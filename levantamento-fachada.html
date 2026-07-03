@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Levantamento de Fachada — Controle e Planejamento de Obras</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/tabelas.css">
+  <link rel="stylesheet" href="css/modulos.css">
+</head>
+<body>
+<div class="app-container">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-logo"><div class="logo-icon">A</div><div class="logo-text">Controle de Obras<span>Absoluta Engenharia</span></div></div>
+    <div class="sidebar-obra-selector"><label>Obra ativa</label><select id="seletor-obra"><option value="">Selecione...</option></select></div>
+    <nav class="sidebar-nav">
+      <div class="sidebar-section-title">Principal</div>
+      <a href="dashboard.html"><span class="nav-icon">📊</span> Dashboard</a>
+      <a href="obras.html"><span class="nav-icon">🏗️</span> Obras</a>
+      <a href="configuracao-obra.html"><span class="nav-icon">⚙️</span> Config. da Obra</a>
+      <div class="sidebar-section-title">Produção</div>
+      <a href="planejamento.html"><span class="nav-icon">📅</span> Planejamento</a>
+      <a href="levantamento.html"><span class="nav-icon">📐</span> Levantamentos</a>
+      <a href="controle.html"><span class="nav-icon">✅</span> Controle</a>
+      <div class="sidebar-section-title">Gestão</div>
+      <a href="restricoes.html"><span class="nav-icon">🚧</span> Restrições</a>
+      <a href="semanal.html"><span class="nav-icon">📋</span> Semanal</a>
+      <a href="medicoes.html"><span class="nav-icon">📏</span> Medições</a>
+      <div class="sidebar-section-title">Custos</div>
+      <a href="orcamentos.html"><span class="nav-icon">💰</span> Orçamentos</a>
+      <a href="suprimentos.html"><span class="nav-icon">📦</span> Suprimentos</a>
+      <a href="materiais.html"><span class="nav-icon">🧱</span> Materiais</a>
+      <div class="sidebar-section-title">Análise</div>
+      <a href="relatorios.html"><span class="nav-icon">📈</span> Relatórios</a>
+      <a href="histograma.html"><span class="nav-icon">📊</span> Histograma</a>
+      <a href="admin-permissoes.html"><span class="nav-icon">🔑</span> Permissões</a>
+    </nav>
+    <div class="sidebar-user"><div class="user-avatar">U</div><div class="user-info"><div class="user-name">Usuário</div><div class="user-role">—</div></div><button class="btn-logout" onclick="Auth.logout()" title="Sair">⏻</button></div>
+  </aside>
+
+  <!-- HEADER -->
+  <header class="header">
+    <div class="header-title">
+      <h1>Levantamento de Fachada</h1>
+      <div class="header-breadcrumb">
+        <a href="levantamento.html">Levantamentos</a>
+        <span class="sep">›</span>
+        <span>Fachada</span>
+      </div>
+    </div>
+    <div class="header-actions" id="header-actions"></div>
+  </header>
+
+  <!-- CONTENT: Layout de árvore + painel -->
+  <main class="content" id="fachada-main" style="padding:16px;">
+    <div class="fachada-layout">
+      <!-- Árvore hierárquica -->
+      <div class="fachada-tree">
+        <div class="fachada-tree-header">
+          <h3>Estrutura</h3>
+          <button class="btn btn-primario btn-sm" onclick="LevantamentoFachada.novaFachada()">+ Fachada</button>
+        </div>
+        <div class="fachada-tree-body" id="fachada-tree-body">
+          <!-- Renderizado pelo JS -->
+        </div>
+      </div>
+
+      <!-- Painel de conteúdo -->
+      <div class="fachada-painel" id="fachada-painel">
+        <!-- Renderizado pelo JS -->
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- ============================== -->
+<!-- MODAL: Nova/Editar Entidade    -->
+<!-- (Fachada, Conjunto, Balancim)  -->
+<!-- ============================== -->
+<div class="modal-overlay" id="modal-entidade">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modal-fachada-titulo">Novo Item</h3>
+      <button class="modal-close" onclick="Utils.fecharModal('modal-entidade')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="form-entidade-tipo">
+      <input type="hidden" id="form-entidade-id">
+      <input type="hidden" id="form-entidade-parent">
+      <form id="form-entidade" onsubmit="event.preventDefault()">
+        <div class="form-grupo">
+          <label>Nome</label>
+          <input type="text" name="nome" class="form-control" placeholder="Ex: Fachada Norte" required>
+        </div>
+        <div class="form-grupo">
+          <label>Observação</label>
+          <textarea name="observacao" class="form-control" rows="2" placeholder="Opcional"></textarea>
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-entidade')">Cancelar</button>
+      <button class="btn btn-primario" onclick="LevantamentoFachada.salvarEntidade()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================== -->
+<!-- MODAL: Nova/Editar Peça        -->
+<!-- ============================== -->
+<div class="modal-overlay" id="modal-peca">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <h3 id="modal-peca-titulo">Nova Peça</h3>
+      <button class="modal-close" onclick="Utils.fecharModal('modal-peca')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <form id="form-peca" onsubmit="event.preventDefault()">
+        <div class="form-row">
+          <div class="form-grupo" style="flex:2">
+            <label>Nome da Peça</label>
+            <input type="text" name="nome" class="form-control" placeholder="Ex: Parede entre janelas" required>
+          </div>
+          <div class="form-grupo">
+            <label>Tipo de Medição</label>
+            <select name="tipoMedicao" class="form-control">
+              <option value="m2">m² (área)</option>
+              <option value="vao_completo">Vão completo</option>
+              <option value="ml">Metro linear (ML)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-grupo">
+            <label>Comprimento (m)</label>
+            <input type="number" name="comprimento" class="form-control" step="0.01" min="0" placeholder="0,00">
+          </div>
+          <div class="form-grupo">
+            <label>Altura (m)</label>
+            <input type="number" name="altura" class="form-control" step="0.01" min="0" placeholder="0,00">
+          </div>
+          <div class="form-grupo">
+            <label>Quantidade</label>
+            <input type="number" name="quantidade" class="form-control" min="1" value="1">
+          </div>
+        </div>
+
+        <div class="form-check mb-2">
+          <input type="checkbox" name="possuiJanela" id="check-janela" onchange="LevantamentoFachada.onToggleJanela(this)">
+          <label for="check-janela">Possui janela / abertura</label>
+        </div>
+
+        <div id="campos-janela" class="form-row" style="display:none;">
+          <div class="form-grupo">
+            <label>Largura da Janela (m)</label>
+            <input type="number" name="larguraJanela" class="form-control" step="0.01" min="0" placeholder="0,00">
+          </div>
+          <div class="form-grupo">
+            <label>Altura da Janela (m)</label>
+            <input type="number" name="alturaJanela" class="form-control" step="0.01" min="0" placeholder="0,00">
+          </div>
+          <div class="form-grupo">
+            <label>Qtd de Janelas</label>
+            <input type="number" name="quantidadeJanelas" class="form-control" min="0" value="1">
+          </div>
+        </div>
+
+        <div class="form-check mb-2">
+          <input type="checkbox" name="vaoFechado" id="check-vao">
+          <label for="check-vao">Vão fechado</label>
+        </div>
+
+        <div class="form-grupo">
+          <label>Observação</label>
+          <textarea name="observacao" class="form-control" rows="2" placeholder="Opcional"></textarea>
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-peca')">Cancelar</button>
+      <button class="btn btn-primario" onclick="LevantamentoFachada.salvarPeca()">Salvar Peça</button>
+    </div>
+  </div>
+</div>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+
+<!-- Core -->
+<script src="js/firebase-config.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/database.js"></script>
+<script src="js/router.js"></script>
+<script src="js/permissions.js"></script>
+<script src="js/audit.js"></script>
+<script src="js/utils.js"></script>
+
+<!-- Module -->
+<script src="js/levantamento-fachada.js"></script>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    LevantamentoFachada.init();
+  });
+</script>
+</body>
+</html>

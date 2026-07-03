@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Orçamentos — Controle e Planejamento de Obras</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/tabelas.css">
+  <link rel="stylesheet" href="css/modulos.css">
+</head>
+<body>
+<div class="app-container">
+  <aside class="sidebar">
+    <div class="sidebar-logo"><div class="logo-icon">A</div><div class="logo-text">Controle de Obras<span>Absoluta Engenharia</span></div></div>
+    <div class="sidebar-obra-selector"><label>Obra ativa</label><select id="seletor-obra"><option value="">Selecione...</option></select></div>
+    <nav class="sidebar-nav">
+      <div class="sidebar-section-title">Principal</div>
+      <a href="dashboard.html"><span class="nav-icon">📊</span> Dashboard</a>
+      <a href="obras.html"><span class="nav-icon">🏗️</span> Obras</a>
+      <a href="configuracao-obra.html"><span class="nav-icon">⚙️</span> Config. da Obra</a>
+      <div class="sidebar-section-title">Produção</div>
+      <a href="planejamento.html"><span class="nav-icon">📅</span> Planejamento</a>
+      <a href="levantamento.html"><span class="nav-icon">📐</span> Levantamentos</a>
+      <a href="controle.html"><span class="nav-icon">✅</span> Controle</a>
+      <div class="sidebar-section-title">Gestão</div>
+      <a href="restricoes.html"><span class="nav-icon">🚧</span> Restrições</a>
+      <a href="semanal.html"><span class="nav-icon">📋</span> Semanal</a>
+      <a href="medicoes.html"><span class="nav-icon">📏</span> Medições</a>
+      <div class="sidebar-section-title">Custos</div>
+      <a href="orcamentos.html"><span class="nav-icon">💰</span> Orçamentos</a>
+      <a href="suprimentos.html"><span class="nav-icon">📦</span> Suprimentos</a>
+      <a href="materiais.html"><span class="nav-icon">🧱</span> Materiais</a>
+      <div class="sidebar-section-title">Análise</div>
+      <a href="relatorios.html"><span class="nav-icon">📈</span> Relatórios</a>
+      <a href="histograma.html"><span class="nav-icon">📊</span> Histograma</a>
+      <a href="admin-permissoes.html"><span class="nav-icon">🔑</span> Permissões</a>
+    </nav>
+    <div class="sidebar-user"><div class="user-avatar">U</div><div class="user-info"><div class="user-name">Usuário</div><div class="user-role">—</div></div><button class="btn-logout" onclick="Auth.logout()" title="Sair">⏻</button></div>
+  </aside>
+  <header class="header"><div class="header-title"><h1>Orçamentos</h1></div><div class="header-actions" id="header-actions"></div></header>
+  <main class="content">
+    <div id="modulo-content">
+      <div class="estado-vazio"><div class="icone">🚧</div><p>Módulo em desenvolvimento.</p><p class="text-sm text-muted">Será construído conforme o roadmap do projeto.</p></div>
+    </div>
+  </main>
+</div>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+<script src="js/firebase-config.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/database.js"></script>
+<script src="js/router.js"></script>
+<script src="js/permissions.js"></script>
+<script src="js/audit.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/orcamentos.js"></script>
+<script>document.addEventListener('DOMContentLoaded', () => { Utils.initPagina(); });</script>
+</body>
+</html>

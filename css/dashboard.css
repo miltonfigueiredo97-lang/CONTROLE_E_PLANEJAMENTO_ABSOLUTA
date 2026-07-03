@@ -1,0 +1,35 @@
+/* ============================================
+   Dashboard (expandido conforme módulo Dashboard for construído)
+   ============================================ */
+
+.dashboard-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.stat-card {
+  background: #fff;
+  border: 1px solid var(--cor-borda-light);
+  border-radius: var(--borda-radius-lg);
+  padding: 20px;
+}
+.stat-card .stat-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--cor-texto-muted);
+  margin-bottom: 6px;
+}
+.stat-card .stat-valor {
+  font-size: 2rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  color: var(--cor-texto);
+  line-height: 1;
+}
+.stat-card .stat-sub {
+  font-size: 0.8rem;
+  color: var(--cor-texto-secundario);
+  margin-top: 6px;
+}

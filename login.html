@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Login — Controle e Planejamento de Obras Absoluta</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/layout.css">
+</head>
+<body>
+  <div class="login-page">
+    <div class="login-box">
+      <div class="login-logo">
+        <div class="logo-icon-lg">A</div>
+        <h1>Controle e Planejamento de Obras</h1>
+        <p>Absoluta Engenharia</p>
+      </div>
+
+      <div id="login-erro" class="hidden" style="background:#fee2e2;color:#dc2626;padding:10px 14px;border-radius:6px;font-size:0.85rem;margin-bottom:16px;"></div>
+
+      <form id="form-login" onsubmit="handleLogin(event)">
+        <div class="form-grupo">
+          <label for="email">E-mail</label>
+          <input type="email" id="email" class="form-control" placeholder="seu@email.com" required>
+        </div>
+        <div class="form-grupo">
+          <label for="senha">Senha</label>
+          <input type="password" id="senha" class="form-control" placeholder="Sua senha" required>
+        </div>
+        <button type="submit" class="btn btn-primario" id="btn-login">Entrar</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Firebase SDKs (compat) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/auth.js"></script>
+
+  <script>
+    // Se já logado, ir para dashboard
+    if (initFirebase()) {
+      auth.onAuthStateChanged(user => {
+        if (user) window.location.href = 'dashboard.html';
+      });
+    }
+
+    async function handleLogin(e) {
+      e.preventDefault();
+      const email = document.getElementById('email').value.trim();
+      const senha = document.getElementById('senha').value;
+      const btn = document.getElementById('btn-login');
+      const erro = document.getElementById('login-erro');
+
+      erro.classList.add('hidden');
+      btn.disabled = true;
+      btn.textContent = 'Entrando...';
+
+      const result = await Auth.login(email, senha);
+
+      if (result.success) {
+        window.location.href = 'dashboard.html';
+      } else {
+        erro.textContent = result.error;
+        erro.classList.remove('hidden');
+        btn.disabled = false;
+        btn.textContent = 'Entrar';
+      }
+    }
+  </script>
+</body>
+</html>
