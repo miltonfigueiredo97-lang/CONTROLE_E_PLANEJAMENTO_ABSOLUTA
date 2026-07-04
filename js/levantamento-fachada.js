@@ -98,13 +98,13 @@ const LevantamentoFachada = (() => {
     fachadas.forEach(f=>{
       const fSel=sel.fachadaId===f.id;
       const nPec=pecas.filter(x=>x.fachadaId===f.id).length;
-      h+=_ti(f.id,'fachada','🏢',f.nome,nPec,fSel&&!sel.balancimId,true);
+      h+=_ti(f.id,'fachada','🏢',f.nome,nPec,fSel&&!sel.balancimId,true,true);
       if(fSel){
         h+='<div class="tree-children">';
         balancins.filter(x=>x.fachadaId===f.id).forEach(bl=>{
           const bSel=sel.balancimId===bl.id;
           const bPec=pecas.filter(x=>x.balancimId===bl.id).length;
-          h+=_ti(bl.id,'balancim','⬛',bl.nome||bl.codigo,bPec,bSel&&!sel.vistaId,true);
+          h+=_ti(bl.id,'balancim','⬛',bl.nome||bl.codigo,bPec,bSel&&!sel.vistaId,true,true);
           if(bSel){
             h+='<div class="tree-children">';
             vistas.filter(v=>v.balancimId===bl.id).sort((a,b)=>a.tipoVista==='externa'?-1:1).forEach(vi=>{
@@ -125,8 +125,17 @@ const LevantamentoFachada = (() => {
     c.innerHTML=h;
   }
 
-  function _ti(id,tipo,icon,label,badge,ativo,hasT){
-    return '<div class="tree-item'+(ativo?' ativo':'')+'" onclick="LF.sel(\''+tipo+'\',\''+id+'\')"><span class="tree-toggle">'+(hasT?(ativo?'▾':'▸'):'')+'</span><span class="tree-icon">'+icon+'</span><span class="tree-label"'+(tipo==='fachada'?' style="font-weight:600;"':'')+'>'+label+'</span>'+(badge>0?'<span class="tree-badge">'+badge+'</span>':'')+'</div>';
+  function _ti(id,tipo,icon,label,badge,ativo,hasT,showDel){
+    const delBtn=showDel
+      ?'<button class="tree-del-btn" onclick="event.stopPropagation();LF.excluir(\''+tipo+'\',\''+id+'\')" title="Excluir">✕</button>'
+      :'';
+    return '<div class="tree-item'+(ativo?' ativo':'')+'" onclick="LF.sel(\''+tipo+'\',\''+id+'\')">'+
+      '<span class="tree-toggle">'+(hasT?(ativo?'▾':'▸'):'')+'</span>'+
+      '<span class="tree-icon">'+icon+'</span>'+
+      '<span class="tree-label"'+(tipo==='fachada'?' style="font-weight:600;"':'')+'>'+label+'</span>'+
+      (badge>0?'<span class="tree-badge">'+badge+'</span>':'')+
+      delBtn+
+      '</div>';
   }
 
   // ===================== SELEÇÃO COM TOGGLE =====================

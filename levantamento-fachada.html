@@ -11,6 +11,22 @@
   <link rel="stylesheet" href="css/tabelas.css">
   <link rel="stylesheet" href="css/modulos.css">
   <style>
+    /* Botão excluir inline na árvore */
+    .tree-del-btn {
+      display: none;
+      margin-left: auto;
+      background: none;
+      border: none;
+      color: #ef4444;
+      cursor: pointer;
+      font-size: 0.7rem;
+      padding: 2px 5px;
+      border-radius: 4px;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+    .tree-item:hover .tree-del-btn { display: inline-flex; }
+    .tree-del-btn:hover { background: #fee2e2; }
     /* Toggle de aba */
     .aba-toggle {
       display: inline-flex;
