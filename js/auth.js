@@ -36,13 +36,20 @@ const Auth = (() => {
     }
   }
 
-  // Logout
+  // Logout — robusto mesmo se auth não inicializado
   async function logout() {
     try {
-      await auth.signOut();
-      window.location.href = 'login.html';
+      if (typeof auth !== 'undefined' && auth) {
+        await auth.signOut();
+      } else if (typeof firebase !== 'undefined') {
+        await firebase.auth().signOut();
+      }
     } catch (error) {
       console.error('Erro ao sair:', error);
+    } finally {
+      // Limpar storage e redirecionar sempre
+      localStorage.removeItem('obra_selecionada');
+      window.location.href = 'login.html';
     }
   }
 

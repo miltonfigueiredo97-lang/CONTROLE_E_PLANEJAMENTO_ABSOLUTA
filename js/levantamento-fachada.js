@@ -38,13 +38,29 @@ const LevantamentoFachada = (() => {
   async function carregar(){
     try{
       Utils.mostrarLoading('Carregando...');
-      const todos=await Database.listar(obraId,COL,null);
+      // Tenta sem orderBy (evita índice obrigatório no Firestore)
+      let todos=[];
+      try{
+        todos=await Database.listar(obraId,COL,null);
+      }catch(e1){
+        console.warn('listar sem order falhou, tentando com createdAt:',e1);
+        try{
+          todos=await Database.listar(obraId,COL,'createdAt');
+        }catch(e2){
+          console.error('listar com createdAt falhou:',e2);
+          todos=[];
+        }
+      }
       fachadas=todos.filter(d=>d.tipo==='fachada').sort(_sNome);
       balancins=todos.filter(d=>d.tipo==='balancim').sort(_sNome);
       vistas=todos.filter(d=>d.tipo==='vista');
       pecas=todos.filter(d=>d.tipo==='peca');
+      console.log(`✅ Fachada carregada: ${fachadas.length} fachadas, ${balancins.length} balancins, ${pecas.length} peças`);
       renderArvore();renderPainel();
-    }catch(e){console.error(e);Utils.toast('Erro ao carregar.','erro');}
+    }catch(e){
+      console.error('Erro ao carregar fachada:',e);
+      Utils.toast('Erro ao carregar dados: '+e.message,'erro');
+    }
     finally{Utils.esconderLoading();}
   }
 
