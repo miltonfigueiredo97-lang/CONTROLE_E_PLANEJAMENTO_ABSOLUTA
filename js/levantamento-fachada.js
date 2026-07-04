@@ -71,17 +71,17 @@ const LevantamentoFachada = (() => {
 
       } else if(cfg.janela_modo==='parcial_considera'){
         // Vão > X m²: considera apenas Y m², desconta o excedente (areaUnitaria - Y)
-        // Vão ≤ X m²: desconta tudo
+        // Vão ≤ X m²: NÃO desconta nada
         if(areaUnitaria>limX){
           const desconto=(areaUnitaria-valY)*qtJ*qt;
           janela=Math.max(0,desconto);
         } else {
-          janela=areaTotal;
+          janela=0;
         }
 
       } else if(cfg.janela_modo==='parcial_desconta'){
         // Vão > X m²: desconta apenas Y m² por vão (mantém o resto)
-        // Vão ≤ X m²: não desconta nada
+        // Vão ≤ X m²: NÃO desconta nada
         if(areaUnitaria>limX){
           janela=valY*qtJ*qt;
         } else {
