@@ -118,94 +118,58 @@
   </div>
 </div>
 
-<!-- ===== MODAL: Peça ===== -->
+<!-- ===== MODAL: Nova Peça (simplificado) ===== -->
 <div class="modal-overlay" id="modal-peca">
-  <div class="modal modal-lg">
+  <div class="modal" style="max-width:600px;">
     <div class="modal-header">
       <h3 id="modal-peca-titulo">Nova Peça</h3>
       <button class="modal-close" onclick="Utils.fecharModal('modal-peca')">&times;</button>
     </div>
     <div class="modal-body">
       <form id="form-peca" onsubmit="event.preventDefault()">
-        <div class="form-row">
-          <div class="form-grupo" style="flex:2">
-            <label>Nome da Peça</label>
-            <input type="text" name="nome" class="form-control" placeholder="Ex: Parede entre janelas, Faixa < 50cm" required>
-          </div>
-          <div class="form-grupo">
-            <label>Tipo de Medição</label>
-            <select name="tipoMedicao" class="form-control">
-              <option value="m2">m² (área)</option>
-              <option value="ml">Metro Linear (ML)</option>
-              <option value="vao_completo">Vão Completo</option>
-              <option value="misto">Misto (m² + ML)</option>
-            </select>
-          </div>
+        <div class="form-grupo">
+          <label>Nome da Peça</label>
+          <input type="text" name="nome" class="form-control" placeholder="Ex: Parede lateral, Faixa abaixo da janela, Pilar" required>
         </div>
-
         <div class="form-row">
-          <div class="form-grupo">
-            <label>Comprimento (m)</label>
-            <input type="number" name="comprimento" class="form-control" step="0.01" min="0" placeholder="0,00">
-          </div>
-          <div class="form-grupo">
-            <label>Altura (m)</label>
-            <input type="number" name="altura" class="form-control" step="0.01" min="0" placeholder="0,00">
-          </div>
-          <div class="form-grupo">
-            <label>Quantidade</label>
-            <input type="number" name="quantidade" class="form-control" min="1" value="1">
-          </div>
+          <div class="form-grupo"><label>Comprimento (m)</label><input type="number" name="comprimento" class="form-control" step="0.01" min="0" placeholder="0,00"></div>
+          <div class="form-grupo"><label>Altura (m)</label><input type="number" name="altura" class="form-control" step="0.01" min="0" placeholder="0,00"></div>
+          <div class="form-grupo"><label>Quantidade</label><input type="number" name="quantidade" class="form-control" min="1" value="1"></div>
         </div>
 
         <div class="form-check mb-2">
           <input type="checkbox" name="possuiJanela" id="check-janela" onchange="LF.onToggleJanela(this)">
           <label for="check-janela">Possui janela / abertura</label>
         </div>
-
-        <div id="campos-janela" class="form-row" style="display:none;">
-          <div class="form-grupo">
-            <label>Largura da Janela (m)</label>
-            <input type="number" name="larguraJanela" class="form-control" step="0.01" min="0">
-          </div>
-          <div class="form-grupo">
-            <label>Altura da Janela (m)</label>
-            <input type="number" name="alturaJanela" class="form-control" step="0.01" min="0">
-          </div>
-          <div class="form-grupo">
-            <label>Qtd Janelas</label>
-            <input type="number" name="quantidadeJanelas" class="form-control" min="0" value="1">
-          </div>
+        <div id="campos-janela" class="form-row" style="display:none;margin-bottom:12px;">
+          <div class="form-grupo"><label>Largura da Janela (m)</label><input type="number" name="larguraJanela" class="form-control" step="0.01" min="0"></div>
+          <div class="form-grupo"><label>Altura da Janela (m)</label><input type="number" name="alturaJanela" class="form-control" step="0.01" min="0"></div>
+          <div class="form-grupo"><label>Qtd Janelas</label><input type="number" name="quantidadeJanelas" class="form-control" min="0" value="1"></div>
         </div>
 
-        <div class="form-row">
-          <div class="form-grupo">
-            <label>Vão Fechado</label>
-            <select name="vaoFechado" class="form-control">
-              <option value="nenhum">Nenhum</option>
-              <option value="descontar">Descontar</option>
-              <option value="medir_cheio">Medir cheio</option>
-              <option value="vao_completo">Vão completo</option>
-              <option value="observacao">Apenas observação</option>
-            </select>
-          </div>
-          <div class="form-grupo">
-            <label>Tarefa Vinculada</label>
-            <select name="tarefaId" class="form-control">
-              <option value="">Nenhuma tarefa</option>
-            </select>
-          </div>
+        <div class="form-check mb-2">
+          <input type="checkbox" name="possuiVaoFechado" id="check-vao" onchange="LF.onToggleVao(this)">
+          <label for="check-vao">Possui vão fechado</label>
+        </div>
+        <div id="campos-vao" class="form-row" style="display:none;margin-bottom:12px;">
+          <div class="form-grupo"><label>Comprimento do Vão (m)</label><input type="number" name="comprimentoVao" class="form-control" step="0.01" min="0"></div>
+          <div class="form-grupo"><label>Altura do Vão (m)</label><input type="number" name="alturaVao" class="form-control" step="0.01" min="0"></div>
         </div>
 
         <div class="form-grupo">
-          <label>Observações</label>
+          <label>Acabamento</label>
+          <input type="text" name="acabamento" class="form-control" placeholder="Ex: Textura, Pintura, Cerâmica, Pastilha">
+        </div>
+
+        <div class="form-grupo">
+          <label>Observação</label>
           <textarea name="observacao" class="form-control" rows="2" placeholder="Opcional"></textarea>
         </div>
       </form>
     </div>
     <div class="modal-footer">
       <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-peca')">Cancelar</button>
-      <button class="btn btn-secundario" onclick="LF.salvarPeca(false)" title="Salva e abre formulário para próxima peça">Salvar e Nova</button>
+      <button class="btn btn-secundario" onclick="LF.salvarPeca(false)">Salvar e Nova</button>
       <button class="btn btn-primario" onclick="LF.salvarPeca(true)">Salvar e Fechar</button>
     </div>
   </div>
