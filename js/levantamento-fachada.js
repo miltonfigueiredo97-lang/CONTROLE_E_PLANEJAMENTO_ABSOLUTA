@@ -63,32 +63,32 @@ const LevantamentoFachada = (() => {
     if(pc.possuiJanela && qtJ>0 && larJ>0 && altJ>0){
       const areaUnitaria=larJ*altJ;            // m² de 1 janela
       const areaTotal=areaUnitaria*qtJ*qt;     // m² de todas as janelas
-      const limite=_pn(cfg.janela_limite_m2)||1.0;
+      const limX=_pn(cfg.janela_limite_x)||1.5; // limite de tamanho X
+      const valY=_pn(cfg.janela_valor_y)||1.0;  // valor aplicado Y
 
       if(cfg.janela_modo==='desconto_total'){
-        // Desconta TODA a área de janela
         janela=areaTotal;
 
       } else if(cfg.janela_modo==='parcial_considera'){
-        // Para vãos MAIORES que X m²: considera apenas X m², desconta o resto
-        // Para vãos MENORES ou IGUAIS a X m²: desconta tudo normalmente
-        if(areaUnitaria>limite){
-          janela=areaTotal-(limite*qtJ*qt); // desconta só o excedente
+        // Vão > X m²: considera apenas Y m², desconta o excedente (areaUnitaria - Y)
+        // Vão ≤ X m²: desconta tudo
+        if(areaUnitaria>limX){
+          const desconto=(areaUnitaria-valY)*qtJ*qt;
+          janela=Math.max(0,desconto);
         } else {
           janela=areaTotal;
         }
 
       } else if(cfg.janela_modo==='parcial_desconta'){
-        // Para vãos MAIORES que X m²: desconta apenas X m² por vão (o resto fica)
-        // Para vãos MENORES ou IGUAIS a X m²: não desconta nada
-        if(areaUnitaria>limite){
-          janela=limite*qtJ*qt;
+        // Vão > X m²: desconta apenas Y m² por vão (mantém o resto)
+        // Vão ≤ X m²: não desconta nada
+        if(areaUnitaria>limX){
+          janela=valY*qtJ*qt;
         } else {
           janela=0;
         }
 
       } else if(cfg.janela_modo==='metade'){
-        // Considera metade, descarta metade
         janela=areaTotal/2;
       }
     }
@@ -392,7 +392,8 @@ const LevantamentoFachada = (() => {
   function abrirConfig(){
     const cfg=_getCfg();
     document.getElementById('cfg-janela-modo').value=cfg.janela_modo||'desconto_total';
-    document.getElementById('cfg-janela-limite').value=cfg.janela_limite_m2||'';
+    document.getElementById('cfg-janela-limite').value=cfg.janela_limite_x||'';
+    document.getElementById('cfg-janela-valor-y').value=cfg.janela_valor_y||'';
     document.getElementById('cfg-ml-menor').value=cfg.ml_menor_que||0.50;
     document.getElementById('cfg-ml-pct').value=cfg.ml_percentual||50;
     _toggleCfgJanela(cfg.janela_modo||'desconto_total');
@@ -406,8 +407,8 @@ const LevantamentoFachada = (() => {
     const mostra=modo==='parcial_considera'||modo==='parcial_desconta';
     row.style.display=mostra?'block':'none';
     if(hint){
-      if(modo==='parcial_considera') hint.textContent='Vãos > X m²: considera apenas X m². Vãos ≤ X m²: desconta tudo.';
-      else if(modo==='parcial_desconta') hint.textContent='Vãos > X m²: desconta apenas X m² (mantém o resto). Vãos ≤ X m²: não desconta.';
+      if(modo==='parcial_considera') hint.textContent='Considera Y m² por vão';
+      else if(modo==='parcial_desconta') hint.textContent='Desconta Y m² por vão';
       else hint.textContent='';
     }
   }
@@ -417,7 +418,8 @@ const LevantamentoFachada = (() => {
   function salvarConfig(){
     const cfg={
       janela_modo:document.getElementById('cfg-janela-modo').value||'desconto_total',
-      janela_limite_m2:_pn(document.getElementById('cfg-janela-limite').value)||1.0,
+      janela_limite_x:_pn(document.getElementById('cfg-janela-limite').value)||1.5,
+      janela_valor_y:_pn(document.getElementById('cfg-janela-valor-y').value)||1.0,
       ml_menor_que:_pn(document.getElementById('cfg-ml-menor').value)||0.50,
       ml_percentual:_pn(document.getElementById('cfg-ml-pct').value)||50
     };

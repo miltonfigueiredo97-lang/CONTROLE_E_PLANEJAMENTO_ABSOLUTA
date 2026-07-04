@@ -293,9 +293,18 @@
         </div>
 
         <div class="form-grupo" id="cfg-janela-limite-row" style="display:none;">
-          <label>Limite de m² por vão (X)</label>
-          <input type="number" id="cfg-janela-limite" class="form-control" step="0.01" min="0.01" placeholder="Ex: 1.00">
-          <p class="text-sm text-muted" id="cfg-janela-hint" style="margin-top:4px;"></p>
+          <div class="form-row">
+            <div class="form-grupo">
+              <label>Limite do vão — X (m²)</label>
+              <input type="number" id="cfg-janela-limite" class="form-control" step="0.01" min="0.01" placeholder="Ex: 1.50">
+              <p class="text-sm text-muted" style="margin-top:3px;">Vãos maiores que X são afetados</p>
+            </div>
+            <div class="form-grupo">
+              <label>Valor aplicado — Y (m²)</label>
+              <input type="number" id="cfg-janela-valor-y" class="form-control" step="0.01" min="0.01" placeholder="Ex: 1.00">
+              <p class="text-sm text-muted" id="cfg-janela-hint" style="margin-top:3px;"></p>
+            </div>
+          </div>
         </div>
       </div>
 
