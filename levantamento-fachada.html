@@ -10,6 +10,71 @@
   <link rel="stylesheet" href="css/layout.css">
   <link rel="stylesheet" href="css/tabelas.css">
   <link rel="stylesheet" href="css/modulos.css">
+  <style>
+    /* Toggle de aba */
+    .aba-toggle {
+      display: inline-flex;
+      background: #f1f5f9;
+      border-radius: 8px;
+      padding: 3px;
+      gap: 2px;
+    }
+    .aba-btn {
+      padding: 6px 20px;
+      border: none;
+      background: transparent;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--cor-texto-secundario);
+      cursor: pointer;
+      font-family: var(--font-principal);
+      transition: all 0.15s;
+    }
+    .aba-btn.ativo {
+      background: #fff;
+      color: var(--cor-primaria);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    /* Mapa visão geral */
+    .mapa-container {
+      position: relative;
+      width: 100%;
+      height: calc(100vh - 300px);
+      min-height: 500px;
+      background: #f8fafc;
+      border: 2px dashed #e2e8f0;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .mapa-caixa {
+      position: absolute;
+      background: #fff;
+      border: 1.5px solid var(--cor-primaria);
+      border-radius: 8px;
+      min-width: 200px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+      pointer-events: all;
+      user-select: none;
+    }
+    .mapa-caixa-header {
+      background: var(--cor-primaria);
+      color: #fff;
+      padding: 6px 10px;
+      border-radius: 6px 6px 0 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .mapa-caixa-nome { font-weight: 600; font-size: 0.85rem; }
+    .mapa-caixa-btns { display: flex; gap: 2px; }
+    .mapa-caixa-btns .btn { padding: 2px 5px; font-size: 0.7rem; background: rgba(255,255,255,0.2); color: #fff; border-color: transparent; }
+    .mapa-caixa-btns .btn:hover { background: rgba(255,255,255,0.35); }
+    .mapa-caixa-dados { padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; }
+    .mapa-dado-label { font-size: 0.7rem; color: var(--cor-texto-muted); text-transform: uppercase; letter-spacing: 0.3px; }
+    .mapa-dado-valor { font-size: 1rem; font-weight: 700; font-family: var(--font-mono); color: var(--cor-primaria); margin-left: 8px; }
+  </style>
 </head>
 <body>
 <div class="app-container">
@@ -44,71 +109,56 @@
   <header class="header">
     <div class="header-title">
       <h1>Levantamento de Fachada</h1>
-      <div class="header-breadcrumb">
-        <a href="levantamento.html">Levantamentos</a><span class="sep">›</span><span>Fachada</span>
-      </div>
+      <div class="header-breadcrumb"><a href="levantamento.html">Levantamentos</a><span class="sep">›</span><span>Fachada</span></div>
     </div>
-    <div class="header-actions" id="header-actions"></div>
   </header>
 
   <main class="content" id="fachada-main" style="padding:16px;">
     <div class="fachada-layout">
+      <!-- ÁRVORE -->
       <div class="fachada-tree">
         <div class="fachada-tree-header">
           <h3>Estrutura</h3>
-          <button class="btn btn-primario btn-sm" onclick="LF.novoItem('fachada')">+ Fachada</button>
+          <button class="btn btn-primario btn-sm" onclick="LF.criarFachada()">+ Fachada</button>
         </div>
         <div class="fachada-tree-body" id="fachada-tree-body"></div>
       </div>
+      <!-- PAINEL -->
       <div class="fachada-painel" id="fachada-painel"></div>
     </div>
   </main>
 </div>
 
-<!-- ===== MODAL: Entidade (Fachada/Conjunto/Balancim/Vista) ===== -->
+<!-- MODAL: Editar Entidade -->
 <div class="modal-overlay" id="modal-entidade">
   <div class="modal">
     <div class="modal-header">
-      <h3 id="modal-ent-titulo">Novo Item</h3>
+      <h3 id="modal-ent-titulo">Editar</h3>
       <button class="modal-close" onclick="Utils.fecharModal('modal-entidade')">&times;</button>
     </div>
     <div class="modal-body">
       <input type="hidden" id="form-ent-tipo">
       <input type="hidden" id="form-ent-id">
-      <input type="hidden" id="form-ent-parent">
       <form id="form-entidade" onsubmit="event.preventDefault()">
-        <div class="form-grupo">
-          <label>Nome</label>
-          <input type="text" name="nome" class="form-control" placeholder="Ex: Fachada Norte, BAL-01, Vista Externa" required>
-        </div>
-        <div class="form-row">
-          <div class="form-grupo" id="campo-codigo-ent">
-            <label>Código</label>
-            <input type="text" name="codigo" class="form-control" placeholder="Ex: BAL-01">
-          </div>
-          <div class="form-grupo" id="campo-status-ent">
-            <label>Status</label>
-            <select name="status" class="form-control">
-              <option value="rascunho">Rascunho</option>
-              <option value="em_conferencia">Em Conferência</option>
-              <option value="aprovado">Aprovado</option>
-              <option value="revisado">Revisado</option>
-              <option value="cancelado">Cancelado</option>
-            </select>
-          </div>
-        </div>
+        <div class="form-grupo"><label>Nome</label><input type="text" name="nome" class="form-control" required></div>
         <div class="form-grupo hidden" id="campo-tipo-vista">
           <label>Tipo de Vista</label>
           <select name="tipoVista" class="form-control">
             <option value="externa">Externa</option>
             <option value="interna">Interna</option>
-            <option value="outra">Outra</option>
           </select>
         </div>
-        <div class="form-grupo">
-          <label>Descrição / Observação</label>
-          <textarea name="descricao" class="form-control" rows="2" placeholder="Opcional"></textarea>
+        <div class="form-grupo" id="campo-status-ent">
+          <label>Status</label>
+          <select name="status" class="form-control">
+            <option value="rascunho">Rascunho</option>
+            <option value="em_conferencia">Em Conferência</option>
+            <option value="aprovado">Aprovado</option>
+            <option value="revisado">Revisado</option>
+            <option value="cancelado">Cancelado</option>
+          </select>
         </div>
+        <div class="form-grupo"><label>Descrição</label><textarea name="descricao" class="form-control" rows="2"></textarea></div>
       </form>
     </div>
     <div class="modal-footer">
@@ -118,8 +168,7 @@
   </div>
 </div>
 
-
-<!-- ===== MODAL: Nova Peça ===== -->
+<!-- MODAL: Nova / Editar Peça -->
 <div class="modal-overlay" id="modal-peca">
   <div class="modal" style="max-width:600px;">
     <div class="modal-header">
@@ -128,16 +177,19 @@
     </div>
     <div class="modal-body">
       <form id="form-peca" onsubmit="event.preventDefault()">
+
         <div class="form-grupo">
           <label>Nome da Peça</label>
           <input type="text" name="nome" class="form-control" placeholder="Ex: Parede lateral, Faixa abaixo da janela" required>
         </div>
+
         <div class="form-row">
           <div class="form-grupo"><label>Comprimento (cm)</label><input type="number" name="comprimento" class="form-control" step="1" min="0" placeholder="Ex: 400"></div>
           <div class="form-grupo"><label>Altura (cm)</label><input type="number" name="altura" class="form-control" step="1" min="0" placeholder="Ex: 280"></div>
           <div class="form-grupo"><label>Quantidade</label><input type="number" name="quantidade" class="form-control" min="1" value="1"></div>
         </div>
 
+        <!-- Janela -->
         <div class="form-check mb-2">
           <input type="checkbox" name="possuiJanela" id="check-janela" onchange="LF.onToggleJanela(this)">
           <label for="check-janela">Possui janela / abertura</label>
@@ -148,20 +200,31 @@
           <div class="form-grupo"><label>Qtd Janelas</label><input type="number" name="quantidadeJanelas" class="form-control" min="0" value="1"></div>
         </div>
 
-        <div style="margin-top:4px;margin-bottom:8px;font-size:0.8rem;font-weight:600;color:var(--cor-texto-secundario);text-transform:uppercase;letter-spacing:0.3px;">Vão Fechado</div>
+        <!-- Vão Fechado (sempre visível) -->
+        <div style="margin-bottom:6px;font-size:0.8rem;font-weight:600;color:var(--cor-texto-secundario);text-transform:uppercase;letter-spacing:0.3px;">Vão Fechado</div>
         <div class="form-row" style="margin-bottom:12px;">
           <div class="form-grupo"><label>Comprimento do Vão (cm)</label><input type="number" name="comprimentoVao" class="form-control" step="1" min="0" placeholder="0"></div>
           <div class="form-grupo"><label>Altura do Vão (cm)</label><input type="number" name="alturaVao" class="form-control" step="1" min="0" placeholder="0"></div>
         </div>
 
+        <!-- Pode ser ML -->
+        <div class="form-check mb-2" style="background:var(--cor-alerta-bg);padding:10px 14px;border-radius:6px;border:1px solid #fcd34d;">
+          <input type="checkbox" name="podeSerML" id="check-ml">
+          <label for="check-ml" style="font-weight:500;color:#92400e;">Pode ser considerado Metro Linear<br><span style="font-size:0.75rem;font-weight:400;color:#b45309;">Peças com dimensão relevante em comprimento (ex: faixas, soleiras, peitoris)</span></label>
+        </div>
+
+        <!-- Acabamento -->
         <div class="form-grupo">
           <label>Acabamento</label>
           <input type="text" name="acabamento" class="form-control" placeholder="Ex: Textura, Pintura, Cerâmica, Pastilha">
         </div>
+
+        <!-- Observação -->
         <div class="form-grupo">
           <label>Observação</label>
           <textarea name="observacao" class="form-control" rows="2" placeholder="Opcional"></textarea>
         </div>
+
       </form>
     </div>
     <div class="modal-footer">
