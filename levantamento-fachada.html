@@ -118,7 +118,8 @@
   </div>
 </div>
 
-<!-- ===== MODAL: Nova Peça (simplificado) ===== -->
+
+<!-- ===== MODAL: Nova Peça ===== -->
 <div class="modal-overlay" id="modal-peca">
   <div class="modal" style="max-width:600px;">
     <div class="modal-header">
@@ -129,11 +130,11 @@
       <form id="form-peca" onsubmit="event.preventDefault()">
         <div class="form-grupo">
           <label>Nome da Peça</label>
-          <input type="text" name="nome" class="form-control" placeholder="Ex: Parede lateral, Faixa abaixo da janela, Pilar" required>
+          <input type="text" name="nome" class="form-control" placeholder="Ex: Parede lateral, Faixa abaixo da janela" required>
         </div>
         <div class="form-row">
-          <div class="form-grupo"><label>Comprimento (m)</label><input type="number" name="comprimento" class="form-control" step="0.01" min="0" placeholder="0,00"></div>
-          <div class="form-grupo"><label>Altura (m)</label><input type="number" name="altura" class="form-control" step="0.01" min="0" placeholder="0,00"></div>
+          <div class="form-grupo"><label>Comprimento (cm)</label><input type="number" name="comprimento" class="form-control" step="1" min="0" placeholder="Ex: 400"></div>
+          <div class="form-grupo"><label>Altura (cm)</label><input type="number" name="altura" class="form-control" step="1" min="0" placeholder="Ex: 280"></div>
           <div class="form-grupo"><label>Quantidade</label><input type="number" name="quantidade" class="form-control" min="1" value="1"></div>
         </div>
 
@@ -142,25 +143,21 @@
           <label for="check-janela">Possui janela / abertura</label>
         </div>
         <div id="campos-janela" class="form-row" style="display:none;margin-bottom:12px;">
-          <div class="form-grupo"><label>Largura da Janela (m)</label><input type="number" name="larguraJanela" class="form-control" step="0.01" min="0"></div>
-          <div class="form-grupo"><label>Altura da Janela (m)</label><input type="number" name="alturaJanela" class="form-control" step="0.01" min="0"></div>
+          <div class="form-grupo"><label>Largura Janela (cm)</label><input type="number" name="larguraJanela" class="form-control" step="1" min="0"></div>
+          <div class="form-grupo"><label>Altura Janela (cm)</label><input type="number" name="alturaJanela" class="form-control" step="1" min="0"></div>
           <div class="form-grupo"><label>Qtd Janelas</label><input type="number" name="quantidadeJanelas" class="form-control" min="0" value="1"></div>
         </div>
 
-        <div class="form-check mb-2">
-          <input type="checkbox" name="possuiVaoFechado" id="check-vao" onchange="LF.onToggleVao(this)">
-          <label for="check-vao">Possui vão fechado</label>
-        </div>
-        <div id="campos-vao" class="form-row" style="display:none;margin-bottom:12px;">
-          <div class="form-grupo"><label>Comprimento do Vão (m)</label><input type="number" name="comprimentoVao" class="form-control" step="0.01" min="0"></div>
-          <div class="form-grupo"><label>Altura do Vão (m)</label><input type="number" name="alturaVao" class="form-control" step="0.01" min="0"></div>
+        <div style="margin-top:4px;margin-bottom:8px;font-size:0.8rem;font-weight:600;color:var(--cor-texto-secundario);text-transform:uppercase;letter-spacing:0.3px;">Vão Fechado</div>
+        <div class="form-row" style="margin-bottom:12px;">
+          <div class="form-grupo"><label>Comprimento do Vão (cm)</label><input type="number" name="comprimentoVao" class="form-control" step="1" min="0" placeholder="0"></div>
+          <div class="form-grupo"><label>Altura do Vão (cm)</label><input type="number" name="alturaVao" class="form-control" step="1" min="0" placeholder="0"></div>
         </div>
 
         <div class="form-grupo">
           <label>Acabamento</label>
           <input type="text" name="acabamento" class="form-control" placeholder="Ex: Textura, Pintura, Cerâmica, Pastilha">
         </div>
-
         <div class="form-grupo">
           <label>Observação</label>
           <textarea name="observacao" class="form-control" rows="2" placeholder="Opcional"></textarea>
