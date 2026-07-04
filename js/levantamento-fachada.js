@@ -260,8 +260,7 @@ const LevantamentoFachada = (() => {
       return '<tr><td><a href="#" onclick="LF.sel(\'balancim\',\''+bl.id+'\');return false;"><strong>'+(bl.nome||bl.codigo)+'</strong></a></td>'+
         '<td class="col-num">'+np+'</td>'+
         '<td class="col-num" style="font-weight:600;color:var(--cor-primaria);">'+_f(t.m2semML)+'</td>'+
-        '<td class="col-num">'+_f(t.m2comML_equiv)+'</td>'+
-        '<td class="col-num">'+_f(t.ml)+'</td>'+
+        '<td class="col-num">'+_f(t.m2comML_puro)+'m²<br><span style="font-size:0.75rem;color:var(--cor-texto-muted);">+'+_f(t.ml)+'ML = '+_f(t.m2comML_equiv)+'m²</span></td>'+
         '<td class="col-num">'+_f(t.vao)+'</td>'+
         '<td class="col-acoes"><button class="btn btn-secundario btn-sm" onclick="LF.editar(\'balancim\',\''+bl.id+'\')">✎</button> <button class="btn btn-sm btn-icon" onclick="LF.duplicarBal(\''+bl.id+'\')" title="Duplicar">⧉</button> <button class="btn btn-perigo btn-sm btn-icon" onclick="LF.excluir(\'balancim\',\''+bl.id+'\')">✕</button></td></tr>';
     }).join('');
@@ -271,12 +270,13 @@ const LevantamentoFachada = (() => {
       _cards(tot)+
       '<div class="tabela-container mt-2"><table class="tabela"><thead><tr>'+
       '<th>Balancim</th><th class="col-num">Peças</th>'+
-      '<th class="col-num">m² sem ML</th><th class="col-num">m² com ML</th><th class="col-num">ML</th><th class="col-num">Vão F.</th>'+
+      '<th class="col-num">m² sem ML</th><th class="col-num">m² com ML</th><th class="col-num">Vão F.</th>'+
       '<th class="col-acoes">Ações</th></tr></thead>'+
-      '<tbody>'+(rows||'<tr><td colspan="7" class="text-center text-muted">Nenhum balancim.</td></tr>')+'</tbody>'+
+      '<tbody>'+(rows||'<tr><td colspan="6" class="text-center text-muted">Nenhum balancim.</td></tr>')+'</tbody>'+
       '<tfoot><tr><td><strong>TOTAL</strong></td><td class="col-num">'+fp.length+'</td>'+
       '<td class="col-num" style="font-weight:700;color:var(--cor-primaria);">'+_f(tot.m2semML)+'</td>'+
-      '<td class="col-num">'+_f(tot.m2comML_equiv)+'</td><td class="col-num">'+_f(tot.ml)+'</td><td class="col-num">'+_f(tot.vao)+'</td><td></td></tr></tfoot>'+
+      '<td class="col-num">'+_f(tot.m2comML_puro)+'m²<br><span style="font-size:0.75rem;color:var(--cor-texto-muted);">+'+_f(tot.ml)+'ML = '+_f(tot.m2comML_equiv)+'m²</span></td>'+
+      '<td class="col-num">'+_f(tot.vao)+'</td><td></td></tr></tfoot>'+
       '</table></div>';
   }
 
@@ -319,8 +319,6 @@ const LevantamentoFachada = (() => {
         '<td class="col-num col-centro">'+(pc.quantidade||1)+'</td>'+
         '<td class="col-centro">'+(pc.possuiJanela?'✓':'')+'</td>'+
         '<td class="col-num" style="font-weight:600;color:var(--cor-primaria);">'+_f(c.m2semML)+'</td>'+
-        '<td class="col-num">'+_f(c.m2comML_puro)+'</td>'+
-        '<td class="col-num">'+_f(c.ml)+'</td>'+
         '<td class="col-num">'+_f(c.vao)+'</td>'+
         '<td class="text-sm">'+(pc.acabamento||'')+'</td>'+
         '<td class="col-centro">'+(pc.conferido?'✅':'')+'</td>'+
@@ -343,13 +341,11 @@ const LevantamentoFachada = (() => {
       '<div class="tabela-container mt-2"><table class="tabela tabela-compacta"><thead><tr>'+
       '<th class="col-sm">#</th><th>Peça</th><th class="col-num">Comp cm</th><th class="col-num">Alt cm</th>'+
       '<th class="col-num col-centro">Qtd</th><th class="col-centro">Jan</th>'+
-      '<th class="col-num">m² sem ML</th><th class="col-num">m² com ML</th><th class="col-num">ML</th><th class="col-num">Vão F.</th>'+
+      '<th class="col-num">m² sem ML</th><th class="col-num">Vão F.</th>'+
       '<th>Acab.</th><th class="col-centro">Conf</th><th class="col-acoes">Ações</th></tr></thead>'+
-      '<tbody>'+(rows||'<tr><td colspan="13" class="text-center text-muted">Clique "+ Nova Peça".</td></tr>')+'</tbody>'+
+      '<tbody>'+(rows||'<tr><td colspan="11" class="text-center text-muted">Clique "+ Nova Peça".</td></tr>')+'</tbody>'+
       '<tfoot><tr><td></td><td><strong>TOTAL</strong></td><td></td><td></td><td></td><td></td>'+
       '<td class="col-num" style="font-weight:700;color:var(--cor-primaria);">'+_f(tot.m2semML)+'</td>'+
-      '<td class="col-num">'+_f(tot.m2comML_equiv)+'</td>'+
-      '<td class="col-num">'+_f(tot.ml)+'</td>'+
       '<td class="col-num">'+_f(tot.vao)+'</td>'+
       '<td></td><td></td><td></td></tr></tfoot></table></div>';
   }
