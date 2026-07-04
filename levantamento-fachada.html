@@ -13,7 +13,6 @@
 </head>
 <body>
 <div class="app-container">
-  <!-- SIDEBAR -->
   <aside class="sidebar">
     <div class="sidebar-logo"><div class="logo-icon">A</div><div class="logo-text">Controle de Obras<span>Absoluta Engenharia</span></div></div>
     <div class="sidebar-obra-selector"><label>Obra ativa</label><select id="seletor-obra"><option value="">Selecione...</option></select></div>
@@ -42,76 +41,84 @@
     <div class="sidebar-user"><div class="user-avatar">U</div><div class="user-info"><div class="user-name">Usuário</div><div class="user-role">—</div></div><button class="btn-logout" onclick="Auth.logout()" title="Sair">⏻</button></div>
   </aside>
 
-  <!-- HEADER -->
   <header class="header">
     <div class="header-title">
       <h1>Levantamento de Fachada</h1>
       <div class="header-breadcrumb">
-        <a href="levantamento.html">Levantamentos</a>
-        <span class="sep">›</span>
-        <span>Fachada</span>
+        <a href="levantamento.html">Levantamentos</a><span class="sep">›</span><span>Fachada</span>
       </div>
     </div>
     <div class="header-actions" id="header-actions"></div>
   </header>
 
-  <!-- CONTENT: Layout de árvore + painel -->
   <main class="content" id="fachada-main" style="padding:16px;">
     <div class="fachada-layout">
-      <!-- Árvore hierárquica -->
       <div class="fachada-tree">
         <div class="fachada-tree-header">
           <h3>Estrutura</h3>
-          <button class="btn btn-primario btn-sm" onclick="LevantamentoFachada.novaFachada()">+ Fachada</button>
+          <button class="btn btn-primario btn-sm" onclick="LF.novoItem('fachada')">+ Fachada</button>
         </div>
-        <div class="fachada-tree-body" id="fachada-tree-body">
-          <!-- Renderizado pelo JS -->
-        </div>
+        <div class="fachada-tree-body" id="fachada-tree-body"></div>
       </div>
-
-      <!-- Painel de conteúdo -->
-      <div class="fachada-painel" id="fachada-painel">
-        <!-- Renderizado pelo JS -->
-      </div>
+      <div class="fachada-painel" id="fachada-painel"></div>
     </div>
   </main>
 </div>
 
-<!-- ============================== -->
-<!-- MODAL: Nova/Editar Entidade    -->
-<!-- (Fachada, Conjunto, Balancim)  -->
-<!-- ============================== -->
+<!-- ===== MODAL: Entidade (Fachada/Conjunto/Balancim/Vista) ===== -->
 <div class="modal-overlay" id="modal-entidade">
   <div class="modal">
     <div class="modal-header">
-      <h3 id="modal-fachada-titulo">Novo Item</h3>
+      <h3 id="modal-ent-titulo">Novo Item</h3>
       <button class="modal-close" onclick="Utils.fecharModal('modal-entidade')">&times;</button>
     </div>
     <div class="modal-body">
-      <input type="hidden" id="form-entidade-tipo">
-      <input type="hidden" id="form-entidade-id">
-      <input type="hidden" id="form-entidade-parent">
+      <input type="hidden" id="form-ent-tipo">
+      <input type="hidden" id="form-ent-id">
+      <input type="hidden" id="form-ent-parent">
       <form id="form-entidade" onsubmit="event.preventDefault()">
         <div class="form-grupo">
           <label>Nome</label>
-          <input type="text" name="nome" class="form-control" placeholder="Ex: Fachada Norte" required>
+          <input type="text" name="nome" class="form-control" placeholder="Ex: Fachada Norte, BAL-01, Vista Externa" required>
+        </div>
+        <div class="form-row">
+          <div class="form-grupo" id="campo-codigo-ent">
+            <label>Código</label>
+            <input type="text" name="codigo" class="form-control" placeholder="Ex: BAL-01">
+          </div>
+          <div class="form-grupo" id="campo-status-ent">
+            <label>Status</label>
+            <select name="status" class="form-control">
+              <option value="rascunho">Rascunho</option>
+              <option value="em_conferencia">Em Conferência</option>
+              <option value="aprovado">Aprovado</option>
+              <option value="revisado">Revisado</option>
+              <option value="cancelado">Cancelado</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-grupo hidden" id="campo-tipo-vista">
+          <label>Tipo de Vista</label>
+          <select name="tipoVista" class="form-control">
+            <option value="externa">Externa</option>
+            <option value="interna">Interna</option>
+            <option value="outra">Outra</option>
+          </select>
         </div>
         <div class="form-grupo">
-          <label>Observação</label>
-          <textarea name="observacao" class="form-control" rows="2" placeholder="Opcional"></textarea>
+          <label>Descrição / Observação</label>
+          <textarea name="descricao" class="form-control" rows="2" placeholder="Opcional"></textarea>
         </div>
       </form>
     </div>
     <div class="modal-footer">
       <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-entidade')">Cancelar</button>
-      <button class="btn btn-primario" onclick="LevantamentoFachada.salvarEntidade()">Salvar</button>
+      <button class="btn btn-primario" onclick="LF.salvarEntidade()">Salvar</button>
     </div>
   </div>
 </div>
 
-<!-- ============================== -->
-<!-- MODAL: Nova/Editar Peça        -->
-<!-- ============================== -->
+<!-- ===== MODAL: Peça ===== -->
 <div class="modal-overlay" id="modal-peca">
   <div class="modal modal-lg">
     <div class="modal-header">
@@ -123,14 +130,15 @@
         <div class="form-row">
           <div class="form-grupo" style="flex:2">
             <label>Nome da Peça</label>
-            <input type="text" name="nome" class="form-control" placeholder="Ex: Parede entre janelas" required>
+            <input type="text" name="nome" class="form-control" placeholder="Ex: Parede entre janelas, Faixa < 50cm" required>
           </div>
           <div class="form-grupo">
             <label>Tipo de Medição</label>
             <select name="tipoMedicao" class="form-control">
               <option value="m2">m² (área)</option>
-              <option value="vao_completo">Vão completo</option>
-              <option value="ml">Metro linear (ML)</option>
+              <option value="ml">Metro Linear (ML)</option>
+              <option value="vao_completo">Vão Completo</option>
+              <option value="misto">Misto (m² + ML)</option>
             </select>
           </div>
         </div>
@@ -151,39 +159,53 @@
         </div>
 
         <div class="form-check mb-2">
-          <input type="checkbox" name="possuiJanela" id="check-janela" onchange="LevantamentoFachada.onToggleJanela(this)">
+          <input type="checkbox" name="possuiJanela" id="check-janela" onchange="LF.onToggleJanela(this)">
           <label for="check-janela">Possui janela / abertura</label>
         </div>
 
         <div id="campos-janela" class="form-row" style="display:none;">
           <div class="form-grupo">
             <label>Largura da Janela (m)</label>
-            <input type="number" name="larguraJanela" class="form-control" step="0.01" min="0" placeholder="0,00">
+            <input type="number" name="larguraJanela" class="form-control" step="0.01" min="0">
           </div>
           <div class="form-grupo">
             <label>Altura da Janela (m)</label>
-            <input type="number" name="alturaJanela" class="form-control" step="0.01" min="0" placeholder="0,00">
+            <input type="number" name="alturaJanela" class="form-control" step="0.01" min="0">
           </div>
           <div class="form-grupo">
-            <label>Qtd de Janelas</label>
+            <label>Qtd Janelas</label>
             <input type="number" name="quantidadeJanelas" class="form-control" min="0" value="1">
           </div>
         </div>
 
-        <div class="form-check mb-2">
-          <input type="checkbox" name="vaoFechado" id="check-vao">
-          <label for="check-vao">Vão fechado</label>
+        <div class="form-row">
+          <div class="form-grupo">
+            <label>Vão Fechado</label>
+            <select name="vaoFechado" class="form-control">
+              <option value="nenhum">Nenhum</option>
+              <option value="descontar">Descontar</option>
+              <option value="medir_cheio">Medir cheio</option>
+              <option value="vao_completo">Vão completo</option>
+              <option value="observacao">Apenas observação</option>
+            </select>
+          </div>
+          <div class="form-grupo">
+            <label>Tarefa Vinculada</label>
+            <select name="tarefaId" class="form-control">
+              <option value="">Nenhuma tarefa</option>
+            </select>
+          </div>
         </div>
 
         <div class="form-grupo">
-          <label>Observação</label>
+          <label>Observações</label>
           <textarea name="observacao" class="form-control" rows="2" placeholder="Opcional"></textarea>
         </div>
       </form>
     </div>
     <div class="modal-footer">
       <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-peca')">Cancelar</button>
-      <button class="btn btn-primario" onclick="LevantamentoFachada.salvarPeca()">Salvar Peça</button>
+      <button class="btn btn-primario" onclick="LF.salvarPeca()">Salvar Peça</button>
     </div>
   </div>
 </div>
@@ -193,8 +215,6 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
-
-<!-- Core -->
 <script src="js/firebase-config.js"></script>
 <script src="js/auth.js"></script>
 <script src="js/database.js"></script>
@@ -202,14 +222,7 @@
 <script src="js/permissions.js"></script>
 <script src="js/audit.js"></script>
 <script src="js/utils.js"></script>
-
-<!-- Module -->
 <script src="js/levantamento-fachada.js"></script>
-
-<script>
-  document.addEventListener('DOMContentLoaded', () => {
-    LevantamentoFachada.init();
-  });
-</script>
+<script>document.addEventListener('DOMContentLoaded', () => { LevantamentoFachada.init(); });</script>
 </body>
 </html>
