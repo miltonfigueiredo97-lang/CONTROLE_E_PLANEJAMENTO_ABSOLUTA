@@ -44,34 +44,44 @@ const LevantamentoFachada = (() => {
     const co=_m(_pn(pc.comprimento)), al=_m(_pn(pc.altura)), qt=_pn(pc.quantidade)||1;
     const larJ=_m(_pn(pc.larguraJanela)), altJ=_m(_pn(pc.alturaJanela)), qtJ=_pn(pc.quantidadeJanelas)||0;
     const coV=_m(_pn(pc.comprimentoVao)), alV=_m(_pn(pc.alturaVao));
+    const podeML=!!pc.podeSerML;
 
-    // Área bruta
+    // Área bruta e desconto janela
     const bruto=co*al*qt;
-    // Desconto janela
     const janela=pc.possuiJanela?larJ*altJ*qtJ*qt:0;
-    // Área líquida (bruto - janela)
     const areaLiq=Math.max(0,bruto-janela);
 
-    // Pode ser ML? → usa maior dimensão como ML
-    const podeML=!!pc.podeSerML;
-    const maiorDim=Math.max(co,al); // maior lado em metros
-    const ml=podeML?(maiorDim*qt):0;
+    // m² SEM ML: soma TUDO como m², independente de ser ML ou não. Exceto vão.
+    const m2semML=areaLiq;
 
-    // m² sem ML = área líquida (independente se pode ser ML ou não, exceto vão)
-    // m² com ML = se pode ML → não conta no m², conta no ML
-    const m2semML=areaLiq;       // sempre a área calculada
-    const m2comML=podeML?0:areaLiq; // se marcado como ML, sai do m²
+    // m² COM ML:
+    // - Peças normais: contam como m²
+    // - Peças marcadas ML: saem do m², entram como ML (maior lado × qtd)
+    // - Total exibido: Xm² + XML = X+ML/2 m² equivalente
+    const maiorLado=Math.max(co,al);
+    const ml=podeML?(maiorLado*qt):0;
+    const m2comML_puro=podeML?0:areaLiq; // só m² puro (sem as peças ML)
 
     // Vão fechado
     const vao=coV*alV*qt;
 
-    return{bruto,janela,areaLiq,ml,m2semML,m2comML,vao,podeML};
+    return{bruto,janela,areaLiq,m2semML,m2comML_puro,ml,vao,podeML};
   }
 
   function _somar(lista){
-    let m2semML=0,m2comML=0,ml=0,vao=0,bruto=0,janela=0;
-    lista.forEach(pc=>{const c=_calc(pc);m2semML+=c.m2semML;m2comML+=c.m2comML;ml+=c.ml;vao+=c.vao;bruto+=c.bruto;janela+=c.janela;});
-    return{m2semML,m2comML,ml,vao,bruto,janela};
+    let m2semML=0,m2comML_puro=0,ml=0,vao=0,bruto=0,janela=0;
+    lista.forEach(pc=>{
+      const c=_calc(pc);
+      m2semML+=c.m2semML;
+      m2comML_puro+=c.m2comML_puro;
+      ml+=c.ml;
+      vao+=c.vao;
+      bruto+=c.bruto;
+      janela+=c.janela;
+    });
+    // Total equivalente m² com ML = m²puro + (ML / 2)
+    const m2comML_equiv=m2comML_puro+(ml/2);
+    return{m2semML,m2comML_puro,ml,m2comML_equiv,vao,bruto,janela};
   }
   function _somarBal(id){return _somar(pecas.filter(x=>x.balancimId===id));}
   function _somarFachada(id){return _somar(pecas.filter(x=>x.fachadaId===id));}
@@ -181,11 +191,25 @@ const LevantamentoFachada = (() => {
 
   // ===================== CARDS DE MÉTRICAS =====================
   function _cards(t){
+    // m² com ML exibe: Xm² e XML = X total
+    const comMLstr=_f(t.m2comML_puro)+'m² e '+_f(t.ml)+'ML';
+    const comMLequiv='= '+_f(t.m2comML_equiv)+'m²';
     return '<div class="fachada-info-bar">'+
-      '<div class="fachada-info-item"><div class="info-label">m² sem ML</div><div class="info-valor destaque">'+_f(t.m2semML)+'</div><div class="info-sub">área total</div></div>'+
-      '<div class="fachada-info-item"><div class="info-label">m² com ML</div><div class="info-valor">'+_f(t.m2comML)+'</div><div class="info-sub">excl. peças ML</div></div>'+
-      '<div class="fachada-info-item"><div class="info-label">Metro Linear</div><div class="info-valor">'+_f(t.ml)+'</div><div class="info-sub">peças marcadas ML</div></div>'+
-      '<div class="fachada-info-item"><div class="info-label">m² Vão Fechado</div><div class="info-valor">'+_f(t.vao)+'</div><div class="info-sub">apenas vãos</div></div>'+
+      '<div class="fachada-info-item">'+
+        '<div class="info-label">m² sem ML</div>'+
+        '<div class="info-valor destaque">'+_f(t.m2semML)+'</div>'+
+        '<div class="info-sub">tudo como m²</div>'+
+      '</div>'+
+      '<div class="fachada-info-item">'+
+        '<div class="info-label">m² com ML</div>'+
+        '<div class="info-valor" style="font-size:0.95rem;">'+comMLstr+'</div>'+
+        '<div class="info-sub">'+comMLequiv+'</div>'+
+      '</div>'+
+      '<div class="fachada-info-item">'+
+        '<div class="info-label">m² Vão Fechado</div>'+
+        '<div class="info-valor">'+_f(t.vao)+'</div>'+
+        '<div class="info-sub">apenas vãos</div>'+
+      '</div>'+
       '</div>';
   }
 
@@ -200,7 +224,7 @@ const LevantamentoFachada = (() => {
         '<td class="col-centro">'+_badge(f.status)+'</td>'+
         '<td class="col-num">'+nb+'</td><td class="col-num">'+np+'</td>'+
         '<td class="col-num" style="font-weight:600;color:var(--cor-primaria);">'+_f(t.m2semML)+'</td>'+
-        '<td class="col-num">'+_f(t.m2comML)+'</td>'+
+        '<td class="col-num">'+_f(t.m2comML_equiv)+'</td>'+
         '<td class="col-num">'+_f(t.ml)+'</td>'+
         '<td class="col-num">'+_f(t.vao)+'</td>'+
         '<td class="col-acoes"><button class="btn btn-secundario btn-sm" onclick="LF.editar(\'fachada\',\''+f.id+'\')">✎</button> <button class="btn btn-perigo btn-sm btn-icon" onclick="LF.excluir(\'fachada\',\''+f.id+'\')">✕</button></td></tr>';
@@ -227,7 +251,7 @@ const LevantamentoFachada = (() => {
       return '<tr><td><a href="#" onclick="LF.sel(\'balancim\',\''+bl.id+'\');return false;"><strong>'+(bl.nome||bl.codigo)+'</strong></a></td>'+
         '<td class="col-num">'+np+'</td>'+
         '<td class="col-num" style="font-weight:600;color:var(--cor-primaria);">'+_f(t.m2semML)+'</td>'+
-        '<td class="col-num">'+_f(t.m2comML)+'</td>'+
+        '<td class="col-num">'+_f(t.m2comML_equiv)+'</td>'+
         '<td class="col-num">'+_f(t.ml)+'</td>'+
         '<td class="col-num">'+_f(t.vao)+'</td>'+
         '<td class="col-acoes"><button class="btn btn-secundario btn-sm" onclick="LF.editar(\'balancim\',\''+bl.id+'\')">✎</button> <button class="btn btn-sm btn-icon" onclick="LF.duplicarBal(\''+bl.id+'\')" title="Duplicar">⧉</button> <button class="btn btn-perigo btn-sm btn-icon" onclick="LF.excluir(\'balancim\',\''+bl.id+'\')">✕</button></td></tr>';
@@ -243,7 +267,7 @@ const LevantamentoFachada = (() => {
       '<tbody>'+(rows||'<tr><td colspan="7" class="text-center text-muted">Nenhum balancim.</td></tr>')+'</tbody>'+
       '<tfoot><tr><td><strong>TOTAL</strong></td><td class="col-num">'+fp.length+'</td>'+
       '<td class="col-num" style="font-weight:700;color:var(--cor-primaria);">'+_f(tot.m2semML)+'</td>'+
-      '<td class="col-num">'+_f(tot.m2comML)+'</td><td class="col-num">'+_f(tot.ml)+'</td><td class="col-num">'+_f(tot.vao)+'</td><td></td></tr></tfoot>'+
+      '<td class="col-num">'+_f(tot.m2comML_equiv)+'</td><td class="col-num">'+_f(tot.ml)+'</td><td class="col-num">'+_f(tot.vao)+'</td><td></td></tr></tfoot>'+
       '</table></div>';
   }
 
@@ -286,7 +310,7 @@ const LevantamentoFachada = (() => {
         '<td class="col-num col-centro">'+(pc.quantidade||1)+'</td>'+
         '<td class="col-centro">'+(pc.possuiJanela?'✓':'')+'</td>'+
         '<td class="col-num" style="font-weight:600;color:var(--cor-primaria);">'+_f(c.m2semML)+'</td>'+
-        '<td class="col-num">'+_f(c.m2comML)+'</td>'+
+        '<td class="col-num">'+_f(c.m2comML_puro)+'</td>'+
         '<td class="col-num">'+_f(c.ml)+'</td>'+
         '<td class="col-num">'+_f(c.vao)+'</td>'+
         '<td class="text-sm">'+(pc.acabamento||'')+'</td>'+
@@ -303,10 +327,9 @@ const LevantamentoFachada = (() => {
       '<div class="btn-grupo"><button class="btn btn-secundario btn-sm" onclick="LF.exportarVista()">📥 CSV</button>'+
       '<button class="btn btn-primario" onclick="LF.novaPeca()">+ Nova Peça</button></div></div>'+
       '<div class="fachada-info-bar">'+
-      '<div class="fachada-info-item"><div class="info-label">m² sem ML</div><div class="info-valor destaque">'+_f(tot.m2semML)+'</div></div>'+
-      '<div class="fachada-info-item"><div class="info-label">m² com ML</div><div class="info-valor">'+_f(tot.m2comML)+'</div></div>'+
-      '<div class="fachada-info-item"><div class="info-label">Metro Linear</div><div class="info-valor">'+_f(tot.ml)+'</div></div>'+
-      '<div class="fachada-info-item"><div class="info-label">Vão Fechado</div><div class="info-valor">'+_f(tot.vao)+'</div></div>'+
+      '<div class="fachada-info-item"><div class="info-label">m² sem ML</div><div class="info-valor destaque">'+_f(tot.m2semML)+'</div><div class="info-sub">tudo como m²</div></div>'+
+      '<div class="fachada-info-item"><div class="info-label">m² com ML</div><div class="info-valor" style="font-size:0.95rem;">'+_f(tot.m2comML_puro)+'m² e '+_f(tot.ml)+'ML</div><div class="info-sub">= '+_f(tot.m2comML_equiv)+'m²</div></div>'+
+      '<div class="fachada-info-item"><div class="info-label">m² Vão Fechado</div><div class="info-valor">'+_f(tot.vao)+'</div><div class="info-sub">apenas vãos</div></div>'+
       '</div>'+
       '<div class="tabela-container mt-2"><table class="tabela tabela-compacta"><thead><tr>'+
       '<th class="col-sm">#</th><th>Peça</th><th class="col-num">Comp cm</th><th class="col-num">Alt cm</th>'+
@@ -316,7 +339,7 @@ const LevantamentoFachada = (() => {
       '<tbody>'+(rows||'<tr><td colspan="13" class="text-center text-muted">Clique "+ Nova Peça".</td></tr>')+'</tbody>'+
       '<tfoot><tr><td></td><td><strong>TOTAL</strong></td><td></td><td></td><td></td><td></td>'+
       '<td class="col-num" style="font-weight:700;color:var(--cor-primaria);">'+_f(tot.m2semML)+'</td>'+
-      '<td class="col-num">'+_f(tot.m2comML)+'</td>'+
+      '<td class="col-num">'+_f(tot.m2comML_equiv)+'</td>'+
       '<td class="col-num">'+_f(tot.ml)+'</td>'+
       '<td class="col-num">'+_f(tot.vao)+'</td>'+
       '<td></td><td></td><td></td></tr></tfoot></table></div>';
@@ -328,7 +351,7 @@ const LevantamentoFachada = (() => {
     const mapData=JSON.parse(localStorage.getItem('fachadaMap_'+obraId)||'{"img":null,"caixas":[]}');
     const caixasHtml=mapData.caixas.map((cx,i)=>{
       const f=fachadas.find(x=>x.id===cx.fachadaId);
-      const t=cx.fachadaId?_somarFachada(cx.fachadaId):{m2semML:0,m2comML:0,vao:0};
+      const t=cx.fachadaId?_somarFachada(cx.fachadaId):{m2semML:0,m2comML_equiv:0,m2comML_puro:0,vao:0};
       const nome=f?f.nome:'Fachada';
       return '<div class="mapa-caixa" id="cx-'+i+'" style="left:'+cx.x+'px;top:'+cx.y+'px;'+(cx.travada?'cursor:default;':'cursor:move;')+'" '+
         (cx.travada?'':'ondragstart="LF.cxDragStart(event,'+i+')" draggable="true"')+'>'+
@@ -342,7 +365,7 @@ const LevantamentoFachada = (() => {
         '</div>'+
         '<div class="mapa-caixa-dados">'+
           '<div><span class="mapa-dado-label">m² sem ML</span><span class="mapa-dado-valor">'+_f(t.m2semML)+'</span></div>'+
-          '<div><span class="mapa-dado-label">m² com ML</span><span class="mapa-dado-valor">'+_f(t.m2comML)+'</span></div>'+
+          '<div><span class="mapa-dado-label">m² com ML</span><span class="mapa-dado-valor">'+_f(t.m2comML_equiv)+'</span></div>'+
           '<div><span class="mapa-dado-label">Vão Fechado</span><span class="mapa-dado-valor">'+_f(t.vao)+'</span></div>'+
         '</div>'+
       '</div>';
@@ -523,7 +546,7 @@ const LevantamentoFachada = (() => {
   function exportarVista(){_csv(pecas.filter(x=>x.vistaId===sel.vistaId),'fachada_vista');}
   function _csv(lista,nome){
     let csv='Peça;Comp cm;Alt cm;Qtd;Janela;L-Jan cm;A-Jan cm;Q-Jan;Comp Vão cm;Alt Vão cm;Pode ML;m2 sem ML;m2 com ML;ML;Vão m2;Acabamento;Conferido;Obs\n';
-    lista.forEach(pc=>{const c=_calc(pc);csv+=[pc.nome,pc.comprimento,pc.altura,pc.quantidade,pc.possuiJanela?'Sim':'Nao',pc.larguraJanela||'',pc.alturaJanela||'',pc.quantidadeJanelas||'',pc.comprimentoVao||'',pc.alturaVao||'',pc.podeSerML?'Sim':'Nao',c.m2semML.toFixed(2),c.m2comML.toFixed(2),c.ml.toFixed(2),c.vao.toFixed(2),pc.acabamento||'',pc.conferido?'Sim':'Nao',pc.observacao||''].join(';')+'\n';});
+    lista.forEach(pc=>{const c=_calc(pc);csv+=[pc.nome,pc.comprimento,pc.altura,pc.quantidade,pc.possuiJanela?'Sim':'Nao',pc.larguraJanela||'',pc.alturaJanela||'',pc.quantidadeJanelas||'',pc.comprimentoVao||'',pc.alturaVao||'',pc.podeSerML?'Sim':'Nao',c.m2semML.toFixed(2),c.m2comML_puro.toFixed(2),c.ml.toFixed(2),c.vao.toFixed(2),pc.acabamento||'',pc.conferido?'Sim':'Nao',pc.observacao||''].join(';')+'\n';});
     const b=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=nome+'.csv';a.click();URL.revokeObjectURL(u);Utils.toast('Exportado!','sucesso');
   }
 
