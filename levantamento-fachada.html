@@ -271,27 +271,31 @@
 
 <!-- MODAL: Configurações de Cálculo -->
 <div class="modal-overlay" id="modal-config">
-  <div class="modal" style="max-width:480px;">
+  <div class="modal" style="max-width:500px;">
     <div class="modal-header">
       <h3>⚙️ Configurações de Cálculo</h3>
       <button class="modal-close" onclick="Utils.fecharModal('modal-config')">&times;</button>
     </div>
     <div class="modal-body">
-      <p class="text-sm text-muted mb-3">Essas regras afetam como os totais de m², ML e vão são calculados em toda a fachada.</p>
+      <p class="text-sm text-muted mb-3">Essas regras afetam como os totais são calculados em toda a fachada. Ao salvar, os valores são recalculados imediatamente.</p>
 
       <div style="border:1px solid var(--cor-borda-light);border-radius:8px;padding:16px;margin-bottom:16px;">
         <div style="font-weight:600;font-size:0.9rem;margin-bottom:12px;">🪟 Vãos de Janela</div>
+
         <div class="form-grupo">
-          <label>Considerar vão como:</label>
+          <label>Como considerar os vãos:</label>
           <select id="cfg-janela-modo" class="form-control" onchange="LF.onChangeCfgJanela(this)">
-            <option value="desconto_total">Desconto total — desconta toda a área da janela</option>
-            <option value="valor_fixo">Valor fixo — considera X m² do vão e desconta o restante</option>
+            <option value="desconto_total">Desconto Total — desconta toda a área de janela do m²</option>
+            <option value="parcial_considera">Desconto Parcial 1 — para vãos maiores que X m², considera apenas X m²</option>
+            <option value="parcial_desconta">Desconto Parcial 2 — para vãos maiores que X m², desconta apenas X m²</option>
             <option value="metade">Metade — considera metade e descarta metade</option>
           </select>
         </div>
-        <div class="form-grupo" id="cfg-janela-valor-row" style="display:none;">
-          <label>Valor a considerar por janela (m²)</label>
-          <input type="number" id="cfg-janela-valor" class="form-control" step="0.01" min="0" placeholder="Ex: 1.00">
+
+        <div class="form-grupo" id="cfg-janela-limite-row" style="display:none;">
+          <label>Limite de m² por vão (X)</label>
+          <input type="number" id="cfg-janela-limite" class="form-control" step="0.01" min="0.01" placeholder="Ex: 1.00">
+          <p class="text-sm text-muted" id="cfg-janela-hint" style="margin-top:4px;"></p>
         </div>
       </div>
 
@@ -304,10 +308,10 @@
           </div>
           <div class="form-grupo">
             <label>Considerar (% do m²)</label>
-            <input type="number" id="cfg-ml-pct" class="form-control" step="1" min="0" max="100" placeholder="Ex: 50">
+            <input type="number" id="cfg-ml-pct" class="form-control" step="1" min="0" max="100" placeholder="50">
           </div>
         </div>
-        <p class="text-sm text-muted">Peças menores que X m² marcadas como ML serão calculadas como: m² × %</p>
+        <p class="text-sm text-muted">Peças marcadas como ML com área menor que X m²: valor = m² × %/100</p>
       </div>
     </div>
     <div class="modal-footer">

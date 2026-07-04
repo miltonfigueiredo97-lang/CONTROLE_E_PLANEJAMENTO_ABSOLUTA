@@ -50,52 +50,67 @@ const LevantamentoFachada = (() => {
   function _m(cm){return _pn(cm)/100;}
 
   // ===================== CÁLCULOS COM CONFIG =====================
-  function _calc(pc){
-    const cfg=_getCfg();
+  function _calc(pc, cfg){
+    if(!cfg) cfg=_getCfg();
     const co=_m(_pn(pc.comprimento)), al=_m(_pn(pc.altura)), qt=_pn(pc.quantidade)||1;
     const larJ=_m(_pn(pc.larguraJanela)), altJ=_m(_pn(pc.alturaJanela)), qtJ=_pn(pc.quantidadeJanelas)||0;
     const podeML=!!pc.podeSerML;
 
-    // Área bruta
     const bruto=co*al*qt;
 
-    // Desconto janela conforme config
+    // ---- Desconto janela: 4 modos ----
     let janela=0;
-    if(pc.possuiJanela && qtJ>0){
-      const areaJanBruta=larJ*altJ*qtJ*qt;
+    if(pc.possuiJanela && qtJ>0 && larJ>0 && altJ>0){
+      const areaUnitaria=larJ*altJ;            // m² de 1 janela
+      const areaTotal=areaUnitaria*qtJ*qt;     // m² de todas as janelas
+      const limite=_pn(cfg.janela_limite_m2)||1.0;
+
       if(cfg.janela_modo==='desconto_total'){
-        janela=areaJanBruta; // desconta tudo
-      } else if(cfg.janela_modo==='valor_fixo'){
-        // Considera apenas X m² do vão, desconta o restante
-        const fixo=_pn(cfg.janela_valor_fixo)*qtJ*qt;
-        janela=Math.max(0,areaJanBruta-fixo);
+        // Desconta TODA a área de janela
+        janela=areaTotal;
+
+      } else if(cfg.janela_modo==='parcial_considera'){
+        // Para vãos MAIORES que X m²: considera apenas X m², desconta o resto
+        // Para vãos MENORES ou IGUAIS a X m²: desconta tudo normalmente
+        if(areaUnitaria>limite){
+          janela=areaTotal-(limite*qtJ*qt); // desconta só o excedente
+        } else {
+          janela=areaTotal;
+        }
+
+      } else if(cfg.janela_modo==='parcial_desconta'){
+        // Para vãos MAIORES que X m²: desconta apenas X m² por vão (o resto fica)
+        // Para vãos MENORES ou IGUAIS a X m²: não desconta nada
+        if(areaUnitaria>limite){
+          janela=limite*qtJ*qt;
+        } else {
+          janela=0;
+        }
+
       } else if(cfg.janela_modo==='metade'){
-        janela=areaJanBruta/2; // desconta metade
+        // Considera metade, descarta metade
+        janela=areaTotal/2;
       }
     }
 
     const areaLiq=Math.max(0,bruto-janela);
-
-    // m² SEM ML — tudo como m² independente de ML
     const m2semML=areaLiq;
-
-    // m² COM ML — peças ML saem do m², viram ML (maior lado × qtd)
     const maiorLado=Math.max(co,al);
     const ml=podeML?(maiorLado*qt):0;
     const m2comML_puro=podeML?0:areaLiq;
 
-    return{bruto,janela,areaLiq,m2semML,m2comML_puro,ml,vao:0,podeML};
+    return{bruto,janela,areaLiq,m2semML,m2comML_puro,ml,podeML};
   }
 
-  // Soma peças + vão fechado das vistas do conjunto
+  // Soma peças (com cfg) + vão das vistas
   function _somar(listaPecas, listaVistas){
+    const cfg=_getCfg(); // carrega config uma vez para todo o batch
     let m2semML=0,m2comML_puro=0,ml=0,bruto=0,janela=0;
     listaPecas.forEach(pc=>{
-      const c=_calc(pc);
+      const c=_calc(pc, cfg);
       m2semML+=c.m2semML; m2comML_puro+=c.m2comML_puro;
       ml+=c.ml; bruto+=c.bruto; janela+=c.janela;
     });
-    // Vão fechado vem das vistas
     let vao=0;
     if(listaVistas){
       listaVistas.forEach(vi=>{
@@ -108,11 +123,11 @@ const LevantamentoFachada = (() => {
   }
 
   function _somarBal(blId){
-    const bVis=vistas.filter(v=>v.balancimId===blId);
-    return _somar(pecas.filter(x=>x.balancimId===blId), bVis);
+    return _somar(pecas.filter(x=>x.balancimId===blId), vistas.filter(v=>v.balancimId===blId));
   }
   function _somarFachada(fId){
-    const fVis=vistas.filter(v=>v.fachadaId===fId);
+    const bIds=balancins.filter(b=>b.fachadaId===fId).map(b=>b.id);
+    const fVis=vistas.filter(v=>bIds.includes(v.balancimId));
     return _somar(pecas.filter(x=>x.fachadaId===fId), fVis);
   }
   function _somarGeral(){
@@ -376,32 +391,40 @@ const LevantamentoFachada = (() => {
   // ===================== CONFIGURAÇÕES DE CÁLCULO =====================
   function abrirConfig(){
     const cfg=_getCfg();
-    document.getElementById('cfg-janela-modo').value=cfg.janela_modo;
-    document.getElementById('cfg-janela-valor').value=cfg.janela_valor_fixo;
-    document.getElementById('cfg-ml-menor').value=cfg.ml_menor_que;
-    document.getElementById('cfg-ml-pct').value=cfg.ml_percentual;
-    _toggleCfgJanela(cfg.janela_modo);
+    document.getElementById('cfg-janela-modo').value=cfg.janela_modo||'desconto_total';
+    document.getElementById('cfg-janela-limite').value=cfg.janela_limite_m2||'';
+    document.getElementById('cfg-ml-menor').value=cfg.ml_menor_que||0.50;
+    document.getElementById('cfg-ml-pct').value=cfg.ml_percentual||50;
+    _toggleCfgJanela(cfg.janela_modo||'desconto_total');
     Utils.abrirModal('modal-config');
   }
 
   function _toggleCfgJanela(modo){
-    const el=document.getElementById('cfg-janela-valor-row');
-    if(el) el.style.display=modo==='valor_fixo'?'flex':'none';
+    const row=document.getElementById('cfg-janela-limite-row');
+    const hint=document.getElementById('cfg-janela-hint');
+    if(!row) return;
+    const mostra=modo==='parcial_considera'||modo==='parcial_desconta';
+    row.style.display=mostra?'block':'none';
+    if(hint){
+      if(modo==='parcial_considera') hint.textContent='Vãos > X m²: considera apenas X m². Vãos ≤ X m²: desconta tudo.';
+      else if(modo==='parcial_desconta') hint.textContent='Vãos > X m²: desconta apenas X m² (mantém o resto). Vãos ≤ X m²: não desconta.';
+      else hint.textContent='';
+    }
   }
 
   function onChangeCfgJanela(sel){_toggleCfgJanela(sel.value);}
 
   function salvarConfig(){
     const cfg={
-      janela_modo:document.getElementById('cfg-janela-modo').value,
-      janela_valor_fixo:_pn(document.getElementById('cfg-janela-valor').value)||1.0,
+      janela_modo:document.getElementById('cfg-janela-modo').value||'desconto_total',
+      janela_limite_m2:_pn(document.getElementById('cfg-janela-limite').value)||1.0,
       ml_menor_que:_pn(document.getElementById('cfg-ml-menor').value)||0.50,
       ml_percentual:_pn(document.getElementById('cfg-ml-pct').value)||50
     };
     _saveCfg(cfg);
     Utils.fecharModal('modal-config');
     Utils.toast('Configurações salvas! Recalculando...','sucesso');
-    renderPainel(); // Recalcula tudo com nova config
+    renderPainel();
   }
   function renderPecas(p, toggle){
     const vi=vistas.find(x=>x.id===sel.vistaId);if(!vi)return;
