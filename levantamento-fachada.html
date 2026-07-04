@@ -127,6 +127,9 @@
       <h1>Levantamento de Fachada</h1>
       <div class="header-breadcrumb"><a href="levantamento.html">Levantamentos</a><span class="sep">›</span><span>Fachada</span></div>
     </div>
+    <div class="header-actions">
+      <button class="btn btn-secundario btn-sm" onclick="LF.abrirConfig()" title="Configurações de cálculo">⚙️ Config</button>
+    </div>
   </header>
 
   <main class="content" id="fachada-main" style="padding:16px;">
@@ -186,26 +189,22 @@
 
 <!-- MODAL: Nova / Editar Peça -->
 <div class="modal-overlay" id="modal-peca">
-  <div class="modal" style="max-width:600px;">
+  <div class="modal" style="max-width:560px;">
     <div class="modal-header">
       <h3 id="modal-peca-titulo">Nova Peça</h3>
       <button class="modal-close" onclick="Utils.fecharModal('modal-peca')">&times;</button>
     </div>
     <div class="modal-body">
       <form id="form-peca" onsubmit="event.preventDefault()">
-
         <div class="form-grupo">
           <label>Nome da Peça</label>
           <input type="text" name="nome" class="form-control" placeholder="Ex: Parede lateral, Faixa abaixo da janela" required>
         </div>
-
         <div class="form-row">
           <div class="form-grupo"><label>Comprimento (cm)</label><input type="number" name="comprimento" class="form-control" step="1" min="0" placeholder="Ex: 400"></div>
           <div class="form-grupo"><label>Altura (cm)</label><input type="number" name="altura" class="form-control" step="1" min="0" placeholder="Ex: 280"></div>
           <div class="form-grupo"><label>Quantidade</label><input type="number" name="quantidade" class="form-control" min="1" value="1"></div>
         </div>
-
-        <!-- Janela -->
         <div class="form-check mb-2">
           <input type="checkbox" name="possuiJanela" id="check-janela" onchange="LF.onToggleJanela(this)">
           <label for="check-janela">Possui janela / abertura</label>
@@ -215,38 +214,105 @@
           <div class="form-grupo"><label>Altura Janela (cm)</label><input type="number" name="alturaJanela" class="form-control" step="1" min="0"></div>
           <div class="form-grupo"><label>Qtd Janelas</label><input type="number" name="quantidadeJanelas" class="form-control" min="0" value="1"></div>
         </div>
-
-        <!-- Vão Fechado (sempre visível) -->
-        <div style="margin-bottom:6px;font-size:0.8rem;font-weight:600;color:var(--cor-texto-secundario);text-transform:uppercase;letter-spacing:0.3px;">Vão Fechado</div>
-        <div class="form-row" style="margin-bottom:12px;">
-          <div class="form-grupo"><label>Comprimento do Vão (cm)</label><input type="number" name="comprimentoVao" class="form-control" step="1" min="0" placeholder="0"></div>
-          <div class="form-grupo"><label>Altura do Vão (cm)</label><input type="number" name="alturaVao" class="form-control" step="1" min="0" placeholder="0"></div>
-        </div>
-
-        <!-- Pode ser ML -->
         <div class="form-check mb-2" style="background:var(--cor-alerta-bg);padding:10px 14px;border-radius:6px;border:1px solid #fcd34d;">
           <input type="checkbox" name="podeSerML" id="check-ml">
-          <label for="check-ml" style="font-weight:500;color:#92400e;">Pode ser considerado Metro Linear<br><span style="font-size:0.75rem;font-weight:400;color:#b45309;">Peças com dimensão relevante em comprimento (ex: faixas, soleiras, peitoris)</span></label>
+          <label for="check-ml" style="font-weight:500;color:#92400e;">Pode ser considerado Metro Linear<br><span style="font-size:0.75rem;font-weight:400;color:#b45309;">Peças com comprimento relevante (ex: faixas, soleiras, peitoris)</span></label>
         </div>
-
-        <!-- Acabamento -->
         <div class="form-grupo">
           <label>Acabamento</label>
           <input type="text" name="acabamento" class="form-control" placeholder="Ex: Textura, Pintura, Cerâmica, Pastilha">
         </div>
-
-        <!-- Observação -->
         <div class="form-grupo">
           <label>Observação</label>
           <textarea name="observacao" class="form-control" rows="2" placeholder="Opcional"></textarea>
         </div>
-
       </form>
     </div>
     <div class="modal-footer">
       <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-peca')">Cancelar</button>
       <button class="btn btn-secundario" onclick="LF.salvarPeca(false)">Salvar e Nova</button>
       <button class="btn btn-primario" onclick="LF.salvarPeca(true)">Salvar e Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Vão Fechado da Vista -->
+<div class="modal-overlay" id="modal-vao-vista">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-header">
+      <h3>📐 Vão Fechado</h3>
+      <button class="modal-close" onclick="Utils.fecharModal('modal-vao-vista')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="vao-vista-id">
+      <p style="font-size:0.9rem;font-weight:600;color:var(--cor-primaria);margin-bottom:16px;" id="vao-vista-label">Vista</p>
+      <p class="text-sm text-muted mb-2">Informe as medidas do vão fechado deste balancim. O m² será somado separadamente nas métricas.</p>
+      <div class="form-row">
+        <div class="form-grupo">
+          <label>Comprimento (cm)</label>
+          <input type="number" id="vao-comp" class="form-control" step="1" min="0" placeholder="0" oninput="LF._atualizarPreviewVao()">
+        </div>
+        <div class="form-grupo">
+          <label>Altura (cm)</label>
+          <input type="number" id="vao-alt" class="form-control" step="1" min="0" placeholder="0" oninput="LF._atualizarPreviewVao()">
+        </div>
+      </div>
+      <div style="background:var(--cor-primaria-light);border-radius:6px;padding:12px;text-align:center;margin-top:8px;">
+        <div style="font-size:0.75rem;color:var(--cor-texto-muted);text-transform:uppercase;letter-spacing:0.3px;">m² Vão Fechado</div>
+        <div style="font-size:1.5rem;font-weight:700;color:var(--cor-primaria);font-family:var(--font-mono);" id="vao-preview">—</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-vao-vista')">Cancelar</button>
+      <button class="btn btn-primario" onclick="LF.salvarVaoVista()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Configurações de Cálculo -->
+<div class="modal-overlay" id="modal-config">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-header">
+      <h3>⚙️ Configurações de Cálculo</h3>
+      <button class="modal-close" onclick="Utils.fecharModal('modal-config')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p class="text-sm text-muted mb-3">Essas regras afetam como os totais de m², ML e vão são calculados em toda a fachada.</p>
+
+      <div style="border:1px solid var(--cor-borda-light);border-radius:8px;padding:16px;margin-bottom:16px;">
+        <div style="font-weight:600;font-size:0.9rem;margin-bottom:12px;">🪟 Vãos de Janela</div>
+        <div class="form-grupo">
+          <label>Considerar vão como:</label>
+          <select id="cfg-janela-modo" class="form-control" onchange="LF.onChangeCfgJanela(this)">
+            <option value="desconto_total">Desconto total — desconta toda a área da janela</option>
+            <option value="valor_fixo">Valor fixo — considera X m² do vão e desconta o restante</option>
+            <option value="metade">Metade — considera metade e descarta metade</option>
+          </select>
+        </div>
+        <div class="form-grupo" id="cfg-janela-valor-row" style="display:none;">
+          <label>Valor a considerar por janela (m²)</label>
+          <input type="number" id="cfg-janela-valor" class="form-control" step="0.01" min="0" placeholder="Ex: 1.00">
+        </div>
+      </div>
+
+      <div style="border:1px solid var(--cor-borda-light);border-radius:8px;padding:16px;">
+        <div style="font-weight:600;font-size:0.9rem;margin-bottom:12px;">📏 Metro Linear</div>
+        <div class="form-row">
+          <div class="form-grupo">
+            <label>Quando for menor que (m²)</label>
+            <input type="number" id="cfg-ml-menor" class="form-control" step="0.01" min="0" placeholder="Ex: 0.50">
+          </div>
+          <div class="form-grupo">
+            <label>Considerar (% do m²)</label>
+            <input type="number" id="cfg-ml-pct" class="form-control" step="1" min="0" max="100" placeholder="Ex: 50">
+          </div>
+        </div>
+        <p class="text-sm text-muted">Peças menores que X m² marcadas como ML serão calculadas como: m² × %</p>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-config')">Cancelar</button>
+      <button class="btn btn-primario" onclick="LF.salvarConfig()">Salvar e Recalcular</button>
     </div>
   </div>
 </div>

@@ -1,15 +1,27 @@
 // ============================================
-// Levantamento de Fachada — V7
-// Hierarquia: Fachada → Balancim → Vista → Peça
-// Sem Conjunto. Métricas: m²SemML / m²ComML+ML / vãoFechado
+// Levantamento de Fachada — V8
+// Config de cálculo, vão fechado por vista, sem vão na peça
 // ============================================
 const LevantamentoFachada = (() => {
   let obraId=null;
   let fachadas=[],balancins=[],vistas=[],pecas=[];
   let sel={fachadaId:null,balancimId:null,vistaId:null};
   let editandoId=null;
-  let abaAtiva='resumo'; // 'resumo' | 'visao'
+  let abaAtiva='resumo';
   const COL='levantamentosFachada';
+
+  // ===================== CONFIGURAÇÕES DE CÁLCULO =====================
+  // Salvas no localStorage por obra
+  function _getCfg(){
+    const d={
+      janela_modo:'desconto_total', // 'desconto_total' | 'valor_fixo' | 'metade'
+      janela_valor_fixo:1.0,        // m² fixo a considerar do vão
+      ml_menor_que:0.50,            // m² — peças menores que isso são ML
+      ml_percentual:50              // % do m² que conta (padrão 50%)
+    };
+    try{return Object.assign(d,JSON.parse(localStorage.getItem('fachadaCfg_'+obraId)||'{}'));}catch(e){return d;}
+  }
+  function _saveCfg(cfg){localStorage.setItem('fachadaCfg_'+obraId,JSON.stringify(cfg));}
 
   // ===================== INIT =====================
   async function init(){
@@ -35,57 +47,77 @@ const LevantamentoFachada = (() => {
 
   function _sNome(a,b){return(a.nome||a.codigo||'').localeCompare(b.nome||b.codigo||'',undefined,{numeric:true});}
   function _proximoBAL(fachadaId){let max=0;balancins.filter(b=>b.fachadaId===fachadaId).forEach(b=>{const m=(b.codigo||b.nome||'').match(/(\d+)/);if(m)max=Math.max(max,parseInt(m[1]));});return 'BAL-'+String(max+1).padStart(2,'0');}
-
-  // ===================== CÁLCULOS =====================
-  // cm → m
   function _m(cm){return _pn(cm)/100;}
 
+  // ===================== CÁLCULOS COM CONFIG =====================
   function _calc(pc){
+    const cfg=_getCfg();
     const co=_m(_pn(pc.comprimento)), al=_m(_pn(pc.altura)), qt=_pn(pc.quantidade)||1;
     const larJ=_m(_pn(pc.larguraJanela)), altJ=_m(_pn(pc.alturaJanela)), qtJ=_pn(pc.quantidadeJanelas)||0;
-    const coV=_m(_pn(pc.comprimentoVao)), alV=_m(_pn(pc.alturaVao));
     const podeML=!!pc.podeSerML;
 
-    // Área bruta e desconto janela
+    // Área bruta
     const bruto=co*al*qt;
-    const janela=pc.possuiJanela?larJ*altJ*qtJ*qt:0;
+
+    // Desconto janela conforme config
+    let janela=0;
+    if(pc.possuiJanela && qtJ>0){
+      const areaJanBruta=larJ*altJ*qtJ*qt;
+      if(cfg.janela_modo==='desconto_total'){
+        janela=areaJanBruta; // desconta tudo
+      } else if(cfg.janela_modo==='valor_fixo'){
+        // Considera apenas X m² do vão, desconta o restante
+        const fixo=_pn(cfg.janela_valor_fixo)*qtJ*qt;
+        janela=Math.max(0,areaJanBruta-fixo);
+      } else if(cfg.janela_modo==='metade'){
+        janela=areaJanBruta/2; // desconta metade
+      }
+    }
+
     const areaLiq=Math.max(0,bruto-janela);
 
-    // m² SEM ML: soma TUDO como m², independente de ser ML ou não. Exceto vão.
+    // m² SEM ML — tudo como m² independente de ML
     const m2semML=areaLiq;
 
-    // m² COM ML:
-    // - Peças normais: contam como m²
-    // - Peças marcadas ML: saem do m², entram como ML (maior lado × qtd)
-    // - Total exibido: Xm² + XML = X+ML/2 m² equivalente
+    // m² COM ML — peças ML saem do m², viram ML (maior lado × qtd)
     const maiorLado=Math.max(co,al);
     const ml=podeML?(maiorLado*qt):0;
-    const m2comML_puro=podeML?0:areaLiq; // só m² puro (sem as peças ML)
+    const m2comML_puro=podeML?0:areaLiq;
 
-    // Vão fechado
-    const vao=coV*alV*qt;
-
-    return{bruto,janela,areaLiq,m2semML,m2comML_puro,ml,vao,podeML};
+    return{bruto,janela,areaLiq,m2semML,m2comML_puro,ml,vao:0,podeML};
   }
 
-  function _somar(lista){
-    let m2semML=0,m2comML_puro=0,ml=0,vao=0,bruto=0,janela=0;
-    lista.forEach(pc=>{
+  // Soma peças + vão fechado das vistas do conjunto
+  function _somar(listaPecas, listaVistas){
+    let m2semML=0,m2comML_puro=0,ml=0,bruto=0,janela=0;
+    listaPecas.forEach(pc=>{
       const c=_calc(pc);
-      m2semML+=c.m2semML;
-      m2comML_puro+=c.m2comML_puro;
-      ml+=c.ml;
-      vao+=c.vao;
-      bruto+=c.bruto;
-      janela+=c.janela;
+      m2semML+=c.m2semML; m2comML_puro+=c.m2comML_puro;
+      ml+=c.ml; bruto+=c.bruto; janela+=c.janela;
     });
-    // Total equivalente m² com ML = m²puro + (ML / 2)
+    // Vão fechado vem das vistas
+    let vao=0;
+    if(listaVistas){
+      listaVistas.forEach(vi=>{
+        const coV=_m(_pn(vi.vaoComp)), alV=_m(_pn(vi.vaoAlt));
+        vao+=coV*alV;
+      });
+    }
     const m2comML_equiv=m2comML_puro+(ml/2);
     return{m2semML,m2comML_puro,ml,m2comML_equiv,vao,bruto,janela};
   }
-  function _somarBal(id){return _somar(pecas.filter(x=>x.balancimId===id));}
-  function _somarFachada(id){return _somar(pecas.filter(x=>x.fachadaId===id));}
-  function _somarGeral(){return _somar(pecas);}
+
+  function _somarBal(blId){
+    const bVis=vistas.filter(v=>v.balancimId===blId);
+    return _somar(pecas.filter(x=>x.balancimId===blId), bVis);
+  }
+  function _somarFachada(fId){
+    const fVis=vistas.filter(v=>v.fachadaId===fId);
+    return _somar(pecas.filter(x=>x.fachadaId===fId), fVis);
+  }
+  function _somarGeral(){
+    return _somar(pecas, vistas);
+  }
 
   // ===================== ÁRVORE =====================
   function renderArvore(){
@@ -285,13 +317,24 @@ const LevantamentoFachada = (() => {
     const bl=balancins.find(x=>x.id===sel.balancimId);if(!bl)return;
     const bVis=vistas.filter(x=>x.balancimId===bl.id).sort((a,b)=>a.tipoVista==='externa'?-1:1);
     const tot=_somarBal(bl.id);
-    let viCards=bVis.map(vi=>{const vp=pecas.filter(x=>x.vistaId===vi.id);const tv=_somar(vp);const ico=vi.tipoVista==='externa'?'🔵':'🟡';const lbl=vi.tipoVista==='externa'?'Vista Externa':'Vista Interna';
-      return '<div class="resumo-card" style="cursor:pointer" onclick="LF.sel(\'vista\',\''+vi.id+'\')">'+
-        '<div class="resumo-label" style="font-size:0.95rem;font-weight:600;">'+ico+' '+lbl+'</div>'+
-        '<div class="resumo-valor">'+_f(tv.m2semML)+'</div>'+
-        '<div class="resumo-unidade">m² sem ML · '+vp.length+' peça(s)</div>'+
-        '<div style="font-size:0.8rem;color:var(--cor-texto-secundario);margin-top:4px;">'+
-        'ML: '+_f(tv.ml)+' · Vão: '+_f(tv.vao)+'</div></div>';
+    let viCards=bVis.map(vi=>{
+      const vp=pecas.filter(x=>x.vistaId===vi.id);const tv=_somar(vp,[vi]);
+      const ico=vi.tipoVista==='externa'?'🔵':'🟡';
+      const lbl=vi.tipoVista==='externa'?'Vista Externa':'Vista Interna';
+      const temVao=_pn(vi.vaoComp)>0&&_pn(vi.vaoAlt)>0;
+      const vaoM2=_m(_pn(vi.vaoComp))*_m(_pn(vi.vaoAlt));
+      return '<div class="resumo-card" style="position:relative;">'+
+        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">'+
+          '<div class="resumo-label" style="font-size:0.95rem;font-weight:600;margin:0;">'+ico+' '+lbl+'</div>'+
+          '<button class="btn btn-secundario btn-sm" onclick="LF.abrirVaoVista(\''+vi.id+'\')" title="Vão Fechado">📐 Vão</button>'+
+        '</div>'+
+        '<div style="cursor:pointer" onclick="LF.sel(\'vista\',\''+vi.id+'\')">'+
+          '<div class="resumo-valor">'+_f(tv.m2semML)+'</div>'+
+          '<div class="resumo-unidade">m² sem ML · '+vp.length+' peça(s)</div>'+
+          (temVao?'<div style="font-size:0.8rem;color:var(--cor-primaria);margin-top:4px;font-weight:600;">📐 Vão: '+_f(vaoM2)+'m²</div>':'<div style="font-size:0.78rem;color:#94a3b8;margin-top:4px;">Sem vão fechado</div>')+
+          '<div style="font-size:0.78rem;color:var(--cor-texto-secundario);margin-top:2px;">Clique para ver peças →</div>'+
+        '</div>'+
+      '</div>';
     }).join('');
     p.innerHTML=toggle+
       '<div class="page-header"><div><h2>⬛ '+(bl.nome||bl.codigo)+'</h2><span class="subtitulo">Clique em uma vista para cadastrar peças</span></div>'+
@@ -299,7 +342,67 @@ const LevantamentoFachada = (() => {
       _cards(tot)+'<div class="resumo-grid mt-2">'+viCards+'</div>';
   }
 
-  // ===================== PEÇAS =====================
+  // Abre modal de vão fechado da vista
+  function abrirVaoVista(vistaId){
+    const vi=vistas.find(v=>v.id===vistaId);if(!vi)return;
+    document.getElementById('vao-vista-id').value=vistaId;
+    document.getElementById('vao-vista-label').textContent=(vi.tipoVista==='externa'?'🔵 Vista Externa':'🟡 Vista Interna');
+    document.getElementById('vao-comp').value=vi.vaoComp||'';
+    document.getElementById('vao-alt').value=vi.vaoAlt||'';
+    _atualizarPreviewVao();
+    Utils.abrirModal('modal-vao-vista');
+  }
+
+  function _atualizarPreviewVao(){
+    const co=_m(_pn(document.getElementById('vao-comp').value));
+    const al=_m(_pn(document.getElementById('vao-alt').value));
+    const m2=co*al;
+    const prev=document.getElementById('vao-preview');
+    if(prev) prev.textContent=m2>0?_f(m2)+' m²':'—';
+  }
+
+  async function salvarVaoVista(){
+    const vistaId=document.getElementById('vao-vista-id').value;
+    const vaoComp=_pn(document.getElementById('vao-comp').value);
+    const vaoAlt=_pn(document.getElementById('vao-alt').value);
+    try{
+      await Database.atualizar(obraId,COL,vistaId,{vaoComp,vaoAlt});
+      Utils.fecharModal('modal-vao-vista');
+      Utils.toast('Vão salvo!','sucesso');
+      await carregar();
+    }catch(e){Utils.toast('Erro.','erro');}
+  }
+
+  // ===================== CONFIGURAÇÕES DE CÁLCULO =====================
+  function abrirConfig(){
+    const cfg=_getCfg();
+    document.getElementById('cfg-janela-modo').value=cfg.janela_modo;
+    document.getElementById('cfg-janela-valor').value=cfg.janela_valor_fixo;
+    document.getElementById('cfg-ml-menor').value=cfg.ml_menor_que;
+    document.getElementById('cfg-ml-pct').value=cfg.ml_percentual;
+    _toggleCfgJanela(cfg.janela_modo);
+    Utils.abrirModal('modal-config');
+  }
+
+  function _toggleCfgJanela(modo){
+    const el=document.getElementById('cfg-janela-valor-row');
+    if(el) el.style.display=modo==='valor_fixo'?'flex':'none';
+  }
+
+  function onChangeCfgJanela(sel){_toggleCfgJanela(sel.value);}
+
+  function salvarConfig(){
+    const cfg={
+      janela_modo:document.getElementById('cfg-janela-modo').value,
+      janela_valor_fixo:_pn(document.getElementById('cfg-janela-valor').value)||1.0,
+      ml_menor_que:_pn(document.getElementById('cfg-ml-menor').value)||0.50,
+      ml_percentual:_pn(document.getElementById('cfg-ml-pct').value)||50
+    };
+    _saveCfg(cfg);
+    Utils.fecharModal('modal-config');
+    Utils.toast('Configurações salvas! Recalculando...','sucesso');
+    renderPainel(); // Recalcula tudo com nova config
+  }
   function renderPecas(p, toggle){
     const vi=vistas.find(x=>x.id===sel.vistaId);if(!vi)return;
     const bl=balancins.find(x=>x.id===vi.balancimId);
@@ -562,7 +665,7 @@ const LevantamentoFachada = (() => {
   function _pn(v){return Utils.parseNum(v);}
   function _badge(st){const m={rascunho:'badge-neutro',em_conferencia:'badge-alerta',aprovado:'badge-sucesso',revisado:'badge-info',cancelado:'badge-perigo'};const l={rascunho:'Rascunho',em_conferencia:'Em conferência',aprovado:'Aprovado',revisado:'Revisado',cancelado:'Cancelado'};return '<span class="badge '+(m[st]||'badge-neutro')+'">'+(l[st]||'Rascunho')+'</span>';}
 
-  return {init,carregar,sel:selecionar,setAba,criarFachada,criarBalancim,editar,salvarEntidade,excluir,novaPeca,editarPeca,salvarPeca,excluirPeca,duplicarPeca,duplicarBal,conferirPeca,exportarCSV,exportarVista,onToggleJanela,importarMapa,cxAdicionar,cxRemover,cxTravar,cxVincular,cxDragStart,cxDrop,limparMapa};
+  return {init,carregar,sel:selecionar,setAba,criarFachada,criarBalancim,editar,salvarEntidade,excluir,novaPeca,editarPeca,salvarPeca,excluirPeca,duplicarPeca,duplicarBal,conferirPeca,exportarCSV,exportarVista,onToggleJanela,importarMapa,cxAdicionar,cxRemover,cxTravar,cxVincular,cxDragStart,cxDrop,limparMapa,abrirVaoVista,salvarVaoVista,_atualizarPreviewVao,abrirConfig,salvarConfig,onChangeCfgJanela};
 })();
 const LF=LevantamentoFachada;
 function onObraChanged(){LF.init();}
