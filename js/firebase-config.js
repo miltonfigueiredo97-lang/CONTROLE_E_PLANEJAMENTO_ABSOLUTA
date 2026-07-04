@@ -12,36 +12,32 @@ const firebaseConfig = {
   appId: "1:933834682296:web:b28bd8cd624fe19006294d"
 };
 
-// Importa Firebase via CDN (compat mode para funcionar com <script>)
-// Os scripts são carregados no HTML antes deste arquivo
-
 let app, auth, db, storage;
 
 function initFirebase() {
-  if (!firebaseConfig.apiKey) {
-    console.warn('Firebase não configurado.');
-    return false;
+  // Se já foi inicializado nesta aba, reutiliza
+  if (app && auth && db) {
+    return true;
   }
 
   try {
-    app = firebase.initializeApp(firebaseConfig);
-    auth = firebase.auth();
-    db = firebase.firestore();
-    storage = firebase.storage();
-    
-    // Habilitar persistência offline
-    db.enablePersistence({ synchronizeTabs: true }).catch(err => {
-      if (err.code === 'failed-precondition') {
-        console.warn('Persistência offline: múltiplas abas abertas.');
-      } else if (err.code === 'unimplemented') {
-        console.warn('Persistência offline: navegador não suportado.');
-      }
-    });
+    // Verificar se já existe app inicializado (navegação entre páginas)
+    if (firebase.apps.length > 0) {
+      app = firebase.apps[0];
+    } else {
+      app = firebase.initializeApp(firebaseConfig);
+    }
 
-    console.log('✅ Firebase inicializado com sucesso.');
+    auth    = firebase.auth();
+    db      = firebase.firestore();
+    storage = firebase.storage();
+
+    // Persistência offline (ignora erros silenciosamente)
+    db.enablePersistence({ synchronizeTabs: true }).catch(() => {});
+
     return true;
   } catch (e) {
-    console.error('❌ Erro ao inicializar Firebase:', e);
+    console.error('Erro ao inicializar Firebase:', e);
     return false;
   }
 }

@@ -6,35 +6,44 @@
 const Auth = (() => {
   let currentUser = null;
   let userProfile = null;
-  let initialized = false; // evita múltiplos onAuthStateChanged
   let initPromise = null;
 
-  // Observador de estado — chame apenas uma vez por página
+  // Init robusto: aguarda Firebase restaurar sessão antes de decidir
   function init() {
-    // Se já tem promise em andamento, retorna ela
     if (initPromise) return initPromise;
 
     initPromise = new Promise((resolve) => {
-      auth.onAuthStateChanged(async (user) => {
+      // onAuthStateChanged pode chamar com null primeiro (sessão carregando)
+      // e depois com o usuário real — usamos unsubscribe para pegar só o primeiro válido
+      let resolved = false;
+
+      const unsub = auth.onAuthStateChanged(async (user) => {
+        if (resolved) return; // ignora chamadas duplicadas
+
         currentUser = user;
+
         if (user) {
-          // Tenta carregar perfil, mas NÃO bloqueia se falhar
-          userProfile = await _loadProfile(user.uid).catch(e => {
-            console.warn('Perfil não carregado (usando fallback):', e.message);
-            return {
-              uid: user.uid,
-              email: user.email,
-              nome: user.email.split('@')[0],
-              perfil: 'admin',
-              ativo: true
-            };
-          });
-          initialized = true;
+          resolved = true;
+          unsub(); // para de ouvir
+          // Carrega perfil com fallback
+          userProfile = await _loadProfile(user.uid).catch(() => ({
+            uid: user.uid,
+            email: user.email,
+            nome: user.email.split('@')[0],
+            perfil: 'admin',
+            ativo: true
+          }));
           resolve(user);
         } else {
-          userProfile = null;
-          initialized = true;
-          resolve(null);
+          // Firebase ainda pode estar restaurando a sessão
+          // Aguarda 2s antes de concluir como "não logado"
+          setTimeout(() => {
+            if (!resolved) {
+              resolved = true;
+              unsub();
+              resolve(null);
+            }
+          }, 2000);
         }
       });
     });
@@ -42,15 +51,9 @@ const Auth = (() => {
     return initPromise;
   }
 
-  // Resetar para próxima navegação
-  function reset() {
-    initPromise = null;
-    initialized = false;
-  }
-
   async function login(email, password) {
+    initPromise = null; // reset para nova sessão
     try {
-      reset(); // limpa state anterior
       const result = await auth.signInWithEmailAndPassword(email, password);
       return { success: true, user: result.user };
     } catch (error) {
@@ -59,15 +62,12 @@ const Auth = (() => {
   }
 
   async function logout() {
+    initPromise = null;
     try {
-      reset();
-      if (typeof auth !== 'undefined' && auth) {
-        await auth.signOut();
-      } else if (typeof firebase !== 'undefined') {
-        await firebase.auth().signOut();
-      }
-    } catch (error) {
-      console.error('Erro ao sair:', error);
+      if (typeof auth !== 'undefined' && auth) await auth.signOut();
+      else if (typeof firebase !== 'undefined') await firebase.auth().signOut();
+    } catch (e) {
+      console.error('Erro ao sair:', e);
     } finally {
       localStorage.removeItem('obra_selecionada');
       window.location.href = 'login.html';
@@ -75,50 +75,26 @@ const Auth = (() => {
   }
 
   async function _loadProfile(uid) {
-    // Tenta buscar perfil no Firestore com timeout de 5s
-    const timeout = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('timeout')), 5000)
-    );
+    const doc = await db.collection('users').doc(uid).get();
+    if (doc.exists) return doc.data();
 
-    const fetchProfile = async () => {
-      const doc = await db.collection('users').doc(uid).get();
-      if (doc.exists) return doc.data();
-
-      // Não existe — cria perfil padrão
-      const profile = {
-        uid,
-        email: currentUser.email,
-        nome: currentUser.email.split('@')[0],
-        perfil: 'admin', // primeiro usuário sempre admin
-        ativo: true,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-      };
-
-      // Tenta salvar mas não bloqueia se falhar
-      db.collection('users').doc(uid).set(profile).catch(e =>
-        console.warn('Não foi possível salvar perfil:', e.message)
-      );
-
-      return profile;
+    // Cria perfil padrão
+    const profile = {
+      uid, email: currentUser.email,
+      nome: currentUser.email.split('@')[0],
+      perfil: 'admin', ativo: true,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     };
-
-    return Promise.race([fetchProfile(), timeout]);
+    db.collection('users').doc(uid).set(profile).catch(() => {});
+    return profile;
   }
 
   function isLoggedIn() { return currentUser !== null; }
   function getUser() { return currentUser; }
   function getProfile() { return userProfile; }
   function getUid() { return currentUser ? currentUser.uid : null; }
-  function isAdmin() { return userProfile && (userProfile.perfil === 'admin' || !userProfile.perfil); }
-
-  function requireAuth() {
-    if (!currentUser) {
-      window.location.href = 'login.html';
-      return false;
-    }
-    return true;
-  }
+  function isAdmin() { return !userProfile || userProfile.perfil === 'admin'; }
 
   function _parseError(code) {
     const msgs = {
@@ -127,12 +103,12 @@ const Auth = (() => {
       'auth/invalid-email': 'E-mail inválido.',
       'auth/email-already-in-use': 'E-mail já cadastrado.',
       'auth/weak-password': 'Senha muito fraca (mínimo 6 caracteres).',
-      'auth/too-many-requests': 'Muitas tentativas. Aguarde um momento.',
-      'auth/network-request-failed': 'Erro de conexão. Verifique sua internet.',
+      'auth/too-many-requests': 'Muitas tentativas. Aguarde.',
+      'auth/network-request-failed': 'Erro de conexão.',
       'auth/invalid-credential': 'E-mail ou senha inválidos.'
     };
-    return msgs[code] || 'Erro de autenticação. Tente novamente.';
+    return msgs[code] || 'Erro de autenticação.';
   }
 
-  return { init, reset, login, logout, isLoggedIn, getUser, getProfile, getUid, isAdmin, requireAuth };
+  return { init, login, logout, isLoggedIn, getUser, getProfile, getUid, isAdmin };
 })();
