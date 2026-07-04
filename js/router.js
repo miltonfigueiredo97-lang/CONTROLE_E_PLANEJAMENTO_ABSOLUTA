@@ -79,9 +79,12 @@ const Router = (() => {
         if (select.value) {
           const obra = await Database.getObra(select.value);
           setObra(obra);
-          // Recarregar dados do módulo atual
+          // Recarregar dados do módulo atual imediatamente
           if (typeof onObraChanged === 'function') {
             onObraChanged(obra);
+          } else {
+            // Fallback: reload page se não tem callback
+            window.location.reload();
           }
         } else {
           setObra(null);

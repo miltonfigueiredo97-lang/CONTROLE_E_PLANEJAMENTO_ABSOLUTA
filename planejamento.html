@@ -3,9 +3,9 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Planejamento — Controle e Planejamento de Obras</title>
+  <title>Planejamento — Controle e Planejamento de Obras Absoluta</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/base.css">
   <link rel="stylesheet" href="css/layout.css">
   <link rel="stylesheet" href="css/tabelas.css">
@@ -14,7 +14,10 @@
 <body>
 <div class="app-container">
   <aside class="sidebar">
-    <div class="sidebar-logo"><div class="logo-icon">A</div><div class="logo-text">Controle de Obras<span>Absoluta Engenharia</span></div></div>
+    <div class="sidebar-logo">
+      <img src="assets/images/logo-absoluta.png" class="logo-full" alt="Absoluta"
+           onerror="this.parentElement.innerHTML='<div class=\'logo-fallback\'><div class=\'logo-icon\'><span style=\'font-size:1.3rem;font-weight:900;color:#000;\'>A</span></div><div class=\'logo-text\'>ABSOLUTA<span>Controle de Obras</span></div></div>'">
+    </div>
     <div class="sidebar-obra-selector"><label>Obra ativa</label><select id="seletor-obra"><option value="">Selecione...</option></select></div>
     <nav class="sidebar-nav">
       <div class="sidebar-section-title">Principal</div>
@@ -40,13 +43,82 @@
     </nav>
     <div class="sidebar-user"><div class="user-avatar">U</div><div class="user-info"><div class="user-name">Usuário</div><div class="user-role">—</div></div><button class="btn-logout" onclick="Auth.logout()" title="Sair">⏻</button></div>
   </aside>
-  <header class="header"><div class="header-title"><h1>Planejamento</h1></div><div class="header-actions" id="header-actions"></div></header>
-  <main class="content">
-    <div id="modulo-content">
-      <div class="estado-vazio"><div class="icone">🚧</div><p>Módulo em desenvolvimento.</p><p class="text-sm text-muted">Será construído conforme o roadmap do projeto.</p></div>
+  <header class="header">
+    <div class="header-title">
+      <h1>Planejamento</h1>
+      <div class="header-breadcrumb"><span>Cronograma · Gantt · Linha de Balanço · Escadinha</span></div>
     </div>
+    <div class="header-actions" id="header-actions"></div>
+  </header>
+  <main class="content" style="background:#0d0d0d;padding:16px;">
+    <div id="planejamento-content"></div>
   </main>
 </div>
+
+<!-- Modal: Nova/Editar Tarefa -->
+<div class="modal-overlay" id="modal-tarefa">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <h3 id="modal-tarefa-titulo">Nova Tarefa</h3>
+      <button class="modal-close" onclick="Utils.fecharModal('modal-tarefa')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <form id="form-tarefa" onsubmit="event.preventDefault()">
+        <div class="form-row">
+          <div class="form-grupo"><label>Tipo</label>
+            <select name="tipo" class="form-control">
+              <option value="tarefa">Tarefa</option>
+              <option value="grupo">Grupo</option>
+              <option value="marco">Marco</option>
+            </select>
+          </div>
+          <div class="form-grupo"><label>Código</label><input type="text" name="codigo" class="form-control" placeholder="Ex: 1.1.1"></div>
+          <div class="form-grupo"><label>Ordem</label><input type="number" name="ordem" class="form-control" min="1" value="1"></div>
+        </div>
+        <div class="form-grupo"><label>Nome da Tarefa</label><input type="text" name="nome" class="form-control" required placeholder="Ex: Execução Fachada Balancim 01"></div>
+        <div class="form-row">
+          <div class="form-grupo"><label>Início Planejado</label><input type="date" name="inicioPlanejado" class="form-control"></div>
+          <div class="form-grupo"><label>Término Planejado</label><input type="date" name="terminoPlanejado" class="form-control"></div>
+          <div class="form-grupo"><label>Duração (dias)</label><input type="number" name="duracao" class="form-control" min="0" placeholder="Auto"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-grupo"><label>Etapa</label><select id="st-etapa" name="etapaId" class="form-control"></select></div>
+          <div class="form-grupo"><label>Pacote</label><select id="st-pacote" name="pacoteId" class="form-control"></select></div>
+          <div class="form-grupo"><label>Local</label><select id="st-local" name="local" class="form-control"></select></div>
+        </div>
+        <div class="form-row">
+          <div class="form-grupo"><label>Responsável</label><input type="text" name="responsavel" class="form-control" placeholder="Nome do responsável"></div>
+          <div class="form-grupo"><label>Equipe</label><select id="st-equipe" name="equipeId" class="form-control"></select></div>
+          <div class="form-grupo"><label>Peso (%)</label><input type="number" name="peso" class="form-control" min="0" max="100" placeholder="0"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-grupo"><label>Quantidade Prevista</label><input type="number" name="quantidadePrevista" class="form-control" step="0.01"></div>
+          <div class="form-grupo"><label>Unidade</label><input type="text" name="unidade" class="form-control" placeholder="m², m, un, h"></div>
+          <div class="form-grupo"><label>% Concluído</label><input type="number" name="percentualConcluido" class="form-control" min="0" max="100" value="0"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-grupo"><label>Predecessora</label><select id="st-pred" name="predecessoraId" class="form-control"></select></div>
+          <div class="form-grupo"><label>Tipo Vínculo</label>
+            <select name="tipoVinculo" class="form-control">
+              <option value="TI">TI — Término para Início</option>
+              <option value="II">II — Início para Início</option>
+              <option value="TT">TT — Término para Término</option>
+              <option value="IT">IT — Início para Término</option>
+            </select>
+          </div>
+          <div class="form-grupo"><label>Defasagem (dias)</label><input type="number" name="defasagem" class="form-control" value="0"></div>
+        </div>
+        <input type="hidden" name="parentId">
+        <div class="form-grupo"><label>Observações</label><textarea name="observacoes" class="form-control" rows="2"></textarea></div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-tarefa')">Cancelar</button>
+      <button class="btn btn-primario" onclick="Planejamento.salvarTarefa()">Salvar Tarefa</button>
+    </div>
+  </div>
+</div>
+
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -59,6 +131,6 @@
 <script src="js/audit.js"></script>
 <script src="js/utils.js"></script>
 <script src="js/planejamento.js"></script>
-<script>document.addEventListener('DOMContentLoaded', () => { Utils.initPagina(); });</script>
+<script>document.addEventListener('DOMContentLoaded', () => { Planejamento.init(); });</script>
 </body>
 </html>

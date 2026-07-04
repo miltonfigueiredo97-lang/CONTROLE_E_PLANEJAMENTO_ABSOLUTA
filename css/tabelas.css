@@ -1,119 +1,37 @@
 /* ============================================
-   Tabelas
+   Tabelas — Identidade Absoluta
    ============================================ */
 
 .tabela-container {
   overflow-x: auto;
-  border: 1px solid var(--cor-borda-light);
+  border: 1.5px solid var(--cor-borda-light);
   border-radius: var(--borda-radius-lg);
   background: #fff;
 }
-
-.tabela {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.825rem;
-}
-.tabela thead {
-  position: sticky;
-  top: 0;
-  z-index: 5;
-}
+.tabela { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+.tabela thead { position: sticky; top: 0; z-index: 5; }
 .tabela th {
-  background: #f8fafc;
-  padding: 10px 14px;
-  text-align: left;
-  font-weight: 600;
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  color: var(--cor-texto-secundario);
-  border-bottom: 2px solid var(--cor-borda);
-  white-space: nowrap;
-  user-select: none;
+  background: var(--cor-dark-800); color: #ccc;
+  padding: 10px 14px; text-align: left; font-weight: 700;
+  font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px;
+  border-bottom: 2px solid var(--cor-primaria); white-space: nowrap;
 }
-.tabela th.sortable {
-  cursor: pointer;
-}
-.tabela th.sortable:hover {
-  color: var(--cor-texto);
-}
-.tabela td {
-  padding: 10px 14px;
-  border-bottom: 1px solid var(--cor-borda-light);
-  vertical-align: middle;
-}
-.tabela tbody tr:hover {
-  background: var(--cor-primaria-ultra-light);
-}
-.tabela tbody tr:last-child td {
-  border-bottom: none;
-}
+.tabela td { padding: 10px 14px; border-bottom: 1px solid var(--cor-borda-light); vertical-align: middle; }
+.tabela tbody tr:hover { background: var(--cor-primaria-ultra-light); }
+.tabela tbody tr:last-child td { border-bottom: none; }
 
-/* Colunas numéricas */
-.tabela .col-num {
-  text-align: right;
-  font-family: var(--font-mono);
-  font-size: 0.8rem;
-}
-.tabela .col-centro {
-  text-align: center;
-}
-.tabela .col-acoes {
-  text-align: center;
-  width: 100px;
-  white-space: nowrap;
-}
-.tabela .col-acoes .btn {
-  padding: 4px 8px;
-  font-size: 0.75rem;
-}
-.tabela .col-sm { width: 60px; }
+.tabela .col-num { text-align: right; font-family: var(--font-mono); font-size: 0.82rem; }
+.tabela .col-centro { text-align: center; }
+.tabela .col-acoes { text-align: center; width: 100px; white-space: nowrap; }
+.tabela .col-acoes .btn { padding: 4px 8px; font-size: 0.75rem; }
+.tabela .col-sm { width: 40px; }
 .tabela .col-md { width: 120px; }
-.tabela .col-lg { width: 200px; }
 
-/* Linha de totais */
 .tabela tfoot td {
-  padding: 10px 14px;
-  font-weight: 700;
-  background: #f0faf4;
-  border-top: 2px solid var(--cor-primaria);
-  font-size: 0.85rem;
+  padding: 10px 14px; font-weight: 800; background: var(--cor-dark-900);
+  color: var(--cor-primaria); border-top: 2px solid var(--cor-primaria); font-size: 0.85rem;
+  font-family: var(--font-mono);
 }
-.tabela tfoot .col-num {
-  color: var(--cor-primaria);
-}
+.tabela tfoot .col-num { color: var(--cor-primaria); }
 
-/* Tabela compacta */
-.tabela-compacta th,
-.tabela-compacta td {
-  padding: 7px 10px;
-}
-
-/* Tabela com seleção */
-.tabela .col-check {
-  width: 36px;
-  text-align: center;
-}
-.tabela .col-check input[type="checkbox"] {
-  width: 14px;
-  height: 14px;
-  accent-color: var(--cor-primaria);
-}
-
-/* Expand/collapse */
-.tabela .row-parent td:first-child {
-  cursor: pointer;
-}
-.tabela .row-child {
-  background: #fafbfc;
-}
-.tabela .row-child td:first-child {
-  padding-left: 36px;
-}
-
-/* Hierarquia visual */
-.tabela .nivel-0 { font-weight: 600; background: #f8fafc; }
-.tabela .nivel-1 td:first-child { padding-left: 28px; }
-.tabela .nivel-2 td:first-child { padding-left: 44px; }
-.tabela .nivel-3 td:first-child { padding-left: 60px; }
+.tabela-compacta th, .tabela-compacta td { padding: 7px 10px; }

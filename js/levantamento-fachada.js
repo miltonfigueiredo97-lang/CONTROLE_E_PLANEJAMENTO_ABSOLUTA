@@ -5,6 +5,9 @@
 const LevantamentoFachada = (() => {
   let obraId=null;
   let fachadas=[],balancins=[],vistas=[],pecas=[];
+  // openFachadas: Set of fachadaIds that are expanded (multiple allowed)
+  // sel tracks what's actively selected/highlighted
+  let openFachadas=new Set();
   let sel={fachadaId:null,balancimId:null,vistaId:null};
   let editandoId=null;
   let abaAtiva='resumo';
@@ -146,7 +149,7 @@ const LevantamentoFachada = (() => {
       const fSel=sel.fachadaId===f.id;
       const nPec=pecas.filter(x=>x.fachadaId===f.id).length;
       h+=_ti(f.id,'fachada','🏢',f.nome,nPec,fSel&&!sel.balancimId,true,true);
-      if(fSel){
+      if(openFachadas.has(f.id)||fSel){
         h+='<div class="tree-children">';
         balancins.filter(x=>x.fachadaId===f.id).forEach(bl=>{
           const bSel=sel.balancimId===bl.id;
@@ -173,21 +176,26 @@ const LevantamentoFachada = (() => {
   }
 
   function _ti(id,tipo,icon,label,badge,ativo,hasT,showDel){
-    const delBtn=showDel
-      ?'<button class="tree-del-btn" onclick="event.stopPropagation();LF.excluir(\''+tipo+'\',\''+id+'\')" title="Excluir">✕</button>'
-      :'';
+    const delBtn=showDel?'<button class="tree-del-btn" onclick="event.stopPropagation();LF.excluir(\''+tipo+'\',\''+id+'\')" title="Excluir">✕</button>':'';
+    const editBtn='<button class="tree-edit-btn" onclick="event.stopPropagation();LF.editarNomeInline(\"'+tipo+'\",\"'+id+'\")" title="Renomear">✎</button>';
     return '<div class="tree-item'+(ativo?' ativo':'')+'" onclick="LF.sel(\''+tipo+'\',\''+id+'\')">'+
       '<span class="tree-toggle">'+(hasT?(ativo?'▾':'▸'):'')+'</span>'+
       '<span class="tree-icon">'+icon+'</span>'+
       '<span class="tree-label"'+(tipo==='fachada'?' style="font-weight:600;"':'')+'>'+label+'</span>'+
       (badge>0?'<span class="tree-badge">'+badge+'</span>':'')+
-      delBtn+
+      editBtn+delBtn+
       '</div>';
   }
 
   // ===================== SELEÇÃO COM TOGGLE =====================
   function selecionar(tipo,id){
-    if(tipo==='fachada'){if(sel.fachadaId===id&&!sel.balancimId)sel={fachadaId:null,balancimId:null,vistaId:null};else sel={fachadaId:id,balancimId:null,vistaId:null};}
+    if(tipo==='fachada'){
+      if(openFachadas.has(id)&&sel.fachadaId===id&&!sel.balancimId){
+        openFachadas.delete(id); sel={fachadaId:null,balancimId:null,vistaId:null};
+      } else {
+        openFachadas.add(id); sel={fachadaId:id,balancimId:null,vistaId:null};
+      }
+    }
     else if(tipo==='balancim'){if(sel.balancimId===id&&!sel.vistaId){sel.balancimId=null;sel.vistaId=null;}else{const bl=balancins.find(b=>b.id===id);sel.fachadaId=bl?.fachadaId||sel.fachadaId;sel.balancimId=id;sel.vistaId=null;}}
     else if(tipo==='vista'){const vi=vistas.find(v=>v.id===id);const bl=balancins.find(b=>b.id===vi?.balancimId);sel.fachadaId=bl?.fachadaId||sel.fachadaId;sel.balancimId=vi?.balancimId||sel.balancimId;sel.vistaId=id;}
     renderArvore();renderPainel();
@@ -480,20 +488,32 @@ const LevantamentoFachada = (() => {
 
   // ===================== VISÃO GERAL (mapa + caixas) =====================
   function renderVisaoGeral(p, toggle){
-    // Carregar dados salvos do mapa
-    const mapData=JSON.parse(localStorage.getItem('fachadaMap_'+obraId)||'{"img":null,"caixas":[]}');
+    const mapData=_getMapData();
+    const tot=_somarGeral();
+
+    // Total geral card
+    const totalCard='<div class="mapa-total-card">'+
+      '<div class="mapa-total-title">📊 Total Geral — Todas as Fachadas</div>'+
+      '<div class="mapa-total-grid">'+
+      '<div><span class="mapa-dado-label">m² sem ML</span><span class="mapa-dado-valor">'+_f(tot.m2semML)+'</span></div>'+
+      '<div><span class="mapa-dado-label">m² com ML</span><span class="mapa-dado-valor">'+_f(tot.m2comML_equiv)+'</span></div>'+
+      '<div><span class="mapa-dado-label">ML</span><span class="mapa-dado-valor">'+_f(tot.ml)+'</span></div>'+
+      '<div><span class="mapa-dado-label">Vão Fechado</span><span class="mapa-dado-valor">'+_f(tot.vao)+'</span></div>'+
+      '</div></div>';
+
     const caixasHtml=mapData.caixas.map((cx,i)=>{
       const f=fachadas.find(x=>x.id===cx.fachadaId);
-      const t=cx.fachadaId?_somarFachada(cx.fachadaId):{m2semML:0,m2comML_equiv:0,m2comML_puro:0,vao:0};
-      const nome=f?f.nome:'Fachada';
+      const t=cx.fachadaId?_somarFachada(cx.fachadaId):{m2semML:0,m2comML_equiv:0,ml:0,vao:0};
+      const nome=f?f.nome:(cx.nome||'Fachada');
+      const lockIcon=cx.travada?'🔒':'🔓';
       return '<div class="mapa-caixa" id="cx-'+i+'" style="left:'+cx.x+'px;top:'+cx.y+'px;'+(cx.travada?'cursor:default;':'cursor:move;')+'" '+
         (cx.travada?'':'ondragstart="LF.cxDragStart(event,'+i+')" draggable="true"')+'>'+
         '<div class="mapa-caixa-header">'+
           '<span class="mapa-caixa-nome">'+nome+'</span>'+
           '<div class="mapa-caixa-btns">'+
-            '<button class="btn btn-sm btn-icon" title="'+(cx.travada?'Destravar':'Travar')+'" onclick="LF.cxTravar('+i+')">'+(cx.travada?'🔒':'🔓')+'</button>'+
-            '<button class="btn btn-sm btn-icon" title="Vincular fachada" onclick="LF.cxVincular('+i+')">✎</button>'+
-            '<button class="btn btn-perigo btn-sm btn-icon" onclick="LF.cxRemover('+i+')">✕</button>'+
+            '<button class="btn btn-sm btn-icon" onclick="event.stopPropagation();LF.cxTravar('+i+')" title="'+(cx.travada?'Destravar':'Travar')+'">'+lockIcon+'</button>'+
+            '<button class="btn btn-sm btn-icon" onclick="event.stopPropagation();LF.cxEditar('+i+')" title="Editar">✎</button>'+
+            '<button class="btn btn-sm btn-icon btn-perigo" onclick="event.stopPropagation();LF.cxRemover('+i+')">✕</button>'+
           '</div>'+
         '</div>'+
         '<div class="mapa-caixa-dados">'+
@@ -504,24 +524,34 @@ const LevantamentoFachada = (() => {
       '</div>';
     }).join('');
 
-    const imgArea=mapData.img?
-      '<img src="'+mapData.img+'" style="width:100%;height:100%;object-fit:contain;position:absolute;top:0;left:0;pointer-events:none;">':
-      '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#94a3b8;flex-direction:column;gap:8px;"><div style="font-size:2rem;">📐</div><p>Importe uma planta (PNG/JPG) para começar</p></div>';
+    const imgContent=mapData.img?
+      '<img src="'+mapData.img+'" style="display:block;max-width:100%;pointer-events:none;user-select:none;" draggable="false">':
+      '<div style="display:flex;align-items:center;justify-content:center;height:400px;color:#94a3b8;flex-direction:column;gap:12px;">'+
+        '<div style="font-size:3rem;">📐</div>'+
+        '<p>Importe uma planta (PNG/JPG) para começar</p>'+
+        '<label class="btn btn-primario" style="cursor:pointer;">Importar Imagem<input type="file" accept="image/*" style="display:none;" onchange="LF.importarMapa(event)"></label>'+
+      '</div>';
 
     p.innerHTML=toggle+
-      '<div class="page-header"><div><h2>Visão Geral</h2><span class="subtitulo">Mapa visual da fachada</span></div>'+
-      '<div class="btn-grupo">'+
-      '<label class="btn btn-secundario btn-sm" style="cursor:pointer;">📎 Importar Mapa<input type="file" accept="image/*" style="display:none;" onchange="LF.importarMapa(event)"></label>'+
-      '<button class="btn btn-secundario btn-sm" onclick="LF.cxAdicionar()">+ Caixa</button>'+
-      (mapData.img?'<button class="btn btn-perigo btn-sm" onclick="LF.limparMapa()">🗑 Limpar</button>':'')+
-      '</div></div>'+
-      '<div class="mapa-container" id="mapa-area" ondragover="event.preventDefault()" ondrop="LF.cxDrop(event)">'+
-        imgArea+
-        '<div id="mapa-caixas" style="position:absolute;inset:0;pointer-events:none;">'+
+      '<div class="page-header">'+
+        '<div><h2>Visão Geral</h2><span class="subtitulo">Mapa visual da fachada — clique e arraste as caixas para posicionar</span></div>'+
+        '<div class="btn-grupo">'+
+          '<label class="btn btn-secundario btn-sm" style="cursor:pointer;">📎 Importar Mapa<input type="file" accept="image/*" style="display:none;" onchange="LF.importarMapa(event)"></label>'+
+          '<button class="btn btn-secundario btn-sm" onclick="LF.cxAdicionar()">+ Caixa</button>'+
+          (mapData.img?'<button class="btn btn-perigo btn-sm" onclick="LF.limparMapa()">🗑 Limpar</button>':'')+
+        '</div>'+
+      '</div>'+
+      totalCard+
+      '<div class="mapa-wrapper" ondragover="event.preventDefault()" ondrop="LF.cxDrop(event)" id="mapa-wrapper">'+
+        '<div class="mapa-imagem-area" id="mapa-area">'+
+          imgContent+
+        '</div>'+
+        '<div id="mapa-caixas" style="position:absolute;top:0;left:0;pointer-events:none;">'+
           '<div style="position:relative;width:100%;height:100%;pointer-events:none;">'+caixasHtml+'</div>'+
         '</div>'+
       '</div>';
   }
+
 
   // ===================== VISÃO GERAL — MAPA =====================
   let _cxDragIdx=null, _cxDragOffX=0, _cxDragOffY=0;
@@ -545,14 +575,20 @@ const LevantamentoFachada = (() => {
 
   function cxTravar(i){const data=_getMapData();data.caixas[i].travada=!data.caixas[i].travada;_saveMapData(data);renderPainel();}
 
-  function cxVincular(i){
-    const opts=fachadas.map(f=>'<option value="'+f.id+'">'+f.nome+'</option>').join('');
+  function cxEditar(i){
+    const data=_getMapData();const cx=data.caixas[i];
+    document.getElementById('cx-edit-idx').value=i;
+    document.getElementById('cx-edit-nome').value=cx.nome||'';
+    const sel=document.getElementById('cx-edit-fachada');
+    sel.innerHTML='<option value="">— Sem vínculo —</option>'+fachadas.map(f=>'<option value="'+f.id+'"'+(f.id===cx.fachadaId?' selected':'')+'>'+f.nome+'</option>').join('');
+    Utils.abrirModal('modal-cx-edit');
+  }
+  function salvarCxEdit(){
+    const i=parseInt(document.getElementById('cx-edit-idx').value);
     const data=_getMapData();
-    const atual=data.caixas[i].fachadaId||'';
-    const sel2=prompt('ID ou nome da fachada — escolha:\n'+fachadas.map((f,j)=>(j+1)+'. '+f.nome).join('\n'));
-    if(!sel2)return;
-    const idx=parseInt(sel2)-1;
-    if(idx>=0&&idx<fachadas.length){data.caixas[i].fachadaId=fachadas[idx].id;_saveMapData(data);renderPainel();}
+    data.caixas[i].nome=document.getElementById('cx-edit-nome').value.trim();
+    data.caixas[i].fachadaId=document.getElementById('cx-edit-fachada').value||null;
+    _saveMapData(data);Utils.fecharModal('modal-cx-edit');renderPainel();
   }
 
   function cxDragStart(e,i){_cxDragIdx=i;const el=document.getElementById('cx-'+i);const r=el.getBoundingClientRect();_cxDragOffX=e.clientX-r.left;_cxDragOffY=e.clientY-r.top;}
@@ -689,6 +725,17 @@ const LevantamentoFachada = (() => {
   function _f(n){return Utils.formatarNumero(n);}
   function _pn(v){return Utils.parseNum(v);}
   function _badge(st){const m={rascunho:'badge-neutro',em_conferencia:'badge-alerta',aprovado:'badge-sucesso',revisado:'badge-info',cancelado:'badge-perigo'};const l={rascunho:'Rascunho',em_conferencia:'Em conferência',aprovado:'Aprovado',revisado:'Revisado',cancelado:'Cancelado'};return '<span class="badge '+(m[st]||'badge-neutro')+'">'+(l[st]||'Rascunho')+'</span>';}
+
+  // Editar nome direto na árvore
+  async function editarNomeInline(tipo,id,nomeAtual){
+    const novo=prompt('Renomear:',nomeAtual);
+    if(!novo||!novo.trim()||novo.trim()===nomeAtual)return;
+    try{
+      await Database.atualizar(obraId,COL,id,{nome:novo.trim()});
+      Utils.toast('Renomeado!','sucesso');
+      await carregar();
+    }catch(e){Utils.toast('Erro.','erro');}
+  }
 
   return {init,carregar,sel:selecionar,setAba,criarFachada,criarBalancim,editar,salvarEntidade,excluir,novaPeca,editarPeca,salvarPeca,excluirPeca,duplicarPeca,duplicarBal,conferirPeca,exportarCSV,exportarVista,onToggleJanela,importarMapa,cxAdicionar,cxRemover,cxTravar,cxVincular,cxDragStart,cxDrop,limparMapa,abrirVaoVista,salvarVaoVista,_atualizarPreviewVao,abrirConfig,salvarConfig,onChangeCfgJanela};
 })();
