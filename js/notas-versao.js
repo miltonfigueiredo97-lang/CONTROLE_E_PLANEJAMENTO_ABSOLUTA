@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V1.1.6',
+  versaoAtual: 'V1.2',
 
   versoes: [
     {
@@ -311,7 +311,7 @@ const NotasVersao = {
     },
     {
       versao: 'V1.1.6',
-      status: 'aberta',
+      status: 'fechada',
       data: '2025-07-05',
       tipo: 'correcao',
       titulo: 'Drag caixas: header é a alça de arrasto',
@@ -322,6 +322,35 @@ const NotasVersao = {
         'Fix: onmousedown movido para o HEADER (barra amarela)',
         '  → Arrastar pelo header amarelo move a caixa',
         '  → Botões ainda têm stopPropagation para não arrastar ao clicar',
+      ]
+    },
+    {
+      versao: 'V1.2',
+      status: 'aberta',
+      data: '2025-07-05',
+      tipo: 'funcionalidade',
+      titulo: 'Planejamento funcional + Módulo Materiais',
+      itens: [
+        'PLANEJAMENTO — Importar Excel:',
+        '  → Aceita .xlsx e .xls (SheetJS via CDN, sem instalação)',
+        '  → Detecta colunas em PT e EN automaticamente',
+        '  → Importa: Código, Nome, Tipo, Datas, Duração, %, Responsável, Etapa, Pacote, Local',
+        '  → Calcula duração automaticamente se tiver datas',
+        '  → Trata datas em DD/MM/YYYY, YYYY-MM-DD e serial Excel',
+        'PLANEJAMENTO — Exportar Excel:',
+        '  → Gera .xlsx com todas as tarefas',
+        '  → Inclui aba de Instruções de importação',
+        '  → Nome do arquivo inclui obra e data',
+        'PLANEJAMENTO — Gantt melhorado:',
+        '  → Linha Hoje em amarelo com label',
+        '  → Barra executada real (início/término real)',
+        '  → Zoom dia/semana/mês/trimestre/ano',
+        'MATERIAIS — Novo módulo:',
+        '  → Vínculo com tarefas do Planejamento',
+        '  → Vínculo com Fachadas do Levantamento',
+        '  → Consumo Previsto × Quantidade da tarefa = total calculado',
+        '  → Detalhes da tarefa/fachada ao filtrar',
+        '  → CRUD completo com tipo, fabricante, unidade',
       ]
     }
   ],
