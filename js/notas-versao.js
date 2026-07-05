@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V1.0.2',
+  versaoAtual: 'V1.0.3',
 
   versoes: [
     {
@@ -50,7 +50,7 @@ const NotasVersao = {
     },
     {
       versao: 'V1.0.2',
-      status: 'aberta',
+      status: 'fechada',
       data: '2025-07-04',
       tipo: 'correcao',
       titulo: 'Correção definitiva de autenticação',
@@ -94,6 +94,24 @@ const NotasVersao = {
         'Drag das caixas: reescrito com mouse events (mousedown/mousemove/mouseup)',
         '  → Movimento preciso, sem travar, sem voltar ao lugar inicial',
         '  → Considera scroll do wrapper no cálculo de posição',
+      ]
+    },
+    {
+      versao: 'V1.0.3',
+      status: 'aberta',
+      data: '2025-07-04',
+      tipo: 'correcao',
+      titulo: 'Correções de layout e mapa',
+      itens: [
+        'Imagem do mapa: compressão via canvas — sem loading infinito',
+        'Imagem do mapa: salva comprimida no Firestore (sem Firebase Storage)',
+        'Visão Geral: sidebar esquerda oculta para maximizar área do mapa',
+        'Visão Geral: imagem ocupa toda a largura disponível (fit)',
+        'Drag das caixas: reescrito com mousedown/mousemove/mouseup',
+        '  → Movimento preciso, não volta ao lugar inicial',
+        '  → Considera scroll do wrapper no cálculo de posição',
+        'Layout geral: sidebar fixa em 100vh, usuário sempre visível',
+        'Versão atualizada para V1.0.3 em todos os arquivos',
       ]
     }
   ],
