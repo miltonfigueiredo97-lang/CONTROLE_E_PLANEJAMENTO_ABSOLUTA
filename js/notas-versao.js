@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V1.0.3',
+  versaoAtual: 'V1.0.4',
 
   versoes: [
     {
@@ -98,7 +98,7 @@ const NotasVersao = {
     },
     {
       versao: 'V1.0.3',
-      status: 'aberta',
+      status: 'fechada',
       data: '2025-07-04',
       tipo: 'correcao',
       titulo: 'Correções de layout e mapa',
@@ -112,6 +112,25 @@ const NotasVersao = {
         '  → Considera scroll do wrapper no cálculo de posição',
         'Layout geral: sidebar fixa em 100vh, usuário sempre visível',
         'Versão atualizada para V1.0.3 em todos os arquivos',
+      ]
+    }
+    {
+      versao: 'V1.0.4',
+      status: 'aberta',
+      data: '2025-07-04',
+      tipo: 'correcao',
+      titulo: 'Visão Geral: sidebar, drag e imagem corrigidos',
+      itens: [
+        'Sidebar esquerda oculta na Visão Geral — toda a tela para o mapa',
+        '  → Grade muda para 1 coluna (sem sidebar)',
+        '  → Volta ao normal no Resumo Geral',
+        'Drag das caixas reescrito corretamente com mouse events',
+        '  → Caixas se movem livremente, não travam, não voltam ao lugar',
+        '  → Offset calculado relativo ao mapa-area com scroll do wrapper',
+        'Ícone de cadeado: 🔓 aberto (livre) / 🔒 fechado (travado) — visível',
+        'Botões da caixa não ativam drag ao clicar (stopPropagation)',
+        'Imagem ocupa 100% da largura do mapa com scroll quando maior',
+        'pointer-events:none no container, pointer-events:all por caixa',
       ]
     }
   ],

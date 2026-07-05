@@ -508,10 +508,9 @@ const LevantamentoFachada = (() => {
     const mapData=_getMapData();
     const tot=_somarGeral();
 
-    // Card total geral
     const totalCard=
       '<div class="mapa-total-card">'+
-        '<span class="mapa-total-title">📊 Total Geral</span>'+
+        '<span class="mapa-total-title">📊 Total Geral — Todas as Fachadas</span>'+
         '<div class="mapa-total-grid">'+
           '<div><span class="mapa-dado-label">m² sem ML</span><span class="mapa-dado-valor">'+_f(tot.m2semML)+'</span></div>'+
           '<div><span class="mapa-dado-label">m² com ML</span><span class="mapa-dado-valor">'+_f(tot.m2comML_equiv)+'</span></div>'+
@@ -520,61 +519,81 @@ const LevantamentoFachada = (() => {
         '</div>'+
       '</div>';
 
+    // Caixas — pointer-events:all para cada caixa individualmente
     const caixasHtml=mapData.caixas.map((cx,i)=>{
       const f=fachadas.find(x=>x.id===cx.fachadaId);
       const t=cx.fachadaId?_somarFachada(cx.fachadaId):{m2semML:0,m2comML_equiv:0,ml:0,vao:0};
-      const nome=f?f.nome:(cx.nome||'Caixa');
-      return '<div class="mapa-caixa" id="cx-'+i+'" style="left:'+cx.x+'px;top:'+cx.y+'px;'+(cx.travada?'cursor:default':'cursor:move')+'" '+
-        (cx.travada?'':'ondragstart="LF.cxDragStart(event,'+i+')" draggable="true"')+'>'+
-        '<div class="mapa-caixa-header">'+
-          '<span class="mapa-caixa-nome">'+nome+'</span>'+
-          '<div class="mapa-caixa-btns">'+
-            '<button class="btn btn-sm btn-icon" onclick="event.stopPropagation();LF.cxTravar('+i+')" title="'+(cx.travada?'Destravar':'Travar')+'">'+(cx.travada?'🔒':'🔓')+'</button>'+
-            '<button class="btn btn-sm btn-icon" onclick="event.stopPropagation();LF.cxEditar('+i+')" title="Editar">✎</button>'+
-            '<button class="btn btn-sm btn-icon" style="color:#dc2626" onclick="event.stopPropagation();LF.cxRemover('+i+')">✕</button>'+
+      const nome=f?f.nome:(cx.nome||'Caixa '+(i+1));
+      const lock=cx.travada?'🔒':'🔓';
+      const lockTitle=cx.travada?'Clique para destravar':'Clique para travar';
+      return (
+        '<div class="mapa-caixa" id="cx-'+i+'" '+
+          'style="position:absolute;left:'+cx.x+'px;top:'+cx.y+'px;cursor:'+(cx.travada?'default':'grab')+';" '+
+          'onmousedown="'+(cx.travada?'':'LF.cxMouseDown(event,'+i+')')+'">'+
+          '<div class="mapa-caixa-header">'+
+            '<span class="mapa-caixa-nome" title="'+nome+'">'+nome+'</span>'+
+            '<div class="mapa-caixa-btns" onmousedown="event.stopPropagation()">'+
+              '<button class="btn btn-sm btn-icon" title="'+lockTitle+'" onclick="LF.cxTravar('+i+')">'+lock+'</button>'+
+              '<button class="btn btn-sm btn-icon" title="Editar" onclick="LF.cxEditar('+i+')">✎</button>'+
+              '<button class="btn btn-sm btn-icon" title="Remover" onclick="LF.cxRemover('+i+')" style="color:#dc2626">✕</button>'+
+            '</div>'+
           '</div>'+
-        '</div>'+
-        '<div class="mapa-caixa-dados">'+
-          '<div><span class="mapa-dado-label">m² sem ML</span><span class="mapa-dado-valor">'+_f(t.m2semML)+'</span></div>'+
-          '<div><span class="mapa-dado-label">m² com ML</span><span class="mapa-dado-valor">'+_f(t.m2comML_equiv)+'</span></div>'+
-          '<div><span class="mapa-dado-label">Vão Fechado</span><span class="mapa-dado-valor">'+_f(t.vao)+'</span></div>'+
-        '</div>'+
-      '</div>';
+          '<div class="mapa-caixa-dados">'+
+            '<div><span class="mapa-dado-label">m² sem ML</span><span class="mapa-dado-valor">'+_f(t.m2semML)+'</span></div>'+
+            '<div><span class="mapa-dado-label">m² com ML</span><span class="mapa-dado-valor">'+_f(t.m2comML_equiv)+'</span></div>'+
+            '<div><span class="mapa-dado-label">Vão Fechado</span><span class="mapa-dado-valor">'+_f(t.vao)+'</span></div>'+
+          '</div>'+
+        '</div>'
+      );
     }).join('');
 
-    const imgContent=mapData.img
-      ? '<img src="'+mapData.img+'" style="display:block;max-width:100%;pointer-events:none;user-select:none;" draggable="false">'
-      : '<div style="display:flex;align-items:center;justify-content:center;height:300px;flex-direction:column;gap:12px;color:#aaa;">'+
-          '<div style="font-size:2.5rem;">📐</div>'+
-          '<p style="margin:0;font-size:.85rem;">Importe uma planta (PNG/JPG) para começar</p>'+
-          '<label class="btn btn-primario btn-sm" style="cursor:pointer;">Importar Imagem<input type="file" accept="image/*" style="display:none" onchange="LF.importarMapa(event)"></label>'+
-        '</div>';
-
-    // Topbar: toggle + ações lado a lado
-    const topbar=
-      '<div class="visao-geral-topbar">'+
-        toggle+
-        '<div class="btn-grupo">'+
-          '<label class="btn btn-secundario btn-sm" style="cursor:pointer;">📎 Importar Mapa<input type="file" accept="image/*" style="display:none" onchange="LF.importarMapa(event)"></label>'+
-          '<button class="btn btn-secundario btn-sm" onclick="LF.cxAdicionar()">+ Caixa</button>'+
-          (mapData.img?'<button class="btn btn-perigo btn-sm" onclick="LF.limparMapa()">🗑 Limpar</button>':'')+
-        '</div>'+
+    const semImagem=
+      '<div style="display:flex;align-items:center;justify-content:center;'+
+        'min-height:300px;flex-direction:column;gap:14px;color:#aaa;">'+
+        '<div style="font-size:3rem;">📐</div>'+
+        '<p style="margin:0">Importe uma planta para começar</p>'+
+        '<label class="btn btn-primario btn-sm" style="cursor:pointer;">'+
+          '📎 Importar Planta'+
+          '<input type="file" accept="image/*" style="display:none" onchange="LF.importarMapa(event)">'+
+        '</label>'+
       '</div>';
+
+    const imgTag=mapData.img
+      ? '<img src="'+mapData.img+'" id="mapa-img" '+
+          'style="display:block;width:100%;height:auto;pointer-events:none;user-select:none;" '+
+          'draggable="false">'
+      : semImagem;
 
     p.innerHTML=
       '<div class="visao-geral-layout">'+
-        topbar+
+        // Topbar: toggle + botões
+        '<div class="visao-geral-topbar">'+
+          toggle+
+          '<div class="btn-grupo">'+
+            '<label class="btn btn-secundario btn-sm" style="cursor:pointer;">'+
+              '📎 Importar Mapa'+
+              '<input type="file" accept="image/*" style="display:none" onchange="LF.importarMapa(event)">'+
+            '</label>'+
+            '<button class="btn btn-secundario btn-sm" onclick="LF.cxAdicionar()">+ Caixa</button>'+
+            (mapData.img?'<button class="btn btn-perigo btn-sm" onclick="LF.limparMapa()">🗑 Limpar</button>':'')+
+          '</div>'+
+        '</div>'+
+        // Total geral
         totalCard+
-        '<div class="mapa-wrapper" id="mapa-wrapper">'+
-          '<div class="mapa-imagem-area" id="mapa-area">'+
-            imgContent+
-            '<div id="mapa-caixas" style="position:absolute;top:0;left:0;pointer-events:none;width:100%;height:100%;">'+
-              '<div style="position:relative;width:100%;height:100%;pointer-events:none;">'+caixasHtml+'</div>'+
+        // Área do mapa — overflow auto para scroll quando imagem for grande
+        '<div id="mapa-wrapper" class="mapa-wrapper">'+
+          // mapa-area é o container posicionado das caixas
+          '<div id="mapa-area" style="position:relative;display:inline-block;min-width:100%;">'+
+            imgTag+
+            // Caixas ficam SOBRE a imagem — pointer-events:all individualmente
+            '<div id="mapa-caixas" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;">'+
+              caixasHtml+
             '</div>'+
           '</div>'+
         '</div>'+
       '</div>';
   }
+
 
   // ===================== VISÃO GERAL — MAPA =====================
   let _cxDragIdx=null, _cxDragOffX=0, _cxDragOffY=0;
@@ -643,49 +662,51 @@ const LevantamentoFachada = (() => {
   }
 
   function cxMouseDown(e,i){
-    if(e.button!==0)return;
-    e.preventDefault(); e.stopPropagation();
-    const el=document.getElementById('cx-'+i);
+    if(e.button!==0) return;
+    e.preventDefault();
+    e.stopPropagation();
+
+    const wrapper=document.getElementById('mapa-wrapper');
     const area=document.getElementById('mapa-area');
-    if(!el||!area)return;
-    const areaRect=area.getBoundingClientRect();
+    const el=document.getElementById('cx-'+i);
+    if(!wrapper||!area||!el) return;
+
+    // Offset do clique dentro da caixa (relativo à caixa)
     const elRect=el.getBoundingClientRect();
     const offX=e.clientX-elRect.left;
     const offY=e.clientY-elRect.top;
-    el.style.cursor='grabbing';
-    el.style.zIndex='1000';
 
-    function onMove(ev){
-      const wrapper=document.getElementById('mapa-wrapper');
-      const wRect=wrapper?wrapper.getBoundingClientRect():areaRect;
-      // posição relativa ao mapa-area (considera scroll do wrapper)
-      const scrollX=wrapper?wrapper.scrollLeft:0;
-      const scrollY=wrapper?wrapper.scrollTop:0;
-      const x=ev.clientX - areaRect.left - offX + scrollX;
-      const y=ev.clientY - areaRect.top  - offY + scrollY;
+    el.style.cursor='grabbing';
+    el.style.zIndex='999';
+
+    function move(ev){
+      const areaRect=area.getBoundingClientRect();
+      const x=ev.clientX - areaRect.left - offX + wrapper.scrollLeft;
+      const y=ev.clientY - areaRect.top  - offY + wrapper.scrollTop;
       el.style.left=Math.max(0,x)+'px';
       el.style.top =Math.max(0,y)+'px';
     }
 
-    async function onUp(ev){
-      document.removeEventListener('mousemove',onMove);
-      document.removeEventListener('mouseup',onUp);
+    async function up(ev){
+      document.removeEventListener('mousemove',move);
+      document.removeEventListener('mouseup',up);
       el.style.cursor='grab';
       el.style.zIndex='';
-      const wrapper=document.getElementById('mapa-wrapper');
-      const scrollX=wrapper?wrapper.scrollLeft:0;
-      const scrollY=wrapper?wrapper.scrollTop:0;
-      const x=ev.clientX - areaRect.left - offX + scrollX;
-      const y=ev.clientY - areaRect.top  - offY + scrollY;
+      const areaRect=area.getBoundingClientRect();
+      const x=ev.clientX - areaRect.left - offX + wrapper.scrollLeft;
+      const y=ev.clientY - areaRect.top  - offY + wrapper.scrollTop;
       const data=_getMapData();
-      data.caixas[i].x=Math.max(0,x);
-      data.caixas[i].y=Math.max(0,y);
-      await _saveMapData(data);
+      if(data.caixas[i]){
+        data.caixas[i].x=Math.max(0,x);
+        data.caixas[i].y=Math.max(0,y);
+        await _saveMapData(data);
+      }
     }
 
-    document.addEventListener('mousemove',onMove);
-    document.addEventListener('mouseup',onUp);
+    document.addEventListener('mousemove',move);
+    document.addEventListener('mouseup',up);
   }
+
 
   // cxDrop kept for ondrop compatibility (not used anymore)
   async function cxDrop(e){ /* substituído por cxMouseDown */ }
