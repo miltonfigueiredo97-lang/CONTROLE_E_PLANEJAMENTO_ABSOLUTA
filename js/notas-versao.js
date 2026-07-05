@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V1.0.9',
+  versaoAtual: 'V1.1.0',
 
   versoes: [
     {
@@ -198,7 +198,7 @@ const NotasVersao = {
     },
     {
       versao: 'V1.0.9',
-      status: 'aberta',
+      status: 'fechada',
       data: '2025-07-04',
       tipo: 'correcao',
       titulo: 'Resize correto, fundo branco, caixas livres, cadeado legível',
@@ -208,6 +208,26 @@ const NotasVersao = {
         'Fundo do canvas: branco puro (sem pontinhos)',
         'Cadeado: substituído por texto LIVRE (verde) / TRAV (vermelho)',
         '  → Muito mais legível que emoji de cadeado',
+      ]
+    },
+    {
+      versao: 'V1.1.0',
+      status: 'aberta',
+      data: '2025-07-04',
+      tipo: 'funcionalidade',
+      titulo: 'Resize completo de imagem e caixas na Visão Geral',
+      itens: [
+        'Imagem: 8 handles amarelos para redimensionar (4 cantos + 4 bordas)',
+        '  → Cantos: resize proporcional (mantém proporção da imagem)',
+        '  → Bordas E/W: estica horizontalmente',
+        '  → Bordas N/S: estica verticalmente com proporção',
+        'Imagem: arrastar para mover livremente no canvas',
+        'Imagem: fit automático ao importar (cabe na tela)',
+        'Caixas: handle ⤡ no canto inferior direito para redimensionar largura',
+        '  → Conteúdo se adapta à largura da caixa',
+        'Caixas: ficam sempre em cima da imagem (z-index:20 vs z-index:1)',
+        'Canvas: fundo branco puro, sem pontinhos',
+        'Lock: LIVRE (verde) / TRAV (vermelho) — legível',
       ]
     }
   ],

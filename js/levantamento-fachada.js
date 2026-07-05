@@ -514,13 +514,16 @@ const LevantamentoFachada = (() => {
   }
 
   // ===================== VISÃO GERAL =====================
-  // Estado da imagem no canvas
-  let _img = { x:40, y:40, w:0, h:0, loaded:false };
+  // Estado persistente da imagem e caixas no canvas
+  let _img = { x:40, y:40, w:0, loaded:false };
+  // Estado persistente das caixas (tamanho)
+  // cx.w e cx.h ficam no mapData.caixas
 
   function renderVisaoGeral(p, toggle){
     const mapData = _getMapData();
     const tot = _somarGeral();
 
+    // Total geral
     const totalCard =
       '<div class="mapa-total-card">' +
         '<span class="mapa-total-title">📊 Total Geral</span>' +
@@ -532,31 +535,88 @@ const LevantamentoFachada = (() => {
         '</div>' +
       '</div>';
 
+    // Caixas — cada uma com resize handles
     const caixasHtml = mapData.caixas.map((cx, i) => {
       const f = fachadas.find(x => x.id === cx.fachadaId);
-      const t = cx.fachadaId ? _somarFachada(cx.fachadaId) : { m2semML:0, m2comML_equiv:0, vao:0 };
+      const t = cx.fachadaId ? _somarFachada(cx.fachadaId) : { m2semML:0, m2comML_equiv:0, ml:0, vao:0 };
       const nome = f ? f.nome : (cx.nome || 'Caixa ' + (i+1));
+      const w = cx.w || 200;
+      const travBtn = '<button onmousedown="event.stopPropagation()" onclick="LF.cxTravar(' + i + ')" ' +
+        'style="background:none;border:none;cursor:pointer;font-size:0.65rem;font-weight:800;padding:2px 5px;border-radius:3px;' +
+        'color:' + (cx.travada ? '#dc2626' : '#15803d') + ';background:' + (cx.travada ? '#fee2e2' : '#dcfce7') + ';">' +
+        (cx.travada ? 'TRAV' : 'LIVRE') + '</button>';
       return (
-        '<div class="mapa-caixa" id="cx-' + i + '" ' +
-          'style="position:absolute;left:' + cx.x + 'px;top:' + cx.y + 'px;' +
-          'cursor:' + (cx.travada ? 'default' : 'grab') + ';z-index:20;pointer-events:all;" ' +
+        '<div id="cx-' + i + '" style="' +
+          'position:absolute;left:' + cx.x + 'px;top:' + cx.y + 'px;width:' + w + 'px;' +
+          'background:#fff;border:2px solid var(--cor-primaria);border-radius:8px;' +
+          'box-shadow:0 4px 16px rgba(0,0,0,0.15);z-index:20;pointer-events:all;' +
+          'cursor:' + (cx.travada ? 'default' : 'grab') + ';" ' +
           (cx.travada ? '' : 'onmousedown="LF.cxMouseDown(event,' + i + ')"') + '>' +
-          '<div class="mapa-caixa-header">' +
-            '<span class="mapa-caixa-nome">' + nome + '</span>' +
-            '<div class="mapa-caixa-btns" onmousedown="event.stopPropagation()">' +
-              '<button class="btn btn-sm btn-icon" onclick="LF.cxTravar(' + i + ')" title="' + (cx.travada ? 'Destravar' : 'Travar') + '" style="font-size:0.65rem;font-weight:700;letter-spacing:.5px;color:' + (cx.travada ? '#dc2626' : '#16a34a') + '">' + (cx.travada ? 'TRAV' : 'LIVRE') + '</button>' +
-              '<button class="btn btn-sm btn-icon" onclick="LF.cxEditar(' + i + ')">✎</button>' +
-              '<button class="btn btn-sm btn-icon" onclick="LF.cxRemover(' + i + ')" style="color:#dc2626">✕</button>' +
+          // Header amarelo
+          '<div style="background:var(--cor-primaria);padding:7px 10px;border-radius:6px 6px 0 0;' +
+            'display:flex;align-items:center;gap:6px;" onmousedown="event.stopPropagation()">' +
+            '<span style="flex:1;font-weight:800;font-size:0.82rem;color:#000;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + nome + '">' + nome + '</span>' +
+            travBtn +
+            '<button onmousedown="event.stopPropagation()" onclick="LF.cxEditar(' + i + ')" ' +
+              'style="background:none;border:none;cursor:pointer;font-size:0.85rem;padding:2px 4px;">✎</button>' +
+            '<button onmousedown="event.stopPropagation()" onclick="LF.cxRemover(' + i + ')" ' +
+              'style="background:none;border:none;cursor:pointer;font-size:0.85rem;padding:2px 4px;color:#dc2626;">✕</button>' +
+          '</div>' +
+          // Dados
+          '<div style="padding:10px 12px;display:flex;flex-direction:column;gap:5px;">' +
+            '<div style="display:flex;justify-content:space-between;font-size:0.78rem;">' +
+              '<span style="color:#888;text-transform:uppercase;font-size:0.65rem;letter-spacing:.3px;">m² sem ML</span>' +
+              '<span style="font-family:var(--font-mono);font-weight:700;color:var(--cor-primaria);">' + _f(t.m2semML) + '</span>' +
+            '</div>' +
+            '<div style="display:flex;justify-content:space-between;font-size:0.78rem;">' +
+              '<span style="color:#888;text-transform:uppercase;font-size:0.65rem;letter-spacing:.3px;">m² com ML</span>' +
+              '<span style="font-family:var(--font-mono);font-weight:700;color:var(--cor-primaria);">' + _f(t.m2comML_equiv) + '</span>' +
+            '</div>' +
+            '<div style="display:flex;justify-content:space-between;font-size:0.78rem;">' +
+              '<span style="color:#888;text-transform:uppercase;font-size:0.65rem;letter-spacing:.3px;">Vão Fechado</span>' +
+              '<span style="font-family:var(--font-mono);font-weight:700;color:var(--cor-primaria);">' + _f(t.vao) + '</span>' +
             '</div>' +
           '</div>' +
-          '<div class="mapa-caixa-dados">' +
-            '<div><span class="mapa-dado-label">m² sem ML</span><span class="mapa-dado-valor">' + _f(t.m2semML) + '</span></div>' +
-            '<div><span class="mapa-dado-label">m² com ML</span><span class="mapa-dado-valor">' + _f(t.m2comML_equiv) + '</span></div>' +
-            '<div><span class="mapa-dado-label">Vão Fechado</span><span class="mapa-dado-valor">' + _f(t.vao) + '</span></div>' +
-          '</div>' +
+          // Handle de resize da CAIXA (canto inferior direito)
+          (cx.travada ? '' :
+            '<div onmousedown="LF.cxResize(event,' + i + ')" ' +
+              'style="position:absolute;bottom:0;right:0;width:16px;height:16px;cursor:se-resize;' +
+              'background:var(--cor-primaria);border-radius:4px 0 6px 0;' +
+              'display:flex;align-items:center;justify-content:center;font-size:0.6rem;color:#000;">⤡</div>'
+          ) +
         '</div>'
       );
     }).join('');
+
+    // Imagem com handles de resize
+    const imgWrap = mapData.img ? (
+      '<div id="mapa-img-wrap" ' +
+        'style="position:absolute;left:' + _img.x + 'px;top:' + _img.y + 'px;' +
+        'width:' + (_img.w || 'auto') + (_img.w ? 'px;' : ';') +
+        'cursor:move;z-index:1;outline:2px dashed rgba(245,200,0,0.6);outline-offset:2px;" ' +
+        'onmousedown="LF.imgMouseDown(event)">' +
+        '<img id="mapa-img" src="' + mapData.img + '" draggable="false" ' +
+          'style="display:block;width:100%;height:auto;pointer-events:none;user-select:none;">' +
+        // 4 handles de canto
+        '<div data-dir="se" onmousedown="LF.imgResize(event,\'se\')" style="position:absolute;bottom:-7px;right:-7px;width:14px;height:14px;background:var(--cor-primaria);border:2px solid #fff;border-radius:50%;cursor:se-resize;z-index:50;"></div>' +
+        '<div data-dir="sw" onmousedown="LF.imgResize(event,\'sw\')" style="position:absolute;bottom:-7px;left:-7px;width:14px;height:14px;background:var(--cor-primaria);border:2px solid #fff;border-radius:50%;cursor:sw-resize;z-index:50;"></div>' +
+        '<div data-dir="ne" onmousedown="LF.imgResize(event,\'ne\')" style="position:absolute;top:-7px;right:-7px;width:14px;height:14px;background:var(--cor-primaria);border:2px solid #fff;border-radius:50%;cursor:ne-resize;z-index:50;"></div>' +
+        '<div data-dir="nw" onmousedown="LF.imgResize(event,\'nw\')" style="position:absolute;top:-7px;left:-7px;width:14px;height:14px;background:var(--cor-primaria);border:2px solid #fff;border-radius:50%;cursor:nw-resize;z-index:50;"></div>' +
+        // 4 handles de borda
+        '<div data-dir="e" onmousedown="LF.imgResize(event,\'e\')" style="position:absolute;top:50%;right:-7px;width:14px;height:14px;transform:translateY(-50%);background:var(--cor-primaria);border:2px solid #fff;border-radius:50%;cursor:e-resize;z-index:50;"></div>' +
+        '<div data-dir="w" onmousedown="LF.imgResize(event,\'w\')" style="position:absolute;top:50%;left:-7px;width:14px;height:14px;transform:translateY(-50%);background:var(--cor-primaria);border:2px solid #fff;border-radius:50%;cursor:w-resize;z-index:50;"></div>' +
+        '<div data-dir="s" onmousedown="LF.imgResize(event,\'s\')" style="position:absolute;bottom:-7px;left:50%;width:14px;height:14px;transform:translateX(-50%);background:var(--cor-primaria);border:2px solid #fff;border-radius:50%;cursor:s-resize;z-index:50;"></div>' +
+        '<div data-dir="n" onmousedown="LF.imgResize(event,\'n\')" style="position:absolute;top:-7px;left:50%;width:14px;height:14px;transform:translateX(-50%);background:var(--cor-primaria);border:2px solid #fff;border-radius:50%;cursor:n-resize;z-index:50;"></div>' +
+      '</div>'
+    ) : (
+      '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:14px;color:#bbb;">' +
+        '<div style="font-size:3rem;">📐</div>' +
+        '<p style="margin:0;font-size:0.9rem;">Importe uma planta para começar</p>' +
+        '<label class="btn btn-primario btn-sm" style="cursor:pointer;">📎 Importar Planta' +
+          '<input type="file" accept="image/*" style="display:none" onchange="LF.importarMapa(event)">' +
+        '</label>' +
+      '</div>'
+    );
 
     p.innerHTML =
       '<div class="visao-geral-layout">' +
@@ -571,138 +631,128 @@ const LevantamentoFachada = (() => {
           '</div>' +
         '</div>' +
         totalCard +
-        // Canvas: ocupa todo o espaço restante, sem overflow
-        '<div id="mapa-canvas" style="' +
-          'flex:1;min-height:0;position:relative;' +
-          'background:#f8f8f8;' +
-          'border-radius:8px;border:1px solid #e0e0e0;' +
-          'overflow:hidden;' +   // SEM SCROLL — tudo cabe dentro
-        '">' +
-          // Imagem: posicionada e redimensionável
-          (mapData.img ?
-            '<div id="mapa-img-wrap" style="' +
-              'position:absolute;' +
-              'left:' + _img.x + 'px;top:' + _img.y + 'px;' +
-              'width:' + (_img.w || 'auto') + (_img.w ? 'px' : '') + ';' +
-              'cursor:move;user-select:none;z-index:1;' +
-            '" onmousedown="LF.imgMouseDown(event)">' +
-              '<img id="mapa-img" src="' + mapData.img + '" draggable="false" ' +
-                'style="display:block;width:100%;height:auto;pointer-events:none;">' +
-              // Handles de resize nos 4 cantos e bordas
-              '<div class="img-handle img-handle-se" data-dir="se" onmousedown="LF.imgResize(event,this.dataset.dir)"></div>' +
-              '<div class="img-handle img-handle-sw" data-dir="sw" onmousedown="LF.imgResize(event,this.dataset.dir)"></div>' +
-              '<div class="img-handle img-handle-ne" data-dir="ne" onmousedown="LF.imgResize(event,this.dataset.dir)"></div>' +
-              '<div class="img-handle img-handle-nw" data-dir="nw" onmousedown="LF.imgResize(event,this.dataset.dir)"></div>' +
-              '<div class="img-handle img-handle-e"  data-dir="e" onmousedown="LF.imgResize(event,this.dataset.dir)"></div>' +
-              '<div class="img-handle img-handle-w"  data-dir="w" onmousedown="LF.imgResize(event,this.dataset.dir)"></div>' +
-              '<div class="img-handle img-handle-s"  data-dir="s" onmousedown="LF.imgResize(event,this.dataset.dir)"></div>' +
-              '<div class="img-handle img-handle-n"  data-dir="n" onmousedown="LF.imgResize(event,this.dataset.dir)"></div>' +
-            '</div>'
-          :
-            '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:14px;color:#aaa;">' +
-              '<div style="font-size:3rem;">📐</div>' +
-              '<p style="margin:0">Importe uma planta para começar</p>' +
-              '<label class="btn btn-primario btn-sm" style="cursor:pointer;">📎 Importar Planta' +
-                '<input type="file" accept="image/*" style="display:none" onchange="LF.importarMapa(event)">' +
-              '</label>' +
-            '</div>'
-          ) +
-          // Caixas flutuam sobre o canvas
+        '<div id="mapa-canvas" style="flex:1;min-height:0;position:relative;background:#fff;border-radius:8px;border:1px solid #e0e0e0;overflow:hidden;">' +
+          imgWrap +
           caixasHtml +
         '</div>' +
       '</div>';
 
-    // Após render: se imagem ainda não tem tamanho definido, fit na tela
+    // Fit imagem na tela se primeira vez
     if (mapData.img && !_img.w) {
-      requestAnimationFrame(() => {
-        const canvas = document.getElementById('mapa-canvas');
-        const img = document.getElementById('mapa-img');
-        if (!canvas || !img) return;
-        img.onload = () => {
+      const img = document.getElementById('mapa-img');
+      const canvas = document.getElementById('mapa-canvas');
+      if (img && canvas) {
+        const doFit = () => {
           const cW = canvas.clientWidth - 80;
           const cH = canvas.clientHeight - 80;
-          const ratio = img.naturalWidth / img.naturalHeight;
-          let w = cW, h = cW / ratio;
-          if (h > cH) { h = cH; w = cH * ratio; }
-          _img.w = Math.round(w);
-          _img.x = 40; _img.y = 40;
+          const r = img.naturalWidth / img.naturalHeight;
+          let w = cW, h = w / r;
+          if (h > cH) { h = cH; w = h * r; }
+          _img.w = Math.round(w); _img.x = 40; _img.y = 40;
           const wrap = document.getElementById('mapa-img-wrap');
-          if (wrap) { wrap.style.width = _img.w + 'px'; wrap.style.left = _img.x + 'px'; wrap.style.top = _img.y + 'px'; }
+          if (wrap) { wrap.style.width = _img.w + 'px'; wrap.style.left = '40px'; wrap.style.top = '40px'; }
         };
-        if (img.complete) img.onload();
-      });
+        if (img.complete && img.naturalWidth) doFit();
+        else img.onload = doFit;
+      }
     }
   }
 
-  // Mover imagem (drag)
+  // Mover imagem
   function imgMouseDown(e) {
-    if (e.button !== 0) return;
-    if (e.target.classList.contains('img-handle')) return;
-    e.preventDefault(); e.stopPropagation();
-    const wrap = document.getElementById('mapa-img-wrap');
-    const canvas = document.getElementById('mapa-canvas');
-    if (!wrap || !canvas) return;
-    const startX = e.clientX - _img.x;
-    const startY = e.clientY - _img.y;
-    wrap.style.cursor = 'grabbing';
-    function move(ev) {
-      _img.x = ev.clientX - startX;
-      _img.y = ev.clientY - startY;
-      wrap.style.left = _img.x + 'px';
-      wrap.style.top  = _img.y + 'px';
-    }
-    function up() {
-      document.removeEventListener('mousemove', move);
-      document.removeEventListener('mouseup', up);
-      wrap.style.cursor = 'move';
-    }
-    document.addEventListener('mousemove', move);
-    document.addEventListener('mouseup', up);
-  }
-
-  // Redimensionar imagem pelos handles
-  function imgResize(e, dir) {
+    if (e.button !== 0 || e.target.dataset.dir) return;
     e.preventDefault(); e.stopPropagation();
     const wrap = document.getElementById('mapa-img-wrap');
     if (!wrap) return;
-    const startX = e.clientX, startY = e.clientY;
-    const startW = wrap.offsetWidth;
-    const startL = _img.x, startT = _img.y;
-    // Aspect ratio da imagem real
-    const imgEl = document.getElementById('mapa-img');
-    const ratio = imgEl ? (imgEl.naturalWidth / imgEl.naturalHeight) : 1;
-    function move(ev) {
-      const dx = ev.clientX - startX;
-      const dy = ev.clientY - startY;
-      let w = startW, x = startL, y = startT;
-      if (dir === 'e')  w = Math.max(80, startW + dx);
-      if (dir === 'w')  { w = Math.max(80, startW - dx); x = startL + (startW - w); }
-      if (dir === 's')  w = Math.max(80, startW + dy * ratio);
-      if (dir === 'n')  { w = Math.max(80, startW - dy * ratio); y = startT + (startW - w) / ratio; }
-      if (dir === 'se') w = Math.max(80, startW + Math.max(dx, dy * ratio));
-      if (dir === 'sw') { w = Math.max(80, startW - Math.min(dx, -dy * ratio)); x = startL + (startW - w); }
-      if (dir === 'ne') { w = Math.max(80, startW + Math.max(dx, -dy * ratio)); y = startT + (startW - w) / ratio; }
-      if (dir === 'nw') { w = Math.max(80, startW - Math.max(-dx, dy * ratio)); x = startL + (startW - w); y = startT + (startW - w) / ratio; }
-      _img.w = Math.round(w);
-      _img.x = Math.round(x);
-      _img.y = Math.round(y);
-      wrap.style.width = _img.w + 'px';
-      wrap.style.left  = _img.x + 'px';
-      wrap.style.top   = _img.y + 'px';
-    }
-    function up() {
-      document.removeEventListener('mousemove', move);
-      document.removeEventListener('mouseup', up);
-    }
+    const sx = e.clientX - _img.x, sy = e.clientY - _img.y;
+    wrap.style.cursor = 'grabbing';
+    const move = ev => { _img.x = ev.clientX - sx; _img.y = ev.clientY - sy; wrap.style.left = _img.x + 'px'; wrap.style.top = _img.y + 'px'; };
+    const up = () => { document.removeEventListener('mousemove', move); document.removeEventListener('mouseup', up); wrap.style.cursor = 'move'; };
     document.addEventListener('mousemove', move);
     document.addEventListener('mouseup', up);
   }
 
-  function toggleEditImg(){} // não usado mais
-  function fecharEditImg(){}
-  function onImgResize(){}
-  function setZoomMapa(){}
+  // Redimensionar imagem
+  function imgResize(e, dir) {
+    e.preventDefault(); e.stopPropagation();
+    const wrap = document.getElementById('mapa-img-wrap');
+    const imgEl = document.getElementById('mapa-img');
+    if (!wrap || !imgEl) return;
+    const sx = e.clientX, sy = e.clientY;
+    const sw = wrap.offsetWidth, sh = wrap.offsetHeight;
+    const sl = _img.x, st = _img.y;
+    const ratio = imgEl.naturalWidth / imgEl.naturalHeight;
+    const move = ev => {
+      const dx = ev.clientX - sx, dy = ev.clientY - sy;
+      let w = sw, h = sh, x = sl, y = st;
+      if (dir === 'e')  { w = Math.max(60, sw + dx); }
+      if (dir === 'w')  { w = Math.max(60, sw - dx); x = sl + (sw - w); }
+      if (dir === 's')  { h = Math.max(40, sh + dy); w = h * ratio; }
+      if (dir === 'n')  { h = Math.max(40, sh - dy); w = h * ratio; y = st + (sh - h); }
+      if (dir === 'se') { w = Math.max(60, sw + dx); }
+      if (dir === 'sw') { w = Math.max(60, sw - dx); x = sl + (sw - w); }
+      if (dir === 'ne') { w = Math.max(60, sw + dx); y = st + sh - (w / ratio); }
+      if (dir === 'nw') { w = Math.max(60, sw - dx); x = sl + (sw - w); y = st + sh - (w / ratio); }
+      _img.w = Math.round(w); _img.x = Math.round(x); _img.y = Math.round(y);
+      wrap.style.width = _img.w + 'px'; wrap.style.left = _img.x + 'px'; wrap.style.top = _img.y + 'px';
+    };
+    const up = () => { document.removeEventListener('mousemove', move); document.removeEventListener('mouseup', up); };
+    document.addEventListener('mousemove', move);
+    document.addEventListener('mouseup', up);
+  }
 
+  // Mover caixas
+  function cxMouseDown(e, i) {
+    if (e.button !== 0) return;
+    e.preventDefault(); e.stopPropagation();
+    const canvas = document.getElementById('mapa-canvas');
+    const el = document.getElementById('cx-' + i);
+    if (!canvas || !el) return;
+    const cr = canvas.getBoundingClientRect();
+    const er = el.getBoundingClientRect();
+    const ox = e.clientX - er.left, oy = e.clientY - er.top;
+    el.style.cursor = 'grabbing'; el.style.zIndex = '999';
+    const move = ev => {
+      el.style.left = (ev.clientX - cr.left - ox) + 'px';
+      el.style.top  = (ev.clientY - cr.top  - oy) + 'px';
+    };
+    const up = async ev => {
+      document.removeEventListener('mousemove', move);
+      document.removeEventListener('mouseup', up);
+      el.style.cursor = 'grab'; el.style.zIndex = '20';
+      const data = _getMapData();
+      if (data.caixas[i]) {
+        data.caixas[i].x = ev.clientX - cr.left - ox;
+        data.caixas[i].y = ev.clientY - cr.top  - oy;
+        await _saveMapData(data);
+      }
+    };
+    document.addEventListener('mousemove', move);
+    document.addEventListener('mouseup', up);
+  }
+
+  // Redimensionar caixas
+  function cxResize(e, i) {
+    e.preventDefault(); e.stopPropagation();
+    const el = document.getElementById('cx-' + i);
+    if (!el) return;
+    const sx = e.clientX, sw = el.offsetWidth;
+    const move = ev => {
+      const w = Math.max(160, sw + (ev.clientX - sx));
+      el.style.width = w + 'px';
+    };
+    const up = async ev => {
+      document.removeEventListener('mousemove', move);
+      document.removeEventListener('mouseup', up);
+      const w = Math.max(160, sw + (ev.clientX - sx));
+      const data = _getMapData();
+      if (data.caixas[i]) { data.caixas[i].w = Math.round(w); await _saveMapData(data); }
+    };
+    document.addEventListener('mousemove', move);
+    document.addEventListener('mouseup', up);
+  }
+
+  function toggleEditImg(){} function fecharEditImg(){} function onImgResize(){} function setZoomMapa(){}
 
   // ===================== VISÃO GERAL — MAPA =====================
   let _cxDragIdx=null, _cxDragOffX=0, _cxDragOffY=0;
@@ -968,7 +1018,7 @@ const LevantamentoFachada = (() => {
     }catch(e){Utils.toast('Erro.','erro');}
   }
 
-  return {init,carregar,sel:selecionar,setAba,criarFachada,criarBalancim,editar,salvarEntidade,excluir,novaPeca,editarPeca,salvarPeca,excluirPeca,duplicarPeca,duplicarBal,conferirPeca,exportarCSV,exportarVista,onToggleJanela,importarMapa,cxAdicionar,cxRemover,cxTravar,cxEditar,salvarCxEdit,cxMouseDown,cxDrop,imgMouseDown,imgResize,toggleEditImg,fecharEditImg,onImgResize,limparMapa,abrirVaoVista,salvarVaoVista,_atualizarPreviewVao,abrirConfig,salvarConfig,onChangeCfgJanela};
+  return {init,carregar,sel:selecionar,setAba,criarFachada,criarBalancim,editar,salvarEntidade,excluir,novaPeca,editarPeca,salvarPeca,excluirPeca,duplicarPeca,duplicarBal,conferirPeca,exportarCSV,exportarVista,onToggleJanela,importarMapa,cxAdicionar,cxRemover,cxTravar,cxEditar,salvarCxEdit,cxMouseDown,cxDrop,cxResize,imgMouseDown,imgResize,toggleEditImg,fecharEditImg,onImgResize,limparMapa,abrirVaoVista,salvarVaoVista,_atualizarPreviewVao,abrirConfig,salvarConfig,onChangeCfgJanela};
 })();
 const LF=LevantamentoFachada;
 function onObraChanged(){LF.init();}
