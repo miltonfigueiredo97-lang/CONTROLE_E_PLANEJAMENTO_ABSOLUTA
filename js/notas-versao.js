@@ -146,7 +146,7 @@ const NotasVersao = {
         'Save do mapa: log de debug + validação de tamanho antes de salvar',
         '  → Mostra erro claro se imagem ainda for grande demais',
       ]
-    }},
+    },
     {
       versao: 'V1.0.6',
       status: 'aberta',
