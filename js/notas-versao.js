@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V1.1.0',
+  versaoAtual: 'V1.1.1',
 
   versoes: [
     {
@@ -212,7 +212,7 @@ const NotasVersao = {
     },
     {
       versao: 'V1.1.0',
-      status: 'aberta',
+      status: 'fechada',
       data: '2025-07-04',
       tipo: 'funcionalidade',
       titulo: 'Resize completo de imagem e caixas na Visão Geral',
@@ -228,6 +228,23 @@ const NotasVersao = {
         'Caixas: ficam sempre em cima da imagem (z-index:20 vs z-index:1)',
         'Canvas: fundo branco puro, sem pontinhos',
         'Lock: LIVRE (verde) / TRAV (vermelho) — legível',
+      ]
+    },
+    {
+      versao: 'V1.1.1',
+      status: 'aberta',
+      data: '2025-07-04',
+      tipo: 'correcao',
+      titulo: 'Visão Geral: modo edição, imgState no Firestore, resize caixas',
+      itens: [
+        'Imagem: botão Editar Imagem ativa modo edição (borda amarela)',
+        'Imagem: botão Confirmar salva posição/tamanho no Firestore e trava',
+        '  → Imagem não se move/redimensiona fora do modo edição',
+        'Imagem: imgState (x,y,w) salvo no Firestore — persiste ao recarregar',
+        'Caixas: resize em largura (E) e altura (S) separados',
+        '  → Handle ⤡ no canto: resize em diagonal (largura+altura)',
+        '  → Barra na base: resize só em altura',
+        'Caixas: ficam acima da imagem (z-index:30 vs z-index:1)',
       ]
     }
   ],
