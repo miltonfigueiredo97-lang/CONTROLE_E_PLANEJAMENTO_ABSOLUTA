@@ -565,7 +565,7 @@ const LevantamentoFachada = (() => {
       '<div class="visao-geral-layout">'+
         topbar+
         totalCard+
-        '<div class="mapa-wrapper" ondragover="event.preventDefault()" ondrop="LF.cxDrop(event)" id="mapa-wrapper">'+
+        '<div class="mapa-wrapper" id="mapa-wrapper">'+
           '<div class="mapa-imagem-area" id="mapa-area">'+
             imgContent+
             '<div id="mapa-caixas" style="position:absolute;top:0;left:0;pointer-events:none;width:100%;height:100%;">'+
@@ -579,27 +579,41 @@ const LevantamentoFachada = (() => {
   // ===================== VISÃO GERAL — MAPA =====================
   let _cxDragIdx=null, _cxDragOffX=0, _cxDragOffY=0;
 
-  async function importarMapa(e){
+  function importarMapa(e){
     const file=e.target.files[0];if(!file)return;
-    try{
-      Utils.mostrarLoading('Enviando imagem...');
-      const path='obras/'+obraId+'/mapaVisao.jpg';
-      const reader=new FileReader();
-      reader.onload=async ev=>{
+    Utils.mostrarLoading('Processando imagem...');
+    const reader=new FileReader();
+    reader.onload=ev=>{
+      // Comprime imagem via canvas para caber no Firestore (<900KB)
+      const img=new Image();
+      img.onload=async ()=>{
         try{
-          // Faz upload para Firebase Storage
-          const url=await uploadImagem(path, ev.target.result);
+          const MAX_W=2400, MAX_H=2400;
+          let w=img.width, h=img.height;
+          if(w>MAX_W){h=Math.round(h*MAX_W/w);w=MAX_W;}
+          if(h>MAX_H){w=Math.round(w*MAX_H/h);h=MAX_H;}
+          const canvas=document.createElement('canvas');
+          canvas.width=w; canvas.height=h;
+          canvas.getContext('2d').drawImage(img,0,0,w,h);
+          // Qualidade progressiva até caber
+          let quality=0.85, dataUrl='';
+          for(let q=quality;q>=0.3;q-=0.1){
+            dataUrl=canvas.toDataURL('image/jpeg',q);
+            if(dataUrl.length<900000)break;
+          }
           const data=_getMapData();
-          data.img=url; // salva URL (não base64)
+          data.img=dataUrl;
           await _saveMapData(data);
           renderPainel();
+          Utils.toast('Imagem importada!','sucesso');
         }catch(err){
-          console.error('Erro upload mapa:',err);
-          Utils.toast('Erro ao enviar imagem: '+err.message,'erro');
+          console.error('Erro ao salvar mapa:',err);
+          Utils.toast('Erro ao salvar: '+err.message,'erro');
         }finally{Utils.esconderLoading();}
       };
-      reader.readAsDataURL(file);
-    }catch(e){Utils.esconderLoading();Utils.toast('Erro.','erro');}
+      img.src=ev.target.result;
+    };
+    reader.readAsDataURL(file);
   }
 
   async function cxAdicionar(){
@@ -628,18 +642,53 @@ const LevantamentoFachada = (() => {
     await _saveMapData(data);Utils.fecharModal('modal-cx-edit');renderPainel();
   }
 
-  function cxDragStart(e,i){_cxDragIdx=i;const el=document.getElementById('cx-'+i);const r=el.getBoundingClientRect();_cxDragOffX=e.clientX-r.left;_cxDragOffY=e.clientY-r.top;}
+  function cxMouseDown(e,i){
+    if(e.button!==0)return;
+    e.preventDefault(); e.stopPropagation();
+    const el=document.getElementById('cx-'+i);
+    const area=document.getElementById('mapa-area');
+    if(!el||!area)return;
+    const areaRect=area.getBoundingClientRect();
+    const elRect=el.getBoundingClientRect();
+    const offX=e.clientX-elRect.left;
+    const offY=e.clientY-elRect.top;
+    el.style.cursor='grabbing';
+    el.style.zIndex='1000';
 
-  async function cxDrop(e){
-    if(_cxDragIdx===null)return;
-    const area=document.getElementById('mapa-area').getBoundingClientRect();
-    const x=e.clientX-area.left-_cxDragOffX;
-    const y=e.clientY-area.top-_cxDragOffY;
-    const data=_getMapData();
-    data.caixas[_cxDragIdx].x=Math.max(0,x);
-    data.caixas[_cxDragIdx].y=Math.max(0,y);
-    await _saveMapData(data);_cxDragIdx=null;renderPainel();
+    function onMove(ev){
+      const wrapper=document.getElementById('mapa-wrapper');
+      const wRect=wrapper?wrapper.getBoundingClientRect():areaRect;
+      // posição relativa ao mapa-area (considera scroll do wrapper)
+      const scrollX=wrapper?wrapper.scrollLeft:0;
+      const scrollY=wrapper?wrapper.scrollTop:0;
+      const x=ev.clientX - areaRect.left - offX + scrollX;
+      const y=ev.clientY - areaRect.top  - offY + scrollY;
+      el.style.left=Math.max(0,x)+'px';
+      el.style.top =Math.max(0,y)+'px';
+    }
+
+    async function onUp(ev){
+      document.removeEventListener('mousemove',onMove);
+      document.removeEventListener('mouseup',onUp);
+      el.style.cursor='grab';
+      el.style.zIndex='';
+      const wrapper=document.getElementById('mapa-wrapper');
+      const scrollX=wrapper?wrapper.scrollLeft:0;
+      const scrollY=wrapper?wrapper.scrollTop:0;
+      const x=ev.clientX - areaRect.left - offX + scrollX;
+      const y=ev.clientY - areaRect.top  - offY + scrollY;
+      const data=_getMapData();
+      data.caixas[i].x=Math.max(0,x);
+      data.caixas[i].y=Math.max(0,y);
+      await _saveMapData(data);
+    }
+
+    document.addEventListener('mousemove',onMove);
+    document.addEventListener('mouseup',onUp);
   }
+
+  // cxDrop kept for ondrop compatibility (not used anymore)
+  async function cxDrop(e){ /* substituído por cxMouseDown */ }
 
   async function limparMapa(){
     if(!confirm('Limpar mapa e todas as caixas?')) return;
@@ -652,11 +701,23 @@ const LevantamentoFachada = (() => {
     if(!obraId) return;
     _mapaDoc = d;
     try {
-      // Salva metadados (URL da imagem + posição das caixas) no Firestore
-      // A imagem em si fica no Firebase Storage
-      const docData = {img: d.img||null, caixas: d.caixas||[], updatedAt: firebase.firestore.FieldValue.serverTimestamp()};
-      await db.collection('obras').doc(obraId).collection('config').doc('mapaVisao').set(docData);
-    } catch(e) { console.error('Erro ao salvar mapa:', e); Utils.toast('Erro ao salvar mapa.','erro'); }
+      const ref = db.collection('obras').doc(obraId).collection('config').doc('mapaVisao');
+      // Salva caixas e img separadamente para contornar limite de tamanho
+      if(d.img !== undefined){
+        // img comprimida via canvas — salva tudo junto
+        await ref.set({
+          img: d.img||null,
+          caixas: d.caixas||[],
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+      } else {
+        // Atualiza só caixas
+        await ref.set({caixas: d.caixas||[], updatedAt: firebase.firestore.FieldValue.serverTimestamp()}, {merge:true});
+      }
+    } catch(e) {
+      console.error('Erro ao salvar mapa:', e);
+      Utils.toast('Erro ao salvar mapa. Tente uma imagem menor.','erro');
+    }
   }
 
   // ===================== CRUD PEÇA =====================
@@ -788,7 +849,7 @@ const LevantamentoFachada = (() => {
     }catch(e){Utils.toast('Erro.','erro');}
   }
 
-  return {init,carregar,sel:selecionar,setAba,criarFachada,criarBalancim,editar,salvarEntidade,excluir,novaPeca,editarPeca,salvarPeca,excluirPeca,duplicarPeca,duplicarBal,conferirPeca,exportarCSV,exportarVista,onToggleJanela,importarMapa,cxAdicionar,cxRemover,cxTravar,cxEditar,salvarCxEdit,cxDragStart,cxDrop,limparMapa,abrirVaoVista,salvarVaoVista,_atualizarPreviewVao,abrirConfig,salvarConfig,onChangeCfgJanela};
+  return {init,carregar,sel:selecionar,setAba,criarFachada,criarBalancim,editar,salvarEntidade,excluir,novaPeca,editarPeca,salvarPeca,excluirPeca,duplicarPeca,duplicarBal,conferirPeca,exportarCSV,exportarVista,onToggleJanela,importarMapa,cxAdicionar,cxRemover,cxTravar,cxEditar,salvarCxEdit,cxMouseDown,cxDrop,limparMapa,abrirVaoVista,salvarVaoVista,_atualizarPreviewVao,abrirConfig,salvarConfig,onChangeCfgJanela};
 })();
 const LF=LevantamentoFachada;
 function onObraChanged(){LF.init();}

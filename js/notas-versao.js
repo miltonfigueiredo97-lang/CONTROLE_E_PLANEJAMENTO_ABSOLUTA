@@ -85,6 +85,15 @@ const NotasVersao = {
         '  → Imagem de capa das obras: upload para Storage',
         '  → Resolve limite de 1MB do Firestore e persistência entre dispositivos',
         'Mapa: imagem no tamanho natural com scroll — não mais cortada',
+        'Imagem: compressão via canvas (sem Firebase Storage) — sem loading infinito',
+        '  → Reduz para <900KB antes de salvar no Firestore',
+        '  → Qualidade progressiva: 85% → 30% até caber',
+        'Visão Geral: sidebar esquerda oculta para maximizar área do mapa',
+        '  → Aparece de volta ao entrar no Resumo Geral',
+        'Visão Geral: imagem ocupa toda a largura disponível (fit)',
+        'Drag das caixas: reescrito com mouse events (mousedown/mousemove/mouseup)',
+        '  → Movimento preciso, sem travar, sem voltar ao lugar inicial',
+        '  → Considera scroll do wrapper no cálculo de posição',
       ]
     }
   ],
