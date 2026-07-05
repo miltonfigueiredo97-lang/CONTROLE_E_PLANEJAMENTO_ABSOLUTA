@@ -657,10 +657,12 @@ const LevantamentoFachada = (() => {
       return '<div id="cx-'+i+'" '+
           'style="position:absolute;left:'+cx.x+'px;top:'+cx.y+'px;width:'+w+'px;'+h+
           'pointer-events:all;background:#fff;border:2px solid var(--cor-primaria);border-radius:8px;'+
-          'box-shadow:0 4px 20px rgba(0,0,0,0.2);cursor:'+(livre?'grab':'default')+';user-select:none;"'+
-          (livre?' onmousedown="LF.cxMouseDown(event,'+i+')"':'')+'>'+
-        '<div onmousedown="event.stopPropagation()" style="background:var(--cor-primaria);padding:7px 10px;'+
-          'border-radius:6px 6px 0 0;display:flex;align-items:center;gap:5px;">'+
+          'box-shadow:0 4px 20px rgba(0,0,0,0.2);user-select:none;">'+
+        // HEADER: é aqui que arrasta — onmousedown direto no header
+        '<div '+(livre?'onmousedown="LF.cxMouseDown(event,'+i+')"':'')+
+          ' style="background:var(--cor-primaria);padding:7px 10px;'+
+          'border-radius:6px 6px 0 0;display:flex;align-items:center;gap:5px;'+
+          'cursor:'+(livre?'grab':'default')+';">'+
           '<span style="flex:1;font-weight:800;font-size:0.82rem;color:#000;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+nome+'</span>'+
           '<button onclick="LF.cxTravar('+i+')" onmousedown="event.stopPropagation()" style="border:none;cursor:pointer;'+
             'font-size:0.62rem;font-weight:800;padding:2px 6px;border-radius:3px;'+

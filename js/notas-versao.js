@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V1.1.5',
+  versaoAtual: 'V1.1.6',
 
   versoes: [
     {
@@ -298,7 +298,7 @@ const NotasVersao = {
     },
     {
       versao: 'V1.1.5',
-      status: 'aberta',
+      status: 'fechada',
       data: '2025-07-05',
       tipo: 'correcao',
       titulo: 'Drag das caixas: reescrito simples e direto',
@@ -307,6 +307,21 @@ const NotasVersao = {
         '  → Não depende do overlay existir ou ter posição correta',
         '  → Move exatamente o quanto o mouse se deslocou',
         '  → Salva posição final no Firestore ao soltar',
+      ]
+    },
+    {
+      versao: 'V1.1.6',
+      status: 'aberta',
+      data: '2025-07-05',
+      tipo: 'correcao',
+      titulo: 'Drag caixas: header é a alça de arrasto',
+      itens: [
+        'CAUSA RAIZ do drag não funcionar:',
+        '  → onmousedown estava no div pai, mas header tinha stopPropagation',
+        '  → Qualquer clique passava pelo header e cancelava o evento',
+        'Fix: onmousedown movido para o HEADER (barra amarela)',
+        '  → Arrastar pelo header amarelo move a caixa',
+        '  → Botões ainda têm stopPropagation para não arrastar ao clicar',
       ]
     }
   ],
