@@ -44,7 +44,7 @@
       <a href="histograma.html"><span class="nav-icon">📊</span> Histograma</a>
       <a href="admin-permissoes.html"><span class="nav-icon">🔑</span> Permissões</a>
       <div class="sidebar-section-title">Sistema</div>
-      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V1.2.2</span></a>
+      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V1.2.3</span></a>
     </nav>
     <div class="sidebar-user">
       <div class="user-avatar">U</div>
@@ -113,34 +113,17 @@
   </div>
 </div>
 
-<!-- MODAL: Vincular Material à Tarefa -->
+<!-- MODAL: Vincular / Criar Material -->
 <div class="modal-overlay" id="modal-material-vinc">
-  <div class="modal" style="max-width:520px;">
+  <div class="modal" style="max-width:580px;">
     <div class="modal-header">
-      <h3 id="modal-vinc-titulo">Vincular Material</h3>
+      <h3 id="modal-vinc-titulo">Adicionar Material à Tarefa</h3>
       <button class="modal-close" onclick="Utils.fecharModal('modal-material-vinc')">&times;</button>
     </div>
-    <div class="modal-body">
-      <form id="form-material-vinc" onsubmit="event.preventDefault()">
-        <div class="form-grupo"><label>Material (da biblioteca) *</label>
-          <select id="vinc-material-sel" class="form-control"><option value="">— Selecione —</option></select>
-          <p class="text-sm text-muted" style="margin-top:4px;">Não encontrou? <a href="#" onclick="Utils.fecharModal('modal-material-vinc');Materiais.novoMaterialBib();return false;">Cadastre na biblioteca</a></p>
-        </div>
-        <div class="form-grupo"><label>Serviço / Tarefa *</label>
-          <select id="vinc-tarefa-sel" class="form-control"><option value="">— Selecione —</option></select></div>
-        <div class="form-row">
-          <div class="form-grupo"><label>Consumo Previsto (por unidade da tarefa)</label>
-            <input type="number" name="consumoPrevisto" class="form-control" step="0.001" min="0" placeholder="Ex: 3.5 kg/m²"></div>
-          <div class="form-grupo"><label>Consumo Real</label>
-            <input type="number" name="consumoReal" class="form-control" step="0.001" min="0"></div>
-        </div>
-        <div class="form-grupo"><label>Observações do vínculo</label>
-          <textarea name="observacoes" class="form-control" rows="2" placeholder="Notas específicas desta tarefa..."></textarea></div>
-      </form>
-    </div>
+    <div class="modal-body" id="vinc-body"></div>
     <div class="modal-footer">
       <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-material-vinc')">Cancelar</button>
-      <button class="btn btn-primario" onclick="Materiais.salvarVinculo()">Salvar Vínculo</button>
+      <button class="btn btn-primario" onclick="Materiais.salvarVinculo()">Salvar</button>
     </div>
   </div>
 </div>
@@ -196,34 +179,17 @@
   </div>
 </div>
 
-<!-- MODAL: Vincular Material à Tarefa -->
+<!-- MODAL: Vincular / Criar Material -->
 <div class="modal-overlay" id="modal-material-vinc">
-  <div class="modal" style="max-width:520px;">
+  <div class="modal" style="max-width:580px;">
     <div class="modal-header">
-      <h3 id="modal-vinc-titulo">Vincular Material</h3>
+      <h3 id="modal-vinc-titulo">Adicionar Material à Tarefa</h3>
       <button class="modal-close" onclick="Utils.fecharModal('modal-material-vinc')">&times;</button>
     </div>
-    <div class="modal-body">
-      <form id="form-material-vinc" onsubmit="event.preventDefault()">
-        <div class="form-grupo"><label>Material (da biblioteca) *</label>
-          <select id="vinc-material-sel" class="form-control"><option value="">— Selecione —</option></select>
-          <p class="text-sm text-muted" style="margin-top:4px;">Não encontrou? <a href="#" onclick="Utils.fecharModal('modal-material-vinc');Materiais.novoMaterialBib();return false;">Cadastre na biblioteca</a></p>
-        </div>
-        <div class="form-grupo"><label>Serviço / Tarefa *</label>
-          <select id="vinc-tarefa-sel" class="form-control"><option value="">— Selecione —</option></select></div>
-        <div class="form-row">
-          <div class="form-grupo"><label>Consumo Previsto (por unidade da tarefa)</label>
-            <input type="number" name="consumoPrevisto" class="form-control" step="0.001" min="0" placeholder="Ex: 3.5 kg/m²"></div>
-          <div class="form-grupo"><label>Consumo Real</label>
-            <input type="number" name="consumoReal" class="form-control" step="0.001" min="0"></div>
-        </div>
-        <div class="form-grupo"><label>Observações do vínculo</label>
-          <textarea name="observacoes" class="form-control" rows="2" placeholder="Notas específicas desta tarefa..."></textarea></div>
-      </form>
-    </div>
+    <div class="modal-body" id="vinc-body"></div>
     <div class="modal-footer">
       <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-material-vinc')">Cancelar</button>
-      <button class="btn btn-primario" onclick="Materiais.salvarVinculo()">Salvar Vínculo</button>
+      <button class="btn btn-primario" onclick="Materiais.salvarVinculo()">Salvar</button>
     </div>
   </div>
 </div>
@@ -279,34 +245,17 @@
   </div>
 </div>
 
-<!-- MODAL: Vincular Material à Tarefa -->
+<!-- MODAL: Vincular / Criar Material -->
 <div class="modal-overlay" id="modal-material-vinc">
-  <div class="modal" style="max-width:520px;">
+  <div class="modal" style="max-width:580px;">
     <div class="modal-header">
-      <h3 id="modal-vinc-titulo">Vincular Material</h3>
+      <h3 id="modal-vinc-titulo">Adicionar Material à Tarefa</h3>
       <button class="modal-close" onclick="Utils.fecharModal('modal-material-vinc')">&times;</button>
     </div>
-    <div class="modal-body">
-      <form id="form-material-vinc" onsubmit="event.preventDefault()">
-        <div class="form-grupo"><label>Material (da biblioteca) *</label>
-          <select id="vinc-material-sel" class="form-control"><option value="">— Selecione —</option></select>
-          <p class="text-sm text-muted" style="margin-top:4px;">Não encontrou? <a href="#" onclick="Utils.fecharModal('modal-material-vinc');Materiais.novoMaterialBib();return false;">Cadastre na biblioteca</a></p>
-        </div>
-        <div class="form-grupo"><label>Serviço / Tarefa *</label>
-          <select id="vinc-tarefa-sel" class="form-control"><option value="">— Selecione —</option></select></div>
-        <div class="form-row">
-          <div class="form-grupo"><label>Consumo Previsto (por unidade da tarefa)</label>
-            <input type="number" name="consumoPrevisto" class="form-control" step="0.001" min="0" placeholder="Ex: 3.5 kg/m²"></div>
-          <div class="form-grupo"><label>Consumo Real</label>
-            <input type="number" name="consumoReal" class="form-control" step="0.001" min="0"></div>
-        </div>
-        <div class="form-grupo"><label>Observações do vínculo</label>
-          <textarea name="observacoes" class="form-control" rows="2" placeholder="Notas específicas desta tarefa..."></textarea></div>
-      </form>
-    </div>
+    <div class="modal-body" id="vinc-body"></div>
     <div class="modal-footer">
       <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-material-vinc')">Cancelar</button>
-      <button class="btn btn-primario" onclick="Materiais.salvarVinculo()">Salvar Vínculo</button>
+      <button class="btn btn-primario" onclick="Materiais.salvarVinculo()">Salvar</button>
     </div>
   </div>
 </div>
@@ -362,34 +311,17 @@
   </div>
 </div>
 
-<!-- MODAL: Vincular Material à Tarefa -->
+<!-- MODAL: Vincular / Criar Material -->
 <div class="modal-overlay" id="modal-material-vinc">
-  <div class="modal" style="max-width:520px;">
+  <div class="modal" style="max-width:580px;">
     <div class="modal-header">
-      <h3 id="modal-vinc-titulo">Vincular Material</h3>
+      <h3 id="modal-vinc-titulo">Adicionar Material à Tarefa</h3>
       <button class="modal-close" onclick="Utils.fecharModal('modal-material-vinc')">&times;</button>
     </div>
-    <div class="modal-body">
-      <form id="form-material-vinc" onsubmit="event.preventDefault()">
-        <div class="form-grupo"><label>Material (da biblioteca) *</label>
-          <select id="vinc-material-sel" class="form-control"><option value="">— Selecione —</option></select>
-          <p class="text-sm text-muted" style="margin-top:4px;">Não encontrou? <a href="#" onclick="Utils.fecharModal('modal-material-vinc');Materiais.novoMaterialBib();return false;">Cadastre na biblioteca</a></p>
-        </div>
-        <div class="form-grupo"><label>Serviço / Tarefa *</label>
-          <select id="vinc-tarefa-sel" class="form-control"><option value="">— Selecione —</option></select></div>
-        <div class="form-row">
-          <div class="form-grupo"><label>Consumo Previsto (por unidade da tarefa)</label>
-            <input type="number" name="consumoPrevisto" class="form-control" step="0.001" min="0" placeholder="Ex: 3.5 kg/m²"></div>
-          <div class="form-grupo"><label>Consumo Real</label>
-            <input type="number" name="consumoReal" class="form-control" step="0.001" min="0"></div>
-        </div>
-        <div class="form-grupo"><label>Observações do vínculo</label>
-          <textarea name="observacoes" class="form-control" rows="2" placeholder="Notas específicas desta tarefa..."></textarea></div>
-      </form>
-    </div>
+    <div class="modal-body" id="vinc-body"></div>
     <div class="modal-footer">
       <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-material-vinc')">Cancelar</button>
-      <button class="btn btn-primario" onclick="Materiais.salvarVinculo()">Salvar Vínculo</button>
+      <button class="btn btn-primario" onclick="Materiais.salvarVinculo()">Salvar</button>
     </div>
   </div>
 </div>

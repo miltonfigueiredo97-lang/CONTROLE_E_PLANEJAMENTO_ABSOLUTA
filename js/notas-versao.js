@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V1.2.2',
+  versaoAtual: 'V1.2.3',
 
   versoes: [
     {
@@ -371,7 +371,7 @@ const NotasVersao = {
     },
     {
       versao: 'V1.2.2',
-      status: 'aberta',
+      status: 'fechada',
       data: '2025-07-05',
       tipo: 'funcionalidade',
       titulo: 'Materiais: biblioteca + vínculos por UID',
@@ -387,6 +387,25 @@ const NotasVersao = {
         '  → Consumo Previsto × Quantidade da tarefa = total calculado',
         '  → Avisa duplicidade (mesmo material + mesma tarefa)',
         '  → Link rápido para cadastrar na biblioteca se não encontrar',
+      ]
+    },
+    {
+      versao: 'V1.2.3',
+      status: 'aberta',
+      data: '2025-07-05',
+      tipo: 'correcao',
+      titulo: 'Materiais polido + Excel sem conflito',
+      itens: [
+        'Excel exportar: colunas sem acentos (Inicio, Termino, Nivel, Perc Concluido)',
+        '  → Importar detecta com ou sem acento, normaliza automaticamente',
+        'Materiais: botão ← Por Tarefa na tela de Biblioteca',
+        'Materiais: modal único Vincular / Criar com toggle no topo',
+        '  → Vincular: busca na biblioteca',
+        '  → Criar: formulário inline, salva na biblioteca e vincula de uma vez',
+        'Unidade de consumo: sempre no formato X/Y (kg/m², L/m², un/un...)',
+        '  → Consumo real herda a mesma unidade (label dinâmico)',
+        '  → Dropdown com opções padrão de mercado',
+        'Card de tarefa: exibe apenas total (m², un...) sem listar fachadas',
       ]
     }
   ],

@@ -339,8 +339,8 @@ const Planejamento = (() => {
           nome:   String(nome).trim(),
           ordem:  parseFloat(mapCampo(row,['Ordem','ordem','Order','WBS']))||importadas+1,
           nivel:  parseInt(mapCampo(row,['Nível','nivel','Level']))||0,
-          inicioPlanejado: _parseData(mapCampo(row,['Início Planejado','inicioPlanejado','Start','Início','inicio'])),
-          terminoPlanejado:_parseData(mapCampo(row,['Término Planejado','terminoPlanejado','Finish','Fim','fim','Término'])),
+          inicioPlanejado: _parseData(mapCampo(row,['Inicio Planejado','Início Planejado','inicioPlanejado','Start','Início','inicio'])),
+          terminoPlanejado:_parseData(mapCampo(row,['Termino Planejado','Término Planejado','terminoPlanejado','Finish','Fim','fim','Término'])),
           duracao:parseInt(mapCampo(row,['Duração','duracao','Duration']))||0,
           percentualConcluido:parseFloat(mapCampo(row,['% Concluído','percentualConcluido','% Complete','% Done']))||0,
           responsavel:mapCampo(row,['Responsável','responsavel','Resource','Responsable'])||'',
@@ -381,24 +381,25 @@ const Planejamento = (() => {
         await _loadScript('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');
       }
 
+      // Colunas exatamente como o importador espera — sem conflito
       const dados=tarefas.map(t=>({
-        'Código':          t.codigo||'',
-        'Nome':            t.nome||'',
-        'Tipo':            t.tipo||'tarefa',
-        'Ordem':           t.ordem||'',
-        'Nível':           t.nivel||0,
-        'Início Planejado':t.inicioPlanejado||'',
-        'Término Planejado':t.terminoPlanejado||'',
-        'Duração':         t.duracao||'',
-        '% Concluído':     t.percentualConcluido||0,
-        'Responsável':     t.responsavel||'',
-        'Etapa':           t.etapa||'',
-        'Pacote':          t.pacote||'',
-        'Local':           t.local||'',
-        'Unidade':         t.unidade||'',
-        'Quantidade':      t.quantidade||'',
-        'Peso':            t.peso||'',
-        'Observações':     t.observacoes||'',
+        'Codigo':           t.codigo||'',
+        'Nome':             t.nome||'',
+        'Tipo':             t.tipo||'tarefa',
+        'Ordem':            t.ordem||'',
+        'Nivel':            t.nivel||0,
+        'Inicio Planejado': t.inicioPlanejado||'',
+        'Termino Planejado':t.terminoPlanejado||'',
+        'Duracao':          t.duracao||'',
+        'Perc Concluido':   t.percentualConcluido||0,
+        'Responsavel':      t.responsavel||'',
+        'Etapa':            t.etapa||'',
+        'Pacote':           t.pacote||'',
+        'Local':            t.local||'',
+        'Unidade':          t.unidade||'',
+        'Quantidade':       t.quantidade||'',
+        'Peso':             t.peso||'',
+        'Observacoes':      t.observacoes||'',
       }));
 
       const ws=XLSX.utils.json_to_sheet(dados);
