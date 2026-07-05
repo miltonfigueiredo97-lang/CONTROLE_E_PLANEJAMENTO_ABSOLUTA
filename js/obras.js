@@ -1,24 +1,6 @@
-// ============================================
 // Módulo: Obras
-// CRUD completo — criar, listar, editar, excluir
-// Suporte a card com imagem para obras especiais
-// ============================================
 const Obras = (() => {
   let obras = [];
-
-  // Obras com imagem especial (por nome parcial)
-  const OBRAS_IMAGEM = {
-    'essence': 'assets/images/essence-obra.png',
-    'zenith':  'assets/images/essence-obra.png',
-  };
-
-  function _getImagem(nome) {
-    const n = (nome||'').toLowerCase();
-    for (const [key, img] of Object.entries(OBRAS_IMAGEM)) {
-      if (n.includes(key)) return img;
-    }
-    return null;
-  }
 
   async function init() {
     const ok = await Utils.initPagina();
@@ -43,83 +25,59 @@ const Obras = (() => {
     const container = document.getElementById('lista-obras');
     if (!container) return;
 
-    if (obras.length === 0) {
+    if (!obras.length) {
       container.innerHTML = `<div class="estado-vazio">
         <div class="icone">🏗️</div><p>Nenhuma obra cadastrada.</p>
-        <button class="btn btn-primario" onclick="Obras.abrirFormNova()">+ Nova Obra</button></div>`;
+        <button class="btn btn-primario" onclick="Obras.abrirFormNova()">+ Nova Obra</button>
+      </div>`;
       return;
     }
 
-    container.innerHTML = '';
     const grid = document.createElement('div');
     grid.className = 'cards-grid';
 
     obras.forEach(obra => {
-      const img = _getImagem(obra.nome);
       const card = document.createElement('div');
+      card.className = 'card obra-card';
 
-      if (img) {
-        // Card com imagem especial
-        card.className = 'card obra-card obra-card-img';
+      if (obra.imagemUrl) {
+        // Card com imagem enviada pelo usuário
         card.innerHTML = `
-          <div class="obra-img-bg" style="background-image:url('${img}')"></div>
-          <div class="obra-img-overlay"></div>
-          <div class="obra-img-content">
-            <div class="obra-nome">${obra.nome}</div>
-            <div class="obra-info">${obra.endereco||''}</div>
-            <div class="obra-info">${obra.cliente||''}</div>
-            <div class="obra-status mt-1">
-              <span class="badge badge-amarelo">${obra.ativa!==false?'Ativa':'Inativa'}</span>
+          <div style="position:relative;height:160px;overflow:hidden;border-radius:8px 8px 0 0;">
+            <img src="${obra.imagemUrl}" style="width:100%;height:100%;object-fit:cover;">
+            <div style="position:absolute;inset:0;background:linear-gradient(0deg,rgba(0,0,0,.7) 0%,transparent 60%)"></div>
+            <div style="position:absolute;bottom:10px;left:14px;right:14px;">
+              <div class="obra-nome" style="color:#fff">${obra.nome}</div>
+              <div class="obra-info" style="color:rgba(255,255,255,.75)">${obra.cliente||''}</div>
+            </div>
+          </div>
+          <div class="card-body" style="padding:10px 14px;display:flex;align-items:center;justify-content:space-between;">
+            <span class="badge ${obra.ativa!==false?'badge-sucesso':'badge-neutro'}">${obra.ativa!==false?'Ativa':'Inativa'}</span>
+            <div style="display:flex;gap:6px;">
+              <button class="btn btn-secundario btn-sm" onclick="event.stopPropagation();Obras.abrirFormEditar('${obra.id}')">✎ Editar</button>
             </div>
           </div>`;
       } else {
-        card.className = 'card obra-card';
-        card.innerHTML = `<div class="card-body">
-          <div class="obra-nome">${obra.nome||'Sem nome'}</div>
-          <div class="obra-info">${obra.endereco||''}</div>
-          <div class="obra-info text-sm text-muted">${obra.cliente||''}</div>
-          <div class="obra-status mt-1">
-            <span class="badge ${obra.ativa!==false?'badge-sucesso':'badge-neutro'}">
-              ${obra.ativa!==false?'Ativa':'Inativa'}
-            </span>
-          </div>
-        </div>`;
+        card.innerHTML = `
+          <div class="card-body">
+            <div class="obra-nome">${obra.nome||'Sem nome'}</div>
+            <div class="obra-info text-sm">${obra.cliente||''}</div>
+            <div class="obra-info text-sm text-muted">${obra.endereco||''}</div>
+            <div style="margin-top:10px;display:flex;align-items:center;justify-content:space-between;">
+              <span class="badge ${obra.ativa!==false?'badge-sucesso':'badge-neutro'}">${obra.ativa!==false?'Ativa':'Inativa'}</span>
+              <button class="btn btn-secundario btn-sm" onclick="event.stopPropagation();Obras.abrirFormEditar('${obra.id}')">✎ Editar</button>
+            </div>
+          </div>`;
       }
 
-      // Click vai para dashboard, botões de ação ficam em cima
       card.addEventListener('click', (e) => {
-        if (!e.target.closest('.obra-acoes')) selecionarObra(obra);
+        if (!e.target.closest('button')) selecionarObra(obra);
       });
       grid.appendChild(card);
     });
 
+    container.innerHTML = '';
     container.appendChild(grid);
-    _renderTabela();
-  }
-
-  function _renderTabela() {
-    const tabContainer = document.getElementById('tabela-obras');
-    if (!tabContainer) return;
-    if (obras.length === 0) { tabContainer.innerHTML = ''; return; }
-
-    let rows = obras.map(o => `<tr>
-      <td><strong>${o.nome}</strong></td>
-      <td>${o.cliente||'—'}</td>
-      <td>${o.cidade||'—'}</td>
-      <td>${o.endereco||'—'}</td>
-      <td class="col-centro"><span class="badge ${o.ativa!==false?'badge-sucesso':'badge-neutro'}">${o.ativa!==false?'Ativa':'Inativa'}</span></td>
-      <td class="col-acoes">
-        <button class="btn btn-secundario btn-sm" onclick="Obras.abrirFormEditar('${o.id}')">✎ Editar</button>
-        <button class="btn btn-perigo btn-sm btn-icon" onclick="Obras.excluir('${o.id}')">✕</button>
-      </td>
-    </tr>`).join('');
-
-    tabContainer.innerHTML = `<div class="tabela-container mt-3">
-      <table class="tabela">
-        <thead><tr><th>Nome</th><th>Cliente</th><th>Cidade</th><th>Endereço</th><th class="col-centro">Status</th><th class="col-acoes">Ações</th></tr></thead>
-        <tbody>${rows}</tbody>
-      </table>
-    </div>`;
   }
 
   function selecionarObra(obra) {
@@ -128,9 +86,10 @@ const Obras = (() => {
   }
 
   function abrirFormNova() {
-    Utils.limparForm('form-obra');
     document.getElementById('form-obra-id').value = '';
     document.getElementById('modal-obra-titulo').textContent = 'Nova Obra';
+    document.getElementById('preview-imagem-obra').style.display = 'none';
+    Utils.limparForm('form-obra');
     document.querySelector('#form-obra [name="ativa"]').checked = true;
     Utils.abrirModal('modal-obra');
   }
@@ -141,24 +100,50 @@ const Obras = (() => {
     document.getElementById('form-obra-id').value = obraId;
     document.getElementById('modal-obra-titulo').textContent = 'Editar Obra';
     Utils.setFormData('form-obra', obra);
+    // Mostrar preview se tiver imagem
+    const prev = document.getElementById('preview-imagem-obra');
+    if (obra.imagemUrl) {
+      prev.src = obra.imagemUrl;
+      prev.style.display = 'block';
+    } else {
+      prev.style.display = 'none';
+    }
     Utils.abrirModal('modal-obra');
+  }
+
+  function onImagemSelecionada(input) {
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const prev = document.getElementById('preview-imagem-obra');
+      prev.src = e.target.result;
+      prev.style.display = 'block';
+      // Guarda base64 temporariamente no input hidden
+      document.getElementById('imagem-obra-b64').value = e.target.result;
+    };
+    reader.readAsDataURL(file);
   }
 
   async function salvar() {
     const id = document.getElementById('form-obra-id').value;
     const data = Utils.getFormData('form-obra');
     if (!data.nome) { Utils.toast('Informe o nome da obra.', 'alerta'); return; }
+
+    // Imagem: pega base64 se houver nova, senão mantém existente
+    const b64 = document.getElementById('imagem-obra-b64').value;
+    if (b64) data.imagemUrl = b64;
+
     try {
       if (id) {
         await Database.atualizarObra(id, data);
-        await Audit.editar(id, 'obras', 'obra', id, `Editou obra: ${data.nome}`);
         Utils.toast('Obra atualizada!', 'sucesso');
       } else {
-        const novoId = await Database.criarObra(data);
-        await Audit.criar(novoId, 'obras', 'obra', novoId, `Criou obra: ${data.nome}`);
+        await Database.criarObra(data);
         Utils.toast('Obra criada!', 'sucesso');
       }
       Utils.fecharModal('modal-obra');
+      document.getElementById('imagem-obra-b64').value = '';
       await carregar();
       await Router.popularSeletorObras();
     } catch (e) {
@@ -177,5 +162,5 @@ const Obras = (() => {
     } catch (e) { Utils.toast('Erro ao excluir.', 'erro'); }
   }
 
-  return { init, carregar, renderizar, abrirFormNova, abrirFormEditar, salvar, excluir };
+  return { init, carregar, renderizar, abrirFormNova, abrirFormEditar, salvar, excluir, onImagemSelecionada };
 })();

@@ -753,7 +753,7 @@ const LevantamentoFachada = (() => {
     }catch(e){Utils.toast('Erro.','erro');}
   }
 
-  return {init,carregar,sel:selecionar,setAba,criarFachada,criarBalancim,editar,salvarEntidade,excluir,novaPeca,editarPeca,salvarPeca,excluirPeca,duplicarPeca,duplicarBal,conferirPeca,exportarCSV,exportarVista,onToggleJanela,importarMapa,cxAdicionar,cxRemover,cxTravar,cxVincular,cxDragStart,cxDrop,limparMapa,abrirVaoVista,salvarVaoVista,_atualizarPreviewVao,abrirConfig,salvarConfig,onChangeCfgJanela};
+  return {init,carregar,sel:selecionar,setAba,criarFachada,criarBalancim,editar,salvarEntidade,excluir,novaPeca,editarPeca,salvarPeca,excluirPeca,duplicarPeca,duplicarBal,conferirPeca,exportarCSV,exportarVista,onToggleJanela,importarMapa,cxAdicionar,cxRemover,cxTravar,cxEditar,salvarCxEdit,cxDragStart,cxDrop,limparMapa,abrirVaoVista,salvarVaoVista,_atualizarPreviewVao,abrirConfig,salvarConfig,onChangeCfgJanela};
 })();
 const LF=LevantamentoFachada;
 function onObraChanged(){LF.init();}

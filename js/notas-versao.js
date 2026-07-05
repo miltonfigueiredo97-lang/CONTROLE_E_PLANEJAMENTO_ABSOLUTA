@@ -64,6 +64,11 @@ const NotasVersao = {
         '  → Usuário nunca é redirecionado por erro de Firestore',
         'Versão atual visível na sidebar (ex: V1.0.2)',
         'Notas de versão bumpeadas a cada commit (V1.0.2)',
+        'CRÍTICO fachada: cxVincular não existia → travava o módulo inteiro',
+        '  → Corrigido para cxEditar e salvarCxEdit',
+        '  → LevantamentoFachada undefined era consequência deste erro',
+        'Obras: removidas imagens hardcoded (Essence/Zenith)',
+        'Obras: botão Inserir Imagem no modal — cada obra tem sua própria foto',
       ]
     }
   ],
