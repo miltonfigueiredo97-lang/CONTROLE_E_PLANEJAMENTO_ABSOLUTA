@@ -1,14 +1,24 @@
 // ============================================
-// Módulo: Materiais — V1.0
-// Vinculado ao Levantamento (tarefas/fachadas)
-// Material → Tarefa → Quantidade calculada
+// Módulo: Materiais — V1.1
+// Biblioteca de materiais (UID único por material)
+// Vínculos material↔tarefa separados (consumo por tarefa)
 // ============================================
 const Materiais = (() => {
   let obraId=null;
-  let materiais=[], tarefas=[], levFachadas=[];
-  let filtroTarefa='', editandoId=null;
-  const COL='materiais';
+  let biblioteca=[];    // todos os materiais (biblioteca global da obra)
+  let vinculos=[];      // vínculos material↔tarefa com consumo
+  let tarefas=[];       // tarefas do planejamento
+  let levFachadas=[];   // peças/fachadas do levantamento
 
+  let abaAtiva='vinculos'; // 'vinculos' | 'biblioteca'
+  let filtroTarefa='';
+  let editandoBiblId=null;  // editando material na biblioteca
+  let editandoVincId=null;  // editando vínculo
+
+  const COL_BIB='materiais';
+  const COL_VIN='materiais_vinculos';
+
+  // ===================== INIT =====================
   async function init(){
     const ok=await Utils.initPagina();if(!ok)return;
     obraId=Router.getObraId();
@@ -23,8 +33,9 @@ const Materiais = (() => {
   async function carregar(){
     try{
       Utils.mostrarLoading('Carregando materiais...');
-      [materiais, tarefas, levFachadas]=await Promise.all([
-        Database.listar(obraId,COL,'nome').catch(()=>[]),
+      [biblioteca,vinculos,tarefas,levFachadas]=await Promise.all([
+        Database.listar(obraId,COL_BIB,'nome').catch(()=>[]),
+        Database.listar(obraId,COL_VIN,'createdAt').catch(()=>[]),
         Database.listar(obraId,'tarefas','ordem').catch(()=>[]),
         Database.listar(obraId,'levantamentosFachada',null).catch(()=>[]),
       ]);
@@ -33,203 +44,291 @@ const Materiais = (() => {
     finally{Utils.esconderLoading();}
   }
 
+  // ===================== RENDER PRINCIPAL =====================
   function renderizar(){
     const c=document.getElementById('materiais-content');if(!c)return;
-
-    // Agrupa tarefas únicas referenciadas nos materiais
-    // + tarefas do planejamento + levantamentos de fachada como "tarefas"
-    const opcoesTarefa=_getOpcoesTarefa();
-
-    const matsFiltrados=filtroTarefa
-      ? materiais.filter(m=>m.tarefaId===filtroTarefa)
-      : materiais;
-
     c.innerHTML=`
       <div class="page-header">
         <div><h2>Materiais</h2>
-          <span class="subtitulo">${materiais.length} material(is) cadastrado(s)</span></div>
-        <button class="btn btn-primario" onclick="Materiais.novoMaterial()">+ Novo Material</button>
+          <span class="subtitulo">${biblioteca.length} material(is) na biblioteca · ${vinculos.length} vínculo(s)</span></div>
+        <div class="btn-grupo">
+          <button class="btn btn-secundario btn-sm" onclick="Materiais.setAba('biblioteca')" 
+            style="${abaAtiva==='biblioteca'?'background:var(--cor-dark-800);color:var(--cor-primaria);border-color:var(--cor-primaria);':''}">
+            📚 Biblioteca</button>
+          <button class="btn btn-secundario btn-sm" onclick="Materiais.setAba('vinculos')"
+            style="${abaAtiva==='vinculos'?'background:var(--cor-dark-800);color:var(--cor-primaria);border-color:var(--cor-primaria);':''}">
+            🔗 Por Tarefa</button>
+          ${abaAtiva==='biblioteca'
+            ?'<button class="btn btn-primario btn-sm" onclick="Materiais.novoMaterialBib()">+ Novo Material</button>'
+            :'<button class="btn btn-primario btn-sm" onclick="Materiais.novoVinculo()">+ Vincular Material</button>'}
+        </div>
       </div>
+      <div id="mat-corpo">${abaAtiva==='biblioteca'?_renderBiblioteca():_renderVinculos()}</div>`;
+  }
 
-      <!-- Filtro por tarefa/serviço -->
+  // ===================== ABA: BIBLIOTECA =====================
+  function _renderBiblioteca(){
+    if(!biblioteca.length) return `<div class="estado-vazio">
+      <div class="icone">📚</div>
+      <p>Nenhum material cadastrado na biblioteca.</p>
+      <button class="btn btn-primario" onclick="Materiais.novoMaterialBib()">+ Cadastrar primeiro material</button>
+    </div>`;
+
+    return `<div class="tabela-container"><table class="tabela tabela-compacta">
+      <thead><tr>
+        <th>Material</th><th>Tipo</th><th>Fabricante</th><th class="col-num">Unidade</th>
+        <th class="col-num">Usado em</th><th class="col-acoes">Ações</th>
+      </tr></thead>
+      <tbody>${biblioteca.map(m=>{
+        const usos=vinculos.filter(v=>v.materialId===m.id).length;
+        return `<tr>
+          <td><strong>${m.nome}</strong>${m.referencia?`<br><span class="text-sm text-muted">${m.referencia}</span>`:''}
+          </td>
+          <td>${m.tipo||'—'}</td>
+          <td>${m.fabricante||'—'}</td>
+          <td class="col-num">${m.unidade||'—'}</td>
+          <td class="col-num">
+            ${usos?`<span class="badge badge-amarelo">${usos} tarefa(s)</span>`:'<span class="text-muted">—</span>'}
+          </td>
+          <td class="col-acoes">
+            <button class="btn btn-secundario btn-sm" onclick="Materiais.editarMaterialBib('${m.id}')">✎</button>
+            <button class="btn btn-perigo btn-sm btn-icon" onclick="Materiais.excluirMaterialBib('${m.id}')">✕</button>
+          </td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table></div>`;
+  }
+
+  // ===================== ABA: VÍNCULOS POR TAREFA =====================
+  function _renderVinculos(){
+    const opcoesTarefa=_getOpcoesTarefa();
+
+    const vincsFiltrados=filtroTarefa
+      ? vinculos.filter(v=>v.tarefaId===filtroTarefa)
+      : vinculos;
+
+    const tarefaInfo=filtroTarefa?_getTarefaInfo(filtroTarefa):null;
+
+    return `
       <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center;">
-        <select class="form-control" style="width:280px;" onchange="Materiais.setFiltro(this.value)">
-          <option value="">Todos os serviços/tarefas</option>
+        <select class="form-control" style="width:300px;" onchange="Materiais.setFiltro(this.value)">
+          <option value="">Todos os serviços / tarefas</option>
           ${opcoesTarefa.map(o=>`<option value="${o.id}" ${filtroTarefa===o.id?'selected':''}>${o.label}</option>`).join('')}
         </select>
-        ${filtroTarefa?`<button class="btn btn-secundario btn-sm" onclick="Materiais.setFiltro('')">✕ Limpar filtro</button>`:''}
+        ${filtroTarefa?`<button class="btn btn-secundario btn-sm" onclick="Materiais.setFiltro('')">✕ Limpar</button>`:''}
       </div>
 
-      ${!matsFiltrados.length?`
-        <div class="estado-vazio">
-          <div class="icone">🧱</div>
-          <p>${filtroTarefa?'Nenhum material neste serviço.':'Nenhum material cadastrado.'}</p>
-          <button class="btn btn-primario" onclick="Materiais.novoMaterial()">+ Cadastrar primeiro material</button>
-        </div>` : `
-      <div class="tabela-container">
-        <table class="tabela">
-          <thead><tr>
-            <th>Material</th><th>Tipo</th><th>Fabricante</th>
-            <th>Serviço / Tarefa</th>
-            <th class="col-num">Consumo Prev.</th><th class="col-num">Consumo Real</th>
-            <th class="col-num">Qtd Tarefa</th><th class="col-num">Un</th>
-            <th class="col-acoes">Ações</th>
-          </tr></thead>
-          <tbody>
-            ${matsFiltrados.map(m=>{
-              const tarefa=_getTarefaInfo(m.tarefaId||m.tarefaRef);
-              const qtd=tarefa?_calcQtdTarefa(tarefa,m):'—';
-              return `<tr>
-                <td><strong>${m.nome}</strong></td>
-                <td>${m.tipo||'—'}</td>
-                <td>${m.fabricante||'—'}</td>
-                <td>${tarefa?tarefa.label:'—'}</td>
-                <td class="col-num" style="font-family:var(--font-mono);">${m.consumoPrevisto||'—'}</td>
-                <td class="col-num" style="font-family:var(--font-mono);">${m.consumoReal||'—'}</td>
-                <td class="col-num" style="font-weight:700;color:var(--cor-primaria);font-family:var(--font-mono);">${qtd}</td>
-                <td class="col-num">${m.unidade||'—'}</td>
-                <td class="col-acoes">
-                  <button class="btn btn-secundario btn-sm" onclick="Materiais.editarMaterial('${m.id}')">✎</button>
-                  <button class="btn btn-perigo btn-sm btn-icon" onclick="Materiais.excluirMaterial('${m.id}')">✕</button>
-                </td>
-              </tr>`;
-            }).join('')}
-          </tbody>
-        </table>
-      </div>
+      ${tarefaInfo?_renderCardTarefa(tarefaInfo):''}
 
-      <!-- Painel de detalhes se filtro de tarefa ativo -->
-      ${filtroTarefa?_renderDetalhesTarefa(filtroTarefa,matsFiltrados):''}`}`;
+      ${!vincsFiltrados.length?`<div class="estado-vazio">
+        <div class="icone">🔗</div>
+        <p>${filtroTarefa?'Nenhum material vinculado a este serviço.':'Nenhum vínculo cadastrado.'}</p>
+        <button class="btn btn-primario" onclick="Materiais.novoVinculo()">+ Vincular material</button>
+      </div>` : `
+      <div class="tabela-container"><table class="tabela tabela-compacta">
+        <thead><tr>
+          <th>Material</th><th>Tipo</th><th>Fabricante</th>
+          <th>Serviço / Tarefa</th>
+          <th class="col-num">Consumo Prev.</th>
+          <th class="col-num">Consumo Real</th>
+          <th class="col-num" style="color:var(--cor-primaria);">Qtd Total</th>
+          <th class="col-acoes">Ações</th>
+        </tr></thead>
+        <tbody>${vincsFiltrados.map(v=>{
+          const mat=biblioteca.find(m=>m.id===v.materialId);
+          const tInfo=_getTarefaInfo(v.tarefaId);
+          const qtd=_calcQtd(tInfo,v);
+          return `<tr>
+            <td><strong>${mat?mat.nome:'Material removido'}</strong>
+              ${mat?.fabricante?`<br><span class="text-sm text-muted">${mat.fabricante}</span>`:''}
+            </td>
+            <td>${mat?.tipo||'—'}</td>
+            <td>${mat?.fabricante||'—'}</td>
+            <td>${tInfo?tInfo.label:'—'}</td>
+            <td class="col-num" style="font-family:var(--font-mono);">
+              ${v.consumoPrevisto||'—'} ${mat?.unidade||''}
+            </td>
+            <td class="col-num" style="font-family:var(--font-mono);">
+              ${v.consumoReal||'—'} ${mat?.unidade||''}
+            </td>
+            <td class="col-num" style="font-weight:700;color:var(--cor-primaria);font-family:var(--font-mono);">
+              ${qtd}
+            </td>
+            <td class="col-acoes">
+              <button class="btn btn-secundario btn-sm" onclick="Materiais.editarVinculo('${v.id}')">✎</button>
+              <button class="btn btn-perigo btn-sm btn-icon" onclick="Materiais.excluirVinculo('${v.id}')">✕</button>
+            </td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table></div>`}`;
   }
 
-  // Renderiza painel de detalhes da tarefa/fachada selecionada
-  function _renderDetalhesTarefa(tarefaId, mats){
-    const info=_getTarefaInfo(tarefaId);
-    if(!info)return '';
-    const total=mats.reduce((acc,m)=>{
-      const qtd=info?_calcQtdTarefaNum(info,m):0;
-      return acc;
-    },0);
-    return `
-      <div style="background:var(--cor-dark-800);border-radius:8px;padding:16px;margin-top:16px;border:1px solid var(--cor-primaria);">
-        <div style="font-weight:700;color:var(--cor-primaria);margin-bottom:12px;">📊 Detalhes: ${info.label}</div>
-        ${info.detalhes?`<div style="display:flex;gap:16px;flex-wrap:wrap;">
-          ${info.detalhes.map(d=>`
-            <div style="background:rgba(255,255,255,0.05);border-radius:6px;padding:10px 14px;min-width:140px;">
-              <div style="font-size:0.68rem;color:#777;text-transform:uppercase;">${d.label}</div>
-              <div style="font-size:1.1rem;font-weight:700;font-family:var(--font-mono);color:#fff;">${d.valor}</div>
-            </div>`).join('')}
-        </div>`:''}
-      </div>`;
+  function _renderCardTarefa(info){
+    if(!info.detalhes)return '';
+    return `<div style="background:var(--cor-dark-800);border-radius:8px;padding:14px 18px;
+      margin-bottom:16px;border-left:3px solid var(--cor-primaria);display:flex;gap:20px;flex-wrap:wrap;align-items:center;">
+      <div style="font-weight:700;color:var(--cor-primaria);font-size:0.9rem;min-width:120px;">${info.label}</div>
+      ${info.detalhes.map(d=>`
+        <div style="display:flex;flex-direction:column;gap:2px;">
+          <span style="font-size:0.65rem;color:#777;text-transform:uppercase;">${d.label}</span>
+          <span style="font-weight:700;color:#fff;font-family:var(--font-mono);">${d.valor}</span>
+        </div>`).join('')}
+    </div>`;
   }
 
-  // Retorna lista de opções: tarefas do planejamento + "Levantamento de Fachada" como entrada única
+  // ===================== HELPERS TAREFA/QUANTIDADE =====================
   function _getOpcoesTarefa(){
     const opts=[];
-    // Tarefas do planejamento
     tarefas.forEach(t=>{
-      if(t.tipo!=='grupo')opts.push({id:t.id,label:`[Plan] ${t.codigo?t.codigo+' ':''}${t.nome}`,tipo:'tarefa'});
+      if(t.tipo!=='grupo')
+        opts.push({id:t.id,label:`[Plan] ${t.codigo?t.codigo+' ':''}${t.nome}`,tipo:'tarefa'});
     });
-    // Levantamento de Fachada como entrada única (agrega todas as fachadas)
-    const temFachada=levFachadas.some(d=>d.tipo==='fachada');
-    if(temFachada){
+    if(levFachadas.some(d=>d.tipo==='fachada'))
       opts.push({id:'__fachada__',label:'[Levantamento] Fachada',tipo:'fachada_agregada'});
-    }
     return opts;
   }
 
   function _getTarefaInfo(id){
     if(!id)return null;
-    // Tarefa do planejamento
     const t=tarefas.find(x=>x.id===id);
-    if(t)return {id,label:`[Plan] ${t.nome}`,tipo:'tarefa',unidade:t.unidade||'un',quantidade:t.quantidade||0,detalhes:[
+    if(t)return {id,label:`[Plan] ${t.nome}`,quantidade:t.quantidade||0,unidade:t.unidade||'un',detalhes:[
       {label:'Qtd Prevista',valor:`${t.quantidade||0} ${t.unidade||''}`},
       {label:'% Concluído',valor:`${t.percentualConcluido||0}%`},
-      {label:'Responsável',valor:t.responsavel||'—'},
     ]};
-    // Levantamento de Fachada agregado
     if(id==='__fachada__'){
       const fachadas=levFachadas.filter(x=>x.tipo==='fachada');
-      const pecasTodas=levFachadas.filter(x=>x.tipo==='peca');
-      const m2Total=pecasTodas.reduce((s,p)=>s+(_m(p.comprimento)*_m(p.altura)*(p.quantidade||1)),0);
-      // Detalhe por fachada
-      const porFachada=fachadas.map(f=>{
-        const pecasF=pecasTodas.filter(p=>p.fachadaId===f.id);
-        const m2F=pecasF.reduce((s,p)=>s+(_m(p.comprimento)*_m(p.altura)*(p.quantidade||1)),0);
-        return {label:f.nome,valor:_f(m2F)+' m²'};
-      });
-      return {id,label:'[Levantamento] Fachada',tipo:'fachada_agregada',quantidade:m2Total,unidade:'m²',detalhes:[
-        {label:'m² Total Geral',valor:_f(m2Total)+' m²'},
+      const pecas=levFachadas.filter(x=>x.tipo==='peca');
+      const m2=pecas.reduce((s,p)=>s+(_m(p.comprimento)*_m(p.altura)*(p.quantidade||1)),0);
+      return {id,label:'[Levantamento] Fachada',quantidade:m2,unidade:'m²',detalhes:[
+        {label:'m² Total',valor:_f(m2)+' m²'},
         {label:'Fachadas',valor:fachadas.length},
-        {label:'Peças',valor:pecasTodas.length},
-        ...porFachada.slice(0,4), // mostra até 4 fachadas no detalhe
+        ...fachadas.slice(0,3).map(f=>{
+          const m2f=pecas.filter(p=>p.fachadaId===f.id).reduce((s,p)=>s+(_m(p.comprimento)*_m(p.altura)*(p.quantidade||1)),0);
+          return {label:f.nome,valor:_f(m2f)+' m²'};
+        }),
       ]};
     }
     return null;
   }
 
-  function _calcQtdTarefa(info,m){
-    const n=_calcQtdTarefaNum(info,m);
-    return n?_f(n)+' '+( m.unidade||''):info.quantidade?_f(info.quantidade)+' '+(info.unidade||''):'—';
-  }
-  function _calcQtdTarefaNum(info,m){
-    if(!info||!info.quantidade)return 0;
-    const cons=parseFloat(m.consumoPrevisto)||0;
-    return cons?parseFloat((info.quantidade*cons).toFixed(2)):info.quantidade;
+  function _calcQtd(info,v){
+    if(!info||!info.quantidade)return '—';
+    const cons=parseFloat(v.consumoPrevisto)||0;
+    if(!cons)return _f(info.quantidade)+' '+info.unidade;
+    const mat=biblioteca.find(m=>m.id===v.materialId);
+    return _f(info.quantidade*cons)+' '+(mat?.unidade||'');
   }
 
-  // CRUD
-  function novoMaterial(){
-    editandoId=null;
-    document.getElementById('modal-material-titulo').textContent='Novo Material';
-    Utils.limparForm('form-material');
-    _popTarefaSelect();
-    Utils.abrirModal('modal-material');
-  }
-  function editarMaterial(id){
-    const m=materiais.find(x=>x.id===id);if(!m)return;
-    editandoId=id;
-    document.getElementById('modal-material-titulo').textContent='Editar Material';
-    _popTarefaSelect();
-    Utils.setFormData('form-material',m);
-    document.getElementById('mat-tarefa-sel').value=m.tarefaId||m.tarefaRef||'';
-    Utils.abrirModal('modal-material');
+  // ===================== CRUD BIBLIOTECA =====================
+  function novoMaterialBib(){
+    editandoBiblId=null;
+    document.getElementById('modal-bib-titulo').textContent='Novo Material';
+    Utils.limparForm('form-material-bib');
+    Utils.abrirModal('modal-material-bib');
   }
 
-  function _popTarefaSelect(){
-    const sel=document.getElementById('mat-tarefa-sel');if(!sel)return;
-    const opts=_getOpcoesTarefa();
-    sel.innerHTML='<option value="">— Sem vínculo —</option>'+
-      opts.map(o=>`<option value="${o.id}">${o.label}</option>`).join('');
+  function editarMaterialBib(id){
+    const m=biblioteca.find(x=>x.id===id);if(!m)return;
+    editandoBiblId=id;
+    document.getElementById('modal-bib-titulo').textContent='Editar Material';
+    Utils.setFormData('form-material-bib',m);
+    Utils.abrirModal('modal-material-bib');
   }
 
-  async function salvarMaterial(){
-    const data=Utils.getFormData('form-material');
-    const tarefaId=document.getElementById('mat-tarefa-sel').value;
+  async function salvarMaterialBib(){
+    const data=Utils.getFormData('form-material-bib');
     if(!data.nome){Utils.toast('Informe o nome.','alerta');return;}
-    data.tarefaId=tarefaId||null;
     try{
-      if(editandoId){await Database.atualizar(obraId,COL,editandoId,data);}
-      else{await Database.criar(obraId,COL,data);}
-      Utils.fecharModal('modal-material');
+      if(editandoBiblId)await Database.atualizar(obraId,COL_BIB,editandoBiblId,data);
+      else await Database.criar(obraId,COL_BIB,data);
+      Utils.fecharModal('modal-material-bib');
       Utils.toast('Material salvo!','sucesso');
-      editandoId=null;
-      await carregar();
+      editandoBiblId=null;await carregar();
     }catch(e){Utils.toast('Erro.','erro');}
   }
 
-  async function excluirMaterial(id){
-    if(!Utils.confirmar('Excluir material?'))return;
-    try{await Database.deletar(obraId,COL,id);Utils.toast('Excluído.','sucesso');await carregar();}
+  async function excluirMaterialBib(id){
+    const usos=vinculos.filter(v=>v.materialId===id).length;
+    if(usos&&!Utils.confirmar(`Este material está em ${usos} vínculo(s). Excluir mesmo assim?`))return;
+    if(!usos&&!Utils.confirmar('Excluir material da biblioteca?'))return;
+    try{await Database.deletar(obraId,COL_BIB,id);Utils.toast('Excluído.','sucesso');await carregar();}
     catch(e){Utils.toast('Erro.','erro');}
   }
 
+  // ===================== CRUD VÍNCULOS =====================
+  function novoVinculo(){
+    editandoVincId=null;
+    document.getElementById('modal-vinc-titulo').textContent='Vincular Material à Tarefa';
+    Utils.limparForm('form-material-vinc');
+    _popVincSelects();
+    Utils.abrirModal('modal-material-vinc');
+  }
+
+  function editarVinculo(id){
+    const v=vinculos.find(x=>x.id===id);if(!v)return;
+    editandoVincId=id;
+    document.getElementById('modal-vinc-titulo').textContent='Editar Vínculo';
+    _popVincSelects();
+    Utils.setFormData('form-material-vinc',v);
+    document.getElementById('vinc-material-sel').value=v.materialId||'';
+    document.getElementById('vinc-tarefa-sel').value=v.tarefaId||'';
+    Utils.abrirModal('modal-material-vinc');
+  }
+
+  function _popVincSelects(){
+    // Materiais da biblioteca
+    const sm=document.getElementById('vinc-material-sel');
+    if(sm){
+      sm.innerHTML='<option value="">— Selecione o material —</option>'+
+        biblioteca.map(m=>`<option value="${m.id}">${m.nome}${m.fabricante?' — '+m.fabricante:''}${m.unidade?' ('+m.unidade+')':''}</option>`).join('');
+    }
+    // Tarefas
+    const st=document.getElementById('vinc-tarefa-sel');
+    if(st){
+      const opts=_getOpcoesTarefa();
+      st.innerHTML='<option value="">— Selecione o serviço/tarefa —</option>'+
+        opts.map(o=>`<option value="${o.id}">${o.label}</option>`).join('');
+    }
+  }
+
+  async function salvarVinculo(){
+    const materialId=document.getElementById('vinc-material-sel').value;
+    const tarefaId=document.getElementById('vinc-tarefa-sel').value;
+    if(!materialId){Utils.toast('Selecione um material.','alerta');return;}
+    if(!tarefaId){Utils.toast('Selecione uma tarefa/serviço.','alerta');return;}
+    const data={
+      ...Utils.getFormData('form-material-vinc'),
+      materialId,
+      tarefaId,
+    };
+    // Verificar duplicidade (mesmo material + mesma tarefa)
+    if(!editandoVincId){
+      const existe=vinculos.find(v=>v.materialId===materialId&&v.tarefaId===tarefaId);
+      if(existe&&!Utils.confirmar('Este material já está vinculado a esta tarefa. Criar outro vínculo?'))return;
+    }
+    try{
+      if(editandoVincId)await Database.atualizar(obraId,COL_VIN,editandoVincId,data);
+      else await Database.criar(obraId,COL_VIN,data);
+      Utils.fecharModal('modal-material-vinc');
+      Utils.toast('Vínculo salvo!','sucesso');
+      editandoVincId=null;await carregar();
+    }catch(e){Utils.toast('Erro.','erro');}
+  }
+
+  async function excluirVinculo(id){
+    if(!Utils.confirmar('Remover este vínculo?'))return;
+    try{await Database.deletar(obraId,COL_VIN,id);Utils.toast('Removido.','sucesso');await carregar();}
+    catch(e){Utils.toast('Erro.','erro');}
+  }
+
+  function setAba(a){abaAtiva=a;renderizar();}
   function setFiltro(v){filtroTarefa=v;renderizar();}
 
-  // Helpers
   function _m(cm){return (parseFloat(cm)||0)/100;}
   function _f(n){return Utils.formatarNumero(n);}
 
-  return {init,carregar,renderizar,novoMaterial,editarMaterial,salvarMaterial,excluirMaterial,setFiltro};
+  return {init,carregar,renderizar,setAba,setFiltro,
+    novoMaterialBib,editarMaterialBib,salvarMaterialBib,excluirMaterialBib,
+    novoVinculo,editarVinculo,salvarVinculo,excluirVinculo};
 })();
 function onObraChanged(){Materiais.init();}

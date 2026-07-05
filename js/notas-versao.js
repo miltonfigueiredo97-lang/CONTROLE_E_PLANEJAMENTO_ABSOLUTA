@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V1.2.1',
+  versaoAtual: 'V1.2.2',
 
   versoes: [
     {
@@ -355,7 +355,7 @@ const NotasVersao = {
     },
     {
       versao: 'V1.2.1',
-      status: 'aberta',
+      status: 'fechada',
       data: '2025-07-05',
       tipo: 'correcao',
       titulo: 'Correções Planejamento e Materiais',
@@ -367,6 +367,26 @@ const NotasVersao = {
         '  → Agrupa todas as fachadas com m² total e detalhe por fachada',
         '  → Não lista cada fachada separada',
         'Materiais: layout organizado com tabela e filtros no topo',
+      ]
+    },
+    {
+      versao: 'V1.2.2',
+      status: 'aberta',
+      data: '2025-07-05',
+      tipo: 'funcionalidade',
+      titulo: 'Materiais: biblioteca + vínculos por UID',
+      itens: [
+        'Estrutura em duas coleções separadas:',
+        '  → materiais/ = biblioteca (cada material com UID único)',
+        '  → materiais_vinculos/ = vínculo materialId + tarefaId + consumo',
+        'Aba Biblioteca: cadastrar materiais com nome, tipo, fabricante, referência',
+        '  → Ex: Cimento CP-III Votorantim e Cimento CP-III Cauê são IDs diferentes',
+        '  → Coluna mostra em quantas tarefas cada material é usado',
+        'Aba Por Tarefa: vincular material da biblioteca a uma tarefa/serviço',
+        '  → Busca material pelo nome na biblioteca (não digitação manual)',
+        '  → Consumo Previsto × Quantidade da tarefa = total calculado',
+        '  → Avisa duplicidade (mesmo material + mesma tarefa)',
+        '  → Link rápido para cadastrar na biblioteca se não encontrar',
       ]
     }
   ],
