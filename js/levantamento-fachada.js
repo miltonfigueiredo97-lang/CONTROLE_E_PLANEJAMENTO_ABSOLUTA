@@ -559,9 +559,7 @@ const LevantamentoFachada = (() => {
       '</div>';
 
     const imgTag=mapData.img
-      ? '<img src="'+mapData.img+'" id="mapa-img" '+
-          'style="display:block;width:100%;height:auto;pointer-events:none;user-select:none;" '+
-          'draggable="false">'
+      ? '<img src="'+mapData.img+'" id="mapa-img" draggable="false">'
       : semImagem;
 
     p.innerHTML=
@@ -683,8 +681,8 @@ const LevantamentoFachada = (() => {
       const areaRect=area.getBoundingClientRect();
       const x=ev.clientX - areaRect.left - offX + wrapper.scrollLeft;
       const y=ev.clientY - areaRect.top  - offY + wrapper.scrollTop;
-      el.style.left=Math.max(0,x)+'px';
-      el.style.top =Math.max(0,y)+'px';
+      el.style.left=x+'px';  // sem limite — livre pra ir onde quiser
+      el.style.top =y+'px';
     }
 
     async function up(ev){
@@ -697,8 +695,8 @@ const LevantamentoFachada = (() => {
       const y=ev.clientY - areaRect.top  - offY + wrapper.scrollTop;
       const data=_getMapData();
       if(data.caixas[i]){
-        data.caixas[i].x=Math.max(0,x);
-        data.caixas[i].y=Math.max(0,y);
+        data.caixas[i].x=x;  // salva posição real sem limite
+        data.caixas[i].y=y;
         await _saveMapData(data);
       }
     }
@@ -719,25 +717,27 @@ const LevantamentoFachada = (() => {
   function _getMapData(){ return _mapaDoc; }
 
   async function _saveMapData(d){
-    if(!obraId) return;
+    if(!obraId){console.warn('_saveMapData: obraId null');return;}
     _mapaDoc = d;
     try {
       const ref = db.collection('obras').doc(obraId).collection('config').doc('mapaVisao');
-      // Salva caixas e img separadamente para contornar limite de tamanho
-      if(d.img !== undefined){
-        // img comprimida via canvas — salva tudo junto
-        await ref.set({
-          img: d.img||null,
-          caixas: d.caixas||[],
-          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
-      } else {
-        // Atualiza só caixas
-        await ref.set({caixas: d.caixas||[], updatedAt: firebase.firestore.FieldValue.serverTimestamp()}, {merge:true});
+      const payload = {
+        img: d.img||null,
+        caixas: d.caixas||[],
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      };
+      // Verifica tamanho antes de salvar (Firestore limite ~1MB)
+      const payloadStr = JSON.stringify(payload);
+      console.log('💾 Salvando mapa:', Math.round(payloadStr.length/1024)+'KB', 'caixas:', payload.caixas.length);
+      if(payloadStr.length > 950000){
+        Utils.toast('Imagem muito grande mesmo após compressão. Tente um arquivo menor.','erro');
+        return;
       }
+      await ref.set(payload);
+      console.log('✅ Mapa salvo com sucesso');
     } catch(e) {
-      console.error('Erro ao salvar mapa:', e);
-      Utils.toast('Erro ao salvar mapa. Tente uma imagem menor.','erro');
+      console.error('❌ Erro ao salvar mapa:', e.code, e.message);
+      Utils.toast('Erro ao salvar: '+e.message,'erro');
     }
   }
 

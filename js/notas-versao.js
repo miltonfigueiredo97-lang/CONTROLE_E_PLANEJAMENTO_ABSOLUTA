@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V1.0.4',
+  versaoAtual: 'V1.0.5',
 
   versoes: [
     {
@@ -116,7 +116,7 @@ const NotasVersao = {
     },
     {
       versao: 'V1.0.4',
-      status: 'aberta',
+      status: 'fechada',
       data: '2025-07-04',
       tipo: 'correcao',
       titulo: 'Visão Geral: sidebar, drag e imagem corrigidos',
@@ -131,6 +131,20 @@ const NotasVersao = {
         'Botões da caixa não ativam drag ao clicar (stopPropagation)',
         'Imagem ocupa 100% da largura do mapa com scroll quando maior',
         'pointer-events:none no container, pointer-events:all por caixa',
+      ]
+    }
+    ,{
+      versao: 'V1.0.5',
+      status: 'aberta',
+      data: '2025-07-04',
+      tipo: 'correcao',
+      titulo: 'Sidebar, caixas livres e imagem fit',
+      itens: [
+        'Sidebar da estrutura: id adicionado ao HTML — agora some de verdade na Visão Geral',
+        'Caixas sem limite de posição — movem livremente para qualquer lugar',
+        'Imagem do mapa: object-fit contain — cabe na tela sem scroll, sem corte',
+        'Save do mapa: log de debug + validação de tamanho antes de salvar',
+        '  → Mostra erro claro se imagem ainda for grande demais',
       ]
     }
   ],

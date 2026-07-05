@@ -221,20 +221,21 @@ html, body { height: 100%; overflow: hidden; margin: 0; padding: 0; }
   background: #fff;
   border-radius: 8px;
   border: 1px solid #e0e0e0;
-  overflow: auto;
+  overflow: auto;            /* scroll só se caixas saírem da área */
   min-height: 0;
-  padding: 32px;
+  padding: 0;
 }
-.mapa-imagem-area {
+/* mapa-area = container relativo das caixas, filho direto do wrapper */
+#mapa-area {
   position: relative;
-  display: block;
   width: 100%;
-  min-height: 300px;
+  height: 100%;
 }
-.mapa-imagem-area img {
+#mapa-area img {
   display: block;
-  width: 100%;               /* imagem ocupa toda a largura disponível */
-  height: auto;
+  width: 100%;               /* imagem cabe na largura total */
+  height: 100%;              /* imagem cabe na altura total */
+  object-fit: contain;       /* mantém proporção sem cortar */
   pointer-events: none;
   user-select: none;
 }
