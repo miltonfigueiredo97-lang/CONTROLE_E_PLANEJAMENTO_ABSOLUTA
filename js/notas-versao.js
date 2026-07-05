@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V1.0.7',
+  versaoAtual: 'V1.0.8',
 
   versoes: [
     {
@@ -165,7 +165,7 @@ const NotasVersao = {
     },
     {
       versao: 'V1.0.7',
-      status: 'aberta',
+      status: 'fechada',
       data: '2025-07-04',
       tipo: 'correcao',
       titulo: 'Canvas infinito + redimensionar imagem',
@@ -178,6 +178,22 @@ const NotasVersao = {
         '  → Scroll livre para navegar pelo canvas',
         'Imagem posicionada no canto superior esquerdo do canvas',
         '  → Margem de 40px ao redor para posicionar caixas fora da imagem',
+      ]
+    },
+        {
+      versao: 'V1.0.8',
+      status: 'aberta',
+      data: '2025-07-04',
+      tipo: 'correcao',
+      titulo: 'Imagem arrastável e redimensionável com handles',
+      itens: [
+        'Imagem do mapa: drag para mover (arrastar em qualquer direção)',
+        'Imagem do mapa: 8 handles amarelos nos cantos e bordas para redimensionar',
+        '  → Arrastar canto: resize proporcional',
+        '  → Arrastar borda: resize direcional',
+        'Imagem cabe na tela ao importar (fit automático)',
+        'Canvas sem overflow/scroll — imagem e caixas sempre visíveis',
+        'Borda tracejada amarela indica que a imagem é editável',
       ]
     }
   ],
