@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V1.1.1',
+  versaoAtual: 'V1.1.2',
 
   versoes: [
     {
@@ -232,7 +232,7 @@ const NotasVersao = {
     },
     {
       versao: 'V1.1.1',
-      status: 'aberta',
+      status: 'fechada',
       data: '2025-07-04',
       tipo: 'correcao',
       titulo: 'Visão Geral: modo edição, imgState no Firestore, resize caixas',
@@ -245,6 +245,21 @@ const NotasVersao = {
         '  → Handle ⤡ no canto: resize em diagonal (largura+altura)',
         '  → Barra na base: resize só em altura',
         'Caixas: ficam acima da imagem (z-index:30 vs z-index:1)',
+      ]
+    },
+    {
+      versao: 'V1.1.2',
+      status: 'aberta',
+      data: '2025-07-04',
+      tipo: 'correcao',
+      titulo: 'Caixas nunca cortadas + imgState persistido',
+      itens: [
+        'Caixas: movidas para overlay fora do canvas (overflow:visible)',
+        '  → Nunca mais cortadas — podem ir para qualquer lugar da tela',
+        'imgState salvo no Firestore — posição e tamanho da imagem persistem',
+        'Modo edição: botão confirmar salva e trava imagem',
+        'Resize caixas: handle ⤡ para largura+altura simultâneos',
+        'Texto das caixas: flex-wrap para refluir ao redimensionar',
       ]
     }
   ],
