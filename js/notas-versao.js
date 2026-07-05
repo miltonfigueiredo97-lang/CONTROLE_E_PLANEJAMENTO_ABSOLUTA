@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V1.0.6',
+  versaoAtual: 'V1.0.7',
 
   versoes: [
     {
@@ -149,7 +149,7 @@ const NotasVersao = {
     },
     {
       versao: 'V1.0.6',
-      status: 'aberta',
+      status: 'fechada',
       data: '2025-07-04',
       tipo: 'correcao',
       titulo: 'Estrutura some + zoom do mapa',
@@ -161,6 +161,23 @@ const NotasVersao = {
         '  → Zoom de 20% a 300% para ajustar a imagem na tela',
         '  → Caixas escalam junto com a imagem',
         'Mapa: overflow auto — scroll só quando zoom > tela',
+      ]
+    },
+    {
+      versao: 'V1.0.7',
+      status: 'aberta',
+      data: '2025-07-04',
+      tipo: 'correcao',
+      titulo: 'Canvas infinito + redimensionar imagem',
+      itens: [
+        'Botão ✎ Tamanho na topbar — abre slider para ajustar largura da imagem',
+        '  → Slider de 200px a 3000px em tempo real',
+        '  → Caixas permanecem onde estão ao redimensionar',
+        'Canvas infinito (2000×1400px mínimo) com fundo pontilhado',
+        '  → Caixas podem ficar em qualquer lugar, inclusive fora da imagem',
+        '  → Scroll livre para navegar pelo canvas',
+        'Imagem posicionada no canto superior esquerdo do canvas',
+        '  → Margem de 40px ao redor para posicionar caixas fora da imagem',
       ]
     }
   ],

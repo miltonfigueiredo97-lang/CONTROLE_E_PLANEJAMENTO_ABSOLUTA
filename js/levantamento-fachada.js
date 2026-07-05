@@ -514,7 +514,8 @@ const LevantamentoFachada = (() => {
   }
 
   // ===================== VISÃO GERAL (mapa + caixas) =====================
-  let _zoom = 1.0; // zoom da imagem
+  let _imgW = 900;   // largura da imagem em px (editável pelo usuário)
+  let _editandoImg = false;
 
   function renderVisaoGeral(p, toggle){
     const mapData=_getMapData();
@@ -531,21 +532,21 @@ const LevantamentoFachada = (() => {
         '</div>'+
       '</div>';
 
+    // Caixas — ficam em posição absoluta sobre o canvas infinito
     const caixasHtml=mapData.caixas.map((cx,i)=>{
       const f=fachadas.find(x=>x.id===cx.fachadaId);
       const t=cx.fachadaId?_somarFachada(cx.fachadaId):{m2semML:0,m2comML_equiv:0,ml:0,vao:0};
       const nome=f?f.nome:(cx.nome||'Caixa '+(i+1));
-      const lock=cx.travada?'🔒':'🔓';
       return (
         '<div class="mapa-caixa" id="cx-'+i+'" '+
           'style="position:absolute;left:'+cx.x+'px;top:'+cx.y+'px;'+
-          'cursor:'+(cx.travada?'default':'grab')+';z-index:10;" '+
+          'cursor:'+(cx.travada?'default':'grab')+';z-index:10;pointer-events:all;" '+
           (cx.travada?'':'onmousedown="LF.cxMouseDown(event,'+i+')"')+'>'+
           '<div class="mapa-caixa-header">'+
             '<span class="mapa-caixa-nome">'+nome+'</span>'+
             '<div class="mapa-caixa-btns" onmousedown="event.stopPropagation()">'+
-              '<button class="btn btn-sm btn-icon" onclick="LF.cxTravar('+i+')">'+lock+'</button>'+
-              '<button class="btn btn-sm btn-icon" onclick="LF.cxEditar('+i+')">✎</button>'+
+              '<button class="btn btn-sm btn-icon" onclick="LF.cxTravar('+i+')" title="'+(cx.travada?'Destravar':'Travar')+'">'+(cx.travada?'🔒':'🔓')+'</button>'+
+              '<button class="btn btn-sm btn-icon" onclick="LF.cxEditar('+i+')" title="Editar">✎</button>'+
               '<button class="btn btn-sm btn-icon" onclick="LF.cxRemover('+i+')" style="color:#dc2626">✕</button>'+
             '</div>'+
           '</div>'+
@@ -558,44 +559,38 @@ const LevantamentoFachada = (() => {
       );
     }).join('');
 
-    const semImagem=
-      '<div style="display:flex;align-items:center;justify-content:center;'+
-        'height:100%;flex-direction:column;gap:14px;color:#aaa;">'+
-        '<div style="font-size:3rem;">📐</div>'+
-        '<p style="margin:0">Importe uma planta para começar</p>'+
-        '<label class="btn btn-primario btn-sm" style="cursor:pointer;">'+
-          '📎 Importar Planta'+
-          '<input type="file" accept="image/*" style="display:none" onchange="LF.importarMapa(event)">'+
-        '</label>'+
-      '</div>';
+    // Painel de edição da imagem (inline quando ativo)
+    const editPanel=_editandoImg?
+      '<div style="background:#fff;border:1.5px solid var(--cor-primaria);border-radius:8px;padding:12px 16px;'+
+        'display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:8px;">'+
+        '<span style="font-size:0.82rem;font-weight:600;color:#555;">Tamanho da imagem:</span>'+
+        '<input type="range" id="img-size-slider" min="200" max="3000" value="'+_imgW+'" step="10" '+
+          'style="width:200px;accent-color:var(--cor-primaria);" '+
+          'oninput="LF.onImgResize(this.value)" onmouseup="LF.onImgResize(this.value)">'+
+        '<span id="img-size-val" style="font-family:var(--font-mono);font-size:0.85rem;font-weight:700;min-width:50px;">'+_imgW+'px</span>'+
+        '<button class="btn btn-primario btn-sm" onclick="LF.fecharEditImg()">✓ Ok</button>'+
+      '</div>'
+      : '';
 
-    const zoomPct=Math.round(_zoom*100);
-    const imgContent=mapData.img
-      ? '<div id="mapa-zoom-wrap" style="transform:scale('+_zoom+');transform-origin:top left;'+
-          'width:'+(100/_zoom)+'%;position:relative;display:inline-block;">'+
-          '<img src="'+mapData.img+'" draggable="false" '+
-            'style="display:block;width:100%;height:auto;pointer-events:none;user-select:none;">'+
-          '<div id="mapa-caixas" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;">'+
-            caixasHtml+
-          '</div>'+
-        '</div>'
-      : semImagem;
+    const imgContent=mapData.img?
+      '<img id="mapa-img" src="'+mapData.img+'" draggable="false" '+
+        'style="display:block;width:'+_imgW+'px;height:auto;pointer-events:none;user-select:none;position:relative;z-index:1;">'
+      : '<div style="display:flex;align-items:center;justify-content:center;'+
+          'min-height:400px;flex-direction:column;gap:14px;color:#aaa;pointer-events:all;">'+
+          '<div style="font-size:3rem;">📐</div>'+
+          '<p style="margin:0">Importe uma planta para começar</p>'+
+          '<label class="btn btn-primario btn-sm" style="cursor:pointer;">'+
+            '📎 Importar Planta'+
+            '<input type="file" accept="image/*" style="display:none" onchange="LF.importarMapa(event)">'+
+          '</label>'+
+        '</div>';
 
     p.innerHTML=
       '<div class="visao-geral-layout">'+
-        // Topbar: toggle + zoom + botões
         '<div class="visao-geral-topbar">'+
           toggle+
-          // Controles de zoom
-          (mapData.img?
-            '<div class="btn-grupo">'+
-              '<button class="btn btn-secundario btn-sm" onclick="LF.setZoomMapa('+(_zoom-0.1).toFixed(1)+')" '+((_zoom<=0.2)?'disabled':'')+'>−</button>'+
-              '<span style="min-width:44px;text-align:center;font-size:0.82rem;font-weight:600;color:#555;">'+zoomPct+'%</span>'+
-              '<button class="btn btn-secundario btn-sm" onclick="LF.setZoomMapa('+(_zoom+0.1).toFixed(1)+')" '+((_zoom>=3)?'disabled':'')+'>+</button>'+
-              '<button class="btn btn-secundario btn-sm" onclick="LF.setZoomMapa(1)">↺</button>'+
-            '</div>'
-          :'')+
           '<div class="btn-grupo">'+
+            (mapData.img?'<button class="btn btn-secundario btn-sm" onclick="LF.toggleEditImg()" title="Ajustar tamanho da imagem">✎ Tamanho</button>':'')+
             '<label class="btn btn-secundario btn-sm" style="cursor:pointer;">'+
               '📎 Importar Mapa'+
               '<input type="file" accept="image/*" style="display:none" onchange="LF.importarMapa(event)">'+
@@ -605,19 +600,35 @@ const LevantamentoFachada = (() => {
           '</div>'+
         '</div>'+
         totalCard+
-        // Mapa: overflow auto para scroll quando zoom > 1
+        editPanel+
+        // Canvas infinito: fundo xadrez suave, scroll livre, imagem + caixas dentro
         '<div id="mapa-wrapper" class="mapa-wrapper">'+
-          '<div id="mapa-area" style="position:relative;width:100%;height:100%;">'+
+          '<div id="mapa-area" style="position:relative;min-width:2000px;min-height:1400px;">'+
             imgContent+
+            '<div id="mapa-caixas" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;">'+
+              caixasHtml+
+            '</div>'+
           '</div>'+
         '</div>'+
       '</div>';
   }
 
-  function setZoomMapa(z){
-    _zoom=Math.min(3,Math.max(0.2,parseFloat(z.toFixed(1))));
+  function toggleEditImg(){
+    _editandoImg=!_editandoImg;
     renderPainel();
   }
+  function fecharEditImg(){
+    _editandoImg=false;
+    renderPainel();
+  }
+  function onImgResize(val){
+    _imgW=parseInt(val);
+    const img=document.getElementById('mapa-img');
+    if(img) img.style.width=_imgW+'px';
+    const lbl=document.getElementById('img-size-val');
+    if(lbl) lbl.textContent=_imgW+'px';
+  }
+  function setZoomMapa(z){ /* não usado mais */ }
 
 
   // ===================== VISÃO GERAL — MAPA =====================
@@ -897,7 +908,7 @@ const LevantamentoFachada = (() => {
     }catch(e){Utils.toast('Erro.','erro');}
   }
 
-  return {init,carregar,sel:selecionar,setAba,criarFachada,criarBalancim,editar,salvarEntidade,excluir,novaPeca,editarPeca,salvarPeca,excluirPeca,duplicarPeca,duplicarBal,conferirPeca,exportarCSV,exportarVista,onToggleJanela,importarMapa,cxAdicionar,cxRemover,cxTravar,cxEditar,salvarCxEdit,cxMouseDown,cxDrop,setZoomMapa,limparMapa,abrirVaoVista,salvarVaoVista,_atualizarPreviewVao,abrirConfig,salvarConfig,onChangeCfgJanela};
+  return {init,carregar,sel:selecionar,setAba,criarFachada,criarBalancim,editar,salvarEntidade,excluir,novaPeca,editarPeca,salvarPeca,excluirPeca,duplicarPeca,duplicarBal,conferirPeca,exportarCSV,exportarVista,onToggleJanela,importarMapa,cxAdicionar,cxRemover,cxTravar,cxEditar,salvarCxEdit,cxMouseDown,cxDrop,toggleEditImg,fecharEditImg,onImgResize,limparMapa,abrirVaoVista,salvarVaoVista,_atualizarPreviewVao,abrirConfig,salvarConfig,onChangeCfgJanela};
 })();
 const LF=LevantamentoFachada;
 function onObraChanged(){LF.init();}
