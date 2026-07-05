@@ -67,6 +67,9 @@ const NotasVersao = {
         'Fachada: card total geral na Visão Geral',
         'Notas de Versão: criadas e acessíveis na sidebar de todas as páginas',
         'Notas de Versão: atualizadas a cada commit automaticamente',
+        'CRÍTICO auth: onAuthStateChanged ignora null inicial (false null do Firebase)',
+        '  → Aguarda até 6s pelo usuário real antes de considerar deslogado',
+        '  → Resolve o bug de usuário sumindo ao entrar em levantamento-fachada',
       ]
     }
   ],
