@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V1.1.4',
+  versaoAtual: 'V1.1.5',
 
   versoes: [
     {
@@ -283,7 +283,7 @@ const NotasVersao = {
     },
     {
       versao: 'V1.1.4',
-      status: 'aberta',
+      status: 'fechada',
       data: '2025-07-05',
       tipo: 'correcao',
       titulo: 'CRÍTICO: funções perdidas restauradas',
@@ -294,6 +294,19 @@ const NotasVersao = {
         '  → Usuário bugava porque o módulo não carregava',
         'Todas as funções restauradas e verificadas (47 exportadas, todas existem)',
         'cxTravar e cxEditar agora rerenderizam só as caixas (sem reload do painel inteiro)',
+      ]
+    },
+    {
+      versao: 'V1.1.5',
+      status: 'aberta',
+      data: '2025-07-05',
+      tipo: 'correcao',
+      titulo: 'Drag das caixas: reescrito simples e direto',
+      itens: [
+        'cxMouseDown: usa delta (startX/startY) em vez de getBoundingClientRect do overlay',
+        '  → Não depende do overlay existir ou ter posição correta',
+        '  → Move exatamente o quanto o mouse se deslocou',
+        '  → Salva posição final no Firestore ao soltar',
       ]
     }
   ],

@@ -718,19 +718,42 @@ const LevantamentoFachada = (() => {
   function cxMouseDown(e,i){
     if(e.button!==0)return;
     e.preventDefault();e.stopPropagation();
-    const ov=document.getElementById('mapa-overlay'),el=document.getElementById('cx-'+i);
-    if(!ov||!el)return;
-    const or=ov.getBoundingClientRect(),er=el.getBoundingClientRect();
-    const ox=e.clientX-er.left,oy=e.clientY-er.top;
-    el.style.cursor='grabbing';el.style.zIndex='999';
-    const move=ev=>{el.style.left=(ev.clientX-or.left-ox)+'px';el.style.top=(ev.clientY-or.top-oy)+'px';};
-    const up=async ev=>{
-      document.removeEventListener('mousemove',move);document.removeEventListener('mouseup',up);
-      el.style.cursor='grab';el.style.zIndex='';
+    const el=document.getElementById('cx-'+i);
+    if(!el)return;
+
+    // Posição inicial da caixa
+    const startLeft=parseInt(el.style.left)||0;
+    const startTop=parseInt(el.style.top)||0;
+    const startX=e.clientX;
+    const startY=e.clientY;
+
+    el.style.cursor='grabbing';
+    el.style.zIndex='999';
+
+    function move(ev){
+      const dx=ev.clientX-startX;
+      const dy=ev.clientY-startY;
+      el.style.left=(startLeft+dx)+'px';
+      el.style.top=(startTop+dy)+'px';
+    }
+
+    async function up(ev){
+      document.removeEventListener('mousemove',move);
+      document.removeEventListener('mouseup',up);
+      el.style.cursor='grab';
+      el.style.zIndex='20';
+      const dx=ev.clientX-startX;
+      const dy=ev.clientY-startY;
       const data=_getMapData();
-      if(data.caixas[i]){data.caixas[i].x=ev.clientX-or.left-ox;data.caixas[i].y=ev.clientY-or.top-oy;await _saveMapData(data);}
-    };
-    document.addEventListener('mousemove',move);document.addEventListener('mouseup',up);
+      if(data.caixas[i]){
+        data.caixas[i].x=startLeft+dx;
+        data.caixas[i].y=startTop+dy;
+        await _saveMapData(data);
+      }
+    }
+
+    document.addEventListener('mousemove',move);
+    document.addEventListener('mouseup',up);
   }
 
   function cxResize(e,i,dir){
