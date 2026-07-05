@@ -39,30 +39,27 @@ const LevantamentoFachada = (() => {
   async function carregar(){
     try{
       Utils.mostrarLoading('Carregando...');
-      // Tenta sem orderBy (evita índice obrigatório no Firestore)
       let todos=[];
-      try{
-        todos=await Database.listar(obraId,COL,null);
-      }catch(e1){
-        console.warn('listar sem order falhou, tentando com createdAt:',e1);
-        try{
-          todos=await Database.listar(obraId,COL,'createdAt');
-        }catch(e2){
-          console.error('listar com createdAt falhou:',e2);
-          todos=[];
-        }
+      try{ todos=await Database.listar(obraId,COL,null); }
+      catch(e1){
+        try{ todos=await Database.listar(obraId,COL,'createdAt'); }
+        catch(e2){ todos=[]; }
       }
       fachadas=todos.filter(d=>d.tipo==='fachada').sort(_sNome);
       balancins=todos.filter(d=>d.tipo==='balancim').sort(_sNome);
       vistas=todos.filter(d=>d.tipo==='vista');
       pecas=todos.filter(d=>d.tipo==='peca');
-      console.log(`✅ Fachada carregada: ${fachadas.length} fachadas, ${balancins.length} balancins, ${pecas.length} peças`);
-      renderArvore();renderPainel();
+      // Carrega mapa (imagem + caixas + imgState) do Firestore
+      try{
+        const mapaSnap=await db.collection('obras').doc(obraId).collection('config').doc('mapaVisao').get();
+        _mapaDoc=mapaSnap.exists?mapaSnap.data():{img:null,caixas:[],imgState:null};
+      }catch(em){ _mapaDoc={img:null,caixas:[],imgState:null}; }
+      console.log(`✅ Fachada: ${fachadas.length} fachadas, ${pecas.length} peças, mapa:${_mapaDoc.img?'sim':'não'}`);
+      renderArvore(); renderPainel();
     }catch(e){
       console.error('Erro ao carregar fachada:',e);
-      Utils.toast('Erro ao carregar dados: '+e.message,'erro');
-    }
-    finally{Utils.esconderLoading();}
+      Utils.toast('Erro ao carregar: '+e.message,'erro');
+    }finally{ Utils.esconderLoading(); }
   }
 
   function _sNome(a,b){return(a.nome||a.codigo||'').localeCompare(b.nome||b.codigo||'',undefined,{numeric:true});}
@@ -116,29 +113,42 @@ const LevantamentoFachada = (() => {
     const areaLiq=Math.max(0,bruto-janela);
     const m2semML=areaLiq;
     const maiorLado=Math.max(co,al);
+
+    // ML: aplica percentual do config (não mais fixo em 50%)
+    // ml_percentual = quanto do metro linear conta no equivalente m²
+    // Ex: 100% → ml conta como ml inteiro; 50% → ml/2
+    const mlPct=_pn(cfg.ml_percentual)/100; // 0.0 a 1.0
     const ml=podeML?(maiorLado*qt):0;
     const m2comML_puro=podeML?0:areaLiq;
 
-    return{bruto,janela,areaLiq,m2semML,m2comML_puro,ml,podeML};
+    return{bruto,janela,areaLiq,m2semML,m2comML_puro,ml,mlPct,podeML};
   }
 
-  // Soma peças (com cfg) + vão das vistas
   function _somar(listaPecas, listaVistas){
-    const cfg=_getCfg(); // carrega config uma vez para todo o batch
-    let m2semML=0,m2comML_puro=0,ml=0,bruto=0,janela=0;
+    const cfg=_getCfg();
+    let m2semML=0,m2comML_puro=0,ml=0,mlEquiv=0,bruto=0,janela=0;
     listaPecas.forEach(pc=>{
       const c=_calc(pc, cfg);
       m2semML+=c.m2semML; m2comML_puro+=c.m2comML_puro;
       ml+=c.ml; bruto+=c.bruto; janela+=c.janela;
+      mlEquiv+=c.ml*c.mlPct; // usa percentual configurado
     });
     let vao=0;
     if(listaVistas){
       listaVistas.forEach(vi=>{
-        const coV=_m(_pn(vi.vaoComp)), alV=_m(_pn(vi.vaoAlt));
-        vao+=coV*alV;
+        // Vão fechado: pode ter múltiplos (vãos = array) ou legado (vaoComp/vaoAlt)
+        if(vi.vaos&&vi.vaos.length){
+          vi.vaos.forEach(v=>{
+            const coV=_m(_pn(v.comp)),alV=_m(_pn(v.alt)),qtV=_pn(v.qtd)||1;
+            vao+=coV*alV*qtV;
+          });
+        } else {
+          const coV=_m(_pn(vi.vaoComp)),alV=_m(_pn(vi.vaoAlt));
+          vao+=coV*alV;
+        }
       });
     }
-    const m2comML_equiv=m2comML_puro+(ml/2);
+    const m2comML_equiv=m2comML_puro+mlEquiv;
     return{m2semML,m2comML_puro,ml,m2comML_equiv,vao,bruto,janela};
   }
 
@@ -392,33 +402,71 @@ const LevantamentoFachada = (() => {
       _cards(tot)+'<div class="resumo-grid mt-2">'+viCards+'</div>';
   }
 
-  // Abre modal de vão fechado da vista
+  // Abre modal de vão fechado da vista — suporta múltiplos vãos
   function abrirVaoVista(vistaId){
     const vi=vistas.find(v=>v.id===vistaId);if(!vi)return;
     document.getElementById('vao-vista-id').value=vistaId;
     document.getElementById('vao-vista-label').textContent=(vi.tipoVista==='externa'?'🔵 Vista Externa':'🟡 Vista Interna');
-    document.getElementById('vao-comp').value=vi.vaoComp||'';
-    document.getElementById('vao-alt').value=vi.vaoAlt||'';
-    _atualizarPreviewVao();
+    // Carregar vãos existentes (novo formato array ou legado)
+    const vaos=vi.vaos&&vi.vaos.length?vi.vaos:[{comp:vi.vaoComp||'',alt:vi.vaoAlt||'',qtd:1}];
+    _renderVaosModal(vaos);
     Utils.abrirModal('modal-vao-vista');
   }
 
+  function _renderVaosModal(vaos){
+    const container=document.getElementById('vaos-container');if(!container)return;
+    container.innerHTML=vaos.map((v,i)=>`
+      <div class="vao-row" id="vao-row-${i}" style="display:grid;grid-template-columns:1fr 1fr 80px 32px;gap:8px;align-items:end;margin-bottom:8px;">
+        <div class="form-grupo" style="margin:0"><label>Comp (cm)</label>
+          <input type="number" class="form-control vao-comp" data-i="${i}" step="1" min="0" value="${v.comp||''}" oninput="_atualizarPreviewVao()"></div>
+        <div class="form-grupo" style="margin:0"><label>Alt (cm)</label>
+          <input type="number" class="form-control vao-alt" data-i="${i}" step="1" min="0" value="${v.alt||''}" oninput="_atualizarPreviewVao()"></div>
+        <div class="form-grupo" style="margin:0"><label>Qtd</label>
+          <input type="number" class="form-control vao-qtd" data-i="${i}" step="1" min="1" value="${v.qtd||1}" oninput="_atualizarPreviewVao()"></div>
+        <div class="form-grupo" style="margin:0"><label>&nbsp;</label>
+          <button class="btn btn-perigo btn-sm btn-icon" onclick="LF.removerVaoRow(${i})" ${vaos.length<=1?'disabled':''}>✕</button></div>
+      </div>`).join('');
+    _atualizarPreviewVao();
+  }
+
+  function adicionarVaoRow(){
+    const rows=document.querySelectorAll('.vao-row');
+    const vaos=_getVaosDoModal();
+    vaos.push({comp:'',alt:'',qtd:1});
+    _renderVaosModal(vaos);
+  }
+
+  function removerVaoRow(i){
+    const vaos=_getVaosDoModal();
+    vaos.splice(i,1);
+    _renderVaosModal(vaos);
+  }
+
+  function _getVaosDoModal(){
+    const comps=document.querySelectorAll('.vao-comp');
+    const alts=document.querySelectorAll('.vao-alt');
+    const qtds=document.querySelectorAll('.vao-qtd');
+    return Array.from(comps).map((_,i)=>({
+      comp:_pn(comps[i].value),alt:_pn(alts[i].value),qtd:_pn(qtds[i].value)||1
+    }));
+  }
+
   function _atualizarPreviewVao(){
-    const co=_m(_pn(document.getElementById('vao-comp').value));
-    const al=_m(_pn(document.getElementById('vao-alt').value));
-    const m2=co*al;
+    const vaos=_getVaosDoModal();
+    let total=0;
+    vaos.forEach(v=>{total+=_m(v.comp)*_m(v.alt)*(v.qtd||1);});
     const prev=document.getElementById('vao-preview');
-    if(prev) prev.textContent=m2>0?_f(m2)+' m²':'—';
+    if(prev)prev.textContent=total>0?_f(total)+' m²':'—';
   }
 
   async function salvarVaoVista(){
     const vistaId=document.getElementById('vao-vista-id').value;
-    const vaoComp=_pn(document.getElementById('vao-comp').value);
-    const vaoAlt=_pn(document.getElementById('vao-alt').value);
+    const vaos=_getVaosDoModal().filter(v=>v.comp>0&&v.alt>0);
     try{
-      await Database.atualizar(obraId,COL,vistaId,{vaoComp,vaoAlt});
+      // Salva como array (novo formato)
+      await Database.atualizar(obraId,COL,vistaId,{vaos,vaoComp:vaos[0]?.comp||0,vaoAlt:vaos[0]?.alt||0});
       Utils.fecharModal('modal-vao-vista');
-      Utils.toast('Vão salvo!','sucesso');
+      Utils.toast('Vão(s) salvo(s)!','sucesso');
       await carregar();
     }catch(e){Utils.toast('Erro.','erro');}
   }
@@ -861,7 +909,7 @@ const LevantamentoFachada = (() => {
   function imgRZEv(e, el){ imgRZ(e, el.dataset.d); }
   function cxResizeEv(e){ cxResize(e, parseInt(e.currentTarget.dataset.i), e.currentTarget.dataset.d); }
 
-  return {init,carregar,sel:selecionar,setAba,criarFachada,criarBalancim,editar,salvarEntidade,excluir,novaPeca,editarPeca,salvarPeca,excluirPeca,duplicarPeca,duplicarBal,conferirPeca,exportarCSV,exportarVista,onToggleJanela,importarMapa,cxAdicionar,cxRemover,cxTravar,cxEditar,salvarCxEdit,cxMouseDown,cxDrop,cxResize,imgMouseDown,imgResize,entrarEditImg,sairEditImg,imgMD,imgRZEv,cxResizeEv,toggleEditImg,fecharEditImg,onImgResize,limparMapa,abrirVaoVista,salvarVaoVista,_atualizarPreviewVao,abrirConfig,salvarConfig,onChangeCfgJanela};
+  return {init,carregar,sel:selecionar,setAba,criarFachada,criarBalancim,editar,salvarEntidade,excluir,novaPeca,editarPeca,salvarPeca,excluirPeca,duplicarPeca,duplicarBal,conferirPeca,exportarCSV,exportarVista,onToggleJanela,importarMapa,cxAdicionar,cxRemover,cxTravar,cxEditar,salvarCxEdit,cxMouseDown,cxDrop,cxResize,imgMouseDown,imgResize,entrarEditImg,sairEditImg,imgMD,imgRZEv,cxResizeEv,toggleEditImg,fecharEditImg,onImgResize,limparMapa,abrirVaoVista,salvarVaoVista,_atualizarPreviewVao,adicionarVaoRow,removerVaoRow,abrirConfig,salvarConfig,onChangeCfgJanela};
 })();
 const LF=LevantamentoFachada;
 function onObraChanged(){LF.init();}

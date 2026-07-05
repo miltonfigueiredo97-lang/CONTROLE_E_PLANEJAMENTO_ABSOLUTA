@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V1.1.2',
+  versaoAtual: 'V1.1.3',
 
   versoes: [
     {
@@ -249,7 +249,7 @@ const NotasVersao = {
     },
     {
       versao: 'V1.1.2',
-      status: 'aberta',
+      status: 'fechada',
       data: '2025-07-04',
       tipo: 'correcao',
       titulo: 'Caixas nunca cortadas + imgState persistido',
@@ -260,6 +260,25 @@ const NotasVersao = {
         'Modo edição: botão confirmar salva e trava imagem',
         'Resize caixas: handle ⤡ para largura+altura simultâneos',
         'Texto das caixas: flex-wrap para refluir ao redimensionar',
+      ]
+    },
+    {
+      versao: 'V1.1.3',
+      status: 'aberta',
+      data: '2025-07-05',
+      tipo: 'correcao',
+      titulo: 'Auth corrigido, fórmula ML do config, vãos múltiplos',
+      itens: [
+        'CRÍTICO: carregar() agora carrega mapaVisao do Firestore novamente',
+        '  → Imagem e caixas voltam ao abrir a página',
+        '  → Usuário não buga mais ao entrar em fachada',
+        'Fórmula ML: usa ml_percentual do config (não mais fixo em 50%)',
+        '  → Ex: 100% → ml conta inteiro no equivalente: 6m² + 4ml = 10m²',
+        '  → Ex: 50%  → ml conta metade: 6m² + 4ml = 8m²',
+        'Vão Fechado por Vista: múltiplos vãos por vista',
+        '  → Cada vão tem Comprimento, Altura e Quantidade',
+        '  → Botão + Adicionar Vão para incluir mais vãos',
+        '  → Total acumulado exibido em tempo real',
       ]
     }
   ],
