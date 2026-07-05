@@ -1,194 +1,114 @@
-// ============================================
-// Utilitários Globais
-// ============================================
-
+// Utils — Controle e Planejamento Absoluta
 const Utils = (() => {
 
-  function formatarNumero(num, decimais = 2) {
-    if (num == null || isNaN(num)) return '0,00';
-    return Number(num).toLocaleString('pt-BR', {
-      minimumFractionDigits: decimais,
-      maximumFractionDigits: decimais
-    });
-  }
-  function formatarInteiro(num) {
-    if (num == null || isNaN(num)) return '0';
-    return Number(num).toLocaleString('pt-BR', { maximumFractionDigits: 0 });
-  }
-  function formatarData(data) {
-    if (!data) return '—';
-    if (data.toDate) data = data.toDate();
-    if (typeof data === 'string') data = new Date(data);
-    return data.toLocaleDateString('pt-BR');
-  }
-  function formatarDataHora(data) {
-    if (!data) return '—';
-    if (data.toDate) data = data.toDate();
-    if (typeof data === 'string') data = new Date(data);
-    return data.toLocaleDateString('pt-BR') + ' ' + data.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-  }
-  function formatarM2(valor) { return formatarNumero(valor) + ' m²'; }
-  function formatarML(valor) { return formatarNumero(valor) + ' m'; }
-  function parseNum(valor) {
-    if (typeof valor === 'number') return valor;
-    if (!valor) return 0;
-    return parseFloat(String(valor).replace(',', '.')) || 0;
-  }
+  // ---- Formatação ----
+  const formatarNumero = (n, d=2) => isNaN(n)||n==null ? '0,00' : Number(n).toLocaleString('pt-BR',{minimumFractionDigits:d,maximumFractionDigits:d});
+  const formatarInteiro = (n) => isNaN(n)||n==null ? '0' : Number(n).toLocaleString('pt-BR',{maximumFractionDigits:0});
+  const formatarData = (d) => { if(!d)return'—'; if(d.toDate)d=d.toDate(); return new Date(d).toLocaleDateString('pt-BR'); };
+  const formatarDataHora = (d) => { if(!d)return'—'; if(d.toDate)d=d.toDate(); const dt=new Date(d); return dt.toLocaleDateString('pt-BR')+' '+dt.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}); };
+  const formatarM2 = (v) => formatarNumero(v)+' m²';
+  const formatarML = (v) => formatarNumero(v)+' m';
+  const parseNum = (v) => { if(typeof v==='number')return v; if(!v)return 0; return parseFloat(String(v).replace(',','.'))||0; };
+  const hoje = () => new Date().toISOString().split('T')[0];
 
   // ---- Toast ----
-  function toast(mensagem, tipo = 'info', duracao = 3500) {
-    let container = document.querySelector('.toast-container');
-    if (!container) {
-      container = document.createElement('div');
-      container.className = 'toast-container';
-      document.body.appendChild(container);
-    }
+  function toast(msg, tipo='info', dur=3500) {
+    let box = document.querySelector('.toast-container');
+    if (!box) { box=document.createElement('div'); box.className='toast-container'; document.body.appendChild(box); }
     const t = document.createElement('div');
     t.className = `toast ${tipo}`;
-    const icons = { sucesso: '✓', erro: '✕', alerta: '⚠', info: 'ℹ' };
-    t.innerHTML = `<span>${icons[tipo] || 'ℹ'}</span> ${mensagem}`;
-    container.appendChild(t);
-    setTimeout(() => {
-      t.style.opacity = '0'; t.style.transform = 'translateX(20px)';
-      t.style.transition = 'all 0.3s ease';
-      setTimeout(() => t.remove(), 300);
-    }, duracao);
+    t.innerHTML = `<span>${{sucesso:'✓',erro:'✕',alerta:'⚠',info:'ℹ'}[tipo]||'ℹ'}</span> ${msg}`;
+    box.appendChild(t);
+    setTimeout(() => { t.style.cssText='opacity:0;transform:translateX(20px);transition:all .3s'; setTimeout(()=>t.remove(),300); }, dur);
   }
 
   // ---- Modal ----
-  function abrirModal(id) {
-    const modal = document.getElementById(id);
-    if (modal) { modal.classList.add('ativo'); document.body.style.overflow = 'hidden'; }
-  }
-  function fecharModal(id) {
-    const modal = document.getElementById(id);
-    if (modal) { modal.classList.remove('ativo'); document.body.style.overflow = ''; }
-  }
-  function fecharTodosModais() {
-    document.querySelectorAll('.modal-overlay.ativo').forEach(m => m.classList.remove('ativo'));
-    document.body.style.overflow = '';
-  }
-
-  function confirmar(mensagem) { return window.confirm(mensagem); }
+  const abrirModal = (id) => { const m=document.getElementById(id); if(m){m.classList.add('ativo');document.body.style.overflow='hidden';} };
+  const fecharModal = (id) => { const m=document.getElementById(id); if(m){m.classList.remove('ativo');document.body.style.overflow='';} };
+  const fecharTodosModais = () => { document.querySelectorAll('.modal-overlay.ativo').forEach(m=>m.classList.remove('ativo')); document.body.style.overflow=''; };
+  const confirmar = (msg) => window.confirm(msg);
 
   // ---- Loading ----
-  function mostrarLoading(msg = 'Carregando...') {
-    let overlay = document.getElementById('loading-global');
-    if (!overlay) {
-      overlay = document.createElement('div');
-      overlay.id = 'loading-global';
-      overlay.className = 'loading-overlay';
-      overlay.innerHTML = `<div class="spinner spinner-lg"></div><span style="color:#64748b;font-size:0.9rem;">${msg}</span>`;
-      document.body.appendChild(overlay);
-    }
-    overlay.style.display = 'flex';
+  function mostrarLoading(msg='Carregando...') {
+    let el=document.getElementById('loading-global');
+    if(!el){el=document.createElement('div');el.id='loading-global';el.className='loading-overlay';el.innerHTML=`<div class="spinner spinner-lg"></div><span style="color:#64748b;font-size:.9rem">${msg}</span>`;document.body.appendChild(el);}
+    el.style.display='flex';
   }
-  function esconderLoading() {
-    const overlay = document.getElementById('loading-global');
-    if (overlay) overlay.style.display = 'none';
+  const esconderLoading = () => { const el=document.getElementById('loading-global'); if(el)el.style.display='none'; };
+
+  // ---- Form helpers ----
+  const $ = (s) => document.querySelector(s);
+  const $$ = (s) => document.querySelectorAll(s);
+
+  function limparForm(id) {
+    const f=document.getElementById(id); if(!f)return;
+    f.querySelectorAll('input,select,textarea').forEach(el => { if(el.type==='checkbox')el.checked=false; else el.value=''; });
   }
-
-  // ---- DOM ----
-  function $(seletor) { return document.querySelector(seletor); }
-  function $$(seletor) { return document.querySelectorAll(seletor); }
-
-  function limparForm(formId) {
-    const form = document.getElementById(formId);
-    if (form) form.querySelectorAll('input, select, textarea').forEach(el => {
-      if (el.type === 'checkbox') el.checked = false;
-      else el.value = '';
+  function getFormData(id) {
+    const f=document.getElementById(id); if(!f)return{};
+    const d={};
+    f.querySelectorAll('[name]').forEach(el => {
+      if(el.type==='checkbox') d[el.name]=el.checked;
+      else if(el.type==='number') d[el.name]=parseNum(el.value);
+      else d[el.name]=el.value.trim();
     });
+    return d;
+  }
+  function setFormData(id, data) {
+    const f=document.getElementById(id); if(!f||!data)return;
+    Object.entries(data).forEach(([k,v])=>{ const el=f.querySelector(`[name="${k}"]`); if(!el)return; if(el.type==='checkbox')el.checked=!!v; else el.value=v??''; });
+  }
+  const debounce = (fn,delay=300) => { let t; return (...a)=>{clearTimeout(t);t=setTimeout(()=>fn(...a),delay);}; };
+
+  // ---- Renderiza info do usuário na sidebar ----
+  function _renderUser() {
+    const p = Auth.getProfile();
+    const u = Auth.getUser();
+    const nome = p?.nome || u?.email?.split('@')[0] || 'Usuário';
+    const perfil = p?.perfil === 'admin' ? 'Administrador' : 'Usuário';
+    const avatar = nome.charAt(0).toUpperCase();
+    const nameEl   = document.querySelector('.user-name');
+    const roleEl   = document.querySelector('.user-role');
+    const avatarEl = document.querySelector('.user-avatar');
+    if (nameEl)   nameEl.textContent   = nome;
+    if (roleEl)   roleEl.textContent   = perfil;
+    if (avatarEl) avatarEl.textContent = avatar;
   }
 
-  function getFormData(formId) {
-    const form = document.getElementById(formId);
-    if (!form) return {};
-    const data = {};
-    form.querySelectorAll('[name]').forEach(el => {
-      if (el.type === 'checkbox') data[el.name] = el.checked;
-      else if (el.type === 'number') data[el.name] = parseNum(el.value);
-      else data[el.name] = el.value.trim();
-    });
-    return data;
-  }
-
-  function setFormData(formId, data) {
-    const form = document.getElementById(formId);
-    if (!form || !data) return;
-    Object.entries(data).forEach(([key, value]) => {
-      const el = form.querySelector(`[name="${key}"]`);
-      if (!el) return;
-      if (el.type === 'checkbox') el.checked = !!value;
-      else el.value = value ?? '';
-    });
-  }
-
-  function debounce(fn, delay = 300) {
-    let timer;
-    return function (...args) { clearTimeout(timer); timer = setTimeout(() => fn.apply(this, args), delay); };
-  }
-
-  function hoje() { return new Date().toISOString().split('T')[0]; }
-
-  // ---- INIT PÁGINA (robusto, não redireciona por erro de Firestore) ----
+  // ---- initPagina: robusto, sem timers conflitantes ----
   async function initPagina(options = {}) {
-    // 1. Inicializar Firebase
-    if (!initFirebase()) return false;
-
-    // 2. Aguardar autenticação (com timeout de 8s)
-    let user;
-    try {
-      const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('auth_timeout')), 8000));
-      user = await Promise.race([Auth.init(), timeout]);
-    } catch (e) {
-      if (e.message === 'auth_timeout') {
-        console.warn('Auth timeout — redirecionando para login');
-        window.location.href = 'login.html';
-        return false;
-      }
-      console.error('Erro de auth:', e);
-      window.location.href = 'login.html';
+    // 1. Firebase
+    if (!initFirebase()) {
+      console.error('Firebase falhou ao inicializar');
       return false;
     }
+
+    // 2. Auth — aguarda o resultado (o próprio Auth.init() tem timeout de 8s)
+    const user = await Auth.init();
 
     if (!user) {
       window.location.href = 'login.html';
       return false;
     }
 
-    // 3. Router + Obras (sem bloquear se falhar)
+    // 3. Seletor de obras (erro aqui NÃO bloqueia a página)
     try {
       Router.init();
       await Router.popularSeletorObras();
     } catch (e) {
-      console.warn('Erro ao carregar obras no seletor:', e.message);
+      console.warn('Seletor de obras falhou:', e.message);
     }
 
-    // 4. Renderizar info do usuário
-    _renderUserInfo();
+    // 4. Info do usuário na sidebar
+    _renderUser();
 
     return true;
   }
 
-  function _renderUserInfo() {
-    const profile = Auth.getProfile();
-    const email = Auth.getUser()?.email || '';
-
-    const nameEl = document.querySelector('.user-name');
-    const roleEl = document.querySelector('.user-role');
-    const avatarEl = document.querySelector('.user-avatar');
-
-    if (nameEl) nameEl.textContent = profile?.nome || email.split('@')[0] || 'Usuário';
-    if (roleEl) roleEl.textContent = profile?.perfil === 'admin' ? 'Administrador' : 'Usuário';
-    if (avatarEl) avatarEl.textContent = ((profile?.nome || email).charAt(0) || 'U').toUpperCase();
-  }
-
   return {
-    formatarNumero, formatarInteiro, formatarData, formatarDataHora,
-    formatarM2, formatarML, parseNum,
-    toast, abrirModal, fecharModal, fecharTodosModais, confirmar,
-    mostrarLoading, esconderLoading,
-    $, $$, limparForm, getFormData, setFormData, debounce, hoje,
-    initPagina
+    formatarNumero, formatarInteiro, formatarData, formatarDataHora, formatarM2, formatarML,
+    parseNum, hoje, toast, abrirModal, fecharModal, fecharTodosModais, confirmar,
+    mostrarLoading, esconderLoading, $, $$, limparForm, getFormData, setFormData, debounce,
+    initPagina,
   };
 })();
