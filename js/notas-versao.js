@@ -80,6 +80,11 @@ const NotasVersao = {
         '  → Toggle + botões na mesma linha (topbar)',
         '  → Mapa ocupa o espaço restante da tela automaticamente',
         '  → Imagem responsiva dentro da área de mapa',
+        'Imagens: migradas de base64/localStorage para Firebase Storage',
+        '  → Mapa da Visão Geral: upload para Storage, URL salva no Firestore',
+        '  → Imagem de capa das obras: upload para Storage',
+        '  → Resolve limite de 1MB do Firestore e persistência entre dispositivos',
+        'Mapa: imagem no tamanho natural com scroll — não mais cortada',
       ]
     }
   ],

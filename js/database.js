@@ -193,3 +193,19 @@ const Database = (() => {
     onSnapshot
   };
 })();
+
+// ============================================
+// Storage Helpers — upload de imagens
+// ============================================
+async function uploadImagem(path, base64DataUrl) {
+  // Converte base64 para blob
+  const res = await fetch(base64DataUrl);
+  const blob = await res.blob();
+  const ref = storage.ref(path);
+  await ref.put(blob);
+  return await ref.getDownloadURL();
+}
+
+async function deletarImagem(path) {
+  try { await storage.ref(path).delete(); } catch(e) {}
+}

@@ -579,13 +579,27 @@ const LevantamentoFachada = (() => {
   // ===================== VISÃO GERAL — MAPA =====================
   let _cxDragIdx=null, _cxDragOffX=0, _cxDragOffY=0;
 
-  function importarMapa(e){
+  async function importarMapa(e){
     const file=e.target.files[0];if(!file)return;
-    const reader=new FileReader();
-    reader.onload=async ev=>{
-      const data=_getMapData();data.img=ev.target.result;await _saveMapData(data);renderPainel();
-    };
-    reader.readAsDataURL(file);
+    try{
+      Utils.mostrarLoading('Enviando imagem...');
+      const path='obras/'+obraId+'/mapaVisao.jpg';
+      const reader=new FileReader();
+      reader.onload=async ev=>{
+        try{
+          // Faz upload para Firebase Storage
+          const url=await uploadImagem(path, ev.target.result);
+          const data=_getMapData();
+          data.img=url; // salva URL (não base64)
+          await _saveMapData(data);
+          renderPainel();
+        }catch(err){
+          console.error('Erro upload mapa:',err);
+          Utils.toast('Erro ao enviar imagem: '+err.message,'erro');
+        }finally{Utils.esconderLoading();}
+      };
+      reader.readAsDataURL(file);
+    }catch(e){Utils.esconderLoading();Utils.toast('Erro.','erro');}
   }
 
   async function cxAdicionar(){
@@ -638,7 +652,10 @@ const LevantamentoFachada = (() => {
     if(!obraId) return;
     _mapaDoc = d;
     try {
-      await db.collection('obras').doc(obraId).collection('mapaVisao').doc('mapa').set(d);
+      // Salva metadados (URL da imagem + posição das caixas) no Firestore
+      // A imagem em si fica no Firebase Storage
+      const docData = {img: d.img||null, caixas: d.caixas||[], updatedAt: firebase.firestore.FieldValue.serverTimestamp()};
+      await db.collection('obras').doc(obraId).collection('config').doc('mapaVisao').set(docData);
     } catch(e) { console.error('Erro ao salvar mapa:', e); Utils.toast('Erro ao salvar mapa.','erro'); }
   }
 

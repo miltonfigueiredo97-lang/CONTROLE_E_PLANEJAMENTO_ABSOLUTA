@@ -119,8 +119,8 @@ const Obras = (() => {
       const prev = document.getElementById('preview-imagem-obra');
       prev.src = e.target.result;
       prev.style.display = 'block';
-      // Guarda base64 temporariamente no input hidden
       document.getElementById('imagem-obra-b64').value = e.target.result;
+      document.getElementById('imagem-obra-file-name').value = file.name;
     };
     reader.readAsDataURL(file);
   }
@@ -130,9 +130,22 @@ const Obras = (() => {
     const data = Utils.getFormData('form-obra');
     if (!data.nome) { Utils.toast('Informe o nome da obra.', 'alerta'); return; }
 
-    // Imagem: pega base64 se houver nova, senão mantém existente
+    // Imagem: faz upload para Firebase Storage se houver nova
     const b64 = document.getElementById('imagem-obra-b64').value;
-    if (b64) data.imagemUrl = b64;
+    if (b64) {
+      try {
+        Utils.mostrarLoading('Enviando imagem...');
+        const obraIdTemp = id || ('new_' + Date.now());
+        const path = 'obras/' + obraIdTemp + '/capa.jpg';
+        data.imagemUrl = await uploadImagem(path, b64);
+      } catch(e) {
+        console.error('Erro upload imagem obra:', e);
+        // Fallback: salva base64 (funciona mas é maior)
+        data.imagemUrl = b64;
+      } finally {
+        Utils.esconderLoading();
+      }
+    }
 
     try {
       if (id) {

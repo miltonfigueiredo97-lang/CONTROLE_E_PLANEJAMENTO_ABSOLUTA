@@ -217,26 +217,29 @@ html, body { height: 100%; overflow: hidden; margin: 0; padding: 0; }
 .mapa-dado-label { font-size: 0.64rem; color: #777; text-transform: uppercase; letter-spacing: 0.3px; }
 .mapa-dado-valor { font-size: 0.95rem; font-weight: 700; font-family: var(--font-mono); color: var(--cor-primaria); }
 .mapa-wrapper {
-  flex: 1;                   /* ocupa o espaço restante */
+  flex: 1;
   position: relative;
   background: #fff;
   border-radius: 8px;
   border: 1px solid #e0e0e0;
-  overflow: auto;
+  overflow: auto;            /* scroll quando imagem for maior que o espaço */
   min-height: 0;
-  padding: 60px;             /* área branca ao redor da imagem */
+  padding: 48px;             /* área branca ao redor da imagem */
+  cursor: default;
 }
 .mapa-imagem-area {
   position: relative;
-  display: inline-block;
+  display: inline-block;     /* tamanho natural da imagem */
   min-width: 400px;
   min-height: 300px;
 }
 .mapa-imagem-area img {
   display: block;
-  max-width: 100%;
+  max-width: none;           /* imagem no tamanho real — scroll para navegar */
+  height: auto;
   pointer-events: none;
   user-select: none;
+  draggable: false;
 }
 
 /* Caixas do mapa */
