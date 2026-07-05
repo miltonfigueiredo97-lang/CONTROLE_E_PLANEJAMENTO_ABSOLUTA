@@ -75,6 +75,11 @@ const NotasVersao = {
         'Mapa (Visão Geral): migrado de localStorage para Firestore',
         '  → Imagem e posições das caixas disponíveis em qualquer dispositivo',
         '  → Carregado junto com os dados da fachada no init()',
+        'Layout geral: sidebar fixa em 100vh, usuário sempre visível sem scroll',
+        'Visão Geral: layout compacto — topbar, total e mapa cabem na tela',
+        '  → Toggle + botões na mesma linha (topbar)',
+        '  → Mapa ocupa o espaço restante da tela automaticamente',
+        '  → Imagem responsiva dentro da área de mapa',
       ]
     }
   ],

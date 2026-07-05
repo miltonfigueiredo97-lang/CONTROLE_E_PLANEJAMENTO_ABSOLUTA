@@ -508,29 +508,30 @@ const LevantamentoFachada = (() => {
     const mapData=_getMapData();
     const tot=_somarGeral();
 
-    // Total geral card
-    const totalCard='<div class="mapa-total-card">'+
-      '<div class="mapa-total-title">📊 Total Geral — Todas as Fachadas</div>'+
-      '<div class="mapa-total-grid">'+
-      '<div><span class="mapa-dado-label">m² sem ML</span><span class="mapa-dado-valor">'+_f(tot.m2semML)+'</span></div>'+
-      '<div><span class="mapa-dado-label">m² com ML</span><span class="mapa-dado-valor">'+_f(tot.m2comML_equiv)+'</span></div>'+
-      '<div><span class="mapa-dado-label">ML</span><span class="mapa-dado-valor">'+_f(tot.ml)+'</span></div>'+
-      '<div><span class="mapa-dado-label">Vão Fechado</span><span class="mapa-dado-valor">'+_f(tot.vao)+'</span></div>'+
-      '</div></div>';
+    // Card total geral
+    const totalCard=
+      '<div class="mapa-total-card">'+
+        '<span class="mapa-total-title">📊 Total Geral</span>'+
+        '<div class="mapa-total-grid">'+
+          '<div><span class="mapa-dado-label">m² sem ML</span><span class="mapa-dado-valor">'+_f(tot.m2semML)+'</span></div>'+
+          '<div><span class="mapa-dado-label">m² com ML</span><span class="mapa-dado-valor">'+_f(tot.m2comML_equiv)+'</span></div>'+
+          '<div><span class="mapa-dado-label">ML</span><span class="mapa-dado-valor">'+_f(tot.ml)+'</span></div>'+
+          '<div><span class="mapa-dado-label">Vão Fechado</span><span class="mapa-dado-valor">'+_f(tot.vao)+'</span></div>'+
+        '</div>'+
+      '</div>';
 
     const caixasHtml=mapData.caixas.map((cx,i)=>{
       const f=fachadas.find(x=>x.id===cx.fachadaId);
       const t=cx.fachadaId?_somarFachada(cx.fachadaId):{m2semML:0,m2comML_equiv:0,ml:0,vao:0};
-      const nome=f?f.nome:(cx.nome||'Fachada');
-      const lockIcon=cx.travada?'🔒':'🔓';
-      return '<div class="mapa-caixa" id="cx-'+i+'" style="left:'+cx.x+'px;top:'+cx.y+'px;'+(cx.travada?'cursor:default;':'cursor:move;')+'" '+
+      const nome=f?f.nome:(cx.nome||'Caixa');
+      return '<div class="mapa-caixa" id="cx-'+i+'" style="left:'+cx.x+'px;top:'+cx.y+'px;'+(cx.travada?'cursor:default':'cursor:move')+'" '+
         (cx.travada?'':'ondragstart="LF.cxDragStart(event,'+i+')" draggable="true"')+'>'+
         '<div class="mapa-caixa-header">'+
           '<span class="mapa-caixa-nome">'+nome+'</span>'+
           '<div class="mapa-caixa-btns">'+
-            '<button class="btn btn-sm btn-icon" onclick="event.stopPropagation();LF.cxTravar('+i+')" title="'+(cx.travada?'Destravar':'Travar')+'">'+lockIcon+'</button>'+
+            '<button class="btn btn-sm btn-icon" onclick="event.stopPropagation();LF.cxTravar('+i+')" title="'+(cx.travada?'Destravar':'Travar')+'">'+(cx.travada?'🔒':'🔓')+'</button>'+
             '<button class="btn btn-sm btn-icon" onclick="event.stopPropagation();LF.cxEditar('+i+')" title="Editar">✎</button>'+
-            '<button class="btn btn-sm btn-icon btn-perigo" onclick="event.stopPropagation();LF.cxRemover('+i+')">✕</button>'+
+            '<button class="btn btn-sm btn-icon" style="color:#dc2626" onclick="event.stopPropagation();LF.cxRemover('+i+')">✕</button>'+
           '</div>'+
         '</div>'+
         '<div class="mapa-caixa-dados">'+
@@ -541,34 +542,39 @@ const LevantamentoFachada = (() => {
       '</div>';
     }).join('');
 
-    const imgContent=mapData.img?
-      '<img src="'+mapData.img+'" style="display:block;max-width:100%;pointer-events:none;user-select:none;" draggable="false">':
-      '<div style="display:flex;align-items:center;justify-content:center;height:400px;color:#94a3b8;flex-direction:column;gap:12px;">'+
-        '<div style="font-size:3rem;">📐</div>'+
-        '<p>Importe uma planta (PNG/JPG) para começar</p>'+
-        '<label class="btn btn-primario" style="cursor:pointer;">Importar Imagem<input type="file" accept="image/*" style="display:none;" onchange="LF.importarMapa(event)"></label>'+
-      '</div>';
+    const imgContent=mapData.img
+      ? '<img src="'+mapData.img+'" style="display:block;max-width:100%;pointer-events:none;user-select:none;" draggable="false">'
+      : '<div style="display:flex;align-items:center;justify-content:center;height:300px;flex-direction:column;gap:12px;color:#aaa;">'+
+          '<div style="font-size:2.5rem;">📐</div>'+
+          '<p style="margin:0;font-size:.85rem;">Importe uma planta (PNG/JPG) para começar</p>'+
+          '<label class="btn btn-primario btn-sm" style="cursor:pointer;">Importar Imagem<input type="file" accept="image/*" style="display:none" onchange="LF.importarMapa(event)"></label>'+
+        '</div>';
 
-    p.innerHTML=toggle+
-      '<div class="page-header">'+
-        '<div><h2>Visão Geral</h2><span class="subtitulo">Mapa visual da fachada — clique e arraste as caixas para posicionar</span></div>'+
+    // Topbar: toggle + ações lado a lado
+    const topbar=
+      '<div class="visao-geral-topbar">'+
+        toggle+
         '<div class="btn-grupo">'+
-          '<label class="btn btn-secundario btn-sm" style="cursor:pointer;">📎 Importar Mapa<input type="file" accept="image/*" style="display:none;" onchange="LF.importarMapa(event)"></label>'+
+          '<label class="btn btn-secundario btn-sm" style="cursor:pointer;">📎 Importar Mapa<input type="file" accept="image/*" style="display:none" onchange="LF.importarMapa(event)"></label>'+
           '<button class="btn btn-secundario btn-sm" onclick="LF.cxAdicionar()">+ Caixa</button>'+
           (mapData.img?'<button class="btn btn-perigo btn-sm" onclick="LF.limparMapa()">🗑 Limpar</button>':'')+
         '</div>'+
-      '</div>'+
-      totalCard+
-      '<div class="mapa-wrapper" ondragover="event.preventDefault()" ondrop="LF.cxDrop(event)" id="mapa-wrapper">'+
-        '<div class="mapa-imagem-area" id="mapa-area">'+
-          imgContent+
-        '</div>'+
-        '<div id="mapa-caixas" style="position:absolute;top:0;left:0;pointer-events:none;">'+
-          '<div style="position:relative;width:100%;height:100%;pointer-events:none;">'+caixasHtml+'</div>'+
+      '</div>';
+
+    p.innerHTML=
+      '<div class="visao-geral-layout">'+
+        topbar+
+        totalCard+
+        '<div class="mapa-wrapper" ondragover="event.preventDefault()" ondrop="LF.cxDrop(event)" id="mapa-wrapper">'+
+          '<div class="mapa-imagem-area" id="mapa-area">'+
+            imgContent+
+            '<div id="mapa-caixas" style="position:absolute;top:0;left:0;pointer-events:none;width:100%;height:100%;">'+
+              '<div style="position:relative;width:100%;height:100%;pointer-events:none;">'+caixasHtml+'</div>'+
+            '</div>'+
+          '</div>'+
         '</div>'+
       '</div>';
   }
-
 
   // ===================== VISÃO GERAL — MAPA =====================
   let _cxDragIdx=null, _cxDragOffX=0, _cxDragOffY=0;
