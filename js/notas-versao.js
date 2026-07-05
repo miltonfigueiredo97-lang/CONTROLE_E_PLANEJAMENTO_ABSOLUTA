@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V1.0.8',
+  versaoAtual: 'V1.0.9',
 
   versoes: [
     {
@@ -182,7 +182,7 @@ const NotasVersao = {
     },
         {
       versao: 'V1.0.8',
-      status: 'aberta',
+      status: 'fechada',
       data: '2025-07-04',
       tipo: 'correcao',
       titulo: 'Imagem arrastável e redimensionável com handles',
@@ -194,6 +194,20 @@ const NotasVersao = {
         'Imagem cabe na tela ao importar (fit automático)',
         'Canvas sem overflow/scroll — imagem e caixas sempre visíveis',
         'Borda tracejada amarela indica que a imagem é editável',
+      ]
+    },
+    {
+      versao: 'V1.0.9',
+      status: 'aberta',
+      data: '2025-07-04',
+      tipo: 'correcao',
+      titulo: 'Resize correto, fundo branco, caixas livres, cadeado legível',
+      itens: [
+        'Handles de resize: corrigidos — agora redimensiona a imagem corretamente',
+        'Caixas: drag corrigido — posição relativa ao canvas (não à area)',
+        'Fundo do canvas: branco puro (sem pontinhos)',
+        'Cadeado: substituído por texto LIVRE (verde) / TRAV (vermelho)',
+        '  → Muito mais legível que emoji de cadeado',
       ]
     }
   ],

@@ -544,7 +544,7 @@ const LevantamentoFachada = (() => {
           '<div class="mapa-caixa-header">' +
             '<span class="mapa-caixa-nome">' + nome + '</span>' +
             '<div class="mapa-caixa-btns" onmousedown="event.stopPropagation()">' +
-              '<button class="btn btn-sm btn-icon" onclick="LF.cxTravar(' + i + ')">' + (cx.travada ? '🔒' : '🔓') + '</button>' +
+              '<button class="btn btn-sm btn-icon" onclick="LF.cxTravar(' + i + ')" title="' + (cx.travada ? 'Destravar' : 'Travar') + '" style="font-size:0.65rem;font-weight:700;letter-spacing:.5px;color:' + (cx.travada ? '#dc2626' : '#16a34a') + '">' + (cx.travada ? 'TRAV' : 'LIVRE') + '</button>' +
               '<button class="btn btn-sm btn-icon" onclick="LF.cxEditar(' + i + ')">✎</button>' +
               '<button class="btn btn-sm btn-icon" onclick="LF.cxRemover(' + i + ')" style="color:#dc2626">✕</button>' +
             '</div>' +
@@ -575,8 +575,6 @@ const LevantamentoFachada = (() => {
         '<div id="mapa-canvas" style="' +
           'flex:1;min-height:0;position:relative;' +
           'background:#f8f8f8;' +
-          'background-image:radial-gradient(circle,#ddd 1px,transparent 1px);' +
-          'background-size:28px 28px;' +
           'border-radius:8px;border:1px solid #e0e0e0;' +
           'overflow:hidden;' +   // SEM SCROLL — tudo cabe dentro
         '">' +
@@ -610,9 +608,7 @@ const LevantamentoFachada = (() => {
             '</div>'
           ) +
           // Caixas flutuam sobre o canvas
-          '<div id="mapa-caixas" style="position:absolute;inset:0;pointer-events:none;z-index:10;">' +
-            caixasHtml +
-          '</div>' +
+          caixasHtml +
         '</div>' +
       '</div>';
 
@@ -670,17 +666,23 @@ const LevantamentoFachada = (() => {
     const wrap = document.getElementById('mapa-img-wrap');
     if (!wrap) return;
     const startX = e.clientX, startY = e.clientY;
-    const startW = wrap.offsetWidth, startH = wrap.offsetHeight;
+    const startW = wrap.offsetWidth;
     const startL = _img.x, startT = _img.y;
-    const ratio = startW / startH;
+    // Aspect ratio da imagem real
+    const imgEl = document.getElementById('mapa-img');
+    const ratio = imgEl ? (imgEl.naturalWidth / imgEl.naturalHeight) : 1;
     function move(ev) {
       const dx = ev.clientX - startX;
       const dy = ev.clientY - startY;
       let w = startW, x = startL, y = startT;
-      if (dir.includes('e')) w = Math.max(100, startW + dx);
-      if (dir.includes('w')) { w = Math.max(100, startW - dx); x = startL + dx; }
-      if (dir.includes('s')) w = Math.max(100, startW + dy * ratio);
-      if (dir.includes('n')) { w = Math.max(100, startW - dy * ratio); y = startT + dy; }
+      if (dir === 'e')  w = Math.max(80, startW + dx);
+      if (dir === 'w')  { w = Math.max(80, startW - dx); x = startL + (startW - w); }
+      if (dir === 's')  w = Math.max(80, startW + dy * ratio);
+      if (dir === 'n')  { w = Math.max(80, startW - dy * ratio); y = startT + (startW - w) / ratio; }
+      if (dir === 'se') w = Math.max(80, startW + Math.max(dx, dy * ratio));
+      if (dir === 'sw') { w = Math.max(80, startW - Math.min(dx, -dy * ratio)); x = startL + (startW - w); }
+      if (dir === 'ne') { w = Math.max(80, startW + Math.max(dx, -dy * ratio)); y = startT + (startW - w) / ratio; }
+      if (dir === 'nw') { w = Math.max(80, startW - Math.max(-dx, dy * ratio)); x = startL + (startW - w); y = startT + (startW - w) / ratio; }
       _img.w = Math.round(w);
       _img.x = Math.round(x);
       _img.y = Math.round(y);
@@ -772,44 +774,31 @@ const LevantamentoFachada = (() => {
     if(e.button!==0) return;
     e.preventDefault();
     e.stopPropagation();
-
-    const wrapper=document.getElementById('mapa-wrapper');
-    const area=document.getElementById('mapa-area');
+    const canvas=document.getElementById('mapa-canvas');
     const el=document.getElementById('cx-'+i);
-    if(!wrapper||!area||!el) return;
-
-    // Offset do clique dentro da caixa (relativo à caixa)
+    if(!canvas||!el) return;
+    const cRect=canvas.getBoundingClientRect();
     const elRect=el.getBoundingClientRect();
     const offX=e.clientX-elRect.left;
     const offY=e.clientY-elRect.top;
-
     el.style.cursor='grabbing';
     el.style.zIndex='999';
-
     function move(ev){
-      const areaRect=area.getBoundingClientRect();
-      const x=ev.clientX - areaRect.left - offX + wrapper.scrollLeft;
-      const y=ev.clientY - areaRect.top  - offY + wrapper.scrollTop;
-      el.style.left=x+'px';  // sem limite — livre pra ir onde quiser
-      el.style.top =y+'px';
+      const x=ev.clientX-cRect.left-offX;
+      const y=ev.clientY-cRect.top-offY;
+      el.style.left=x+'px';
+      el.style.top=y+'px';
     }
-
     async function up(ev){
       document.removeEventListener('mousemove',move);
       document.removeEventListener('mouseup',up);
       el.style.cursor='grab';
       el.style.zIndex='';
-      const areaRect=area.getBoundingClientRect();
-      const x=ev.clientX - areaRect.left - offX + wrapper.scrollLeft;
-      const y=ev.clientY - areaRect.top  - offY + wrapper.scrollTop;
+      const x=ev.clientX-cRect.left-offX;
+      const y=ev.clientY-cRect.top-offY;
       const data=_getMapData();
-      if(data.caixas[i]){
-        data.caixas[i].x=x;  // salva posição real sem limite
-        data.caixas[i].y=y;
-        await _saveMapData(data);
-      }
+      if(data.caixas[i]){data.caixas[i].x=x;data.caixas[i].y=y;await _saveMapData(data);}
     }
-
     document.addEventListener('mousemove',move);
     document.addEventListener('mouseup',up);
   }
