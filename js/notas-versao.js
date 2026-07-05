@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V1.2',
+  versaoAtual: 'V1.2.1',
 
   versoes: [
     {
@@ -326,7 +326,7 @@ const NotasVersao = {
     },
     {
       versao: 'V1.2',
-      status: 'aberta',
+      status: 'fechada',
       data: '2025-07-05',
       tipo: 'funcionalidade',
       titulo: 'Planejamento funcional + Módulo Materiais',
@@ -351,6 +351,22 @@ const NotasVersao = {
         '  → Consumo Previsto × Quantidade da tarefa = total calculado',
         '  → Detalhes da tarefa/fachada ao filtrar',
         '  → CRUD completo com tipo, fabricante, unidade',
+      ]
+    },
+    {
+      versao: 'V1.2.1',
+      status: 'aberta',
+      data: '2025-07-05',
+      tipo: 'correcao',
+      titulo: 'Correções Planejamento e Materiais',
+      itens: [
+        'Planejamento: Router.getObraAtiva → Router.getObra (exportar funcionando)',
+        'Materiais: removido stub de desenvolvimento',
+        'Materiais: modal de cadastro adicionado ao HTML',
+        'Materiais: Levantamento Fachada aparece como UMA entrada agregada',
+        '  → Agrupa todas as fachadas com m² total e detalhe por fachada',
+        '  → Não lista cada fachada separada',
+        'Materiais: layout organizado com tabela e filtros no topo',
       ]
     }
   ],

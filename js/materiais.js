@@ -41,7 +41,7 @@ const Materiais = (() => {
     const opcoesTarefa=_getOpcoesTarefa();
 
     const matsFiltrados=filtroTarefa
-      ? materiais.filter(m=>m.tarefaId===filtroTarefa||m.tarefaRef===filtroTarefa)
+      ? materiais.filter(m=>m.tarefaId===filtroTarefa)
       : materiais;
 
     c.innerHTML=`
@@ -123,39 +123,46 @@ const Materiais = (() => {
       </div>`;
   }
 
-  // Retorna lista de opções: tarefas do planejamento + levantamentos de fachada
+  // Retorna lista de opções: tarefas do planejamento + "Levantamento de Fachada" como entrada única
   function _getOpcoesTarefa(){
     const opts=[];
     // Tarefas do planejamento
     tarefas.forEach(t=>{
-      if(t.tipo!=='grupo')opts.push({id:t.id,label:`[Plan] ${t.codigo||''} ${t.nome}`.trim(),tipo:'tarefa'});
+      if(t.tipo!=='grupo')opts.push({id:t.id,label:`[Plan] ${t.codigo?t.codigo+' ':''}${t.nome}`,tipo:'tarefa'});
     });
-    // Fachadas do levantamento
-    const fachadas=levFachadas.filter(d=>d.tipo==='fachada');
-    fachadas.forEach(f=>{
-      opts.push({id:f.id,label:`[Fachada] ${f.nome}`,tipo:'fachada',fachadaId:f.id});
-    });
+    // Levantamento de Fachada como entrada única (agrega todas as fachadas)
+    const temFachada=levFachadas.some(d=>d.tipo==='fachada');
+    if(temFachada){
+      opts.push({id:'__fachada__',label:'[Levantamento] Fachada',tipo:'fachada_agregada'});
+    }
     return opts;
   }
 
   function _getTarefaInfo(id){
     if(!id)return null;
-    // Busca no planejamento
+    // Tarefa do planejamento
     const t=tarefas.find(x=>x.id===id);
-    if(t)return {id,label:`[Plan] ${t.nome}`,tipo:'tarefa',unidade:t.unidade,quantidade:t.quantidade,detalhes:[
-      {label:'Quantidade Prevista',valor:`${t.quantidade||0} ${t.unidade||''}`},
+    if(t)return {id,label:`[Plan] ${t.nome}`,tipo:'tarefa',unidade:t.unidade||'un',quantidade:t.quantidade||0,detalhes:[
+      {label:'Qtd Prevista',valor:`${t.quantidade||0} ${t.unidade||''}`},
       {label:'% Concluído',valor:`${t.percentualConcluido||0}%`},
       {label:'Responsável',valor:t.responsavel||'—'},
     ]};
-    // Busca nas fachadas
-    const f=levFachadas.find(x=>x.id===id&&x.tipo==='fachada');
-    if(f){
-      const pecas=levFachadas.filter(x=>x.tipo==='peca'&&x.fachadaId===id);
-      const m2=pecas.reduce((s,p)=>s+(_m(p.comprimento)*_m(p.altura)*(p.quantidade||1)),0);
-      return {id,label:`[Fachada] ${f.nome}`,tipo:'fachada',quantidade:m2,unidade:'m²',detalhes:[
-        {label:'m² Total',valor:_f(m2)+' m²'},
-        {label:'Balancins',valor:levFachadas.filter(x=>x.tipo==='balancim'&&x.fachadaId===id).length},
-        {label:'Peças',valor:pecas.length},
+    // Levantamento de Fachada agregado
+    if(id==='__fachada__'){
+      const fachadas=levFachadas.filter(x=>x.tipo==='fachada');
+      const pecasTodas=levFachadas.filter(x=>x.tipo==='peca');
+      const m2Total=pecasTodas.reduce((s,p)=>s+(_m(p.comprimento)*_m(p.altura)*(p.quantidade||1)),0);
+      // Detalhe por fachada
+      const porFachada=fachadas.map(f=>{
+        const pecasF=pecasTodas.filter(p=>p.fachadaId===f.id);
+        const m2F=pecasF.reduce((s,p)=>s+(_m(p.comprimento)*_m(p.altura)*(p.quantidade||1)),0);
+        return {label:f.nome,valor:_f(m2F)+' m²'};
+      });
+      return {id,label:'[Levantamento] Fachada',tipo:'fachada_agregada',quantidade:m2Total,unidade:'m²',detalhes:[
+        {label:'m² Total Geral',valor:_f(m2Total)+' m²'},
+        {label:'Fachadas',valor:fachadas.length},
+        {label:'Peças',valor:pecasTodas.length},
+        ...porFachada.slice(0,4), // mostra até 4 fachadas no detalhe
       ]};
     }
     return null;
@@ -201,7 +208,6 @@ const Materiais = (() => {
     const tarefaId=document.getElementById('mat-tarefa-sel').value;
     if(!data.nome){Utils.toast('Informe o nome.','alerta');return;}
     data.tarefaId=tarefaId||null;
-    data.tarefaRef=tarefaId||null;
     try{
       if(editandoId){await Database.atualizar(obraId,COL,editandoId,data);}
       else{await Database.criar(obraId,COL,data);}

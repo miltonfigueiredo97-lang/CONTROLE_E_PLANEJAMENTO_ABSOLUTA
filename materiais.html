@@ -44,7 +44,7 @@
       <a href="histograma.html"><span class="nav-icon">📊</span> Histograma</a>
       <a href="admin-permissoes.html"><span class="nav-icon">🔑</span> Permissões</a>
       <div class="sidebar-section-title">Sistema</div>
-      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V1.2</span></a>
+      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V1.2.1</span></a>
     </nav>
     <div class="sidebar-user">
       <div class="user-avatar">U</div>
@@ -58,14 +58,226 @@
   <header class="header"><div class="header-title"><h1>Materiais</h1></div><div class="header-actions" id="header-actions"></div></header>
   <main class="content" style="background:var(--cor-fundo);">
     <div id="modulo-content">
-      <div class="estado-vazio"><div class="icone">🚧</div><p>Módulo em desenvolvimento.</p><p class="text-sm text-muted">Será construído conforme o roadmap do projeto.</p></div>
+      
     </div>
     <div id="materiais-content"></div>
   </main>
 </div>
+<!-- MODAL: Novo/Editar Material -->
+<div class="modal-overlay" id="modal-material">
+  <div class="modal" style="max-width:560px;">
+    <div class="modal-header">
+      <h3 id="modal-material-titulo">Novo Material</h3>
+      <button class="modal-close" onclick="Utils.fecharModal('modal-material')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <form id="form-material" onsubmit="event.preventDefault()">
+        <div class="form-grupo"><label>Nome do Material *</label>
+          <input type="text" name="nome" class="form-control" placeholder="Ex: Tinta Acrílica, Pastilha 5x5cm" required></div>
+        <div class="form-row">
+          <div class="form-grupo"><label>Tipo</label>
+            <select name="tipo" class="form-control">
+              <option value="">— Selecione —</option>
+              <option value="Revestimento">Revestimento</option>
+              <option value="Pintura">Pintura</option>
+              <option value="Argamassa">Argamassa</option>
+              <option value="Impermeabilizante">Impermeabilizante</option>
+              <option value="Fixação">Fixação</option>
+              <option value="Estrutural">Estrutural</option>
+              <option value="Acabamento">Acabamento</option>
+              <option value="Outro">Outro</option>
+            </select></div>
+          <div class="form-grupo"><label>Fabricante</label>
+            <input type="text" name="fabricante" class="form-control" placeholder="Ex: Weber, Quartzolit"></div>
+        </div>
+        <div class="form-grupo"><label>Serviço / Tarefa vinculada</label>
+          <select id="mat-tarefa-sel" class="form-control"><option value="">— Sem vínculo —</option></select></div>
+        <div class="form-row">
+          <div class="form-grupo"><label>Consumo Previsto (por unidade da tarefa)</label>
+            <input type="number" name="consumoPrevisto" class="form-control" step="0.01" min="0" placeholder="Ex: 3.5 kg/m²"></div>
+          <div class="form-grupo"><label>Consumo Real</label>
+            <input type="number" name="consumoReal" class="form-control" step="0.01" min="0"></div>
+          <div class="form-grupo"><label>Unidade</label>
+            <select name="unidade" class="form-control">
+              <option value="kg">kg</option><option value="L">L (litro)</option>
+              <option value="m²">m²</option><option value="m">m</option>
+              <option value="un">un</option><option value="saco">saco</option>
+              <option value="caixa">caixa</option>
+            </select></div>
+        </div>
+        <div class="form-grupo"><label>Observações</label>
+          <textarea name="observacoes" class="form-control" rows="2"></textarea></div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-material')">Cancelar</button>
+      <button class="btn btn-primario" onclick="Materiais.salvarMaterial()">Salvar</button>
+    </div>
+  </div>
+</div>
+
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<!-- MODAL: Novo/Editar Material -->
+<div class="modal-overlay" id="modal-material">
+  <div class="modal" style="max-width:560px;">
+    <div class="modal-header">
+      <h3 id="modal-material-titulo">Novo Material</h3>
+      <button class="modal-close" onclick="Utils.fecharModal('modal-material')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <form id="form-material" onsubmit="event.preventDefault()">
+        <div class="form-grupo"><label>Nome do Material *</label>
+          <input type="text" name="nome" class="form-control" placeholder="Ex: Tinta Acrílica, Pastilha 5x5cm" required></div>
+        <div class="form-row">
+          <div class="form-grupo"><label>Tipo</label>
+            <select name="tipo" class="form-control">
+              <option value="">— Selecione —</option>
+              <option value="Revestimento">Revestimento</option>
+              <option value="Pintura">Pintura</option>
+              <option value="Argamassa">Argamassa</option>
+              <option value="Impermeabilizante">Impermeabilizante</option>
+              <option value="Fixação">Fixação</option>
+              <option value="Estrutural">Estrutural</option>
+              <option value="Acabamento">Acabamento</option>
+              <option value="Outro">Outro</option>
+            </select></div>
+          <div class="form-grupo"><label>Fabricante</label>
+            <input type="text" name="fabricante" class="form-control" placeholder="Ex: Weber, Quartzolit"></div>
+        </div>
+        <div class="form-grupo"><label>Serviço / Tarefa vinculada</label>
+          <select id="mat-tarefa-sel" class="form-control"><option value="">— Sem vínculo —</option></select></div>
+        <div class="form-row">
+          <div class="form-grupo"><label>Consumo Previsto (por unidade da tarefa)</label>
+            <input type="number" name="consumoPrevisto" class="form-control" step="0.01" min="0" placeholder="Ex: 3.5 kg/m²"></div>
+          <div class="form-grupo"><label>Consumo Real</label>
+            <input type="number" name="consumoReal" class="form-control" step="0.01" min="0"></div>
+          <div class="form-grupo"><label>Unidade</label>
+            <select name="unidade" class="form-control">
+              <option value="kg">kg</option><option value="L">L (litro)</option>
+              <option value="m²">m²</option><option value="m">m</option>
+              <option value="un">un</option><option value="saco">saco</option>
+              <option value="caixa">caixa</option>
+            </select></div>
+        </div>
+        <div class="form-grupo"><label>Observações</label>
+          <textarea name="observacoes" class="form-control" rows="2"></textarea></div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-material')">Cancelar</button>
+      <button class="btn btn-primario" onclick="Materiais.salvarMaterial()">Salvar</button>
+    </div>
+  </div>
+</div>
+
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<!-- MODAL: Novo/Editar Material -->
+<div class="modal-overlay" id="modal-material">
+  <div class="modal" style="max-width:560px;">
+    <div class="modal-header">
+      <h3 id="modal-material-titulo">Novo Material</h3>
+      <button class="modal-close" onclick="Utils.fecharModal('modal-material')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <form id="form-material" onsubmit="event.preventDefault()">
+        <div class="form-grupo"><label>Nome do Material *</label>
+          <input type="text" name="nome" class="form-control" placeholder="Ex: Tinta Acrílica, Pastilha 5x5cm" required></div>
+        <div class="form-row">
+          <div class="form-grupo"><label>Tipo</label>
+            <select name="tipo" class="form-control">
+              <option value="">— Selecione —</option>
+              <option value="Revestimento">Revestimento</option>
+              <option value="Pintura">Pintura</option>
+              <option value="Argamassa">Argamassa</option>
+              <option value="Impermeabilizante">Impermeabilizante</option>
+              <option value="Fixação">Fixação</option>
+              <option value="Estrutural">Estrutural</option>
+              <option value="Acabamento">Acabamento</option>
+              <option value="Outro">Outro</option>
+            </select></div>
+          <div class="form-grupo"><label>Fabricante</label>
+            <input type="text" name="fabricante" class="form-control" placeholder="Ex: Weber, Quartzolit"></div>
+        </div>
+        <div class="form-grupo"><label>Serviço / Tarefa vinculada</label>
+          <select id="mat-tarefa-sel" class="form-control"><option value="">— Sem vínculo —</option></select></div>
+        <div class="form-row">
+          <div class="form-grupo"><label>Consumo Previsto (por unidade da tarefa)</label>
+            <input type="number" name="consumoPrevisto" class="form-control" step="0.01" min="0" placeholder="Ex: 3.5 kg/m²"></div>
+          <div class="form-grupo"><label>Consumo Real</label>
+            <input type="number" name="consumoReal" class="form-control" step="0.01" min="0"></div>
+          <div class="form-grupo"><label>Unidade</label>
+            <select name="unidade" class="form-control">
+              <option value="kg">kg</option><option value="L">L (litro)</option>
+              <option value="m²">m²</option><option value="m">m</option>
+              <option value="un">un</option><option value="saco">saco</option>
+              <option value="caixa">caixa</option>
+            </select></div>
+        </div>
+        <div class="form-grupo"><label>Observações</label>
+          <textarea name="observacoes" class="form-control" rows="2"></textarea></div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-material')">Cancelar</button>
+      <button class="btn btn-primario" onclick="Materiais.salvarMaterial()">Salvar</button>
+    </div>
+  </div>
+</div>
+
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<!-- MODAL: Novo/Editar Material -->
+<div class="modal-overlay" id="modal-material">
+  <div class="modal" style="max-width:560px;">
+    <div class="modal-header">
+      <h3 id="modal-material-titulo">Novo Material</h3>
+      <button class="modal-close" onclick="Utils.fecharModal('modal-material')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <form id="form-material" onsubmit="event.preventDefault()">
+        <div class="form-grupo"><label>Nome do Material *</label>
+          <input type="text" name="nome" class="form-control" placeholder="Ex: Tinta Acrílica, Pastilha 5x5cm" required></div>
+        <div class="form-row">
+          <div class="form-grupo"><label>Tipo</label>
+            <select name="tipo" class="form-control">
+              <option value="">— Selecione —</option>
+              <option value="Revestimento">Revestimento</option>
+              <option value="Pintura">Pintura</option>
+              <option value="Argamassa">Argamassa</option>
+              <option value="Impermeabilizante">Impermeabilizante</option>
+              <option value="Fixação">Fixação</option>
+              <option value="Estrutural">Estrutural</option>
+              <option value="Acabamento">Acabamento</option>
+              <option value="Outro">Outro</option>
+            </select></div>
+          <div class="form-grupo"><label>Fabricante</label>
+            <input type="text" name="fabricante" class="form-control" placeholder="Ex: Weber, Quartzolit"></div>
+        </div>
+        <div class="form-grupo"><label>Serviço / Tarefa vinculada</label>
+          <select id="mat-tarefa-sel" class="form-control"><option value="">— Sem vínculo —</option></select></div>
+        <div class="form-row">
+          <div class="form-grupo"><label>Consumo Previsto (por unidade da tarefa)</label>
+            <input type="number" name="consumoPrevisto" class="form-control" step="0.01" min="0" placeholder="Ex: 3.5 kg/m²"></div>
+          <div class="form-grupo"><label>Consumo Real</label>
+            <input type="number" name="consumoReal" class="form-control" step="0.01" min="0"></div>
+          <div class="form-grupo"><label>Unidade</label>
+            <select name="unidade" class="form-control">
+              <option value="kg">kg</option><option value="L">L (litro)</option>
+              <option value="m²">m²</option><option value="m">m</option>
+              <option value="un">un</option><option value="saco">saco</option>
+              <option value="caixa">caixa</option>
+            </select></div>
+        </div>
+        <div class="form-grupo"><label>Observações</label>
+          <textarea name="observacoes" class="form-control" rows="2"></textarea></div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-material')">Cancelar</button>
+      <button class="btn btn-primario" onclick="Materiais.salvarMaterial()">Salvar</button>
+    </div>
+  </div>
+</div>
+
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 <script src="js/firebase-config.js"></script>
 <script src="js/auth.js"></script>
@@ -75,6 +287,6 @@
 <script src="js/audit.js"></script>
 <script src="js/utils.js"></script>
 <script src="js/materiais.js"></script>
-<script>document.addEventListener('DOMContentLoaded', () => { Materiais.init();  Utils.initPagina(); });</script>
+<script>document.addEventListener('DOMContentLoaded', () => { Materiais.init(); });</script>
 </body>
 </html>

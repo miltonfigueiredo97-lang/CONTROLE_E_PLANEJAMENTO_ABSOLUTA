@@ -436,7 +436,7 @@ const Planejamento = (() => {
       ]);
       XLSX.utils.book_append_sheet(wb,instrucoes,'Instruções');
 
-      const nomeObra=(Router.getObraAtiva()?.nome||'planejamento').replace(/[^a-z0-9]/gi,'_');
+      const nomeObra=(Router.getObra()?.nome||'planejamento').replace(/[^a-z0-9]/gi,'_');
       XLSX.writeFile(wb,`planejamento_${nomeObra}_${_hoje()}.xlsx`);
       Utils.toast('Planilha exportada!','sucesso');
     }catch(e){
