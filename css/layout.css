@@ -80,8 +80,7 @@ html, body { height: 100%; overflow: hidden; margin: 0; padding: 0; }
 .sidebar-nav a.ativo { color: var(--cor-primaria); background: rgba(245,200,0,0.08); border-left-color: var(--cor-primaria); font-weight: 600; }
 .sidebar-nav a .nav-icon { width: 17px; text-align: center; font-size: 0.88rem; flex-shrink: 0; }
 
-/* Versão */
-.sidebar-version { padding: 4px 14px 6px; font-size: 0.62rem; color: #333; letter-spacing: .5px; flex-shrink: 0; }
+.nav-version { margin-left: auto; font-size: 0.65rem; font-weight: 700; color: var(--cor-primaria); background: rgba(245,200,0,0.15); padding: 1px 6px; border-radius: 4px; flex-shrink: 0; }
 
 /* Usuário — sempre fixo na base, nunca scrollado */
 .sidebar-user {
