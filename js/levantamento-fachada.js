@@ -11,6 +11,7 @@ const LevantamentoFachada = (() => {
   let sel={fachadaId:null,balancimId:null,vistaId:null};
   let editandoId=null;
   let abaAtiva='visao';
+  let _mapaDoc={img:null,caixas:[]};  // carregado do Firestore
   const COL='levantamentosFachada';
 
   // ===================== CONFIGURAÇÕES DE CÁLCULO =====================
@@ -575,21 +576,21 @@ const LevantamentoFachada = (() => {
   function importarMapa(e){
     const file=e.target.files[0];if(!file)return;
     const reader=new FileReader();
-    reader.onload=ev=>{
-      const data=_getMapData();data.img=ev.target.result;_saveMapData(data);renderPainel();
+    reader.onload=async ev=>{
+      const data=_getMapData();data.img=ev.target.result;await _saveMapData(data);renderPainel();
     };
     reader.readAsDataURL(file);
   }
 
-  function cxAdicionar(){
+  async function cxAdicionar(){
     const data=_getMapData();
     data.caixas.push({x:20+(data.caixas.length*20),y:20+(data.caixas.length*20),fachadaId:null,travada:false});
-    _saveMapData(data);renderPainel();
+    await _saveMapData(data);renderPainel();
   }
 
-  function cxRemover(i){if(!confirm('Remover caixa?'))return;const data=_getMapData();data.caixas.splice(i,1);_saveMapData(data);renderPainel();}
+  async function cxRemover(i){if(!confirm('Remover caixa?'))return;const data=_getMapData();data.caixas.splice(i,1);_saveMapData(data);renderPainel();}
 
-  function cxTravar(i){const data=_getMapData();data.caixas[i].travada=!data.caixas[i].travada;_saveMapData(data);renderPainel();}
+  async function cxTravar(i){const data=_getMapData();data.caixas[i].travada=!data.caixas[i].travada;await _saveMapData(data);renderPainel();}
 
   function cxEditar(i){
     const data=_getMapData();const cx=data.caixas[i];
@@ -599,17 +600,17 @@ const LevantamentoFachada = (() => {
     sel.innerHTML='<option value="">— Sem vínculo —</option>'+fachadas.map(f=>'<option value="'+f.id+'"'+(f.id===cx.fachadaId?' selected':'')+'>'+f.nome+'</option>').join('');
     Utils.abrirModal('modal-cx-edit');
   }
-  function salvarCxEdit(){
+  async function salvarCxEdit(){
     const i=parseInt(document.getElementById('cx-edit-idx').value);
     const data=_getMapData();
     data.caixas[i].nome=document.getElementById('cx-edit-nome').value.trim();
     data.caixas[i].fachadaId=document.getElementById('cx-edit-fachada').value||null;
-    _saveMapData(data);Utils.fecharModal('modal-cx-edit');renderPainel();
+    await _saveMapData(data);Utils.fecharModal('modal-cx-edit');renderPainel();
   }
 
   function cxDragStart(e,i){_cxDragIdx=i;const el=document.getElementById('cx-'+i);const r=el.getBoundingClientRect();_cxDragOffX=e.clientX-r.left;_cxDragOffY=e.clientY-r.top;}
 
-  function cxDrop(e){
+  async function cxDrop(e){
     if(_cxDragIdx===null)return;
     const area=document.getElementById('mapa-area').getBoundingClientRect();
     const x=e.clientX-area.left-_cxDragOffX;
@@ -617,25 +618,22 @@ const LevantamentoFachada = (() => {
     const data=_getMapData();
     data.caixas[_cxDragIdx].x=Math.max(0,x);
     data.caixas[_cxDragIdx].y=Math.max(0,y);
-    _saveMapData(data);_cxDragIdx=null;renderPainel();
+    await _saveMapData(data);_cxDragIdx=null;renderPainel();
   }
 
-  function limparMapa(){if(!confirm('Limpar mapa e todas as caixas?'))return;localStorage.removeItem('fachadaMap_'+obraId);renderPainel();}
-  function _getMapData(){
-    // Tenta com obraId atual, depois fallback com 'null' (compatibilidade)
-    const key='fachadaMap_'+obraId;
-    const keyNull='fachadaMap_null';
-    let data=localStorage.getItem(key);
-    if(!data){
-      // Migração: pega dados antigos salvos com obraId null
-      const old=localStorage.getItem(keyNull);
-      if(old){localStorage.setItem(key,old);localStorage.removeItem(keyNull);data=old;}
-    }
-    return JSON.parse(data||'{"img":null,"caixas":[]}');
+  async function limparMapa(){
+    if(!confirm('Limpar mapa e todas as caixas?')) return;
+    await _saveMapData({img:null,caixas:[]});
+    renderPainel();
   }
-  function _saveMapData(d){
-    if(!obraId)return;
-    localStorage.setItem('fachadaMap_'+obraId,JSON.stringify(d));
+  function _getMapData(){ return _mapaDoc; }
+
+  async function _saveMapData(d){
+    if(!obraId) return;
+    _mapaDoc = d;
+    try {
+      await db.collection('obras').doc(obraId).collection('mapaVisao').doc('mapa').set(d);
+    } catch(e) { console.error('Erro ao salvar mapa:', e); Utils.toast('Erro ao salvar mapa.','erro'); }
   }
 
   // ===================== CRUD PEÇA =====================

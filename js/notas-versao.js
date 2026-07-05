@@ -72,6 +72,9 @@ const NotasVersao = {
         'Fachada: toggle Visão Geral agora abre primeiro (antes de Resumo Geral)',
         'Fachada: mapa migra dados de chave antiga (fachadaMap_null) para chave correta',
         '  → Imagem importada volta a aparecer após correção do bug anterior',
+        'Mapa (Visão Geral): migrado de localStorage para Firestore',
+        '  → Imagem e posições das caixas disponíveis em qualquer dispositivo',
+        '  → Carregado junto com os dados da fachada no init()',
       ]
     }
   ],
