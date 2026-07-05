@@ -69,6 +69,9 @@ const NotasVersao = {
         '  → LevantamentoFachada undefined era consequência deste erro',
         'Obras: removidas imagens hardcoded (Essence/Zenith)',
         'Obras: botão Inserir Imagem no modal — cada obra tem sua própria foto',
+        'Fachada: toggle Visão Geral agora abre primeiro (antes de Resumo Geral)',
+        'Fachada: mapa migra dados de chave antiga (fachadaMap_null) para chave correta',
+        '  → Imagem importada volta a aparecer após correção do bug anterior',
       ]
     }
   ],

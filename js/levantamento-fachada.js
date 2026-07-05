@@ -10,7 +10,7 @@ const LevantamentoFachada = (() => {
   let openFachadas=new Set();
   let sel={fachadaId:null,balancimId:null,vistaId:null};
   let editandoId=null;
-  let abaAtiva='resumo';
+  let abaAtiva='visao';
   const COL='levantamentosFachada';
 
   // ===================== CONFIGURAÇÕES DE CÁLCULO =====================
@@ -256,7 +256,7 @@ const LevantamentoFachada = (() => {
   function renderPainel(){
     const p=document.getElementById('fachada-painel');if(!p)return;
     // Toggle sempre visível no topo
-    const toggleHtml='<div class="aba-toggle mb-2"><button class="aba-btn'+(abaAtiva==='resumo'?' ativo':'')+'" onclick="LF.setAba(\'resumo\')">Resumo Geral</button><button class="aba-btn'+(abaAtiva==='visao'?' ativo':'')+'" onclick="LF.setAba(\'visao\')">Visão Geral</button></div>';
+    const toggleHtml='<div class="aba-toggle mb-2"><button class="aba-btn'+(abaAtiva==='visao'?' ativo':'')+'" onclick="LF.setAba(\'visao\')">Visão Geral</button><button class="aba-btn'+(abaAtiva==='resumo'?' ativo':'')+'" onclick="LF.setAba(\'resumo\')">Resumo Geral</button></div>';
 
     if(abaAtiva==='visao') return renderVisaoGeral(p, toggleHtml);
 
@@ -621,8 +621,22 @@ const LevantamentoFachada = (() => {
   }
 
   function limparMapa(){if(!confirm('Limpar mapa e todas as caixas?'))return;localStorage.removeItem('fachadaMap_'+obraId);renderPainel();}
-  function _getMapData(){return JSON.parse(localStorage.getItem('fachadaMap_'+obraId)||'{"img":null,"caixas":[]}');}
-  function _saveMapData(d){localStorage.setItem('fachadaMap_'+obraId,JSON.stringify(d));}
+  function _getMapData(){
+    // Tenta com obraId atual, depois fallback com 'null' (compatibilidade)
+    const key='fachadaMap_'+obraId;
+    const keyNull='fachadaMap_null';
+    let data=localStorage.getItem(key);
+    if(!data){
+      // Migração: pega dados antigos salvos com obraId null
+      const old=localStorage.getItem(keyNull);
+      if(old){localStorage.setItem(key,old);localStorage.removeItem(keyNull);data=old;}
+    }
+    return JSON.parse(data||'{"img":null,"caixas":[]}');
+  }
+  function _saveMapData(d){
+    if(!obraId)return;
+    localStorage.setItem('fachadaMap_'+obraId,JSON.stringify(d));
+  }
 
   // ===================== CRUD PEÇA =====================
   function novaPeca(){
