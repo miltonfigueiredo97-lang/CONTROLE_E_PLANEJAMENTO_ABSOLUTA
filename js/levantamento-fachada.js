@@ -256,12 +256,22 @@ const LevantamentoFachada = (() => {
   // ===================== PAINEL: Toggle + Roteamento =====================
   function renderPainel(){
     const p=document.getElementById('fachada-painel');if(!p)return;
-    // Toggle sempre visível no topo
-    const toggleHtml='<div class="aba-toggle mb-2"><button class="aba-btn'+(abaAtiva==='visao'?' ativo':'')+'" onclick="LF.setAba(\'visao\')">Visão Geral</button><button class="aba-btn'+(abaAtiva==='resumo'?' ativo':'')+'" onclick="LF.setAba(\'resumo\')">Resumo Geral</button></div>';
+    const tree=document.getElementById('fachada-tree');
+    const layout=document.getElementById('fachada-layout');
 
-    if(abaAtiva==='visao') return renderVisaoGeral(p, toggleHtml);
+    if(abaAtiva==='visao'){
+      // Esconde a coluna Estrutura — tela toda para o mapa
+      if(tree){tree.style.display='none';}
+      if(layout){layout.style.gridTemplateColumns='1fr';}
+      const toggleHtml='<div class="aba-toggle mb-2"><button class="aba-btn ativo" onclick="LF.setAba(\'visao\')">Visão Geral</button><button class="aba-btn" onclick="LF.setAba(\'resumo\')">Resumo Geral</button></div>';
+      return renderVisaoGeral(p, toggleHtml);
+    }
 
-    // Aba Resumo Geral
+    // Resumo Geral — mostra coluna Estrutura
+    if(tree){tree.style.display='';}
+    if(layout){layout.style.gridTemplateColumns='252px 1fr';}
+    const toggleHtml='<div class="aba-toggle mb-2"><button class="aba-btn" onclick="LF.setAba(\'visao\')">Visão Geral</button><button class="aba-btn ativo" onclick="LF.setAba(\'resumo\')">Resumo Geral</button></div>';
+
     if(sel.vistaId) return renderPecas(p, toggleHtml);
     if(sel.balancimId) return renderBalancim(p, toggleHtml);
     if(sel.fachadaId) return renderFachada(p, toggleHtml);
@@ -504,6 +514,8 @@ const LevantamentoFachada = (() => {
   }
 
   // ===================== VISÃO GERAL (mapa + caixas) =====================
+  let _zoom = 1.0; // zoom da imagem
+
   function renderVisaoGeral(p, toggle){
     const mapData=_getMapData();
     const tot=_somarGeral();
@@ -519,23 +531,22 @@ const LevantamentoFachada = (() => {
         '</div>'+
       '</div>';
 
-    // Caixas — pointer-events:all para cada caixa individualmente
     const caixasHtml=mapData.caixas.map((cx,i)=>{
       const f=fachadas.find(x=>x.id===cx.fachadaId);
       const t=cx.fachadaId?_somarFachada(cx.fachadaId):{m2semML:0,m2comML_equiv:0,ml:0,vao:0};
       const nome=f?f.nome:(cx.nome||'Caixa '+(i+1));
       const lock=cx.travada?'🔒':'🔓';
-      const lockTitle=cx.travada?'Clique para destravar':'Clique para travar';
       return (
         '<div class="mapa-caixa" id="cx-'+i+'" '+
-          'style="position:absolute;left:'+cx.x+'px;top:'+cx.y+'px;cursor:'+(cx.travada?'default':'grab')+';" '+
-          'onmousedown="'+(cx.travada?'':'LF.cxMouseDown(event,'+i+')')+'">'+
+          'style="position:absolute;left:'+cx.x+'px;top:'+cx.y+'px;'+
+          'cursor:'+(cx.travada?'default':'grab')+';z-index:10;" '+
+          (cx.travada?'':'onmousedown="LF.cxMouseDown(event,'+i+')"')+'>'+
           '<div class="mapa-caixa-header">'+
-            '<span class="mapa-caixa-nome" title="'+nome+'">'+nome+'</span>'+
+            '<span class="mapa-caixa-nome">'+nome+'</span>'+
             '<div class="mapa-caixa-btns" onmousedown="event.stopPropagation()">'+
-              '<button class="btn btn-sm btn-icon" title="'+lockTitle+'" onclick="LF.cxTravar('+i+')">'+lock+'</button>'+
-              '<button class="btn btn-sm btn-icon" title="Editar" onclick="LF.cxEditar('+i+')">✎</button>'+
-              '<button class="btn btn-sm btn-icon" title="Remover" onclick="LF.cxRemover('+i+')" style="color:#dc2626">✕</button>'+
+              '<button class="btn btn-sm btn-icon" onclick="LF.cxTravar('+i+')">'+lock+'</button>'+
+              '<button class="btn btn-sm btn-icon" onclick="LF.cxEditar('+i+')">✎</button>'+
+              '<button class="btn btn-sm btn-icon" onclick="LF.cxRemover('+i+')" style="color:#dc2626">✕</button>'+
             '</div>'+
           '</div>'+
           '<div class="mapa-caixa-dados">'+
@@ -549,7 +560,7 @@ const LevantamentoFachada = (() => {
 
     const semImagem=
       '<div style="display:flex;align-items:center;justify-content:center;'+
-        'min-height:300px;flex-direction:column;gap:14px;color:#aaa;">'+
+        'height:100%;flex-direction:column;gap:14px;color:#aaa;">'+
         '<div style="font-size:3rem;">📐</div>'+
         '<p style="margin:0">Importe uma planta para começar</p>'+
         '<label class="btn btn-primario btn-sm" style="cursor:pointer;">'+
@@ -558,15 +569,32 @@ const LevantamentoFachada = (() => {
         '</label>'+
       '</div>';
 
-    const imgTag=mapData.img
-      ? '<img src="'+mapData.img+'" id="mapa-img" draggable="false">'
+    const zoomPct=Math.round(_zoom*100);
+    const imgContent=mapData.img
+      ? '<div id="mapa-zoom-wrap" style="transform:scale('+_zoom+');transform-origin:top left;'+
+          'width:'+(100/_zoom)+'%;position:relative;display:inline-block;">'+
+          '<img src="'+mapData.img+'" draggable="false" '+
+            'style="display:block;width:100%;height:auto;pointer-events:none;user-select:none;">'+
+          '<div id="mapa-caixas" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;">'+
+            caixasHtml+
+          '</div>'+
+        '</div>'
       : semImagem;
 
     p.innerHTML=
       '<div class="visao-geral-layout">'+
-        // Topbar: toggle + botões
+        // Topbar: toggle + zoom + botões
         '<div class="visao-geral-topbar">'+
           toggle+
+          // Controles de zoom
+          (mapData.img?
+            '<div class="btn-grupo">'+
+              '<button class="btn btn-secundario btn-sm" onclick="LF.setZoomMapa('+(_zoom-0.1).toFixed(1)+')" '+((_zoom<=0.2)?'disabled':'')+'>−</button>'+
+              '<span style="min-width:44px;text-align:center;font-size:0.82rem;font-weight:600;color:#555;">'+zoomPct+'%</span>'+
+              '<button class="btn btn-secundario btn-sm" onclick="LF.setZoomMapa('+(_zoom+0.1).toFixed(1)+')" '+((_zoom>=3)?'disabled':'')+'>+</button>'+
+              '<button class="btn btn-secundario btn-sm" onclick="LF.setZoomMapa(1)">↺</button>'+
+            '</div>'
+          :'')+
           '<div class="btn-grupo">'+
             '<label class="btn btn-secundario btn-sm" style="cursor:pointer;">'+
               '📎 Importar Mapa'+
@@ -576,20 +604,19 @@ const LevantamentoFachada = (() => {
             (mapData.img?'<button class="btn btn-perigo btn-sm" onclick="LF.limparMapa()">🗑 Limpar</button>':'')+
           '</div>'+
         '</div>'+
-        // Total geral
         totalCard+
-        // Área do mapa — overflow auto para scroll quando imagem for grande
+        // Mapa: overflow auto para scroll quando zoom > 1
         '<div id="mapa-wrapper" class="mapa-wrapper">'+
-          // mapa-area é o container posicionado das caixas
-          '<div id="mapa-area" style="position:relative;display:inline-block;min-width:100%;">'+
-            imgTag+
-            // Caixas ficam SOBRE a imagem — pointer-events:all individualmente
-            '<div id="mapa-caixas" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;">'+
-              caixasHtml+
-            '</div>'+
+          '<div id="mapa-area" style="position:relative;width:100%;height:100%;">'+
+            imgContent+
           '</div>'+
         '</div>'+
       '</div>';
+  }
+
+  function setZoomMapa(z){
+    _zoom=Math.min(3,Math.max(0.2,parseFloat(z.toFixed(1))));
+    renderPainel();
   }
 
 
@@ -870,7 +897,7 @@ const LevantamentoFachada = (() => {
     }catch(e){Utils.toast('Erro.','erro');}
   }
 
-  return {init,carregar,sel:selecionar,setAba,criarFachada,criarBalancim,editar,salvarEntidade,excluir,novaPeca,editarPeca,salvarPeca,excluirPeca,duplicarPeca,duplicarBal,conferirPeca,exportarCSV,exportarVista,onToggleJanela,importarMapa,cxAdicionar,cxRemover,cxTravar,cxEditar,salvarCxEdit,cxMouseDown,cxDrop,limparMapa,abrirVaoVista,salvarVaoVista,_atualizarPreviewVao,abrirConfig,salvarConfig,onChangeCfgJanela};
+  return {init,carregar,sel:selecionar,setAba,criarFachada,criarBalancim,editar,salvarEntidade,excluir,novaPeca,editarPeca,salvarPeca,excluirPeca,duplicarPeca,duplicarBal,conferirPeca,exportarCSV,exportarVista,onToggleJanela,importarMapa,cxAdicionar,cxRemover,cxTravar,cxEditar,salvarCxEdit,cxMouseDown,cxDrop,setZoomMapa,limparMapa,abrirVaoVista,salvarVaoVista,_atualizarPreviewVao,abrirConfig,salvarConfig,onChangeCfgJanela};
 })();
 const LF=LevantamentoFachada;
 function onObraChanged(){LF.init();}

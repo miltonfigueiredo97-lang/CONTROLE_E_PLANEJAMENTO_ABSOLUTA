@@ -225,19 +225,11 @@ html, body { height: 100%; overflow: hidden; margin: 0; padding: 0; }
   min-height: 0;
   padding: 0;
 }
-/* mapa-area = container relativo das caixas, filho direto do wrapper */
 #mapa-area {
   position: relative;
   width: 100%;
   height: 100%;
-}
-#mapa-area img {
-  display: block;
-  width: 100%;               /* imagem cabe na largura total */
-  height: 100%;              /* imagem cabe na altura total */
-  object-fit: contain;       /* mantém proporção sem cortar */
-  pointer-events: none;
-  user-select: none;
+  overflow: visible;
 }
 
 /* Caixas do mapa */

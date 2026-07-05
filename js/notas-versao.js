@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V1.0.5',
+  versaoAtual: 'V1.0.6',
 
   versoes: [
     {
@@ -135,7 +135,7 @@ const NotasVersao = {
     }
     ,{
       versao: 'V1.0.5',
-      status: 'aberta',
+      status: 'fechada',
       data: '2025-07-04',
       tipo: 'correcao',
       titulo: 'Sidebar, caixas livres e imagem fit',
@@ -145,6 +145,22 @@ const NotasVersao = {
         'Imagem do mapa: object-fit contain — cabe na tela sem scroll, sem corte',
         'Save do mapa: log de debug + validação de tamanho antes de salvar',
         '  → Mostra erro claro se imagem ainda for grande demais',
+      ]
+    }},
+    {
+      versao: 'V1.0.6',
+      status: 'aberta',
+      data: '2025-07-04',
+      tipo: 'correcao',
+      titulo: 'Estrutura some + zoom do mapa',
+      itens: [
+        'Coluna Estrutura (fachada-tree): agora some de verdade na Visão Geral',
+        '  → renderPainel() usa getElementById corretamente',
+        '  → Volta ao abrir Resumo Geral',
+        'Controles de zoom na Visão Geral: − / % / + / ↺ reset',
+        '  → Zoom de 20% a 300% para ajustar a imagem na tela',
+        '  → Caixas escalam junto com a imagem',
+        'Mapa: overflow auto — scroll só quando zoom > tela',
       ]
     }
   ],
