@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V1.1.3',
+  versaoAtual: 'V1.1.4',
 
   versoes: [
     {
@@ -264,7 +264,7 @@ const NotasVersao = {
     },
     {
       versao: 'V1.1.3',
-      status: 'aberta',
+      status: 'fechada',
       data: '2025-07-05',
       tipo: 'correcao',
       titulo: 'Auth corrigido, fórmula ML do config, vãos múltiplos',
@@ -279,6 +279,21 @@ const NotasVersao = {
         '  → Cada vão tem Comprimento, Altura e Quantidade',
         '  → Botão + Adicionar Vão para incluir mais vãos',
         '  → Total acumulado exibido em tempo real',
+      ]
+    },
+    {
+      versao: 'V1.1.4',
+      status: 'aberta',
+      data: '2025-07-05',
+      tipo: 'correcao',
+      titulo: 'CRÍTICO: funções perdidas restauradas',
+      itens: [
+        'CAUSA RAIZ do bug: reescritas da Visão Geral deletaram funções essenciais',
+        '  → importarMapa, cxAdicionar, cxRemover, cxTravar, cxEditar, salvarCxEdit, limparMapa',
+        '  → return{} exportava funções inexistentes → IIFE falhava → módulo undefined',
+        '  → Usuário bugava porque o módulo não carregava',
+        'Todas as funções restauradas e verificadas (47 exportadas, todas existem)',
+        'cxTravar e cxEditar agora rerenderizam só as caixas (sem reload do painel inteiro)',
       ]
     }
   ],

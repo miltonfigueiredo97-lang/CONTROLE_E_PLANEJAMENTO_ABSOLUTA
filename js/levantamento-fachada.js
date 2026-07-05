@@ -905,6 +905,94 @@ const LevantamentoFachada = (() => {
     }catch(e){Utils.toast('Erro.','erro');}
   }
 
+  function importarMapa(e){
+    const file=e.target.files[0];if(!file)return;
+    Utils.mostrarLoading('Processando imagem...');
+    const reader=new FileReader();
+    reader.onload=ev=>{
+      const img=new Image();
+      img.onload=async ()=>{
+        try{
+          const MAX_W=2400,MAX_H=2400;
+          let w=img.width,h=img.height;
+          if(w>MAX_W){h=Math.round(h*MAX_W/w);w=MAX_W;}
+          if(h>MAX_H){w=Math.round(w*MAX_H/h);h=MAX_H;}
+          const canvas=document.createElement('canvas');
+          canvas.width=w;canvas.height=h;
+          canvas.getContext('2d').drawImage(img,0,0,w,h);
+          let dataUrl='';
+          for(let q=0.85;q>=0.3;q-=0.1){
+            dataUrl=canvas.toDataURL('image/jpeg',q);
+            if(dataUrl.length<900000)break;
+          }
+          const data=_getMapData();
+          data.img=dataUrl;
+          _img={x:40,y:40,w:0}; // reset fit
+          await _saveMapData(data);
+          renderPainel();
+          Utils.toast('Imagem importada!','sucesso');
+        }catch(err){
+          Utils.toast('Erro ao salvar: '+err.message,'erro');
+        }finally{Utils.esconderLoading();}
+      };
+      img.src=ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  async function cxAdicionar(){
+    const data=_getMapData();
+    data.caixas.push({x:40+(data.caixas.length*30),y:40+(data.caixas.length*20),fachadaId:null,travada:false,w:220});
+    await _saveMapData(data);
+    _renderCaixas(data);
+  }
+
+  async function cxRemover(i){
+    if(!confirm('Remover caixa?'))return;
+    const data=_getMapData();
+    data.caixas.splice(i,1);
+    await _saveMapData(data);
+    _renderCaixas(data);
+  }
+
+  async function cxTravar(i){
+    const data=_getMapData();
+    if(!data.caixas[i])return;
+    data.caixas[i].travada=!data.caixas[i].travada;
+    await _saveMapData(data);
+    _renderCaixas(data);
+  }
+
+  function cxEditar(i){
+    const data=_getMapData();const cx=data.caixas[i];if(!cx)return;
+    document.getElementById('cx-edit-idx').value=i;
+    document.getElementById('cx-edit-nome').value=cx.nome||'';
+    const sel=document.getElementById('cx-edit-fachada');
+    sel.innerHTML='<option value="">— Sem vínculo —</option>'+
+      fachadas.map(f=>'<option value="'+f.id+'"'+(f.id===cx.fachadaId?' selected':'')+'>'+f.nome+'</option>').join('');
+    Utils.abrirModal('modal-cx-edit');
+  }
+
+  async function salvarCxEdit(){
+    const i=parseInt(document.getElementById('cx-edit-idx').value);
+    const data=_getMapData();
+    if(!data.caixas[i])return;
+    data.caixas[i].nome=document.getElementById('cx-edit-nome').value.trim();
+    data.caixas[i].fachadaId=document.getElementById('cx-edit-fachada').value||null;
+    await _saveMapData(data);
+    Utils.fecharModal('modal-cx-edit');
+    _renderCaixas(data);
+  }
+
+  async function limparMapa(){
+    if(!confirm('Limpar mapa e todas as caixas?'))return;
+    await _saveMapData({img:null,caixas:[],imgState:null});
+    _imgEditando=false;
+    renderPainel();
+  }
+
+  async function cxDrop(e){ /* não usado — substituído por cxMouseDown */ }
+
   // Event wrappers for inline handlers that need direction
   function imgRZEv(e, el){ imgRZ(e, el.dataset.d); }
   function cxResizeEv(e){ cxResize(e, parseInt(e.currentTarget.dataset.i), e.currentTarget.dataset.d); }
