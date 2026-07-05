@@ -113,7 +113,7 @@ const NotasVersao = {
         'Layout geral: sidebar fixa em 100vh, usuário sempre visível',
         'Versão atualizada para V1.0.3 em todos os arquivos',
       ]
-    }
+    },
     {
       versao: 'V1.0.4',
       status: 'aberta',
