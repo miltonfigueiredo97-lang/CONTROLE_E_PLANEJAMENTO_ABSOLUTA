@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V1.3.2',
+  versaoAtual: 'V1.3.3',
 
   versoes: [
     {
@@ -494,7 +494,7 @@ const NotasVersao = {
     },
     {
       versao: 'V1.3.2',
-      status: 'aberta',
+      status: 'fechada',
       data: '2025-07-06',
       tipo: 'correcao',
       titulo: 'Planejamento: colunas, import, hierarquia, zoom',
@@ -509,6 +509,27 @@ const NotasVersao = {
         'Hierarquia ← →: move a tarefa E todos os filhos abaixo dela',
         '  → Igual MS Project: outdent/indent puxa a família inteira',
         'Zoom: escala correta dia/semana/mês/trimestre/ano',
+      ]
+    },
+    {
+      versao: 'V1.3.3',
+      status: 'aberta',
+      data: '2025-07-06',
+      tipo: 'correcao',
+      titulo: 'Planejamento: ← → no Gantt, zoom correto, esconder Gantt',
+      itens: [
+        'Aba Tabela removida — tudo feito pelo Gantt',
+        'Botões ← → de hierarquia agora no Gantt (coluna Ações)',
+        '  → Recuar/avançar move tarefa + todos os filhos abaixo',
+        'Botão Esconder Gantt: esconde as barras e deixa só a tabela',
+        '  → Toggle: clica de novo para mostrar o Gantt',
+        'Zoom headers corrigidos:',
+        '  → Dia: mostra cada dia individualmente',
+        '  → Semana: linhas verticais por semana com número do dia',
+        '  → Mês: label por mês com ano',
+        '  → Trimestre: T1/T2/T3/T4 com ano',
+        '  → Ano: só o número do ano',
+        'Coluna Ações alargada (64px) para caber ← → ✎',
       ]
     }
   ],

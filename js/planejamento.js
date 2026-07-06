@@ -6,6 +6,7 @@ const Planejamento = (() => {
   let obraId=null, tarefas=[], tarefasFiltradas=[];
   let abaAtiva='gantt', zoomGantt='mes', editandoId=null, selectedIdx=-1;
   let splitX=420;
+  let ganttVisible=true;
   let colsRecolhidas=new Set();
   let colsHidden=new Set(); // colunas escondidas
   const COL='tarefas';
@@ -27,7 +28,7 @@ const Planejamento = (() => {
     {id:'responsavel',label:'Responsável',w:100},
     {id:'local',label:'Local',w:80},
     {id:'grupo',label:'Grupo',w:80},
-    {id:'acoes',label:'',w:36,fixed:true},
+    {id:'acoes',label:'',w:64,fixed:true},
   ];
 
   async function init(){
@@ -80,20 +81,20 @@ const Planejamento = (() => {
   // ===================== RENDER PRINCIPAL =====================
   function renderizar(){
     const c=_el();
-    const abas=[{id:'gantt',icon:'📊',label:'Gantt'},{id:'tabela',icon:'📋',label:'Tabela'}];
     c.innerHTML=`
       <div class="plan-header">
         <div class="plan-abas">
-          ${abas.map(a=>`<button class="plan-aba${abaAtiva===a.id?' ativo':''}" onclick="Planejamento.setAba('${a.id}')">${a.icon} ${a.label}</button>`).join('')}
+          <button class="plan-aba ativo">📊 Planejamento</button>
         </div>
         <div class="plan-actions" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
           <label class="btn btn-secundario btn-sm" style="cursor:pointer;">📥 Importar<input type="file" accept=".xlsx,.xls" style="display:none" onchange="Planejamento.importarExcel(event)"></label>
           <button class="btn btn-secundario btn-sm" onclick="Planejamento.exportar()">📤 Exportar</button>
+          <button class="btn btn-secundario btn-sm" onclick="Planejamento.toggleGantt()" id="btn-toggle-gantt">📊 Esconder Gantt</button>
           <button class="btn btn-primario btn-sm" onclick="Planejamento.inserirTarefa()">＋ Tarefa</button>
         </div>
       </div>
       <div style="font-size:.72rem;color:#444;margin-bottom:6px;">${tarefasFiltradas.length} tarefas · Ctrl++ inserir · Ctrl+- excluir · clique para selecionar · duplo-clique para editar</div>
-      <div id="plan-corpo">${abaAtiva==='gantt'?_renderGantt():_renderTabela()}</div>`;
+      <div id="plan-corpo">${_renderGantt()}</div>`;
   }
 
   // ===================== GANTT (virtual scroll) =====================
@@ -124,17 +125,63 @@ const Planejamento = (() => {
     const zoomHtml=['dia','semana','mes','trimestre','ano'].map(z=>
       `<button class="btn btn-sm ${zoomGantt===z?'btn-primario':'btn-secundario'}" onclick="Planejamento.setZoom('${z}')" style="font-size:.72rem;padding:2px 8px;">${z.charAt(0).toUpperCase()+z.slice(1)}</button>`).join('');
 
-    // Datas header do gantt
+    // Datas header do gantt — granularidade depende do zoom
     const meses=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
-    let hDatas='',d=new Date(dMin),lastM=-1;
-    while(d<=dMax){
-      const x=Math.round((d-dMin)/864e5*lpd);
-      if(d.getMonth()!==lastM){
+    let hDatas='';
+    if(zoomGantt==='dia'){
+      // Mostrar cada dia
+      let d=new Date(dMin),lastM=-1;
+      while(d<=dMax){
+        const x=Math.round((d-dMin)/864e5*lpd);
+        const m=d.getMonth();
+        if(m!==lastM){
+          hDatas+=`<div style="position:absolute;left:${x}px;top:1px;font-size:.55rem;color:#666;white-space:nowrap;">${meses[m]} ${d.getFullYear()}</div>`;
+          lastM=m;
+        }
+        const dow=d.getDay();
+        hDatas+=`<div style="position:absolute;left:${x}px;top:0;bottom:0;border-left:1px solid rgba(255,255,255,${dow===0||dow===6?'.08':'.03'});"></div>`;
+        hDatas+=`<div style="position:absolute;left:${x+2}px;top:13px;font-size:.55rem;color:${dow===0||dow===6?'#666':'#444'};white-space:nowrap;">${d.getDate()}</div>`;
+        d.setDate(d.getDate()+1);
+      }
+    } else if(zoomGantt==='semana'){
+      let d=new Date(dMin); d.setDate(d.getDate()-(d.getDay()||7)+1); // segunda
+      let lastM=-1;
+      while(d<=dMax){
+        const x=Math.round((d-dMin)/864e5*lpd);
+        if(d.getMonth()!==lastM){
+          hDatas+=`<div style="position:absolute;left:${x}px;top:1px;font-size:.55rem;color:#666;white-space:nowrap;">${meses[d.getMonth()]} ${d.getFullYear()}</div>`;
+          lastM=d.getMonth();
+        }
+        hDatas+=`<div style="position:absolute;left:${x}px;top:0;bottom:0;border-left:1px solid rgba(255,255,255,.06);"></div>`;
+        hDatas+=`<div style="position:absolute;left:${x+2}px;top:13px;font-size:.5rem;color:#444;">${d.getDate()}</div>`;
+        d.setDate(d.getDate()+7);
+      }
+    } else if(zoomGantt==='mes'){
+      let d=new Date(dMin.getFullYear(),dMin.getMonth(),1);
+      while(d<=dMax){
+        const x=Math.round((d-dMin)/864e5*lpd);
         hDatas+=`<div style="position:absolute;left:${x}px;top:0;bottom:0;border-left:1px solid rgba(255,255,255,.06);"></div>`;
         hDatas+=`<div style="position:absolute;left:${x+3}px;top:6px;font-size:.6rem;color:#555;white-space:nowrap;">${meses[d.getMonth()]} ${d.getFullYear()}</div>`;
-        lastM=d.getMonth();
+        d.setMonth(d.getMonth()+1);
       }
-      d.setDate(d.getDate()+1);
+    } else if(zoomGantt==='trimestre'){
+      let d=new Date(dMin.getFullYear(),Math.floor(dMin.getMonth()/3)*3,1);
+      while(d<=dMax){
+        const x=Math.round((d-dMin)/864e5*lpd);
+        const q=Math.floor(d.getMonth()/3)+1;
+        hDatas+=`<div style="position:absolute;left:${x}px;top:0;bottom:0;border-left:1px solid rgba(255,255,255,.06);"></div>`;
+        hDatas+=`<div style="position:absolute;left:${x+3}px;top:6px;font-size:.6rem;color:#555;white-space:nowrap;">T${q} ${d.getFullYear()}</div>`;
+        d.setMonth(d.getMonth()+3);
+      }
+    } else { // ano
+      let y=dMin.getFullYear();
+      while(y<=dMax.getFullYear()+1){
+        const d=new Date(y,0,1);
+        const x=Math.round((d-dMin)/864e5*lpd);
+        hDatas+=`<div style="position:absolute;left:${x}px;top:0;bottom:0;border-left:1px solid rgba(255,255,255,.06);"></div>`;
+        hDatas+=`<div style="position:absolute;left:${x+3}px;top:6px;font-size:.65rem;color:#555;font-weight:700;">${y}</div>`;
+        y++;
+      }
     }
     const hojeX=Math.round((hoje-dMin)/864e5*lpd);
 
@@ -232,7 +279,10 @@ const Planejamento = (() => {
         else if(c.id==='responsavel') cells+=`<div style="${base}color:#555;font-size:.7rem;">${t.responsavel||'—'}</div>`;
         else if(c.id==='local')   cells+=`<div style="${base}color:#555;font-size:.7rem;">${t.local||'—'}</div>`;
         else if(c.id==='grupo')   cells+=`<div style="${base}color:#555;font-size:.7rem;">${t.grupo||'—'}</div>`;
-        else if(c.id==='acoes')   cells+=`<div style="${base}display:flex;justify-content:center;"><button class="btn btn-sm btn-icon" style="font-size:.65rem;background:#222;color:#888;border-color:#333;padding:1px 3px;" onclick="event.stopPropagation();Planejamento.editarTarefa('${t.id}')">✎</button></div>`;
+        else if(c.id==='acoes')   cells+=`<div style="${base}display:flex;gap:1px;justify-content:center;">` +
+          `<button style="background:#222;color:#888;border:1px solid #333;border-radius:3px;cursor:pointer;font-size:.6rem;padding:0 3px;line-height:1.5;" onclick="event.stopPropagation();Planejamento.recuarNivel('${t.id}')" title="Recuar nível">←</button>` +
+          `<button style="background:#222;color:#888;border:1px solid #333;border-radius:3px;cursor:pointer;font-size:.6rem;padding:0 3px;line-height:1.5;" onclick="event.stopPropagation();Planejamento.avancarNivel('${t.id}')" title="Avançar nível">→</button>` +
+          `<button style="background:#222;color:#888;border:1px solid #333;border-radius:3px;cursor:pointer;font-size:.6rem;padding:0 3px;line-height:1.5;" onclick="event.stopPropagation();Planejamento.editarTarefa('${t.id}')" title="Editar">✎</button></div>`;
       }
 
       rowsHtml+=`<div style="position:absolute;top:${y}px;left:0;right:0;height:${ROW_H}px;display:flex;align-items:center;border-bottom:1px solid #1a1a1a;background:${bg};cursor:pointer;"
@@ -263,32 +313,6 @@ const Planejamento = (() => {
     dirVirt.innerHTML=barsHtml;
   }
 
-  // ===================== TABELA =====================
-  function _renderTabela(){
-    const tf=tarefasFiltradas;
-    if(!tf.length)return`<div class="estado-vazio"><div class="icone">📋</div><p>Nenhuma tarefa.</p></div>`;
-    const rows=tf.map((t,i)=>{
-      const st=_status(t),p=_perc(t);
-      return`<tr style="${i===selectedIdx?'background:rgba(245,200,0,.1)':''}" onclick="Planejamento.selectIdx(${i})" ondblclick="Planejamento.editarTarefa('${t.id}')">
-        <td style="font-family:var(--font-mono);font-size:.7rem;color:#444;text-align:center;">${i+1}</td>
-        <td><span class="status-dot ${st}"></span></td>
-        <td style="font-family:var(--font-mono);font-size:.75rem;">${t.codigo||''}</td>
-        <td style="padding-left:${((t.nivel||0)*14)+6}px"><span style="color:${t.tipo==='grupo'?'var(--cor-primaria)':'inherit'};font-weight:${t.tipo==='grupo'?700:400};">${t.nome}</span></td>
-        <td>${_fd(t.inicioPlanejado)}</td><td>${_fd(t.terminoPlanejado)}</td><td>${t.duracao||'—'}</td>
-        <td>${t.percentualEsperado||0}%</td>
-        <td style="color:${p>=100?'#16a34a':p>0?'#2563eb':'#aaa'}"><strong>${p}%</strong></td>
-        <td>${t.predecessora||'—'}</td><td>${t.responsavel||'—'}</td><td>${t.local||'—'}</td><td>${t.grupo||''}</td>
-        <td class="col-acoes" style="white-space:nowrap;">
-          <button class="btn btn-secundario btn-sm" onclick="event.stopPropagation();Planejamento.recuarNivel('${t.id}')" title="←">←</button>
-          <button class="btn btn-secundario btn-sm" onclick="event.stopPropagation();Planejamento.avancarNivel('${t.id}')" title="→">→</button>
-          <button class="btn btn-secundario btn-sm" onclick="event.stopPropagation();Planejamento.editarTarefa('${t.id}')">✎</button>
-          <button class="btn btn-perigo btn-sm btn-icon" onclick="event.stopPropagation();Planejamento.excluirTarefa('${t.id}')">✕</button>
-        </td></tr>`;
-    }).join('');
-    return`<div class="tabela-container" style="max-height:calc(100vh - 210px);overflow:auto;"><table class="tabela tabela-compacta">
-      <thead><tr><th>#</th><th></th><th>Cód</th><th>Tarefa</th><th>Início</th><th>Fim</th><th>Dur</th><th>%Esp</th><th>%Conc</th><th>Pred.</th><th>Resp.</th><th>Local</th><th>Grupo</th><th class="col-acoes">Ações</th></tr></thead>
-      <tbody>${rows}</tbody></table></div>`;
-  }
 
   // ===================== COLUNAS =====================
   function hideCol(id){colsHidden.add(id);renderizar();requestAnimationFrame(_afterRender);}
@@ -563,12 +587,23 @@ const Planejamento = (() => {
   }
   function _loadScript(src){return new Promise((r,j)=>{const s=document.createElement('script');s.src=src;s.onload=r;s.onerror=j;document.head.appendChild(s);});}
 
+  function toggleGantt(){
+    ganttVisible=!ganttVisible;
+    const dir=document.getElementById('gantt-dir');
+    const div=document.getElementById('gantt-divider');
+    const btn=document.getElementById('btn-toggle-gantt');
+    if(dir){dir.style.display=ganttVisible?'':'none';}
+    if(div){div.style.display=ganttVisible?'':'none';}
+    if(btn){btn.textContent=ganttVisible?'📊 Esconder Gantt':'📊 Mostrar Gantt';}
+    const esq=document.getElementById('gantt-esq');
+    if(esq){esq.style.width=ganttVisible?splitX+'px':'100%';}
+  }
   function setAba(a){abaAtiva=a;renderizar();requestAnimationFrame(_afterRender);}
   function setZoom(z){zoomGantt=z;renderizar();requestAnimationFrame(_afterRender);}
 
   return {init,carregar,renderizar,inserirTarefa,editarTarefa,salvarTarefa,excluirTarefa,
     selectIdx,toggleRecolher,recuarNivel,avancarNivel,
     setAba,setZoom,hideCol,showAllCols,_startDivider,_syncScroll,_afterRender,
-    importarExcel,exportar,_startColResize,_showCol,_showAllCols};
+    importarExcel,exportar,_startColResize,_showCol,_showAllCols,toggleGantt};
 })();
 function onObraChanged(){Planejamento.init();}
