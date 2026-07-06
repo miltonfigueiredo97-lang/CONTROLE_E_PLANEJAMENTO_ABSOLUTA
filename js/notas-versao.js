@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V1.2.5',
+  versaoAtual: 'V1.3',
 
   versoes: [
     {
@@ -429,7 +429,7 @@ const NotasVersao = {
     },
     {
       versao: 'V1.2.5',
-      status: 'aberta',
+      status: 'fechada',
       data: '2025-07-05',
       tipo: 'correcao',
       titulo: 'Importar/Exportar Excel: formato exato do modelo',
@@ -448,6 +448,27 @@ const NotasVersao = {
         '  → Nome com recuo por nível (2 espaços por nível)',
         '  → Datas em DD/MM/YYYY, duração com sufixo d',
         '  → Todas as 19 colunas do modelo',
+      ]
+    },
+    {
+      versao: 'V1.3',
+      status: 'aberta',
+      data: '2025-07-06',
+      tipo: 'funcionalidade',
+      titulo: 'Planejamento: Gantt tipo MS Project',
+      itens: [
+        'Hierarquia: grupos com ▼/▶ para recolher/expandir filhos',
+        'Hierarquia: botões ← → na tabela para recuar/avançar nível',
+        'Hierarquia: Ctrl++ nova tarefa, Ctrl+- excluir selecionada',
+        'Colunas: botão ⚙ Colunas para mostrar/esconder cada coluna',
+        'Divisor: barra amarela entre tabela e Gantt é arrastável',
+        'Scroll sincronizado: esquerda e direita rolam juntos',
+        'Importar: confirma antes de substituir, apaga antigas primeiro',
+        'Exportar Gantt: botão 🖼 Gantt PDF gera imagem PNG',
+        'Zoom: dia/semana/mês/trimestre/ano com escala correta',
+        'Modal tarefa: todos os campos do modelo Excel',
+        'Barras de grupo: formato chapéu (MS Project style)',
+        'Linha de base e desafio como campos separados',
       ]
     }
   ],

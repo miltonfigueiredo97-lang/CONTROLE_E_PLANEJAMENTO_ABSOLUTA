@@ -41,7 +41,7 @@
       <a href="histograma.html"><span class="nav-icon">📊</span> Histograma</a>
       <a href="admin-permissoes.html"><span class="nav-icon">🔑</span> Permissões</a>
       <div class="sidebar-section-title">Sistema</div>
-      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V1.2.5</span></a>
+      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V1.3</span></a>
     </nav>
     <div class="sidebar-user"><div class="user-avatar">U</div><div class="user-info"><div class="user-name">Usuário</div><div class="user-role">—</div></div><button class="btn-logout" onclick="Auth.logout()" title="Sair">⏻</button></div>
   </aside>
@@ -72,51 +72,46 @@
               <option value="tarefa">Tarefa</option>
               <option value="grupo">Grupo</option>
               <option value="marco">Marco</option>
-            </select>
-          </div>
+            </select></div>
           <div class="form-grupo"><label>Código</label><input type="text" name="codigo" class="form-control" placeholder="Ex: 1.1.1"></div>
-          <div class="form-grupo"><label>Ordem</label><input type="number" name="ordem" class="form-control" min="1" value="1"></div>
+          <div class="form-grupo"><label>Nível hierárquico</label><input type="number" name="nivel" class="form-control" min="0" value="0" placeholder="0=raiz"></div>
+          <div class="form-grupo"><label>Ordem</label><input type="number" name="ordem" class="form-control" min="1"></div>
         </div>
-        <div class="form-grupo"><label>Nome da Tarefa</label><input type="text" name="nome" class="form-control" required placeholder="Ex: Execução Fachada Balancim 01"></div>
+        <div class="form-grupo"><label>Nome *</label><input type="text" name="nome" class="form-control" required placeholder="Ex: Execução Fachada Frontal"></div>
         <div class="form-row">
           <div class="form-grupo"><label>Início Planejado</label><input type="date" name="inicioPlanejado" class="form-control"></div>
           <div class="form-grupo"><label>Término Planejado</label><input type="date" name="terminoPlanejado" class="form-control"></div>
           <div class="form-grupo"><label>Duração (dias)</label><input type="number" name="duracao" class="form-control" min="0" placeholder="Auto"></div>
         </div>
         <div class="form-row">
-          <div class="form-grupo"><label>Etapa</label><select id="st-etapa" name="etapaId" class="form-control"></select></div>
-          <div class="form-grupo"><label>Pacote</label><select id="st-pacote" name="pacoteId" class="form-control"></select></div>
-          <div class="form-grupo"><label>Local</label><select id="st-local" name="local" class="form-control"></select></div>
-        </div>
-        <div class="form-row">
-          <div class="form-grupo"><label>Responsável</label><input type="text" name="responsavel" class="form-control" placeholder="Nome do responsável"></div>
-          <div class="form-grupo"><label>Equipe</label><select id="st-equipe" name="equipeId" class="form-control"></select></div>
-          <div class="form-grupo"><label>Peso (%)</label><input type="number" name="peso" class="form-control" min="0" max="100" placeholder="0"></div>
-        </div>
-        <div class="form-row">
-          <div class="form-grupo"><label>Quantidade Prevista</label><input type="number" name="quantidadePrevista" class="form-control" step="0.01"></div>
-          <div class="form-grupo"><label>Unidade</label><input type="text" name="unidade" class="form-control" placeholder="m², m, un, h"></div>
+          <div class="form-grupo"><label>% Esperado</label><input type="number" name="percentualEsperado" class="form-control" min="0" max="100" value="0"></div>
           <div class="form-grupo"><label>% Concluído</label><input type="number" name="percentualConcluido" class="form-control" min="0" max="100" value="0"></div>
+          <div class="form-grupo"><label>Predecessora</label><input type="text" name="predecessora" class="form-control" placeholder="Ex: 1.1"></div>
         </div>
         <div class="form-row">
-          <div class="form-grupo"><label>Predecessora</label><select id="st-pred" name="predecessoraId" class="form-control"></select></div>
-          <div class="form-grupo"><label>Tipo Vínculo</label>
-            <select name="tipoVinculo" class="form-control">
-              <option value="TI">TI — Término para Início</option>
-              <option value="II">II — Início para Início</option>
-              <option value="TT">TT — Término para Término</option>
-              <option value="IT">IT — Início para Término</option>
-            </select>
-          </div>
-          <div class="form-grupo"><label>Defasagem (dias)</label><input type="number" name="defasagem" class="form-control" value="0"></div>
+          <div class="form-grupo"><label>Tarefa Pai</label><input type="text" name="tarefaPai" class="form-control" placeholder="Nome da tarefa pai"></div>
+          <div class="form-grupo"><label>Grupo</label><input type="text" name="grupo" class="form-control" placeholder="Ex: Serviços Iniciais"></div>
+          <div class="form-grupo"><label>Local</label><input type="text" name="local" class="form-control" placeholder="Ex: Torre A"></div>
         </div>
-        <input type="hidden" name="parentId">
+        <div class="form-row">
+          <div class="form-grupo"><label>Responsável</label><input type="text" name="responsavel" class="form-control"></div>
+          <div class="form-grupo"><label>Custo</label><input type="number" name="custo" class="form-control" step="0.01" min="0" value="0"></div>
+          <div class="form-grupo"><label>Receita</label><input type="number" name="receita" class="form-control" step="0.01" min="0" value="0"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-grupo"><label>Início Linha de Base</label><input type="date" name="inicioPlanejadoBase" class="form-control"></div>
+          <div class="form-grupo"><label>Término Linha de Base</label><input type="date" name="terminoPlanejadoBase" class="form-control"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-grupo"><label>Início Desafio</label><input type="date" name="inicioDesafio" class="form-control"></div>
+          <div class="form-grupo"><label>Término Desafio</label><input type="date" name="terminoDesafio" class="form-control"></div>
+        </div>
         <div class="form-grupo"><label>Observações</label><textarea name="observacoes" class="form-control" rows="2"></textarea></div>
       </form>
     </div>
     <div class="modal-footer">
       <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-tarefa')">Cancelar</button>
-      <button class="btn btn-primario" onclick="Planejamento.salvarTarefa()">Salvar Tarefa</button>
+      <button class="btn btn-primario" onclick="Planejamento.salvarTarefa()">Salvar</button>
     </div>
   </div>
 </div>
