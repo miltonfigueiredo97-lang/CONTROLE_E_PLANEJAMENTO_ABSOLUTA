@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V1.2.4',
+  versaoAtual: 'V1.2.5',
 
   versoes: [
     {
@@ -410,7 +410,7 @@ const NotasVersao = {
     },
     {
       versao: 'V1.2.4',
-      status: 'aberta',
+      status: 'fechada',
       data: '2025-07-05',
       tipo: 'correcao',
       titulo: 'Materiais: editar corrigido, embalagem, relatório por balancim',
@@ -425,6 +425,29 @@ const NotasVersao = {
         '  → Mostra total em unidade base e em embalagem se configurado',
         'HTML do modal reconstruído limpo (sem duplicação)',
         'Consumo real: label dinâmico com mesma unidade do previsto',
+      ]
+    },
+    {
+      versao: 'V1.2.5',
+      status: 'aberta',
+      data: '2025-07-05',
+      tipo: 'correcao',
+      titulo: 'Importar/Exportar Excel: formato exato do modelo',
+      itens: [
+        'IMPORTAR: detecta colunas do modelo real (ID, Código, Nome, Duração...)',
+        '  → Colunas: ID, Código, Nome, Duração, Início, Término, % Esperado',
+        '  → % Concluído, Prececessora, Tarefa Pai, Grupo, Local, Custo, Receita',
+        '  → Responsável, Inicio/Termino Linha de Base, Inicio/Termino Desafio',
+        '  → Duração no formato Xd (ex: 20d)',
+        '  → Datas no formato DD/MM/YYYY',
+        '  → Hierarquia detectada por recuo de espaços no nome',
+        'IMPORTAR: gravação em lotes de 50 (sem loading infinito)',
+        '  → Antes: 2399 awaits sequenciais = travava',
+        '  → Agora: Promise.all em lotes = rápido',
+        'EXPORTAR: cabeçalho idêntico ao modelo importável',
+        '  → Nome com recuo por nível (2 espaços por nível)',
+        '  → Datas em DD/MM/YYYY, duração com sufixo d',
+        '  → Todas as 19 colunas do modelo',
       ]
     }
   ],

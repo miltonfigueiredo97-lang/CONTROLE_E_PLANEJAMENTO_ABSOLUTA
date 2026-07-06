@@ -299,76 +299,108 @@ const Planejamento = (() => {
   async function importarExcel(event){
     const file=event.target.files[0];
     if(!file)return;
-    // Reset input
     event.target.value='';
-
     try{
       Utils.mostrarLoading('Lendo planilha...');
-
-      // Carrega SheetJS dinamicamente
       if(typeof XLSX==='undefined'){
         await _loadScript('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');
       }
-
-      const arrayBuffer=await file.arrayBuffer();
-      const wb=XLSX.read(arrayBuffer,{type:'array',cellDates:true});
+      const ab=await file.arrayBuffer();
+      const wb=XLSX.read(ab,{type:'array'});
       const ws=wb.Sheets[wb.SheetNames[0]];
-      const rows=XLSX.utils.sheet_to_json(ws,{defval:''});
+      // Usa sheet_to_json com header:1 para pegar linhas brutas
+      const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+      if(rows.length<2){Utils.toast('Planilha vazia.','alerta');return;}
 
-      if(!rows.length){Utils.toast('Planilha vazia.','alerta');return;}
+      // Linha 0 = cabeçalhos
+      const hdrs=rows[0].map(h=>String(h||'').trim().toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+        .replace(/\s+/g,' '));
 
-      // Mapear colunas (aceita nomes em PT e EN)
-      const mapCampo=(row,nomes)=>{
-        for(const n of nomes){
-          const val=row[n]||row[n.toLowerCase()]||row[n.toUpperCase()]||'';
-          if(val!=='')return val;
+      // Mapear índice de cada coluna pelo nome normalizado
+      const col=name=>{
+        const aliases={
+          'id':['id'],
+          'codigo':['codigo','code','cod'],
+          'nome':['nome','name','tarefa','task name','task'],
+          'duracao':['duracao','duration','dur'],
+          'inicio':['inicio','start','inicio planejado'],
+          'termino':['termino','finish','fim','termino planejado','término planejado'],
+          'percEsperado':['esperado','% esperado','perc esperado','planned'],
+          'percConcluido':['concluido','% concluido','perc concluido','% complete','% done','done'],
+          'predecessora':['predecessora','predecessor','prececessora'],
+          'pai':['tarefa pai','parent','pai','wbs parent'],
+          'grupo':['grupo','group','fase','etapa','phase'],
+          'local':['local','location'],
+          'custo':['custo','cost'],
+          'receita':['receita','revenue'],
+          'responsavel':['responsavel','responsible','resource','responsável'],
+          'inicioBase':['inicio linha de base','baseline start','inicio base'],
+          'terminoBase':['termino linha de base','baseline finish','termino base'],
+          'inicioDesafio':['inicio desafio','challenge start'],
+          'terminoDesafio':['termino desafio','challenge finish'],
+        };
+        const alts=aliases[name]||[name];
+        for(const a of alts){
+          const i=hdrs.indexOf(a);
+          if(i>=0)return i;
         }
-        return '';
+        return -1;
       };
 
-      Utils.mostrarLoading(`Importando ${rows.length} tarefas...`);
+      const iNome=col('nome'), iCod=col('codigo'), iId=col('id');
+      if(iNome<0){Utils.toast('Coluna "Nome" não encontrada.','erro');return;}
+
+      Utils.mostrarLoading(`Importando ${rows.length-1} linhas...`);
       let importadas=0, erros=0;
 
-      for(const row of rows){
-        const nome=mapCampo(row,['Nome','nome','Task Name','name','Tarefa','tarefa']);
+      // Parse all rows first (sem await)
+      const registros=[];
+      for(let r=1;r<rows.length;r++){
+        const row=rows[r];
+        const nome=String(row[iNome]||'').trim();
         if(!nome)continue;
-
-        const data={
-          tipo:   (mapCampo(row,['Tipo','tipo','Type'])||'tarefa').toLowerCase(),
-          codigo: mapCampo(row,['Código','codigo','Code','ID','id'])||'',
-          nome:   String(nome).trim(),
-          ordem:  parseFloat(mapCampo(row,['Ordem','ordem','Order','WBS']))||importadas+1,
-          nivel:  parseInt(mapCampo(row,['Nível','nivel','Level']))||0,
-          inicioPlanejado: _parseData(mapCampo(row,['Inicio Planejado','Início Planejado','inicioPlanejado','Start','Início','inicio'])),
-          terminoPlanejado:_parseData(mapCampo(row,['Termino Planejado','Término Planejado','terminoPlanejado','Finish','Fim','fim','Término'])),
-          duracao:parseInt(mapCampo(row,['Duração','duracao','Duration']))||0,
-          percentualConcluido:parseFloat(mapCampo(row,['% Concluído','percentualConcluido','% Complete','% Done']))||0,
-          responsavel:mapCampo(row,['Responsável','responsavel','Resource','Responsable'])||'',
-          etapa:  mapCampo(row,['Etapa','etapa','Phase'])||'',
-          pacote: mapCampo(row,['Pacote','pacote','Package'])||'',
-          local:  mapCampo(row,['Local','local','Location'])||'',
-          unidade:mapCampo(row,['Unidade','unidade','Unit'])||'',
-          quantidade:parseFloat(mapCampo(row,['Quantidade','quantidade','Quantity']))||0,
-          peso:   parseFloat(mapCampo(row,['Peso','peso','Weight']))||0,
-          observacoes:mapCampo(row,['Observações','observacoes','Notes'])||'',
+        const nomeOriginal=String(row[iNome]||'');
+        const nivel=Math.floor((nomeOriginal.length-nomeOriginal.trimStart().length)/2);
+        const codigo=String(row[iCod]||'').trim();
+        const pontos=(codigo.match(/\./g)||[]).length;
+        let tipo='tarefa';
+        if(pontos===0&&codigo)tipo='grupo';
+        else if(pontos===1)tipo='grupo';
+        registros.push({
+          tipo,codigo,nome,nivel,ordem:r,
+          inicioPlanejado:   _parseData(row[col('inicio')]),
+          terminoPlanejado:  _parseData(row[col('termino')]),
+          duracao:           _parseDur(row[col('duracao')]),
+          percentualEsperado:_parseNum(row[col('percEsperado')]),
+          percentualConcluido:_parseNum(row[col('percConcluido')]),
+          predecessora:      String(row[col('predecessora')]||'').trim(),
+          tarefaPai:         String(row[col('pai')]||'').trim(),
+          grupo:             String(row[col('grupo')]||'').trim(),
+          local:             String(row[col('local')]||'').trim(),
+          custo:             _parseNum(row[col('custo')]),
+          receita:           _parseNum(row[col('receita')]),
+          responsavel:       String(row[col('responsavel')]||'').trim(),
+          inicioPlanejadoBase:  _parseData(row[col('inicioBase')]),
+          terminoPlanejadoBase: _parseData(row[col('terminoBase')]),
+          inicioDesafio:     _parseData(row[col('inicioDesafio')]),
+          terminoDesafio:    _parseData(row[col('terminoDesafio')]),
           obraId,
-        };
+        });
+      }
 
-        // Calcular duração se tiver datas
-        if(data.inicioPlanejado&&data.terminoPlanejado&&!data.duracao){
-          data.duracao=Math.max(0,Math.ceil((new Date(data.terminoPlanejado)-new Date(data.inicioPlanejado))/864e5));
-        }
-
-        try{
-          await Database.criar(obraId,COL,data);
-          importadas++;
-        }catch(e){erros++;}
+      // Grava em lotes de 50 (Firestore suporta 500 por batch mas usamos 50 para não travar)
+      const LOTE=50;
+      for(let i=0;i<registros.length;i+=LOTE){
+        const lote=registros.slice(i,i+LOTE);
+        Utils.mostrarLoading(`Importando... ${Math.min(i+LOTE,registros.length)}/${registros.length}`);
+        await Promise.all(lote.map(d=>Database.criar(obraId,COL,d).then(()=>importadas++).catch(e=>{erros++;console.error(e);})));
       }
 
       Utils.toast(`✅ ${importadas} tarefas importadas${erros?` (${erros} erros)`:''}!`,'sucesso');
       await carregar();
     }catch(e){
-      console.error('Erro ao importar:',e);
+      console.error('Erro importar:',e);
       Utils.toast('Erro ao ler arquivo: '+e.message,'erro');
     }finally{Utils.esconderLoading();}
   }
@@ -381,70 +413,63 @@ const Planejamento = (() => {
         await _loadScript('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');
       }
 
-      // Colunas exatamente como o importador espera — sem conflito
-      const dados=tarefas.map(t=>({
-        'Codigo':           t.codigo||'',
-        'Nome':             t.nome||'',
-        'Tipo':             t.tipo||'tarefa',
-        'Ordem':            t.ordem||'',
-        'Nivel':            t.nivel||0,
-        'Inicio Planejado': t.inicioPlanejado||'',
-        'Termino Planejado':t.terminoPlanejado||'',
-        'Duracao':          t.duracao||'',
-        'Perc Concluido':   t.percentualConcluido||0,
-        'Responsavel':      t.responsavel||'',
-        'Etapa':            t.etapa||'',
-        'Pacote':           t.pacote||'',
-        'Local':            t.local||'',
-        'Unidade':          t.unidade||'',
-        'Quantidade':       t.quantidade||'',
-        'Peso':             t.peso||'',
-        'Observacoes':      t.observacoes||'',
-      }));
+      // Cabeçalho exatamente igual ao modelo importável
+      const HDR=['ID','Código','Nome','Duração','Início','Término',
+        '% Esperado','% Concluído','Prececessora','Tarefa Pai','Grupo',
+        'Local','Custo','Receita','Responsável',
+        'Inicio Linha de Base','Termino Linha de Base',
+        'Inicio Desafio','Termino Desafio'];
 
-      const ws=XLSX.utils.json_to_sheet(dados);
+      const sorted=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
 
-      // Largura das colunas
+      const dataRows=sorted.map((t,i)=>{
+        // Recuo pelo nível
+        const indent='  '.repeat(t.nivel||0);
+        return [
+          i+1,
+          t.codigo||'',
+          indent+(t.nome||''),
+          t.duracao?t.duracao+'d':'',
+          _fDataBR(t.inicioPlanejado),
+          _fDataBR(t.terminoPlanejado),
+          t.percentualEsperado||t.percEsperado||0,
+          t.percentualConcluido||t.percConcluido||0,
+          t.predecessora||'',
+          t.tarefaPai||'',
+          t.grupo||'',
+          t.local||'',
+          t.custo||0,
+          t.receita||0,
+          t.responsavel||'',
+          _fDataBR(t.inicioPlanejadoBase||t.inicioPlanejado),
+          _fDataBR(t.terminoPlanejadoBase||t.terminoPlanejado),
+          _fDataBR(t.inicioDesafio),
+          _fDataBR(t.terminoDesafio),
+        ];
+      });
+
+      const wsData=[HDR,...dataRows];
+      const ws=XLSX.utils.aoa_to_sheet(wsData);
+
+      // Larguras das colunas
       ws['!cols']=[
-        {wch:10},{wch:40},{wch:10},{wch:8},{wch:7},
-        {wch:16},{wch:16},{wch:10},{wch:12},{wch:20},
-        {wch:15},{wch:15},{wch:15},{wch:10},{wch:12},{wch:8},{wch:30}
+        {wch:6},{wch:10},{wch:45},{wch:8},{wch:13},{wch:13},
+        {wch:11},{wch:11},{wch:13},{wch:20},{wch:18},
+        {wch:15},{wch:10},{wch:10},{wch:18},
+        {wch:22},{wch:22},{wch:15},{wch:15}
       ];
 
       const wb=XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb,ws,'Planejamento');
-
-      // Aba de instruções
-      const instrucoes=XLSX.utils.aoa_to_sheet([
-        ['INSTRUÇÕES DE IMPORTAÇÃO'],
-        [''],
-        ['Esta planilha pode ser editada e reimportada no sistema.'],
-        ['Colunas aceitas na importação (maiúsculas ou minúsculas):'],
-        ['Nome / Task Name / Tarefa — OBRIGATÓRIO'],
-        ['Código / Code / ID'],
-        ['Tipo: tarefa, grupo ou marco'],
-        ['Ordem / Order / WBS'],
-        ['Nível / Level — hierarquia (0 = raiz)'],
-        ['Início Planejado / Start / Início'],
-        ['Término Planejado / Finish / Fim / Término'],
-        ['Duração — em dias (calculado automaticamente se tiver datas)'],
-        ['% Concluído / % Complete'],
-        ['Responsável / Resource'],
-        ['Etapa / Phase'],
-        ['Pacote / Package'],
-        ['Local / Location'],
-        ['Unidade, Quantidade, Peso, Observações'],
-      ]);
-      XLSX.utils.book_append_sheet(wb,instrucoes,'Instruções');
-
-      const nomeObra=(Router.getObra()?.nome||'planejamento').replace(/[^a-z0-9]/gi,'_');
-      XLSX.writeFile(wb,`planejamento_${nomeObra}_${_hoje()}.xlsx`);
+      XLSX.utils.book_append_sheet(wb,ws,'Cronograma');
+      const obra=Router.getObra();
+      const nomeArq=(obra?.nome||'cronograma').replace(/[^a-z0-9]/gi,'_');
+      XLSX.writeFile(wb,`cronograma_${nomeArq}_${_hoje()}.xlsx`);
       Utils.toast('Planilha exportada!','sucesso');
     }catch(e){
-      console.error(e);
-      Utils.toast('Erro ao exportar: '+e.message,'erro');
+      console.error(e);Utils.toast('Erro ao exportar: '+e.message,'erro');
     }finally{Utils.esconderLoading();}
   }
+
 
   // ===================== CRUD TAREFAS =====================
   function novaTarefa(parentId){
@@ -522,7 +547,10 @@ const Planejamento = (() => {
     return Math.round((h-i)/(f-i)*100);
   }
   function _fd(d){return d?new Date(d).toLocaleDateString('pt-BR'):'—';}
+  function _fDataBR(d){if(!d)return '';try{const dt=new Date(d+'T12:00:00');return dt.toLocaleDateString('pt-BR');}catch(e){return '';}}
   function _hoje(){return new Date().toISOString().split('T')[0];}
+  function _parseDur(v){if(!v)return 0;const s=String(v).trim();const m=s.match(/(\d+)/);return m?parseInt(m[1]):0;}
+  function _parseNum(v){if(v===''||v===null||v===undefined)return 0;return parseFloat(String(v).replace(',','.'))||0;}
   function _parseData(v){
     if(!v)return '';
     if(v instanceof Date)return v.toISOString().split('T')[0];
