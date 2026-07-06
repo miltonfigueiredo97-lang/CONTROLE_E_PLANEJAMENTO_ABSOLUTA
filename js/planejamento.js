@@ -16,15 +16,15 @@ const Planejamento = (() => {
   // Definição de colunas
   const COLUNAS=[
     {id:'num',label:'#',w:36,fixed:true},
-    {id:'codigo',label:'Cód',w:64},
-    {id:'nome',label:'Tarefa',w:0,flex:true}, // flex = ocupa resto
-    {id:'inicio',label:'Início',w:82},
-    {id:'termino',label:'Fim',w:82},
-    {id:'duracao',label:'Dur',w:44},
-    {id:'percEsp',label:'%Esp',w:44},
-    {id:'percConc',label:'%Conc',w:44},
-    {id:'predecessora',label:'Pred.',w:54},
-    {id:'responsavel',label:'Responsável',w:90},
+    {id:'codigo',label:'Código',w:70},
+    {id:'nome',label:'Tarefa',w:0,flex:true},
+    {id:'inicio',label:'Início',w:90},
+    {id:'termino',label:'Término',w:90},
+    {id:'duracao',label:'Duração',w:62},
+    {id:'percEsp',label:'% Esperado',w:75},
+    {id:'percConc',label:'% Concluído',w:82},
+    {id:'predecessora',label:'Predecessora',w:82},
+    {id:'responsavel',label:'Responsável',w:100},
     {id:'local',label:'Local',w:80},
     {id:'grupo',label:'Grupo',w:80},
     {id:'acoes',label:'',w:36,fixed:true},
@@ -108,7 +108,7 @@ const Planejamento = (() => {
     const dMin=datas.length?new Date(Math.min(...datas)):new Date(hoje.getTime()-30*864e5);
     const dMax=datas.length?new Date(Math.max(...datas)):new Date(hoje.getTime()+60*864e5);
     dMin.setDate(dMin.getDate()-3);dMax.setDate(dMax.getDate()+10);
-    const lpd={dia:40,semana:14,mes:5,trimestre:2,ano:0.8}[zoomGantt]||5;
+    const lpd={dia:32,semana:8,mes:3,trimestre:1.2,ano:0.4}[zoomGantt]||3;
     const totalDias=Math.ceil((dMax-dMin)/864e5);
     const W=Math.max(600,Math.round(totalDias*lpd));
     const totalH=tf.length*ROW_H;
@@ -200,7 +200,7 @@ const Planejamento = (() => {
     const datas=tf.flatMap(t=>[t.inicioPlanejado,t.terminoPlanejado].filter(Boolean).map(d=>new Date(d)));
     const dMin=datas.length?new Date(Math.min(...datas)):new Date(hoje.getTime()-30*864e5);
     dMin.setDate(dMin.getDate()-3);
-    const lpd={dia:40,semana:14,mes:5,trimestre:2,ano:0.8}[zoomGantt]||5;
+    const lpd={dia:32,semana:8,mes:3,trimestre:1.2,ano:0.4}[zoomGantt]||3;
 
     let rowsHtml='', barsHtml='';
     for(let i=startIdx;i<endIdx;i++){
@@ -292,7 +292,34 @@ const Planejamento = (() => {
 
   // ===================== COLUNAS =====================
   function hideCol(id){colsHidden.add(id);renderizar();requestAnimationFrame(_afterRender);}
-  function showAllCols(){colsHidden.clear();renderizar();requestAnimationFrame(_afterRender);}
+  function showAllCols(){
+    // Show popup with hidden columns
+    const hidden=[...colsHidden];
+    if(!hidden.length)return;
+    const labels=COLUNAS.reduce((m,c)=>{m[c.id]=c.label;return m;},{});
+    let pop=document.getElementById('show-cols-pop');
+    if(pop){pop.remove();return;}
+    pop=document.createElement('div');
+    pop.id='show-cols-pop';
+    pop.style.cssText='position:fixed;top:100px;right:20px;background:#1a1a1a;border:1px solid #333;border-radius:8px;padding:14px;z-index:1000;min-width:180px;box-shadow:0 8px 32px rgba(0,0,0,.5);';
+    pop.innerHTML='<div style="font-weight:700;color:var(--cor-primaria);margin-bottom:10px;font-size:.82rem;">Colunas ocultas</div>'+
+      hidden.map(id=>'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;margin-bottom:4px;text-align:left;" onclick="Planejamento._showCol(\''+id+'\')">+ '+(labels[id]||id)+'</button>').join('')+
+      '<hr style="border-color:#333;margin:8px 0;"><button class="btn btn-primario btn-sm" style="width:100%;" onclick="Planejamento._showAllCols()">Mostrar todas</button>';
+    document.body.appendChild(pop);
+    setTimeout(()=>document.addEventListener('click',function h(e){if(!pop.contains(e.target)){pop.remove();document.removeEventListener('click',h);}},false),100);
+  }
+  function _showCol(id){colsHidden.delete(id);const p=document.getElementById('show-cols-pop');if(p)p.remove();renderizar();requestAnimationFrame(_afterRender);}
+  function _showAllCols(){colsHidden.clear();const p=document.getElementById('show-cols-pop');if(p)p.remove();renderizar();requestAnimationFrame(_afterRender);}
+
+  // ===================== RESIZE COLUNAS =====================
+  function _startColResize(e, colId){
+    e.preventDefault(); e.stopPropagation();
+    const col=COLUNAS.find(c=>c.id===colId); if(!col)return;
+    const sx=e.clientX, sw=col.w;
+    const move=ev=>{col.w=Math.max(30,sw+(ev.clientX-sx));renderizar();requestAnimationFrame(_afterRender);};
+    const up=()=>{document.removeEventListener('mousemove',move);document.removeEventListener('mouseup',up);};
+    document.addEventListener('mousemove',move);document.addEventListener('mouseup',up);
+  }
 
   // ===================== DIVISOR =====================
   function _startDivider(e){
@@ -310,11 +337,32 @@ const Planejamento = (() => {
   }
   async function recuarNivel(id){
     const t=tarefas.find(x=>x.id===id);if(!t)return;
-    await Database.atualizar(obraId,COL,id,{nivel:Math.max(0,(t.nivel||0)-1)});await carregar();
+    const diff=-1;
+    // Move task and all children below it that have higher level
+    const sorted=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
+    const idx=sorted.findIndex(x=>x.id===id);
+    const updates=[{id,nivel:Math.max(0,(t.nivel||0)+diff)}];
+    for(let i=idx+1;i<sorted.length;i++){
+      if((sorted[i].nivel||0)>(t.nivel||0)){
+        updates.push({id:sorted[i].id,nivel:Math.max(0,(sorted[i].nivel||0)+diff)});
+      } else break;
+    }
+    try{await Promise.all(updates.map(u=>Database.atualizar(obraId,COL,u.id,{nivel:u.nivel})));await carregar();}
+    catch(e){Utils.toast('Erro.','erro');}
   }
   async function avancarNivel(id){
     const t=tarefas.find(x=>x.id===id);if(!t)return;
-    await Database.atualizar(obraId,COL,id,{nivel:(t.nivel||0)+1});await carregar();
+    const diff=1;
+    const sorted=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
+    const idx=sorted.findIndex(x=>x.id===id);
+    const updates=[{id,nivel:(t.nivel||0)+diff}];
+    for(let i=idx+1;i<sorted.length;i++){
+      if((sorted[i].nivel||0)>(t.nivel||0)){
+        updates.push({id:sorted[i].id,nivel:(sorted[i].nivel||0)+diff});
+      } else break;
+    }
+    try{await Promise.all(updates.map(u=>Database.atualizar(obraId,COL,u.id,{nivel:u.nivel})));await carregar();}
+    catch(e){Utils.toast('Erro.','erro');}
   }
 
   // ===================== SELEÇÃO + CRUD =====================
@@ -427,23 +475,19 @@ const Planejamento = (() => {
 
       // Apagar existentes em lotes
       Utils.mostrarLoading('Limpando tarefas antigas...');
-      const LOTE=100;
+      const LOTE=200;
       for(let i=0;i<tarefas.length;i+=LOTE){
         await Promise.all(tarefas.slice(i,i+LOTE).map(t=>Database.deletar(obraId,COL,t.id).catch(()=>{})));
       }
 
-      // Montar registros (sem duplicatas — usa Set de nomes já inseridos)
-      const registros=[],vistos=new Set();
+      // Montar registros — todas as linhas com nome
+      const registros=[];
       for(let r=1;r<rows.length;r++){
         const row=rows[r];
         const nomeRaw=String(row[iNome]||'');
         const nome=nomeRaw.trim();
         if(!nome)continue;
-        // Chave única: código+nome para evitar duplicata
         const codigo=String(row[ci('codigo')]||'').trim();
-        const chave=codigo+'|'+nome;
-        if(vistos.has(chave))continue;
-        vistos.add(chave);
 
         const nivel=Math.floor((nomeRaw.length-nomeRaw.trimStart().length)/2);
         const pontos=(codigo.match(/\./g)||[]).length;
@@ -525,6 +569,6 @@ const Planejamento = (() => {
   return {init,carregar,renderizar,inserirTarefa,editarTarefa,salvarTarefa,excluirTarefa,
     selectIdx,toggleRecolher,recuarNivel,avancarNivel,
     setAba,setZoom,hideCol,showAllCols,_startDivider,_syncScroll,_afterRender,
-    importarExcel,exportar};
+    importarExcel,exportar,_startColResize,_showCol,_showAllCols};
 })();
 function onObraChanged(){Planejamento.init();}

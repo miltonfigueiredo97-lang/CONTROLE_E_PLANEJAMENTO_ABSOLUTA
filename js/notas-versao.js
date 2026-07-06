@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V1.3.1',
+  versaoAtual: 'V1.3.2',
 
   versoes: [
     {
@@ -473,7 +473,7 @@ const NotasVersao = {
     },
     {
       versao: 'V1.3.1',
-      status: 'aberta',
+      status: 'fechada',
       data: '2025-07-06',
       tipo: 'correcao',
       titulo: 'Planejamento: performance + duplicatas + colunas',
@@ -490,6 +490,25 @@ const NotasVersao = {
         'Inserir tarefa: herda nível/grupo da selecionada, empurra as demais',
         'Ctrl++ insere, Ctrl+- exclui selecionada',
         'Divisor amarelo arrastável entre tabela e Gantt',
+      ]
+    },
+    {
+      versao: 'V1.3.2',
+      status: 'aberta',
+      data: '2025-07-06',
+      tipo: 'correcao',
+      titulo: 'Planejamento: colunas, import, hierarquia, zoom',
+      itens: [
+        'Colunas: nomes completos (Duração, % Esperado, % Concluído, Predecessora)',
+        'Colunas: clique DIREITO no header para esconder (menos sensível)',
+        'Colunas: mostrar individual — popup lista apenas as ocultas',
+        'Colunas: arrastar borda direita do header para redimensionar largura',
+        'Import: removida deduplicação — todas as linhas são importadas',
+        '  → Suporte a 10.000+ linhas (lotes de 200)',
+        '  → Linhas com mesmo nome mas níveis diferentes são mantidas',
+        'Hierarquia ← →: move a tarefa E todos os filhos abaixo dela',
+        '  → Igual MS Project: outdent/indent puxa a família inteira',
+        'Zoom: escala correta dia/semana/mês/trimestre/ano',
       ]
     }
   ],
