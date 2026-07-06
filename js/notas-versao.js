@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V1.3.3',
+  versaoAtual: 'V2.0',
 
   versoes: [
     {
@@ -513,7 +513,7 @@ const NotasVersao = {
     },
     {
       versao: 'V1.3.3',
-      status: 'aberta',
+      status: 'fechada',
       data: '2025-07-06',
       tipo: 'correcao',
       titulo: 'Planejamento: ← → no Gantt, zoom correto, esconder Gantt',
@@ -530,6 +530,42 @@ const NotasVersao = {
         '  → Trimestre: T1/T2/T3/T4 com ano',
         '  → Ano: só o número do ano',
         'Coluna Ações alargada (64px) para caber ← → ✎',
+      ]
+    },
+    {
+      versao: 'V2.0',
+      status: 'aberta',
+      data: '2025-07-06',
+      tipo: 'funcionalidade',
+      titulo: 'Planejamento V2.0 — reescrita completa',
+      itens: [
+        'EDIÇÃO INLINE: clique na célula para editar direto (sem modal)',
+        '  → Enter salva, Escape cancela, Tab avança',
+        '  → Funciona para todos os campos editáveis',
+        'COLUNA NÍVEL: mostra o nível hierárquico de cada tarefa',
+        'HIERARQUIA ← →: move tarefa + todos os filhos abaixo',
+        '  → Update em paralelo para performance',
+        '  → Atualiza dados locais antes de recarregar',
+        'COLUNAS:',
+        '  → Nomes completos sem abreviação',
+        '  → Clique DIREITO no header para esconder',
+        '  → Mostrar: popup lista ocultas individualmente',
+        '  → Arrastar borda direita do header para redimensionar',
+        '  → Arrastar header para reordenar (drag and drop)',
+        '  → Reorder não afeta importar/exportar Excel',
+        'TOGGLE GANTT: 1 clique para esconder/mostrar',
+        '  → Tabela ocupa tela toda quando Gantt oculto',
+        '  → Não reaparece ao scrollar',
+        'ZOOM CORRETO:',
+        '  → Dia: cada dia individualmente',
+        '  → Semana: linhas por semana',
+        '  → Mês: label por mês',
+        '  → Trimestre: T1/T2/T3/T4',
+        '  → Ano: só número do ano',
+        'EXPORTAR PNG: gera imagem completa do Gantt',
+        '  → Expande temporariamente para capturar tudo',
+        'IMPORT: sem deduplicação, lotes de 200, limpa antes',
+        'PERFORMANCE: virtual scroll + requestAnimationFrame',
       ]
     }
   ],
