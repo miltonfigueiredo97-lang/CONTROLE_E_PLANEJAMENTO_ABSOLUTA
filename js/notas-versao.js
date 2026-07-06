@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.0.1',
+  versaoAtual: 'V2.0.2',
 
   versoes: [
     {
@@ -570,7 +570,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.0.1',
-      status: 'aberta',
+      status: 'fechada',
       data: '2025-07-06',
       tipo: 'correcao',
       titulo: 'Gantt corrigido, hierarquia funcional, nível por código',
@@ -584,6 +584,25 @@ const NotasVersao = {
         'Nível importado pelo CÓDIGO: 1=nível 0, 1.1=nível 1, 1.1.1=nível 2',
         '  → Antes usava espaços no nome (impreciso)',
         '  → Agora conta pontos no código = nível',
+      ]
+    },
+    {
+      versao: 'V2.0.2',
+      status: 'aberta',
+      data: '2025-07-06',
+      tipo: 'correcao',
+      titulo: 'Gantt restaurado, hierarquia por nível, famílias',
+      itens: [
+        'GANTT BARRAS: corrigido width:440% → width:440px no painel esquerdo',
+        '  → Painel esquerdo ocupava 440% da tela, empurrando Gantt pra fora',
+        'FAMÍLIAS por nível: ▼/▶ funciona baseado no NÍVEL hierárquico',
+        '  → Recolher grupo esconde tudo abaixo com nível maior',
+        '  → Detecta filhos pela próxima tarefa na ordem ter nível maior',
+        '  → Não depende mais do campo tarefaPai',
+        'NÍVEL NO IMPORT: conta pontos no código (1.3.1.1 = nível 3)',
+        '  → PRECISA REIMPORTAR o Excel para corrigir os níveis',
+        '← → HIERARQUIA: atualiza local primeiro (resposta imediata)',
+        '  → Salva no Firestore em background',
       ]
     }
   ],

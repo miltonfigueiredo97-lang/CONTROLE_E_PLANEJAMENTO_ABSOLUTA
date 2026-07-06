@@ -48,12 +48,18 @@ const Planejamento = (() => {
   function _buildFiltradas(){
     const sorted=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
     if(!colsRecolhidas.size){filtradas=sorted;return;}
-    const result=[]; let skipAbove=-1;
+    const result=[];
+    let skipLevel=-1; // se >= 0, pula tudo com nível > skipLevel
     for(const t of sorted){
-      if(skipAbove>=0&&(t.nivel||0)>skipAbove){continue;}
-      skipAbove=-1;
+      const niv=t.nivel||0;
+      // Se estamos pulando e este item tem nível > o grupo recolhido, pula
+      if(skipLevel>=0){
+        if(niv>skipLevel){continue;} // filho do recolhido — esconde
+        else skipLevel=-1; // chegou em item do mesmo nível ou acima — para de pular
+      }
       result.push(t);
-      if(colsRecolhidas.has(t.id)){skipAbove=t.nivel||0;}
+      // Se este item está recolhido, começa a pular filhos
+      if(colsRecolhidas.has(t.id)){skipLevel=niv;}
     }
     filtradas=result;
   }
@@ -115,7 +121,7 @@ const Planejamento = (() => {
     const hojeX=Math.round((hoje-dMin)/864e5*lpd);
 
     return`<div id="gantt-c" style="display:flex;border:1px solid #222;border-radius:6px;overflow:hidden;height:calc(100vh - 200px);min-height:300px;">
-      <div id="g-esq" style="width:${ganttVisible?splitX:'100'}%;flex-shrink:${ganttVisible?'0':'1'};background:#111;display:flex;flex-direction:column;overflow:hidden;${ganttVisible?'':'flex:1;'}">
+      <div id="g-esq" style="width:${ganttVisible?splitX+'px':'100%'};flex-shrink:${ganttVisible?'0':'1'};background:#111;display:flex;flex-direction:column;overflow:hidden;${ganttVisible?'':'flex:1;'}">
         <div style="height:26px;background:#0d0d0d;border-bottom:1px solid #222;display:flex;align-items:center;flex-shrink:0;">${hdr}</div>
         <div id="g-esq-s" style="overflow:auto;flex:1;" onscroll="Planejamento._sync(this)">
           <div style="height:${totalH}px;position:relative;" id="g-esq-v"></div>
@@ -173,7 +179,9 @@ const Planejamento = (() => {
           cells+=`<div style="${base}color:#555;font-family:var(--font-mono);font-size:.7rem;cursor:pointer;" ${clickEdit}>${t.codigo||''}</div>`;
         } else if(cid==='nome'){
           const ind=(t.nivel||0)*14;
-          const temF=isG&&tarefas.some(x=>(x.tarefaPai||'')===(t.nome||''));
+          // Tem filhos = próxima tarefa na ordem tem nível maior
+          const tIdx=tarefas.sort((a,b)=>(a.ordem||0)-(b.ordem||0)).findIndex(x=>x.id===t.id);
+          const temF=tIdx>=0&&tIdx<tarefas.length-1&&(tarefas[tIdx+1].nivel||0)>(t.nivel||0);
           const tog=temF?`<span onclick="event.stopPropagation();Planejamento.toggleRecolher('${t.id}')" style="cursor:pointer;color:#666;font-size:.6rem;margin-right:3px;flex-shrink:0;">${colsRecolhidas.has(t.id)?'▶':'▼'}</span>`:'';
           cells+=`<div style="${base}padding-left:${ind+4}px;cursor:pointer;" ${clickEdit} title="${t.nome}">
             ${tog}<span style="color:${isG?'var(--cor-primaria)':'#ccc'};font-weight:${isG?700:400};overflow:hidden;text-overflow:ellipsis;">${t.nome||''}</span></div>`;
@@ -225,11 +233,16 @@ const Planejamento = (() => {
     }
 
     const ev=document.getElementById('g-esq-v');if(ev)ev.innerHTML=rH;
-    if(ganttVisible){const dv=document.getElementById('g-dir-v');if(dv){
-      const hojeEl=document.getElementById('gantt-hoje');
-      const hojeHTML=hojeEl?hojeEl.outerHTML:'';
-      dv.innerHTML=bH+hojeHTML;
-    }}
+    if(ganttVisible){
+      const dv=document.getElementById('g-dir-v');
+      if(dv){
+        const hojeEl=document.getElementById('gantt-hoje');
+        const hojeHTML=hojeEl?hojeEl.outerHTML:'';
+        dv.innerHTML=bH+hojeHTML;
+      } else {
+        console.warn('g-dir-v NÃO ENCONTRADO — Gantt não renderiza barras');
+      }
+    }
   }
 
   // ===================== INLINE EDIT =====================
