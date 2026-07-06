@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.0',
+  versaoAtual: 'V2.0.1',
 
   versoes: [
     {
@@ -534,7 +534,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.0',
-      status: 'aberta',
+      status: 'fechada',
       data: '2025-07-06',
       tipo: 'funcionalidade',
       titulo: 'Planejamento V2.0 — reescrita completa',
@@ -566,6 +566,24 @@ const NotasVersao = {
         '  → Expande temporariamente para capturar tudo',
         'IMPORT: sem deduplicação, lotes de 200, limpa antes',
         'PERFORMANCE: virtual scroll + requestAnimationFrame',
+      ]
+    },
+    {
+      versao: 'V2.0.1',
+      status: 'aberta',
+      data: '2025-07-06',
+      tipo: 'correcao',
+      titulo: 'Gantt corrigido, hierarquia funcional, nível por código',
+      itens: [
+        'Gantt: barras voltaram — linha Hoje usa getElementById (não querySelector)',
+        '  → querySelector encontrava barras de grupo e corrompia o HTML',
+        'Hierarquia ← →: atualiza dados LOCALMENTE primeiro (sem esperar Firestore)',
+        '  → Feedback visual imediato ao clicar',
+        '  → Salva no Firestore em background em lotes de 20',
+        '  → Mostra erro se tarefa já está no nível mínimo (0)',
+        'Nível importado pelo CÓDIGO: 1=nível 0, 1.1=nível 1, 1.1.1=nível 2',
+        '  → Antes usava espaços no nome (impreciso)',
+        '  → Agora conta pontos no código = nível',
       ]
     }
   ],

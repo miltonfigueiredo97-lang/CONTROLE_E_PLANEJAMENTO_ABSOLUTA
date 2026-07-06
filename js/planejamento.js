@@ -128,7 +128,7 @@ const Planejamento = (() => {
         </div>
         <div id="g-dir-s" style="overflow:auto;flex:1;" onscroll="Planejamento._sync(this)">
           <div style="width:${W}px;height:${totalH}px;position:relative;" id="g-dir-v">
-            <div style="position:absolute;left:${hojeX}px;top:0;bottom:0;width:2px;background:var(--cor-primaria);opacity:.8;z-index:5;pointer-events:none;">
+            <div id="gantt-hoje" style="position:absolute;left:${hojeX}px;top:0;bottom:0;width:2px;background:var(--cor-primaria);opacity:.8;z-index:5;pointer-events:none;">
               <div style="position:absolute;top:0;left:-14px;background:var(--cor-primaria);color:#000;font-size:.5rem;font-weight:800;padding:1px 3px;border-radius:2px;">Hoje</div>
             </div>
           </div>
@@ -226,8 +226,7 @@ const Planejamento = (() => {
 
     const ev=document.getElementById('g-esq-v');if(ev)ev.innerHTML=rH;
     if(ganttVisible){const dv=document.getElementById('g-dir-v');if(dv){
-      // Preservar linha Hoje
-      const hojeEl=dv.querySelector('div[style*="background:var(--cor-primaria)"]');
+      const hojeEl=document.getElementById('gantt-hoje');
       const hojeHTML=hojeEl?hojeEl.outerHTML:'';
       dv.innerHTML=bH+hojeHTML;
     }}
@@ -395,25 +394,41 @@ const Planejamento = (() => {
   async function recuarNivel(id){await _moverNivel(id,-1);}
   async function avancarNivel(id){await _moverNivel(id,1);}
   async function _moverNivel(id,diff){
-    const t=tarefas.find(x=>x.id===id);if(!t)return;
+    const t=tarefas.find(x=>x.id===id);
+    if(!t){console.error('Tarefa não encontrada:',id);return;}
+    if(diff<0&&(t.nivel||0)<=0){Utils.toast('Já está no nível mínimo.','alerta');return;}
+    
     const sorted=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
-    const idx=sorted.findIndex(x=>x.id===id);if(idx<0)return;
-    const updates=[{id,nivel:Math.max(0,(t.nivel||0)+diff)}];
-    // Find children: all subsequent tasks with level > this task's level
+    const idx=sorted.findIndex(x=>x.id===id);
+    if(idx<0){console.error('Índice não encontrado');return;}
+    
+    // Coleta tarefa + filhos (tudo abaixo com nível maior)
+    const updates=[{id:t.id,nivel:Math.max(0,(t.nivel||0)+diff)}];
     for(let i=idx+1;i<sorted.length;i++){
       if((sorted[i].nivel||0)>(t.nivel||0)){
         updates.push({id:sorted[i].id,nivel:Math.max(0,(sorted[i].nivel||0)+diff)});
-      } else break; // stop at first task with same or lower level
+      } else break;
     }
-    Utils.mostrarLoading('Atualizando...');
-    try{
-      // Batch updates in parallel
-      await Promise.all(updates.map(u=>Database.atualizar(obraId,COL,u.id,{nivel:u.nivel})));
-      // Update local data immediately for responsiveness
-      updates.forEach(u=>{const tt=tarefas.find(x=>x.id===u.id);if(tt)tt.nivel=u.nivel;});
-      _buildFiltradas();_render();
-    }catch(e){console.error(e);Utils.toast('Erro ao mover nível.','erro');}
-    finally{Utils.esconderLoading();}
+    
+    console.log('Movendo nível:',diff,'para',updates.length,'tarefas');
+    
+    // Atualiza localmente PRIMEIRO (responsividade)
+    updates.forEach(u=>{
+      const tt=tarefas.find(x=>x.id===u.id);
+      if(tt)tt.nivel=u.nivel;
+    });
+    _buildFiltradas();
+    _render();
+    requestAnimationFrame(()=>_paintRows());
+    
+    // Salva no Firestore em background (lotes de 20)
+    const LOTE=20;
+    for(let i=0;i<updates.length;i+=LOTE){
+      const batch=updates.slice(i,i+LOTE);
+      await Promise.all(batch.map(u=>
+        Database.atualizar(obraId,COL,u.id,{nivel:u.nivel}).catch(e=>console.error('Erro update:',u.id,e))
+      ));
+    }
   }
 
   // ===================== CRUD =====================
@@ -506,9 +521,13 @@ const Planejamento = (() => {
       for(let r=1;r<rows.length;r++){
         const row=rows[r],nR=String(row[iN]||''),nm=nR.trim();if(!nm)continue;
         const cd=String(row[ci('codigo')]||'').trim();
-        const niv=Math.floor((nR.length-nR.trimStart().length)/2);
+        // Nível: pelo código (1=0, 1.1=1, 1.1.1=2) OU pelo recuo de espaços
         const pts=(cd.match(/\./g)||[]).length;
-        regs.push({tipo:pts<=1&&cd?'grupo':'tarefa',codigo:cd,nome:nm,nivel:niv,ordem:regs.length+1,
+        const nivelByCod=pts; // 0 pontos = nível 0, 1 ponto = nível 1, etc.
+        const nivelBySpace=Math.floor((nR.length-nR.trimStart().length)/2);
+        const niv=cd?nivelByCod:nivelBySpace; // prioriza código se existir
+        const tipo=pts<=1&&cd?'grupo':'tarefa';
+        regs.push({tipo,codigo:cd,nome:nm,nivel:niv,ordem:regs.length+1,
           inicioPlanejado:_pd(row[ci('inicio')]),terminoPlanejado:_pd(row[ci('termino')]),
           duracao:_pDur(row[ci('duracao')]),percentualEsperado:_pN(row[ci('percEsp')]),
           percentualConcluido:_pN(row[ci('percConc')]),predecessora:String(row[ci('pred')]||'').trim(),
