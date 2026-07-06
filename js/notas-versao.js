@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V1.3',
+  versaoAtual: 'V1.3.1',
 
   versoes: [
     {
@@ -452,7 +452,7 @@ const NotasVersao = {
     },
     {
       versao: 'V1.3',
-      status: 'aberta',
+      status: 'fechada',
       data: '2025-07-06',
       tipo: 'funcionalidade',
       titulo: 'Planejamento: Gantt tipo MS Project',
@@ -469,6 +469,27 @@ const NotasVersao = {
         'Modal tarefa: todos os campos do modelo Excel',
         'Barras de grupo: formato chapéu (MS Project style)',
         'Linha de base e desafio como campos separados',
+      ]
+    },
+    {
+      versao: 'V1.3.1',
+      status: 'aberta',
+      data: '2025-07-06',
+      tipo: 'correcao',
+      titulo: 'Planejamento: performance + duplicatas + colunas',
+      itens: [
+        'PERFORMANCE: renderização virtual — só linhas visíveis no viewport',
+        '  → 2400 tarefas sem travar (antes renderizava tudo de uma vez)',
+        '  → Scroll sincronizado esquerda/direita',
+        'Coluna # (número da linha) sempre visível',
+        'Coluna Predecessora visível',
+        'Esconder coluna: clique no ▼ no header da própria coluna',
+        '  → Botão "Mostrar colunas" aparece quando alguma está oculta',
+        'Import: evita duplicatas (chave código+nome)',
+        '  → Limpa tudo antes de importar',
+        'Inserir tarefa: herda nível/grupo da selecionada, empurra as demais',
+        'Ctrl++ insere, Ctrl+- exclui selecionada',
+        'Divisor amarelo arrastável entre tabela e Gantt',
       ]
     }
   ],
