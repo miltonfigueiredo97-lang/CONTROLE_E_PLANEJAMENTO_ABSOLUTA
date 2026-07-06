@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V1.2.3',
+  versaoAtual: 'V1.2.4',
 
   versoes: [
     {
@@ -391,7 +391,7 @@ const NotasVersao = {
     },
     {
       versao: 'V1.2.3',
-      status: 'aberta',
+      status: 'fechada',
       data: '2025-07-05',
       tipo: 'correcao',
       titulo: 'Materiais polido + Excel sem conflito',
@@ -406,6 +406,25 @@ const NotasVersao = {
         '  → Consumo real herda a mesma unidade (label dinâmico)',
         '  → Dropdown com opções padrão de mercado',
         'Card de tarefa: exibe apenas total (m², un...) sem listar fachadas',
+      ]
+    },
+    {
+      versao: 'V1.2.4',
+      status: 'aberta',
+      data: '2025-07-05',
+      tipo: 'correcao',
+      titulo: 'Materiais: editar corrigido, embalagem, relatório por balancim',
+      itens: [
+        'Editar material na biblioteca: botão funcionando (preenchimento manual)',
+        'Material com conversão de embalagem: 1 saco = 20 kg',
+        '  → Total exibido em unidade base E em embalagem',
+        '  → Ex: 840 kg = 42 sacos de 20 kg',
+        'Relatório Fachada: ao filtrar por [Levantamento] Fachada',
+        '  → Tabela por material com breakdown por Fachada e por Balancim',
+        '  → Total por fachada e total geral em destaque amarelo',
+        '  → Mostra total em unidade base e em embalagem se configurado',
+        'HTML do modal reconstruído limpo (sem duplicação)',
+        'Consumo real: label dinâmico com mesma unidade do previsto',
       ]
     }
   ],
