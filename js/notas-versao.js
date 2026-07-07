@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.1.6',
+  versaoAtual: 'V2.2.0',
 
   versoes: [
     {
@@ -839,7 +839,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.1.6',
-      status: 'aberta',
+      status: 'fechada',
       data: '2025-07-07',
       tipo: 'correcao',
       titulo: 'Relatórios: nome do arquivo baixado/compartilhado padronizado',
@@ -849,6 +849,35 @@ const NotasVersao = {
         'Usa a data extraída pela IA (dataRelatorio) quando disponível, senão a data de criação',
         'Sanitização de caracteres inválidos em nome de arquivo (\\ / : * ? " < > |)',
         'Mesmo nome usado no botão Baixar, no Compartilhar (share nativo) e no fallback de link',
+      ]
+    },
+    {
+      versao: 'V2.2.0',
+      status: 'aberta',
+      data: '2025-07-07',
+      tipo: 'funcionalidade',
+      titulo: 'Relatórios: compartilhamento direto do Samsung Notes (PWA) + aba Pendentes',
+      itens: [
+        'ATENÇÃO: Relatórios migraram de subcoleção por obra (obras/{obraId}/relatorios)',
+        '  para coleção raiz "relatorios" com campo obraId — relatórios de teste antigos',
+        '  criados antes desta versão não aparecem mais (não foram migrados)',
+        'database.js: novos helpers genéricos para coleções de nível raiz',
+        '  (listarRaiz, obterRaiz, criarRaiz, atualizarRaiz, deletarRaiz, queryRaiz, novoIdRaiz)',
+        'manifest.json novo: site agora é instalável como PWA, com share_target',
+        '  → aceita receber arquivo PDF compartilhado por outros apps (Samsung Notes)',
+        'service-worker.js novo: intercepta o POST do compartilhamento, guarda o PDF',
+        '  temporariamente no IndexedDB e redireciona para share-target.html',
+        'share-target.html + js/share-target.js novos: recebem o PDF, chamam a IA',
+        '  (mesmo endpoint /api/gerar-relatorio) e salvam como relatório PENDENTE (obraId: null)',
+        'vercel.json novo: rewrite de /share-target/ para /share-target.html',
+        'Ícones do PWA gerados a partir do logo existente (icons/icon-192.png, icon-512.png)',
+        'utils.js: registra manifest + service worker automaticamente em toda página autenticada',
+        'relatorios.js: nova estrutura com abas "Desta Obra" e "Pendentes"',
+        '  → Pendentes lista relatórios sem obraId, com dropdown pra atribuir à obra certa',
+        '  → Ao atribuir, só atualiza o campo obraId (arquivo já processado, sem reprocessar)',
+        'relatorios.html?aba=pendentes abre direto na aba Pendentes (usado pelo botão pós-compartilhamento)',
+        '12/12 funções do return OK (relatorios.js), verificado manualmente (comentários no',
+        '  return{} do database.js geraram falso positivo no script automático de checagem)',
       ]
     }
   ],

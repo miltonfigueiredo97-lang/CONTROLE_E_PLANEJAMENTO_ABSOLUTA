@@ -66,6 +66,56 @@ const Database = (() => {
     return doc.exists ? { id: doc.id, ...doc.data() } : null;
   }
 
+  // --- Coleções de nível raiz (não vinculadas a uma obra) ---
+
+  function _raizRef(collectionName) {
+    return db.collection(collectionName);
+  }
+
+  async function listarRaiz(collectionName, orderByField = 'createdAt', direction = 'desc') {
+    let q = _raizRef(collectionName);
+    if (orderByField) q = q.orderBy(orderByField, direction);
+    const snap = await q.get();
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  }
+
+  async function obterRaiz(collectionName, docId) {
+    const doc = await _raizRef(collectionName).doc(docId).get();
+    return doc.exists ? { id: doc.id, ...doc.data() } : null;
+  }
+
+  async function criarRaiz(collectionName, data, customId = null) {
+    _addMeta(data);
+    if (customId) {
+      await _raizRef(collectionName).doc(customId).set(data);
+      return customId;
+    }
+    const ref = await _raizRef(collectionName).add(data);
+    return ref.id;
+  }
+
+  async function atualizarRaiz(collectionName, docId, data) {
+    _addMeta(data, false);
+    await _raizRef(collectionName).doc(docId).update(data);
+  }
+
+  async function deletarRaiz(collectionName, docId) {
+    await _raizRef(collectionName).doc(docId).delete();
+  }
+
+  async function queryRaiz(collectionName, filters = [], orderByField = null, limit = null) {
+    let ref = _raizRef(collectionName);
+    filters.forEach(f => { ref = ref.where(f.field, f.op, f.value); });
+    if (orderByField) ref = ref.orderBy(orderByField.field || orderByField, orderByField.direction || 'asc');
+    if (limit) ref = ref.limit(limit);
+    const snap = await ref.get();
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  }
+
+  function novoIdRaiz(collectionName) {
+    return _raizRef(collectionName).doc().id;
+  }
+
   // --- Subcoleções por obra ---
 
   function _obraSubRef(obraId, subcollection) {
@@ -180,6 +230,14 @@ const Database = (() => {
     // Users
     getUsers,
     getUser,
+    // Raiz (não vinculada a obra)
+    listarRaiz,
+    obterRaiz,
+    criarRaiz,
+    atualizarRaiz,
+    deletarRaiz,
+    queryRaiz,
+    novoIdRaiz,
     // Genéricas
     listar,
     obter,

@@ -324,3 +324,16 @@
 .rel-doc-original { margin:24px 32px 0 32px; padding-top:16px; border-top:1px solid var(--cor-borda-light); }
 .rel-doc-original a { color:var(--cor-info); font-size:0.88rem; text-decoration:none; }
 .rel-doc-original a:hover { text-decoration:underline; }
+
+/* Abas do módulo Relatórios */
+.rel-tabs { display:flex; gap:4px; border-bottom:1px solid var(--cor-borda); margin-bottom:18px; }
+.rel-tab {
+  background:none; border:none; cursor:pointer;
+  padding:10px 16px; font-size:0.9rem; font-weight:600;
+  color:var(--cor-texto-secundario);
+  border-bottom:2px solid transparent;
+}
+.rel-tab.ativa { color:var(--cor-primaria); border-bottom-color:var(--cor-primaria); }
+.rel-tab:hover:not(.ativa) { color:var(--cor-texto); }
+.relatorio-pendente { border-left:3px solid var(--cor-alerta); cursor:default; }
+.relatorio-pendente:hover { transform:none; box-shadow:none; }

@@ -75,8 +75,29 @@ const Utils = (() => {
     if (avatarEl) avatarEl.textContent = avatar;
   }
 
+  // ---- PWA: manifest + service worker (pra aparecer no menu de compartilhar do Android) ----
+  function _registrarPWA() {
+    try {
+      if (!document.querySelector('link[rel="manifest"]')) {
+        const link = document.createElement('link');
+        link.rel = 'manifest';
+        link.href = '/manifest.json';
+        document.head.appendChild(link);
+      }
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/service-worker.js').catch((e) => {
+          console.warn('Service worker não registrado:', e.message);
+        });
+      }
+    } catch (e) {
+      console.warn('PWA não registrado:', e.message);
+    }
+  }
+
   // ---- initPagina: robusto, sem timers conflitantes ----
   async function initPagina(options = {}) {
+    _registrarPWA();
+
     // 1. Firebase
     if (!initFirebase()) {
       console.error('Firebase falhou ao inicializar');
