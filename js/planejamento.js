@@ -267,24 +267,119 @@ const Planejamento = (() => {
     cell.innerHTML='';
     cell.appendChild(input);
     input.focus();
-    input.select();
+    if(!isDate)input.select();
 
+    let saved=false;
     const save=async()=>{
+      if(saved)return; saved=true;
       let v=input.value.trim();
       if(isNum)v=parseFloat(v)||0;
       if(field==='duracao')v=parseInt(v)||0;
-      try{
-        await Database.atualizar(obraId,COL,t.id,{[field]:v});
-        t[field]=v; // update local
-        _paintRows();
-      }catch(er){Utils.toast('Erro ao salvar.','erro');}
+      
+      // Lógica de datas automática
+      const updates={[field]:v};
+      if(field==='inicioPlanejado'&&v&&t.terminoPlanejado){
+        // Início + Fim → calcula Duração
+        updates.duracao=Math.max(0,Math.ceil((new Date(t.terminoPlanejado)-new Date(v))/864e5));
+      } else if(field==='terminoPlanejado'&&v&&t.inicioPlanejado){
+        // Fim + Início → calcula Duração
+        updates.duracao=Math.max(0,Math.ceil((new Date(v)-new Date(t.inicioPlanejado))/864e5));
+      } else if(field==='duracao'&&v>0&&t.inicioPlanejado){
+        // Duração + Início → calcula Fim
+        const fim=new Date(t.inicioPlanejado);fim.setDate(fim.getDate()+v);
+        updates.terminoPlanejado=fim.toISOString().split('T')[0];
+      } else if(field==='predecessora'&&v){
+        // Predecessora: "3TI" = após tarefa com código 3 (TI = término-início)
+        _calcPredecessora(t, v, updates);
+      }
+      
+      // Se mudou nível, move filhos também
+      if(field==='nivel'){
+        const diff=v-(t.nivel||0);
+        if(diff!==0){
+          // Atualiza local
+          t.nivel=v;
+          // Move filhos
+          const sorted=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
+          const idx2=sorted.findIndex(x=>x.id===t.id);
+          const childUpdates=[];
+          for(let i=idx2+1;i<sorted.length;i++){
+            if((sorted[i].nivel||0)>(t.nivel||0)-diff){
+              sorted[i].nivel=Math.max(0,(sorted[i].nivel||0)+diff);
+              childUpdates.push({id:sorted[i].id,nivel:sorted[i].nivel});
+            } else break;
+          }
+          _buildFiltradas();_render();requestAnimationFrame(()=>_paintRows());
+          // Save in background
+          await Database.atualizar(obraId,COL,t.id,{nivel:v}).catch(console.error);
+          for(const cu of childUpdates){
+            await Database.atualizar(obraId,COL,cu.id,{nivel:cu.nivel}).catch(console.error);
+          }
+          return;
+        }
+      }
+      
+      // Atualiza local
+      Object.assign(t, updates);
+      _paintRows();
+      
+      // Save in background
+      try{await Database.atualizar(obraId,COL,t.id,updates);}
+      catch(er){console.error(er);Utils.toast('Erro ao salvar.','erro');}
     };
+    
     input.addEventListener('blur',save);
     input.addEventListener('keydown',ev=>{
       if(ev.key==='Enter'){ev.preventDefault();input.blur();}
-      if(ev.key==='Escape'){input.value=val;input.blur();}
-      if(ev.key==='Tab'){ev.preventDefault();input.blur();/* TODO: move to next cell */}
+      if(ev.key==='Escape'){saved=true;_paintRows();}
     });
+    // Para spinners de number: salva ao mudar valor
+    if(isNum){
+      input.addEventListener('change',()=>{input.blur();});
+    }
+  }
+  
+  // Calcula datas baseado na predecessora (tipo MS Project)
+  function _calcPredecessora(t, predStr, updates){
+    // Formato: "3TI" ou "1.2TI" ou "5" (default TI)
+    // TI = Término-Início (mais comum)
+    // II = Início-Início, TT = Término-Término, IT = Início-Término
+    const match=predStr.match(/^([\d.]+)\s*(TI|II|TT|IT)?\s*([+-]?\d+)?$/i);
+    if(!match)return;
+    const codPred=match[1];
+    const tipo=(match[2]||'TI').toUpperCase();
+    const defasagem=parseInt(match[3])||0;
+    
+    // Buscar tarefa predecessora pelo código
+    const pred=tarefas.find(x=>x.codigo===codPred);
+    if(!pred)return;
+    
+    let dataRef;
+    if(tipo==='TI') dataRef=pred.terminoPlanejado; // Após término da pred
+    else if(tipo==='II') dataRef=pred.inicioPlanejado; // Junto com início da pred
+    else if(tipo==='TT') dataRef=pred.terminoPlanejado; // Término junto com término da pred
+    else if(tipo==='IT') dataRef=pred.inicioPlanejado; // Término junto com início da pred
+    
+    if(!dataRef)return;
+    
+    const dt=new Date(dataRef);
+    dt.setDate(dt.getDate()+defasagem+(tipo==='TI'?1:0)); // TI: começa no dia seguinte
+    
+    if(tipo==='TI'||tipo==='II'){
+      updates.inicioPlanejado=dt.toISOString().split('T')[0];
+      // Se tem duração, calcula fim
+      if(t.duracao){
+        const fim=new Date(dt);fim.setDate(fim.getDate()+t.duracao);
+        updates.terminoPlanejado=fim.toISOString().split('T')[0];
+      }
+    } else {
+      updates.terminoPlanejado=dt.toISOString().split('T')[0];
+      // Se tem duração, calcula início
+      if(t.duracao){
+        const ini=new Date(dt);ini.setDate(ini.getDate()-t.duracao);
+        updates.inicioPlanejado=ini.toISOString().split('T')[0];
+      }
+    }
   }
 
   // ===================== SYNC SCROLL =====================
@@ -352,15 +447,24 @@ const Planejamento = (() => {
   function _colResizeStart(e, colId){
     e.preventDefault();e.stopPropagation();
     const sx=e.clientX, sw=colLarguras[colId]||60;
+    // Resize via DOM direto (sem re-render) para fluidez
+    const allCells=document.querySelectorAll('[data-col="'+colId+'"]');
+    const hdrCell=e.currentTarget.parentElement;
+    
     const move=ev=>{
-      colLarguras[colId]=Math.max(30,sw+(ev.clientX-sx));
-      _render();
+      const newW=Math.max(30,sw+(ev.clientX-sx));
+      colLarguras[colId]=newW;
+      if(hdrCell)hdrCell.style.width=newW+'px';
+      allCells.forEach(c=>c.style.width=newW+'px');
     };
-    // Throttle: only update on animation frame
-    let pending=false;
-    const moveT=ev=>{if(!pending){pending=true;requestAnimationFrame(()=>{colLarguras[colId]=Math.max(30,sw+(ev.clientX-sx));_render();pending=false;});}};
-    const up=()=>{document.removeEventListener('mousemove',moveT);document.removeEventListener('mouseup',up);};
-    document.addEventListener('mousemove',moveT);document.addEventListener('mouseup',up);
+    const up=()=>{
+      document.removeEventListener('mousemove',move);
+      document.removeEventListener('mouseup',up);
+      // Re-render para consistência
+      _render();requestAnimationFrame(()=>_paintRows());
+    };
+    document.addEventListener('mousemove',move);
+    document.addEventListener('mouseup',up);
   }
 
   // ===================== COLUMN DRAG REORDER =====================
@@ -396,7 +500,12 @@ const Planejamento = (() => {
   // ===================== DIVIDER =====================
   function _divStart(e){
     e.preventDefault();const sx=e.clientX,sw=splitX;
-    const move=ev=>{splitX=Math.max(250,Math.min(900,sw+(ev.clientX-sx)));const el=document.getElementById('g-esq');if(el)el.style.width=splitX+'px';};
+    const container=document.getElementById('gantt-c');
+    const maxW=container?container.clientWidth-80:1600;
+    const move=ev=>{
+      splitX=Math.max(60,Math.min(maxW,sw+(ev.clientX-sx)));
+      const el=document.getElementById('g-esq');if(el)el.style.width=splitX+'px';
+    };
     const up=()=>{document.removeEventListener('mousemove',move);document.removeEventListener('mouseup',up);};
     document.addEventListener('mousemove',move);document.addEventListener('mouseup',up);
   }

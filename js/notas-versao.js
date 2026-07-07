@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.0.2',
+  versaoAtual: 'V2.0.3',
 
   versoes: [
     {
@@ -588,7 +588,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.0.2',
-      status: 'aberta',
+      status: 'fechada',
       data: '2025-07-06',
       tipo: 'correcao',
       titulo: 'Gantt restaurado, hierarquia por nível, famílias',
@@ -603,6 +603,29 @@ const NotasVersao = {
         '  → PRECISA REIMPORTAR o Excel para corrigir os níveis',
         '← → HIERARQUIA: atualiza local primeiro (resposta imediata)',
         '  → Salva no Firestore em background',
+      ]
+    },
+    {
+      versao: 'V2.0.3',
+      status: 'aberta',
+      data: '2025-07-06',
+      tipo: 'correcao',
+      titulo: 'Divisor livre, nível por spinner, datas automáticas, predecessora',
+      itens: [
+        'DIVISOR: arrasta de 60px até quase o final da tela (sem limite rígido)',
+        'NÍVEL: spinner funciona — change event dispara save automaticamente',
+        '  → Ao mudar nível, filhos são movidos junto (MS Project)',
+        'DATAS AUTOMÁTICAS (3 modos):',
+        '  → Início + Fim → calcula Duração',
+        '  → Início + Duração → calcula Fim',
+        '  → Predecessora → calcula Início e Fim',
+        'PREDECESSORA tipo MS Project:',
+        '  → Formato: código + tipo (ex: 3TI, 1.2II, 5TT)',
+        '  → TI = Término-Início (default): começa após a predecessora',
+        '  → II = Início-Início: começa junto com a predecessora',
+        '  → TT = Término-Término: termina junto com a predecessora',
+        '  → Defasagem: 3TI+2 = 2 dias após término da tarefa 3',
+        'RESIZE COLUNAS: arrasta borda direita do header',
       ]
     }
   ],
