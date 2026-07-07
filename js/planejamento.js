@@ -749,37 +749,138 @@ const Planejamento = (() => {
   
   async function _gerarPNG(){
     const pop=document.getElementById('png-pop');if(pop)pop.remove();
-    const container=document.getElementById('gantt-c');
-    if(!container){Utils.toast('Abra o Gantt primeiro.','alerta');return;}
+    const iniStr=document.getElementById('png-ini')?.value;
+    const fimStr=document.getElementById('png-fim')?.value;
+    if(!iniStr||!fimStr){Utils.toast('Selecione o intervalo de datas.','alerta');return;}
+    const dMin=new Date(iniStr+'T00:00:00');
+    const dMax=new Date(fimStr+'T00:00:00');
+    if(dMax<dMin){Utils.toast('Data final antes da inicial.','alerta');return;}
+    if(!filtradas.length){Utils.toast('Nenhuma tarefa para exportar.','alerta');return;}
+
+    // Tamanho: usa a escala do zoom atual da tela
+    const lpd={dia:32,semana:8,mes:3,trimestre:1.2,ano:0.4}[zoomGantt]||3;
+    const totalDias=Math.max(1,Math.ceil((dMax-dMin)/864e5));
+    const W=Math.max(200,Math.round(totalDias*lpd));
+    const tf=filtradas; // todas as linhas visíveis (respeita famílias recolhidas), sem paginação
+    const totalH=tf.length*ROW_H;
+    const visCols=colOrdem.filter(id=>!colsHidden.has(id));
+
+    // Proteção: canvas gigante pode travar/corromper o navegador
+    const larguraEsq=_totalColWidth(visCols);
+    const larguraTotal=larguraEsq+W;
+    if(larguraTotal>16000||totalH>16000){
+      Utils.toast('Intervalo ou lista muito grande para gerar PNG. Reduza o período ou o zoom (ex: Mês/Trimestre).','erro');
+      return;
+    }
+
     try{
-      Utils.mostrarLoading('Gerando imagem...');
+      Utils.mostrarLoading('Renderizando Gantt completo...');
       if(typeof html2canvas==='undefined')await _ls('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
-      
-      // Captura a tela COMO ESTÁ (sem expandir — mais confiável)
-      const canvas=await html2canvas(container,{
+
+      // ---- Monta o HTML estático (TODAS as linhas, sem virtual scroll) ----
+      const hdrHtml=visCols.map(id=>{
+        const w=id==='nome'?'flex:1;min-width:150px;':`width:${colLarguras[id]||60}px;flex-shrink:0;`;
+        return`<div style="${w}padding:0 4px;font-size:.63rem;font-weight:700;color:#555;text-transform:uppercase;overflow:hidden;white-space:nowrap;display:flex;align-items:center;">${COL_LABELS[id]||id}</div>`;
+      }).join('');
+      const hDatas=_buildDateHeader(dMin,dMax,lpd,W);
+      const hoje=new Date();
+      const hojeX=Math.round((hoje-dMin)/864e5*lpd);
+      const mostrarHoje=hoje>=dMin&&hoje<=dMax;
+
+      let rowsHtml='', barsHtml='';
+      tf.forEach((t,i)=>{
+        const y=i*ROW_H, isG=t.tipo==='grupo', st2=_status(t), perc=_perc(t);
+        let cells='';
+        for(const cid of visCols){
+          const w=cid==='nome'?'flex:1;min-width:150px;':`width:${colLarguras[cid]||60}px;flex-shrink:0;`;
+          const base=`${w}overflow:hidden;white-space:nowrap;text-overflow:ellipsis;padding:0 4px;font-size:.78rem;height:100%;display:flex;align-items:center;`;
+          if(cid==='num')cells+=`<div style="${base}color:#444;font-family:var(--font-mono);font-size:.65rem;justify-content:center;">${i+1}</div>`;
+          else if(cid==='nivel')cells+=`<div style="${base}color:#666;font-family:var(--font-mono);font-size:.68rem;justify-content:center;">${t.nivel||0}</div>`;
+          else if(cid==='codigo')cells+=`<div style="${base}color:#555;font-family:var(--font-mono);font-size:.7rem;">${t.codigo||''}</div>`;
+          else if(cid==='nome'){
+            const ind=(t.nivel||0)*14;
+            cells+=`<div style="${base}padding-left:${ind+4}px;"><span style="color:${isG?'var(--cor-primaria)':'#ccc'};font-weight:${isG?700:400};overflow:hidden;text-overflow:ellipsis;">${t.nome||''}</span></div>`;
+          }
+          else if(cid==='inicio')cells+=`<div style="${base}color:#666;font-size:.7rem;justify-content:center;">${_fd(t.inicioPlanejado)}</div>`;
+          else if(cid==='termino')cells+=`<div style="${base}color:#666;font-size:.7rem;justify-content:center;">${_fd(t.terminoPlanejado)}</div>`;
+          else if(cid==='duracao')cells+=`<div style="${base}color:#666;font-size:.7rem;justify-content:center;">${t.duracao||'—'}</div>`;
+          else if(cid==='percEsp')cells+=`<div style="${base}color:#555;font-size:.7rem;justify-content:center;">${t.percentualEsperado||0}%</div>`;
+          else if(cid==='percConc')cells+=`<div style="${base}font-size:.7rem;justify-content:center;color:${perc>=100?'#16a34a':perc>0?'#2563eb':'#555'};">${perc}%</div>`;
+          else if(cid==='predecessora')cells+=`<div style="${base}color:#555;font-size:.7rem;justify-content:center;">${t.predecessora||'—'}</div>`;
+          else if(cid==='responsavel')cells+=`<div style="${base}color:#555;font-size:.7rem;">${t.responsavel||'—'}</div>`;
+          else if(cid==='local')cells+=`<div style="${base}color:#555;font-size:.7rem;">${t.local||'—'}</div>`;
+          else if(cid==='grupo')cells+=`<div style="${base}color:#555;font-size:.7rem;">${t.grupo||'—'}</div>`;
+          else if(cid==='acoes')cells+=`<div style="${base}"></div>`;
+        }
+        rowsHtml+=`<div style="position:absolute;top:${y}px;left:0;right:0;height:${ROW_H}px;display:flex;align-items:center;border-bottom:1px solid #1a1a1a;background:${i%2?'rgba(255,255,255,.015)':''};">${cells}</div>`;
+
+        barsHtml+=`<div style="position:absolute;left:0;top:${y}px;width:100%;height:${ROW_H}px;border-bottom:1px solid #1a1a1a;background:${i%2?'rgba(255,255,255,.015)':''};"></div>`;
+        if(t.inicioPlanejado&&t.terminoPlanejado){
+          const ti=new Date(t.inicioPlanejado), tf2=new Date(t.terminoPlanejado);
+          // Só desenha a barra se ela intersecta o intervalo pedido
+          if(tf2>=dMin&&ti<=dMax){
+            const bx=Math.round((ti-dMin)/864e5*lpd);
+            const bw=Math.max(4,Math.round((tf2-ti)/864e5*lpd));
+            const by=y+5,bh=20;
+            const cor={nao_iniciado:'#333',em_andamento:'#1d4ed8',concluido:'#15803d',atrasado:'#dc2626'}[st2]||'#333';
+            if(isG){
+              barsHtml+=`<div style="position:absolute;left:${bx}px;top:${by+8}px;width:${bw}px;height:5px;background:var(--cor-primaria);border-radius:1px;"></div>`;
+            } else {
+              barsHtml+=`<div style="position:absolute;left:${bx}px;top:${by}px;width:${bw}px;height:${bh}px;background:${cor};border-radius:3px;overflow:hidden;">
+                <div style="height:100%;width:${perc}%;background:rgba(255,255,255,.25);"></div>
+                ${bw>50?`<span style="position:absolute;left:4px;top:4px;font-size:.58rem;color:rgba(255,255,255,.85);white-space:nowrap;overflow:hidden;max-width:${bw-8}px;">${t.nome}</span>`:''}
+              </div>`;
+            }
+          }
+        }
+      });
+
+      const offscreen=document.createElement('div');
+      offscreen.style.cssText='position:fixed;left:-999999px;top:0;background:#0d0d0d;';
+      offscreen.innerHTML=`<div style="display:flex;border:1px solid #222;border-radius:6px;overflow:hidden;width:${larguraEsq+W}px;">
+        <div style="width:${larguraEsq}px;flex-shrink:0;background:#111;">
+          <div style="height:26px;background:#0d0d0d;border-bottom:1px solid #222;display:flex;align-items:center;">${hdrHtml}</div>
+          <div style="height:${totalH}px;position:relative;">${rowsHtml}</div>
+        </div>
+        <div style="width:${W}px;flex-shrink:0;background:#0d0d0d;">
+          <div style="height:26px;background:#0a0a0a;border-bottom:1px solid #222;position:relative;">${hDatas}</div>
+          <div style="width:${W}px;height:${totalH}px;position:relative;">
+            ${barsHtml}
+            ${mostrarHoje?`<div style="position:absolute;left:${hojeX}px;top:0;bottom:0;width:2px;background:var(--cor-primaria);opacity:.8;z-index:5;"></div>`:''}
+          </div>
+        </div>
+      </div>`;
+      document.body.appendChild(offscreen);
+
+      // Espera o layout assentar antes de capturar
+      await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+
+      const canvas=await html2canvas(offscreen.firstElementChild,{
         backgroundColor:'#0d0d0d',
         scale:2,
         logging:false,
         useCORS:true,
         allowTaint:true,
       });
-      
-      // Converter para blob e baixar
+
+      offscreen.remove();
+
       canvas.toBlob(blob=>{
         if(!blob){Utils.toast('Erro ao gerar imagem.','erro');return;}
         const url=URL.createObjectURL(blob);
         const link=document.createElement('a');
-        link.download='gantt_'+new Date().toISOString().split('T')[0]+'.png';
+        link.download='gantt_'+iniStr+'_a_'+fimStr+'.png';
         link.href=url;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
-        Utils.toast('PNG exportado!','sucesso');
+        Utils.toast('PNG do Gantt exportado!','sucesso');
       },'image/png');
     }catch(e){
       console.error('Erro PNG:',e);
       Utils.toast('Erro ao gerar: '+e.message,'erro');
+      const off=document.querySelector('div[style*="left:-999999px"]');if(off)off.remove();
     }finally{Utils.esconderLoading();}
   }
 

@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.2.7',
+  versaoAtual: 'V2.2.8',
 
   versoes: [
     {
@@ -935,6 +935,29 @@ const NotasVersao = {
         '  esse registro antigo removido automaticamente no próximo',
         '  carregamento de qualquer página — não precisa limpar cache',
         '  manualmente.',
+      ]
+    },
+    {
+      versao: 'V2.2.8',
+      status: 'aberta',
+      data: '2026-07-07',
+      tipo: 'correcao',
+      titulo: 'PNG do Gantt: renderiza o Gantt completo no intervalo, não mais print da tela',
+      itens: [
+        'CORRIGIDO: o botão PNG estava tirando um "print" da área visível',
+        '  na tela (html2canvas na viewport atual) — o intervalo de datas',
+        '  escolhido no popup nem era usado no cálculo.',
+        '',
+        'NOVO COMPORTAMENTO: monta um Gantt completo à parte (fora da',
+        '  tela, sem paginação/scroll virtual) com TODAS as tarefas',
+        '  visíveis (respeitando famílias recolhidas), com a linha do',
+        '  tempo cortada exatamente no intervalo início/fim solicitado.',
+        '  Só depois disso tira o PNG — do Gantt inteiro, não da tela.',
+        'Barras fora do intervalo não aparecem; barras que cruzam a',
+        '  borda do intervalo aparecem cortadas corretamente.',
+        'Nome do arquivo agora inclui o intervalo: gantt_INICIO_a_FIM.png',
+        'Proteção: avisa e cancela se o intervalo + zoom gerariam uma',
+        '  imagem grande demais (reduzir período ou usar zoom Mês/Trimestre).',
       ]
     }
   ],
