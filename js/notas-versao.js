@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.1.0',
+  versaoAtual: 'V2.0.9',
 
   versoes: [
     {
@@ -730,7 +730,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.0.9',
-      status: 'fechada',
+      status: 'aberta',
       data: '2025-07-07',
       tipo: 'correcao',
       titulo: 'CRÍTICO: _totalColWidth não definida quebrava o módulo',
@@ -740,35 +740,6 @@ const NotasVersao = {
         'Função adicionada: soma larguras das colunas visíveis',
         'Verificação ampliada: return{} + TODAS as funções chamadas no código',
         '  → 30 funções do return OK, 29 funções internas OK',
-      ]
-    },
-    {
-      versao: 'V2.1.0',
-      status: 'aberta',
-      data: '2026-07-07',
-      tipo: 'feature',
-      titulo: 'Versão Mobile — sistema completo no celular',
-      itens: [
-        'Novo css/mobile.css: todo o sistema responsivo para telas ≤ 900px',
-        'Novo js/mobile.js: menu hambúrguer + sidebar em gaveta com overlay',
-        '  → Fecha ao tocar fora, ao navegar ou com ESC',
-        'Sidebar vira gaveta lateral deslizante (não ocupa a tela)',
-        'Modais em tela cheia (bottom sheet) com header/footer fixos',
-        'Tabelas com scroll horizontal por toque em todos os módulos',
-        'Botões e inputs com alvo de toque ≥ 40px; inputs 16px (sem zoom iOS)',
-        'Levantamento de Fachada: árvore empilhada sobre o painel',
-        '  → Botões editar/excluir sempre visíveis (sem hover no toque)',
-        'Planejamento mobile:',
-        '  → Toque longo no cabeçalho abre menu: esconder / mover coluna',
-        '  → Divisor do Gantt arrastável com o dedo (touch)',
-        '  → Resize de coluna por toque (alça ampliada para 10px)',
-        '  → Painel de tarefas limitado a 62vw, Gantt com scroll por toque',
-        '  → Linhas mais altas (36px) para edição inline no celular',
-        'BUGFIX: _colDragStart/_colDrop eram chamadas mas nunca definidas',
-        '  → Reordenação de colunas por arraste agora funciona (desktop)',
-        '100vh → 100dvh: corrige corte pela barra do navegador móvel',
-        'mobile.css e mobile.js aplicados em todas as 18 páginas',
-        'Desktop permanece 100% idêntico — zero impacto visual',
       ]
     }
   ],
