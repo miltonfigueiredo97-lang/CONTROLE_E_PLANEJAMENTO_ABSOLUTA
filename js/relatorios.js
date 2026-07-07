@@ -392,24 +392,45 @@ const Relatorios = (() => {
     const r = relatorios.find((x) => x.id === id);
     if (!r) return;
     try {
-      let urlPdf = r.urlPdfGerado;
-      if (!urlPdf) {
-        Utils.mostrarLoading('Preparando arquivo para compartilhar...');
-        if (typeof window.jspdf === 'undefined') {
-          await _ls('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
-        }
-        const blob = _gerarPdfBlob(r);
-        const path = `obras/${obraId}/relatorios/${r.id}/gerado.pdf`;
-        urlPdf = await _uploadBlob(path, blob, _nomeArquivoPdf(r));
-        await Database.atualizar(obraId, COL, r.id, { urlPdfGerado: urlPdf });
-        r.urlPdfGerado = urlPdf;
-        Utils.esconderLoading();
+      Utils.mostrarLoading('Preparando arquivo para compartilhar...');
+      if (typeof window.jspdf === 'undefined') {
+        await _ls('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
       }
+      const blob = _gerarPdfBlob(r);
+      const nomeArquivo = _nomeArquivoPdf(r);
 
       const j = r.conteudoJson || {};
       const titulo = j.titulo || r.titulo || 'Relatório';
       const resumo = j.resumo ? `\n${j.resumo}` : '';
-      const texto = `📈 *${titulo}*${obraNome ? ' — ' + obraNome : ''}${resumo}\n\n📥 Baixar relatório (PDF):\n${urlPdf}`;
+      const textoBase = `📈 ${titulo}${obraNome ? ' — ' + obraNome : ''}${resumo}`;
+
+      // 1ª tentativa: compartilhamento nativo com o PDF anexado de verdade (funciona no celular)
+      let arquivoCompartilhado = false;
+      try {
+        const file = new File([blob], nomeArquivo, { type: 'application/pdf' });
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          Utils.esconderLoading();
+          await navigator.share({ files: [file], title: titulo, text: textoBase });
+          arquivoCompartilhado = true;
+        }
+      } catch (eShare) {
+        if (eShare.name === 'AbortError') { Utils.esconderLoading(); return; } // usuário cancelou, não é erro
+        arquivoCompartilhado = false;
+      }
+
+      // Sempre garante que o PDF fica salvo no Storage (link de backup / acesso futuro)
+      if (!r.urlPdfGerado) {
+        const path = `obras/${obraId}/relatorios/${r.id}/gerado.pdf`;
+        const urlPdfGerado = await _uploadBlob(path, blob, nomeArquivo);
+        await Database.atualizar(obraId, COL, r.id, { urlPdfGerado });
+        r.urlPdfGerado = urlPdfGerado;
+      }
+
+      if (arquivoCompartilhado) return;
+
+      // Fallback (desktop ou navegador sem suporte a compartilhar arquivo): link via wa.me
+      Utils.esconderLoading();
+      const texto = `${textoBase}\n\n📥 Baixar relatório (PDF):\n${r.urlPdfGerado}`;
       const link = `https://wa.me/?text=${encodeURIComponent(texto)}`;
       window.open(link, '_blank');
     } catch (e) {

@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.1.4',
+  versaoAtual: 'V2.1.5',
 
   versoes: [
     {
@@ -811,7 +811,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.1.4',
-      status: 'aberta',
+      status: 'fechada',
       data: '2025-07-07',
       tipo: 'correcao',
       titulo: 'Relatórios: link de compartilhar força download do PDF',
@@ -820,6 +820,21 @@ const NotasVersao = {
         '  → Ao abrir o link no WhatsApp, o PDF baixa em vez de só abrir em visualização inline',
         'Mensagem do WhatsApp deixa explícito "📥 Baixar relatório (PDF)" antes do link',
         'Nome do arquivo padronizado (mesmo nome usado no botão Baixar)',
+      ]
+    },
+    {
+      versao: 'V2.1.5',
+      status: 'aberta',
+      data: '2025-07-07',
+      tipo: 'funcionalidade',
+      titulo: 'Relatórios: compartilhar envia o PDF anexado de verdade (no celular)',
+      itens: [
+        'compartilharWhatsapp agora tenta Web Share API (navigator.share) com o PDF como File',
+        '  → No celular, abre o menu nativo de compartilhar com o arquivo já anexado',
+        '  → Escolhendo WhatsApp, o PDF vai anexado de verdade, não como link',
+        'Cancelamento do usuário no menu nativo (AbortError) não gera erro/toast',
+        'Fallback mantido: desktop ou navegador sem suporte usa o link via wa.me como antes',
+        'PDF sempre salvo no Storage independente do método (link de backup)',
       ]
     }
   ],
