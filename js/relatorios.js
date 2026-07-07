@@ -254,8 +254,15 @@ const Relatorios = (() => {
     return await ref.getDownloadURL();
   }
 
+  function _sanitizarNomeArquivo(txt) {
+    return String(txt).replace(/[\\/:*?"<>|]/g, '').replace(/\s+/g, ' ').trim();
+  }
+
   function _nomeArquivoPdf(r) {
-    return `${(r.conteudoJson?.titulo || r.titulo || 'relatorio').replace(/[^\w\-]+/g,'_')}.pdf`;
+    const j = r.conteudoJson || {};
+    const dataStr = (j.dataRelatorio || Utils.formatarData(r.createdAt) || '').replace(/\//g, '-');
+    const partes = [obraNome || 'Obra', 'Planejamento e Andamento', dataStr].filter(Boolean);
+    return `${_sanitizarNomeArquivo(partes.join(' - '))}.pdf`;
   }
 
   // ====== VISUALIZAR / VOLTAR ======

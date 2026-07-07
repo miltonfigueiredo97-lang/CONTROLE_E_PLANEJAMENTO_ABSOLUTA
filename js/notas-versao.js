@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.1.5',
+  versaoAtual: 'V2.1.6',
 
   versoes: [
     {
@@ -824,7 +824,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.1.5',
-      status: 'aberta',
+      status: 'fechada',
       data: '2025-07-07',
       tipo: 'funcionalidade',
       titulo: 'Relatórios: compartilhar envia o PDF anexado de verdade (no celular)',
@@ -835,6 +835,20 @@ const NotasVersao = {
         'Cancelamento do usuário no menu nativo (AbortError) não gera erro/toast',
         'Fallback mantido: desktop ou navegador sem suporte usa o link via wa.me como antes',
         'PDF sempre salvo no Storage independente do método (link de backup)',
+      ]
+    },
+    {
+      versao: 'V2.1.6',
+      status: 'aberta',
+      data: '2025-07-07',
+      tipo: 'correcao',
+      titulo: 'Relatórios: nome do arquivo baixado/compartilhado padronizado',
+      itens: [
+        'Formato: "Nome da Obra - Planejamento e Andamento - Data do relatório.pdf"',
+        '  → Ex: "Residencial Essence - Planejamento e Andamento - 17-07-2025.pdf"',
+        'Usa a data extraída pela IA (dataRelatorio) quando disponível, senão a data de criação',
+        'Sanitização de caracteres inválidos em nome de arquivo (\\ / : * ? " < > |)',
+        'Mesmo nome usado no botão Baixar, no Compartilhar (share nativo) e no fallback de link',
       ]
     }
   ],
