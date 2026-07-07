@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.1.1',
+  versaoAtual: 'V2.1.2',
 
   versoes: [
     {
@@ -766,7 +766,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.1.1',
-      status: 'aberta',
+      status: 'fechada',
       data: '2025-07-07',
       tipo: 'correcao',
       titulo: 'Relatórios: troca de provedor de IA para API gratuita',
@@ -778,6 +778,19 @@ const NotasVersao = {
         'Modelo usado: gemini-2.5-flash, com responseMimeType JSON nativo',
         'Testado manualmente no AI Studio com nota real — aprovado',
         'Layout do PDF de saída (jsPDF) validado com conteúdo real gerado pela IA',
+      ]
+    },
+    {
+      versao: 'V2.1.2',
+      status: 'aberta',
+      data: '2025-07-07',
+      tipo: 'correcao',
+      titulo: 'CRÍTICO: relatorios.html não chamava Relatorios.init()',
+      itens: [
+        'relatorios.html chamava Utils.initPagina() direto no DOMContentLoaded',
+        '  → Relatorios.init() nunca era executado',
+        '  → Tela ficava travada no placeholder estático "Módulo em desenvolvimento"',
+        'Corrigido para chamar Relatorios.init(), igual aos demais módulos',
       ]
     }
   ],
