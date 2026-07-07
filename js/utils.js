@@ -85,7 +85,26 @@ const Utils = (() => {
         document.head.appendChild(link);
       }
       if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/service-worker.js').catch((e) => {
+        // Escopo restrito a /share-target/: o SW só controla essa rota
+        // (recebe o compartilhamento do Samsung Notes/Android), sem
+        // interceptar a navegação normal entre módulos do sistema.
+        //
+        // IMPORTANTE: navegadores que já visitaram o site antes desta
+        // correção podem ter um SW antigo registrado com escopo raiz
+        // ("/"), que passava a controlar TODA a navegação do site —
+        // essa era a causa do travamento ao trocar de módulo. Por isso
+        // limpamos qualquer registro com escopo raiz antes de registrar
+        // o novo, restrito.
+        navigator.serviceWorker.getRegistrations().then((regs) => {
+          regs.forEach((reg) => {
+            const scopePath = new URL(reg.scope).pathname;
+            if (scopePath === '/' || scopePath === '') {
+              reg.unregister().catch(() => {});
+            }
+          });
+        }).catch(() => {});
+
+        navigator.serviceWorker.register('/service-worker.js', { scope: '/share-target/' }).catch((e) => {
           console.warn('Service worker não registrado:', e.message);
         });
       }

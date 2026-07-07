@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.2.1',
+  versaoAtual: 'V2.2.2',
 
   versoes: [
     {
@@ -882,7 +882,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.2.1',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-07',
       tipo: 'correcao',
       titulo: 'CRÍTICO: drag travado (Pointer Capture) — Planejamento e Fachada',
@@ -911,6 +911,30 @@ const NotasVersao = {
         '  bloqueiam a propagação corretamente (estavam usando mousedown',
         '  enquanto o arrasto passou a escutar pointerdown — clique neles',
         '  também iniciava um arrasto por engano)',
+      ]
+    },
+    {
+      versao: 'V2.2.2',
+      status: 'aberta',
+      data: '2026-07-07',
+      tipo: 'correcao',
+      titulo: 'CRÍTICO: Service Worker com escopo raiz travava troca de módulo',
+      itens: [
+        'CAUSA RAIZ: o service worker do compartilhamento (Samsung Notes)',
+        '  era registrado com escopo raiz ("/"), passando a controlar TODA',
+        '  a navegação do site — literalmente toda troca de módulo (cada',
+        '  link da sidebar) passava a ser interceptada por ele.',
+        '',
+        'CORREÇÃO: service worker agora registrado com escopo restrito a',
+        '  /share-target/ (única rota que ele realmente precisa controlar,',
+        '  usada pelo compartilhamento do Android). A navegação normal',
+        '  entre módulos deixa de passar por ele.',
+        '',
+        'LIMPEZA AUTOMÁTICA: navegadores que já tinham o service worker',
+        '  antigo (escopo raiz) registrado de antes desta correção têm',
+        '  esse registro antigo removido automaticamente no próximo',
+        '  carregamento de qualquer página — não precisa limpar cache',
+        '  manualmente.',
       ]
     }
   ],
