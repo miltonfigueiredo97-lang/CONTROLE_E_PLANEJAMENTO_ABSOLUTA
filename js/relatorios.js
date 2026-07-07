@@ -244,10 +244,18 @@ const Relatorios = (() => {
     return await ref.getDownloadURL();
   }
 
-  async function _uploadBlob(path, blob) {
+  async function _uploadBlob(path, blob, nomeArquivo) {
     const ref = storage.ref(path);
-    await ref.put(blob);
+    const metadata = {
+      contentType: 'application/pdf',
+      contentDisposition: `attachment; filename="${(nomeArquivo || 'relatorio.pdf').replace(/"/g, '')}"`,
+    };
+    await ref.put(blob, metadata);
     return await ref.getDownloadURL();
+  }
+
+  function _nomeArquivoPdf(r) {
+    return `${(r.conteudoJson?.titulo || r.titulo || 'relatorio').replace(/[^\w\-]+/g,'_')}.pdf`;
   }
 
   // ====== VISUALIZAR / VOLTAR ======
@@ -273,7 +281,7 @@ const Relatorios = (() => {
         await _ls('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
       }
       const blob = _gerarPdfBlob(r);
-      const nomeArquivo = `${(r.conteudoJson?.titulo || r.titulo || 'relatorio').replace(/[^\w\-]+/g,'_')}.pdf`;
+      const nomeArquivo = _nomeArquivoPdf(r);
 
       // Download local
       const url = URL.createObjectURL(blob);
@@ -285,7 +293,7 @@ const Relatorios = (() => {
       // Também sobe pro Storage se ainda não existe, pra poder compartilhar depois
       if (!r.urlPdfGerado) {
         const path = `obras/${obraId}/relatorios/${r.id}/gerado.pdf`;
-        const urlPdfGerado = await _uploadBlob(path, blob);
+        const urlPdfGerado = await _uploadBlob(path, blob, nomeArquivo);
         await Database.atualizar(obraId, COL, r.id, { urlPdfGerado });
         r.urlPdfGerado = urlPdfGerado;
       }
@@ -392,7 +400,7 @@ const Relatorios = (() => {
         }
         const blob = _gerarPdfBlob(r);
         const path = `obras/${obraId}/relatorios/${r.id}/gerado.pdf`;
-        urlPdf = await _uploadBlob(path, blob);
+        urlPdf = await _uploadBlob(path, blob, _nomeArquivoPdf(r));
         await Database.atualizar(obraId, COL, r.id, { urlPdfGerado: urlPdf });
         r.urlPdfGerado = urlPdf;
         Utils.esconderLoading();
@@ -401,7 +409,7 @@ const Relatorios = (() => {
       const j = r.conteudoJson || {};
       const titulo = j.titulo || r.titulo || 'Relatório';
       const resumo = j.resumo ? `\n${j.resumo}` : '';
-      const texto = `📈 *${titulo}*${obraNome ? ' — ' + obraNome : ''}${resumo}\n\n${urlPdf}`;
+      const texto = `📈 *${titulo}*${obraNome ? ' — ' + obraNome : ''}${resumo}\n\n📥 Baixar relatório (PDF):\n${urlPdf}`;
       const link = `https://wa.me/?text=${encodeURIComponent(texto)}`;
       window.open(link, '_blank');
     } catch (e) {

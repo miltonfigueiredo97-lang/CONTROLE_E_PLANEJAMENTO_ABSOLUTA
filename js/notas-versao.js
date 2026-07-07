@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.1.3',
+  versaoAtual: 'V2.1.4',
 
   versoes: [
     {
@@ -795,7 +795,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.1.3',
-      status: 'aberta',
+      status: 'fechada',
       data: '2025-07-07',
       tipo: 'funcionalidade',
       titulo: 'Relatórios: fallback automático Gemini → Claude',
@@ -807,6 +807,19 @@ const NotasVersao = {
         'maxDuration da function ampliado para 60s (tenta os dois provedores em sequência se necessário)',
         'Resposta da API agora inclui "provedor" usado (gemini ou anthropic)',
         'relatorios.js: exibe aviso ao usuário quando o fallback pago é usado',
+      ]
+    },
+    {
+      versao: 'V2.1.4',
+      status: 'aberta',
+      data: '2025-07-07',
+      tipo: 'correcao',
+      titulo: 'Relatórios: link de compartilhar força download do PDF',
+      itens: [
+        'PDF gerado agora sobe ao Storage com Content-Disposition: attachment',
+        '  → Ao abrir o link no WhatsApp, o PDF baixa em vez de só abrir em visualização inline',
+        'Mensagem do WhatsApp deixa explícito "📥 Baixar relatório (PDF)" antes do link',
+        'Nome do arquivo padronizado (mesmo nome usado no botão Baixar)',
       ]
     }
   ],
