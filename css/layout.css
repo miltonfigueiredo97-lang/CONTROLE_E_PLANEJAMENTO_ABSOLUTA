@@ -118,7 +118,11 @@ html, body { height: 100%; overflow: hidden; margin: 0; padding: 0; }
   padding: 16px 20px;
   overflow-y: auto;
   min-height: 0;          /* essencial para o scroll funcionar no grid */
+  display: flex;
+  flex-direction: column;
 }
+/* filho direto do .content pode crescer (ex: Planejamento com gantt flex:1) */
+.content > div { min-height: 0; }
 
 .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; gap: 12px; flex-wrap: wrap; }
 .page-header h2 { font-size: 1.1rem; }

@@ -69,6 +69,7 @@ const Planejamento = (() => {
     const c=_el();
     const visCols=colOrdem.filter(id=>!colsHidden.has(id));
 
+    c.style.cssText='display:flex;flex-direction:column;min-height:0;height:100%;';
     c.innerHTML=`
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px;">
         <div style="display:flex;gap:6px;align-items:center;">
@@ -120,7 +121,7 @@ const Planejamento = (() => {
     const hDatas=_buildDateHeader(dMin,dMax,lpd,W);
     const hojeX=Math.round((hoje-dMin)/864e5*lpd);
 
-    return`<div id="gantt-c" style="display:flex;border:1px solid #222;border-radius:6px;overflow:hidden;height:calc(100vh - 200px);min-height:300px;">
+    return`<div id="gantt-c" style="display:flex;border:1px solid #222;border-radius:6px;overflow:hidden;flex:1;min-height:300px;max-height:calc(100vh - 180px);">
       <div id="g-esq" style="width:${ganttVisible?splitX+'px':'100%'};flex-shrink:${ganttVisible?'0':'1'};background:#111;display:flex;flex-direction:column;overflow:hidden;${ganttVisible?'':'flex:1;'}">
         <div style="height:26px;background:#0d0d0d;border-bottom:1px solid #222;display:flex;align-items:center;flex-shrink:0;overflow:hidden;">
           <div style="display:flex;align-items:center;min-width:${_totalColWidth(visCols)}px;height:100%;">${hdr}</div>

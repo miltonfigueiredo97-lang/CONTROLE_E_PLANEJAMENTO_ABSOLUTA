@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.2.2',
+  versaoAtual: 'V2.2.3',
 
   versoes: [
     {
@@ -915,7 +915,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.2.2',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-07',
       tipo: 'correcao',
       titulo: 'CRÍTICO: Service Worker com escopo raiz travava troca de módulo',
