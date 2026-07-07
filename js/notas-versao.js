@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.3.0',
+  versaoAtual: 'V2.3.1',
 
   versoes: [
     {
@@ -977,7 +977,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.3.0',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-07',
       tipo: 'correcao',
       titulo: 'PNG do Gantt: escala automática — agora exporta anos inteiros sem travar',
@@ -1002,6 +1002,33 @@ const NotasVersao = {
         '  (muitas tarefas visíveis vs período extenso), com sugestão',
         '  do que fazer em cada caso.',
         'Popup avisa que a escala da imagem é automática.',
+      ]
+    },
+    {
+      versao: 'V2.3.1',
+      status: 'aberta',
+      data: '2026-07-07',
+      tipo: 'funcionalidade',
+      titulo: 'PNG do Gantt: paginação automática — captura TODAS as linhas (2500+)',
+      itens: [
+        'PROBLEMA: uma imagem só com 2500 tarefas ficaria altíssima',
+        '  (~75.000px), acima do que qualquer navegador aguenta — travava',
+        '  ou corrompia o arquivo.',
+        '',
+        'SOLUÇÃO: paginação automática. Se as tarefas não couberem numa',
+        '  imagem só (limite seguro de altura), o sistema gera VÁRIAS',
+        '  imagens em sequência — cada uma com o mesmo cabeçalho de',
+        '  colunas e o mesmo período de datas, cobrindo um bloco de',
+        '  linhas por vez, até cobrir TODAS as tarefas.',
+        '  → Ex: 2500 tarefas → 10 páginas de ~266 linhas cada',
+        '  → Cada arquivo nomeado: gantt_INICIO_a_FIM_pagina_01_de_10.png',
+        '  → Cada página numerada no canto (Página X de Y — linhas A–B)',
+        'Toast de progresso mostra qual página está sendo gerada',
+        'Pequena pausa entre downloads para o navegador não bloquear',
+        '  múltiplos arquivos automáticos de uma vez',
+        'Casos pequenos (cabem numa imagem só) continuam gerando um',
+        '  único arquivo, sem sufixo de página — sem mudança de',
+        '  comportamento pro caso comum',
       ]
     }
   ],
