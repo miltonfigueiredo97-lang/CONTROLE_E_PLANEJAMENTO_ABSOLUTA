@@ -447,18 +447,28 @@ const Planejamento = (() => {
   function _colResizeStart(e, colId){
     e.preventDefault();e.stopPropagation();
     const sx=e.clientX, sw=colLarguras[colId]||60;
-    const hdrCell=document.querySelector('[data-hcol="'+colId+'"]');
+    // Desativa drag enquanto resize
+    document.querySelectorAll('[data-hcol]').forEach(h=>h.draggable=false);
     document.body.style.cursor='col-resize';
+    document.body.style.userSelect='none';
+    
+    const overlay=document.createElement('div');
+    overlay.style.cssText='position:fixed;inset:0;z-index:9999;cursor:col-resize;';
+    document.body.appendChild(overlay);
     
     const move=ev=>{
-      colLarguras[colId]=Math.max(30,sw+(ev.clientX-sx));
-      // Atualiza header direto
-      if(hdrCell)hdrCell.style.width=colLarguras[colId]+'px';
+      const newW=Math.max(30,sw+(ev.clientX-sx));
+      colLarguras[colId]=newW;
+      // Atualiza todos os elementos desta coluna no DOM direto
+      const hdr=document.querySelector('[data-hcol="'+colId+'"]');
+      if(hdr)hdr.style.width=newW+'px';
     };
     const up=()=>{
       document.removeEventListener('mousemove',move);
       document.removeEventListener('mouseup',up);
+      overlay.remove();
       document.body.style.cursor='';
+      document.body.style.userSelect='';
       _render();requestAnimationFrame(()=>_paintRows());
     };
     document.addEventListener('mousemove',move);
@@ -467,16 +477,27 @@ const Planejamento = (() => {
 
   // ===================== COLUMN DRAG REORDER =====================
   let _dragColId=null;
-  function _colDragStart(e, colId){if(COL_FIXED.has(colId)){e.preventDefault();return;}_dragColId=colId;e.dataTransfer.effectAllowed='move';}
+  function _colDragStart(e, colId){
+    if(COL_FIXED.has(colId)){e.preventDefault();return;}
+    _dragColId=colId;
+    e.dataTransfer.effectAllowed='move';
+    e.dataTransfer.setData('text/plain',colId);
+    e.currentTarget.style.opacity='0.5';
+    setTimeout(()=>{if(e.target)e.target.style.opacity='';},300);
+  }
   function _colDrop(e, targetId){
-    e.preventDefault();if(!_dragColId||_dragColId===targetId||COL_FIXED.has(targetId))return;
+    e.preventDefault();
+    if(!_dragColId||_dragColId===targetId)return;
+    // Pode soltar em qualquer coluna, inclusive fixa (insere ao lado)
     const from=colOrdem.indexOf(_dragColId);
-    const to=colOrdem.indexOf(targetId);
+    let to=colOrdem.indexOf(targetId);
     if(from<0||to<0)return;
     colOrdem.splice(from,1);
-    colOrdem.splice(to,0,_dragColId);
+    // Recalcula posição pois splice mudou os índices
+    to=colOrdem.indexOf(targetId);
+    colOrdem.splice(to+1,0,_dragColId);
     _dragColId=null;
-    _render();
+    _render();requestAnimationFrame(()=>_paintRows());
   }
 
   // ===================== COLUMN HIDE/SHOW =====================
@@ -690,7 +711,34 @@ const Planejamento = (() => {
   }
 
   // ===================== EXPORTAR PNG =====================
-  async function exportarPNG(){
+  function exportarPNG(){
+    // Popup para selecionar intervalo
+    let pop=document.getElementById('png-pop');if(pop){pop.remove();return;}
+    // Datas do projeto
+    const datas=tarefas.flatMap(t=>[t.inicioPlanejado,t.terminoPlanejado].filter(Boolean)).sort();
+    const minDate=datas[0]||new Date().toISOString().split('T')[0];
+    const maxDate=datas[datas.length-1]||minDate;
+    
+    pop=document.createElement('div');pop.id='png-pop';
+    pop.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#1a1a1a;border:2px solid var(--cor-primaria);border-radius:10px;padding:20px;z-index:2000;min-width:340px;box-shadow:0 12px 40px rgba(0,0,0,.6);';
+    pop.innerHTML=`
+      <div style="font-weight:700;color:var(--cor-primaria);margin-bottom:14px;">🖼 Exportar Gantt como PNG</div>
+      <div class="form-row" style="gap:10px;margin-bottom:14px;">
+        <div class="form-grupo" style="margin:0;"><label style="font-size:.72rem;color:#888;">Início</label>
+          <input type="date" id="png-ini" value="${minDate}" class="form-control"></div>
+        <div class="form-grupo" style="margin:0;"><label style="font-size:.72rem;color:#888;">Fim</label>
+          <input type="date" id="png-fim" value="${maxDate}" class="form-control"></div>
+      </div>
+      <div style="font-size:.72rem;color:#555;margin-bottom:14px;">Período do projeto: ${_fd(minDate)} a ${_fd(maxDate)}</div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;">
+        <button class="btn btn-secundario btn-sm" onclick="document.getElementById('png-pop').remove()">Cancelar</button>
+        <button class="btn btn-primario btn-sm" onclick="Planejamento._gerarPNG()">Gerar PNG</button>
+      </div>`;
+    document.body.appendChild(pop);
+  }
+  
+  async function _gerarPNG(){
+    const pop=document.getElementById('png-pop');if(pop)pop.remove();
     const container=document.getElementById('gantt-c');
     if(!container){Utils.toast('Abra o Gantt primeiro.','alerta');return;}
     try{
@@ -881,6 +929,6 @@ const Planejamento = (() => {
     selectIdx,toggleRecolher,recuarNivel,avancarNivel,
     toggleGantt,hideCol,showColsMenu,_showCol,_showAll,
     _colResizeStart,_colDragStart,_colDrop,_divStart,_sync,_editCell,
-    importarExcel,exportar,exportarPNG,_predPopup,_predPreview,_predSalvar};
+    importarExcel,exportar,exportarPNG,_gerarPNG,_predPopup,_predPreview,_predSalvar};
 })();
 function onObraChanged(){Planejamento.init();}

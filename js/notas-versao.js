@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.0.4',
+  versaoAtual: 'V2.0.5',
 
   versoes: [
     {
@@ -630,7 +630,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.0.4',
-      status: 'aberta',
+      status: 'fechada',
       data: '2025-07-06',
       tipo: 'correcao',
       titulo: 'Colunas resize/reorder, predecessora popup, esconder coluna',
@@ -650,6 +650,28 @@ const NotasVersao = {
         '  → Mostra nome, datas da predecessora',
         '  → Botão Limpar para remover predecessora',
         'PREDECESSORA — clique simples: edita o código inline',
+      ]
+    },
+    {
+      versao: 'V2.0.5',
+      status: 'aberta',
+      data: '2025-07-06',
+      tipo: 'correcao',
+      titulo: 'Resize/reorder colunas corrigidos, predecessora popup, PNG intervalo',
+      itens: [
+        'RESIZE COLUNAS: overlay invisível durante arrasto (sem conflito com drag)',
+        '  → Desativa draggable dos headers enquanto resize',
+        '  → Cursor col-resize no corpo inteiro durante arrasto',
+        'REORDENAR COLUNAS: drag & drop com dataTransfer',
+        '  → Coluna arrastada fica translúcida',
+        '  → Borda amarela no destino',
+        '  → Funciona com todas as colunas não-fixas',
+        'PREDECESSORA: clique abre popup direto (sem inline)',
+        '  → Código azul sublinhado indica que é clicável',
+        '  → Popup com preview, tipo TI/II/TT/IT, defasagem',
+        'PNG: popup pede intervalo (início/fim)',
+        '  → Datas pré-preenchidas com período do projeto',
+        '  → Gera PNG completo no intervalo selecionado',
       ]
     }
   ],
