@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.2.0',
+  versaoAtual: 'V2.2.1',
 
   versoes: [
     {
@@ -853,7 +853,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.2.0',
-      status: 'aberta',
+      status: 'fechada',
       data: '2025-07-07',
       tipo: 'funcionalidade',
       titulo: 'Relatórios: compartilhamento direto do Samsung Notes (PWA) + aba Pendentes',
@@ -878,6 +878,39 @@ const NotasVersao = {
         'relatorios.html?aba=pendentes abre direto na aba Pendentes (usado pelo botão pós-compartilhamento)',
         '12/12 funções do return OK (relatorios.js), verificado manualmente (comentários no',
         '  return{} do database.js geraram falso positivo no script automático de checagem)',
+      ]
+    },
+    {
+      versao: 'V2.2.1',
+      status: 'aberta',
+      data: '2026-07-07',
+      tipo: 'correcao',
+      titulo: 'CRÍTICO: drag travado (Pointer Capture) — Planejamento e Fachada',
+      itens: [
+        'CAUSA RAIZ identificada: arrastar (resize de coluna, divisor, caixas',
+        '  da Visão Geral, mover/redimensionar imagem) usava mousemove/mouseup',
+        '  no document. Se o botão do mouse era solto FORA da janela do',
+        '  navegador (comum com trackpad/monitor externo), o evento de',
+        '  soltura nunca chegava — o listener ficava "vivo" para sempre,',
+        '  reagindo a qualquer movimento de mouse na página depois.',
+        '  Isso explica: caixas da fachada "enlouquecendo", imagem travada',
+        '  sem conseguir confirmar posição, e o Planejamento parecendo',
+        '  travar/sumir (um overlay invisível de tela cheia ficava preso',
+        '  bloqueando cliques em tudo, inclusive a barra lateral).',
+        '',
+        'CORREÇÃO: todos os arrastos agora usam Pointer Capture',
+        '  (setPointerCapture/releasePointerCapture), que garante que o',
+        '  evento de soltura SEMPRE chega ao elemento correto, não importa',
+        '  onde o mouse for solto. Aplicado em:',
+        '  → Planejamento: resize de coluna, divisor tabela/Gantt',
+        '  → Fachada: arrastar caixa, redimensionar caixa, arrastar imagem,',
+        '    redimensionar imagem',
+        'Removido overlay de tela cheia do resize de coluna (não é mais',
+        '  necessário — Pointer Capture dispensa essa técnica)',
+        'Botões dentro do header das caixas (Travar/Editar/Remover) agora',
+        '  bloqueiam a propagação corretamente (estavam usando mousedown',
+        '  enquanto o arrasto passou a escutar pointerdown — clique neles',
+        '  também iniciava um arrasto por engano)',
       ]
     }
   ],

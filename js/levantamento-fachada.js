@@ -583,12 +583,12 @@ const LevantamentoFachada = (() => {
         ne:'top:-7px;right:-7px;cursor:ne-resize',e:'top:50%;right:-7px;transform:translateY(-50%);cursor:e-resize',
         se:'bottom:-7px;right:-7px;cursor:se-resize',s:'bottom:-7px;left:50%;transform:translateX(-50%);cursor:s-resize',
         sw:'bottom:-7px;left:-7px;cursor:sw-resize',w:'top:50%;left:-7px;transform:translateY(-50%);cursor:w-resize'}[d];
-      return '<div data-d="'+d+'" onmousedown="LF.imgRZEv(event,this)" style="position:absolute;'+pos+
+      return '<div data-d="'+d+'" onpointerdown="LF.imgRZEv(event,this)" style="position:absolute;'+pos+
         ';width:14px;height:14px;border-radius:50%;background:var(--cor-primaria);border:2px solid #fff;z-index:5;pointer-events:all;"></div>';
     }).join('') : '';
 
     const imgArea=md.img?
-      '<div id="vi-img" '+(ed?'onmousedown="LF.imgMD(event)"':'')+' style="position:absolute;'+
+      '<div id="vi-img" '+(ed?'onpointerdown="LF.imgMD(event)"':'')+' style="position:absolute;'+
         'left:'+is.x+'px;top:'+is.y+'px;width:'+(is.w||'auto')+(is.w?'px':'')+';z-index:1;'+
         'cursor:'+(ed?'move':'default')+';user-select:none;'+
         (ed?'outline:2px dashed var(--cor-primaria);outline-offset:3px;':'')+'">' +
@@ -658,24 +658,24 @@ const LevantamentoFachada = (() => {
           'style="position:absolute;left:'+cx.x+'px;top:'+cx.y+'px;width:'+w+'px;'+h+
           'pointer-events:all;background:#fff;border:2px solid var(--cor-primaria);border-radius:8px;'+
           'box-shadow:0 4px 20px rgba(0,0,0,0.2);user-select:none;">'+
-        // HEADER: é aqui que arrasta — onmousedown direto no header
-        '<div '+(livre?'onmousedown="LF.cxMouseDown(event,'+i+')"':'')+
+        // HEADER: é aqui que arrasta — onpointerdown direto no header
+        '<div '+(livre?'onpointerdown="LF.cxMouseDown(event,'+i+')"':'')+
           ' style="background:var(--cor-primaria);padding:7px 10px;'+
           'border-radius:6px 6px 0 0;display:flex;align-items:center;gap:5px;'+
           'cursor:'+(livre?'grab':'default')+';">'+
           '<span style="flex:1;font-weight:800;font-size:0.82rem;color:#000;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+nome+'</span>'+
-          '<button onclick="LF.cxTravar('+i+')" onmousedown="event.stopPropagation()" style="border:none;cursor:pointer;'+
+          '<button onclick="LF.cxTravar('+i+')" onpointerdown="event.stopPropagation()" style="border:none;cursor:pointer;'+
             'font-size:0.62rem;font-weight:800;padding:2px 6px;border-radius:3px;'+
             'background:'+(livre?'#dcfce7':'#fee2e2')+';color:'+(livre?'#15803d':'#dc2626')+';"> '+(livre?'LIVRE':'TRAV')+'</button>'+
-          '<button onclick="LF.cxEditar('+i+')" onmousedown="event.stopPropagation()" style="border:none;cursor:pointer;background:rgba(0,0,0,0.12);border-radius:3px;padding:2px 6px;font-size:0.8rem;">✎</button>'+
-          '<button onclick="LF.cxRemover('+i+')" onmousedown="event.stopPropagation()" style="border:none;cursor:pointer;background:rgba(220,38,38,0.15);border-radius:3px;padding:2px 6px;font-size:0.8rem;color:#dc2626;">✕</button>'+
+          '<button onclick="LF.cxEditar('+i+')" onpointerdown="event.stopPropagation()" style="border:none;cursor:pointer;background:rgba(0,0,0,0.12);border-radius:3px;padding:2px 6px;font-size:0.8rem;">✎</button>'+
+          '<button onclick="LF.cxRemover('+i+')" onpointerdown="event.stopPropagation()" style="border:none;cursor:pointer;background:rgba(220,38,38,0.15);border-radius:3px;padding:2px 6px;font-size:0.8rem;color:#dc2626;">✕</button>'+
         '</div>'+
         '<div style="padding:10px 12px;display:flex;flex-direction:column;gap:5px;">'+
           _cxRow('m² sem ML',_f(t.m2semML))+
           _cxRow('m² com ML',_f(t.m2comML_equiv))+
           _cxRow('Vão Fechado',_f(t.vao))+
         '</div>'+
-        (livre?'<div data-i="'+i+'" data-d="se" onmousedown="LF.cxResizeEv(event)" style="position:absolute;bottom:0;right:0;width:18px;height:18px;cursor:se-resize;background:var(--cor-primaria);border-radius:3px 0 6px 0;display:flex;align-items:center;justify-content:center;font-size:0.7rem;color:#000;font-weight:900;">⤡</div>':'')+
+        (livre?'<div data-i="'+i+'" data-d="se" onpointerdown="LF.cxResizeEv(event)" style="position:absolute;bottom:0;right:0;width:18px;height:18px;cursor:se-resize;background:var(--cor-primaria);border-radius:3px 0 6px 0;display:flex;align-items:center;justify-content:center;font-size:0.7rem;color:#000;font-weight:900;">⤡</div>':'')+
       '</div>';
     }).join('');
   }
@@ -689,16 +689,23 @@ const LevantamentoFachada = (() => {
     const el=document.getElementById('vi-img');if(!el)return;
     const is=_imgState(), sx=e.clientX-is.x, sy=e.clientY-is.y;
     el.style.cursor='grabbing';
+    try{el.setPointerCapture(e.pointerId);}catch(err){}
     const move=ev=>{is.x=ev.clientX-sx;is.y=ev.clientY-sy;el.style.left=is.x+'px';el.style.top=is.y+'px';};
-    const up=()=>{document.removeEventListener('mousemove',move);document.removeEventListener('mouseup',up);el.style.cursor='move';};
-    document.addEventListener('mousemove',move);document.addEventListener('mouseup',up);
+    const up=()=>{
+      el.removeEventListener('pointermove',move);el.removeEventListener('pointerup',up);el.removeEventListener('pointercancel',up);
+      try{el.releasePointerCapture(e.pointerId);}catch(err){}
+      el.style.cursor='move';
+    };
+    el.addEventListener('pointermove',move);el.addEventListener('pointerup',up);el.addEventListener('pointercancel',up);
   }
 
   function imgRZ(e,dir){
     e.preventDefault();e.stopPropagation();
     const el=document.getElementById('vi-img'),imgEl=el?el.querySelector('img'):null;if(!el||!imgEl)return;
+    const handle=e.currentTarget||el;
     const sx=e.clientX,sy=e.clientY,sw=el.offsetWidth,sh=el.offsetHeight;
     const is=_imgState(),sl=is.x,st=is.y,ratio=imgEl.naturalWidth/imgEl.naturalHeight;
+    try{handle.setPointerCapture(e.pointerId);}catch(err){}
     const move=ev=>{
       const dx=ev.clientX-sx,dy=ev.clientY-sy;let w=sw,x=sl,y=st;
       if(dir==='e')w=Math.max(60,sw+dx);
@@ -712,8 +719,11 @@ const LevantamentoFachada = (() => {
       is.x=Math.round(x);is.y=Math.round(y);is.w=Math.round(w);
       el.style.left=is.x+'px';el.style.top=is.y+'px';el.style.width=is.w+'px';
     };
-    const up=()=>{document.removeEventListener('mousemove',move);document.removeEventListener('mouseup',up);};
-    document.addEventListener('mousemove',move);document.addEventListener('mouseup',up);
+    const up=()=>{
+      handle.removeEventListener('pointermove',move);handle.removeEventListener('pointerup',up);handle.removeEventListener('pointercancel',up);
+      try{handle.releasePointerCapture(e.pointerId);}catch(err){}
+    };
+    handle.addEventListener('pointermove',move);handle.addEventListener('pointerup',up);handle.addEventListener('pointercancel',up);
   }
   function imgRZEv(e,el){imgRZ(e,el.dataset.d);}
 
@@ -723,7 +733,6 @@ const LevantamentoFachada = (() => {
     const el=document.getElementById('cx-'+i);
     if(!el)return;
 
-    // Posição inicial da caixa
     const startLeft=parseInt(el.style.left)||0;
     const startTop=parseInt(el.style.top)||0;
     const startX=e.clientX;
@@ -731,6 +740,9 @@ const LevantamentoFachada = (() => {
 
     el.style.cursor='grabbing';
     el.style.zIndex='999';
+    // Pointer Capture: garante que move/up cheguem neste elemento
+    // mesmo se o mouse sair da janela do navegador (evita listener travado)
+    try{el.setPointerCapture(e.pointerId);}catch(err){}
 
     function move(ev){
       const dx=ev.clientX-startX;
@@ -740,8 +752,10 @@ const LevantamentoFachada = (() => {
     }
 
     async function up(ev){
-      document.removeEventListener('mousemove',move);
-      document.removeEventListener('mouseup',up);
+      el.removeEventListener('pointermove',move);
+      el.removeEventListener('pointerup',up);
+      el.removeEventListener('pointercancel',up);
+      try{el.releasePointerCapture(e.pointerId);}catch(err){}
       el.style.cursor='grab';
       el.style.zIndex='20';
       const dx=ev.clientX-startX;
@@ -754,20 +768,24 @@ const LevantamentoFachada = (() => {
       }
     }
 
-    document.addEventListener('mousemove',move);
-    document.addEventListener('mouseup',up);
+    el.addEventListener('pointermove',move);
+    el.addEventListener('pointerup',up);
+    el.addEventListener('pointercancel',up);
   }
 
   function cxResize(e,i,dir){
     e.preventDefault();e.stopPropagation();
     const el=document.getElementById('cx-'+i);if(!el)return;
+    const handle=e.currentTarget||el;
     const sx=e.clientX,sy=e.clientY,sw=el.offsetWidth,sh=el.offsetHeight;
+    try{handle.setPointerCapture(e.pointerId);}catch(err){}
     const move=ev=>{
       if(dir==='se'||dir==='e')el.style.width=Math.max(160,sw+(ev.clientX-sx))+'px';
       if(dir==='se'||dir==='s')el.style.height=Math.max(80,sh+(ev.clientY-sy))+'px';
     };
     const up=async ev=>{
-      document.removeEventListener('mousemove',move);document.removeEventListener('mouseup',up);
+      handle.removeEventListener('pointermove',move);handle.removeEventListener('pointerup',up);handle.removeEventListener('pointercancel',up);
+      try{handle.releasePointerCapture(e.pointerId);}catch(err){}
       const data=_getMapData();
       if(data.caixas[i]){
         if(dir==='se'||dir==='e')data.caixas[i].w=Math.max(160,sw+(ev.clientX-sx));
@@ -775,7 +793,7 @@ const LevantamentoFachada = (() => {
         await _saveMapData(data);
       }
     };
-    document.addEventListener('mousemove',move);document.addEventListener('mouseup',up);
+    handle.addEventListener('pointermove',move);handle.addEventListener('pointerup',up);handle.addEventListener('pointercancel',up);
   }
   function cxResizeEv(e){const el=e.currentTarget;cxResize(e,parseInt(el.dataset.i),el.dataset.d);}
 

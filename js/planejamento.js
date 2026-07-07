@@ -113,7 +113,7 @@ const Planejamento = (() => {
         ondragstart="Planejamento._colDragStart(event,'${id}')"
         ondragover="event.preventDefault()"
         ondrop="Planejamento._colDrop(event,'${id}')"
-        title="Arraste para reordenar · Clique direito para esconder">${COL_LABELS[id]||id}${id!=='nome'&&!COL_FIXED.has(id)?'<div onmousedown="Planejamento._colResizeStart(event,\''+id+'\')" style="position:absolute;right:0;top:0;bottom:0;width:4px;cursor:col-resize;"></div>':''}</div>`;
+        title="Arraste para reordenar · Clique direito para esconder">${COL_LABELS[id]||id}${id!=='nome'&&!COL_FIXED.has(id)?'<div onpointerdown="Planejamento._colResizeStart(event,\''+id+'\')" style="position:absolute;right:0;top:0;bottom:0;width:4px;cursor:col-resize;"></div>':''}</div>`;
     }).join('');
 
     // Datas header gantt
@@ -129,7 +129,7 @@ const Planejamento = (() => {
           <div style="height:${totalH}px;position:relative;min-width:${_totalColWidth(visCols)}px;" id="g-esq-v"></div>
         </div>
       </div>
-      ${ganttVisible?`<div id="g-div" style="width:4px;background:var(--cor-primaria);cursor:col-resize;flex-shrink:0;opacity:.7;" onmousedown="Planejamento._divStart(event)"></div>
+      ${ganttVisible?`<div id="g-div" style="width:4px;background:var(--cor-primaria);cursor:col-resize;flex-shrink:0;opacity:.7;" onpointerdown="Planejamento._divStart(event)"></div>
       <div id="g-dir" style="flex:1;min-width:0;background:#0d0d0d;display:flex;flex-direction:column;overflow:hidden;">
         <div style="height:26px;background:#0a0a0a;border-bottom:1px solid #222;overflow:hidden;flex-shrink:0;" id="g-hdr-d">
           <div style="width:${W}px;height:100%;position:relative;">${hDatas}</div>
@@ -448,30 +448,38 @@ const Planejamento = (() => {
   // ===================== COLUMN RESIZE =====================
   function _colResizeStart(e, colId){
     e.preventDefault();e.stopPropagation();
+    const handle=e.currentTarget;
     const sx=e.clientX, sw=colLarguras[colId]||60;
-    
-    // Overlay captura todos os eventos de mouse
-    const ov=document.createElement('div');
-    ov.style.cssText='position:fixed;inset:0;z-index:9999;cursor:col-resize;';
-    document.body.appendChild(ov);
-    
-    // Linha guia visual
+
+    // Pointer Capture: garante que move/up cheguem neste elemento
+    // mesmo se o mouse sair da janela do navegador (evita drag travado)
+    try{handle.setPointerCapture(e.pointerId);}catch(err){}
+    document.body.style.cursor='col-resize';
+
+    // Linha guia visual (puramente visual, não captura eventos)
     const line=document.createElement('div');
     line.style.cssText='position:fixed;top:0;bottom:0;width:2px;background:var(--cor-primaria);z-index:10000;pointer-events:none;left:'+e.clientX+'px';
     document.body.appendChild(line);
-    
-    ov.onmousemove=ev=>{
+
+    const move=ev=>{
       const newW=Math.max(30,sw+(ev.clientX-sx));
       colLarguras[colId]=newW;
       line.style.left=ev.clientX+'px';
-      // Atualiza header em tempo real
       const hdr=document.querySelector('[data-hcol="'+colId+'"]');
       if(hdr)hdr.style.width=newW+'px';
     };
-    ov.onmouseup=()=>{
-      ov.remove();line.remove();
+    const up=()=>{
+      handle.removeEventListener('pointermove',move);
+      handle.removeEventListener('pointerup',up);
+      handle.removeEventListener('pointercancel',up);
+      try{handle.releasePointerCapture(e.pointerId);}catch(err){}
+      document.body.style.cursor='';
+      line.remove();
       _render();requestAnimationFrame(()=>_paintRows());
     };
+    handle.addEventListener('pointermove',move);
+    handle.addEventListener('pointerup',up);
+    handle.addEventListener('pointercancel',up);
   }
 
   // ===================== COLUMN DRAG REORDER =====================
@@ -509,15 +517,25 @@ const Planejamento = (() => {
 
   // ===================== DIVIDER =====================
   function _divStart(e){
-    e.preventDefault();const sx=e.clientX,sw=splitX;
+    e.preventDefault();
+    const handle=e.currentTarget;
+    const sx=e.clientX,sw=splitX;
     const container=document.getElementById('gantt-c');
     const maxW=container?container.clientWidth-80:1600;
+    try{handle.setPointerCapture(e.pointerId);}catch(err){}
     const move=ev=>{
       splitX=Math.max(60,Math.min(maxW,sw+(ev.clientX-sx)));
       const el=document.getElementById('g-esq');if(el)el.style.width=splitX+'px';
     };
-    const up=()=>{document.removeEventListener('mousemove',move);document.removeEventListener('mouseup',up);};
-    document.addEventListener('mousemove',move);document.addEventListener('mouseup',up);
+    const up=()=>{
+      handle.removeEventListener('pointermove',move);
+      handle.removeEventListener('pointerup',up);
+      handle.removeEventListener('pointercancel',up);
+      try{handle.releasePointerCapture(e.pointerId);}catch(err){}
+    };
+    handle.addEventListener('pointermove',move);
+    handle.addEventListener('pointerup',up);
+    handle.addEventListener('pointercancel',up);
   }
 
   // ===================== HIERARCHY =====================
