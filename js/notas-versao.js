@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.0.7',
+  versaoAtual: 'V2.0.8',
 
   versoes: [
     {
@@ -696,7 +696,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.0.7',
-      status: 'aberta',
+      status: 'fechada',
       data: '2025-07-06',
       tipo: 'correcao',
       titulo: 'CRÍTICO: funções faltando no return corrigidas',
@@ -706,6 +706,26 @@ const NotasVersao = {
         '  → Estava referenciada no menu mas não definida',
         '  → IIFE falhava → módulo undefined → usuário bugava',
         'Verificação: todas as 30 funções do return confirmadas',
+      ]
+    },
+    {
+      versao: 'V2.0.8',
+      status: 'aberta',
+      data: '2025-07-06',
+      tipo: 'correcao',
+      titulo: 'Divisor independente, resize colunas, PNG confiável',
+      itens: [
+        'DIVISOR: tabela tem min-width fixo e overflow:hidden',
+        '  → Arrastar o divisor CORTA a tabela (não encolhe colunas)',
+        '  → Colunas mantêm largura original, conteúdo é clipado',
+        'RESIZE COLUNAS: handle de 8px com borda amarela visível ao hover',
+        '  → Posição right:-3px para facilitar o clique',
+        '  → stopPropagation evita conflito com outros eventos',
+        'PNG: captura a tela como está (sem expandir)',
+        '  → Usa toBlob em vez de toDataURL (mais confiável)',
+        '  → Scale 2x para qualidade boa',
+        '  → Sem expandir container (evita canvas gigante corrompido)',
+        '30/30 funções do return verificadas',
       ]
     }
   ],

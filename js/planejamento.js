@@ -122,9 +122,11 @@ const Planejamento = (() => {
 
     return`<div id="gantt-c" style="display:flex;border:1px solid #222;border-radius:6px;overflow:hidden;height:calc(100vh - 200px);min-height:300px;">
       <div id="g-esq" style="width:${ganttVisible?splitX+'px':'100%'};flex-shrink:${ganttVisible?'0':'1'};background:#111;display:flex;flex-direction:column;overflow:hidden;${ganttVisible?'':'flex:1;'}">
-        <div style="height:26px;background:#0d0d0d;border-bottom:1px solid #222;display:flex;align-items:center;flex-shrink:0;">${hdr}</div>
-        <div id="g-esq-s" style="overflow:auto;flex:1;" onscroll="Planejamento._sync(this)">
-          <div style="height:${totalH}px;position:relative;" id="g-esq-v"></div>
+        <div style="height:26px;background:#0d0d0d;border-bottom:1px solid #222;display:flex;align-items:center;flex-shrink:0;overflow:hidden;">
+          <div style="display:flex;align-items:center;min-width:${_totalColWidth(visCols)}px;height:100%;">${hdr}</div>
+        </div>
+        <div id="g-esq-s" style="overflow-y:auto;overflow-x:hidden;flex:1;" onscroll="Planejamento._sync(this)">
+          <div style="height:${totalH}px;position:relative;min-width:${_totalColWidth(visCols)}px;" id="g-esq-v"></div>
         </div>
       </div>
       ${ganttVisible?`<div id="g-div" style="width:4px;background:var(--cor-primaria);cursor:col-resize;flex-shrink:0;opacity:.7;" onmousedown="Planejamento._divStart(event)"></div>
@@ -731,85 +733,35 @@ const Planejamento = (() => {
     const container=document.getElementById('gantt-c');
     if(!container){Utils.toast('Abra o Gantt primeiro.','alerta');return;}
     try{
-      Utils.mostrarLoading('Gerando imagem completa...');
+      Utils.mostrarLoading('Gerando imagem...');
       if(typeof html2canvas==='undefined')await _ls('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
-      // Temporarily expand to show all content
-      const esqS=document.getElementById('g-esq-s');
-      const dirS=document.getElementById('g-dir-s');
-      const oldEH=esqS?.style.height, oldDH=dirS?.style.height;
-      const oldCH=container.style.height;
-      const totalH=filtradas.length*ROW_H+30;
-      container.style.height=totalH+'px';
-      if(esqS){esqS.style.height=totalH+'px';esqS.style.overflow='visible';}
-      if(dirS){dirS.style.height=totalH+'px';dirS.style.overflow='visible';}
-      // Force paint all rows
-      const origSt=esqS?.scrollTop||0;
-      if(esqS)esqS.scrollTop=0;
-      // Paint all rows (not just viewport)
-      const ev=document.getElementById('g-esq-v');
-      const dv=document.getElementById('g-dir-v');
-      // Save and restore after screenshot
-      _paintAllRows();
-      await new Promise(r=>setTimeout(r,200));
-      const canvas=await html2canvas(container,{backgroundColor:'#0d0d0d',scale:1,logging:false,windowHeight:Math.min(totalH+100,8000),height:Math.min(totalH+100,8000)});
-      // Restore
-      container.style.height=oldCH||'';
-      if(esqS){esqS.style.height=oldEH||'';esqS.style.overflow='auto';esqS.scrollTop=origSt;}
-      if(dirS){dirS.style.height=oldDH||'';dirS.style.overflow='auto';}
-      _paintRows();
-      const link=document.createElement('a');link.download=`gantt_${new Date().toISOString().split('T')[0]}.png`;
-      link.href=canvas.toDataURL('image/png');link.click();
-      Utils.toast('Gantt exportado como PNG!','sucesso');
-    }catch(e){Utils.toast('Erro: '+e.message,'erro');}finally{Utils.esconderLoading();}
-  }
-  function _paintAllRows(){
-    // Paint ALL rows for PNG export
-    const visCols=colOrdem.filter(id=>!colsHidden.has(id));
-    // Same as _paintRows but with s=0, e=filtradas.length
-    const orig_s=0, orig_e=filtradas.length;
-    // Reuse _paintRows logic by temporarily changing viewport
-    const ev=document.getElementById('g-esq-v');
-    const dv=document.getElementById('g-dir-v');
-    // Just call with full range - simplify
-    const hoje=new Date();
-    const datas=filtradas.flatMap(t=>[t.inicioPlanejado,t.terminoPlanejado].filter(Boolean).map(d=>new Date(d)));
-    const dMin=datas.length?new Date(Math.min(...datas)):new Date(hoje.getTime()-30*864e5);
-    dMin.setDate(dMin.getDate()-5);
-    const lpd={dia:32,semana:8,mes:3,trimestre:1.2,ano:0.4}[zoomGantt]||3;
-    let rH='',bH='';
-    for(let i=0;i<filtradas.length;i++){
-      const t=filtradas[i],y=i*ROW_H;
-      const st2=_status(t),perc=_perc(t),isG=t.tipo==='grupo';
-      let cells='';
-      for(const cid of visCols){
-        const w=cid==='nome'?'flex:1;min-width:150px;':`width:${colLarguras[cid]||60}px;flex-shrink:0;`;
-        const base=`${w}overflow:hidden;white-space:nowrap;text-overflow:ellipsis;padding:0 4px;font-size:.78rem;height:100%;display:flex;align-items:center;`;
-        if(cid==='num')cells+=`<div style="${base}color:#444;font-size:.65rem;justify-content:center;">${i+1}</div>`;
-        else if(cid==='nivel')cells+=`<div style="${base}color:#666;font-size:.68rem;justify-content:center;">${t.nivel||0}</div>`;
-        else if(cid==='codigo')cells+=`<div style="${base}color:#555;font-size:.7rem;">${t.codigo||''}</div>`;
-        else if(cid==='nome'){const ind=(t.nivel||0)*14;cells+=`<div style="${base}padding-left:${ind+4}px;color:${isG?'var(--cor-primaria)':'#ccc'};font-weight:${isG?700:400};">${t.nome||''}</div>`;}
-        else if(cid==='inicio')cells+=`<div style="${base}color:#666;font-size:.7rem;justify-content:center;">${_fd(t.inicioPlanejado)}</div>`;
-        else if(cid==='termino')cells+=`<div style="${base}color:#666;font-size:.7rem;justify-content:center;">${_fd(t.terminoPlanejado)}</div>`;
-        else if(cid==='duracao')cells+=`<div style="${base}color:#666;font-size:.7rem;justify-content:center;">${t.duracao||'—'}</div>`;
-        else if(cid==='percEsp')cells+=`<div style="${base}color:#555;font-size:.7rem;justify-content:center;">${t.percentualEsperado||0}%</div>`;
-        else if(cid==='percConc')cells+=`<div style="${base}font-size:.7rem;justify-content:center;color:${perc>=100?'#16a34a':perc>0?'#2563eb':'#555'};">${perc}%</div>`;
-        else if(cid==='predecessora')cells+=`<div style="${base}color:#555;font-size:.7rem;justify-content:center;">${t.predecessora||'—'}</div>`;
-        else if(cid==='responsavel')cells+=`<div style="${base}color:#555;font-size:.7rem;">${t.responsavel||'—'}</div>`;
-        else if(cid==='local')cells+=`<div style="${base}color:#555;font-size:.7rem;">${t.local||'—'}</div>`;
-        else if(cid==='grupo')cells+=`<div style="${base}color:#555;font-size:.7rem;">${t.grupo||'—'}</div>`;
-        else if(cid==='acoes')cells+=`<div style="${base}"></div>`;
-      }
-      rH+=`<div style="position:absolute;top:${y}px;left:0;right:0;height:${ROW_H}px;display:flex;align-items:center;border-bottom:1px solid #1a1a1a;">${cells}</div>`;
-      if(ganttVisible&&t.inicioPlanejado&&t.terminoPlanejado){
-        const bx=Math.round((new Date(t.inicioPlanejado)-dMin)/864e5*lpd);
-        const bw=Math.max(4,Math.round((new Date(t.terminoPlanejado)-new Date(t.inicioPlanejado))/864e5*lpd));
-        const cor={nao_iniciado:'#333',em_andamento:'#1d4ed8',concluido:'#15803d',atrasado:'#dc2626'}[st2]||'#333';
-        if(isG)bH+=`<div style="position:absolute;left:${bx}px;top:${y+13}px;width:${bw}px;height:5px;background:var(--cor-primaria);"></div>`;
-        else bH+=`<div style="position:absolute;left:${bx}px;top:${y+5}px;width:${bw}px;height:20px;background:${cor};border-radius:3px;overflow:hidden;"><div style="height:100%;width:${perc}%;background:rgba(255,255,255,.25);"></div></div>`;
-      }
-    }
-    if(ev)ev.innerHTML=rH;
-    if(dv)dv.innerHTML=bH;
+      
+      // Captura a tela COMO ESTÁ (sem expandir — mais confiável)
+      const canvas=await html2canvas(container,{
+        backgroundColor:'#0d0d0d',
+        scale:2,
+        logging:false,
+        useCORS:true,
+        allowTaint:true,
+      });
+      
+      // Converter para blob e baixar
+      canvas.toBlob(blob=>{
+        if(!blob){Utils.toast('Erro ao gerar imagem.','erro');return;}
+        const url=URL.createObjectURL(blob);
+        const link=document.createElement('a');
+        link.download='gantt_'+new Date().toISOString().split('T')[0]+'.png';
+        link.href=url;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        Utils.toast('PNG exportado!','sucesso');
+      },'image/png');
+    }catch(e){
+      console.error('Erro PNG:',e);
+      Utils.toast('Erro ao gerar: '+e.message,'erro');
+    }finally{Utils.esconderLoading();}
   }
 
   // ===================== HELPERS =====================
