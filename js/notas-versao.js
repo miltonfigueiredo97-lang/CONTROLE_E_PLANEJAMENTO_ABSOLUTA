@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.0.5',
+  versaoAtual: 'V2.0.6',
 
   versoes: [
     {
@@ -654,7 +654,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.0.5',
-      status: 'aberta',
+      status: 'fechada',
       data: '2025-07-06',
       tipo: 'correcao',
       titulo: 'Resize/reorder colunas corrigidos, predecessora popup, PNG intervalo',
@@ -672,6 +672,26 @@ const NotasVersao = {
         'PNG: popup pede intervalo (início/fim)',
         '  → Datas pré-preenchidas com período do projeto',
         '  → Gera PNG completo no intervalo selecionado',
+      ]
+    },
+    {
+      versao: 'V2.0.6',
+      status: 'aberta',
+      data: '2025-07-06',
+      tipo: 'correcao',
+      titulo: 'Resize colunas, reordenar, predecessora, PNG corrigidos',
+      itens: [
+        'RESIZE COLUNAS: overlay + linha guia amarela',
+        '  → Removido HTML5 drag API (conflitava com resize)',
+        '  → Handle na borda direita fica amarelo ao hover',
+        '  → Overlay captura mouse, linha guia mostra posição',
+        'REORDENAR COLUNAS: via menu (clique direito no header)',
+        '  → Opções: ◀ Mover esquerda, Mover direita ▶, ✕ Esconder',
+        '  → Removido drag&drop que não funcionava',
+        'PREDECESSORA: console.log adicionado para debug',
+        '  → Clique abre popup com preview em tempo real',
+        'PNG: scale reduzido para 1x e altura limitada a 8000px',
+        '  → Evita arquivo corrompido por canvas muito grande',
       ]
     }
   ],

@@ -447,56 +447,45 @@ const Planejamento = (() => {
   function _colResizeStart(e, colId){
     e.preventDefault();e.stopPropagation();
     const sx=e.clientX, sw=colLarguras[colId]||60;
-    // Desativa drag enquanto resize
-    document.querySelectorAll('[data-hcol]').forEach(h=>h.draggable=false);
-    document.body.style.cursor='col-resize';
-    document.body.style.userSelect='none';
     
-    const overlay=document.createElement('div');
-    overlay.style.cssText='position:fixed;inset:0;z-index:9999;cursor:col-resize;';
-    document.body.appendChild(overlay);
+    // Overlay captura todos os eventos de mouse
+    const ov=document.createElement('div');
+    ov.style.cssText='position:fixed;inset:0;z-index:9999;cursor:col-resize;';
+    document.body.appendChild(ov);
     
-    const move=ev=>{
+    // Linha guia visual
+    const line=document.createElement('div');
+    line.style.cssText='position:fixed;top:0;bottom:0;width:2px;background:var(--cor-primaria);z-index:10000;pointer-events:none;left:'+e.clientX+'px';
+    document.body.appendChild(line);
+    
+    ov.onmousemove=ev=>{
       const newW=Math.max(30,sw+(ev.clientX-sx));
       colLarguras[colId]=newW;
-      // Atualiza todos os elementos desta coluna no DOM direto
+      line.style.left=ev.clientX+'px';
+      // Atualiza header em tempo real
       const hdr=document.querySelector('[data-hcol="'+colId+'"]');
       if(hdr)hdr.style.width=newW+'px';
     };
-    const up=()=>{
-      document.removeEventListener('mousemove',move);
-      document.removeEventListener('mouseup',up);
-      overlay.remove();
-      document.body.style.cursor='';
-      document.body.style.userSelect='';
+    ov.onmouseup=()=>{
+      ov.remove();line.remove();
       _render();requestAnimationFrame(()=>_paintRows());
     };
-    document.addEventListener('mousemove',move);
-    document.addEventListener('mouseup',up);
   }
 
   // ===================== COLUMN DRAG REORDER =====================
-  let _dragColId=null;
-  function _colDragStart(e, colId){
-    if(COL_FIXED.has(colId)){e.preventDefault();return;}
-    _dragColId=colId;
-    e.dataTransfer.effectAllowed='move';
-    e.dataTransfer.setData('text/plain',colId);
-    e.currentTarget.style.opacity='0.5';
-    setTimeout(()=>{if(e.target)e.target.style.opacity='';},300);
+  // Reordenar colunas via menu de contexto (clique direito)
+  // O hideCol já usa oncontextmenu — vamos usar Shift+click direito para reordenar
+  function moveColLeft(colId){
+    const i=colOrdem.indexOf(colId);if(i<=0)return;
+    // Não mover antes de uma fixa
+    if(COL_FIXED.has(colOrdem[i-1]))return;
+    [colOrdem[i-1],colOrdem[i]]=[colOrdem[i],colOrdem[i-1]];
+    _render();requestAnimationFrame(()=>_paintRows());
   }
-  function _colDrop(e, targetId){
-    e.preventDefault();
-    if(!_dragColId||_dragColId===targetId)return;
-    // Pode soltar em qualquer coluna, inclusive fixa (insere ao lado)
-    const from=colOrdem.indexOf(_dragColId);
-    let to=colOrdem.indexOf(targetId);
-    if(from<0||to<0)return;
-    colOrdem.splice(from,1);
-    // Recalcula posição pois splice mudou os índices
-    to=colOrdem.indexOf(targetId);
-    colOrdem.splice(to+1,0,_dragColId);
-    _dragColId=null;
+  function moveColRight(colId){
+    const i=colOrdem.indexOf(colId);if(i<0||i>=colOrdem.length-1)return;
+    if(COL_FIXED.has(colOrdem[i+1]))return;
+    [colOrdem[i],colOrdem[i+1]]=[colOrdem[i+1],colOrdem[i]];
     _render();requestAnimationFrame(()=>_paintRows());
   }
 
@@ -762,7 +751,7 @@ const Planejamento = (() => {
       // Save and restore after screenshot
       _paintAllRows();
       await new Promise(r=>setTimeout(r,200));
-      const canvas=await html2canvas(container,{backgroundColor:'#0d0d0d',scale:1.5,logging:false,windowHeight:totalH+100});
+      const canvas=await html2canvas(container,{backgroundColor:'#0d0d0d',scale:1,logging:false,windowHeight:Math.min(totalH+100,8000),height:Math.min(totalH+100,8000)});
       // Restore
       container.style.height=oldCH||'';
       if(esqS){esqS.style.height=oldEH||'';esqS.style.overflow='auto';esqS.scrollTop=origSt;}
@@ -839,8 +828,9 @@ const Planejamento = (() => {
   function _ls(src){return new Promise((r,j)=>{const s=document.createElement('script');s.src=src;s.onload=r;s.onerror=j;document.head.appendChild(s);});}
   function setZoom(z){zoomGantt=z;_render();}
 
-  // Popup de predecessora (double-click)
+  // Popup de predecessora
   function _predPopup(idx){
+    console.log('_predPopup chamado, idx=',idx);
     const t=filtradas[idx];if(!t)return;
     let pop=document.getElementById('pred-pop');if(pop)pop.remove();
     pop=document.createElement('div');pop.id='pred-pop';
@@ -928,7 +918,7 @@ const Planejamento = (() => {
   return{init,carregar,setZoom,insertTarefa:inserirTarefa,inserirTarefa,editarTarefa,salvarTarefa,excluirTarefa,
     selectIdx,toggleRecolher,recuarNivel,avancarNivel,
     toggleGantt,hideCol,showColsMenu,_showCol,_showAll,
-    _colResizeStart,_colDragStart,_colDrop,_divStart,_sync,_editCell,
+    _colResizeStart,moveColLeft,moveColRight,_hideCol,_divStart,_sync,_editCell,
     importarExcel,exportar,exportarPNG,_gerarPNG,_predPopup,_predPreview,_predSalvar};
 })();
 function onObraChanged(){Planejamento.init();}
