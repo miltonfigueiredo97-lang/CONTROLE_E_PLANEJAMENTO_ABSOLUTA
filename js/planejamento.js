@@ -113,14 +113,17 @@ const Planejamento = (() => {
         ondragstart="Planejamento._colDragStart(event,'${id}')"
         ondragover="event.preventDefault()"
         ondrop="Planejamento._colDrop(event,'${id}')"
-        title="Arraste para reordenar · Clique direito para esconder">${COL_LABELS[id]||id}${id!=='nome'&&!COL_FIXED.has(id)?'<div onmousedown="Planejamento._colResizeStart(event,\''+id+'\')" style="position:absolute;right:0;top:0;bottom:0;width:4px;cursor:col-resize;"></div>':''}</div>`;
+        ontouchstart="Planejamento._colTouchStart(event,'${id}')"
+        ontouchend="Planejamento._colTouchEnd()"
+        ontouchmove="Planejamento._colTouchEnd()"
+        title="Arraste para reordenar · Clique direito para esconder · Toque longo no celular">${COL_LABELS[id]||id}${id!=='nome'&&!COL_FIXED.has(id)?'<div onmousedown="Planejamento._colResizeStart(event,\''+id+'\')" ontouchstart="Planejamento._colResizeStart(event,\''+id+'\')" style="position:absolute;right:0;top:0;bottom:0;width:10px;cursor:col-resize;touch-action:none;"></div>':''}</div>`;
     }).join('');
 
     // Datas header gantt
     const hDatas=_buildDateHeader(dMin,dMax,lpd,W);
     const hojeX=Math.round((hoje-dMin)/864e5*lpd);
 
-    return`<div id="gantt-c" style="display:flex;border:1px solid #222;border-radius:6px;overflow:hidden;height:calc(100vh - 200px);min-height:300px;">
+    return`<div id="gantt-c" style="display:flex;border:1px solid #222;border-radius:6px;overflow:hidden;height:calc(100dvh - 200px);min-height:300px;">
       <div id="g-esq" style="width:${ganttVisible?splitX+'px':'100%'};flex-shrink:${ganttVisible?'0':'1'};background:#111;display:flex;flex-direction:column;overflow:hidden;${ganttVisible?'':'flex:1;'}">
         <div style="height:26px;background:#0d0d0d;border-bottom:1px solid #222;display:flex;align-items:center;flex-shrink:0;overflow:hidden;">
           <div style="display:flex;align-items:center;min-width:${_totalColWidth(visCols)}px;height:100%;">${hdr}</div>
@@ -129,7 +132,7 @@ const Planejamento = (() => {
           <div style="height:${totalH}px;position:relative;min-width:${_totalColWidth(visCols)}px;" id="g-esq-v"></div>
         </div>
       </div>
-      ${ganttVisible?`<div id="g-div" style="width:4px;background:var(--cor-primaria);cursor:col-resize;flex-shrink:0;opacity:.7;" onmousedown="Planejamento._divStart(event)"></div>
+      ${ganttVisible?`<div id="g-div" style="width:4px;background:var(--cor-primaria);cursor:col-resize;flex-shrink:0;opacity:.7;" onmousedown="Planejamento._divStart(event)" ontouchstart="Planejamento._divStart(event)"></div>
       <div id="g-dir" style="flex:1;min-width:0;background:#0d0d0d;display:flex;flex-direction:column;overflow:hidden;">
         <div style="height:26px;background:#0a0a0a;border-bottom:1px solid #222;overflow:hidden;flex-shrink:0;" id="g-hdr-d">
           <div style="width:${W}px;height:100%;position:relative;">${hDatas}</div>
@@ -448,30 +451,78 @@ const Planejamento = (() => {
   // ===================== COLUMN RESIZE =====================
   function _colResizeStart(e, colId){
     e.preventDefault();e.stopPropagation();
-    const sx=e.clientX, sw=colLarguras[colId]||60;
+    const startX=(e.touches?e.touches[0].clientX:e.clientX);
+    const sx=startX, sw=colLarguras[colId]||60;
     
-    // Overlay captura todos os eventos de mouse
+    // Overlay captura todos os eventos de mouse/toque
     const ov=document.createElement('div');
-    ov.style.cssText='position:fixed;inset:0;z-index:9999;cursor:col-resize;';
+    ov.style.cssText='position:fixed;inset:0;z-index:9999;cursor:col-resize;touch-action:none;';
     document.body.appendChild(ov);
     
     // Linha guia visual
     const line=document.createElement('div');
-    line.style.cssText='position:fixed;top:0;bottom:0;width:2px;background:var(--cor-primaria);z-index:10000;pointer-events:none;left:'+e.clientX+'px';
+    line.style.cssText='position:fixed;top:0;bottom:0;width:2px;background:var(--cor-primaria);z-index:10000;pointer-events:none;left:'+startX+'px';
     document.body.appendChild(line);
     
-    ov.onmousemove=ev=>{
-      const newW=Math.max(30,sw+(ev.clientX-sx));
+    const doMove=cx=>{
+      const newW=Math.max(30,sw+(cx-sx));
       colLarguras[colId]=newW;
-      line.style.left=ev.clientX+'px';
+      line.style.left=cx+'px';
       // Atualiza header em tempo real
       const hdr=document.querySelector('[data-hcol="'+colId+'"]');
       if(hdr)hdr.style.width=newW+'px';
     };
-    ov.onmouseup=()=>{
+    const finish=()=>{
       ov.remove();line.remove();
       _render();requestAnimationFrame(()=>_paintRows());
     };
+    ov.onmousemove=ev=>doMove(ev.clientX);
+    ov.onmouseup=finish;
+    ov.addEventListener('touchmove',ev=>{ev.preventDefault();doMove(ev.touches[0].clientX);},{passive:false});
+    ov.addEventListener('touchend',finish);
+  }
+
+  // ===================== COLUMN DRAG (desktop) =====================
+  // BUGFIX: eram chamadas no HTML do header mas nunca haviam sido definidas
+  let _colDragId=null;
+  function _colDragStart(e,colId){
+    if(COL_FIXED.has(colId)){e.preventDefault();return;}
+    _colDragId=colId;
+    if(e.dataTransfer){e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',colId);}
+  }
+  function _colDrop(e,targetId){
+    e.preventDefault();
+    const src=_colDragId;_colDragId=null;
+    if(!src||src===targetId||COL_FIXED.has(targetId))return;
+    const i=colOrdem.indexOf(src),j=colOrdem.indexOf(targetId);
+    if(i<0||j<0)return;
+    colOrdem.splice(i,1);
+    colOrdem.splice(j,0,src);
+    _render();requestAnimationFrame(()=>_paintRows());
+  }
+
+  // ===================== COLUMN TOUCH (long-press mobile) =====================
+  let _colLPTimer=null;
+  function _colTouchStart(e,colId){
+    _colTouchEnd(); // limpa timer anterior
+    _colLPTimer=setTimeout(()=>{_colMenuMobile(colId);},500);
+  }
+  function _colTouchEnd(){
+    if(_colLPTimer){clearTimeout(_colLPTimer);_colLPTimer=null;}
+  }
+  function _colMenuMobile(colId){
+    const old=document.getElementById('col-pop-m');if(old)old.remove();
+    const pop=document.createElement('div');pop.id='col-pop-m';
+    pop.style.cssText='position:fixed;bottom:0;left:0;right:0;background:#1a1a1a;border-top:2px solid var(--cor-primaria);border-radius:14px 14px 0 0;padding:14px;z-index:9500;box-shadow:0 -8px 32px rgba(0,0,0,.6);';
+    const podeEsconder=!COL_FIXED.has(colId);
+    pop.innerHTML='<div style="font-weight:700;color:var(--cor-primaria);margin-bottom:10px;font-size:.85rem;">Coluna: '+(COL_LABELS[colId]||colId)+'</div>'+
+      '<div style="display:flex;flex-direction:column;gap:6px;">'+
+      (podeEsconder?'<button class="btn btn-secundario" style="width:100%;" onclick="Planejamento.hideCol(\''+colId+'\');document.getElementById(\'col-pop-m\').remove()">👁 Esconder coluna</button>':'')+
+      '<button class="btn btn-secundario" style="width:100%;" onclick="Planejamento.moveColLeft(\''+colId+'\');document.getElementById(\'col-pop-m\')?.remove()">← Mover para esquerda</button>'+
+      '<button class="btn btn-secundario" style="width:100%;" onclick="Planejamento.moveColRight(\''+colId+'\');document.getElementById(\'col-pop-m\')?.remove()">Mover para direita →</button>'+
+      '<button class="btn btn-primario" style="width:100%;" onclick="document.getElementById(\'col-pop-m\').remove()">Fechar</button>'+
+      '</div>';
+    document.body.appendChild(pop);
   }
 
   // ===================== COLUMN DRAG REORDER =====================
@@ -509,15 +560,21 @@ const Planejamento = (() => {
 
   // ===================== DIVIDER =====================
   function _divStart(e){
-    e.preventDefault();const sx=e.clientX,sw=splitX;
+    e.preventDefault();
+    const sx=(e.touches?e.touches[0].clientX:e.clientX),sw=splitX;
     const container=document.getElementById('gantt-c');
     const maxW=container?container.clientWidth-80:1600;
     const move=ev=>{
-      splitX=Math.max(60,Math.min(maxW,sw+(ev.clientX-sx)));
+      const cx=(ev.touches?ev.touches[0].clientX:ev.clientX);
+      splitX=Math.max(60,Math.min(maxW,sw+(cx-sx)));
       const el=document.getElementById('g-esq');if(el)el.style.width=splitX+'px';
     };
-    const up=()=>{document.removeEventListener('mousemove',move);document.removeEventListener('mouseup',up);};
+    const up=()=>{
+      document.removeEventListener('mousemove',move);document.removeEventListener('mouseup',up);
+      document.removeEventListener('touchmove',move);document.removeEventListener('touchend',up);
+    };
     document.addEventListener('mousemove',move);document.addEventListener('mouseup',up);
+    document.addEventListener('touchmove',move,{passive:false});document.addEventListener('touchend',up);
   }
 
   // ===================== HIERARCHY =====================
@@ -880,6 +937,7 @@ const Planejamento = (() => {
     selectIdx,toggleRecolher,recuarNivel,avancarNivel,
     toggleGantt,hideCol,showColsMenu,_showCol,_showAll,
     _colResizeStart,moveColLeft,moveColRight,_hideCol,_divStart,_sync,_editCell,
+    _colTouchStart,_colTouchEnd,_colDragStart,_colDrop,
     importarExcel,exportar,exportarPNG,_gerarPNG,_predPopup,_predPreview,_predSalvar};
 })();
 function onObraChanged(){Planejamento.init();}

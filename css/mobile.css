@@ -1,0 +1,227 @@
+/* ============================================
+   MOBILE — Versão responsiva Absoluta
+   Aplica-se a telas <= 900px (celular/tablet)
+   Tudo que existe no desktop funciona aqui,
+   apenas reformatado para a tela do celular.
+   ============================================ */
+
+/* Botão hambúrguer e overlay — escondidos no desktop */
+.btn-menu-mobile { display: none; }
+.sidebar-overlay { display: none; }
+
+@media (max-width: 900px) {
+
+  /* ---- ESTRUTURA GERAL ---- */
+  html, body { height: 100%; }
+  .app-container {
+    display: grid;
+    grid-template-columns: 1fr;          /* sidebar sai do grid */
+    grid-template-rows: 54px 1fr;
+    height: 100dvh;                       /* corrige barra do navegador iOS/Android */
+    overflow: hidden;
+  }
+
+  /* ---- SIDEBAR vira gaveta (drawer) ---- */
+  .sidebar {
+    position: fixed;
+    top: 0; left: 0;
+    width: 272px;
+    max-width: 82vw;
+    height: 100dvh;
+    z-index: 1200;
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+    box-shadow: 4px 0 24px rgba(0,0,0,0.5);
+    grid-row: auto;
+  }
+  .sidebar.mobile-aberta { transform: translateX(0); }
+
+  /* Overlay escuro atrás da gaveta */
+  .sidebar-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.55);
+    z-index: 1100;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.25s ease, visibility 0.25s;
+  }
+  .sidebar-overlay.ativo { opacity: 1; visibility: visible; }
+
+  /* Links da nav maiores para toque */
+  .sidebar-nav a { padding: 12px 16px; font-size: 0.9rem; }
+  .sidebar-nav a .nav-icon { font-size: 1rem; width: 20px; }
+  .sidebar-obra-selector select { padding: 10px 12px; font-size: 0.9rem; }
+  .sidebar-user { padding: 12px 16px; }
+  .sidebar-user .btn-logout { padding: 8px; font-size: 1.15rem; }
+
+  /* ---- HEADER com hambúrguer ---- */
+  .btn-menu-mobile {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px; height: 40px;
+    background: transparent;
+    border: none;
+    color: var(--cor-primaria);
+    font-size: 1.5rem;
+    cursor: pointer;
+    flex-shrink: 0;
+    padding: 0;
+    margin-right: 4px;
+  }
+  .header { padding: 0 12px; gap: 8px; }
+  .header-title { gap: 8px; overflow: hidden; }
+  .header-title h1 { font-size: 0.88rem; overflow: hidden; text-overflow: ellipsis; }
+  .header-breadcrumb { display: none; }   /* breadcrumb não cabe no celular */
+  .header-actions { gap: 6px; }
+  .header-actions .btn { padding: 8px 10px; font-size: 0.75rem; }
+
+  /* ---- CONTEÚDO ---- */
+  .content {
+    padding: 12px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .page-header { flex-direction: column; align-items: stretch; gap: 8px; margin-bottom: 12px; }
+  .page-header h2 { font-size: 1rem; }
+
+  /* Cards em coluna única */
+  .cards-grid { grid-template-columns: 1fr; gap: 10px; }
+  .resumo-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 8px; }
+
+  /* Toolbar empilhada, com scroll horizontal quando necessário */
+  .toolbar { flex-direction: column; align-items: stretch; gap: 8px; }
+  .toolbar-group {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 2px;
+  }
+  .toolbar-group::-webkit-scrollbar { height: 3px; }
+
+  /* Tabs com scroll horizontal */
+  .tabs { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .tab { padding: 10px 14px; white-space: nowrap; flex-shrink: 0; }
+
+  /* ---- BOTÕES E INPUTS — alvo de toque >= 40px ---- */
+  .btn { min-height: 40px; padding: 9px 14px; font-size: 0.82rem; }
+  input, select, textarea { min-height: 40px; font-size: 16px !important; } /* 16px evita zoom automático do iOS */
+  textarea { min-height: 80px; }
+  .form-row, .form-grid { grid-template-columns: 1fr !important; display: grid; gap: 10px; }
+
+  /* ---- TABELAS — scroll horizontal suave ---- */
+  .tabela-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    max-width: 100%;
+  }
+  .tabela { font-size: 0.78rem; }
+  .tabela th { padding: 8px 10px; font-size: 0.62rem; }
+  .tabela td { padding: 8px 10px; }
+  .tabela .col-acoes .btn { min-height: 34px; padding: 5px 8px; }
+
+  /* ---- MODAIS — tela cheia ---- */
+  .modal-overlay { padding: 0; align-items: flex-end; }
+  .modal {
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: 92dvh;
+    margin: 0;
+    border-radius: 16px 16px 0 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .modal-header { position: sticky; top: 0; background: inherit; z-index: 3; padding: 14px 16px; }
+  .modal-body { padding: 8px 16px 16px; }
+  .modal-footer {
+    position: sticky; bottom: 0; background: #fff; z-index: 3;
+    padding: 12px 16px;
+    display: flex; gap: 8px;
+  }
+  .modal-footer .btn { flex: 1; }
+  .modal-close { width: 40px; height: 40px; font-size: 1.3rem; }
+
+  /* ---- LEVANTAMENTO DE FACHADA — empilha árvore + painel ---- */
+  .fachada-layout {
+    grid-template-columns: 1fr;
+    height: auto;
+    overflow: visible;
+    gap: 10px;
+  }
+  .fachada-tree { max-height: 38dvh; }
+  .fachada-painel { overflow-y: visible; }
+  .fachada-info-bar { gap: 6px; }
+  .tree-item { padding: 10px 8px; font-size: 0.85rem; }
+  /* Botões de editar/excluir sempre visíveis (não existe hover no toque) */
+  .tree-item .tree-del-btn,
+  .tree-item .tree-edit-btn { display: inline-flex; }
+
+  /* Mapa / visão geral com scroll */
+  .mapa-wrapper, .mapa-imagem-area { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .mapa-total-grid { grid-template-columns: repeat(2, 1fr) !important; }
+
+  /* ---- PLANEJAMENTO ---- */
+  .plan-header { flex-direction: column; align-items: stretch; gap: 8px; }
+  .plan-abas { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .plan-aba { white-space: nowrap; flex-shrink: 0; padding: 10px 14px; }
+  .plan-actions {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    gap: 6px;
+    padding-bottom: 2px;
+  }
+  .plan-actions .btn { flex-shrink: 0; }
+  .plan-filtros { flex-wrap: wrap; gap: 6px; }
+
+  /* Gantt: painel esquerdo reduzido + scroll horizontal por toque.
+     No celular o painel de tarefas ocupa no máx. 62vw e o restante
+     rola horizontalmente — nada é perdido, tudo acessível. */
+  .gantt-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .gantt-left {
+    width: min(520px, 62vw);
+    min-width: 200px;
+  }
+  .gantt-row { min-height: 36px; }         /* linhas mais altas p/ toque */
+  .gantt-zoom-bar { flex-wrap: wrap; gap: 6px; }
+
+  /* Escadinha e Linha de Balanço com scroll horizontal */
+  .escadinha-local { min-width: 90px; }
+  .plan-corpo { overflow-x: auto; -webkit-overflow-scrolling: touch; min-height: 300px; }
+
+  /* ---- POPUPS FLUTUANTES (predecessora, colunas etc.) ---- */
+  #sc-pop, .pop-flutuante {
+    max-width: 94vw !important;
+    max-height: 70dvh !important;
+    overflow-y: auto !important;
+    left: 3vw !important;
+    right: 3vw !important;
+  }
+
+  /* ---- CONFIGURAÇÃO DA OBRA ---- */
+  .config-section-header { flex-wrap: wrap; gap: 8px; }
+
+  /* ---- DASHBOARD ---- */
+  .stat-card { padding: 12px; }
+
+  /* ---- UTILIDADES ---- */
+  .hide-mobile { display: none !important; }
+  .estado-vazio { padding: 32px 16px; }
+}
+
+/* Telas muito pequenas (< 380px) */
+@media (max-width: 380px) {
+  .resumo-grid { grid-template-columns: 1fr !important; }
+  .header-title h1 { font-size: 0.8rem; }
+  .gantt-left { width: 58vw; }
+}
+
+/* Ajuste para tablets em pé (768–900px): 2 colunas nos cards */
+@media (min-width: 600px) and (max-width: 900px) {
+  .cards-grid { grid-template-columns: repeat(2, 1fr); }
+}
