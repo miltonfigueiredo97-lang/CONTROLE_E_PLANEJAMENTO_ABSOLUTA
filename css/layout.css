@@ -10,7 +10,7 @@ html, body { height: 100%; overflow: hidden; margin: 0; padding: 0; }
   display: grid;
   grid-template-columns: 240px 1fr;
   grid-template-rows: 54px 1fr;
-  height: 100vh;
+  height: 100dvh;
   overflow: hidden;
 }
 
@@ -20,7 +20,7 @@ html, body { height: 100%; overflow: hidden; margin: 0; padding: 0; }
   background: var(--cor-dark-900);
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  height: 100dvh;
   overflow: hidden;           /* sem scroll externo */
 }
 
@@ -257,7 +257,7 @@ html, body { height: 100%; overflow: hidden; margin: 0; padding: 0; }
 .stat-card .stat-sub { font-size: 0.78rem; color: var(--cor-texto-secundario); margin-top: 5px; }
 
 /* ---- LOGIN ---- */
-.login-page { display: flex; min-height: 100vh; background: var(--cor-dark-900); overflow: auto; }
+.login-page { display: flex; min-height: 100dvh; background: var(--cor-dark-900); overflow: auto; }
 .login-left { flex: 1; display: flex; align-items: center; justify-content: center; padding: 40px; background: linear-gradient(135deg, var(--cor-dark-900) 0%, var(--cor-dark-700) 100%); }
 .login-brand { text-align: center; }
 .login-brand img { max-width: 180px; filter: brightness(0) invert(1); margin-bottom: 20px; }
@@ -285,11 +285,55 @@ html, body { height: 100%; overflow: hidden; margin: 0; padding: 0; }
 .status-dot.marco { background: #7c3aed; }
 
 /* ---- RESPONSIVE ---- */
-@media (max-width: 768px) {
-  html, body { overflow: auto; }
-  .app-container { grid-template-columns: 1fr; grid-template-rows: 54px 1fr; }
+@media (max-width: 1024px) {
+  html, body { overflow: auto; height: 100dvh; }
+  .app-container {
+    grid-template-columns: 1fr;
+    grid-template-rows: 54px 1fr;
+    height: 100dvh;
+    overflow: hidden;
+  }
+  /* Sidebar escondida — volta visível via JS do menu hambúrguer futuramente */
   .sidebar { display: none; }
   .fachada-layout { grid-template-columns: 1fr; height: auto; }
   .login-left { display: none; }
   .login-right { width: 100%; }
+  /* Cabeçalho ocupa largura total sem a sidebar */
+  .header { grid-column: 1; }
+}
+
+/* ---- HAMBÚRGUER + GAVETA — tablet/APK (≤1024px) ---- */
+.btn-menu-tablet {
+  display: none;
+  background: none;
+  border: none;
+  color: var(--cor-primaria);
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 6px 10px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+@media (max-width: 1024px) {
+  .btn-menu-tablet { display: flex; align-items: center; }
+  .sidebar-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    z-index: 1100;
+  }
+  .sidebar-overlay.ativo { display: block; }
+  .sidebar {
+    display: flex !important;   /* sobrescreve o display:none da media query anterior */
+    position: fixed;
+    top: 0; left: 0;
+    height: 100dvh;
+    width: 260px;
+    z-index: 1200;
+    transform: translateX(-100%);
+    transition: transform 0.22s ease;
+    box-shadow: 4px 0 20px rgba(0,0,0,0.6);
+  }
+  .sidebar.aberta { transform: translateX(0); }
 }

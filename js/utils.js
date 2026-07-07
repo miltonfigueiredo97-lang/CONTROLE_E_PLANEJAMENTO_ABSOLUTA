@@ -152,3 +152,45 @@ const Utils = (() => {
     initPagina,
   };
 })();
+
+// ============================================================
+// GAVETA LATERAL — tablet/APK (≤1024px)
+// Injeta botão hambúrguer e overlay em todas as páginas.
+// No desktop não aparece (CSS oculta via display:none).
+// ============================================================
+(function initGaveta(){
+  function _abrir(){
+    document.querySelector('.sidebar')?.classList.add('aberta');
+    _ov().classList.add('ativo');
+  }
+  function _fechar(){
+    document.querySelector('.sidebar')?.classList.remove('aberta');
+    _ov().classList.remove('ativo');
+  }
+  function _ov(){
+    let ov=document.querySelector('.sidebar-overlay');
+    if(!ov){
+      ov=document.createElement('div');
+      ov.className='sidebar-overlay';
+      ov.onclick=_fechar;
+      document.querySelector('.app-container')?.appendChild(ov);
+    }
+    return ov;
+  }
+  function _setup(){
+    const header=document.querySelector('.header');
+    if(!header||header.querySelector('.btn-menu-tablet')) return;
+    const btn=document.createElement('button');
+    btn.className='btn-menu-tablet';
+    btn.setAttribute('aria-label','Menu');
+    btn.innerHTML='☰';
+    btn.onclick=_abrir;
+    header.insertBefore(btn,header.firstChild);
+    // Fecha ao clicar num link da nav
+    document.querySelectorAll('.sidebar-nav a').forEach(a=>a.addEventListener('click',_fechar));
+    // Fecha ao girar para paisagem se não for mais tablet
+    window.addEventListener('resize',()=>{if(window.innerWidth>1024)_fechar();});
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',_setup);
+  else _setup();
+})();
