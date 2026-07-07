@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.1.2',
+  versaoAtual: 'V2.1.3',
 
   versoes: [
     {
@@ -782,7 +782,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.1.2',
-      status: 'aberta',
+      status: 'fechada',
       data: '2025-07-07',
       tipo: 'correcao',
       titulo: 'CRÍTICO: relatorios.html não chamava Relatorios.init()',
@@ -791,6 +791,22 @@ const NotasVersao = {
         '  → Relatorios.init() nunca era executado',
         '  → Tela ficava travada no placeholder estático "Módulo em desenvolvimento"',
         'Corrigido para chamar Relatorios.init(), igual aos demais módulos',
+      ]
+    },
+    {
+      versao: 'V2.1.3',
+      status: 'aberta',
+      data: '2025-07-07',
+      tipo: 'funcionalidade',
+      titulo: 'Relatórios: fallback automático Gemini → Claude',
+      itens: [
+        'api/gerar-relatorio.js agora tenta Gemini primeiro (gratuito)',
+        '  → Se falhar (erro, timeout, JSON inválido, bug de billing do Google), cai automaticamente para Anthropic (pago, estável)',
+        '  → Precisa de GEMINI_API_KEY e ANTHROPIC_API_KEY configuradas no Vercel',
+        'Timeout de 25s (Gemini) e 30s (Anthropic) via AbortController',
+        'maxDuration da function ampliado para 60s (tenta os dois provedores em sequência se necessário)',
+        'Resposta da API agora inclui "provedor" usado (gemini ou anthropic)',
+        'relatorios.js: exibe aviso ao usuário quando o fallback pago é usado',
       ]
     }
   ],

@@ -205,6 +205,10 @@ const Relatorios = (() => {
 
       const conteudoJson = resultado.data;
 
+      if (resultado.provedor === 'anthropic') {
+        Utils.toast('Gemini indisponível no momento — relatório gerado pelo Claude (fallback pago).', 'alerta', 6000);
+      }
+
       Utils.mostrarLoading('Salvando relatório...');
 
       const novoId = Database.novoId(obraId, COL);
