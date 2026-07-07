@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.0.6',
+  versaoAtual: 'V2.0.7',
 
   versoes: [
     {
@@ -676,7 +676,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.0.6',
-      status: 'aberta',
+      status: 'fechada',
       data: '2025-07-06',
       tipo: 'correcao',
       titulo: 'Resize colunas, reordenar, predecessora, PNG corrigidos',
@@ -692,6 +692,20 @@ const NotasVersao = {
         '  → Clique abre popup com preview em tempo real',
         'PNG: scale reduzido para 1x e altura limitada a 8000px',
         '  → Evita arquivo corrompido por canvas muito grande',
+      ]
+    },
+    {
+      versao: 'V2.0.7',
+      status: 'aberta',
+      data: '2025-07-06',
+      tipo: 'correcao',
+      titulo: 'CRÍTICO: funções faltando no return corrigidas',
+      itens: [
+        'insertTarefa removido (alias duplicado de inserirTarefa)',
+        '_hideCol adicionada como função standalone',
+        '  → Estava referenciada no menu mas não definida',
+        '  → IIFE falhava → módulo undefined → usuário bugava',
+        'Verificação: todas as 30 funções do return confirmadas',
       ]
     }
   ],

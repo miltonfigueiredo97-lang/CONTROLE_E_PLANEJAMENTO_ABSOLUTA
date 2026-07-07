@@ -915,7 +915,9 @@ const Planejamento = (() => {
     catch(e){console.error(e);Utils.toast('Erro.','erro');}
   }
 
-  return{init,carregar,setZoom,insertTarefa:inserirTarefa,inserirTarefa,editarTarefa,salvarTarefa,excluirTarefa,
+  function _hideCol(id){colsHidden.add(id);_render();requestAnimationFrame(()=>_paintRows());}
+
+  return{init,carregar,setZoom,inserirTarefa,editarTarefa,salvarTarefa,excluirTarefa,
     selectIdx,toggleRecolher,recuarNivel,avancarNivel,
     toggleGantt,hideCol,showColsMenu,_showCol,_showAll,
     _colResizeStart,moveColLeft,moveColRight,_hideCol,_divStart,_sync,_editCell,
