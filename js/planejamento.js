@@ -130,7 +130,7 @@ const Planejamento = (() => {
           <div style="height:${totalH}px;position:relative;min-width:${_totalColWidth(visCols)}px;" id="g-esq-v"></div>
         </div>
       </div>
-      ${ganttVisible?`<div id="g-div" style="width:4px;background:var(--cor-primaria);cursor:col-resize;flex-shrink:0;opacity:.7;" onpointerdown="Planejamento._divStart(event)"></div>
+      ${ganttVisible?`<div id="g-div" style="width:4px;background:var(--cor-primaria);cursor:col-resize;flex-shrink:0;opacity:.7;position:relative;touch-action:none;" onpointerdown="Planejamento._divStart(event)"><div style="position:absolute;top:0;bottom:0;left:-10px;right:-10px;cursor:col-resize;"></div></div>
       <div id="g-dir" style="flex:1;min-width:0;background:#0d0d0d;display:flex;flex-direction:column;overflow:hidden;">
         <div style="height:26px;background:#0a0a0a;border-bottom:1px solid #222;overflow:hidden;flex-shrink:0;" id="g-hdr-d">
           <div style="width:${W}px;height:100%;position:relative;">${hDatas}</div>
