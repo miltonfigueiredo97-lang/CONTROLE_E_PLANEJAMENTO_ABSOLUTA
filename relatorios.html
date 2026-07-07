@@ -44,7 +44,7 @@
       <a href="histograma.html"><span class="nav-icon">📊</span> Histograma</a>
       <a href="admin-permissoes.html"><span class="nav-icon">🔑</span> Permissões</a>
       <div class="sidebar-section-title">Sistema</div>
-      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V2.0.9</span></a>
+      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V2.1.0</span></a>
     </nav>
     <div class="sidebar-user">
       <div class="user-avatar">U</div>
@@ -62,6 +62,31 @@
     </div>
   </main>
 </div>
+
+<!-- MODAL: Novo Relatório -->
+<div class="modal-overlay" id="modal-rel-novo">
+  <div class="modal" style="max-width:520px;">
+    <div class="modal-header">
+      <h3>Novo Relatório</h3>
+      <button class="modal-close" onclick="Utils.fecharModal('modal-rel-novo')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <form id="form-rel-novo" onsubmit="event.preventDefault()">
+        <div class="form-grupo">
+          <label>PDF da nota (Samsung Notes) *</label>
+          <input type="file" accept="application/pdf" onchange="Relatorios.selecionarArquivo(this)">
+          <p id="rel-arquivo-nome" class="text-sm text-muted" style="margin-top:6px;">Nenhum arquivo selecionado.</p>
+        </div>
+        <p class="text-sm text-muted">A IA vai ler o conteúdo do PDF (digitado ou manuscrito) e organizar automaticamente em um relatório formatado.</p>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-rel-novo')">Cancelar</button>
+      <button class="btn btn-primario" id="rel-btn-gerar" onclick="Relatorios.gerarRelatorio()">✨ Gerar Relatório</button>
+    </div>
+  </div>
+</div>
+
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>

@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.0.9',
+  versaoAtual: 'V2.1.0',
 
   versoes: [
     {
@@ -730,7 +730,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.0.9',
-      status: 'aberta',
+      status: 'fechada',
       data: '2025-07-07',
       tipo: 'correcao',
       titulo: 'CRÍTICO: _totalColWidth não definida quebrava o módulo',
@@ -740,6 +740,28 @@ const NotasVersao = {
         'Função adicionada: soma larguras das colunas visíveis',
         'Verificação ampliada: return{} + TODAS as funções chamadas no código',
         '  → 30 funções do return OK, 29 funções internas OK',
+      ]
+    },
+    {
+      versao: 'V2.1.0',
+      status: 'aberta',
+      data: '2025-07-07',
+      tipo: 'funcionalidade',
+      titulo: 'Módulo Relatórios: "Relatórios de Vista" com IA',
+      itens: [
+        'Novo módulo Relatórios implementado (antes stub)',
+        'Importa PDF de nota (Samsung Notes, digitada ou manuscrita)',
+        '  → Nova Vercel Function api/gerar-relatorio.js chama a IA (Claude)',
+        '  → Lê o PDF diretamente (sem OCR separado) e devolve JSON estruturado',
+        '  → Chave de API fica só no servidor (ANTHROPIC_API_KEY no Vercel)',
+        'Relatório salvo no Firestore: obras/{obraId}/relatorios',
+        'PDF original arquivado no Firebase Storage',
+        'Tela "Relatórios de Vista": lista os últimos relatórios em cards',
+        'Visualização formatada: título, resumo, seções, pendências',
+        'Botão Baixar: gera novo PDF formatado (jsPDF) e também arquiva no Storage',
+        'Botão Compartilhar: abre WhatsApp com texto + link do PDF gerado',
+        'Botão Excluir: remove do Firestore e do Storage (original + gerado)',
+        '10/10 funções do return OK, 8/8 funções internas OK',
       ]
     }
   ],
