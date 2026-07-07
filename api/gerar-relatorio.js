@@ -2,19 +2,22 @@
 // Vercel Function: gerar-relatorio
 // Recebe um PDF (nota digitada ou manuscrita, exportada
 // do Samsung Notes) e devolve um relatório estruturado em JSON,
-// gerado pela IA da Anthropic (Claude lê o PDF diretamente,
-// sem precisar de OCR separado).
+// gerado pela IA do Google Gemini (lê o PDF diretamente,
+// sem precisar de OCR separado). Usa a camada gratuita da API.
 //
 // A chave da API NUNCA fica no client — só aqui, como variável
-// de ambiente (ANTHROPIC_API_KEY) configurada no painel do Vercel.
+// de ambiente (GEMINI_API_KEY) configurada no painel do Vercel.
+// Gere a chave grátis (sem cartão) em https://aistudio.google.com/apikey
 // ============================================
+
+const MODEL = 'gemini-2.5-flash';
 
 const SYSTEM_PROMPT = `Você é um assistente que organiza notas de campo de obras de
 construção civil em relatórios formais. Você vai receber um PDF que pode conter texto
 digitado ou escrita manuscrita (às vezes com desenhos/croquis simples).
 
-Leia todo o conteúdo do PDF com atenção e devolva SOMENTE um objeto JSON válido,
-sem markdown, sem crases, sem texto antes ou depois, seguindo exatamente este schema:
+Leia todo o conteúdo do PDF com atenção e devolva um objeto JSON válido seguindo
+exatamente este schema:
 
 {
   "titulo": "título curto e objetivo do relatório, baseado no conteúdo",
@@ -48,69 +51,62 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    const apiKey = process.env.ANTHROPIC_API_KEY;
+    const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      res.status(500).json({ ok: false, error: 'ANTHROPIC_API_KEY não configurada no servidor (Vercel > Settings > Environment Variables).' });
+      res.status(500).json({ ok: false, error: 'GEMINI_API_KEY não configurada no servidor (Vercel > Settings > Environment Variables).' });
       return;
     }
 
-    const userText = `Obra: ${obraNome || 'não informado'}. Extraia e organize o conteúdo desta nota em um relatório estruturado, seguindo estritamente o schema JSON pedido no sistema.`;
+    const userText = `Obra: ${obraNome || 'não informado'}. Extraia e organize o conteúdo desta nota em um relatório estruturado, seguindo estritamente o schema JSON pedido nas instruções.`;
 
-    const anthropicRes = await fetch('https://api.anthropic.com/v1/messages', {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${apiKey}`;
+
+    const geminiRes = await fetch(url, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'claude-sonnet-5',
-        max_tokens: 4000,
-        system: SYSTEM_PROMPT,
-        messages: [
+        systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+        contents: [
           {
             role: 'user',
-            content: [
-              {
-                type: 'document',
-                source: {
-                  type: 'base64',
-                  media_type: mediaType || 'application/pdf',
-                  data: pdfBase64,
-                },
-              },
-              { type: 'text', text: userText },
+            parts: [
+              { inline_data: { mime_type: mediaType || 'application/pdf', data: pdfBase64 } },
+              { text: userText },
             ],
           },
         ],
+        generationConfig: {
+          responseMimeType: 'application/json',
+        },
       }),
     });
 
-    const data = await anthropicRes.json();
+    const data = await geminiRes.json();
 
-    if (!anthropicRes.ok) {
-      console.error('Erro Anthropic:', data);
-      res.status(anthropicRes.status).json({
+    if (!geminiRes.ok) {
+      console.error('Erro Gemini:', data);
+      res.status(geminiRes.status).json({
         ok: false,
         error: (data && data.error && data.error.message) || 'Erro ao consultar a IA.',
       });
       return;
     }
 
-    const textBlock = (data.content || []).find((b) => b.type === 'text');
-    if (!textBlock) {
+    const candidato = data.candidates && data.candidates[0];
+    const parte = candidato && candidato.content && candidato.content.parts && candidato.content.parts[0];
+    const texto = parte && parte.text;
+
+    if (!texto) {
+      console.error('Resposta inesperada do Gemini:', JSON.stringify(data));
       res.status(500).json({ ok: false, error: 'A IA não retornou nenhum texto.' });
       return;
     }
 
-    let jsonLimpo = textBlock.text.trim();
-    jsonLimpo = jsonLimpo.replace(/^```json\s*/i, '').replace(/^```\s*/, '').replace(/```\s*$/, '').trim();
-
     let conteudo;
     try {
-      conteudo = JSON.parse(jsonLimpo);
+      conteudo = JSON.parse(texto);
     } catch (e) {
-      console.error('JSON inválido retornado pela IA:', jsonLimpo);
+      console.error('JSON inválido retornado pela IA:', texto);
       res.status(500).json({ ok: false, error: 'A IA retornou um formato inválido. Tente novamente.' });
       return;
     }

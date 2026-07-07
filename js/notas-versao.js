@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.1.0',
+  versaoAtual: 'V2.1.1',
 
   versoes: [
     {
@@ -744,7 +744,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.1.0',
-      status: 'aberta',
+      status: 'fechada',
       data: '2025-07-07',
       tipo: 'funcionalidade',
       titulo: 'Módulo Relatórios: "Relatórios de Vista" com IA',
@@ -762,6 +762,22 @@ const NotasVersao = {
         'Botão Compartilhar: abre WhatsApp com texto + link do PDF gerado',
         'Botão Excluir: remove do Firestore e do Storage (original + gerado)',
         '10/10 funções do return OK, 8/8 funções internas OK',
+      ]
+    },
+    {
+      versao: 'V2.1.1',
+      status: 'aberta',
+      data: '2025-07-07',
+      tipo: 'correcao',
+      titulo: 'Relatórios: troca de provedor de IA para API gratuita',
+      itens: [
+        'api/gerar-relatorio.js migrada de Anthropic (paga) para Google Gemini',
+        '  → Camada gratuita da API (sem custo dentro da cota de uso)',
+        '  → Variável de ambiente agora é GEMINI_API_KEY (não usa mais ANTHROPIC_API_KEY)',
+        '  → Chave gerada sem cartão em aistudio.google.com/apikey',
+        'Modelo usado: gemini-2.5-flash, com responseMimeType JSON nativo',
+        'Testado manualmente no AI Studio com nota real — aprovado',
+        'Layout do PDF de saída (jsPDF) validado com conteúdo real gerado pela IA',
       ]
     }
   ],
