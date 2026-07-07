@@ -739,7 +739,8 @@ const Planejamento = (() => {
         <div class="form-grupo" style="margin:0;"><label style="font-size:.72rem;color:#888;">Fim</label>
           <input type="date" id="png-fim" value="${maxDate}" class="form-control"></div>
       </div>
-      <div style="font-size:.72rem;color:#555;margin-bottom:14px;">Período do projeto: ${_fd(minDate)} a ${_fd(maxDate)}</div>
+      <div style="font-size:.72rem;color:#555;margin-bottom:6px;">Período do projeto: ${_fd(minDate)} a ${_fd(maxDate)}</div>
+      <div style="font-size:.68rem;color:#444;margin-bottom:14px;">A escala da imagem é ajustada automaticamente ao tamanho do período (não depende do zoom da tela).</div>
       <div style="display:flex;gap:8px;justify-content:flex-end;">
         <button class="btn btn-secundario btn-sm" onclick="document.getElementById('png-pop').remove()">Cancelar</button>
         <button class="btn btn-primario btn-sm" onclick="Planejamento._gerarPNG()">Gerar PNG</button>
@@ -759,24 +760,46 @@ const Planejamento = (() => {
     if(dMax<dMin){Utils.toast('Data final antes da inicial.','alerta');return;}
     if(!filtradas.length){Utils.toast('Nenhuma tarefa para exportar.','alerta');return;}
 
-    // Tamanho: usa a escala do zoom atual da tela
-    const lpd={dia:32,semana:8,mes:3,trimestre:1.2,ano:0.4}[zoomGantt]||3;
     const totalDias=Math.max(1,Math.ceil((dMax-dMin)/864e5));
+
+    // Escala do PNG é escolhida AUTOMATICAMENTE pelo tamanho do intervalo,
+    // independente do zoom da tela (a tela pode estar em "Dia" mas pedir
+    // 3 anos — usar 32px/dia geraria uma imagem gigante sem necessidade).
+    const ESCALAS=[
+      {nome:'dia',       lpd:32,  maxDias:60},
+      {nome:'semana',    lpd:8,   maxDias:240},
+      {nome:'mes',       lpd:3,   maxDias:900},
+      {nome:'trimestre', lpd:1.2, maxDias:2500},
+      {nome:'ano',       lpd:0.4, maxDias:Infinity},
+    ];
+    const escolhida=ESCALAS.find(e=>totalDias<=e.maxDias)||ESCALAS[ESCALAS.length-1];
+    const lpd=escolhida.lpd;
     const W=Math.max(200,Math.round(totalDias*lpd));
     const tf=filtradas; // todas as linhas visíveis (respeita famílias recolhidas), sem paginação
     const totalH=tf.length*ROW_H;
     const visCols=colOrdem.filter(id=>!colsHidden.has(id));
-
-    // Proteção: canvas gigante pode travar/corromper o navegador
     const larguraEsq=_totalColWidth(visCols);
     const larguraTotal=larguraEsq+W;
-    if(larguraTotal>16000||totalH>16000){
-      Utils.toast('Intervalo ou lista muito grande para gerar PNG. Reduza o período ou o zoom (ex: Mês/Trimestre).','erro');
+
+    // Escala de captura (scale do html2canvas): reduz automaticamente
+    // se a imagem final ficaria grande demais para o navegador aguentar.
+    let scaleCaptura=2;
+    if(Math.max(larguraTotal,totalH)*scaleCaptura>20000)scaleCaptura=1;
+
+    // Proteção final: só bloqueia se REALMENTE não couber nem em scale 1
+    // (na prática isso só acontece com uma quantidade enorme de tarefas
+    // visíveis ao mesmo tempo, não pelo tamanho do período — isso já é
+    // resolvido automaticamente escolhendo Trimestre/Ano acima)
+    if(Math.max(larguraTotal,totalH)*scaleCaptura>28000){
+      const motivo=totalH>larguraTotal
+        ? `${tf.length} tarefas visíveis ao mesmo tempo. Recolha algumas famílias (▶) antes de exportar.`
+        : 'Período muito extenso mesmo no zoom Ano. Tente exportar em partes menores.';
+      Utils.toast('Não foi possível gerar: '+motivo,'erro');
       return;
     }
 
     try{
-      Utils.mostrarLoading('Renderizando Gantt completo...');
+      Utils.mostrarLoading('Renderizando Gantt completo ('+escolhida.nome+')...');
       if(typeof html2canvas==='undefined')await _ls('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
 
       // ---- Monta o HTML estático (TODAS as linhas, sem virtual scroll) ----
@@ -784,7 +807,13 @@ const Planejamento = (() => {
         const w=id==='nome'?'flex:1;min-width:150px;':`width:${colLarguras[id]||60}px;flex-shrink:0;`;
         return`<div style="${w}padding:0 4px;font-size:.63rem;font-weight:700;color:#555;text-transform:uppercase;overflow:hidden;white-space:nowrap;display:flex;align-items:center;">${COL_LABELS[id]||id}</div>`;
       }).join('');
+      // _buildDateHeader decide a granularidade dos labels pela variável
+      // global zoomGantt — trocamos temporariamente pela escala escolhida
+      // para o PNG e restauramos logo em seguida (não afeta a tela).
+      const zoomOriginal=zoomGantt;
+      zoomGantt=escolhida.nome;
       const hDatas=_buildDateHeader(dMin,dMax,lpd,W);
+      zoomGantt=zoomOriginal;
       const hoje=new Date();
       const hojeX=Math.round((hoje-dMin)/864e5*lpd);
       const mostrarHoje=hoje>=dMin&&hoje<=dMax;
@@ -859,7 +888,7 @@ const Planejamento = (() => {
 
       const canvas=await html2canvas(offscreen.firstElementChild,{
         backgroundColor:'#0d0d0d',
-        scale:2,
+        scale:scaleCaptura,
         logging:false,
         useCORS:true,
         allowTaint:true,

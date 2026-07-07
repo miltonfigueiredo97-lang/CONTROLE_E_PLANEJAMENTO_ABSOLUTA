@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.2.9',
+  versaoAtual: 'V2.3.0',
 
   versoes: [
     {
@@ -962,7 +962,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.2.9',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-07',
       tipo: 'correcao',
       titulo: 'CRÍTICO: PNG do Gantt sempre pedia intervalo mesmo já selecionado',
@@ -973,6 +973,35 @@ const NotasVersao = {
         '  sempre retornava vazio, disparando "Selecione o intervalo"',
         '  mesmo com as datas corretamente preenchidas na tela.',
         'CORREÇÃO: os valores agora são lidos ANTES de remover o popup.',
+      ]
+    },
+    {
+      versao: 'V2.3.0',
+      status: 'aberta',
+      data: '2026-07-07',
+      tipo: 'correcao',
+      titulo: 'PNG do Gantt: escala automática — agora exporta anos inteiros sem travar',
+      itens: [
+        'CAUSA: a largura da imagem usava o zoom atual DA TELA (ex: Dia,',
+        '  32px/dia). Pedir 3 anos nesse zoom geraria ~35.000px de',
+        '  largura — daí o aviso de "intervalo grande demais".',
+        '',
+        'CORREÇÃO: a escala do PNG agora é escolhida automaticamente pelo',
+        '  TAMANHO DO INTERVALO pedido, independente do zoom da tela:',
+        '  → até 60 dias: zoom Dia',
+        '  → até 240 dias: zoom Semana',
+        '  → até 900 dias: zoom Mês',
+        '  → até ~7 anos (2500 dias): zoom Trimestre',
+        '  → períodos maiores: zoom Ano',
+        '3 anos agora gera ~1300px de largura (zoom Trimestre) — rápido',
+        '  e sem travar.',
+        'Escala de captura (nitidez) também se ajusta automaticamente:',
+        '  usa alta resolução quando cabe, reduz sozinha se a lista de',
+        '  tarefas visíveis for muito grande.',
+        'Aviso de erro agora diz o motivo real quando algo não cabe',
+        '  (muitas tarefas visíveis vs período extenso), com sugestão',
+        '  do que fazer em cada caso.',
+        'Popup avisa que a escala da imagem é automática.',
       ]
     }
   ],
