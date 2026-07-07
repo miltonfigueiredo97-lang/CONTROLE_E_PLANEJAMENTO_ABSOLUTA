@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.2.8',
+  versaoAtual: 'V2.2.9',
 
   versoes: [
     {
@@ -939,7 +939,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.2.8',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-07',
       tipo: 'correcao',
       titulo: 'PNG do Gantt: renderiza o Gantt completo no intervalo, não mais print da tela',
@@ -958,6 +958,21 @@ const NotasVersao = {
         'Nome do arquivo agora inclui o intervalo: gantt_INICIO_a_FIM.png',
         'Proteção: avisa e cancela se o intervalo + zoom gerariam uma',
         '  imagem grande demais (reduzir período ou usar zoom Mês/Trimestre).',
+      ]
+    },
+    {
+      versao: 'V2.2.9',
+      status: 'aberta',
+      data: '2026-07-07',
+      tipo: 'correcao',
+      titulo: 'CRÍTICO: PNG do Gantt sempre pedia intervalo mesmo já selecionado',
+      itens: [
+        'CAUSA: o popup de datas era removido do DOM ANTES de ler os',
+        '  valores dos campos início/fim. Como os campos são filhos do',
+        '  popup, remover primeiro apaga os valores — a leitura seguinte',
+        '  sempre retornava vazio, disparando "Selecione o intervalo"',
+        '  mesmo com as datas corretamente preenchidas na tela.',
+        'CORREÇÃO: os valores agora são lidos ANTES de remover o popup.',
       ]
     }
   ],

@@ -748,9 +748,11 @@ const Planejamento = (() => {
   }
   
   async function _gerarPNG(){
-    const pop=document.getElementById('png-pop');if(pop)pop.remove();
+    // IMPORTANTE: ler os valores ANTES de remover o popup — os inputs
+    // são filhos dele, então remover primeiro apaga os valores.
     const iniStr=document.getElementById('png-ini')?.value;
     const fimStr=document.getElementById('png-fim')?.value;
+    const pop=document.getElementById('png-pop');if(pop)pop.remove();
     if(!iniStr||!fimStr){Utils.toast('Selecione o intervalo de datas.','alerta');return;}
     const dMin=new Date(iniStr+'T00:00:00');
     const dMax=new Date(fimStr+'T00:00:00');
