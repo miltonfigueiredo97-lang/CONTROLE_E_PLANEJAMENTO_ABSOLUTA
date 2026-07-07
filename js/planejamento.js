@@ -764,6 +764,13 @@ const Planejamento = (() => {
     }finally{Utils.esconderLoading();}
   }
 
+  function _totalColWidth(visCols){
+    return visCols.reduce((s,id)=>{
+      if(id==='nome')return s+250;
+      return s+(colLarguras[id]||60);
+    },0);
+  }
+
   // ===================== HELPERS =====================
   function _status(t){if(!t.inicioPlanejado)return'nao_iniciado';if(_perc(t)>=100)return'concluido';
     const h=new Date(),f=t.terminoPlanejado?new Date(t.terminoPlanejado):null;

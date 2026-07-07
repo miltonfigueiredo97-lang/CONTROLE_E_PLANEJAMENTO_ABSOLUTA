@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.0.8',
+  versaoAtual: 'V2.0.9',
 
   versoes: [
     {
@@ -710,7 +710,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.0.8',
-      status: 'aberta',
+      status: 'fechada',
       data: '2025-07-06',
       tipo: 'correcao',
       titulo: 'Divisor independente, resize colunas, PNG confiável',
@@ -726,6 +726,20 @@ const NotasVersao = {
         '  → Scale 2x para qualidade boa',
         '  → Sem expandir container (evita canvas gigante corrompido)',
         '30/30 funções do return verificadas',
+      ]
+    },
+    {
+      versao: 'V2.0.9',
+      status: 'aberta',
+      data: '2025-07-07',
+      tipo: 'correcao',
+      titulo: 'CRÍTICO: _totalColWidth não definida quebrava o módulo',
+      itens: [
+        '_totalColWidth era chamada no render mas nunca foi definida',
+        '  → ReferenceError quebrava todo o Planejamento',
+        'Função adicionada: soma larguras das colunas visíveis',
+        'Verificação ampliada: return{} + TODAS as funções chamadas no código',
+        '  → 30 funções do return OK, 29 funções internas OK',
       ]
     }
   ],
