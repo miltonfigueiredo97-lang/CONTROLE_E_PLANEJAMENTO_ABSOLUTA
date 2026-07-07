@@ -2,10 +2,37 @@
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8">
-  <meta http-equiv="refresh" content="0;url=login.html">
-  <title>Controle e Planejamento de Obras Absoluta</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Absoluta Engenharia</title>
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <style>
+    body{margin:0;background:#0d0d0d;display:flex;align-items:center;justify-content:center;height:100dvh;font-family:sans-serif;}
+    .loader{text-align:center;color:#888;}
+    .loader::after{content:'';display:block;width:32px;height:32px;border:3px solid #333;border-top-color:#f5c518;border-radius:50%;animation:spin .8s linear infinite;margin:12px auto 0;}
+    @keyframes spin{to{transform:rotate(360deg)}}
+  </style>
 </head>
 <body>
-  <p>Redirecionando...</p>
+  <div class="loader">Carregando...</div>
+  <script>
+    // Aguarda o Firebase resolver o estado de autenticação
+    // e redireciona para a página certa — sempre.
+    // Isso garante que o APK/TWA nunca fique preso em outra página.
+    let timer = setTimeout(() => {
+      window.location.replace('login.html');
+    }, 6000);
+
+    firebase.auth().onAuthStateChanged(user => {
+      clearTimeout(timer);
+      if (user) {
+        window.location.replace('dashboard.html');
+      } else {
+        window.location.replace('login.html');
+      }
+    });
+  </script>
 </body>
 </html>
