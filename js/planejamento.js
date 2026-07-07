@@ -447,20 +447,18 @@ const Planejamento = (() => {
   function _colResizeStart(e, colId){
     e.preventDefault();e.stopPropagation();
     const sx=e.clientX, sw=colLarguras[colId]||60;
-    // Resize via DOM direto (sem re-render) para fluidez
-    const allCells=document.querySelectorAll('[data-col="'+colId+'"]');
-    const hdrCell=e.currentTarget.parentElement;
+    const hdrCell=document.querySelector('[data-hcol="'+colId+'"]');
+    document.body.style.cursor='col-resize';
     
     const move=ev=>{
-      const newW=Math.max(30,sw+(ev.clientX-sx));
-      colLarguras[colId]=newW;
-      if(hdrCell)hdrCell.style.width=newW+'px';
-      allCells.forEach(c=>c.style.width=newW+'px');
+      colLarguras[colId]=Math.max(30,sw+(ev.clientX-sx));
+      // Atualiza header direto
+      if(hdrCell)hdrCell.style.width=colLarguras[colId]+'px';
     };
     const up=()=>{
       document.removeEventListener('mousemove',move);
       document.removeEventListener('mouseup',up);
-      // Re-render para consistência
+      document.body.style.cursor='';
       _render();requestAnimationFrame(()=>_paintRows());
     };
     document.addEventListener('mousemove',move);
@@ -793,10 +791,96 @@ const Planejamento = (() => {
   function _ls(src){return new Promise((r,j)=>{const s=document.createElement('script');s.src=src;s.onload=r;s.onerror=j;document.head.appendChild(s);});}
   function setZoom(z){zoomGantt=z;_render();}
 
+  // Popup de predecessora (double-click)
+  function _predPopup(idx){
+    const t=filtradas[idx];if(!t)return;
+    let pop=document.getElementById('pred-pop');if(pop)pop.remove();
+    pop=document.createElement('div');pop.id='pred-pop';
+    pop.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#1a1a1a;border:2px solid var(--cor-primaria);border-radius:10px;padding:20px;z-index:2000;min-width:360px;box-shadow:0 12px 40px rgba(0,0,0,.6);';
+    
+    const predAtual=t.predecessora||'';
+    const match=predAtual.match(/^([\d.]+)\s*(TI|II|TT|IT)?\s*([+-]?\d+)?$/i);
+    const codAtual=match?match[1]:'';
+    const tipoAtual=match?(match[2]||'TI').toUpperCase():'TI';
+    const defAtual=match?parseInt(match[3])||0:0;
+    
+    pop.innerHTML=`
+      <div style="font-weight:700;color:var(--cor-primaria);margin-bottom:14px;font-size:.9rem;">Predecessora de: ${t.nome}</div>
+      <div style="display:flex;gap:8px;margin-bottom:12px;">
+        <div style="flex:1;">
+          <label style="font-size:.7rem;color:#888;display:block;margin-bottom:4px;">Código da tarefa</label>
+          <input id="pred-cod" type="text" value="${codAtual}" class="form-control" placeholder="Ex: 1.2" oninput="Planejamento._predPreview()" style="font-size:.9rem;">
+        </div>
+        <div style="width:80px;">
+          <label style="font-size:.7rem;color:#888;display:block;margin-bottom:4px;">Tipo</label>
+          <select id="pred-tipo" class="form-control" onchange="Planejamento._predPreview()">
+            <option value="TI" ${tipoAtual==='TI'?'selected':''}>TI</option>
+            <option value="II" ${tipoAtual==='II'?'selected':''}>II</option>
+            <option value="TT" ${tipoAtual==='TT'?'selected':''}>TT</option>
+            <option value="IT" ${tipoAtual==='IT'?'selected':''}>IT</option>
+          </select>
+        </div>
+        <div style="width:70px;">
+          <label style="font-size:.7rem;color:#888;display:block;margin-bottom:4px;">Defasagem</label>
+          <input id="pred-def" type="number" value="${defAtual}" class="form-control" oninput="Planejamento._predPreview()">
+        </div>
+      </div>
+      <div id="pred-info" style="background:#111;border-radius:6px;padding:10px;margin-bottom:14px;min-height:40px;font-size:.82rem;color:#aaa;"></div>
+      <div style="font-size:.68rem;color:#555;margin-bottom:12px;">
+        TI = Término→Início (após terminar) · II = Início→Início (começa junto)<br>
+        TT = Término→Término (termina junto) · IT = Início→Término
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;">
+        <button class="btn btn-secundario btn-sm" onclick="document.getElementById('pred-pop').remove()">Cancelar</button>
+        <button class="btn btn-perigo btn-sm" onclick="Planejamento._predSalvar(${idx},'')">Limpar</button>
+        <button class="btn btn-primario btn-sm" onclick="Planejamento._predSalvar(${idx})">Salvar</button>
+      </div>`;
+    document.body.appendChild(pop);
+    document.getElementById('pred-cod').focus();
+    _predPreview();
+    // Close on escape
+    const onKey=e=>{if(e.key==='Escape'){pop.remove();document.removeEventListener('keydown',onKey);}};
+    document.addEventListener('keydown',onKey);
+  }
+  
+  function _predPreview(){
+    const cod=document.getElementById('pred-cod')?.value?.trim();
+    const tipo=document.getElementById('pred-tipo')?.value||'TI';
+    const def=parseInt(document.getElementById('pred-def')?.value)||0;
+    const info=document.getElementById('pred-info');
+    if(!info)return;
+    if(!cod){info.innerHTML='<span style="color:#555;">Digite o código da tarefa predecessora</span>';return;}
+    const pred=tarefas.find(x=>x.codigo===cod);
+    if(!pred){info.innerHTML='<span style="color:#dc2626;">Tarefa com código "'+cod+'" não encontrada</span>';return;}
+    const descTipo={TI:'Inicia após término de',II:'Inicia junto com',TT:'Termina junto com',IT:'Termina junto com início de'}[tipo];
+    info.innerHTML=`<div style="color:var(--cor-primaria);font-weight:700;margin-bottom:4px;">${pred.codigo} — ${pred.nome}</div>
+      <div style="color:#aaa;font-size:.78rem;">${descTipo}: <strong>${pred.nome}</strong>${def?` (${def>0?'+':''}${def} dias)`:''}</div>
+      ${pred.inicioPlanejado?`<div style="color:#666;font-size:.72rem;margin-top:4px;">Início: ${_fd(pred.inicioPlanejado)} · Fim: ${_fd(pred.terminoPlanejado)}</div>`:''}`;
+  }
+  
+  async function _predSalvar(idx, forceVal){
+    const t=filtradas[idx];if(!t)return;
+    let valor;
+    if(forceVal!==undefined){valor=forceVal;}
+    else{
+      const cod=document.getElementById('pred-cod')?.value?.trim()||'';
+      const tipo=document.getElementById('pred-tipo')?.value||'TI';
+      const def=parseInt(document.getElementById('pred-def')?.value)||0;
+      valor=cod?(cod+tipo+(def?((def>0?'+':'')+def):'')):'' ;
+    }
+    const updates={predecessora:valor};
+    if(valor)_calcPredecessora(t,valor,updates);
+    Object.assign(t,updates);
+    _paintRows();
+    const pop=document.getElementById('pred-pop');if(pop)pop.remove();
+    try{await Database.atualizar(obraId,COL,t.id,updates);}
+    catch(e){console.error(e);Utils.toast('Erro.','erro');}
+  }
+
   return{init,carregar,setZoom,insertTarefa:inserirTarefa,inserirTarefa,editarTarefa,salvarTarefa,excluirTarefa,
     selectIdx,toggleRecolher,recuarNivel,avancarNivel,
     toggleGantt,hideCol,showColsMenu,_showCol,_showAll,
     _colResizeStart,_colDragStart,_colDrop,_divStart,_sync,_editCell,
-    importarExcel,exportar,exportarPNG};
+    importarExcel,exportar,exportarPNG,_predPopup,_predPreview,_predSalvar};
 })();
 function onObraChanged(){Planejamento.init();}

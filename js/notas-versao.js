@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.0.3',
+  versaoAtual: 'V2.0.4',
 
   versoes: [
     {
@@ -607,7 +607,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.0.3',
-      status: 'aberta',
+      status: 'fechada',
       data: '2025-07-06',
       tipo: 'correcao',
       titulo: 'Divisor livre, nível por spinner, datas automáticas, predecessora',
@@ -626,6 +626,30 @@ const NotasVersao = {
         '  → TT = Término-Término: termina junto com a predecessora',
         '  → Defasagem: 3TI+2 = 2 dias após término da tarefa 3',
         'RESIZE COLUNAS: arrasta borda direita do header',
+      ]
+    },
+    {
+      versao: 'V2.0.4',
+      status: 'aberta',
+      data: '2025-07-06',
+      tipo: 'correcao',
+      titulo: 'Colunas resize/reorder, predecessora popup, esconder coluna',
+      itens: [
+        'RESIZE COLUNAS: handle visível (amarelo ao hover) na borda direita do header',
+        '  → Arrasta para redimensionar, cursor muda para col-resize',
+        '  → Re-renderiza ao soltar para consistência',
+        'REORDENAR COLUNAS: drag and drop nos headers',
+        '  → Borda amarela indica onde vai cair',
+        '  → Não afeta exportar/importar Excel',
+        'ESCONDER COLUNA: clique direito no header (restaurado)',
+        '  → Botão + Colunas aparece quando há ocultas',
+        'PREDECESSORA — duplo clique abre popup:',
+        '  → Campo de código com preview da tarefa em tempo real',
+        '  → Seletor TI/II/TT/IT com descrição',
+        '  → Campo de defasagem em dias',
+        '  → Mostra nome, datas da predecessora',
+        '  → Botão Limpar para remover predecessora',
+        'PREDECESSORA — clique simples: edita o código inline',
       ]
     }
   ],
