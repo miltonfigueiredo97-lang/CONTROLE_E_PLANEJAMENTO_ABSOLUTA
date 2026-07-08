@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.5.0',
+  versaoAtual: 'V2.5.1',
 
   versoes: [
     {
@@ -1071,7 +1071,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.5.0',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-07',
       tipo: 'funcionalidade',
       titulo: 'Módulos Semanal/Diário e Medições implementados',
@@ -1105,6 +1105,21 @@ const NotasVersao = {
         '  Salvar grava os % no Planejamento e registra a sessão em',
         '  obras/{id}/medicoes; lista de medições com detalhes e exclusão',
         'Novos campos nas tarefas: inicioReal e terminoReal',
+      ]
+    },
+    {
+      versao: 'V2.5.1',
+      status: 'aberta',
+      data: '2026-07-08',
+      tipo: 'correcao',
+      titulo: 'Semanal: robustez no fechamento de relatório',
+      itens: [
+        'Correção de erro potencial ao destacar tarefa sem justificativa',
+        '  no modal de fechamento (proteção para navegadores/WebViews',
+        '  sem suporte a scrollIntoView)',
+        'Módulos Semanal e Medições validados com bateria de 124 testes',
+        '  funcionais automatizados simulando o uso real (lançamentos,',
+        '  omissões, adições, fechamentos, medições e casos extremos)',
       ]
     }
   ],

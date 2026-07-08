@@ -604,7 +604,7 @@ const Semanal = (() => {
       const id=b.dataset.just;
       const motivo=b.querySelector('[data-motivo]').value;
       const obs=b.querySelector('[data-obs]').value.trim();
-      if(!motivo&&!obs){Utils.toast('Toda tarefa abaixo do esperado precisa de motivo ou observação.','alerta');b.scrollIntoView({block:'center'});return;}
+      if(!motivo&&!obs){Utils.toast('Toda tarefa abaixo do esperado precisa de motivo ou observação.','alerta');b.scrollIntoView?.({block:'center'});return;}
       just[id]={motivo,detalhamento:obs};
     }
     const r=_calcRelatorio();
