@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.4.1',
+  versaoAtual: 'V2.5.0',
 
   versoes: [
     {
@@ -1058,7 +1058,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.4.1',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-07',
       tipo: 'correcao',
       titulo: 'Levantamento de Ar Condicionado: busca de material mais clara',
@@ -1067,6 +1067,44 @@ const NotasVersao = {
         '  modal e ao trocar de aba',
         'Nome do material destaca (highlight) o trecho que bateu com o',
         '  termo buscado, deixando visível a aproximação por nome',
+      ]
+    },
+    {
+      versao: 'V2.5.0',
+      status: 'aberta',
+      data: '2026-07-07',
+      tipo: 'funcionalidade',
+      titulo: 'Módulos Semanal/Diário e Medições implementados',
+      itens: [
+        'SEMANAL/DIÁRIO — módulo completo, alimentado pelo Planejamento:',
+        '  Modos Semana (dom-sáb) e Dia, com navegação ‹ › e botão "hoje"',
+        '  Mostra tarefas planejadas para o período + atrasadas (término',
+        '  vencido e % < 100), com status Atual/Atrasada/Adicionada/Omitida',
+        '  Colunas: Início, Término, Esperado (calculado pela data),',
+        '  Progresso, Local, Grupo, Início/Término Real, Responsável e',
+        '  grade de dias com marcação amarela dos dias planejados',
+        '  Lançar Progresso grava no % Concluído do Planejamento e',
+        '  atualiza Início Real (1º avanço) e Término Real (100%)',
+        '  Início planejado editável apenas para tarefa não iniciada',
+        '  (recalcula o término pela duração)',
+        '  Adicionar tarefas externas ao período (modal com árvore + busca)',
+        '  Omitir tarefas com motivo obrigatório (15 opções) + detalhamento;',
+        '  vista Omitidas com restauração',
+        '  Seleção múltipla: barra flutuante com Datas, Responsável e Omitir',
+        '  Iniciar período (baseline do avanço) e Fechar relatório:',
+        '  tarefas abaixo do esperado exigem justificativa (motivo ou',
+        '  observação); relatório salvo com % do período real/esperado,',
+        '  % total atual/esperado da obra e PPC',
+        '  Dashboard com cards do período e histórico de fechamentos',
+        'MEDIÇÕES — módulo funcional:',
+        '  Nova Medição: árvore completa do cronograma com recolher/expandir,',
+        '  Esperado/Real por grupo (média ponderada por duração) e por tarefa',
+        '  Modal de lançamento: progresso (−/＋/＝100), Início/Fim Real e',
+        '  fotos (comprimidas e enviadas ao Storage)',
+        '  Chips de % Total, % Medição (avanço da sessão) e % Esperado hoje',
+        '  Salvar grava os % no Planejamento e registra a sessão em',
+        '  obras/{id}/medicoes; lista de medições com detalhes e exclusão',
+        'Novos campos nas tarefas: inicioReal e terminoReal',
       ]
     }
   ],

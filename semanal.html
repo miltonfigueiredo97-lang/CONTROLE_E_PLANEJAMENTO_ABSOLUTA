@@ -44,7 +44,7 @@
       <a href="histograma.html"><span class="nav-icon">📊</span> Histograma</a>
       <a href="admin-permissoes.html"><span class="nav-icon">🔑</span> Permissões</a>
       <div class="sidebar-section-title">Sistema</div>
-      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V2.4.1</span></a>
+      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V2.5.0</span></a>
     </nav>
     <div class="sidebar-user">
       <div class="user-avatar">U</div>
@@ -58,9 +58,80 @@
   <header class="header"><div class="header-title"><h1>Planejamento Semanal</h1></div><div class="header-actions" id="header-actions"></div></header>
   <main class="content">
     <div id="modulo-content">
-      <div class="estado-vazio"><div class="icone">🚧</div><p>Módulo em desenvolvimento.</p><p class="text-sm text-muted">Será construído conforme o roadmap do projeto.</p></div>
+      <div class="estado-vazio"><div class="icone">📋</div><p>Carregando...</p></div>
     </div>
   </main>
+</div>
+
+<!-- Modal: Omitir tarefa(s) -->
+<div class="modal-overlay" id="modal-sem-omitir">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Omitir tarefa da semana <small id="sem-omitir-sub" style="font-weight:400;font-size:.72rem;color:#94a3b8;"></small></h3>
+      <button class="modal-close" onclick="Utils.fecharModal('modal-sem-omitir')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grupo"><label>Motivo *</label>
+        <select id="sem-omitir-motivo" class="form-control"></select>
+      </div>
+      <div class="form-grupo"><label>Detalhamento</label>
+        <textarea id="sem-omitir-det" class="form-control" rows="4"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="Utils.fecharModal('modal-sem-omitir')">Cancelar</button>
+      <button class="btn btn-primario" onclick="Semanal.salvarOmitir()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Adicionar tarefas -->
+<div class="modal-overlay" id="modal-sem-add">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <h3>Adicionar tarefas ao período</h3>
+      <button class="modal-close" onclick="Utils.fecharModal('modal-sem-add')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grupo"><label>Busca por Nome</label>
+        <input id="sem-add-busca" class="form-control" oninput="Semanal.filtrarAdicionar(this.value)">
+      </div>
+      <div id="sem-add-lista" class="sem-tree"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="Utils.fecharModal('modal-sem-add')">Cancelar</button>
+      <button class="btn btn-primario" onclick="Semanal.confirmarAdicionar()">Selecionar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Fechar relatório -->
+<div class="modal-overlay" id="modal-sem-fechar">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <h3>Fechar relatório do período</h3>
+      <button class="modal-close" onclick="Utils.fecharModal('modal-sem-fechar')">&times;</button>
+    </div>
+    <div class="modal-body" id="sem-fechar-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="Utils.fecharModal('modal-sem-fechar')">Cancelar</button>
+      <button class="btn btn-primario" onclick="Semanal.confirmarFechar()">Fechar período</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Ver relatório -->
+<div class="modal-overlay" id="modal-sem-rel">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <h3>Relatório do período</h3>
+      <button class="modal-close" onclick="Utils.fecharModal('modal-sem-rel')">&times;</button>
+    </div>
+    <div class="modal-body" id="sem-rel-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-primario" onclick="Utils.fecharModal('modal-sem-rel')">Fechar</button>
+    </div>
+  </div>
 </div>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
@@ -74,6 +145,6 @@
 <script src="js/audit.js"></script>
 <script src="js/utils.js"></script>
 <script src="js/semanal.js"></script>
-<script>document.addEventListener('DOMContentLoaded', () => { Utils.initPagina(); });</script>
+<script>document.addEventListener('DOMContentLoaded', () => { Semanal.init(); });</script>
 </body>
 </html>

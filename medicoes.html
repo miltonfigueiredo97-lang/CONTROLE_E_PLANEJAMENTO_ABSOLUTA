@@ -44,7 +44,7 @@
       <a href="histograma.html"><span class="nav-icon">📊</span> Histograma</a>
       <a href="admin-permissoes.html"><span class="nav-icon">🔑</span> Permissões</a>
       <div class="sidebar-section-title">Sistema</div>
-      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V2.4.1</span></a>
+      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V2.5.0</span></a>
     </nav>
     <div class="sidebar-user">
       <div class="user-avatar">U</div>
@@ -58,9 +58,60 @@
   <header class="header"><div class="header-title"><h1>Medições</h1></div><div class="header-actions" id="header-actions"></div></header>
   <main class="content">
     <div id="modulo-content">
-      <div class="estado-vazio"><div class="icone">🚧</div><p>Módulo em desenvolvimento.</p><p class="text-sm text-muted">Será construído conforme o roadmap do projeto.</p></div>
+      <div class="estado-vazio"><div class="icone">📏</div><p>Carregando...</p></div>
     </div>
   </main>
+</div>
+
+<!-- Modal: Medição individual -->
+<div class="modal-overlay" id="modal-medicao">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Medição</h3>
+      <button class="modal-close" onclick="Utils.fecharModal('modal-medicao')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p id="med-modal-nome" style="font-weight:700;font-size:.9rem;margin-bottom:2px;"></p>
+      <p id="med-modal-periodo" style="font-size:.72rem;color:#94a3b8;margin-bottom:14px;"></p>
+      <div class="form-grupo"><label>Progresso *</label>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <input type="number" id="med-prog" class="form-control" min="0" max="100" style="flex:1;">
+          <button class="btn btn-sm btn-outline" onclick="Medicoes.progDelta(-5)">−</button>
+          <button class="btn btn-sm btn-outline" onclick="Medicoes.progDelta(5)">＋</button>
+          <button class="btn btn-sm btn-outline" title="Concluir (100%)" onclick="Medicoes.progDelta(100)">＝</button>
+        </div>
+      </div>
+      <div class="form-grupo"><label>Início Real</label>
+        <input type="date" id="med-ini" class="form-control">
+      </div>
+      <div class="form-grupo"><label>Fim Real</label>
+        <input type="date" id="med-fim" class="form-control">
+      </div>
+      <div class="form-grupo"><label>Fotos da medição</label>
+        <div id="med-fotos-prev" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;"></div>
+        <label style="display:inline-flex;align-items:center;justify-content:center;width:72px;height:72px;border:2px dashed #cbd5e1;border-radius:10px;cursor:pointer;color:#94a3b8;font-size:1.2rem;">＋🖼️
+          <input type="file" accept="image/*" multiple style="display:none;" onchange="Medicoes.fotoSelecionada(this)">
+        </label>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primario" onclick="Medicoes.confirmarMedicao()">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Ver medição -->
+<div class="modal-overlay" id="modal-med-ver">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <h3>Detalhes da medição</h3>
+      <button class="modal-close" onclick="Utils.fecharModal('modal-med-ver')">&times;</button>
+    </div>
+    <div class="modal-body" id="med-ver-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-primario" onclick="Utils.fecharModal('modal-med-ver')">Fechar</button>
+    </div>
+  </div>
 </div>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
@@ -74,6 +125,6 @@
 <script src="js/audit.js"></script>
 <script src="js/utils.js"></script>
 <script src="js/medicoes.js"></script>
-<script>document.addEventListener('DOMContentLoaded', () => { Utils.initPagina(); });</script>
+<script>document.addEventListener('DOMContentLoaded', () => { Medicoes.init(); });</script>
 </body>
 </html>
