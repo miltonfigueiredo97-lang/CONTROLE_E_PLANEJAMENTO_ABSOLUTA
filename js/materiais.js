@@ -64,7 +64,7 @@ const Materiais = (() => {
       <button class="btn btn-primario" onclick="Materiais.novoMaterialBib()">+ Cadastrar Material</button></div>`;
     return `<div class="tabela-container"><table class="tabela">
       <thead><tr><th>Material</th><th>Tipo</th><th>Fabricante</th><th>Ref.</th>
-        <th class="col-num">Unidade</th><th class="col-num">Embalagem</th>
+        <th class="col-num">Unidade</th><th class="col-num">Preço Unit.</th><th class="col-num">Embalagem</th>
         <th class="col-num">Vínculos</th><th class="col-acoes">Ações</th></tr></thead>
       <tbody>${biblioteca.map(m=>{
         const usos=vinculos.filter(v=>v.materialId===m.id).length;
@@ -75,6 +75,7 @@ const Materiais = (() => {
           <td>${m.tipo||'—'}</td><td>${m.fabricante||'—'}</td>
           <td class="text-sm text-muted">${m.referencia||'—'}</td>
           <td class="col-num">${m.unidade||'—'}</td>
+          <td class="col-num" style="font-family:var(--font-mono);">${m.preco?'R$ '+_fNum(m.preco):'—'}</td>
           <td class="col-num" style="font-size:0.75rem;color:#888;">${emb}</td>
           <td class="col-num">${usos?`<span class="badge badge-amarelo">${usos}</span>`:'—'}</td>
           <td class="col-acoes">
@@ -113,16 +114,28 @@ const Materiais = (() => {
       ${!vf.length?`<div class="estado-vazio"><div class="icone">🔗</div>
         <p>${filtroTarefa?'Nenhum material vinculado.':'Nenhum vínculo cadastrado.'}</p>
         <button class="btn btn-primario" onclick="Materiais.novoVinculo()">+ Vincular / Criar material</button></div>`:`
+      <div style="display:flex;justify-content:flex-end;margin-bottom:8px;">
+        <div style="background:var(--cor-dark-800);border-radius:8px;padding:8px 16px;border-left:3px solid var(--cor-primaria);">
+          <span style="font-size:0.75rem;color:#888;">Custo total (materiais):</span>
+          <strong style="font-family:var(--font-mono);color:var(--cor-primaria);margin-left:6px;">R$ ${_fNum(vf.reduce((s,v)=>{
+            const mat=biblioteca.find(m=>m.id===v.materialId);
+            const ti=_getTarefaInfo(v.tarefaId);
+            return s+_calcCustoNum(ti,v,mat);
+          },0))}</strong>
+        </div>
+      </div>
       <div class="tabela-container"><table class="tabela tabela-compacta">
         <thead><tr><th>Material</th><th>Tipo</th><th>Fabricante</th><th>Serviço</th>
           <th class="col-num">Consumo Prev.</th><th class="col-num">Consumo Real</th>
           <th class="col-num" style="color:var(--cor-primaria);">Total (mat.)</th>
           <th class="col-num" style="color:#aaa;">Total (emb.)</th>
+          <th class="col-num" style="color:var(--cor-primaria);">Custo (R$)</th>
           <th class="col-acoes">Ações</th></tr></thead>
         <tbody>${vf.map(v=>{
           const mat=biblioteca.find(m=>m.id===v.materialId);
           const ti=_getTarefaInfo(v.tarefaId);
           const {totalBase,totalEmb}=_calcTotal(ti,v,mat);
+          const custo=_calcCustoNum(ti,v,mat);
           return `<tr>
             <td><strong>${mat?mat.nome:'(removido)'}</strong></td>
             <td>${mat?.tipo||'—'}</td><td>${mat?.fabricante||'—'}</td>
@@ -131,6 +144,7 @@ const Materiais = (() => {
             <td class="col-num" style="font-family:var(--font-mono);">${v.consumoReal?v.consumoReal+' '+v.unidadeConsumo:'—'}</td>
             <td class="col-num" style="font-weight:700;color:var(--cor-primaria);font-family:var(--font-mono);">${totalBase}</td>
             <td class="col-num" style="color:#888;font-family:var(--font-mono);">${totalEmb}</td>
+            <td class="col-num" style="font-weight:700;color:var(--cor-primaria);font-family:var(--font-mono);">${custo?'R$ '+_fNum(custo):'—'}</td>
             <td class="col-acoes">
               <button class="btn btn-secundario btn-sm" onclick="Materiais.editarVinculo('${v.id}')">✎</button>
               <button class="btn btn-perigo btn-sm btn-icon" onclick="Materiais.excluirVinculo('${v.id}')">✕</button>
@@ -223,9 +237,8 @@ const Materiais = (() => {
 
   // ====== HELPERS ======
   function _getOpcoesTarefa(){
-    const opts=[];
-    tarefas.forEach(t=>{if(t.tipo!=='grupo')opts.push({id:t.id,label:`[Plan] ${t.codigo?t.codigo+' ':''}${t.nome}`});});
-    if(levFachadas.some(d=>d.tipo==='fachada'))opts.push({id:'__fachada__',label:'[Levantamento] Fachada'});
+    const opts=Utils.opcoesTarefaHierarquia(tarefas);
+    if(levFachadas.some(d=>d.tipo==='fachada'))opts.push({id:'__fachada__',label:'[Levantamento] Fachada',nivel:0,tipo:'especial'});
     return opts;
   }
 
@@ -255,6 +268,21 @@ const Materiais = (() => {
     return {totalBase:baseStr,totalEmb:embStr};
   }
 
+  // Quantidade em unidade base (número puro, sem formatação) = quantidade da
+  // tarefa vinculada × consumo previsto. Usado para calcular custo (R$).
+  function _calcQtdBaseNum(info,v){
+    if(!info||!info.quantidade)return 0;
+    const cons=parseFloat(v.consumoPrevisto)||0;
+    if(!cons)return 0;
+    return info.quantidade*cons;
+  }
+
+  // Custo em R$ = quantidade em unidade base × preço unitário do material.
+  function _calcCustoNum(info,v,mat){
+    if(!mat?.preco)return 0;
+    return _calcQtdBaseNum(info,v)*parseFloat(mat.preco);
+  }
+
   function _fNum(n){return Utils.formatarNumero(n);}
 
   // ====== CRUD BIBLIOTECA ======
@@ -278,6 +306,7 @@ const Materiais = (() => {
     f.querySelector('[name="fabricante"]').value=m.fabricante||'';
     f.querySelector('[name="referencia"]').value=m.referencia||'';
     f.querySelector('[name="observacoes"]').value=m.observacoes||'';
+    f.querySelector('[name="preco"]').value=m.preco||'';
     document.getElementById('bib-unidade').value=m.unidade||'kg';
     document.getElementById('bib-emb-und').value=m.embalagemUnidade||'';
     f.querySelector('[name="embalagemQtd"]').value=m.embalagemQtd||'';
@@ -295,6 +324,7 @@ const Materiais = (() => {
       fabricante:f.querySelector('[name="fabricante"]').value.trim(),
       referencia:f.querySelector('[name="referencia"]').value.trim(),
       observacoes:f.querySelector('[name="observacoes"]').value.trim(),
+      preco:parseFloat(f.querySelector('[name="preco"]').value)||0,
       unidade:document.getElementById('bib-unidade').value,
       embalagemUnidade:document.getElementById('bib-emb-und').value,
       embalagemQtd:parseFloat(f.querySelector('[name="embalagemQtd"]').value)||0,
@@ -365,6 +395,8 @@ const Materiais = (() => {
               <select id="nm-und" class="form-control">
                 ${UNIDADES_MAT.map(u=>`<option value="${u}">${u}</option>`).join('')}
               </select></div>
+            <div class="form-grupo"><label>Preço unitário (R$)</label>
+              <input id="nm-preco" type="number" step="0.01" min="0" class="form-control" placeholder="Ex: 32,50"></div>
           </div>
           <div class="form-row" style="align-items:center;">
             <div class="form-grupo"><label>Embalagem</label>
@@ -431,6 +463,7 @@ const Materiais = (() => {
           fabricante:document.getElementById('nm-fab')?.value||'',
           referencia:document.getElementById('nm-ref')?.value||'',
           unidade:document.getElementById('nm-und')?.value||'kg',
+          preco:parseFloat(document.getElementById('nm-preco')?.value)||0,
           embalagemUnidade:document.getElementById('nm-emb-und')?.value||'',
           embalagemQtd:parseFloat(document.getElementById('nm-emb-qtd')?.value)||0,
           embalagemBaseUnidade:document.getElementById('nm-emb-base')?.value||'kg',

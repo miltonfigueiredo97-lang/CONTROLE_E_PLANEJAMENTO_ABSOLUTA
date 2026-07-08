@@ -145,11 +145,29 @@ const Utils = (() => {
     return true;
   }
 
+  // Gera opções de <select> com hierarquia visual (indentação por nível),
+  // na mesma ordem do Planejamento. Usada em todo módulo que vincula algo
+  // a uma tarefa (Materiais, Mão de Obra, Suprimentos, etc.) para permitir
+  // vincular tanto a um nível "pai" quanto a um nível "filho" específico.
+  // Retorna array de {id, label, nivel, tipo} pronto para .map() em <option>.
+  function opcoesTarefaHierarquia(tarefas){
+    const sorted=[...(tarefas||[])].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
+    // \u2007 (figure space) não é colapsado pelo navegador dentro de <option>,
+    // diferente do espaço normal — é o que permite a indentação visual.
+    return sorted.map(t=>{
+      const nivel=t.nivel||0;
+      const indent='\u2007\u2007'.repeat(nivel);
+      const marcador=t.tipo==='grupo'?'▸ ':(nivel>0?'– ':'');
+      const label=indent+marcador+(t.codigo?t.codigo+' ':'')+(t.nome||'');
+      return {id:t.id, label, nivel, tipo:t.tipo||'tarefa'};
+    });
+  }
+
   return {
     formatarNumero, formatarInteiro, formatarData, formatarDataHora, formatarM2, formatarML,
     parseNum, hoje, toast, abrirModal, fecharModal, fecharTodosModais, confirmar,
     mostrarLoading, esconderLoading, $, $$, limparForm, getFormData, setFormData, debounce,
-    initPagina,
+    initPagina, opcoesTarefaHierarquia,
   };
 })();
 

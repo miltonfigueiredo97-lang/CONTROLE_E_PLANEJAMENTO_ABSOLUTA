@@ -137,9 +137,7 @@ const MaoDeObra = (() => {
 
   // ====== HELPERS ======
   function _getOpcoesTarefa(){
-    const opts=[];
-    tarefas.forEach(t=>{if(t.tipo!=='grupo')opts.push({id:t.id,label:`[Plan] ${t.codigo?t.codigo+' ':''}${t.nome}`});});
-    return opts;
+    return Utils.opcoesTarefaHierarquia(tarefas);
   }
 
   function _getTarefaInfo(id){

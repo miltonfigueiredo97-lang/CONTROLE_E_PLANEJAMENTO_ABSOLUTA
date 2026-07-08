@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.6.0',
+  versaoAtual: 'V2.7.0',
 
   versoes: [
     {
@@ -1124,7 +1124,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.6.0',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-08',
       tipo: 'funcionalidade',
       titulo: 'Novo módulo: Mão de Obra (Custos)',
@@ -1140,6 +1140,41 @@ const NotasVersao = {
         '  Materiais, para agilizar o cadastro',
         'Adicionado ao menu de permissões (admin com acesso total,',
         '  usuário padrão sem acesso por padrão)',
+      ]
+    },
+    {
+      versao: 'V2.7.0',
+      status: 'aberta',
+      data: '2026-07-08',
+      tipo: 'funcionalidade',
+      titulo: 'Seletor hierárquico de tarefas + Custo Material/Mão de Obra no Planejamento',
+      itens: [
+        'SELETOR HIERÁRQUICO (Materiais e Mão de Obra):',
+        '  → Antes só apareciam tarefas-folha (grupos ficavam de fora)',
+        '  → Agora aparece TODA a hierarquia, com indentação por nível',
+        '  → Permite vincular material/mão de obra a um nível maior',
+        '    (grupo) ou a um nível menor (tarefa específica)',
+        '  → Helper compartilhado: Utils.opcoesTarefaHierarquia()',
+        '',
+        'PREÇO DO MATERIAL (Materiais):',
+        '  → Novo campo "Preço unitário (R$)" na biblioteca',
+        '  → Nova coluna "Custo (R$)" na tabela Por Tarefa',
+        '  → Total geral de custo em materiais exibido no topo',
+        '',
+        'PLANEJAMENTO — 2 colunas novas:',
+        '  → "Custo Material" e "Custo M.Obra", alimentadas',
+        '    automaticamente pelos módulos Materiais e Mão de Obra',
+        '',
+        'REGRA DE DISTRIBUIÇÃO HIERÁRQUICA:',
+        '  → Custo vinculado a uma tarefa de nível N é dividido IGUALMENTE',
+        '    entre os filhos diretos (nível N+1)',
+        '  → Cada filho redistribui a própria parte + o que já tinha entre',
+        '    os SEUS filhos, e assim por diante até as folhas',
+        '  → O valor exibido em qualquer tarefa = soma de tudo que está',
+        '    abaixo dela (uma tarefa-folha soma o que herdou + o que foi',
+        '    vinculado direto nela; um grupo soma todos os filhos)',
+        '  → Testado com 3 cenários (custo só no pai / pai+filho / só',
+        '    folhas) — todos batem com a regra descrita',
       ]
     }
   ],

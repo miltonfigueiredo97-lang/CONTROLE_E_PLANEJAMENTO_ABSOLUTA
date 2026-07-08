@@ -12,13 +12,19 @@ const Planejamento = (() => {
   let _rafId=null;
 
   // Colunas: ordem editável, largura editável
-  let colOrdem=['num','nivel','codigo','nome','inicio','termino','duracao','percEsp','percConc','predecessora','responsavel','local','grupo','acoes'];
-  let colLarguras={num:36,nivel:42,codigo:70,nome:250,inicio:88,termino:88,duracao:60,percEsp:72,percConc:78,predecessora:80,responsavel:100,local:80,grupo:80,acoes:64};
+  let colOrdem=['num','nivel','codigo','nome','inicio','termino','duracao','percEsp','percConc','predecessora','responsavel','local','grupo','custoMaterial','custoMaoObra','acoes'];
+  let colLarguras={num:36,nivel:42,codigo:70,nome:250,inicio:88,termino:88,duracao:60,percEsp:72,percConc:78,predecessora:80,responsavel:100,local:80,grupo:80,custoMaterial:100,custoMaoObra:100,acoes:64};
   let colsHidden=new Set();
 
-  const COL_LABELS={num:'#',nivel:'Nível',codigo:'Código',nome:'Tarefa',inicio:'Início',termino:'Término',duracao:'Duração',percEsp:'% Esperado',percConc:'% Concluído',predecessora:'Predecessora',responsavel:'Responsável',local:'Local',grupo:'Grupo',acoes:''};
+  const COL_LABELS={num:'#',nivel:'Nível',codigo:'Código',nome:'Tarefa',inicio:'Início',termino:'Término',duracao:'Duração',percEsp:'% Esperado',percConc:'% Concluído',predecessora:'Predecessora',responsavel:'Responsável',local:'Local',grupo:'Grupo',custoMaterial:'Custo Material',custoMaoObra:'Custo M.Obra',acoes:''};
   const COL_FIXED=new Set(['num','nome','acoes']);
   const COL_EDITABLE=new Set(['codigo','nome','inicio','termino','duracao','percEsp','percConc','predecessora','responsavel','local','grupo','nivel']);
+
+  // Custo Material / Custo Mão de Obra por tarefa (calculado a partir dos
+  // vínculos de Materiais e Mão de Obra, com distribuição hierárquica —
+  // ver _calcularCustos). Preenchido em carregar(), lido em _paintRows.
+  let custoMaterialPorTarefa=new Map();
+  let custoMaoObraPorTarefa=new Map();
 
   async function init(){
     const ok=await Utils.initPagina({requireObra:true});if(!ok)return;
@@ -32,11 +38,108 @@ const Planejamento = (() => {
   async function carregar(){
     try{
       Utils.mostrarLoading('Carregando...');
-      tarefas=await Database.listar(obraId,COL,'ordem').catch(()=>[]);
+      const [tf,materiaisBib,materiaisVinc,maoDeObraVinc]=await Promise.all([
+        Database.listar(obraId,COL,'ordem').catch(()=>[]),
+        Database.listar(obraId,'materiais','nome').catch(()=>[]),
+        Database.listar(obraId,'materiais_vinculos','createdAt').catch(()=>[]),
+        Database.listar(obraId,'maoDeObra_vinculos','createdAt').catch(()=>[]),
+      ]);
+      tarefas=tf;
+      _calcularCustos(materiaisBib,materiaisVinc,maoDeObraVinc);
       _buildFiltradas();
       _render();
     }catch(e){console.error(e);Utils.toast('Erro.','erro');}
     finally{Utils.esconderLoading();}
+  }
+
+  // ===================== CUSTOS (Material / Mão de Obra) =====================
+  // Regra de distribuição hierárquica pedida por Milton:
+  // - O custo direto vinculado a uma tarefa de nível N é dividido IGUALMENTE
+  //   entre os filhos diretos dessa tarefa (nível N+1), que por sua vez
+  //   redistribuem à própria vez para os seus filhos, e assim por diante.
+  // - Ao final, o custo EXIBIDO em qualquer tarefa = soma do custo de
+  //   todos os níveis abaixo dela (uma folha mostra o que recebeu por
+  //   herança + o que foi vinculado direto a ela; um pai mostra a soma
+  //   de tudo que está por baixo).
+  function _calcularCustos(materiaisBib,materiaisVinc,maoDeObraVinc){
+    custoMaterialPorTarefa=new Map();
+    custoMaoObraPorTarefa=new Map();
+    if(!tarefas.length)return;
+
+    // ---- 1. Custo DIRETO por tarefa (o que foi vinculado especificamente a ela) ----
+    const diretoMaterial=new Map();
+    const bibPorId=new Map(materiaisBib.map(m=>[m.id,m]));
+    for(const v of materiaisVinc){
+      if(!v.tarefaId||v.tarefaId==='__fachada__')continue; // não pertence à árvore do Planejamento
+      const t=tarefas.find(x=>x.id===v.tarefaId);
+      const mat=bibPorId.get(v.materialId);
+      if(!t||!mat||!mat.preco)continue;
+      const cons=parseFloat(v.consumoPrevisto)||0;
+      const qtdBase=(t.quantidade||0)*cons;
+      const custo=qtdBase*parseFloat(mat.preco);
+      diretoMaterial.set(v.tarefaId,(diretoMaterial.get(v.tarefaId)||0)+custo);
+    }
+
+    const diretoMaoObra=new Map();
+    for(const v of maoDeObraVinc){
+      if(!v.tarefaId)continue;
+      const t=tarefas.find(x=>x.id===v.tarefaId);
+      if(!t)continue;
+      const valor=parseFloat(v.valor)||0;
+      const custo=t.quantidade?valor*t.quantidade:valor;
+      diretoMaoObra.set(v.tarefaId,(diretoMaoObra.get(v.tarefaId)||0)+custo);
+    }
+
+    custoMaterialPorTarefa=_distribuirEAgregar(diretoMaterial);
+    custoMaoObraPorTarefa=_distribuirEAgregar(diretoMaoObra);
+  }
+
+  // Recebe Map(tarefaId -> custo direto) e devolve Map(tarefaId -> custo
+  // exibido), aplicando a distribuição igualitária pai→filhos e depois a
+  // soma filhos→pai, usando a mesma ordem/nível já usado no resto do módulo.
+  function _distribuirEAgregar(diretoPorId){
+    const sorted=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
+
+    // Monta lista de filhos diretos de cada tarefa (próximas na ordem com
+    // nível = nivel+1, até achar uma de nível <= o da tarefa atual) —
+    // mesma convenção usada em recuarNivel/avancarNivel e _buildFiltradas.
+    const filhosDe=new Map();
+    for(let i=0;i<sorted.length;i++){
+      const t=sorted[i], niv=t.nivel||0, filhos=[];
+      for(let j=i+1;j<sorted.length;j++){
+        const s=sorted[j];
+        if((s.nivel||0)>niv){ if((s.nivel||0)===niv+1) filhos.push(s); }
+        else break;
+      }
+      filhosDe.set(t.id,filhos);
+    }
+
+    // Passo 1 (topo→baixo): distribui direto+herdado igualmente entre filhos
+    const herdado=new Map();
+    const custoProprioFinal=new Map(); // só preenchido para folhas
+    for(const t of sorted){
+      const proprio=(diretoPorId.get(t.id)||0)+(herdado.get(t.id)||0);
+      const filhos=filhosDe.get(t.id)||[];
+      if(filhos.length){
+        const parte=proprio/filhos.length;
+        for(const f of filhos) herdado.set(f.id,(herdado.get(f.id)||0)+parte);
+      } else {
+        custoProprioFinal.set(t.id,proprio);
+      }
+    }
+
+    // Passo 2 (baixo→topo): soma dos filhos vira o valor exibido do pai
+    const exibido=new Map();
+    for(let i=sorted.length-1;i>=0;i--){
+      const t=sorted[i], filhos=filhosDe.get(t.id)||[];
+      if(filhos.length){
+        let soma=0; for(const f of filhos) soma+=exibido.get(f.id)||0;
+        exibido.set(t.id,soma);
+      } else {
+        exibido.set(t.id,custoProprioFinal.get(t.id)||0);
+      }
+    }
+    return exibido;
   }
 
   function _onKey(e){
@@ -206,6 +309,12 @@ const Planejamento = (() => {
           cells+=`<div style="${base}color:#555;font-size:.7rem;cursor:pointer;" ${clickEdit}>${t.local||'—'}</div>`;
         } else if(cid==='grupo'){
           cells+=`<div style="${base}color:#555;font-size:.7rem;cursor:pointer;" ${clickEdit}>${t.grupo||'—'}</div>`;
+        } else if(cid==='custoMaterial'){
+          const cm=custoMaterialPorTarefa.get(t.id)||0;
+          cells+=`<div style="${base}color:#8a8;font-size:.68rem;justify-content:flex-end;font-family:var(--font-mono);">${cm?'R$ '+_fMoeda(cm):'—'}</div>`;
+        } else if(cid==='custoMaoObra'){
+          const cmo=custoMaoObraPorTarefa.get(t.id)||0;
+          cells+=`<div style="${base}color:#8a8;font-size:.68rem;justify-content:flex-end;font-family:var(--font-mono);">${cmo?'R$ '+_fMoeda(cmo):'—'}</div>`;
         } else if(cid==='acoes'){
           cells+=`<div style="${base}display:flex;gap:1px;justify-content:center;">
             <button style="background:#222;color:#888;border:1px solid #333;border-radius:3px;cursor:pointer;font-size:.58rem;padding:0 3px;line-height:1.4;" onclick="event.stopPropagation();Planejamento.recuarNivel('${t.id}')" title="Recuar nível">←</button>
@@ -841,6 +950,8 @@ const Planejamento = (() => {
             else if(cid==='responsavel')cells+=`<div style="${base}color:#555;font-size:.7rem;">${t.responsavel||'—'}</div>`;
             else if(cid==='local')cells+=`<div style="${base}color:#555;font-size:.7rem;">${t.local||'—'}</div>`;
             else if(cid==='grupo')cells+=`<div style="${base}color:#555;font-size:.7rem;">${t.grupo||'—'}</div>`;
+            else if(cid==='custoMaterial'){const cm=custoMaterialPorTarefa.get(t.id)||0;cells+=`<div style="${base}color:#8a8;font-size:.68rem;justify-content:flex-end;">${cm?'R$ '+_fMoeda(cm):'—'}</div>`;}
+            else if(cid==='custoMaoObra'){const cmo=custoMaoObraPorTarefa.get(t.id)||0;cells+=`<div style="${base}color:#8a8;font-size:.68rem;justify-content:flex-end;">${cmo?'R$ '+_fMoeda(cmo):'—'}</div>`;}
             else if(cid==='acoes')cells+=`<div style="${base}"></div>`;
           }
           rowsHtml+=`<div style="position:absolute;top:${yLocal}px;left:0;right:0;height:${ROW_H}px;display:flex;align-items:center;border-bottom:1px solid #1a1a1a;background:${i%2?'rgba(255,255,255,.015)':''};">${cells}</div>`;
@@ -948,6 +1059,7 @@ const Planejamento = (() => {
   function _perc(t){return Math.round(t.percentualConcluido||0);}
   function _fd(d){if(!d)return'—';try{return new Date(d+'T12:00:00').toLocaleDateString('pt-BR');}catch(e){return d;}}
   function _fBR(d){if(!d)return'';try{return new Date(d+'T12:00:00').toLocaleDateString('pt-BR');}catch(e){return'';}}
+  function _fMoeda(n){return Number(n||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});}
   function _pd(v){if(!v)return'';if(v instanceof Date)return v.toISOString().split('T')[0];
     if(typeof v==='number')return new Date((v-25569)*864e5).toISOString().split('T')[0];
     const s=String(v).trim(),m=s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
