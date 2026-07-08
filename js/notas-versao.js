@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.8.1',
+  versaoAtual: 'V2.8.2',
 
   versoes: [
     {
@@ -1239,7 +1239,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.8.1',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-08',
       tipo: 'funcionalidade',
       titulo: 'Mão de Obra: busca hierárquica para vincular tarefa',
@@ -1257,6 +1257,30 @@ const NotasVersao = {
         'Reaproveita o helper compartilhado Utils.opcoesTarefaHierarquia,',
         '  mesmo já usado no módulo Materiais, para manter os dois',
         '  módulos consistentes.',
+      ]
+    },
+    {
+      versao: 'V2.8.2',
+      status: 'aberta',
+      data: '2026-07-08',
+      tipo: 'funcionalidade',
+      titulo: 'Planejamento: reordenar linha por arrasto + cor por nível',
+      itens: [
+        'REORDENAR POR ARRASTO: Ctrl + botão direito + arrastar move a',
+        '  tarefa (e os filhos diretos dela, se houver) pra cima ou pra',
+        '  baixo na lista, encaixando antes/depois de onde soltar',
+        '  → Resolve o problema de vincular um nível 4 ao nível 3 errado',
+        '    quando há vários grupos do mesmo nível em sequência',
+        '  → Linha some parcialmente (fica translúcida) durante o arrasto',
+        '  → Barra amarela indica onde vai encaixar (antes/depois da linha)',
+        '  → Local-first: tela atualiza na hora, salva no Firestore atrás',
+        '',
+        'COR POR NÍVEL: badge colorido na coluna Nível (cores diferentes',
+        '  por nível, cíclico), ajuda a identificar rapidamente a que',
+        '  grupo uma tarefa pertence mesmo com vários níveis iguais',
+        '  em sequência',
+        'Indentação da coluna Tarefa aumentada (14px → 20px por nível)',
+        '  + linha guia vertical sutil marcando a profundidade',
       ]
     }
   ],

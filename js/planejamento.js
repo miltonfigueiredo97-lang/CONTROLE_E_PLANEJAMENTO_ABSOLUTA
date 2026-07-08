@@ -6,6 +6,7 @@ const Planejamento = (() => {
   let obraId=null, tarefas=[], filtradas=[];
   let zoomGantt='mes', editandoId=null, selectedIdx=-1;
   let splitX=440, ganttVisible=true;
+  let _dragTaskId=null, _dropTargetId=null, _dropPos='before';
   let colsRecolhidas=new Set();
   const COL='tarefas';
   const ROW_H=30;
@@ -268,6 +269,8 @@ const Planejamento = (() => {
       const t=filtradas[i], y=i*ROW_H;
       const sel=i===selectedIdx, isG=t.tipo==='grupo';
       const st2=_status(t), perc=_perc(t);
+      const isDragged=t.id===_dragTaskId;
+      const isDropAlvo=t.id===_dropTargetId;
 
       // Build row cells
       let cells='';
@@ -280,17 +283,20 @@ const Planejamento = (() => {
         if(cid==='num'){
           cells+=`<div style="${base}color:#444;font-family:var(--font-mono);font-size:.65rem;justify-content:center;cursor:pointer;" ${clickEdit}>${i+1}</div>`;
         } else if(cid==='nivel'){
-          cells+=`<div style="${base}color:#666;font-family:var(--font-mono);font-size:.68rem;justify-content:center;cursor:pointer;" ${clickEdit}>${t.nivel||0}</div>`;
+          const cor=_corNivel(t.nivel||0);
+          cells+=`<div style="${base}justify-content:center;cursor:pointer;" ${clickEdit}>
+            <span style="background:${cor};color:#000;font-weight:800;font-family:var(--font-mono);font-size:.65rem;padding:1px 6px;border-radius:3px;min-width:16px;text-align:center;">${t.nivel||0}</span></div>`;
         } else if(cid==='codigo'){
           cells+=`<div style="${base}color:#555;font-family:var(--font-mono);font-size:.7rem;cursor:pointer;" ${clickEdit}>${t.codigo||''}</div>`;
         } else if(cid==='nome'){
-          const ind=(t.nivel||0)*14;
+          const ind=(t.nivel||0)*20;
           // Tem filhos = próxima tarefa na ordem tem nível maior
           const tIdx=tarefas.sort((a,b)=>(a.ordem||0)-(b.ordem||0)).findIndex(x=>x.id===t.id);
           const temF=tIdx>=0&&tIdx<tarefas.length-1&&(tarefas[tIdx+1].nivel||0)>(t.nivel||0);
           const tog=temF?`<span onclick="event.stopPropagation();Planejamento.toggleRecolher('${t.id}')" style="cursor:pointer;color:#666;font-size:.6rem;margin-right:3px;flex-shrink:0;">${colsRecolhidas.has(t.id)?'▶':'▼'}</span>`:'';
-          cells+=`<div style="${base}padding-left:${ind+4}px;cursor:pointer;" ${clickEdit} title="${t.nome}">
-            ${tog}<span style="color:${isG?'var(--cor-primaria)':'#ccc'};font-weight:${isG?700:400};overflow:hidden;text-overflow:ellipsis;">${t.nome||''}</span></div>`;
+          const guia=(t.nivel||0)>0?`<span style="position:absolute;left:${ind-13}px;top:0;bottom:0;width:1px;background:rgba(255,255,255,.08);"></span>`:'';
+          cells+=`<div style="${base}padding-left:${ind+4}px;cursor:pointer;position:relative;" ${clickEdit} title="${t.nome}">
+            ${guia}${tog}<span style="color:${isG?'var(--cor-primaria)':'#ccc'};font-weight:${isG?700:400};overflow:hidden;text-overflow:ellipsis;">${t.nome||''}</span></div>`;
         } else if(cid==='inicio'){
           cells+=`<div style="${base}color:#666;font-size:.7rem;justify-content:center;cursor:pointer;" ${clickEdit}>${_fd(t.inicioPlanejado)}</div>`;
         } else if(cid==='termino'){
@@ -324,7 +330,9 @@ const Planejamento = (() => {
         }
       }
 
-      rH+=`<div style="position:absolute;top:${y}px;left:0;right:0;height:${ROW_H}px;display:flex;align-items:center;border-bottom:1px solid #1a1a1a;background:${sel?'rgba(245,200,0,.12)':''};">${cells}</div>`;
+      const bordaDrop=isDropAlvo?(_dropPos==='before'?'box-shadow:inset 0 2px 0 var(--cor-primaria);':'box-shadow:inset 0 -2px 0 var(--cor-primaria);'):'';
+      rH+=`<div data-rowid="${t.id}" style="position:absolute;top:${y}px;left:0;right:0;height:${ROW_H}px;display:flex;align-items:center;border-bottom:1px solid #1a1a1a;background:${sel?'rgba(245,200,0,.12)':''};opacity:${isDragged?'.35':'1'};${bordaDrop}cursor:default;"
+        onpointerdown="Planejamento._rowDragStart(event,${i})" oncontextmenu="if(event.ctrlKey)event.preventDefault();">${cells}</div>`;
 
       // Barra Gantt
       if(ganttVisible&&t.inicioPlanejado&&t.terminoPlanejado){
@@ -546,6 +554,105 @@ const Planejamento = (() => {
     el.addEventListener('pointermove',move);
     el.addEventListener('pointerup',up);
     el.addEventListener('pointercancel',up);
+  }
+
+  // Cor cíclica por nível hierárquico — ajuda a diferenciar visualmente
+  // vários grupos do mesmo nível em sequência (ex: vários níveis 3
+  // seguidos, cada um com filhos nível 4 próprios).
+  const _PALETA_NIVEL=['#F5C800','#60a5fa','#4ade80','#f472b6','#fb923c','#a78bfa','#2dd4bf'];
+  function _corNivel(nivel){return _PALETA_NIVEL[nivel%_PALETA_NIVEL.length];}
+
+  // ===================== ARRASTAR LINHA (REORDENAR) =====================
+  // Ctrl + botão direito + arrastar move a tarefa (e seus filhos diretos,
+  // se houver) para cima ou para baixo na lista, encaixando-a antes/depois
+  // da linha onde o mouse for solto. Resolve o problema de vincular um
+  // nível 4 ao nível 3 errado quando há vários no mesmo grupo.
+  function _rowDragStart(e, idx){
+    if(!e.ctrlKey||e.button!==2)return;
+    e.preventDefault();e.stopPropagation();
+    const t=filtradas[idx];if(!t)return;
+    const el=e.currentTarget;
+    const esqS=document.getElementById('g-esq-s');
+    if(!esqS)return;
+
+    _dragTaskId=t.id;
+    try{el.setPointerCapture(e.pointerId);}catch(err){}
+
+    const move=ev=>{
+      const rect=esqS.getBoundingClientRect();
+      const yRel=ev.clientY-rect.top+esqS.scrollTop;
+      let overIdx=Math.floor(yRel/ROW_H);
+      overIdx=Math.max(0,Math.min(filtradas.length-1,overIdx));
+      const alvo=filtradas[overIdx];
+      if(!alvo||alvo.id===_dragTaskId){ _dropTargetId=null; }
+      else{
+        const dentroDaLinha=yRel-overIdx*ROW_H;
+        _dropTargetId=alvo.id;
+        _dropPos=dentroDaLinha<ROW_H/2?'before':'after';
+      }
+      _paintRows();
+    };
+    const up=async()=>{
+      el.removeEventListener('pointermove',move);
+      el.removeEventListener('pointerup',up);
+      el.removeEventListener('pointercancel',up);
+      try{el.releasePointerCapture(e.pointerId);}catch(err){}
+      const dragId=_dragTaskId, targetId=_dropTargetId, pos=_dropPos;
+      _dragTaskId=null;_dropTargetId=null;
+      if(dragId&&targetId&&dragId!==targetId){
+        await _reordenarTarefa(dragId,targetId,pos);
+      } else {
+        _paintRows();
+      }
+    };
+    el.addEventListener('pointermove',move);
+    el.addEventListener('pointerup',up);
+    el.addEventListener('pointercancel',up);
+  }
+
+  // Move a tarefa (+ filhos diretos contíguos, mesma convenção usada em
+  // recuarNivel/avancarNivel) para antes ou depois da tarefa-alvo, e
+  // recalcula 'ordem' de tudo. Local-first: atualiza a tela na hora,
+  // salva no Firestore em lotes em segundo plano.
+  async function _reordenarTarefa(dragId,targetId,pos){
+    const sorted=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
+    const dragIdx=sorted.findIndex(x=>x.id===dragId);
+    if(dragIdx<0)return;
+    const dragTask=sorted[dragIdx], dragNivel=dragTask.nivel||0;
+
+    // Bloco = a tarefa arrastada + tudo abaixo dela com nível maior
+    let fimBloco=dragIdx+1;
+    while(fimBloco<sorted.length&&(sorted[fimBloco].nivel||0)>dragNivel)fimBloco++;
+    const bloco=sorted.splice(dragIdx,fimBloco-dragIdx);
+
+    // Não permite soltar dentro do próprio bloco (vira no-op)
+    const targetIdxAtual=sorted.findIndex(x=>x.id===targetId);
+    if(targetIdxAtual<0){_paintRows();return;}
+
+    let insertAt=pos==='before'?targetIdxAtual:targetIdxAtual+1;
+    sorted.splice(insertAt,0,...bloco);
+
+    // Recalcula ordem sequencial e detecta o que mudou
+    const updates=[];
+    sorted.forEach((t,i)=>{
+      const novaOrdem=i+1;
+      if((t.ordem||0)!==novaOrdem){
+        t.ordem=novaOrdem;
+        updates.push({id:t.id,ordem:novaOrdem});
+      }
+    });
+
+    // Atualiza local imediatamente (responsividade)
+    tarefas=sorted;
+    _buildFiltradas();_render();requestAnimationFrame(()=>_paintRows());
+
+    // Salva em segundo plano, em lotes
+    const LOTE=30;
+    for(let i=0;i<updates.length;i+=LOTE){
+      await Promise.all(updates.slice(i,i+LOTE).map(u=>
+        Database.atualizar(obraId,COL,u.id,{ordem:u.ordem}).catch(e=>console.error('Erro reordenar:',u.id,e))
+      ));
+    }
   }
 
   // ===================== TOGGLE GANTT =====================
@@ -1205,6 +1312,7 @@ const Planejamento = (() => {
     selectIdx,toggleRecolher,recuarNivel,avancarNivel,
     toggleGantt,hideCol,showColsMenu,_showCol,_showAll,
     _colResizeStart,moveColLeft,moveColRight,_hideCol,_divStart,_sync,_editCell,_esqDragStart,
+    _rowDragStart,
     importarExcel,exportar,exportarPNG,_gerarPNG,_predPopup,_predPreview,_predSalvar};
 })();
 function onObraChanged(){Planejamento.init();}
