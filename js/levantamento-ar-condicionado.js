@@ -328,6 +328,7 @@ const LevantamentoAr = (() => {
     document.getElementById('modal-ar-titulo').textContent = 'Adicionar Item ao Levantamento';
     _renderItemModal(null);
     Utils.abrirModal('modal-ar-item');
+    _focarBusca();
   }
   function editarItem(id) {
     const it = itens.find(x => x.id === id); if (!it) return;
@@ -335,8 +336,16 @@ const LevantamentoAr = (() => {
     document.getElementById('modal-ar-titulo').textContent = 'Editar Item';
     _renderItemModal(it);
     Utils.abrirModal('modal-ar-item');
+    _focarBusca();
   }
-  function setModoItem(m) { modoItem = m; _renderItemModal(editandoItemId ? itens.find(x => x.id === editandoItemId) : null); }
+  function setModoItem(m) {
+    modoItem = m;
+    _renderItemModal(editandoItemId ? itens.find(x => x.id === editandoItemId) : null);
+    if (m === 'buscar') _focarBusca();
+  }
+  function _focarBusca() {
+    setTimeout(() => { document.getElementById('ar-busca-input')?.focus(); }, 60);
+  }
   function onBuscaMaterial(texto) {
     buscaTexto = texto;
     const lista = document.getElementById('ar-busca-resultados');
@@ -347,13 +356,22 @@ const LevantamentoAr = (() => {
     _renderItemModal(editandoItemId ? itens.find(x => x.id === editandoItemId) : null);
   }
 
+  function _destacar(nome, query) {
+    if (!query || !query.trim()) return nome;
+    const qNorm = _normalizar(query);
+    const nNorm = _normalizar(nome);
+    const idx = nNorm.indexOf(qNorm);
+    if (idx === -1) return nome;
+    return nome.slice(0, idx) + '<mark style="background:rgba(245,200,0,0.35);color:inherit;border-radius:2px;">' + nome.slice(idx, idx + query.length) + '</mark>' + nome.slice(idx + query.length);
+  }
+
   function _renderResultadosBusca() {
     const resultados = _buscarMateriais(buscaTexto).slice(0, 30);
     if (!resultados.length) return `<div class="text-sm text-muted" style="padding:8px;">Nenhum material de Ar Condicionado/Hidráulica encontrado com esse nome.</div>`;
     return resultados.map(m => `
       <div class="tree-item${materialSelecionadoId === m.id ? ' ativo' : ''}" style="padding:8px 10px;" onclick="LevantamentoAr.selecionarMaterialBusca('${m.id}')">
         <span class="tree-icon">🧊</span>
-        <span class="tree-label">${m.nome}${m.fabricante ? ' — <span style=\'color:#888\'>' + m.fabricante + '</span>' : ''}</span>
+        <span class="tree-label">${_destacar(m.nome, buscaTexto)}${m.fabricante ? ' — <span style=\'color:#888\'>' + m.fabricante + '</span>' : ''}</span>
         <span class="tree-badge">${m.tipo}</span>
       </div>`).join('');
   }
@@ -374,7 +392,7 @@ const LevantamentoAr = (() => {
 
       ${modoItem === 'buscar' ? `
         <div class="form-grupo"><label>Buscar peça/material (Ar Condicionado / Hidráulica)</label>
-          <input type="text" class="form-control" placeholder="Ex: dreno, tubo cobre, VRF..." value="${buscaTexto}"
+          <input type="text" id="ar-busca-input" class="form-control" placeholder="Ex: dreno, tubo cobre, VRF..." value="${buscaTexto}"
             oninput="LevantamentoAr.onBuscaMaterial(this.value)"></div>
         <div id="ar-busca-resultados" style="max-height:220px;overflow-y:auto;border:1px solid var(--cor-borda-light);border-radius:8px;margin-bottom:14px;">
           ${_renderResultadosBusca()}
