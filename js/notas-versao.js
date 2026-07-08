@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.8.2',
+  versaoAtual: 'V2.8.3',
 
   versoes: [
     {
@@ -1261,7 +1261,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.8.2',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-08',
       tipo: 'funcionalidade',
       titulo: 'Planejamento: reordenar linha por arrasto + cor por nível',
@@ -1281,6 +1281,26 @@ const NotasVersao = {
         '  em sequência',
         'Indentação da coluna Tarefa aumentada (14px → 20px por nível)',
         '  + linha guia vertical sutil marcando a profundidade',
+      ]
+    },
+    {
+      versao: 'V2.8.3',
+      status: 'aberta',
+      data: '2026-07-08',
+      tipo: 'funcionalidade',
+      titulo: 'Mão de Obra: exportar planilha com nome da obra em destaque',
+      itens: [
+        'Novo botão "📤 Exportar" no módulo Mão de Obra, gera arquivo',
+        '  .xlsx (mesma biblioteca já usada em Planejamento)',
+        'Nome da obra em letra grande, mesclado no topo da planilha,',
+        '  antes da tabela em si — seguido de um subtítulo com a aba',
+        '  exportada (Biblioteca ou Por Tarefa) e a data da exportação',
+        'Aba "Por Tarefa": exporta Mão de Obra, Categoria, Serviço/Tarefa,',
+        '  Valor Unit., Unidade, Quantidade da Tarefa e Custo Total, com',
+        '  linha de TOTAL GERAL ao final (respeita o filtro de tarefa',
+        '  ativo, se houver)',
+        'Aba "Biblioteca": exporta Mão de Obra, Categoria, Observações',
+        '  e número de vínculos de cada uma',
       ]
     }
   ],

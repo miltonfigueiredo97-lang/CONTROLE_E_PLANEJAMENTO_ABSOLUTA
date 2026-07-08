@@ -50,6 +50,7 @@ const MaoDeObra = (() => {
         <div><h2>Mão de Obra</h2>
           <span class="subtitulo">${biblioteca.length} na biblioteca · ${vinculos.length} vínculo(s)</span></div>
         <div class="btn-grupo">
+          <button class="btn btn-secundario btn-sm" onclick="MaoDeObra.exportar()">📤 Exportar</button>
           ${abaAtiva==='biblioteca'
             ?`<button class="btn btn-secundario btn-sm" onclick="MaoDeObra.setAba('vinculos')">← Por Tarefa</button>
               <button class="btn btn-primario btn-sm" onclick="MaoDeObra.novaMaoDeObraBib()">+ Nova Mão de Obra</button>`
@@ -389,12 +390,68 @@ const MaoDeObra = (() => {
     catch(e){Utils.toast('Erro.','erro');}
   }
 
+  // ===================== EXPORTAR (XLSX) =====================
+  // Nome da obra em destaque (linha grande mesclada) antes da tabela em si,
+  // seguido de subtítulo com a aba atual (Biblioteca ou Por Tarefa) e data.
+  function _ls(src){return new Promise((r,j)=>{const s=document.createElement('script');s.src=src;s.onload=r;s.onerror=j;document.head.appendChild(s);});}
+
+  async function exportar(){
+    try{
+      Utils.mostrarLoading('Gerando planilha...');
+      if(typeof XLSX==='undefined')await _ls('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');
+      const obra=Router.getObra();
+      const nomeObra=(obra?.nome||'Obra sem nome').toUpperCase();
+      const dataExp=new Date().toLocaleDateString('pt-BR');
+
+      let H,rows,subtitulo;
+      if(abaAtiva==='biblioteca'){
+        subtitulo='Mão de Obra — Biblioteca';
+        H=['Mão de Obra','Categoria','Observações','Nº de Vínculos'];
+        rows=biblioteca.map(m=>[m.nome||'',m.categoria||'',m.observacoes||'',
+          vinculos.filter(v=>v.maoDeObraId===m.id).length]);
+      }else{
+        const infoFiltro=filtroTarefa?_getTarefaInfo(filtroTarefa):null;
+        subtitulo='Mão de Obra — Por Tarefa'+(infoFiltro?` (filtrado: ${infoFiltro.label})`:'');
+        H=['Mão de Obra','Categoria','Serviço / Tarefa','Valor Unit. (R$)','Unidade','Quantidade da Tarefa','Custo Total (R$)'];
+        const vf=filtroTarefa?vinculos.filter(v=>v.tarefaId===filtroTarefa):vinculos;
+        rows=vf.map(v=>{
+          const mo=biblioteca.find(m=>m.id===v.maoDeObraId);
+          const ti=_getTarefaInfo(v.tarefaId);
+          const total=_calcTotalNum(ti,v);
+          return[mo?mo.nome:'(removido)',mo?.categoria||'',ti?ti.label:'',
+            parseFloat(v.valor)||0,v.unidade||'',ti?ti.quantidade:'',total];
+        });
+        const totalGeral=rows.reduce((s,r)=>s+(parseFloat(r[6])||0),0);
+        rows.push(['','','','','','TOTAL GERAL',totalGeral]);
+      }
+
+      const ncols=H.length;
+      const aoa=[[nomeObra],[subtitulo+' — Exportado em '+dataExp],[],H,...rows];
+      const ws=XLSX.utils.aoa_to_sheet(aoa);
+      ws['!merges']=[
+        {s:{r:0,c:0},e:{r:0,c:ncols-1}},
+        {s:{r:1,c:0},e:{r:1,c:ncols-1}},
+      ];
+      ws['!rows']=[{hpx:34},{hpx:20},{hpx:8}];
+      if(ws['A1'])ws['A1'].s={font:{bold:true,sz:20},alignment:{horizontal:'center',vertical:'center'}};
+      if(ws['A2'])ws['A2'].s={font:{bold:true,sz:12,color:{rgb:'8a6d00'}},alignment:{horizontal:'center'}};
+      ws['!cols']=H.map((h,i)=>i===0?{wch:26}:i===2?{wch:34}:{wch:16});
+
+      const wb=XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb,ws,'Mão de Obra');
+      const nomeArquivo=`mao_de_obra_${(obra?.nome||'obra').replace(/[^a-z0-9]/gi,'_')}.xlsx`;
+      XLSX.writeFile(wb,nomeArquivo,{cellStyles:true});
+      Utils.toast('Planilha exportada!','sucesso');
+    }catch(e){console.error(e);Utils.toast('Erro ao exportar: '+e.message,'erro');}
+    finally{Utils.esconderLoading();}
+  }
+
   function setAba(a){abaAtiva=a;renderizar();}
   function setFiltro(v){filtroTarefa=v;renderizar();}
 
   return {init,carregar,renderizar,setAba,setFiltro,
     novaMaoDeObraBib,editarMaoDeObraBib,salvarMaoDeObraBib,excluirMaoDeObraBib,
     novoVinculo,editarVinculo,salvarVinculo,excluirVinculo,toggleModoVinc,
-    onBuscaTarefaVinc,selecionarTarefaVinc};
+    onBuscaTarefaVinc,selecionarTarefaVinc,exportar};
 })();
 function onObraChanged(){MaoDeObra.init();}
