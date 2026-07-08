@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.3.1',
+  versaoAtual: 'V2.4.0',
 
   versoes: [
     {
@@ -1006,7 +1006,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.3.1',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-07',
       tipo: 'funcionalidade',
       titulo: 'PNG do Gantt: paginação automática — captura TODAS as linhas (2500+)',
@@ -1029,6 +1029,31 @@ const NotasVersao = {
         'Casos pequenos (cabem numa imagem só) continuam gerando um',
         '  único arquivo, sem sufixo de página — sem mudança de',
         '  comportamento pro caso comum',
+      ]
+    },
+    {
+      versao: 'V2.4.0',
+      status: 'aberta',
+      data: '2026-07-07',
+      tipo: 'funcionalidade',
+      titulo: 'Novo módulo: Levantamento de Ar Condicionado / Hidráulica',
+      itens: [
+        'Novo módulo dentro de Levantamentos: Ar Condicionado / Hidráulica',
+        'Estrutura de Áreas configurável e editável (adicionar, renomear,',
+        '  excluir área e subárea/local) — começa com "Área Comum" e',
+        '  "Torre (Apartamentos)", mas totalmente livre para o usuário',
+        '  reorganizar (ex: subdividir Área Comum por pavimento/local)',
+        'Adicionar item ao levantamento tem 2 modos:',
+        '  → Buscar da biblioteca: busca por nome com tolerância a',
+        '    erro de digitação, filtrando materiais tipo "Ar',
+        '    Condicionado" ou "Hidráulica"',
+        '  → Criar novo material: cria direto na biblioteca de',
+        '    Materiais e já usa no levantamento na mesma operação',
+        'Novos tipos "Ar Condicionado" e "Hidráulica" adicionados à',
+        '  biblioteca de Materiais (cadastro e criação rápida)',
+        'Visão Geral consolida o total por material somando todas as',
+        '  áreas — base para futura vinculação com tarefas do',
+        '  Planejamento (cálculo de valor/consumo por dia no cronograma)',
       ]
     }
   ],

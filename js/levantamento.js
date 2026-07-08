@@ -62,11 +62,11 @@ const Levantamento = (() => {
 
       <h3 class="mb-2" style="font-size:1rem;">Bases de Quantitativos / Composições</h3>
       <div class="cards-grid">
-        <div class="card" style="opacity:0.5">
+        <div class="card obra-card" onclick="Router.navegar('levantamento-ar-condicionado.html')">
           <div class="card-body">
             <div class="obra-nome">❄️ Ar Condicionado</div>
-            <div class="obra-info text-sm">Composição por tipologia de unidade.</div>
-            <div class="mt-1"><span class="badge badge-neutro">Em breve</span></div>
+            <div class="obra-info text-sm">Levantamento de materiais de ar condicionado e hidráulica por área da obra.</div>
+            <div class="mt-1"><span class="badge badge-sucesso">Disponível</span></div>
           </div>
         </div>
       </div>

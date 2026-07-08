@@ -355,7 +355,7 @@ const Materiais = (() => {
           <div class="form-row">
             <div class="form-grupo"><label>Tipo</label>
               <select id="nm-tipo" class="form-control"><option value="">—</option>
-                ${['Revestimento','Pintura','Argamassa','Cimento','Impermeabilizante','Fixação','Acabamento','Outro'].map(t=>`<option>${t}</option>`).join('')}
+                ${['Revestimento','Pintura','Argamassa','Cimento','Impermeabilizante','Fixação','Estrutural','Acabamento','Ar Condicionado','Hidráulica','Outro'].map(t=>`<option>${t}</option>`).join('')}
               </select></div>
             <div class="form-grupo"><label>Fabricante</label><input id="nm-fab" class="form-control"></div>
           </div>

@@ -337,3 +337,58 @@
 .rel-tab:hover:not(.ativa) { color:var(--cor-texto); }
 .relatorio-pendente { border-left:3px solid var(--cor-alerta); cursor:default; }
 .relatorio-pendente:hover { transform:none; box-shadow:none; }
+
+/* ============================================
+   LEVANTAMENTO DE AR CONDICIONADO
+   ============================================ */
+.ar-layout {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 20px;
+  height: calc(100vh - 56px - 48px);
+}
+.ar-tree {
+  background: #fff;
+  border: 1px solid var(--cor-borda-light);
+  border-radius: var(--borda-radius-lg);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.ar-tree-header {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--cor-borda-light);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.ar-tree-header h3 { font-size: 0.9rem; }
+.ar-tree-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+}
+.ar-painel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-y: auto;
+}
+.ar-add-inline {
+  padding: 6px 10px;
+  border-radius: var(--borda-radius);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.78rem;
+  color: var(--cor-primaria-dark);
+  opacity: 0.75;
+}
+.ar-add-inline:hover { opacity: 1; background: var(--cor-fundo); }
+
+@media (max-width: 768px) {
+  .ar-layout { grid-template-columns: 1fr; height: auto; }
+  .ar-tree { max-height: 300px; }
+}
