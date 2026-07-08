@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.4.0',
+  versaoAtual: 'V2.4.1',
 
   versoes: [
     {
@@ -1033,7 +1033,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.4.0',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-07',
       tipo: 'funcionalidade',
       titulo: 'Novo módulo: Levantamento de Ar Condicionado / Hidráulica',
@@ -1054,6 +1054,19 @@ const NotasVersao = {
         'Visão Geral consolida o total por material somando todas as',
         '  áreas — base para futura vinculação com tarefas do',
         '  Planejamento (cálculo de valor/consumo por dia no cronograma)',
+      ]
+    },
+    {
+      versao: 'V2.4.1',
+      status: 'aberta',
+      data: '2026-07-07',
+      tipo: 'correcao',
+      titulo: 'Levantamento de Ar Condicionado: busca de material mais clara',
+      itens: [
+        'Campo "Buscar da biblioteca" ganha foco automático ao abrir o',
+        '  modal e ao trocar de aba',
+        'Nome do material destaca (highlight) o trecho que bateu com o',
+        '  termo buscado, deixando visível a aproximação por nome',
       ]
     }
   ],
