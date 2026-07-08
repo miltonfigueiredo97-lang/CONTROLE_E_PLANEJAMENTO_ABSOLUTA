@@ -521,19 +521,24 @@ const Planejamento = (() => {
     const el=e.currentTarget;
     const sx=e.clientX, startScroll=el.scrollLeft;
     _esqDragMoved=false;
-    let dragging=false;
-    try{el.setPointerCapture(e.pointerId);}catch(err){}
+    let dragging=false, captured=false;
 
     const move=ev=>{
       const dx=ev.clientX-sx;
-      if(!dragging&&Math.abs(dx)>4){dragging=true;_esqDragMoved=true;el.style.cursor='grabbing';}
+      if(!dragging&&Math.abs(dx)>4){
+        dragging=true;_esqDragMoved=true;el.style.cursor='grabbing';
+        // Só captura o ponteiro quando confirma que é arrasto de verdade —
+        // capturar cedo demais (num clique normal) sequestra o clique de
+        // tudo dentro da tabela (toggle ▼, edição de célula, botões ←→✕)
+        if(!captured){try{el.setPointerCapture(e.pointerId);captured=true;}catch(err){}}
+      }
       if(dragging){el.scrollLeft=startScroll-dx;}
     };
     const up=()=>{
       el.removeEventListener('pointermove',move);
       el.removeEventListener('pointerup',up);
       el.removeEventListener('pointercancel',up);
-      try{el.releasePointerCapture(e.pointerId);}catch(err){}
+      if(captured){try{el.releasePointerCapture(e.pointerId);}catch(err){}}
       el.style.cursor='grab';
       // Pequeno atraso pra não disparar clique/edição de célula logo após um arrasto real
       if(dragging)setTimeout(()=>{_esqDragMoved=false;},50);

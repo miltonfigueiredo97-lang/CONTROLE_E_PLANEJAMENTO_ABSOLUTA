@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.7.1',
+  versaoAtual: 'V2.7.2',
 
   versoes: [
     {
@@ -1179,7 +1179,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.7.1',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-08',
       tipo: 'correcao',
       titulo: 'Tabela do Planejamento: scroll horizontal com arrasto',
@@ -1192,6 +1192,25 @@ const NotasVersao = {
         'Cabeçalho das colunas acompanha o scroll horizontal da tabela',
         'Gantt (lado direito) continua fixo, sem ser afetado',
         'Arrastar não dispara seleção/edição de célula por engano',
+      ]
+    },
+    {
+      versao: 'V2.7.2',
+      status: 'aberta',
+      data: '2026-07-08',
+      tipo: 'correcao',
+      titulo: 'CRÍTICO: scroll horizontal da tabela sequestrava TODOS os cliques',
+      itens: [
+        'CAUSA: o scroll-com-arrasto (V2.7.1) capturava o ponteiro',
+        '  (setPointerCapture) logo no clique, antes de confirmar que',
+        '  era um arrasto de verdade. Isso sequestrava o clique de TUDO',
+        '  dentro da tabela: toggle ▼/▶ de famílias, edição de célula,',
+        '  botões ← → ✕ — nada respondia mais.',
+        'CORREÇÃO: a captura do ponteiro só acontece DEPOIS de confirmar',
+        '  movimento real (>4px). Um clique parado nunca ativa a',
+        '  captura, então não interfere em nada — toggle, edição e',
+        '  botões voltam a funcionar normalmente, e o arrasto horizontal',
+        '  continua funcionando quando o movimento é intencional.',
       ]
     }
   ],
