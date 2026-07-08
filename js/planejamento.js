@@ -226,10 +226,10 @@ const Planejamento = (() => {
 
     return`<div id="gantt-c" style="display:flex;border:1px solid #222;border-radius:6px;overflow:hidden;flex:1;min-height:300px;max-height:calc(100dvh - 180px);">
       <div id="g-esq" style="width:${ganttVisible?splitX+'px':'100%'};flex-shrink:${ganttVisible?'0':'1'};background:#111;display:flex;flex-direction:column;overflow:hidden;${ganttVisible?'':'flex:1;'}">
-        <div style="height:26px;background:#0d0d0d;border-bottom:1px solid #222;display:flex;align-items:center;flex-shrink:0;overflow:hidden;">
+        <div style="height:26px;background:#0d0d0d;border-bottom:1px solid #222;display:flex;align-items:center;flex-shrink:0;overflow:hidden;" id="g-esq-hdr">
           <div style="display:flex;align-items:center;min-width:${_totalColWidth(visCols)}px;height:100%;">${hdr}</div>
         </div>
-        <div id="g-esq-s" style="overflow-y:auto;overflow-x:hidden;flex:1;" onscroll="Planejamento._sync(this)">
+        <div id="g-esq-s" style="overflow:auto;flex:1;cursor:grab;" onscroll="Planejamento._sync(this)" onpointerdown="Planejamento._esqDragStart(event)">
           <div style="height:${totalH}px;position:relative;min-width:${_totalColWidth(visCols)}px;" id="g-esq-v"></div>
         </div>
       </div>
@@ -360,6 +360,7 @@ const Planejamento = (() => {
   // ===================== INLINE EDIT =====================
   function _editCell(e, idx, colId){
     e.stopPropagation();
+    if(_esqDragMoved)return;
     const t=filtradas[idx]; if(!t)return;
     selectedIdx=idx;
     const cell=e.currentTarget;
@@ -499,10 +500,47 @@ const Planejamento = (() => {
     const es=document.getElementById('g-esq-s');
     const ds=document.getElementById('g-dir-s');
     const hd=document.getElementById('g-hdr-d');
-    if(src===es&&ds){ds.scrollTop=es.scrollTop;}
+    const eh=document.getElementById('g-esq-hdr');
+    if(src===es){
+      if(ds)ds.scrollTop=es.scrollTop;
+      if(eh)eh.scrollLeft=es.scrollLeft; // cabeçalho da tabela acompanha o scroll horizontal
+    }
     else if(src===ds&&es){es.scrollTop=ds.scrollTop;if(hd)hd.scrollLeft=ds.scrollLeft;}
     if(_rafId)cancelAnimationFrame(_rafId);
     _rafId=requestAnimationFrame(()=>_paintRows());
+  }
+
+  // ===================== ARRASTAR TABELA HORIZONTALMENTE =====================
+  // Clique e arraste sobre a tabela (painel esquerdo) para rolar na horizontal,
+  // além do scroll normal (barra/trackpad). Usa Pointer Capture para não
+  // travar se o clique for solto fora da área (mesmo problema já corrigido
+  // no resize de colunas e no divisor).
+  let _esqDragMoved=false;
+  function _esqDragStart(e){
+    if(e.button!==0)return;
+    const el=e.currentTarget;
+    const sx=e.clientX, startScroll=el.scrollLeft;
+    _esqDragMoved=false;
+    let dragging=false;
+    try{el.setPointerCapture(e.pointerId);}catch(err){}
+
+    const move=ev=>{
+      const dx=ev.clientX-sx;
+      if(!dragging&&Math.abs(dx)>4){dragging=true;_esqDragMoved=true;el.style.cursor='grabbing';}
+      if(dragging){el.scrollLeft=startScroll-dx;}
+    };
+    const up=()=>{
+      el.removeEventListener('pointermove',move);
+      el.removeEventListener('pointerup',up);
+      el.removeEventListener('pointercancel',up);
+      try{el.releasePointerCapture(e.pointerId);}catch(err){}
+      el.style.cursor='grab';
+      // Pequeno atraso pra não disparar clique/edição de célula logo após um arrasto real
+      if(dragging)setTimeout(()=>{_esqDragMoved=false;},50);
+    };
+    el.addEventListener('pointermove',move);
+    el.addEventListener('pointerup',up);
+    el.addEventListener('pointercancel',up);
   }
 
   // ===================== TOGGLE GANTT =====================
@@ -692,7 +730,7 @@ const Planejamento = (() => {
   }
 
   // ===================== CRUD =====================
-  function selectIdx(i){selectedIdx=i;_paintRows();}
+  function selectIdx(i){if(_esqDragMoved)return;selectedIdx=i;_paintRows();}
 
   function inserirTarefa(){
     editandoId=null;
@@ -1161,7 +1199,7 @@ const Planejamento = (() => {
   return{init,carregar,setZoom,inserirTarefa,editarTarefa,salvarTarefa,excluirTarefa,
     selectIdx,toggleRecolher,recuarNivel,avancarNivel,
     toggleGantt,hideCol,showColsMenu,_showCol,_showAll,
-    _colResizeStart,moveColLeft,moveColRight,_hideCol,_divStart,_sync,_editCell,
+    _colResizeStart,moveColLeft,moveColRight,_hideCol,_divStart,_sync,_editCell,_esqDragStart,
     importarExcel,exportar,exportarPNG,_gerarPNG,_predPopup,_predPreview,_predSalvar};
 })();
 function onObraChanged(){Planejamento.init();}

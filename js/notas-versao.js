@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.7.0',
+  versaoAtual: 'V2.7.1',
 
   versoes: [
     {
@@ -1144,7 +1144,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.7.0',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-08',
       tipo: 'funcionalidade',
       titulo: 'Seletor hierárquico de tarefas + Custo Material/Mão de Obra no Planejamento',
@@ -1175,6 +1175,23 @@ const NotasVersao = {
         '    vinculado direto nela; um grupo soma todos os filhos)',
         '  → Testado com 3 cenários (custo só no pai / pai+filho / só',
         '    folhas) — todos batem com a regra descrita',
+      ]
+    },
+    {
+      versao: 'V2.7.1',
+      status: 'aberta',
+      data: '2026-07-08',
+      tipo: 'correcao',
+      titulo: 'Tabela do Planejamento: scroll horizontal com arrasto',
+      itens: [
+        'Com as novas colunas de custo, a tabela ficou mais larga que a',
+        '  área visível — antes não tinha como ver as colunas escondidas',
+        '  sem arrastar o divisor até o fim',
+        'Agora dá pra rolar a tabela na horizontal: barra de rolagem',
+        '  normal OU clique e arraste o conteúdo pro lado (como um mapa)',
+        'Cabeçalho das colunas acompanha o scroll horizontal da tabela',
+        'Gantt (lado direito) continua fixo, sem ser afetado',
+        'Arrastar não dispara seleção/edição de célula por engano',
       ]
     }
   ],
