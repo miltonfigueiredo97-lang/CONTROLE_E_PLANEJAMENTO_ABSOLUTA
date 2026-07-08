@@ -1,13 +1,17 @@
 // ============================================
-// Módulo: Mão de Obra — V1.0
+// Módulo: Mão de Obra — V1.1
 // Biblioteca de mão de obra + vínculo por tarefa
 // Valor unitário × quantidade da tarefa = custo total (base de cálculo)
+// Vínculo por busca hierárquica (nível 1, depois níveis 2 dele, etc.),
+// igual ao padrão adotado em Materiais — pode vincular a qualquer nível
+// (grupo/etapa ou tarefa folha) do Planejamento.
 // ============================================
 const MaoDeObra = (() => {
   let obraId=null;
   let biblioteca=[], vinculos=[], tarefas=[];
   let abaAtiva='vinculos', filtroTarefa='';
   let editandoBiblId=null, editandoVincId=null, _modoVinc='vincular';
+  let _buscaTarText='', _vincTarSelId='';
   const COL_BIB='maoDeObra', COL_VIN='maoDeObra_vinculos';
 
   const CATEGORIAS=['Pedreiro','Servente','Ajudante','Carpinteiro','Armador',
@@ -89,7 +93,7 @@ const MaoDeObra = (() => {
 
     return `
       <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center;">
-        <select class="form-control" style="width:300px;" onchange="MaoDeObra.setFiltro(this.value)">
+        <select class="form-control" style="width:340px;" onchange="MaoDeObra.setFiltro(this.value)">
           <option value="">Todos os serviços / tarefas</option>
           ${opts.map(o=>`<option value="${o.id}" ${filtroTarefa===o.id?'selected':''}>${o.label}</option>`).join('')}
         </select>
@@ -136,6 +140,10 @@ const MaoDeObra = (() => {
   }
 
   // ====== HELPERS ======
+  // Todos os níveis do Planejamento (grupos e tarefas), com indentação e
+  // ordem hierárquica — usa o helper compartilhado (mesma convenção adotada
+  // em Materiais) para permitir vincular tanto a um nível maior (grupo/etapa)
+  // quanto a um nível menor (tarefa folha).
   function _getOpcoesTarefa(){
     return Utils.opcoesTarefaHierarquia(tarefas);
   }
@@ -143,12 +151,13 @@ const MaoDeObra = (() => {
   function _getTarefaInfo(id){
     if(!id)return null;
     const t=tarefas.find(x=>x.id===id);
-    if(t)return {id,label:`[Plan] ${t.nome}`,quantidade:t.quantidade||0,unidade:t.unidade||'un'};
-    return null;
+    if(!t)return null;
+    const label=(t.codigo?t.codigo+' — ':'')+(t.nome||'');
+    return {id,label,quantidade:t.quantidade||0,unidade:t.unidade||'un',tipo:t.tipo||'tarefa'};
   }
 
-  // Custo total = valor unitário × quantidade da tarefa, quando a unidade bate;
-  // caso a tarefa não tenha quantidade, mostra apenas o valor unitário informado.
+  // Custo total = valor unitário × quantidade da tarefa, quando a tarefa
+  // tem quantidade; caso contrário, mostra apenas o valor unitário informado.
   function _calcTotalNum(info,v){
     const valor=parseFloat(v.valor)||0;
     if(!info||!info.quantidade)return valor;
@@ -156,6 +165,45 @@ const MaoDeObra = (() => {
   }
 
   function _fNum(n){return Utils.formatarNumero(n);}
+
+  // ===== Busca fuzzy de tarefa (código ou nome), tolerante a erro de digitação =====
+  function _normalizar(s){return (s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();}
+  function _levenshtein(a,b){
+    const m=a.length,n=b.length;
+    if(!m)return n;if(!n)return m;
+    const d=Array.from({length:m+1},(_,i)=>[i,...Array(n).fill(0)]);
+    for(let j=0;j<=n;j++)d[0][j]=j;
+    for(let i=1;i<=m;i++)for(let j=1;j<=n;j++)
+      d[i][j]=a[i-1]===b[j-1]?d[i-1][j-1]:1+Math.min(d[i-1][j],d[i][j-1],d[i-1][j-1]);
+    return d[m][n];
+  }
+  function _score(txtNorm,queryNorm){
+    if(!queryNorm)return 1;
+    if(txtNorm===queryNorm)return 100;
+    if(txtNorm.startsWith(queryNorm))return 90;
+    if(txtNorm.includes(queryNorm))return 80;
+    const pq=queryNorm.split(/\s+/).filter(Boolean),pn=txtNorm.split(/\s+/).filter(Boolean);
+    if(pq.every(q=>pn.some(n=>n.includes(q))))return 70;
+    const dist=_levenshtein(txtNorm,queryNorm);
+    const tol=Math.max(2,Math.floor(queryNorm.length*0.35));
+    if(dist<=tol)return 60-dist;
+    if(pq.some(q=>pn.some(n=>_levenshtein(n,q)<=Math.max(1,Math.floor(q.length*0.3)))))return 40;
+    return -1;
+  }
+  function _destacar(txt,query){
+    if(!query||!query.trim())return txt;
+    const qN=_normalizar(query),tN=_normalizar(txt);
+    const idx=tN.indexOf(qN);
+    if(idx===-1)return txt;
+    return txt.slice(0,idx)+'<mark style="background:rgba(245,200,0,0.35);color:inherit;border-radius:2px;">'+txt.slice(idx,idx+query.length)+'</mark>'+txt.slice(idx+query.length);
+  }
+  function _buscarTarefaOpts(texto){
+    const opts=_getOpcoesTarefa();
+    const q=_normalizar(texto);
+    if(!q)return opts; // sem busca: mostra a árvore completa (nível 1, depois níveis 2 dele, etc.)
+    return opts.map(o=>({o,score:_score(_normalizar(o.label),q)}))
+      .filter(x=>x.score>=0).sort((a,b)=>b.score-a.score).map(x=>x.o);
+  }
 
   // ====== CRUD BIBLIOTECA ======
   function novaMaoDeObraBib(){
@@ -205,7 +253,7 @@ const MaoDeObra = (() => {
 
   // ====== CRUD VÍNCULOS ======
   function novoVinculo(){
-    editandoVincId=null;_modoVinc='vincular';
+    editandoVincId=null;_modoVinc='vincular';_buscaTarText='';_vincTarSelId='';
     document.getElementById('modal-mdo-vinc-titulo').textContent='Vincular Mão de Obra à Tarefa';
     _renderVincModal(null);
     Utils.abrirModal('modal-mdo-vinc');
@@ -213,14 +261,28 @@ const MaoDeObra = (() => {
   function editarVinculo(id){
     const v=vinculos.find(x=>x.id===id);if(!v)return;
     editandoVincId=id;_modoVinc='vincular';
+    _vincTarSelId=v.tarefaId||'';
+    const o=_getOpcoesTarefa().find(x=>x.id===_vincTarSelId);
+    _buscaTarText=o?o.label.replace(/\u2007/g,''):'';
     document.getElementById('modal-mdo-vinc-titulo').textContent='Editar Vínculo';
     _renderVincModal(v);
     Utils.abrirModal('modal-mdo-vinc');
   }
-  function toggleModoVinc(m){_modoVinc=m;_renderVincModal(null);}
+  function toggleModoVinc(m){_modoVinc=m;_renderVincModal(editandoVincId?vinculos.find(x=>x.id===editandoVincId):null);}
+
+  function _renderResultadosTarefa(){
+    const resultados=_buscarTarefaOpts(_buscaTarText).slice(0,40);
+    if(!resultados.length)return `<div class="text-sm text-muted" style="padding:8px;">Nenhuma tarefa/serviço encontrado.</div>`;
+    return resultados.map(o=>`
+      <div class="tree-item${_vincTarSelId===o.id?' ativo':''}" style="padding:8px 10px;white-space:pre;" onclick="MaoDeObra.selecionarTarefaVinc('${o.id}')">
+        <span class="tree-icon">${o.tipo==='grupo'?'📁':'📄'}</span>
+        <span class="tree-label" style="white-space:pre;">${_destacar(o.label,_buscaTarText)}</span>
+      </div>`).join('');
+  }
 
   function _renderVincModal(v){
     const body=document.getElementById('mdo-vinc-body');if(!body)return;
+    const tarSel=_vincTarSelId?_getOpcoesTarefa().find(o=>o.id===_vincTarSelId):null;
     body.innerHTML=`
       <div style="display:flex;gap:6px;margin-bottom:16px;">
         <button class="btn btn-sm ${_modoVinc==='vincular'?'btn-primario':'btn-secundario'}"
@@ -244,11 +306,14 @@ const MaoDeObra = (() => {
             </select></div>
         </div>`}
 
-      <div class="form-grupo"><label>Serviço / Tarefa *</label>
-        <select id="mdo-vinc-tar-sel" class="form-control">
-          <option value="">— Selecione —</option>
-          ${_getOpcoesTarefa().map(o=>`<option value="${o.id}" ${v?.tarefaId===o.id?'selected':''}>${o.label}</option>`).join('')}
-        </select></div>
+      <div class="form-grupo"><label>Buscar serviço / tarefa *
+        <span class="text-muted" style="font-weight:400;font-size:0.75rem;"> (qualquer nível do Planejamento)</span></label>
+        <input type="text" id="mdo-vinc-tar-busca" class="form-control" placeholder="Digite para buscar... Ex: alvenaria, pintura"
+          value="${_buscaTarText}" oninput="MaoDeObra.onBuscaTarefaVinc(this.value)"></div>
+      <div id="mdo-vinc-tar-resultados" style="max-height:200px;overflow-y:auto;border:1px solid var(--cor-borda-light);border-radius:8px;margin-bottom:10px;">
+        ${_renderResultadosTarefa()}
+      </div>
+      ${tarSel?`<div class="text-sm" style="margin-bottom:14px;">Selecionado: <strong>${tarSel.label.replace(/\u2007/g,'')}</strong></div>`:''}
 
       <div class="form-row">
         <div class="form-grupo">
@@ -267,9 +332,21 @@ const MaoDeObra = (() => {
         <textarea id="mdo-vinc-obs" class="form-control" rows="2">${v?.observacoes||''}</textarea></div>`;
   }
 
+  function onBuscaTarefaVinc(texto){
+    _buscaTarText=texto;
+    const lista=document.getElementById('mdo-vinc-tar-resultados');
+    if(lista)lista.innerHTML=_renderResultadosTarefa();
+  }
+  function selecionarTarefaVinc(id){
+    _vincTarSelId=id;
+    const o=_getOpcoesTarefa().find(x=>x.id===id);
+    if(o)_buscaTarText=o.label.replace(/\u2007/g,'');
+    _renderVincModal(editandoVincId?vinculos.find(x=>x.id===editandoVincId):null);
+  }
+
   async function salvarVinculo(){
-    const tarefaId=document.getElementById('mdo-vinc-tar-sel')?.value;
-    if(!tarefaId){Utils.toast('Selecione uma tarefa.','alerta');return;}
+    const tarefaId=_vincTarSelId;
+    if(!tarefaId){Utils.toast('Busque e selecione uma tarefa.','alerta');return;}
     const valor=parseFloat(document.getElementById('mdo-vinc-valor')?.value);
     if(!valor||valor<=0){Utils.toast('Informe o valor.','alerta');return;}
     const unidade=document.getElementById('mdo-vinc-und')?.value||'m²';
@@ -317,6 +394,7 @@ const MaoDeObra = (() => {
 
   return {init,carregar,renderizar,setAba,setFiltro,
     novaMaoDeObraBib,editarMaoDeObraBib,salvarMaoDeObraBib,excluirMaoDeObraBib,
-    novoVinculo,editarVinculo,salvarVinculo,excluirVinculo,toggleModoVinc};
+    novoVinculo,editarVinculo,salvarVinculo,excluirVinculo,toggleModoVinc,
+    onBuscaTarefaVinc,selecionarTarefaVinc};
 })();
 function onObraChanged(){MaoDeObra.init();}
