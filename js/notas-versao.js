@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.7.2',
+  versaoAtual: 'V2.8.0',
 
   versoes: [
     {
@@ -1196,7 +1196,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.7.2',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-08',
       tipo: 'correcao',
       titulo: 'CRÍTICO: scroll horizontal da tabela sequestrava TODOS os cliques',
@@ -1211,6 +1211,30 @@ const NotasVersao = {
         '  captura, então não interfere em nada — toggle, edição e',
         '  botões voltam a funcionar normalmente, e o arrasto horizontal',
         '  continua funcionando quando o movimento é intencional.',
+      ]
+    },
+    {
+      versao: 'V2.8.0',
+      status: 'aberta',
+      data: '2026-07-08',
+      tipo: 'funcionalidade',
+      titulo: 'Materiais: busca inteligente para vincular material à tarefa',
+      itens: [
+        'Vínculo de material à tarefa: os antigos menus <select> de',
+        '  "Material" e "Serviço/Tarefa" foram substituídos por campos',
+        '  de busca com resultado mais próximo (fuzzy, tolera erro de',
+        '  digitação), igual ao padrão já usado no Levantamento de Ar',
+        '  Condicionado.',
+        'Busca de tarefa mantém a hierarquia do Planejamento: Nível 1,',
+        '  depois seus Níveis 2, e assim por diante — permite vincular',
+        '  material tanto numa tarefa-mãe quanto numa tarefa-filha.',
+        'Modo "+ Criar novo material": ao digitar o nome, o sistema',
+        '  mostra materiais parecidos já cadastrados na biblioteca',
+        '  (mesma busca fuzzy) para evitar duplicidade — um clique usa',
+        '  o material existente em vez de criar outro.',
+        'Custo unitário do material (campo já existente na Biblioteca)',
+        '  continua gerando automaticamente o custo total de cada',
+        '  vínculo material↔tarefa, exibido na aba "Por Tarefa".',
       ]
     }
   ],
