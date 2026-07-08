@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Controle — Controle e Planejamento de Obras</title>
+  <title>Mão de Obra — Controle e Planejamento de Obras</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/base.css">
@@ -13,7 +13,7 @@
 </head>
 <body>
 <div class="app-container">
-    <aside class="sidebar">
+  <aside class="sidebar">
     <div class="sidebar-logo">
       <img src="assets/images/logo-absoluta.png" class="logo-full" alt="Absoluta"
            onerror="this.parentElement.innerHTML='<div class=\'logo-fallback\'><div class=\'logo-icon\'><span style=\'font-size:1.3rem;font-weight:900;color:#000;\'>A</span></div><div class=\'logo-text\'>ABSOLUTA<span>Controle de Obras</span></div></div>'">
@@ -49,20 +49,72 @@
     </nav>
     <div class="sidebar-user">
       <div class="user-avatar">U</div>
-      <div class="user-info">
-        <div class="user-name">Usuário</div>
-        <div class="user-role">—</div>
-      </div>
+      <div class="user-info"><div class="user-name">Usuário</div><div class="user-role">—</div></div>
       <button class="btn-logout" onclick="Auth.logout()" title="Sair">⏻</button>
     </div>
   </aside>
-  <header class="header"><div class="header-title"><h1>Controle</h1></div><div class="header-actions" id="header-actions"></div></header>
+  <header class="header">
+    <div class="header-title"><h1>Mão de Obra</h1></div>
+    <div class="header-actions" id="header-actions"></div>
+  </header>
   <main class="content">
-    <div id="modulo-content">
-      <div class="estado-vazio"><div class="icone">🚧</div><p>Módulo em desenvolvimento.</p><p class="text-sm text-muted">Será construído conforme o roadmap do projeto.</p></div>
-    </div>
+    <div id="mdo-content"></div>
   </main>
 </div>
+
+<!-- MODAL: Biblioteca — Nova/Editar Mão de Obra -->
+<div class="modal-overlay" id="modal-mdo-bib">
+  <div class="modal" style="max-width:520px;">
+    <div class="modal-header">
+      <h3 id="modal-mdo-bib-titulo">Nova Mão de Obra</h3>
+      <button class="modal-close" onclick="Utils.fecharModal('modal-mdo-bib')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <form id="form-mdo-bib" onsubmit="event.preventDefault()">
+        <div class="form-grupo"><label>Nome *</label>
+          <input type="text" name="nome" class="form-control" placeholder="Ex: Pedreiro, Empreiteira Alvenaria" required></div>
+        <div class="form-grupo"><label>Categoria</label>
+          <select name="categoria" class="form-control">
+            <option value="">— Selecione —</option>
+            <option value="Pedreiro">Pedreiro</option>
+            <option value="Servente">Servente</option>
+            <option value="Ajudante">Ajudante</option>
+            <option value="Carpinteiro">Carpinteiro</option>
+            <option value="Armador">Armador</option>
+            <option value="Eletricista">Eletricista</option>
+            <option value="Encanador / Hidráulica">Encanador / Hidráulica</option>
+            <option value="Pintor">Pintor</option>
+            <option value="Gesseiro">Gesseiro</option>
+            <option value="Azulejista">Azulejista</option>
+            <option value="Empreiteira / Terceirizado">Empreiteira / Terceirizado</option>
+            <option value="Outro">Outro</option>
+          </select></div>
+        <div class="form-grupo"><label>Observações</label>
+          <textarea name="observacoes" class="form-control" rows="2"></textarea></div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-mdo-bib')">Cancelar</button>
+      <button class="btn btn-primario" onclick="MaoDeObra.salvarMaoDeObraBib()">Salvar na Biblioteca</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Vincular / Criar Mão de Obra -->
+<div class="modal-overlay" id="modal-mdo-vinc">
+  <div class="modal" style="max-width:580px;">
+    <div class="modal-header">
+      <h3 id="modal-mdo-vinc-titulo">Vincular Mão de Obra à Tarefa</h3>
+      <button class="modal-close" onclick="Utils.fecharModal('modal-mdo-vinc')">&times;</button>
+    </div>
+    <div class="modal-body" id="mdo-vinc-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-mdo-vinc')">Cancelar</button>
+      <button class="btn btn-primario" onclick="MaoDeObra.salvarVinculo()">Salvar</button>
+    </div>
+  </div>
+</div>
+
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -74,7 +126,7 @@
 <script src="js/permissions.js"></script>
 <script src="js/audit.js"></script>
 <script src="js/utils.js"></script>
-<script src="js/controle.js"></script>
-<script>document.addEventListener('DOMContentLoaded', () => { Utils.initPagina(); });</script>
+<script src="js/mao-de-obra.js"></script>
+<script>document.addEventListener('DOMContentLoaded', () => { MaoDeObra.init(); });</script>
 </body>
 </html>

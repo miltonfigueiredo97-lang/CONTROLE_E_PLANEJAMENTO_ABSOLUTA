@@ -46,7 +46,7 @@ const Permissions = (() => {
   function _fullAccess() {
     const modulos = [
       'planejamento', 'levantamento', 'controle', 'relatorios',
-      'restricoes', 'semanal', 'medicoes', 'orcamentos',
+      'restricoes', 'semanal', 'medicoes', 'orcamentos', 'maoDeObra',
       'suprimentos', 'materiais', 'histograma', 'dashboard',
       'configuracao', 'permissoes'
     ];
@@ -68,6 +68,7 @@ const Permissions = (() => {
       semanal: { ver: true, editar: true },
       medicoes: { ver: true, editar: false },
       orcamentos: { ver: false, editar: false },
+      maoDeObra: { ver: false, editar: false },
       suprimentos: { ver: true, editar: false },
       materiais: { ver: true, editar: false },
       histograma: { ver: true, editar: false },

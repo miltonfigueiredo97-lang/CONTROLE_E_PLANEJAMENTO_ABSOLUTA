@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.5.1',
+  versaoAtual: 'V2.6.0',
 
   versoes: [
     {
@@ -1109,7 +1109,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.5.1',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-08',
       tipo: 'correcao',
       titulo: 'Semanal: robustez no fechamento de relatório',
@@ -1120,6 +1120,26 @@ const NotasVersao = {
         'Módulos Semanal e Medições validados com bateria de 124 testes',
         '  funcionais automatizados simulando o uso real (lançamentos,',
         '  omissões, adições, fechamentos, medições e casos extremos)',
+      ]
+    },
+    {
+      versao: 'V2.6.0',
+      status: 'aberta',
+      data: '2026-07-08',
+      tipo: 'funcionalidade',
+      titulo: 'Novo módulo: Mão de Obra (Custos)',
+      itens: [
+        'Novo módulo Mão de Obra dentro da seção Custos',
+        'Biblioteca de mão de obra: nome e categoria (Pedreiro, Servente,',
+        '  Empreiteira, etc.), reutilizável entre tarefas',
+        'Vínculo por tarefa: valor unitário + unidade do valor (m², m, un,',
+        '  vb, h, diária, mês) vinculado a uma tarefa do Planejamento',
+        'Cálculo automático do custo total (valor unitário × quantidade',
+        '  da tarefa), exibido por vínculo e como total geral/por serviço',
+        'Modo "Vincular / Criar nova" no mesmo modal, igual ao módulo',
+        '  Materiais, para agilizar o cadastro',
+        'Adicionado ao menu de permissões (admin com acesso total,',
+        '  usuário padrão sem acesso por padrão)',
       ]
     }
   ],
