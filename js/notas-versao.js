@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.8.0',
+  versaoAtual: 'V2.8.1',
 
   versoes: [
     {
@@ -1215,7 +1215,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.8.0',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-08',
       tipo: 'funcionalidade',
       titulo: 'Materiais: busca inteligente para vincular material à tarefa',
@@ -1235,6 +1235,28 @@ const NotasVersao = {
         'Custo unitário do material (campo já existente na Biblioteca)',
         '  continua gerando automaticamente o custo total de cada',
         '  vínculo material↔tarefa, exibido na aba "Por Tarefa".',
+      ]
+    },
+    {
+      versao: 'V2.8.1',
+      status: 'aberta',
+      data: '2026-07-08',
+      tipo: 'funcionalidade',
+      titulo: 'Mão de Obra: busca hierárquica para vincular tarefa',
+      itens: [
+        'Vínculo de mão de obra à tarefa: o antigo <select> de',
+        '  "Serviço/Tarefa" foi substituído por busca com resultado mais',
+        '  próximo do que é digitado (fuzzy, tolera erro de digitação),',
+        '  no mesmo padrão adotado em Materiais.',
+        'Busca mantém a hierarquia do Planejamento: Nível 1, depois seus',
+        '  Níveis 2, e assim por diante — permite vincular mão de obra',
+        '  tanto a um nível maior (grupo/etapa) quanto a um nível menor',
+        '  (tarefa folha).',
+        'Válido tanto para vincular uma mão de obra já existente na',
+        '  biblioteca quanto para criar uma nova na hora.',
+        'Reaproveita o helper compartilhado Utils.opcoesTarefaHierarquia,',
+        '  mesmo já usado no módulo Materiais, para manter os dois',
+        '  módulos consistentes.',
       ]
     }
   ],
