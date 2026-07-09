@@ -18,6 +18,9 @@ const Diario = (() => {
   // Pauta do dia
   let _pautaExp={};        // {tarefaId:'andou'|'parado'} — card expandido
   let _skips=new Set();    // tarefas puladas nesta sessão
+  let _grpAberto=new Set();// grupos (pais) expandidos na pauta
+  let _extras=new Set();   // tarefas do planejamento adicionadas manualmente à pauta
+  let _buscaPauta='';      // busca p/ adicionar tarefa do planejamento à pauta
   let _formAberto=false;   // formulário "fora da pauta"
   let _atrasAberto=false;  // seção de atrasadas expandida
   let _avulsas=[];         // tarefas avulsas pendentes (rolam entre dias)
@@ -123,7 +126,15 @@ const Diario = (() => {
       if(dia>=i&&dia<=f)previstas.push(t);
       else if(f<dia)atrasadas.push(t);
     }
-    atrasadas.sort((a,b)=>_d(b.terminoPlanejado)-_d(a.terminoPlanejado));
+    // Extras: tarefas do planejamento adicionadas manualmente à pauta
+    const jaIds=new Set(previstas.map(t=>t.id));
+    for(const id of _extras){
+      if(jaIds.has(id))continue;
+      const t=tarefas.find(x=>x.id===id);
+      if(t)previstas.push(t);
+    }
+    // Atrasadas ficam na ordem do planejamento (sorted) — famílias juntas.
+    previstas.sort((a,b)=>(a.ordem||0)-(b.ordem||0));
     return {previstas,atrasadas};
   }
 
@@ -252,6 +263,44 @@ const Diario = (() => {
     finally{Utils.esconderLoading();}
   }
   function toggleAtrasadas(){_atrasAberto=!_atrasAberto;_render();}
+  function toggleGrupo(pid){
+    if(_grpAberto.has(pid))_grpAberto.delete(pid);else _grpAberto.add(pid);
+    _render();
+  }
+  // Busca fuzzy p/ adicionar tarefa do planejamento à pauta.
+  // Atualização parcial do DOM (só o holder de resultados) para não
+  // perder o foco do input enquanto digita.
+  function _optsNome(texto){
+    const q=_norm(texto);
+    const base=sorted.map(t=>({
+      id:t.id,
+      label:'\u2007\u2007'.repeat(t.nivel||0)+((t.nivel||0)>0?'– ':'')+(t.nome||''),
+      nome:t.nome||'',
+    }));
+    if(!q)return base;
+    return base.map(o=>({o,score:_score(_norm(o.nome),q)}))
+      .filter(x=>x.score>=0).sort((a,b)=>b.score-a.score).map(x=>x.o);
+  }
+  function _pautaBuscaResHtml(){
+    if(!_buscaPauta)return'';
+    const opts=_optsNome(_buscaPauta).slice(0,40);
+    return `<div class="dia-res">${opts.length?opts.map(o=>
+      `<div onclick="Diario.pautaAddExtra('${o.id}')">${_esc(o.label)}</div>`).join(''):
+      '<div style="color:#94a3b8;cursor:default;">Nenhuma tarefa encontrada</div>'}</div>`;
+  }
+  function pautaBuscar(v){
+    _buscaPauta=v;
+    const holder=document.getElementById('pauta-busca-res');
+    if(holder)holder.innerHTML=_pautaBuscaResHtml();
+  }
+  function pautaAddExtra(id){
+    _extras.add(id);_skips.delete(id);_buscaPauta='';
+    const t=tarefas.find(x=>x.id===id);
+    // Abre o grupo do pai para o card aparecer na hora
+    if(t){const pai=Utils.percFamilia(tarefas).ancestrais(t)[0];if(pai)_grpAberto.add(pai.id);}
+    _render();
+    Utils.toast('Tarefa adicionada à pauta.','sucesso');
+  }
   function toggleForm(){_formAberto=!_formAberto;_render();
     if(_formAberto)requestAnimationFrame(()=>{const i=document.getElementById('dia-busca');if(i)i.focus();});}
 
@@ -297,9 +346,9 @@ const Diario = (() => {
       acoes=`<span class="pt-badge" style="background:${st.bg};color:${st.cor};">${st.label}${lanc.percDepois!=null?` ${lanc.percAntes??'?'}→${lanc.percDepois}%`:''}</span>`;
     } else if(!exp){
       acoes=`<div class="pt-acao">
-        <button class="a-and" onclick="Diario.pautaAbrir('${t.id}','andou')">✅ Andou</button>
-        <button class="a-par" onclick="Diario.pautaAbrir('${t.id}','parado')">✖ Parado</button>
-        <button onclick="Diario.pautaPular('${t.id}')">⏭</button>
+        <button class="a-and" title="Lançar avanço de % (grava no Planejamento)" onclick="Diario.pautaAbrir('${t.id}','andou')">✅ Andou</button>
+        <button class="a-par" title="Registrar que não foi executado e o motivo" onclick="Diario.pautaAbrir('${t.id}','parado')">✖ Parado</button>
+        <button title="Pular — deixar de fora da pauta de hoje" onclick="Diario.pautaPular('${t.id}')">⏭</button>
       </div>`;
     }
     let expH='';
@@ -322,7 +371,7 @@ const Diario = (() => {
     return `<div class="pt-card"${atrasada?' style="background:#fffbeb;"':''}>
       <div class="pt-l1">
         ${atrasada?'<span class="pt-badge" style="background:#fee2e2;color:#dc2626;">ATRASADA</span>':''}
-        <span class="nm">${_esc((t.codigo?t.codigo+' ':'')+(t.nome||''))}</span>
+        <span class="nm" title="${_esc(t.codigo||'')}">${_esc(t.nome||'')}</span>
         <span class="inf">${inf.join(' · ')}</span>
         ${acoes}
       </div>${expH}</div>`;
@@ -343,28 +392,32 @@ const Diario = (() => {
       const percPai=Math.round(fam.percCalculado(p)*10)/10;
       const qPai=parseFloat(p.quantidade)||0;
       const exp=_pautaExp[p.id];
+      // Grupo abre: por clique, se algum card interno está expandido, ou se o pai está em lançamento
+      const aberto=_grpAberto.has(p.id)||exp||g.itens.some(t=>_pautaExp[t.id]);
+      const tratadas=g.itens.filter(t=>lancMap.has(t.id)).length;
       let paiExp='';
       if(exp==='andou'){
         paiExp=`<div class="pt-exp" style="margin:8px 12px;">
           <div><label>% do grupo</label><input type="number" id="pt-perc-${p.id}" min="0" max="100" step="1" value="${percPai}" style="width:90px;" oninput="Diario.pautaPreview('${p.id}')" onkeydown="if(event.key==='Enter')Diario.pautaSalvarAvanco('${p.id}')"></div>
           <div style="flex:1;min-width:160px;"><label>O que foi feito (opcional)</label><input type="text" id="pt-atv-${p.id}" style="width:100%;"></div>
-          <button class="btn btn-sm btn-primario" onclick="Diario.pautaSalvarAvanco('${p.id}')">Lançar no grupo</button>
-          <button class="btn btn-sm btn-outline" onclick="Diario.pautaFechar()">✕</button>
+          <button class="btn btn-sm btn-primario" title="Grava o % no grupo e distribui para todas as subtarefas" onclick="Diario.pautaSalvarAvanco('${p.id}')">Lançar no grupo</button>
+          <button class="btn btn-sm btn-outline" title="Fechar sem salvar" onclick="Diario.pautaFechar()">✕</button>
           <div class="pt-prev" style="color:#b45309;">⚠ Distribui o % para TODAS as subtarefas do grupo.</div>
         </div>`;
       }
       return `<div class="pt-grupo">
-        <div class="pt-grupo-h">
-          <span class="nm">▸ ${_esc((p.codigo?p.codigo+' ':'')+(p.nome||''))}</span>
-          <span class="inf">${percPai}%${qPai?` · ${_fmtQtd(qPai)} ${_esc(p.unidade||'un')}`:''}</span>
-          ${exp?'':`<div class="pt-acao"><button onclick="Diario.pautaAbrir('${p.id}','andou')" title="Lança o % no pai e distribui para os filhos">Lançar no grupo</button></div>`}
+        <div class="pt-grupo-h" style="cursor:pointer;" title="${aberto?'Recolher':'Expandir'} grupo" onclick="Diario.toggleGrupo('${p.id}')">
+          <span class="nm">${aberto?'▾':'▸'} ${_esc(p.nome||'')}</span>
+          <span class="inf">${tratadas}/${g.itens.length} tratadas · ${percPai}%${qPai?` · ${_fmtQtd(qPai)} ${_esc(p.unidade||'un')}`:''}</span>
+          ${exp?'':`<div class="pt-acao"><button title="Lança o % no grupo inteiro e distribui para as subtarefas" onclick="event.stopPropagation();Diario.pautaAbrir('${p.id}','andou')">Lançar no grupo</button></div>`}
         </div>
         ${paiExp}
-        ${g.itens.map(t=>_cardPauta(t,lancMap,false)).join('')}
+        ${aberto?g.itens.map(t=>_cardPauta(t,lancMap,false)).join(''):''}
       </div>`;
     };
 
     const atrasVis=atrasadas.filter(t=>!_skips.has(t.id));
+    const gruposAtras=_agruparPorPai(atrasVis);
     const avPend=_avulsas.filter(a=>!a.concluida);
     const avDia=_avulsas.filter(a=>a.concluida);
 
@@ -375,13 +428,23 @@ const Diario = (() => {
     ${vis.length?grupos.map(grupoH).join(''):
       `<div style="background:#fff;border:1px dashed #cbd5e1;border-radius:10px;padding:18px;text-align:center;color:#94a3b8;font-size:.82rem;margin-bottom:10px;">Nenhuma tarefa prevista para este dia no Planejamento.</div>`}
 
+    <div class="pt-grupo">
+      <div class="pt-card" style="position:relative;">
+        <label style="font-size:.68rem;color:#64748b;font-weight:700;text-transform:uppercase;display:block;margin-bottom:3px;">🔎 Adicionar tarefa do planejamento à pauta</label>
+        <input type="text" id="pauta-busca-inp" value="${_esc(_buscaPauta)}" placeholder="Busque pelo nome — ex: fachada, alvenaria 15..." style="width:100%;padding:7px 9px;border:1px solid #cbd5e1;border-radius:7px;font-size:.82rem;box-sizing:border-box;" oninput="Diario.pautaBuscar(this.value)" autocomplete="off">
+        <div id="pauta-busca-res">${_pautaBuscaResHtml()}</div>
+      </div>
+    </div>
+
     ${atrasVis.length?`
     <div class="pt-grupo" style="border-color:#fbbf24;">
-      <div class="pt-grupo-h" style="background:#fffbeb;cursor:pointer;" onclick="Diario.toggleAtrasadas()">
+      <div class="pt-grupo-h" style="background:#fffbeb;cursor:pointer;" title="${_atrasAberto?'Recolher':'Expandir'} atrasadas" onclick="Diario.toggleAtrasadas()">
         <span class="nm" style="color:#b45309;">⚠ Atrasadas — término já passou e não concluíram</span>
         <span class="inf" style="color:#b45309;font-weight:800;">${atrasVis.length} ${_atrasAberto?'▴':'▾'}</span>
       </div>
-      ${_atrasAberto?atrasVis.map(t=>_cardPauta(t,lancMap,true)).join(''):''}
+      ${_atrasAberto?gruposAtras.map(g=>`
+        ${g.pai?`<div style="padding:6px 12px;background:#fef3c7;font-size:.76rem;font-weight:800;color:#92400e;border-bottom:1px solid #fde68a;">${_esc(g.pai.nome||'')}</div>`:''}
+        ${g.itens.map(t=>_cardPauta(t,lancMap,true)).join('')}`).join(''):''}
     </div>`:''}
 
     <div class="pt-grupo">
@@ -390,10 +453,10 @@ const Diario = (() => {
       </div>
       <div class="pt-card" style="display:flex;gap:8px;">
         <input type="text" id="dia-avulsa-txt" placeholder="Ex: conversar com projetista sobre detalhe da fachada" style="flex:1;padding:6px 9px;border:1px solid #cbd5e1;border-radius:7px;font-size:.8rem;" onkeydown="if(event.key==='Enter')Diario.avulsaAdd()">
-        <button class="btn btn-sm btn-primario" onclick="Diario.avulsaAdd()">＋ Adicionar</button>
+        <button class="btn btn-sm btn-primario" title="Adicionar tarefa avulsa (fora do planejamento) — rola para os próximos dias até concluir" onclick="Diario.avulsaAdd()">＋ Adicionar</button>
       </div>
       ${avPend.map(a=>`<div class="pt-card"><div class="pt-l1">
-        <input type="checkbox" onchange="Diario.avulsaConcluir('${a.id}')" style="cursor:pointer;">
+        <input type="checkbox" title="Marcar como concluída" onchange="Diario.avulsaConcluir('${a.id}')" style="cursor:pointer;">
         <span class="nm">${_esc(a.atividade||'')}</span>
         <span class="inf">desde ${_fmt(a.data)}</span>
         <button class="btn-icone" title="Excluir" onclick="Diario.avulsaExcluir('${a.id}')">🗑️</button>
@@ -455,15 +518,15 @@ const Diario = (() => {
     </style>
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
       <div class="dia-nav">
-        <button onclick="Diario.nav(-1)">‹</button>
+        <button title="Dia anterior" onclick="Diario.nav(-1)">‹</button>
         <span class="lbl">${DIAS[diaRef.getDay()]}, ${_fmt(iso)}${iso===hojeIso?' (hoje)':''}</span>
-        <button onclick="Diario.nav(1)">›</button>
+        <button title="Próximo dia" onclick="Diario.nav(1)">›</button>
         <button onclick="Diario.hojeBtn()" title="Ir para hoje" style="border-left:1px solid #334155;">●</button>
       </div>
-      <input type="date" value="${iso}" onchange="Diario.setData(this.value)" style="padding:7px 9px;border:1px solid #cbd5e1;border-radius:8px;font-size:.82rem;">
+      <input type="date" value="${iso}" title="Escolher uma data" onchange="Diario.setData(this.value)" style="padding:7px 9px;border:1px solid #cbd5e1;border-radius:8px;font-size:.82rem;">
       <div style="flex:1;"></div>
-      <button class="btn btn-sm btn-outline" onclick="Diario.toggleForm()">${_formAberto?'✕ Fechar':'＋ Fora da pauta'}</button>
-      <button class="btn btn-sm" style="background:#0f172a;color:#fff;" onclick="Diario.gerarRelatorio()">📄 Relatório do dia</button>
+      <button class="btn btn-sm btn-outline" title="Lançamento livre com busca em todo o Planejamento" onclick="Diario.toggleForm()">${_formAberto?'✕ Fechar':'＋ Fora da pauta'}</button>
+      <button class="btn btn-sm" style="background:#0f172a;color:#fff;" title="Gerar o relatório completo do dia" onclick="Diario.gerarRelatorio()">📄 Relatório do dia</button>
     </div>
 
     ${_pautaHtml()}
@@ -719,6 +782,7 @@ const Diario = (() => {
   return{init,carregar,nav,hojeBtn,setData,onBusca,selTarefa,setStatus,
     salvar,editar,cancelarEdicao,excluir,gerarRelatorio,imprimirRelatorio,
     pautaAbrir,pautaFechar,pautaPular,pautaPreview,pautaSalvarAvanco,pautaSalvarParado,
-    toggleAtrasadas,toggleForm,avulsaAdd,avulsaConcluir,avulsaExcluir};
+    toggleAtrasadas,toggleGrupo,toggleForm,pautaBuscar,pautaAddExtra,
+    avulsaAdd,avulsaConcluir,avulsaExcluir};
 })();
 function onObraChanged(){Diario.init();}

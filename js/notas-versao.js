@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.13.0',
+  versaoAtual: 'V2.13.1',
 
   versoes: [
     {
@@ -1433,7 +1433,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.13.0',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-09',
       tipo: 'funcionalidade',
       titulo: 'Diário de Obra: Pauta do Dia',
@@ -1460,6 +1460,29 @@ const NotasVersao = {
         '  mesma busca fuzzy em todo o Planejamento',
         'Gravação de avanço unificada em caminho único (_gravarAvanco):',
         '  regras de início/término real + % em família',
+      ]
+    },
+    {
+      versao: 'V2.13.1',
+      status: 'aberta',
+      data: '2026-07-09',
+      tipo: 'melhoria',
+      titulo: 'Pauta do Dia: ajustes de uso em campo',
+      itens: [
+        'Cards mostram só o NOME da tarefa (sem o código) — o código',
+        '  aparece como tooltip ao passar o mouse no nome',
+        'Grupos da pauta agora são RECOLHÍVEIS: clique no cabeçalho',
+        '  para abrir/fechar e ver os filhos; contador de tratadas',
+        '  por grupo (ex: 2/5 tratadas) direto no cabeçalho',
+        'ATRASADAS: ordenadas pela ordem do planejamento e agrupadas',
+        '  por família (todas as alvenarias juntas, etc.), com o nome',
+        '  do pai como divisor',
+        'NOVO: busca "Adicionar tarefa do planejamento à pauta" —',
+        '  fuzzy pelo nome, adiciona à pauta tarefas do planejamento',
+        '  que não estavam previstas para o dia (adiantadas, etc.).',
+        '  Avulsas continuam sendo só o que está FORA do planejamento.',
+        'Tooltips em todos os botões (Andou, Parado, ⏭ Pular,',
+        '  Lançar no grupo, navegação de dias, avulsas...)',
       ]
     }
   ],
