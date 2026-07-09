@@ -11,10 +11,14 @@ const Semanal = (() => {
   let semDoc=null;            // doc da semana/dia atual (coleção 'semanas')
   let vista='atuais';         // 'atuais' | 'omitidas'
   let ordenacao='ordem';      // 'ordem' | 'status'
-  let aba='tarefas';          // 'dashboard' | 'tarefas'
+  let aba='tarefas';          // 'dashboard' | 'tarefas' | 'diario'
   let sel=new Set();          // ids selecionados (checkbox)
   let omitindo=[];            // ids em processo de omissão
-  const COL='tarefas', COLS='semanas';
+  const COL='tarefas', COLS='semanas', COLD='diario';
+  // ---- Diário de obra ----
+  let diaRef=null;            // Date do dia sendo lançado/visto no Diário
+  let lancamentosDia=[];      // lançamentos do dia carregado
+  let _diaBusca='', _diaTarSel='', _diaStatus='executado', _diaEditId=null;
   const DIAS=['dom','seg','ter','qua','qui','sex','sáb'];
   const MOTIVOS=['Frente/Predecessora Não Liberada','Atraso Entrega de Material','Atraso Programação de Material','Falta de Material (Sobreconsumo)','Material Não Conforme','Material Não Comprado','Necessidade Não Prevista (EAP)','Especificação de Projeto','Equipamentos Indisponíveis','Serviço Não Contratado','Mudança no Plano de Ataque','Atraso em Documentações','Baixa Produtividade Prevista','Intempéries','Outros'];
   const ST_LABEL={atual:'Atual',adicionada:'Adicionada',atrasada:'Atrasada',omitida:'Omitida'};
@@ -258,8 +262,9 @@ const Semanal = (() => {
     <div class="sem-subtabs">
       <button class="${aba==='dashboard'?'on':''}" onclick="Semanal.setAba('dashboard')">Dashboard</button>
       <button class="${aba==='tarefas'?'on':''}" onclick="Semanal.setAba('tarefas')">Tarefas</button>
+      <button class="${aba==='diario'?'on':''}" onclick="Semanal.setAba('diario')">Diário</button>
     </div>
-    <div class="sem-top">
+    ${aba==='diario'?'':`<div class="sem-top">
       <div class="sem-nav">
         <button onclick="Semanal.nav(-1)" title="Anterior">‹</button>
         <span class="lbl">${p.label}</span>
@@ -285,8 +290,8 @@ const Semanal = (() => {
         <button class="${ordenacao==='status'?'on':''}" onclick="Semanal.setOrdem('status')">Por Status</button>
       </div>
       <button class="btn btn-sm btn-outline" onclick="window.print()" title="Imprimir">🖨️</button>
-    </div>
-    ${aba==='dashboard'?_dashHTML(tot):`
+    </div>`}
+    ${aba==='dashboard'?_dashHTML(tot):aba==='diario'?_diarioHTML():`
     <div class="sem-tbl-wrap">
       <table class="sem-tbl">
         <thead><tr>
@@ -359,7 +364,15 @@ const Semanal = (() => {
   async function setModo(m){if(m===modo)return;modo=m;sel.clear();await _loadDoc();_render();}
   function setVista(v){vista=v;sel.clear();_render();}
   function setOrdem(o){ordenacao=o;_render();}
-  function setAba(a){aba=a;_render();}
+  function setAba(a){
+    aba=a;
+    if(a==='diario'){
+      if(!diaRef)diaRef=_hoje();
+      _loadDiario().then(()=>_render());
+      return;
+    }
+    _render();
+  }
   function toggleSel(id,on){if(on)sel.add(id);else sel.delete(id);_render();}
   function limparSel(){sel.clear();_render();}
 
@@ -659,12 +672,290 @@ const Semanal = (() => {
     Utils.abrirModal('modal-sem-rel');
   }
 
+  // ============================================================
+  // DIÁRIO DE OBRA — lançamento rápido do que está sendo feito,
+  // vinculado a tarefa do Planejamento (busca fuzzy hierárquica,
+  // mesmo padrão de Materiais/Mão de Obra), com relatório do dia:
+  // executado / não executado / deveria estar / porquês.
+  // Coleção: obras/{id}/diario — um doc por lançamento:
+  // {data:'YYYY-MM-DD', tarefaId, tarefaLabel, atividade, status,
+  //  motivo, detalhe, createdAt}
+  // ============================================================
+
+  async function _loadDiario(){
+    const iso=_iso(diaRef);
+    try{
+      const todos=await Database.listar(obraId,COLD,'createdAt').catch(()=>[]);
+      lancamentosDia=todos.filter(l=>l.data===iso);
+    }catch(e){console.error(e);lancamentosDia=[];}
+  }
+
+  // --- busca fuzzy de tarefa (mesmo padrão de mao-de-obra.js) ---
+  function _dNorm(s){return (s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();}
+  function _dLev(a,b){
+    const m=a.length,n=b.length;if(!m)return n;if(!n)return m;
+    const d=Array.from({length:m+1},(_,i)=>[i,...Array(n).fill(0)]);
+    for(let j=0;j<=n;j++)d[0][j]=j;
+    for(let i=1;i<=m;i++)for(let j=1;j<=n;j++)
+      d[i][j]=a[i-1]===b[j-1]?d[i-1][j-1]:1+Math.min(d[i-1][j],d[i][j-1],d[i-1][j-1]);
+    return d[m][n];
+  }
+  function _dScore(t,q){
+    if(!q)return 1;
+    if(t===q)return 100;if(t.startsWith(q))return 90;if(t.includes(q))return 80;
+    const pq=q.split(/\s+/).filter(Boolean),pn=t.split(/\s+/).filter(Boolean);
+    if(pq.every(x=>pn.some(n=>n.includes(x))))return 70;
+    const dist=_dLev(t,q),tol=Math.max(2,Math.floor(q.length*0.35));
+    if(dist<=tol)return 60-dist;
+    if(pq.some(x=>pn.some(n=>_dLev(n,x)<=Math.max(1,Math.floor(x.length*0.3)))))return 40;
+    return -1;
+  }
+  function _dOpcoesTarefa(){return Utils.opcoesTarefaHierarquia(tarefas);}
+  function _dBuscarOpts(texto){
+    const opts=_dOpcoesTarefa(),q=_dNorm(texto);
+    if(!q)return opts;
+    return opts.map(o=>({o,score:_dScore(_dNorm(o.label),q)}))
+      .filter(x=>x.score>=0).sort((a,b)=>b.score-a.score).map(x=>x.o);
+  }
+
+  // --- UI da aba ---
+  const D_STATUS={
+    executado:   {label:'✅ Executado',     cor:'#16a34a', bg:'#dcfce7'},
+    parcial:     {label:'◐ Parcial',        cor:'#ca8a04', bg:'#fef9c3'},
+    nao_executado:{label:'✖ Não executado', cor:'#dc2626', bg:'#fee2e2'},
+  };
+
+  function _diarioHTML(){
+    const iso=_iso(diaRef);
+    const hojeIso=_iso(_hoje());
+    const precisaMotivo=_diaStatus!=='executado';
+    const tarSel=_diaTarSel?tarefas.find(t=>t.id===_diaTarSel):null;
+    const opts=_dBuscarOpts(_diaBusca).slice(0,60);
+
+    // Lançamentos do dia agrupados por status
+    const porStatus={executado:[],parcial:[],nao_executado:[]};
+    lancamentosDia.forEach(l=>{(porStatus[l.status]||porStatus.executado).push(l);});
+
+    return `
+    <style>
+      .dia-form{background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:14px;margin-bottom:14px;}
+      .dia-form label{font-size:.72rem;color:#64748b;font-weight:700;text-transform:uppercase;display:block;margin-bottom:3px;}
+      .dia-form input[type=text],.dia-form select,.dia-form textarea{width:100%;padding:7px 9px;border:1px solid #cbd5e1;border-radius:7px;font-size:.85rem;box-sizing:border-box;}
+      .dia-res{max-height:230px;overflow:auto;border:1px solid #e2e8f0;border-radius:8px;margin-top:4px;background:#fff;position:relative;z-index:20;}
+      .dia-res div{padding:6px 10px;cursor:pointer;font-size:.8rem;border-bottom:1px solid #f8fafc;white-space:pre;}
+      .dia-res div:hover{background:#fefce8;}
+      .dia-st{display:flex;gap:6px;}
+      .dia-st button{flex:1;border:1.5px solid #cbd5e1;background:#fff;border-radius:8px;padding:8px 4px;cursor:pointer;font-size:.78rem;font-weight:700;color:#64748b;}
+      .dia-lanc{background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:10px 14px;margin-bottom:8px;display:flex;gap:10px;align-items:flex-start;}
+      .dia-lanc .tag{padding:2px 8px;border-radius:6px;font-size:.68rem;font-weight:800;white-space:nowrap;flex-shrink:0;}
+      .dia-sec-t{font-size:.85rem;font-weight:800;margin:14px 0 8px;display:flex;align-items:center;gap:8px;}
+    </style>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
+      <div class="sem-nav">
+        <button onclick="Semanal.diarioNav(-1)">‹</button>
+        <span class="lbl">${DIAS[diaRef.getDay()]}, ${_fmt(iso)}${iso===hojeIso?' (hoje)':''}</span>
+        <button onclick="Semanal.diarioNav(1)">›</button>
+        <button onclick="Semanal.diarioHoje()" title="Ir para hoje" style="border-left:1px solid #334155;">●</button>
+      </div>
+      <input type="date" value="${iso}" onchange="Semanal.diarioSetData(this.value)" style="padding:7px 9px;border:1px solid #cbd5e1;border-radius:8px;font-size:.82rem;">
+      <div style="flex:1;"></div>
+      <button class="btn btn-sm" style="background:#0f172a;color:#fff;" onclick="Semanal.gerarRelatorioDiario()">📄 Relatório do dia</button>
+    </div>
+
+    <div class="dia-form">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div style="position:relative;">
+          <label>Tarefa vinculada (busque por código ou nome)</label>
+          <input type="text" id="dia-busca" value="${_esc(_diaBusca)}" placeholder="Ex: alvenaria 3 pav, 1.3.1..." oninput="Semanal.onBuscaDiario(this.value)" autocomplete="off">
+          ${tarSel?`<div style="margin-top:5px;font-size:.78rem;color:#16a34a;font-weight:700;">✓ ${_esc((tarSel.codigo?tarSel.codigo+' ':'')+tarSel.nome)}</div>`:''}
+          ${_diaBusca&&!tarSel?`<div class="dia-res">${opts.length?opts.map(o=>
+            `<div onclick="Semanal.selTarefaDiario('${o.id}')">${_esc(o.label)}</div>`).join(''):
+            '<div style="color:#94a3b8;cursor:default;">Nenhuma tarefa encontrada</div>'}</div>`:''}
+        </div>
+        <div>
+          <label>O que está sendo feito</label>
+          <input type="text" id="dia-atividade" placeholder="Ex: Elevação de alvenaria eixo A-B, 2 pedreiros" autocomplete="off">
+          <div style="margin-top:10px;">
+            <label>Situação</label>
+            <div class="dia-st">
+              ${Object.entries(D_STATUS).map(([k,v])=>`<button onclick="Semanal.setStatusDiario('${k}')" style="${_diaStatus===k?`background:${v.bg};border-color:${v.cor};color:${v.cor};`:''}">${v.label}</button>`).join('')}
+            </div>
+          </div>
+        </div>
+      </div>
+      ${precisaMotivo?`
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px;">
+        <div>
+          <label>Motivo (por quê?)</label>
+          <select id="dia-motivo">${MOTIVOS.map(m=>`<option value="${_esc(m)}">${_esc(m)}</option>`).join('')}</select>
+        </div>
+        <div>
+          <label>Detalhe (opcional)</label>
+          <input type="text" id="dia-detalhe" placeholder="Complemento do motivo" autocomplete="off">
+        </div>
+      </div>`:''}
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;">
+        ${_diaEditId?`<button class="btn btn-sm btn-outline" onclick="Semanal.cancelarEdicaoDiario()">Cancelar edição</button>`:''}
+        <button class="btn btn-sm btn-primario" onclick="Semanal.salvarLancamento()">${_diaEditId?'💾 Salvar alteração':'＋ Lançar'}</button>
+      </div>
+    </div>
+
+    ${!lancamentosDia.length?`<div style="text-align:center;color:#94a3b8;padding:26px;font-size:.85rem;">Nenhum lançamento neste dia ainda.</div>`:
+      Object.entries(D_STATUS).map(([k,v])=>{
+        const ls=porStatus[k];if(!ls.length)return'';
+        return `<div class="dia-sec-t" style="color:${v.cor};">${v.label} <span style="color:#94a3b8;font-weight:600;">(${ls.length})</span></div>`+
+          ls.map(l=>`<div class="dia-lanc">
+            <span class="tag" style="background:${v.bg};color:${v.cor};">${v.label}</span>
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:.82rem;font-weight:700;">${_esc(l.tarefaLabel||'(tarefa)')}</div>
+              <div style="font-size:.8rem;color:#334155;">${_esc(l.atividade||'')}</div>
+              ${l.motivo?`<div style="font-size:.75rem;color:#dc2626;margin-top:2px;">Motivo: ${_esc(l.motivo)}${l.detalhe?' — '+_esc(l.detalhe):''}</div>`:''}
+            </div>
+            <button class="btn-icone" title="Editar" onclick="Semanal.editarLancamento('${l.id}')">✏️</button>
+            <button class="btn-icone" title="Excluir" onclick="Semanal.excluirLancamento('${l.id}')">🗑️</button>
+          </div>`).join('');
+      }).join('')}`;
+  }
+
+  // --- handlers ---
+  async function diarioNav(dir){diaRef=_addD(diaRef,dir);await _loadDiario();_render();}
+  async function diarioHoje(){diaRef=_hoje();await _loadDiario();_render();}
+  async function diarioSetData(v){const d=_d(v);if(!d)return;diaRef=d;await _loadDiario();_render();}
+  function onBuscaDiario(v){_diaBusca=v;_diaTarSel='';_render();
+    // devolve o foco ao campo depois do re-render (para digitação contínua)
+    requestAnimationFrame(()=>{const i=document.getElementById('dia-busca');if(i){i.focus();i.setSelectionRange(i.value.length,i.value.length);}});}
+  function selTarefaDiario(id){
+    _diaTarSel=id;
+    const t=tarefas.find(x=>x.id===id);
+    _diaBusca=t?((t.codigo?t.codigo+' ':'')+(t.nome||'')):'';
+    _render();
+    requestAnimationFrame(()=>{const i=document.getElementById('dia-atividade');if(i)i.focus();});
+  }
+  function setStatusDiario(s){
+    // preserva o texto digitado da atividade antes do re-render
+    const at=document.getElementById('dia-atividade');
+    if(at)_diaAtividadeTmp=at.value;
+    _diaStatus=s;_render();
+    requestAnimationFrame(()=>{const i=document.getElementById('dia-atividade');if(i&&_diaAtividadeTmp)i.value=_diaAtividadeTmp;});
+  }
+  let _diaAtividadeTmp='';
+
+  async function salvarLancamento(){
+    if(!_diaTarSel){Utils.toast('Selecione a tarefa vinculada.','alerta');return;}
+    const atividade=(document.getElementById('dia-atividade')?.value||'').trim();
+    if(!atividade){Utils.toast('Descreva o que está sendo feito.','alerta');return;}
+    const t=tarefas.find(x=>x.id===_diaTarSel);
+    const dados={
+      data:_iso(diaRef),
+      tarefaId:_diaTarSel,
+      tarefaLabel:t?((t.codigo?t.codigo+' ':'')+(t.nome||'')):'',
+      atividade,
+      status:_diaStatus,
+      motivo:_diaStatus!=='executado'?(document.getElementById('dia-motivo')?.value||''):'',
+      detalhe:_diaStatus!=='executado'?(document.getElementById('dia-detalhe')?.value||'').trim():'',
+      obraId,
+    };
+    try{
+      Utils.mostrarLoading('Salvando...');
+      if(_diaEditId)await Database.atualizar(obraId,COLD,_diaEditId,dados);
+      else await Database.criar(obraId,COLD,{...dados,createdAt:new Date().toISOString()});
+      _diaEditId=null;_diaBusca='';_diaTarSel='';_diaStatus='executado';_diaAtividadeTmp='';
+      await _loadDiario();_render();
+      Utils.toast('Lançamento salvo!','sucesso');
+      requestAnimationFrame(()=>{const i=document.getElementById('dia-busca');if(i)i.focus();});
+    }catch(e){console.error(e);Utils.toast('Erro ao salvar.','erro');}
+    finally{Utils.esconderLoading();}
+  }
+
+  function editarLancamento(id){
+    const l=lancamentosDia.find(x=>x.id===id);if(!l)return;
+    _diaEditId=id;_diaTarSel=l.tarefaId;_diaBusca=l.tarefaLabel||'';_diaStatus=l.status||'executado';
+    _render();
+    requestAnimationFrame(()=>{
+      const a=document.getElementById('dia-atividade');if(a)a.value=l.atividade||'';
+      const m=document.getElementById('dia-motivo');if(m&&l.motivo)m.value=l.motivo;
+      const d=document.getElementById('dia-detalhe');if(d)d.value=l.detalhe||'';
+    });
+  }
+  function cancelarEdicaoDiario(){_diaEditId=null;_diaBusca='';_diaTarSel='';_diaStatus='executado';_render();}
+
+  async function excluirLancamento(id){
+    if(!confirm('Excluir este lançamento?'))return;
+    try{await Database.deletar(obraId,COLD,id);await _loadDiario();_render();Utils.toast('Excluído.','sucesso');}
+    catch(e){console.error(e);Utils.toast('Erro ao excluir.','erro');}
+  }
+
+  // --- relatório do dia ---
+  function gerarRelatorioDiario(){
+    const iso=_iso(diaRef);
+    const dia=diaRef;
+    // Tarefas-folha que DEVERIAM estar em execução neste dia
+    const deveriam=sorted.filter(t=>{
+      if(!leafSet.has(t.id))return false;
+      if((t.percentualConcluido||0)>=100)return false;
+      const i=_d(t.inicioPlanejado),f=_d(t.terminoPlanejado);
+      return i&&f&&dia>=i&&dia<=f;
+    });
+    const comLanc=new Set(lancamentosDia.map(l=>l.tarefaId));
+    const semLanc=deveriam.filter(t=>!comLanc.has(t.id));
+    const exec=lancamentosDia.filter(l=>l.status==='executado');
+    const parc=lancamentosDia.filter(l=>l.status==='parcial');
+    const nao=lancamentosDia.filter(l=>l.status==='nao_executado');
+    const porques=lancamentosDia.filter(l=>l.motivo);
+
+    const bloco=(titulo,cor,itens,vazio)=>`
+      <div style="margin-bottom:16px;">
+        <div style="font-weight:800;font-size:.9rem;color:${cor};border-bottom:2px solid ${cor};padding-bottom:4px;margin-bottom:8px;">${titulo} (${itens.length})</div>
+        ${itens.length?itens.join(''):`<div style="color:#94a3b8;font-size:.8rem;">${vazio}</div>`}
+      </div>`;
+    const li=l=>`<div style="padding:6px 0;border-bottom:1px solid #f1f5f9;font-size:.82rem;">
+      <b>${_esc(l.tarefaLabel||'')}</b> — ${_esc(l.atividade||'')}
+      ${l.motivo?`<div style="color:#dc2626;font-size:.76rem;">Motivo: ${_esc(l.motivo)}${l.detalhe?' — '+_esc(l.detalhe):''}</div>`:''}
+    </div>`;
+    const liT=t=>`<div style="padding:6px 0;border-bottom:1px solid #f1f5f9;font-size:.82rem;">
+      <b>${_esc((t.codigo?t.codigo+' ':'')+t.nome)}</b>
+      <span style="color:#64748b;font-size:.76rem;"> · ${_fmt(t.inicioPlanejado)} → ${_fmt(t.terminoPlanejado)} · ${t.percentualConcluido||0}% concluído</span>
+    </div>`;
+
+    const html=`
+    <div id="dia-rel-overlay" style="position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1000;display:flex;align-items:flex-start;justify-content:center;padding:30px 16px;overflow:auto;" onclick="if(event.target===this)this.remove()">
+      <div style="background:#fff;border-radius:12px;max-width:860px;width:100%;padding:24px;" id="dia-rel-print">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+          <h2 style="margin:0;font-size:1.1rem;">Diário de Obra — ${DIAS[dia.getDay()]}, ${_fmt(iso)}</h2>
+          <div style="display:flex;gap:8px;" class="no-print">
+            <button class="btn btn-sm btn-outline" onclick="Semanal.imprimirRelatorioDiario()">🖨️ Imprimir</button>
+            <button class="btn btn-sm btn-outline" onclick="document.getElementById('dia-rel-overlay').remove()">✕ Fechar</button>
+          </div>
+        </div>
+        <div style="font-size:.78rem;color:#64748b;margin-bottom:16px;">${lancamentosDia.length} lançamento(s) · ${deveriam.length} tarefa(s) previstas para o dia no Planejamento</div>
+        ${bloco('✅ Executado','#16a34a',exec.map(li),'Nenhum lançamento como executado.')}
+        ${bloco('◐ Parcial','#ca8a04',parc.map(li),'Nenhum lançamento parcial.')}
+        ${bloco('✖ Não executado','#dc2626',nao.map(li),'Nenhum lançamento como não executado.')}
+        ${bloco('⚠️ Deveria estar em execução (sem lançamento)','#7c3aed',semLanc.map(liT),'Tudo que estava previsto tem lançamento. 👏')}
+        ${bloco('📋 Porquês do dia','#0f172a',porques.map(l=>`<div style="padding:5px 0;border-bottom:1px solid #f1f5f9;font-size:.8rem;"><b>${_esc(l.motivo)}</b>${l.detalhe?' — '+_esc(l.detalhe):''} <span style="color:#64748b;">(${_esc(l.tarefaLabel||'')})</span></div>`),'Nenhum motivo registrado hoje.')}
+      </div>
+    </div>`;
+    const div=document.createElement('div');div.innerHTML=html;
+    document.body.appendChild(div.firstElementChild);
+  }
+
+  function imprimirRelatorioDiario(){
+    const rel=document.getElementById('dia-rel-print');if(!rel)return;
+    const w=window.open('','_blank');
+    w.document.write('<html><head><title>Diário de Obra</title><style>body{font-family:system-ui,Arial;padding:20px;}.no-print{display:none;}</style></head><body>'+rel.innerHTML+'</body></html>');
+    w.document.close();w.focus();
+    setTimeout(()=>{w.print();},300);
+  }
+
   return{init,carregar,nav,hojeBtn,setModo,setVista,setOrdem,setAba,toggleSel,limparSel,
     editarProgresso,editarInicio,editarData,editarResp,selDatas,selResp,
     abrirOmitir,abrirOmitirSel,salvarOmitir,restaurar,
     abrirAdicionar,filtrarAdicionar,confirmarAdicionar,
     iniciar,resetar,abrirFechar,confirmarFechar,reabrir,
-    verRelatorio,verRelatorioDoc,carregarHistorico};
+    verRelatorio,verRelatorioDoc,carregarHistorico,
+    diarioNav,diarioHoje,diarioSetData,onBuscaDiario,selTarefaDiario,setStatusDiario,
+    salvarLancamento,editarLancamento,cancelarEdicaoDiario,excluirLancamento,
+    gerarRelatorioDiario,imprimirRelatorioDiario};
 })();
 
 function onObraChanged(){ Semanal.init(); }

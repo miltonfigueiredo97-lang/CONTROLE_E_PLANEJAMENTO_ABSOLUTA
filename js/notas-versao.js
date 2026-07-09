@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.9.0',
+  versaoAtual: 'V2.10.0',
 
   versoes: [
     {
@@ -1305,7 +1305,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.9.0',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-09',
       tipo: 'funcionalidade',
       titulo: 'Seleção múltipla com barra de ações + coluna de status com filtro',
@@ -1329,6 +1329,39 @@ const NotasVersao = {
         '  quebrada — referenciava funções que não existiam mais',
         '  (_colDragStart/_colDrop). Substituída pelo menu de clique',
         '  direito que já funcionava (mover esquerda/direita/esconder).',
+      ]
+    },
+    {
+      versao: 'V2.10.0',
+      status: 'aberta',
+      data: '2026-07-09',
+      tipo: 'funcionalidade',
+      titulo: 'Semanal: nova aba Diário — lançamento rápido de campo + relatório do dia',
+      itens: [
+        'NOVA ABA "DIÁRIO" no módulo Semanal — pensada pra ser rápida',
+        '  no dia a dia da obra:',
+        '  → Busca de tarefa por código ou nome (fuzzy, tolerante a erro',
+        '    de digitação, hierárquica — mesmo padrão de Materiais/MO)',
+        '  → Campo "o que está sendo feito" + 3 situações:',
+        '    ✅ Executado · ◐ Parcial · ✖ Não executado',
+        '  → Parcial/Não executado pedem o motivo (mesma lista de',
+        '    motivos do fechamento semanal) + detalhe opcional',
+        '  → Após lançar, o formulário limpa e volta o foco pra busca —',
+        '    lançamentos em sequência sem pegar no mouse',
+        '  → Lançamentos do dia listados por situação, com editar/excluir',
+        '  → Navegação por dia (‹ › · hoje · seletor de data)',
+        '',
+        'RELATÓRIO DO DIA (botão 📄):',
+        '  → ✅ Executado / ◐ Parcial / ✖ Não executado (com motivos)',
+        '  → ⚠️ Deveria estar em execução: tarefas previstas no',
+        '    Planejamento para o dia (início ≤ dia ≤ término, não',
+        '    concluídas) que NÃO receberam nenhum lançamento',
+        '  → 📋 Porquês do dia: todos os motivos registrados, agregados',
+        '  → Botão imprimir (janela própria, pronta pra PDF)',
+        '',
+        'TESTE INTERNO COMPLETO (todos os módulos): sintaxe 28/28,',
+        '  return{} de 20 módulos, handlers onclick 100% resolvidos,',
+        '  versão consistente nos 19 HTMLs, coleções Firestore conferidas.',
       ]
     }
   ],
