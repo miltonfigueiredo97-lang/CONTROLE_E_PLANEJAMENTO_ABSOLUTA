@@ -15,6 +15,12 @@ const Diario = (() => {
   let diaRef=null;
   let lancamentosDia=[];
   let _busca='', _tarSel='', _status='executado', _editId=null, _atividadeTmp='', _percTmp='';
+  // Pauta do dia
+  let _pautaExp={};        // {tarefaId:'andou'|'parado'} — card expandido
+  let _skips=new Set();    // tarefas puladas nesta sessão
+  let _formAberto=false;   // formulário "fora da pauta"
+  let _atrasAberto=false;  // seção de atrasadas expandida
+  let _avulsas=[];         // tarefas avulsas pendentes (rolam entre dias)
   const COL='tarefas', COLD='diario';
   const DIAS=['dom','seg','ter','qua','qui','sex','sáb'];
   const MOTIVOS=['Frente/Predecessora Não Liberada','Atraso Entrega de Material','Atraso Programação de Material','Falta de Material (Sobreconsumo)','Material Não Conforme','Material Não Comprado','Necessidade Não Prevista (EAP)','Especificação de Projeto','Equipamentos Indisponíveis','Serviço Não Contratado','Mudança no Plano de Ataque','Atraso em Documentações','Baixa Produtividade Prevista','Intempéries','Outros'];
@@ -69,8 +75,10 @@ const Diario = (() => {
     const iso=_iso(diaRef);
     try{
       const todos=await Database.listar(obraId,COLD,'createdAt').catch(()=>[]);
-      lancamentosDia=todos.filter(l=>l.data===iso);
-    }catch(e){console.error(e);lancamentosDia=[];}
+      lancamentosDia=todos.filter(l=>l.data===iso&&!l.avulsa);
+      // Avulsas: pendentes (qualquer data) + concluídas neste dia
+      _avulsas=todos.filter(l=>l.avulsa&&(!l.concluida||l.dataConclusao===iso));
+    }catch(e){console.error(e);lancamentosDia=[];_avulsas=[];}
   }
 
   // ==================== BUSCA FUZZY DE TAREFA ====================
@@ -100,7 +108,305 @@ const Diario = (() => {
       .filter(x=>x.score>=0).sort((a,b)=>b.score-a.score).map(x=>x.o);
   }
 
+  // ==================== PAUTA DO DIA ====================
+  // Lê o Planejamento e monta a agenda da reunião: folhas previstas
+  // para o dia (início<=dia<=término, %<100) agrupadas pelo pai direto,
+  // + atrasadas (término<dia, %<100). Nada fixo: 100% dirigido pelos dados.
+  function _pautaItens(){
+    const dia=diaRef;
+    const previstas=[],atrasadas=[];
+    for(const t of sorted){
+      if(!leafSet.has(t.id))continue;
+      if((t.percentualConcluido||0)>=100)continue;
+      const i=_d(t.inicioPlanejado),f=_d(t.terminoPlanejado);
+      if(!i||!f)continue;
+      if(dia>=i&&dia<=f)previstas.push(t);
+      else if(f<dia)atrasadas.push(t);
+    }
+    atrasadas.sort((a,b)=>_d(b.terminoPlanejado)-_d(a.terminoPlanejado));
+    return {previstas,atrasadas};
+  }
+
+  // Agrupa folhas pelo pai direto (via Utils.percFamilia). Retorna
+  // [{pai:tarefa|null, itens:[folhas]}] na ordem do planejamento.
+  function _agruparPorPai(folhas){
+    const fam=Utils.percFamilia(tarefas);
+    const grupos=[],idx=new Map();
+    for(const t of folhas){
+      const pai=fam.ancestrais(t)[0]||null;
+      const k=pai?pai.id:'__sem_pai__';
+      if(!idx.has(k)){idx.set(k,grupos.length);grupos.push({pai,itens:[]});}
+      grupos[idx.get(k)].itens.push(t);
+    }
+    return grupos;
+  }
+
+  // Produção física: delta% × quantidade, na unidade da própria tarefa.
+  function _prodFisica(t,percAntes,percDepois){
+    const q=parseFloat(t?.quantidade)||0;
+    if(!q||percDepois==null||percAntes==null)return null;
+    const delta=(percDepois-percAntes)/100*q;
+    if(Math.abs(delta)<0.001)return null;
+    return {qtd:delta,unidade:(t.unidade||'un')};
+  }
+  function _fmtQtd(v){return (Math.round(v*100)/100).toLocaleString('pt-BR');}
+
+  // Gravação de avanço no Planejamento — caminho ÚNICO de escrita.
+  // Regras do Semanal (inicioReal/terminoReal) + % em família (Utils).
+  async function _gravarAvanco(t,percDepois){
+    const upd={percentualConcluido:percDepois};
+    const hoje=_iso(_hoje());
+    if(percDepois>0&&!t.inicioReal)upd.inicioReal=hoje;
+    if(percDepois>=100&&!t.terminoReal)upd.terminoReal=hoje;
+    if(percDepois<100&&t.terminoReal)upd.terminoReal='';
+    await Database.atualizar(obraId,COL,t.id,upd);
+    Object.assign(t,upd);
+    const fam=Utils.percFamilia(tarefas);
+    let famUps=[];
+    if(fam.filhosDiretos(t).length>0){
+      famUps=Utils.distribuirPercDescendentes(tarefas,t.id,percDepois)
+        .concat(Utils.recalcularPercAncestrais(tarefas,t.id));
+    } else {
+      famUps=Utils.recalcularPercAncestrais(tarefas,t.id);
+    }
+    for(const u of famUps){
+      await Database.atualizar(obraId,COL,u.id,{percentualConcluido:u.percentualConcluido});
+    }
+    return famUps.length;
+  }
+
+  // --- handlers dos cards da pauta ---
+  function pautaAbrir(tid,modo){_pautaExp={};_pautaExp[tid]=modo;_render();
+    requestAnimationFrame(()=>{const i=document.getElementById('pt-perc-'+tid)||document.getElementById('pt-det-'+tid);if(i)i.focus();});}
+  function pautaFechar(){_pautaExp={};_render();}
+  function pautaPular(tid){_skips.add(tid);delete _pautaExp[tid];_render();}
+  function pautaPreview(tid){
+    const t=tarefas.find(x=>x.id===tid);if(!t)return;
+    const inp=document.getElementById('pt-perc-'+tid);
+    const out=document.getElementById('pt-prev-'+tid);
+    if(!inp||!out)return;
+    const v=parseFloat(inp.value);
+    if(isNaN(v)){out.textContent='';return;}
+    const pd=Math.min(100,Math.max(0,v));
+    const pa=t.percentualConcluido||0;
+    const partes=[];
+    const pf=_prodFisica(t,pa,pd);
+    if(pf)partes.push(`${pf.qtd>=0?'+':''}${_fmtQtd(pf.qtd)} ${pf.unidade}`);
+    const fam=Utils.percFamilia(tarefas);
+    const pai=fam.ancestrais(t)[0];
+    if(pai){
+      const antes=Math.round(fam.percCalculado(pai)*10)/10;
+      const bkp=t.percentualConcluido;t.percentualConcluido=pd;
+      const depois=Math.round(fam.percCalculado(pai)*10)/10;
+      t.percentualConcluido=bkp;
+      if(Math.abs(depois-antes)>=0.05)partes.push(`${pai.nome||'pai'}: ${antes}% → ${depois}%`);
+    }
+    out.textContent=partes.join(' · ');
+  }
+  async function pautaSalvarAvanco(tid){
+    const t=tarefas.find(x=>x.id===tid);if(!t)return;
+    const inp=document.getElementById('pt-perc-'+tid);
+    const v=parseFloat(inp?.value);
+    if(isNaN(v)){Utils.toast('Informe o % atual da tarefa.','alerta');return;}
+    const percDepois=Math.min(100,Math.max(0,v));
+    const percAntes=t.percentualConcluido||0;
+    const atv=(document.getElementById('pt-atv-'+tid)?.value||'').trim();
+    try{
+      Utils.mostrarLoading('Salvando...');
+      const ehPai=Utils.percFamilia(tarefas).filhosDiretos(t).length>0;
+      await Database.criar(obraId,COLD,{
+        data:_iso(diaRef),tarefaId:tid,
+        tarefaLabel:(t.codigo?t.codigo+' ':'')+(t.nome||''),
+        atividade:atv||'Avanço lançado pela pauta',
+        status:percDepois>=100?'executado':'parcial',
+        percAntes,percDepois,motivo:'',detalhe:'',obraId,
+        createdAt:new Date().toISOString(),
+      });
+      const nFam=await _gravarAvanco(t,percDepois);
+      delete _pautaExp[tid];
+      await _loadDia();_render();
+      const pf=_prodFisica(t,percAntes,percDepois);
+      Utils.toast(`Lançado!${pf?` ${pf.qtd>=0?'+':''}${_fmtQtd(pf.qtd)} ${pf.unidade}.`:''}${ehPai&&nFam?` % distribuído p/ ${nFam} tarefa(s).`:''}`,'sucesso');
+    }catch(e){console.error(e);Utils.toast('Erro ao salvar.','erro');}
+    finally{Utils.esconderLoading();}
+  }
+  async function pautaSalvarParado(tid){
+    const t=tarefas.find(x=>x.id===tid);if(!t)return;
+    const motivo=document.getElementById('pt-mot-'+tid)?.value||'';
+    const detalhe=(document.getElementById('pt-det-'+tid)?.value||'').trim();
+    try{
+      Utils.mostrarLoading('Salvando...');
+      await Database.criar(obraId,COLD,{
+        data:_iso(diaRef),tarefaId:tid,
+        tarefaLabel:(t.codigo?t.codigo+' ':'')+(t.nome||''),
+        atividade:detalhe||'Não executado',
+        status:'nao_executado',
+        percAntes:t.percentualConcluido||0,percDepois:null,
+        motivo,detalhe,obraId,
+        createdAt:new Date().toISOString(),
+      });
+      delete _pautaExp[tid];
+      await _loadDia();_render();
+      Utils.toast('Registrado.','sucesso');
+    }catch(e){console.error(e);Utils.toast('Erro ao salvar.','erro');}
+    finally{Utils.esconderLoading();}
+  }
+  function toggleAtrasadas(){_atrasAberto=!_atrasAberto;_render();}
+  function toggleForm(){_formAberto=!_formAberto;_render();
+    if(_formAberto)requestAnimationFrame(()=>{const i=document.getElementById('dia-busca');if(i)i.focus();});}
+
+  // --- avulsas (rolam entre dias até concluir) ---
+  async function avulsaAdd(){
+    const inp=document.getElementById('dia-avulsa-txt');
+    const txt=(inp?.value||'').trim();
+    if(!txt){Utils.toast('Descreva a tarefa avulsa.','alerta');return;}
+    try{
+      await Database.criar(obraId,COLD,{
+        avulsa:true,concluida:false,data:_iso(diaRef),
+        atividade:txt,obraId,createdAt:new Date().toISOString(),
+      });
+      await _loadDia();_render();
+      requestAnimationFrame(()=>{const i=document.getElementById('dia-avulsa-txt');if(i)i.focus();});
+    }catch(e){console.error(e);Utils.toast('Erro ao salvar.','erro');}
+  }
+  async function avulsaConcluir(id){
+    const a=_avulsas.find(x=>x.id===id);if(!a)return;
+    try{
+      await Database.atualizar(obraId,COLD,id,{concluida:!a.concluida,dataConclusao:a.concluida?'':_iso(diaRef)});
+      await _loadDia();_render();
+    }catch(e){console.error(e);Utils.toast('Erro.','erro');}
+  }
+  async function avulsaExcluir(id){
+    if(!confirm('Excluir esta tarefa avulsa?'))return;
+    try{await Database.deletar(obraId,COLD,id);await _loadDia();_render();}
+    catch(e){console.error(e);Utils.toast('Erro.','erro');}
+  }
+
   // ==================== RENDER ====================
+  function _cardPauta(t,lancMap,atrasada){
+    const perc=t.percentualConcluido||0;
+    const q=parseFloat(t.quantidade)||0;
+    const lanc=lancMap.get(t.id);
+    const exp=_pautaExp[t.id];
+    const st=lanc?D_STATUS[lanc.status]:null;
+    const inf=[`${perc}%`];
+    if(q)inf.push(`${_fmtQtd(q)} ${_esc(t.unidade||'un')}`);
+    if(atrasada)inf.push(`término ${_fmt(t.terminoPlanejado)}`);
+    let acoes='';
+    if(lanc&&st){
+      acoes=`<span class="pt-badge" style="background:${st.bg};color:${st.cor};">${st.label}${lanc.percDepois!=null?` ${lanc.percAntes??'?'}→${lanc.percDepois}%`:''}</span>`;
+    } else if(!exp){
+      acoes=`<div class="pt-acao">
+        <button class="a-and" onclick="Diario.pautaAbrir('${t.id}','andou')">✅ Andou</button>
+        <button class="a-par" onclick="Diario.pautaAbrir('${t.id}','parado')">✖ Parado</button>
+        <button onclick="Diario.pautaPular('${t.id}')">⏭</button>
+      </div>`;
+    }
+    let expH='';
+    if(exp==='andou'){
+      expH=`<div class="pt-exp">
+        <div><label>% atual</label><input type="number" id="pt-perc-${t.id}" min="0" max="100" step="1" value="${perc}" style="width:90px;" oninput="Diario.pautaPreview('${t.id}')" onkeydown="if(event.key==='Enter')Diario.pautaSalvarAvanco('${t.id}')"></div>
+        <div style="flex:1;min-width:180px;"><label>O que foi feito (opcional)</label><input type="text" id="pt-atv-${t.id}" style="width:100%;" placeholder="Ex: eixo A-B, 2 pedreiros" onkeydown="if(event.key==='Enter')Diario.pautaSalvarAvanco('${t.id}')"></div>
+        <button class="btn btn-sm btn-primario" onclick="Diario.pautaSalvarAvanco('${t.id}')">Lançar</button>
+        <button class="btn btn-sm btn-outline" onclick="Diario.pautaFechar()">✕</button>
+        <div class="pt-prev" id="pt-prev-${t.id}"></div>
+      </div>`;
+    } else if(exp==='parado'){
+      expH=`<div class="pt-exp">
+        <div style="min-width:200px;"><label>Motivo</label><select id="pt-mot-${t.id}">${MOTIVOS.map(m=>`<option value="${_esc(m)}">${_esc(m)}</option>`).join('')}</select></div>
+        <div style="flex:1;min-width:160px;"><label>Detalhe (opcional)</label><input type="text" id="pt-det-${t.id}" style="width:100%;" onkeydown="if(event.key==='Enter')Diario.pautaSalvarParado('${t.id}')"></div>
+        <button class="btn btn-sm btn-primario" onclick="Diario.pautaSalvarParado('${t.id}')">Registrar</button>
+        <button class="btn btn-sm btn-outline" onclick="Diario.pautaFechar()">✕</button>
+      </div>`;
+    }
+    return `<div class="pt-card"${atrasada?' style="background:#fffbeb;"':''}>
+      <div class="pt-l1">
+        ${atrasada?'<span class="pt-badge" style="background:#fee2e2;color:#dc2626;">ATRASADA</span>':''}
+        <span class="nm">${_esc((t.codigo?t.codigo+' ':'')+(t.nome||''))}</span>
+        <span class="inf">${inf.join(' · ')}</span>
+        ${acoes}
+      </div>${expH}</div>`;
+  }
+
+  function _pautaHtml(){
+    const {previstas,atrasadas}=_pautaItens();
+    const lancMap=new Map();
+    lancamentosDia.forEach(l=>{if(l.tarefaId)lancMap.set(l.tarefaId,l);});
+    const fam=Utils.percFamilia(tarefas);
+    const vis=previstas.filter(t=>!_skips.has(t.id));
+    const grupos=_agruparPorPai(vis);
+    const feitos=vis.filter(t=>lancMap.has(t.id)).length;
+
+    const grupoH=g=>{
+      if(!g.pai)return g.itens.map(t=>_cardPauta(t,lancMap,false)).join('');
+      const p=g.pai;
+      const percPai=Math.round(fam.percCalculado(p)*10)/10;
+      const qPai=parseFloat(p.quantidade)||0;
+      const exp=_pautaExp[p.id];
+      let paiExp='';
+      if(exp==='andou'){
+        paiExp=`<div class="pt-exp" style="margin:8px 12px;">
+          <div><label>% do grupo</label><input type="number" id="pt-perc-${p.id}" min="0" max="100" step="1" value="${percPai}" style="width:90px;" oninput="Diario.pautaPreview('${p.id}')" onkeydown="if(event.key==='Enter')Diario.pautaSalvarAvanco('${p.id}')"></div>
+          <div style="flex:1;min-width:160px;"><label>O que foi feito (opcional)</label><input type="text" id="pt-atv-${p.id}" style="width:100%;"></div>
+          <button class="btn btn-sm btn-primario" onclick="Diario.pautaSalvarAvanco('${p.id}')">Lançar no grupo</button>
+          <button class="btn btn-sm btn-outline" onclick="Diario.pautaFechar()">✕</button>
+          <div class="pt-prev" style="color:#b45309;">⚠ Distribui o % para TODAS as subtarefas do grupo.</div>
+        </div>`;
+      }
+      return `<div class="pt-grupo">
+        <div class="pt-grupo-h">
+          <span class="nm">▸ ${_esc((p.codigo?p.codigo+' ':'')+(p.nome||''))}</span>
+          <span class="inf">${percPai}%${qPai?` · ${_fmtQtd(qPai)} ${_esc(p.unidade||'un')}`:''}</span>
+          ${exp?'':`<div class="pt-acao"><button onclick="Diario.pautaAbrir('${p.id}','andou')" title="Lança o % no pai e distribui para os filhos">Lançar no grupo</button></div>`}
+        </div>
+        ${paiExp}
+        ${g.itens.map(t=>_cardPauta(t,lancMap,false)).join('')}
+      </div>`;
+    };
+
+    const atrasVis=atrasadas.filter(t=>!_skips.has(t.id));
+    const avPend=_avulsas.filter(a=>!a.concluida);
+    const avDia=_avulsas.filter(a=>a.concluida);
+
+    return `
+    <div class="dia-sec-t" style="color:#0f172a;margin-top:0;">📌 Pauta do dia
+      <span style="color:#94a3b8;font-weight:600;">(${feitos}/${vis.length} tratadas)</span>
+    </div>
+    ${vis.length?grupos.map(grupoH).join(''):
+      `<div style="background:#fff;border:1px dashed #cbd5e1;border-radius:10px;padding:18px;text-align:center;color:#94a3b8;font-size:.82rem;margin-bottom:10px;">Nenhuma tarefa prevista para este dia no Planejamento.</div>`}
+
+    ${atrasVis.length?`
+    <div class="pt-grupo" style="border-color:#fbbf24;">
+      <div class="pt-grupo-h" style="background:#fffbeb;cursor:pointer;" onclick="Diario.toggleAtrasadas()">
+        <span class="nm" style="color:#b45309;">⚠ Atrasadas — término já passou e não concluíram</span>
+        <span class="inf" style="color:#b45309;font-weight:800;">${atrasVis.length} ${_atrasAberto?'▴':'▾'}</span>
+      </div>
+      ${_atrasAberto?atrasVis.map(t=>_cardPauta(t,lancMap,true)).join(''):''}
+    </div>`:''}
+
+    <div class="pt-grupo">
+      <div class="pt-grupo-h">
+        <span class="nm">📝 Tarefas avulsas <span style="font-weight:600;color:#94a3b8;">(fora do planejamento — rolam até concluir)</span></span>
+      </div>
+      <div class="pt-card" style="display:flex;gap:8px;">
+        <input type="text" id="dia-avulsa-txt" placeholder="Ex: conversar com projetista sobre detalhe da fachada" style="flex:1;padding:6px 9px;border:1px solid #cbd5e1;border-radius:7px;font-size:.8rem;" onkeydown="if(event.key==='Enter')Diario.avulsaAdd()">
+        <button class="btn btn-sm btn-primario" onclick="Diario.avulsaAdd()">＋ Adicionar</button>
+      </div>
+      ${avPend.map(a=>`<div class="pt-card"><div class="pt-l1">
+        <input type="checkbox" onchange="Diario.avulsaConcluir('${a.id}')" style="cursor:pointer;">
+        <span class="nm">${_esc(a.atividade||'')}</span>
+        <span class="inf">desde ${_fmt(a.data)}</span>
+        <button class="btn-icone" title="Excluir" onclick="Diario.avulsaExcluir('${a.id}')">🗑️</button>
+      </div></div>`).join('')}
+      ${avDia.map(a=>`<div class="pt-card" style="opacity:.6;"><div class="pt-l1">
+        <input type="checkbox" checked onchange="Diario.avulsaConcluir('${a.id}')" style="cursor:pointer;">
+        <span class="nm" style="text-decoration:line-through;">${_esc(a.atividade||'')}</span>
+        <span class="inf">concluída hoje</span>
+      </div></div>`).join('')}
+      ${!avPend.length&&!avDia.length?'<div class="pt-card" style="color:#94a3b8;font-size:.78rem;">Nenhuma tarefa avulsa pendente.</div>':''}
+    </div>`;
+  }
+
   function _render(){
     const iso=_iso(diaRef);
     const hojeIso=_iso(_hoje());
@@ -128,6 +434,24 @@ const Diario = (() => {
       .dia-lanc .tag{padding:2px 8px;border-radius:6px;font-size:.68rem;font-weight:800;white-space:nowrap;flex-shrink:0;}
       .dia-sec-t{font-size:.85rem;font-weight:800;margin:14px 0 8px;display:flex;align-items:center;gap:8px;}
       .btn-icone{background:none;border:none;cursor:pointer;font-size:.9rem;padding:2px;}
+      .pt-grupo{background:#fff;border:1px solid #e2e8f0;border-radius:10px;margin-bottom:10px;overflow:hidden;}
+      .pt-grupo-h{background:#f8fafc;padding:8px 12px;display:flex;align-items:center;gap:8px;border-bottom:1px solid #e2e8f0;flex-wrap:wrap;}
+      .pt-grupo-h .nm{font-weight:800;font-size:.84rem;color:#0f172a;flex:1;min-width:0;}
+      .pt-grupo-h .inf{font-size:.72rem;color:#64748b;white-space:nowrap;}
+      .pt-card{padding:9px 12px;border-bottom:1px solid #f1f5f9;}
+      .pt-card:last-child{border-bottom:none;}
+      .pt-l1{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+      .pt-l1 .nm{font-size:.82rem;font-weight:700;flex:1;min-width:180px;}
+      .pt-l1 .inf{font-size:.72rem;color:#64748b;white-space:nowrap;}
+      .pt-acao{display:flex;gap:5px;}
+      .pt-acao button{border:1.5px solid #cbd5e1;background:#fff;border-radius:7px;padding:4px 9px;cursor:pointer;font-size:.72rem;font-weight:700;color:#475569;white-space:nowrap;}
+      .pt-acao .a-and{border-color:#16a34a;color:#16a34a;}
+      .pt-acao .a-par{border-color:#dc2626;color:#dc2626;}
+      .pt-exp{margin-top:8px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;}
+      .pt-exp label{font-size:.68rem;color:#64748b;font-weight:700;text-transform:uppercase;display:block;margin-bottom:2px;}
+      .pt-exp input,.pt-exp select{padding:6px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.8rem;box-sizing:border-box;}
+      .pt-badge{padding:2px 7px;border-radius:6px;font-size:.66rem;font-weight:800;white-space:nowrap;}
+      .pt-prev{font-size:.74rem;color:#2563eb;font-weight:700;min-height:1em;width:100%;}
     </style>
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
       <div class="dia-nav">
@@ -138,9 +462,13 @@ const Diario = (() => {
       </div>
       <input type="date" value="${iso}" onchange="Diario.setData(this.value)" style="padding:7px 9px;border:1px solid #cbd5e1;border-radius:8px;font-size:.82rem;">
       <div style="flex:1;"></div>
+      <button class="btn btn-sm btn-outline" onclick="Diario.toggleForm()">${_formAberto?'✕ Fechar':'＋ Fora da pauta'}</button>
       <button class="btn btn-sm" style="background:#0f172a;color:#fff;" onclick="Diario.gerarRelatorio()">📄 Relatório do dia</button>
     </div>
 
+    ${_pautaHtml()}
+
+    ${(_formAberto||_editId)?`<div class="dia-sec-t" style="color:#0f172a;">🔎 Lançamento fora da pauta <span style="color:#94a3b8;font-weight:600;">(busca em todo o Planejamento)</span></div>
     <div class="dia-form">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
         <div style="position:relative;">
@@ -186,9 +514,10 @@ const Diario = (() => {
           <button class="btn btn-sm btn-primario" onclick="Diario.salvar()">${_editId?'💾 Salvar alteração':'＋ Lançar'}</button>
         </div>
       </div>
-    </div>
+    </div>`:''}
 
-    ${!lancamentosDia.length?`<div style="text-align:center;color:#94a3b8;padding:26px;font-size:.85rem;">Nenhum lançamento neste dia ainda.</div>`:
+    ${lancamentosDia.length?`<div class="dia-sec-t" style="color:#0f172a;margin-top:18px;">🗒 Lançamentos do dia <span style="color:#94a3b8;font-weight:600;">(${lancamentosDia.length})</span></div>`:''}
+    ${!lancamentosDia.length?``:
       Object.entries(D_STATUS).map(([k,v])=>{
         const ls=porStatus[k];if(!ls.length)return'';
         return `<div class="dia-sec-t" style="color:${v.cor};">${v.label} <span style="color:#94a3b8;font-weight:600;">(${ls.length})</span></div>`+
@@ -264,31 +593,10 @@ const Diario = (() => {
       if(_editId)await Database.atualizar(obraId,COLD,_editId,dados);
       else await Database.criar(obraId,COLD,{...dados,createdAt:new Date().toISOString()});
 
-      // Grava o avanço no Planejamento (mesmas regras do Semanal:
-      // primeiro progresso marca inicioReal, 100% marca terminoReal,
-      // voltar de 100% limpa terminoReal)
+      // Grava o avanço no Planejamento — caminho único (_gravarAvanco):
+      // regras do Semanal (inicioReal/terminoReal) + % em família (Utils)
       if(percDepois!=null&&t){
-        const upd={percentualConcluido:percDepois};
-        const hoje=_iso(_hoje());
-        if(percDepois>0&&!t.inicioReal)upd.inicioReal=hoje;
-        if(percDepois>=100&&!t.terminoReal)upd.terminoReal=hoje;
-        if(percDepois<100&&t.terminoReal)upd.terminoReal='';
-        await Database.atualizar(obraId,COL,_tarSel,upd);
-        Object.assign(t,upd);
-        // ===== % EM FAMÍLIA =====
-        // Helper compartilhado do Utils (mesma regra do Planejamento):
-        // % em folha → recalcula ancestrais; % em pai → distribui p/ descendentes.
-        const fam=Utils.percFamilia(tarefas);
-        let famUps=[];
-        if(fam.filhosDiretos(t).length>0){
-          famUps=Utils.distribuirPercDescendentes(tarefas,_tarSel,percDepois)
-            .concat(Utils.recalcularPercAncestrais(tarefas,_tarSel));
-        } else {
-          famUps=Utils.recalcularPercAncestrais(tarefas,_tarSel);
-        }
-        for(const u of famUps){
-          await Database.atualizar(obraId,COL,u.id,{percentualConcluido:u.percentualConcluido});
-        }
+        await _gravarAvanco(t,percDepois);
       }
 
       _editId=null;_busca='';_tarSel='';_status='executado';_atividadeTmp='';_percTmp='';
@@ -336,6 +644,21 @@ const Diario = (() => {
     const nao=lancamentosDia.filter(l=>l.status==='nao_executado');
     const porques=lancamentosDia.filter(l=>l.motivo);
 
+    // ===== PRODUÇÃO FÍSICA DO DIA =====
+    // delta% × quantidade da tarefa, agrupado pela unidade dela.
+    const prodItens=[];
+    const prodPorUnidade={};
+    for(const l of lancamentosDia){
+      if(l.percDepois==null||l.percAntes==null)continue;
+      const t=tarefas.find(x=>x.id===l.tarefaId);if(!t)continue;
+      const pf=_prodFisica(t,l.percAntes,l.percDepois);
+      prodItens.push({l,t,pf});
+      if(pf){
+        prodPorUnidade[pf.unidade]=(prodPorUnidade[pf.unidade]||0)+pf.qtd;
+      }
+    }
+    const avPend=_avulsas.filter(a=>!a.concluida);
+
     const bloco=(titulo,cor,itens,vazio)=>`
       <div style="margin-bottom:16px;">
         <div style="font-weight:800;font-size:.9rem;color:${cor};border-bottom:2px solid ${cor};padding-bottom:4px;margin-bottom:8px;">${titulo} (${itens.length})</div>
@@ -362,11 +685,23 @@ const Diario = (() => {
           </div>
         </div>
         <div style="font-size:.78rem;color:#64748b;margin-bottom:16px;">${lancamentosDia.length} lançamento(s) · ${deveriam.length} tarefa(s) previstas para o dia no Planejamento</div>
+        ${Object.keys(prodPorUnidade).length?`
+        <div style="margin-bottom:16px;">
+          <div style="font-weight:800;font-size:.9rem;color:#0369a1;border-bottom:2px solid #0369a1;padding-bottom:4px;margin-bottom:8px;">📐 Produção física do dia</div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:8px;">
+            ${Object.entries(prodPorUnidade).map(([u,q])=>`<div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:8px 14px;font-size:.95rem;font-weight:800;color:#0369a1;">${q>=0?'+':''}${_fmtQtd(q)} <span style="font-size:.72rem;font-weight:700;">${_esc(u)}</span></div>`).join('')}
+          </div>
+          ${prodItens.map(({l,t,pf})=>`<div style="padding:4px 0;border-bottom:1px solid #f1f5f9;font-size:.8rem;">
+            <b>${_esc(l.tarefaLabel||'')}</b> · ${l.percAntes}% → ${l.percDepois}%
+            ${pf?`<span style="color:#0369a1;font-weight:700;"> · ${pf.qtd>=0?'+':''}${_fmtQtd(pf.qtd)} ${_esc(pf.unidade)}</span>`:'<span style="color:#94a3b8;font-size:.72rem;"> · sem quantidade cadastrada</span>'}
+          </div>`).join('')}
+        </div>`:''}
         ${bloco('✅ Executado','#16a34a',exec.map(li),'Nenhum lançamento como executado.')}
         ${bloco('◐ Parcial','#ca8a04',parc.map(li),'Nenhum lançamento parcial.')}
         ${bloco('✖ Não executado','#dc2626',nao.map(li),'Nenhum lançamento como não executado.')}
         ${bloco('⚠️ Deveria estar em execução (sem lançamento)','#7c3aed',semLanc.map(liT),'Tudo que estava previsto tem lançamento. 👏')}
         ${bloco('📋 Porquês do dia','#0f172a',porques.map(l=>`<div style="padding:5px 0;border-bottom:1px solid #f1f5f9;font-size:.8rem;"><b>${_esc(l.motivo)}</b>${l.detalhe?' — '+_esc(l.detalhe):''} <span style="color:#64748b;">(${_esc(l.tarefaLabel||'')})</span></div>`),'Nenhum motivo registrado hoje.')}
+        ${bloco('📝 Pendências / tarefas avulsas em aberto','#b45309',avPend.map(a=>`<div style="padding:5px 0;border-bottom:1px solid #f1f5f9;font-size:.8rem;">${_esc(a.atividade||'')} <span style="color:#94a3b8;font-size:.72rem;">(desde ${_fmt(a.data)})</span></div>`),'Nenhuma pendência em aberto.')}
       </div>
     </div>`;
     const div=document.createElement('div');div.innerHTML=html;
@@ -382,6 +717,8 @@ const Diario = (() => {
   }
 
   return{init,carregar,nav,hojeBtn,setData,onBusca,selTarefa,setStatus,
-    salvar,editar,cancelarEdicao,excluir,gerarRelatorio,imprimirRelatorio};
+    salvar,editar,cancelarEdicao,excluir,gerarRelatorio,imprimirRelatorio,
+    pautaAbrir,pautaFechar,pautaPular,pautaPreview,pautaSalvarAvanco,pautaSalvarParado,
+    toggleAtrasadas,toggleForm,avulsaAdd,avulsaConcluir,avulsaExcluir};
 })();
 function onObraChanged(){Diario.init();}

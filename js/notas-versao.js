@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.12.0',
+  versaoAtual: 'V2.13.0',
 
   versoes: [
     {
@@ -1411,7 +1411,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.12.0',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-09',
       tipo: 'funcionalidade',
       titulo: '% em família no Planejamento (pai ↔ filhos)',
@@ -1429,6 +1429,37 @@ const NotasVersao = {
         '  compartilhada em Utils (percFamilia, recalcularPercAncestrais,',
         '  distribuirPercDescendentes), sem duplicação',
         'Hierarquia lida por ordem + nível, igual ao restante do sistema',
+      ]
+    },
+    {
+      versao: 'V2.13.0',
+      status: 'aberta',
+      data: '2026-07-09',
+      tipo: 'funcionalidade',
+      titulo: 'Diário de Obra: Pauta do Dia',
+      itens: [
+        'NOVO: ao abrir o Diário, a pauta da reunião já vem montada —',
+        '  tarefas-folha previstas para o dia no Planejamento',
+        '  (início <= dia <= término, % < 100), agrupadas pelo pai,',
+        '  com % e quantidade/unidade de cada uma. Nada fixo no código:',
+        '  a pauta é 100% dirigida pelos dados do Planejamento da obra.',
+        'Cards com 3 ações rápidas: ✅ Andou (lança % novo, com prévia',
+        '  ao vivo da produção física — delta% × quantidade, na unidade',
+        '  da tarefa — e do novo % do pai), ✖ Parado (motivo + detalhe)',
+        '  e ⏭ Pular. Tarefa já tratada mostra o badge do lançamento.',
+        'Lançamento no PAI (botão "Lançar no grupo" no cabeçalho):',
+        '  distribui o % para todas as subtarefas (% em família da V2.12.0)',
+        'Seção recolhível de ATRASADAS: término já passou e não concluiu',
+        'Tarefas AVULSAS (fora do planejamento, ex: falar com projetista):',
+        '  rolam automaticamente para os dias seguintes até serem',
+        '  concluídas, e saem como pendências no relatório',
+        'Relatório do dia ganhou PRODUÇÃO FÍSICA: totais agrupados por',
+        '  unidade (m², m³, un...) + detalhe por tarefa, e bloco de',
+        '  pendências avulsas em aberto',
+        'Formulário antigo virou "Fora da pauta" (recolhível), com a',
+        '  mesma busca fuzzy em todo o Planejamento',
+        'Gravação de avanço unificada em caminho único (_gravarAvanco):',
+        '  regras de início/término real + % em família',
       ]
     }
   ],
