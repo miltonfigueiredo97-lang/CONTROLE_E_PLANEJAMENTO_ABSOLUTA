@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.10.0',
+  versaoAtual: 'V2.11.0',
 
   versoes: [
     {
@@ -1333,7 +1333,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.10.0',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-09',
       tipo: 'funcionalidade',
       titulo: 'Semanal: nova aba Diário — lançamento rápido de campo + relatório do dia',
@@ -1362,6 +1362,35 @@ const NotasVersao = {
         'TESTE INTERNO COMPLETO (todos os módulos): sintaxe 28/28,',
         '  return{} de 20 módulos, handlers onclick 100% resolvidos,',
         '  versão consistente nos 19 HTMLs, coleções Firestore conferidas.',
+      ]
+    },
+    {
+      versao: 'V2.11.0',
+      status: 'aberta',
+      data: '2026-07-09',
+      tipo: 'funcionalidade',
+      titulo: 'Diário de Obra vira módulo próprio (Gestão) + lançamento de % no Planejamento',
+      itens: [
+        'DIÁRIO SAIU DO SEMANAL: agora é um módulo independente na',
+        '  seção Gestão da barra lateral (📓 Diário) — o Semanal voltou',
+        '  a ter só Dashboard e Tarefas, como antes',
+        '',
+        'NOVO: campo "Avanço %" no lançamento (opcional):',
+        '  → Mostra o % atual da tarefa selecionada ao lado do nome',
+        '  → O % informado é gravado DIRETO no Planejamento',
+        '    (percentualConcluido), com as mesmas regras do Semanal:',
+        '    primeiro avanço marca Início Real, 100% marca Término Real,',
+        '    voltar de 100% limpa o Término Real',
+        '  → O lançamento guarda o antes/depois (ex: 40% → 60%) e o',
+        '    relatório do dia mostra essa evolução',
+        '',
+        'Mantido do fluxo anterior: busca fuzzy hierárquica de tarefa,',
+        '  situação (Executado/Parcial/Não executado), motivo + detalhe,',
+        '  lançamentos em sequência sem mouse, relatório do dia com',
+        '  executado / não executado / deveria estar / porquês, impressão.',
+        '',
+        'Obs: estrutura pensada para evoluir — o formato do relatório',
+        '  ainda vai ser amadurecido junto com o módulo Relatórios.',
       ]
     }
   ],
