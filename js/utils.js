@@ -163,11 +163,101 @@ const Utils = (() => {
     });
   }
 
+  // ============================================================
+  // % EM FAMÍLIA (pai ↔ filhos), estilo MS Project.
+  // Hierarquia definida por ordem + nivel: o pai de uma tarefa é a
+  // tarefa anterior (na ordem) com nível menor; filhos diretos são a
+  // sequência seguinte com nível = nivel+1 até voltar a nível <= nivel.
+  // Ponderação: pela quantidade dos filhos quando TODOS os filhos
+  // diretos têm quantidade > 0; senão, média simples.
+  // Usado por Planejamento, Semanal e Diário — NÃO duplicar a lógica.
+  // ============================================================
+  function percFamilia(tarefas){
+    const sorted=[...(tarefas||[])].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
+    const idx=new Map(sorted.map((t,i)=>[t.id,i]));
+    function filhosDiretos(t){
+      const i=idx.get(t.id);if(i==null)return[];
+      const n=t.nivel||0;const out=[];
+      for(let j=i+1;j<sorted.length;j++){
+        const nj=sorted[j].nivel||0;
+        if(nj<=n)break;
+        if(nj===n+1)out.push(sorted[j]);
+      }
+      return out;
+    }
+    function ancestrais(t){
+      const i=idx.get(t.id);if(i==null)return[];
+      let n=t.nivel||0;const out=[];
+      for(let j=i-1;j>=0&&n>0;j--){
+        const nj=sorted[j].nivel||0;
+        if(nj<n){out.push(sorted[j]);n=nj;}
+      }
+      return out;
+    }
+    function descendentes(t){
+      const i=idx.get(t.id);if(i==null)return[];
+      const n=t.nivel||0;const out=[];
+      for(let j=i+1;j<sorted.length;j++){
+        if((sorted[j].nivel||0)<=n)break;
+        out.push(sorted[j]);
+      }
+      return out;
+    }
+    function percCalculado(t){
+      const f=filhosDiretos(t);
+      if(!f.length)return Math.min(100,Math.max(0,parseFloat(t.percentualConcluido)||0));
+      const todosComQtd=f.every(x=>parseFloat(x.quantidade)>0);
+      let sp=0,sw=0;
+      for(const x of f){
+        const w=todosComQtd?parseFloat(x.quantidade):1;
+        sp+=percCalculado(x)*w;sw+=w;
+      }
+      return sw?sp/sw:0;
+    }
+    return {sorted, filhosDiretos, ancestrais, descendentes, percCalculado};
+  }
+
+  // Recalcula o % dos ancestrais de uma tarefa (após editar o % dela).
+  // Muta as tarefas em memória e retorna [{id, percentualConcluido}] só
+  // dos ancestrais que mudaram, para o chamador persistir no Firestore.
+  function recalcularPercAncestrais(tarefas, tarefaId){
+    const fam=percFamilia(tarefas);
+    const t=fam.sorted.find(x=>x.id===tarefaId);if(!t)return[];
+    const ups=[];
+    for(const a of fam.ancestrais(t)){
+      const p=Math.round(fam.percCalculado(a)*10)/10;
+      if(Math.abs(p-(parseFloat(a.percentualConcluido)||0))>0.05){
+        a.percentualConcluido=p;
+        ups.push({id:a.id,percentualConcluido:p});
+      }
+    }
+    return ups;
+  }
+
+  // Distribui o % digitado em um pai para TODOS os descendentes
+  // (folhas e intermediários ficam com o mesmo %). Muta em memória e
+  // retorna [{id, percentualConcluido}] dos descendentes que mudaram.
+  // O chamador é responsável por salvar o % do próprio pai.
+  function distribuirPercDescendentes(tarefas, tarefaId, perc){
+    const fam=percFamilia(tarefas);
+    const t=fam.sorted.find(x=>x.id===tarefaId);if(!t)return[];
+    const p=Math.min(100,Math.max(0,parseFloat(perc)||0));
+    const ups=[];
+    for(const d of fam.descendentes(t)){
+      if(Math.abs(p-(parseFloat(d.percentualConcluido)||0))>0.05){
+        d.percentualConcluido=p;
+        ups.push({id:d.id,percentualConcluido:p});
+      }
+    }
+    return ups;
+  }
+
   return {
     formatarNumero, formatarInteiro, formatarData, formatarDataHora, formatarM2, formatarML,
     parseNum, hoje, toast, abrirModal, fecharModal, fecharTodosModais, confirmar,
     mostrarLoading, esconderLoading, $, $$, limparForm, getFormData, setFormData, debounce,
     initPagina, opcoesTarefaHierarquia,
+    percFamilia, recalcularPercAncestrais, distribuirPercDescendentes,
   };
 })();
 

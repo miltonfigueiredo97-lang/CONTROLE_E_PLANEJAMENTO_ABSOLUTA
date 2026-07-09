@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.11.1',
+  versaoAtual: 'V2.12.0',
 
   versoes: [
     {
@@ -1395,7 +1395,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.11.1',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-09',
       tipo: 'correcao',
       titulo: 'Correção: Diário de Obra travava em "Carregando..."',
@@ -1407,6 +1407,28 @@ const NotasVersao = {
         'CORRIGIDO: chamada trocada para Diario.init()',
         'Menu lateral: rótulo alterado de "Diário" para "Diário de Obra"',
         '  em todas as 20 páginas do sistema',
+      ]
+    },
+    {
+      versao: 'V2.12.0',
+      status: 'aberta',
+      data: '2026-07-09',
+      tipo: 'funcionalidade',
+      titulo: '% em família no Planejamento (pai ↔ filhos)',
+      itens: [
+        'NOVO: porcentagem de conclusão agora trabalha em família,',
+        '  estilo MS Project — caminho de mão dupla:',
+        '  • Lançou % numa FOLHA → o % do pai (e avós) é recalculado',
+        '    automaticamente como média dos filhos ponderada pela',
+        '    quantidade (se todos os filhos diretos têm quantidade;',
+        '    senão, média simples)',
+        '  • Lançou % num PAI → o valor é distribuído para todos os',
+        '    descendentes (toast informa quantas tarefas foram afetadas)',
+        'Vale nos 3 pontos de lançamento: Planejamento (edição inline',
+        '  e modal), Semanal e Diário de Obra — lógica única e',
+        '  compartilhada em Utils (percFamilia, recalcularPercAncestrais,',
+        '  distribuirPercDescendentes), sem duplicação',
+        'Hierarquia lida por ordem + nível, igual ao restante do sistema',
       ]
     }
   ],

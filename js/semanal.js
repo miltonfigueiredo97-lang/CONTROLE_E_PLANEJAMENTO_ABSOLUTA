@@ -381,6 +381,22 @@ const Semanal = (() => {
     try{
       await Database.atualizar(obraId,COL,id,upd);
       const t=_t(id);if(t)Object.assign(t,upd);
+      // ===== % EM FAMÍLIA =====
+      // Helper compartilhado do Utils (mesma regra do Planejamento):
+      // % em folha → recalcula ancestrais; % em pai → distribui p/ descendentes.
+      if(t&&upd.percentualConcluido!=null){
+        const fam=Utils.percFamilia(tarefas);
+        let famUps=[];
+        if(fam.filhosDiretos(t).length>0){
+          famUps=Utils.distribuirPercDescendentes(tarefas,id,upd.percentualConcluido)
+            .concat(Utils.recalcularPercAncestrais(tarefas,id));
+        } else {
+          famUps=Utils.recalcularPercAncestrais(tarefas,id);
+        }
+        for(const u of famUps){
+          await Database.atualizar(obraId,COL,u.id,{percentualConcluido:u.percentualConcluido});
+        }
+      }
       _prep();_render();
     }catch(e){console.error(e);Utils.toast('Erro ao salvar.','erro');}
   }

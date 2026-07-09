@@ -275,6 +275,20 @@ const Diario = (() => {
         if(percDepois<100&&t.terminoReal)upd.terminoReal='';
         await Database.atualizar(obraId,COL,_tarSel,upd);
         Object.assign(t,upd);
+        // ===== % EM FAMÍLIA =====
+        // Helper compartilhado do Utils (mesma regra do Planejamento):
+        // % em folha → recalcula ancestrais; % em pai → distribui p/ descendentes.
+        const fam=Utils.percFamilia(tarefas);
+        let famUps=[];
+        if(fam.filhosDiretos(t).length>0){
+          famUps=Utils.distribuirPercDescendentes(tarefas,_tarSel,percDepois)
+            .concat(Utils.recalcularPercAncestrais(tarefas,_tarSel));
+        } else {
+          famUps=Utils.recalcularPercAncestrais(tarefas,_tarSel);
+        }
+        for(const u of famUps){
+          await Database.atualizar(obraId,COL,u.id,{percentualConcluido:u.percentualConcluido});
+        }
       }
 
       _editId=null;_busca='';_tarSel='';_status='executado';_atividadeTmp='';_percTmp='';

@@ -473,10 +473,33 @@ const Planejamento = (() => {
       
       // Atualiza local
       Object.assign(t, updates);
+
+      // ===== % EM FAMÍLIA (mão dupla) =====
+      // Editou % de um PAI → distribui para todos os descendentes.
+      // Editou % de uma FOLHA → recalcula os ancestrais (média ponderada
+      // pela quantidade dos filhos; sem quantidade em todos, média simples).
+      let famUps=[];
+      if(field==='percentualConcluido'){
+        const fam=Utils.percFamilia(tarefas);
+        const ehPai=fam.filhosDiretos(t).length>0;
+        if(ehPai){
+          famUps=Utils.distribuirPercDescendentes(tarefas,t.id,v);
+          // Depois de nivelar os descendentes, ancestrais do pai também mudam
+          famUps=famUps.concat(Utils.recalcularPercAncestrais(tarefas,t.id));
+          if(famUps.length)Utils.toast(`% aplicado a ${famUps.length} tarefa(s) da família.`,'sucesso');
+        } else {
+          famUps=Utils.recalcularPercAncestrais(tarefas,t.id);
+        }
+      }
       _paintRows();
-      
+
       // Save in background
-      try{await Database.atualizar(obraId,COL,t.id,updates);}
+      try{
+        await Database.atualizar(obraId,COL,t.id,updates);
+        for(const u of famUps){
+          await Database.atualizar(obraId,COL,u.id,{percentualConcluido:u.percentualConcluido});
+        }
+      }
       catch(er){console.error(er);Utils.toast('Erro ao salvar.','erro');}
     };
     
@@ -1026,7 +1049,26 @@ const Planejamento = (() => {
       inicioPlanejadoBase:g('inicioPlanejadoBase')||'',terminoPlanejadoBase:g('terminoPlanejadoBase')||'',
       inicioDesafio:g('inicioDesafio')||'',terminoDesafio:g('terminoDesafio')||'',observacoes:g('observacoes')||'',obraId};
     try{
-      if(editandoId)await Database.atualizar(obraId,COL,editandoId,data);
+      if(editandoId){
+        await Database.atualizar(obraId,COL,editandoId,data);
+        // ===== % EM FAMÍLIA (mesma regra da edição inline) =====
+        const tLocal=tarefas.find(x=>x.id===editandoId);
+        const percAntes=tLocal?(parseFloat(tLocal.percentualConcluido)||0):0;
+        if(tLocal&&Math.abs(data.percentualConcluido-percAntes)>0.05){
+          Object.assign(tLocal,data);
+          const fam=Utils.percFamilia(tarefas);
+          let famUps=[];
+          if(fam.filhosDiretos(tLocal).length>0){
+            famUps=Utils.distribuirPercDescendentes(tarefas,tLocal.id,data.percentualConcluido)
+              .concat(Utils.recalcularPercAncestrais(tarefas,tLocal.id));
+          } else {
+            famUps=Utils.recalcularPercAncestrais(tarefas,tLocal.id);
+          }
+          for(const u of famUps){
+            await Database.atualizar(obraId,COL,u.id,{percentualConcluido:u.percentualConcluido});
+          }
+        }
+      }
       else await Database.criar(obraId,COL,data);
       Utils.fecharModal('modal-tarefa');Utils.toast('Salvo!','sucesso');editandoId=null;await carregar();
     }catch(e){console.error(e);Utils.toast('Erro.','erro');}
