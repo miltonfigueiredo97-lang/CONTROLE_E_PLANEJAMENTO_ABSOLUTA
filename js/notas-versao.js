@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.11.0',
+  versaoAtual: 'V2.11.1',
 
   versoes: [
     {
@@ -1366,7 +1366,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.11.0',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-09',
       tipo: 'funcionalidade',
       titulo: 'Diário de Obra vira módulo próprio (Gestão) + lançamento de % no Planejamento',
@@ -1391,6 +1391,22 @@ const NotasVersao = {
         '',
         'Obs: estrutura pensada para evoluir — o formato do relatório',
         '  ainda vai ser amadurecido junto com o módulo Relatórios.',
+      ]
+    },
+    {
+      versao: 'V2.11.1',
+      status: 'aberta',
+      data: '2026-07-09',
+      tipo: 'correcao',
+      titulo: 'Correção: Diário de Obra travava em "Carregando..."',
+      itens: [
+        'BUG: diario.html chamava Semanal.init() (resquício de quando',
+        '  o Diário era aba do Semanal) em vez de Diario.init() —',
+        '  Semanal nem é carregado nessa página, então o módulo',
+        '  quebrava e a tela ficava travada em "Carregando..." pra sempre',
+        'CORRIGIDO: chamada trocada para Diario.init()',
+        'Menu lateral: rótulo alterado de "Diário" para "Diário de Obra"',
+        '  em todas as 20 páginas do sistema',
       ]
     }
   ],
