@@ -12,14 +12,27 @@ const Planejamento = (() => {
   const ROW_H=30;
   let _rafId=null;
 
+  // Seleção múltipla (checkbox) e filtro por status
+  let selecionados=new Set();
+  let statusFiltro=new Set(); // vazio = mostra tudo
+
   // Colunas: ordem editável, largura editável
-  let colOrdem=['num','nivel','codigo','nome','inicio','termino','duracao','percEsp','percConc','predecessora','responsavel','local','grupo','custoMaterial','custoMaoObra','acoes'];
-  let colLarguras={num:36,nivel:42,codigo:70,nome:250,inicio:88,termino:88,duracao:60,percEsp:72,percConc:78,predecessora:80,responsavel:100,local:80,grupo:80,custoMaterial:100,custoMaoObra:100,acoes:64};
+  let colOrdem=['sel','num','status','nivel','codigo','nome','inicio','termino','duracao','percEsp','percConc','predecessora','responsavel','local','grupo','custoMaterial','custoMaoObra','acoes'];
+  let colLarguras={sel:28,num:36,status:34,nivel:42,codigo:70,nome:250,inicio:88,termino:88,duracao:60,percEsp:72,percConc:78,predecessora:80,responsavel:100,local:80,grupo:80,custoMaterial:100,custoMaoObra:100,acoes:64};
   let colsHidden=new Set();
 
-  const COL_LABELS={num:'#',nivel:'Nível',codigo:'Código',nome:'Tarefa',inicio:'Início',termino:'Término',duracao:'Duração',percEsp:'% Esperado',percConc:'% Concluído',predecessora:'Predecessora',responsavel:'Responsável',local:'Local',grupo:'Grupo',custoMaterial:'Custo Material',custoMaoObra:'Custo M.Obra',acoes:''};
-  const COL_FIXED=new Set(['num','nome','acoes']);
+  const COL_LABELS={sel:'',num:'#',status:'',nivel:'Nível',codigo:'Código',nome:'Tarefa',inicio:'Início',termino:'Término',duracao:'Duração',percEsp:'% Esperado',percConc:'% Concluído',predecessora:'Predecessora',responsavel:'Responsável',local:'Local',grupo:'Grupo',custoMaterial:'Custo Material',custoMaoObra:'Custo M.Obra',acoes:''};
+  const COL_FIXED=new Set(['sel','num','status','nome','acoes']);
   const COL_EDITABLE=new Set(['codigo','nome','inicio','termino','duracao','percEsp','percConc','predecessora','responsavel','local','grupo','nivel']);
+
+  // Metadados de status: cor + rótulo, usado no badge da coluna e no filtro
+  const STATUS_INFO={
+    atrasado:    {cor:'#ef4444', label:'Atrasado'},
+    alerta:      {cor:'#fb923c', label:'Alerta'},
+    em_andamento:{cor:'#facc15', label:'Em Andamento'},
+    em_dia:      {cor:'#60a5fa', label:'Em Dia'},
+    concluido:   {cor:'#4ade80', label:'Concluído'},
+  };
 
   // Custo Material / Custo Mão de Obra por tarefa (calculado a partir dos
   // vínculos de Materiais e Mão de Obra, com distribuição hierárquica —
@@ -151,19 +164,25 @@ const Planejamento = (() => {
 
   function _buildFiltradas(){
     const sorted=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
-    if(!colsRecolhidas.size){filtradas=sorted;return;}
-    const result=[];
-    let skipLevel=-1; // se >= 0, pula tudo com nível > skipLevel
-    for(const t of sorted){
-      const niv=t.nivel||0;
-      // Se estamos pulando e este item tem nível > o grupo recolhido, pula
-      if(skipLevel>=0){
-        if(niv>skipLevel){continue;} // filho do recolhido — esconde
-        else skipLevel=-1; // chegou em item do mesmo nível ou acima — para de pular
+    let result;
+    if(!colsRecolhidas.size){result=sorted;}
+    else{
+      result=[];
+      let skipLevel=-1; // se >= 0, pula tudo com nível > skipLevel
+      for(const t of sorted){
+        const niv=t.nivel||0;
+        // Se estamos pulando e este item tem nível > o grupo recolhido, pula
+        if(skipLevel>=0){
+          if(niv>skipLevel){continue;} // filho do recolhido — esconde
+          else skipLevel=-1; // chegou em item do mesmo nível ou acima — para de pular
+        }
+        result.push(t);
+        // Se este item está recolhido, começa a pular filhos
+        if(colsRecolhidas.has(t.id)){skipLevel=niv;}
       }
-      result.push(t);
-      // Se este item está recolhido, começa a pular filhos
-      if(colsRecolhidas.has(t.id)){skipLevel=niv;}
+    }
+    if(statusFiltro.size){
+      result=result.filter(t=>statusFiltro.has(_status(t)));
     }
     filtradas=result;
   }
@@ -191,8 +210,9 @@ const Planejamento = (() => {
           <button class="btn btn-primario btn-sm" onclick="Planejamento.inserirTarefa()" style="font-size:.72rem;">＋ Tarefa</button>
         </div>
       </div>
-      <div style="font-size:.68rem;color:#444;margin-bottom:4px;">Ctrl++ inserir · Ctrl+- excluir · clique na célula para editar · clique direito no header para esconder coluna</div>
-      ${_renderGantt(visCols)}`;
+      <div style="font-size:.68rem;color:#444;margin-bottom:4px;">Ctrl++ inserir · Ctrl+- excluir · clique na célula para editar · clique direito no header para esconder coluna · Ctrl+botão direito+arrastar para reordenar</div>
+      ${_renderGantt(visCols)}
+      ${_renderBarraSelecao()}`;
     requestAnimationFrame(()=>_paintRows());
   }
 
@@ -212,13 +232,17 @@ const Planejamento = (() => {
     // Header colunas
     const hdr=visCols.map(id=>{
       const w=id==='nome'?'flex:1;min-width:150px;':`width:${colLarguras[id]||60}px;flex-shrink:0;`;
+      if(id==='status'){
+        return`<div style="${w}position:relative;padding:0;display:flex;align-items:center;justify-content:center;">
+          <span onclick="event.stopPropagation();Planejamento.toggleStatusFiltro()" style="cursor:pointer;font-size:.72rem;color:${statusFiltro.size?'var(--cor-primaria)':'#666'};">▼</span>
+        </div>`;
+      }
+      if(COL_FIXED.has(id)&&id!=='num'){
+        return`<div style="${w}padding:0 4px;font-size:.63rem;font-weight:700;color:#555;text-transform:uppercase;overflow:hidden;white-space:nowrap;display:flex;align-items:center;">${COL_LABELS[id]||id}</div>`;
+      }
       return`<div style="${w}position:relative;padding:0 4px;font-size:.63rem;font-weight:700;color:#555;text-transform:uppercase;overflow:hidden;white-space:nowrap;display:flex;align-items:center;user-select:none;cursor:pointer;"
         oncontextmenu="event.preventDefault();Planejamento.hideCol('${id}')"
-        draggable="${COL_FIXED.has(id)?'false':'true'}"
-        ondragstart="Planejamento._colDragStart(event,'${id}')"
-        ondragover="event.preventDefault()"
-        ondrop="Planejamento._colDrop(event,'${id}')"
-        title="Arraste para reordenar · Clique direito para esconder">${COL_LABELS[id]||id}${id!=='nome'&&!COL_FIXED.has(id)?'<div onpointerdown="Planejamento._colResizeStart(event,\''+id+'\')" style="position:absolute;right:0;top:0;bottom:0;width:4px;cursor:col-resize;"></div>':''}</div>`;
+        title="Clique direito: mover/esconder coluna">${COL_LABELS[id]||id}${!COL_FIXED.has(id)?'<div onpointerdown="Planejamento._colResizeStart(event,\''+id+'\')" style="position:absolute;right:0;top:0;bottom:0;width:4px;cursor:col-resize;"></div>':''}</div>`;
     }).join('');
 
     // Datas header gantt
@@ -280,7 +304,14 @@ const Planejamento = (() => {
         const editable=COL_EDITABLE.has(cid);
         const clickEdit=editable?`onclick="Planejamento._editCell(event,${i},'${cid}')"`:cid==='num'?`onclick="Planejamento.selectIdx(${i})"`:''
 
-        if(cid==='num'){
+        if(cid==='sel'){
+          cells+=`<div style="${base}justify-content:center;">
+            <input type="checkbox" ${selecionados.has(t.id)?'checked':''} onclick="event.stopPropagation();Planejamento.toggleSel('${t.id}')" style="cursor:pointer;width:13px;height:13px;"></div>`;
+        } else if(cid==='status'){
+          const stInfo=STATUS_INFO[st2]||STATUS_INFO.em_dia;
+          cells+=`<div style="${base}justify-content:center;" title="${stInfo.label}">
+            <span style="width:9px;height:9px;border-radius:50%;background:${stInfo.cor};display:inline-block;"></span></div>`;
+        } else if(cid==='num'){
           cells+=`<div style="${base}color:#444;font-family:var(--font-mono);font-size:.65rem;justify-content:center;cursor:pointer;" ${clickEdit}>${i+1}</div>`;
         } else if(cid==='nivel'){
           const cor=_corNivel(t.nivel||0);
@@ -339,7 +370,7 @@ const Planejamento = (() => {
         const bx=Math.round((new Date(t.inicioPlanejado)-dMin)/864e5*lpd);
         const bw=Math.max(4,Math.round((new Date(t.terminoPlanejado)-new Date(t.inicioPlanejado))/864e5*lpd));
         const by=y+5, bh=20;
-        const cor={nao_iniciado:'#333',em_andamento:'#1d4ed8',concluido:'#15803d',atrasado:'#dc2626'}[st2]||'#333';
+        const cor={em_dia:'#2563eb',em_andamento:'#ca8a04',concluido:'#15803d',alerta:'#c2410c',atrasado:'#dc2626'}[st2]||'#333';
         if(isG){
           bH+=`<div style="position:absolute;left:${bx}px;top:${by+8}px;width:${bw}px;height:5px;background:var(--cor-primaria);border-radius:1px;"></div>`;
         } else {
@@ -561,6 +592,111 @@ const Planejamento = (() => {
   // seguidos, cada um com filhos nível 4 próprios).
   const _PALETA_NIVEL=['#F5C800','#60a5fa','#4ade80','#f472b6','#fb923c','#a78bfa','#2dd4bf'];
   function _corNivel(nivel){return _PALETA_NIVEL[nivel%_PALETA_NIVEL.length];}
+
+  // ===================== SELEÇÃO MÚLTIPLA (checkbox) =====================
+  function toggleSel(id){
+    if(selecionados.has(id))selecionados.delete(id);else selecionados.add(id);
+    _paintRows();
+    _atualizarBarraSelecao();
+  }
+  function _limparSelecao(){selecionados.clear();_paintRows();_atualizarBarraSelecao();}
+
+  function _renderBarraSelecao(){
+    if(!selecionados.size)return'';
+    return`<div id="barra-selecao" style="position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#1a1a1a;border:1px solid var(--cor-primaria);border-radius:10px;padding:10px 16px;box-shadow:0 8px 32px rgba(0,0,0,.6);z-index:500;display:flex;align-items:center;gap:14px;">
+      <span style="font-size:.8rem;color:#fff;font-weight:700;">${selecionados.size} tarefa${selecionados.size>1?'s':''} selecionada${selecionados.size>1?'s':''}</span>
+      <button onclick="Planejamento._limparSelecao()" style="background:none;border:none;color:#888;cursor:pointer;font-size:1rem;line-height:1;">✕</button>
+      <span style="width:1px;height:20px;background:#333;"></span>
+      <button class="btn btn-secundario btn-sm" onclick="Planejamento._bulkNivel(-1)" title="Recuar nível">← Recuar</button>
+      <button class="btn btn-secundario btn-sm" onclick="Planejamento._bulkNivel(1)" title="Avançar nível">→ Avançar</button>
+      <button class="btn btn-secundario btn-sm" onclick="Planejamento._bulkDuplicar()" title="Duplicar selecionadas">⧉ Duplicar</button>
+      <button class="btn btn-perigo btn-sm" onclick="Planejamento._bulkExcluir()" title="Excluir selecionadas">✕ Excluir</button>
+    </div>`;
+  }
+  function _atualizarBarraSelecao(){
+    // Re-renderiza só a barra (sem recriar o Gantt inteiro) para performance
+    const antiga=document.getElementById('barra-selecao');
+    if(antiga)antiga.remove();
+    const c=_el();
+    if(selecionados.size){
+      const div=document.createElement('div');
+      div.innerHTML=_renderBarraSelecao();
+      c.appendChild(div.firstElementChild);
+    }
+  }
+
+  async function _bulkNivel(diff){
+    const ids=[...selecionados];
+    for(const id of ids){
+      const t=tarefas.find(x=>x.id===id);
+      if(t)t.nivel=Math.max(0,(t.nivel||0)+diff);
+    }
+    _buildFiltradas();_render();requestAnimationFrame(()=>_paintRows());
+    for(const id of ids){
+      const t=tarefas.find(x=>x.id===id);
+      if(t)await Database.atualizar(obraId,COL,id,{nivel:t.nivel}).catch(console.error);
+    }
+  }
+
+  async function _bulkDuplicar(){
+    const ids=[...selecionados];
+    if(!confirm(`Duplicar ${ids.length} tarefa(s) selecionada(s)?`))return;
+    Utils.mostrarLoading('Duplicando...');
+    try{
+      for(const id of ids){
+        const t=tarefas.find(x=>x.id===id);
+        if(!t)continue;
+        const copia={...t};
+        delete copia.id;
+        copia.nome=(copia.nome||'')+' (cópia)';
+        copia.ordem=(copia.ordem||0)+0.5; // fica logo depois do original antes de recalcular
+        await Database.criar(obraId,COL,copia);
+      }
+      selecionados.clear();
+      Utils.toast('Tarefas duplicadas!','sucesso');
+      await carregar();
+    }catch(e){console.error(e);Utils.toast('Erro ao duplicar.','erro');}
+    finally{Utils.esconderLoading();}
+  }
+
+  async function _bulkExcluir(){
+    const ids=[...selecionados];
+    if(!confirm(`Excluir ${ids.length} tarefa(s) selecionada(s)? Esta ação não pode ser desfeita.`))return;
+    Utils.mostrarLoading('Excluindo...');
+    try{
+      await Promise.all(ids.map(id=>Database.deletar(obraId,COL,id).catch(console.error)));
+      selecionados.clear();
+      Utils.toast('Tarefas excluídas!','sucesso');
+      await carregar();
+    }catch(e){console.error(e);Utils.toast('Erro ao excluir.','erro');}
+    finally{Utils.esconderLoading();}
+  }
+
+  // ===================== FILTRO POR STATUS =====================
+  function toggleStatusFiltro(){
+    let pop=document.getElementById('status-filtro-pop');
+    if(pop){pop.remove();return;}
+    pop=document.createElement('div');
+    pop.id='status-filtro-pop';
+    pop.style.cssText='position:fixed;top:120px;left:50%;transform:translateX(-50%);background:#1a1a1a;border:1px solid #333;border-radius:8px;padding:12px;z-index:2000;min-width:200px;box-shadow:0 8px 32px rgba(0,0,0,.5);';
+    const itens=Object.entries(STATUS_INFO).map(([key,info])=>`
+      <label style="display:flex;align-items:center;gap:8px;padding:5px 2px;cursor:pointer;">
+        <input type="checkbox" data-status-key="${key}" ${statusFiltro.has(key)?'checked':''} style="width:13px;height:13px;">
+        <span style="width:9px;height:9px;border-radius:50%;background:${info.cor};display:inline-block;flex-shrink:0;"></span>
+        <span style="font-size:.8rem;color:#ddd;">${info.label}</span>
+      </label>`).join('');
+    pop.innerHTML=`<div style="font-weight:700;color:var(--cor-primaria);margin-bottom:8px;font-size:.8rem;">Filtrar por status</div>
+      ${itens}
+      <button class="btn btn-primario btn-sm" style="width:100%;margin-top:10px;" onclick="Planejamento._aplicarStatusFiltro()">Filtrar</button>`;
+    document.body.appendChild(pop);
+    setTimeout(()=>document.addEventListener('click',function h(e){if(!pop.contains(e.target)){pop.remove();document.removeEventListener('click',h);}},false),50);
+  }
+  function _aplicarStatusFiltro(){
+    const pop=document.getElementById('status-filtro-pop');if(!pop)return;
+    statusFiltro=new Set([...pop.querySelectorAll('input[data-status-key]:checked')].map(i=>i.dataset.statusKey));
+    pop.remove();
+    _buildFiltradas();_render();requestAnimationFrame(()=>_paintRows());
+  }
 
   // ===================== ARRASTAR LINHA (REORDENAR) =====================
   // Ctrl + botão direito + arrastar move a tarefa (e seus filhos diretos,
@@ -1084,7 +1220,9 @@ const Planejamento = (() => {
           for(const cid of visCols){
             const w=cid==='nome'?'flex:1;min-width:150px;':`width:${colLarguras[cid]||60}px;flex-shrink:0;`;
             const base=`${w}overflow:hidden;white-space:nowrap;text-overflow:ellipsis;padding:0 4px;font-size:.78rem;height:100%;display:flex;align-items:center;`;
-            if(cid==='num')cells+=`<div style="${base}color:#444;font-family:var(--font-mono);font-size:.65rem;justify-content:center;">${i+1}</div>`;
+            if(cid==='sel')cells+=`<div style="${base}"></div>`;
+            else if(cid==='status'){const stInfo=STATUS_INFO[st2]||STATUS_INFO.em_dia;cells+=`<div style="${base}justify-content:center;"><span style="width:9px;height:9px;border-radius:50%;background:${stInfo.cor};display:inline-block;"></span></div>`;}
+            else if(cid==='num')cells+=`<div style="${base}color:#444;font-family:var(--font-mono);font-size:.65rem;justify-content:center;">${i+1}</div>`;
             else if(cid==='nivel')cells+=`<div style="${base}color:#666;font-family:var(--font-mono);font-size:.68rem;justify-content:center;">${t.nivel||0}</div>`;
             else if(cid==='codigo')cells+=`<div style="${base}color:#555;font-family:var(--font-mono);font-size:.7rem;">${t.codigo||''}</div>`;
             else if(cid==='nome'){
@@ -1113,7 +1251,7 @@ const Planejamento = (() => {
               const bx=Math.round((ti-dMin)/864e5*lpd);
               const bw=Math.max(4,Math.round((tf2-ti)/864e5*lpd));
               const by=yLocal+5,bh=20;
-              const cor={nao_iniciado:'#333',em_andamento:'#1d4ed8',concluido:'#15803d',atrasado:'#dc2626'}[st2]||'#333';
+              const cor={em_dia:'#2563eb',em_andamento:'#ca8a04',concluido:'#15803d',alerta:'#c2410c',atrasado:'#dc2626'}[st2]||'#333';
               if(isG){
                 barsHtml+=`<div style="position:absolute;left:${bx}px;top:${by+8}px;width:${bw}px;height:5px;background:var(--cor-primaria);border-radius:1px;"></div>`;
               } else {
@@ -1203,9 +1341,19 @@ const Planejamento = (() => {
   }
 
   // ===================== HELPERS =====================
-  function _status(t){if(!t.inicioPlanejado)return'nao_iniciado';if(_perc(t)>=100)return'concluido';
-    const h=new Date(),f=t.terminoPlanejado?new Date(t.terminoPlanejado):null;
-    if(_perc(t)>0)return f&&h>f?'atrasado':'em_andamento';return f&&h>f?'atrasado':'nao_iniciado';}
+  // 5 estados (igual à legenda pedida): Atrasado, Alerta, Em Andamento, Em Dia, Concluído
+  function _status(t){
+    if(_perc(t)>=100)return'concluido';
+    const hoje=new Date();
+    const fim=t.terminoPlanejado?new Date(t.terminoPlanejado):null;
+    if(fim&&hoje>fim)return'atrasado';
+    if(fim){
+      const diasRestantes=Math.ceil((fim-hoje)/864e5);
+      if(diasRestantes<=7)return'alerta';
+    }
+    if(_perc(t)>0)return'em_andamento';
+    return'em_dia';
+  }
   function _perc(t){return Math.round(t.percentualConcluido||0);}
   function _fd(d){if(!d)return'—';try{return new Date(d+'T12:00:00').toLocaleDateString('pt-BR');}catch(e){return d;}}
   function _fBR(d){if(!d)return'';try{return new Date(d+'T12:00:00').toLocaleDateString('pt-BR');}catch(e){return'';}}
@@ -1312,7 +1460,8 @@ const Planejamento = (() => {
     selectIdx,toggleRecolher,recuarNivel,avancarNivel,
     toggleGantt,hideCol,showColsMenu,_showCol,_showAll,
     _colResizeStart,moveColLeft,moveColRight,_hideCol,_divStart,_sync,_editCell,_esqDragStart,
-    _rowDragStart,
+    _rowDragStart,toggleSel,_limparSelecao,_bulkNivel,_bulkDuplicar,_bulkExcluir,
+    toggleStatusFiltro,_aplicarStatusFiltro,
     importarExcel,exportar,exportarPNG,_gerarPNG,_predPopup,_predPreview,_predSalvar};
 })();
 function onObraChanged(){Planejamento.init();}

@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.8.3',
+  versaoAtual: 'V2.9.0',
 
   versoes: [
     {
@@ -1285,7 +1285,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.8.3',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-08',
       tipo: 'funcionalidade',
       titulo: 'Mão de Obra: exportar planilha com nome da obra em destaque',
@@ -1301,6 +1301,34 @@ const NotasVersao = {
         '  ativo, se houver)',
         'Aba "Biblioteca": exporta Mão de Obra, Categoria, Observações',
         '  e número de vínculos de cada uma',
+      ]
+    },
+    {
+      versao: 'V2.9.0',
+      status: 'aberta',
+      data: '2026-07-09',
+      tipo: 'funcionalidade',
+      titulo: 'Seleção múltipla com barra de ações + coluna de status com filtro',
+      itens: [
+        'COLUNA DE STATUS (bolinha colorida) — 5 estados:',
+        '  → Atrasado (vermelho), Alerta (laranja, vence em até 7 dias),',
+        '    Em Andamento (amarelo), Em Dia (azul), Concluído (verde)',
+        '  → Ícone ▼ no cabeçalho abre popup para filtrar por status',
+        '  → Cores das barras do Gantt atualizadas para bater com o status',
+        '',
+        'SELEÇÃO MÚLTIPLA (checkbox):',
+        '  → Nova coluna de checkbox na tabela',
+        '  → Ao marcar 1+ tarefas, aparece barra flutuante no rodapé',
+        '  → Ações em massa: ← Recuar nível, → Avançar nível,',
+        '    ⧉ Duplicar, ✕ Excluir — aplicadas a todas as selecionadas',
+        '  → Recuar/Avançar em massa muda só as tarefas marcadas',
+        '    (não arrasta filhos junto, diferente do botão individual —',
+        '    aqui você escolhe exatamente quais linhas quer mudar)',
+        '',
+        'CORREÇÃO: reordenar coluna por arrastar (HTML5 drag) estava',
+        '  quebrada — referenciava funções que não existiam mais',
+        '  (_colDragStart/_colDrop). Substituída pelo menu de clique',
+        '  direito que já funcionava (mover esquerda/direita/esconder).',
       ]
     }
   ],
