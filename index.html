@@ -28,7 +28,7 @@
     firebase.auth().onAuthStateChanged(user => {
       clearTimeout(timer);
       if (user) {
-        window.location.replace('dashboard.html');
+        window.location.replace('obras.html');
       } else {
         window.location.replace('login.html');
       }

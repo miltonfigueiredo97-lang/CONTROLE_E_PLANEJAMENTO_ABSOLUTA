@@ -64,7 +64,7 @@
 <script src="js/auth.js"></script>
 <script>
   if (initFirebase()) {
-    auth.onAuthStateChanged(user => { if (user) window.location.href = 'dashboard.html'; });
+    auth.onAuthStateChanged(user => { if (user) window.location.href = 'obras.html'; });
   }
   async function handleLogin(e) {
     e.preventDefault();
@@ -75,7 +75,7 @@
     erro.classList.add('hidden');
     btn.disabled = true; btn.textContent = 'Entrando...';
     const result = await Auth.login(email, senha);
-    if (result.success) { window.location.href = 'dashboard.html'; }
+    if (result.success) { window.location.href = 'obras.html'; }
     else { erro.textContent = result.error; erro.classList.remove('hidden'); btn.disabled = false; btn.textContent = 'Entrar'; }
   }
 </script>

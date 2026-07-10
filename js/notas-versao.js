@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.14.1',
+  versaoAtual: 'V2.15.0',
 
   versoes: [
     {
@@ -1559,7 +1559,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.14.1',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-10',
       tipo: 'correcao',
       titulo: 'Coluna Tarefa redimensionável + predecessoras seguem vínculo ao reordenar',
@@ -1584,6 +1584,21 @@ const NotasVersao = {
         '  → Só atualiza referências que realmente mudaram de número.',
         '  → Toast confirma quantas predecessoras foram atualizadas.',
         '  → Salvamento no Firestore em background.',
+      ]
+    },
+    {
+      versao: 'V2.15.0',
+      status: 'aberta',
+      data: '2026-07-10',
+      tipo: 'funcionalidade',
+      titulo: 'Módulo Obras vira o hub central de navegação',
+      itens: [
+        'Tela inicial pós-login agora é a seleção de Obra (era Dashboard)',
+        'Sidebar reordenada: Obras aparece antes de Dashboard',
+        'Config. da Obra sai do menu lateral e vira ícone ⚙️ direto no card da obra',
+        'Card de cada obra mostra % executada (calculada do Planejamento, ponderada por duração das tarefas-folha)',
+        'Card de cada obra mostra Início Real (menor inicioReal das tarefas) e Fim Provável (maior terminoPlanejado)',
+        'Progresso de cada obra carrega em paralelo e atualiza o card assim que pronto, sem travar a listagem',
       ]
     }
   ],
