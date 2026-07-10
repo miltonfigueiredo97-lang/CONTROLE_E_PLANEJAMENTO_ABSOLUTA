@@ -11,10 +11,33 @@ const Planejamento = (() => {
   const COL='tarefas';
   const ROW_H=30;
   let _rafId=null;
+  let _editandoCelula=false; // true enquanto há um input aberto em uma célula
 
   // Seleção múltipla (checkbox) e filtro por status
   let selecionados=new Set();
   let statusFiltro=new Set(); // vazio = mostra tudo
+  // Undo stack: últimas 30 snapshots do array tarefas (cópia plana antes de cada ação)
+  const _undoStack=[];
+  function _undoPush(){
+    _undoStack.push(tarefas.map(t=>({...t})));
+    if(_undoStack.length>30)_undoStack.shift();
+  }
+  async function undo(){
+    if(!_undoStack.length){Utils.toast('Nada para desfazer.','alerta');return;}
+    const snap=_undoStack.pop();
+    tarefas=snap;
+    _buildFiltradas();_render();requestAnimationFrame(()=>_paintRows());
+    Utils.toast('Ação desfeita.','sucesso');
+    for(const t of snap){
+      await Database.atualizar(obraId,COL,t.id,{
+        nome:t.nome,codigo:t.codigo,nivel:t.nivel,ordem:t.ordem,
+        inicioPlanejado:t.inicioPlanejado,terminoPlanejado:t.terminoPlanejado,
+        duracao:t.duracao,percentualEsperado:t.percentualEsperado,
+        percentualConcluido:t.percentualConcluido,predecessora:t.predecessora,
+        responsavel:t.responsavel,local:t.local,grupo:t.grupo,
+      }).catch(()=>{});
+    }
+  }
 
   // Colunas: ordem editável, largura editável
   let colOrdem=['sel','num','status','nivel','codigo','nome','inicio','termino','duracao','percEsp','percConc','predecessora','responsavel','local','grupo','custoMaterial','custoMaoObra','acoes'];
@@ -160,10 +183,14 @@ const Planejamento = (() => {
     if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA'||e.target.tagName==='SELECT')return;
     if((e.ctrlKey||e.metaKey)&&(e.key==='+'||e.key==='=')){e.preventDefault();inserirTarefa();}
     if((e.ctrlKey||e.metaKey)&&e.key==='-'){e.preventDefault();if(selectedIdx>=0&&filtradas[selectedIdx])excluirTarefa(filtradas[selectedIdx].id);}
+    if((e.ctrlKey||e.metaKey)&&(e.key==='z'||e.key==='Z')){e.preventDefault();undo();}
   }
 
   function _buildFiltradas(){
     const sorted=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
+    // numLinha é FIXO pela posição na ordem geral (não muda com filtro/recolhimento)
+    // É esse número que é exibido na coluna # e usado nas predecessoras
+    sorted.forEach((t,i)=>{t._numLinha=i+1;});
     let result;
     if(!colsRecolhidas.size){result=sorted;}
     else{
@@ -282,6 +309,14 @@ const Planejamento = (() => {
     const e=Math.min(filtradas.length,Math.ceil((st+vH)/ROW_H)+3);
     const visCols=colOrdem.filter(id=>!colsHidden.has(id));
 
+    // Se há uma célula em edição (input aberto), não recria as linhas do DOM —
+    // isso destruiria o input e apagaria o que o usuário está digitando.
+    // Só recria as barras do Gantt (lado direito), que não têm inputs.
+    if(_editandoCelula){
+      _paintGanttOnly(s,e,visCols);
+      return;
+    }
+
     const hoje=new Date();
     const datas=filtradas.flatMap(t=>[t.inicioPlanejado,t.terminoPlanejado].filter(Boolean).map(d=>new Date(d)));
     const dMin=datas.length?new Date(Math.min(...datas)):new Date(hoje.getTime()-30*864e5);
@@ -312,7 +347,7 @@ const Planejamento = (() => {
           cells+=`<div style="${base}justify-content:center;" title="${stInfo.label}">
             <span style="width:9px;height:9px;border-radius:50%;background:${stInfo.cor};display:inline-block;"></span></div>`;
         } else if(cid==='num'){
-          cells+=`<div style="${base}color:#444;font-family:var(--font-mono);font-size:.65rem;justify-content:center;cursor:pointer;" ${clickEdit}>${i+1}</div>`;
+          cells+=`<div style="${base}color:#444;font-family:var(--font-mono);font-size:.65rem;justify-content:center;cursor:pointer;" ${clickEdit}>${t._numLinha||i+1}</div>`;
         } else if(cid==='nivel'){
           const cor=_corNivel(t.nivel||0);
           cells+=`<div style="${base}justify-content:center;cursor:pointer;" ${clickEdit}>
@@ -324,7 +359,7 @@ const Planejamento = (() => {
           // Tem filhos = próxima tarefa na ordem tem nível maior
           const tIdx=tarefas.sort((a,b)=>(a.ordem||0)-(b.ordem||0)).findIndex(x=>x.id===t.id);
           const temF=tIdx>=0&&tIdx<tarefas.length-1&&(tarefas[tIdx+1].nivel||0)>(t.nivel||0);
-          const tog=temF?`<span onclick="event.stopPropagation();Planejamento.toggleRecolher('${t.id}')" style="cursor:pointer;color:#666;font-size:.6rem;margin-right:3px;flex-shrink:0;">${colsRecolhidas.has(t.id)?'▶':'▼'}</span>`:'';
+          const tog=temF?`<span onclick="event.stopPropagation();Planejamento.toggleRecolher('${t.id}')" style="cursor:pointer;color:${colsRecolhidas.has(t.id)?'#888':'#555'};font-size:.85rem;margin-right:4px;flex-shrink:0;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;border-radius:3px;background:rgba(255,255,255,.06);" title="${colsRecolhidas.has(t.id)?'Expandir família':'Recolher família'}">${colsRecolhidas.has(t.id)?'▶':'▼'}</span>`:'';
           const guia=(t.nivel||0)>0?`<span style="position:absolute;left:${ind-13}px;top:0;bottom:0;width:1px;background:rgba(255,255,255,.08);"></span>`:'';
           cells+=`<div style="${base}padding-left:${ind+4}px;cursor:pointer;position:relative;" ${clickEdit} title="${t.nome}">
             ${guia}${tog}<span style="color:${isG?'var(--cor-primaria)':'#ccc'};font-weight:${isG?700:400};overflow:hidden;text-overflow:ellipsis;">${t.nome||''}</span></div>`;
@@ -397,6 +432,32 @@ const Planejamento = (() => {
   }
 
   // ===================== INLINE EDIT =====================
+  // Redesenha apenas as barras do Gantt (painel direito), preservando a
+  // tabela esquerda (onde pode haver um input aberto em edição).
+  function _paintGanttOnly(s,e,visCols){
+    const hoje=new Date();
+    const datas=filtradas.flatMap(t=>[t.inicioPlanejado,t.terminoPlanejado].filter(Boolean).map(d=>new Date(d)));
+    const dMin=datas.length?new Date(Math.min(...datas)):new Date(hoje.getTime()-30*864e5);
+    dMin.setDate(dMin.getDate()-5);
+    const lpd={dia:32,semana:8,mes:3,trimestre:1.2,ano:0.4}[zoomGantt]||3;
+    let bH='';
+    for(let i=s;i<e;i++){
+      const t=filtradas[i], y=i*ROW_H;
+      const perc=_perc(t), isG=t.tipo==='grupo', st2=_status(t);
+      bH+=`<div style="position:absolute;left:0;top:${y}px;width:100%;height:${ROW_H}px;border-bottom:1px solid #1a1a1a;"></div>`;
+      if(ganttVisible&&t.inicioPlanejado&&t.terminoPlanejado){
+        const ini=new Date(t.inicioPlanejado),fim=new Date(t.terminoPlanejado);
+        const bx=Math.round((ini-dMin)/864e5*lpd);
+        const bw=Math.max(4,Math.round((fim-ini)/864e5*lpd));
+        const by=y+5,bh=20;
+        const cor={em_dia:'#2563eb',em_andamento:'#ca8a04',concluido:'#15803d',alerta:'#c2410c',atrasado:'#dc2626'}[st2]||'#333';
+        if(isG){bH+=`<div style="position:absolute;left:${bx}px;top:${by+8}px;width:${bw}px;height:5px;background:var(--cor-primaria);border-radius:1px;"></div>`;}
+        else{bH+=`<div style="position:absolute;left:${bx}px;top:${by}px;width:${bw}px;height:${bh}px;background:${cor};border-radius:3px;overflow:hidden;"><div style="height:100%;width:${perc}%;background:rgba(255,255,255,.25);"></div></div>`;}
+      }
+    }
+    const ev=document.getElementById('g-dir-v');if(ev)ev.innerHTML=bH;
+  }
+
   function _editCell(e, idx, colId){
     e.stopPropagation();
     if(_esqDragMoved)return;
@@ -421,9 +482,11 @@ const Planejamento = (() => {
     input.focus();
     if(!isDate)input.select();
 
+    _editandoCelula=true; // bloqueia _paintRows de destruir o input
     let saved=false;
     const save=async()=>{
       if(saved)return; saved=true;
+      _editandoCelula=false;
       let v=input.value.trim();
       if(isNum)v=parseFloat(v)||0;
       if(field==='duracao')v=parseInt(v)||0;
@@ -471,6 +534,8 @@ const Planejamento = (() => {
         }
       }
       
+      // Salva estado para undo antes de qualquer mudança
+      _undoPush();
       // Atualiza local
       Object.assign(t, updates);
 
@@ -506,7 +571,7 @@ const Planejamento = (() => {
     input.addEventListener('blur',save);
     input.addEventListener('keydown',ev=>{
       if(ev.key==='Enter'){ev.preventDefault();input.blur();}
-      if(ev.key==='Escape'){saved=true;_paintRows();}
+      if(ev.key==='Escape'){saved=true;_editandoCelula=false;_paintRows();}
     });
     // Para spinners de number: salva ao mudar valor
     if(isNum){
@@ -525,8 +590,12 @@ const Planejamento = (() => {
     const tipo=(match[2]||'TI').toUpperCase();
     const defasagem=parseInt(match[3])||0;
     
-    // Buscar tarefa predecessora pelo código
-    const pred=tarefas.find(x=>x.codigo===codPred);
+    // Busca pelo número de linha (coluna #) — igual ao MS Project
+    // _numLinha é atribuído em _buildFiltradas() pela ordem real
+    const numBusca=parseInt(codPred);
+    const pred=isNaN(numBusca)
+      ? tarefas.find(x=>x.codigo===codPred)    // fallback: busca por código
+      : tarefas.find(x=>x._numLinha===numBusca);
     if(!pred)return;
     
     let dataRef;
@@ -630,6 +699,8 @@ const Planejamento = (() => {
       <span style="font-size:.8rem;color:#fff;font-weight:700;">${selecionados.size} tarefa${selecionados.size>1?'s':''} selecionada${selecionados.size>1?'s':''}</span>
       <button onclick="Planejamento._limparSelecao()" style="background:none;border:none;color:#888;cursor:pointer;font-size:1rem;line-height:1;">✕</button>
       <span style="width:1px;height:20px;background:#333;"></span>
+      <button class="btn btn-secundario btn-sm" onclick="Planejamento._moverSel(-1)" title="Mover linha acima">↑ Acima</button>
+      <button class="btn btn-secundario btn-sm" onclick="Planejamento._moverSel(1)" title="Mover linha abaixo">↓ Abaixo</button>
       <button class="btn btn-secundario btn-sm" onclick="Planejamento._bulkNivel(-1)" title="Recuar nível">← Recuar</button>
       <button class="btn btn-secundario btn-sm" onclick="Planejamento._bulkNivel(1)" title="Avançar nível">→ Avançar</button>
       <button class="btn btn-secundario btn-sm" onclick="Planejamento._bulkDuplicar()" title="Duplicar selecionadas">⧉ Duplicar</button>
@@ -801,6 +872,8 @@ const Planejamento = (() => {
       }
     });
 
+    // Salva estado para undo antes de reordenar
+    _undoPush();
     // Atualiza local imediatamente (responsividade)
     tarefas=sorted;
     _buildFiltradas();_render();requestAnimationFrame(()=>_paintRows());
@@ -958,7 +1031,19 @@ const Planejamento = (() => {
   }
 
   // ===================== HIERARCHY =====================
-  function toggleRecolher(id){if(colsRecolhidas.has(id))colsRecolhidas.delete(id);else colsRecolhidas.add(id);_buildFiltradas();_render();}
+  function toggleRecolher(id){
+    const esqS=document.getElementById('g-esq-s');
+    const dirS=document.getElementById('g-dir-s');
+    const stE=esqS?esqS.scrollTop:0;
+    const stD=dirS?dirS.scrollTop:0;
+    if(colsRecolhidas.has(id))colsRecolhidas.delete(id);else colsRecolhidas.add(id);
+    _buildFiltradas();_render();
+    // Restaura a posição de scroll — o _render() reseta para 0
+    requestAnimationFrame(()=>{
+      const e2=document.getElementById('g-esq-s');const d2=document.getElementById('g-dir-s');
+      if(e2)e2.scrollTop=stE;if(d2)d2.scrollTop=stD;
+    });
+  }
 
   async function recuarNivel(id){await _moverNivel(id,-1);}
   async function avancarNivel(id){await _moverNivel(id,1);}
@@ -1264,7 +1349,7 @@ const Planejamento = (() => {
             const base=`${w}overflow:hidden;white-space:nowrap;text-overflow:ellipsis;padding:0 4px;font-size:.78rem;height:100%;display:flex;align-items:center;`;
             if(cid==='sel')cells+=`<div style="${base}"></div>`;
             else if(cid==='status'){const stInfo=STATUS_INFO[st2]||STATUS_INFO.em_dia;cells+=`<div style="${base}justify-content:center;"><span style="width:9px;height:9px;border-radius:50%;background:${stInfo.cor};display:inline-block;"></span></div>`;}
-            else if(cid==='num')cells+=`<div style="${base}color:#444;font-family:var(--font-mono);font-size:.65rem;justify-content:center;">${i+1}</div>`;
+            else if(cid==='num')cells+=`<div style="${base}color:#444;font-family:var(--font-mono);font-size:.65rem;justify-content:center;">${t._numLinha||i+1}</div>`;
             else if(cid==='nivel')cells+=`<div style="${base}color:#666;font-family:var(--font-mono);font-size:.68rem;justify-content:center;">${t.nivel||0}</div>`;
             else if(cid==='codigo')cells+=`<div style="${base}color:#555;font-family:var(--font-mono);font-size:.7rem;">${t.codigo||''}</div>`;
             else if(cid==='nome'){
@@ -1469,7 +1554,7 @@ const Planejamento = (() => {
     const info=document.getElementById('pred-info');
     if(!info)return;
     if(!cod){info.innerHTML='<span style="color:#555;">Digite o código da tarefa predecessora</span>';return;}
-    const pred=tarefas.find(x=>x.codigo===cod);
+    const numBusca2=parseInt(cod);const pred=isNaN(numBusca2)?tarefas.find(x=>x.codigo===cod):tarefas.find(x=>x._numLinha===numBusca2);
     if(!pred){info.innerHTML='<span style="color:#dc2626;">Tarefa com código "'+cod+'" não encontrada</span>';return;}
     const descTipo={TI:'Inicia após término de',II:'Inicia junto com',TT:'Termina junto com',IT:'Termina junto com início de'}[tipo];
     info.innerHTML=`<div style="color:var(--cor-primaria);font-weight:700;margin-bottom:4px;">${pred.codigo} — ${pred.nome}</div>
@@ -1498,12 +1583,31 @@ const Planejamento = (() => {
 
   function _hideCol(id){colsHidden.add(id);_render();requestAnimationFrame(()=>_paintRows());}
 
+  // Move a tarefa selecionada (se houver exatamente 1) uma posição acima ou abaixo
+  async function _moverSel(dir){
+    if(selecionados.size!==1){Utils.toast('Selecione exatamente 1 tarefa para mover.','alerta');return;}
+    const id=[...selecionados][0];
+    const sorted=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
+    const idx=sorted.findIndex(t=>t.id===id);if(idx<0)return;
+    const alvoIdx=idx+dir;
+    if(alvoIdx<0||alvoIdx>=sorted.length)return;
+    // Troca ordens
+    const tA=sorted[idx], tB=sorted[alvoIdx];
+    const oA=tA.ordem,oB=tB.ordem;
+    tA.ordem=oB;tB.ordem=oA;
+    _buildFiltradas();_render();requestAnimationFrame(()=>_paintRows());
+    await Promise.all([
+      Database.atualizar(obraId,COL,tA.id,{ordem:oB}).catch(console.error),
+      Database.atualizar(obraId,COL,tB.id,{ordem:oA}).catch(console.error),
+    ]);
+  }
+
   return{init,carregar,setZoom,inserirTarefa,editarTarefa,salvarTarefa,excluirTarefa,
     selectIdx,toggleRecolher,recuarNivel,avancarNivel,
     toggleGantt,hideCol,showColsMenu,_showCol,_showAll,
     _colResizeStart,moveColLeft,moveColRight,_hideCol,_divStart,_sync,_editCell,_esqDragStart,
-    _rowDragStart,toggleSel,_limparSelecao,_bulkNivel,_bulkDuplicar,_bulkExcluir,
-    toggleStatusFiltro,_aplicarStatusFiltro,
+    _rowDragStart,toggleSel,_limparSelecao,_moverSel,_bulkNivel,_bulkDuplicar,_bulkExcluir,
+    toggleStatusFiltro,_aplicarStatusFiltro,undo,
     importarExcel,exportar,exportarPNG,_gerarPNG,_predPopup,_predPreview,_predSalvar};
 })();
 function onObraChanged(){Planejamento.init();}

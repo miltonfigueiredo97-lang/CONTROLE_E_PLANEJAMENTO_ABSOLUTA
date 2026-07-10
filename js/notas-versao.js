@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.13.1',
+  versaoAtual: 'V2.14.0',
 
   versoes: [
     {
@@ -1464,7 +1464,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.13.1',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-09',
       tipo: 'melhoria',
       titulo: 'Pauta do Dia: ajustes de uso em campo',
@@ -1483,6 +1483,46 @@ const NotasVersao = {
         '  Avulsas continuam sendo só o que está FORA do planejamento.',
         'Tooltips em todos os botões (Andou, Parado, ⏭ Pular,',
         '  Lançar no grupo, navegação de dias, avulsas...)',
+      ]
+    },
+    {
+      versao: 'V2.14.0',
+      status: 'aberta',
+      data: '2026-07-10',
+      tipo: 'correcao',
+      titulo: 'Planejamento: 7 correções críticas de usabilidade',
+      itens: [
+        '1. COLUNA #: número fixo por ordem real da tarefa, não muda',
+        '   ao filtrar/recolher famílias. Predecessoras agora buscam por',
+        '   esse número (igual MS Project) — digitar "3TI" vincula à',
+        '   tarefa de linha 3 do planejamento, não ao código "3".',
+        '',
+        '2. PREDECESSORAS: agora funcionam de verdade. Ao salvar o campo',
+        '   "Predecessora" com o número da linha (ex: "5TI" ou "12TI+2"),',
+        '   o início/fim da tarefa é recalculado automaticamente.',
+        '',
+        '3. TOGGLE ▼/▶: área de clique aumentada (20×20px com fundo',
+        '   visível) — muito mais fácil de acertar no celular/tablet.',
+        '',
+        '4. SCROLL AO TOGGLEAR: abrir/fechar uma família não salta mais',
+        '   para o topo — a posição do scroll é preservada.',
+        '',
+        '5. RESIZE DE COLUNA: área de arraste aumentada de 4px para 10px',
+        '   (com margem negativa para facilitar pegar a borda)',
+        '   e cursor col-resize visível com dica ao passar o mouse.',
+        '',
+        '6. CTRL+Z: desfaz a última ação (edição de célula, reordenação).',
+        '   Guarda os últimos 30 estados. Funciona no teclado enquanto',
+        '   não há nenhum campo de texto ativo.',
+        '',
+        '7. EDIÇÃO DE CÉLULA: _paintRows() (virtual scroll) não destrói',
+        '   mais o input aberto ao rolar a tela. Enquanto há um campo',
+        '   em edição, só o Gantt é repintado; a tabela esquerda fica',
+        '   intacta até o usuário confirmar (Enter/Tab) ou cancelar (Esc).',
+        '',
+        'BÔNUS: barra de seleção ganha botões ↑ Acima / ↓ Abaixo',
+        '   para mover a tarefa selecionada uma posição (alternativa',
+        '   visual ao Ctrl+BotãoDireito+Arrastar).',
       ]
     }
   ],
