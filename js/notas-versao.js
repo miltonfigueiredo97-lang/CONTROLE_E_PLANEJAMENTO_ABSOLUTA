@@ -1556,6 +1556,35 @@ const NotasVersao = {
         '  → m³ e combinações com m³ (kg/m³, L/m³, etc.) adicionadas',
         '    como sugestões prontas na lista',
       ]
+    },
+    {
+      versao: 'V2.14.1',
+      status: 'aberta',
+      data: '2026-07-10',
+      tipo: 'correcao',
+      titulo: 'Coluna Tarefa redimensionável + predecessoras seguem vínculo ao reordenar',
+      itens: [
+        'COLUNA "TAREFA" REDIMENSIONÁVEL:',
+        '  A coluna de nome da tarefa era do tipo flex:1 (ocupa o espaço',
+        '  que sobra), o que impedia o resize por arrasto. Agora:',
+        '  → Handle de arrasto visível no cabeçalho da coluna Tarefa',
+        '  → Ao arrastar, muda para largura fixa em pixels (gravada em',
+        '    colLarguras) — se não foi redimensionada, continua flex:1',
+        '  → Atualizado nos 4 lugares: live, PNG header, PNG rows',
+        '',
+        'PREDECESSORAS SEGUEM O VÍNCULO AO REORDENAR:',
+        '  Ao mover uma tarefa (↑ Acima, ↓ Abaixo, ou Ctrl+drag),',
+        '  o número # de todas as tarefas que mudaram de posição é',
+        '  recalculado. O sistema então varre todas as predecessoras',
+        '  e atualiza automaticamente qualquer referência numérica',
+        '  que tenha mudado.',
+        '  → Exemplo: Concreto era #3, Alvenaria tinha "3TI".',
+        '    Após mover Concreto para #4, Alvenaria passa a "4TI".',
+        '  → Formatos suportados: "3", "3TI", "3TI+2", "3TT-1" etc.',
+        '  → Só atualiza referências que realmente mudaram de número.',
+        '  → Toast confirma quantas predecessoras foram atualizadas.',
+        '  → Salvamento no Firestore em background.',
+      ]
     }
   ],
 

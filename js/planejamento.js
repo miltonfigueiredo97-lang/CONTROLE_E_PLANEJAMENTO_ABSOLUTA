@@ -258,7 +258,7 @@ const Planejamento = (() => {
 
     // Header colunas
     const hdr=visCols.map(id=>{
-      const w=id==='nome'?'flex:1;min-width:150px;':`width:${colLarguras[id]||60}px;flex-shrink:0;`;
+      const w=id==='nome'?(colLarguras['nome']?`width:${colLarguras['nome']}px;flex-shrink:0;`:'flex:1;min-width:150px;'):`width:${colLarguras[id]||60}px;flex-shrink:0;`;
       if(id==='status'){
         return`<div style="${w}position:relative;padding:0;display:flex;align-items:center;justify-content:center;">
           <span onclick="event.stopPropagation();Planejamento.toggleStatusFiltro()" style="cursor:pointer;font-size:.72rem;color:${statusFiltro.size?'var(--cor-primaria)':'#666'};">▼</span>
@@ -269,7 +269,7 @@ const Planejamento = (() => {
       }
       return`<div style="${w}position:relative;padding:0 4px;font-size:.63rem;font-weight:700;color:#555;text-transform:uppercase;overflow:hidden;white-space:nowrap;display:flex;align-items:center;user-select:none;cursor:pointer;"
         oncontextmenu="event.preventDefault();Planejamento.hideCol('${id}')"
-        title="Clique direito: mover/esconder coluna">${COL_LABELS[id]||id}${!COL_FIXED.has(id)?'<div onpointerdown="Planejamento._colResizeStart(event,\''+id+'\')" style="position:absolute;right:0;top:0;bottom:0;width:4px;cursor:col-resize;"></div>':''}</div>`;
+        title="Clique direito: mover/esconder coluna">${COL_LABELS[id]||id}${(!COL_FIXED.has(id)||id==='nome')?'<div onpointerdown="Planejamento._colResizeStart(event,\''+id+'\')" style="position:absolute;right:-2px;top:0;bottom:0;width:10px;cursor:col-resize;z-index:5;" title="Arrastar para redimensionar"></div>':''}</div>`;
     }).join('');
 
     // Datas header gantt
@@ -334,7 +334,7 @@ const Planejamento = (() => {
       // Build row cells
       let cells='';
       for(const cid of visCols){
-        const w=cid==='nome'?'flex:1;min-width:150px;':`width:${colLarguras[cid]||60}px;flex-shrink:0;`;
+        const w=cid==='nome'?(colLarguras['nome']?`width:${colLarguras['nome']}px;flex-shrink:0;`:'flex:1;min-width:150px;'):`width:${colLarguras[cid]||60}px;flex-shrink:0;`;
         const base=`${w}overflow:hidden;white-space:nowrap;text-overflow:ellipsis;padding:0 4px;font-size:.78rem;height:100%;display:flex;align-items:center;`;
         const editable=COL_EDITABLE.has(cid);
         const clickEdit=editable?`onclick="Planejamento._editCell(event,${i},'${cid}')"`:cid==='num'?`onclick="Planejamento.selectIdx(${i})"`:''
@@ -876,7 +876,18 @@ const Planejamento = (() => {
     _undoPush();
     // Atualiza local imediatamente (responsividade)
     tarefas=sorted;
+    // Captura numLinhas ANTES de rebuild (para saber o 'antes' de cada tarefa)
+    const numAntes=new Map(tarefas.map(t=>[t.id,t._numLinha||0]));
     _buildFiltradas();_render();requestAnimationFrame(()=>_paintRows());
+    // Agora cada t._numLinha tem o número DEPOIS — monta o mapa de mudanças
+    const mudancasNum=new Map();
+    for(const t of tarefas){
+      const antes=numAntes.get(t.id)||0;
+      const depois=t._numLinha||0;
+      if(antes||depois) mudancasNum.set(t.id,{antes,depois});
+    }
+    // Atualiza predecessoras que apontavam para tarefas que mudaram de número
+    await _remapearPredecessoras(mudancasNum);
 
     // Salva em segundo plano, em lotes
     const LOTE=30;
@@ -1323,7 +1334,7 @@ const Planejamento = (() => {
 
       // ---- Partes que são IGUAIS em todas as páginas ----
       const hdrHtml=visCols.map(id=>{
-        const w=id==='nome'?'flex:1;min-width:150px;':`width:${colLarguras[id]||60}px;flex-shrink:0;`;
+        const w=id==='nome'?(colLarguras['nome']?`width:${colLarguras['nome']}px;flex-shrink:0;`:'flex:1;min-width:150px;'):`width:${colLarguras[id]||60}px;flex-shrink:0;`;
         return`<div style="${w}padding:0 4px;font-size:.63rem;font-weight:700;color:#555;text-transform:uppercase;overflow:hidden;white-space:nowrap;display:flex;align-items:center;">${COL_LABELS[id]||id}</div>`;
       }).join('');
       // _buildDateHeader decide a granularidade dos labels pela variável
@@ -1345,7 +1356,7 @@ const Planejamento = (() => {
           const t=tf[i], yLocal=(i-inicioIdx)*ROW_H, isG=t.tipo==='grupo', st2=_status(t), perc=_perc(t);
           let cells='';
           for(const cid of visCols){
-            const w=cid==='nome'?'flex:1;min-width:150px;':`width:${colLarguras[cid]||60}px;flex-shrink:0;`;
+            const w=cid==='nome'?(colLarguras['nome']?`width:${colLarguras['nome']}px;flex-shrink:0;`:'flex:1;min-width:150px;'):`width:${colLarguras[cid]||60}px;flex-shrink:0;`;
             const base=`${w}overflow:hidden;white-space:nowrap;text-overflow:ellipsis;padding:0 4px;font-size:.78rem;height:100%;display:flex;align-items:center;`;
             if(cid==='sel')cells+=`<div style="${base}"></div>`;
             else if(cid==='status'){const stInfo=STATUS_INFO[st2]||STATUS_INFO.em_dia;cells+=`<div style="${base}justify-content:center;"><span style="width:9px;height:9px;border-radius:50%;background:${stInfo.cor};display:inline-block;"></span></div>`;}
@@ -1583,6 +1594,40 @@ const Planejamento = (() => {
 
   function _hideCol(id){colsHidden.add(id);_render();requestAnimationFrame(()=>_paintRows());}
 
+
+  // Remapeia referências numéricas de predecessoras após reordenação.
+  // oldToNew: Map<id_tarefa, novo_numLinha> — gerado depois de _buildFiltradas().
+  // Só toca tarefas cujo número de predecessora mudou; salva no Firestore em background.
+  async function _remapearPredecessoras(oldNumMap){
+    // oldNumMap: Map<tarefaId, {antes:numLinha, depois:numLinha}>
+    // Monta um lookup: numAntes → numDepois
+    const lookup=new Map();
+    for(const [,v] of oldNumMap){
+      if(v.antes!==v.depois) lookup.set(v.antes, v.depois);
+    }
+    if(!lookup.size)return; // nada mudou de número
+
+    const atualizacoes=[];
+    for(const t of tarefas){
+      if(!t.predecessora)continue;
+      // Formato: "3TI+2" ou "3" ou "3TI"
+      const novo=t.predecessora.replace(/^(\d+)/,(match,num)=>{
+        const n=parseInt(num);
+        return lookup.has(n)?String(lookup.get(n)):match;
+      });
+      if(novo!==t.predecessora){
+        t.predecessora=novo;
+        atualizacoes.push({id:t.id,predecessora:novo});
+      }
+    }
+    if(atualizacoes.length){
+      Utils.toast(`Predecessoras atualizadas (${atualizacoes.length} tarefa${atualizacoes.length>1?'s':''}).`,'sucesso');
+      for(const u of atualizacoes){
+        await Database.atualizar(obraId,COL,u.id,{predecessora:u.predecessora}).catch(console.error);
+      }
+    }
+  }
+
   // Move a tarefa selecionada (se houver exatamente 1) uma posição acima ou abaixo
   async function _moverSel(dir){
     if(selecionados.size!==1){Utils.toast('Selecione exatamente 1 tarefa para mover.','alerta');return;}
@@ -1595,7 +1640,15 @@ const Planejamento = (() => {
     const tA=sorted[idx], tB=sorted[alvoIdx];
     const oA=tA.ordem,oB=tB.ordem;
     tA.ordem=oB;tB.ordem=oA;
+    const numAntes2=new Map(tarefas.map(t=>[t.id,t._numLinha||0]));
     _buildFiltradas();_render();requestAnimationFrame(()=>_paintRows());
+    const mudancasNum2=new Map();
+    for(const t of tarefas){
+      const antes=numAntes2.get(t.id)||0;
+      const depois=t._numLinha||0;
+      if(antes!==depois) mudancasNum2.set(t.id,{antes,depois});
+    }
+    await _remapearPredecessoras(mudancasNum2);
     await Promise.all([
       Database.atualizar(obraId,COL,tA.id,{ordem:oB}).catch(console.error),
       Database.atualizar(obraId,COL,tB.id,{ordem:oA}).catch(console.error),
