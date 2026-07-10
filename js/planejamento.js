@@ -264,12 +264,15 @@ const Planejamento = (() => {
           <span onclick="event.stopPropagation();Planejamento.toggleStatusFiltro()" style="cursor:pointer;font-size:.72rem;color:${statusFiltro.size?'var(--cor-primaria)':'#666'};">▼</span>
         </div>`;
       }
-      if(COL_FIXED.has(id)&&id!=='num'){
+      // sel e acoes: sem handle, sem data-hcol
+      if(id==='sel'||id==='acoes'){
         return`<div style="${w}padding:0 4px;font-size:.63rem;font-weight:700;color:#555;text-transform:uppercase;overflow:hidden;white-space:nowrap;display:flex;align-items:center;">${COL_LABELS[id]||id}</div>`;
       }
-      return`<div style="${w}position:relative;padding:0 4px;font-size:.63rem;font-weight:700;color:#555;text-transform:uppercase;overflow:hidden;white-space:nowrap;display:flex;align-items:center;user-select:none;cursor:pointer;"
+      // 'nome' e todas as colunas não-fixas: têm data-hcol + handle de resize
+      const podeResize=!COL_FIXED.has(id)||id==='nome'||id==='num';
+      return`<div data-hcol="${id}" style="${w}position:relative;padding:0 4px;font-size:.63rem;font-weight:700;color:#555;text-transform:uppercase;overflow:hidden;white-space:nowrap;display:flex;align-items:center;user-select:none;cursor:pointer;"
         oncontextmenu="event.preventDefault();Planejamento.hideCol('${id}')"
-        title="Clique direito: mover/esconder coluna">${COL_LABELS[id]||id}${(!COL_FIXED.has(id)||id==='nome')?'<div onpointerdown="Planejamento._colResizeStart(event,\''+id+'\')" style="position:absolute;right:-2px;top:0;bottom:0;width:10px;cursor:col-resize;z-index:5;" title="Arrastar para redimensionar"></div>':''}</div>`;
+        title="Clique direito: mover/esconder coluna">${COL_LABELS[id]||id}${podeResize?'<div onpointerdown="Planejamento._colResizeStart(event,\''+id+'\')" style="position:absolute;right:-2px;top:0;bottom:0;width:10px;cursor:col-resize;z-index:5;" title="Arrastar para redimensionar"></div>':''}</div>`;
     }).join('');
 
     // Datas header gantt
@@ -356,12 +359,11 @@ const Planejamento = (() => {
           cells+=`<div style="${base}color:#555;font-family:var(--font-mono);font-size:.7rem;cursor:pointer;" ${clickEdit}>${t.codigo||''}</div>`;
         } else if(cid==='nome'){
           const ind=(t.nivel||0)*20;
-          // Tem filhos = próxima tarefa na ordem tem nível maior
           const tIdx=tarefas.sort((a,b)=>(a.ordem||0)-(b.ordem||0)).findIndex(x=>x.id===t.id);
           const temF=tIdx>=0&&tIdx<tarefas.length-1&&(tarefas[tIdx+1].nivel||0)>(t.nivel||0);
           const tog=temF?`<span onclick="event.stopPropagation();Planejamento.toggleRecolher('${t.id}')" style="cursor:pointer;color:${colsRecolhidas.has(t.id)?'#888':'#555'};font-size:.85rem;margin-right:4px;flex-shrink:0;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;border-radius:3px;background:rgba(255,255,255,.06);" title="${colsRecolhidas.has(t.id)?'Expandir família':'Recolher família'}">${colsRecolhidas.has(t.id)?'▶':'▼'}</span>`:'';
           const guia=(t.nivel||0)>0?`<span style="position:absolute;left:${ind-13}px;top:0;bottom:0;width:1px;background:rgba(255,255,255,.08);"></span>`:'';
-          cells+=`<div style="${base}padding-left:${ind+4}px;cursor:pointer;position:relative;" ${clickEdit} title="${t.nome}">
+          cells+=`<div data-col="nome" style="${base}padding-left:${ind+4}px;cursor:pointer;position:relative;" ${clickEdit} title="${t.nome}">
             ${guia}${tog}<span style="color:${isG?'var(--cor-primaria)':'#ccc'};font-weight:${isG?700:400};overflow:hidden;text-overflow:ellipsis;">${t.nome||''}</span></div>`;
         } else if(cid==='inicio'){
           cells+=`<div style="${base}color:#666;font-size:.7rem;justify-content:center;cursor:pointer;" ${clickEdit}>${_fd(t.inicioPlanejado)}</div>`;
@@ -968,8 +970,13 @@ const Planejamento = (() => {
       const newW=Math.max(30,sw+(ev.clientX-sx));
       colLarguras[colId]=newW;
       line.style.left=ev.clientX+'px';
+      // Atualiza o header em tempo real
       const hdr=document.querySelector('[data-hcol="'+colId+'"]');
-      if(hdr)hdr.style.width=newW+'px';
+      if(hdr){hdr.style.width=newW+'px';hdr.style.flex='none';}
+      // Atualiza todas as células da coluna (para 'nome' que usa flex:1)
+      document.querySelectorAll('[data-col="'+colId+'"]').forEach(cell=>{
+        cell.style.width=newW+'px';cell.style.flex='none';
+      });
     };
     const up=()=>{
       handle.removeEventListener('pointermove',move);
@@ -1630,29 +1637,64 @@ const Planejamento = (() => {
 
   // Move a tarefa selecionada (se houver exatamente 1) uma posição acima ou abaixo
   async function _moverSel(dir){
-    if(selecionados.size!==1){Utils.toast('Selecione exatamente 1 tarefa para mover.','alerta');return;}
-    const id=[...selecionados][0];
+    if(!selecionados.size){Utils.toast('Selecione pelo menos 1 tarefa para mover.','alerta');return;}
     const sorted=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
-    const idx=sorted.findIndex(t=>t.id===id);if(idx<0)return;
-    const alvoIdx=idx+dir;
-    if(alvoIdx<0||alvoIdx>=sorted.length)return;
-    // Troca ordens
-    const tA=sorted[idx], tB=sorted[alvoIdx];
-    const oA=tA.ordem,oB=tB.ordem;
-    tA.ordem=oB;tB.ordem=oA;
+    const ids=new Set(selecionados);
+
+    // Índices selecionados na ordem atual
+    const selIdxs=sorted.map((t,i)=>ids.has(t.id)?i:-1).filter(i=>i>=0);
+    if(!selIdxs.length)return;
+
+    if(dir===-1){
+      // Mover para cima: processar do primeiro para o último
+      // Cada linha selecionada troca com a linha imediatamente acima (se não selecionada)
+      for(const idx of selIdxs){
+        const alvo=idx-1;
+        if(alvo<0)break; // chegou no topo, para
+        if(ids.has(sorted[alvo].id))continue; // linha acima também selecionada, pula
+        const tmp=sorted[alvo].ordem;
+        sorted[alvo].ordem=sorted[idx].ordem;
+        sorted[idx].ordem=tmp;
+        // Troca fisicamente no array para manter posições relativas consistentes
+        [sorted[alvo],sorted[idx]]=[sorted[idx],sorted[alvo]];
+      }
+    } else {
+      // Mover para baixo: processar do último para o primeiro
+      for(let k=selIdxs.length-1;k>=0;k--){
+        const idx=selIdxs[k];
+        const alvo=idx+1;
+        if(alvo>=sorted.length)break; // chegou no fim, para
+        if(ids.has(sorted[alvo].id))continue; // linha abaixo também selecionada, pula
+        const tmp=sorted[alvo].ordem;
+        sorted[alvo].ordem=sorted[idx].ordem;
+        sorted[idx].ordem=tmp;
+        [sorted[alvo],sorted[idx]]=[sorted[idx],sorted[alvo]];
+      }
+    }
+
+    // Normaliza ordens sequenciais (1, 2, 3...)
+    sorted.forEach((t,i)=>{t.ordem=i+1;});
+
     const numAntes2=new Map(tarefas.map(t=>[t.id,t._numLinha||0]));
+    tarefas=sorted;
     _buildFiltradas();_render();requestAnimationFrame(()=>_paintRows());
+
     const mudancasNum2=new Map();
     for(const t of tarefas){
       const antes=numAntes2.get(t.id)||0;
       const depois=t._numLinha||0;
-      if(antes!==depois) mudancasNum2.set(t.id,{antes,depois});
+      if(antes!==depois)mudancasNum2.set(t.id,{antes,depois});
     }
     await _remapearPredecessoras(mudancasNum2);
-    await Promise.all([
-      Database.atualizar(obraId,COL,tA.id,{ordem:oB}).catch(console.error),
-      Database.atualizar(obraId,COL,tB.id,{ordem:oA}).catch(console.error),
-    ]);
+
+    // Salva só as que mudaram de ordem
+    const updates=sorted.filter(t=>{
+      const orig=tarefas.find(x=>x.id===t.id);
+      return orig&&orig.ordem!==t.ordem;
+    });
+    await Promise.all(sorted.map(t=>
+      Database.atualizar(obraId,COL,t.id,{ordem:t.ordem}).catch(console.error)
+    ));
   }
 
   return{init,carregar,setZoom,inserirTarefa,editarTarefa,salvarTarefa,excluirTarefa,
