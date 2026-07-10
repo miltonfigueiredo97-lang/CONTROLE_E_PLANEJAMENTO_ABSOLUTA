@@ -11,13 +11,13 @@ const MaoDeObra = (() => {
   let biblioteca=[], vinculos=[], tarefas=[];
   let abaAtiva='vinculos', filtroTarefa='';
   let editandoBiblId=null, editandoVincId=null, _modoVinc='vincular';
-  let _buscaTarText='', _vincTarSelId='';
+  let _buscaTarText='', _vincTarSelIds=[];
   const COL_BIB='maoDeObra', COL_VIN='maoDeObra_vinculos';
 
   const CATEGORIAS=['Pedreiro','Servente','Ajudante','Carpinteiro','Armador',
     'Eletricista','Encanador / Hidráulica','Pintor','Gesseiro','Azulejista',
     'Empreiteira / Terceirizado','Outro'];
-  const UNIDADES=['m²','m','un','vb','h','diária','mês','kg','t'];
+  const UNIDADES=['m²','m³','m','un','vb','h','diária','mês','kg','t'];
 
   async function init(){
     const ok=await Utils.initPagina();if(!ok)return;
@@ -55,7 +55,7 @@ const MaoDeObra = (() => {
             ?`<button class="btn btn-secundario btn-sm" onclick="MaoDeObra.setAba('vinculos')">← Por Tarefa</button>
               <button class="btn btn-primario btn-sm" onclick="MaoDeObra.novaMaoDeObraBib()">+ Nova Mão de Obra</button>`
             :`<button class="btn btn-secundario btn-sm" onclick="MaoDeObra.setAba('biblioteca')">👷 Biblioteca (${biblioteca.length})</button>
-              <button class="btn btn-primario btn-sm" onclick="MaoDeObra.novoVinculo()">+ Vincular à Tarefa</button>`}
+              <button class="btn btn-primario btn-sm" onclick="MaoDeObra.novoVinculo()">+ Adicionar Nova Mão de Obra</button>`}
         </div>
       </div>
       <div id="mdo-corpo">${abaAtiva==='biblioteca'?_renderBib():_renderVinculos()}</div>`;
@@ -116,7 +116,7 @@ const MaoDeObra = (() => {
 
       ${!vf.length?`<div class="estado-vazio"><div class="icone">🔗</div>
         <p>${filtroTarefa?'Nenhuma mão de obra vinculada.':'Nenhum vínculo cadastrado.'}</p>
-        <button class="btn btn-primario" onclick="MaoDeObra.novoVinculo()">+ Vincular / Criar mão de obra</button></div>`:`
+        <button class="btn btn-primario" onclick="MaoDeObra.novoVinculo()">+ Adicionar Nova Mão de Obra</button></div>`:`
       <div class="tabela-container"><table class="tabela tabela-compacta">
         <thead><tr><th>Mão de Obra</th><th>Categoria</th><th>Serviço</th>
           <th class="col-num">Valor Unit.</th><th class="col-num">Quantidade</th>
@@ -254,16 +254,16 @@ const MaoDeObra = (() => {
 
   // ====== CRUD VÍNCULOS ======
   function novoVinculo(){
-    editandoVincId=null;_modoVinc='vincular';_buscaTarText='';_vincTarSelId='';
-    document.getElementById('modal-mdo-vinc-titulo').textContent='Vincular Mão de Obra à Tarefa';
+    editandoVincId=null;_modoVinc='vincular';_buscaTarText='';_vincTarSelIds=[];
+    document.getElementById('modal-mdo-vinc-titulo').textContent='Adicionar Nova Mão de Obra';
     _renderVincModal(null);
     Utils.abrirModal('modal-mdo-vinc');
   }
   function editarVinculo(id){
     const v=vinculos.find(x=>x.id===id);if(!v)return;
     editandoVincId=id;_modoVinc='vincular';
-    _vincTarSelId=v.tarefaId||'';
-    const o=_getOpcoesTarefa().find(x=>x.id===_vincTarSelId);
+    _vincTarSelIds=v.tarefaId?[v.tarefaId]:[];
+    const o=_getOpcoesTarefa().find(x=>x.id===v.tarefaId);
     _buscaTarText=o?o.label.replace(/\u2007/g,''):'';
     document.getElementById('modal-mdo-vinc-titulo').textContent='Editar Vínculo';
     _renderVincModal(v);
@@ -275,15 +275,27 @@ const MaoDeObra = (() => {
     const resultados=_buscarTarefaOpts(_buscaTarText).slice(0,40);
     if(!resultados.length)return `<div class="text-sm text-muted" style="padding:8px;">Nenhuma tarefa/serviço encontrado.</div>`;
     return resultados.map(o=>`
-      <div class="tree-item${_vincTarSelId===o.id?' ativo':''}" style="padding:8px 10px;white-space:pre;" onclick="MaoDeObra.selecionarTarefaVinc('${o.id}')">
-        <span class="tree-icon">${o.tipo==='grupo'?'📁':'📄'}</span>
+      <div class="tree-item${_vincTarSelIds.includes(o.id)?' ativo':''}" style="padding:8px 10px;white-space:pre;" onclick="MaoDeObra.selecionarTarefaVinc('${o.id}')">
+        <span class="tree-icon">${_vincTarSelIds.includes(o.id)?'✅':(o.tipo==='grupo'?'📁':'📄')}</span>
         <span class="tree-label" style="white-space:pre;">${_destacar(o.label,_buscaTarText)}</span>
       </div>`).join('');
   }
 
+  function _renderTarefasSelecionadasChips(){
+    if(!_vincTarSelIds.length)return '';
+    const opts=_getOpcoesTarefa();
+    return `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;">
+      ${_vincTarSelIds.map(id=>{
+        const o=opts.find(x=>x.id===id);
+        const label=o?o.label.replace(/\u2007/g,''):id;
+        return `<span class="badge badge-amarelo" style="display:inline-flex;align-items:center;gap:6px;">${label}
+          ${editandoVincId?'':`<span style="cursor:pointer;font-weight:800;" onclick="MaoDeObra.removerTarefaVinc('${id}')">✕</span>`}</span>`;
+      }).join('')}
+    </div>`;
+  }
+
   function _renderVincModal(v){
     const body=document.getElementById('mdo-vinc-body');if(!body)return;
-    const tarSel=_vincTarSelId?_getOpcoesTarefa().find(o=>o.id===_vincTarSelId):null;
     body.innerHTML=`
       <div style="display:flex;gap:6px;margin-bottom:16px;">
         <button class="btn btn-sm ${_modoVinc==='vincular'?'btn-primario':'btn-secundario'}"
@@ -308,13 +320,15 @@ const MaoDeObra = (() => {
         </div>`}
 
       <div class="form-grupo"><label>Buscar serviço / tarefa *
-        <span class="text-muted" style="font-weight:400;font-size:0.75rem;"> (qualquer nível do Planejamento)</span></label>
+        <span class="text-muted" style="font-weight:400;font-size:0.75rem;">
+          ${editandoVincId?' (qualquer nível do Planejamento)':' (qualquer nível — pode selecionar mais de uma tarefa)'}
+        </span></label>
         <input type="text" id="mdo-vinc-tar-busca" class="form-control" placeholder="Digite para buscar... Ex: alvenaria, pintura"
           value="${_buscaTarText}" oninput="MaoDeObra.onBuscaTarefaVinc(this.value)"></div>
       <div id="mdo-vinc-tar-resultados" style="max-height:200px;overflow-y:auto;border:1px solid var(--cor-borda-light);border-radius:8px;margin-bottom:10px;">
         ${_renderResultadosTarefa()}
       </div>
-      ${tarSel?`<div class="text-sm" style="margin-bottom:14px;">Selecionado: <strong>${tarSel.label.replace(/\u2007/g,'')}</strong></div>`:''}
+      ${_renderTarefasSelecionadasChips()}
 
       <div class="form-row">
         <div class="form-grupo">
@@ -323,10 +337,11 @@ const MaoDeObra = (() => {
             value="${v?.valor||''}" placeholder="0,00">
         </div>
         <div class="form-grupo">
-          <label>Unidade do valor *</label>
-          <select id="mdo-vinc-und" class="form-control">
-            ${UNIDADES.map(u=>`<option value="${u}" ${(v?.unidade||'m²')===u?'selected':''}>${u}</option>`).join('')}
-          </select>
+          <label>Unidade do valor *
+            <span class="text-muted" style="font-weight:400;font-size:0.7rem;">(digite p/ criar nova, ex: m³)</span></label>
+          <input id="mdo-vinc-und" class="form-control" list="mdo-unidades-list"
+            value="${v?.unidade||'m²'}" placeholder="m², m³, un...">
+          <datalist id="mdo-unidades-list">${UNIDADES.map(u=>`<option value="${u}">`).join('')}</datalist>
         </div>
       </div>
       <div class="form-grupo"><label>Observações</label>
@@ -339,18 +354,27 @@ const MaoDeObra = (() => {
     if(lista)lista.innerHTML=_renderResultadosTarefa();
   }
   function selecionarTarefaVinc(id){
-    _vincTarSelId=id;
-    const o=_getOpcoesTarefa().find(x=>x.id===id);
-    if(o)_buscaTarText=o.label.replace(/\u2007/g,'');
+    if(editandoVincId){
+      _vincTarSelIds=[id];
+      const o=_getOpcoesTarefa().find(x=>x.id===id);
+      if(o)_buscaTarText=o.label.replace(/\u2007/g,'');
+    }else{
+      const i=_vincTarSelIds.indexOf(id);
+      if(i>=0)_vincTarSelIds.splice(i,1);else _vincTarSelIds.push(id);
+    }
+    _renderVincModal(editandoVincId?vinculos.find(x=>x.id===editandoVincId):null);
+  }
+  function removerTarefaVinc(id){
+    _vincTarSelIds=_vincTarSelIds.filter(x=>x!==id);
     _renderVincModal(editandoVincId?vinculos.find(x=>x.id===editandoVincId):null);
   }
 
   async function salvarVinculo(){
-    const tarefaId=_vincTarSelId;
-    if(!tarefaId){Utils.toast('Busque e selecione uma tarefa.','alerta');return;}
+    const tarefaIds=_vincTarSelIds.slice();
+    if(!tarefaIds.length){Utils.toast('Busque e selecione ao menos uma tarefa.','alerta');return;}
     const valor=parseFloat(document.getElementById('mdo-vinc-valor')?.value);
     if(!valor||valor<=0){Utils.toast('Informe o valor.','alerta');return;}
-    const unidade=document.getElementById('mdo-vinc-und')?.value||'m²';
+    const unidade=document.getElementById('mdo-vinc-und')?.value.trim()||'m²';
     const observacoes=document.getElementById('mdo-vinc-obs')?.value||'';
     let maoDeObraId='';
 
@@ -369,17 +393,22 @@ const MaoDeObra = (() => {
       if(!maoDeObraId){Utils.toast('Selecione uma mão de obra.','alerta');return;}
     }
 
-    if(!editandoVincId){
-      const existe=vinculos.find(v=>v.maoDeObraId===maoDeObraId&&v.tarefaId===tarefaId);
-      if(existe&&!Utils.confirmar('Mão de obra já vinculada a esta tarefa. Criar outro vínculo mesmo assim?'))return;
-    }
-
-    const data={maoDeObraId,tarefaId,valor,unidade,observacoes};
     try{
-      if(editandoVincId)await Database.atualizar(obraId,COL_VIN,editandoVincId,data);
-      else await Database.criar(obraId,COL_VIN,data);
+      if(editandoVincId){
+        const data={maoDeObraId,tarefaId:tarefaIds[0],valor,unidade,observacoes};
+        await Database.atualizar(obraId,COL_VIN,editandoVincId,data);
+        Utils.toast('Vínculo atualizado!','sucesso');
+      } else {
+        let criados=0,ignorados=0;
+        for(const tarefaId of tarefaIds){
+          const existe=vinculos.find(x=>x.maoDeObraId===maoDeObraId&&x.tarefaId===tarefaId);
+          if(existe){ignorados++;continue;}
+          await Database.criar(obraId,COL_VIN,{maoDeObraId,tarefaId,valor,unidade,observacoes});
+          criados++;
+        }
+        Utils.toast(`${criados} vínculo(s) criado(s)`+(ignorados?` (${ignorados} já existente(s), ignorado(s))`:''),'sucesso');
+      }
       Utils.fecharModal('modal-mdo-vinc');
-      Utils.toast(`Mão de obra ${_modoVinc==='criar'?'criada e ':''}vinculada!`,'sucesso');
       editandoVincId=null;await carregar();
     }catch(e){console.error(e);Utils.toast('Erro.','erro');}
   }
@@ -452,6 +481,6 @@ const MaoDeObra = (() => {
   return {init,carregar,renderizar,setAba,setFiltro,
     novaMaoDeObraBib,editarMaoDeObraBib,salvarMaoDeObraBib,excluirMaoDeObraBib,
     novoVinculo,editarVinculo,salvarVinculo,excluirVinculo,toggleModoVinc,
-    onBuscaTarefaVinc,selecionarTarefaVinc,exportar};
+    onBuscaTarefaVinc,selecionarTarefaVinc,removerTarefaVinc,exportar};
 })();
 function onObraChanged(){MaoDeObra.init();}

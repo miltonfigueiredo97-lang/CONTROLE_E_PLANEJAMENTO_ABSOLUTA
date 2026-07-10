@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.14.0',
+  versaoAtual: 'V2.14.1',
 
   versoes: [
     {
@@ -1487,7 +1487,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.14.0',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-10',
       tipo: 'correcao',
       titulo: 'Planejamento: 7 correções críticas de usabilidade',
@@ -1523,6 +1523,38 @@ const NotasVersao = {
         'BÔNUS: barra de seleção ganha botões ↑ Acima / ↓ Abaixo',
         '   para mover a tarefa selecionada uma posição (alternativa',
         '   visual ao Ctrl+BotãoDireito+Arrastar).',
+      ]
+    },
+    {
+      versao: 'V2.14.1',
+      status: 'aberta',
+      data: '2026-07-10',
+      tipo: 'funcionalidade',
+      titulo: 'Mão de Obra e Materiais: vínculo múltiplo + unidades livres',
+      itens: [
+        'Botão renomeado: "+ Vincular à Tarefa" agora é',
+        '  "+ Adicionar Nova Mão de Obra" (módulo Mão de Obra)',
+        'VÍNCULO A VÁRIAS TAREFAS DE UMA VEZ: ao adicionar uma mão de',
+        '  obra ou material novo, agora dá pra selecionar mais de uma',
+        '  tarefa na busca — cada clique adiciona/remove da lista',
+        '  (chips abaixo da busca, com "✕" para remover individualmente)',
+        '  → Salva um vínculo para cada tarefa selecionada, com o mesmo',
+        '    valor/unidade/consumo. Vínculos já existentes são',
+        '    ignorados silenciosamente (evita duplicidade)',
+        '  → Ao EDITAR um vínculo já existente, a seleção continua',
+        '    única (o vínculo representa uma tarefa só)',
+        'Válido nos dois módulos: Mão de Obra e Materiais',
+        '',
+        'UNIDADES DE MEDIÇÃO LIVRES: os campos de unidade que antes',
+        '  eram <select> fechado (limitado à lista pré-definida) agora',
+        '  aceitam digitação livre, com sugestões da lista existente',
+        '  — resolve o caso de unidades faltando, como m³',
+        '  → Mão de Obra: "Unidade do valor"',
+        '  → Materiais: unidade base do material (biblioteca e ao',
+        '    criar novo), unidade de embalagem, unidade base da',
+        '    embalagem, unidade de consumo (previsto/real)',
+        '  → m³ e combinações com m³ (kg/m³, L/m³, etc.) adicionadas',
+        '    como sugestões prontas na lista',
       ]
     }
   ],

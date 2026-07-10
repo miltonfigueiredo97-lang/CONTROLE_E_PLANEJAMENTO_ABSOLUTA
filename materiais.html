@@ -46,7 +46,7 @@
       <a href="histograma.html"><span class="nav-icon">📊</span> Histograma</a>
       <a href="admin-permissoes.html"><span class="nav-icon">🔑</span> Permissões</a>
       <div class="sidebar-section-title">Sistema</div>
-      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V2.14.0</span></a>
+      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V2.14.1</span></a>
     </nav>
     <div class="sidebar-user">
       <div class="user-avatar">U</div>
@@ -96,17 +96,14 @@
         <div class="form-row">
           <div class="form-grupo"><label>Referência / Código</label>
             <input type="text" name="referencia" class="form-control" placeholder="Ex: CP-III-40"></div>
-          <div class="form-grupo"><label>Unidade base do material</label>
-            <select name="unidade" id="bib-unidade" class="form-control">
-              <option value="kg">kg</option>
-              <option value="L">L (litro)</option>
-              <option value="m²">m²</option>
-              <option value="m">m (metro)</option>
-              <option value="un">un (unidade)</option>
-              <option value="saco">saco</option>
-              <option value="caixa">caixa</option>
-              <option value="t">tonelada</option>
-            </select></div>
+          <div class="form-grupo"><label>Unidade base do material
+            <span class="text-muted" style="font-weight:400;font-size:0.7rem;">(digite p/ criar nova, ex: m³)</span></label>
+            <input name="unidade" id="bib-unidade" class="form-control" list="unidades-mat-list" placeholder="kg, L, m², m³, un...">
+            <datalist id="unidades-mat-list">
+              <option value="kg"></option><option value="L"></option><option value="m²"></option>
+              <option value="m³"></option><option value="m"></option><option value="un"></option>
+              <option value="saco"></option><option value="caixa"></option><option value="t"></option>
+            </datalist></div>
           <div class="form-grupo"><label>Preço unitário (R$)</label>
             <input type="number" name="preco" class="form-control" step="0.01" min="0" placeholder="Ex: 32,50">
             <small class="text-muted" style="font-size:0.7rem;">Preço por unidade base — usado para calcular custo na tarefa vinculada</small></div>
@@ -121,27 +118,18 @@
           </div>
           <div class="form-row" style="align-items:center;gap:8px;">
             <div class="form-grupo" style="margin:0"><label>1</label>
-              <select name="embalagemUnidade" class="form-control" id="bib-emb-und">
-                <option value="">— embalagem —</option>
-                <option value="saco">saco</option>
-                <option value="caixa">caixa</option>
-                <option value="lata">lata</option>
-                <option value="balde">balde</option>
-                <option value="fardo">fardo</option>
-                <option value="rolo">rolo</option>
-                <option value="un">un</option>
-              </select></div>
+              <input name="embalagemUnidade" class="form-control" id="bib-emb-und" list="unidades-emb-list" placeholder="— embalagem —">
+              <datalist id="unidades-emb-list">
+                <option value="saco"></option><option value="caixa"></option><option value="lata"></option>
+                <option value="balde"></option><option value="fardo"></option><option value="rolo"></option>
+                <option value="un"></option>
+              </datalist></div>
             <div style="padding-top:20px;color:#666;font-size:1rem;">=</div>
             <div class="form-grupo" style="margin:0"><label>Qtd</label>
               <input type="number" name="embalagemQtd" class="form-control" step="0.001" min="0" placeholder="Ex: 20"></div>
             <div class="form-grupo" style="margin:0"><label>Unidade base</label>
-              <select name="embalagemBaseUnidade" class="form-control" id="bib-emb-base">
-                <option value="kg">kg</option>
-                <option value="L">L</option>
-                <option value="m²">m²</option>
-                <option value="m">m</option>
-                <option value="un">un</option>
-              </select></div>
+              <input name="embalagemBaseUnidade" class="form-control" id="bib-emb-base" list="unidades-mat-list" placeholder="kg, L, m², m³...">
+            </div>
           </div>
         </div>
         <div class="form-grupo" style="margin-top:10px;"><label>Observações</label>

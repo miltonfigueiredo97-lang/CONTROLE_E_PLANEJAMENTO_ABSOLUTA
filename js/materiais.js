@@ -8,13 +8,13 @@ const Materiais = (() => {
   let biblioteca=[], vinculos=[], tarefas=[], levFachadas=[];
   let abaAtiva='vinculos', filtroTarefa='';
   let editandoBiblId=null, editandoVincId=null, _modoVinc='vincular';
-  let _buscaTarText='', _buscaMatText='', _vincTarSelId='', _vincMatSelId='';
+  let _buscaTarText='', _buscaMatText='', _vincTarSelIds=[], _vincMatSelId='';
   const COL_BIB='materiais', COL_VIN='materiais_vinculos';
 
-  const UNIDADES_CONSUMO=['kg/m²','kg/m','kg/un','L/m²','L/m','L/un',
+  const UNIDADES_CONSUMO=['kg/m²','kg/m','kg/un','kg/m³','L/m²','L/m','L/un','L/m³',
     'saco/m²','saco/m','saco/un','caixa/m²','caixa/m','caixa/un',
-    'un/m²','un/m','un/un','m²/m²','m/m²','m/m','t/m²','t/m'];
-  const UNIDADES_MAT=['kg','L','m²','m','un','saco','caixa','lata','balde','fardo','rolo','t'];
+    'un/m²','un/m','un/un','un/m³','m²/m²','m/m²','m/m','m³/m²','m³/m','m³/un','t/m²','t/m','t/m³'];
+  const UNIDADES_MAT=['kg','L','m²','m³','m','un','saco','caixa','lata','balde','fardo','rolo','t'];
 
   async function init(){
     const ok=await Utils.initPagina();if(!ok)return;
@@ -395,7 +395,7 @@ const Materiais = (() => {
   // ====== CRUD VÍNCULOS ======
   function novoVinculo(){
     editandoVincId=null;_modoVinc='vincular';
-    _buscaTarText='';_buscaMatText='';_vincTarSelId='';_vincMatSelId='';
+    _buscaTarText='';_buscaMatText='';_vincTarSelIds=[];_vincMatSelId='';
     document.getElementById('modal-vinc-titulo').textContent='Adicionar Material à Tarefa';
     _renderVincModal(null);
     Utils.abrirModal('modal-material-vinc');
@@ -403,8 +403,8 @@ const Materiais = (() => {
   function editarVinculo(id){
     const v=vinculos.find(x=>x.id===id);if(!v)return;
     editandoVincId=id;_modoVinc='vincular';
-    _vincTarSelId=v.tarefaId||'';_vincMatSelId=v.materialId||'';
-    const o=_getOpcoesTarefa().find(x=>x.id===_vincTarSelId);
+    _vincTarSelIds=v.tarefaId?[v.tarefaId]:[];_vincMatSelId=v.materialId||'';
+    const o=_getOpcoesTarefa().find(x=>x.id===v.tarefaId);
     const m=biblioteca.find(x=>x.id===_vincMatSelId);
     _buscaTarText=o?o.label.replace(/\u2007/g,''):'';
     _buscaMatText=m?m.nome:'';
@@ -421,10 +421,22 @@ const Materiais = (() => {
     const resultados=_buscarTarefaOpts(_buscaTarText).slice(0,40);
     if(!resultados.length)return `<div class="text-sm text-muted" style="padding:8px;">Nenhuma tarefa/serviço encontrado.</div>`;
     return resultados.map(o=>`
-      <div class="tree-item${_vincTarSelId===o.id?' ativo':''}" style="padding:8px 10px;white-space:pre;" onclick="Materiais.selecionarTarefaVinc('${o.id}')">
-        <span class="tree-icon">${o.tipo==='especial'?'🏗️':(o.tipo==='grupo'?'📁':'📌')}</span>
+      <div class="tree-item${_vincTarSelIds.includes(o.id)?' ativo':''}" style="padding:8px 10px;white-space:pre;" onclick="Materiais.selecionarTarefaVinc('${o.id}')">
+        <span class="tree-icon">${_vincTarSelIds.includes(o.id)?'✅':(o.tipo==='especial'?'🏗️':(o.tipo==='grupo'?'📁':'📌'))}</span>
         <span class="tree-label" style="white-space:pre;">${_destacar(o.label,_buscaTarText)}</span>
       </div>`).join('');
+  }
+  function _renderTarefasSelecionadasChips(){
+    if(!_vincTarSelIds.length)return '';
+    const opts=_getOpcoesTarefa();
+    return `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;">
+      ${_vincTarSelIds.map(id=>{
+        const o=opts.find(x=>x.id===id);
+        const label=o?o.label.replace(/\u2007/g,''):id;
+        return `<span class="badge badge-amarelo" style="display:inline-flex;align-items:center;gap:6px;">${label}
+          ${editandoVincId?'':`<span style="cursor:pointer;font-weight:800;" onclick="Materiais.removerTarefaVinc('${id}')">✕</span>`}</span>`;
+      }).join('')}
+    </div>`;
   }
   function _renderResultadosMaterial(){
     const resultados=_buscarMateriaisBib(_buscaMatText).slice(0,40);
@@ -453,7 +465,6 @@ const Materiais = (() => {
     const uc=v?.unidadeConsumo||'kg/m²';
     const body=document.getElementById('vinc-body');if(!body)return;
     const matSel=_vincMatSelId?biblioteca.find(m=>m.id===_vincMatSelId):null;
-    const tarSel=_vincTarSelId?_getOpcoesTarefa().find(o=>o.id===_vincTarSelId):null;
     body.innerHTML=`
       <div style="display:flex;gap:6px;margin-bottom:16px;">
         <button class="btn btn-sm ${_modoVinc==='vincular'?'btn-primario':'btn-secundario'}"
@@ -484,36 +495,36 @@ const Materiais = (() => {
           </div>
           <div class="form-row">
             <div class="form-grupo"><label>Referência</label><input id="nm-ref" class="form-control"></div>
-            <div class="form-grupo"><label>Unidade base</label>
-              <select id="nm-und" class="form-control">
-                ${UNIDADES_MAT.map(u=>`<option value="${u}">${u}</option>`).join('')}
-              </select></div>
+            <div class="form-grupo"><label>Unidade base
+              <span class="text-muted" style="font-weight:400;font-size:0.68rem;">(digite p/ nova)</span></label>
+              <input id="nm-und" class="form-control" list="mat-unidades-list" value="kg" placeholder="kg, L, m², m³...">
+              </div>
             <div class="form-grupo"><label>Preço unitário (R$)</label>
               <input id="nm-preco" type="number" step="0.01" min="0" class="form-control" placeholder="Ex: 32,50"></div>
           </div>
           <div class="form-row" style="align-items:center;">
             <div class="form-grupo"><label>Embalagem</label>
-              <select id="nm-emb-und" class="form-control">
-                <option value="">— sem —</option>
-                ${['saco','caixa','lata','balde','fardo','rolo','un'].map(u=>`<option>${u}</option>`).join('')}
-              </select></div>
+              <input id="nm-emb-und" class="form-control" list="mat-emb-list" placeholder="— sem —">
+              <datalist id="mat-emb-list">${['saco','caixa','lata','balde','fardo','rolo','un'].map(u=>`<option value="${u}">`).join('')}</datalist></div>
             <div style="padding-top:20px;color:#555;">=</div>
             <div class="form-grupo"><label>Qtd/embalagem</label>
               <input id="nm-emb-qtd" type="number" step="0.001" class="form-control" placeholder="Ex: 20"></div>
             <div class="form-grupo"><label>Unidade</label>
-              <select id="nm-emb-base" class="form-control">
-                ${UNIDADES_MAT.map(u=>`<option>${u}</option>`).join('')}
-              </select></div>
+              <input id="nm-emb-base" class="form-control" list="mat-unidades-list" placeholder="kg, L, m², m³...">
+              <datalist id="mat-unidades-list">${UNIDADES_MAT.map(u=>`<option value="${u}">`).join('')}</datalist></div>
           </div>
         </div>`}
 
-      <div class="form-grupo"><label>Buscar serviço / tarefa *</label>
+      <div class="form-grupo"><label>Buscar serviço / tarefa *
+        <span class="text-muted" style="font-weight:400;font-size:0.75rem;">
+          ${editandoVincId?'':' (pode selecionar mais de uma tarefa)'}
+        </span></label>
         <input type="text" id="vinc-tar-busca" class="form-control" placeholder="Digite para buscar... Ex: alvenaria, pintura"
           value="${_buscaTarText}" oninput="Materiais.onBuscaTarefaVinc(this.value)"></div>
       <div id="vinc-tar-resultados" style="max-height:200px;overflow-y:auto;border:1px solid var(--cor-borda-light);border-radius:8px;margin-bottom:10px;">
         ${_renderResultadosTarefa()}
       </div>
-      ${tarSel?`<div class="text-sm" style="margin-bottom:14px;">Selecionado: <strong>${tarSel.label.replace(/\u2007/g,'')}</strong></div>`:''}
+      ${_renderTarefasSelecionadasChips()}
 
       <div class="form-row">
         <div class="form-grupo">
@@ -521,9 +532,9 @@ const Materiais = (() => {
           <div style="display:flex;gap:6px;">
             <input id="vinc-cp" type="number" step="0.001" min="0" class="form-control"
               value="${v?.consumoPrevisto||''}" placeholder="0,000" style="flex:1;">
-            <select id="vinc-uc" class="form-control" style="width:120px;" onchange="document.getElementById('vinc-uc2').textContent=this.value">
-              ${UNIDADES_CONSUMO.map(u=>`<option value="${u}" ${u===uc?'selected':''}>${u}</option>`).join('')}
-            </select>
+            <input id="vinc-uc" class="form-control" list="mat-unidades-consumo-list" style="width:120px;"
+              value="${uc}" oninput="document.getElementById('vinc-uc2').textContent=this.value">
+            <datalist id="mat-unidades-consumo-list">${UNIDADES_CONSUMO.map(u=>`<option value="${u}">`).join('')}</datalist>
           </div>
         </div>
         <div class="form-grupo">
@@ -556,9 +567,18 @@ const Materiais = (() => {
     if(lista)lista.innerHTML=_renderResultadosTarefa();
   }
   function selecionarTarefaVinc(id){
-    _vincTarSelId=id;
-    const o=_getOpcoesTarefa().find(x=>x.id===id);
-    if(o)_buscaTarText=o.label.replace(/\u2007/g,'');
+    if(editandoVincId){
+      _vincTarSelIds=[id];
+      const o=_getOpcoesTarefa().find(x=>x.id===id);
+      if(o)_buscaTarText=o.label.replace(/\u2007/g,'');
+    }else{
+      const i=_vincTarSelIds.indexOf(id);
+      if(i>=0)_vincTarSelIds.splice(i,1);else _vincTarSelIds.push(id);
+    }
+    _renderVincModal(editandoVincId?vinculos.find(x=>x.id===editandoVincId):null);
+  }
+  function removerTarefaVinc(id){
+    _vincTarSelIds=_vincTarSelIds.filter(x=>x!==id);
     _renderVincModal(editandoVincId?vinculos.find(x=>x.id===editandoVincId):null);
   }
   function onDigitarNomeNovo(texto){
@@ -572,11 +592,11 @@ const Materiais = (() => {
   }
 
   async function salvarVinculo(){
-    const tarefaId=_vincTarSelId;
-    if(!tarefaId){Utils.toast('Busque e selecione uma tarefa.','alerta');return;}
+    const tarefaIds=_vincTarSelIds.slice();
+    if(!tarefaIds.length){Utils.toast('Busque e selecione ao menos uma tarefa.','alerta');return;}
     const consumoPrevisto=parseFloat(document.getElementById('vinc-cp')?.value)||0;
     const consumoReal=parseFloat(document.getElementById('vinc-cr')?.value)||0;
-    const unidadeConsumo=document.getElementById('vinc-uc')?.value||'kg/m²';
+    const unidadeConsumo=document.getElementById('vinc-uc')?.value.trim()||'kg/m²';
     const observacoes=document.getElementById('vinc-obs')?.value||'';
     let materialId='';
 
@@ -589,11 +609,11 @@ const Materiais = (() => {
           tipo:document.getElementById('nm-tipo')?.value||'',
           fabricante:document.getElementById('nm-fab')?.value||'',
           referencia:document.getElementById('nm-ref')?.value||'',
-          unidade:document.getElementById('nm-und')?.value||'kg',
+          unidade:document.getElementById('nm-und')?.value.trim()||'kg',
           preco:parseFloat(document.getElementById('nm-preco')?.value)||0,
-          embalagemUnidade:document.getElementById('nm-emb-und')?.value||'',
+          embalagemUnidade:document.getElementById('nm-emb-und')?.value.trim()||'',
           embalagemQtd:parseFloat(document.getElementById('nm-emb-qtd')?.value)||0,
-          embalagemBaseUnidade:document.getElementById('nm-emb-base')?.value||'kg',
+          embalagemBaseUnidade:document.getElementById('nm-emb-base')?.value.trim()||'kg',
         });
       }catch(e){Utils.toast('Erro ao criar material.','erro');return;}
     } else {
@@ -601,17 +621,22 @@ const Materiais = (() => {
       if(!materialId){Utils.toast('Busque e selecione um material.','alerta');return;}
     }
 
-    if(!editandoVincId){
-      const existe=vinculos.find(v=>v.materialId===materialId&&v.tarefaId===tarefaId);
-      if(existe&&!Utils.confirmar('Material já vinculado a esta tarefa. Criar outro vínculo mesmo assim?'))return;
-    }
-
-    const data={materialId,tarefaId,consumoPrevisto,consumoReal,unidadeConsumo,observacoes};
     try{
-      if(editandoVincId)await Database.atualizar(obraId,COL_VIN,editandoVincId,data);
-      else await Database.criar(obraId,COL_VIN,data);
+      if(editandoVincId){
+        const data={materialId,tarefaId:tarefaIds[0],consumoPrevisto,consumoReal,unidadeConsumo,observacoes};
+        await Database.atualizar(obraId,COL_VIN,editandoVincId,data);
+        Utils.toast('Vínculo atualizado!','sucesso');
+      } else {
+        let criados=0,ignorados=0;
+        for(const tarefaId of tarefaIds){
+          const existe=vinculos.find(x=>x.materialId===materialId&&x.tarefaId===tarefaId);
+          if(existe){ignorados++;continue;}
+          await Database.criar(obraId,COL_VIN,{materialId,tarefaId,consumoPrevisto,consumoReal,unidadeConsumo,observacoes});
+          criados++;
+        }
+        Utils.toast(`${criados} vínculo(s) criado(s)`+(ignorados?` (${ignorados} já existente(s), ignorado(s))`:''),'sucesso');
+      }
       Utils.fecharModal('modal-material-vinc');
-      Utils.toast(`Material ${_modoVinc==='criar'?'criado e ':''}vinculado!`,'sucesso');
       editandoVincId=null;await carregar();
     }catch(e){console.error(e);Utils.toast('Erro.','erro');}
   }
@@ -628,7 +653,7 @@ const Materiais = (() => {
   return {init,carregar,renderizar,setAba,setFiltro,
     novoMaterialBib,editarMaterialBib,salvarMaterialBib,excluirMaterialBib,
     novoVinculo,editarVinculo,salvarVinculo,excluirVinculo,toggleModoVinc,
-    onBuscaMaterialVinc,selecionarMaterialVinc,onBuscaTarefaVinc,selecionarTarefaVinc,
+    onBuscaMaterialVinc,selecionarMaterialVinc,onBuscaTarefaVinc,selecionarTarefaVinc,removerTarefaVinc,
     onDigitarNomeNovo,usarExistenteAoCriar};
 })();
 function onObraChanged(){Materiais.init();}
