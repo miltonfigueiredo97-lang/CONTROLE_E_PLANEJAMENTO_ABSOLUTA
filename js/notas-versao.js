@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.15.0',
+  versaoAtual: 'V2.16.0',
 
   versoes: [
     {
@@ -1588,7 +1588,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.15.0',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-10',
       tipo: 'funcionalidade',
       titulo: 'Módulo Obras vira o hub central de navegação',
@@ -1603,7 +1603,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.14.2',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-10',
       tipo: 'correcao',
       titulo: 'Coluna Tarefa realmente redimensionável + mover múltiplas linhas',
@@ -1629,6 +1629,55 @@ const NotasVersao = {
         '  → Predecessoras remapeadas automaticamente após o movimento',
         '  → Testado: bloco de 2 linhas sobe/desce junto, para no topo',
         '    corretamente quando já está na primeira posição',
+      ]
+    },
+    {
+      versao: 'V2.16.0',
+      status: 'aberta',
+      data: '2026-07-11',
+      tipo: 'funcionalidade',
+      titulo: 'Módulo Concreto: Levantamento + Controle',
+      itens: [
+        'Novos módulos "Levantamento de Concreto" e "Controle de Concreto",',
+        '  integrados a partir do dashboard de concreto (antes em planilha',
+        '  Google Sheets + Apps Script separados) para dentro do sistema',
+        '  principal, com todos os dados agora no Firestore da obra.',
+        '',
+        'LEVANTAMENTO DE CONCRETO (aba Levantamentos):',
+        '  → Calculadora de volumes com diagramas: Pilar (retangular,',
+        '    redondo, L, T), Rampa e Escada (laje inclinada + patamares',
+        '    + degraus), envio direto para a base de peças',
+        '  → Base de peças com busca, filtro por andar/tipo e edição',
+        '  → Importação em lote (colar do Excel ou carregar TSV/CSV),',
+        '    com normalização automática de nomes de andar e modelo',
+        '    de planilha para download',
+        '  → Montagem de Concretagens em 4 passos: dados → vínculo de',
+        '    peças com % (bloqueia peças já 100% alocadas em outra',
+        '    concretagem) → configuração das BTs previstas → resumo',
+        '  → Configuração da ordem dos andares (arrastar e soltar)',
+        '',
+        'CONTROLE DE CONCRETO (aba Controle):',
+        '  → 6 KPIs: Volume Total, Previsto (+10%), Real Concretado,',
+        '    Executado de Projeto, Faltando e Índice de Perda',
+        '  → Alerta de peças com lançamento acima do volume de projeto',
+        '  → Lançamento e edição de BTs, com % relativo ao volume da',
+        '    peça NESTA concretagem e detecção de excesso considerando',
+        '    outras BTs já lançadas',
+        '  → Progresso por tipo de peça (acordeão) com detalhe da peça',
+        '    e histórico de lançamentos por concretagem',
+        '  → Status das BTs por concretagem (previsto × usado, perda/',
+        '    sobra de caminhão, perda de cocho)',
+        '  → Painel da última BT lançada',
+        '  → Exportação CSV de peças por concretagem',
+        '  → Aba Relatórios: gráficos donut (execução geral e',
+        '    distribuição de perdas), volume por andar (gráfico de',
+        '    barras SVG com 4 séries), resumo por tipo e índice',
+        '    detalhado por BT',
+        '',
+        'Regras de negócio preservadas do sistema original:',
+        '  → Editar concretagem substitui todos os vínculos e BTs',
+        '  → Excluir peça remove seus vínculos com concretagens',
+        '  → Editar BT já lançada substitui os lançamentos anteriores',
       ]
     }
   ],

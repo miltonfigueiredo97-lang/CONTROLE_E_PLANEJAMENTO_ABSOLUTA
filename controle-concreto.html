@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Histograma — Controle e Planejamento de Obras</title>
+  <title>Controle de Concreto — Controle e Planejamento de Obras</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/base.css">
@@ -56,13 +56,49 @@
       <button class="btn-logout" onclick="Auth.logout()" title="Sair">⏻</button>
     </div>
   </aside>
-  <header class="header"><div class="header-title"><h1>Histograma</h1></div><div class="header-actions" id="header-actions"></div></header>
-  <main class="content">
-    <div id="modulo-content">
-      <div class="estado-vazio"><div class="icone">🚧</div><p>Módulo em desenvolvimento.</p><p class="text-sm text-muted">Será construído conforme o roadmap do projeto.</p></div>
+
+  <header class="header">
+    <div class="header-title">
+      <h1>Controle de Concreto</h1>
+      <div class="header-breadcrumb"><a href="controle.html">Controle</a><span class="sep">›</span><span>Concreto</span></div>
     </div>
-  </main>
+    <div class="header-actions">
+      <a class="btn btn-secundario btn-sm" href="levantamento-concreto.html">🪨 Levantamento Concreto</a>
+    </div>
+  </header>
+
+  <main class="content" id="cc-content"></main>
 </div>
+
+<!-- MODAL: Detalhe da peça -->
+<div class="modal-overlay" id="modal-cc-detalhe">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <h3 id="cc-detalhe-titulo">⬡ Peça</h3>
+      <button class="modal-close" onclick="Utils.fecharModal('modal-cc-detalhe')">&times;</button>
+    </div>
+    <div class="modal-body" id="cc-detalhe-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-cc-detalhe')">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Lançar / Editar BT -->
+<div class="modal-overlay" id="modal-cc-bt">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <h3>⊕ Lançar BT</h3>
+      <button class="modal-close" onclick="Utils.fecharModal('modal-cc-bt')">&times;</button>
+    </div>
+    <div class="modal-body" id="cc-bt-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-cc-bt')">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Firebase SDKs -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -74,7 +110,8 @@
 <script src="js/permissions.js"></script>
 <script src="js/audit.js"></script>
 <script src="js/utils.js"></script>
-<script src="js/histograma.js"></script>
-<script>document.addEventListener('DOMContentLoaded', () => { Utils.initPagina(); });</script>
+<script src="js/concreto-calculos.js"></script>
+<script src="js/controle-concreto.js"></script>
+<script>document.addEventListener('DOMContentLoaded', () => { ControleConcreto.init(); });</script>
 </body>
 </html>

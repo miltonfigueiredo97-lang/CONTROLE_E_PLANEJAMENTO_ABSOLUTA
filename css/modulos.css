@@ -392,3 +392,68 @@
   .ar-layout { grid-template-columns: 1fr; height: auto; }
   .ar-tree { max-height: 300px; }
 }
+
+/* ============================================
+   MÓDULO: CONCRETO (Levantamento + Controle)
+   ============================================ */
+
+/* Toggle de abas (Operacional / Relatórios) */
+.aba-toggle {
+  display: inline-flex;
+  background: #f1f5f9;
+  border-radius: 100px;
+  padding: 3px;
+  gap: 2px;
+}
+.aba-btn {
+  border: none;
+  background: transparent;
+  padding: 7px 16px;
+  border-radius: 100px;
+  font-family: var(--font-principal);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--cor-texto-secundario);
+  cursor: pointer;
+  transition: all var(--transicao);
+  white-space: nowrap;
+}
+.aba-btn.ativo {
+  background: var(--cor-primaria);
+  color: var(--cor-dark-900);
+}
+.aba-btn:not(.ativo):hover { color: var(--cor-dark-900); }
+
+/* Calculadora: grid responsivo do esquema + campos */
+.lc-calc-grid { grid-template-columns: 190px 1fr; }
+
+@media (max-width: 640px) {
+  .lc-calc-grid { grid-template-columns: 1fr !important; }
+  .lc-menu-grid { grid-template-columns: 1fr !important; }
+  .lc-bt-row { grid-template-columns: 1fr 1fr !important; }
+}
+
+/* Barra de progresso genérica usada nos gráficos de concreto */
+.cc-barra {
+  height: 7px;
+  background: #e2e8f0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+.cc-barra > span {
+  display: block;
+  height: 100%;
+}
+
+/* Cards de BT (Status das BTs por Concretagem) */
+.cc-bt-card {
+  background: #f8fafc;
+  border: 1.5px solid var(--cor-borda-light);
+  border-radius: var(--borda-radius);
+  padding: 10px 14px;
+  min-width: 98px;
+  cursor: pointer;
+  transition: border-color var(--transicao);
+}
+.cc-bt-card:hover { border-color: var(--cor-primaria); }
+

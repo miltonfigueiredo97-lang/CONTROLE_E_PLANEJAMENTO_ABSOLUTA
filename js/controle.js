@@ -1,6 +1,6 @@
 // ============================================
-// Módulo: controle
-// Stub — será implementado conforme roadmap
+// Módulo: Controle (Hub)
+// Lista os módulos de controle operacional da obra
 // ============================================
 
 const Controle = (() => {
@@ -13,15 +13,34 @@ const Controle = (() => {
   function renderizar() {
     const container = document.getElementById('modulo-content');
     if (!container) return;
+
+    const obraId = Router.getObraId();
+    if (!obraId) {
+      container.innerHTML = `<div class="estado-vazio"><div class="icone">✅</div><p>Selecione uma obra para acessar o controle.</p></div>`;
+      return;
+    }
+
     container.innerHTML = `
-      <div class="estado-vazio">
-        <div class="icone">🚧</div>
-        <p>Módulo em desenvolvimento.</p>
-        <p class="text-sm text-muted">Este módulo será construído conforme o roadmap do projeto.</p>
-      </div>`;
+      <div class="page-header">
+        <div>
+          <h2>Controle</h2>
+          <span class="subtitulo">Controle operacional e acompanhamento da produção</span>
+        </div>
+      </div>
+
+      <div class="cards-grid">
+        <div class="card obra-card" onclick="Router.navegar('controle-concreto.html')">
+          <div class="card-body">
+            <div class="obra-nome">🪨 Controle Concreto</div>
+            <div class="obra-info text-sm">Lançamento de BTs, previsto × realizado, índices de perda e relatórios.</div>
+            <div class="mt-1"><span class="badge badge-sucesso">Disponível</span></div>
+          </div>
+        </div>
+      </div>
+    `;
   }
 
   return { init, renderizar };
 })();
 
-function onObraChanged() { Controle.init(); }
+function onObraChanged() { Controle.renderizar(); }

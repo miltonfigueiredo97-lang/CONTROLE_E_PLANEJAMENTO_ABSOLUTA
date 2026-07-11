@@ -51,11 +51,11 @@ const Levantamento = (() => {
             <div class="mt-1"><span class="badge badge-neutro">Em breve</span></div>
           </div>
         </div>
-        <div class="card" style="opacity:0.5">
+        <div class="card obra-card" onclick="Router.navegar('levantamento-concreto.html')">
           <div class="card-body">
             <div class="obra-nome">🪨 Concreto</div>
-            <div class="obra-info text-sm">Volume de concreto por elemento e pavimento.</div>
-            <div class="mt-1"><span class="badge badge-neutro">Em breve</span></div>
+            <div class="obra-info text-sm">Volume de concreto por elemento e pavimento, com montagem de concretagens.</div>
+            <div class="mt-1"><span class="badge badge-sucesso">Disponível</span></div>
           </div>
         </div>
       </div>
