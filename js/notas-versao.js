@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.17.3',
+  versaoAtual: 'V2.17.4',
 
   versoes: [
     {
@@ -1755,7 +1755,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.17.3',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-11',
       tipo: 'correcao',
       titulo: 'Mão de Obra/Materiais: tarefas sem código, vínculo somado em uma linha, correção de bug ao selecionar tarefa',
@@ -1784,6 +1784,24 @@ const NotasVersao = {
         '  observações...) — antes o clique recarregava o modal inteiro',
         '  e perdia tudo. Agora só a lista de resultados e os',
         '  "chips" de tarefas selecionadas são atualizados.',
+      ]
+    },
+    {
+      versao: 'V2.17.4',
+      status: 'aberta',
+      data: '2026-07-11',
+      tipo: 'correcao',
+      titulo: 'Controle: hub do Concreto não estava sendo exibido',
+      itens: [
+        'BUG: a aba Controle continuava mostrando "Módulo em',
+        '  desenvolvimento" mesmo depois do hub com o card Controle',
+        '  Concreto ter sido implementado — o controle.html ainda',
+        '  chamava Utils.initPagina() direto no carregamento, em vez',
+        '  de Controle.init() (que é quem de fato desenha o hub)',
+        '  → Corrigido: controle.html agora inicializa via',
+        '    Controle.init(), igual às demais páginas do sistema',
+        '  → Card "🪨 Controle Concreto" volta a aparecer normalmente',
+        '    ao entrar em Controle',
       ]
     }
   ],
