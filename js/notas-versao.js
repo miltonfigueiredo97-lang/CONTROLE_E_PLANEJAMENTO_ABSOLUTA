@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.17.1',
+  versaoAtual: 'V2.17.2',
 
   versoes: [
     {
@@ -1702,7 +1702,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.17.1',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-11',
       tipo: 'melhoria',
       titulo: 'Tutorial: explicações completas por módulo',
@@ -1716,6 +1716,41 @@ const NotasVersao = {
         '  → Semanal, Diário, Medições, Mão de Obra, Materiais e Relatórios',
         '    com os fluxos reais de cada um',
         'Modal do tutorial ampliado (modal-lg) para acomodar o conteúdo',
+      ]
+    },
+    {
+      versao: 'V2.17.2',
+      status: 'aberta',
+      data: '2026-07-11',
+      tipo: 'correcao',
+      titulo: 'Concreto: navegação corrigida + visão fiel ao dashboard original',
+      itens: [
+        'NAVEGAÇÃO: removidos os links cruzados nos cabeçalhos de',
+        '  Levantamento Concreto e Controle Concreto — cada módulo só',
+        '  é acessado pelo seu próprio hub (Levantamentos / Controle),',
+        '  sem atalho de um para o outro pelo topo da página',
+        '',
+        'VISÃO: layout reconstruído para bater com o dashboard original',
+        '  (Next.js), recolorido para o Design System Absoluta — mesma',
+        '  estrutura, cores novas:',
+        '  → FiltroBar: cards clicáveis com dropdown (Andar / Concretagem/',
+        '    Andar), como no original, no lugar de <select> simples',
+        '  → KPIs: cartão com ícone circular colorido por categoria',
+        '    (verde/azul/roxo/vermelho/laranja), igual ao original',
+        '  → Launch Bar: banner escuro com selo, título, descrição e',
+        '    botão grande "⊕ LANÇAR BT →" (Controle) + atalho para o',
+        '    Levantamento — recriando a barra de lançamento do original',
+        '  → Última BT: painel com selo "Última BT", número grande,',
+        '    grid de 4 itens (Concretagem/Previsto/Executado/Perda ou',
+        '    Sobra) e selo "Concluído ✓", como no dashboard original',
+        '  → Painéis (Progresso por Tipo, Status das BTs, Relatórios)',
+        '    convertidos para o componente de painel do original',
+        '  → Tabelas e badges (Levantamento e Controle) convertidos',
+        '    para o estilo de tabela/badge do dashboard original',
+        '  → Wizard de Concretagem: indicador de passos com círculos',
+        '    numerados, igual ao original (era um conjunto de pílulas)',
+        '  → Cards de seleção (tipo de peça, menu de concretagem)',
+        '    convertidos para o "menuCard" do original',
       ]
     }
   ],

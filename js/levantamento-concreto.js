@@ -133,6 +133,7 @@ const LevantamentoConcreto = (() => {
     const volBTs = btsConfig.reduce((s, b) => s + (b.volumePrevisto || 0), 0);
 
     c.innerHTML = `
+      <div class="cc-view">
       <div class="page-header">
         <div>
           <h2>🪨 Levantamento de Concreto</h2>
@@ -140,40 +141,39 @@ const LevantamentoConcreto = (() => {
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <button class="btn btn-secundario btn-sm" onclick="LC.abrirCalculadora()">📐 Calculadora</button>
-          <button class="btn btn-secundario btn-sm" onclick="LC.abrirLevantamento()">📋 Levantamento${levantamento.length ? ` <span class="badge badge-amarelo" style="margin-left:4px;">${levantamento.length}</span>` : ''}</button>
+          <button class="btn btn-secundario btn-sm" onclick="LC.abrirLevantamento()">📋 Levantamento${levantamento.length ? ` <span class="cc-badge cc-badgePartial" style="margin-left:4px;">${levantamento.length}</span>` : ''}</button>
           <button class="btn btn-secundario btn-sm" onclick="LC.abrirImportar()">⊞ Importar Lote</button>
           <button class="btn btn-dark btn-sm" onclick="LC.abrirConcretagens()">◈ Concretagens</button>
           <button class="btn btn-primario btn-sm" onclick="LC.abrirNovaPeca()">+ Nova Peça</button>
         </div>
       </div>
 
-      <div class="cards-grid mb-3" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr));">
-        <div class="stat-card"><div class="stat-label">Peças cadastradas</div><div class="stat-valor">${pecas.length}</div></div>
-        <div class="stat-card"><div class="stat-label">Volume total de projeto</div><div class="stat-valor">${CC.fmt4(volTotal)} <span style="font-size:0.8rem;">m³</span></div></div>
-        <div class="stat-card"><div class="stat-label">Concretagens montadas</div><div class="stat-valor">${concretagens.length}</div></div>
-        <div class="stat-card"><div class="stat-label">BTs configuradas</div><div class="stat-valor">${btsConfig.length}</div><div class="stat-sub">${CC.fmt4(volBTs)} m³ previstos</div></div>
+      <div class="cc-kpiGrid" style="grid-template-columns:repeat(4,1fr);">
+        <div class="cc-kpi"><div class="cc-kpiIcon">⬡</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Peças cadastradas</div><div class="cc-kpiValue">${pecas.length}</div></div></div>
+        <div class="cc-kpi"><div class="cc-kpiIcon">📦</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Volume total de projeto</div><div class="cc-kpiValue">${CC.fmt4(volTotal)}<span class="cc-kpiUnit">m³</span></div></div></div>
+        <div class="cc-kpi"><div class="cc-kpiIcon">◈</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Concretagens montadas</div><div class="cc-kpiValue">${concretagens.length}</div></div></div>
+        <div class="cc-kpi"><div class="cc-kpiIcon">📋</div><div class="cc-kpiBody"><div class="cc-kpiLabel">BTs configuradas</div><div class="cc-kpiValue">${btsConfig.length}</div><div class="cc-kpiSub">${CC.fmt4(volBTs)} m³ previstos</div></div></div>
       </div>
 
-      <div class="card mb-3">
-        <div class="card-header"><h3>⬡ Peças</h3></div>
-        <div class="card-body">
-          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
-            <input type="text" class="form-control" id="lc-busca" placeholder="🔍 Buscar peça..." style="flex:1;min-width:160px;" value="${esc(fBusca)}" oninput="LC.onFiltro()">
-            <select class="form-control" id="lc-f-andar" style="max-width:200px;" onchange="LC.onFiltro()">
-              <option value="todos">Todos os andares</option>${optAndares(fAndar)}
-            </select>
-            <select class="form-control" id="lc-f-tipo" style="max-width:180px;" onchange="LC.onFiltro()">
-              <option value="todos">Todos os tipos</option>
-              ${[...new Set(pecas.map(p => p.tipo))].sort().map(t => `<option value="${esc(t)}" ${t === fTipo ? 'selected' : ''}>${esc(t)}</option>`).join('')}
-            </select>
-          </div>
-          <div id="lc-tabela-pecas"></div>
+      <div class="cc-panel">
+        <div class="cc-panelTitle">⬡ Peças</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+          <input type="text" class="form-control" id="lc-busca" placeholder="🔍 Buscar peça..." style="flex:1;min-width:160px;" value="${esc(fBusca)}" oninput="LC.onFiltro()">
+          <select class="form-control" id="lc-f-andar" style="max-width:200px;" onchange="LC.onFiltro()">
+            <option value="todos">Todos os andares</option>${optAndares(fAndar)}
+          </select>
+          <select class="form-control" id="lc-f-tipo" style="max-width:180px;" onchange="LC.onFiltro()">
+            <option value="todos">Todos os tipos</option>
+            ${[...new Set(pecas.map(p => p.tipo))].sort().map(t => `<option value="${esc(t)}" ${t === fTipo ? 'selected' : ''}>${esc(t)}</option>`).join('')}
+          </select>
         </div>
+        <div id="lc-tabela-pecas"></div>
       </div>
 
-      <div class="card">
-        <div class="card-header"><h3>◈ Concretagens</h3></div>
-        <div class="card-body" id="lc-tabela-concs"></div>
+      <div class="cc-panel">
+        <div class="cc-panelTitle">◈ Concretagens</div>
+        <div id="lc-tabela-concs"></div>
+      </div>
       </div>
     `;
     renderTabelaPecas();
@@ -205,32 +205,32 @@ const LevantamentoConcreto = (() => {
     });
 
     if (!lista.length) {
-      el.innerHTML = `<div class="estado-vazio" style="padding:24px;"><div class="icone">⬡</div><p>Nenhuma peça encontrada. Use a calculadora ou importe em lote.</p></div>`;
+      el.innerHTML = `<div class="cc-empty">⬡<br>Nenhuma peça encontrada. Use a calculadora ou importe em lote.</div>`;
       return;
     }
     const volFiltro = lista.reduce((s, p) => s + (p.volume || 0), 0);
     el.innerHTML = `
-      <div style="max-height:480px;overflow-y:auto;">
-      <table class="tabela">
+      <div class="cc-tableWrap" style="max-height:480px;overflow-y:auto;">
+      <table class="cc-table">
         <thead><tr><th>Nome</th><th>Tipo</th><th>Andar</th><th class="col-num">Volume (m³)</th><th class="col-centro">Concretado</th><th class="col-acoes"></th></tr></thead>
         <tbody>
           ${lista.map(p => {
             const pct = CC.pctConcretado(p, lancamentos);
-            const badge = pct >= 100 ? 'badge-sucesso' : pct > 0 ? 'badge-alerta' : 'badge-neutro';
+            const badge = pct >= 100 ? 'cc-badgeComplete' : pct > 0 ? 'cc-badgePartial' : 'cc-badgePending';
             return `<tr>
               <td style="font-weight:600;">${esc(p.nome)}</td>
               <td>${esc(p.tipo)}</td>
               <td>${esc(p.andar)}</td>
-              <td class="col-num" style="font-family:var(--font-mono);">${CC.fmt4(p.volume)}</td>
-              <td class="col-centro"><span class="badge ${badge}">${CC.fmt1(pct)}%</span></td>
+              <td class="col-num cc-tdMono">${CC.fmt4(p.volume)}</td>
+              <td class="col-centro"><span class="cc-badge ${badge}">${CC.fmt1(pct)}%</span></td>
               <td class="col-acoes">
                 <button class="btn btn-secundario btn-sm" onclick="LC.abrirEditarPeca('${p.id}')">✎</button>
-                <button class="btn btn-secundario btn-sm" style="color:#ef4444;" onclick="LC.excluirPeca('${p.id}')">🗑</button>
+                <button class="btn btn-secundario btn-sm" style="color:var(--cv-red);" onclick="LC.excluirPeca('${p.id}')">🗑</button>
               </td>
             </tr>`;
           }).join('')}
         </tbody>
-        <tfoot><tr><td colspan="3" style="font-weight:700;">${lista.length} peça${lista.length !== 1 ? 's' : ''}</td><td class="col-num" style="font-family:var(--font-mono);font-weight:700;">${CC.fmt4(volFiltro)}</td><td colspan="2"></td></tr></tfoot>
+        <tfoot><tr><td colspan="3" style="font-weight:700;">${lista.length} peça${lista.length !== 1 ? 's' : ''}</td><td class="col-num cc-tdMono" style="font-weight:700;">${CC.fmt4(volFiltro)}</td><td colspan="2"></td></tr></tfoot>
       </table>
       </div>
     `;
@@ -240,12 +240,13 @@ const LevantamentoConcreto = (() => {
     const el = document.getElementById('lc-tabela-concs');
     if (!el) return;
     if (!concretagens.length) {
-      el.innerHTML = `<div class="estado-vazio" style="padding:24px;"><div class="icone">◈</div><p>Nenhuma concretagem montada. Clique em "◈ Concretagens" para criar.</p></div>`;
+      el.innerHTML = `<div class="cc-empty">◈<br>Nenhuma concretagem montada. Clique em "◈ Concretagens" para criar.</div>`;
       return;
     }
     const lista = [...concretagens].sort((a, b) => (a.numero || 0) - (b.numero || 0));
     el.innerHTML = `
-      <table class="tabela">
+      <div class="cc-tableWrap">
+      <table class="cc-table">
         <thead><tr><th>Nº</th><th>Data</th><th>Descrição</th><th class="col-centro">Peças</th><th class="col-num">Vol. vinculado (m³)</th><th class="col-centro">BTs</th><th class="col-num">Vol. BTs (m³)</th><th class="col-acoes"></th></tr></thead>
         <tbody>
           ${lista.map(c => {
@@ -257,21 +258,22 @@ const LevantamentoConcreto = (() => {
             const bts = btsConfig.filter(b => b.concretagemId === c.id);
             const volBts = bts.reduce((s, b) => s + (b.volumePrevisto || 0), 0);
             return `<tr>
-              <td style="font-family:var(--font-mono);font-weight:700;">Nº ${c.numero}</td>
-              <td style="font-family:var(--font-mono);">${esc(c.data || '')}</td>
+              <td class="cc-tdAccent" style="font-weight:700;">Nº ${c.numero}</td>
+              <td class="cc-tdMono">${esc(c.data || '')}</td>
               <td>${esc(c.descricao || '—')}</td>
               <td class="col-centro">${vincs.length}</td>
-              <td class="col-num" style="font-family:var(--font-mono);">${CC.fmt4(volVinc)}</td>
+              <td class="col-num cc-tdMono">${CC.fmt4(volVinc)}</td>
               <td class="col-centro">${bts.length}</td>
-              <td class="col-num" style="font-family:var(--font-mono);">${CC.fmt4(volBts)}</td>
+              <td class="col-num cc-tdMono">${CC.fmt4(volBts)}</td>
               <td class="col-acoes">
                 <button class="btn btn-secundario btn-sm" onclick="LC.editarConcretagem('${c.id}')">✎</button>
-                <button class="btn btn-secundario btn-sm" style="color:#ef4444;" onclick="LC.excluirConcretagem('${c.id}')">🗑</button>
+                <button class="btn btn-secundario btn-sm" style="color:var(--cv-red);" onclick="LC.excluirConcretagem('${c.id}')">🗑</button>
               </td>
             </tr>`;
           }).join('')}
         </tbody>
       </table>
+      </div>
     `;
   }
 
@@ -384,12 +386,10 @@ const LevantamentoConcreto = (() => {
             { id: 'rampa', icon: '⟋', label: 'Rampa', sub: 'Comp × Larg × Esp. Laje' },
             { id: 'escada', icon: '🪜', label: 'Escada', sub: 'Laje + Patamares + Degraus' },
           ].map(t => `
-            <div class="card obra-card" style="text-align:center;cursor:pointer;" onclick="LC.calcTipoPeca('${t.id}')">
-              <div class="card-body">
-                <div style="font-size:2rem;margin-bottom:6px;">${t.icon}</div>
-                <div class="obra-nome">${t.label}</div>
-                <div class="obra-info text-sm">${t.sub}</div>
-              </div>
+            <div class="cc-menuCard" style="text-align:center;" onclick="LC.calcTipoPeca('${t.id}')">
+              <div class="cc-menuCardIcon">${t.icon}</div>
+              <div class="cc-menuCardTitle">${t.label}</div>
+              <div class="cc-menuCardSub">${t.sub}</div>
             </div>`).join('')}
         </div>`;
       return;
@@ -594,7 +594,7 @@ const LevantamentoConcreto = (() => {
     const el = document.getElementById('lc-lev-body');
     if (!el) return;
     if (!levantamento.length) {
-      el.innerHTML = `<div class="estado-vazio" style="padding:24px;"><div class="icone">📋</div><p>Levantamento vazio. Use a calculadora para adicionar peças.</p></div>`;
+      el.innerHTML = `<div class="cc-empty">📋<br>Levantamento vazio. Use a calculadora para adicionar peças.</div>`;
       return;
     }
     const selecionados = levantamento.filter(i => levSel.has(i.id));
@@ -939,26 +939,22 @@ const LevantamentoConcreto = (() => {
     if (cw.modo === 'menu') {
       el.innerHTML = `
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;" class="lc-menu-grid">
-          <div class="card obra-card" style="cursor:pointer;text-align:center;" onclick="LC.iniciarNovaConc()">
-            <div class="card-body">
-              <div style="font-size:1.8rem;margin-bottom:4px;">＋</div>
-              <div class="obra-nome">Nova Concretagem</div>
-              <div class="obra-info text-sm">Criar do zero com peças e BTs</div>
-            </div>
+          <div class="cc-menuCard" style="text-align:center;" onclick="LC.iniciarNovaConc()">
+            <div class="cc-menuCardIcon">＋</div>
+            <div class="cc-menuCardTitle">Nova Concretagem</div>
+            <div class="cc-menuCardSub">Criar do zero com peças e BTs</div>
           </div>
-          <div class="card" style="text-align:center;">
-            <div class="card-body">
-              <div style="font-size:1.8rem;margin-bottom:4px;">✎</div>
-              <div class="obra-nome">Editar / Excluir</div>
-              <select class="form-control mt-1" onchange="LC.cwSetConcSel(this.value)">
-                <option value="">— selecione —</option>
-                ${[...concretagens].sort((a, b) => a.numero - b.numero).map(c =>
-                  `<option value="${c.id}">Nº${c.numero} — ${esc(c.data || '')}${c.descricao ? ` | ${esc(c.descricao)}` : ''}</option>`).join('')}
-              </select>
-              <div style="display:flex;gap:8px;margin-top:10px;">
-                <button class="btn btn-primario btn-sm" style="flex:1;" onclick="LC.cwIniciarEditar()">Editar →</button>
-                <button class="btn btn-secundario btn-sm" style="color:#ef4444;" onclick="LC.cwExcluirSelecionada()">🗑</button>
-              </div>
+          <div class="cc-menuCard" style="text-align:center;cursor:default;">
+            <div class="cc-menuCardIcon">✎</div>
+            <div class="cc-menuCardTitle">Editar / Excluir</div>
+            <select class="form-control mt-1" onchange="LC.cwSetConcSel(this.value)">
+              <option value="">— selecione —</option>
+              ${[...concretagens].sort((a, b) => a.numero - b.numero).map(c =>
+                `<option value="${c.id}">Nº${c.numero} — ${esc(c.data || '')}${c.descricao ? ` | ${esc(c.descricao)}` : ''}</option>`).join('')}
+            </select>
+            <div style="display:flex;gap:8px;margin-top:10px;">
+              <button class="btn btn-primario btn-sm" style="flex:1;" onclick="LC.cwIniciarEditar()">Editar →</button>
+              <button class="btn btn-secundario btn-sm" style="color:var(--cv-red);" onclick="LC.cwExcluirSelecionada()">🗑</button>
             </div>
           </div>
         </div>`;
@@ -967,14 +963,13 @@ const LevantamentoConcreto = (() => {
 
     // Wizard
     const stepsHtml = `
-      <div style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;">
+      <div class="cc-steps">
         ${['Dados', 'Peças', 'BTs', 'Resumo'].map((label, i) => {
           const n = i + 1;
           const ativo = cw.step === n, feito = cw.step > n;
-          return `<div style="display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:100px;font-size:0.78rem;font-weight:600;
-            background:${ativo ? 'var(--cor-primaria)' : feito ? 'var(--cor-dark-800,#1a1a1a)' : '#f1f5f9'};
-            color:${ativo ? '#000' : feito ? '#fff' : 'var(--cor-texto-muted)'};">
-            <span>${feito ? '✓' : n}</span> ${label}
+          return `<div class="cc-step ${ativo ? 'cc-stepActive' : ''} ${feito ? 'cc-stepDone' : ''}">
+            <span class="cc-stepNum">${feito ? '✓' : n}</span>
+            <span class="cc-stepLabel">${label}</span>
           </div>`;
         }).join('')}
       </div>`;
@@ -1038,7 +1033,7 @@ const LevantamentoConcreto = (() => {
           <button class="btn btn-secundario btn-sm" onclick="LC.cwAddBT()">+ Adicionar BT</button>
         </div>
         <div id="lc-cw-bts">
-          ${!cw.bts.length ? `<div class="estado-vazio" style="padding:20px;"><p>Clique em "+ Adicionar BT" para configurar as betonadas.</p></div>` :
+          ${!cw.bts.length ? `<div class="cc-empty">Clique em "+ Adicionar BT" para configurar as betonadas.</div>` :
           cw.bts.map((b, i) => `
             <div style="display:grid;grid-template-columns:70px 110px 1fr 1fr auto;gap:8px;margin-bottom:8px;align-items:end;" class="lc-bt-row">
               <div class="form-grupo" style="margin-bottom:0;"><label style="font-size:0.68rem;">BT Nº</label><input type="number" min="1" class="form-control" value="${esc(b.numero)}" oninput="LC.cwUpdBT(${i}, 'numero', this.value)"></div>
@@ -1058,9 +1053,9 @@ const LevantamentoConcreto = (() => {
     // Step 4: resumo
     const volTotal = cwVolTotalVinculos();
     el.innerHTML = `${stepsHtml}
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;" class="lc-menu-grid">
-        <div class="stat-card"><div class="stat-label">Concretagem</div><div class="stat-valor">Nº ${esc(cw.numero)}</div><div class="stat-sub">${esc(cw.data)}${cw.desc ? ` · ${esc(cw.desc)}` : ''}</div></div>
-        <div class="stat-card"><div class="stat-label">Volume Total</div><div class="stat-valor">${CC.fmt4(volTotal)} <span style="font-size:0.8rem;">m³</span></div><div class="stat-sub">${cw.vinculos.length} peças · ${cw.bts.length} BTs</div></div>
+      <div class="cc-kpiGrid" style="grid-template-columns:1fr 1fr;margin-bottom:14px;">
+        <div class="cc-kpi"><div class="cc-kpiIcon">◈</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Concretagem</div><div class="cc-kpiValue" style="font-size:18px;">Nº ${esc(cw.numero)}</div><div class="cc-kpiSub">${esc(cw.data)}${cw.desc ? ` · ${esc(cw.desc)}` : ''}</div></div></div>
+        <div class="cc-kpi"><div class="cc-kpiIcon">📦</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Volume Total</div><div class="cc-kpiValue">${CC.fmt4(volTotal)}<span class="cc-kpiUnit">m³</span></div><div class="cc-kpiSub">${cw.vinculos.length} peças · ${cw.bts.length} BTs</div></div></div>
       </div>
       <div style="margin-bottom:12px;">
         ${cw.vinculos.slice(0, 6).map(v => {
@@ -1109,7 +1104,7 @@ const LevantamentoConcreto = (() => {
       return true;
     });
     if (!visiveis.length) {
-      el.innerHTML = `<div class="estado-vazio" style="padding:20px;"><p>Nenhuma peça encontrada.</p></div>`;
+      el.innerHTML = `<div class="cc-empty">Nenhuma peça encontrada.</div>`;
       return;
     }
     el.innerHTML = visiveis.map(p => {
@@ -1303,7 +1298,7 @@ const LevantamentoConcreto = (() => {
       </div>
       <p class="text-sm text-muted mb-2">Arraste para reordenar · ▲▼ para mover · ✕ remove da lista</p>
       <div style="border:1px solid var(--cor-borda-light);border-radius:8px;margin-bottom:4px;">
-        ${!cfgOrdem.length ? `<div class="estado-vazio" style="padding:20px;"><p>Nenhum andar cadastrado ainda.</p></div>` :
+        ${!cfgOrdem.length ? `<div class="cc-empty">Nenhum andar cadastrado ainda.</div>` :
         cfgOrdem.map((a, i) => `
           <div draggable="true"
             ondragstart="LC.cfgDragStart(${i})" ondragover="event.preventDefault();LC.cfgDragOver(${i})" ondragend="LC.cfgDragEnd()"

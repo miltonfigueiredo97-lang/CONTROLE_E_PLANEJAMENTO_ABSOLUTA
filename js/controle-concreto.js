@@ -28,6 +28,8 @@ const ControleConcreto = (() => {
   let filtroConc = 'todas';
   let filtroRelConc = 'todas';
   let filtroRelAndar = 'todos';
+  let filtroBarAberto = null; // 'andar' | 'concretagem' | null (FiltroBar original)
+  let relFiltroBarAberto = null;
 
   // Estado dos gráficos
   let tipoAberto = null;      // GraficoTipos: tipo expandido
@@ -119,33 +121,31 @@ const ControleConcreto = (() => {
 
     if (!pecas.length && !concretagens.length) {
       c.innerHTML = `
+        <div class="cc-view">
         <div class="page-header">
           <div><h2>📊 Controle de Concreto</h2><span class="subtitulo">Lançamento de BTs, previsto × realizado e índices de perda</span></div>
         </div>
-        <div class="estado-vazio"><div class="icone">🪨</div>
-          <p>Nenhuma peça ou concretagem cadastrada ainda.<br>Monte a base no <a href="levantamento-concreto.html" style="color:var(--cor-primaria-dark,#b8960a);font-weight:600;">Levantamento de Concreto</a>.</p>
+        <div class="cc-empty"><div style="font-size:2rem;margin-bottom:8px;">🪨</div>
+          Nenhuma peça ou concretagem cadastrada ainda.<br>Monte a base no <a href="levantamento-concreto.html" style="color:var(--cor-primaria-dark);font-weight:600;">Levantamento de Concreto</a>.
+        </div>
         </div>`;
       return;
     }
 
     c.innerHTML = `
+      <div class="cc-view">
       <div class="page-header">
         <div>
           <h2>📊 Controle de Concreto</h2>
           <span class="subtitulo">Lançamento de BTs, previsto × realizado e índices de perda</span>
         </div>
-        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-          <div class="aba-toggle">
-            <button class="aba-btn ${aba === 'operacional' ? 'ativo' : ''}" onclick="CCON.setAba('operacional')">Operacional</button>
-            <button class="aba-btn ${aba === 'relatorios' ? 'ativo' : ''}" onclick="CCON.setAba('relatorios')">Relatórios</button>
-          </div>
-          ${aba === 'operacional' ? `
-            <button class="btn btn-secundario btn-sm" onclick="CCON.exportarCSV()">⬇ CSV</button>
-            <button class="btn btn-primario btn-sm" onclick="CCON.abrirLancarBT()">⊕ Lançar BT</button>
-          ` : ''}
+        <div class="aba-toggle">
+          <button class="aba-btn ${aba === 'operacional' ? 'ativo' : ''}" onclick="CCON.setAba('operacional')">Operacional</button>
+          <button class="aba-btn ${aba === 'relatorios' ? 'ativo' : ''}" onclick="CCON.setAba('relatorios')">Relatórios</button>
         </div>
       </div>
       <div id="cc-body"></div>
+      </div>
     `;
     if (aba === 'operacional') renderOperacional();
     else renderRelatorios();
@@ -156,9 +156,6 @@ const ControleConcreto = (() => {
   // ══════════════════════════════════════════
   // ABA OPERACIONAL
   // ══════════════════════════════════════════
-  function setFiltroAndar(v) { filtroAndar = v; if (v !== 'todos') filtroConc = 'todas'; renderOperacional(); }
-  function setFiltroConc(v) { filtroConc = v; renderOperacional(); }
-
   function renderOperacional() {
     const el = document.getElementById('cc-body');
     if (!el) return;
@@ -205,60 +202,107 @@ const ControleConcreto = (() => {
       });
     }
 
+    // Labels do FiltroBar
+    const labelAndar = filtroAndar === 'todos' ? 'Todos os Andares' : filtroAndar;
+    const concSel = concretagens.find(c => c.id === filtroConc);
+    const labelConc = filtroConc === 'todas' ? 'Todas as Concretagens' : `Nº ${concSel?.numero} — ${concSel?.data || ''}`;
+
     el.innerHTML = `
-      <div class="card mb-3">
-        <div class="card-body" style="display:flex;gap:14px;flex-wrap:wrap;align-items:end;">
-          <div class="form-grupo" style="margin-bottom:0;min-width:180px;">
-            <label>Andar</label>
-            <select class="form-control" onchange="CCON.setFiltroAndar(this.value)">
-              <option value="todos">Todos</option>
-              ${todosAndares().map(a => `<option value="${esc(a)}" ${filtroAndar === a ? 'selected' : ''}>${esc(a)}</option>`).join('')}
-            </select>
+      <div class="cc-filtroBar">
+        ${filtroBarAberto ? `<div class="cc-filtroOverlay" onclick="CCON.fbFechar()"></div>` : ''}
+        <div class="cc-filtroCard ${filtroBarAberto === 'andar' ? 'cc-filtroCardActive' : ''}" onclick="CCON.fbToggle('andar')">
+          <div class="cc-filtroCardLeft">
+            <span class="cc-filtroCardLabel">Andar</span>
+            <span class="cc-filtroCardValue ${filtroAndar !== 'todos' ? 'cc-filtroCardValueActive' : ''}">${esc(labelAndar)}</span>
           </div>
-          <div class="form-grupo" style="margin-bottom:0;min-width:260px;">
-            <label>Concretagem</label>
-            <select class="form-control" onchange="CCON.setFiltroConc(this.value)">
-              <option value="todas">Todas</option>
-              ${[...concsFiltro].sort((a, b) => a.numero - b.numero).map(c => `<option value="${c.id}" ${filtroConc === c.id ? 'selected' : ''}>${esc(concLabel(c))}</option>`).join('')}
-            </select>
+          <span class="cc-filtroChevron ${filtroBarAberto === 'andar' ? 'cc-filtroChevronOpen' : ''}">▼</span>
+          ${filtroBarAberto === 'andar' ? `
+            <div class="cc-filtroDropdown" onclick="event.stopPropagation()">
+              <button class="cc-filtroOption ${filtroAndar === 'todos' ? 'cc-filtroOptionActive' : ''}" onclick="CCON.fbSelAndar('todos')">Todos os Andares ${filtroAndar === 'todos' ? '✓' : ''}</button>
+              ${todosAndares().map(a => `<button class="cc-filtroOption ${filtroAndar === a ? 'cc-filtroOptionActive' : ''}" onclick="CCON.fbSelAndar('${esc(a).replace(/'/g, "\\'")}')">${esc(a)} ${filtroAndar === a ? '✓' : ''}</button>`).join('')}
+            </div>` : ''}
+        </div>
+        <div class="cc-filtroCard ${filtroBarAberto === 'concretagem' ? 'cc-filtroCardActive' : ''}" onclick="CCON.fbToggle('concretagem')">
+          <div class="cc-filtroCardLeft">
+            <span class="cc-filtroCardLabel">Concretagem</span>
+            <span class="cc-filtroCardValue ${filtroConc !== 'todas' ? 'cc-filtroCardValueActive' : ''}">${esc(labelConc)}</span>
           </div>
+          <span class="cc-filtroChevron ${filtroBarAberto === 'concretagem' ? 'cc-filtroChevronOpen' : ''}">▼</span>
+          ${filtroBarAberto === 'concretagem' ? `
+            <div class="cc-filtroDropdown" onclick="event.stopPropagation()">
+              <button class="cc-filtroOption ${filtroConc === 'todas' ? 'cc-filtroOptionActive' : ''}" onclick="CCON.fbSelConc('todas')">Todas as Concretagens ${filtroConc === 'todas' ? '✓' : ''}</button>
+              ${[...concsFiltro].sort((a, b) => a.numero - b.numero).map(c => `<button class="cc-filtroOption ${filtroConc === c.id ? 'cc-filtroOptionActive' : ''}" onclick="CCON.fbSelConc('${c.id}')">${esc(concLabel(c))} ${filtroConc === c.id ? '✓' : ''}</button>`).join('')}
+              ${!concsFiltro.length ? `<div style="padding:16px;color:var(--cv-text3);font-size:13px;text-align:center;">Nenhuma concretagem para este andar</div>` : ''}
+            </div>` : ''}
         </div>
       </div>
 
-      <div class="cards-grid mb-3" style="grid-template-columns:repeat(auto-fit,minmax(175px,1fr));">
-        <div class="stat-card"><div class="stat-label">Volume Total Projeto</div><div class="stat-valor">${CC.fmt4(kpis.totalVol)} <span style="font-size:0.75rem;">m³</span></div><div class="stat-sub">${pecasKPI.length} peças</div></div>
-        <div class="stat-card"><div class="stat-label">Vol. Previsto (+10%)</div><div class="stat-valor">${CC.fmt4(kpis.totalVol * 1.1)} <span style="font-size:0.75rem;">m³</span></div><div class="stat-sub">projeto + 10% perda esperada</div></div>
-        <div class="stat-card" style="border-left:3px solid #16a34a;"><div class="stat-label">Volume Real Concretado</div><div class="stat-valor" style="color:#16a34a;">${CC.fmt4(kpis.concVol)} <span style="font-size:0.75rem;">m³</span></div><div class="stat-sub">soma dos previstos das BTs lançadas</div></div>
-        <div class="stat-card" style="border-left:3px solid #3b82f6;"><div class="stat-label">Vol. Executado Projeto 🚛</div><div class="stat-valor" style="color:#3b82f6;">${CC.fmt4(kpis.execVol)} <span style="font-size:0.75rem;">m³</span></div><div class="stat-sub">${CC.fmt1(kpis.totalVol > 0 ? kpis.execVol / kpis.totalVol * 100 : 0)}% do projeto · saída real do caminhão</div></div>
-        <div class="stat-card"><div class="stat-label">Faltando (Projeto)</div><div class="stat-valor">${CC.fmt4(kpis.projFaltando)} <span style="font-size:0.75rem;">m³</span></div><div class="stat-sub">projeto − BTs lançadas</div></div>
-        <div class="stat-card" style="border-left:3px solid #f97316;"><div class="stat-label">Índice de Perda</div><div class="stat-valor" style="color:#f97316;">${CC.fmt1(pInfo.indice)}<span style="font-size:0.75rem;">%</span></div><div class="stat-sub">(prev.−exec.)/prev. s/ cocho · cocho: ${CC.fmt4(pInfo.perdaCocho)} m³</div></div>
+      <div class="cc-kpiGrid">
+        <div class="cc-kpi"><div class="cc-kpiIcon">📦</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Volume Total do Projeto</div><div class="cc-kpiValue">${CC.fmt4(kpis.totalVol)}<span class="cc-kpiUnit">m³</span></div><div class="cc-kpiSub">${pecasKPI.length} peças ${filtroConc !== 'todas' ? 'nesta concretagem' : 'cadastradas'}</div></div></div>
+        <div class="cc-kpi cc-kpiBlue"><div class="cc-kpiIcon">📊</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Vol. Previsto (proj.×1.1)</div><div class="cc-kpiValue">${CC.fmt4(kpis.totalVol * 1.1)}<span class="cc-kpiUnit">m³</span></div><div class="cc-kpiSub">volume projeto + 10% perda esperada</div></div></div>
+        <div class="cc-kpi cc-kpiGreen"><div class="cc-kpiIcon">✅</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Volume Real Concretado</div><div class="cc-kpiValue">${CC.fmt4(kpis.concVol)}<span class="cc-kpiUnit">m³</span></div><div class="cc-kpiSub">soma dos volumes previstos das BTs lançadas</div></div></div>
+        <div class="cc-kpi cc-kpiPurple"><div class="cc-kpiIcon">🚛</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Volume Executado de Projeto</div><div class="cc-kpiValue">${CC.fmt4(kpis.execVol)}<span class="cc-kpiUnit">m³</span></div><div class="cc-kpiSub">${CC.fmt1(kpis.totalVol > 0 ? kpis.execVol / kpis.totalVol * 100 : 0)}% do projeto · saída real do caminhão</div></div></div>
+        <div class="cc-kpi cc-kpiRed"><div class="cc-kpiIcon">⚠️</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Faltando (Projeto)</div><div class="cc-kpiValue">${CC.fmt4(kpis.projFaltando)}<span class="cc-kpiUnit">m³</span></div><div class="cc-kpiSub">proj. − BTs lançadas</div></div></div>
+        <div class="cc-kpi cc-kpiOrange"><div class="cc-kpiIcon">📉</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Índice de Perda</div><div class="cc-kpiValue">${CC.fmt1(pInfo.indice)}<span class="cc-kpiUnit">%</span></div><div class="cc-kpiSub">(prev. − exec.) / prev. s/ cocho · cocho: ${CC.fmt4(pInfo.perdaCocho)} m³</div></div></div>
+      </div>
+
+      <div style="display:flex;justify-content:flex-end;margin-bottom:8px;">
+        <button style="background:var(--cv-surface2);border:1px solid var(--cv-border);color:var(--cv-text2);font-size:12px;padding:6px 14px;border-radius:var(--cv-radius-sm);cursor:pointer;display:flex;align-items:center;gap:6px;font-family:var(--cv-sans);" onclick="CCON.exportarCSV()">📥 Exportar Peças por Concretagem</button>
       </div>
 
       ${kpis.pecasExcesso.length ? `
-        <div class="card mb-3" style="border:1.5px solid #ef4444;">
-          <div class="card-body">
-            <div style="font-weight:700;color:#991b1b;margin-bottom:8px;">⚠️ ${kpis.pecasExcesso.length} peça${kpis.pecasExcesso.length !== 1 ? 's' : ''} com lançamento acima do projeto — excesso total: ${CC.fmt4(kpis.pecasExcesso.reduce((s, p) => s + p.excesso, 0))} m³</div>
+        <div class="cc-alertRed">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap;">
+            <span style="font-size:18px;">⚠️</span>
+            <span style="font-weight:700;font-size:14px;">${kpis.pecasExcesso.length} peça${kpis.pecasExcesso.length !== 1 ? 's' : ''} lançada${kpis.pecasExcesso.length !== 1 ? 's' : ''} além de 100% do projeto</span>
+            <span style="font-family:var(--cv-mono);font-size:11px;color:var(--cv-text3);margin-left:auto;">Excesso total: ${CC.fmt4(kpis.pecasExcesso.reduce((s, p) => s + p.excesso, 0))} m³</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px;">
             ${kpis.pecasExcesso.map(p => `
-              <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid #fee2e2;font-size:0.82rem;flex-wrap:wrap;">
-                <span style="font-weight:600;">${esc(p.nome)} <span style="color:var(--cor-texto-muted);font-weight:400;">· ${esc(p.andar)} · ${esc(p.tipo)}</span></span>
-                <span style="font-family:var(--font-mono);">Projeto ${CC.fmt4(p.volume)} m³ · Lançado ${CC.fmt4(p.lanTotal)} m³ <span class="badge badge-perigo">+${CC.fmt4(p.excesso)} m³</span></span>
+              <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 12px;background:rgba(239,68,68,0.06);border-radius:var(--cv-radius-sm);border-left:3px solid var(--cv-red);flex-wrap:wrap;">
+                <div><span style="font-weight:600;font-size:13px;color:var(--cv-text);">${esc(p.nome)}</span><span style="font-size:12px;color:var(--cv-text3);margin-left:8px;">${esc(p.andar)} · ${esc(p.tipo)}</span></div>
+                <div style="font-family:var(--cv-mono);font-size:12px;text-align:right;">
+                  <span style="color:var(--cv-text2);">Projeto: ${CC.fmt4(p.volume)} m³</span>
+                  <span style="color:var(--cv-red);font-weight:700;margin-left:12px;">Lançado: ${CC.fmt4(p.lanTotal)} m³</span>
+                  <span style="background:var(--cv-red);color:#fff;font-weight:700;font-size:11px;padding:2px 8px;border-radius:4px;margin-left:8px;">+${CC.fmt4(p.excesso)} m³ a mais</span>
+                </div>
               </div>`).join('')}
           </div>
+          <div style="margin-top:10px;font-size:11px;color:var(--cv-text3);">ℹ Corrija os lançamentos dessas peças — o Volume Real Concretado foi limitado ao projeto.</div>
         </div>` : ''}
 
-      <div class="card mb-3">
-        <div class="card-header"><h3>Progresso por Tipo de Peça <span style="font-size:0.7rem;color:var(--cor-texto-muted);font-weight:400;">▼ clique para expandir</span></h3></div>
-        <div class="card-body" id="cc-grafico-tipos"></div>
+      <div class="cc-launchBar">
+        <div class="cc-launchBarContent">
+          <div class="cc-launchBarLeft">
+            <div class="cc-launchBarBadge">⚡ Pronto para Lançamento</div>
+            <div class="cc-launchBarTitle">Lançamento de Concretagem</div>
+            <div class="cc-launchBarSub">Configure as concretagens no Levantamento e lance as BTs por aqui com agilidade.</div>
+          </div>
+          <div class="cc-launchBarRight">
+            <div class="cc-launchBarActions">
+              <a class="cc-launchBarSmallBtn" href="levantamento-concreto.html">
+                <span class="cc-launchBarSmallBtnIcon">🪨</span>
+                Levantamento
+                <span class="cc-launchBarSmallBtnSub">Peças e concretagens</span>
+              </a>
+            </div>
+            <button class="cc-btnLaunch" onclick="CCON.abrirLancarBT()">⊕ LANÇAR BT →</button>
+          </div>
+        </div>
       </div>
 
-      <div class="cards-grid mb-3" style="grid-template-columns:2fr 1fr;" id="cc-linha-bts">
-        <div class="card">
-          <div class="card-header"><h3>Status das BTs por Concretagem</h3></div>
-          <div class="card-body" id="cc-grafico-bts"></div>
+      <div class="cc-grid2">
+        <div class="cc-panel">
+          <div class="cc-panelTitle">Progresso por Tipo <span style="font-family:var(--cv-mono);font-size:10px;color:var(--cv-text3);font-weight:400;text-transform:none;letter-spacing:0;">▼ clique para ver peças</span></div>
+          <div id="cc-grafico-tipos"></div>
         </div>
-        <div class="card">
-          <div class="card-header"><h3>Última BT Lançada</h3></div>
-          <div class="card-body" id="cc-ultima-bt"></div>
+
+        <div>
+          <div id="cc-ultima-bt"></div>
+          <div class="cc-panel">
+            <div class="cc-panelTitle">Status das BTs por Concretagem</div>
+            <div id="cc-grafico-bts"></div>
+          </div>
         </div>
       </div>
     `;
@@ -267,13 +311,19 @@ const ControleConcreto = (() => {
     renderUltimaBT();
   }
 
+  // ── FiltroBar (dropdown cards, igual ao original) ──
+  function fbToggle(tipo) { filtroBarAberto = filtroBarAberto === tipo ? null : tipo; renderOperacional(); }
+  function fbFechar() { filtroBarAberto = null; renderOperacional(); }
+  function fbSelAndar(v) { filtroAndar = v; filtroConc = 'todas'; filtroBarAberto = null; renderOperacional(); }
+  function fbSelConc(v) { filtroConc = v; filtroBarAberto = null; renderOperacional(); }
+
   // ── Progresso por tipo (acordeão) ───────────
   function renderGraficoTipos(ps, lans) {
     const el = document.getElementById('cc-grafico-tipos');
     if (!el) return;
     const dados = CC.calcPorTipo(ps, lans);
     if (!dados.length) {
-      el.innerHTML = `<div class="estado-vazio" style="padding:20px;"><p>Sem peças para exibir.</p></div>`;
+      el.innerHTML = `<div class="cc-empty">Sem peças para exibir.</div>`;
       return;
     }
     el.innerHTML = dados.map((t, i) => {
@@ -282,39 +332,39 @@ const ControleConcreto = (() => {
       return `
         <div style="margin-bottom:8px;">
           <div onclick="CCON.toggleTipo('${esc(t.tipo).replace(/'/g, "\\'")}')"
-            style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:${open ? 'var(--cor-primaria-light,#fef9e7)' : '#f8fafc'};border:1px solid ${open ? 'var(--cor-primaria)' : 'var(--cor-borda-light)'};border-radius:8px;cursor:pointer;">
-            <div style="width:12px;height:12px;background:${cor};border-radius:3px;flex-shrink:0;"></div>
+            style="display:flex;align-items:center;gap:14px;padding:14px 16px;background:${open ? 'var(--cor-primaria-ultra-light)' : 'var(--cv-surface2)'};border:1px solid ${open ? 'var(--cv-accent)' : 'var(--cv-border)'};cursor:pointer;transition:all 0.2s;">
+            <div style="width:14px;height:14px;background:${cor};flex-shrink:0;border-radius:2px;"></div>
             <div style="flex:1;">
-              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;flex-wrap:wrap;gap:4px;">
-                <span style="font-weight:700;font-size:0.92rem;text-transform:uppercase;">${esc(t.tipo)} <span style="font-family:var(--font-mono);font-size:0.72rem;color:var(--cor-texto-muted);font-weight:400;text-transform:none;">${t.count} peça${t.count !== 1 ? 's' : ''}</span></span>
-                <span style="display:flex;gap:12px;align-items:center;">
-                  <span style="font-family:var(--font-mono);font-size:0.82rem;color:#16a34a;font-weight:700;">${CC.fmt4(t.conc)} m³</span>
-                  <span style="font-family:var(--font-mono);font-size:0.72rem;color:var(--cor-texto-muted);">/ ${CC.fmt4(t.prog)} m³</span>
-                  <span style="font-family:var(--font-mono);font-size:0.9rem;color:var(--cor-primaria-dark,#b8960a);font-weight:700;">${CC.fmt1(t.pct)}%</span>
-                  <span style="color:var(--cor-texto-muted);font-size:0.75rem;">${open ? '▲' : '▼'}</span>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;flex-wrap:wrap;gap:6px;">
+                <span style="font-weight:700;font-size:15px;letter-spacing:0.5px;text-transform:uppercase;color:${open ? 'var(--cv-accent3)' : 'var(--cv-text)'};">${esc(t.tipo)} <span style="font-family:var(--cv-mono);font-size:11px;color:var(--cv-text3);margin-left:8px;font-weight:400;text-transform:none;">${t.count} peça${t.count !== 1 ? 's' : ''}</span></span>
+                <span style="display:flex;gap:16px;align-items:center;">
+                  <span style="font-family:var(--cv-mono);font-size:13px;color:var(--cv-green);font-weight:700;">${CC.fmt4(t.conc)} m³</span>
+                  <span style="font-family:var(--cv-mono);font-size:11px;color:var(--cv-text3);">/ ${CC.fmt4(t.prog)} m³</span>
+                  <span style="font-family:var(--cv-mono);font-size:14px;color:var(--cv-accent3);font-weight:700;min-width:52px;text-align:right;">${CC.fmt1(t.pct)}%</span>
+                  <span style="color:var(--cv-text3);font-size:13px;">${open ? '▲' : '▼'}</span>
                 </span>
               </div>
-              <div style="height:7px;background:#e2e8f0;border-radius:4px;overflow:hidden;">
-                <div style="height:100%;width:${Math.min(100, t.pct)}%;background:${t.pct >= 100 ? '#16a34a' : cor};"></div>
+              <div style="height:7px;background:var(--cv-surface);border-radius:1px;overflow:hidden;">
+                <div style="height:100%;width:${Math.min(100, t.pct)}%;background:${t.pct >= 100 ? 'var(--cv-green)' : cor};transition:width 0.5s;"></div>
               </div>
             </div>
           </div>
-          ${open ? `<div style="border:1px solid var(--cor-primaria);border-top:none;border-radius:0 0 8px 8px;background:#fff;">
+          ${open ? `<div style="border:1px solid var(--cv-accent);border-top:none;background:var(--cv-surface);">
             ${t.pecas.map(p => {
               const vc = Math.min(p.volume, CC.volLancadoPeca(p.id, lans));
               const pct = CC.pctConcretado(p, lans);
               const falt = Math.max(0, p.volume - vc);
               return `
-                <div onclick="event.stopPropagation();CCON.abrirDetalhePeca('${p.id}')" style="padding:10px 14px;border-bottom:1px solid var(--cor-borda-light);cursor:pointer;">
-                  <div style="display:flex;justify-content:space-between;margin-bottom:4px;flex-wrap:wrap;gap:4px;">
-                    <span style="font-size:0.85rem;font-weight:600;">${esc(p.nome)} <span style="color:var(--cor-texto-muted);font-size:0.72rem;font-weight:400;">· ${esc(p.andar)}</span></span>
-                    <span style="font-family:var(--font-mono);font-size:0.82rem;color:var(--cor-primaria-dark,#b8960a);font-weight:700;">${CC.fmt1(pct)}% 🔍</span>
+                <div onclick="event.stopPropagation();CCON.abrirDetalhePeca('${p.id}')" style="padding:12px 16px;border-bottom:1px solid var(--cv-border);cursor:pointer;">
+                  <div style="display:flex;justify-content:space-between;margin-bottom:5px;flex-wrap:wrap;gap:4px;">
+                    <span style="font-size:14px;font-weight:600;color:var(--cv-text);">${esc(p.nome)} <span style="color:var(--cv-text3);font-size:12px;font-weight:400;">· ${esc(p.andar)}</span></span>
+                    <span style="font-family:var(--cv-mono);font-size:14px;color:var(--cv-accent3);font-weight:700;">${CC.fmt1(pct)}% 🔍</span>
                   </div>
-                  <div style="height:5px;background:#f1f5f9;border-radius:3px;overflow:hidden;margin-bottom:4px;">
-                    <div style="height:100%;width:${Math.min(100, pct)}%;background:${pct >= 100 ? '#16a34a' : 'var(--cor-primaria)'};"></div>
+                  <div style="height:6px;background:var(--cv-surface2);border-radius:1px;overflow:hidden;margin-bottom:5px;">
+                    <div style="height:100%;width:${Math.min(100, pct)}%;background:${pct >= 100 ? 'var(--cv-green)' : 'var(--cv-accent)'};"></div>
                   </div>
-                  <div style="font-family:var(--font-mono);font-size:0.72rem;color:var(--cor-texto-muted);">
-                    feito ${CC.fmt4(vc)} m³ · faltando <span style="color:${falt < 0.005 ? '#16a34a' : '#ef4444'};">${falt < 0.005 ? '0' : CC.fmt4(falt)} m³</span> · projeto ${CC.fmt4(p.volume)} m³
+                  <div style="font-family:var(--cv-mono);font-size:12px;color:var(--cv-text3);">
+                    feito ${CC.fmt4(vc)} m³ · faltando <span style="color:${falt < 0.005 ? 'var(--cv-green)' : 'var(--cv-red)'};">${falt < 0.005 ? '0' : CC.fmt4(falt)} m³</span> · projeto ${CC.fmt4(p.volume)} m³
                   </div>
                 </div>`;
             }).join('')}
@@ -349,34 +399,34 @@ const ControleConcreto = (() => {
     document.getElementById('cc-detalhe-titulo').textContent = `⬡ ${p.nome}`;
     el.innerHTML = `
       <p class="text-sm text-muted mb-2">${esc(p.tipo)} · ${esc(p.andar)}</p>
-      <div class="cards-grid mb-2" style="grid-template-columns:repeat(3,1fr);">
-        <div class="stat-card"><div class="stat-label">Projeto</div><div class="stat-valor" style="font-size:1.1rem;">${CC.fmt4(p.volume)} <span style="font-size:0.7rem;">m³</span></div></div>
-        <div class="stat-card"><div class="stat-label">Concretado</div><div class="stat-valor" style="font-size:1.1rem;color:${excesso > 0 ? '#ef4444' : pct >= 100 ? '#16a34a' : 'inherit'};">${CC.fmt4(lanTotal)} <span style="font-size:0.7rem;">m³</span></div>${excesso > 0 ? `<div class="stat-sub" style="color:#ef4444;">+${CC.fmt4(excesso)} m³ excesso</div>` : ''}</div>
-        <div class="stat-card"><div class="stat-label">Faltando</div><div class="stat-valor" style="font-size:1.1rem;">${CC.fmt4(falt)} <span style="font-size:0.7rem;">m³</span></div></div>
+      <div class="cc-lastBtGrid mb-2" style="grid-template-columns:repeat(3,1fr);">
+        <div class="cc-kpi" style="flex-direction:column;"><div class="cc-kpiLabel">Projeto</div><div class="cc-kpiValue" style="font-size:1.1rem;">${CC.fmt4(p.volume)} <span style="font-size:0.7rem;">m³</span></div></div>
+        <div class="cc-kpi" style="flex-direction:column;"><div class="cc-kpiLabel">Concretado</div><div class="cc-kpiValue" style="font-size:1.1rem;color:${excesso > 0 ? 'var(--cv-red)' : pct >= 100 ? 'var(--cv-green)' : 'var(--cv-text)'};">${CC.fmt4(lanTotal)} <span style="font-size:0.7rem;">m³</span></div>${excesso > 0 ? `<div class="cc-kpiSub" style="color:var(--cv-red);">+${CC.fmt4(excesso)} m³ excesso</div>` : ''}</div>
+        <div class="cc-kpi" style="flex-direction:column;"><div class="cc-kpiLabel">Faltando</div><div class="cc-kpiValue" style="font-size:1.1rem;">${CC.fmt4(falt)} <span style="font-size:0.7rem;">m³</span></div></div>
       </div>
-      <div style="height:8px;background:#e2e8f0;border-radius:4px;overflow:hidden;margin-bottom:4px;">
-        <div style="height:100%;width:${Math.min(100, pct)}%;background:${pct >= 100 ? '#16a34a' : 'var(--cor-primaria)'};"></div>
+      <div style="height:8px;background:var(--cv-surface2);border-radius:2px;overflow:hidden;margin-bottom:4px;">
+        <div style="height:100%;width:${Math.min(100, pct)}%;background:${pct >= 100 ? 'var(--cv-green)' : 'var(--cv-accent)'};"></div>
       </div>
-      <div style="font-family:var(--font-mono);font-size:0.8rem;color:var(--cor-primaria-dark,#b8960a);font-weight:700;text-align:right;margin-bottom:14px;">${CC.fmt1(pct)}%</div>
-      ${!lansP.length ? `<div class="estado-vazio" style="padding:16px;"><p>Nenhum lançamento nesta peça ainda.</p></div>` :
+      <div style="font-family:var(--cv-mono);font-size:0.8rem;color:var(--cv-accent3);font-weight:700;text-align:right;margin-bottom:14px;">${CC.fmt1(pct)}%</div>
+      ${!lansP.length ? `<div class="cc-empty">Nenhum lançamento nesta peça ainda.</div>` :
       Object.values(byConc).map(g => {
         const totalG = g.bts.reduce((s, x) => s + (x.l.volume || 0), 0);
         return `
-          <div style="border:1px solid var(--cor-borda-light);border-radius:8px;margin-bottom:10px;overflow:hidden;">
-            <div style="background:#f8fafc;padding:8px 12px;font-weight:700;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.3px;">
-              Concretagem Nº${g.conc?.numero || '?'} <span style="color:var(--cor-texto-muted);font-weight:400;text-transform:none;">— ${esc(g.conc?.data || '')}${g.conc?.descricao ? ` | ${esc(g.conc.descricao)}` : ''}</span>
+          <div style="border:1px solid var(--cv-border); margin-bottom:10px;overflow:hidden;">
+            <div style="background:var(--cv-surface2);padding:8px 12px;font-weight:700;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.3px;">
+              Concretagem Nº${g.conc?.numero || '?'} <span style="color:var(--cv-text3);font-weight:400;text-transform:none;">— ${esc(g.conc?.data || '')}${g.conc?.descricao ? ` | ${esc(g.conc.descricao)}` : ''}</span>
             </div>
             ${g.bts.map(x => `
-              <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-top:1px solid var(--cor-borda-light);">
-                <span style="font-family:var(--font-mono);font-size:0.78rem;font-weight:700;color:var(--cor-primaria-dark,#b8960a);min-width:52px;">BT-${x.bt?.numero || '?'}</span>
-                <div style="flex:1;height:5px;background:#f1f5f9;border-radius:3px;overflow:hidden;">
-                  <div style="height:100%;width:${Math.min(100, x.pctBT)}%;background:${x.l.volume > p.volume ? '#ef4444' : '#16a34a'};"></div>
+              <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-top:1px solid var(--cv-border);">
+                <span style="font-family:var(--cv-mono);font-size:0.78rem;font-weight:700;color:var(--cv-accent3);min-width:52px;">BT-${x.bt?.numero || '?'}</span>
+                <div style="flex:1;height:5px;background:var(--cv-surface2);border-radius:1px;overflow:hidden;">
+                  <div style="height:100%;width:${Math.min(100, x.pctBT)}%;background:${x.l.volume > p.volume ? 'var(--cv-red)' : 'var(--cv-green)'};"></div>
                 </div>
-                <span style="font-family:var(--font-mono);font-size:0.78rem;">${CC.fmt4(x.l.volume)} m³</span>
-                <span style="font-family:var(--font-mono);font-size:0.7rem;color:var(--cor-texto-muted);">${CC.fmt1(x.pctBT)}% desta peça</span>
-                ${x.l.volume > p.volume ? `<span class="badge badge-perigo">+${CC.fmt4(x.l.volume - p.volume)} m³</span>` : ''}
+                <span style="font-family:var(--cv-mono);font-size:0.78rem;">${CC.fmt4(x.l.volume)} m³</span>
+                <span style="font-family:var(--cv-mono);font-size:0.7rem;color:var(--cv-text3);">${CC.fmt1(x.pctBT)}% desta peça</span>
+                ${x.l.volume > p.volume ? `<span class="cc-badge" style="background:var(--cv-red);color:#fff;">+${CC.fmt4(x.l.volume - p.volume)} m³</span>` : ''}
               </div>`).join('')}
-            <div style="padding:6px 12px;border-top:1px solid var(--cor-borda-light);font-family:var(--font-mono);font-size:0.75rem;text-align:right;color:var(--cor-texto-secundario);">Total: <b>${CC.fmt4(totalG)} m³</b></div>
+            <div style="padding:6px 12px;border-top:1px solid var(--cv-border);font-family:var(--cv-mono);font-size:0.75rem;text-align:right;color:var(--cv-text2);">Total: <b>${CC.fmt4(totalG)} m³</b></div>
           </div>`;
       }).join('')}
     `;
@@ -389,7 +439,7 @@ const ControleConcreto = (() => {
     if (!el) return;
     const concs = [...concsG].sort((a, b) => a.numero - b.numero);
     if (!concs.length) {
-      el.innerHTML = `<div class="estado-vazio" style="padding:20px;"><p>Nenhuma concretagem configurada.</p></div>`;
+      el.innerHTML = `<div class="cc-empty">Nenhuma concretagem configurada.</div>`;
       return;
     }
     el.innerHTML = concs.map(c => {
@@ -401,9 +451,9 @@ const ControleConcreto = (() => {
         s + lansG.filter(l => l.btConfigId === b.id).reduce((ss, l) => ss + (l.volume || 0), 0), 0);
       return `
         <div style="margin-bottom:18px;">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:4px;">
-            <span style="font-weight:700;font-size:0.85rem;">CONC. Nº${c.numero} <span style="color:var(--cor-texto-muted);font-weight:400;font-size:0.72rem;">· ${esc(c.data || '')}${c.descricao ? ` · ${esc(c.descricao)}` : ''}</span></span>
-            <span style="font-family:var(--font-mono);font-size:0.78rem;color:var(--cor-texto-secundario);">${CC.fmt4(volUsado)} / ${CC.fmt4(volPrev)} m³</span>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:4px;">
+            <span style="font-weight:700;font-size:14px;letter-spacing:0.5px;color:var(--cv-text);">CONC. Nº${c.numero} <span style="color:var(--cv-text3);font-weight:400;font-size:11px;">· ${esc(c.data || '')}${c.descricao ? ` · ${esc(c.descricao)}` : ''}</span></span>
+            <span style="font-family:var(--cv-mono);font-size:12px;color:var(--cv-text2);">${CC.fmt4(volUsado)} / ${CC.fmt4(volPrev)} m³</span>
           </div>
           <div style="display:flex;flex-wrap:wrap;gap:8px;">
             ${bts.map(b => {
@@ -414,58 +464,52 @@ const ControleConcreto = (() => {
               const perdaCam = (b.volumePrevisto || 0) - usado;
               const perdaCocho = lancada ? (parseFloat(lans[0].perdaCocho) || 0) : 0;
               const perdaReal = perdaCam - perdaCocho;
-              const corBorda = lancada ? (acima ? '#3b82f6' : '#16a34a') : 'var(--cor-borda-light)';
+              const corBorda = lancada ? (acima ? 'var(--cv-blue)' : 'var(--cv-green)') : 'var(--cv-border)';
               return `
-                <div onclick="CCON.abrirLancarBT('${c.id}', '${b.id}')" style="background:#f8fafc;border:1.5px solid ${corBorda};border-radius:8px;padding:10px 14px;min-width:98px;cursor:pointer;">
-                  <div style="font-family:var(--font-mono);font-size:0.68rem;color:var(--cor-texto-muted);margin-bottom:3px;">BT-${b.numero}</div>
-                  <div style="font-family:var(--font-mono);font-weight:700;font-size:1.15rem;color:${lancada ? (acima ? '#3b82f6' : '#16a34a') : 'var(--cor-texto-muted)'};">${lancada ? CC.fmt4(usado) : '—'}</div>
-                  <div style="font-family:var(--font-mono);font-size:0.68rem;color:var(--cor-texto-muted);margin-top:1px;">/ ${CC.fmt4(b.volumePrevisto)} m³</div>
+                <div onclick="CCON.abrirLancarBT('${c.id}', '${b.id}')" style="background:var(--cv-surface2);border:1.5px solid ${corBorda};padding:12px 16px;min-width:100px;cursor:pointer;transition:filter 0.15s;">
+                  <div style="font-family:var(--cv-mono);font-size:11px;color:var(--cv-text3);margin-bottom:4px;">BT-${b.numero}</div>
+                  <div style="font-weight:700;font-size:22px;color:${lancada ? (acima ? 'var(--cv-blue)' : 'var(--cv-green)') : 'var(--cv-text3)'};">${lancada ? CC.fmt4(usado) : '—'}</div>
+                  <div style="font-family:var(--cv-mono);font-size:11px;color:var(--cv-text3);margin-top:2px;">/ ${CC.fmt4(b.volumePrevisto)} m³</div>
                   ${lancada ? `
-                    <div style="height:4px;background:#e2e8f0;margin-top:6px;border-radius:2px;overflow:hidden;">
-                      <div style="height:100%;width:${Math.min(120, b.volumePrevisto > 0 ? (usado / b.volumePrevisto) * 100 : 0)}%;background:${acima ? '#3b82f6' : '#16a34a'};"></div>
+                    <div style="height:4px;background:var(--cv-surface);margin-top:8px;overflow:hidden;border-radius:1px;">
+                      <div style="height:100%;width:${Math.min(120, b.volumePrevisto > 0 ? (usado / b.volumePrevisto) * 100 : 0)}%;background:${acima ? 'var(--cv-blue)' : 'var(--cv-green)'};"></div>
                     </div>
-                    <div style="font-family:var(--font-mono);font-size:0.68rem;margin-top:4px;display:flex;flex-direction:column;gap:1px;">
-                      ${perdaCam !== 0 ? `<span style="color:${perdaCam > 0 ? '#ef4444' : '#3b82f6'};font-weight:700;">${perdaCam > 0 ? `▼ ${CC.fmt4(perdaCam)} m³` : `▲ +${CC.fmt4(Math.abs(perdaCam))} m³`}</span>` : ''}
-                      ${b.volumePrevisto > 0 ? `<span style="color:${perdaCam > 0 ? '#ef4444' : perdaCam < 0 ? '#3b82f6' : '#16a34a'};font-weight:700;">${perdaCam > 0 ? `${CC.fmt1((perdaCam / b.volumePrevisto) * 100)}% perda` : perdaCam < 0 ? `${CC.fmt1((Math.abs(perdaCam) / b.volumePrevisto) * 100)}% sobra` : '0% perda'}</span>` : ''}
-                      ${perdaCocho > 0 ? `<span style="color:var(--cor-primaria-dark,#b8960a);">cocho: ${CC.fmt4(perdaCocho)} m³ · real: ${CC.fmt1(perdaReal > 0 ? (perdaReal / b.volumePrevisto) * 100 : 0)}% perda</span>` : ''}
-                    </div>` : `<div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--cor-texto-muted);margin-top:4px;">pendente</div>`}
+                    <div style="font-family:var(--cv-mono);font-size:11px;margin-top:5px;display:flex;flex-direction:column;gap:2px;">
+                      ${perdaCam !== 0 ? `<span style="color:${perdaCam > 0 ? 'var(--cv-red)' : 'var(--cv-blue)'};font-weight:700;">${perdaCam > 0 ? `▼ ${CC.fmt4(perdaCam)} m³` : `▲ +${CC.fmt4(Math.abs(perdaCam))} m³`}</span>` : ''}
+                      ${b.volumePrevisto > 0 ? `<span style="color:${perdaCam > 0 ? 'var(--cv-red)' : perdaCam < 0 ? 'var(--cv-blue)' : 'var(--cv-green)'};font-weight:700;">${perdaCam > 0 ? `${CC.fmt1((perdaCam / b.volumePrevisto) * 100)}% perda` : perdaCam < 0 ? `${CC.fmt1((Math.abs(perdaCam) / b.volumePrevisto) * 100)}% sobra` : '0% perda'}</span>` : ''}
+                      ${perdaCocho > 0 ? `<span style="color:var(--cv-accent3);">cocho: ${CC.fmt4(perdaCocho)} m³ · real: ${CC.fmt1(perdaReal > 0 ? (perdaReal / b.volumePrevisto) * 100 : 0)}% perda</span>` : ''}
+                    </div>` : `<div style="font-family:var(--cv-mono);font-size:10px;color:var(--cv-text3);margin-top:5px;">pendente</div>`}
                 </div>`;
             }).join('')}
           </div>
         </div>`;
-    }).join('') || `<div class="estado-vazio" style="padding:20px;"><p>Nenhuma BT configurada.</p></div>`;
+    }).join('') || `<div class="cc-empty">Nenhuma BT configurada.</div>`;
   }
 
   // ── Última BT lançada ───────────────────────
   function renderUltimaBT() {
     const el = document.getElementById('cc-ultima-bt');
     if (!el) return;
-    if (!lancamentos.length) {
-      el.innerHTML = `<div class="estado-vazio" style="padding:20px;"><p>Nenhuma BT lançada ainda.</p></div>`;
-      return;
-    }
+    if (!lancamentos.length) { el.innerHTML = ''; return; }
     const ultimo = [...lancamentos].sort((a, b) => tsMillis(b) - tsMillis(a))[0];
     const b = btsConfig.find(x => x.id === ultimo.btConfigId);
     const c = b ? concretagens.find(x => x.id === b.concretagemId) : null;
-    if (!b) { el.innerHTML = `<div class="estado-vazio" style="padding:20px;"><p>—</p></div>`; return; }
+    if (!b) { el.innerHTML = ''; return; }
     const lansBT = lancamentos.filter(l => l.btConfigId === b.id);
     const executado = lansBT.reduce((s, l) => s + (l.volume || 0), 0);
-    const dif = (b.volumePrevisto || 0) - executado;
+    const perdaUltima = (b.volumePrevisto || 0) - executado;
     el.innerHTML = `
-      <div style="text-align:center;padding:6px 0;">
-        <div style="font-family:var(--font-mono);font-size:1.7rem;font-weight:700;color:var(--cor-primaria-dark,#b8960a);">BT-${b.numero}</div>
-        <div style="font-size:0.78rem;color:var(--cor-texto-muted);margin-bottom:10px;">Concretagem Nº${c?.numero || '?'}${ultimo.hora ? ` · ${esc(ultimo.hora)}` : ''}</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
-          <div class="stat-card" style="padding:10px;"><div class="stat-label">Previsto</div><div class="stat-valor" style="font-size:1rem;">${CC.fmt4(b.volumePrevisto)} m³</div></div>
-          <div class="stat-card" style="padding:10px;"><div class="stat-label">Executado</div><div class="stat-valor" style="font-size:1rem;color:#16a34a;">${CC.fmt4(executado)} m³</div></div>
+      <div class="cc-lastBtPanel">
+        <div class="cc-lastBtBadge">Última BT</div>
+        <div class="cc-lastBtNum">BT-${b.numero}</div>
+        <div class="cc-lastBtGrid">
+          <div class="cc-lastBtItem"><span class="cc-lastBtItemLabel">Concretagem</span><span class="cc-lastBtItemValue" style="color:var(--cv-accent3);">Nº ${c?.numero || '—'}</span></div>
+          <div class="cc-lastBtItem"><span class="cc-lastBtItemLabel">Previsto</span><span class="cc-lastBtItemValue">${CC.fmt4(b.volumePrevisto)} m³</span></div>
+          <div class="cc-lastBtItem"><span class="cc-lastBtItemLabel">Executado</span><span class="cc-lastBtItemValue" style="color:var(--cv-green);">${CC.fmt4(executado)} m³</span></div>
+          <div class="cc-lastBtItem"><span class="cc-lastBtItemLabel">${perdaUltima >= 0 ? 'Perda Caminhão' : 'Sobra Inesperada'}</span><span class="cc-lastBtItemValue" style="color:${perdaUltima > 0 ? 'var(--cv-red)' : 'var(--cv-blue)'};">${CC.fmt4(Math.abs(perdaUltima))} m³</span></div>
         </div>
-        <div style="font-family:var(--font-mono);font-size:0.8rem;font-weight:700;color:${dif > 0 ? '#ef4444' : dif < 0 ? '#3b82f6' : '#16a34a'};margin-bottom:10px;">
-          ${dif > 0 ? `Perda caminhão: ${CC.fmt4(dif)} m³` : dif < 0 ? `Sobra inesperada: +${CC.fmt4(Math.abs(dif))} m³` : 'Sem diferença'}
-        </div>
-        <span class="badge badge-sucesso">✓ Lançada</span>
-        <div style="margin-top:12px;">
-          <button class="btn btn-secundario btn-sm" onclick="CCON.abrirLancarBT('${b.concretagemId}', '${b.id}')">Ver detalhes / editar</button>
-        </div>
+        <div style="margin-top:12px;"><span class="cc-badge cc-badgeComplete">Concluído ✓</span></div>
+        <button class="cc-lastBtBtn" onclick="CCON.abrirLancarBT('${b.concretagemId}', '${b.id}')">Ver detalhes da BT →</button>
       </div>`;
   }
 
@@ -623,7 +667,7 @@ const ControleConcreto = (() => {
 
     if (bt.concId) {
       if (!btsConc.length) {
-        html += `<div class="estado-vazio" style="padding:20px;"><p>Nenhuma BT configurada. Configure no Levantamento de Concreto → Concretagens.</p></div>`;
+        html += `<div class="cc-empty">Nenhuma BT configurada. Configure no Levantamento de Concreto → Concretagens.</div>`;
       } else {
         html += `
           <label style="display:block;font-size:0.78rem;font-weight:600;color:var(--cor-texto-secundario);margin-bottom:8px;">Selecione a BT</label>
@@ -837,15 +881,13 @@ const ControleConcreto = (() => {
   // ══════════════════════════════════════════
   // ABA RELATÓRIOS
   // ══════════════════════════════════════════
-  function setFiltroRelConc(v) { filtroRelConc = v; renderRelatorios(); }
-  function setFiltroRelAndar(v) { filtroRelAndar = v; renderRelatorios(); }
   function setAndarFiltroTipo(v) { andarFiltroTipo = v; renderRelatorios(); }
   function toggleAndarAberto(a) { andarAberto = andarAberto === a ? null : a; renderRelatorios(); }
 
   // Donut SVG (fatias)
   function donutSVG(dados, total, size, thickness, label) {
     dados = dados.filter(d => d.val > 0);
-    if (!dados.length || !total) return `<div class="estado-vazio" style="padding:16px;"><p>Sem dados.</p></div>`;
+    if (!dados.length || !total) return `<div class="cc-empty">Sem dados.</div>`;
     const cx = size / 2, cy = size / 2, r = (size - thickness * 2) / 2;
     let angle = -Math.PI / 2;
     const paths = dados.map(d => {
@@ -897,85 +939,97 @@ const ControleConcreto = (() => {
       pInfo.totalPrevisto || 1, 130, 20,
       { top: CC.fmt1(pInfo.indice) + '%', bot: 'perda' });
 
+    const labelRelConc = filtroRelConc === 'todas' ? 'Todas as Concretagens' : (() => { const c = concretagens.find(x => x.id === filtroRelConc); return `Nº ${c?.numero} — ${c?.data || ''}`; })();
+    const labelRelAndar = filtroRelAndar === 'todos' ? 'Todos os Andares' : filtroRelAndar;
+
     el.innerHTML = `
-      <div class="card mb-3">
-        <div class="card-body" style="display:flex;gap:14px;flex-wrap:wrap;align-items:end;">
-          <div class="form-grupo" style="margin-bottom:0;min-width:260px;">
-            <label>Concretagem</label>
-            <select class="form-control" onchange="CCON.setFiltroRelConc(this.value)">
-              <option value="todas">Todas</option>
-              ${[...concretagens].sort((a, b) => a.numero - b.numero).map(c => `<option value="${c.id}" ${filtroRelConc === c.id ? 'selected' : ''}>${esc(concLabel(c))}</option>`).join('')}
-            </select>
+      <div class="cc-filtroBar">
+        ${relFiltroBarAberto ? `<div class="cc-filtroOverlay" onclick="CCON.rfbFechar()"></div>` : ''}
+        <div class="cc-filtroCard ${relFiltroBarAberto === 'concretagem' ? 'cc-filtroCardActive' : ''}" onclick="CCON.rfbToggle('concretagem')">
+          <div class="cc-filtroCardLeft">
+            <span class="cc-filtroCardLabel">Concretagem</span>
+            <span class="cc-filtroCardValue ${filtroRelConc !== 'todas' ? 'cc-filtroCardValueActive' : ''}">${esc(labelRelConc)}</span>
           </div>
-          <div class="form-grupo" style="margin-bottom:0;min-width:180px;">
-            <label>Andar</label>
-            <select class="form-control" onchange="CCON.setFiltroRelAndar(this.value)">
-              <option value="todos">Todos</option>
-              ${todosAndares().map(a => `<option value="${esc(a)}" ${filtroRelAndar === a ? 'selected' : ''}>${esc(a)}</option>`).join('')}
-            </select>
+          <span class="cc-filtroChevron ${relFiltroBarAberto === 'concretagem' ? 'cc-filtroChevronOpen' : ''}">▼</span>
+          ${relFiltroBarAberto === 'concretagem' ? `
+            <div class="cc-filtroDropdown" onclick="event.stopPropagation()">
+              <button class="cc-filtroOption ${filtroRelConc === 'todas' ? 'cc-filtroOptionActive' : ''}" onclick="CCON.rfbSelConc('todas')">Todas as Concretagens ${filtroRelConc === 'todas' ? '✓' : ''}</button>
+              ${[...concretagens].sort((a, b) => a.numero - b.numero).map(c => `<button class="cc-filtroOption ${filtroRelConc === c.id ? 'cc-filtroOptionActive' : ''}" onclick="CCON.rfbSelConc('${c.id}')">${esc(concLabel(c))} ${filtroRelConc === c.id ? '✓' : ''}</button>`).join('')}
+            </div>` : ''}
+        </div>
+        <div class="cc-filtroCard ${relFiltroBarAberto === 'andar' ? 'cc-filtroCardActive' : ''}" onclick="CCON.rfbToggle('andar')">
+          <div class="cc-filtroCardLeft">
+            <span class="cc-filtroCardLabel">Andar</span>
+            <span class="cc-filtroCardValue ${filtroRelAndar !== 'todos' ? 'cc-filtroCardValueActive' : ''}">${esc(labelRelAndar)}</span>
           </div>
+          <span class="cc-filtroChevron ${relFiltroBarAberto === 'andar' ? 'cc-filtroChevronOpen' : ''}">▼</span>
+          ${relFiltroBarAberto === 'andar' ? `
+            <div class="cc-filtroDropdown" onclick="event.stopPropagation()">
+              <button class="cc-filtroOption ${filtroRelAndar === 'todos' ? 'cc-filtroOptionActive' : ''}" onclick="CCON.rfbSelAndar('todos')">Todos os Andares ${filtroRelAndar === 'todos' ? '✓' : ''}</button>
+              ${todosAndares().map(a => `<button class="cc-filtroOption ${filtroRelAndar === a ? 'cc-filtroOptionActive' : ''}" onclick="CCON.rfbSelAndar('${esc(a).replace(/'/g, "\\'")}')">${esc(a)} ${filtroRelAndar === a ? '✓' : ''}</button>`).join('')}
+            </div>` : ''}
         </div>
       </div>
 
-      <div class="cards-grid mb-3" style="grid-template-columns:repeat(auto-fit,minmax(175px,1fr));">
-        <div class="stat-card"><div class="stat-label">Vol. Programado</div><div class="stat-valor">${CC.fmt4(relProg)} <span style="font-size:0.75rem;">m³</span></div></div>
-        <div class="stat-card" style="border-left:3px solid #16a34a;"><div class="stat-label">Vol. Concretado</div><div class="stat-valor" style="color:#16a34a;">${CC.fmt4(relConc)} <span style="font-size:0.75rem;">m³</span></div><div class="stat-sub">${CC.fmt1(relProg > 0 ? relConc / relProg * 100 : 0)}%</div></div>
-        <div class="stat-card" style="border-left:3px solid #ef4444;"><div class="stat-label">Perda em Obra</div><div class="stat-valor" style="color:#ef4444;">${CC.fmt4(pInfo.perdaObra)} <span style="font-size:0.75rem;">m³</span></div><div class="stat-sub">${CC.fmt1(pInfo.totalPrevisto > 0 ? pInfo.perdaObra / pInfo.totalPrevisto * 100 : 0)}%</div></div>
-        <div class="stat-card" style="border-left:3px solid #f97316;"><div class="stat-label">Índice de Perda</div><div class="stat-valor" style="color:#f97316;">${CC.fmt1(pInfo.indice)}<span style="font-size:0.75rem;">%</span></div><div class="stat-sub">média por BT</div></div>
+      <div class="cc-kpiGrid" style="grid-template-columns:repeat(4,1fr);">
+        <div class="cc-kpi"><div class="cc-kpiIcon">📐</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Vol. Programado</div><div class="cc-kpiValue">${CC.fmt4(relProg)}<span class="cc-kpiUnit">m³</span></div></div></div>
+        <div class="cc-kpi cc-kpiGreen"><div class="cc-kpiIcon">✅</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Vol. Concretado</div><div class="cc-kpiValue">${CC.fmt4(relConc)}<span class="cc-kpiUnit">m³</span></div><div class="cc-kpiSub">${CC.fmt1(relProg > 0 ? relConc / relProg * 100 : 0)}%</div></div></div>
+        <div class="cc-kpi cc-kpiRed"><div class="cc-kpiIcon">⚠️</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Perda em Obra</div><div class="cc-kpiValue">${CC.fmt4(pInfo.perdaObra)}<span class="cc-kpiUnit">m³</span></div><div class="cc-kpiSub">${CC.fmt1(pInfo.totalPrevisto > 0 ? pInfo.perdaObra / pInfo.totalPrevisto * 100 : 0)}%</div></div></div>
+        <div class="cc-kpi cc-kpiOrange"><div class="cc-kpiIcon">📉</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Índice de Perda</div><div class="cc-kpiValue">${CC.fmt1(pInfo.indice)}<span class="cc-kpiUnit">%</span></div><div class="cc-kpiSub">média por BT</div></div></div>
       </div>
 
-      <div class="cards-grid mb-3" style="grid-template-columns:1fr 1fr;" id="cc-rel-donuts">
-        <div class="card">
-          <div class="card-header"><h3>Execução Geral</h3></div>
-          <div class="card-body" style="display:flex;align-items:center;gap:22px;flex-wrap:wrap;">
+      <div class="cc-grid2">
+        <div class="cc-panel">
+          <div class="cc-panelTitle">Execução Geral</div>
+          <div style="display:flex;align-items:center;gap:22px;flex-wrap:wrap;">
             ${donutExec}
             <div>
-              ${[{ label: 'Executado', cor: '#16a34a', val: relConc }, { label: 'Faltando', cor: '#cbd5e1', val: Math.max(0, relProg - relConc) }].map(d => `
+              ${[{ label: 'Executado', cor: 'var(--cv-green)', val: relConc }, { label: 'Faltando', cor: '#CBD5E1', val: Math.max(0, relProg - relConc) }].map(d => `
                 <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
                   <div style="width:10px;height:10px;background:${d.cor};border-radius:2px;"></div>
-                  <div><div style="font-weight:600;font-size:0.82rem;">${d.label}</div><div style="font-family:var(--font-mono);font-size:0.72rem;color:var(--cor-texto-muted);">${CC.fmt4(d.val)} m³</div></div>
+                  <div><div style="font-weight:600;font-size:0.82rem;">${d.label}</div><div style="font-family:var(--cv-mono);font-size:0.72rem;color:var(--cv-text3);">${CC.fmt4(d.val)} m³</div></div>
                 </div>`).join('')}
-              <div style="font-family:var(--font-mono);font-size:0.7rem;color:var(--cor-texto-muted);padding-top:6px;border-top:1px solid var(--cor-borda-light);">BTs faltando: ${CC.fmt4(prevVol.faltando)} m³</div>
+              <div style="font-family:var(--cv-mono);font-size:0.7rem;color:var(--cv-text3);padding-top:6px;border-top:1px solid var(--cv-border);">BTs faltando: ${CC.fmt4(prevVol.faltando)} m³</div>
             </div>
           </div>
         </div>
-        <div class="card">
-          <div class="card-header"><h3>Distribuição de Perdas</h3></div>
-          <div class="card-body" style="display:flex;align-items:center;gap:22px;flex-wrap:wrap;">
+        <div class="cc-panel">
+          <div class="cc-panelTitle">Distribuição de Perdas</div>
+          <div style="display:flex;align-items:center;gap:22px;flex-wrap:wrap;">
             ${donutPerda}
             <div>
-              ${[{ label: 'Executado', cor: '#16a34a', val: pInfo.totalExecutado }, { label: 'Perda Obra', cor: '#ef4444', val: pInfo.perdaObra }, { label: 'Perda Caminhão', cor: '#f97316', val: Math.max(0, pInfo.perdaCaminhao) }].map(d => `
+              ${[{ label: 'Executado', cor: 'var(--cv-green)', val: pInfo.totalExecutado }, { label: 'Perda Obra', cor: 'var(--cv-red)', val: pInfo.perdaObra }, { label: 'Perda Caminhão', cor: 'var(--cv-orange)', val: Math.max(0, pInfo.perdaCaminhao) }].map(d => `
                 <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
                   <div style="width:10px;height:10px;background:${d.cor};border-radius:2px;"></div>
-                  <div><div style="font-weight:600;font-size:0.82rem;">${d.label}</div><div style="font-family:var(--font-mono);font-size:0.72rem;color:var(--cor-texto-muted);">${CC.fmt4(d.val)} m³</div></div>
+                  <div><div style="font-weight:600;font-size:0.82rem;">${d.label}</div><div style="font-family:var(--cv-mono);font-size:0.72rem;color:var(--cv-text3);">${CC.fmt4(d.val)} m³</div></div>
                 </div>`).join('')}
             </div>
           </div>
         </div>
       </div>
 
-      <div class="card mb-3">
-        <div class="card-header"><h3>Volume por Andar <span style="font-size:0.7rem;color:var(--cor-texto-muted);font-weight:400;">▼ clique na barra para expandir</span></h3></div>
-        <div class="card-body">${graficoAndaresHTML(pcs, lans, pInfo.indice)}</div>
+      <div class="cc-panel">
+        <div class="cc-panelTitle">Volume por Andar <span style="font-family:var(--cv-mono);font-size:10px;color:var(--cv-text3);font-weight:400;text-transform:none;letter-spacing:0;">▼ clique na barra para expandir</span></div>
+        ${graficoAndaresHTML(pcs, lans, pInfo.indice)}
       </div>
 
-      <div class="card mb-3">
-        <div class="card-header"><h3>Resumo por Tipo de Peça</h3></div>
-        <div class="card-body">
-          <table class="tabela">
+      <div class="cc-panel">
+        <div class="cc-panelTitle">Resumo por Tipo de Peça</div>
+        <div class="cc-tableWrap">
+          <table class="cc-table">
             <thead><tr><th>Tipo</th><th class="col-centro">Qtd</th><th class="col-num">Previsto</th><th class="col-num">Executado</th><th class="col-num">Faltando</th><th>%</th></tr></thead>
             <tbody>
               ${CC.calcPorTipo(pcs, lans).map((t, i) => `
                 <tr>
                   <td><span style="display:inline-flex;align-items:center;gap:8px;"><span style="width:8px;height:8px;background:${CC.CORES[i % CC.CORES.length]};border-radius:2px;display:inline-block;"></span><b>${esc(t.tipo)}</b></span></td>
-                  <td class="col-centro" style="font-family:var(--font-mono);">${t.count}</td>
-                  <td class="col-num" style="font-family:var(--font-mono);">${CC.fmt4(t.prog)} m³</td>
-                  <td class="col-num" style="font-family:var(--font-mono);color:#16a34a;">${CC.fmt4(t.conc)} m³</td>
-                  <td class="col-num" style="font-family:var(--font-mono);color:#ef4444;">${CC.fmt4(t.falt)} m³</td>
+                  <td class="col-centro cc-tdMono">${t.count}</td>
+                  <td class="col-num cc-tdMono">${CC.fmt4(t.prog)} m³</td>
+                  <td class="col-num cc-tdGreen">${CC.fmt4(t.conc)} m³</td>
+                  <td class="col-num cc-tdRed">${CC.fmt4(t.falt)} m³</td>
                   <td>
                     <span style="display:inline-flex;align-items:center;gap:8px;">
-                      <span style="width:60px;height:5px;background:#f1f5f9;border-radius:3px;overflow:hidden;display:inline-block;"><span style="display:block;height:100%;width:${Math.min(100, t.pct)}%;background:${t.pct >= 100 ? '#16a34a' : CC.CORES[i % CC.CORES.length]};"></span></span>
-                      <span style="font-family:var(--font-mono);font-size:0.78rem;">${CC.fmt1(t.pct)}%</span>
+                      <span style="width:60px;height:5px;background:var(--cv-surface2);border-radius:1px;overflow:hidden;display:inline-block;"><span style="display:block;height:100%;width:${Math.min(100, t.pct)}%;background:${t.pct >= 100 ? 'var(--cv-green)' : CC.CORES[i % CC.CORES.length]};"></span></span>
+                      <span class="cc-tdMono">${CC.fmt1(t.pct)}%</span>
                     </span>
                   </td>
                 </tr>`).join('')}
@@ -984,13 +1038,13 @@ const ControleConcreto = (() => {
         </div>
       </div>
 
-      <div class="card">
-        <div class="card-header"><h3>Índice Detalhado por BT</h3></div>
-        <div class="card-body">
-          <table class="tabela">
+      <div class="cc-panel">
+        <div class="cc-panelTitle">Índice Detalhado por BT</div>
+        <div class="cc-tableWrap">
+          <table class="cc-table">
             <thead><tr><th>BT</th><th class="col-centro">Conc.</th><th>NF</th><th class="col-num">Previsto</th><th class="col-num">Executado</th><th class="col-num">Perda Obra</th><th class="col-num">Dif. Caminhão</th><th class="col-centro">Status</th></tr></thead>
             <tbody>
-              ${!bts.length ? `<tr><td colspan="8" style="text-align:center;color:var(--cor-texto-muted);padding:20px;">Sem BTs configuradas</td></tr>` :
+              ${!bts.length ? `<tr><td colspan="8" style="text-align:center;color:var(--cv-text3);padding:20px;">Sem BTs configuradas</td></tr>` :
               [...bts].sort((a, b) => a.numero - b.numero).map(b => {
                 const conc = concretagens.find(c => c.id === b.concretagemId);
                 const bLans = lans.filter(l => l.btConfigId === b.id);
@@ -1000,14 +1054,14 @@ const ControleConcreto = (() => {
                 const lancada = bLans.length > 0;
                 return `
                   <tr>
-                    <td style="font-family:var(--font-mono);font-weight:700;color:var(--cor-primaria-dark,#b8960a);">BT-${b.numero}</td>
-                    <td class="col-centro" style="font-family:var(--font-mono);">${conc?.numero || '—'}</td>
-                    <td style="font-family:var(--font-mono);">${esc(b.notaFiscal || '—')}</td>
-                    <td class="col-num" style="font-family:var(--font-mono);">${CC.fmt4(b.volumePrevisto)}</td>
-                    <td class="col-num" style="font-family:var(--font-mono);color:${lancada ? (difCam > 0 ? '#3b82f6' : '#16a34a') : 'var(--cor-texto-muted)'};">${lancada ? CC.fmt4(usado) : '—'}</td>
-                    <td class="col-num" style="font-family:var(--font-mono);color:${perdaO > 0 ? '#ef4444' : 'var(--cor-texto-muted)'};">${lancada ? CC.fmt4(perdaO) : '—'}</td>
-                    <td class="col-num" style="font-family:var(--font-mono);color:${lancada ? (difCam > 0 ? '#3b82f6' : difCam < 0 ? '#ef4444' : 'var(--cor-texto-muted)') : 'var(--cor-texto-muted)'};">${lancada ? (difCam > 0 ? `▲ +${CC.fmt4(difCam)}` : difCam < 0 ? `▼ ${CC.fmt4(Math.abs(difCam))}` : '—') : '—'}</td>
-                    <td class="col-centro"><span class="badge ${lancada ? 'badge-sucesso' : 'badge-neutro'}">${lancada ? 'Lançada' : 'Pendente'}</span></td>
+                    <td class="cc-tdAccent" style="font-weight:700;">BT-${b.numero}</td>
+                    <td class="col-centro cc-tdMono">${conc?.numero || '—'}</td>
+                    <td class="cc-tdMono">${esc(b.notaFiscal || '—')}</td>
+                    <td class="col-num cc-tdMono">${CC.fmt4(b.volumePrevisto)}</td>
+                    <td class="col-num ${lancada ? (difCam > 0 ? 'cc-tdBlue' : 'cc-tdGreen') : 'cc-tdMuted'}">${lancada ? CC.fmt4(usado) : '—'}</td>
+                    <td class="col-num ${perdaO > 0 ? 'cc-tdRed' : 'cc-tdMuted'}">${lancada ? CC.fmt4(perdaO) : '—'}</td>
+                    <td class="col-num ${lancada ? (difCam > 0 ? 'cc-tdBlue' : difCam < 0 ? 'cc-tdRed' : 'cc-tdMuted') : 'cc-tdMuted'}">${lancada ? (difCam > 0 ? `▲ +${CC.fmt4(difCam)}` : difCam < 0 ? `▼ ${CC.fmt4(Math.abs(difCam))}` : '—') : '—'}</td>
+                    <td class="col-centro"><span class="cc-badge ${lancada ? 'cc-badgeComplete' : 'cc-badgePending'}">${lancada ? 'Lançada' : 'Pendente'}</span></td>
                   </tr>`;
               }).join('')}
             </tbody>
@@ -1017,10 +1071,16 @@ const ControleConcreto = (() => {
     `;
   }
 
+  // ── FiltroBar dos Relatórios ──
+  function rfbToggle(tipo) { relFiltroBarAberto = relFiltroBarAberto === tipo ? null : tipo; renderRelatorios(); }
+  function rfbFechar() { relFiltroBarAberto = null; renderRelatorios(); }
+  function rfbSelConc(v) { filtroRelConc = v; relFiltroBarAberto = null; renderRelatorios(); }
+  function rfbSelAndar(v) { filtroRelAndar = v; relFiltroBarAberto = null; renderRelatorios(); }
+
   // ── Gráfico de barras por andar (SVG) ───────
   function graficoAndaresHTML(pcs, lans, indicePerda) {
     const dados = CC.calcAndares(pcs, lans, config.ordemAndares, indicePerda);
-    if (!dados.length) return `<div class="estado-vazio" style="padding:20px;"><p>Sem dados de andares.</p></div>`;
+    if (!dados.length) return `<div class="cc-empty">Sem dados de andares.</div>`;
     const tipos = ['todos', ...new Set(pcs.map(p => p.tipo))].sort();
 
     const chartDados = dados.map(d => {
@@ -1032,7 +1092,7 @@ const ControleConcreto = (() => {
       return { andar: d.andar, proj, conc, falt, previsto };
     }).filter(d => d.proj > 0);
 
-    if (!chartDados.length) return `<div class="estado-vazio" style="padding:20px;"><p>Sem peças para o filtro atual.</p></div>`;
+    if (!chartDados.length) return `<div class="cc-empty">Sem peças para o filtro atual.</div>`;
 
     const maxVal = Math.max(...chartDados.map(d => Math.max(d.proj, d.conc, d.previsto, d.falt)), 0.01);
     const chartH = 220, barW = 18, gap = 8;
@@ -1096,28 +1156,28 @@ const ControleConcreto = (() => {
     if (andarAberto) {
       const pecasAndar = pcs.filter(p => p.andar === andarAberto && (andarFiltroTipo === 'todos' || p.tipo === andarFiltroTipo));
       tabelaAndar = `
-        <div style="margin-top:12px;border:1px solid var(--cor-primaria);border-radius:8px;overflow:hidden;">
-          <div style="padding:10px 14px;background:var(--cor-primaria-light,#fef9e7);display:flex;justify-content:space-between;align-items:center;">
-            <span style="font-weight:700;font-size:0.85rem;color:var(--cor-primaria-dark,#b8960a);">${esc(andarAberto)}</span>
+        <div style="margin-top:12px;border:1px solid var(--cv-accent);overflow:hidden;">
+          <div style="padding:10px 14px;background:var(--cor-primaria-ultra-light);display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-weight:700;font-size:0.85rem;color:var(--cv-accent3);">${esc(andarAberto)}</span>
             <button class="btn btn-secundario btn-sm" onclick="CCON.toggleAndarAberto('${esc(andarAberto).replace(/'/g, "\\'")}')">✕</button>
           </div>
-          <table class="tabela">
+          <table class="cc-table">
             <thead><tr><th>Peça</th><th class="col-num">Previsto</th><th class="col-num">Exec.</th><th class="col-num">Falt.</th><th>%</th></tr></thead>
             <tbody>
-              ${!pecasAndar.length ? `<tr><td colspan="5" style="text-align:center;color:var(--cor-texto-muted);padding:14px;">Sem peças</td></tr>` :
+              ${!pecasAndar.length ? `<tr><td colspan="5" style="text-align:center;color:var(--cv-text3);padding:14px;">Sem peças</td></tr>` :
               pecasAndar.map(p => {
                 const vc = Math.min(p.volume || 0, CC.volLancadoPeca(p.id, lans));
                 const pct = CC.pctConcretado(p, lans);
                 return `
                   <tr>
-                    <td><b style="font-size:0.82rem;">${esc(p.nome)}</b> <span style="font-size:0.7rem;color:var(--cor-texto-muted);">${esc(p.tipo)}</span></td>
-                    <td class="col-num" style="font-family:var(--font-mono);font-size:0.75rem;">${CC.fmt4(p.volume)}</td>
-                    <td class="col-num" style="font-family:var(--font-mono);font-size:0.75rem;color:#16a34a;">${CC.fmt4(vc)}</td>
-                    <td class="col-num" style="font-family:var(--font-mono);font-size:0.75rem;color:#ef4444;">${CC.fmt4(Math.max(0, (p.volume || 0) - vc))}</td>
+                    <td><b style="font-size:0.82rem;">${esc(p.nome)}</b> <span style="font-size:0.7rem;color:var(--cv-text3);">${esc(p.tipo)}</span></td>
+                    <td class="col-num cc-tdMono" style="font-size:0.75rem;">${CC.fmt4(p.volume)}</td>
+                    <td class="col-num cc-tdGreen" style="font-size:0.75rem;">${CC.fmt4(vc)}</td>
+                    <td class="col-num cc-tdRed" style="font-size:0.75rem;">${CC.fmt4(Math.max(0, (p.volume || 0) - vc))}</td>
                     <td>
                       <span style="display:inline-flex;align-items:center;gap:6px;">
-                        <span style="width:48px;height:4px;background:#f1f5f9;border-radius:2px;overflow:hidden;display:inline-block;"><span style="display:block;height:100%;width:${Math.min(100, pct)}%;background:${pct >= 100 ? '#16a34a' : 'var(--cor-primaria)'};"></span></span>
-                        <span style="font-family:var(--font-mono);font-size:0.72rem;font-weight:700;color:var(--cor-primaria-dark,#b8960a);">${CC.fmt1(pct)}%</span>
+                        <span style="width:48px;height:4px;background:var(--cv-surface2);border-radius:1px;overflow:hidden;display:inline-block;"><span style="display:block;height:100%;width:${Math.min(100, pct)}%;background:${pct >= 100 ? 'var(--cv-green)' : 'var(--cv-accent)'};"></span></span>
+                        <span class="cc-tdMono" style="font-weight:700;color:var(--cv-accent3);">${CC.fmt1(pct)}%</span>
                       </span>
                     </td>
                   </tr>`;
@@ -1131,7 +1191,7 @@ const ControleConcreto = (() => {
       <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;">${chips}</div>
       <div style="display:flex;gap:16px;margin-bottom:12px;flex-wrap:wrap;align-items:center;">
         ${legenda}
-        <span style="font-size:0.68rem;color:var(--cor-texto-muted);margin-left:auto;">${indicePerda !== 0 ? `* Perda média atual: ${CC.fmt1(Math.abs(indicePerda))}% — aplicada ao volume faltando` : 'Lance BTs para calcular a perda média'}</span>
+        <span style="font-size:0.68rem;color:var(--cv-text3);margin-left:auto;">${indicePerda !== 0 ? `* Perda média atual: ${CC.fmt1(Math.abs(indicePerda))}% — aplicada ao volume faltando` : 'Lance BTs para calcular a perda média'}</span>
       </div>
       <div style="overflow-x:auto;">
         <svg width="${Math.max(totalW + padL + 20, 400)}" height="${svgH}" style="display:block;">
@@ -1146,12 +1206,12 @@ const ControleConcreto = (() => {
 
   return {
     init, recarregar, renderizar,
-    setAba, setFiltroAndar, setFiltroConc,
+    setAba, fbToggle, fbFechar, fbSelAndar, fbSelConc,
     toggleTipo, abrirDetalhePeca,
     exportarCSV,
     abrirLancarBT, btSetConc, btSetBT, btIniciarEdicao,
     btUpd, btBusca, btEsconder100, btAddLinha, btRemLinha, btUpdLinha, btSalvar,
-    setFiltroRelConc, setFiltroRelAndar, setAndarFiltroTipo, toggleAndarAberto,
+    rfbToggle, rfbFechar, rfbSelConc, rfbSelAndar, setAndarFiltroTipo, toggleAndarAberto,
   };
 })();
 
