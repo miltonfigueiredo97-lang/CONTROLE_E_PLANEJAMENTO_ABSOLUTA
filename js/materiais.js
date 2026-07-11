@@ -89,7 +89,7 @@ const Materiais = (() => {
   // ====== POR TAREFA ======
   function _renderVinculos(){
     const opts=_getOpcoesTarefa();
-    const vf=filtroTarefa?vinculos.filter(v=>v.tarefaId===filtroTarefa):vinculos;
+    const vf=filtroTarefa?vinculos.filter(v=>_getTarefaIds(v).includes(filtroTarefa)):vinculos;
     const info=filtroTarefa?_getTarefaInfo(filtroTarefa):null;
     const isFachada=filtroTarefa==='__fachada__';
 
@@ -120,7 +120,7 @@ const Materiais = (() => {
           <span style="font-size:0.75rem;color:#888;">Custo total (materiais):</span>
           <strong style="font-family:var(--font-mono);color:var(--cor-primaria);margin-left:6px;">R$ ${_fNum(vf.reduce((s,v)=>{
             const mat=biblioteca.find(m=>m.id===v.materialId);
-            const ti=_getTarefaInfo(v.tarefaId);
+            const ti=_getTarefaInfoMulti(_getTarefaIds(v));
             return s+_calcCustoNum(ti,v,mat);
           },0))}</strong>
         </div>
@@ -134,7 +134,7 @@ const Materiais = (() => {
           <th class="col-acoes">Ações</th></tr></thead>
         <tbody>${vf.map(v=>{
           const mat=biblioteca.find(m=>m.id===v.materialId);
-          const ti=_getTarefaInfo(v.tarefaId);
+          const ti=_getTarefaInfoMulti(_getTarefaIds(v));
           const {totalBase,totalEmb}=_calcTotal(ti,v,mat);
           const custo=_calcCustoNum(ti,v,mat);
           return `<tr>
@@ -253,6 +253,27 @@ const Materiais = (() => {
       return {id,label:'[Levantamento] Fachada',quantidade:m2,unidade:'m²'};
     }
     return null;
+  }
+
+  // Um vínculo pode estar ligado a mais de uma tarefa (tarefaIds). Docs
+  // antigos têm apenas tarefaId (singular) — suporta os dois formatos.
+  function _getTarefaIds(v){
+    return v.tarefaIds||(v.tarefaId?[v.tarefaId]:[]);
+  }
+
+  // Combina as tarefas de um vínculo em uma única "linha": nomes unidos
+  // por " + " e quantidade SOMADA (não uma linha por tarefa).
+  function _getTarefaInfoMulti(ids){
+    const infos=(ids||[]).map(_getTarefaInfo).filter(Boolean);
+    if(!infos.length)return null;
+    if(infos.length===1)return infos[0];
+    const mesmaUnidade=infos.every(i=>i.unidade===infos[0].unidade);
+    return {
+      id:ids.join(','),
+      label:infos.map(i=>i.label).join(' + '),
+      quantidade:infos.reduce((s,i)=>s+(i.quantidade||0),0),
+      unidade:mesmaUnidade?infos[0].unidade:'(misto)',
+    };
   }
 
   function _calcTotal(info,v,mat){
@@ -403,10 +424,9 @@ const Materiais = (() => {
   function editarVinculo(id){
     const v=vinculos.find(x=>x.id===id);if(!v)return;
     editandoVincId=id;_modoVinc='vincular';
-    _vincTarSelIds=v.tarefaId?[v.tarefaId]:[];_vincMatSelId=v.materialId||'';
-    const o=_getOpcoesTarefa().find(x=>x.id===v.tarefaId);
+    _vincTarSelIds=_getTarefaIds(v);_vincMatSelId=v.materialId||'';
     const m=biblioteca.find(x=>x.id===_vincMatSelId);
-    _buscaTarText=o?o.label.replace(/\u2007/g,''):'';
+    _buscaTarText='';
     _buscaMatText=m?m.nome:'';
     document.getElementById('modal-vinc-titulo').textContent='Editar Vínculo';
     _renderVincModal(v);
@@ -434,9 +454,15 @@ const Materiais = (() => {
         const o=opts.find(x=>x.id===id);
         const label=o?o.label.replace(/\u2007/g,''):id;
         return `<span class="badge badge-amarelo" style="display:inline-flex;align-items:center;gap:6px;">${label}
-          ${editandoVincId?'':`<span style="cursor:pointer;font-weight:800;" onclick="Materiais.removerTarefaVinc('${id}')">✕</span>`}</span>`;
+          <span style="cursor:pointer;font-weight:800;" onclick="Materiais.removerTarefaVinc('${id}')">✕</span></span>`;
       }).join('')}
     </div>`;
+  }
+  function _renderMaterialSelecionado(){
+    if(!_vincMatSelId)return '';
+    const matSel=biblioteca.find(m=>m.id===_vincMatSelId);
+    if(!matSel)return '';
+    return `<div class="text-sm" style="margin-bottom:14px;">Selecionado: <strong>${matSel.nome}</strong>${matSel.fabricante?' — '+matSel.fabricante:''} (${matSel.unidade||'?'})</div>`;
   }
   function _renderResultadosMaterial(){
     const resultados=_buscarMateriaisBib(_buscaMatText).slice(0,40);
@@ -464,7 +490,7 @@ const Materiais = (() => {
   function _renderVincModal(v){
     const uc=v?.unidadeConsumo||'kg/m²';
     const body=document.getElementById('vinc-body');if(!body)return;
-    const matSel=_vincMatSelId?biblioteca.find(m=>m.id===_vincMatSelId):null;
+    const snap=_snapshotVincForm(body);
     body.innerHTML=`
       <div style="display:flex;gap:6px;margin-bottom:16px;">
         <button class="btn btn-sm ${_modoVinc==='vincular'?'btn-primario':'btn-secundario'}"
@@ -480,7 +506,7 @@ const Materiais = (() => {
         <div id="vinc-mat-resultados" style="max-height:200px;overflow-y:auto;border:1px solid var(--cor-borda-light);border-radius:8px;margin-bottom:10px;">
           ${_renderResultadosMaterial()}
         </div>
-        ${matSel?`<div class="text-sm" style="margin-bottom:14px;">Selecionado: <strong>${matSel.nome}</strong>${matSel.fabricante?' — '+matSel.fabricante:''} (${matSel.unidade||'?'})</div>`:''}`:`
+        <div id="vinc-mat-selecionado">${_renderMaterialSelecionado()}</div>`:`
         <div style="background:rgba(245,200,0,0.07);border:1.5px solid rgba(245,200,0,0.25);border-radius:8px;padding:14px;margin-bottom:12px;">
           <div style="font-size:0.8rem;font-weight:700;color:var(--cor-primaria);margin-bottom:10px;">Novo material → será salvo na biblioteca</div>
           <div class="form-grupo"><label>Nome *</label><input id="nm-nome" class="form-control" placeholder="Ex: Cimento CP-III Votorantim"
@@ -516,15 +542,13 @@ const Materiais = (() => {
         </div>`}
 
       <div class="form-grupo"><label>Buscar serviço / tarefa *
-        <span class="text-muted" style="font-weight:400;font-size:0.75rem;">
-          ${editandoVincId?'':' (pode selecionar mais de uma tarefa)'}
-        </span></label>
+        <span class="text-muted" style="font-weight:400;font-size:0.75rem;"> (pode selecionar mais de uma tarefa)</span></label>
         <input type="text" id="vinc-tar-busca" class="form-control" placeholder="Digite para buscar... Ex: alvenaria, pintura"
           value="${_buscaTarText}" oninput="Materiais.onBuscaTarefaVinc(this.value)"></div>
       <div id="vinc-tar-resultados" style="max-height:200px;overflow-y:auto;border:1px solid var(--cor-borda-light);border-radius:8px;margin-bottom:10px;">
         ${_renderResultadosTarefa()}
       </div>
-      ${_renderTarefasSelecionadasChips()}
+      <div id="vinc-tar-chips">${_renderTarefasSelecionadasChips()}</div>
 
       <div class="form-row">
         <div class="form-grupo">
@@ -548,6 +572,22 @@ const Materiais = (() => {
       </div>
       <div class="form-grupo"><label>Observações</label>
         <textarea id="vinc-obs" class="form-control" rows="2">${v?.observacoes||''}</textarea></div>`;
+    _restoreVincForm(body,snap);
+  }
+
+  // Preserva o que o usuário já digitou (nome do novo material, preço,
+  // consumo, observações, etc.) ao re-renderizar o modal por causa de
+  // um toggle de modo — sem isso, o innerHTML novo apaga tudo.
+  function _snapshotVincForm(body){
+    const snap={};
+    body.querySelectorAll('input[id], textarea[id], select[id]').forEach(el=>{snap[el.id]=el.value;});
+    return snap;
+  }
+  function _restoreVincForm(body,snap){
+    Object.keys(snap).forEach(id=>{
+      const el=body.querySelector('#'+id);
+      if(el)el.value=snap[id];
+    });
   }
 
   function onBuscaMaterialVinc(texto){
@@ -559,7 +599,12 @@ const Materiais = (() => {
     _vincMatSelId=id;
     const m=biblioteca.find(x=>x.id===id);
     if(m)_buscaMatText=m.nome;
-    _renderVincModal(editandoVincId?vinculos.find(x=>x.id===editandoVincId):null);
+    const lista=document.getElementById('vinc-mat-resultados');
+    if(lista)lista.innerHTML=_renderResultadosMaterial();
+    const sel=document.getElementById('vinc-mat-selecionado');
+    if(sel)sel.innerHTML=_renderMaterialSelecionado();
+    const busca=document.getElementById('vinc-mat-busca');
+    if(busca)busca.value=_buscaMatText;
   }
   function onBuscaTarefaVinc(texto){
     _buscaTarText=texto;
@@ -567,19 +612,19 @@ const Materiais = (() => {
     if(lista)lista.innerHTML=_renderResultadosTarefa();
   }
   function selecionarTarefaVinc(id){
-    if(editandoVincId){
-      _vincTarSelIds=[id];
-      const o=_getOpcoesTarefa().find(x=>x.id===id);
-      if(o)_buscaTarText=o.label.replace(/\u2007/g,'');
-    }else{
-      const i=_vincTarSelIds.indexOf(id);
-      if(i>=0)_vincTarSelIds.splice(i,1);else _vincTarSelIds.push(id);
-    }
-    _renderVincModal(editandoVincId?vinculos.find(x=>x.id===editandoVincId):null);
+    const i=_vincTarSelIds.indexOf(id);
+    if(i>=0)_vincTarSelIds.splice(i,1);else _vincTarSelIds.push(id);
+    const lista=document.getElementById('vinc-tar-resultados');
+    if(lista)lista.innerHTML=_renderResultadosTarefa();
+    const chips=document.getElementById('vinc-tar-chips');
+    if(chips)chips.innerHTML=_renderTarefasSelecionadasChips();
   }
   function removerTarefaVinc(id){
     _vincTarSelIds=_vincTarSelIds.filter(x=>x!==id);
-    _renderVincModal(editandoVincId?vinculos.find(x=>x.id===editandoVincId):null);
+    const lista=document.getElementById('vinc-tar-resultados');
+    if(lista)lista.innerHTML=_renderResultadosTarefa();
+    const chips=document.getElementById('vinc-tar-chips');
+    if(chips)chips.innerHTML=_renderTarefasSelecionadasChips();
   }
   function onDigitarNomeNovo(texto){
     _buscaMatText=texto;
@@ -588,7 +633,10 @@ const Materiais = (() => {
   }
   function usarExistenteAoCriar(materialId){
     _modoVinc='vincular';
-    selecionarMaterialVinc(materialId);
+    _vincMatSelId=materialId;
+    const m=biblioteca.find(x=>x.id===materialId);
+    if(m)_buscaMatText=m.nome;
+    _renderVincModal(editandoVincId?vinculos.find(x=>x.id===editandoVincId):null);
   }
 
   async function salvarVinculo(){
@@ -621,22 +669,19 @@ const Materiais = (() => {
       if(!materialId){Utils.toast('Busque e selecione um material.','alerta');return;}
     }
 
+    if(!editandoVincId){
+      const chave=[...tarefaIds].sort().join('|');
+      const existe=vinculos.find(x=>x.materialId===materialId&&
+        [..._getTarefaIds(x)].sort().join('|')===chave);
+      if(existe&&!Utils.confirmar('Já existe um vínculo idêntico (mesmo material e mesmas tarefas). Criar mesmo assim?'))return;
+    }
+
+    const data={materialId,tarefaIds,consumoPrevisto,consumoReal,unidadeConsumo,observacoes};
     try{
-      if(editandoVincId){
-        const data={materialId,tarefaId:tarefaIds[0],consumoPrevisto,consumoReal,unidadeConsumo,observacoes};
-        await Database.atualizar(obraId,COL_VIN,editandoVincId,data);
-        Utils.toast('Vínculo atualizado!','sucesso');
-      } else {
-        let criados=0,ignorados=0;
-        for(const tarefaId of tarefaIds){
-          const existe=vinculos.find(x=>x.materialId===materialId&&x.tarefaId===tarefaId);
-          if(existe){ignorados++;continue;}
-          await Database.criar(obraId,COL_VIN,{materialId,tarefaId,consumoPrevisto,consumoReal,unidadeConsumo,observacoes});
-          criados++;
-        }
-        Utils.toast(`${criados} vínculo(s) criado(s)`+(ignorados?` (${ignorados} já existente(s), ignorado(s))`:''),'sucesso');
-      }
+      if(editandoVincId)await Database.atualizar(obraId,COL_VIN,editandoVincId,data);
+      else await Database.criar(obraId,COL_VIN,data);
       Utils.fecharModal('modal-material-vinc');
+      Utils.toast('Vínculo salvo!','sucesso');
       editandoVincId=null;await carregar();
     }catch(e){console.error(e);Utils.toast('Erro.','erro');}
   }

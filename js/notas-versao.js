@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.17.2',
+  versaoAtual: 'V2.17.3',
 
   versoes: [
     {
@@ -1720,7 +1720,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.17.2',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-11',
       tipo: 'correcao',
       titulo: 'Concreto: navegação corrigida + visão fiel ao dashboard original',
@@ -1751,6 +1751,39 @@ const NotasVersao = {
         '    numerados, igual ao original (era um conjunto de pílulas)',
         '  → Cards de seleção (tipo de peça, menu de concretagem)',
         '    convertidos para o "menuCard" do original',
+      ]
+    },
+    {
+      versao: 'V2.17.3',
+      status: 'aberta',
+      data: '2026-07-11',
+      tipo: 'correcao',
+      titulo: 'Mão de Obra/Materiais: tarefas sem código, vínculo somado em uma linha, correção de bug ao selecionar tarefa',
+      itens: [
+        'TAREFAS SEM CÓDIGO: a busca/árvore de tarefas (Mão de Obra,',
+        '  Materiais e Diário) agora mostra só o nome do serviço/tarefa,',
+        '  sem o código na frente (helper compartilhado',
+        '  Utils.opcoesTarefaHierarquia)',
+        '',
+        'VÍNCULO A VÁRIAS TAREFAS = UMA LINHA SÓ: selecionar mais de uma',
+        '  tarefa não cria mais uma linha por tarefa — agora gera UM',
+        '  único vínculo com todas as tarefas somadas: nomes unidos',
+        '  ("Tarefa A + Tarefa B") e quantidade somada (base do cálculo',
+        '  do custo total). Vale para Mão de Obra e Materiais.',
+        '  → Editar um vínculo existente também permite adicionar ou',
+        '    remover tarefas dele (antes só uma tarefa era permitida',
+        '    na edição)',
+        '  → Planejamento (colunas Custo Material/Custo M.Obra) já lê',
+        '    o novo formato — cada tarefa recebe valor×sua própria',
+        '    quantidade, mesmo quando o vínculo cobre várias tarefas',
+        '  → Vínculos antigos (uma tarefa só) continuam funcionando',
+        '    normalmente, sem precisar recriar nada',
+        '',
+        'CORREÇÃO DE BUG: selecionar uma tarefa na busca não apaga mais',
+        '  o que já tinha sido digitado (nome, valor, categoria,',
+        '  observações...) — antes o clique recarregava o modal inteiro',
+        '  e perdia tudo. Agora só a lista de resultados e os',
+        '  "chips" de tarefas selecionadas são atualizados.',
       ]
     }
   ],

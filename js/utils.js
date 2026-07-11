@@ -158,8 +158,8 @@ const Utils = (() => {
       const nivel=t.nivel||0;
       const indent='\u2007\u2007'.repeat(nivel);
       const marcador=t.tipo==='grupo'?'▸ ':(nivel>0?'– ':'');
-      const label=indent+marcador+(t.codigo?t.codigo+' ':'')+(t.nome||'');
-      return {id:t.id, label, nivel, tipo:t.tipo||'tarefa'};
+      const label=indent+marcador+(t.nome||'');
+      return {id:t.id, label, codigo:t.codigo||'', nivel, tipo:t.tipo||'tarefa'};
     });
   }
 

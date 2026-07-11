@@ -85,10 +85,10 @@ const MaoDeObra = (() => {
   // ====== POR TAREFA ======
   function _renderVinculos(){
     const opts=_getOpcoesTarefa();
-    const vf=filtroTarefa?vinculos.filter(v=>v.tarefaId===filtroTarefa):vinculos;
+    const vf=filtroTarefa?vinculos.filter(v=>_getTarefaIds(v).includes(filtroTarefa)):vinculos;
     const info=filtroTarefa?_getTarefaInfo(filtroTarefa):null;
     const totalGeral=vf.reduce((s,v)=>{
-      const ti=_getTarefaInfo(v.tarefaId);
+      const ti=_getTarefaInfoMulti(_getTarefaIds(v));
       return s+_calcTotalNum(ti,v);
     },0);
 
@@ -124,7 +124,7 @@ const MaoDeObra = (() => {
           <th class="col-acoes">Ações</th></tr></thead>
         <tbody>${vf.map(v=>{
           const mo=biblioteca.find(m=>m.id===v.maoDeObraId);
-          const ti=_getTarefaInfo(v.tarefaId);
+          const ti=_getTarefaInfoMulti(_getTarefaIds(v));
           const total=_calcTotalNum(ti,v);
           return `<tr>
             <td><strong>${mo?mo.nome:'(removido)'}</strong></td>
@@ -153,8 +153,29 @@ const MaoDeObra = (() => {
     if(!id)return null;
     const t=tarefas.find(x=>x.id===id);
     if(!t)return null;
-    const label=(t.codigo?t.codigo+' — ':'')+(t.nome||'');
-    return {id,label,quantidade:t.quantidade||0,unidade:t.unidade||'un',tipo:t.tipo||'tarefa'};
+    return {id,label:t.nome||'',quantidade:t.quantidade||0,unidade:t.unidade||'un',tipo:t.tipo||'tarefa'};
+  }
+
+  // Um vínculo pode estar ligado a mais de uma tarefa (tarefaIds). Docs
+  // antigos têm apenas tarefaId (singular) — suporta os dois formatos.
+  function _getTarefaIds(v){
+    return v.tarefaIds||(v.tarefaId?[v.tarefaId]:[]);
+  }
+
+  // Combina as tarefas de um vínculo em uma única "linha": nomes unidos
+  // por " + " e quantidade SOMADA (não uma linha por tarefa).
+  function _getTarefaInfoMulti(ids){
+    const infos=(ids||[]).map(_getTarefaInfo).filter(Boolean);
+    if(!infos.length)return null;
+    if(infos.length===1)return infos[0];
+    const mesmaUnidade=infos.every(i=>i.unidade===infos[0].unidade);
+    return {
+      id:ids.join(','),
+      label:infos.map(i=>i.label).join(' + '),
+      quantidade:infos.reduce((s,i)=>s+(i.quantidade||0),0),
+      unidade:mesmaUnidade?infos[0].unidade:'(misto)',
+      tipo:'multi',
+    };
   }
 
   // Custo total = valor unitário × quantidade da tarefa, quando a tarefa
@@ -262,9 +283,8 @@ const MaoDeObra = (() => {
   function editarVinculo(id){
     const v=vinculos.find(x=>x.id===id);if(!v)return;
     editandoVincId=id;_modoVinc='vincular';
-    _vincTarSelIds=v.tarefaId?[v.tarefaId]:[];
-    const o=_getOpcoesTarefa().find(x=>x.id===v.tarefaId);
-    _buscaTarText=o?o.label.replace(/\u2007/g,''):'';
+    _vincTarSelIds=_getTarefaIds(v);
+    _buscaTarText='';
     document.getElementById('modal-mdo-vinc-titulo').textContent='Editar Vínculo';
     _renderVincModal(v);
     Utils.abrirModal('modal-mdo-vinc');
@@ -289,13 +309,14 @@ const MaoDeObra = (() => {
         const o=opts.find(x=>x.id===id);
         const label=o?o.label.replace(/\u2007/g,''):id;
         return `<span class="badge badge-amarelo" style="display:inline-flex;align-items:center;gap:6px;">${label}
-          ${editandoVincId?'':`<span style="cursor:pointer;font-weight:800;" onclick="MaoDeObra.removerTarefaVinc('${id}')">✕</span>`}</span>`;
+          <span style="cursor:pointer;font-weight:800;" onclick="MaoDeObra.removerTarefaVinc('${id}')">✕</span></span>`;
       }).join('')}
     </div>`;
   }
 
   function _renderVincModal(v){
     const body=document.getElementById('mdo-vinc-body');if(!body)return;
+    const snap=_snapshotVincForm(body);
     body.innerHTML=`
       <div style="display:flex;gap:6px;margin-bottom:16px;">
         <button class="btn btn-sm ${_modoVinc==='vincular'?'btn-primario':'btn-secundario'}"
@@ -320,15 +341,13 @@ const MaoDeObra = (() => {
         </div>`}
 
       <div class="form-grupo"><label>Buscar serviço / tarefa *
-        <span class="text-muted" style="font-weight:400;font-size:0.75rem;">
-          ${editandoVincId?' (qualquer nível do Planejamento)':' (qualquer nível — pode selecionar mais de uma tarefa)'}
-        </span></label>
+        <span class="text-muted" style="font-weight:400;font-size:0.75rem;"> (qualquer nível — pode selecionar mais de uma tarefa)</span></label>
         <input type="text" id="mdo-vinc-tar-busca" class="form-control" placeholder="Digite para buscar... Ex: alvenaria, pintura"
           value="${_buscaTarText}" oninput="MaoDeObra.onBuscaTarefaVinc(this.value)"></div>
       <div id="mdo-vinc-tar-resultados" style="max-height:200px;overflow-y:auto;border:1px solid var(--cor-borda-light);border-radius:8px;margin-bottom:10px;">
         ${_renderResultadosTarefa()}
       </div>
-      ${_renderTarefasSelecionadasChips()}
+      <div id="mdo-vinc-chips">${_renderTarefasSelecionadasChips()}</div>
 
       <div class="form-row">
         <div class="form-grupo">
@@ -346,6 +365,22 @@ const MaoDeObra = (() => {
       </div>
       <div class="form-grupo"><label>Observações</label>
         <textarea id="mdo-vinc-obs" class="form-control" rows="2">${v?.observacoes||''}</textarea></div>`;
+    _restoreVincForm(body,snap);
+  }
+
+  // Preserva o que o usuário já digitou (nome, valor, observações, etc.)
+  // ao re-renderizar o modal por causa de uma seleção de tarefa/mão de
+  // obra — sem isso, o innerHTML novo apaga tudo que já tinha sido escrito.
+  function _snapshotVincForm(body){
+    const snap={};
+    body.querySelectorAll('input[id], textarea[id], select[id]').forEach(el=>{snap[el.id]=el.value;});
+    return snap;
+  }
+  function _restoreVincForm(body,snap){
+    Object.keys(snap).forEach(id=>{
+      const el=body.querySelector('#'+id);
+      if(el)el.value=snap[id];
+    });
   }
 
   function onBuscaTarefaVinc(texto){
@@ -354,19 +389,19 @@ const MaoDeObra = (() => {
     if(lista)lista.innerHTML=_renderResultadosTarefa();
   }
   function selecionarTarefaVinc(id){
-    if(editandoVincId){
-      _vincTarSelIds=[id];
-      const o=_getOpcoesTarefa().find(x=>x.id===id);
-      if(o)_buscaTarText=o.label.replace(/\u2007/g,'');
-    }else{
-      const i=_vincTarSelIds.indexOf(id);
-      if(i>=0)_vincTarSelIds.splice(i,1);else _vincTarSelIds.push(id);
-    }
-    _renderVincModal(editandoVincId?vinculos.find(x=>x.id===editandoVincId):null);
+    const i=_vincTarSelIds.indexOf(id);
+    if(i>=0)_vincTarSelIds.splice(i,1);else _vincTarSelIds.push(id);
+    const lista=document.getElementById('mdo-vinc-tar-resultados');
+    if(lista)lista.innerHTML=_renderResultadosTarefa();
+    const chips=document.getElementById('mdo-vinc-chips');
+    if(chips)chips.innerHTML=_renderTarefasSelecionadasChips();
   }
   function removerTarefaVinc(id){
     _vincTarSelIds=_vincTarSelIds.filter(x=>x!==id);
-    _renderVincModal(editandoVincId?vinculos.find(x=>x.id===editandoVincId):null);
+    const lista=document.getElementById('mdo-vinc-tar-resultados');
+    if(lista)lista.innerHTML=_renderResultadosTarefa();
+    const chips=document.getElementById('mdo-vinc-chips');
+    if(chips)chips.innerHTML=_renderTarefasSelecionadasChips();
   }
 
   async function salvarVinculo(){
@@ -393,22 +428,19 @@ const MaoDeObra = (() => {
       if(!maoDeObraId){Utils.toast('Selecione uma mão de obra.','alerta');return;}
     }
 
+    if(!editandoVincId){
+      const chave=[...tarefaIds].sort().join('|');
+      const existe=vinculos.find(x=>x.maoDeObraId===maoDeObraId&&
+        [..._getTarefaIds(x)].sort().join('|')===chave);
+      if(existe&&!Utils.confirmar('Já existe um vínculo idêntico (mesma mão de obra e mesmas tarefas). Criar mesmo assim?'))return;
+    }
+
+    const data={maoDeObraId,tarefaIds,valor,unidade,observacoes};
     try{
-      if(editandoVincId){
-        const data={maoDeObraId,tarefaId:tarefaIds[0],valor,unidade,observacoes};
-        await Database.atualizar(obraId,COL_VIN,editandoVincId,data);
-        Utils.toast('Vínculo atualizado!','sucesso');
-      } else {
-        let criados=0,ignorados=0;
-        for(const tarefaId of tarefaIds){
-          const existe=vinculos.find(x=>x.maoDeObraId===maoDeObraId&&x.tarefaId===tarefaId);
-          if(existe){ignorados++;continue;}
-          await Database.criar(obraId,COL_VIN,{maoDeObraId,tarefaId,valor,unidade,observacoes});
-          criados++;
-        }
-        Utils.toast(`${criados} vínculo(s) criado(s)`+(ignorados?` (${ignorados} já existente(s), ignorado(s))`:''),'sucesso');
-      }
+      if(editandoVincId)await Database.atualizar(obraId,COL_VIN,editandoVincId,data);
+      else await Database.criar(obraId,COL_VIN,data);
       Utils.fecharModal('modal-mdo-vinc');
+      Utils.toast('Vínculo salvo!','sucesso');
       editandoVincId=null;await carregar();
     }catch(e){console.error(e);Utils.toast('Erro.','erro');}
   }
@@ -442,10 +474,10 @@ const MaoDeObra = (() => {
         const infoFiltro=filtroTarefa?_getTarefaInfo(filtroTarefa):null;
         subtitulo='Mão de Obra — Por Tarefa'+(infoFiltro?` (filtrado: ${infoFiltro.label})`:'');
         H=['Mão de Obra','Categoria','Serviço / Tarefa','Valor Unit. (R$)','Unidade','Quantidade da Tarefa','Custo Total (R$)'];
-        const vf=filtroTarefa?vinculos.filter(v=>v.tarefaId===filtroTarefa):vinculos;
+        const vf=filtroTarefa?vinculos.filter(v=>_getTarefaIds(v).includes(filtroTarefa)):vinculos;
         rows=vf.map(v=>{
           const mo=biblioteca.find(m=>m.id===v.maoDeObraId);
-          const ti=_getTarefaInfo(v.tarefaId);
+          const ti=_getTarefaInfoMulti(_getTarefaIds(v));
           const total=_calcTotalNum(ti,v);
           return[mo?mo.nome:'(removido)',mo?.categoria||'',ti?ti.label:'',
             parseFloat(v.valor)||0,v.unidade||'',ti?ti.quantidade:'',total];

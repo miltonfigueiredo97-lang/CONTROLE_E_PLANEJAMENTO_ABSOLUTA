@@ -104,27 +104,36 @@ const Planejamento = (() => {
     if(!tarefas.length)return;
 
     // ---- 1. Custo DIRETO por tarefa (o que foi vinculado especificamente a ela) ----
+    // Um vínculo pode estar ligado a mais de uma tarefa (tarefaIds); docs
+    // antigos têm apenas tarefaId (singular) — suporta os dois formatos.
+    // Cada tarefa recebe valor×sua própria quantidade (não dividido entre elas).
     const diretoMaterial=new Map();
     const bibPorId=new Map(materiaisBib.map(m=>[m.id,m]));
     for(const v of materiaisVinc){
-      if(!v.tarefaId||v.tarefaId==='__fachada__')continue; // não pertence à árvore do Planejamento
-      const t=tarefas.find(x=>x.id===v.tarefaId);
-      const mat=bibPorId.get(v.materialId);
-      if(!t||!mat||!mat.preco)continue;
-      const cons=parseFloat(v.consumoPrevisto)||0;
-      const qtdBase=(t.quantidade||0)*cons;
-      const custo=qtdBase*parseFloat(mat.preco);
-      diretoMaterial.set(v.tarefaId,(diretoMaterial.get(v.tarefaId)||0)+custo);
+      const ids=v.tarefaIds||(v.tarefaId?[v.tarefaId]:[]);
+      for(const tarefaId of ids){
+        if(!tarefaId||tarefaId==='__fachada__')continue; // não pertence à árvore do Planejamento
+        const t=tarefas.find(x=>x.id===tarefaId);
+        const mat=bibPorId.get(v.materialId);
+        if(!t||!mat||!mat.preco)continue;
+        const cons=parseFloat(v.consumoPrevisto)||0;
+        const qtdBase=(t.quantidade||0)*cons;
+        const custo=qtdBase*parseFloat(mat.preco);
+        diretoMaterial.set(tarefaId,(diretoMaterial.get(tarefaId)||0)+custo);
+      }
     }
 
     const diretoMaoObra=new Map();
     for(const v of maoDeObraVinc){
-      if(!v.tarefaId)continue;
-      const t=tarefas.find(x=>x.id===v.tarefaId);
-      if(!t)continue;
-      const valor=parseFloat(v.valor)||0;
-      const custo=t.quantidade?valor*t.quantidade:valor;
-      diretoMaoObra.set(v.tarefaId,(diretoMaoObra.get(v.tarefaId)||0)+custo);
+      const ids=v.tarefaIds||(v.tarefaId?[v.tarefaId]:[]);
+      for(const tarefaId of ids){
+        if(!tarefaId)continue;
+        const t=tarefas.find(x=>x.id===tarefaId);
+        if(!t)continue;
+        const valor=parseFloat(v.valor)||0;
+        const custo=t.quantidade?valor*t.quantidade:valor;
+        diretoMaoObra.set(tarefaId,(diretoMaoObra.get(tarefaId)||0)+custo);
+      }
     }
 
     custoMaterialPorTarefa=_distribuirEAgregar(diretoMaterial);
