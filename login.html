@@ -37,14 +37,14 @@
 
       <div id="login-erro" class="hidden" style="background:#fee2e2;color:#dc2626;padding:10px 14px;border-radius:6px;font-size:0.85rem;margin-bottom:16px;border-left:3px solid #dc2626;"></div>
 
-      <form id="form-login" onsubmit="handleLogin(event)">
+      <form id="form-login" onsubmit="handleLogin(event)" novalidate>
         <div class="form-grupo">
           <label>E-mail</label>
-          <input type="email" id="email" class="form-control" placeholder="seu@email.com" required>
+          <input type="text" id="email" class="form-control" placeholder="seu@email.com" autocomplete="username">
         </div>
         <div class="form-grupo" style="margin-bottom:20px;">
           <label>Senha</label>
-          <input type="password" id="senha" class="form-control" placeholder="Sua senha" required>
+          <input type="password" id="senha" class="form-control" placeholder="Sua senha" autocomplete="current-password">
         </div>
         <button type="submit" class="btn btn-primario" id="btn-login">Entrar</button>
       </form>
@@ -66,13 +66,29 @@
   if (initFirebase()) {
     auth.onAuthStateChanged(user => { if (user) window.location.href = 'obras.html'; });
   }
+  // Acesso simplificado (0/0): traduz para a credencial real cadastrada
+  // no Firebase Auth, sem expor e-mail/senha de verdade pra quem acessa.
+  const ACESSO_SIMPLIFICADO = { usuario: '0', senha: '0', email: 'gestor@absoluta.eng', senhaReal: '000000' };
+
   async function handleLogin(e) {
     e.preventDefault();
-    const email = document.getElementById('email').value.trim();
-    const senha = document.getElementById('senha').value;
+    let email = document.getElementById('email').value.trim();
+    let senha = document.getElementById('senha').value;
     const btn = document.getElementById('btn-login');
     const erro = document.getElementById('login-erro');
     erro.classList.add('hidden');
+
+    if (!email || !senha) {
+      erro.textContent = 'Preencha e-mail e senha.';
+      erro.classList.remove('hidden');
+      return;
+    }
+
+    if (email === ACESSO_SIMPLIFICADO.usuario && senha === ACESSO_SIMPLIFICADO.senha) {
+      email = ACESSO_SIMPLIFICADO.email;
+      senha = ACESSO_SIMPLIFICADO.senhaReal;
+    }
+
     btn.disabled = true; btn.textContent = 'Entrando...';
     const result = await Auth.login(email, senha);
     if (result.success) { window.location.href = 'obras.html'; }

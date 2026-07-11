@@ -5,6 +5,21 @@
 /* Dashboard CSS */
 .dashboard-css { /* placeholder */ }
 
+/* --- Tutorial --- */
+.tutorial-progresso {
+  height: 5px; background: var(--cor-borda-light); border-radius: 100px; overflow: hidden;
+}
+.tutorial-progresso-fill {
+  height: 100%; background: var(--cor-primaria); border-radius: 100px; transition: width var(--transicao-lenta);
+}
+#tutorial-modal .badge { margin-top: 4px; }
+#tutorial-modal p { margin-bottom: 10px; line-height: 1.5; }
+.sidebar-nav a.tutorial-destaque {
+  background: rgba(245, 200, 0, 0.14);
+  box-shadow: inset 3px 0 0 var(--cor-primaria);
+  color: #fff;
+}
+
 /* --- Levantamento Fachada --- */
 .fachada-layout {
   display: grid;

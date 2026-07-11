@@ -46,7 +46,7 @@
       <a href="histograma.html"><span class="nav-icon">📊</span> Histograma</a>
       <a href="admin-permissoes.html"><span class="nav-icon">🔑</span> Permissões</a>
       <div class="sidebar-section-title">Sistema</div>
-      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V2.16.0</span></a>
+      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V2.17.0</span></a>
     </nav>
     <div class="sidebar-user">
       <div class="user-avatar">U</div>
@@ -60,7 +60,9 @@
 
   <header class="header">
     <div class="header-title"><h1>Obras</h1></div>
-    <div class="header-actions" id="header-actions"></div>
+    <div class="header-actions" id="header-actions">
+      <button class="btn btn-secundario btn-sm" onclick="Tutorial.abrir()" title="Rever o tour dos módulos">🎓 Tutorial</button>
+    </div>
   </header>
 
   <main class="content">
@@ -124,6 +126,7 @@
 <script src="js/audit.js"></script>
 <script src="js/utils.js"></script>
 
+<script src="js/tutorial.js"></script>
 <script src="js/obras.js"></script>
 <script>document.addEventListener('DOMContentLoaded', () => { Obras.init(); });</script>
 </body>

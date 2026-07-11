@@ -7,6 +7,7 @@ const Obras = (() => {
     const ok = await Utils.initPagina();
     if (!ok) return;
     await carregar();
+    if (typeof Tutorial !== 'undefined') Tutorial.iniciarSeNecessario();
   }
 
   async function carregar() {

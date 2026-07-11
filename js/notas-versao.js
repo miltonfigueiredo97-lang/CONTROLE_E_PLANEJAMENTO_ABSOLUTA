@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.16.0',
+  versaoAtual: 'V2.17.0',
 
   versoes: [
     {
@@ -1633,7 +1633,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.16.0',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-11',
       tipo: 'funcionalidade',
       titulo: 'Módulo Concreto: Levantamento + Controle',
@@ -1678,6 +1678,26 @@ const NotasVersao = {
         '  → Editar concretagem substitui todos os vínculos e BTs',
         '  → Excluir peça remove seus vínculos com concretagens',
         '  → Editar BT já lançada substitui os lançamentos anteriores',
+      ]
+    },
+    {
+      versao: 'V2.17.0',
+      status: 'aberta',
+      data: '2026-07-11',
+      tipo: 'funcionalidade',
+      titulo: 'Acesso simplificado + Tutorial guiado',
+      itens: [
+        'Login: acesso simplificado (usuário "0" / senha "0") traduzido',
+        '  internamente para uma credencial real do Firebase Auth,',
+        '  pensado para acesso rápido de convidados/gestores',
+        'Novo módulo Tutorial: pop-up de boas-vindas no primeiro acesso',
+        '  → Tour rápido explicando cada aba do menu lateral (o que é,',
+        '    como funciona, se já está ou não em funcionamento)',
+        '  → Botão "Pular" a qualquer momento e "Próximo" entre os passos',
+        '  → Não abre as telas de fato, só um pop-up sobre a tela de Obras',
+        '  → Pode ser revisto a qualquer momento pelo botão "🎓 Tutorial"',
+        '    na tela de Obras',
+        '  → Preferência salva no navegador (não repete depois da 1ª vez)',
       ]
     }
   ],
