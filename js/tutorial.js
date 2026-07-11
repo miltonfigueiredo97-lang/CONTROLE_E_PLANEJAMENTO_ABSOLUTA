@@ -9,56 +9,131 @@ const Tutorial = (() => {
   // Ordem e conteúdo espelham exatamente o menu lateral (obras.html).
   const PASSOS = [
     { icone: '🏗️', nome: 'Obras', href: 'obras.html', status: 'ok',
-      oque: 'É a tela inicial do sistema — o hub de navegação entre as obras cadastradas.',
-      como: 'Cada obra vira um card. Ao clicar em uma obra, ela passa a ser a "obra ativa" e todos os outros módulos do menu passam a mostrar os dados dela.' },
+      oque: 'É a tela inicial do sistema — o hub de navegação entre todas as obras cadastradas.',
+      recursos: [
+        'Cada obra vira um card, com nome, cliente, cidade, endereço e datas previstas',
+        'Upload de imagem de capa pra identificar a obra visualmente',
+        'Ao clicar em uma obra ela vira a "obra ativa" — todos os outros módulos do menu passam a mostrar os dados dela',
+        'Barra de % executado calculada automaticamente a partir do Planejamento, com início real e fim provável',
+        'Editar, ativar/inativar e excluir obras diretamente por aqui',
+      ] },
     { icone: '📊', nome: 'Dashboard', href: 'dashboard.html', status: 'construcao',
-      oque: 'Painel com os indicadores gerais da obra ativa (avanço físico, prazos, alertas).',
-      como: 'Ainda não foi construído. A ideia é reunir aqui, em um só lugar, um resumo visual do que está acontecendo na obra.' },
+      oque: 'Painel de indicadores gerais da obra ativa — visão executiva rápida.',
+      recursos: [
+        'Ainda não foi construído (só existe a página com o menu)',
+        'A ideia é reunir aqui, em um só lugar: avanço físico, prazos, alertas de restrições e destaques do Diário/Medições',
+      ] },
     { icone: '📅', nome: 'Planejamento', href: 'planejamento.html', status: 'ok',
-      oque: 'O cronograma da obra em formato de Gantt, com hierarquia de tarefas.',
-      como: 'Já está funcionando: cadastro de tarefas, datas, % concluído (que sobe automaticamente para as tarefas "pai"), linha de balanço e escadinha.' },
+      oque: 'O cronograma da obra em formato de Gantt, no estilo MS Project.',
+      recursos: [
+        'Hierarquia de tarefas (grupo → sub-tarefas) com níveis indentados e coloridos',
+        '% concluído do "pai" é calculado automaticamente a partir dos filhos (ponderado por quantidade quando existe)',
+        'Predecessoras entre tarefas — muda a data de uma e as dependentes recalculam sozinhas',
+        'Status automático por tarefa: atrasado, alerta, em andamento, em dia, concluído (cores no Gantt)',
+        'Custo Material e Custo Mão de Obra por tarefa, puxados automaticamente dos vínculos feitos em Materiais e Mão de Obra',
+        'Reordenar tarefas arrastando a linha, zoom do Gantt (dia/semana/mês), colunas que você mostra/oculta/redimensiona/reordena',
+        'Importação de cronograma via Excel e exportação do Gantt inteiro em PNG (mesmo com centenas de linhas)',
+        'Desfazer (undo) as últimas alterações',
+      ] },
     { icone: '📐', nome: 'Levantamentos', href: 'levantamento.html', status: 'ok',
-      oque: 'Hub com as calculadoras de quantitativos da obra: Fachada, Ar Condicionado e Concreto.',
-      como: 'Cada levantamento já está funcionando de forma independente, com sua própria lógica de cálculo (m², peças, volume de concreto etc).' },
+      oque: 'Hub com as calculadoras de quantitativos da obra — cada uma com sua lógica própria.',
+      recursos: [
+        'Fachada: hierarquia Fachada → Balancim → Vista → Peça, cálculo de m² com e sem metro linear, 4 modos de desconto de vão configuráveis, mapa visual com caixas posicionáveis sobre a planta',
+        'Ar Condicionado: hierarquia Área → Subárea → Item, com busca inteligente (fuzzy) que sugere o material certo da biblioteca conforme você digita',
+        'Concreto: cadastro de peças com diagrama de pilar em SVG, calculadora de volume, importação em massa por TSV/CSV e um assistente (wizard) de concretagem com ordenação de andares por arrasto',
+      ] },
     { icone: '✅', nome: 'Controle', href: 'controle.html', status: 'ok',
-      oque: 'Hub de controle operacional — acompanhamento do que já foi executado no campo.',
-      como: 'O Controle de Concreto já está funcionando (KPIs, boletins de concretagem, gráficos e relatórios). Os demais controles serão adicionados aqui com o tempo.' },
+      oque: 'Hub de controle operacional — o que já foi executado de fato no campo, não só planejado.',
+      recursos: [
+        'Controle de Concreto já está funcionando por completo: 6 KPIs (Volume Total, Previsto +10%, Real Concretado, Executado de Projeto, Faltando, Índice de Perda)',
+        'Lançamento e edição de Boletins de Concretagem (BT), com alerta automático de excesso de volume por peça',
+        'Gráficos de progresso por tipo de peça e status das BTs por concretagem',
+        'Aba de Relatórios com gráficos donut e de barras (volume por andar) e exportação em CSV',
+        'Outros controles operacionais (além de concreto) serão adicionados aqui com o tempo',
+      ] },
     { icone: '🚧', nome: 'Restrições', href: 'restricoes.html', status: 'construcao',
       oque: 'Controle de restrições/impedimentos que travam o andamento da obra.',
-      como: 'Ainda não foi construído. A ideia é listar pendências (material, projeto, terceiros) e o prazo pra cada uma ser resolvida.' },
+      recursos: [
+        'Ainda não foi construído',
+        'A ideia é listar pendências (material, projeto, terceiros, decisão do cliente) com um responsável e um prazo pra cada uma ser resolvida, alimentando alertas no Dashboard e no Planejamento',
+      ] },
     { icone: '📋', nome: 'Semanal', href: 'semanal.html', status: 'ok',
-      oque: 'Planejamento de curto prazo — o que será executado na semana.',
-      como: 'Já está funcionando: seleção de tarefas da semana, acompanhamento e comparação com o planejado.' },
+      oque: 'Planejamento de curto prazo — o que efetivamente será executado na semana, puxado do cronograma geral.',
+      recursos: [
+        'Seleção de tarefas do Planejamento pra compor a semana de trabalho',
+        'Edição de data, início, responsável e progresso direto na tela, sem precisar ir ao Planejamento',
+        'Fechamento da semana com histórico guardado por obra, pra consultar semanas anteriores',
+        'Relatório automático comparando planejado x realizado, e opção de omitir/reabrir tarefas específicas',
+      ] },
     { icone: '📓', nome: 'Diário de Obra', href: 'diario.html', status: 'ok',
-      oque: 'Registro diário do que aconteceu na obra: efetivo, clima, ocorrências, fotos.',
-      como: 'Já está funcionando, com histórico por data e por obra.' },
+      oque: 'Registro diário do que aconteceu na obra — o "diário de bordo" de cada dia de trabalho.',
+      recursos: [
+        '"Pauta do dia" puxada automaticamente das tarefas em andamento no Planejamento',
+        'Lançamento de avanço físico direto no diário, que já atualiza o % da tarefa no Planejamento',
+        'Registro de atividades avulsas (fora do planejamento original), efetivo, clima e ocorrências',
+        'Busca de tarefas por similaridade (fuzzy), útil quando o nome não bate 100% com o cronograma',
+        'Geração e impressão de relatório do dia, com histórico por data e por obra',
+      ] },
     { icone: '📏', nome: 'Medições', href: 'medicoes.html', status: 'ok',
-      oque: 'Medição de serviços executados para fins de faturamento/contrato.',
-      como: 'Já está funcionando, com cálculo por período e por etapa.' },
+      oque: 'Medição de serviços executados, para fins de faturamento/contrato com o cliente ou fornecedor.',
+      recursos: [
+        'Medição calculada a partir do avanço já registrado no Planejamento, agrupada por etapa',
+        'Anexo de fotos por item medido, como comprovação',
+        'Histórico de medições por obra, com opção de descartar item ou excluir a medição inteira',
+      ] },
     { icone: '💰', nome: 'Orçamentos', href: 'orcamentos.html', status: 'construcao',
       oque: 'Orçamento da obra e comparação entre previsto e realizado.',
-      como: 'Ainda não foi construído.' },
+      recursos: [
+        'Ainda não foi construído',
+        'A ideia é cruzar o orçamento contratado com os custos reais que já vêm sendo calculados em Materiais e Mão de Obra',
+      ] },
     { icone: '👷', nome: 'Mão de Obra', href: 'mao-de-obra.html', status: 'ok',
-      oque: 'Controle de efetivo e produtividade das equipes na obra.',
-      como: 'Já está funcionando, vinculado às tarefas do Planejamento.' },
+      oque: 'Controle de efetivo e custo de mão de obra, ligado diretamente ao cronograma.',
+      recursos: [
+        'Biblioteca de funções/equipes cadastrada uma vez só e reaproveitada em qualquer obra',
+        'Vínculo de mão de obra a uma ou mais tarefas do Planejamento, com busca inteligente (fuzzy) pra achar a tarefa certa',
+        'Cálculo automático do custo total por tarefa, que alimenta a coluna "Custo Mão de Obra" lá no Planejamento',
+        'Exportação dos dados',
+      ] },
     { icone: '📦', nome: 'Suprimentos', href: 'suprimentos.html', status: 'construcao',
       oque: 'Controle de pedidos de compra e prazos de entrega de insumos.',
-      como: 'Ainda não foi construído.' },
+      recursos: [
+        'Ainda não foi construído',
+        'A ideia é acompanhar pedido → aprovação → entrega, com alerta de atraso que pode virar uma Restrição',
+      ] },
     { icone: '🧱', nome: 'Materiais', href: 'materiais.html', status: 'ok',
-      oque: 'Controle de consumo de materiais na obra.',
-      como: 'Já está funcionando, vinculado às tarefas do Planejamento.' },
+      oque: 'Controle de consumo de materiais da obra, ligado diretamente ao cronograma.',
+      recursos: [
+        'Biblioteca de materiais cadastrada uma vez só e reaproveitada em qualquer obra',
+        'Vínculo de material a uma ou mais tarefas, com quantidade base e custo — e alerta de possível material duplicado ao cadastrar um novo',
+        'Relatório de materiais cruzado com o Levantamento de Fachada',
+        'Alimenta automaticamente a coluna "Custo Material" no Planejamento',
+      ] },
     { icone: '📈', nome: 'Relatórios', href: 'relatorios.html', status: 'ok',
-      oque: 'Geração de relatórios da obra com apoio de inteligência artificial.',
-      como: 'Já está funcionando.' },
+      oque: 'Geração de relatórios em PDF da obra, com apoio de inteligência artificial.',
+      recursos: [
+        'Geração automática de texto do relatório usando IA (Gemini como principal, Claude como reserva caso o primeiro falhe)',
+        'Lista de relatórios pendentes e já gerados por obra, com visualização antes de baixar',
+        'Download do PDF e compartilhamento direto por WhatsApp',
+      ] },
     { icone: '📊', nome: 'Histograma', href: 'histograma.html', status: 'construcao',
       oque: 'Gráfico de histograma de mão de obra/recursos ao longo do cronograma.',
-      como: 'Ainda não foi construído.' },
+      recursos: [
+        'Ainda não foi construído',
+        'A ideia é mostrar a curva de efetivo necessário por período, cruzando Planejamento com Mão de Obra',
+      ] },
     { icone: '🔑', nome: 'Permissões', href: 'admin-permissoes.html', status: 'construcao',
       oque: 'Controle de quais módulos cada usuário pode ver, editar ou excluir.',
-      como: 'Ainda não foi construído — por enquanto todo usuário criado tem acesso total ao sistema.' },
+      recursos: [
+        'Ainda não foi construído',
+        'Por enquanto, todo usuário criado no sistema é tratado como administrador e tem acesso total a todos os módulos e obras',
+      ] },
     { icone: '📋', nome: 'Notas de Versão', href: 'notas-versao.html', status: 'ok',
-      oque: 'Histórico de tudo que já foi entregue no sistema, versão por versão.',
-      como: 'Já está funcionando — vale a pena dar uma olhada de vez em quando pra ver as novidades.' },
+      oque: 'Histórico completo de tudo que já foi entregue no sistema, versão por versão.',
+      recursos: [
+        'Cada versão lista exatamente o que mudou: funcionalidades novas, correções e melhorias',
+        'Vale a pena dar uma olhada de vez em quando pra acompanhar as novidades e o que já foi corrigido',
+      ] },
   ];
 
   let passoAtual = -1; // -1 = tela de boas-vindas
@@ -153,6 +228,7 @@ const Tutorial = (() => {
       ? '<span class="badge badge-sucesso">✓ Já está funcionando</span>'
       : '<span class="badge badge-alerta">🚧 Em construção</span>';
     const ultimo = passoAtual === PASSOS.length - 1;
+    const listaRecursos = (p.recursos || []).map(r => `<li>${r}</li>`).join('');
 
     modal.innerHTML = `
       <div class="modal-header">
@@ -161,9 +237,10 @@ const Tutorial = (() => {
       </div>
       <div class="modal-body">
         <div class="tutorial-progresso"><div class="tutorial-progresso-fill" style="width:${((passoAtual + 1) / PASSOS.length) * 100}%;"></div></div>
-        <p style="margin-top:14px;"><strong>O que é:</strong> ${p.oque}</p>
-        <p><strong>Como funciona:</strong> ${p.como}</p>
         ${statusBadge}
+        <p style="margin-top:12px;"><strong>O que é:</strong> ${p.oque}</p>
+        <p class="tutorial-recursos-titulo"><strong>Como funciona:</strong></p>
+        <ul class="tutorial-recursos">${listaRecursos}</ul>
       </div>
       <div class="modal-footer" style="justify-content:space-between;">
         <button class="btn btn-secundario" onclick="Tutorial.pular()">Pular tutorial</button>
@@ -176,7 +253,7 @@ const Tutorial = (() => {
     const overlay = document.createElement('div');
     overlay.id = 'tutorial-overlay';
     overlay.className = 'modal-overlay';
-    overlay.innerHTML = `<div class="modal" id="tutorial-modal"></div>`;
+    overlay.innerHTML = `<div class="modal modal-lg" id="tutorial-modal"></div>`;
     document.body.appendChild(overlay);
   }
 

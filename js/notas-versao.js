@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.17.0',
+  versaoAtual: 'V2.17.1',
 
   versoes: [
     {
@@ -1682,7 +1682,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.17.0',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-11',
       tipo: 'funcionalidade',
       titulo: 'Acesso simplificado + Tutorial guiado',
@@ -1698,6 +1698,24 @@ const NotasVersao = {
         '  → Pode ser revisto a qualquer momento pelo botão "🎓 Tutorial"',
         '    na tela de Obras',
         '  → Preferência salva no navegador (não repete depois da 1ª vez)',
+      ]
+    },
+    {
+      versao: 'V2.17.1',
+      status: 'aberta',
+      data: '2026-07-11',
+      tipo: 'melhoria',
+      titulo: 'Tutorial: explicações completas por módulo',
+      itens: [
+        'Cada passo do tutorial ganhou lista detalhada de recursos reais',
+        '  do módulo (não mais 1 frase genérica), incluindo:',
+        '  → Planejamento: hierarquia, % em família, predecessoras,',
+        '    custo material/mão de obra, undo, exportação PNG paginada',
+        '  → Levantamentos: detalhe de Fachada, Ar Condicionado e Concreto',
+        '  → Controle: detalhe dos 6 KPIs e recursos do Controle de Concreto',
+        '  → Semanal, Diário, Medições, Mão de Obra, Materiais e Relatórios',
+        '    com os fluxos reais de cada um',
+        'Modal do tutorial ampliado (modal-lg) para acomodar o conteúdo',
       ]
     }
   ],
