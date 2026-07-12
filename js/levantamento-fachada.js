@@ -526,11 +526,12 @@ const LevantamentoFachada = (() => {
       const c=_calc(pc);
       rows+='<tr>'+
         '<td>'+(i+1)+'</td>'+
-        '<td>'+pc.nome+(c.podeML?'<span class="badge badge-alerta" style="margin-left:4px;font-size:0.65rem;">ML</span>':'')+'</td>'+
+        '<td>'+pc.nome+'</td>'+
         '<td class="col-num">'+_pn(pc.comprimento)+'</td>'+
         '<td class="col-num">'+_pn(pc.altura)+'</td>'+
         '<td class="col-num col-centro">'+(pc.quantidade||1)+'</td>'+
         '<td class="col-centro">'+(pc.possuiJanela?'✓':'')+'</td>'+
+        '<td class="col-centro"><button class="btn btn-sm btn-icon" onclick="LF.togglePecaML(\''+pc.id+'\')" title="Pode ser considerado ML? (clique para alternar)">'+(c.podeML?'✅':'—')+'</button></td>'+
         '<td class="col-num" style="font-weight:600;color:var(--cor-primaria);">'+_f(c.m2semML)+'</td>'+
         '<td class="col-num">'+_f(c.vao)+'</td>'+
         '<td class="text-sm">'+(pc.acabamento||'')+'</td>'+
@@ -553,11 +554,11 @@ const LevantamentoFachada = (() => {
       '</div>'+
       '<div class="tabela-container mt-2"><table class="tabela tabela-compacta"><thead><tr>'+
       '<th class="col-sm">#</th><th>Peça</th><th class="col-num">Comp cm</th><th class="col-num">Alt cm</th>'+
-      '<th class="col-num col-centro">Qtd</th><th class="col-centro">Jan</th>'+
+      '<th class="col-num col-centro">Qtd</th><th class="col-centro">Jan</th><th class="col-centro">ML?</th>'+
       '<th class="col-num">m² sem ML</th><th class="col-num">Vão F.</th>'+
       '<th>Acab.</th><th class="col-centro">Conf</th><th class="col-acoes">Ações</th></tr></thead>'+
-      '<tbody>'+(rows||'<tr><td colspan="11" class="text-center text-muted">Clique "+ Nova Peça".</td></tr>')+'</tbody>'+
-      '<tfoot><tr><td></td><td><strong>TOTAL</strong></td><td></td><td></td><td></td><td></td>'+
+      '<tbody>'+(rows||'<tr><td colspan="12" class="text-center text-muted">Clique "+ Nova Peça".</td></tr>')+'</tbody>'+
+      '<tfoot><tr><td></td><td><strong>TOTAL</strong></td><td></td><td></td><td></td><td></td><td></td>'+
       '<td class="col-num" style="font-weight:700;color:var(--cor-primaria);">'+_f(tot.m2semML)+'</td>'+
       '<td class="col-num">'+_f(tot.vao)+'</td>'+
       '<td></td><td></td><td></td></tr></tfoot></table></div>';
@@ -828,12 +829,14 @@ const LevantamentoFachada = (() => {
     Utils.limparForm('form-peca');
     document.querySelector('#form-peca [name="quantidade"]').value=1;
     document.querySelector('#form-peca [name="quantidadeJanelas"]').value=1;
+    _mlManualTouch=false;
     _togJ(false);Utils.abrirModal('modal-peca');
   }
 
   function editarPeca(id){
     const pc=pecas.find(x=>x.id===id);if(!pc)return;
     editandoId=id;document.getElementById('modal-peca-titulo').textContent='Editar Peça';
+    _mlManualTouch=true;
     Utils.setFormData('form-peca',pc);_togJ(!!pc.possuiJanela);Utils.abrirModal('modal-peca');
   }
 
@@ -861,6 +864,24 @@ const LevantamentoFachada = (() => {
   async function excluirPeca(id){if(!Utils.confirmar('Excluir peça?'))return;try{await Database.deletar(obraId,COL,id);Utils.toast('Excluída.','sucesso');await carregar();}catch(e){Utils.toast('Erro.','erro');}}
   async function duplicarPeca(id){const pc=pecas.find(x=>x.id===id);if(!pc)return;const cl={...pc};delete cl.id;delete cl.createdAt;delete cl.updatedAt;delete cl.createdBy;delete cl.updatedBy;cl.nome=pc.nome+' (cópia)';cl.conferido=false;try{await Database.criar(obraId,COL,cl);Utils.toast('Duplicada!','sucesso');await carregar();}catch(e){Utils.toast('Erro.','erro');}}
   async function conferirPeca(id){const pc=pecas.find(x=>x.id===id);if(!pc)return;const n=!pc.conferido;try{await Database.atualizar(obraId,COL,id,{conferido:n,conferidoPor:n?Auth.getUid():null,conferidoEm:n?new Date().toISOString():null});Utils.toast(n?'Conferida.':'Desconferida.','sucesso');await carregar();}catch(e){Utils.toast('Erro.','erro');}}
+  async function togglePecaML(id){const pc=pecas.find(x=>x.id===id);if(!pc)return;const n=!pc.podeSerML;try{await Database.atualizar(obraId,COL,id,{podeSerML:n});Utils.toast(n?'Marcada como ML.':'Desmarcada como ML.','sucesso');await carregar();}catch(e){Utils.toast('Erro.','erro');}}
+
+  // Sugestão automática do "Pode ser ML" no formulário, baseada na config
+  // (peça com área <= ml_menor_que já nasce marcada; double-check manual continua liberado)
+  let _mlManualTouch=false;
+  function onClickCheckML(){_mlManualTouch=true;}
+  function onCompAltInput(){
+    if(_mlManualTouch)return;
+    const cInp=document.querySelector('#form-peca [name="comprimento"]');
+    const aInp=document.querySelector('#form-peca [name="altura"]');
+    const cb=document.getElementById('check-ml');
+    if(!cInp||!aInp||!cb)return;
+    const co=_pn(cInp.value), al=_pn(aInp.value);
+    if(!co||!al)return;
+    const areaUnit=(co/100)*(al/100);
+    const cfg=_getCfg();
+    cb.checked=areaUnit<=(_pn(cfg.ml_menor_que)||0.5);
+  }
 
   // ===================== EDITAR/EXCLUIR ENTIDADES =====================
   function editar(tipo,id){
@@ -1092,7 +1113,7 @@ const LevantamentoFachada = (() => {
   function imgRZEv(e, el){ imgRZ(e, el.dataset.d); }
   function cxResizeEv(e){ cxResize(e, parseInt(e.currentTarget.dataset.i), e.currentTarget.dataset.d); }
 
-  return {init,carregar,sel:selecionar,setAba,criarFachada,criarBalancim,editar,salvarEntidade,excluir,novaPeca,editarPeca,salvarPeca,excluirPeca,duplicarPeca,duplicarBal,editarNomeInline,abrirClonarBal,confirmarClonarBal,conferirPeca,exportarCSV,exportarVista,onToggleJanela,importarMapa,cxAdicionar,cxRemover,cxTravar,cxEditar,salvarCxEdit,cxMouseDown,cxDrop,cxResize,imgMouseDown,imgResize,entrarEditImg,sairEditImg,imgMD,imgRZEv,cxResizeEv,toggleEditImg,fecharEditImg,onImgResize,limparMapa,abrirVaoVista,salvarVaoVista,_atualizarPreviewVao,adicionarVaoRow,removerVaoRow,abrirConfig,salvarConfig,onChangeCfgJanela};
+  return {init,carregar,sel:selecionar,setAba,criarFachada,criarBalancim,editar,salvarEntidade,excluir,novaPeca,editarPeca,salvarPeca,excluirPeca,duplicarPeca,duplicarBal,editarNomeInline,abrirClonarBal,confirmarClonarBal,conferirPeca,togglePecaML,onClickCheckML,onCompAltInput,exportarCSV,exportarVista,onToggleJanela,importarMapa,cxAdicionar,cxRemover,cxTravar,cxEditar,salvarCxEdit,cxMouseDown,cxDrop,cxResize,imgMouseDown,imgResize,entrarEditImg,sairEditImg,imgMD,imgRZEv,cxResizeEv,toggleEditImg,fecharEditImg,onImgResize,limparMapa,abrirVaoVista,salvarVaoVista,_atualizarPreviewVao,adicionarVaoRow,removerVaoRow,abrirConfig,salvarConfig,onChangeCfgJanela};
 })();
 const LF=LevantamentoFachada;
 function onObraChanged(){LF.init();}

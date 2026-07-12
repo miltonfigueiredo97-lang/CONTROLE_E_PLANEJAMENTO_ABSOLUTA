@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.17.5',
+  versaoAtual: 'V2.17.6',
 
   versoes: [
     {
@@ -1806,7 +1806,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.17.5',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-12',
       tipo: 'funcionalidade',
       titulo: 'Levantamento de Fachada: clonar peças entre balancins',
@@ -1824,6 +1824,28 @@ const NotasVersao = {
         '  árvore não funcionava (erro "LF.editarNomeInline is not',
         '  a function"); corrigido, e agora busca o nome atual',
         '  internamente ao invés de depender do onclick',
+      ]
+    },
+    {
+      versao: 'V2.17.6',
+      status: 'aberta',
+      data: '2026-07-12',
+      tipo: 'funcionalidade',
+      titulo: 'Levantamento de Fachada: coluna "ML?" no relatório de peças',
+      itens: [
+        'Nova coluna "ML?" na tabela de peças da Vista, com um',
+        '  check clicável — mostra se a peça está sendo tratada',
+        '  como Metro Linear e permite alternar direto ali',
+        'No formulário de Nova Peça, o campo "Pode ser considerado',
+        '  Metro Linear" agora é pré-marcado automaticamente com',
+        '  base na Configuração de Cálculo (peça com área menor ou',
+        '  igual ao limite definido já nasce marcada como ML)',
+        'A checkbox continua sendo um double-check manual: se o',
+        '  usuário clicar nela, a sugestão automática para de',
+        '  sobrescrever aquela peça (respeita a escolha manual)',
+        'Ao editar uma peça já existente, o valor salvo é mantido',
+        '  como está (não recalcula sozinho por cima do que já foi',
+        '  decidido antes)',
       ]
     }
   ],

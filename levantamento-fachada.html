@@ -126,7 +126,7 @@
       <a href="histograma.html"><span class="nav-icon">📊</span> Histograma</a>
       <a href="admin-permissoes.html"><span class="nav-icon">🔑</span> Permissões</a>
       <div class="sidebar-section-title">Sistema</div>
-      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V2.17.5</span></a>
+      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V2.17.6</span></a>
     </nav>
     <div class="sidebar-user">
       <div class="user-avatar">U</div>
@@ -217,8 +217,8 @@
           <input type="text" name="nome" class="form-control" placeholder="Ex: Parede lateral, Faixa abaixo da janela" required>
         </div>
         <div class="form-row">
-          <div class="form-grupo"><label>Comprimento (cm)</label><input type="number" name="comprimento" class="form-control" step="1" min="0" placeholder="Ex: 400"></div>
-          <div class="form-grupo"><label>Altura (cm)</label><input type="number" name="altura" class="form-control" step="1" min="0" placeholder="Ex: 280"></div>
+          <div class="form-grupo"><label>Comprimento (cm)</label><input type="number" name="comprimento" class="form-control" step="1" min="0" placeholder="Ex: 400" oninput="LF.onCompAltInput()"></div>
+          <div class="form-grupo"><label>Altura (cm)</label><input type="number" name="altura" class="form-control" step="1" min="0" placeholder="Ex: 280" oninput="LF.onCompAltInput()"></div>
           <div class="form-grupo"><label>Quantidade</label><input type="number" name="quantidade" class="form-control" min="1" value="1"></div>
         </div>
         <div class="form-check mb-2">
@@ -231,8 +231,8 @@
           <div class="form-grupo"><label>Qtd Janelas</label><input type="number" name="quantidadeJanelas" class="form-control" min="0" value="1"></div>
         </div>
         <div class="form-check mb-2" style="background:var(--cor-alerta-bg);padding:10px 14px;border-radius:6px;border:1px solid #fcd34d;">
-          <input type="checkbox" name="podeSerML" id="check-ml">
-          <label for="check-ml" style="font-weight:500;color:#92400e;">Pode ser considerado Metro Linear<br><span style="font-size:0.75rem;font-weight:400;color:#b45309;">Peças com comprimento relevante (ex: faixas, soleiras, peitoris)</span></label>
+          <input type="checkbox" name="podeSerML" id="check-ml" onclick="LF.onClickCheckML()">
+          <label for="check-ml" style="font-weight:500;color:#92400e;">Pode ser considerado Metro Linear<br><span style="font-size:0.75rem;font-weight:400;color:#b45309;">Sugestão automática pela config (peça pequena). Marque/desmarque para confirmar ou sobrescrever.</span></label>
         </div>
         <div class="form-grupo">
           <label>Acabamento</label>
