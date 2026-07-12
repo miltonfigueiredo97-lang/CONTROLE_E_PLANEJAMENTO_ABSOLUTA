@@ -300,6 +300,9 @@
 .tree-edit-btn { display:none; margin-left:2px; background:none; border:none; color:#666; cursor:pointer; font-size:0.72rem; padding:2px 4px; border-radius:3px; }
 .tree-item:hover .tree-edit-btn { display:inline-flex; }
 .tree-edit-btn:hover { color:var(--cor-primaria); }
+.tree-clone-btn { display:none; margin-left:2px; background:none; border:none; color:#666; cursor:pointer; font-size:0.72rem; padding:2px 4px; border-radius:3px; }
+.tree-item:hover .tree-clone-btn { display:inline-flex; }
+.tree-clone-btn:hover { color:var(--cor-primaria); }
 
 /* Config caixa modal */
 .cx-fachada-opt { padding:8px 12px; cursor:pointer; border-radius:6px; font-size:0.85rem; }

@@ -126,7 +126,7 @@
       <a href="histograma.html"><span class="nav-icon">📊</span> Histograma</a>
       <a href="admin-permissoes.html"><span class="nav-icon">🔑</span> Permissões</a>
       <div class="sidebar-section-title">Sistema</div>
-      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V2.17.4</span></a>
+      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V2.17.5</span></a>
     </nav>
     <div class="sidebar-user">
       <div class="user-avatar">U</div>
@@ -361,6 +361,29 @@
     <div class="modal-footer">
       <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-cx-edit')">Cancelar</button>
       <button class="btn btn-primario" onclick="LF.salvarCxEdit()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Clonar peças de outro balancim -->
+<div class="modal-overlay" id="modal-clonar-bal">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-header">
+      <h3 id="clonar-bal-titulo">⧉ Clonar peças</h3>
+      <button class="modal-close" onclick="Utils.fecharModal('modal-clonar-bal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grupo">
+        <label>Copiar peças (Vista Externa + Vista Interna) do balancim:</label>
+        <select id="clonar-bal-origem" class="form-control">
+          <option value="">Selecione...</option>
+        </select>
+      </div>
+      <p style="font-size:0.8rem;color:#888;margin-top:8px;">O nome deste balancim não muda. Todas as peças serão copiadas (com os mesmos valores) e passam a pertencer a este balancim.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-clonar-bal')">Cancelar</button>
+      <button class="btn btn-primario" onclick="LF.confirmarClonarBal()">Clonar</button>
     </div>
   </div>
 </div>

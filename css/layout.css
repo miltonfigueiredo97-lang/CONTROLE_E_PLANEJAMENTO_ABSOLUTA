@@ -178,6 +178,9 @@ html, body { height: 100%; overflow: hidden; margin: 0; padding: 0; }
 .tree-edit-btn { display: none; margin-left: 2px; background: none; border: none; color: #555; cursor: pointer; font-size: 0.7rem; padding: 2px 4px; border-radius: 3px; }
 .tree-item:hover .tree-edit-btn { display: inline-flex; }
 .tree-edit-btn:hover { color: var(--cor-primaria); }
+.tree-clone-btn { display: none; margin-left: 2px; background: none; border: none; color: #555; cursor: pointer; font-size: 0.7rem; padding: 2px 4px; border-radius: 3px; }
+.tree-item:hover .tree-clone-btn { display: inline-flex; }
+.tree-clone-btn:hover { color: var(--cor-primaria); }
 
 /* Painel fachada */
 .fachada-painel { display: flex; flex-direction: column; gap: 10px; overflow-y: auto; min-height: 0; }

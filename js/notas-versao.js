@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.17.4',
+  versaoAtual: 'V2.17.5',
 
   versoes: [
     {
@@ -1788,7 +1788,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.17.4',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-11',
       tipo: 'correcao',
       titulo: 'Controle: hub do Concreto não estava sendo exibido',
@@ -1802,6 +1802,28 @@ const NotasVersao = {
         '    Controle.init(), igual às demais páginas do sistema',
         '  → Card "🪨 Controle Concreto" volta a aparecer normalmente',
         '    ao entrar em Controle',
+      ]
+    },
+    {
+      versao: 'V2.17.5',
+      status: 'aberta',
+      data: '2026-07-12',
+      tipo: 'funcionalidade',
+      titulo: 'Levantamento de Fachada: clonar peças entre balancins',
+      itens: [
+        'Novo botão "⧉" na árvore, ao lado do lápis, em cada',
+        '  balancim — clona as peças de outro balancim (já',
+        '  levantado) para dentro do balancim atual',
+        'O nome do balancim atual não muda; apenas as peças',
+        '  (Vista Externa + Vista Interna) são copiadas com os',
+        '  mesmos valores, mas passam a pertencer a este balancim',
+        'Se o balancim atual já tiver peças, o sistema avisa e',
+        '  substitui pelas peças clonadas (evita duplicidade)',
+        'CORREÇÃO: LF.editarNomeInline (renomear na árvore) estava',
+        '  faltando no export do módulo — o botão de lápis na',
+        '  árvore não funcionava (erro "LF.editarNomeInline is not',
+        '  a function"); corrigido, e agora busca o nome atual',
+        '  internamente ao invés de depender do onclick',
       ]
     }
   ],

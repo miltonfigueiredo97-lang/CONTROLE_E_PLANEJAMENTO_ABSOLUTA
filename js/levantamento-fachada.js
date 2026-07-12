@@ -11,6 +11,7 @@ const LevantamentoFachada = (() => {
   let sel={fachadaId:null,balancimId:null,vistaId:null};
   let editandoId=null;
   let abaAtiva='visao';
+  let clonarAlvoId=null;
   let _mapaDoc={img:null,caixas:[]};  // carregado do Firestore
   const COL='levantamentosFachada';
 
@@ -205,12 +206,13 @@ const LevantamentoFachada = (() => {
   function _ti(id,tipo,icon,label,badge,ativo,hasT,showDel){
     const delBtn=showDel?'<button class="tree-del-btn" onclick="event.stopPropagation();LF.excluir(\''+tipo+'\',\''+id+'\')" title="Excluir">✕</button>':'';
     const editBtn='<button class="tree-edit-btn" onclick="event.stopPropagation();LF.editarNomeInline(\"'+tipo+'\",\"'+id+'\")" title="Renomear">✎</button>';
+    const cloneBtn=tipo==='balancim'?'<button class="tree-clone-btn" onclick="event.stopPropagation();LF.abrirClonarBal(\''+id+'\')" title="Clonar peças de outro balancim">⧉</button>':'';
     return '<div class="tree-item'+(ativo?' ativo':'')+'" onclick="LF.sel(\''+tipo+'\',\''+id+'\')">'+
       '<span class="tree-toggle">'+(hasT?(ativo?'▾':'▸'):'')+'</span>'+
       '<span class="tree-icon">'+icon+'</span>'+
       '<span class="tree-label"'+(tipo==='fachada'?' style="font-weight:600;"':'')+'>'+label+'</span>'+
       (badge>0?'<span class="tree-badge">'+badge+'</span>':'')+
-      editBtn+delBtn+
+      editBtn+cloneBtn+delBtn+
       '</div>';
   }
 
@@ -921,6 +923,53 @@ const LevantamentoFachada = (() => {
     }catch(e){Utils.toast('Erro.','erro');}finally{Utils.esconderLoading();}
   }
 
+  // Clonar peças de OUTRO balancim para dentro deste (mantém nome/código deste)
+  function abrirClonarBal(blId){
+    const alvo=balancins.find(x=>x.id===blId);if(!alvo)return;
+    clonarAlvoId=blId;
+    const sel=document.getElementById('clonar-bal-origem');if(!sel)return;
+    let h='<option value="">Selecione...</option>';
+    fachadas.forEach(f=>{
+      const opts=balancins.filter(b=>b.fachadaId===f.id&&b.id!==blId);
+      if(!opts.length)return;
+      h+='<optgroup label="'+f.nome+'">';
+      opts.forEach(b=>{h+='<option value="'+b.id+'">'+(b.nome||b.codigo)+'</option>';});
+      h+='</optgroup>';
+    });
+    sel.innerHTML=h;
+    const tit=document.getElementById('clonar-bal-titulo');
+    if(tit)tit.textContent='Clonar peças para "'+(alvo.nome||alvo.codigo)+'"';
+    Utils.abrirModal('modal-clonar-bal');
+  }
+
+  async function confirmarClonarBal(){
+    const origemId=document.getElementById('clonar-bal-origem')?.value;
+    if(!origemId){Utils.toast('Selecione um balancim de origem.','erro');return;}
+    const alvoId=clonarAlvoId;
+    const alvo=balancins.find(x=>x.id===alvoId);
+    const origem=balancins.find(x=>x.id===origemId);
+    if(!alvo||!origem)return;
+    const pecasAlvoAtuais=pecas.filter(p=>p.balancimId===alvoId);
+    if(pecasAlvoAtuais.length&&!Utils.confirmar('"'+(alvo.nome||alvo.codigo)+'" já possui '+pecasAlvoAtuais.length+' peça(s). Elas serão substituídas pelas peças clonadas de "'+(origem.nome||origem.codigo)+'". Continuar?')){return;}
+    Utils.fecharModal('modal-clonar-bal');
+    try{
+      Utils.mostrarLoading('Clonando peças...');
+      for(const pc of pecasAlvoAtuais){await Database.deletar(obraId,COL,pc.id);}
+      const vistasOrigem=vistas.filter(v=>v.balancimId===origemId);
+      const vistasAlvo=vistas.filter(v=>v.balancimId===alvoId);
+      for(const viO of vistasOrigem){
+        const viA=vistasAlvo.find(v=>v.tipoVista===viO.tipoVista);
+        if(!viA)continue;
+        for(const pc of pecas.filter(p=>p.vistaId===viO.id)){
+          const pcC={...pc};delete pcC.id;delete pcC.createdAt;delete pcC.updatedAt;
+          pcC.balancimId=alvoId;pcC.vistaId=viA.id;pcC.conferido=false;
+          await Database.criar(obraId,COL,pcC);
+        }
+      }
+      Utils.toast('Peças clonadas!','sucesso');await carregar();
+    }catch(e){Utils.toast('Erro ao clonar.','erro');}finally{Utils.esconderLoading();}
+  }
+
   // ===================== EXPORTAR =====================
   function exportarCSV(){_csv(pecas,'fachada_geral');}
   function exportarVista(){_csv(pecas.filter(x=>x.vistaId===sel.vistaId),'fachada_vista');}
@@ -938,7 +987,10 @@ const LevantamentoFachada = (() => {
   function _badge(st){const m={rascunho:'badge-neutro',em_conferencia:'badge-alerta',aprovado:'badge-sucesso',revisado:'badge-info',cancelado:'badge-perigo'};const l={rascunho:'Rascunho',em_conferencia:'Em conferência',aprovado:'Aprovado',revisado:'Revisado',cancelado:'Cancelado'};return '<span class="badge '+(m[st]||'badge-neutro')+'">'+(l[st]||'Rascunho')+'</span>';}
 
   // Editar nome direto na árvore
-  async function editarNomeInline(tipo,id,nomeAtual){
+  async function editarNomeInline(tipo,id){
+    const map={fachada:fachadas,balancim:balancins,vista:vistas};
+    const obj=(map[tipo]||[]).find(x=>x.id===id);
+    const nomeAtual=obj?(obj.nome||obj.codigo||''):'';
     const novo=prompt('Renomear:',nomeAtual);
     if(!novo||!novo.trim()||novo.trim()===nomeAtual)return;
     try{
@@ -1040,7 +1092,7 @@ const LevantamentoFachada = (() => {
   function imgRZEv(e, el){ imgRZ(e, el.dataset.d); }
   function cxResizeEv(e){ cxResize(e, parseInt(e.currentTarget.dataset.i), e.currentTarget.dataset.d); }
 
-  return {init,carregar,sel:selecionar,setAba,criarFachada,criarBalancim,editar,salvarEntidade,excluir,novaPeca,editarPeca,salvarPeca,excluirPeca,duplicarPeca,duplicarBal,conferirPeca,exportarCSV,exportarVista,onToggleJanela,importarMapa,cxAdicionar,cxRemover,cxTravar,cxEditar,salvarCxEdit,cxMouseDown,cxDrop,cxResize,imgMouseDown,imgResize,entrarEditImg,sairEditImg,imgMD,imgRZEv,cxResizeEv,toggleEditImg,fecharEditImg,onImgResize,limparMapa,abrirVaoVista,salvarVaoVista,_atualizarPreviewVao,adicionarVaoRow,removerVaoRow,abrirConfig,salvarConfig,onChangeCfgJanela};
+  return {init,carregar,sel:selecionar,setAba,criarFachada,criarBalancim,editar,salvarEntidade,excluir,novaPeca,editarPeca,salvarPeca,excluirPeca,duplicarPeca,duplicarBal,editarNomeInline,abrirClonarBal,confirmarClonarBal,conferirPeca,exportarCSV,exportarVista,onToggleJanela,importarMapa,cxAdicionar,cxRemover,cxTravar,cxEditar,salvarCxEdit,cxMouseDown,cxDrop,cxResize,imgMouseDown,imgResize,entrarEditImg,sairEditImg,imgMD,imgRZEv,cxResizeEv,toggleEditImg,fecharEditImg,onImgResize,limparMapa,abrirVaoVista,salvarVaoVista,_atualizarPreviewVao,adicionarVaoRow,removerVaoRow,abrirConfig,salvarConfig,onChangeCfgJanela};
 })();
 const LF=LevantamentoFachada;
 function onObraChanged(){LF.init();}
