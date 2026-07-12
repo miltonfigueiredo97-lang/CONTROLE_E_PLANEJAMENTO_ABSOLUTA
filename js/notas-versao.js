@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.17.7',
+  versaoAtual: 'V2.17.8',
 
   versoes: [
     {
@@ -1850,7 +1850,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.17.7',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-12',
       tipo: 'correcao',
       titulo: 'Levantamento de Fachada: Vão Fechado zerado + coluna m² unitário',
@@ -1867,6 +1867,25 @@ const NotasVersao = {
         'Nova coluna "m² unit." no lugar: mostra o m² de UMA peça',
         '  só, sem multiplicar pela quantidade (a coluna "m² sem',
         '  ML" continua mostrando o total já multiplicado)',
+      ]
+    },
+    {
+      versao: 'V2.17.8',
+      status: 'aberta',
+      data: '2026-07-12',
+      tipo: 'melhoria',
+      titulo: 'Levantamento de Fachada: ordem alfabética, cards de vista clicáveis e histórico de acabamento',
+      itens: [
+        'Peças da tabela da Vista agora aparecem em ordem',
+        '  alfabética (antes era pela ordem de cadastro)',
+        'Nos cards "Vista Externa" / "Vista Interna" (dentro do',
+        '  balancim), o card inteiro agora é clicável — antes só',
+        '  o corpo abaixo do título respondia ao clique, e clicar',
+        '  em cima do título/ícone não abria a vista',
+        'Campo "Acabamento" no formulário de peça agora sugere',
+        '  (autocomplete) os acabamentos já usados em outras',
+        '  peças da obra, mas continua aceitando texto livre',
+        '  digitado na hora',
       ]
     }
   ],

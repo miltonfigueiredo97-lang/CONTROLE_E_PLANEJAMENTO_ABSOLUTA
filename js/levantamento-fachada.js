@@ -386,12 +386,12 @@ const LevantamentoFachada = (() => {
       const lbl=vi.tipoVista==='externa'?'Vista Externa':'Vista Interna';
       const temVao=_pn(vi.vaoComp)>0&&_pn(vi.vaoAlt)>0;
       const vaoM2=_m(_pn(vi.vaoComp))*_m(_pn(vi.vaoAlt));
-      return '<div class="resumo-card" style="position:relative;">'+
+      return '<div class="resumo-card" style="position:relative;cursor:pointer" onclick="LF.sel(\'vista\',\''+vi.id+'\')">'+
         '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">'+
           '<div class="resumo-label" style="font-size:0.95rem;font-weight:600;margin:0;">'+ico+' '+lbl+'</div>'+
-          '<button class="btn btn-secundario btn-sm" onclick="LF.abrirVaoVista(\''+vi.id+'\')" title="Vão Fechado">📐 Vão</button>'+
+          '<button class="btn btn-secundario btn-sm" onclick="event.stopPropagation();LF.abrirVaoVista(\''+vi.id+'\')" title="Vão Fechado">📐 Vão</button>'+
         '</div>'+
-        '<div style="cursor:pointer" onclick="LF.sel(\'vista\',\''+vi.id+'\')">'+
+        '<div>'+
           '<div class="resumo-valor">'+_f(tv.m2semML)+'</div>'+
           '<div class="resumo-unidade">m² sem ML · '+vp.length+' peça(s)</div>'+
           (temVao?'<div style="font-size:0.8rem;color:var(--cor-primaria);margin-top:4px;font-weight:600;">📐 Vão: '+_f(vaoM2)+'m²</div>':'<div style="font-size:0.78rem;color:#94a3b8;margin-top:4px;">Sem vão fechado</div>')+
@@ -520,7 +520,7 @@ const LevantamentoFachada = (() => {
     const f=fachadas.find(x=>x.id===bl?.fachadaId);
     const ico=vi.tipoVista==='externa'?'🔵':'🟡';
     const lbl=vi.tipoVista==='externa'?'Vista Externa':'Vista Interna';
-    const vPec=pecas.filter(x=>x.vistaId===vi.id);
+    const vPec=pecas.filter(x=>x.vistaId===vi.id).sort(_sNome);
     const tot=_somar(vPec,[vi]);
     let rows='';
     vPec.forEach((pc,i)=>{
@@ -824,6 +824,17 @@ const LevantamentoFachada = (() => {
 
   // ===================== CRUD PEÇA =====================
   // ===================== CRUD PEÇA =====================
+  function _popularAcabamentos(){
+    const dl=document.getElementById('lista-acabamentos');if(!dl)return;
+    const vistos=new Set();
+    let h='';
+    pecas.forEach(pc=>{
+      const a=(pc.acabamento||'').trim();
+      if(a&&!vistos.has(a.toLowerCase())){vistos.add(a.toLowerCase());h+='<option value="'+a.replace(/"/g,'&quot;')+'">';}
+    });
+    dl.innerHTML=h;
+  }
+
   function novaPeca(){
     if(!sel.vistaId){Utils.toast('Selecione uma vista.','alerta');return;}
     editandoId=null;document.getElementById('modal-peca-titulo').textContent='Nova Peça';
@@ -831,6 +842,7 @@ const LevantamentoFachada = (() => {
     document.querySelector('#form-peca [name="quantidade"]').value=1;
     document.querySelector('#form-peca [name="quantidadeJanelas"]').value=1;
     _mlManualTouch=false;
+    _popularAcabamentos();
     _togJ(false);Utils.abrirModal('modal-peca');
   }
 
@@ -838,6 +850,7 @@ const LevantamentoFachada = (() => {
     const pc=pecas.find(x=>x.id===id);if(!pc)return;
     editandoId=id;document.getElementById('modal-peca-titulo').textContent='Editar Peça';
     _mlManualTouch=true;
+    _popularAcabamentos();
     Utils.setFormData('form-peca',pc);_togJ(!!pc.possuiJanela);Utils.abrirModal('modal-peca');
   }
 
