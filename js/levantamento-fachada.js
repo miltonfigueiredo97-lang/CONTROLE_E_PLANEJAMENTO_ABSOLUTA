@@ -1016,6 +1016,33 @@ const LevantamentoFachada = (() => {
 
   // ===================== HELPERS =====================
   function _togJ(s){const e=document.getElementById('campos-janela');if(e)e.style.display=s?'grid':'none';}
+  // Permite digitar contas simples nos campos de medida (ex: 291+100 + Enter = 391)
+  function calcExprEnter(e){
+    if(e.key!=='Enter')return;
+    e.preventDefault();
+    const r=_avaliarExpr(e.target.value);
+    if(r!==null){
+      e.target.value=_fmtExprResultado(r);
+      e.target.dispatchEvent(new Event('input',{bubbles:true}));
+    }
+  }
+  function _avaliarExpr(str){
+    if(str==null)return null;
+    const s=String(str).trim().replace(/,/g,'.');
+    if(!s)return null;
+    if(!/^[0-9+\-*/.() ]+$/.test(s))return null; // só permite números e operadores básicos
+    if(!/[+\-*/]/.test(s))return null; // sem operador: usuário só digitou um número, não precisa calcular
+    try{
+      const r=Function('"use strict";return ('+s+')')();
+      if(typeof r==='number'&&isFinite(r))return r;
+    }catch(err){}
+    return null;
+  }
+  function _fmtExprResultado(n){
+    const r=Math.round(n*100)/100;
+    return Number.isInteger(r)?String(r):String(r).replace('.',',');
+  }
+
   function onToggleJanela(cb){_togJ(cb.checked);}
   function _f(n){return Utils.formatarNumero(n);}
   function _pn(v){return Utils.parseNum(v);}
@@ -1127,7 +1154,7 @@ const LevantamentoFachada = (() => {
   function imgRZEv(e, el){ imgRZ(e, el.dataset.d); }
   function cxResizeEv(e){ cxResize(e, parseInt(e.currentTarget.dataset.i), e.currentTarget.dataset.d); }
 
-  return {init,carregar,sel:selecionar,setAba,criarFachada,criarBalancim,editar,salvarEntidade,excluir,novaPeca,editarPeca,salvarPeca,excluirPeca,duplicarPeca,duplicarBal,editarNomeInline,abrirClonarBal,confirmarClonarBal,conferirPeca,togglePecaML,onClickCheckML,onCompAltInput,exportarCSV,exportarVista,onToggleJanela,importarMapa,cxAdicionar,cxRemover,cxTravar,cxEditar,salvarCxEdit,cxMouseDown,cxDrop,cxResize,imgMouseDown,imgResize,entrarEditImg,sairEditImg,imgMD,imgRZEv,cxResizeEv,toggleEditImg,fecharEditImg,onImgResize,limparMapa,abrirVaoVista,salvarVaoVista,_atualizarPreviewVao,adicionarVaoRow,removerVaoRow,abrirConfig,salvarConfig,onChangeCfgJanela};
+  return {init,carregar,sel:selecionar,setAba,criarFachada,criarBalancim,editar,salvarEntidade,excluir,novaPeca,editarPeca,salvarPeca,excluirPeca,duplicarPeca,duplicarBal,editarNomeInline,abrirClonarBal,confirmarClonarBal,conferirPeca,togglePecaML,onClickCheckML,onCompAltInput,calcExprEnter,exportarCSV,exportarVista,onToggleJanela,importarMapa,cxAdicionar,cxRemover,cxTravar,cxEditar,salvarCxEdit,cxMouseDown,cxDrop,cxResize,imgMouseDown,imgResize,entrarEditImg,sairEditImg,imgMD,imgRZEv,cxResizeEv,toggleEditImg,fecharEditImg,onImgResize,limparMapa,abrirVaoVista,salvarVaoVista,_atualizarPreviewVao,adicionarVaoRow,removerVaoRow,abrirConfig,salvarConfig,onChangeCfgJanela};
 })();
 const LF=LevantamentoFachada;
 function onObraChanged(){LF.init();}

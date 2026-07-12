@@ -126,7 +126,7 @@
       <a href="histograma.html"><span class="nav-icon">📊</span> Histograma</a>
       <a href="admin-permissoes.html"><span class="nav-icon">🔑</span> Permissões</a>
       <div class="sidebar-section-title">Sistema</div>
-      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V2.17.8</span></a>
+      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V2.17.9</span></a>
     </nav>
     <div class="sidebar-user">
       <div class="user-avatar">U</div>
@@ -217,8 +217,8 @@
           <input type="text" name="nome" class="form-control" placeholder="Ex: Parede lateral, Faixa abaixo da janela" required>
         </div>
         <div class="form-row">
-          <div class="form-grupo"><label>Comprimento (cm)</label><input type="number" name="comprimento" class="form-control" step="1" min="0" placeholder="Ex: 400" oninput="LF.onCompAltInput()"></div>
-          <div class="form-grupo"><label>Altura (cm)</label><input type="number" name="altura" class="form-control" step="1" min="0" placeholder="Ex: 280" oninput="LF.onCompAltInput()"></div>
+          <div class="form-grupo"><label>Comprimento (cm)</label><input type="text" inputmode="decimal" name="comprimento" class="form-control" placeholder="Ex: 400 ou 291+100" oninput="LF.onCompAltInput()" onkeydown="LF.calcExprEnter(event)"></div>
+          <div class="form-grupo"><label>Altura (cm)</label><input type="text" inputmode="decimal" name="altura" class="form-control" placeholder="Ex: 280 ou 291+100" oninput="LF.onCompAltInput()" onkeydown="LF.calcExprEnter(event)"></div>
           <div class="form-grupo"><label>Quantidade</label><input type="number" name="quantidade" class="form-control" min="1" value="1"></div>
         </div>
         <div class="form-check mb-2">
@@ -226,8 +226,8 @@
           <label for="check-janela">Possui janela / abertura</label>
         </div>
         <div id="campos-janela" class="form-row" style="display:none;margin-bottom:12px;">
-          <div class="form-grupo"><label>Largura Janela (cm)</label><input type="number" name="larguraJanela" class="form-control" step="1" min="0"></div>
-          <div class="form-grupo"><label>Altura Janela (cm)</label><input type="number" name="alturaJanela" class="form-control" step="1" min="0"></div>
+          <div class="form-grupo"><label>Largura Janela (cm)</label><input type="text" inputmode="decimal" name="larguraJanela" class="form-control" placeholder="Ex: 291+100" onkeydown="LF.calcExprEnter(event)"></div>
+          <div class="form-grupo"><label>Altura Janela (cm)</label><input type="text" inputmode="decimal" name="alturaJanela" class="form-control" placeholder="Ex: 291+100" onkeydown="LF.calcExprEnter(event)"></div>
           <div class="form-grupo"><label>Qtd Janelas</label><input type="number" name="quantidadeJanelas" class="form-control" min="0" value="1"></div>
         </div>
         <div class="form-check mb-2" style="background:var(--cor-alerta-bg);padding:10px 14px;border-radius:6px;border:1px solid #fcd34d;">

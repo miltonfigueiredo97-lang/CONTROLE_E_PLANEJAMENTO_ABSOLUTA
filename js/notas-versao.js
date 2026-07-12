@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.17.8',
+  versaoAtual: 'V2.17.9',
 
   versoes: [
     {
@@ -1871,7 +1871,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.17.8',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-12',
       tipo: 'melhoria',
       titulo: 'Levantamento de Fachada: ordem alfabética, cards de vista clicáveis e histórico de acabamento',
@@ -1886,6 +1886,21 @@ const NotasVersao = {
         '  (autocomplete) os acabamentos já usados em outras',
         '  peças da obra, mas continua aceitando texto livre',
         '  digitado na hora',
+      ]
+    },
+    {
+      versao: 'V2.17.9',
+      status: 'aberta',
+      data: '2026-07-12',
+      tipo: 'funcionalidade',
+      titulo: 'Levantamento de Fachada: contas dentro dos campos de medida (cm)',
+      itens: [
+        'Agora dá pra digitar uma conta direto nos campos',
+        '  Comprimento, Altura, Largura Janela e Altura Janela',
+        '  da peça — ex: "291+100" e apertar Enter vira "391"',
+        'Aceita +, -, * e / (e parênteses); se não tiver operador',
+        '  ou o texto não for uma conta válida, o campo fica',
+        '  como o usuário digitou, sem mexer em nada',
       ]
     }
   ],
