@@ -421,11 +421,11 @@ const LevantamentoFachada = (() => {
     container.innerHTML=vaos.map((v,i)=>`
       <div class="vao-row" id="vao-row-${i}" style="display:grid;grid-template-columns:1fr 1fr 80px 32px;gap:8px;align-items:end;margin-bottom:8px;">
         <div class="form-grupo" style="margin:0"><label>Comp (cm)</label>
-          <input type="number" class="form-control vao-comp" data-i="${i}" step="1" min="0" value="${v.comp||''}" oninput="_atualizarPreviewVao()"></div>
+          <input type="text" inputmode="decimal" class="form-control vao-comp" data-i="${i}" placeholder="Ex: 291+100" value="${v.comp||''}" oninput="LF._atualizarPreviewVao()" onkeydown="LF.calcExprEnter(event)"></div>
         <div class="form-grupo" style="margin:0"><label>Alt (cm)</label>
-          <input type="number" class="form-control vao-alt" data-i="${i}" step="1" min="0" value="${v.alt||''}" oninput="_atualizarPreviewVao()"></div>
+          <input type="text" inputmode="decimal" class="form-control vao-alt" data-i="${i}" placeholder="Ex: 291+100" value="${v.alt||''}" oninput="LF._atualizarPreviewVao()" onkeydown="LF.calcExprEnter(event)"></div>
         <div class="form-grupo" style="margin:0"><label>Qtd</label>
-          <input type="number" class="form-control vao-qtd" data-i="${i}" step="1" min="1" value="${v.qtd||1}" oninput="_atualizarPreviewVao()"></div>
+          <input type="number" class="form-control vao-qtd" data-i="${i}" step="1" min="1" value="${v.qtd||1}" oninput="LF._atualizarPreviewVao()"></div>
         <div class="form-grupo" style="margin:0"><label>&nbsp;</label>
           <button class="btn btn-perigo btn-sm btn-icon" onclick="LF.removerVaoRow(${i})" ${vaos.length<=1?'disabled':''}>✕</button></div>
       </div>`).join('');

@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.17.9',
+  versaoAtual: 'V2.17.10',
 
   versoes: [
     {
@@ -1890,7 +1890,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.17.9',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-12',
       tipo: 'funcionalidade',
       titulo: 'Levantamento de Fachada: contas dentro dos campos de medida (cm)',
@@ -1901,6 +1901,23 @@ const NotasVersao = {
         'Aceita +, -, * e / (e parênteses); se não tiver operador',
         '  ou o texto não for uma conta válida, o campo fica',
         '  como o usuário digitou, sem mexer em nada',
+      ]
+    },
+    {
+      versao: 'V2.17.10',
+      status: 'aberta',
+      data: '2026-07-12',
+      tipo: 'correcao',
+      titulo: 'Levantamento de Fachada: contas também no Vão Fechado',
+      itens: [
+        'Os campos Comp (cm) e Alt (cm) do modal de Vão Fechado',
+        '  agora também aceitam conta (ex: "291+100" + Enter =',
+        '  "391"), igual ao formulário de peça',
+        'CORREÇÃO: o preview de m² do Vão Fechado estava quebrado',
+        '  — o oninput dos campos chamava uma função global que',
+        '  não existia (_atualizarPreviewVao em vez de',
+        '  LF._atualizarPreviewVao), gerando erro no console',
+        '  toda vez que o usuário digitava; corrigido',
       ]
     }
   ],
