@@ -113,6 +113,7 @@ const LevantamentoFachada = (() => {
 
     const areaLiq=Math.max(0,bruto-janela);
     const m2semML=areaLiq;
+    const m2unitario=qt>0?areaLiq/qt:areaLiq; // m² de 1 peça só, sem multiplicar pela qtd
     const maiorLado=Math.max(co,al);
 
     // ML: aplica percentual do config (não mais fixo em 50%)
@@ -122,7 +123,7 @@ const LevantamentoFachada = (() => {
     const ml=podeML?(maiorLado*qt):0;
     const m2comML_puro=podeML?0:areaLiq;
 
-    return{bruto,janela,areaLiq,m2semML,m2comML_puro,ml,mlPct,podeML};
+    return{bruto,janela,areaLiq,m2semML,m2unitario,m2comML_puro,ml,mlPct,podeML};
   }
 
   function _somar(listaPecas, listaVistas){
@@ -520,7 +521,7 @@ const LevantamentoFachada = (() => {
     const ico=vi.tipoVista==='externa'?'🔵':'🟡';
     const lbl=vi.tipoVista==='externa'?'Vista Externa':'Vista Interna';
     const vPec=pecas.filter(x=>x.vistaId===vi.id);
-    const tot=_somar(vPec);
+    const tot=_somar(vPec,[vi]);
     let rows='';
     vPec.forEach((pc,i)=>{
       const c=_calc(pc);
@@ -533,7 +534,7 @@ const LevantamentoFachada = (() => {
         '<td class="col-centro">'+(pc.possuiJanela?'✓':'')+'</td>'+
         '<td class="col-centro"><button class="btn btn-sm btn-icon" onclick="LF.togglePecaML(\''+pc.id+'\')" title="Pode ser considerado ML? (clique para alternar)">'+(c.podeML?'✅':'—')+'</button></td>'+
         '<td class="col-num" style="font-weight:600;color:var(--cor-primaria);">'+_f(c.m2semML)+'</td>'+
-        '<td class="col-num">'+_f(c.vao)+'</td>'+
+        '<td class="col-num text-muted">'+_f(c.m2unitario)+'</td>'+
         '<td class="text-sm">'+(pc.acabamento||'')+'</td>'+
         '<td class="col-centro">'+(pc.conferido?'✅':'')+'</td>'+
         '<td class="col-acoes" style="white-space:nowrap;">'+
@@ -555,12 +556,12 @@ const LevantamentoFachada = (() => {
       '<div class="tabela-container mt-2"><table class="tabela tabela-compacta"><thead><tr>'+
       '<th class="col-sm">#</th><th>Peça</th><th class="col-num">Comp cm</th><th class="col-num">Alt cm</th>'+
       '<th class="col-num col-centro">Qtd</th><th class="col-centro">Jan</th><th class="col-centro">ML?</th>'+
-      '<th class="col-num">m² sem ML</th><th class="col-num">Vão F.</th>'+
+      '<th class="col-num">m² sem ML</th><th class="col-num">m² unit.</th>'+
       '<th>Acab.</th><th class="col-centro">Conf</th><th class="col-acoes">Ações</th></tr></thead>'+
       '<tbody>'+(rows||'<tr><td colspan="12" class="text-center text-muted">Clique "+ Nova Peça".</td></tr>')+'</tbody>'+
       '<tfoot><tr><td></td><td><strong>TOTAL</strong></td><td></td><td></td><td></td><td></td><td></td>'+
       '<td class="col-num" style="font-weight:700;color:var(--cor-primaria);">'+_f(tot.m2semML)+'</td>'+
-      '<td class="col-num">'+_f(tot.vao)+'</td>'+
+      '<td class="col-num"></td>'+
       '<td></td><td></td><td></td></tr></tfoot></table></div>';
   }
 
@@ -995,8 +996,8 @@ const LevantamentoFachada = (() => {
   function exportarCSV(){_csv(pecas,'fachada_geral');}
   function exportarVista(){_csv(pecas.filter(x=>x.vistaId===sel.vistaId),'fachada_vista');}
   function _csv(lista,nome){
-    let csv='Peça;Comp cm;Alt cm;Qtd;Janela;L-Jan cm;A-Jan cm;Q-Jan;Comp Vão cm;Alt Vão cm;Pode ML;m2 sem ML;m2 com ML;ML;Vão m2;Acabamento;Conferido;Obs\n';
-    lista.forEach(pc=>{const c=_calc(pc);csv+=[pc.nome,pc.comprimento,pc.altura,pc.quantidade,pc.possuiJanela?'Sim':'Nao',pc.larguraJanela||'',pc.alturaJanela||'',pc.quantidadeJanelas||'',pc.comprimentoVao||'',pc.alturaVao||'',pc.podeSerML?'Sim':'Nao',c.m2semML.toFixed(2),c.m2comML_puro.toFixed(2),c.ml.toFixed(2),c.vao.toFixed(2),pc.acabamento||'',pc.conferido?'Sim':'Nao',pc.observacao||''].join(';')+'\n';});
+    let csv='Peça;Comp cm;Alt cm;Qtd;Janela;L-Jan cm;A-Jan cm;Q-Jan;Comp Vão cm;Alt Vão cm;Pode ML;m2 unitario;m2 sem ML;m2 com ML;ML;Acabamento;Conferido;Obs\n';
+    lista.forEach(pc=>{const c=_calc(pc);csv+=[pc.nome,pc.comprimento,pc.altura,pc.quantidade,pc.possuiJanela?'Sim':'Nao',pc.larguraJanela||'',pc.alturaJanela||'',pc.quantidadeJanelas||'',pc.comprimentoVao||'',pc.alturaVao||'',pc.podeSerML?'Sim':'Nao',c.m2unitario.toFixed(2),c.m2semML.toFixed(2),c.m2comML_puro.toFixed(2),c.ml.toFixed(2),pc.acabamento||'',pc.conferido?'Sim':'Nao',pc.observacao||''].join(';')+'\n';});
     const b=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=nome+'.csv';a.click();URL.revokeObjectURL(u);Utils.toast('Exportado!','sucesso');
   }
 

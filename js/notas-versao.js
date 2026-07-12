@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.17.6',
+  versaoAtual: 'V2.17.7',
 
   versoes: [
     {
@@ -1828,7 +1828,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.17.6',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-12',
       tipo: 'funcionalidade',
       titulo: 'Levantamento de Fachada: coluna "ML?" no relatório de peças',
@@ -1846,6 +1846,27 @@ const NotasVersao = {
         'Ao editar uma peça já existente, o valor salvo é mantido',
         '  como está (não recalcula sozinho por cima do que já foi',
         '  decidido antes)',
+      ]
+    },
+    {
+      versao: 'V2.17.7',
+      status: 'aberta',
+      data: '2026-07-12',
+      tipo: 'correcao',
+      titulo: 'Levantamento de Fachada: Vão Fechado zerado + coluna m² unitário',
+      itens: [
+        'BUG: o card "M² Vão Fechado" no topo da tela de Vista',
+        '  sempre mostrava 0,00, mesmo com vão(s) cadastrado(s)',
+        '  para aquela vista — a função de soma não estava',
+        '  recebendo a vista ao calcular o total; corrigido',
+        'BUG: exportar CSV (geral ou da vista) quebrava com erro,',
+        '  pois tentava usar um campo "vão" que não existia mais',
+        '  no cálculo por peça; corrigido',
+        'Coluna "Vão F." por peça removida da tabela (não fazia',
+        '  sentido — vão fechado é por vista, não por peça)',
+        'Nova coluna "m² unit." no lugar: mostra o m² de UMA peça',
+        '  só, sem multiplicar pela quantidade (a coluna "m² sem',
+        '  ML" continua mostrando o total já multiplicado)',
       ]
     }
   ],
