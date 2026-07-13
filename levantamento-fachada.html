@@ -126,7 +126,7 @@
       <a href="histograma.html"><span class="nav-icon">📊</span> Histograma</a>
       <a href="admin-permissoes.html"><span class="nav-icon">🔑</span> Permissões</a>
       <div class="sidebar-section-title">Sistema</div>
-      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V2.17.12</span></a>
+      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V2.17.13</span></a>
     </nav>
     <div class="sidebar-user">
       <div class="user-avatar">U</div>
@@ -232,6 +232,20 @@
           <div class="form-grupo"><label>Largura Janela (cm)</label><input type="text" inputmode="decimal" name="larguraJanela" class="form-control" placeholder="Ex: 291+100" onkeydown="LF.calcExprEnter(event)"></div>
           <div class="form-grupo"><label>Altura Janela (cm)</label><input type="text" inputmode="decimal" name="alturaJanela" class="form-control" placeholder="Ex: 291+100" onkeydown="LF.calcExprEnter(event)"></div>
           <div class="form-grupo"><label>Qtd Janelas</label><input type="number" name="quantidadeJanelas" class="form-control" min="0" value="1"></div>
+        </div>
+        <div class="form-check mb-2">
+          <input type="checkbox" name="possuiFriso" id="check-friso" onchange="LF.onToggleFriso(this)">
+          <label for="check-friso">Possui friso</label>
+        </div>
+        <div id="campos-friso" class="form-row" style="display:none;margin-bottom:12px;">
+          <div class="form-grupo"><label>Comprimento Friso (cm)</label><input type="text" inputmode="decimal" name="frisoComprimento" class="form-control" placeholder="Ex: 291+100" onkeydown="LF.calcExprEnter(event)"></div>
+          <div class="form-grupo"><label>Tipo de Friso</label>
+            <select name="frisoTipo" class="form-control">
+              <option value="arquitetonico">Arquitetônico</option>
+              <option value="estrutural">Estrutural</option>
+            </select>
+          </div>
+          <div class="form-grupo"><label>Qtd Frisos</label><input type="number" name="frisoQuantidade" class="form-control" min="0" value="1"></div>
         </div>
         <div class="form-check mb-2" style="background:var(--cor-alerta-bg);padding:10px 14px;border-radius:6px;border:1px solid #fcd34d;">
           <input type="checkbox" name="podeSerML" id="check-ml" onclick="LF.onClickCheckML()">

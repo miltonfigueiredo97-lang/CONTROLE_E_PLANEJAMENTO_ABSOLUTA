@@ -123,17 +123,28 @@ const LevantamentoFachada = (() => {
     const ml=podeML?(maiorLado*qt):0;
     const m2comML_puro=podeML?0:areaLiq;
 
-    return{bruto,janela,areaLiq,m2semML,m2unitario,m2comML_puro,ml,mlPct,podeML};
+    // ---- Friso (arquitetônico ou estrutural) — soma à parte, em ML ----
+    let mlFrisoArq=0,mlFrisoEst=0;
+    if(pc.possuiFriso){
+      const frisoM=_m(_pn(pc.frisoComprimento));
+      const qtF=_pn(pc.frisoQuantidade)||0;
+      const totalFriso=frisoM*qtF*qt;
+      if(pc.frisoTipo==='estrutural') mlFrisoEst=totalFriso;
+      else mlFrisoArq=totalFriso;
+    }
+
+    return{bruto,janela,areaLiq,m2semML,m2unitario,m2comML_puro,ml,mlPct,podeML,mlFrisoArq,mlFrisoEst};
   }
 
   function _somar(listaPecas, listaVistas){
     const cfg=_getCfg();
-    let m2semML=0,m2comML_puro=0,ml=0,mlEquiv=0,bruto=0,janela=0;
+    let m2semML=0,m2comML_puro=0,ml=0,mlEquiv=0,bruto=0,janela=0,mlFrisoArq=0,mlFrisoEst=0;
     listaPecas.forEach(pc=>{
       const c=_calc(pc, cfg);
       m2semML+=c.m2semML; m2comML_puro+=c.m2comML_puro;
       ml+=c.ml; bruto+=c.bruto; janela+=c.janela;
       mlEquiv+=c.ml*c.mlPct; // usa percentual configurado
+      mlFrisoArq+=c.mlFrisoArq; mlFrisoEst+=c.mlFrisoEst;
     });
     let vao=0;
     if(listaVistas){
@@ -151,16 +162,18 @@ const LevantamentoFachada = (() => {
       });
     }
     const m2comML_equiv=m2comML_puro+mlEquiv;
-    return{m2semML,m2comML_puro,ml,m2comML_equiv,vao,bruto,janela};
+    return{m2semML,m2comML_puro,ml,m2comML_equiv,vao,bruto,janela,mlFrisoArq,mlFrisoEst};
   }
 
   function _somarBal(blId){
     return _somar(pecas.filter(x=>x.balancimId===blId), vistas.filter(v=>v.balancimId===blId));
   }
+  function _balIdsFachada(fId){return balancins.filter(b=>b.fachadaId===fId).map(b=>b.id);}
+  function _pecasDaFachada(fId){const ids=_balIdsFachada(fId);return pecas.filter(p=>ids.includes(p.balancimId));}
   function _somarFachada(fId){
-    const bIds=balancins.filter(b=>b.fachadaId===fId).map(b=>b.id);
+    const bIds=_balIdsFachada(fId);
     const fVis=vistas.filter(v=>bIds.includes(v.balancimId));
-    return _somar(pecas.filter(x=>x.fachadaId===fId), fVis);
+    return _somar(pecas.filter(x=>bIds.includes(x.balancimId)), fVis);
   }
   function _somarGeral(){
     return _somar(pecas, vistas);
@@ -176,7 +189,7 @@ const LevantamentoFachada = (() => {
     let h='';
     fachadas.forEach(f=>{
       const fSel=sel.fachadaId===f.id;
-      const nPec=pecas.filter(x=>x.fachadaId===f.id).length;
+      const nPec=_pecasDaFachada(f.id).length;
       h+=_ti(f.id,'fachada','🏢',f.nome,nPec,fSel&&!sel.balancimId,true,true);
       if(openFachadas.has(f.id)||fSel){
         h+='<div class="tree-children">';
@@ -314,6 +327,16 @@ const LevantamentoFachada = (() => {
         '<div class="info-valor">'+_f(t.vao)+'</div>'+
         '<div class="info-sub">apenas vãos</div>'+
       '</div>'+
+      '<div class="fachada-info-item">'+
+        '<div class="info-label">Friso Arquitetônico</div>'+
+        '<div class="info-valor" style="font-size:0.95rem;">'+_f(t.mlFrisoArq)+'ML</div>'+
+        '<div class="info-sub">comprimento total</div>'+
+      '</div>'+
+      '<div class="fachada-info-item">'+
+        '<div class="info-label">Friso Estrutural</div>'+
+        '<div class="info-valor" style="font-size:0.95rem;">'+_f(t.mlFrisoEst)+'ML</div>'+
+        '<div class="info-sub">comprimento total</div>'+
+      '</div>'+
       '</div>';
   }
 
@@ -323,7 +346,7 @@ const LevantamentoFachada = (() => {
     let rows=fachadas.map(f=>{
       const t=_somarFachada(f.id);
       const nb=balancins.filter(b=>b.fachadaId===f.id).length;
-      const np=pecas.filter(x=>x.fachadaId===f.id).length;
+      const np=_pecasDaFachada(f.id).length;
       return '<tr><td><a href="#" onclick="LF.sel(\'fachada\',\''+f.id+'\');return false;"><strong>'+f.nome+'</strong></a></td>'+
         '<td class="col-centro">'+_badge(f.status)+'</td>'+
         '<td class="col-num">'+nb+'</td><td class="col-num">'+np+'</td>'+
@@ -347,7 +370,7 @@ const LevantamentoFachada = (() => {
   // ===================== FACHADA =====================
   function renderFachada(p, toggle){
     const f=fachadas.find(x=>x.id===sel.fachadaId);if(!f)return;
-    const fp=pecas.filter(x=>x.fachadaId===f.id);
+    const fp=_pecasDaFachada(f.id);
     const tot=_somarFachada(f.id);
     const fBals=balancins.filter(b=>b.fachadaId===f.id);
     let rows=fBals.map(bl=>{
@@ -525,6 +548,7 @@ const LevantamentoFachada = (() => {
     let rows='';
     vPec.forEach((pc,i)=>{
       const c=_calc(pc);
+      const frisoTxt=pc.possuiFriso&&_pn(pc.frisoComprimento)>0?(_pn(pc.frisoComprimento)+'cm ('+(pc.frisoTipo==='estrutural'?'Est':'Arq')+')'):'—';
       rows+='<tr>'+
         '<td>'+(i+1)+'</td>'+
         '<td>'+pc.nome+'</td>'+
@@ -532,6 +556,7 @@ const LevantamentoFachada = (() => {
         '<td class="col-num">'+_pn(pc.altura)+'</td>'+
         '<td class="col-num col-centro">'+(pc.quantidade||1)+'</td>'+
         '<td class="col-centro">'+(pc.possuiJanela?'✓':'')+'</td>'+
+        '<td class="text-sm col-centro">'+frisoTxt+'</td>'+
         '<td class="col-centro"><button class="btn btn-sm btn-icon" onclick="LF.togglePecaML(\''+pc.id+'\')" title="Pode ser considerado ML? (clique para alternar)">'+(c.podeML?'✅':'—')+'</button></td>'+
         '<td class="col-num" style="font-weight:600;color:var(--cor-primaria);">'+_f(c.m2semML)+'</td>'+
         '<td class="col-num text-muted">'+_f(c.m2unitario)+'</td>'+
@@ -548,18 +573,14 @@ const LevantamentoFachada = (() => {
       '<div class="page-header"><div><h2>'+ico+' '+lbl+' — '+(bl?.nome||'')+'</h2><span class="subtitulo">'+path+' · '+vPec.length+' peça(s)</span></div>'+
       '<div class="btn-grupo"><button class="btn btn-secundario btn-sm" onclick="LF.exportarVista()">📥 CSV</button>'+
       '<button class="btn btn-primario" onclick="LF.novaPeca()">+ Nova Peça</button></div></div>'+
-      '<div class="fachada-info-bar">'+
-      '<div class="fachada-info-item"><div class="info-label">m² sem ML</div><div class="info-valor destaque">'+_f(tot.m2semML)+'</div><div class="info-sub">tudo como m²</div></div>'+
-      '<div class="fachada-info-item"><div class="info-label">m² com ML</div><div class="info-valor" style="font-size:0.95rem;">'+_f(tot.m2comML_puro)+'m² e '+_f(tot.ml)+'ML</div><div class="info-sub">= '+_f(tot.m2comML_equiv)+'m²</div></div>'+
-      '<div class="fachada-info-item"><div class="info-label">m² Vão Fechado</div><div class="info-valor">'+_f(tot.vao)+'</div><div class="info-sub">apenas vãos</div></div>'+
-      '</div>'+
+      _cards(tot)+
       '<div class="tabela-container mt-2"><table class="tabela tabela-compacta"><thead><tr>'+
       '<th class="col-sm">#</th><th>Peça</th><th class="col-num">Comp cm</th><th class="col-num">Alt cm</th>'+
-      '<th class="col-num col-centro">Qtd</th><th class="col-centro">Jan</th><th class="col-centro">ML?</th>'+
+      '<th class="col-num col-centro">Qtd</th><th class="col-centro">Jan</th><th class="col-centro">Friso</th><th class="col-centro">ML?</th>'+
       '<th class="col-num">m² sem ML</th><th class="col-num">m² unit.</th>'+
       '<th>Acab.</th><th class="col-centro">Conf</th><th class="col-acoes">Ações</th></tr></thead>'+
-      '<tbody>'+(rows||'<tr><td colspan="12" class="text-center text-muted">Clique "+ Nova Peça".</td></tr>')+'</tbody>'+
-      '<tfoot><tr><td></td><td><strong>TOTAL</strong></td><td></td><td></td><td></td><td></td><td></td>'+
+      '<tbody>'+(rows||'<tr><td colspan="13" class="text-center text-muted">Clique "+ Nova Peça".</td></tr>')+'</tbody>'+
+      '<tfoot><tr><td></td><td><strong>TOTAL</strong></td><td></td><td></td><td></td><td></td><td></td><td></td>'+
       '<td class="col-num" style="font-weight:700;color:var(--cor-primaria);">'+_f(tot.m2semML)+'</td>'+
       '<td class="col-num"></td>'+
       '<td></td><td></td><td></td></tr></tfoot></table></div>';
@@ -579,6 +600,8 @@ const LevantamentoFachada = (() => {
         '<div><span class="mapa-dado-label">m² sem ML</span><span class="mapa-dado-valor">'+_f(tot.m2semML)+'</span></div>'+
         '<div><span class="mapa-dado-label">m² com ML</span><span class="mapa-dado-valor">'+_f(tot.m2comML_equiv)+'</span></div>'+
         '<div><span class="mapa-dado-label">Vão Fechado</span><span class="mapa-dado-valor">'+_f(tot.vao)+'</span></div>'+
+        '<div><span class="mapa-dado-label">Friso Arquitetônico</span><span class="mapa-dado-valor">'+_f(tot.mlFrisoArq)+'ML</span></div>'+
+        '<div><span class="mapa-dado-label">Friso Estrutural</span><span class="mapa-dado-valor">'+_f(tot.mlFrisoEst)+'ML</span></div>'+
       '</div></div>';
 
     // Handles da imagem
@@ -664,7 +687,7 @@ const LevantamentoFachada = (() => {
     if(!md)md=_getMapData();
     overlay.innerHTML=md.caixas.map((cx,i)=>{
       const f=fachadas.find(x=>x.id===cx.fachadaId);
-      const t=cx.fachadaId?_somarFachada(cx.fachadaId):{m2semML:0,m2comML_puro:0,ml:0,m2comML_equiv:0,vao:0};
+      const t=cx.fachadaId?_somarFachada(cx.fachadaId):{m2semML:0,m2comML_puro:0,ml:0,m2comML_equiv:0,vao:0,mlFrisoArq:0,mlFrisoEst:0};
       const nome=f?f.nome:(cx.nome||'Caixa '+(i+1));
       const w=cx.w||220, h=cx.h?'height:'+cx.h+'px;':'';
       const livre=!cx.travada;
@@ -688,6 +711,8 @@ const LevantamentoFachada = (() => {
           _cxRow('m² sem ML',_f(t.m2semML))+
           _cxRowML(t)+
           _cxRow('Vão Fechado',_f(t.vao))+
+          (t.mlFrisoArq>0?_cxRow('Friso Arq.',_f(t.mlFrisoArq)+'ML'):'')+
+          (t.mlFrisoEst>0?_cxRow('Friso Est.',_f(t.mlFrisoEst)+'ML'):'')+
         '</div>'+
         (livre?'<div data-i="'+i+'" data-d="se" onpointerdown="LF.cxResizeEv(event)" style="position:absolute;bottom:0;right:0;width:18px;height:18px;cursor:se-resize;background:var(--cor-primaria);border-radius:3px 0 6px 0;display:flex;align-items:center;justify-content:center;font-size:0.7rem;color:#000;font-weight:900;">⤡</div>':'')+
       '</div>';
@@ -851,9 +876,10 @@ const LevantamentoFachada = (() => {
     Utils.limparForm('form-peca');
     document.querySelector('#form-peca [name="quantidade"]').value=1;
     document.querySelector('#form-peca [name="quantidadeJanelas"]').value=1;
+    document.querySelector('#form-peca [name="frisoQuantidade"]').value=1;
     _mlManualTouch=false;
     _popularAcabamentos();
-    _togJ(false);Utils.abrirModal('modal-peca');
+    _togJ(false);_togF(false);Utils.abrirModal('modal-peca');
   }
 
   function editarPeca(id){
@@ -861,7 +887,7 @@ const LevantamentoFachada = (() => {
     editandoId=id;document.getElementById('modal-peca-titulo').textContent='Editar Peça';
     _mlManualTouch=true;
     _popularAcabamentos();
-    Utils.setFormData('form-peca',pc);_togJ(!!pc.possuiJanela);Utils.abrirModal('modal-peca');
+    Utils.setFormData('form-peca',pc);_togJ(!!pc.possuiJanela);_togF(!!pc.possuiFriso);Utils.abrirModal('modal-peca');
   }
 
   async function salvarPeca(fechar){
@@ -873,6 +899,8 @@ const LevantamentoFachada = (() => {
     data.larguraJanela=_pn(data.larguraJanela);data.alturaJanela=_pn(data.alturaJanela);data.quantidadeJanelas=_pn(data.quantidadeJanelas)||0;
     data.comprimentoVao=_pn(data.comprimentoVao);data.alturaVao=_pn(data.alturaVao);
     data.podeSerML=!!data.podeSerML;
+    data.possuiFriso=!!data.possuiFriso;
+    data.frisoComprimento=_pn(data.frisoComprimento);data.frisoTipo=data.frisoTipo||'arquitetonico';data.frisoQuantidade=_pn(data.frisoQuantidade)||0;
     data.acabamento=(data.acabamento||'').trim();
     if(data.comprimento<0){Utils.toast('Comprimento negativo.','alerta');return;}
     if(data.quantidade<=0){Utils.toast('Qtd > 0.','alerta');return;}
@@ -881,7 +909,7 @@ const LevantamentoFachada = (() => {
       else{await Database.criar(obraId,COL,data);}
       Utils.toast('Peça salva!','sucesso');editandoId=null;await carregar();
       if(fechar!==false)Utils.fecharModal('modal-peca');
-      else{Utils.limparForm('form-peca');document.querySelector('#form-peca [name="quantidade"]').value=1;document.querySelector('#form-peca [name="quantidadeJanelas"]').value=1;_togJ(false);document.querySelector('#form-peca [name="nome"]').focus();}
+      else{Utils.limparForm('form-peca');document.querySelector('#form-peca [name="quantidade"]').value=1;document.querySelector('#form-peca [name="quantidadeJanelas"]').value=1;document.querySelector('#form-peca [name="frisoQuantidade"]').value=1;_togJ(false);_togF(false);document.querySelector('#form-peca [name="nome"]').focus();}
     }catch(e){console.error(e);Utils.toast('Erro.','erro');}
   }
 
@@ -1050,13 +1078,14 @@ const LevantamentoFachada = (() => {
   function exportarCSV(){_csv(pecas,'fachada_geral');}
   function exportarVista(){_csv(pecas.filter(x=>x.vistaId===sel.vistaId),'fachada_vista');}
   function _csv(lista,nome){
-    let csv='Peça;Comp cm;Alt cm;Qtd;Janela;L-Jan cm;A-Jan cm;Q-Jan;Comp Vão cm;Alt Vão cm;Pode ML;m2 unitario;m2 sem ML;m2 com ML;ML;Acabamento;Conferido;Obs\n';
-    lista.forEach(pc=>{const c=_calc(pc);csv+=[pc.nome,pc.comprimento,pc.altura,pc.quantidade,pc.possuiJanela?'Sim':'Nao',pc.larguraJanela||'',pc.alturaJanela||'',pc.quantidadeJanelas||'',pc.comprimentoVao||'',pc.alturaVao||'',pc.podeSerML?'Sim':'Nao',c.m2unitario.toFixed(2),c.m2semML.toFixed(2),c.m2comML_puro.toFixed(2),c.ml.toFixed(2),pc.acabamento||'',pc.conferido?'Sim':'Nao',pc.observacao||''].join(';')+'\n';});
+    let csv='Peça;Comp cm;Alt cm;Qtd;Janela;L-Jan cm;A-Jan cm;Q-Jan;Comp Vão cm;Alt Vão cm;Pode ML;Friso;Comp Friso cm;Tipo Friso;Qtd Friso;ML Friso Arq;ML Friso Est;m2 unitario;m2 sem ML;m2 com ML;ML;Acabamento;Conferido;Obs\n';
+    lista.forEach(pc=>{const c=_calc(pc);csv+=[pc.nome,pc.comprimento,pc.altura,pc.quantidade,pc.possuiJanela?'Sim':'Nao',pc.larguraJanela||'',pc.alturaJanela||'',pc.quantidadeJanelas||'',pc.comprimentoVao||'',pc.alturaVao||'',pc.podeSerML?'Sim':'Nao',pc.possuiFriso?'Sim':'Nao',pc.frisoComprimento||'',pc.frisoTipo==='estrutural'?'Estrutural':(pc.possuiFriso?'Arquitetônico':''),pc.frisoQuantidade||'',c.mlFrisoArq.toFixed(2),c.mlFrisoEst.toFixed(2),c.m2unitario.toFixed(2),c.m2semML.toFixed(2),c.m2comML_puro.toFixed(2),c.ml.toFixed(2),pc.acabamento||'',pc.conferido?'Sim':'Nao',pc.observacao||''].join(';')+'\n';});
     const b=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=nome+'.csv';a.click();URL.revokeObjectURL(u);Utils.toast('Exportado!','sucesso');
   }
 
   // ===================== HELPERS =====================
   function _togJ(s){const e=document.getElementById('campos-janela');if(e)e.style.display=s?'grid':'none';}
+  function _togF(s){const e=document.getElementById('campos-friso');if(e)e.style.display=s?'grid':'none';}
   // Permite digitar contas simples nos campos de medida (ex: 291+100 + Enter = 391)
   function calcExprEnter(e){
     if(e.key!=='Enter')return;
@@ -1085,6 +1114,7 @@ const LevantamentoFachada = (() => {
   }
 
   function onToggleJanela(cb){_togJ(cb.checked);}
+  function onToggleFriso(cb){_togF(cb.checked);}
   function _f(n){return Utils.formatarNumero(n);}
   function _pn(v){return Utils.parseNum(v);}
   function _badge(st){const m={rascunho:'badge-neutro',em_conferencia:'badge-alerta',aprovado:'badge-sucesso',revisado:'badge-info',cancelado:'badge-perigo'};const l={rascunho:'Rascunho',em_conferencia:'Em conferência',aprovado:'Aprovado',revisado:'Revisado',cancelado:'Cancelado'};return '<span class="badge '+(m[st]||'badge-neutro')+'">'+(l[st]||'Rascunho')+'</span>';}
@@ -1195,7 +1225,7 @@ const LevantamentoFachada = (() => {
   function imgRZEv(e, el){ imgRZ(e, el.dataset.d); }
   function cxResizeEv(e){ cxResize(e, parseInt(e.currentTarget.dataset.i), e.currentTarget.dataset.d); }
 
-  return {init,carregar,sel:selecionar,setAba,criarFachada,criarBalancim,editar,salvarEntidade,excluir,novaPeca,editarPeca,salvarPeca,excluirPeca,duplicarPeca,duplicarBal,editarNomeInline,abrirClonarBal,confirmarClonarBal,corrigirVinculos,conferirPeca,togglePecaML,onClickCheckML,onCompAltInput,calcExprEnter,exportarCSV,exportarVista,onToggleJanela,importarMapa,cxAdicionar,cxRemover,cxTravar,cxEditar,salvarCxEdit,cxMouseDown,cxDrop,cxResize,imgMouseDown,imgResize,entrarEditImg,sairEditImg,imgMD,imgRZEv,cxResizeEv,toggleEditImg,fecharEditImg,onImgResize,limparMapa,abrirVaoVista,salvarVaoVista,_atualizarPreviewVao,adicionarVaoRow,removerVaoRow,abrirConfig,salvarConfig,onChangeCfgJanela};
+  return {init,carregar,sel:selecionar,setAba,criarFachada,criarBalancim,editar,salvarEntidade,excluir,novaPeca,editarPeca,salvarPeca,excluirPeca,duplicarPeca,duplicarBal,editarNomeInline,abrirClonarBal,confirmarClonarBal,corrigirVinculos,conferirPeca,togglePecaML,onClickCheckML,onCompAltInput,calcExprEnter,onToggleFriso,exportarCSV,exportarVista,onToggleJanela,importarMapa,cxAdicionar,cxRemover,cxTravar,cxEditar,salvarCxEdit,cxMouseDown,cxDrop,cxResize,imgMouseDown,imgResize,entrarEditImg,sairEditImg,imgMD,imgRZEv,cxResizeEv,toggleEditImg,fecharEditImg,onImgResize,limparMapa,abrirVaoVista,salvarVaoVista,_atualizarPreviewVao,adicionarVaoRow,removerVaoRow,abrirConfig,salvarConfig,onChangeCfgJanela};
 })();
 const LF=LevantamentoFachada;
 function onObraChanged(){LF.init();}

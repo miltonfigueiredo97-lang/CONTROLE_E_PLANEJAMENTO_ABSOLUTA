@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.17.12',
+  versaoAtual: 'V2.17.13',
 
   versoes: [
     {
@@ -1943,7 +1943,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.17.12',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-12',
       tipo: 'funcionalidade',
       titulo: 'Levantamento de Fachada: botão de corrigir vínculos antigos + breakdown de ML na Visão Geral',
@@ -1956,6 +1956,35 @@ const NotasVersao = {
         'Nos cards da Visão Geral (mapa), "M² COM ML" agora mostra',
         '  o valor separado: Xm² + YML, com "= Zm²" embaixo — igual',
         '  já aparecia nas outras telas do sistema',
+      ]
+    },
+    {
+      versao: 'V2.17.13',
+      status: 'aberta',
+      data: '2026-07-12',
+      tipo: 'funcionalidade',
+      titulo: 'Levantamento de Fachada: friso (arquitetônico/estrutural) + fachada não reconhecia clone (raiz do problema)',
+      itens: [
+        'CORREÇÃO DEFINITIVA: os totais de peças/m²/vão por fachada',
+        '  (árvore, Resumo Geral, tela da Fachada, Visão Geral)',
+        '  dependiam do campo fachadaId gravado em cada peça/vista',
+        '  — se esse campo ficasse desatualizado (ex: em clones),',
+        '  a fachada "não reconhecia" as peças mesmo elas estando',
+        '  no balancim certo. Agora os totais são calculados pelo',
+        '  balancim (fonte da verdade), não mais pelo fachadaId',
+        '  solto — o problema de "Fachada Frontal Esquerda" não',
+        '  bater com a "Direita" clonada está resolvido de raiz,',
+        '  mesmo sem precisar rodar o botão 🔧 de correção',
+        'Novo seletor "Possui friso?" na peça (igual ao de janela):',
+        '  Comprimento do friso (cm, aceita conta), Tipo',
+        '  (Arquitetônico ou Estrutural) e Qtd de frisos',
+        'Todo o levantamento agora soma o ML de friso separado',
+        '  por tipo — "Friso Arquitetônico" e "Friso Estrutural"',
+        '  aparecem no resumo (m² sem ML / com ML / vão) de toda',
+        '  vista, balancim, fachada e no total geral, e também nos',
+        '  cards da Visão Geral (mapa) e no CSV exportado',
+        'Nova coluna "Friso" na tabela de peças, mostrando',
+        '  comprimento e tipo (Arq/Est) quando a peça tiver friso',
       ]
     }
   ],
