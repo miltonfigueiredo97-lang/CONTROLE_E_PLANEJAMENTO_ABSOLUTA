@@ -55,6 +55,12 @@ const LP = (() => {
   let areaEditId = null;           // id da área em edição (null = nova)
   let areaPoligonoPendente = null; // polígono (pontos-PDF) aguardando salvar no modal
   let areaM2Pendente = 0;
+  let rodapeArestasPendente = null; // seleção de arestas com rodapé (nova área) aguardando salvar
+  let mlRodapePendente = 0;
+  let poligonoRodapeSelecionado = []; // seleção em progresso (modo 'rodape'), array de booleans por aresta
+  let _rodapeEditandoAreaId = null;   // se setado, o modo 'rodape' está editando o rodapé de uma área já salva
+  let areaDestacadaId = null;      // área destacada temporariamente (ao focar pela árvore)
+  let _destacarTimer = null;
 
   let _pendingVincularNodeId = null; // para qual nó o upload do modal-lp-planta se destina
 
@@ -221,6 +227,41 @@ const LP = (() => {
   function toggleArvore() { treeColapsada = !treeColapsada; renderizar(); }
   function toggleFullscreen() { fsAtivo = !fsAtivo; renderizar(); }
 
+  // Clique numa área da árvore: seleciona o local (se necessário) e centraliza
+  // a planta nela, com um destaque temporário — a "visão" pedida.
+  function focarArea(nodeId, areaId) {
+    const trocou = nodeId !== selNodeId;
+    selNode(nodeId);
+    setTimeout(() => _focarAreaNoCanvas(areaId), trocou ? 650 : 150);
+  }
+
+  function _focarAreaNoCanvas(areaId) {
+    const a = areas.find(x => x.id === areaId);
+    if (!a || !a.poligono || !a.poligono.length) return;
+    const col = document.getElementById('lp-canvas-col');
+    const stage = document.querySelector('#lp-canvas-col .lp-canvas-stage');
+    const canvas = stage && stage.querySelector('canvas.lp-base');
+    if (!col || !stage || !canvas || !pageWidthPts) return;
+    const cx = a.poligono.reduce((s, p) => s + p.x, 0) / a.poligono.length;
+    const cy = a.poligono.reduce((s, p) => s + p.y, 0) / a.poligono.length;
+    const dispScale = (canvas.width * zoomCss) / pageWidthPts;
+    col.scrollLeft = Math.max(0, cx * dispScale - col.clientWidth / 2);
+    col.scrollTop = Math.max(0, cy * dispScale - col.clientHeight / 2);
+    _destacarAreaTemporario(areaId);
+  }
+
+  function _destacarAreaTemporario(areaId) {
+    areaDestacadaId = areaId;
+    const r = _acharNode(selNodeId);
+    if (r) _desenharOverlay(r.node);
+    clearTimeout(_destacarTimer);
+    _destacarTimer = setTimeout(() => {
+      areaDestacadaId = null;
+      const r2 = _acharNode(selNodeId);
+      if (r2) _desenharOverlay(r2.node);
+    }, 1800);
+  }
+
   function _renderArvoreNivel(nodes) {
     return _ordenarNodes(nodes).map(n => {
       const aberto = openNodes.has(n.id);
@@ -235,6 +276,21 @@ const LP = (() => {
         <button class="tree-edit-btn" onclick="event.stopPropagation();LP.renomearNode('${n.id}')" title="Renomear">✎</button>
         <button class="tree-del-btn" onclick="event.stopPropagation();LP.excluirNode('${n.id}')" title="Excluir">✕</button>
       </div>`;
+      // Áreas medidas diretamente neste local — sempre visíveis (não escondidas atrás
+      // do collapse), clicáveis pra focar/ver a área na planta.
+      const areasDoNo = _areasDoNode(n.id).sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
+      if (areasDoNo.length) {
+        h += `<div class="tree-children tree-children-areas">`;
+        areasDoNo.forEach(a => {
+          h += `<div class="tree-item tree-item-area" onclick="event.stopPropagation();LP.focarArea('${n.id}','${a.id}')" title="Ver esta área na planta">
+            <span class="tree-toggle"></span>
+            <span class="tree-icon">📐</span>
+            <span class="tree-label">${esc(a.nome)}</span>
+            <span class="tree-badge tree-badge-area">${fmt2(a.areaM2)}m²</span>
+          </div>`;
+        });
+        h += `</div>`;
+      }
       if (aberto) {
         h += `<div class="tree-children">`;
         h += _renderArvoreNivel(n.filhos || []);
@@ -517,7 +573,10 @@ const LP = (() => {
   function _renderWorkspace(node) {
     const temEscala = !!node.escalaMetrosPorPonto;
     const areasN = _areasDoNode(node.id).sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
-    const totalNode = areasN.reduce((s, a) => s + (a.areaM2 || 0), 0);
+    const totalPiso = areasN.reduce((s, a) => s + (a.areaM2 || 0), 0);
+    const totalContrapiso = areasN.reduce((s, a) => s + (a.tipoContrapiso ? (a.areaM2 || 0) : 0), 0);
+    const totalImperm = areasN.reduce((s, a) => s + (a.impermeabilizacao ? (a.areaM2 || 0) : 0), 0);
+    const totalRodape = areasN.reduce((s, a) => s + (a.mlRodape || 0), 0);
     const pl = _plantaPorId(node.plantaId);
 
     setTimeout(_popularDatalists, 0);
@@ -526,7 +585,7 @@ const LP = (() => {
       <div id="lp-workspace-wrap" class="${fsAtivo ? 'lp-fullscreen-overlay' : ''}">
         <div class="lp-workspace-header">
           <div><h2>${esc(node.nome)}</h2>
-            <span class="subtitulo">${pl ? esc(pl.nome) : ''} — pág. ${node.pagina} · ${areasN.length} área(s) · ${fmt2(totalNode)} m²</span></div>
+            <span class="subtitulo">${pl ? esc(pl.nome) : ''} — pág. ${node.pagina} · ${areasN.length} área(s) · ${fmt2(totalPiso)} m²</span></div>
           <div style="display:flex;gap:6px;">
             <button class="btn btn-primario btn-sm" onclick="LP.toggleFullscreen()">${fsAtivo ? '✕ Sair da tela cheia' : '⛶ Tela cheia'}</button>
             ${fsAtivo ? '' : `<button class="btn btn-secundario btn-sm" onclick="LP.trocarPlanta('${node.id}')">🔄 Trocar planta/página</button>`}
@@ -540,6 +599,11 @@ const LP = (() => {
             <button class="btn btn-secundario btn-sm" onclick="LP.cancelarDesenho()">Cancelar</button>
           ` : ''}
           ${modo === 'calibrar' ? `<button class="btn btn-secundario btn-sm" onclick="LP.cancelarDesenho()">Cancelar</button>` : ''}
+          ${modo === 'rodape' ? `
+            <span class="info">🦶 Rodapé selecionado: <strong id="lp-rodape-ml">${fmt2(_calcularMlRodape(areaPoligonoPendente, poligonoRodapeSelecionado, node.escalaMetrosPorPonto || 0))} m</strong></span>
+            <button class="btn btn-primario btn-sm" onclick="LP.confirmarRodape()">✓ Confirmar Rodapé</button>
+            <button class="btn btn-secundario btn-sm" onclick="LP.cancelarRodape()">Cancelar</button>
+          ` : ''}
           <div class="sep"></div>
           <button class="btn btn-secundario btn-sm" onclick="LP.zoomOut()" title="Diminuir zoom">➖</button>
           <button class="btn btn-secundario btn-sm" onclick="LP.zoomReset()" title="Redefinir zoom (100%)"><span id="lp-zoom-pct">100%</span></button>
@@ -550,21 +614,26 @@ const LP = (() => {
         ${!temEscala ? `<div class="lp-hint">Clique em "📏 Calibrar Escala", desenhe uma linha sobre uma medida conhecida do desenho e informe a distância real.</div>` : ''}
         ${modo === 'medir' ? `<div class="lp-hint">Clique para adicionar vértices do polígono. Duplo-clique ou "Finalizar Área" para terminar.</div>` : ''}
         ${modo === 'calibrar' ? `<div class="lp-hint">Clique em dois pontos sobre uma medida conhecida do desenho.</div>` : ''}
+        ${modo === 'rodape' ? `<div class="lp-hint">Clique nas paredes (linhas cinza) que têm rodapé — ficam roxas quando marcadas. Clique de novo pra desmarcar.</div>` : ''}
         <div class="lp-workspace">
           <div class="lp-canvas-col" id="lp-canvas-col"><div class="loading-inline">Carregando página do PDF...</div></div>
           <div class="lp-painel-lateral">
             <div class="lp-totais">
               <table>
                 <tr><td>Total de áreas</td><td>${areasN.length}</td></tr>
-                <tr><td>Área total</td><td>${fmt2(totalNode)} m²</td></tr>
+                <tr><td>M² de Piso</td><td>${fmt2(totalPiso)} m²</td></tr>
+                <tr><td>M² de Contrapiso</td><td>${fmt2(totalContrapiso)} m²</td></tr>
+                <tr><td>M² de Impermeabilização</td><td>${fmt2(totalImperm)} m²</td></tr>
+                <tr><td>ML de Rodapé</td><td>${fmt2(totalRodape)} m</td></tr>
               </table>
             </div>
             ${areasN.length === 0 ? `<div class="estado-vazio" style="padding:20px;"><p style="font-size:0.85rem;">Nenhuma área medida ainda.</p></div>` : areasN.map(a => `
-              <div class="lp-area-card" onclick="LP.editarArea('${a.id}')">
+              <div class="lp-area-card ${a.id === areaDestacadaId ? 'lp-area-card-destaque' : ''}" onclick="LP.editarArea('${a.id}')">
                 <div class="nome"><span>${esc(a.nome)}</span><span class="m2">${fmt2(a.areaM2)} m²</span></div>
                 <div class="meta">
                   ${a.tipoPiso ? `Piso: ${esc(a.tipoPiso)}` : 'Piso: —'}${a.tipoContrapiso ? ` · Contrapiso: ${esc(a.tipoContrapiso)}` : ''}
                   ${a.impermeabilizacao ? ` · 💧 Impermeabilizado${a.tipoImpermeabilizacao ? ' (' + esc(a.tipoImpermeabilizacao) + ')' : ''}` : ''}
+                  ${a.mlRodape ? ` · 🦶 ${fmt2(a.mlRodape)}m rodapé` : ''}
                 </div>
               </div>
             `).join('')}
@@ -820,6 +889,7 @@ const LP = (() => {
 
   function cancelarDesenho() {
     if (modo === 'nenhum') return;
+    if (modo === 'rodape') { cancelarRodape(); return; }
     modo = 'nenhum'; calibPontos = []; poligonoPontos = [];
     renderizar();
   }
@@ -862,17 +932,98 @@ const LP = (() => {
   function finalizarPoligono() {
     if (poligonoPontos.length < 3) { Utils.toast('Desenhe pelo menos 3 pontos.', 'alerta'); return; }
     const r = _acharNode(selNodeId); if (!r) return;
-    const areaPdf = _areaPoligono(poligonoPontos);
-    const areaM2 = areaPdf * (r.node.escalaMetrosPorPonto ** 2);
     areaPoligonoPendente = poligonoPontos.slice();
-    areaM2Pendente = areaM2;
+    areaM2Pendente = _areaPoligono(areaPoligonoPendente) * (r.node.escalaMetrosPorPonto ** 2);
     areaEditId = null;
+    _rodapeEditandoAreaId = null;
+    poligonoRodapeSelecionado = new Array(areaPoligonoPendente.length).fill(false);
+    poligonoPontos = [];
+    modo = 'rodape';
+    renderizar();
+  }
+
+  // Alterna se a aresta i (entre o vértice i e o próximo) tem rodapé
+  function toggleRodapeEdge(i) {
+    poligonoRodapeSelecionado[i] = !poligonoRodapeSelecionado[i];
+    _redesenharTemp();
+    const r = _acharNode(selNodeId);
+    const ml = _calcularMlRodape(areaPoligonoPendente, poligonoRodapeSelecionado, r ? (r.node.escalaMetrosPorPonto || 0) : 0);
+    const el = document.getElementById('lp-rodape-ml');
+    if (el) el.textContent = fmt2(ml) + ' m';
+  }
+
+  function _calcularMlRodape(poligono, selecionado, escalaMetrosPorPonto) {
+    let total = 0;
+    for (let i = 0; i < poligono.length; i++) {
+      if (!selecionado[i]) continue;
+      const p1 = poligono[i], p2 = poligono[(i + 1) % poligono.length];
+      total += Math.hypot(p2.x - p1.x, p2.y - p1.y) * escalaMetrosPorPonto;
+    }
+    return total;
+  }
+
+  function _atualizarMlRodapeDisplay(escalaMetrosPorPonto) {
+    // (mantida por compatibilidade — a atualização em tempo real é feita direto em toggleRodapeEdge)
+    const ml = _calcularMlRodape(areaPoligonoPendente, poligonoRodapeSelecionado, escalaMetrosPorPonto);
+    const el = document.getElementById('lp-rodape-ml');
+    if (el) el.textContent = fmt2(ml) + ' m';
+    return ml;
+  }
+
+  function cancelarRodape() {
+    modo = 'nenhum'; areaPoligonoPendente = null; poligonoRodapeSelecionado = []; _rodapeEditandoAreaId = null;
+    renderizar();
+  }
+
+  function confirmarRodape() {
+    const r = _acharNode(selNodeId); if (!r) return;
+    const ml = _calcularMlRodape(areaPoligonoPendente, poligonoRodapeSelecionado, r.node.escalaMetrosPorPonto || 0);
+    if (_rodapeEditandoAreaId) {
+      _salvarRodapeDireto(_rodapeEditandoAreaId, poligonoRodapeSelecionado.slice(), ml);
+      return;
+    }
+    rodapeArestasPendente = poligonoRodapeSelecionado.slice();
+    mlRodapePendente = ml;
+    modo = 'nenhum';
     document.getElementById('lp-area-titulo').textContent = 'Nova Área';
     Utils.limparForm('form-lp-area');
-    document.getElementById('lp-area-m2-display').value = fmt2(areaM2);
+    document.getElementById('lp-area-m2-display').value = fmt2(areaM2Pendente);
+    document.getElementById('lp-area-ml-rodape-display').value = fmt2(mlRodapePendente) + ' m';
     document.getElementById('lp-campo-imperm-tipo').style.display = 'none';
     document.getElementById('lp-btn-excluir-area').style.display = 'none';
+    document.getElementById('lp-btn-editar-rodape').style.display = 'none';
     Utils.abrirModal('modal-lp-area');
+    renderizar();
+  }
+
+  async function _salvarRodapeDireto(areaId, rodapeArestas, mlRodape) {
+    Utils.mostrarLoading('Salvando rodapé...');
+    try {
+      await Database.atualizar(obraId, COL_AREAS, areaId, { rodapeArestas, mlRodape });
+      Utils.toast('Rodapé atualizado!', 'sucesso');
+      modo = 'nenhum'; areaPoligonoPendente = null; poligonoRodapeSelecionado = []; _rodapeEditandoAreaId = null;
+      await carregar();
+      selNode(selNodeId);
+    } catch (e) {
+      console.error(e);
+      Utils.toast('Erro ao salvar rodapé: ' + e.message, 'erro');
+    } finally {
+      Utils.esconderLoading();
+    }
+  }
+
+  // Reabre o modo de seleção de rodapé para uma área já salva
+  function iniciarEdicaoRodape(areaId) {
+    const a = areas.find(x => x.id === areaId); if (!a || !a.poligono) return;
+    Utils.fecharModal('modal-lp-area');
+    areaPoligonoPendente = a.poligono;
+    poligonoRodapeSelecionado = a.rodapeArestas && a.rodapeArestas.length === a.poligono.length
+      ? a.rodapeArestas.slice()
+      : new Array(a.poligono.length).fill(false);
+    _rodapeEditandoAreaId = areaId;
+    areaEditId = null;
+    modo = 'rodape';
+    renderizar();
   }
 
   function editarArea(id) {
@@ -882,8 +1033,11 @@ const LP = (() => {
     document.getElementById('lp-area-titulo').textContent = 'Editar Área';
     Utils.setFormData('form-lp-area', a);
     document.getElementById('lp-area-m2-display').value = fmt2(a.areaM2);
+    document.getElementById('lp-area-ml-rodape-display').value = fmt2(a.mlRodape || 0) + ' m';
     document.getElementById('lp-campo-imperm-tipo').style.display = a.impermeabilizacao ? '' : 'none';
     document.getElementById('lp-btn-excluir-area').style.display = '';
+    document.getElementById('lp-btn-editar-rodape').style.display = '';
+    document.getElementById('lp-btn-editar-rodape').setAttribute('onclick', `LP.iniciarEdicaoRodape('${id}')`);
     Utils.abrirModal('modal-lp-area');
   }
 
@@ -895,6 +1049,7 @@ const LP = (() => {
     Utils.fecharModal('modal-lp-area');
     if (areaEditId === null) {
       poligonoPontos = []; modo = 'nenhum'; areaPoligonoPendente = null;
+      rodapeArestasPendente = null; mlRodapePendente = 0; poligonoRodapeSelecionado = [];
       renderizar();
     }
   }
@@ -912,11 +1067,14 @@ const LP = (() => {
         data.nodeId = selNodeId;
         data.poligono = areaPoligonoPendente;
         data.areaM2 = areaM2Pendente;
+        data.rodapeArestas = rodapeArestasPendente || [];
+        data.mlRodape = mlRodapePendente || 0;
         await Database.criar(obraId, COL_AREAS, data);
       }
       Utils.fecharModal('modal-lp-area');
       Utils.toast('Área salva!', 'sucesso');
       poligonoPontos = []; modo = 'nenhum'; areaPoligonoPendente = null; areaEditId = null;
+      rodapeArestasPendente = null; mlRodapePendente = 0; poligonoRodapeSelecionado = [];
       await carregar();
       selNode(selNodeId);
     } catch (e) {
@@ -966,7 +1124,18 @@ const LP = (() => {
     _areasDoNode(node.id).forEach(a => {
       if (!a.poligono || a.poligono.length < 3) return;
       const isEdit = a.id === areaEditId;
-      h += `<polygon points="${_ptsAttr(a.poligono)}" fill="${isEdit ? 'rgba(37,99,235,0.28)' : 'rgba(37,99,235,0.14)'}" stroke="#2563eb" stroke-width="1.5"/>`;
+      const isDestaque = a.id === areaDestacadaId;
+      const corTraco = isDestaque ? '#f59e0b' : '#2563eb';
+      const largTraco = isDestaque ? 3 : 1.5;
+      h += `<polygon points="${_ptsAttr(a.poligono)}" fill="${isDestaque ? 'rgba(245,158,11,0.22)' : (isEdit ? 'rgba(37,99,235,0.28)' : 'rgba(37,99,235,0.14)')}" stroke="${corTraco}" stroke-width="${largTraco}"/>`;
+      // Trechos com rodapé — traço grosso por cima da(s) parede(s) marcada(s)
+      if (a.rodapeArestas && a.rodapeArestas.length === a.poligono.length) {
+        for (let i = 0; i < a.poligono.length; i++) {
+          if (!a.rodapeArestas[i]) continue;
+          const p1 = a.poligono[i], p2 = a.poligono[(i + 1) % a.poligono.length];
+          h += `<line x1="${p1.x * renderScale}" y1="${p1.y * renderScale}" x2="${p2.x * renderScale}" y2="${p2.y * renderScale}" stroke="#7c3aed" stroke-width="4" stroke-linecap="round"/>`;
+        }
+      }
       const cx = a.poligono.reduce((s, p) => s + p.x, 0) / a.poligono.length * renderScale;
       const cy = a.poligono.reduce((s, p) => s + p.y, 0) / a.poligono.length * renderScale;
       h += `<text x="${cx}" y="${cy}" text-anchor="middle" font-size="12" font-weight="700" fill="#1e3a8a" style="paint-order:stroke;stroke:#fff;stroke-width:3px;">${esc(a.nome)}</text>`;
@@ -994,6 +1163,16 @@ const LP = (() => {
         extra += `<polygon points="${_ptsAttr(poligonoPontos)}" fill="rgba(220,38,38,0.12)" stroke="none"/>`;
       }
     }
+    if (modo === 'rodape' && areaPoligonoPendente && areaPoligonoPendente.length) {
+      extra += `<polygon points="${_ptsAttr(areaPoligonoPendente)}" fill="rgba(124,58,237,0.08)" stroke="#c4b5fd" stroke-width="1"/>`;
+      for (let i = 0; i < areaPoligonoPendente.length; i++) {
+        const sel = !!poligonoRodapeSelecionado[i];
+        const p1 = areaPoligonoPendente[i], p2 = areaPoligonoPendente[(i + 1) % areaPoligonoPendente.length];
+        extra += `<line x1="${p1.x * renderScale}" y1="${p1.y * renderScale}" x2="${p2.x * renderScale}" y2="${p2.y * renderScale}" `
+          + `stroke="${sel ? '#7c3aed' : '#94a3b8'}" stroke-width="${sel ? 7 : 4}" stroke-linecap="round" `
+          + `style="pointer-events:auto;cursor:pointer;" onclick="LP.toggleRodapeEdge(${i})"/>`;
+      }
+    }
     let tempG = svg.querySelector('#lp-temp-g');
     if (!tempG) {
       tempG = document.createElementNS('http://www.w3.org/2000/svg', 'g');
@@ -1006,10 +1185,12 @@ const LP = (() => {
   return {
     init, recarregar,
     novoNode, renomearNode, excluirNode, toggleNode, selNode, selGeral, toggleArvore, toggleFullscreen,
+    focarArea,
     abrirModalPlanta, enviarPlanta, excluirPlanta, vincularPlantaExistente, trocarPlanta,
     toggleModoCalibrar, toggleModoMedir, cancelarDesenho,
     cancelarCalibracao, confirmarCalibracao,
     finalizarPoligono, editarArea, onToggleImperm, fecharModalArea, salvarArea, excluirAreaEmEdicao,
+    toggleRodapeEdge, cancelarRodape, confirmarRodape, iniciarEdicaoRodape,
     zoomIn, zoomOut, zoomReset,
   };
 })();

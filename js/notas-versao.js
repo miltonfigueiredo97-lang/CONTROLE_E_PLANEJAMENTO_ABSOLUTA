@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.22.4',
+  versaoAtual: 'V2.23.0',
 
   versoes: [
     {
@@ -2714,7 +2714,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.22.4',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-13',
       tipo: 'correcao',
       titulo: 'Levantamento de Piso: corrige impossibilidade de arrastar em zoom alto (bug clássico de flexbox)',
@@ -2731,6 +2731,36 @@ const NotasVersao = {
         '  deixa a planta maior que a área visível',
         'Agora dá pra arrastar até qualquer canto da planta em qualquer',
         '  nível de zoom, mesmo em PDFs grandes e muito detalhados',
+      ]
+    },
+    {
+      versao: 'V2.23.0',
+      status: 'aberta',
+      data: '2026-07-13',
+      tipo: 'funcionalidade',
+      titulo: 'Levantamento de Piso: áreas na árvore com visão, ML de rodapé, m² contrapiso/impermeabilização',
+      itens: [
+        'Áreas medidas agora aparecem como itens na árvore de locais,',
+        '  logo abaixo do pavimento onde foram medidas — sempre visíveis',
+        '  (não escondidas atrás do collapse), com o m² de cada uma',
+        'Clicar numa área da árvore agora dá uma "visão": seleciona o',
+        '  local (se necessário), centraliza a planta nela e destaca o',
+        '  polígono por alguns segundos — fácil de achar qualquer área',
+        '  já medida, mesmo que tenha sido lançada no local errado',
+        'Novo recurso: ML de Rodapé — depois de fechar o polígono da',
+        '  área, um novo passo permite clicar em cada parede (aresta do',
+        '  polígono) que tem rodapé; o sistema soma o comprimento real',
+        '  (via escala) só das paredes marcadas',
+        'Rodapé de uma área já salva pode ser reeditado a qualquer',
+        '  momento (botão "🦶 Editar Rodapé" no modal da área)',
+        'Trechos com rodapé ficam marcados com um traço roxo grosso',
+        '  em cima da parede correspondente, direto na planta',
+        'Totais do pavimento agora mostram separadamente: M² de Piso,',
+        '  M² de Contrapiso (soma das áreas com tipo de contrapiso',
+        '  preenchido), M² de Impermeabilização (soma das áreas',
+        '  marcadas) e ML de Rodapé total',
+        'Cards de área na lateral também mostram o ML de rodapé quando',
+        '  houver',
       ]
     }
   ],

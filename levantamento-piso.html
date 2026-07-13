@@ -35,6 +35,10 @@
     .lp-hint { font-size:0.74rem; color:#92400e; background:var(--cor-alerta-bg); border:1px solid #fcd34d; border-radius:6px; padding:4px 10px; margin-bottom:6px; }
     .lp-vinc-card { background:#fff; border:1px solid #e2e8f0; border-radius:10px; padding:16px; max-width:480px; }
     .lp-planta-lib-item { display:flex; justify-content:space-between; align-items:center; padding:8px 10px; border:1px solid #e2e8f0; border-radius:6px; margin-bottom:6px; font-size:0.82rem; }
+    .tree-children-areas { border-left:2px dashed #e2e8f0; margin-left:8px; }
+    .tree-item-area .tree-icon { opacity:0.75; }
+    .tree-badge-area { background:#eff6ff !important; color:#2563eb !important; }
+    .lp-area-card-destaque { border-color:#f59e0b !important; box-shadow:0 0 0 2px rgba(245,158,11,0.25); }
     .lp-workspace-header { display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:6px; }
     .lp-workspace-header h2 { font-size:1rem; margin:0; }
     .lp-workspace-header .subtitulo { font-size:0.76rem; }
@@ -86,7 +90,7 @@
       <a href="histograma.html"><span class="nav-icon">📊</span> Histograma</a>
       <a href="admin-permissoes.html"><span class="nav-icon">🔑</span> Permissões</a>
       <div class="sidebar-section-title">Sistema</div>
-      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V2.22.4</span></a>
+      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V2.23.0</span></a>
     </nav>
     <div class="sidebar-user">
       <div class="user-avatar">U</div>
@@ -174,6 +178,13 @@
           <div class="form-grupo">
             <label>Área (m²)</label>
             <input type="text" id="lp-area-m2-display" class="form-control" readonly style="background:#f8fafc;font-weight:700;color:var(--cor-primaria);">
+          </div>
+        </div>
+        <div class="form-grupo">
+          <label>ML de Rodapé <span style="font-weight:400;color:#888;">(selecionado na planta)</span></label>
+          <div style="display:flex;gap:8px;">
+            <input type="text" id="lp-area-ml-rodape-display" class="form-control" readonly style="background:#f8fafc;font-weight:700;color:#7c3aed;">
+            <button type="button" class="btn btn-secundario btn-sm" id="lp-btn-editar-rodape" style="display:none;white-space:nowrap;" onclick="">🦶 Editar Rodapé</button>
           </div>
         </div>
         <div class="form-grupo">
