@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.18.3',
+  versaoAtual: 'V2.18.4',
 
   versoes: [
     {
@@ -2292,7 +2292,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.18.3',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-10',
       tipo: 'funcionalidade',
       titulo: 'Planejamento: barra de busca de tarefa',
@@ -2308,6 +2308,40 @@ const NotasVersao = {
         '  → Esc ou ✕: limpa a busca',
         '  → Contador de resultados ao lado da barra',
         '  → Foco retorna ao campo após re-render',
+      ]
+    },
+    {
+      versao: 'V2.18.4',
+      status: 'aberta',
+      data: '2026-07-13',
+      tipo: 'funcionalidade',
+      titulo: 'Vínculos com Levantamento: seleção granular por Fachada/Balancim/Vista',
+      itens: [
+        'PROBLEMA: o valor usado no vínculo sempre somava TODAS as',
+        '  peças de TODAS as fachadas/balancins/vistas da obra — só',
+        '  dava pra "recortar" esse total com uma fração digitada à',
+        '  mão (ex: 1/8), sem nenhuma relação real com a estrutura',
+        '  do levantamento (ex: não dava pra vincular só a Fachada',
+        '  Frontal, ou só um Balancim específico)',
+        '',
+        'NOVO: modal de vínculo ganhou 3 seletores em cascata —',
+        '  Fachada → Balancim → Vista — que filtram as peças ANTES',
+        '  de calcular o m², restringindo o valor a só aquela parte',
+        '  do levantamento real. Deixar em branco em qualquer nível',
+        '  soma tudo que está abaixo dele (ex: escolher só a fachada',
+        '  soma todos os balancins/vistas dela)',
+        '  → A fração manual (1/8, 0,5 etc.) continua existindo e',
+        '  agora funciona JUNTO com a seleção estrutural: primeiro',
+        '  escolhe a fonte (ex: Balancim 3), depois divide entre',
+        '  tarefas-irmãs com fração se precisar',
+        '  → A tela de Vínculos (lista) agora mostra a fonte',
+        '  estrutural escolhida ao lado da fração (ex: "Fachada',
+        '  Frontal › BAL-01 › Vista Externa")',
+        '  → Recalcular vínculos também respeita a fonte salva de',
+        '  cada tarefa',
+        '  → Mecanismo genérico: a mesma lógica de filtro por níveis',
+        '  serve de base pra quando o vínculo de Levantamento de',
+        '  Concreto for implementado',
       ]
     }
   ],
