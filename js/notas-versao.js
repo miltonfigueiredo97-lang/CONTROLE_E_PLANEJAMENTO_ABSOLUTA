@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.17.21',
+  versaoAtual: 'V2.17.22',
 
   versoes: [
     {
@@ -2112,7 +2112,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.17.21',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-12',
       tipo: 'melhoria',
       titulo: 'Levantamento de Fachada: aviso "por peça" logo no checkbox de janela/friso',
@@ -2123,6 +2123,22 @@ const NotasVersao = {
         '  para UMA única peça)" — pra evitar o erro de colocar a',
         '  quantidade total (ex: 16) em vez da quantidade por',
         '  peça (ex: 1)',
+      ]
+    },
+    {
+      versao: 'V2.17.22',
+      status: 'aberta',
+      data: '2026-07-12',
+      tipo: 'funcionalidade',
+      titulo: 'Levantamento de Fachada: copiar todas as peças da Vista oposta de uma vez',
+      itens: [
+        'Novo botão "⧉ Copiar de Vista Externa/Interna (N)" no',
+        '  topo da tela de peças da Vista — copia TODAS as peças',
+        '  da vista oposta do mesmo balancim de uma vez só, para',
+        '  os casos em que Externa e Interna são iguais',
+        'Só aparece quando a vista oposta tem peças cadastradas',
+        'Se a vista atual já tiver peças, avisa que elas serão',
+        '  substituídas pelas copiadas antes de continuar',
       ]
     }
   ],

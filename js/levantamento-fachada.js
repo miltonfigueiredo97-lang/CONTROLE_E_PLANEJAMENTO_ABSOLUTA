@@ -584,9 +584,13 @@ const LevantamentoFachada = (() => {
         '<button class="btn btn-perigo btn-sm btn-icon" onclick="LF.excluirPeca(\''+pc.id+'\')">✕</button></td></tr>';
     });
     const path=(f?.nome||'')+' › '+(bl?.nome||'')+' › '+lbl;
+    const viOposta=vistas.find(v=>v.balancimId===vi.balancimId&&v.tipoVista!==vi.tipoVista);
+    const pecOposta=viOposta?pecas.filter(x=>x.vistaId===viOposta.id):[];
+    const lblOposta=viOposta?.tipoVista==='externa'?'Vista Externa':'Vista Interna';
+    const btnCopiar=pecOposta.length?'<button class="btn btn-secundario btn-sm" onclick="LF.copiarDeOutraVista()" title="Copia todas as peças da '+lblOposta+' para cá">⧉ Copiar de '+lblOposta+' ('+pecOposta.length+')</button>':'';
     p.innerHTML=toggle+
       '<div class="page-header"><div><h2>'+ico+' '+lbl+' — '+(bl?.nome||'')+'</h2><span class="subtitulo">'+path+' · '+vPec.length+' peça(s)</span></div>'+
-      '<div class="btn-grupo"><button class="btn btn-secundario btn-sm" onclick="LF.exportarVista()">📥 CSV</button>'+
+      '<div class="btn-grupo">'+btnCopiar+'<button class="btn btn-secundario btn-sm" onclick="LF.exportarVista()">📥 CSV</button>'+
       '<button class="btn btn-primario" onclick="LF.novaPeca()">+ Nova Peça</button></div></div>'+
       _cards(tot)+
       '<div class="tabela-container mt-2"><table class="tabela tabela-compacta"><thead><tr>'+
@@ -989,6 +993,31 @@ const LevantamentoFachada = (() => {
     }catch(e){Utils.toast('Erro ao mover.','erro');}
   }
   async function duplicarPeca(id){const pc=pecas.find(x=>x.id===id);if(!pc)return;const cl={...pc};delete cl.id;delete cl.createdAt;delete cl.updatedAt;delete cl.createdBy;delete cl.updatedBy;cl.nome=pc.nome+' (cópia)';cl.conferido=false;try{await Database.criar(obraId,COL,cl);Utils.toast('Duplicada!','sucesso');await carregar();}catch(e){Utils.toast('Erro.','erro');}}
+
+  // Copia TODAS as peças da vista oposta (mesmo balancim) para a vista atual — útil quando Externa/Interna são iguais
+  async function copiarDeOutraVista(){
+    const viAtual=vistas.find(v=>v.id===sel.vistaId);if(!viAtual)return;
+    const viOposta=vistas.find(v=>v.balancimId===viAtual.balancimId&&v.tipoVista!==viAtual.tipoVista);
+    if(!viOposta){Utils.toast('Vista de origem não encontrada.','erro');return;}
+    const pecOposta=pecas.filter(x=>x.vistaId===viOposta.id);
+    if(!pecOposta.length){Utils.toast('A outra vista não tem peças.','alerta');return;}
+    const pecAtuais=pecas.filter(x=>x.vistaId===viAtual.id);
+    const lblOposta=viOposta.tipoVista==='externa'?'Vista Externa':'Vista Interna';
+    const msg=pecAtuais.length
+      ? ('Esta vista já tem '+pecAtuais.length+' peça(s). Elas serão substituídas pelas '+pecOposta.length+' peça(s) da '+lblOposta+'. Continuar?')
+      : ('Copiar as '+pecOposta.length+' peça(s) da '+lblOposta+' para cá?');
+    if(!Utils.confirmar(msg))return;
+    try{
+      Utils.mostrarLoading('Copiando peças...');
+      for(const pc of pecAtuais){await Database.deletar(obraId,COL,pc.id);}
+      for(const pc of pecOposta){
+        const pcC={...pc};delete pcC.id;delete pcC.createdAt;delete pcC.updatedAt;
+        pcC.vistaId=viAtual.id;pcC.conferido=false;
+        await Database.criar(obraId,COL,pcC);
+      }
+      Utils.toast('Peças copiadas!','sucesso');await carregar();
+    }catch(e){Utils.toast('Erro ao copiar.','erro');}finally{Utils.esconderLoading();}
+  }
   async function conferirPeca(id){const pc=pecas.find(x=>x.id===id);if(!pc)return;const n=!pc.conferido;try{await Database.atualizar(obraId,COL,id,{conferido:n,conferidoPor:n?Auth.getUid():null,conferidoEm:n?new Date().toISOString():null});Utils.toast(n?'Conferida.':'Desconferida.','sucesso');await carregar();}catch(e){Utils.toast('Erro.','erro');}}
   async function togglePecaML(id){const pc=pecas.find(x=>x.id===id);if(!pc)return;const n=!pc.podeSerML;try{await Database.atualizar(obraId,COL,id,{podeSerML:n});Utils.toast(n?'Marcada como ML.':'Desmarcada como ML.','sucesso');await carregar();}catch(e){Utils.toast('Erro.','erro');}}
 
@@ -1387,7 +1416,7 @@ const LevantamentoFachada = (() => {
   function imgRZEv(e, el){ imgRZ(e, el.dataset.d); }
   function cxResizeEv(e){ cxResize(e, parseInt(e.currentTarget.dataset.i), e.currentTarget.dataset.d); }
 
-  return {init,carregar,sel:selecionar,setAba,criarFachada,criarBalancim,editar,salvarEntidade,excluir,novaPeca,editarPeca,salvarPeca,excluirPeca,duplicarPeca,moverPeca,abrirMoverPecaBal,confirmarMoverPecaBal,duplicarBal,editarNomeInline,abrirClonarBal,confirmarClonarBal,corrigirVinculos,conferirPeca,togglePecaML,onClickCheckML,onCompAltInput,calcExprEnter,onToggleFriso,adicionarFrisoRow,removerFrisoRow,adicionarJanelaRow,removerJanelaRow,exportarCSV,exportarVista,onToggleJanela,importarMapa,cxAdicionar,cxRemover,cxTravar,cxEditar,salvarCxEdit,cxMouseDown,cxDrop,cxResize,imgMouseDown,imgResize,entrarEditImg,sairEditImg,imgMD,imgRZEv,cxResizeEv,toggleEditImg,fecharEditImg,onImgResize,limparMapa,abrirVaoVista,salvarVaoVista,_atualizarPreviewVao,adicionarVaoRow,removerVaoRow,abrirConfig,salvarConfig,onChangeCfgJanela};
+  return {init,carregar,sel:selecionar,setAba,criarFachada,criarBalancim,editar,salvarEntidade,excluir,novaPeca,editarPeca,salvarPeca,excluirPeca,duplicarPeca,moverPeca,abrirMoverPecaBal,confirmarMoverPecaBal,copiarDeOutraVista,duplicarBal,editarNomeInline,abrirClonarBal,confirmarClonarBal,corrigirVinculos,conferirPeca,togglePecaML,onClickCheckML,onCompAltInput,calcExprEnter,onToggleFriso,adicionarFrisoRow,removerFrisoRow,adicionarJanelaRow,removerJanelaRow,exportarCSV,exportarVista,onToggleJanela,importarMapa,cxAdicionar,cxRemover,cxTravar,cxEditar,salvarCxEdit,cxMouseDown,cxDrop,cxResize,imgMouseDown,imgResize,entrarEditImg,sairEditImg,imgMD,imgRZEv,cxResizeEv,toggleEditImg,fecharEditImg,onImgResize,limparMapa,abrirVaoVista,salvarVaoVista,_atualizarPreviewVao,adicionarVaoRow,removerVaoRow,abrirConfig,salvarConfig,onChangeCfgJanela};
 })();
 const LF=LevantamentoFachada;
 function onObraChanged(){LF.init();}
