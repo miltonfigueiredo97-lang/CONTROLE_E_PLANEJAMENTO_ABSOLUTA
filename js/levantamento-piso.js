@@ -45,6 +45,11 @@ const LP = (() => {
   let calibPontos = [];       // pontos-PDF da linha de calibração em progresso
   let poligonoPontos = [];    // vértices-PDF do polígono em progresso
 
+  let zoomCss = 1;            // zoom de exibição (estilo CAD), aplicado via CSS por cima do canvas renderizado
+  let pageWidthPts = 0;       // largura da página em pontos-PDF (viewport scale=1), usada pra converter clique -> ponto-PDF em qualquer zoom
+  let panAtivo = false;
+  let panInicio = { x: 0, y: 0, scrollX: 0, scrollY: 0 };
+
   let areaEditId = null;           // id da área em edição (null = nova)
   let areaPoligonoPendente = null; // polígono (pontos-PDF) aguardando salvar no modal
   let areaM2Pendente = 0;
@@ -239,11 +244,13 @@ const LP = (() => {
   function toggleNode(id) { if (openNodes.has(id)) openNodes.delete(id); else openNodes.add(id); }
 
   function selNode(id) {
+    const trocouNode = id !== selNodeId;
     selNodeId = id; modo = 'nenhum'; calibPontos = []; poligonoPontos = [];
+    if (trocouNode) zoomCss = 1;
     renderizar();
   }
   function selGeral() {
-    selNodeId = null; modo = 'nenhum'; calibPontos = []; poligonoPontos = [];
+    selNodeId = null; modo = 'nenhum'; calibPontos = []; poligonoPontos = []; zoomCss = 1;
     renderizar();
   }
 
@@ -513,11 +520,16 @@ const LP = (() => {
         ` : ''}
         ${modo === 'calibrar' ? `<button class="btn btn-secundario btn-sm" onclick="LP.cancelarDesenho()">Cancelar</button>` : ''}
         <div class="sep"></div>
+        <button class="btn btn-secundario btn-sm" onclick="LP.zoomOut()" title="Diminuir zoom">➖</button>
+        <button class="btn btn-secundario btn-sm" onclick="LP.zoomReset()" title="Redefinir zoom (100%)"><span id="lp-zoom-pct">100%</span></button>
+        <button class="btn btn-secundario btn-sm" onclick="LP.zoomIn()" title="Aumentar zoom">➕</button>
+        <div class="sep"></div>
         <span class="info">${temEscala ? `Escala: 1 ponto-PDF = ${(node.escalaMetrosPorPonto * 1000).toFixed(3)} mm` : 'Escala não calibrada'}</span>
       </div>
       ${!temEscala ? `<div class="lp-hint">Antes de medir, clique em "📏 Calibrar Escala", desenhe uma linha sobre uma medida conhecida do desenho (ex: uma cota) e informe a distância real.</div>` : ''}
-      ${modo === 'medir' ? `<div class="lp-hint">Clique para adicionar vértices do polígono da área. Dê um duplo-clique ou clique em "Finalizar Área" quando terminar.</div>` : ''}
-      ${modo === 'calibrar' ? `<div class="lp-hint">Clique em dois pontos sobre uma medida conhecida do desenho (ex: início e fim de uma cota).</div>` : ''}
+      ${modo === 'medir' ? `<div class="lp-hint">Clique para adicionar vértices do polígono da área. Dê um duplo-clique ou clique em "Finalizar Área" quando terminar. Roda do mouse: zoom · botão do meio: mover a planta.</div>` : ''}
+      ${modo === 'calibrar' ? `<div class="lp-hint">Clique em dois pontos sobre uma medida conhecida do desenho (ex: início e fim de uma cota). Roda do mouse: zoom · botão do meio: mover a planta.</div>` : ''}
+      ${modo === 'nenhum' ? `<div class="lp-hint">Roda do mouse: zoom (no cursor) · clique e arraste (ou botão do meio): mover a planta — igual AutoCAD.</div>` : ''}
       <div class="lp-workspace">
         <div class="lp-canvas-col" id="lp-canvas-col"><div class="loading-inline">Carregando página do PDF...</div></div>
         <div class="lp-painel-lateral">
@@ -567,6 +579,7 @@ const LP = (() => {
       }
       const page = await pdfDoc.getPage(node.pagina);
       const viewportBase = page.getViewport({ scale: 1 });
+      pageWidthPts = viewportBase.width;
       const larguraDisponivel = Math.max(320, (col.clientWidth || 900) - 24);
       renderScale = Math.min(2.2, larguraDisponivel / viewportBase.width);
       const viewport = page.getViewport({ scale: renderScale });
@@ -589,6 +602,7 @@ const LP = (() => {
       svg.setAttribute('class', 'lp-svg-overlay');
       svg.setAttribute('width', viewport.width);
       svg.setAttribute('height', viewport.height);
+      svg.setAttribute('viewBox', '0 0 ' + viewport.width + ' ' + viewport.height);
       stage.appendChild(svg);
 
       col.innerHTML = '';
@@ -596,7 +610,14 @@ const LP = (() => {
 
       stage.addEventListener('click', _onStageClick);
       stage.addEventListener('dblclick', _onStageDblClick);
+      stage.addEventListener('pointerdown', _iniciarPan);
+      stage.addEventListener('pointermove', _moverPan);
+      stage.addEventListener('pointerup', _finalizarPan);
+      stage.addEventListener('pointercancel', _finalizarPan);
+      stage.addEventListener('contextmenu', e => { if (panAtivo) e.preventDefault(); });
+      col.addEventListener('wheel', _onWheelZoom, { passive: false });
 
+      _aplicarZoom();
       _desenharOverlay(node);
     } catch (e) {
       console.error('Erro ao renderizar PDF:', e);
@@ -607,8 +628,9 @@ const LP = (() => {
   function _clickToPdfPoint(e) {
     const stage = e.currentTarget;
     const rect = stage.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / renderScale;
-    const y = (e.clientY - rect.top) / renderScale;
+    const dispScale = rect.width / pageWidthPts; // escala real exibida (já considera o zoom CSS aplicado)
+    const x = (e.clientX - rect.left) / dispScale;
+    const y = (e.clientY - rect.top) / dispScale;
     return { x, y };
   }
 
@@ -641,6 +663,63 @@ const LP = (() => {
     const btn = document.getElementById('lp-btn-finalizar');
     if (btn) btn.textContent = `✓ Finalizar Área (${poligonoPontos.length} pontos)`;
   }
+
+  // ── PAN (arrastar) — botão do meio sempre; botão esquerdo só fora do modo de desenho ──
+  function _iniciarPan(e) {
+    const isMeio = e.button === 1;
+    const isEsquerdoLivre = e.button === 0 && modo === 'nenhum';
+    if (!isMeio && !isEsquerdoLivre) return;
+    panAtivo = true;
+    const col = document.getElementById('lp-canvas-col');
+    panInicio = { x: e.clientX, y: e.clientY, scrollX: col.scrollLeft, scrollY: col.scrollTop };
+    try { e.currentTarget.setPointerCapture(e.pointerId); } catch (err) {}
+    e.preventDefault();
+  }
+  function _moverPan(e) {
+    if (!panAtivo) return;
+    const col = document.getElementById('lp-canvas-col');
+    col.scrollLeft = panInicio.scrollX - (e.clientX - panInicio.x);
+    col.scrollTop = panInicio.scrollY - (e.clientY - panInicio.y);
+  }
+  function _finalizarPan(e) {
+    if (!panAtivo) return;
+    panAtivo = false;
+    try { e.currentTarget.releasePointerCapture(e.pointerId); } catch (err) {}
+  }
+
+  // ── ZOOM estilo CAD — CSS por cima do canvas já renderizado (mantém o overlay alinhado) ──
+  function _aplicarZoom() {
+    const stage = document.querySelector('#lp-canvas-col .lp-canvas-stage');
+    if (!stage) return;
+    const canvas = stage.querySelector('canvas.lp-base');
+    const svg = stage.querySelector('svg.lp-svg-overlay');
+    if (!canvas || !svg) return;
+    const w = canvas.width * zoomCss, h = canvas.height * zoomCss;
+    stage.style.width = w + 'px'; stage.style.height = h + 'px';
+    canvas.style.width = w + 'px'; canvas.style.height = h + 'px';
+    svg.style.width = w + 'px'; svg.style.height = h + 'px';
+    const pct = document.getElementById('lp-zoom-pct');
+    if (pct) pct.textContent = Math.round(zoomCss * 100) + '%';
+  }
+
+  function _onWheelZoom(e) {
+    e.preventDefault();
+    const col = document.getElementById('lp-canvas-col');
+    const rect = col.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left + col.scrollLeft;
+    const mouseY = e.clientY - rect.top + col.scrollTop;
+    const oldZoom = zoomCss;
+    const fator = e.deltaY < 0 ? 1.15 : (1 / 1.15);
+    zoomCss = Math.min(5, Math.max(0.2, zoomCss * fator));
+    _aplicarZoom();
+    const ratio = zoomCss / oldZoom;
+    col.scrollLeft = mouseX * ratio - (e.clientX - rect.left);
+    col.scrollTop = mouseY * ratio - (e.clientY - rect.top);
+  }
+
+  function zoomIn() { zoomCss = Math.min(5, zoomCss * 1.25); _aplicarZoom(); }
+  function zoomOut() { zoomCss = Math.max(0.2, zoomCss / 1.25); _aplicarZoom(); }
+  function zoomReset() { zoomCss = 1; _aplicarZoom(); }
 
   function toggleModoCalibrar() {
     modo = modo === 'calibrar' ? 'nenhum' : 'calibrar';
@@ -848,6 +927,7 @@ const LP = (() => {
     toggleModoCalibrar, toggleModoMedir, cancelarDesenho,
     cancelarCalibracao, confirmarCalibracao,
     finalizarPoligono, editarArea, onToggleImperm, fecharModalArea, salvarArea, excluirAreaEmEdicao,
+    zoomIn, zoomOut, zoomReset,
   };
 })();
 

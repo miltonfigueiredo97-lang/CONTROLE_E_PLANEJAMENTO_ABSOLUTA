@@ -17,8 +17,9 @@
     .lp-modo-ativo { background:var(--cor-primaria) !important; color:#fff !important; }
     .lp-workspace { display:flex; gap:12px; flex:1; min-height:0; }
     .lp-canvas-col { flex:1; min-width:0; background:#f8fafc; border:2px dashed #e2e8f0; border-radius:10px; overflow:auto; max-height:calc(100vh - 260px); display:flex; align-items:flex-start; justify-content:center; padding:10px; }
-    .lp-canvas-stage { position:relative; line-height:0; cursor:crosshair; }
-    .lp-canvas-stage.modo-nenhum { cursor:default; }
+    .lp-canvas-stage { position:relative; line-height:0; cursor:crosshair; touch-action:none; }
+    .lp-canvas-stage.modo-nenhum { cursor:grab; }
+    .lp-canvas-stage.modo-nenhum:active { cursor:grabbing; }
     .lp-canvas-stage canvas.lp-base { display:block; box-shadow:0 2px 10px rgba(0,0,0,0.1); background:#fff; }
     .lp-svg-overlay { position:absolute; top:0; left:0; pointer-events:none; }
     .lp-painel-lateral { width:320px; flex-shrink:0; display:flex; flex-direction:column; gap:10px; overflow-y:auto; max-height:calc(100vh - 260px); }
@@ -70,7 +71,7 @@
       <a href="histograma.html"><span class="nav-icon">📊</span> Histograma</a>
       <a href="admin-permissoes.html"><span class="nav-icon">🔑</span> Permissões</a>
       <div class="sidebar-section-title">Sistema</div>
-      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V2.22.0</span></a>
+      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V2.22.1</span></a>
     </nav>
     <div class="sidebar-user">
       <div class="user-avatar">U</div>

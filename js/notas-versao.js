@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.22.0',
+  versaoAtual: 'V2.22.1',
 
   versoes: [
     {
@@ -2614,7 +2614,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.22.0',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-13',
       tipo: 'funcionalidade',
       titulo: 'Levantamento de Piso: reestruturado para árvore de locais (igual Paredes)',
@@ -2639,6 +2639,31 @@ const NotasVersao = {
         '  (mesmo padrão do paredesArvore)',
         'obras/{obraId}/pisoAreas agora referencia nodeId em vez de',
         '  pavimentoId',
+      ]
+    },
+    {
+      versao: 'V2.22.1',
+      status: 'aberta',
+      data: '2026-07-13',
+      tipo: 'funcionalidade',
+      titulo: 'Levantamento de Piso: navegação estilo CAD (zoom e pan)',
+      itens: [
+        'Roda do mouse: zoom in/out centralizado exatamente no cursor',
+        '  (igual AutoCAD/visualizadores de CAD)',
+        'Pan (mover a planta): botão do meio do mouse sempre funciona;',
+        '  clique+arraste com o botão esquerdo também move a planta',
+        '  quando não está no modo Calibrar/Medir',
+        'Botões de zoom (➖ / percentual / ➕) na barra de ferramentas do',
+        '  pavimento, com percentual atual exibido',
+        'Zoom aplicado via CSS por cima do canvas já renderizado (mantém',
+        '  os polígonos e a linha de calibração perfeitamente alinhados',
+        '  em qualquer nível de zoom, sem precisar re-renderizar o PDF)',
+        'Conversão de clique para coordenada do PDF agora usa o tamanho',
+        '  real exibido em tela (funciona corretamente em qualquer zoom,',
+        '  não só na escala inicial de ajuste à largura)',
+        'Zoom é lembrado durante a sessão de trabalho no mesmo local',
+        '  (não reseta ao calibrar, medir ou editar uma área) e só volta',
+        '  a 100% quando você troca de local na árvore',
       ]
     }
   ],
