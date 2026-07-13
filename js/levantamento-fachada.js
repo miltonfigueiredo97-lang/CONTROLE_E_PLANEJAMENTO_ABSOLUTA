@@ -551,6 +551,7 @@ const LevantamentoFachada = (() => {
     let rows='';
     vPec.forEach((pc,i)=>{
       const c=_calc(pc);
+      const zerada=c.bruto>0&&c.m2semML<=0;
       const _janelasLista=pc.possuiJanela?((pc.janelas&&pc.janelas.length)?pc.janelas:((pc.larguraJanela||pc.quantidadeJanelas)?[{largura:pc.larguraJanela,altura:pc.alturaJanela,quantidade:pc.quantidadeJanelas}]:[])):[];
       const janelaTitle=_janelasLista.map(j=>_pn(j.largura)+'x'+_pn(j.altura)+'cm (qtd '+(j.quantidade||0)+')').join(' · ');
       const _frisosLista=pc.possuiFriso?((pc.frisos&&pc.frisos.length)?pc.frisos:(pc.frisoComprimento?[{comprimento:pc.frisoComprimento,tipo:pc.frisoTipo,quantidade:pc.frisoQuantidade}]:[])):[];
@@ -560,16 +561,16 @@ const LevantamentoFachada = (() => {
         frisoTxt=partes.length>1?(partes[0]+' +'+(partes.length-1)):partes[0];
         frisoTitle=partes.join(' · ');
       }
-      rows+='<tr>'+
+      rows+='<tr'+(zerada?' style="background:#fef2f2;" title="O desconto de janela zerou o m² desta peça — confira as medidas da janela"':'')+'>'+
         '<td>'+(i+1)+'</td>'+
-        '<td>'+pc.nome+'</td>'+
+        '<td>'+(zerada?'⚠️ ':'')+pc.nome+'</td>'+
         '<td class="col-num">'+_pn(pc.comprimento)+'</td>'+
         '<td class="col-num">'+_pn(pc.altura)+'</td>'+
         '<td class="col-num col-centro">'+(pc.quantidade||1)+'</td>'+
         '<td class="col-centro" title="'+janelaTitle+'">'+(pc.possuiJanela?(_janelasLista.length>1?'✓ +'+(_janelasLista.length-1):'✓'):'')+'</td>'+
         '<td class="text-sm col-centro" title="'+frisoTitle+'">'+frisoTxt+'</td>'+
         '<td class="col-centro"><button class="btn btn-sm btn-icon" onclick="LF.togglePecaML(\''+pc.id+'\')" title="Pode ser considerado ML? (clique para alternar)">'+(c.podeML?'✅':'—')+'</button></td>'+
-        '<td class="col-num" style="font-weight:600;color:var(--cor-primaria);">'+_f(c.m2semML)+'</td>'+
+        '<td class="col-num" style="font-weight:600;color:'+(zerada?'#dc2626':'var(--cor-primaria)')+';">'+_f(c.m2semML)+'</td>'+
         '<td class="col-num text-muted">'+_f(c.m2unitario)+'</td>'+
         '<td class="text-sm">'+(pc.acabamento||'')+'</td>'+
         '<td class="col-centro">'+(pc.conferido?'✅':'')+'</td>'+

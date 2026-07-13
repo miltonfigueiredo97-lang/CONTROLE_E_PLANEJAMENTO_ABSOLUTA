@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.17.18',
+  versaoAtual: 'V2.17.19',
 
   versoes: [
     {
@@ -2055,7 +2055,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.17.18',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-12',
       tipo: 'melhoria',
       titulo: 'Levantamento de Fachada: múltiplos tipos de janela por peça',
@@ -2072,6 +2072,23 @@ const NotasVersao = {
         '  pra ver as medidas de cada uma',
         'Peças com janela cadastrada no formato antigo (uma só)',
         '  continuam funcionando normalmente',
+      ]
+    },
+    {
+      versao: 'V2.17.19',
+      status: 'aberta',
+      data: '2026-07-12',
+      tipo: 'melhoria',
+      titulo: 'Levantamento de Fachada: aviso quando desconto de janela zera a peça',
+      itens: [
+        'Se a peça tem comprimento/altura válidos mas o desconto',
+        '  de janela some com 100% da área (m² sem ML = 0,00),',
+        '  a linha agora aparece destacada em vermelho com "⚠️"',
+        '  no nome, e um aviso ao passar o mouse',
+        'Isso normalmente acontece quando a Largura/Altura da',
+        '  janela foi digitada igual (ou maior) à da própria peça',
+        '  por engano — o sistema não estava avisando, só zerava',
+        '  o valor silenciosamente',
       ]
     }
   ],
