@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Levantamento de Piso — Controle e Planejamento de Obras</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/tabelas.css">
+  <link rel="stylesheet" href="css/modulos.css">
+  <style>
+    .lp-layout { display:flex; flex-direction:column; gap:12px; flex:1; min-height:0; }
+    .lp-toolbar { display:flex; align-items:center; gap:8px; flex-wrap:wrap; background:#fff; border:1px solid #e2e8f0; border-radius:10px; padding:10px 14px; }
+    .lp-toolbar .sep { width:1px; align-self:stretch; background:#e2e8f0; margin:0 4px; }
+    .lp-toolbar .info { font-size:0.78rem; color:var(--cor-texto-muted); }
+    .lp-modo-ativo { background:var(--cor-primaria) !important; color:#fff !important; }
+    .lp-workspace { display:flex; gap:12px; flex:1; min-height:0; }
+    .lp-canvas-col { flex:1; min-width:0; background:#f8fafc; border:2px dashed #e2e8f0; border-radius:10px; overflow:auto; position:relative; display:flex; align-items:flex-start; justify-content:center; padding:10px; }
+    .lp-canvas-stage { position:relative; line-height:0; cursor:crosshair; }
+    .lp-canvas-stage.modo-nenhum { cursor:default; }
+    .lp-canvas-stage canvas.lp-base { display:block; box-shadow:0 2px 10px rgba(0,0,0,0.1); background:#fff; }
+    .lp-svg-overlay { position:absolute; top:0; left:0; pointer-events:none; }
+    .lp-painel-lateral { width:340px; flex-shrink:0; display:flex; flex-direction:column; gap:10px; overflow-y:auto; }
+    .lp-area-card { background:#fff; border:1px solid #e2e8f0; border-radius:8px; padding:10px 12px; cursor:pointer; }
+    .lp-area-card:hover { border-color: var(--cor-primaria); }
+    .lp-area-card .nome { font-weight:600; font-size:0.88rem; display:flex; justify-content:space-between; gap:6px; }
+    .lp-area-card .m2 { font-family:var(--font-mono); color:var(--cor-primaria); font-weight:700; }
+    .lp-area-card .meta { font-size:0.72rem; color:var(--cor-texto-muted); margin-top:3px; }
+    .lp-totais { background:#fff; border:1px solid #e2e8f0; border-radius:8px; padding:10px 12px; }
+    .lp-totais table { width:100%; font-size:0.8rem; border-collapse:collapse; }
+    .lp-totais td { padding:3px 0; }
+    .lp-totais td:last-child { text-align:right; font-family:var(--font-mono); font-weight:600; }
+    .lp-planta-card, .lp-pav-card { background:#fff; border:1px solid #e2e8f0; border-radius:8px; padding:12px 14px; cursor:pointer; }
+    .lp-planta-card:hover, .lp-pav-card:hover { border-color:var(--cor-primaria); }
+    .lp-pag-badge { display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:5px; background:#f1f5f9; font-size:0.7rem; font-weight:700; margin-right:6px; }
+    .lp-breadcrumb-mini { font-size:0.8rem; color:var(--cor-texto-muted); margin-bottom:8px; }
+    .lp-breadcrumb-mini a { color:var(--cor-primaria); cursor:pointer; }
+    .lp-hint { font-size:0.78rem; color:#92400e; background:var(--cor-alerta-bg); border:1px solid #fcd34d; border-radius:6px; padding:6px 10px; }
+  </style>
+</head>
+<body>
+<div class="app-container">
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <img src="assets/images/logo-absoluta.png" class="logo-full" alt="Absoluta"
+           onerror="this.parentElement.innerHTML='<div class=\'logo-fallback\'><div class=\'logo-icon\'><span style=\'font-size:1.3rem;font-weight:900;color:#000;\'>A</span></div><div class=\'logo-text\'>ABSOLUTA<span>Controle de Obras</span></div></div>'">
+    </div>
+    <div class="sidebar-obra-selector">
+      <label>Obra ativa</label>
+      <select id="seletor-obra"><option value="">Selecione...</option></select>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="sidebar-section-title">Principal</div>
+      <a href="obras.html"><span class="nav-icon">🏗️</span> Obras</a>
+      <a href="dashboard.html"><span class="nav-icon">📊</span> Dashboard</a>
+      <div class="sidebar-section-title">Produção</div>
+      <a href="planejamento.html"><span class="nav-icon">📅</span> Planejamento</a>
+      <a href="levantamento.html"><span class="nav-icon">📐</span> Levantamentos</a>
+      <a href="controle.html"><span class="nav-icon">✅</span> Controle</a>
+      <div class="sidebar-section-title">Gestão</div>
+      <a href="restricoes.html"><span class="nav-icon">🚧</span> Restrições</a>
+      <a href="semanal.html"><span class="nav-icon">📋</span> Semanal</a>
+      <a href="diario.html"><span class="nav-icon">📓</span> Diário de Obra</a>
+      <a href="medicoes.html"><span class="nav-icon">📏</span> Medições</a>
+      <div class="sidebar-section-title">Custos</div>
+      <a href="orcamentos.html"><span class="nav-icon">💰</span> Orçamentos</a>
+      <a href="mao-de-obra.html"><span class="nav-icon">👷</span> Mão de Obra</a>
+      <a href="suprimentos.html"><span class="nav-icon">📦</span> Suprimentos</a>
+      <a href="materiais.html"><span class="nav-icon">🧱</span> Materiais</a>
+      <div class="sidebar-section-title">Análise</div>
+      <a href="relatorios.html"><span class="nav-icon">📈</span> Relatórios</a>
+      <a href="histograma.html"><span class="nav-icon">📊</span> Histograma</a>
+      <a href="admin-permissoes.html"><span class="nav-icon">🔑</span> Permissões</a>
+      <div class="sidebar-section-title">Sistema</div>
+      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V2.21.0</span></a>
+    </nav>
+    <div class="sidebar-user">
+      <div class="user-avatar">U</div>
+      <div class="user-info">
+        <div class="user-name">Usuário</div>
+        <div class="user-role">—</div>
+      </div>
+      <button class="btn-logout" onclick="Auth.logout()" title="Sair">⏻</button>
+    </div>
+  </aside>
+
+  <header class="header">
+    <div class="header-title">
+      <h1>Levantamento de Piso</h1>
+      <div class="header-breadcrumb"><a href="levantamento.html">Levantamentos</a><span class="sep">›</span><span>Piso</span></div>
+    </div>
+    <div class="header-actions" id="lp-header-actions"></div>
+  </header>
+
+  <main class="content" id="lp-main" style="padding:12px;display:flex;flex-direction:column;">
+    <div id="lp-content" class="lp-layout"></div>
+  </main>
+</div>
+
+<!-- MODAL: Nova Planta (upload PDF) -->
+<div class="modal-overlay" id="modal-lp-planta">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Nova Planta (PDF)</h3>
+      <button class="modal-close" onclick="Utils.fecharModal('modal-lp-planta')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grupo">
+        <label>Nome da planta</label>
+        <input type="text" id="lp-planta-nome" class="form-control" placeholder="Ex: Pavimento Tipo, Térreo">
+      </div>
+      <div class="form-grupo">
+        <label>Arquivo PDF</label>
+        <input type="file" id="lp-planta-arquivo" accept="application/pdf" class="form-control">
+      </div>
+      <p class="lp-hint">Depois do upload você escolhe qual página do PDF vira cada pavimento.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-lp-planta')">Cancelar</button>
+      <button class="btn btn-primario" id="lp-btn-upload-planta" onclick="LP.enviarPlanta()">Enviar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Calibrar escala -->
+<div class="modal-overlay" id="modal-lp-calibrar">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Calibrar Escala</h3>
+      <button class="modal-close" onclick="LP.cancelarCalibracao()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:0.85rem;color:var(--cor-texto-muted);margin-bottom:10px;">Qual é a distância real da linha que você desenhou?</p>
+      <div class="form-grupo">
+        <label>Distância real (metros)</label>
+        <input type="text" inputmode="decimal" id="lp-calibrar-distancia" class="form-control" placeholder="Ex: 5.00" onkeydown="if(event.key==='Enter'){event.preventDefault();LP.confirmarCalibracao();}">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secundario" onclick="LP.cancelarCalibracao()">Cancelar</button>
+      <button class="btn btn-primario" onclick="LP.confirmarCalibracao()">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Nova / Editar Área -->
+<div class="modal-overlay" id="modal-lp-area">
+  <div class="modal" style="max-width:520px;">
+    <div class="modal-header">
+      <h3 id="lp-area-titulo">Nova Área</h3>
+      <button class="modal-close" onclick="LP.fecharModalArea()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <form id="form-lp-area" onsubmit="event.preventDefault()">
+        <div class="form-row">
+          <div class="form-grupo" style="flex:2;">
+            <label>Nome da área / ambiente</label>
+            <input type="text" name="nome" class="form-control" placeholder="Ex: Sala, Quarto 1, Varanda" required>
+          </div>
+          <div class="form-grupo">
+            <label>Área (m²)</label>
+            <input type="text" id="lp-area-m2-display" class="form-control" readonly style="background:#f8fafc;font-weight:700;color:var(--cor-primaria);">
+          </div>
+        </div>
+        <div class="form-grupo">
+          <label>Tipo de Piso</label>
+          <input type="text" name="tipoPiso" class="form-control" list="lp-lista-pisos" placeholder="Ex: Porcelanato, Cerâmica, Laminado">
+          <datalist id="lp-lista-pisos"></datalist>
+        </div>
+        <div class="form-grupo">
+          <label>Tipo de Contrapiso</label>
+          <input type="text" name="tipoContrapiso" class="form-control" list="lp-lista-contrapisos" placeholder="Ex: Regularização, Autonivelante">
+          <datalist id="lp-lista-contrapisos"></datalist>
+        </div>
+        <div class="form-check mb-2">
+          <input type="checkbox" name="impermeabilizacao" id="lp-check-imperm" onchange="LP.onToggleImperm(this)">
+          <label for="lp-check-imperm">Considerar impermeabilização nesta área</label>
+        </div>
+        <div class="form-grupo" id="lp-campo-imperm-tipo" style="display:none;">
+          <label>Tipo de Impermeabilização</label>
+          <input type="text" name="tipoImpermeabilizacao" class="form-control" list="lp-lista-imperm" placeholder="Ex: Manta asfáltica, Cimento cristalizante">
+          <datalist id="lp-lista-imperm"></datalist>
+        </div>
+        <div class="form-grupo">
+          <label>Observação</label>
+          <textarea name="observacao" class="form-control" rows="2" placeholder="Opcional"></textarea>
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secundario" onclick="LP.excluirAreaEmEdicao()" id="lp-btn-excluir-area" style="display:none;margin-right:auto;color:#dc2626;">Excluir</button>
+      <button class="btn btn-secundario" onclick="LP.fecharModalArea()">Cancelar</button>
+      <button class="btn btn-primario" onclick="LP.salvarArea()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+<script src="js/firebase-config.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/database.js"></script>
+<script src="js/router.js"></script>
+<script src="js/permissions.js"></script>
+<script src="js/audit.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/levantamento-piso.js"></script>
+<script>document.addEventListener('DOMContentLoaded', () => { LP.init(); });</script>
+</body>
+</html>

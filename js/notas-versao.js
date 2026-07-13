@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.20.1',
+  versaoAtual: 'V2.21.0',
 
   versoes: [
     {
@@ -2524,7 +2524,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.20.1',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-13',
       tipo: 'funcionalidade',
       titulo: 'Levantamento de Paredes: ordem alfabética, clonar entre locais, ML por categoria e novo modo de vão',
@@ -2549,6 +2549,34 @@ const NotasVersao = {
         'Configurações de Cálculo: novo modo de vão "Limite Total" —',
         '  vãos maiores que X m² descontam 100% da área; vãos',
         '  menores que X não descontam nada',
+      ]
+    },
+    {
+      versao: 'V2.21.0',
+      status: 'aberta',
+      data: '2026-07-13',
+      tipo: 'funcionalidade',
+      titulo: 'Novo módulo: Levantamento de Piso (medição sobre PDF)',
+      itens: [
+        'Novo módulo Levantamento de Piso, independente (levantamento-piso.html)',
+        'Fluxo por PDF em vez de digitar m² manualmente:',
+        '  1) Envia a planta em PDF (armazenada no Firebase Storage)',
+        '  2) Escolhe qual página do PDF vira cada Pavimento',
+        '  3) Calibra a escala desenhando uma linha sobre uma medida',
+        '     conhecida do desenho e informando a distância real em metros',
+        '  4) Com a escala calibrada, desenha polígonos direto sobre a',
+        '     planta para medir cada área de piso',
+        'Cada polígono gera uma Área independente com nome, m² calculado',
+        '  automaticamente (fórmula de Shoelace), tipo de piso, tipo de',
+        '  contrapiso e impermeabilização (com tipo, quando marcada)',
+        'Coordenadas de calibração e polígonos guardadas em espaço',
+        '  ponto-PDF (independente do zoom de renderização em tela),',
+        '  então a escala nunca se perde ao redimensionar',
+        'PDF renderizado via pdf.js (carregado dinamicamente via CDN,',
+        '  mesmo padrão de _ls usado para xlsx e html2canvas)',
+        'Painel lateral com lista de áreas medidas e totais por pavimento',
+        'Dados: obras/{obraId}/pisoPlantas, pisoPavimentos, pisoAreas',
+        'Card "🧩 Piso" adicionado ao hub de Levantamentos',
       ]
     }
   ],
