@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.19.2',
+  versaoAtual: 'V2.19.3',
 
   versoes: [
     {
@@ -2393,7 +2393,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.19.2',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-13',
       tipo: 'correcao',
       titulo: 'Levantamento de Paredes: correção de digitação, fórmula, alturas separadas e fluxo rápido',
@@ -2421,6 +2421,36 @@ const NotasVersao = {
         '  paredes seguidas mais rápido',
         'Tabela de paredes do local agora mostra m² de Alvenaria e',
         '  m² de Acabamento em colunas separadas',
+      ]
+    },
+    {
+      versao: 'V2.19.3',
+      status: 'aberta',
+      data: '2026-07-13',
+      tipo: 'funcionalidade',
+      titulo: 'Levantamento de Paredes: resumo por camadas, clonar local e ações de parede (mover/duplicar/conferir)',
+      itens: [
+        'Ao clicar num local que tem sublocais (ex: um apartamento',
+        '  modelo com vários cômodos), a tela agora mostra um',
+        '  resumo por camadas igual ao Levantamento de Fachada:',
+        '  → KPIs agregados de TODA a subárvore (não só do local',
+        '  clicado): Vedação, Estrutural, Gesso, Reboco,',
+        '  Revestimento e Pintura somando os sublocais',
+        '  → Tabela "Resumo por Sublocal" com paredes e m² de cada',
+        '  sublocal filho, clicável para entrar nele',
+        '  → Continua mostrando as paredes lançadas diretamente',
+        '  naquele local (ex: paredes externas do apartamento)',
+        'NOVO: Clonar Local (ícone ⧉ na árvore e botão no painel) —',
+        '  duplica um local com toda a estrutura de sublocais E as',
+        '  paredes já lançadas dentro dele. Serve pra replicar um',
+        '  "Apartamento Modelo A" inteiro como "Modelo A (cópia)"',
+        '  sem recriar cômodo por cômodo',
+        'NOVO: ações rápidas na linha de cada parede (igual à',
+        '  Fachada):',
+        '  → ⇄ Mover: manda a parede para outro local da árvore',
+        '  → ⧉ Duplicar: cria uma cópia da parede no mesmo local',
+        '  → ✓ Conferir: marca/desmarca a parede como conferida',
+        '  (linha fica destacada em verde quando conferida)',
       ]
     }
   ],

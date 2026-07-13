@@ -260,6 +260,7 @@ const LevantamentoParedes = (() => {
         <span class="tree-label">${esc(n.nome)}</span>
         ${nPecas ? `<span class="tree-badge">${nPecas}</span>` : ''}
         <button class="tree-edit-btn" onclick="event.stopPropagation();LP.renomearNode('${n.id}')" title="Renomear">✎</button>
+        <button class="tree-clone-btn" onclick="event.stopPropagation();LP.clonarNode('${n.id}')" title="Clonar local (com sublocais e paredes)">⧉</button>
         <button class="tree-del-btn" onclick="event.stopPropagation();LP.excluirNode('${n.id}')" title="Excluir">✕</button>
       </div>`;
       if (aberto) {
@@ -349,35 +350,72 @@ const LevantamentoParedes = (() => {
     if (!selNodeId) return _renderResumoGeral();
     const r = _acharNode(selNodeId);
     if (!r) { selNodeId = null; return _renderResumoGeral(); }
-    const lista = _pecasDe(selNodeId);
-    const t = _totaisDe(lista);
+    const node = r.node;
+    const idsSubtree = _idsComDescendentes(node);
+    const listaSubtree = pecas.filter(p => idsSubtree.includes(p.nodeId));
+    const listaDireta = _pecasDe(selNodeId);
+    const tSub = _totaisDe(listaSubtree);
+    const temFilhos = node.filhos && node.filhos.length;
 
-    return `
+    let html = `
       <div class="page-header">
         <div><h2 style="font-size:1.1rem;">${esc(r.path.join(' → '))}</h2>
-          <span class="subtitulo">${lista.length} parede(s) · ${fmt2(t.areaLiquidaAlvenaria)} m² alvenaria · ${fmt2(t.areaLiquidaAcabamento)} m² acabamento</span></div>
-        <button class="btn btn-primario btn-sm" onclick="LP.novaParede()">+ Nova Parede</button>
+          <span class="subtitulo">${listaSubtree.length} parede(s) no total${temFilhos ? ` (${listaDireta.length} direta[s] neste local)` : ''} · ${fmt2(tSub.areaLiquidaAlvenaria)} m² alvenaria · ${fmt2(tSub.areaLiquidaAcabamento)} m² acabamento</span></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn btn-secundario btn-sm" onclick="LP.clonarNode('${selNodeId}')" title="Clonar local com sublocais e paredes">⧉ Clonar Local</button>
+          <button class="btn btn-primario btn-sm" onclick="LP.novaParede()">+ Nova Parede</button>
+        </div>
       </div>
 
-      ${!lista.length ? `<div class="estado-vazio"><div class="icone">🧱</div><p>Nenhuma parede levantada neste local ainda.</p>
-        <button class="btn btn-primario" onclick="LP.novaParede()">+ Nova Parede</button></div>` : `
-      <div class="cc-kpiGrid" style="grid-template-columns:repeat(4,1fr);margin-bottom:16px;">
-        <div class="cc-kpi"><div class="cc-kpiIcon">🧱</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Vedação</div><div class="cc-kpiValue">${fmt2(t.alvenariaVedacao)}<span class="cc-kpiUnit">m²</span></div></div></div>
-        <div class="cc-kpi"><div class="cc-kpiIcon">🏳️</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Gesso Liso</div><div class="cc-kpiValue">${fmt2(t.gesso)}<span class="cc-kpiUnit">m²</span></div></div></div>
-        <div class="cc-kpi"><div class="cc-kpiIcon">🪨</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Reboco</div><div class="cc-kpiValue">${fmt2(t.reboco)}<span class="cc-kpiUnit">m²</span></div></div></div>
-        <div class="cc-kpi"><div class="cc-kpiIcon">🎨</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Pintura</div><div class="cc-kpiValue">${fmt2(t.pintura)}<span class="cc-kpiUnit">m²</span></div></div></div>
-      </div>
-      <div class="cc-panel" style="padding:0;">
+      <div class="cc-kpiGrid" style="grid-template-columns:repeat(6,1fr);margin-bottom:16px;">
+        <div class="cc-kpi"><div class="cc-kpiIcon">🧱</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Vedação</div><div class="cc-kpiValue">${fmt2(tSub.alvenariaVedacao)}<span class="cc-kpiUnit">m²</span></div></div></div>
+        <div class="cc-kpi"><div class="cc-kpiIcon">🧱</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Estrutural</div><div class="cc-kpiValue">${fmt2(tSub.alvenariaEstrutural)}<span class="cc-kpiUnit">m²</span></div></div></div>
+        <div class="cc-kpi"><div class="cc-kpiIcon">🏳️</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Gesso Liso</div><div class="cc-kpiValue">${fmt2(tSub.gesso)}<span class="cc-kpiUnit">m²</span></div></div></div>
+        <div class="cc-kpi"><div class="cc-kpiIcon">🪨</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Reboco</div><div class="cc-kpiValue">${fmt2(tSub.reboco)}<span class="cc-kpiUnit">m²</span></div></div></div>
+        <div class="cc-kpi"><div class="cc-kpiIcon">◻️</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Revestimento</div><div class="cc-kpiValue">${fmt2(tSub.revestimento)}<span class="cc-kpiUnit">m²</span></div></div></div>
+        <div class="cc-kpi"><div class="cc-kpiIcon">🎨</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Pintura</div><div class="cc-kpiValue">${fmt2(tSub.pintura)}<span class="cc-kpiUnit">m²</span></div></div></div>
+      </div>`;
+
+    if (temFilhos) {
+      html += `
+      <div class="cc-panel">
+        <div class="cc-panelTitle">📍 Resumo por Sublocal</div>
         <div class="tabela-container"><table class="tabela">
-          <thead><tr>
-            <th>Parede</th><th>Comp x Alt Parede/Acab (cm)</th><th style="text-align:right;">m² Alvenaria</th><th style="text-align:right;">m² Acabamento</th>
-            <th>Alvenaria</th><th>Lado A</th><th>Lado B</th><th></th>
-          </tr></thead>
+          <thead><tr><th>Sublocal</th><th style="text-align:right;">Paredes</th><th style="text-align:right;">m² Alvenaria</th><th style="text-align:right;">m² Acabamento</th><th style="text-align:right;">Pintura</th><th></th></tr></thead>
           <tbody>
-            ${lista.map(p => _renderLinhaPeca(p)).join('')}
+            ${node.filhos.map(f => {
+              const idsF = _idsComDescendentes(f);
+              const lstF = pecas.filter(p => idsF.includes(p.nodeId));
+              const tF = _totaisDe(lstF);
+              return `<tr style="cursor:pointer;" onclick="LP.selNode('${f.id}')">
+                <td><strong>${esc(f.nome)}</strong></td>
+                <td style="text-align:right;">${tF.qtdPecas}</td>
+                <td style="text-align:right;">${fmt2(tF.areaLiquidaAlvenaria)}</td>
+                <td style="text-align:right;">${fmt2(tF.areaLiquidaAcabamento)}</td>
+                <td style="text-align:right;">${fmt2(tF.pintura)}</td>
+                <td style="white-space:nowrap;" onclick="event.stopPropagation();"><button class="btn btn-secundario btn-sm" onclick="LP.clonarNode('${f.id}')" title="Clonar">⧉</button></td>
+              </tr>`;
+            }).join('')}
           </tbody>
         </table></div>
-      </div>`}`;
+      </div>`;
+    }
+
+    html += `<div class="cc-panel">
+      <div class="cc-panelTitle">🧱 Paredes lançadas diretamente neste local</div>
+      ${!listaDireta.length ? `<div class="cc-empty">Nenhuma parede lançada diretamente aqui ainda.${temFilhos ? ' Veja o resumo por sublocal acima ou' : ''} Clique em "+ Nova Parede" para começar.</div>` : `
+      <div class="tabela-container"><table class="tabela">
+        <thead><tr>
+          <th>Parede</th><th>Comp x Alt Parede/Acab (cm)</th><th style="text-align:right;">m² Alvenaria</th><th style="text-align:right;">m² Acabamento</th>
+          <th>Alvenaria</th><th>Lado A</th><th>Lado B</th><th></th>
+        </tr></thead>
+        <tbody>
+          ${listaDireta.map(p => _renderLinhaPeca(p)).join('')}
+        </tbody>
+      </table></div>`}
+    </div>`;
+
+    return html;
   }
 
   function _resumoLado(l) {
@@ -393,8 +431,8 @@ const LevantamentoParedes = (() => {
   function _renderLinhaPeca(p) {
     const c = _calcularPeca(p);
     const { alturaParede, alturaAcabamento } = _alturas(p);
-    return `<tr>
-      <td><strong>${esc(p.nome || 'Parede')}</strong>${p.vaos && p.vaos.length ? `<div class="text-sm text-muted">${p.vaos.length} vão(s)</div>` : ''}</td>
+    return `<tr${p.conferido ? ' style="background:rgba(22,163,74,0.06);"' : ''}>
+      <td><strong>${esc(p.nome || 'Parede')}</strong>${p.conferido ? ' <span style="color:#16a34a;" title="Conferida">✓</span>' : ''}${p.vaos && p.vaos.length ? `<div class="text-sm text-muted">${p.vaos.length} vão(s)</div>` : ''}</td>
       <td>${num(p.comprimento)} x ${alturaParede}${alturaAcabamento !== alturaParede ? '/' + alturaAcabamento : ''}</td>
       <td style="text-align:right;">${fmt2(c.areaLiquidaAlvenaria)}</td>
       <td style="text-align:right;">${fmt2(c.areaLiquidaAcabamento)}</td>
@@ -403,7 +441,10 @@ const LevantamentoParedes = (() => {
       <td class="text-sm">${_resumoLado(p.ladoB)}</td>
       <td style="white-space:nowrap;">
         <button class="btn btn-secundario btn-sm" onclick="LP.editarParede('${p.id}')" title="Editar">✎</button>
-        <button class="btn btn-secundario btn-sm" onclick="LP.excluirParede('${p.id}')" title="Excluir">✕</button>
+        <button class="btn btn-sm btn-icon" onclick="LP.abrirMoverParede('${p.id}')" title="Mover para outro local">⇄</button>
+        <button class="btn btn-sm btn-icon" onclick="LP.duplicarParede('${p.id}')" title="Duplicar">⧉</button>
+        <button class="btn btn-sm btn-icon" onclick="LP.conferirParede('${p.id}')" title="${p.conferido ? 'Desmarcar conferência' : 'Marcar como conferida'}">${p.conferido ? '↩' : '✓'}</button>
+        <button class="btn btn-perigo btn-sm btn-icon" onclick="LP.excluirParede('${p.id}')" title="Excluir">✕</button>
       </td>
     </tr>`;
   }
@@ -485,6 +526,57 @@ const LevantamentoParedes = (() => {
       await carregar();
     } catch (e) {
       Utils.toast('Erro ao excluir: ' + e.message, 'erro');
+    } finally {
+      Utils.esconderLoading();
+    }
+  }
+
+  // Localiza o array (raiz ou filhos de outro nó) que contém o id — usado para inserir um clone como irmão
+  function _acharArrayPai(id, nodes = arvore) {
+    if (nodes.some(n => n.id === id)) return nodes;
+    for (const n of nodes) {
+      if (n.filhos && n.filhos.length) {
+        const found = _acharArrayPai(id, n.filhos);
+        if (found) return found;
+      }
+    }
+    return null;
+  }
+
+  // Clona uma subárvore inteira com novos ids, retornando o mapa id-antigo -> id-novo
+  function _clonarSubarvore(node, novoNomeRaiz) {
+    const mapaIds = {};
+    function clone(n, nome) {
+      const novoId = _uid();
+      mapaIds[n.id] = novoId;
+      return { id: novoId, nome, filhos: (n.filhos || []).map(f => clone(f, f.nome)) };
+    }
+    const novoNode = clone(node, novoNomeRaiz);
+    return { novoNode, mapaIds };
+  }
+
+  async function clonarNode(id) {
+    const r = _acharNode(id); if (!r) return;
+    const ok = await Utils.confirmar(`Clonar "${r.node.nome}" com todos os sublocais e paredes, como "${r.node.nome} (cópia)"?`);
+    if (!ok) return;
+    Utils.mostrarLoading();
+    try {
+      const parentArr = _acharArrayPai(id);
+      if (!parentArr) throw new Error('Não foi possível localizar o local pai.');
+      const { novoNode, mapaIds } = _clonarSubarvore(r.node, r.node.nome + ' (cópia)');
+      parentArr.push(novoNode);
+      const oldIds = _idsComDescendentes(r.node);
+      const novasPecas = pecas.filter(p => oldIds.includes(p.nodeId));
+      const ops = novasPecas.map(p => {
+        const { id: _pid, ...rest } = p;
+        return { type: 'set', ref: Database.ref(obraId, COL_PECAS).doc(), data: { ...rest, nodeId: mapaIds[p.nodeId] } };
+      });
+      for (let i = 0; i < ops.length; i += 400) await Database.batchWrite(ops.slice(i, i + 400));
+      await _salvarArvore();
+      Utils.toast(`✓ "${r.node.nome}" clonado com ${novasPecas.length} parede(s)!`, 'sucesso');
+      await carregar();
+    } catch (e) {
+      Utils.toast('Erro ao clonar: ' + e.message, 'erro');
     } finally {
       Utils.esconderLoading();
     }
@@ -748,6 +840,71 @@ const LevantamentoParedes = (() => {
   }
 
   // ══════════════════════════════════════════
+  // AÇÕES RÁPIDAS DA PAREDE: MOVER / DUPLICAR / CONFERIR
+  // ══════════════════════════════════════════
+  async function duplicarParede(id) {
+    const p = pecas.find(x => x.id === id); if (!p) return;
+    Utils.mostrarLoading();
+    try {
+      const { id: _pid, ...rest } = p;
+      await Database.criar(obraId, COL_PECAS, { ...rest, nome: (rest.nome || 'Parede') + ' (cópia)' });
+      Utils.toast('✓ Parede duplicada!', 'sucesso');
+      await carregar();
+    } catch (e) {
+      Utils.toast('Erro ao duplicar: ' + e.message, 'erro');
+    } finally {
+      Utils.esconderLoading();
+    }
+  }
+
+  async function conferirParede(id) {
+    const p = pecas.find(x => x.id === id); if (!p) return;
+    Utils.mostrarLoading();
+    try {
+      await Database.atualizar(obraId, COL_PECAS, id, { conferido: !p.conferido });
+      await carregar();
+    } catch (e) {
+      Utils.toast('Erro: ' + e.message, 'erro');
+    } finally {
+      Utils.esconderLoading();
+    }
+  }
+
+  let pecaMoverId = null;
+  function _listaNosFlat(nodes = arvore, path = [], out = []) {
+    nodes.forEach(n => {
+      out.push({ id: n.id, label: [...path, n.nome].join(' → ') });
+      _listaNosFlat(n.filhos || [], [...path, n.nome], out);
+    });
+    return out;
+  }
+  function abrirMoverParede(id) {
+    const p = pecas.find(x => x.id === id); if (!p) return;
+    pecaMoverId = id;
+    const opts = _listaNosFlat();
+    const sel = document.getElementById('lp-mover-destino');
+    if (sel) sel.innerHTML = opts.map(o => `<option value="${o.id}" ${o.id === p.nodeId ? 'selected' : ''}>${esc(o.label)}</option>`).join('');
+    document.getElementById('lp-mover-titulo').textContent = `Mover "${p.nome || 'Parede'}"`;
+    Utils.abrirModal('modal-lp-mover');
+  }
+  async function confirmarMoverParede() {
+    const destino = document.getElementById('lp-mover-destino')?.value;
+    if (!destino || !pecaMoverId) return;
+    Utils.mostrarLoading();
+    try {
+      await Database.atualizar(obraId, COL_PECAS, pecaMoverId, { nodeId: destino });
+      Utils.fecharModal('modal-lp-mover');
+      Utils.toast('✓ Parede movida!', 'sucesso');
+      pecaMoverId = null;
+      await carregar();
+    } catch (e) {
+      Utils.toast('Erro ao mover: ' + e.message, 'erro');
+    } finally {
+      Utils.esconderLoading();
+    }
+  }
+
+  // ══════════════════════════════════════════
   // SALVAR PEÇA
   // ══════════════════════════════════════════
   function _montarDadosPeca() {
@@ -820,8 +977,9 @@ const LevantamentoParedes = (() => {
   return {
     init, recarregar, renderizar,
     selGeral, selNode, toggleNode,
-    novoNode, renomearNode, salvarNode, excluirNode,
+    novoNode, renomearNode, salvarNode, excluirNode, clonarNode,
     novaParede, editarParede, excluirParede, salvarParede,
+    duplicarParede, conferirParede, abrirMoverParede, confirmarMoverParede,
     updCampo, calcExprEnter, toggleVao, addVao, remVao, updVao,
     addAcab, remAcab, updAcab,
     togglePintura, addPintura, remPintura, updPintura,

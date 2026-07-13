@@ -45,7 +45,7 @@
       <a href="histograma.html"><span class="nav-icon">📊</span> Histograma</a>
       <a href="admin-permissoes.html"><span class="nav-icon">🔑</span> Permissões</a>
       <div class="sidebar-section-title">Sistema</div>
-      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V2.19.2</span></a>
+      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V2.19.3</span></a>
     </nav>
     <div class="sidebar-user">
       <div class="user-avatar">U</div>
@@ -101,6 +101,26 @@
       <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-lp-parede')">Cancelar</button>
       <button class="btn btn-dark" onclick="LP.salvarParede(true)">💾 Salvar e Nova Parede</button>
       <button class="btn btn-primario" onclick="LP.salvarParede(false)">Salvar Parede</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: mover parede para outro local -->
+<div class="modal-overlay" id="modal-lp-mover">
+  <div class="modal" style="max-width:440px;">
+    <div class="modal-header">
+      <h3 id="lp-mover-titulo">Mover Parede</h3>
+      <button class="modal-close" onclick="Utils.fecharModal('modal-lp-mover')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grupo">
+        <label>Local de destino</label>
+        <select id="lp-mover-destino" class="form-control"></select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-lp-mover')">Cancelar</button>
+      <button class="btn btn-primario" onclick="LP.confirmarMoverParede()">Mover</button>
     </div>
   </div>
 </div>
