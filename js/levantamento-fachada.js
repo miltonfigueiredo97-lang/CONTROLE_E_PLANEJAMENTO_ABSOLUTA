@@ -573,6 +573,7 @@ const LevantamentoFachada = (() => {
         '<td class="col-centro">'+(pc.conferido?'✅':'')+'</td>'+
         '<td class="col-acoes" style="white-space:nowrap;">'+
         '<button class="btn btn-secundario btn-sm" onclick="LF.editarPeca(\''+pc.id+'\')">✎</button> '+
+        '<button class="btn btn-sm btn-icon" onclick="LF.moverPeca(\''+pc.id+'\')" title="Mover para '+(vi.tipoVista==='externa'?'Vista Interna':'Vista Externa')+'">⇄</button> '+
         '<button class="btn btn-sm btn-icon" onclick="LF.duplicarPeca(\''+pc.id+'\')" title="Duplicar">⧉</button> '+
         '<button class="btn btn-sm btn-icon" onclick="LF.conferirPeca(\''+pc.id+'\')">'+(pc.conferido?'↩':'✓')+'</button> '+
         '<button class="btn btn-perigo btn-sm btn-icon" onclick="LF.excluirPeca(\''+pc.id+'\')">✕</button></td></tr>';
@@ -926,6 +927,19 @@ const LevantamentoFachada = (() => {
   }
 
   async function excluirPeca(id){if(!Utils.confirmar('Excluir peça?'))return;try{await Database.deletar(obraId,COL,id);Utils.toast('Excluída.','sucesso');await carregar();}catch(e){Utils.toast('Erro.','erro');}}
+  async function moverPeca(id){
+    const pc=pecas.find(x=>x.id===id);if(!pc)return;
+    const viAtual=vistas.find(v=>v.id===pc.vistaId);if(!viAtual)return;
+    const viDestino=vistas.find(v=>v.balancimId===viAtual.balancimId&&v.tipoVista!==viAtual.tipoVista);
+    if(!viDestino){Utils.toast('Vista de destino não encontrada.','erro');return;}
+    const lblDestino=viDestino.tipoVista==='externa'?'Vista Externa':'Vista Interna';
+    if(!Utils.confirmar('Mover "'+pc.nome+'" para '+lblDestino+'?'))return;
+    try{
+      await Database.atualizar(obraId,COL,id,{vistaId:viDestino.id});
+      Utils.toast('Movida para '+lblDestino+'!','sucesso');
+      await carregar();
+    }catch(e){Utils.toast('Erro ao mover.','erro');}
+  }
   async function duplicarPeca(id){const pc=pecas.find(x=>x.id===id);if(!pc)return;const cl={...pc};delete cl.id;delete cl.createdAt;delete cl.updatedAt;delete cl.createdBy;delete cl.updatedBy;cl.nome=pc.nome+' (cópia)';cl.conferido=false;try{await Database.criar(obraId,COL,cl);Utils.toast('Duplicada!','sucesso');await carregar();}catch(e){Utils.toast('Erro.','erro');}}
   async function conferirPeca(id){const pc=pecas.find(x=>x.id===id);if(!pc)return;const n=!pc.conferido;try{await Database.atualizar(obraId,COL,id,{conferido:n,conferidoPor:n?Auth.getUid():null,conferidoEm:n?new Date().toISOString():null});Utils.toast(n?'Conferida.':'Desconferida.','sucesso');await carregar();}catch(e){Utils.toast('Erro.','erro');}}
   async function togglePecaML(id){const pc=pecas.find(x=>x.id===id);if(!pc)return;const n=!pc.podeSerML;try{await Database.atualizar(obraId,COL,id,{podeSerML:n});Utils.toast(n?'Marcada como ML.':'Desmarcada como ML.','sucesso');await carregar();}catch(e){Utils.toast('Erro.','erro');}}
@@ -1283,7 +1297,7 @@ const LevantamentoFachada = (() => {
   function imgRZEv(e, el){ imgRZ(e, el.dataset.d); }
   function cxResizeEv(e){ cxResize(e, parseInt(e.currentTarget.dataset.i), e.currentTarget.dataset.d); }
 
-  return {init,carregar,sel:selecionar,setAba,criarFachada,criarBalancim,editar,salvarEntidade,excluir,novaPeca,editarPeca,salvarPeca,excluirPeca,duplicarPeca,duplicarBal,editarNomeInline,abrirClonarBal,confirmarClonarBal,corrigirVinculos,conferirPeca,togglePecaML,onClickCheckML,onCompAltInput,calcExprEnter,onToggleFriso,adicionarFrisoRow,removerFrisoRow,exportarCSV,exportarVista,onToggleJanela,importarMapa,cxAdicionar,cxRemover,cxTravar,cxEditar,salvarCxEdit,cxMouseDown,cxDrop,cxResize,imgMouseDown,imgResize,entrarEditImg,sairEditImg,imgMD,imgRZEv,cxResizeEv,toggleEditImg,fecharEditImg,onImgResize,limparMapa,abrirVaoVista,salvarVaoVista,_atualizarPreviewVao,adicionarVaoRow,removerVaoRow,abrirConfig,salvarConfig,onChangeCfgJanela};
+  return {init,carregar,sel:selecionar,setAba,criarFachada,criarBalancim,editar,salvarEntidade,excluir,novaPeca,editarPeca,salvarPeca,excluirPeca,duplicarPeca,moverPeca,duplicarBal,editarNomeInline,abrirClonarBal,confirmarClonarBal,corrigirVinculos,conferirPeca,togglePecaML,onClickCheckML,onCompAltInput,calcExprEnter,onToggleFriso,adicionarFrisoRow,removerFrisoRow,exportarCSV,exportarVista,onToggleJanela,importarMapa,cxAdicionar,cxRemover,cxTravar,cxEditar,salvarCxEdit,cxMouseDown,cxDrop,cxResize,imgMouseDown,imgResize,entrarEditImg,sairEditImg,imgMD,imgRZEv,cxResizeEv,toggleEditImg,fecharEditImg,onImgResize,limparMapa,abrirVaoVista,salvarVaoVista,_atualizarPreviewVao,adicionarVaoRow,removerVaoRow,abrirConfig,salvarConfig,onChangeCfgJanela};
 })();
 const LF=LevantamentoFachada;
 function onObraChanged(){LF.init();}

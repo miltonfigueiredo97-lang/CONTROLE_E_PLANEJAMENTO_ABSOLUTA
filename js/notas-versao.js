@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.17.14',
+  versaoAtual: 'V2.17.15',
 
   versoes: [
     {
@@ -1989,7 +1989,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.17.14',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-12',
       tipo: 'melhoria',
       titulo: 'Levantamento de Fachada: múltiplos frisos por peça',
@@ -2005,6 +2005,20 @@ const NotasVersao = {
         '  cima pra ver a lista completa',
         'Peças com friso cadastrado no formato antigo (um só)',
         '  continuam funcionando normalmente',
+      ]
+    },
+    {
+      versao: 'V2.17.15',
+      status: 'aberta',
+      data: '2026-07-12',
+      tipo: 'funcionalidade',
+      titulo: 'Levantamento de Fachada: mover peça entre Vista Externa/Interna',
+      itens: [
+        'Novo botão "⇄" na tabela de peças da Vista — move a peça',
+        '  direto pra outra vista do mesmo balancim (Externa ↔',
+        '  Interna), sem precisar excluir e recadastrar tudo',
+        'Útil pra quando a peça foi lançada na vista errada por',
+        '  engano',
       ]
     }
   ],
