@@ -995,9 +995,16 @@ const LevantamentoFachada = (() => {
       for(const viO of vistasOrigem){
         const viA=vistasAlvo.find(v=>v.tipoVista===viO.tipoVista);
         if(!viA)continue;
+        // Clona também o Vão Fechado da vista de origem para a vista de destino
+        const vaoUpdate={
+          vaos:(viO.vaos&&viO.vaos.length)?viO.vaos.map(v=>({...v})):[],
+          vaoComp:viO.vaoComp||null,
+          vaoAlt:viO.vaoAlt||null
+        };
+        await Database.atualizar(obraId,COL,viA.id,vaoUpdate);
         for(const pc of pecas.filter(p=>p.vistaId===viO.id)){
           const pcC={...pc};delete pcC.id;delete pcC.createdAt;delete pcC.updatedAt;
-          pcC.balancimId=alvoId;pcC.vistaId=viA.id;pcC.conferido=false;
+          pcC.balancimId=alvoId;pcC.vistaId=viA.id;pcC.fachadaId=alvo.fachadaId;pcC.conferido=false;
           await Database.criar(obraId,COL,pcC);
         }
       }

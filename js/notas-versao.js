@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.17.10',
+  versaoAtual: 'V2.17.11',
 
   versoes: [
     {
@@ -1905,7 +1905,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.17.10',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-12',
       tipo: 'correcao',
       titulo: 'Levantamento de Fachada: contas também no Vão Fechado',
@@ -1918,6 +1918,27 @@ const NotasVersao = {
         '  não existia (_atualizarPreviewVao em vez de',
         '  LF._atualizarPreviewVao), gerando erro no console',
         '  toda vez que o usuário digitava; corrigido',
+      ]
+    },
+    {
+      versao: 'V2.17.11',
+      status: 'aberta',
+      data: '2026-07-12',
+      tipo: 'correcao',
+      titulo: 'Levantamento de Fachada: clonar balancim não puxava Vão Fechado nem contava peças na fachada',
+      itens: [
+        'BUG: ao clonar peças de outro balancim (⧉), o Vão Fechado',
+        '  das vistas de origem não era copiado para as vistas do',
+        '  balancim de destino; agora é copiado junto',
+        'BUG: as peças clonadas ficavam com o fachadaId da',
+        '  fachada de ORIGEM em vez da fachada de DESTINO — por',
+        '  isso o contador de peças na árvore, ao lado do nome da',
+        '  fachada, não batia com a realidade quando se clonava',
+        '  entre balancins de fachadas diferentes; corrigido',
+        'IMPORTANTE: clones feitos ANTES desta correção continuam',
+        '  com o fachadaId errado no banco — se algum balancim',
+        '  clonado estiver com contagem estranha, refaça o clone',
+        '  (⧉) nele para corrigir os dados',
       ]
     }
   ],
