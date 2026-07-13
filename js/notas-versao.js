@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.17.13',
+  versaoAtual: 'V2.17.14',
 
   versoes: [
     {
@@ -1960,7 +1960,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.17.13',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-12',
       tipo: 'funcionalidade',
       titulo: 'Levantamento de Fachada: friso (arquitetônico/estrutural) + fachada não reconhecia clone (raiz do problema)',
@@ -1985,6 +1985,26 @@ const NotasVersao = {
         '  cards da Visão Geral (mapa) e no CSV exportado',
         'Nova coluna "Friso" na tabela de peças, mostrando',
         '  comprimento e tipo (Arq/Est) quando a peça tiver friso',
+      ]
+    },
+    {
+      versao: 'V2.17.14',
+      status: 'aberta',
+      data: '2026-07-12',
+      tipo: 'melhoria',
+      titulo: 'Levantamento de Fachada: múltiplos frisos por peça',
+      itens: [
+        '"Possui friso?" agora permite adicionar MAIS DE UM friso',
+        '  na mesma peça (igual à lista de Vão Fechado) — botão',
+        '  "+ Friso" adiciona linha, cada uma com seu próprio',
+        '  Comprimento, Tipo (Arquitetônico/Estrutural) e Qtd',
+        'Os totais de ML Friso Arquitetônico/Estrutural agora',
+        '  somam todos os frisos de todas as peças corretamente',
+        'Coluna "Friso" na tabela mostra o primeiro friso e um',
+        '  "+N" quando a peça tem mais de um; passe o mouse em',
+        '  cima pra ver a lista completa',
+        'Peças com friso cadastrado no formato antigo (um só)',
+        '  continuam funcionando normalmente',
       ]
     }
   ],

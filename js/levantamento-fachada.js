@@ -123,14 +123,17 @@ const LevantamentoFachada = (() => {
     const ml=podeML?(maiorLado*qt):0;
     const m2comML_puro=podeML?0:areaLiq;
 
-    // ---- Friso (arquitetônico ou estrutural) — soma à parte, em ML ----
+    // ---- Friso (arquitetônico ou estrutural) — soma à parte, em ML. Pode ter vários por peça ----
     let mlFrisoArq=0,mlFrisoEst=0;
     if(pc.possuiFriso){
-      const frisoM=_m(_pn(pc.frisoComprimento));
-      const qtF=_pn(pc.frisoQuantidade)||0;
-      const totalFriso=frisoM*qtF*qt;
-      if(pc.frisoTipo==='estrutural') mlFrisoEst=totalFriso;
-      else mlFrisoArq=totalFriso;
+      const lista=(pc.frisos&&pc.frisos.length)?pc.frisos:(pc.frisoComprimento?[{comprimento:pc.frisoComprimento,tipo:pc.frisoTipo,quantidade:pc.frisoQuantidade}]:[]);
+      lista.forEach(f=>{
+        const frisoM=_m(_pn(f.comprimento));
+        const qtF=_pn(f.quantidade)||0;
+        const totalFriso=frisoM*qtF*qt;
+        if(f.tipo==='estrutural') mlFrisoEst+=totalFriso;
+        else mlFrisoArq+=totalFriso;
+      });
     }
 
     return{bruto,janela,areaLiq,m2semML,m2unitario,m2comML_puro,ml,mlPct,podeML,mlFrisoArq,mlFrisoEst};
@@ -548,7 +551,13 @@ const LevantamentoFachada = (() => {
     let rows='';
     vPec.forEach((pc,i)=>{
       const c=_calc(pc);
-      const frisoTxt=pc.possuiFriso&&_pn(pc.frisoComprimento)>0?(_pn(pc.frisoComprimento)+'cm ('+(pc.frisoTipo==='estrutural'?'Est':'Arq')+')'):'—';
+      const _frisosLista=pc.possuiFriso?((pc.frisos&&pc.frisos.length)?pc.frisos:(pc.frisoComprimento?[{comprimento:pc.frisoComprimento,tipo:pc.frisoTipo,quantidade:pc.frisoQuantidade}]:[])):[];
+      let frisoTxt='—',frisoTitle='';
+      if(_frisosLista.length){
+        const partes=_frisosLista.map(f=>_pn(f.comprimento)+'cm ('+(f.tipo==='estrutural'?'Est':'Arq')+')');
+        frisoTxt=partes.length>1?(partes[0]+' +'+(partes.length-1)):partes[0];
+        frisoTitle=partes.join(' · ');
+      }
       rows+='<tr>'+
         '<td>'+(i+1)+'</td>'+
         '<td>'+pc.nome+'</td>'+
@@ -556,7 +565,7 @@ const LevantamentoFachada = (() => {
         '<td class="col-num">'+_pn(pc.altura)+'</td>'+
         '<td class="col-num col-centro">'+(pc.quantidade||1)+'</td>'+
         '<td class="col-centro">'+(pc.possuiJanela?'✓':'')+'</td>'+
-        '<td class="text-sm col-centro">'+frisoTxt+'</td>'+
+        '<td class="text-sm col-centro" title="'+frisoTitle+'">'+frisoTxt+'</td>'+
         '<td class="col-centro"><button class="btn btn-sm btn-icon" onclick="LF.togglePecaML(\''+pc.id+'\')" title="Pode ser considerado ML? (clique para alternar)">'+(c.podeML?'✅':'—')+'</button></td>'+
         '<td class="col-num" style="font-weight:600;color:var(--cor-primaria);">'+_f(c.m2semML)+'</td>'+
         '<td class="col-num text-muted">'+_f(c.m2unitario)+'</td>'+
@@ -876,9 +885,9 @@ const LevantamentoFachada = (() => {
     Utils.limparForm('form-peca');
     document.querySelector('#form-peca [name="quantidade"]').value=1;
     document.querySelector('#form-peca [name="quantidadeJanelas"]').value=1;
-    document.querySelector('#form-peca [name="frisoQuantidade"]').value=1;
     _mlManualTouch=false;
     _popularAcabamentos();
+    _renderFrisosForm([]);
     _togJ(false);_togF(false);Utils.abrirModal('modal-peca');
   }
 
@@ -887,6 +896,8 @@ const LevantamentoFachada = (() => {
     editandoId=id;document.getElementById('modal-peca-titulo').textContent='Editar Peça';
     _mlManualTouch=true;
     _popularAcabamentos();
+    const frisosIniciais=(pc.frisos&&pc.frisos.length)?pc.frisos:(pc.frisoComprimento?[{comprimento:pc.frisoComprimento,tipo:pc.frisoTipo||'arquitetonico',quantidade:pc.frisoQuantidade||1}]:[]);
+    _renderFrisosForm(frisosIniciais);
     Utils.setFormData('form-peca',pc);_togJ(!!pc.possuiJanela);_togF(!!pc.possuiFriso);Utils.abrirModal('modal-peca');
   }
 
@@ -900,7 +911,8 @@ const LevantamentoFachada = (() => {
     data.comprimentoVao=_pn(data.comprimentoVao);data.alturaVao=_pn(data.alturaVao);
     data.podeSerML=!!data.podeSerML;
     data.possuiFriso=!!data.possuiFriso;
-    data.frisoComprimento=_pn(data.frisoComprimento);data.frisoTipo=data.frisoTipo||'arquitetonico';data.frisoQuantidade=_pn(data.frisoQuantidade)||0;
+    data.frisos=data.possuiFriso?_getFrisosDoForm().filter(f=>f.comprimento>0):[];
+    delete data.frisoComprimento;delete data.frisoTipo;delete data.frisoQuantidade; // campos legados, substituídos por data.frisos
     data.acabamento=(data.acabamento||'').trim();
     if(data.comprimento<0){Utils.toast('Comprimento negativo.','alerta');return;}
     if(data.quantidade<=0){Utils.toast('Qtd > 0.','alerta');return;}
@@ -909,7 +921,7 @@ const LevantamentoFachada = (() => {
       else{await Database.criar(obraId,COL,data);}
       Utils.toast('Peça salva!','sucesso');editandoId=null;await carregar();
       if(fechar!==false)Utils.fecharModal('modal-peca');
-      else{Utils.limparForm('form-peca');document.querySelector('#form-peca [name="quantidade"]').value=1;document.querySelector('#form-peca [name="quantidadeJanelas"]').value=1;document.querySelector('#form-peca [name="frisoQuantidade"]').value=1;_togJ(false);_togF(false);document.querySelector('#form-peca [name="nome"]').focus();}
+      else{Utils.limparForm('form-peca');document.querySelector('#form-peca [name="quantidade"]').value=1;document.querySelector('#form-peca [name="quantidadeJanelas"]').value=1;_togJ(false);_togF(false);_renderFrisosForm([]);document.querySelector('#form-peca [name="nome"]').focus();}
     }catch(e){console.error(e);Utils.toast('Erro.','erro');}
   }
 
@@ -1078,14 +1090,19 @@ const LevantamentoFachada = (() => {
   function exportarCSV(){_csv(pecas,'fachada_geral');}
   function exportarVista(){_csv(pecas.filter(x=>x.vistaId===sel.vistaId),'fachada_vista');}
   function _csv(lista,nome){
-    let csv='Peça;Comp cm;Alt cm;Qtd;Janela;L-Jan cm;A-Jan cm;Q-Jan;Comp Vão cm;Alt Vão cm;Pode ML;Friso;Comp Friso cm;Tipo Friso;Qtd Friso;ML Friso Arq;ML Friso Est;m2 unitario;m2 sem ML;m2 com ML;ML;Acabamento;Conferido;Obs\n';
-    lista.forEach(pc=>{const c=_calc(pc);csv+=[pc.nome,pc.comprimento,pc.altura,pc.quantidade,pc.possuiJanela?'Sim':'Nao',pc.larguraJanela||'',pc.alturaJanela||'',pc.quantidadeJanelas||'',pc.comprimentoVao||'',pc.alturaVao||'',pc.podeSerML?'Sim':'Nao',pc.possuiFriso?'Sim':'Nao',pc.frisoComprimento||'',pc.frisoTipo==='estrutural'?'Estrutural':(pc.possuiFriso?'Arquitetônico':''),pc.frisoQuantidade||'',c.mlFrisoArq.toFixed(2),c.mlFrisoEst.toFixed(2),c.m2unitario.toFixed(2),c.m2semML.toFixed(2),c.m2comML_puro.toFixed(2),c.ml.toFixed(2),pc.acabamento||'',pc.conferido?'Sim':'Nao',pc.observacao||''].join(';')+'\n';});
+    let csv='Peça;Comp cm;Alt cm;Qtd;Janela;L-Jan cm;A-Jan cm;Q-Jan;Comp Vão cm;Alt Vão cm;Pode ML;Friso;Frisos (comp x qtd - tipo);ML Friso Arq;ML Friso Est;m2 unitario;m2 sem ML;m2 com ML;ML;Acabamento;Conferido;Obs\n';
+    lista.forEach(pc=>{
+      const c=_calc(pc);
+      const frisosLista=pc.possuiFriso?((pc.frisos&&pc.frisos.length)?pc.frisos:(pc.frisoComprimento?[{comprimento:pc.frisoComprimento,tipo:pc.frisoTipo,quantidade:pc.frisoQuantidade}]:[])):[];
+      const frisosDescr=frisosLista.map(f=>(f.comprimento||0)+'cm x'+(f.quantidade||0)+' ('+(f.tipo==='estrutural'?'Estrutural':'Arquitetônico')+')').join(' | ');
+      csv+=[pc.nome,pc.comprimento,pc.altura,pc.quantidade,pc.possuiJanela?'Sim':'Nao',pc.larguraJanela||'',pc.alturaJanela||'',pc.quantidadeJanelas||'',pc.comprimentoVao||'',pc.alturaVao||'',pc.podeSerML?'Sim':'Nao',pc.possuiFriso?'Sim':'Nao',frisosDescr,c.mlFrisoArq.toFixed(2),c.mlFrisoEst.toFixed(2),c.m2unitario.toFixed(2),c.m2semML.toFixed(2),c.m2comML_puro.toFixed(2),c.ml.toFixed(2),pc.acabamento||'',pc.conferido?'Sim':'Nao',pc.observacao||''].join(';')+'\n';
+    });
     const b=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=nome+'.csv';a.click();URL.revokeObjectURL(u);Utils.toast('Exportado!','sucesso');
   }
 
   // ===================== HELPERS =====================
   function _togJ(s){const e=document.getElementById('campos-janela');if(e)e.style.display=s?'grid':'none';}
-  function _togF(s){const e=document.getElementById('campos-friso');if(e)e.style.display=s?'grid':'none';}
+  function _togF(s){const e=document.getElementById('campos-friso');if(e)e.style.display=s?'block':'none';}
   // Permite digitar contas simples nos campos de medida (ex: 291+100 + Enter = 391)
   function calcExprEnter(e){
     if(e.key!=='Enter')return;
@@ -1115,6 +1132,47 @@ const LevantamentoFachada = (() => {
 
   function onToggleJanela(cb){_togJ(cb.checked);}
   function onToggleFriso(cb){_togF(cb.checked);}
+
+  // ===================== FRISOS (múltiplos por peça) =====================
+  function _renderFrisosForm(frisos){
+    const c=document.getElementById('frisos-container');if(!c)return;
+    if(!frisos||!frisos.length)frisos=[{comprimento:'',tipo:'arquitetonico',quantidade:1}];
+    c.innerHTML=frisos.map((f,i)=>`
+      <div class="friso-row" id="friso-row-${i}" style="display:grid;grid-template-columns:1fr 1fr 70px 32px;gap:8px;align-items:end;margin-bottom:8px;">
+        <div class="form-grupo" style="margin:0"><label>Comprimento (cm)</label>
+          <input type="text" inputmode="decimal" class="form-control friso-comp" data-i="${i}" placeholder="Ex: 291+100" value="${f.comprimento||''}" onkeydown="LF.calcExprEnter(event)"></div>
+        <div class="form-grupo" style="margin:0"><label>Tipo</label>
+          <select class="form-control friso-tipo" data-i="${i}">
+            <option value="arquitetonico"${f.tipo!=='estrutural'?' selected':''}>Arquitetônico</option>
+            <option value="estrutural"${f.tipo==='estrutural'?' selected':''}>Estrutural</option>
+          </select></div>
+        <div class="form-grupo" style="margin:0"><label>Qtd</label>
+          <input type="number" class="form-control friso-qtd" data-i="${i}" min="0" value="${f.quantidade!=null?f.quantidade:1}"></div>
+        <div class="form-grupo" style="margin:0"><label>&nbsp;</label>
+          <button type="button" class="btn btn-perigo btn-sm btn-icon" onclick="LF.removerFrisoRow(${i})" ${frisos.length<=1?'disabled':''}>✕</button></div>
+      </div>`).join('');
+  }
+
+  function _getFrisosDoForm(){
+    const comps=document.querySelectorAll('.friso-comp');
+    const tipos=document.querySelectorAll('.friso-tipo');
+    const qtds=document.querySelectorAll('.friso-qtd');
+    return Array.from(comps).map((_,i)=>({
+      comprimento:_pn(comps[i].value), tipo:tipos[i].value, quantidade:_pn(qtds[i].value)||0
+    }));
+  }
+
+  function adicionarFrisoRow(){
+    const frisos=_getFrisosDoForm();
+    frisos.push({comprimento:'',tipo:'arquitetonico',quantidade:1});
+    _renderFrisosForm(frisos);
+  }
+
+  function removerFrisoRow(i){
+    const frisos=_getFrisosDoForm();
+    frisos.splice(i,1);
+    _renderFrisosForm(frisos);
+  }
   function _f(n){return Utils.formatarNumero(n);}
   function _pn(v){return Utils.parseNum(v);}
   function _badge(st){const m={rascunho:'badge-neutro',em_conferencia:'badge-alerta',aprovado:'badge-sucesso',revisado:'badge-info',cancelado:'badge-perigo'};const l={rascunho:'Rascunho',em_conferencia:'Em conferência',aprovado:'Aprovado',revisado:'Revisado',cancelado:'Cancelado'};return '<span class="badge '+(m[st]||'badge-neutro')+'">'+(l[st]||'Rascunho')+'</span>';}
@@ -1225,7 +1283,7 @@ const LevantamentoFachada = (() => {
   function imgRZEv(e, el){ imgRZ(e, el.dataset.d); }
   function cxResizeEv(e){ cxResize(e, parseInt(e.currentTarget.dataset.i), e.currentTarget.dataset.d); }
 
-  return {init,carregar,sel:selecionar,setAba,criarFachada,criarBalancim,editar,salvarEntidade,excluir,novaPeca,editarPeca,salvarPeca,excluirPeca,duplicarPeca,duplicarBal,editarNomeInline,abrirClonarBal,confirmarClonarBal,corrigirVinculos,conferirPeca,togglePecaML,onClickCheckML,onCompAltInput,calcExprEnter,onToggleFriso,exportarCSV,exportarVista,onToggleJanela,importarMapa,cxAdicionar,cxRemover,cxTravar,cxEditar,salvarCxEdit,cxMouseDown,cxDrop,cxResize,imgMouseDown,imgResize,entrarEditImg,sairEditImg,imgMD,imgRZEv,cxResizeEv,toggleEditImg,fecharEditImg,onImgResize,limparMapa,abrirVaoVista,salvarVaoVista,_atualizarPreviewVao,adicionarVaoRow,removerVaoRow,abrirConfig,salvarConfig,onChangeCfgJanela};
+  return {init,carregar,sel:selecionar,setAba,criarFachada,criarBalancim,editar,salvarEntidade,excluir,novaPeca,editarPeca,salvarPeca,excluirPeca,duplicarPeca,duplicarBal,editarNomeInline,abrirClonarBal,confirmarClonarBal,corrigirVinculos,conferirPeca,togglePecaML,onClickCheckML,onCompAltInput,calcExprEnter,onToggleFriso,adicionarFrisoRow,removerFrisoRow,exportarCSV,exportarVista,onToggleJanela,importarMapa,cxAdicionar,cxRemover,cxTravar,cxEditar,salvarCxEdit,cxMouseDown,cxDrop,cxResize,imgMouseDown,imgResize,entrarEditImg,sairEditImg,imgMD,imgRZEv,cxResizeEv,toggleEditImg,fecharEditImg,onImgResize,limparMapa,abrirVaoVista,salvarVaoVista,_atualizarPreviewVao,adicionarVaoRow,removerVaoRow,abrirConfig,salvarConfig,onChangeCfgJanela};
 })();
 const LF=LevantamentoFachada;
 function onObraChanged(){LF.init();}
