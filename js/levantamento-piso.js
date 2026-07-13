@@ -50,6 +50,7 @@ const LP = (() => {
   let pageWidthPts = 0;       // largura da página em pontos-PDF (viewport scale=1), usada pra converter clique -> ponto-PDF em qualquer zoom
   let panAtivo = false;
   let panInicio = { x: 0, y: 0, scrollX: 0, scrollY: 0 };
+  let fsAtivo = false;        // tela cheia do workspace de medição
 
   let areaEditId = null;           // id da área em edição (null = nova)
   let areaPoligonoPendente = null; // polígono (pontos-PDF) aguardando salvar no modal
@@ -65,7 +66,11 @@ const LP = (() => {
     if (!ok) return;
     obraId = Router.getObraId();
     document.addEventListener('keydown', e => {
-      if (e.key === 'Escape') { cancelarDesenho(); Utils.fecharTodosModais(); }
+      if (e.key === 'Escape') {
+        if (modo !== 'nenhum') { cancelarDesenho(); }
+        else if (fsAtivo) { toggleFullscreen(); }
+        Utils.fecharTodosModais();
+      }
     });
     if (!obraId) { _renderSemObra(); return; }
     await carregar();
@@ -214,6 +219,7 @@ const LP = (() => {
   }
 
   function toggleArvore() { treeColapsada = !treeColapsada; renderizar(); }
+  function toggleFullscreen() { fsAtivo = !fsAtivo; renderizar(); }
 
   function _renderArvoreNivel(nodes) {
     return _ordenarNodes(nodes).map(n => {
@@ -257,11 +263,11 @@ const LP = (() => {
   function selNode(id) {
     const trocouNode = id !== selNodeId;
     selNodeId = id; modo = 'nenhum'; calibPontos = []; poligonoPontos = [];
-    if (trocouNode) zoomCss = 1;
+    if (trocouNode) { zoomCss = 1; fsAtivo = false; }
     renderizar();
   }
   function selGeral() {
-    selNodeId = null; modo = 'nenhum'; calibPontos = []; poligonoPontos = []; zoomCss = 1;
+    selNodeId = null; modo = 'nenhum'; calibPontos = []; poligonoPontos = []; zoomCss = 1; fsAtivo = false;
     renderizar();
   }
 
@@ -517,47 +523,52 @@ const LP = (() => {
     setTimeout(_popularDatalists, 0);
 
     return `
-      <div class="lp-workspace-header">
-        <div><h2>${esc(node.nome)}</h2>
-          <span class="subtitulo">${pl ? esc(pl.nome) : ''} — pág. ${node.pagina} · ${areasN.length} área(s) · ${fmt2(totalNode)} m²</span></div>
-        <button class="btn btn-secundario btn-sm" onclick="LP.trocarPlanta('${node.id}')">🔄 Trocar planta/página</button>
-      </div>
-      <div class="lp-toolbar">
-        <button class="btn btn-secundario btn-sm ${modo === 'calibrar' ? 'lp-modo-ativo' : ''}" onclick="LP.toggleModoCalibrar()">📏 Calibrar Escala</button>
-        <button class="btn btn-secundario btn-sm ${modo === 'medir' ? 'lp-modo-ativo' : ''}" onclick="LP.toggleModoMedir()" ${temEscala ? '' : 'disabled title="Calibre a escala primeiro"'}>⬟ Nova Área</button>
-        ${modo === 'medir' ? `
-          <button class="btn btn-primario btn-sm" id="lp-btn-finalizar" onclick="LP.finalizarPoligono()">✓ Finalizar Área (${poligonoPontos.length} pontos)</button>
-          <button class="btn btn-secundario btn-sm" onclick="LP.cancelarDesenho()">Cancelar</button>
-        ` : ''}
-        ${modo === 'calibrar' ? `<button class="btn btn-secundario btn-sm" onclick="LP.cancelarDesenho()">Cancelar</button>` : ''}
-        <div class="sep"></div>
-        <button class="btn btn-secundario btn-sm" onclick="LP.zoomOut()" title="Diminuir zoom">➖</button>
-        <button class="btn btn-secundario btn-sm" onclick="LP.zoomReset()" title="Redefinir zoom (100%)"><span id="lp-zoom-pct">100%</span></button>
-        <button class="btn btn-secundario btn-sm" onclick="LP.zoomIn()" title="Aumentar zoom">➕</button>
-        <div class="sep"></div>
-        <span class="info">${temEscala ? `Escala: 1pt=${(node.escalaMetrosPorPonto * 1000).toFixed(2)}mm` : 'Sem escala'} · 🖱️ roda=zoom · meio=mover</span>
-      </div>
-      ${!temEscala ? `<div class="lp-hint">Clique em "📏 Calibrar Escala", desenhe uma linha sobre uma medida conhecida do desenho e informe a distância real.</div>` : ''}
-      ${modo === 'medir' ? `<div class="lp-hint">Clique para adicionar vértices do polígono. Duplo-clique ou "Finalizar Área" para terminar.</div>` : ''}
-      ${modo === 'calibrar' ? `<div class="lp-hint">Clique em dois pontos sobre uma medida conhecida do desenho.</div>` : ''}
-      <div class="lp-workspace">
-        <div class="lp-canvas-col" id="lp-canvas-col"><div class="loading-inline">Carregando página do PDF...</div></div>
-        <div class="lp-painel-lateral">
-          <div class="lp-totais">
-            <table>
-              <tr><td>Total de áreas</td><td>${areasN.length}</td></tr>
-              <tr><td>Área total</td><td>${fmt2(totalNode)} m²</td></tr>
-            </table>
+      <div id="lp-workspace-wrap" class="${fsAtivo ? 'lp-fullscreen-overlay' : ''}">
+        <div class="lp-workspace-header">
+          <div><h2>${esc(node.nome)}</h2>
+            <span class="subtitulo">${pl ? esc(pl.nome) : ''} — pág. ${node.pagina} · ${areasN.length} área(s) · ${fmt2(totalNode)} m²</span></div>
+          <div style="display:flex;gap:6px;">
+            <button class="btn btn-primario btn-sm" onclick="LP.toggleFullscreen()">${fsAtivo ? '✕ Sair da tela cheia' : '⛶ Tela cheia'}</button>
+            ${fsAtivo ? '' : `<button class="btn btn-secundario btn-sm" onclick="LP.trocarPlanta('${node.id}')">🔄 Trocar planta/página</button>`}
           </div>
-          ${areasN.length === 0 ? `<div class="estado-vazio" style="padding:20px;"><p style="font-size:0.85rem;">Nenhuma área medida ainda.</p></div>` : areasN.map(a => `
-            <div class="lp-area-card" onclick="LP.editarArea('${a.id}')">
-              <div class="nome"><span>${esc(a.nome)}</span><span class="m2">${fmt2(a.areaM2)} m²</span></div>
-              <div class="meta">
-                ${a.tipoPiso ? `Piso: ${esc(a.tipoPiso)}` : 'Piso: —'}${a.tipoContrapiso ? ` · Contrapiso: ${esc(a.tipoContrapiso)}` : ''}
-                ${a.impermeabilizacao ? ` · 💧 Impermeabilizado${a.tipoImpermeabilizacao ? ' (' + esc(a.tipoImpermeabilizacao) + ')' : ''}` : ''}
-              </div>
+        </div>
+        <div class="lp-toolbar">
+          <button class="btn btn-secundario btn-sm ${modo === 'calibrar' ? 'lp-modo-ativo' : ''}" onclick="LP.toggleModoCalibrar()">📏 Calibrar Escala</button>
+          <button class="btn btn-secundario btn-sm ${modo === 'medir' ? 'lp-modo-ativo' : ''}" onclick="LP.toggleModoMedir()" ${temEscala ? '' : 'disabled title="Calibre a escala primeiro"'}>⬟ Nova Área</button>
+          ${modo === 'medir' ? `
+            <button class="btn btn-primario btn-sm" id="lp-btn-finalizar" onclick="LP.finalizarPoligono()">✓ Finalizar Área (${poligonoPontos.length} pontos)</button>
+            <button class="btn btn-secundario btn-sm" onclick="LP.cancelarDesenho()">Cancelar</button>
+          ` : ''}
+          ${modo === 'calibrar' ? `<button class="btn btn-secundario btn-sm" onclick="LP.cancelarDesenho()">Cancelar</button>` : ''}
+          <div class="sep"></div>
+          <button class="btn btn-secundario btn-sm" onclick="LP.zoomOut()" title="Diminuir zoom">➖</button>
+          <button class="btn btn-secundario btn-sm" onclick="LP.zoomReset()" title="Redefinir zoom (100%)"><span id="lp-zoom-pct">100%</span></button>
+          <button class="btn btn-secundario btn-sm" onclick="LP.zoomIn()" title="Aumentar zoom">➕</button>
+          <div class="sep"></div>
+          <span class="info">${temEscala ? `Escala: 1pt=${(node.escalaMetrosPorPonto * 1000).toFixed(2)}mm` : 'Sem escala'} · 🖱️ roda=zoom · meio=mover</span>
+        </div>
+        ${!temEscala ? `<div class="lp-hint">Clique em "📏 Calibrar Escala", desenhe uma linha sobre uma medida conhecida do desenho e informe a distância real.</div>` : ''}
+        ${modo === 'medir' ? `<div class="lp-hint">Clique para adicionar vértices do polígono. Duplo-clique ou "Finalizar Área" para terminar.</div>` : ''}
+        ${modo === 'calibrar' ? `<div class="lp-hint">Clique em dois pontos sobre uma medida conhecida do desenho.</div>` : ''}
+        <div class="lp-workspace">
+          <div class="lp-canvas-col" id="lp-canvas-col"><div class="loading-inline">Carregando página do PDF...</div></div>
+          <div class="lp-painel-lateral">
+            <div class="lp-totais">
+              <table>
+                <tr><td>Total de áreas</td><td>${areasN.length}</td></tr>
+                <tr><td>Área total</td><td>${fmt2(totalNode)} m²</td></tr>
+              </table>
             </div>
-          `).join('')}
+            ${areasN.length === 0 ? `<div class="estado-vazio" style="padding:20px;"><p style="font-size:0.85rem;">Nenhuma área medida ainda.</p></div>` : areasN.map(a => `
+              <div class="lp-area-card" onclick="LP.editarArea('${a.id}')">
+                <div class="nome"><span>${esc(a.nome)}</span><span class="m2">${fmt2(a.areaM2)} m²</span></div>
+                <div class="meta">
+                  ${a.tipoPiso ? `Piso: ${esc(a.tipoPiso)}` : 'Piso: —'}${a.tipoContrapiso ? ` · Contrapiso: ${esc(a.tipoContrapiso)}` : ''}
+                  ${a.impermeabilizacao ? ` · 💧 Impermeabilizado${a.tipoImpermeabilizacao ? ' (' + esc(a.tipoImpermeabilizacao) + ')' : ''}` : ''}
+                </div>
+              </div>
+            `).join('')}
+          </div>
         </div>
       </div>
     `;
@@ -675,6 +686,8 @@ const LP = (() => {
   }
 
   // ── PAN (arrastar) — botão do meio sempre; botão esquerdo só fora do modo de desenho ──
+  let _panRafPendente = false;
+  let _panUltimoEvento = null;
   function _iniciarPan(e) {
     const isMeio = e.button === 1;
     const isEsquerdoLivre = e.button === 0 && modo === 'nenhum';
@@ -687,13 +700,24 @@ const LP = (() => {
   }
   function _moverPan(e) {
     if (!panAtivo) return;
-    const col = document.getElementById('lp-canvas-col');
-    col.scrollLeft = panInicio.scrollX - (e.clientX - panInicio.x);
-    col.scrollTop = panInicio.scrollY - (e.clientY - panInicio.y);
+    // Throttle via requestAnimationFrame — evita recalcular o scroll a cada
+    // pointermove (que pode disparar muito mais rápido que a tela consegue
+    // pintar, principalmente com o canvas em resolução alta de zoom).
+    _panUltimoEvento = e;
+    if (_panRafPendente) return;
+    _panRafPendente = true;
+    requestAnimationFrame(() => {
+      _panRafPendente = false;
+      if (!panAtivo || !_panUltimoEvento) return;
+      const col = document.getElementById('lp-canvas-col');
+      col.scrollLeft = panInicio.scrollX - (_panUltimoEvento.clientX - panInicio.x);
+      col.scrollTop = panInicio.scrollY - (_panUltimoEvento.clientY - panInicio.y);
+    });
   }
   function _finalizarPan(e) {
     if (!panAtivo) return;
     panAtivo = false;
+    _panUltimoEvento = null;
     try { e.currentTarget.releasePointerCapture(e.pointerId); } catch (err) {}
   }
 
@@ -720,7 +744,7 @@ const LP = (() => {
     const mouseY = e.clientY - rect.top + col.scrollTop;
     const oldZoom = zoomCss;
     const fator = e.deltaY < 0 ? 1.15 : (1 / 1.15);
-    zoomCss = Math.min(8, Math.max(0.15, zoomCss * fator));
+    zoomCss = Math.min(6, Math.max(0.15, zoomCss * fator));
     _aplicarZoom();
     const ratio = zoomCss / oldZoom;
     col.scrollLeft = mouseX * ratio - (e.clientX - rect.left);
@@ -728,7 +752,7 @@ const LP = (() => {
     _agendarRerenderQualidade();
   }
 
-  function zoomIn() { zoomCss = Math.min(8, zoomCss * 1.25); _aplicarZoom(); _agendarRerenderQualidade(); }
+  function zoomIn() { zoomCss = Math.min(6, zoomCss * 1.25); _aplicarZoom(); _agendarRerenderQualidade(); }
   function zoomOut() { zoomCss = Math.max(0.15, zoomCss / 1.25); _aplicarZoom(); _agendarRerenderQualidade(); }
   function zoomReset() { zoomCss = 1; _aplicarZoom(); }
 
@@ -755,7 +779,10 @@ const LP = (() => {
     if (!canvas || !svg) return;
     const efetiva = renderScale * zoomCss;
     if (efetiva <= renderScale * 1.05) return; // já está nítido o bastante nesta resolução
-    const novaEscala = Math.min(8, efetiva); // limite de segurança pra não estourar memória
+    let novaEscala = Math.min(6, efetiva); // limite de segurança pra não estourar memória
+    const MAX_DIM_PX = 4096; // canvas muito grande fica pesado pra arrastar (scroll)/pintar
+    const projLargura = pageWidthPts * novaEscala;
+    if (projLargura > MAX_DIM_PX) novaEscala = MAX_DIM_PX / pageWidthPts;
     const pl = _plantaPorId(node.plantaId);
     if (!pl || !pdfDoc || pdfDocPlantaId !== pl.id) return;
     try {
@@ -978,7 +1005,7 @@ const LP = (() => {
 
   return {
     init, recarregar,
-    novoNode, renomearNode, excluirNode, toggleNode, selNode, selGeral, toggleArvore,
+    novoNode, renomearNode, excluirNode, toggleNode, selNode, selGeral, toggleArvore, toggleFullscreen,
     abrirModalPlanta, enviarPlanta, excluirPlanta, vincularPlantaExistente, trocarPlanta,
     toggleModoCalibrar, toggleModoMedir, cancelarDesenho,
     cancelarCalibracao, confirmarCalibracao,

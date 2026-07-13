@@ -42,6 +42,14 @@
     #lp-content .ar-layout.tree-colapsada .ar-tree { display:none; }
     .lp-reabrir-arvore { position:absolute; left:4px; top:4px; z-index:20; }
     #lp-content .ar-layout { position:relative; height:calc(100vh - 130px); grid-template-columns: 220px 1fr; }
+    .lp-fullscreen-overlay {
+      position: fixed; inset: 0; z-index: 500; background: #fff;
+      display: flex; flex-direction: column; padding: 12px 16px; box-sizing: border-box;
+    }
+    .lp-fullscreen-overlay .lp-canvas-col,
+    .lp-fullscreen-overlay .lp-painel-lateral {
+      height: calc(100vh - 130px); max-height: calc(100vh - 130px);
+    }
   </style>
 </head>
 <body>
@@ -78,7 +86,7 @@
       <a href="histograma.html"><span class="nav-icon">📊</span> Histograma</a>
       <a href="admin-permissoes.html"><span class="nav-icon">🔑</span> Permissões</a>
       <div class="sidebar-section-title">Sistema</div>
-      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V2.22.2</span></a>
+      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V2.22.3</span></a>
     </nav>
     <div class="sidebar-user">
       <div class="user-avatar">U</div>

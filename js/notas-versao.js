@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.22.2',
+  versaoAtual: 'V2.22.3',
 
   versoes: [
     {
@@ -2668,7 +2668,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.22.2',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-13',
       tipo: 'correcao',
       titulo: 'Levantamento de Piso: mais espaço pra planta + zoom sem perder qualidade',
@@ -2686,6 +2686,30 @@ const NotasVersao = {
         '  resolução efetiva atual (debounced, não a cada tique da roda',
         '  do mouse) — mantém a planta nítida em qualquer nível de zoom',
         'Teto de zoom aumentado (até 800%) já que agora mantém qualidade',
+      ]
+    },
+    {
+      versao: 'V2.22.3',
+      status: 'aberta',
+      data: '2026-07-13',
+      tipo: 'funcionalidade',
+      titulo: 'Levantamento de Piso: modo tela cheia + corrige travamento ao arrastar em zoom alto',
+      itens: [
+        'Novo botão "⛶ Tela cheia" no local vinculado a uma planta: abre a',
+        '  planta num overlay cobrindo a tela inteira (não é um modal',
+        '  cortado) — muito mais espaço pra calibrar e medir',
+        'Tecla Esc também sai da tela cheia (quando não está no meio de',
+        '  um desenho)',
+        'Corrigido: arrastar (pan) travando/engasgando em zoom alto —',
+        '  o movimento agora é sincronizado com requestAnimationFrame em',
+        '  vez de recalcular a cada evento do mouse (que dispara mais',
+        '  rápido do que a tela consegue desenhar)',
+        'Limite de segurança no tamanho do canvas re-renderizado em alta',
+        '  resolução (máx. 4096px de largura) — evita ficar pesado demais',
+        '  pra arrastar/pintar em zooms muito extremos',
+        'Teto de zoom ajustado para 600% (consistente com o limite de',
+        '  re-renderização em alta resolução, mantendo a nitidez em',
+        '  qualquer nível permitido)',
       ]
     }
   ],
