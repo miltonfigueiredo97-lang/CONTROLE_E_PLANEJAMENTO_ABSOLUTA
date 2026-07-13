@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.22.3',
+  versaoAtual: 'V2.22.4',
 
   versoes: [
     {
@@ -2690,7 +2690,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.22.3',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-13',
       tipo: 'funcionalidade',
       titulo: 'Levantamento de Piso: modo tela cheia + corrige travamento ao arrastar em zoom alto',
@@ -2710,6 +2710,27 @@ const NotasVersao = {
         'Teto de zoom ajustado para 600% (consistente com o limite de',
         '  re-renderização em alta resolução, mantendo a nitidez em',
         '  qualquer nível permitido)',
+      ]
+    },
+    {
+      versao: 'V2.22.4',
+      status: 'aberta',
+      data: '2026-07-13',
+      tipo: 'correcao',
+      titulo: 'Levantamento de Piso: corrige impossibilidade de arrastar em zoom alto (bug clássico de flexbox)',
+      itens: [
+        'Causa raiz encontrada: o container do canvas usava flexbox com',
+        '  justify-content:center para centralizar a planta. É um bug',
+        '  conhecido do CSS — quando o conteúdo fica maior que o container',
+        '  (zoom alto), o navegador não consegue rolar até o lado que',
+        '  "vaza" da centralização, travando o arrastar bem antes do fim',
+        '  real da imagem, especialmente em plantas grandes/detalhadas',
+        'Trocado o container para layout em bloco normal (sem flexbox),',
+        '  com a planta centralizada via margin:auto — isso centraliza',
+        '  quando cabe na tela, mas não trava a rolagem quando o zoom',
+        '  deixa a planta maior que a área visível',
+        'Agora dá pra arrastar até qualquer canto da planta em qualquer',
+        '  nível de zoom, mesmo em PDFs grandes e muito detalhados',
       ]
     }
   ],
