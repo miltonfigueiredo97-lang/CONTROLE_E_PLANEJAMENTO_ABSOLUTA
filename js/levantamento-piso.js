@@ -104,6 +104,22 @@ const LP = (() => {
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
   }
 
+  // Por padrão o pdf.js busca a URL diretamente e usa cabeçalho Range (streaming),
+  // o que dispara um preflight OPTIONS que o Firebase Storage não libera via CORS
+  // (bucket sem CORS configurado para Range). Solução: baixar os bytes com um
+  // fetch simples (GET puro, sem headers extras) e entregar prontos ao pdf.js.
+  async function _carregarPdfDoc(url) {
+    let resp;
+    try {
+      resp = await fetch(url);
+    } catch (e) {
+      throw new Error('Não foi possível baixar o PDF (CORS/rede). Detalhe: ' + e.message);
+    }
+    if (!resp.ok) throw new Error('Falha ao baixar o PDF (HTTP ' + resp.status + ')');
+    const buf = await resp.arrayBuffer();
+    return await pdfjsLib.getDocument({ data: buf }).promise;
+  }
+
   function _areaPoligono(pts) {
     // Fórmula do Shoelace — retorna área em unidades de ponto-PDF²
     let a = 0;
@@ -186,7 +202,7 @@ const LP = (() => {
       await ref.put(file, { contentType: 'application/pdf' });
       const downloadURL = await ref.getDownloadURL();
 
-      const doc = await pdfjsLib.getDocument(downloadURL).promise;
+      const doc = await _carregarPdfDoc(downloadURL);
       const numPaginas = doc.numPages;
 
       await Database.criar(obraId, COL_PLANTAS, { nome, storagePath: path, downloadURL, numPaginas }, plantaId);
@@ -408,7 +424,7 @@ const LP = (() => {
       const pl = _plantaAtual(pav.plantaId);
       if (!pl) return;
       if (pdfDocPlantaId !== pl.id) {
-        pdfDoc = await pdfjsLib.getDocument(pl.downloadURL).promise;
+        pdfDoc = await _carregarPdfDoc(pl.downloadURL);
         pdfDocPlantaId = pl.id;
       }
       const page = await pdfDoc.getPage(pav.pagina);

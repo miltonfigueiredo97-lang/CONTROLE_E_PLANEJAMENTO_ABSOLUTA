@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.21.0',
+  versaoAtual: 'V2.21.1',
 
   versoes: [
     {
@@ -2553,7 +2553,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.21.0',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-13',
       tipo: 'funcionalidade',
       titulo: 'Novo módulo: Levantamento de Piso (medição sobre PDF)',
@@ -2577,6 +2577,21 @@ const NotasVersao = {
         'Painel lateral com lista de áreas medidas e totais por pavimento',
         'Dados: obras/{obraId}/pisoPlantas, pisoPavimentos, pisoAreas',
         'Card "🧩 Piso" adicionado ao hub de Levantamentos',
+      ]
+    },
+    {
+      versao: 'V2.21.1',
+      status: 'aberta',
+      data: '2026-07-13',
+      tipo: 'correcao',
+      titulo: 'Levantamento de Piso: corrigido erro de CORS ao ler o PDF',
+      itens: [
+        'Corrigido: pdf.js buscava a URL do Firebase Storage direto e usava',
+        '  cabeçalho Range (streaming), o que disparava um preflight OPTIONS',
+        '  bloqueado por CORS (bucket sem CORS configurado para Range)',
+        'Agora o PDF é baixado com um fetch simples (GET puro, sem headers',
+        '  extras) e os bytes são entregues prontos ao pdf.js — não depende',
+        '  de configurar CORS no bucket do Storage',
       ]
     }
   ],
