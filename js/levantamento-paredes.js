@@ -29,7 +29,7 @@ const LevantamentoParedes = (() => {
   const TIPOS_ACABAMENTO = [
     { id: 'gesso', label: 'Gesso Liso' },
     { id: 'reboco', label: 'Reboco' },
-    { id: 'revestimento', label: 'Revestimento' },
+    { id: 'revestimento', label: 'Revestimento de Parede' },
     { id: 'fachada', label: 'Fachada (não contabilizado)' },
   ];
 
@@ -163,6 +163,7 @@ const LevantamentoParedes = (() => {
     if (cfg.vao_modo === 'desconto_total') return areaTotal;
     if (cfg.vao_modo === 'parcial_considera') return areaUnitaria > limX ? Math.max(0, (areaUnitaria - valY) * qtdV) : 0;
     if (cfg.vao_modo === 'parcial_desconta') return areaUnitaria > limX ? valY * qtdV : 0;
+    if (cfg.vao_modo === 'maior_desconta_tudo') return areaUnitaria > limX ? areaTotal : 0;
     if (cfg.vao_modo === 'metade') return areaTotal / 2;
     return 0;
   }
@@ -203,22 +204,18 @@ const LevantamentoParedes = (() => {
     }
     return null;
   }
-  function _clonarSubarvore(node, novoNomeRaiz) {
-    const mapaIds = {};
-    function clone(n, nome) {
-      const novoId = _uid();
-      mapaIds[n.id] = novoId;
-      return { id: novoId, nome, filhos: (n.filhos || []).map(f => clone(f, f.nome)) };
-    }
-    const novoNode = clone(node, novoNomeRaiz);
-    return { novoNode, mapaIds };
+  function _ordenarNodes(nodes) {
+    return (nodes || []).slice().sort((a, b) => (a.nome || '').localeCompare(b.nome || '', 'pt-BR', { sensitivity: 'base' }));
+  }
+  function _ordenarPecas(lista) {
+    return (lista || []).slice().sort((a, b) => (a.nome || '').localeCompare(b.nome || '', 'pt-BR', { sensitivity: 'base', numeric: true }));
   }
   function _breadcrumb(nodeId) {
     const r = _acharNode(nodeId);
     return r ? r.path.join(' → ') : '';
   }
   function _listaNosFlat(nodes = arvore, path = [], out = []) {
-    nodes.forEach(n => {
+    _ordenarNodes(nodes).forEach(n => {
       out.push({ id: n.id, label: [...path, n.nome].join(' → ') });
       _listaNosFlat(n.filhos || [], [...path, n.nome], out);
     });
@@ -239,22 +236,35 @@ const LevantamentoParedes = (() => {
     const mlPct = (num(cfg.ml_percentual) || 50) / 100;
     const ml = podeML ? Math.max(compM, altM) : 0;
     const m2comPuro = podeML ? 0 : areaLiquida;
+    const vedacao = p.tipoAlvenaria === 'vedacao' ? areaLiquida : 0;
+    const estrutural = p.tipoAlvenaria === 'estrutural' ? areaLiquida : 0;
     return {
       areaBruta, areaVaos, areaLiquida, podeML, mlPct, ml, m2comPuro,
-      vedacao: p.tipoAlvenaria === 'vedacao' ? areaLiquida : 0,
-      estrutural: p.tipoAlvenaria === 'estrutural' ? areaLiquida : 0,
+      vedacao, estrutural,
+      mlVedacao: p.tipoAlvenaria === 'vedacao' ? ml : 0,
+      mlEstrutural: p.tipoAlvenaria === 'estrutural' ? ml : 0,
+      m2comPuroVedacao: p.tipoAlvenaria === 'vedacao' ? m2comPuro : 0,
+      m2comPuroEstrutural: p.tipoAlvenaria === 'estrutural' ? m2comPuro : 0,
     };
   }
 
   function _totaisAlvenaria(lista) {
     const cfg = _getCfg();
-    const t = { vedacao: 0, estrutural: 0, areaLiquida: 0, ml: 0, mlEquiv: 0, m2comPuro: 0, qtdPecas: lista.length };
+    const t = {
+      vedacao: 0, estrutural: 0, areaLiquida: 0, ml: 0, mlEquiv: 0, m2comPuro: 0, qtdPecas: lista.length,
+      mlVedacao: 0, mlEstrutural: 0, mlEquivVedacao: 0, mlEquivEstrutural: 0, m2comPuroVedacao: 0, m2comPuroEstrutural: 0,
+    };
     lista.forEach(p => {
       const c = _calcularAlvenaria(p, cfg);
       t.vedacao += c.vedacao; t.estrutural += c.estrutural; t.areaLiquida += c.areaLiquida;
       t.ml += c.ml; t.mlEquiv += c.ml * c.mlPct; t.m2comPuro += c.m2comPuro;
+      t.mlVedacao += c.mlVedacao; t.mlEstrutural += c.mlEstrutural;
+      t.mlEquivVedacao += c.mlVedacao * c.mlPct; t.mlEquivEstrutural += c.mlEstrutural * c.mlPct;
+      t.m2comPuroVedacao += c.m2comPuroVedacao; t.m2comPuroEstrutural += c.m2comPuroEstrutural;
     });
     t.m2comEquiv = t.m2comPuro + t.mlEquiv;
+    t.m2comEquivVedacao = t.m2comPuroVedacao + t.mlEquivVedacao;
+    t.m2comEquivEstrutural = t.m2comPuroEstrutural + t.mlEquivEstrutural;
     return t;
   }
 
@@ -274,50 +284,91 @@ const LevantamentoParedes = (() => {
     const m2comPuro = podeML ? 0 : areaLiquida;
 
     const acabTotais = { gesso: 0, reboco: 0, revestimento: 0 };
+    const mlTotais = { gesso: 0, reboco: 0, revestimento: 0 };
     (p.acabamentos || []).forEach(a => {
-      const area = areaLiquida * (num(a.pct) / 100);
-      if (acabTotais[a.tipo] != null) acabTotais[a.tipo] += area;
+      const pct = num(a.pct) / 100;
+      if (acabTotais[a.tipo] != null) { acabTotais[a.tipo] += areaLiquida * pct; mlTotais[a.tipo] += ml * pct; }
     });
+
     const pinturaTotais = {};
     let pinturaArea = 0;
+    let mlPintura = 0;
     if (p.temPintura) {
       (p.pintura || []).forEach(pt => {
-        const area = areaLiquida * (num(pt.pct) / 100);
-        pinturaArea += area;
+        const pct = num(pt.pct) / 100;
+        pinturaArea += areaLiquida * pct;
+        mlPintura += ml * pct;
         const cor = pt.cor || '(sem nome)';
-        pinturaTotais[cor] = (pinturaTotais[cor] || 0) + area;
+        pinturaTotais[cor] = (pinturaTotais[cor] || 0) + areaLiquida * pct;
       });
     }
+
     return {
       areaBruta, areaVaos, areaLiquida, podeML, mlPct, ml, m2comPuro,
       gesso: acabTotais.gesso, reboco: acabTotais.reboco, revestimento: acabTotais.revestimento,
       pintura: pinturaArea, pinturaPorCor: pinturaTotais,
+      mlGesso: mlTotais.gesso, mlReboco: mlTotais.reboco, mlRevestimento: mlTotais.revestimento, mlPintura,
+      m2comPuroGesso: podeML ? 0 : acabTotais.gesso,
+      m2comPuroReboco: podeML ? 0 : acabTotais.reboco,
+      m2comPuroRevestimento: podeML ? 0 : acabTotais.revestimento,
+      m2comPuroPintura: podeML ? 0 : pinturaArea,
     };
   }
 
   function _totaisAcabamento(lista) {
     const cfg = _getCfg();
-    const t = { gesso: 0, reboco: 0, revestimento: 0, pintura: 0, pinturaPorCor: {}, areaLiquida: 0, ml: 0, mlEquiv: 0, m2comPuro: 0, qtdPecas: lista.length };
+    const t = {
+      gesso: 0, reboco: 0, revestimento: 0, pintura: 0, pinturaPorCor: {}, areaLiquida: 0, ml: 0, mlEquiv: 0, m2comPuro: 0, qtdPecas: lista.length,
+      mlGesso: 0, mlReboco: 0, mlRevestimento: 0, mlPintura: 0,
+      mlEquivGesso: 0, mlEquivReboco: 0, mlEquivRevestimento: 0, mlEquivPintura: 0,
+      m2comPuroGesso: 0, m2comPuroReboco: 0, m2comPuroRevestimento: 0, m2comPuroPintura: 0,
+    };
     lista.forEach(p => {
       const c = _calcularAcabamento(p, cfg);
       t.gesso += c.gesso; t.reboco += c.reboco; t.revestimento += c.revestimento; t.pintura += c.pintura;
       t.areaLiquida += c.areaLiquida; t.ml += c.ml; t.mlEquiv += c.ml * c.mlPct; t.m2comPuro += c.m2comPuro;
+      t.mlGesso += c.mlGesso; t.mlReboco += c.mlReboco; t.mlRevestimento += c.mlRevestimento; t.mlPintura += c.mlPintura;
+      t.mlEquivGesso += c.mlGesso * c.mlPct; t.mlEquivReboco += c.mlReboco * c.mlPct;
+      t.mlEquivRevestimento += c.mlRevestimento * c.mlPct; t.mlEquivPintura += c.mlPintura * c.mlPct;
+      t.m2comPuroGesso += c.m2comPuroGesso; t.m2comPuroReboco += c.m2comPuroReboco;
+      t.m2comPuroRevestimento += c.m2comPuroRevestimento; t.m2comPuroPintura += c.m2comPuroPintura;
       Object.entries(c.pinturaPorCor).forEach(([cor, area]) => { t.pinturaPorCor[cor] = (t.pinturaPorCor[cor] || 0) + area; });
     });
     t.m2comEquiv = t.m2comPuro + t.mlEquiv;
+    t.m2comEquivGesso = t.m2comPuroGesso + t.mlEquivGesso;
+    t.m2comEquivReboco = t.m2comPuroReboco + t.mlEquivReboco;
+    t.m2comEquivRevestimento = t.m2comPuroRevestimento + t.mlEquivRevestimento;
+    t.m2comEquivPintura = t.m2comPuroPintura + t.mlEquivPintura;
     return t;
   }
 
-  function _htmlBarraML(t) {
+  // Barra de Metro Linear detalhada por categoria (Vedação/Estrutural na
+  // Alvenaria; Gesso/Reboco/Revestimento/Pintura no Acabamento).
+  function _htmlBarraMLPorCategoria(categorias) {
     return `
       <div class="cc-panel">
-        <div class="cc-panelTitle">📏 Metro Linear</div>
-        <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:0.85rem;">
-          <span>m² sem ML: <strong>${fmt2(t.areaLiquida)}</strong></span>
-          <span>ML: <strong>${fmt2(t.ml)}</strong></span>
-          <span>m² com ML equivalente: <strong style="color:var(--cor-primaria-dark);">${fmt2(t.m2comEquiv)}</strong></span>
-        </div>
+        <div class="cc-panelTitle">📏 Metro Linear por Categoria</div>
+        <div class="tabela-container"><table class="tabela">
+          <thead><tr><th>Categoria</th><th style="text-align:right;">m² sem ML</th><th style="text-align:right;">ML</th><th style="text-align:right;">m² com ML equivalente</th></tr></thead>
+          <tbody>
+            ${categorias.map(c => `<tr><td><strong>${esc(c.label)}</strong></td><td style="text-align:right;">${fmt2(c.semML)}</td><td style="text-align:right;">${fmt2(c.ml)}</td><td style="text-align:right;color:var(--cor-primaria-dark);font-weight:600;">${fmt2(c.comEquiv)}</td></tr>`).join('')}
+          </tbody>
+        </table></div>
       </div>`;
+  }
+  function _barraMLAlvenaria(t) {
+    return _htmlBarraMLPorCategoria([
+      { label: 'Vedação', semML: t.vedacao, ml: t.mlVedacao, comEquiv: t.m2comEquivVedacao },
+      { label: 'Estrutural', semML: t.estrutural, ml: t.mlEstrutural, comEquiv: t.m2comEquivEstrutural },
+    ]);
+  }
+  function _barraMLAcabamento(t) {
+    return _htmlBarraMLPorCategoria([
+      { label: 'Gesso Liso', semML: t.gesso, ml: t.mlGesso, comEquiv: t.m2comEquivGesso },
+      { label: 'Reboco', semML: t.reboco, ml: t.mlReboco, comEquiv: t.m2comEquivReboco },
+      { label: 'Revestimento de Parede', semML: t.revestimento, ml: t.mlRevestimento, comEquiv: t.m2comEquivRevestimento },
+      { label: 'Pintura', semML: t.pintura, ml: t.mlPintura, comEquiv: t.m2comEquivPintura },
+    ]);
   }
 
   // ══════════════════════════════════════════
@@ -359,7 +410,7 @@ const LevantamentoParedes = (() => {
 
   function _renderArvoreNivel(nodes) {
     const pecasAtuais = _pecasAtual();
-    return nodes.map(n => {
+    return _ordenarNodes(nodes).map(n => {
       const aberto = openNodes.has(n.id);
       const ativo = selNodeId === n.id;
       const ids = _idsComDescendentes(n);
@@ -370,7 +421,7 @@ const LevantamentoParedes = (() => {
         <span class="tree-label">${esc(n.nome)}</span>
         ${nPecas ? `<span class="tree-badge">${nPecas}</span>` : ''}
         <button class="tree-edit-btn" onclick="event.stopPropagation();LP.renomearNode('${n.id}')" title="Renomear">✎</button>
-        <button class="tree-clone-btn" onclick="event.stopPropagation();LP.clonarNode('${n.id}')" title="Clonar local (com sublocais, alvenaria e acabamento)">⧉</button>
+        <button class="tree-clone-btn" onclick="event.stopPropagation();LP.abrirClonarNode('${n.id}')" title="Clonar peças de outro local para este">⧉</button>
         <button class="tree-del-btn" onclick="event.stopPropagation();LP.excluirNode('${n.id}')" title="Excluir">✕</button>
       </div>`;
       if (aberto) {
@@ -418,14 +469,14 @@ const LevantamentoParedes = (() => {
         <div class="cc-kpi"><div class="cc-kpiIcon">🧱</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Alvenaria de Vedação</div><div class="cc-kpiValue">${fmt2(t.vedacao)}<span class="cc-kpiUnit">m²</span></div></div></div>
         <div class="cc-kpi"><div class="cc-kpiIcon">🧱</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Alvenaria Estrutural</div><div class="cc-kpiValue">${fmt2(t.estrutural)}<span class="cc-kpiUnit">m²</span></div></div></div>
       </div>
-      ${_htmlBarraML(t)}
+      ${_barraMLAlvenaria(t)}
       <div class="cc-panel">
         <div class="cc-panelTitle">📍 Resumo por Local (nível superior)</div>
         ${!arvore.length ? `<div class="cc-empty">Cadastre locais na árvore ao lado para ver o resumo.</div>` : `
         <div class="tabela-container"><table class="tabela">
           <thead><tr><th>Local</th><th style="text-align:right;">Paredes</th><th style="text-align:right;">Vedação</th><th style="text-align:right;">Estrutural</th></tr></thead>
           <tbody>
-            ${arvore.map(raiz => {
+            ${_ordenarNodes(arvore).map(raiz => {
               const ids = _idsComDescendentes(raiz);
               const lst = pecasAlvenaria.filter(p => ids.includes(p.nodeId));
               const rt = _totaisAlvenaria(lst);
@@ -448,10 +499,10 @@ const LevantamentoParedes = (() => {
       <div class="cc-kpiGrid" style="grid-template-columns:repeat(4,1fr);">
         <div class="cc-kpi"><div class="cc-kpiIcon">🏳️</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Gesso Liso</div><div class="cc-kpiValue">${fmt2(t.gesso)}<span class="cc-kpiUnit">m²</span></div><div class="cc-kpiSub">Chapisco + Gesso na mesma área</div></div></div>
         <div class="cc-kpi"><div class="cc-kpiIcon">🪨</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Reboco</div><div class="cc-kpiValue">${fmt2(t.reboco)}<span class="cc-kpiUnit">m²</span></div><div class="cc-kpiSub">Chapisco + Massa na mesma área</div></div></div>
-        <div class="cc-kpi"><div class="cc-kpiIcon">◻️</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Revestimento</div><div class="cc-kpiValue">${fmt2(t.revestimento)}<span class="cc-kpiUnit">m²</span></div><div class="cc-kpiSub">Porcelanato / cerâmica</div></div></div>
+        <div class="cc-kpi"><div class="cc-kpiIcon">◻️</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Revestimento de Parede</div><div class="cc-kpiValue">${fmt2(t.revestimento)}<span class="cc-kpiUnit">m²</span></div><div class="cc-kpiSub">Porcelanato / cerâmica</div></div></div>
         <div class="cc-kpi"><div class="cc-kpiIcon">🎨</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Pintura</div><div class="cc-kpiValue">${fmt2(t.pintura)}<span class="cc-kpiUnit">m²</span></div></div></div>
       </div>
-      ${_htmlBarraML(t)}
+      ${_barraMLAcabamento(t)}
       <div class="cc-panel">
         <div class="cc-panelTitle">🎨 Pintura por Cor</div>
         ${!coresOrdenadas.length ? `<div class="cc-empty">Nenhuma pintura lançada ainda.</div>` : `
@@ -468,7 +519,7 @@ const LevantamentoParedes = (() => {
         <div class="tabela-container"><table class="tabela">
           <thead><tr><th>Local</th><th style="text-align:right;">Faces</th><th style="text-align:right;">Gesso</th><th style="text-align:right;">Reboco</th><th style="text-align:right;">Rev.</th><th style="text-align:right;">Pintura</th></tr></thead>
           <tbody>
-            ${arvore.map(raiz => {
+            ${_ordenarNodes(arvore).map(raiz => {
               const ids = _idsComDescendentes(raiz);
               const lst = pecasAcabamento.filter(p => ids.includes(p.nodeId));
               const rt = _totaisAcabamento(lst);
@@ -493,7 +544,7 @@ const LevantamentoParedes = (() => {
         <div><h2 style="font-size:1.1rem;">${esc(r.path.join(' → '))} <span class="text-sm text-muted">— Alvenaria</span></h2>
           <span class="subtitulo">${listaSubtree.length} parede(s) no total${temFilhos ? ` (${listaDireta.length} direta[s] neste local)` : ''} · ${fmt2(tSub.areaLiquida)} m²</span></div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          <button class="btn btn-secundario btn-sm" onclick="LP.clonarNode('${selNodeId}')" title="Clonar local">⧉ Clonar Local</button>
+          <button class="btn btn-secundario btn-sm" onclick="LP.abrirClonarNode('${selNodeId}')" title="Clonar peças de outro local para este">⧉ Clonar de Outro Local</button>
           <button class="btn btn-primario btn-sm" onclick="LP.novaAlvenaria()">+ Nova Parede</button>
         </div>
       </div>
@@ -501,7 +552,7 @@ const LevantamentoParedes = (() => {
         <div class="cc-kpi"><div class="cc-kpiIcon">🧱</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Vedação</div><div class="cc-kpiValue">${fmt2(tSub.vedacao)}<span class="cc-kpiUnit">m²</span></div></div></div>
         <div class="cc-kpi"><div class="cc-kpiIcon">🧱</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Estrutural</div><div class="cc-kpiValue">${fmt2(tSub.estrutural)}<span class="cc-kpiUnit">m²</span></div></div></div>
       </div>
-      ${_htmlBarraML(tSub)}`;
+      ${_barraMLAlvenaria(tSub)}`;
 
     if (temFilhos) {
       html += `
@@ -510,7 +561,7 @@ const LevantamentoParedes = (() => {
         <div class="tabela-container"><table class="tabela">
           <thead><tr><th>Sublocal</th><th style="text-align:right;">Paredes</th><th style="text-align:right;">Vedação</th><th style="text-align:right;">Estrutural</th><th></th></tr></thead>
           <tbody>
-            ${node.filhos.map(f => {
+            ${_ordenarNodes(node.filhos).map(f => {
               const idsF = _idsComDescendentes(f);
               const lstF = pecasAlvenaria.filter(p => idsF.includes(p.nodeId));
               const tF = _totaisAlvenaria(lstF);
@@ -519,7 +570,7 @@ const LevantamentoParedes = (() => {
                 <td style="text-align:right;">${tF.qtdPecas}</td>
                 <td style="text-align:right;">${fmt2(tF.vedacao)}</td>
                 <td style="text-align:right;">${fmt2(tF.estrutural)}</td>
-                <td style="white-space:nowrap;" onclick="event.stopPropagation();"><button class="btn btn-secundario btn-sm" onclick="LP.clonarNode('${f.id}')" title="Clonar">⧉</button></td>
+                <td style="white-space:nowrap;" onclick="event.stopPropagation();"><button class="btn btn-secundario btn-sm" onclick="LP.abrirClonarNode('${f.id}')" title="Clonar de outro local">⧉</button></td>
               </tr>`;
             }).join('')}
           </tbody>
@@ -532,7 +583,7 @@ const LevantamentoParedes = (() => {
       ${!listaDireta.length ? `<div class="cc-empty">Nenhuma parede lançada diretamente aqui ainda.${temFilhos ? ' Veja o resumo por sublocal acima ou' : ''} Clique em "+ Nova Parede" para começar.</div>` : `
       <div class="tabela-container"><table class="tabela">
         <thead><tr><th>Parede</th><th>Comp x Alt (cm)</th><th style="text-align:right;">m²</th><th>Tipo</th><th></th></tr></thead>
-        <tbody>${listaDireta.map(p => _renderLinhaAlvenaria(p)).join('')}</tbody>
+        <tbody>${_ordenarPecas(listaDireta).map(p => _renderLinhaAlvenaria(p)).join('')}</tbody>
       </table></div>`}
     </div>`;
 
@@ -553,17 +604,17 @@ const LevantamentoParedes = (() => {
         <div><h2 style="font-size:1.1rem;">${esc(r.path.join(' → '))} <span class="text-sm text-muted">— Acabamento</span></h2>
           <span class="subtitulo">${listaSubtree.length} face(s) no total${temFilhos ? ` (${listaDireta.length} direta[s] neste local)` : ''} · ${fmt2(tSub.areaLiquida)} m²</span></div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          <button class="btn btn-secundario btn-sm" onclick="LP.clonarNode('${selNodeId}')" title="Clonar local">⧉ Clonar Local</button>
+          <button class="btn btn-secundario btn-sm" onclick="LP.abrirClonarNode('${selNodeId}')" title="Clonar peças de outro local para este">⧉ Clonar de Outro Local</button>
           <button class="btn btn-primario btn-sm" onclick="LP.novaAcabamento()">+ Nova Face</button>
         </div>
       </div>
       <div class="cc-kpiGrid" style="grid-template-columns:repeat(4,1fr);margin-bottom:16px;">
         <div class="cc-kpi"><div class="cc-kpiIcon">🏳️</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Gesso Liso</div><div class="cc-kpiValue">${fmt2(tSub.gesso)}<span class="cc-kpiUnit">m²</span></div></div></div>
         <div class="cc-kpi"><div class="cc-kpiIcon">🪨</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Reboco</div><div class="cc-kpiValue">${fmt2(tSub.reboco)}<span class="cc-kpiUnit">m²</span></div></div></div>
-        <div class="cc-kpi"><div class="cc-kpiIcon">◻️</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Revestimento</div><div class="cc-kpiValue">${fmt2(tSub.revestimento)}<span class="cc-kpiUnit">m²</span></div></div></div>
+        <div class="cc-kpi"><div class="cc-kpiIcon">◻️</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Revestimento de Parede</div><div class="cc-kpiValue">${fmt2(tSub.revestimento)}<span class="cc-kpiUnit">m²</span></div></div></div>
         <div class="cc-kpi"><div class="cc-kpiIcon">🎨</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Pintura</div><div class="cc-kpiValue">${fmt2(tSub.pintura)}<span class="cc-kpiUnit">m²</span></div></div></div>
       </div>
-      ${_htmlBarraML(tSub)}`;
+      ${_barraMLAcabamento(tSub)}`;
 
     if (temFilhos) {
       html += `
@@ -572,7 +623,7 @@ const LevantamentoParedes = (() => {
         <div class="tabela-container"><table class="tabela">
           <thead><tr><th>Sublocal</th><th style="text-align:right;">Faces</th><th style="text-align:right;">Gesso</th><th style="text-align:right;">Reboco</th><th style="text-align:right;">Rev.</th><th style="text-align:right;">Pintura</th><th></th></tr></thead>
           <tbody>
-            ${node.filhos.map(f => {
+            ${_ordenarNodes(node.filhos).map(f => {
               const idsF = _idsComDescendentes(f);
               const lstF = pecasAcabamento.filter(p => idsF.includes(p.nodeId));
               const tF = _totaisAcabamento(lstF);
@@ -583,7 +634,7 @@ const LevantamentoParedes = (() => {
                 <td style="text-align:right;">${fmt2(tF.reboco)}</td>
                 <td style="text-align:right;">${fmt2(tF.revestimento)}</td>
                 <td style="text-align:right;">${fmt2(tF.pintura)}</td>
-                <td style="white-space:nowrap;" onclick="event.stopPropagation();"><button class="btn btn-secundario btn-sm" onclick="LP.clonarNode('${f.id}')" title="Clonar">⧉</button></td>
+                <td style="white-space:nowrap;" onclick="event.stopPropagation();"><button class="btn btn-secundario btn-sm" onclick="LP.abrirClonarNode('${f.id}')" title="Clonar de outro local">⧉</button></td>
               </tr>`;
             }).join('')}
           </tbody>
@@ -596,7 +647,7 @@ const LevantamentoParedes = (() => {
       ${!listaDireta.length ? `<div class="cc-empty">Nenhuma face de acabamento lançada diretamente aqui ainda.${temFilhos ? ' Veja o resumo por sublocal acima ou' : ''} Clique em "+ Nova Face" para começar.</div>` : `
       <div class="tabela-container"><table class="tabela">
         <thead><tr><th>Face</th><th>Comp x Alt (cm)</th><th style="text-align:right;">m²</th><th>Acabamento</th><th></th></tr></thead>
-        <tbody>${listaDireta.map(p => _renderLinhaAcabamento(p)).join('')}</tbody>
+        <tbody>${_ordenarPecas(listaDireta).map(p => _renderLinhaAcabamento(p)).join('')}</tbody>
       </table></div>`}
     </div>`;
 
@@ -731,26 +782,52 @@ const LevantamentoParedes = (() => {
     }
   }
 
-  async function clonarNode(id) {
-    const r = _acharNode(id); if (!r) return;
-    const ok = await Utils.confirmar(`Clonar "${r.node.nome}" com todos os sublocais, alvenaria e acabamento, como "${r.node.nome} (cópia)"?`);
-    if (!ok) return;
-    Utils.mostrarLoading();
+  // Clonar peças de OUTRO local para dentro deste (mantém o local atual,
+  // igual ao mecanismo do Levantamento de Fachada) — substitui o que já
+  // existir no local de destino pelas peças clonadas da origem.
+  let clonarAlvoId = null;
+
+  function abrirClonarNode(nodeId) {
+    const alvo = _acharNode(nodeId); if (!alvo) return;
+    clonarAlvoId = nodeId;
+    const opts = _listaNosFlat().filter(o => o.id !== nodeId);
+    const sel = document.getElementById('lp-clonar-origem');
+    if (sel) sel.innerHTML = '<option value="">Selecione...</option>' + opts.map(o => `<option value="${o.id}">${esc(o.label)}</option>`).join('');
+    document.getElementById('lp-clonar-titulo').textContent = `Clonar peças para "${alvo.node.nome}"`;
+    Utils.abrirModal('modal-lp-clonar');
+  }
+
+  async function confirmarClonarNode() {
+    const origemId = document.getElementById('lp-clonar-origem')?.value;
+    if (!origemId) { Utils.toast('Selecione um local de origem.', 'alerta'); return; }
+    const alvoId = clonarAlvoId;
+    const alvoR = _acharNode(alvoId);
+    const origemR = _acharNode(origemId);
+    if (!alvoR || !origemR) return;
+
+    const alvAlvoAtuais = pecasAlvenaria.filter(p => p.nodeId === alvoId);
+    const acabAlvoAtuais = pecasAcabamento.filter(p => p.nodeId === alvoId);
+    if (alvAlvoAtuais.length || acabAlvoAtuais.length) {
+      const ok = await Utils.confirmar(`"${alvoR.node.nome}" já possui ${alvAlvoAtuais.length} parede(s) de alvenaria e ${acabAlvoAtuais.length} face(s) de acabamento. Elas serão substituídas pelas peças clonadas de "${origemR.node.nome}". Continuar?`);
+      if (!ok) return;
+    }
+    Utils.fecharModal('modal-lp-clonar');
+    Utils.mostrarLoading('Clonando peças...');
     try {
-      const parentArr = _acharArrayPai(id);
-      if (!parentArr) throw new Error('Não foi possível localizar o local pai.');
-      const { novoNode, mapaIds } = _clonarSubarvore(r.node, r.node.nome + ' (cópia)');
-      parentArr.push(novoNode);
-      const oldIds = _idsComDescendentes(r.node);
-      const novasAlv = pecasAlvenaria.filter(p => oldIds.includes(p.nodeId));
-      const novasAcab = pecasAcabamento.filter(p => oldIds.includes(p.nodeId));
-      const ops = [
-        ...novasAlv.map(p => { const { id: _pid, ...rest } = p; return { type: 'set', ref: Database.ref(obraId, COL_ALV).doc(), data: { ...rest, nodeId: mapaIds[p.nodeId] } }; }),
-        ...novasAcab.map(p => { const { id: _pid, ...rest } = p; return { type: 'set', ref: Database.ref(obraId, COL_ACAB).doc(), data: { ...rest, nodeId: mapaIds[p.nodeId] } }; }),
+      const delOps = [
+        ...alvAlvoAtuais.map(p => ({ type: 'delete', ref: Database.ref(obraId, COL_ALV).doc(p.id) })),
+        ...acabAlvoAtuais.map(p => ({ type: 'delete', ref: Database.ref(obraId, COL_ACAB).doc(p.id) })),
       ];
-      for (let i = 0; i < ops.length; i += 400) await Database.batchWrite(ops.slice(i, i + 400));
-      await _salvarArvore();
-      Utils.toast(`✓ "${r.node.nome}" clonado com ${novasAlv.length} parede(s) e ${novasAcab.length} face(s)!`, 'sucesso');
+      for (let i = 0; i < delOps.length; i += 400) await Database.batchWrite(delOps.slice(i, i + 400));
+
+      const alvOrigem = pecasAlvenaria.filter(p => p.nodeId === origemId);
+      const acabOrigem = pecasAcabamento.filter(p => p.nodeId === origemId);
+      const addOps = [
+        ...alvOrigem.map(p => { const { id: _pid, ...rest } = p; return { type: 'set', ref: Database.ref(obraId, COL_ALV).doc(), data: { ...rest, nodeId: alvoId, conferido: false } }; }),
+        ...acabOrigem.map(p => { const { id: _pid, ...rest } = p; return { type: 'set', ref: Database.ref(obraId, COL_ACAB).doc(), data: { ...rest, nodeId: alvoId, conferido: false } }; }),
+      ];
+      for (let i = 0; i < addOps.length; i += 400) await Database.batchWrite(addOps.slice(i, i + 400));
+      Utils.toast(`✓ ${alvOrigem.length} parede(s) e ${acabOrigem.length} face(s) clonadas de "${origemR.node.nome}"!`, 'sucesso');
       await carregar();
     } catch (e) {
       Utils.toast('Erro ao clonar: ' + e.message, 'erro');
@@ -1279,11 +1356,12 @@ const LevantamentoParedes = (() => {
     const row = document.getElementById('lp-cfg-vao-limite-row');
     const hint = document.getElementById('lp-cfg-vao-hint');
     if (!row) return;
-    const mostra = modo === 'parcial_considera' || modo === 'parcial_desconta';
+    const mostra = modo === 'parcial_considera' || modo === 'parcial_desconta' || modo === 'maior_desconta_tudo';
     row.style.display = mostra ? 'block' : 'none';
     if (hint) {
       if (modo === 'parcial_considera') hint.textContent = 'Considera Y m² por vão';
       else if (modo === 'parcial_desconta') hint.textContent = 'Desconta Y m² por vão';
+      else if (modo === 'maior_desconta_tudo') hint.textContent = 'Não usado neste modo — só X importa';
       else hint.textContent = '';
     }
   }
@@ -1305,7 +1383,7 @@ const LevantamentoParedes = (() => {
   return {
     init, recarregar, renderizar, setAba,
     selGeral, selNode, toggleNode,
-    novoNode, renomearNode, salvarNode, excluirNode, clonarNode,
+    novoNode, renomearNode, salvarNode, excluirNode, abrirClonarNode, confirmarClonarNode,
     duplicarPeca, conferirPeca, abrirMoverPeca, confirmarMoverPeca, excluirPeca,
     calcExprEnter, onClickPodeML,
     novaAlvenaria, editarAlvenaria, salvarAlvenaria, updAlv, toggleVaoAlv,

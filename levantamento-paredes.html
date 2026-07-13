@@ -45,7 +45,7 @@
       <a href="histograma.html"><span class="nav-icon">📊</span> Histograma</a>
       <a href="admin-permissoes.html"><span class="nav-icon">🔑</span> Permissões</a>
       <div class="sidebar-section-title">Sistema</div>
-      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V2.20.0</span></a>
+      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V2.20.1</span></a>
     </nav>
     <div class="sidebar-user">
       <div class="user-avatar">U</div>
@@ -139,6 +139,7 @@
           <select id="lp-cfg-vao-modo" class="form-control" onchange="LP.onChangeCfgVao(this)">
             <option value="nenhum">Não Descontar — vão não reduz o m²</option>
             <option value="desconto_total">Desconto Total — desconta toda a área do vão do m²</option>
+            <option value="maior_desconta_tudo">Limite Total — vãos maiores que X m² descontam tudo, menores não descontam nada</option>
             <option value="parcial_considera">Desconto Parcial 1 — para vãos maiores que X m², considera apenas X m²</option>
             <option value="parcial_desconta">Desconto Parcial 2 — para vãos maiores que X m², desconta apenas X m²</option>
             <option value="metade">Metade — considera metade e descarta metade</option>
@@ -180,6 +181,27 @@
     <div class="modal-footer">
       <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-lp-config')">Cancelar</button>
       <button class="btn btn-primario" onclick="LP.salvarConfig()">Salvar e Recalcular</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: clonar peças de outro local para este -->
+<div class="modal-overlay" id="modal-lp-clonar">
+  <div class="modal" style="max-width:460px;">
+    <div class="modal-header">
+      <h3 id="lp-clonar-titulo">Clonar peças</h3>
+      <button class="modal-close" onclick="Utils.fecharModal('modal-lp-clonar')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p class="text-sm text-muted mb-2">Escolha o local de origem — as paredes de alvenaria e faces de acabamento dele serão copiadas para cá, substituindo o que já existir neste local.</p>
+      <div class="form-grupo">
+        <label>Local de origem</label>
+        <select id="lp-clonar-origem" class="form-control"></select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-lp-clonar')">Cancelar</button>
+      <button class="btn btn-primario" onclick="LP.confirmarClonarNode()">Clonar</button>
     </div>
   </div>
 </div>

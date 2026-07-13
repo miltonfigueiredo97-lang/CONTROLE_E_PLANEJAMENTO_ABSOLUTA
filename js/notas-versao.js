@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.20.0',
+  versaoAtual: 'V2.20.1',
 
   versoes: [
     {
@@ -2486,7 +2486,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.20.0',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-13',
       tipo: 'funcionalidade',
       titulo: 'Levantamento de Paredes: separado em Alvenaria x Acabamento (corrige duplicação de m² estrutural)',
@@ -2520,6 +2520,35 @@ const NotasVersao = {
         '  ainda está em fase de testes e prefere recomeçar do zero',
         '  nas duas coleções novas (paredesAlvenariaPecas e',
         '  paredesAcabamentoPecas) em vez de migrar os dados antigos',
+      ]
+    },
+    {
+      versao: 'V2.20.1',
+      status: 'aberta',
+      data: '2026-07-13',
+      tipo: 'funcionalidade',
+      titulo: 'Levantamento de Paredes: ordem alfabética, clonar entre locais, ML por categoria e novo modo de vão',
+      itens: [
+        'Locais (árvore) e Faces/Paredes lançadas agora aparecem em',
+        '  ordem alfabética em todas as listas e tabelas',
+        'CLONAR mudou de comportamento: em vez de criar uma cópia do',
+        '  local (duplicar), agora clona as peças de OUTRO local já',
+        '  existente para dentro do local selecionado — igual ao',
+        '  Levantamento de Fachada. Se o local de destino já tiver',
+        '  peças, elas são substituídas pelas peças clonadas (com',
+        '  confirmação antes de substituir)',
+        'Metro Linear agora é detalhado por categoria em vez de um',
+        '  número só: painel "📏 Metro Linear por Categoria" mostra',
+        '  m² sem ML / ML / m² com ML equivalente separado por',
+        '  Vedação e Estrutural (aba Alvenaria) e por Gesso Liso,',
+        '  Reboco, Revestimento de Parede e Pintura (aba Acabamento)',
+        '  — cada categoria com seu próprio percentual de ML de',
+        '  acordo com a mistura de acabamento da face',
+        '"Revestimento" renomeado para "Revestimento de Parede" em',
+        '  todo o módulo (seletor de acabamento, cards, resumos)',
+        'Configurações de Cálculo: novo modo de vão "Limite Total" —',
+        '  vãos maiores que X m² descontam 100% da área; vãos',
+        '  menores que X não descontam nada',
       ]
     }
   ],
