@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.18.1',
+  versaoAtual: 'V2.18.2',
 
   versoes: [
     {
@@ -2224,7 +2224,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.18.1',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-12',
       tipo: 'melhoria',
       titulo: 'Vínculos com Levantamento: busca, seleção granular, divisão entre irmãos, exclusão em cascata',
@@ -2261,6 +2261,33 @@ const NotasVersao = {
         '  funcionando normalmente, mas recomendo refazer usando a',
         '  nova tela pra aproveitar a seleção granular e a divisão',
         '  automática',
+      ]
+    },
+    {
+      versao: 'V2.18.2',
+      status: 'aberta',
+      data: '2026-07-12',
+      tipo: 'correcao',
+      titulo: 'Vínculos com Levantamento: cascata corrigida + scroll do modal não pula mais pro topo',
+      itens: [
+        'EXCLUSÃO EM CASCATA CORRIGIDA: a versão anterior só cascateava',
+        '  se o vínculo tivesse sido salvo com o campo de rastreio de',
+        '  grupo (levantamentoOrigemId) — vínculos que não tinham esse',
+        '  campo (ou qualquer caso em que não batesse certinho) não',
+        '  cascateavam. Agora a cascata é baseada direto na hierarquia',
+        '  real do Planejamento: remover o vínculo de uma tarefa',
+        '  remove junto o de TODOS os descendentes dela (filhos, netos',
+        '  etc.) que também estejam vinculados a levantamento — não',
+        '  depende mais de nenhum campo de rastreio, funciona tanto',
+        '  pra vínculos novos quanto antigos',
+        '',
+        'SCROLL DO MODAL CORRIGIDO: no modal de "Vincular quantidade",',
+        '  cada clique num checkbox, edição de fração ou clique no',
+        '  botão "÷ Dividir" fazia a lista de tarefas voltar pro topo',
+        '  — muito ruim em grupos com vários irmãos (ex: 8 etapas),',
+        '  porque cada ação te jogava de volta lá em cima. Agora a',
+        '  posição de rolagem da lista fica exatamente onde você',
+        '  estava mexendo',
       ]
     }
   ],

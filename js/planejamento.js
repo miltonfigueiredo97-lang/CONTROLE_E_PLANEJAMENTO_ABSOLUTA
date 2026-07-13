@@ -399,6 +399,8 @@ const Planejamento = (() => {
     const mod=LEVANTAMENTO_MODULOS[_vincModulo];
     const baseValor=_calcularMetrica(_vincModulo,_vincMetrica);
     const fam=Utils.percFamilia(tarefas);
+    const arvoreAntiga=document.getElementById('planej-vinculo-arvore');
+    const scrollAnterior=arvoreAntiga?arvoreAntiga.scrollTop:0;
 
     const linha=(node,nivelRel)=>{
       const incluso=_vincIncluidos.has(node.id);
@@ -444,6 +446,8 @@ const Planejamento = (() => {
         ${renderNode(t,0)}
       </div>
       <div class="text-sm text-muted" style="margin-top:8px;">Marque só o que faz sentido receber essa quantidade. Para dividir um grupo de tarefas-irmãs (ex: 8 etapas), use o botão "÷ Dividir" que aparece logo abaixo delas — ou digite a fração manualmente (ex: <code>1/8</code>).</div>`;
+    const arvoreNova=document.getElementById('planej-vinculo-arvore');
+    if(arvoreNova)arvoreNova.scrollTop=scrollAnterior;
   }
 
   function onVincModuloChange(v){_vincModulo=v;_vincMetrica=LEVANTAMENTO_MODULOS[v].metricas[0].id;_renderVinculoModalBody();}
@@ -506,16 +510,18 @@ const Planejamento = (() => {
     finally{Utils.esconderLoading();}
   }
 
-  // Remover: se a tarefa é a "raiz" do grupo (origem do vínculo dela mesma),
-  // remove ela e todos os filhos que vieram junto nessa mesma ação — não
-  // faz sentido o pai voltar a manual e os filhos ficarem com o valor antigo.
-  // Se for uma tarefa que só herdou de outro grupo, remove só ela.
+  // Remover: cascateia para TODOS os descendentes reais (hierarquia do
+  // Planejamento) que também estejam vinculados a levantamento — não faz
+  // sentido o pai voltar a manual e os filhos ficarem com o valor antigo.
+  // Baseado na árvore de tarefas (não depende de nenhum campo de rastreio),
+  // então funciona tanto pra vínculos novos quanto pra vínculos antigos.
   async function removerVinculoLevantamento(tarefaId){
     const t=tarefas.find(x=>x.id===tarefaId);if(!t)return;
-    const ehRaiz=t.levantamentoOrigemId===tarefaId;
-    const grupo=ehRaiz?tarefas.filter(x=>x.levantamentoOrigemId===tarefaId):[t];
+    const fam=Utils.percFamilia(tarefas);
+    const descVinculados=fam.descendentes(t).filter(d=>d.fonteQuantidade==='levantamento');
+    const grupo=[t,...descVinculados];
     const msg=grupo.length>1
-      ?`Remover o vínculo de "${t.nome}" e das outras ${grupo.length-1} tarefa(s) vinculada(s) junto (mesmo grupo)?`
+      ?`Remover o vínculo de "${t.nome}" e das outras ${grupo.length-1} tarefa(s) vinculada(s) abaixo dela (filhos/netos)?`
       :`Remover o vínculo de "${t.nome}"?`;
     if(!Utils.confirmar(msg))return;
     try{
