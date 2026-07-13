@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.19.1',
+  versaoAtual: 'V2.19.2',
 
   versoes: [
     {
@@ -2379,7 +2379,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.19.1',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-13',
       tipo: 'correcao',
       titulo: 'Levantamento de Paredes: opção "Fachada" no acabamento',
@@ -2389,6 +2389,38 @@ const NotasVersao = {
         '  parede já é resolvido pelo módulo de Levantamento de',
         '  Fachada, sem gerar nenhum quantitativo aqui (não entra',
         '  em Gesso Liso, Reboco ou Revestimento)',
+      ]
+    },
+    {
+      versao: 'V2.19.2',
+      status: 'aberta',
+      data: '2026-07-13',
+      tipo: 'correcao',
+      titulo: 'Levantamento de Paredes: correção de digitação, fórmula, alturas separadas e fluxo rápido',
+      itens: [
+        'CORREÇÃO: campos de Comprimento/Altura/Vão/% invertiam os',
+        '  dígitos digitados (ex: escrever "123" virava "321") —',
+        '  causado por re-renderizar o formulário inteiro a cada',
+        '  tecla, recriando o input e jogando o cursor pro início.',
+        '  Agora a digitação só atualiza os dados em memória e um',
+        '  bloco de resumo à parte, sem recriar o campo',
+        'NOVO: campos de medida aceitam fórmula simples + Enter,',
+        '  igual ao Levantamento de Fachada (ex: digitar "150+200"',
+        '  e apertar Enter vira "350") — funciona em Comprimento,',
+        '  Altura da Parede, Altura do Acabamento e nos vãos',
+        'NOVO: Altura da Parede e Altura do Acabamento agora são',
+        '  campos separados — a primeira calcula o m² de Alvenaria',
+        '  (Estrutural/Vedação), a segunda calcula o m² usado por',
+        '  Gesso Liso, Reboco, Revestimento e Pintura. Se a altura',
+        '  do acabamento ficar em branco, usa a mesma da parede',
+        '  → Peças antigas (só com "altura" única) continuam',
+        '  funcionando normalmente (compatibilidade retroativa)',
+        'NOVO: botão "Salvar e Nova Parede" no modal — salva a',
+        '  parede atual e já abre um formulário novo em branco no',
+        '  mesmo local, sem fechar o modal, para lançar várias',
+        '  paredes seguidas mais rápido',
+        'Tabela de paredes do local agora mostra m² de Alvenaria e',
+        '  m² de Acabamento em colunas separadas',
       ]
     }
   ],

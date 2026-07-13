@@ -5,6 +5,8 @@
 // Cada parede gera: Alvenaria (Estrutural/Vedação), Gesso Liso,
 // Reboco, Revestimento e Pintura (por cor) — por Lado A/B, com
 // mistura de acabamentos por % dentro do mesmo lado.
+// Altura da Parede (m² de alvenaria) e Altura do Acabamento
+// (m² de gesso/reboco/revestimento/pintura) são independentes.
 // Dados: Firestore obras/{obraId}/paredesPecas + config/paredesArvore
 // ============================================
 
@@ -89,7 +91,35 @@ const LevantamentoParedes = (() => {
   function fmt2(n) { return (n || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
   function num(v) { const n = parseFloat(String(v).replace(',', '.')); return isNaN(n) ? 0 : n; }
 
-  // Percorre a árvore procurando um nó por id, retorna {node, parentArr, path:[nomes]}
+  // Permite digitar contas simples nos campos de medida (ex: 291+100 + Enter = 391)
+  // — mesmo padrão usado no Levantamento de Fachada.
+  function calcExprEnter(e) {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    const r = _avaliarExpr(e.target.value);
+    if (r !== null) {
+      e.target.value = _fmtExprResultado(r);
+      e.target.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+  }
+  function _avaliarExpr(str) {
+    if (str == null) return null;
+    const s = String(str).trim().replace(/,/g, '.');
+    if (!s) return null;
+    if (!/^[0-9+\-*/.() ]+$/.test(s)) return null; // só números e operadores básicos
+    if (!/[+\-*/]/.test(s)) return null; // sem operador: não precisa calcular
+    try {
+      const r = Function('"use strict";return (' + s + ')')();
+      if (typeof r === 'number' && isFinite(r)) return r;
+    } catch (err) {}
+    return null;
+  }
+  function _fmtExprResultado(n) {
+    const r = Math.round(n * 100) / 100;
+    return Number.isInteger(r) ? String(r) : String(r).replace('.', ',');
+  }
+
+  // Percorre a árvore procurando um nó por id, retorna {node, path:[nomes]}
   function _acharNode(id, nodes = arvore, path = []) {
     for (const n of nodes) {
       if (n.id === id) return { node: n, path: [...path, n.nome] };
@@ -115,21 +145,30 @@ const LevantamentoParedes = (() => {
     return false;
   }
   function _pecasDe(nodeId) { return pecas.filter(p => p.nodeId === nodeId); }
-  function _todosNodeIds(nodes = arvore) {
-    let out = [];
-    nodes.forEach(n => { out.push(n.id); out = out.concat(_todosNodeIds(n.filhos || [])); });
-    return out;
-  }
 
   // ══════════════════════════════════════════
   // CÁLCULO DE UMA PEÇA (PAREDE)
   // ══════════════════════════════════════════
+  // Altura da Parede -> usada só para o m² de Alvenaria (Estrutural/Vedação)
+  // Altura do Acabamento -> usada para Gesso/Reboco/Revestimento/Pintura
+  // Compatível com peças antigas que só tinham "altura" (uma altura única).
+  function _alturas(p) {
+    const alturaParede = num(p.alturaParede ?? p.altura);
+    const alturaAcabamento = num(p.alturaAcabamento ?? p.alturaParede ?? p.altura);
+    return { alturaParede, alturaAcabamento };
+  }
+
   function _calcularPeca(p) {
     const compM = num(p.comprimento) / 100;
-    const altM = num(p.altura) / 100;
-    const areaBruta = compM * altM;
+    const { alturaParede, alturaAcabamento } = _alturas(p);
+    const altParedeM = alturaParede / 100;
+    const altAcabM = alturaAcabamento / 100;
+
+    const areaBrutaAlvenaria = compM * altParedeM;
+    const areaBrutaAcabamento = compM * altAcabM;
     const areaVaos = (p.vaos || []).reduce((s, v) => s + (num(v.comprimento) / 100) * (num(v.altura) / 100) * (num(v.qtd) || 1), 0);
-    const areaLiquida = Math.max(0, areaBruta - areaVaos);
+    const areaLiquidaAlvenaria = Math.max(0, areaBrutaAlvenaria - areaVaos);
+    const areaLiquidaAcabamento = Math.max(0, areaBrutaAcabamento - areaVaos);
 
     const acabTotais = { gesso: 0, reboco: 0, revestimento: 0 };
     const pinturaTotais = {}; // cor -> m²
@@ -138,12 +177,12 @@ const LevantamentoParedes = (() => {
     ['ladoA', 'ladoB'].forEach(lado => {
       const l = p[lado] || {};
       (l.acabamentos || []).forEach(a => {
-        const area = areaLiquida * (num(a.pct) / 100);
+        const area = areaLiquidaAcabamento * (num(a.pct) / 100);
         if (acabTotais[a.tipo] != null) acabTotais[a.tipo] += area;
       });
       if (l.temPintura) {
         (l.pintura || []).forEach(pt => {
-          const area = areaLiquida * (num(pt.pct) / 100);
+          const area = areaLiquidaAcabamento * (num(pt.pct) / 100);
           pinturaArea += area;
           const cor = pt.cor || '(sem nome)';
           pinturaTotais[cor] = (pinturaTotais[cor] || 0) + area;
@@ -152,9 +191,10 @@ const LevantamentoParedes = (() => {
     });
 
     return {
-      areaBruta, areaVaos, areaLiquida,
-      alvenariaVedacao: p.tipoAlvenaria === 'vedacao' ? areaLiquida : 0,
-      alvenariaEstrutural: p.tipoAlvenaria === 'estrutural' ? areaLiquida : 0,
+      areaBrutaAlvenaria, areaBrutaAcabamento, areaVaos,
+      areaLiquidaAlvenaria, areaLiquidaAcabamento,
+      alvenariaVedacao: p.tipoAlvenaria === 'vedacao' ? areaLiquidaAlvenaria : 0,
+      alvenariaEstrutural: p.tipoAlvenaria === 'estrutural' ? areaLiquidaAlvenaria : 0,
       gesso: acabTotais.gesso,
       reboco: acabTotais.reboco,
       revestimento: acabTotais.revestimento,
@@ -164,7 +204,10 @@ const LevantamentoParedes = (() => {
   }
 
   function _totaisDe(listaPecas) {
-    const t = { alvenariaVedacao: 0, alvenariaEstrutural: 0, gesso: 0, reboco: 0, revestimento: 0, pintura: 0, pinturaPorCor: {}, areaLiquida: 0, qtdPecas: listaPecas.length };
+    const t = {
+      alvenariaVedacao: 0, alvenariaEstrutural: 0, gesso: 0, reboco: 0, revestimento: 0, pintura: 0,
+      pinturaPorCor: {}, areaLiquidaAlvenaria: 0, areaLiquidaAcabamento: 0, qtdPecas: listaPecas.length,
+    };
     listaPecas.forEach(p => {
       const c = _calcularPeca(p);
       t.alvenariaVedacao += c.alvenariaVedacao;
@@ -173,7 +216,8 @@ const LevantamentoParedes = (() => {
       t.reboco += c.reboco;
       t.revestimento += c.revestimento;
       t.pintura += c.pintura;
-      t.areaLiquida += c.areaLiquida;
+      t.areaLiquidaAlvenaria += c.areaLiquidaAlvenaria;
+      t.areaLiquidaAcabamento += c.areaLiquidaAcabamento;
       Object.entries(c.pinturaPorCor).forEach(([cor, area]) => { t.pinturaPorCor[cor] = (t.pinturaPorCor[cor] || 0) + area; });
     });
     return t;
@@ -257,7 +301,7 @@ const LevantamentoParedes = (() => {
     return `
       <div class="page-header">
         <div><h2 style="font-size:1.1rem;">📊 Visão Geral — Quantitativos de Parede</h2>
-          <span class="subtitulo">${t.qtdPecas} parede(s) cadastrada(s) · ${fmt2(t.areaLiquida)} m² líquidos de parede</span></div>
+          <span class="subtitulo">${t.qtdPecas} parede(s) cadastrada(s) · ${fmt2(t.areaLiquidaAlvenaria)} m² de alvenaria · ${fmt2(t.areaLiquidaAcabamento)} m² de acabamento</span></div>
       </div>
       <div class="cc-kpiGrid" style="grid-template-columns:repeat(3,1fr);">
         <div class="cc-kpi"><div class="cc-kpiIcon">🧱</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Alvenaria de Vedação</div><div class="cc-kpiValue">${fmt2(t.alvenariaVedacao)}<span class="cc-kpiUnit">m²</span></div></div></div>
@@ -285,13 +329,13 @@ const LevantamentoParedes = (() => {
         <div class="cc-panelTitle">📍 Resumo por Local (nível superior)</div>
         ${!arvore.length ? `<div class="cc-empty">Cadastre locais na árvore ao lado para ver o resumo.</div>` : `
         <div class="tabela-container"><table class="tabela">
-          <thead><tr><th>Local</th><th style="text-align:right;">Paredes</th><th style="text-align:right;">m² líquidos</th><th style="text-align:right;">Vedação</th><th style="text-align:right;">Estrutural</th><th style="text-align:right;">Pintura</th></tr></thead>
+          <thead><tr><th>Local</th><th style="text-align:right;">Paredes</th><th style="text-align:right;">m² Alvenaria</th><th style="text-align:right;">m² Acabamento</th><th style="text-align:right;">Vedação</th><th style="text-align:right;">Estrutural</th><th style="text-align:right;">Pintura</th></tr></thead>
           <tbody>
             ${arvore.map(raiz => {
               const ids = _idsComDescendentes(raiz);
               const lst = pecas.filter(p => ids.includes(p.nodeId));
               const rt = _totaisDe(lst);
-              return `<tr><td><strong>${esc(raiz.nome)}</strong></td><td style="text-align:right;">${rt.qtdPecas}</td><td style="text-align:right;">${fmt2(rt.areaLiquida)}</td><td style="text-align:right;">${fmt2(rt.alvenariaVedacao)}</td><td style="text-align:right;">${fmt2(rt.alvenariaEstrutural)}</td><td style="text-align:right;">${fmt2(rt.pintura)}</td></tr>`;
+              return `<tr><td><strong>${esc(raiz.nome)}</strong></td><td style="text-align:right;">${rt.qtdPecas}</td><td style="text-align:right;">${fmt2(rt.areaLiquidaAlvenaria)}</td><td style="text-align:right;">${fmt2(rt.areaLiquidaAcabamento)}</td><td style="text-align:right;">${fmt2(rt.alvenariaVedacao)}</td><td style="text-align:right;">${fmt2(rt.alvenariaEstrutural)}</td><td style="text-align:right;">${fmt2(rt.pintura)}</td></tr>`;
             }).join('')}
           </tbody>
         </table></div>`}
@@ -311,7 +355,7 @@ const LevantamentoParedes = (() => {
     return `
       <div class="page-header">
         <div><h2 style="font-size:1.1rem;">${esc(r.path.join(' → '))}</h2>
-          <span class="subtitulo">${lista.length} parede(s) · ${fmt2(t.areaLiquida)} m² líquidos</span></div>
+          <span class="subtitulo">${lista.length} parede(s) · ${fmt2(t.areaLiquidaAlvenaria)} m² alvenaria · ${fmt2(t.areaLiquidaAcabamento)} m² acabamento</span></div>
         <button class="btn btn-primario btn-sm" onclick="LP.novaParede()">+ Nova Parede</button>
       </div>
 
@@ -326,7 +370,7 @@ const LevantamentoParedes = (() => {
       <div class="cc-panel" style="padding:0;">
         <div class="tabela-container"><table class="tabela">
           <thead><tr>
-            <th>Parede</th><th>Comp x Alt (cm)</th><th style="text-align:right;">m² líquido</th>
+            <th>Parede</th><th>Comp x Alt Parede/Acab (cm)</th><th style="text-align:right;">m² Alvenaria</th><th style="text-align:right;">m² Acabamento</th>
             <th>Alvenaria</th><th>Lado A</th><th>Lado B</th><th></th>
           </tr></thead>
           <tbody>
@@ -348,10 +392,12 @@ const LevantamentoParedes = (() => {
 
   function _renderLinhaPeca(p) {
     const c = _calcularPeca(p);
+    const { alturaParede, alturaAcabamento } = _alturas(p);
     return `<tr>
       <td><strong>${esc(p.nome || 'Parede')}</strong>${p.vaos && p.vaos.length ? `<div class="text-sm text-muted">${p.vaos.length} vão(s)</div>` : ''}</td>
-      <td>${num(p.comprimento)} x ${num(p.altura)}</td>
-      <td style="text-align:right;">${fmt2(c.areaLiquida)}</td>
+      <td>${num(p.comprimento)} x ${alturaParede}${alturaAcabamento !== alturaParede ? '/' + alturaAcabamento : ''}</td>
+      <td style="text-align:right;">${fmt2(c.areaLiquidaAlvenaria)}</td>
+      <td style="text-align:right;">${fmt2(c.areaLiquidaAcabamento)}</td>
       <td>${p.tipoAlvenaria === 'estrutural' ? 'Estrutural' : 'Vedação'}</td>
       <td class="text-sm">${_resumoLado(p.ladoA)}</td>
       <td class="text-sm">${_resumoLado(p.ladoB)}</td>
@@ -454,7 +500,7 @@ const LevantamentoParedes = (() => {
     pecaEditId = null;
     pecaForm = {
       nome: `Parede ${_pecasDe(selNodeId).length + 1}`,
-      comprimento: '', altura: '',
+      comprimento: '', alturaParede: '', alturaAcabamento: '',
       tipoAlvenaria: 'vedacao',
       possuiVao: false,
       vaos: [],
@@ -464,12 +510,16 @@ const LevantamentoParedes = (() => {
     document.getElementById('lp-parede-titulo').textContent = 'Nova Parede';
     _renderFormParede();
     Utils.abrirModal('modal-lp-parede');
+    setTimeout(() => document.getElementById('lp-p-comp')?.focus(), 60);
   }
 
   function editarParede(id) {
     const p = pecas.find(x => x.id === id); if (!p) return;
     pecaEditId = id;
     pecaForm = JSON.parse(JSON.stringify(p));
+    const { alturaParede, alturaAcabamento } = _alturas(p);
+    pecaForm.alturaParede = alturaParede || '';
+    pecaForm.alturaAcabamento = alturaAcabamento || '';
     pecaForm.possuiVao = !!(pecaForm.vaos && pecaForm.vaos.length);
     pecaForm.ladoA = pecaForm.ladoA || _novoLado();
     pecaForm.ladoB = pecaForm.ladoB || _novoLado();
@@ -497,17 +547,16 @@ const LevantamentoParedes = (() => {
     }
   }
 
-  // ── Render do formulário (recalcula áreas ao vivo) ──
+  // ── Render do formulário ──
+  // IMPORTANTE: o corpo inteiro só é re-renderizado ao abrir o modal e em
+  // ações estruturais (add/remover linha, marcar checkbox). Digitação em
+  // campos de texto/número NUNCA recria o input (senão o cursor volta pro
+  // início a cada tecla e a digitação sai invertida) — só atualiza pecaForm
+  // e, quando necessário, um bloco de resumo via innerHTML de um id estável.
   function _somaP(arr) { return (arr || []).reduce((s, x) => s + num(x.pct), 0); }
 
   function _renderFormParede() {
     const body = document.getElementById('lp-parede-body'); if (!body) return;
-    const compM = num(pecaForm.comprimento) / 100;
-    const altM = num(pecaForm.altura) / 100;
-    const areaBruta = compM * altM;
-    const areaVaos = (pecaForm.vaos || []).reduce((s, v) => s + (num(v.comprimento) / 100) * (num(v.altura) / 100) * (num(v.qtd) || 1), 0);
-    const areaLiquida = Math.max(0, areaBruta - areaVaos);
-
     body.innerHTML = `
       <div style="background:var(--cor-fundo);border-radius:8px;padding:8px 14px;margin-bottom:14px;font-size:0.82rem;color:var(--cor-texto-secundario);">
         Local: <strong style="color:var(--cor-primaria-dark);">${esc(_breadcrumb(selNodeId))}</strong>
@@ -518,9 +567,13 @@ const LevantamentoParedes = (() => {
 
       <div class="form-row">
         <div class="form-grupo"><label>Comprimento (cm)</label>
-          <input type="number" id="lp-p-comp" class="form-control" step="0.1" min="0" value="${esc(pecaForm.comprimento)}" oninput="LP.updCampo('comprimento', this.value)"></div>
-        <div class="form-grupo"><label>Altura (cm)</label>
-          <input type="number" id="lp-p-alt" class="form-control" step="0.1" min="0" value="${esc(pecaForm.altura)}" oninput="LP.updCampo('altura', this.value)"></div>
+          <input type="text" inputmode="decimal" id="lp-p-comp" class="form-control" placeholder="Ex: 350 ou 150+200" value="${esc(pecaForm.comprimento)}" oninput="LP.updCampo('comprimento', this.value)" onkeydown="LP.calcExprEnter(event)"></div>
+        <div class="form-grupo"><label>Altura da Parede (cm)</label>
+          <input type="text" inputmode="decimal" id="lp-p-altparede" class="form-control" placeholder="Ex: 280" value="${esc(pecaForm.alturaParede)}" oninput="LP.updCampo('alturaParede', this.value)" onkeydown="LP.calcExprEnter(event)"></div>
+        <div class="form-grupo"><label>Altura do Acabamento (cm)</label>
+          <input type="text" inputmode="decimal" id="lp-p-altacab" class="form-control" placeholder="Igual à da parede, se vazio" value="${esc(pecaForm.alturaAcabamento)}" oninput="LP.updCampo('alturaAcabamento', this.value)" onkeydown="LP.calcExprEnter(event)"></div>
+      </div>
+      <div class="form-row">
         <div class="form-grupo"><label>Alvenaria</label>
           <select id="lp-p-tipo" class="form-control" onchange="LP.updCampo('tipoAlvenaria', this.value)">
             <option value="vedacao" ${pecaForm.tipoAlvenaria === 'vedacao' ? 'selected' : ''}>Vedação</option>
@@ -534,17 +587,34 @@ const LevantamentoParedes = (() => {
       </div>
       <div id="lp-vaos-wrap">${pecaForm.possuiVao ? _renderVaos() : ''}</div>
 
-      <div style="background:var(--cor-fundo);border-radius:8px;padding:10px 14px;margin:14px 0;font-size:0.85rem;display:flex;gap:22px;flex-wrap:wrap;">
-        <span>Área bruta: <strong>${fmt2(areaBruta)} m²</strong></span>
-        <span>Área de vãos: <strong>${fmt2(areaVaos)} m²</strong></span>
-        <span>Área líquida (por face): <strong style="color:var(--cor-primaria-dark);">${fmt2(areaLiquida)} m²</strong></span>
-      </div>
+      <div id="lp-resumo-areas">${_htmlResumoAreas()}</div>
 
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-        ${_renderLado('ladoA', 'Lado A', areaLiquida)}
-        ${_renderLado('ladoB', 'Lado B', areaLiquida)}
+        <div id="lp-lado-ladoA">${_renderLado('ladoA', 'Lado A')}</div>
+        <div id="lp-lado-ladoB">${_renderLado('ladoB', 'Lado B')}</div>
       </div>
     `;
+  }
+
+  function _htmlResumoAreas() {
+    const compM = num(pecaForm.comprimento) / 100;
+    const altParedeM = num(pecaForm.alturaParede) / 100;
+    const altAcabM = (num(pecaForm.alturaAcabamento) || num(pecaForm.alturaParede)) / 100;
+    const areaBrutaAlvenaria = compM * altParedeM;
+    const areaBrutaAcabamento = compM * altAcabM;
+    const areaVaos = (pecaForm.vaos || []).reduce((s, v) => s + (num(v.comprimento) / 100) * (num(v.altura) / 100) * (num(v.qtd) || 1), 0);
+    const areaLiquidaAlvenaria = Math.max(0, areaBrutaAlvenaria - areaVaos);
+    const areaLiquidaAcabamento = Math.max(0, areaBrutaAcabamento - areaVaos);
+    return `
+      <div style="background:var(--cor-fundo);border-radius:8px;padding:10px 14px;margin:14px 0;font-size:0.85rem;display:flex;flex-direction:column;gap:4px;">
+        <span>🧱 Alvenaria (Comp x Altura Parede): área bruta <strong>${fmt2(areaBrutaAlvenaria)} m²</strong> − vãos <strong>${fmt2(areaVaos)} m²</strong> = <strong style="color:var(--cor-primaria-dark);">${fmt2(areaLiquidaAlvenaria)} m²</strong></span>
+        <span>🎨 Acabamento (Comp x Altura Acabamento): área bruta <strong>${fmt2(areaBrutaAcabamento)} m²</strong> − vãos <strong>${fmt2(areaVaos)} m²</strong> = <strong style="color:var(--cor-primaria-dark);">${fmt2(areaLiquidaAcabamento)} m²</strong></span>
+      </div>`;
+  }
+
+  function _atualizarResumoAreas() {
+    const el = document.getElementById('lp-resumo-areas');
+    if (el) el.innerHTML = _htmlResumoAreas();
   }
 
   function _renderVaos() {
@@ -558,9 +628,9 @@ const LevantamentoParedes = (() => {
                 <option value="janela" ${v.tipo === 'janela' ? 'selected' : ''}>Janela</option>
               </select></div>
             <div class="form-grupo" style="margin:0;"><label class="text-sm">Comp. (cm)</label>
-              <input type="number" class="form-control" step="0.1" min="0" value="${esc(v.comprimento)}" oninput="LP.updVao(${i},'comprimento',this.value)"></div>
+              <input type="text" inputmode="decimal" class="form-control" placeholder="Ex: 80" value="${esc(v.comprimento)}" oninput="LP.updVao(${i},'comprimento',this.value)" onkeydown="LP.calcExprEnter(event)"></div>
             <div class="form-grupo" style="margin:0;"><label class="text-sm">Altura (cm)</label>
-              <input type="number" class="form-control" step="0.1" min="0" value="${esc(v.altura)}" oninput="LP.updVao(${i},'altura',this.value)"></div>
+              <input type="text" inputmode="decimal" class="form-control" placeholder="Ex: 210" value="${esc(v.altura)}" oninput="LP.updVao(${i},'altura',this.value)" onkeydown="LP.calcExprEnter(event)"></div>
             <div class="form-grupo" style="margin:0;"><label class="text-sm">Qtd</label>
               <input type="number" class="form-control" step="1" min="1" value="${esc(v.qtd || 1)}" oninput="LP.updVao(${i},'qtd',this.value)"></div>
             <button class="btn btn-secundario btn-sm" onclick="LP.remVao(${i})" title="Remover">✕</button>
@@ -570,7 +640,7 @@ const LevantamentoParedes = (() => {
       </div>`;
   }
 
-  function _renderLado(ladoKey, label, areaLiquida) {
+  function _renderLado(ladoKey, label) {
     const l = pecaForm[ladoKey];
     const somaAcab = _somaP(l.acabamentos);
     const somaPint = _somaP(l.pintura);
@@ -589,7 +659,7 @@ const LevantamentoParedes = (() => {
           </div>`).join('')}
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
           <button class="btn btn-secundario btn-sm" onclick="LP.addAcab('${ladoKey}')">+ acabamento</button>
-          <span class="text-sm" style="color:${Math.abs(somaAcab - 100) < 0.01 ? '#16a34a' : '#ef4444'};font-weight:700;">${fmt2(somaAcab)}%</span>
+          <span class="text-sm" id="lp-soma-acab-${ladoKey}" style="color:${Math.abs(somaAcab - 100) < 0.01 ? '#16a34a' : '#ef4444'};font-weight:700;">${fmt2(somaAcab)}%</span>
         </div>
 
         <div class="form-check" style="margin-bottom:8px;">
@@ -608,76 +678,85 @@ const LevantamentoParedes = (() => {
             </div>`).join('')}
           <div style="display:flex;justify-content:space-between;align-items:center;">
             <button class="btn btn-secundario btn-sm" onclick="LP.addPintura('${ladoKey}')">+ cor</button>
-            <span class="text-sm" style="color:${Math.abs(somaPint - 100) < 0.01 ? '#16a34a' : '#ef4444'};font-weight:700;">${fmt2(somaPint)}%</span>
+            <span class="text-sm" id="lp-soma-pint-${ladoKey}" style="color:${Math.abs(somaPint - 100) < 0.01 ? '#16a34a' : '#ef4444'};font-weight:700;">${fmt2(somaPint)}%</span>
           </div>` : ''}
       </div>`;
   }
 
-  // ── Handlers de edição do form (mutam pecaForm e re-renderizam) ──
-  function updCampo(campo, valor) { pecaForm[campo] = valor; if (campo === 'comprimento' || campo === 'altura') _renderFormParedeLeve(); }
+  function _atualizarSomaAcab(ladoKey) {
+    const soma = _somaP(pecaForm[ladoKey].acabamentos);
+    const el = document.getElementById(`lp-soma-acab-${ladoKey}`);
+    if (el) { el.textContent = fmt2(soma) + '%'; el.style.color = Math.abs(soma - 100) < 0.01 ? '#16a34a' : '#ef4444'; }
+  }
+  function _atualizarSomaPint(ladoKey) {
+    const soma = _somaP(pecaForm[ladoKey].pintura);
+    const el = document.getElementById(`lp-soma-pint-${ladoKey}`);
+    if (el) { el.textContent = fmt2(soma) + '%'; el.style.color = Math.abs(soma - 100) < 0.01 ? '#16a34a' : '#ef4444'; }
+  }
+  function _atualizarLado(ladoKey) {
+    const el = document.getElementById(`lp-lado-${ladoKey}`);
+    if (el) el.innerHTML = _renderLado(ladoKey, ladoKey === 'ladoA' ? 'Lado A' : 'Lado B');
+  }
 
-  function _renderFormParedeLeve() {
-    // Re-render completo é simples o bastante aqui (poucos campos); preserva foco não é crítico pois o usuário normalmente termina de digitar antes de tabular.
-    _renderFormParede();
-    document.getElementById('lp-p-comp')?.focus();
+  // ── Handlers de edição do form (mutam pecaForm; SEM re-render do input) ──
+  function updCampo(campo, valor) {
+    pecaForm[campo] = valor;
+    if (campo === 'comprimento' || campo === 'alturaParede' || campo === 'alturaAcabamento') _atualizarResumoAreas();
   }
 
   function toggleVao(checked) {
     pecaForm.possuiVao = checked;
     if (checked && !pecaForm.vaos.length) pecaForm.vaos.push({ tipo: 'porta', comprimento: '', altura: '', qtd: 1 });
-    _renderFormParede();
+    const wrap = document.getElementById('lp-vaos-wrap');
+    if (wrap) wrap.innerHTML = pecaForm.possuiVao ? _renderVaos() : '';
+    _atualizarResumoAreas();
   }
-  function addVao() { pecaForm.vaos.push({ tipo: 'porta', comprimento: '', altura: '', qtd: 1 }); _renderFormParede(); }
-  function remVao(i) { pecaForm.vaos.splice(i, 1); _renderFormParede(); }
-  function updVao(i, campo, valor) {
-    pecaForm.vaos[i][campo] = valor;
+  function addVao() {
+    pecaForm.vaos.push({ tipo: 'porta', comprimento: '', altura: '', qtd: 1 });
     const wrap = document.getElementById('lp-vaos-wrap');
     if (wrap) wrap.innerHTML = _renderVaos();
     _atualizarResumoAreas();
   }
+  function remVao(i) {
+    pecaForm.vaos.splice(i, 1);
+    const wrap = document.getElementById('lp-vaos-wrap');
+    if (wrap) wrap.innerHTML = _renderVaos();
+    _atualizarResumoAreas();
+  }
+  function updVao(i, campo, valor) {
+    pecaForm.vaos[i][campo] = valor;
+    _atualizarResumoAreas();
+  }
 
-  function _atualizarResumoAreas() { _renderFormParede(); }
-
-  function addAcab(ladoKey) { pecaForm[ladoKey].acabamentos.push({ tipo: 'gesso', pct: 0 }); _renderFormParede(); }
-  function remAcab(ladoKey, i) { pecaForm[ladoKey].acabamentos.splice(i, 1); _renderFormParede(); }
-  function updAcab(ladoKey, i, campo, valor) { pecaForm[ladoKey].acabamentos[i][campo] = campo === 'pct' ? valor : valor; _renderFormParede(); }
+  function addAcab(ladoKey) { pecaForm[ladoKey].acabamentos.push({ tipo: 'gesso', pct: 0 }); _atualizarLado(ladoKey); }
+  function remAcab(ladoKey, i) { pecaForm[ladoKey].acabamentos.splice(i, 1); _atualizarLado(ladoKey); }
+  function updAcab(ladoKey, i, campo, valor) {
+    pecaForm[ladoKey].acabamentos[i][campo] = valor;
+    if (campo === 'tipo') _atualizarLado(ladoKey); else _atualizarSomaAcab(ladoKey);
+  }
 
   function togglePintura(ladoKey, checked) {
     pecaForm[ladoKey].temPintura = checked;
     if (checked && !pecaForm[ladoKey].pintura.length) pecaForm[ladoKey].pintura.push({ cor: '', hex: '#ffffff', pct: 100 });
-    _renderFormParede();
+    _atualizarLado(ladoKey);
   }
-  function addPintura(ladoKey) { pecaForm[ladoKey].pintura.push({ cor: '', hex: '#ffffff', pct: 0 }); _renderFormParede(); }
-  function remPintura(ladoKey, i) { pecaForm[ladoKey].pintura.splice(i, 1); _renderFormParede(); }
-  function updPintura(ladoKey, i, campo, valor) { pecaForm[ladoKey].pintura[i][campo] = valor; _renderFormParede(); }
+  function addPintura(ladoKey) { pecaForm[ladoKey].pintura.push({ cor: '', hex: '#ffffff', pct: 0 }); _atualizarLado(ladoKey); }
+  function remPintura(ladoKey, i) { pecaForm[ladoKey].pintura.splice(i, 1); _atualizarLado(ladoKey); }
+  function updPintura(ladoKey, i, campo, valor) {
+    pecaForm[ladoKey].pintura[i][campo] = valor;
+    if (campo === 'pct') _atualizarSomaPint(ladoKey);
+  }
 
   // ══════════════════════════════════════════
   // SALVAR PEÇA
   // ══════════════════════════════════════════
-  async function salvarParede() {
-    if (!num(pecaForm.comprimento) || !num(pecaForm.altura)) {
-      Utils.toast('Informe comprimento e altura da parede.', 'alerta'); return;
-    }
-    for (const lado of ['ladoA', 'ladoB']) {
-      const soma = _somaP(pecaForm[lado].acabamentos);
-      if (Math.abs(soma - 100) > 0.5) {
-        Utils.toast(`A soma dos % de acabamento do ${lado === 'ladoA' ? 'Lado A' : 'Lado B'} deve ser 100% (está em ${fmt2(soma)}%).`, 'alerta');
-        return;
-      }
-      if (pecaForm[lado].temPintura) {
-        const somaP = _somaP(pecaForm[lado].pintura);
-        if (Math.abs(somaP - 100) > 0.5) {
-          Utils.toast(`A soma dos % de pintura do ${lado === 'ladoA' ? 'Lado A' : 'Lado B'} deve ser 100% (está em ${fmt2(somaP)}%).`, 'alerta');
-          return;
-        }
-      }
-    }
-
-    const data = {
+  function _montarDadosPeca() {
+    return {
       nodeId: selNodeId,
       nome: pecaForm.nome || 'Parede',
       comprimento: num(pecaForm.comprimento),
-      altura: num(pecaForm.altura),
+      alturaParede: num(pecaForm.alturaParede),
+      alturaAcabamento: num(pecaForm.alturaAcabamento) || num(pecaForm.alturaParede),
       tipoAlvenaria: pecaForm.tipoAlvenaria,
       vaos: pecaForm.possuiVao ? (pecaForm.vaos || []).filter(v => num(v.comprimento) && num(v.altura)).map(v => ({ tipo: v.tipo, comprimento: num(v.comprimento), altura: num(v.altura), qtd: num(v.qtd) || 1 })) : [],
       ladoA: {
@@ -691,15 +770,46 @@ const LevantamentoParedes = (() => {
         pintura: pecaForm.ladoB.temPintura ? pecaForm.ladoB.pintura.map(p => ({ cor: p.cor || '', hex: p.hex || '#ffffff', pct: num(p.pct) })) : [],
       },
     };
+  }
 
+  function _validarPeca() {
+    if (!num(pecaForm.comprimento) || !num(pecaForm.alturaParede)) {
+      Utils.toast('Informe comprimento e altura da parede.', 'alerta'); return false;
+    }
+    for (const lado of ['ladoA', 'ladoB']) {
+      const soma = _somaP(pecaForm[lado].acabamentos);
+      if (Math.abs(soma - 100) > 0.5) {
+        Utils.toast(`A soma dos % de acabamento do ${lado === 'ladoA' ? 'Lado A' : 'Lado B'} deve ser 100% (está em ${fmt2(soma)}%).`, 'alerta');
+        return false;
+      }
+      if (pecaForm[lado].temPintura) {
+        const somaP = _somaP(pecaForm[lado].pintura);
+        if (Math.abs(somaP - 100) > 0.5) {
+          Utils.toast(`A soma dos % de pintura do ${lado === 'ladoA' ? 'Lado A' : 'Lado B'} deve ser 100% (está em ${fmt2(somaP)}%).`, 'alerta');
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  async function salvarParede(continuar) {
+    if (!_validarPeca()) return;
+    const data = _montarDadosPeca();
     Utils.mostrarLoading();
     try {
       if (pecaEditId) await Database.atualizar(obraId, COL_PECAS, pecaEditId, data);
       else await Database.criar(obraId, COL_PECAS, data);
-      Utils.fecharModal('modal-lp-parede');
-      Utils.toast('✓ Parede salva!', 'sucesso');
       pecaEditId = null;
-      await carregar();
+      if (continuar) {
+        Utils.toast('✓ Parede salva! Pronta para a próxima.', 'sucesso');
+        await carregar();
+        novaParede();
+      } else {
+        Utils.fecharModal('modal-lp-parede');
+        Utils.toast('✓ Parede salva!', 'sucesso');
+        await carregar();
+      }
     } catch (e) {
       Utils.toast('Erro ao salvar: ' + e.message, 'erro');
     } finally {
@@ -712,7 +822,7 @@ const LevantamentoParedes = (() => {
     selGeral, selNode, toggleNode,
     novoNode, renomearNode, salvarNode, excluirNode,
     novaParede, editarParede, excluirParede, salvarParede,
-    updCampo, toggleVao, addVao, remVao, updVao,
+    updCampo, calcExprEnter, toggleVao, addVao, remVao, updVao,
     addAcab, remAcab, updAcab,
     togglePintura, addPintura, remPintura, updPintura,
   };

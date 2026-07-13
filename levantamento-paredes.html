@@ -45,7 +45,7 @@
       <a href="histograma.html"><span class="nav-icon">📊</span> Histograma</a>
       <a href="admin-permissoes.html"><span class="nav-icon">🔑</span> Permissões</a>
       <div class="sidebar-section-title">Sistema</div>
-      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V2.19.1</span></a>
+      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V2.19.2</span></a>
     </nav>
     <div class="sidebar-user">
       <div class="user-avatar">U</div>
@@ -99,7 +99,8 @@
     <div class="modal-body" id="lp-parede-body" style="max-height:72vh;overflow-y:auto;"></div>
     <div class="modal-footer">
       <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-lp-parede')">Cancelar</button>
-      <button class="btn btn-primario" onclick="LP.salvarParede()">Salvar Parede</button>
+      <button class="btn btn-dark" onclick="LP.salvarParede(true)">💾 Salvar e Nova Parede</button>
+      <button class="btn btn-primario" onclick="LP.salvarParede(false)">Salvar Parede</button>
     </div>
   </div>
 </div>
