@@ -126,7 +126,7 @@
       <a href="histograma.html"><span class="nav-icon">📊</span> Histograma</a>
       <a href="admin-permissoes.html"><span class="nav-icon">🔑</span> Permissões</a>
       <div class="sidebar-section-title">Sistema</div>
-      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V2.17.11</span></a>
+      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V2.17.12</span></a>
     </nav>
     <div class="sidebar-user">
       <div class="user-avatar">U</div>
@@ -154,7 +154,10 @@
       <div class="fachada-tree" id="fachada-tree">
         <div class="fachada-tree-header">
           <h3>Estrutura</h3>
-          <button class="btn btn-primario btn-sm" onclick="LF.criarFachada()">+ Fachada</button>
+          <div style="display:flex;gap:4px;">
+            <button class="btn btn-secundario btn-sm btn-icon" onclick="LF.corrigirVinculos()" title="Corrigir vínculos de peças/vistas clonadas (fachada errada)">🔧</button>
+            <button class="btn btn-primario btn-sm" onclick="LF.criarFachada()">+ Fachada</button>
+          </div>
         </div>
         <div class="fachada-tree-body" id="fachada-tree-body"></div>
       </div>

@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.17.11',
+  versaoAtual: 'V2.17.12',
 
   versoes: [
     {
@@ -1922,7 +1922,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.17.11',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-12',
       tipo: 'correcao',
       titulo: 'Levantamento de Fachada: clonar balancim não puxava Vão Fechado nem contava peças na fachada',
@@ -1939,6 +1939,23 @@ const NotasVersao = {
         '  com o fachadaId errado no banco — se algum balancim',
         '  clonado estiver com contagem estranha, refaça o clone',
         '  (⧉) nele para corrigir os dados',
+      ]
+    },
+    {
+      versao: 'V2.17.12',
+      status: 'aberta',
+      data: '2026-07-12',
+      tipo: 'funcionalidade',
+      titulo: 'Levantamento de Fachada: botão de corrigir vínculos antigos + breakdown de ML na Visão Geral',
+      itens: [
+        'Novo botão "🔧" ao lado de "+ Fachada" na Estrutura —',
+        '  revisa TODAS as peças e vistas da obra de uma vez e',
+        '  corrige o vínculo com a fachada certa (baseado no',
+        '  balancim de cada uma). Resolve de vez os clones feitos',
+        '  antes da V2.17.11 sem precisar refazer um por um',
+        'Nos cards da Visão Geral (mapa), "M² COM ML" agora mostra',
+        '  o valor separado: Xm² + YML, com "= Zm²" embaixo — igual',
+        '  já aparecia nas outras telas do sistema',
       ]
     }
   ],

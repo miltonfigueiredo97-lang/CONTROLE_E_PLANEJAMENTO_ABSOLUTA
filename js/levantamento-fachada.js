@@ -649,12 +649,22 @@ const LevantamentoFachada = (() => {
       '<span style="font-family:var(--font-mono);font-weight:700;font-size:0.88rem;color:var(--cor-primaria);">'+v+'</span></div>';
   }
 
+  function _cxRowML(t){
+    return '<div>'+
+      '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:6px;flex-wrap:wrap;">'+
+        '<span style="font-size:0.65rem;color:#888;text-transform:uppercase;white-space:nowrap;">m² com ML</span>'+
+        '<span style="font-family:var(--font-mono);font-weight:700;font-size:0.82rem;color:var(--cor-primaria);text-align:right;">'+_f(t.m2comML_puro)+'m² + '+_f(t.ml)+'ML</span>'+
+      '</div>'+
+      '<div style="text-align:right;font-size:0.66rem;color:#94a3b8;">= '+_f(t.m2comML_equiv)+'m²</div>'+
+    '</div>';
+  }
+
   function _renderCaixas(md){
     const overlay=document.getElementById('mapa-overlay'); if(!overlay)return;
     if(!md)md=_getMapData();
     overlay.innerHTML=md.caixas.map((cx,i)=>{
       const f=fachadas.find(x=>x.id===cx.fachadaId);
-      const t=cx.fachadaId?_somarFachada(cx.fachadaId):{m2semML:0,m2comML_equiv:0,vao:0};
+      const t=cx.fachadaId?_somarFachada(cx.fachadaId):{m2semML:0,m2comML_puro:0,ml:0,m2comML_equiv:0,vao:0};
       const nome=f?f.nome:(cx.nome||'Caixa '+(i+1));
       const w=cx.w||220, h=cx.h?'height:'+cx.h+'px;':'';
       const livre=!cx.travada;
@@ -676,7 +686,7 @@ const LevantamentoFachada = (() => {
         '</div>'+
         '<div style="padding:10px 12px;display:flex;flex-direction:column;gap:5px;">'+
           _cxRow('m² sem ML',_f(t.m2semML))+
-          _cxRow('m² com ML',_f(t.m2comML_equiv))+
+          _cxRowML(t)+
           _cxRow('Vão Fechado',_f(t.vao))+
         '</div>'+
         (livre?'<div data-i="'+i+'" data-d="se" onpointerdown="LF.cxResizeEv(event)" style="position:absolute;bottom:0;right:0;width:18px;height:18px;cursor:se-resize;background:var(--cor-primaria);border-radius:3px 0 6px 0;display:flex;align-items:center;justify-content:center;font-size:0.7rem;color:#000;font-weight:900;">⤡</div>':'')+
@@ -943,6 +953,30 @@ const LevantamentoFachada = (() => {
     await Database.deletar(obraId,COL,id);
   }
 
+  async function corrigirVinculos(){
+    if(!Utils.confirmar('Isso revisa todas as peças e vistas e corrige o vínculo com a fachada certa, com base no balancim de cada uma (corrige clones antigos feitos antes da correção). Continuar?'))return;
+    try{
+      Utils.mostrarLoading('Corrigindo vínculos...');
+      let corrigidas=0;
+      for(const pc of pecas){
+        const bl=balancins.find(b=>b.id===pc.balancimId);
+        if(bl&&pc.fachadaId!==bl.fachadaId){
+          await Database.atualizar(obraId,COL,pc.id,{fachadaId:bl.fachadaId});
+          corrigidas++;
+        }
+      }
+      for(const vi of vistas){
+        const bl=balancins.find(b=>b.id===vi.balancimId);
+        if(bl&&vi.fachadaId!==bl.fachadaId){
+          await Database.atualizar(obraId,COL,vi.id,{fachadaId:bl.fachadaId});
+          corrigidas++;
+        }
+      }
+      Utils.toast(corrigidas>0?(corrigidas+' vínculo(s) corrigido(s)!'):'Tudo certo, nada pra corrigir.','sucesso');
+      await carregar();
+    }catch(e){Utils.toast('Erro ao corrigir.','erro');}finally{Utils.esconderLoading();}
+  }
+
   async function duplicarBal(blId){
     const bl=balancins.find(x=>x.id===blId);if(!bl||!Utils.confirmar('Duplicar "'+bl.nome+'" com peças?'))return;
     try{Utils.mostrarLoading('Duplicando...');
@@ -1161,7 +1195,7 @@ const LevantamentoFachada = (() => {
   function imgRZEv(e, el){ imgRZ(e, el.dataset.d); }
   function cxResizeEv(e){ cxResize(e, parseInt(e.currentTarget.dataset.i), e.currentTarget.dataset.d); }
 
-  return {init,carregar,sel:selecionar,setAba,criarFachada,criarBalancim,editar,salvarEntidade,excluir,novaPeca,editarPeca,salvarPeca,excluirPeca,duplicarPeca,duplicarBal,editarNomeInline,abrirClonarBal,confirmarClonarBal,conferirPeca,togglePecaML,onClickCheckML,onCompAltInput,calcExprEnter,exportarCSV,exportarVista,onToggleJanela,importarMapa,cxAdicionar,cxRemover,cxTravar,cxEditar,salvarCxEdit,cxMouseDown,cxDrop,cxResize,imgMouseDown,imgResize,entrarEditImg,sairEditImg,imgMD,imgRZEv,cxResizeEv,toggleEditImg,fecharEditImg,onImgResize,limparMapa,abrirVaoVista,salvarVaoVista,_atualizarPreviewVao,adicionarVaoRow,removerVaoRow,abrirConfig,salvarConfig,onChangeCfgJanela};
+  return {init,carregar,sel:selecionar,setAba,criarFachada,criarBalancim,editar,salvarEntidade,excluir,novaPeca,editarPeca,salvarPeca,excluirPeca,duplicarPeca,duplicarBal,editarNomeInline,abrirClonarBal,confirmarClonarBal,corrigirVinculos,conferirPeca,togglePecaML,onClickCheckML,onCompAltInput,calcExprEnter,exportarCSV,exportarVista,onToggleJanela,importarMapa,cxAdicionar,cxRemover,cxTravar,cxEditar,salvarCxEdit,cxMouseDown,cxDrop,cxResize,imgMouseDown,imgResize,entrarEditImg,sairEditImg,imgMD,imgRZEv,cxResizeEv,toggleEditImg,fecharEditImg,onImgResize,limparMapa,abrirVaoVista,salvarVaoVista,_atualizarPreviewVao,adicionarVaoRow,removerVaoRow,abrirConfig,salvarConfig,onChangeCfgJanela};
 })();
 const LF=LevantamentoFachada;
 function onObraChanged(){LF.init();}
