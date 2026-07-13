@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.22.1',
+  versaoAtual: 'V2.22.2',
 
   versoes: [
     {
@@ -2643,7 +2643,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.22.1',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-13',
       tipo: 'funcionalidade',
       titulo: 'Levantamento de Piso: navegação estilo CAD (zoom e pan)',
@@ -2664,6 +2664,28 @@ const NotasVersao = {
         'Zoom é lembrado durante a sessão de trabalho no mesmo local',
         '  (não reseta ao calibrar, medir ou editar uma área) e só volta',
         '  a 100% quando você troca de local na árvore',
+      ]
+    },
+    {
+      versao: 'V2.22.2',
+      status: 'aberta',
+      data: '2026-07-13',
+      tipo: 'correcao',
+      titulo: 'Levantamento de Piso: mais espaço pra planta + zoom sem perder qualidade',
+      itens: [
+        'Área de trabalho da planta muito maior: cabeçalho e avisos',
+        '  compactados, árvore de locais mais estreita (220px) e agora',
+        '  recolhível (botão "⏴" / "☰ Locais") pra usar quase a tela',
+        '  inteira quando estiver medindo',
+        'Canvas e painel lateral agora ocupam a altura real da tela',
+        '  disponível (calc baseado em 100vh) em vez de uma altura fixa',
+        '  pequena',
+        'Corrigido: o zoom era só CSS esticando a imagem já renderizada,',
+        '  perdendo nitidez ao ampliar. Agora, depois de um instante sem',
+        '  mexer no zoom, o PDF é re-renderizado automaticamente na',
+        '  resolução efetiva atual (debounced, não a cada tique da roda',
+        '  do mouse) — mantém a planta nítida em qualquer nível de zoom',
+        'Teto de zoom aumentado (até 800%) já que agora mantém qualidade',
       ]
     }
   ],

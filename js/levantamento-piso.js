@@ -36,6 +36,7 @@ const LP = (() => {
   let areas = [];        // todas as áreas medidas (pisoAreas)
   let openNodes = new Set();
   let selNodeId = null;  // null = Visão Geral
+  let treeColapsada = false;
 
   let pdfDoc = null;         // documento pdf.js carregado (da planta do nó aberto)
   let pdfDocPlantaId = null;
@@ -181,21 +182,29 @@ const LP = (() => {
     if (!el) return;
     if (actions) actions.innerHTML = '';
     el.innerHTML = `
-      <div class="page-header">
-        <div>
-          <h2>🧩 Levantamento de Piso</h2>
-          <span class="subtitulo">${areas.length} área(s) medida(s) · ${fmt2(areas.reduce((s, a) => s + (a.areaM2 || 0), 0))} m²</span>
+      ${!selNodeId ? `
+        <div class="page-header">
+          <div>
+            <h2>🧩 Levantamento de Piso</h2>
+            <span class="subtitulo">${areas.length} área(s) medida(s) · ${fmt2(areas.reduce((s, a) => s + (a.areaM2 || 0), 0))} m²</span>
+          </div>
         </div>
-      </div>
-      <div class="ar-layout">
+      ` : ''}
+      <div class="ar-layout ${treeColapsada ? 'tree-colapsada' : ''}">
         <div class="ar-tree">
           <div class="ar-tree-header">
             <h3>Locais</h3>
-            <button class="btn btn-primario btn-sm" onclick="LP.novoNode(null)">+ Local</button>
+            <div style="display:flex;gap:6px;">
+              <button class="btn btn-secundario btn-sm" onclick="LP.toggleArvore()" title="Recolher árvore">⏴</button>
+              <button class="btn btn-primario btn-sm" onclick="LP.novoNode(null)">+ Local</button>
+            </div>
           </div>
           <div class="ar-tree-body" id="lp-tree-body">${_renderArvore()}</div>
         </div>
-        <div class="ar-painel" id="lp-painel">${_renderPainel()}</div>
+        <div class="ar-painel" id="lp-painel">
+          ${treeColapsada ? `<button class="btn btn-secundario btn-sm lp-reabrir-arvore" onclick="LP.toggleArvore()" title="Mostrar árvore de locais">☰ Locais</button>` : ''}
+          ${_renderPainel()}
+        </div>
       </div>
     `;
     if (selNodeId) {
@@ -203,6 +212,8 @@ const LP = (() => {
       if (r && r.node.plantaId) _renderCanvasNode(r.node);
     }
   }
+
+  function toggleArvore() { treeColapsada = !treeColapsada; renderizar(); }
 
   function _renderArvoreNivel(nodes) {
     return _ordenarNodes(nodes).map(n => {
@@ -506,9 +517,9 @@ const LP = (() => {
     setTimeout(_popularDatalists, 0);
 
     return `
-      <div class="page-header">
-        <div><h2 style="font-size:1.1rem;">${esc(node.nome)}</h2>
-          <span class="subtitulo">${pl ? esc(pl.nome) : ''} — página ${node.pagina} · ${areasN.length} área(s) · ${fmt2(totalNode)} m²</span></div>
+      <div class="lp-workspace-header">
+        <div><h2>${esc(node.nome)}</h2>
+          <span class="subtitulo">${pl ? esc(pl.nome) : ''} — pág. ${node.pagina} · ${areasN.length} área(s) · ${fmt2(totalNode)} m²</span></div>
         <button class="btn btn-secundario btn-sm" onclick="LP.trocarPlanta('${node.id}')">🔄 Trocar planta/página</button>
       </div>
       <div class="lp-toolbar">
@@ -524,12 +535,11 @@ const LP = (() => {
         <button class="btn btn-secundario btn-sm" onclick="LP.zoomReset()" title="Redefinir zoom (100%)"><span id="lp-zoom-pct">100%</span></button>
         <button class="btn btn-secundario btn-sm" onclick="LP.zoomIn()" title="Aumentar zoom">➕</button>
         <div class="sep"></div>
-        <span class="info">${temEscala ? `Escala: 1 ponto-PDF = ${(node.escalaMetrosPorPonto * 1000).toFixed(3)} mm` : 'Escala não calibrada'}</span>
+        <span class="info">${temEscala ? `Escala: 1pt=${(node.escalaMetrosPorPonto * 1000).toFixed(2)}mm` : 'Sem escala'} · 🖱️ roda=zoom · meio=mover</span>
       </div>
-      ${!temEscala ? `<div class="lp-hint">Antes de medir, clique em "📏 Calibrar Escala", desenhe uma linha sobre uma medida conhecida do desenho (ex: uma cota) e informe a distância real.</div>` : ''}
-      ${modo === 'medir' ? `<div class="lp-hint">Clique para adicionar vértices do polígono da área. Dê um duplo-clique ou clique em "Finalizar Área" quando terminar. Roda do mouse: zoom · botão do meio: mover a planta.</div>` : ''}
-      ${modo === 'calibrar' ? `<div class="lp-hint">Clique em dois pontos sobre uma medida conhecida do desenho (ex: início e fim de uma cota). Roda do mouse: zoom · botão do meio: mover a planta.</div>` : ''}
-      ${modo === 'nenhum' ? `<div class="lp-hint">Roda do mouse: zoom (no cursor) · clique e arraste (ou botão do meio): mover a planta — igual AutoCAD.</div>` : ''}
+      ${!temEscala ? `<div class="lp-hint">Clique em "📏 Calibrar Escala", desenhe uma linha sobre uma medida conhecida do desenho e informe a distância real.</div>` : ''}
+      ${modo === 'medir' ? `<div class="lp-hint">Clique para adicionar vértices do polígono. Duplo-clique ou "Finalizar Área" para terminar.</div>` : ''}
+      ${modo === 'calibrar' ? `<div class="lp-hint">Clique em dois pontos sobre uma medida conhecida do desenho.</div>` : ''}
       <div class="lp-workspace">
         <div class="lp-canvas-col" id="lp-canvas-col"><div class="loading-inline">Carregando página do PDF...</div></div>
         <div class="lp-painel-lateral">
@@ -710,16 +720,62 @@ const LP = (() => {
     const mouseY = e.clientY - rect.top + col.scrollTop;
     const oldZoom = zoomCss;
     const fator = e.deltaY < 0 ? 1.15 : (1 / 1.15);
-    zoomCss = Math.min(5, Math.max(0.2, zoomCss * fator));
+    zoomCss = Math.min(8, Math.max(0.15, zoomCss * fator));
     _aplicarZoom();
     const ratio = zoomCss / oldZoom;
     col.scrollLeft = mouseX * ratio - (e.clientX - rect.left);
     col.scrollTop = mouseY * ratio - (e.clientY - rect.top);
+    _agendarRerenderQualidade();
   }
 
-  function zoomIn() { zoomCss = Math.min(5, zoomCss * 1.25); _aplicarZoom(); }
-  function zoomOut() { zoomCss = Math.max(0.2, zoomCss / 1.25); _aplicarZoom(); }
+  function zoomIn() { zoomCss = Math.min(8, zoomCss * 1.25); _aplicarZoom(); _agendarRerenderQualidade(); }
+  function zoomOut() { zoomCss = Math.max(0.15, zoomCss / 1.25); _aplicarZoom(); _agendarRerenderQualidade(); }
   function zoomReset() { zoomCss = 1; _aplicarZoom(); }
+
+  // ── QUALIDADE NO ZOOM — o zoom acima é só CSS (rápido, mas perde nitidez ao
+  // ampliar muito). Depois de um instante sem mexer no zoom, re-renderiza o
+  // PDF em resolução mais alta (na escala efetiva atual) e "dobra" o zoom CSS
+  // de volta pra 1 base, mantendo o tamanho em tela igual — sem re-renderizar
+  // a cada tique da roda do mouse (custaria caro).
+  let _reRenderTimer = null;
+  function _agendarRerenderQualidade() {
+    if (!selNodeId) return;
+    clearTimeout(_reRenderTimer);
+    _reRenderTimer = setTimeout(() => {
+      const r = _acharNode(selNodeId);
+      if (r && r.node.plantaId) _rerenderizarEmAltaResolucao(r.node);
+    }, 300);
+  }
+
+  async function _rerenderizarEmAltaResolucao(node) {
+    const stage = document.querySelector('#lp-canvas-col .lp-canvas-stage');
+    if (!stage) return;
+    const canvas = stage.querySelector('canvas.lp-base');
+    const svg = stage.querySelector('svg.lp-svg-overlay');
+    if (!canvas || !svg) return;
+    const efetiva = renderScale * zoomCss;
+    if (efetiva <= renderScale * 1.05) return; // já está nítido o bastante nesta resolução
+    const novaEscala = Math.min(8, efetiva); // limite de segurança pra não estourar memória
+    const pl = _plantaPorId(node.plantaId);
+    if (!pl || !pdfDoc || pdfDocPlantaId !== pl.id) return;
+    try {
+      const page = await pdfDoc.getPage(node.pagina);
+      const viewport = page.getViewport({ scale: novaEscala });
+      const ctx = canvas.getContext('2d');
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+      await page.render({ canvasContext: ctx, viewport }).promise;
+      svg.setAttribute('width', viewport.width);
+      svg.setAttribute('height', viewport.height);
+      svg.setAttribute('viewBox', '0 0 ' + viewport.width + ' ' + viewport.height);
+      zoomCss = zoomCss * (renderScale / novaEscala);
+      renderScale = novaEscala;
+      _aplicarZoom();
+      _desenharOverlay(node);
+    } catch (e) {
+      console.error('Erro ao re-renderizar em alta resolução:', e);
+    }
+  }
 
   function toggleModoCalibrar() {
     modo = modo === 'calibrar' ? 'nenhum' : 'calibrar';
@@ -922,7 +978,7 @@ const LP = (() => {
 
   return {
     init, recarregar,
-    novoNode, renomearNode, excluirNode, toggleNode, selNode, selGeral,
+    novoNode, renomearNode, excluirNode, toggleNode, selNode, selGeral, toggleArvore,
     abrirModalPlanta, enviarPlanta, excluirPlanta, vincularPlantaExistente, trocarPlanta,
     toggleModoCalibrar, toggleModoMedir, cancelarDesenho,
     cancelarCalibracao, confirmarCalibracao,
