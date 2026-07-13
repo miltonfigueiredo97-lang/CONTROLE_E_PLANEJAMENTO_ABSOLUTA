@@ -45,7 +45,7 @@
       <a href="histograma.html"><span class="nav-icon">📊</span> Histograma</a>
       <a href="admin-permissoes.html"><span class="nav-icon">🔑</span> Permissões</a>
       <div class="sidebar-section-title">Sistema</div>
-      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V2.19.4</span></a>
+      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V2.20.0</span></a>
     </nav>
     <div class="sidebar-user">
       <div class="user-avatar">U</div>
@@ -89,18 +89,34 @@
   </div>
 </div>
 
-<!-- Modal: peça (parede) -->
-<div class="modal-overlay" id="modal-lp-parede">
-  <div class="modal" style="max-width:760px;">
+<!-- Modal: peça de ALVENARIA (a parede física — uma vez só) -->
+<div class="modal-overlay" id="modal-lp-alv">
+  <div class="modal" style="max-width:560px;">
     <div class="modal-header">
-      <h3 id="lp-parede-titulo">Nova Parede</h3>
-      <button class="modal-close" onclick="Utils.fecharModal('modal-lp-parede')">✕</button>
+      <h3 id="lp-alv-titulo">Nova Parede (Alvenaria)</h3>
+      <button class="modal-close" onclick="Utils.fecharModal('modal-lp-alv')">✕</button>
     </div>
-    <div class="modal-body" id="lp-parede-body" style="max-height:72vh;overflow-y:auto;"></div>
+    <div class="modal-body" id="lp-alv-body" style="max-height:72vh;overflow-y:auto;"></div>
     <div class="modal-footer">
-      <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-lp-parede')">Cancelar</button>
-      <button class="btn btn-dark" onclick="LP.salvarParede(true)">💾 Salvar e Nova Parede</button>
-      <button class="btn btn-primario" onclick="LP.salvarParede(false)">Salvar Parede</button>
+      <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-lp-alv')">Cancelar</button>
+      <button class="btn btn-dark" onclick="LP.salvarAlvenaria(true)">💾 Salvar e Nova Parede</button>
+      <button class="btn btn-primario" onclick="LP.salvarAlvenaria(false)">Salvar Parede</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: peça de ACABAMENTO (uma face de parede dentro de um cômodo) -->
+<div class="modal-overlay" id="modal-lp-acab">
+  <div class="modal" style="max-width:640px;">
+    <div class="modal-header">
+      <h3 id="lp-acab-titulo">Nova Face (Acabamento)</h3>
+      <button class="modal-close" onclick="Utils.fecharModal('modal-lp-acab')">✕</button>
+    </div>
+    <div class="modal-body" id="lp-acab-body" style="max-height:72vh;overflow-y:auto;"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-lp-acab')">Cancelar</button>
+      <button class="btn btn-dark" onclick="LP.salvarAcabamento(true)">💾 Salvar e Nova Face</button>
+      <button class="btn btn-primario" onclick="LP.salvarAcabamento(false)">Salvar Face</button>
     </div>
   </div>
 </div>
@@ -113,7 +129,7 @@
       <button class="modal-close" onclick="Utils.fecharModal('modal-lp-config')">✕</button>
     </div>
     <div class="modal-body">
-      <p class="text-sm text-muted mb-3">Essas regras afetam como os totais são calculados em todo o Levantamento de Paredes. Ao salvar, os valores são recalculados imediatamente.</p>
+      <p class="text-sm text-muted mb-3">Essas regras valem para os dois lançamentos (Alvenaria e Acabamento). Ao salvar, os valores são recalculados imediatamente.</p>
 
       <div style="border:1px solid var(--cor-borda-light);border-radius:8px;padding:16px;margin-bottom:16px;">
         <div style="font-weight:600;font-size:0.9rem;margin-bottom:12px;">🚪 Vãos (Porta/Janela)</div>
@@ -121,7 +137,7 @@
         <div class="form-grupo">
           <label>Como considerar os vãos:</label>
           <select id="lp-cfg-vao-modo" class="form-control" onchange="LP.onChangeCfgVao(this)">
-            <option value="nenhum">Não Descontar — vão não reduz o m² da parede</option>
+            <option value="nenhum">Não Descontar — vão não reduz o m²</option>
             <option value="desconto_total">Desconto Total — desconta toda a área do vão do m²</option>
             <option value="parcial_considera">Desconto Parcial 1 — para vãos maiores que X m², considera apenas X m²</option>
             <option value="parcial_desconta">Desconto Parcial 2 — para vãos maiores que X m², desconta apenas X m²</option>
@@ -143,6 +159,7 @@
             </div>
           </div>
         </div>
+        <p class="text-sm text-muted">Na Alvenaria, o vão desconta o furo estrutural. No Acabamento, desconta a área da esquadria naquela face.</p>
       </div>
 
       <div style="border:1px solid var(--cor-borda-light);border-radius:8px;padding:16px;">
@@ -157,7 +174,7 @@
             <input type="number" id="lp-cfg-ml-pct" class="form-control" step="1" min="0" max="100" placeholder="50">
           </div>
         </div>
-        <p class="text-sm text-muted">Paredes marcadas como ML com área bruta (alvenaria ou acabamento) menor que X m²: valor equivalente = m² × %/100</p>
+        <p class="text-sm text-muted">Peças marcadas como ML com área bruta menor que X m²: valor equivalente = m² × %/100</p>
       </div>
     </div>
     <div class="modal-footer">
@@ -167,11 +184,11 @@
   </div>
 </div>
 
-<!-- Modal: mover parede para outro local -->
+<!-- Modal: mover peça para outro local -->
 <div class="modal-overlay" id="modal-lp-mover">
   <div class="modal" style="max-width:440px;">
     <div class="modal-header">
-      <h3 id="lp-mover-titulo">Mover Parede</h3>
+      <h3 id="lp-mover-titulo">Mover</h3>
       <button class="modal-close" onclick="Utils.fecharModal('modal-lp-mover')">✕</button>
     </div>
     <div class="modal-body">
@@ -182,7 +199,7 @@
     </div>
     <div class="modal-footer">
       <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-lp-mover')">Cancelar</button>
-      <button class="btn btn-primario" onclick="LP.confirmarMoverParede()">Mover</button>
+      <button class="btn btn-primario" onclick="LP.confirmarMoverPeca()">Mover</button>
     </div>
   </div>
 </div>

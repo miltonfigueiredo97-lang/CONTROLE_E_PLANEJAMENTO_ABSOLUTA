@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.19.4',
+  versaoAtual: 'V2.20.0',
 
   versoes: [
     {
@@ -2455,7 +2455,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.19.4',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-13',
       tipo: 'funcionalidade',
       titulo: 'Levantamento de Paredes: Lado B opcional, Metro Linear e configuração geral (igual Fachada)',
@@ -2482,6 +2482,44 @@ const NotasVersao = {
         '  (cada um com sua própria altura), com um painel novo',
         '  "📏 Metro Linear" mostrando m² sem ML / ML / m² com ML',
         '  equivalente — tanto na Visão Geral quanto em cada local',
+      ]
+    },
+    {
+      versao: 'V2.20.0',
+      status: 'aberta',
+      data: '2026-07-13',
+      tipo: 'funcionalidade',
+      titulo: 'Levantamento de Paredes: separado em Alvenaria x Acabamento (corrige duplicação de m² estrutural)',
+      itens: [
+        'PROBLEMA IDENTIFICADO: uma mesma parede física (ex: "Parede',
+        '  D/B") tem UMA alvenaria mas DUAS faces de acabamento —',
+        '  cada face com comprimento e acabamento próprios (a face',
+        '  do cômodo D pode ser diferente da face do cômodo B). Ao',
+        '  lançar as duas faces como peças separadas (necessário',
+        '  para pegar os dois comprimentos/acabamentos), o m² de',
+        '  Alvenaria (Vedação/Estrutural) duplicava, pois cada',
+        '  lançamento contava a alvenaria de novo',
+        'SOLUÇÃO: o módulo agora tem duas abas independentes, dentro',
+        '  da mesma árvore de locais:',
+        '  → 🧱 Alvenaria: a parede física, lançada 1 vez só',
+        '  (Vedação ou Estrutural, com vão e ML). Sem Lado A/Lado B',
+        '  — alvenaria não muda por face',
+        '  → 🎨 Acabamento de Paredes: cada FACE lançada separada,',
+        '  com seu próprio comprimento/altura, mistura de gesso/',
+        '  reboco/revestimento por %, pintura por %, vão e ML.',
+        '  O conceito de "Lado A/Lado B" foi removido — cada',
+        '  lançamento já é uma face, não precisa mais duplicar',
+        '  internamente',
+        'Reaproveita a mesma árvore de Locais para as duas abas',
+        '  (Torre → Andar → Apto → Cômodo), incluindo Clonar Local',
+        '  (clona sublocais + alvenaria + acabamento juntos)',
+        'Configurações de Cálculo (⚙️) agora valem para as duas',
+        '  abas: desconto de vão (5 modos) e Metro Linear',
+        'ATENÇÃO: dados do modelo anterior (paredes com Lado A/B)',
+        '  foram descontinuados a pedido — Milton confirmou que',
+        '  ainda está em fase de testes e prefere recomeçar do zero',
+        '  nas duas coleções novas (paredesAlvenariaPecas e',
+        '  paredesAcabamentoPecas) em vez de migrar os dados antigos',
       ]
     }
   ],

@@ -40,7 +40,7 @@ const Levantamento = (() => {
         <div class="card obra-card" onclick="Router.navegar('levantamento-paredes.html')">
           <div class="card-body">
             <div class="obra-nome">🧱 Paredes</div>
-            <div class="obra-info text-sm">Levantamento de parede por local/andar/apto/cômodo: alvenaria, gesso liso, reboco, revestimento e pintura por lado.</div>
+            <div class="obra-info text-sm">Duas abas: Alvenaria (a parede física) e Acabamento (cada face, com gesso/reboco/revestimento/pintura por %).</div>
             <div class="mt-1"><span class="badge badge-sucesso">Disponível</span></div>
           </div>
         </div>
