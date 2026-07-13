@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.18.0',
+  versaoAtual: 'V2.18.1',
 
   versoes: [
     {
@@ -2180,7 +2180,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.18.0',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-12',
       tipo: 'funcionalidade',
       titulo: 'Planejamento: aba "Vínculos com Levantamento" — arquitetura correta (Milton pediu para reformular)',
@@ -2220,6 +2220,47 @@ const NotasVersao = {
         'Modal de Editar Tarefa ganhou campos Quantidade/Unidade',
         '  (para quando a fonte é manual) — mostra aviso quando a',
         '  tarefa está vinculada a um Levantamento',
+      ]
+    },
+    {
+      versao: 'V2.18.1',
+      status: 'aberta',
+      data: '2026-07-12',
+      tipo: 'melhoria',
+      titulo: 'Vínculos com Levantamento: busca, seleção granular, divisão entre irmãos, exclusão em cascata',
+      itens: [
+        'BUSCA: campo de busca no topo da tela de Vínculos, filtra a',
+        '  lista de tarefas por nome/código sem precisar rolar tudo',
+        '',
+        'PROBLEMA RESOLVIDO — "aplicar a todos os filhos" era tudo ou',
+        '  nada: agora, ao clicar "Vincular" numa tarefa, abre uma',
+        '  árvore com TODOS os descendentes, cada um com checkbox',
+        '  (incluir ou não) — assim dá pra excluir da vez as tarefas',
+        '  que não fazem sentido (ex: Pingadeiras, Esquadria Alumínio)',
+        '  sem ter que desfazer uma por uma depois',
+        '',
+        'DIVISÃO ENTRE IRMÃOS: cada tarefa incluída tem um campo de',
+        '  fração (padrão "1" = valor cheio; aceita "1/8", "0,5" etc.)',
+        '  — grupos de tarefas-irmãs (ex: 8 "Etapas" dentro de',
+        '  "Montagem Balancim") ganham um botão "÷ Dividir estes N em',
+        '  partes iguais" que marca todas e já calcula 1/N sozinho',
+        '  (pode ajustar manualmente depois se precisar)',
+        '',
+        'EXCLUSÃO EM CASCATA: remover o vínculo da tarefa-raiz (a que',
+        '  originou a ação) agora remove junto todas as tarefas que',
+        '  vieram vinculadas nessa mesma ação — não fica mais o pai',
+        '  manual e os filhos com o valor antigo perdido',
+        '',
+        'CORREÇÃO DE SCROLL: salvar/remover/recalcular vínculo não',
+        '  recarrega mais a tela inteira — atualiza só a tabela, então',
+        '  a posição de rolagem (e o campo de busca) ficam onde você',
+        '  estava, sem voltar pro topo',
+        '',
+        'Observação: vínculos criados na versão anterior (V2.18.0)',
+        '  não tinham essas informações de grupo/fração — continuam',
+        '  funcionando normalmente, mas recomendo refazer usando a',
+        '  nova tela pra aproveitar a seleção granular e a divisão',
+        '  automática',
       ]
     }
   ],

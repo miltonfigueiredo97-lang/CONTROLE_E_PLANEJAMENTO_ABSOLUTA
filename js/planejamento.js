@@ -57,7 +57,10 @@ const Planejamento = (() => {
   // Materiais/Mão de Obra direto ao levantamento.
   let modoView='gantt'; // 'gantt' | 'vinculos'
   let levFachadas=[], _levFachadasCarregado=false;
-  let _vincAlvoId=null, _vincModulo='fachada', _vincMetrica='m2semML', _vincEscopo='somente';
+  let _vincAlvoId=null, _vincModulo='fachada', _vincMetrica='m2semML';
+  let _vincBusca=''; // filtro de busca na tela de Vínculos
+  let _vincIncluidos=new Set(); // ids marcados p/ incluir no vínculo (dentro do modal)
+  let _vincFatores={}; // id -> fração em texto ("1", "1/8", "0.5"...)
   const LEVANTAMENTO_MODULOS={
     fachada:{
       label:'Levantamento de Fachada', colecao:'levantamentosFachada',
@@ -276,7 +279,7 @@ const Planejamento = (() => {
   }
 
   // ===================== VÍNCULOS COM LEVANTAMENTO — TELA =====================
-  function abrirVinculosView(){modoView='vinculos';_render();}
+  function abrirVinculosView(){modoView='vinculos';_vincBusca='';_render();}
   function fecharVinculosView(){modoView='gantt';_render();}
 
   async function _carregarLevFachadaSeNecessario(){
@@ -293,44 +296,96 @@ const Planejamento = (() => {
     return 0;
   }
 
+  // Aceita "1", "0.5" ou frações "1/8" — como as pessoas de obra pensam em partes.
+  function _parseFracao(s){
+    s=String(s==null?'1':s).trim();
+    if(s.includes('/')){const [a,b]=s.split('/').map(Number);return b?a/b:1;}
+    const n=parseFloat(s.replace(',','.'));
+    return isNaN(n)?1:n;
+  }
+  // Representa um fator numérico como fração simples (1/2, 1/8...) quando possível,
+  // pra ficar legível no campo — senão mostra o número.
+  function _fracaoDeFator(f){
+    if(f==null)return '1';
+    if(Math.abs(f-1)<1e-9)return '1';
+    for(let n=2;n<=20;n++){if(Math.abs(f-1/n)<1e-9)return '1/'+n;}
+    return String(f);
+  }
+
+  function onBuscaVinculos(texto){
+    _vincBusca=texto;
+    const tb=document.getElementById('vinc-plan-tbody');
+    if(tb)tb.innerHTML=_renderLinhasVinculos();
+  }
+
+  function _renderLinhasVinculos(){
+    let sorted=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
+    if(_vincBusca.trim()){
+      const q=_vincBusca.trim().toLowerCase();
+      sorted=sorted.filter(t=>(t.nome||'').toLowerCase().includes(q)||(t.codigo||'').toLowerCase().includes(q));
+    }
+    if(!sorted.length)return `<tr><td colspan="4" class="text-sm text-muted" style="padding:16px;">Nenhuma tarefa encontrada.</td></tr>`;
+    return sorted.map(t=>{
+      const vinc=t.fonteQuantidade==='levantamento';
+      const mod=LEVANTAMENTO_MODULOS[t.levantamentoModulo];
+      const metricaLabel=mod?.metricas.find(m=>m.id===t.levantamentoMetrica)?.label||'';
+      const indent=_vincBusca.trim()?0:(t.nivel||0)*18; // busca ativa: mostra achatado, sem indentação
+      const fracaoTxt=vinc&&t.levantamentoFator!=null&&Math.abs(t.levantamentoFator-1)>1e-9?` (${_fracaoDeFator(t.levantamentoFator)})`:'';
+      return `<tr>
+        <td style="padding-left:${8+indent}px;">${t.tipo==='grupo'?'📁 ':''}${t.nome}</td>
+        <td class="col-num" style="font-family:var(--font-mono);">${t.quantidade?_fQtd(t.quantidade)+' '+(t.unidade||''):'—'}</td>
+        <td>${vinc?`<span class="badge badge-amarelo">🔗 ${mod?.label||t.levantamentoModulo} — ${metricaLabel}${fracaoTxt}</span>`:'<span class="text-muted text-sm">Manual</span>'}</td>
+        <td class="col-acoes">
+          <button class="btn btn-secundario btn-sm" onclick="Planejamento.abrirVincularTarefa('${t.id}')">${vinc?'✎ Editar':'🔗 Vincular'}</button>
+          ${vinc?`<button class="btn btn-perigo btn-sm btn-icon" onclick="Planejamento.removerVinculoLevantamento('${t.id}')">✕</button>`:''}
+        </td></tr>`;
+    }).join('');
+  }
+
+  // Atualiza só o corpo da tabela (não recria a tela toda) — preserva a posição
+  // de scroll e o foco/valor do campo de busca automaticamente.
+  function _atualizarTbodyVinculos(){
+    const tb=document.getElementById('vinc-plan-tbody');
+    if(tb)tb.innerHTML=_renderLinhasVinculos();
+  }
+
   function _renderVinculosView(){
     const c=_el();
     c.style.cssText='display:flex;flex-direction:column;min-height:0;height:100%;overflow-y:auto;';
-    const sorted=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
     c.innerHTML=`
       <div class="page-header">
         <div><h2>🔗 Vínculos com Levantamento</h2>
-          <span class="subtitulo">Escolha, tarefa por tarefa (ou tarefa + filhos), se a quantidade vem de um Levantamento ou é manual — Materiais e Mão de Obra continuam lendo a quantidade daqui, da tarefa.</span></div>
+          <span class="subtitulo">Escolha, tarefa por tarefa, se a quantidade vem de um Levantamento ou é manual — Materiais e Mão de Obra continuam lendo a quantidade daqui, da tarefa.</span></div>
         <div class="btn-grupo">
           <button class="btn btn-secundario btn-sm" onclick="Planejamento.recalcularVinculosLevantamento()">🔄 Recalcular vínculos</button>
           <button class="btn btn-secundario btn-sm" onclick="Planejamento.fecharVinculosView()">← Voltar ao Planejamento</button>
         </div>
       </div>
+      <div class="form-grupo" style="max-width:360px;">
+        <input type="text" id="vinc-plan-busca" class="form-control" placeholder="🔎 Buscar tarefa..." value="${_vincBusca}" oninput="Planejamento.onBuscaVinculos(this.value)">
+      </div>
       <div class="tabela-container"><table class="tabela tabela-compacta">
         <thead><tr><th>Tarefa</th><th class="col-num">Quantidade</th><th>Fonte</th><th class="col-acoes">Ações</th></tr></thead>
-        <tbody>${sorted.map(t=>{
-          const vinc=t.fonteQuantidade==='levantamento';
-          const mod=LEVANTAMENTO_MODULOS[t.levantamentoModulo];
-          const metricaLabel=mod?.metricas.find(m=>m.id===t.levantamentoMetrica)?.label||'';
-          const indent=(t.nivel||0)*18;
-          return `<tr>
-            <td style="padding-left:${8+indent}px;">${t.tipo==='grupo'?'📁 ':''}${t.nome}</td>
-            <td class="col-num" style="font-family:var(--font-mono);">${t.quantidade?_fQtd(t.quantidade)+' '+(t.unidade||''):'—'}</td>
-            <td>${vinc?`<span class="badge badge-amarelo">🔗 ${mod?.label||t.levantamentoModulo} — ${metricaLabel}</span>`:'<span class="text-muted text-sm">Manual</span>'}</td>
-            <td class="col-acoes">
-              <button class="btn btn-secundario btn-sm" onclick="Planejamento.abrirVincularTarefa('${t.id}')">${vinc?'✎ Editar':'🔗 Vincular'}</button>
-              ${vinc?`<button class="btn btn-perigo btn-sm btn-icon" onclick="Planejamento.removerVinculoLevantamento('${t.id}')">✕</button>`:''}
-            </td></tr>`;
-        }).join('')}</tbody>
+        <tbody id="vinc-plan-tbody">${_renderLinhasVinculos()}</tbody>
       </table></div>`;
   }
 
+  // ===== Modal de vínculo: seleção granular (tarefa + descendentes) =====
+  // Cada tarefa pode ser incluída ou não, e ter uma fração própria (padrão "1" =
+  // valor total do levantamento). Grupos de irmãos (ex: 8 "etapas") ganham um
+  // botão "÷ Dividir" que marca todos e já preenche 1/N automaticamente.
   async function abrirVincularTarefa(tarefaId){
     const t=tarefas.find(x=>x.id===tarefaId);if(!t)return;
     _vincAlvoId=tarefaId;
     _vincModulo=t.levantamentoModulo||'fachada';
     _vincMetrica=t.levantamentoMetrica||LEVANTAMENTO_MODULOS[_vincModulo].metricas[0].id;
-    _vincEscopo='somente';
+    // Recupera quem já está incluído neste grupo (vínculos originados nesta tarefa);
+    // se não há grupo ainda, começa só com a própria tarefa marcada.
+    const grupoAtual=tarefas.filter(x=>x.levantamentoOrigemId===tarefaId);
+    _vincIncluidos=new Set(grupoAtual.length?grupoAtual.map(x=>x.id):[tarefaId]);
+    _vincFatores={};
+    grupoAtual.forEach(x=>{_vincFatores[x.id]=_fracaoDeFator(x.levantamentoFator);});
+    if(!_vincFatores[tarefaId])_vincFatores[tarefaId]='1';
     document.getElementById('modal-planej-vinculo-titulo').textContent='Vincular quantidade: '+t.nome;
     Utils.abrirModal('modal-planej-vinculo');
     document.getElementById('planej-vinculo-body').innerHTML='<div class="text-sm text-muted">Carregando levantamento...</div>';
@@ -340,9 +395,37 @@ const Planejamento = (() => {
 
   function _renderVinculoModalBody(){
     const body=document.getElementById('planej-vinculo-body');if(!body)return;
-    const t=tarefas.find(x=>x.id===_vincAlvoId);
+    const t=tarefas.find(x=>x.id===_vincAlvoId);if(!t){body.innerHTML='';return;}
     const mod=LEVANTAMENTO_MODULOS[_vincModulo];
-    const nDesc=t?Utils.percFamilia(tarefas).descendentes(t).length:0;
+    const baseValor=_calcularMetrica(_vincModulo,_vincMetrica);
+    const fam=Utils.percFamilia(tarefas);
+
+    const linha=(node,nivelRel)=>{
+      const incluso=_vincIncluidos.has(node.id);
+      const fracao=_vincFatores[node.id]||'1';
+      const valor=baseValor*_parseFracao(fracao);
+      return `<div style="display:flex;align-items:center;gap:8px;padding:4px 4px;padding-left:${nivelRel*18+4}px;${incluso?'':'opacity:.55;'}">
+        <input type="checkbox" ${incluso?'checked':''} onchange="Planejamento.onToggleIncluirVinc('${node.id}',this.checked)">
+        <span style="flex:1;font-size:.83rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${node.tipo==='grupo'?'📁 ':''}${node.nome}</span>
+        ${incluso?`<input type="text" value="${fracao}" title="Fração do total (ex: 1, 1/8, 0.5)" class="form-control" style="width:56px;font-size:.76rem;padding:2px 6px;text-align:center;"
+          onchange="Planejamento.onFatorVincChange('${node.id}',this.value)">
+          <span style="font-size:.7rem;color:#888;width:78px;text-align:right;font-family:var(--font-mono);">${_fQtd(valor)} m²</span>`
+          :'<span style="width:142px;"></span>'}
+      </div>`;
+    };
+
+    const renderNode=(node,nivelRel)=>{
+      let html=linha(node,nivelRel);
+      const filhos=fam.filhosDiretos(node);
+      if(filhos.length>=2){
+        html+=`<div style="padding-left:${(nivelRel+1)*18+28}px;margin:2px 0 6px;">
+          <button class="btn btn-secundario btn-sm" style="font-size:.62rem;padding:2px 8px;" onclick="Planejamento.dividirIrmaosVinc('${node.id}')">÷ Dividir estes ${filhos.length} em partes iguais</button>
+        </div>`;
+      }
+      filhos.forEach(f=>{html+=renderNode(f,nivelRel+1);});
+      return html;
+    };
+
     body.innerHTML=`
       <div class="form-grupo"><label>Levantamento</label>
         <select class="form-control" onchange="Planejamento.onVincModuloChange(this.value)">
@@ -352,43 +435,96 @@ const Planejamento = (() => {
         <select class="form-control" onchange="Planejamento.onVincMetricaChange(this.value)">
           ${mod.metricas.map(m=>`<option value="${m.id}" ${m.id===_vincMetrica?'selected':''}>${m.label}</option>`).join('')}
         </select></div>
-      <div class="form-grupo"><label>Aplicar a</label>
-        <select class="form-control" onchange="Planejamento.onVincEscopoChange(this.value)">
-          <option value="somente" ${_vincEscopo==='somente'?'selected':''}>Somente esta tarefa</option>
-          <option value="comFilhos" ${_vincEscopo==='comFilhos'?'selected':''}>Esta tarefa + todos os filhos (${nDesc} tarefa(s))</option>
-        </select></div>
-      <div class="text-sm text-muted">Valor atual calculado: <strong>${_fQtd(_calcularMetrica(_vincModulo,_vincMetrica))} m²</strong> (será salvo em todas as tarefas afetadas)</div>`;
+      <div class="text-sm text-muted" style="margin-bottom:6px;">Valor total do levantamento: <strong>${_fQtd(baseValor)} m²</strong></div>
+      <div style="display:flex;gap:6px;margin-bottom:8px;">
+        <button class="btn btn-secundario btn-sm" onclick="Planejamento.marcarTodosVinc(true)">Marcar todos</button>
+        <button class="btn btn-secundario btn-sm" onclick="Planejamento.marcarTodosVinc(false)">Desmarcar todos</button>
+      </div>
+      <div id="planej-vinculo-arvore" style="border:1px solid var(--cor-borda-light);border-radius:8px;padding:8px;max-height:340px;overflow-y:auto;">
+        ${renderNode(t,0)}
+      </div>
+      <div class="text-sm text-muted" style="margin-top:8px;">Marque só o que faz sentido receber essa quantidade. Para dividir um grupo de tarefas-irmãs (ex: 8 etapas), use o botão "÷ Dividir" que aparece logo abaixo delas — ou digite a fração manualmente (ex: <code>1/8</code>).</div>`;
   }
+
   function onVincModuloChange(v){_vincModulo=v;_vincMetrica=LEVANTAMENTO_MODULOS[v].metricas[0].id;_renderVinculoModalBody();}
   function onVincMetricaChange(v){_vincMetrica=v;_renderVinculoModalBody();}
-  function onVincEscopoChange(v){_vincEscopo=v;}
+  function onToggleIncluirVinc(id,checked){
+    if(checked){_vincIncluidos.add(id);if(!_vincFatores[id])_vincFatores[id]='1';}
+    else _vincIncluidos.delete(id);
+    _renderVinculoModalBody();
+  }
+  function onFatorVincChange(id,val){_vincFatores[id]=val;_renderVinculoModalBody();}
+  function marcarTodosVinc(v){
+    const t=tarefas.find(x=>x.id===_vincAlvoId);if(!t)return;
+    const fam=Utils.percFamilia(tarefas);
+    if(v){
+      [t,...fam.descendentes(t)].forEach(x=>{_vincIncluidos.add(x.id);if(!_vincFatores[x.id])_vincFatores[x.id]='1';});
+    } else {
+      _vincIncluidos.clear();
+    }
+    _renderVinculoModalBody();
+  }
+  function dividirIrmaosVinc(parentId){
+    const fam=Utils.percFamilia(tarefas);
+    const parent=tarefas.find(x=>x.id===parentId);if(!parent)return;
+    const filhos=fam.filhosDiretos(parent);
+    if(filhos.length<2)return;
+    filhos.forEach(f=>{_vincIncluidos.add(f.id);_vincFatores[f.id]='1/'+filhos.length;});
+    _renderVinculoModalBody();
+  }
 
   async function salvarVinculoLevantamento(){
     const t=tarefas.find(x=>x.id===_vincAlvoId);if(!t)return;
+    if(!_vincIncluidos.size){Utils.toast('Marque ao menos uma tarefa.','alerta');return;}
     try{
       Utils.mostrarLoading('Calculando e salvando...');
       await _carregarLevFachadaSeNecessario();
-      const alvos=[t,...(_vincEscopo==='comFilhos'?Utils.percFamilia(tarefas).descendentes(t):[])];
-      const valor=_calcularMetrica(_vincModulo,_vincMetrica);
-      const data={fonteQuantidade:'levantamento',levantamentoModulo:_vincModulo,levantamentoMetrica:_vincMetrica,quantidade:valor,unidade:'m²'};
-      for(const alvo of alvos){
-        await Database.atualizar(obraId,COL,alvo.id,data);
+      const baseValor=_calcularMetrica(_vincModulo,_vincMetrica);
+
+      // Desfaz vínculos deste mesmo grupo que ficaram desmarcados agora
+      // (edição declarativa: o que está marcado AGORA é o que vale).
+      const antigos=tarefas.filter(x=>x.levantamentoOrigemId===_vincAlvoId);
+      for(const antigo of antigos){
+        if(!_vincIncluidos.has(antigo.id)){
+          await Database.atualizar(obraId,COL,antigo.id,{fonteQuantidade:'manual',levantamentoOrigemId:''});
+          antigo.fonteQuantidade='manual';antigo.levantamentoOrigemId='';
+        }
+      }
+      // Grava os marcados
+      for(const id of _vincIncluidos){
+        const alvo=tarefas.find(x=>x.id===id);if(!alvo)continue;
+        const fator=_parseFracao(_vincFatores[id]||'1');
+        const data={fonteQuantidade:'levantamento',levantamentoModulo:_vincModulo,levantamentoMetrica:_vincMetrica,
+          levantamentoFator:fator,levantamentoOrigemId:_vincAlvoId,quantidade:baseValor*fator,unidade:'m²'};
+        await Database.atualizar(obraId,COL,id,data);
         Object.assign(alvo,data);
       }
       Utils.fecharModal('modal-planej-vinculo');
-      Utils.toast(`Vínculo salvo em ${alvos.length} tarefa(s)!`,'sucesso');
-      _renderVinculosView();
+      Utils.toast(`Vínculo salvo em ${_vincIncluidos.size} tarefa(s)!`,'sucesso');
+      _atualizarTbodyVinculos();
     }catch(e){console.error(e);Utils.toast('Erro ao salvar vínculo.','erro');}
     finally{Utils.esconderLoading();}
   }
 
+  // Remover: se a tarefa é a "raiz" do grupo (origem do vínculo dela mesma),
+  // remove ela e todos os filhos que vieram junto nessa mesma ação — não
+  // faz sentido o pai voltar a manual e os filhos ficarem com o valor antigo.
+  // Se for uma tarefa que só herdou de outro grupo, remove só ela.
   async function removerVinculoLevantamento(tarefaId){
-    if(!Utils.confirmar('Remover o vínculo? A tarefa volta a ter quantidade manual (o último valor calculado fica salvo até você editar).'))return;
+    const t=tarefas.find(x=>x.id===tarefaId);if(!t)return;
+    const ehRaiz=t.levantamentoOrigemId===tarefaId;
+    const grupo=ehRaiz?tarefas.filter(x=>x.levantamentoOrigemId===tarefaId):[t];
+    const msg=grupo.length>1
+      ?`Remover o vínculo de "${t.nome}" e das outras ${grupo.length-1} tarefa(s) vinculada(s) junto (mesmo grupo)?`
+      :`Remover o vínculo de "${t.nome}"?`;
+    if(!Utils.confirmar(msg))return;
     try{
-      await Database.atualizar(obraId,COL,tarefaId,{fonteQuantidade:'manual'});
-      const t=tarefas.find(x=>x.id===tarefaId);if(t)t.fonteQuantidade='manual';
-      Utils.toast('Vínculo removido.','sucesso');
-      _renderVinculosView();
+      for(const g of grupo){
+        await Database.atualizar(obraId,COL,g.id,{fonteQuantidade:'manual',levantamentoOrigemId:''});
+        g.fonteQuantidade='manual';g.levantamentoOrigemId='';
+      }
+      Utils.toast(`${grupo.length} vínculo(s) removido(s).`,'sucesso');
+      _atualizarTbodyVinculos();
     }catch(e){Utils.toast('Erro.','erro');}
   }
 
@@ -400,12 +536,14 @@ const Planejamento = (() => {
       _levFachadasCarregado=false; // força reler o levantamento mais recente
       await _carregarLevFachadaSeNecessario();
       for(const t of alvo){
-        const valor=_calcularMetrica(t.levantamentoModulo,t.levantamentoMetrica);
+        const base=_calcularMetrica(t.levantamentoModulo,t.levantamentoMetrica);
+        const fator=t.levantamentoFator!=null?t.levantamentoFator:1;
+        const valor=base*fator;
         await Database.atualizar(obraId,COL,t.id,{quantidade:valor});
         t.quantidade=valor;
       }
       Utils.toast(`${alvo.length} vínculo(s) recalculado(s)!`,'sucesso');
-      _renderVinculosView();
+      _atualizarTbodyVinculos();
     }catch(e){console.error(e);Utils.toast('Erro ao recalcular.','erro');}
     finally{Utils.esconderLoading();}
   }
@@ -1888,6 +2026,7 @@ const Planejamento = (() => {
     toggleStatusFiltro,_aplicarStatusFiltro,undo,
     importarExcel,exportar,exportarPNG,_gerarPNG,_predPopup,_predPreview,_predSalvar,
     abrirVinculosView,fecharVinculosView,abrirVincularTarefa,onVincModuloChange,onVincMetricaChange,
-    onVincEscopoChange,salvarVinculoLevantamento,removerVinculoLevantamento,recalcularVinculosLevantamento};
+    onBuscaVinculos,onToggleIncluirVinc,onFatorVincChange,marcarTodosVinc,dividirIrmaosVinc,
+    salvarVinculoLevantamento,removerVinculoLevantamento,recalcularVinculosLevantamento};
 })();
 function onObraChanged(){Planejamento.init();}
