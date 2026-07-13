@@ -37,11 +37,11 @@ const Levantamento = (() => {
             <div class="mt-1"><span class="badge badge-sucesso">Disponível</span></div>
           </div>
         </div>
-        <div class="card" style="opacity:0.5">
+        <div class="card obra-card" onclick="Router.navegar('levantamento-paredes.html')">
           <div class="card-body">
-            <div class="obra-nome">🧱 Alvenaria</div>
-            <div class="obra-info text-sm">Levantamento de alvenaria por pavimento e tipo de bloco.</div>
-            <div class="mt-1"><span class="badge badge-neutro">Em breve</span></div>
+            <div class="obra-nome">🧱 Paredes</div>
+            <div class="obra-info text-sm">Levantamento de parede por local/andar/apto/cômodo: alvenaria, gesso liso, reboco, revestimento e pintura por lado.</div>
+            <div class="mt-1"><span class="badge badge-sucesso">Disponível</span></div>
           </div>
         </div>
         <div class="card" style="opacity:0.5">

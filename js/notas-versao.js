@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.18.4',
+  versaoAtual: 'V2.19.0',
 
   versoes: [
     {
@@ -2312,7 +2312,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.18.4',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-13',
       tipo: 'funcionalidade',
       titulo: 'Vínculos com Levantamento: seleção granular por Fachada/Balancim/Vista',
@@ -2342,6 +2342,39 @@ const NotasVersao = {
         '  → Mecanismo genérico: a mesma lógica de filtro por níveis',
         '  serve de base pra quando o vínculo de Levantamento de',
         '  Concreto for implementado',
+      ]
+    },
+    {
+      versao: 'V2.19.0',
+      status: 'aberta',
+      data: '2026-07-13',
+      tipo: 'funcionalidade',
+      titulo: 'Novo módulo: Levantamento de Paredes',
+      itens: [
+        'Novo módulo dentro de Levantamentos: um único cadastro de',
+        '  "Parede" no lugar de módulos separados por acabamento',
+        '  (Alvenaria, Reboco, Gesso, Revestimento)',
+        'Árvore de locais genérica e ilimitada em profundidade —',
+        '  monta a hierarquia como quiser (ex: Torre → 1º Andar →',
+        '  Apto 11 → Cozinha), sem níveis fixos no sistema',
+        'Peça = Parede, com Comprimento (cm), Altura (cm), tipo de',
+        '  Alvenaria (Estrutural ou Vedação) e vãos (porta/janela)',
+        '  — pode adicionar quantos vãos precisar, cada um com',
+        '  comprimento, altura e quantidade',
+        'Lado A e Lado B configurados separadamente, cada um com:',
+        '  → Acabamento por %, podendo misturar Gesso Liso + Reboco',
+        '  + Revestimento na mesma parede (ex: 60% reboco + 40%',
+        '  revestimento)',
+        '  → Pintura independente do acabamento (pode ter reboco/',
+        '  revestimento/gesso E pintura na mesma parede), com mais',
+        '  de uma cor por %',
+        'Geração automática dos quantitativos a partir das peças:',
+        '  → Alvenaria de Vedação (m²) e Alvenaria Estrutural (m²)',
+        '  separadas',
+        '  → Gesso Liso, Reboco e Revestimento (m²)',
+        '  → Pintura total (m²) com detalhamento por cor',
+        'Visão Geral com resumo de quantitativos da obra toda e',
+        '  resumo por local de nível superior (ex: Térreo vs Torre)',
       ]
     }
   ],
