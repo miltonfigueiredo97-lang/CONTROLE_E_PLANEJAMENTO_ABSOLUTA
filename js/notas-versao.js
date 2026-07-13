@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.19.0',
+  versaoAtual: 'V2.19.1',
 
   versoes: [
     {
@@ -2346,7 +2346,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.19.0',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-13',
       tipo: 'funcionalidade',
       titulo: 'Novo módulo: Levantamento de Paredes',
@@ -2375,6 +2375,20 @@ const NotasVersao = {
         '  → Pintura total (m²) com detalhamento por cor',
         'Visão Geral com resumo de quantitativos da obra toda e',
         '  resumo por local de nível superior (ex: Térreo vs Torre)',
+      ]
+    },
+    {
+      versao: 'V2.19.1',
+      status: 'aberta',
+      data: '2026-07-13',
+      tipo: 'correcao',
+      titulo: 'Levantamento de Paredes: opção "Fachada" no acabamento',
+      itens: [
+        'Adicionada opção "Fachada" na lista de acabamentos de',
+        '  Lado A/Lado B — usada para marcar que aquele lado da',
+        '  parede já é resolvido pelo módulo de Levantamento de',
+        '  Fachada, sem gerar nenhum quantitativo aqui (não entra',
+        '  em Gesso Liso, Reboco ou Revestimento)',
       ]
     }
   ],

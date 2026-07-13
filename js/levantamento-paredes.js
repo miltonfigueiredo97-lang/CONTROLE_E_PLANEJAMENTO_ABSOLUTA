@@ -16,6 +16,7 @@ const LevantamentoParedes = (() => {
     { id: 'gesso', label: 'Gesso Liso' },
     { id: 'reboco', label: 'Reboco' },
     { id: 'revestimento', label: 'Revestimento' },
+    { id: 'fachada', label: 'Fachada (não contabilizado)' },
   ];
 
   let obraId = null;
