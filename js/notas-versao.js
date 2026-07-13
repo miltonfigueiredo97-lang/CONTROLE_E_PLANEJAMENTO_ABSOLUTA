@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.18.2',
+  versaoAtual: 'V2.18.3',
 
   versoes: [
     {
@@ -2265,7 +2265,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.18.2',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-12',
       tipo: 'correcao',
       titulo: 'Vínculos com Levantamento: cascata corrigida + scroll do modal não pula mais pro topo',
@@ -2288,6 +2288,26 @@ const NotasVersao = {
         '  porque cada ação te jogava de volta lá em cima. Agora a',
         '  posição de rolagem da lista fica exatamente onde você',
         '  estava mexendo',
+      ]
+    },
+    {
+      versao: 'V2.18.3',
+      status: 'aberta',
+      data: '2026-07-10',
+      tipo: 'funcionalidade',
+      titulo: 'Planejamento: barra de busca de tarefa',
+      itens: [
+        'Barra de busca integrada à toolbar do Planejamento:',
+        '  → Busca por nome, código, responsável, local, grupo ou',
+        '    número de linha (#)',
+        '  → Ao digitar, pula automaticamente para o 1º resultado',
+        '  → Resultado atual destacado em amarelo vivo; outros',
+        '    resultados (também encontrados) em amarelo suave',
+        '  → Enter ou ↓: próximo resultado',
+        '  → ↑: resultado anterior',
+        '  → Esc ou ✕: limpa a busca',
+        '  → Contador de resultados ao lado da barra',
+        '  → Foco retorna ao campo após re-render',
       ]
     }
   ],

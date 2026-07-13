@@ -16,6 +16,8 @@ const Planejamento = (() => {
   // Seleção múltipla (checkbox) e filtro por status
   let selecionados=new Set();
   let statusFiltro=new Set(); // vazio = mostra tudo
+  // Busca de tarefa no Gantt
+  let _buscaTexto='', _buscaResultados=[], _buscaCursor=-1;
   // Undo stack: últimas 30 snapshots do array tarefas (cópia plana antes de cada ação)
   const _undoStack=[];
   function _undoPush(){
@@ -273,6 +275,16 @@ const Planejamento = (() => {
         </div>
       </div>
       <div style="font-size:.68rem;color:#444;margin-bottom:4px;">Ctrl++ inserir · Ctrl+- excluir · clique na célula para editar · clique direito no header para esconder coluna · Ctrl+botão direito+arrastar para reordenar</div>
+      <div style="position:relative;margin-bottom:6px;display:flex;align-items:center;gap:6px;">
+        <div style="position:relative;flex:1;max-width:360px;">
+          <input id="gantt-busca" type="text" value="${_buscaTexto}" placeholder="🔍 Buscar tarefa por nome, código ou responsável..." autocomplete="off"
+            oninput="Planejamento.onBusca(this.value)"
+            onkeydown="Planejamento._buscaKey(event)"
+            style="width:100%;padding:6px 28px 6px 9px;border:1px solid #333;border-radius:7px;font-size:.8rem;box-sizing:border-box;background:#111;color:#ddd;">
+          ${_buscaTexto?`<button onclick="Planejamento.limparBusca()" title="Limpar" style="position:absolute;right:6px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#666;font-size:.9rem;padding:0;">✕</button>`:''}
+        </div>
+        ${_buscaTexto?`<span style="font-size:.75rem;color:#666;">${_buscaResultados.length} resultado${_buscaResultados.length!==1?'s':''} · <span style="color:#aaa;">↑↓ navegar · Enter pular</span></span>`:''}
+      </div>
       ${_renderGantt(visCols)}
       ${_renderBarraSelecao()}`;
     requestAnimationFrame(()=>_paintRows());
@@ -715,7 +727,11 @@ const Planejamento = (() => {
       }
 
       const bordaDrop=isDropAlvo?(_dropPos==='before'?'box-shadow:inset 0 2px 0 var(--cor-primaria);':'box-shadow:inset 0 -2px 0 var(--cor-primaria);'):'';
-      rH+=`<div data-rowid="${t.id}" style="position:absolute;top:${y}px;left:0;right:0;height:${ROW_H}px;display:flex;align-items:center;border-bottom:1px solid #1a1a1a;background:${sel?'rgba(245,200,0,.12)':''};opacity:${isDragged?'.35':'1'};${bordaDrop}cursor:default;"
+      // Destaque de busca: resultado atual (cursor) = amarelo vivo; outros resultados = amarelo suave
+      const isBuscaCurrent=_buscaTexto&&_buscaResultados[_buscaCursor]?.i===i;
+      const isBuscaMatch=_buscaTexto&&_buscaResultados.some(r=>r.i===i);
+      const rowBg=isBuscaCurrent?'rgba(245,200,0,.35)':isBuscaMatch?'rgba(245,200,0,.10)':sel?'rgba(245,200,0,.12)':'';
+      rH+=`<div data-rowid="${t.id}" style="position:absolute;top:${y}px;left:0;right:0;height:${ROW_H}px;display:flex;align-items:center;border-bottom:1px solid #1a1a1a;background:${rowBg};opacity:${isDragged?'.35':'1'};${bordaDrop}cursor:default;"
         onpointerdown="Planejamento._rowDragStart(event,${i})" oncontextmenu="if(event.ctrlKey)event.preventDefault();">${cells}</div>`;
 
       // Barra Gantt
@@ -2024,12 +2040,86 @@ const Planejamento = (() => {
     ));
   }
 
+  // ===================== BUSCA NO GANTT =====================
+  function onBusca(texto){
+    _buscaTexto=texto.trim();
+    _buscaCursor=-1;
+    if(!_buscaTexto){
+      _buscaResultados=[];
+      _render();requestAnimationFrame(()=>_paintRows());
+      return;
+    }
+    const q=_buscaTexto.toLowerCase();
+    _buscaResultados=filtradas
+      .map((t,i)=>({t,i}))
+      .filter(({t})=>
+        (t.nome||'').toLowerCase().includes(q)||
+        (t.codigo||'').toLowerCase().includes(q)||
+        (t.responsavel||'').toLowerCase().includes(q)||
+        (t.local||'').toLowerCase().includes(q)||
+        (t.grupo||'').toLowerCase().includes(q)||
+        String(t._numLinha||'').includes(q)
+      );
+    // Vai para o primeiro resultado automaticamente
+    if(_buscaResultados.length){
+      _buscaCursor=0;
+      _pularParaResultado(0);
+    } else {
+      _render();requestAnimationFrame(()=>_paintRows());
+    }
+    // Preserva o foco no input após o re-render
+    requestAnimationFrame(()=>{
+      const inp=document.getElementById('gantt-busca');
+      if(inp){inp.focus();inp.setSelectionRange(inp.value.length,inp.value.length);}
+    });
+  }
+
+  function limparBusca(){
+    _buscaTexto='';_buscaResultados=[];_buscaCursor=-1;
+    _render();requestAnimationFrame(()=>_paintRows());
+    requestAnimationFrame(()=>document.getElementById('gantt-busca')?.focus());
+  }
+
+  function _buscaKey(e){
+    if(!_buscaResultados.length)return;
+    if(e.key==='Enter'||e.key==='ArrowDown'){
+      e.preventDefault();
+      _buscaCursor=(_buscaCursor+1)%_buscaResultados.length;
+      _pularParaResultado(_buscaCursor);
+    } else if(e.key==='ArrowUp'){
+      e.preventDefault();
+      _buscaCursor=(_buscaCursor-1+_buscaResultados.length)%_buscaResultados.length;
+      _pularParaResultado(_buscaCursor);
+    } else if(e.key==='Escape'){
+      limparBusca();
+    }
+  }
+
+  function _pularParaResultado(cursor){
+    const res=_buscaResultados[cursor];if(!res)return;
+    selectedIdx=res.i;
+    // Scrollar para a linha encontrada no painel esquerdo
+    const esqS=document.getElementById('g-esq-s');
+    if(esqS){
+      const y=res.i*ROW_H;
+      const visH=esqS.clientHeight;
+      if(y<esqS.scrollTop||y+ROW_H>esqS.scrollTop+visH){
+        esqS.scrollTop=Math.max(0,y-visH/2+ROW_H/2);
+        // Sincroniza o Gantt
+        const dirS=document.getElementById('g-dir-s');
+        if(dirS)dirS.scrollTop=esqS.scrollTop;
+      }
+    }
+    _render();requestAnimationFrame(()=>_paintRows());
+  }
+
   return{init,carregar,setZoom,inserirTarefa,editarTarefa,salvarTarefa,excluirTarefa,
     selectIdx,toggleRecolher,recuarNivel,avancarNivel,
     toggleGantt,hideCol,showColsMenu,_showCol,_showAll,
     _colResizeStart,moveColLeft,moveColRight,_hideCol,_divStart,_sync,_editCell,_esqDragStart,
     _rowDragStart,toggleSel,_limparSelecao,_moverSel,_bulkNivel,_bulkDuplicar,_bulkExcluir,
     toggleStatusFiltro,_aplicarStatusFiltro,undo,
+    onBusca,limparBusca,_buscaKey,
     importarExcel,exportar,exportarPNG,_gerarPNG,_predPopup,_predPreview,_predSalvar,
     abrirVinculosView,fecharVinculosView,abrirVincularTarefa,onVincModuloChange,onVincMetricaChange,
     onBuscaVinculos,onToggleIncluirVinc,onFatorVincChange,marcarTodosVinc,dividirIrmaosVinc,
