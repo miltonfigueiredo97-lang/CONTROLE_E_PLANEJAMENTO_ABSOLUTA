@@ -574,6 +574,7 @@ const LevantamentoFachada = (() => {
         '<td class="col-acoes" style="white-space:nowrap;">'+
         '<button class="btn btn-secundario btn-sm" onclick="LF.editarPeca(\''+pc.id+'\')">✎</button> '+
         '<button class="btn btn-sm btn-icon" onclick="LF.moverPeca(\''+pc.id+'\')" title="Mover para '+(vi.tipoVista==='externa'?'Vista Interna':'Vista Externa')+'">⇄</button> '+
+        '<button class="btn btn-sm btn-icon" onclick="LF.abrirMoverPecaBal(\''+pc.id+'\')" title="Mover para outro balancim">↗</button> '+
         '<button class="btn btn-sm btn-icon" onclick="LF.duplicarPeca(\''+pc.id+'\')" title="Duplicar">⧉</button> '+
         '<button class="btn btn-sm btn-icon" onclick="LF.conferirPeca(\''+pc.id+'\')" title="'+(pc.conferido?'Desmarcar conferência':'Marcar peça como conferida')+'">'+(pc.conferido?'↩':'✓')+'</button> '+
         '<button class="btn btn-perigo btn-sm btn-icon" onclick="LF.excluirPeca(\''+pc.id+'\')">✕</button></td></tr>';
@@ -940,6 +941,46 @@ const LevantamentoFachada = (() => {
       await carregar();
     }catch(e){Utils.toast('Erro ao mover.','erro');}
   }
+
+  // Mover peça para OUTRO balancim (qualquer fachada), escolhendo a vista de destino
+  let _moverPecaAlvoId=null;
+  function abrirMoverPecaBal(pcId){
+    const pc=pecas.find(x=>x.id===pcId);if(!pc)return;
+    _moverPecaAlvoId=pcId;
+    const viAtual=vistas.find(v=>v.id===pc.vistaId);
+    const sel=document.getElementById('mover-peca-balancim');if(!sel)return;
+    let h='<option value="">Selecione...</option>';
+    fachadas.forEach(f=>{
+      const opts=balancins.filter(b=>b.fachadaId===f.id&&b.id!==pc.balancimId);
+      if(!opts.length)return;
+      h+='<optgroup label="'+f.nome+'">';
+      opts.forEach(b=>{h+='<option value="'+b.id+'">'+(b.nome||b.codigo)+'</option>';});
+      h+='</optgroup>';
+    });
+    sel.innerHTML=h;
+    const vistaSel=document.getElementById('mover-peca-vista');
+    if(vistaSel)vistaSel.value=viAtual?.tipoVista||'externa';
+    const tit=document.getElementById('mover-peca-titulo');
+    if(tit)tit.textContent='Mover "'+pc.nome+'"';
+    Utils.abrirModal('modal-mover-peca-bal');
+  }
+
+  async function confirmarMoverPecaBal(){
+    const pcId=_moverPecaAlvoId;
+    const pc=pecas.find(x=>x.id===pcId);if(!pc)return;
+    const blDestId=document.getElementById('mover-peca-balancim')?.value;
+    const tipoDest=document.getElementById('mover-peca-vista')?.value||'externa';
+    if(!blDestId){Utils.toast('Selecione um balancim de destino.','erro');return;}
+    const blDest=balancins.find(x=>x.id===blDestId);if(!blDest)return;
+    const viDest=vistas.find(v=>v.balancimId===blDestId&&v.tipoVista===tipoDest);
+    if(!viDest){Utils.toast('Vista de destino não encontrada.','erro');return;}
+    Utils.fecharModal('modal-mover-peca-bal');
+    try{
+      await Database.atualizar(obraId,COL,pcId,{balancimId:blDestId,vistaId:viDest.id,fachadaId:blDest.fachadaId,conferido:false});
+      Utils.toast('Peça movida para "'+(blDest.nome||blDest.codigo)+'"!','sucesso');
+      await carregar();
+    }catch(e){Utils.toast('Erro ao mover.','erro');}
+  }
   async function duplicarPeca(id){const pc=pecas.find(x=>x.id===id);if(!pc)return;const cl={...pc};delete cl.id;delete cl.createdAt;delete cl.updatedAt;delete cl.createdBy;delete cl.updatedBy;cl.nome=pc.nome+' (cópia)';cl.conferido=false;try{await Database.criar(obraId,COL,cl);Utils.toast('Duplicada!','sucesso');await carregar();}catch(e){Utils.toast('Erro.','erro');}}
   async function conferirPeca(id){const pc=pecas.find(x=>x.id===id);if(!pc)return;const n=!pc.conferido;try{await Database.atualizar(obraId,COL,id,{conferido:n,conferidoPor:n?Auth.getUid():null,conferidoEm:n?new Date().toISOString():null});Utils.toast(n?'Conferida.':'Desconferida.','sucesso');await carregar();}catch(e){Utils.toast('Erro.','erro');}}
   async function togglePecaML(id){const pc=pecas.find(x=>x.id===id);if(!pc)return;const n=!pc.podeSerML;try{await Database.atualizar(obraId,COL,id,{podeSerML:n});Utils.toast(n?'Marcada como ML.':'Desmarcada como ML.','sucesso');await carregar();}catch(e){Utils.toast('Erro.','erro');}}
@@ -1297,7 +1338,7 @@ const LevantamentoFachada = (() => {
   function imgRZEv(e, el){ imgRZ(e, el.dataset.d); }
   function cxResizeEv(e){ cxResize(e, parseInt(e.currentTarget.dataset.i), e.currentTarget.dataset.d); }
 
-  return {init,carregar,sel:selecionar,setAba,criarFachada,criarBalancim,editar,salvarEntidade,excluir,novaPeca,editarPeca,salvarPeca,excluirPeca,duplicarPeca,moverPeca,duplicarBal,editarNomeInline,abrirClonarBal,confirmarClonarBal,corrigirVinculos,conferirPeca,togglePecaML,onClickCheckML,onCompAltInput,calcExprEnter,onToggleFriso,adicionarFrisoRow,removerFrisoRow,exportarCSV,exportarVista,onToggleJanela,importarMapa,cxAdicionar,cxRemover,cxTravar,cxEditar,salvarCxEdit,cxMouseDown,cxDrop,cxResize,imgMouseDown,imgResize,entrarEditImg,sairEditImg,imgMD,imgRZEv,cxResizeEv,toggleEditImg,fecharEditImg,onImgResize,limparMapa,abrirVaoVista,salvarVaoVista,_atualizarPreviewVao,adicionarVaoRow,removerVaoRow,abrirConfig,salvarConfig,onChangeCfgJanela};
+  return {init,carregar,sel:selecionar,setAba,criarFachada,criarBalancim,editar,salvarEntidade,excluir,novaPeca,editarPeca,salvarPeca,excluirPeca,duplicarPeca,moverPeca,abrirMoverPecaBal,confirmarMoverPecaBal,duplicarBal,editarNomeInline,abrirClonarBal,confirmarClonarBal,corrigirVinculos,conferirPeca,togglePecaML,onClickCheckML,onCompAltInput,calcExprEnter,onToggleFriso,adicionarFrisoRow,removerFrisoRow,exportarCSV,exportarVista,onToggleJanela,importarMapa,cxAdicionar,cxRemover,cxTravar,cxEditar,salvarCxEdit,cxMouseDown,cxDrop,cxResize,imgMouseDown,imgResize,entrarEditImg,sairEditImg,imgMD,imgRZEv,cxResizeEv,toggleEditImg,fecharEditImg,onImgResize,limparMapa,abrirVaoVista,salvarVaoVista,_atualizarPreviewVao,adicionarVaoRow,removerVaoRow,abrirConfig,salvarConfig,onChangeCfgJanela};
 })();
 const LF=LevantamentoFachada;
 function onObraChanged(){LF.init();}

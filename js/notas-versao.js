@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.17.16',
+  versaoAtual: 'V2.17.17',
 
   versoes: [
     {
@@ -2023,7 +2023,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.17.16',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-12',
       tipo: 'correcao',
       titulo: 'Levantamento de Fachada: botão "✓" sem título explicativo',
@@ -2032,6 +2032,25 @@ const NotasVersao = {
         '  como conferida/já revisada) não tinha texto ao passar',
         '  o mouse — agora mostra "Marcar peça como conferida" ou',
         '  "Desmarcar conferência", conforme o estado atual',
+      ]
+    },
+    {
+      versao: 'V2.17.17',
+      status: 'aberta',
+      data: '2026-07-12',
+      tipo: 'funcionalidade',
+      titulo: 'Levantamento de Fachada: mover peça para outro balancim',
+      itens: [
+        'Novo botão "↗" nas Ações da tabela de peças — abre uma',
+        '  janela pra escolher o balancim de destino (de qualquer',
+        '  fachada) e a vista (Externa ou Interna)',
+        'A peça sai do balancim/fachada atual e passa a pertencer',
+        '  ao balancim escolhido, mantendo nome e valores; a',
+        '  conferência é reiniciada (peça precisa ser reconferida',
+        '  no lugar novo)',
+        'Complementa o botão "⇄" (que só troca entre Externa e',
+        '  Interna do MESMO balancim) — agora dá pra corrigir',
+        '  peça lançada no balancim errado também',
       ]
     }
   ],
