@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.17.23',
+  versaoAtual: 'V2.18.0',
 
   versoes: [
     {
@@ -2143,7 +2143,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.17.23',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-12',
       tipo: 'funcionalidade',
       titulo: 'Mão de Obra: vincular direto ao Levantamento de Fachada (m² real, com desconto de janela)',
@@ -2176,6 +2176,50 @@ const NotasVersao = {
         '  (que são por tarefa) — ele fica visível e correto dentro',
         '  do próprio módulo Mão de Obra / Materiais, na aba Por',
         '  Tarefa, filtrando por essa opção',
+      ]
+    },
+    {
+      versao: 'V2.18.0',
+      status: 'aberta',
+      data: '2026-07-12',
+      tipo: 'funcionalidade',
+      titulo: 'Planejamento: aba "Vínculos com Levantamento" — arquitetura correta (Milton pediu para reformular)',
+      itens: [
+        'MUDANÇA DE ARQUITETURA (a pedido do Milton, corrigindo a',
+        '  V2.17.23 desta mesma sessão): removida a opção de vincular',
+        '  Material/Mão de Obra DIRETO ao Levantamento de Fachada.',
+        '  Motivo: isso fazia o custo não aparecer nas colunas do',
+        '  Planejamento (Custo Material/Custo M.Obra), porque o',
+        '  vínculo não passava por nenhuma tarefa real.',
+        '',
+        'NOVA ARQUITETURA — tudo se vincula ao Planejamento, e o',
+        '  Planejamento se vincula ao Levantamento:',
+        '  → Material, Mão de Obra, Suprimento etc. continuam se',
+        '    vinculando só a tarefas REAIS do Planejamento (como',
+        '    sempre foi) — nada mudou aí',
+        '  → Nova aba/botão "🔗 Vínculos com Levantamento" dentro do',
+        '    Planejamento (separada da visão de Gantt) — lista TODAS',
+        '    as tarefas, pai e filho, uma por linha',
+        '  → Em cada linha, escolhe: qual Levantamento (por enquanto:',
+        '    Fachada) + qual quantidade considerar (m² líquido ou',
+        '    m² + metro linear equivalente) + aplicar só nessa tarefa',
+        '    OU nessa tarefa + todos os filhos de uma vez',
+        '  → Ao salvar, a quantidade da(s) tarefa(s) escolhida(s) é',
+        '    calculada e gravada no campo quantidade da própria',
+        '    tarefa — e como Material/Mão de Obra já leem esse campo,',
+        '    o custo passa a aparecer certinho nas colunas do',
+        '    Planejamento também, sem precisar mudar mais nada',
+        '  → Botão "🔄 Recalcular vínculos" — atualiza a quantidade',
+        '    de todas as tarefas vinculadas, lendo o Levantamento',
+        '    mais recente (útil depois de editar peças na Fachada)',
+        '  → Botão "✕" remove o vínculo (tarefa volta a ser manual)',
+        '',
+        'NOVA COLUNA "Quantidade" no Gantt (visível/escondível como',
+        '  as outras) — mostra o valor + unidade, com ícone 🔗 quando',
+        '  vem de um Levantamento',
+        'Modal de Editar Tarefa ganhou campos Quantidade/Unidade',
+        '  (para quando a fonte é manual) — mostra aviso quando a',
+        '  tarefa está vinculada a um Levantamento',
       ]
     }
   ],

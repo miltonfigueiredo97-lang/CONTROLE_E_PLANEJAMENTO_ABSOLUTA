@@ -40,13 +40,33 @@ const Planejamento = (() => {
   }
 
   // Colunas: ordem editável, largura editável
-  let colOrdem=['sel','num','status','nivel','codigo','nome','inicio','termino','duracao','percEsp','percConc','predecessora','responsavel','local','grupo','custoMaterial','custoMaoObra','acoes'];
-  let colLarguras={sel:28,num:36,status:34,nivel:42,codigo:70,nome:250,inicio:88,termino:88,duracao:60,percEsp:72,percConc:78,predecessora:80,responsavel:100,local:80,grupo:80,custoMaterial:100,custoMaoObra:100,acoes:64};
+  let colOrdem=['sel','num','status','nivel','codigo','nome','inicio','termino','duracao','percEsp','percConc','predecessora','responsavel','local','grupo','quantidade','custoMaterial','custoMaoObra','acoes'];
+  let colLarguras={sel:28,num:36,status:34,nivel:42,codigo:70,nome:250,inicio:88,termino:88,duracao:60,percEsp:72,percConc:78,predecessora:80,responsavel:100,local:80,grupo:80,quantidade:110,custoMaterial:100,custoMaoObra:100,acoes:64};
   let colsHidden=new Set();
 
-  const COL_LABELS={sel:'',num:'#',status:'',nivel:'Nível',codigo:'Código',nome:'Tarefa',inicio:'Início',termino:'Término',duracao:'Duração',percEsp:'% Esperado',percConc:'% Concluído',predecessora:'Predecessora',responsavel:'Responsável',local:'Local',grupo:'Grupo',custoMaterial:'Custo Material',custoMaoObra:'Custo M.Obra',acoes:''};
+  const COL_LABELS={sel:'',num:'#',status:'',nivel:'Nível',codigo:'Código',nome:'Tarefa',inicio:'Início',termino:'Término',duracao:'Duração',percEsp:'% Esperado',percConc:'% Concluído',predecessora:'Predecessora',responsavel:'Responsável',local:'Local',grupo:'Grupo',quantidade:'Quantidade',custoMaterial:'Custo Material',custoMaoObra:'Custo M.Obra',acoes:''};
   const COL_FIXED=new Set(['sel','num','status','nome','acoes']);
   const COL_EDITABLE=new Set(['codigo','nome','inicio','termino','duracao','percEsp','percConc','predecessora','responsavel','local','grupo','nivel']);
+
+  // ===================== VÍNCULOS COM LEVANTAMENTO =====================
+  // Tela separada (não é a visão de Gantt) onde cada tarefa do Planejamento
+  // pode ter sua quantidade vinda de um Levantamento (em vez de manual) —
+  // assim, várias tarefas (ex: chapisco, reboco, limpeza de fachada) usam
+  // o MESMO m² real, e o custo (Material/Mão de Obra) que já lê a
+  // quantidade da tarefa funciona automaticamente, sem precisar vincular
+  // Materiais/Mão de Obra direto ao levantamento.
+  let modoView='gantt'; // 'gantt' | 'vinculos'
+  let levFachadas=[], _levFachadasCarregado=false;
+  let _vincAlvoId=null, _vincModulo='fachada', _vincMetrica='m2semML', _vincEscopo='somente';
+  const LEVANTAMENTO_MODULOS={
+    fachada:{
+      label:'Levantamento de Fachada', colecao:'levantamentosFachada',
+      metricas:[
+        {id:'m2semML',label:'m² líquido (sem metro linear)'},
+        {id:'m2comML_equiv',label:'m² + metro linear equivalente'},
+      ],
+    },
+  };
 
   // Metadados de status: cor + rótulo, usado no badge da coluna e no filtro
   const STATUS_INFO={
@@ -225,6 +245,7 @@ const Planejamento = (() => {
 
   // ===================== RENDER =====================
   function _render(){
+    if(modoView==='vinculos'){_renderVinculosView();return;}
     const c=_el();
     const visCols=colOrdem.filter(id=>!colsHidden.has(id));
 
@@ -243,6 +264,8 @@ const Planejamento = (() => {
           <button class="btn btn-secundario btn-sm" onclick="Planejamento.exportarPNG()" style="font-size:.72rem;">🖼 PNG</button>
           <button class="btn btn-secundario btn-sm" onclick="Planejamento.toggleGantt()" id="btn-tg" style="font-size:.72rem;">${ganttVisible?'◀ Esconder Gantt':'▶ Mostrar Gantt'}</button>
           ${colsHidden.size?`<button class="btn btn-secundario btn-sm" onclick="Planejamento.showColsMenu()" style="font-size:.72rem;">＋ Colunas (${colsHidden.size})</button>`:''}
+          <span style="color:#333;margin:0 4px;">|</span>
+          <button class="btn btn-secundario btn-sm" onclick="Planejamento.abrirVinculosView()" style="font-size:.72rem;">🔗 Vínculos com Levantamento</button>
           <button class="btn btn-primario btn-sm" onclick="Planejamento.inserirTarefa()" style="font-size:.72rem;">＋ Tarefa</button>
         </div>
       </div>
@@ -250,6 +273,141 @@ const Planejamento = (() => {
       ${_renderGantt(visCols)}
       ${_renderBarraSelecao()}`;
     requestAnimationFrame(()=>_paintRows());
+  }
+
+  // ===================== VÍNCULOS COM LEVANTAMENTO — TELA =====================
+  function abrirVinculosView(){modoView='vinculos';_render();}
+  function fecharVinculosView(){modoView='gantt';_render();}
+
+  async function _carregarLevFachadaSeNecessario(){
+    if(_levFachadasCarregado)return;
+    levFachadas=await Database.listar(obraId,'levantamentosFachada',null).catch(()=>[]);
+    _levFachadasCarregado=true;
+  }
+
+  function _calcularMetrica(modulo,metrica){
+    if(modulo==='fachada'){
+      const r=Utils.calcularFachadaM2(levFachadas.filter(x=>x.tipo==='peca'),obraId);
+      return r[metrica]||0;
+    }
+    return 0;
+  }
+
+  function _renderVinculosView(){
+    const c=_el();
+    c.style.cssText='display:flex;flex-direction:column;min-height:0;height:100%;overflow-y:auto;';
+    const sorted=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
+    c.innerHTML=`
+      <div class="page-header">
+        <div><h2>🔗 Vínculos com Levantamento</h2>
+          <span class="subtitulo">Escolha, tarefa por tarefa (ou tarefa + filhos), se a quantidade vem de um Levantamento ou é manual — Materiais e Mão de Obra continuam lendo a quantidade daqui, da tarefa.</span></div>
+        <div class="btn-grupo">
+          <button class="btn btn-secundario btn-sm" onclick="Planejamento.recalcularVinculosLevantamento()">🔄 Recalcular vínculos</button>
+          <button class="btn btn-secundario btn-sm" onclick="Planejamento.fecharVinculosView()">← Voltar ao Planejamento</button>
+        </div>
+      </div>
+      <div class="tabela-container"><table class="tabela tabela-compacta">
+        <thead><tr><th>Tarefa</th><th class="col-num">Quantidade</th><th>Fonte</th><th class="col-acoes">Ações</th></tr></thead>
+        <tbody>${sorted.map(t=>{
+          const vinc=t.fonteQuantidade==='levantamento';
+          const mod=LEVANTAMENTO_MODULOS[t.levantamentoModulo];
+          const metricaLabel=mod?.metricas.find(m=>m.id===t.levantamentoMetrica)?.label||'';
+          const indent=(t.nivel||0)*18;
+          return `<tr>
+            <td style="padding-left:${8+indent}px;">${t.tipo==='grupo'?'📁 ':''}${t.nome}</td>
+            <td class="col-num" style="font-family:var(--font-mono);">${t.quantidade?_fQtd(t.quantidade)+' '+(t.unidade||''):'—'}</td>
+            <td>${vinc?`<span class="badge badge-amarelo">🔗 ${mod?.label||t.levantamentoModulo} — ${metricaLabel}</span>`:'<span class="text-muted text-sm">Manual</span>'}</td>
+            <td class="col-acoes">
+              <button class="btn btn-secundario btn-sm" onclick="Planejamento.abrirVincularTarefa('${t.id}')">${vinc?'✎ Editar':'🔗 Vincular'}</button>
+              ${vinc?`<button class="btn btn-perigo btn-sm btn-icon" onclick="Planejamento.removerVinculoLevantamento('${t.id}')">✕</button>`:''}
+            </td></tr>`;
+        }).join('')}</tbody>
+      </table></div>`;
+  }
+
+  async function abrirVincularTarefa(tarefaId){
+    const t=tarefas.find(x=>x.id===tarefaId);if(!t)return;
+    _vincAlvoId=tarefaId;
+    _vincModulo=t.levantamentoModulo||'fachada';
+    _vincMetrica=t.levantamentoMetrica||LEVANTAMENTO_MODULOS[_vincModulo].metricas[0].id;
+    _vincEscopo='somente';
+    document.getElementById('modal-planej-vinculo-titulo').textContent='Vincular quantidade: '+t.nome;
+    Utils.abrirModal('modal-planej-vinculo');
+    document.getElementById('planej-vinculo-body').innerHTML='<div class="text-sm text-muted">Carregando levantamento...</div>';
+    await _carregarLevFachadaSeNecessario();
+    _renderVinculoModalBody();
+  }
+
+  function _renderVinculoModalBody(){
+    const body=document.getElementById('planej-vinculo-body');if(!body)return;
+    const t=tarefas.find(x=>x.id===_vincAlvoId);
+    const mod=LEVANTAMENTO_MODULOS[_vincModulo];
+    const nDesc=t?Utils.percFamilia(tarefas).descendentes(t).length:0;
+    body.innerHTML=`
+      <div class="form-grupo"><label>Levantamento</label>
+        <select class="form-control" onchange="Planejamento.onVincModuloChange(this.value)">
+          ${Object.entries(LEVANTAMENTO_MODULOS).map(([id,m])=>`<option value="${id}" ${id===_vincModulo?'selected':''}>${m.label}</option>`).join('')}
+        </select></div>
+      <div class="form-grupo"><label>Quantidade a considerar</label>
+        <select class="form-control" onchange="Planejamento.onVincMetricaChange(this.value)">
+          ${mod.metricas.map(m=>`<option value="${m.id}" ${m.id===_vincMetrica?'selected':''}>${m.label}</option>`).join('')}
+        </select></div>
+      <div class="form-grupo"><label>Aplicar a</label>
+        <select class="form-control" onchange="Planejamento.onVincEscopoChange(this.value)">
+          <option value="somente" ${_vincEscopo==='somente'?'selected':''}>Somente esta tarefa</option>
+          <option value="comFilhos" ${_vincEscopo==='comFilhos'?'selected':''}>Esta tarefa + todos os filhos (${nDesc} tarefa(s))</option>
+        </select></div>
+      <div class="text-sm text-muted">Valor atual calculado: <strong>${_fQtd(_calcularMetrica(_vincModulo,_vincMetrica))} m²</strong> (será salvo em todas as tarefas afetadas)</div>`;
+  }
+  function onVincModuloChange(v){_vincModulo=v;_vincMetrica=LEVANTAMENTO_MODULOS[v].metricas[0].id;_renderVinculoModalBody();}
+  function onVincMetricaChange(v){_vincMetrica=v;_renderVinculoModalBody();}
+  function onVincEscopoChange(v){_vincEscopo=v;}
+
+  async function salvarVinculoLevantamento(){
+    const t=tarefas.find(x=>x.id===_vincAlvoId);if(!t)return;
+    try{
+      Utils.mostrarLoading('Calculando e salvando...');
+      await _carregarLevFachadaSeNecessario();
+      const alvos=[t,...(_vincEscopo==='comFilhos'?Utils.percFamilia(tarefas).descendentes(t):[])];
+      const valor=_calcularMetrica(_vincModulo,_vincMetrica);
+      const data={fonteQuantidade:'levantamento',levantamentoModulo:_vincModulo,levantamentoMetrica:_vincMetrica,quantidade:valor,unidade:'m²'};
+      for(const alvo of alvos){
+        await Database.atualizar(obraId,COL,alvo.id,data);
+        Object.assign(alvo,data);
+      }
+      Utils.fecharModal('modal-planej-vinculo');
+      Utils.toast(`Vínculo salvo em ${alvos.length} tarefa(s)!`,'sucesso');
+      _renderVinculosView();
+    }catch(e){console.error(e);Utils.toast('Erro ao salvar vínculo.','erro');}
+    finally{Utils.esconderLoading();}
+  }
+
+  async function removerVinculoLevantamento(tarefaId){
+    if(!Utils.confirmar('Remover o vínculo? A tarefa volta a ter quantidade manual (o último valor calculado fica salvo até você editar).'))return;
+    try{
+      await Database.atualizar(obraId,COL,tarefaId,{fonteQuantidade:'manual'});
+      const t=tarefas.find(x=>x.id===tarefaId);if(t)t.fonteQuantidade='manual';
+      Utils.toast('Vínculo removido.','sucesso');
+      _renderVinculosView();
+    }catch(e){Utils.toast('Erro.','erro');}
+  }
+
+  async function recalcularVinculosLevantamento(){
+    const alvo=tarefas.filter(t=>t.fonteQuantidade==='levantamento');
+    if(!alvo.length){Utils.toast('Nenhuma tarefa vinculada a levantamento.','alerta');return;}
+    try{
+      Utils.mostrarLoading('Recalculando...');
+      _levFachadasCarregado=false; // força reler o levantamento mais recente
+      await _carregarLevFachadaSeNecessario();
+      for(const t of alvo){
+        const valor=_calcularMetrica(t.levantamentoModulo,t.levantamentoMetrica);
+        await Database.atualizar(obraId,COL,t.id,{quantidade:valor});
+        t.quantidade=valor;
+      }
+      Utils.toast(`${alvo.length} vínculo(s) recalculado(s)!`,'sucesso');
+      _renderVinculosView();
+    }catch(e){console.error(e);Utils.toast('Erro ao recalcular.','erro');}
+    finally{Utils.esconderLoading();}
   }
 
   function _renderGantt(visCols){
@@ -392,6 +550,11 @@ const Planejamento = (() => {
           cells+=`<div style="${base}color:#555;font-size:.7rem;cursor:pointer;" ${clickEdit}>${t.local||'—'}</div>`;
         } else if(cid==='grupo'){
           cells+=`<div style="${base}color:#555;font-size:.7rem;cursor:pointer;" ${clickEdit}>${t.grupo||'—'}</div>`;
+        } else if(cid==='quantidade'){
+          const vinc=t.fonteQuantidade==='levantamento';
+          cells+=`<div style="${base}color:${vinc?'var(--cor-primaria)':'#555'};font-size:.7rem;justify-content:flex-end;font-family:var(--font-mono);gap:3px;"
+            title="${vinc?'Vinculado a '+(LEVANTAMENTO_MODULOS[t.levantamentoModulo]?.label||t.levantamentoModulo):'Manual'}">
+            ${vinc?'🔗 ':''}${t.quantidade?_fQtd(t.quantidade)+' '+(t.unidade||''):'—'}</div>`;
         } else if(cid==='custoMaterial'){
           const cm=custoMaterialPorTarefa.get(t.id)||0;
           cells+=`<div style="${base}color:#8a8;font-size:.68rem;justify-content:flex-end;font-family:var(--font-mono);">${cm?'R$ '+_fMoeda(cm):'—'}</div>`;
@@ -1119,6 +1282,7 @@ const Planejamento = (() => {
     editandoId=null;
     document.getElementById('modal-tarefa-titulo').textContent='Nova Tarefa';
     document.getElementById('form-tarefa').reset();
+    const aviso=document.getElementById('tarefa-vinculo-aviso');if(aviso)aviso.innerHTML='';
     if(selectedIdx>=0&&filtradas[selectedIdx]){
       const sel=filtradas[selectedIdx];
       const f=document.getElementById('form-tarefa');
@@ -1140,9 +1304,16 @@ const Planejamento = (() => {
     ['codigo','nome','tipo','nivel','ordem','inicioPlanejado','terminoPlanejado','duracao',
       'percentualEsperado','percentualConcluido','predecessora','tarefaPai','grupo','local',
       'custo','receita','responsavel','inicioPlanejadoBase','terminoPlanejadoBase',
-      'inicioDesafio','terminoDesafio','observacoes'].forEach(k=>{
+      'inicioDesafio','terminoDesafio','observacoes','quantidade','unidade'].forEach(k=>{
       const el=f.querySelector(`[name="${k}"]`);if(el&&t[k]!=null)el.value=t[k];
     });
+    const aviso=document.getElementById('tarefa-vinculo-aviso');
+    if(aviso){
+      const mod=LEVANTAMENTO_MODULOS[t.levantamentoModulo];
+      aviso.innerHTML=t.fonteQuantidade==='levantamento'
+        ?`<div class="text-sm" style="color:var(--cor-primaria);margin:-8px 0 10px;">🔗 Quantidade vinculada a ${mod?.label||t.levantamentoModulo} — editar aqui só vale até o próximo recálculo. Para mudar o vínculo, use "Vínculos com Levantamento".</div>`
+        :'';
+    }
     Utils.abrirModal('modal-tarefa');
   }
 
@@ -1158,6 +1329,7 @@ const Planejamento = (() => {
       percentualEsperado:parseFloat(g('percentualEsperado'))||0,percentualConcluido:parseFloat(g('percentualConcluido'))||0,
       predecessora:g('predecessora')||'',tarefaPai:g('tarefaPai')||'',grupo:g('grupo')||'',local:g('local')||'',
       custo:parseFloat(g('custo'))||0,receita:parseFloat(g('receita'))||0,responsavel:g('responsavel')||'',
+      quantidade:parseFloat(g('quantidade'))||0,unidade:g('unidade')||'',
       inicioPlanejadoBase:g('inicioPlanejadoBase')||'',terminoPlanejadoBase:g('terminoPlanejadoBase')||'',
       inicioDesafio:g('inicioDesafio')||'',terminoDesafio:g('terminoDesafio')||'',observacoes:g('observacoes')||'',obraId};
     try{
@@ -1392,6 +1564,7 @@ const Planejamento = (() => {
             else if(cid==='responsavel')cells+=`<div style="${base}color:#555;font-size:.7rem;">${t.responsavel||'—'}</div>`;
             else if(cid==='local')cells+=`<div style="${base}color:#555;font-size:.7rem;">${t.local||'—'}</div>`;
             else if(cid==='grupo')cells+=`<div style="${base}color:#555;font-size:.7rem;">${t.grupo||'—'}</div>`;
+            else if(cid==='quantidade'){const vinc=t.fonteQuantidade==='levantamento';cells+=`<div style="${base}color:${vinc?'var(--cor-primaria)':'#555'};font-size:.7rem;justify-content:flex-end;">${vinc?'🔗 ':''}${t.quantidade?_fQtd(t.quantidade)+' '+(t.unidade||''):'—'}</div>`;}
             else if(cid==='custoMaterial'){const cm=custoMaterialPorTarefa.get(t.id)||0;cells+=`<div style="${base}color:#8a8;font-size:.68rem;justify-content:flex-end;">${cm?'R$ '+_fMoeda(cm):'—'}</div>`;}
             else if(cid==='custoMaoObra'){const cmo=custoMaoObraPorTarefa.get(t.id)||0;cells+=`<div style="${base}color:#8a8;font-size:.68rem;justify-content:flex-end;">${cmo?'R$ '+_fMoeda(cmo):'—'}</div>`;}
             else if(cid==='acoes')cells+=`<div style="${base}"></div>`;
@@ -1512,6 +1685,7 @@ const Planejamento = (() => {
   function _fd(d){if(!d)return'—';try{return new Date(d+'T12:00:00').toLocaleDateString('pt-BR');}catch(e){return d;}}
   function _fBR(d){if(!d)return'';try{return new Date(d+'T12:00:00').toLocaleDateString('pt-BR');}catch(e){return'';}}
   function _fMoeda(n){return Number(n||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});}
+  function _fQtd(n){return Number(n||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});}
   function _pd(v){if(!v)return'';if(v instanceof Date)return v.toISOString().split('T')[0];
     if(typeof v==='number')return new Date((v-25569)*864e5).toISOString().split('T')[0];
     const s=String(v).trim(),m=s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
@@ -1712,6 +1886,8 @@ const Planejamento = (() => {
     _colResizeStart,moveColLeft,moveColRight,_hideCol,_divStart,_sync,_editCell,_esqDragStart,
     _rowDragStart,toggleSel,_limparSelecao,_moverSel,_bulkNivel,_bulkDuplicar,_bulkExcluir,
     toggleStatusFiltro,_aplicarStatusFiltro,undo,
-    importarExcel,exportar,exportarPNG,_gerarPNG,_predPopup,_predPreview,_predSalvar};
+    importarExcel,exportar,exportarPNG,_gerarPNG,_predPopup,_predPreview,_predSalvar,
+    abrirVinculosView,fecharVinculosView,abrirVincularTarefa,onVincModuloChange,onVincMetricaChange,
+    onVincEscopoChange,salvarVinculoLevantamento,removerVinculoLevantamento,recalcularVinculosLevantamento};
 })();
 function onObraChanged(){Planejamento.init();}

@@ -238,9 +238,7 @@ const Materiais = (() => {
 
   // ====== HELPERS ======
   function _getOpcoesTarefa(){
-    const opts=Utils.opcoesTarefaHierarquia(tarefas);
-    if(levFachadas.some(d=>d.tipo==='fachada'))opts.push({id:'__fachada__',label:'[Levantamento] Fachada',nivel:0,tipo:'especial'});
-    return opts;
+    return Utils.opcoesTarefaHierarquia(tarefas);
   }
 
   function _getTarefaInfo(id){
