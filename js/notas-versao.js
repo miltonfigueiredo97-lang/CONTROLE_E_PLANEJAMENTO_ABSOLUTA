@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.21.2',
+  versaoAtual: 'V2.22.0',
 
   versoes: [
     {
@@ -2596,7 +2596,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.21.2',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-13',
       tipo: 'correcao',
       titulo: 'Levantamento de Piso: proxy serverless para ler o PDF (CORS definitivo)',
@@ -2610,6 +2610,35 @@ const NotasVersao = {
         'Só aceita URLs do bucket controle-absoluta.firebasestorage.app',
         '  (evita virar um proxy aberto para qualquer URL da internet)',
         'js/levantamento-piso.js agora busca o PDF via /api/pdf-proxy?url=...',
+      ]
+    },
+    {
+      versao: 'V2.22.0',
+      status: 'aberta',
+      data: '2026-07-13',
+      tipo: 'funcionalidade',
+      titulo: 'Levantamento de Piso: reestruturado para árvore de locais (igual Paredes)',
+      itens: [
+        'Reestruturado para o mesmo formato de menu do Levantamento de',
+        '  Paredes: árvore de locais ilimitada em profundidade (ex: Torre >',
+        '  Andar > Apto > Cômodo), em vez do fluxo linear Plantas > Páginas',
+        'Cada NÓ da árvore pode ter uma página de PDF vinculada (em vez de',
+        '  lançar as peças manualmente como em Paredes) — a partir dela',
+        '  calibra-se a escala e mede-se os polígonos daquele local',
+        'PDFs enviados ficam numa biblioteca reaproveitável entre vários',
+        '  nós — a mesma planta arquitetônica pode ser vinculada a',
+        '  diferentes locais, cada um usando a página correspondente',
+        'Painel de "Visão Geral" (raiz da árvore) mostra totais gerais e',
+        '  a biblioteca de plantas enviadas, com opção de excluir as que',
+        '  não estão mais vinculadas a nenhum local',
+        'Botão "Trocar planta/página" no local para religar a outra',
+        '  página ou outra planta sem perder as áreas já medidas',
+        'Removida a coleção pisoPavimentos — o vínculo de PDF (plantaId,',
+        '  página, escala, linha de calibração) agora vive dentro do',
+        '  próprio nó da árvore, salvo em obras/{id}/config/pisoArvore',
+        '  (mesmo padrão do paredesArvore)',
+        'obras/{obraId}/pisoAreas agora referencia nodeId em vez de',
+        '  pavimentoId',
       ]
     }
   ],

@@ -1,48 +1,55 @@
 // ============================================
 // Módulo: Levantamento de Piso
 //
-// Fluxo:
-//  1) Upload de PDF do projeto (armazenado no Firebase Storage) -> "Planta"
-//  2) Cada página do PDF pode virar um "Pavimento" (pavimento/ambiente)
-//  3) Dentro do pavimento: desenha-se uma LINHA DE CALIBRAÇÃO sobre uma
-//     medida conhecida do desenho -> define a escala (metros por ponto-PDF)
-//  4) Com a escala definida, desenham-se POLÍGONOS sobre as áreas de piso
-//     -> cada polígono vira uma "Área" com m², tipo de piso, contrapiso
-//     e impermeabilização (opcional)
+// Mesmo formato de menu do Levantamento de Paredes: árvore de locais
+// ilimitada em profundidade (ex: Torre > Andar > Apto > Cômodo).
+// A diferença é que, em vez de lançar as peças manualmente, cada NÓ
+// da árvore pode ter uma PÁGINA DE PDF vinculada — e a partir dela:
 //
-// Coordenadas dos pontos (linha de calibração e polígonos) são sempre
-// guardadas em espaço "ponto-PDF" (viewport scale=1), independente do
-// zoom de renderização em tela — assim a escala nunca se perde.
+//  1) CALIBRA-SE a escala (desenha uma linha sobre uma medida
+//     conhecida do desenho e informa a distância real em metros)
+//  2) MEDE-SE as áreas de piso desenhando polígonos direto sobre a
+//     página do PDF — cada polígono vira uma Área com m², tipo de
+//     piso, contrapiso e impermeabilização (opcional)
 //
-// Dados: obras/{obraId}/pisoPlantas, obras/{obraId}/pisoPavimentos,
-//        obras/{obraId}/pisoAreas
+// As páginas de PDF ficam numa biblioteca de "Plantas" (reaproveitável
+// entre vários nós — ex: a mesma planta arquitetônica, mas cada nó usa
+// a página correspondente ao seu pavimento/ambiente).
+//
+// Coordenadas de calibração e polígonos são guardadas em espaço
+// "ponto-PDF" (viewport scale=1), independente do zoom de renderização
+// em tela — a escala nunca se perde ao redimensionar.
+//
+// Dados: obras/{obraId}/config/pisoArvore   (árvore + vínculo de PDF por nó)
+//        obras/{obraId}/pisoPlantas          (biblioteca de PDFs enviados)
+//        obras/{obraId}/pisoAreas            (áreas medidas, por nodeId)
 // ============================================
 
 const LP = (() => {
   const COL_PLANTAS = 'pisoPlantas';
-  const COL_PAV = 'pisoPavimentos';
   const COL_AREAS = 'pisoAreas';
+  const CONFIG_DOC = 'pisoArvore';
 
   let obraId = null;
-  let plantas = [];
-  let pavimentos = [];
-  let areas = [];
+  let arvore = [];      // [{id,nome,filhos:[...], plantaId, pagina, escalaMetrosPorPonto, linhaCalibracao}]
+  let plantas = [];     // biblioteca de PDFs enviados (pisoPlantas)
+  let areas = [];        // todas as áreas medidas (pisoAreas)
+  let openNodes = new Set();
+  let selNodeId = null;  // null = Visão Geral
 
-  let view = 'plantas'; // 'plantas' | 'pavimentos' | 'pavimento'
-  let selPlantaId = null;
-  let selPavimentoId = null;
-
-  let pdfDoc = null;        // documento pdf.js carregado (da planta atualmente aberta)
+  let pdfDoc = null;         // documento pdf.js carregado (da planta do nó aberto)
   let pdfDocPlantaId = null;
-  let renderScale = 1;      // px de tela por ponto-PDF, na renderização atual
+  let renderScale = 1;        // px de tela por ponto-PDF, na renderização atual
 
-  let modo = 'nenhum';      // 'nenhum' | 'calibrar' | 'medir'
-  let calibPontos = [];     // pontos-PDF da linha de calibração em progresso
-  let poligonoPontos = [];  // vértices-PDF do polígono em progresso
+  let modo = 'nenhum';        // 'nenhum' | 'calibrar' | 'medir'
+  let calibPontos = [];       // pontos-PDF da linha de calibração em progresso
+  let poligonoPontos = [];    // vértices-PDF do polígono em progresso
 
-  let areaEditId = null;         // id da área em edição (null = nova)
+  let areaEditId = null;           // id da área em edição (null = nova)
   let areaPoligonoPendente = null; // polígono (pontos-PDF) aguardando salvar no modal
   let areaM2Pendente = 0;
+
+  let _pendingVincularNodeId = null; // para qual nó o upload do modal-lp-planta se destina
 
   // ══════════════════════════════════════════
   // INIT / CARREGAMENTO
@@ -60,25 +67,26 @@ const LP = (() => {
 
   async function recarregar() {
     obraId = Router.getObraId();
-    view = 'plantas'; selPlantaId = null; selPavimentoId = null;
+    selNodeId = null; modo = 'nenhum';
     if (!obraId) { _renderSemObra(); return; }
     await carregar();
   }
 
   function _renderSemObra() {
     const el = document.getElementById('lp-content');
-    if (el) el.innerHTML = `<div class="estado-vazio"><div class="icone">🧱</div><p>Selecione uma obra na barra lateral.</p></div>`;
+    if (el) el.innerHTML = `<div class="estado-vazio"><div class="icone">🧩</div><p>Selecione uma obra na barra lateral.</p></div>`;
   }
 
   async function carregar() {
     Utils.mostrarLoading('Carregando levantamento de piso...');
     try {
-      const [lp, pv, ar] = await Promise.all([
+      const [cfgSnap, lp, ar] = await Promise.all([
+        db.collection('obras').doc(obraId).collection('config').doc(CONFIG_DOC).get(),
         Database.listar(obraId, COL_PLANTAS, 'createdAt', 'desc').catch(() => []),
-        Database.listar(obraId, COL_PAV, null).catch(() => []),
         Database.listar(obraId, COL_AREAS, null).catch(() => []),
       ]);
-      plantas = lp; pavimentos = pv; areas = ar;
+      arvore = (cfgSnap.exists && Array.isArray(cfgSnap.data().arvore)) ? cfgSnap.data().arvore : [];
+      plantas = lp; areas = ar;
       renderizar();
     } catch (e) {
       console.error('Erro ao carregar levantamento de piso:', e);
@@ -88,11 +96,15 @@ const LP = (() => {
     }
   }
 
+  async function _salvarArvore() {
+    await db.collection('obras').doc(obraId).collection('config').doc(CONFIG_DOC).set({ arvore }, { merge: true });
+  }
+
   // ══════════════════════════════════════════
-  // HELPERS
+  // HELPERS GERAIS
   // ══════════════════════════════════════════
   function esc(s) { return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
-  function _uid() { return 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+  function _uid() { return 'n' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
   function fmt2(n) { return (n || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
   function num(v) { const n = parseFloat(String(v).replace(',', '.')); return isNaN(n) ? 0 : n; }
 
@@ -104,12 +116,10 @@ const LP = (() => {
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
   }
 
-  // Por padrão o pdf.js busca a URL diretamente e usa cabeçalho Range (streaming),
-  // o que dispara um preflight OPTIONS que o Firebase Storage não libera via CORS
-  // (bucket sem CORS configurado, e Storage não libera fetch/XHR cross-origin
-  // mesmo em GET simples). Solução: buscar via proxy serverless próprio
-  // (/api/pdf-proxy), que roda no servidor (sem restrição de CORS) e devolve
-  // os bytes para o navegador a partir do mesmo domínio.
+  // O Firebase Storage não libera CORS para fetch()/XHR por padrão (só funciona
+  // sem CORS em <img>/<embed>). Buscamos os bytes via proxy serverless próprio
+  // (api/pdf-proxy.js), que roda no servidor (sem restrição de CORS) e devolve
+  // pro navegador a partir do mesmo domínio.
   async function _carregarPdfDoc(downloadURL) {
     const proxyUrl = '/api/pdf-proxy?url=' + encodeURIComponent(downloadURL);
     let resp;
@@ -137,55 +147,237 @@ const LP = (() => {
     return Math.abs(a) / 2;
   }
 
-  function _pavAtual() { return pavimentos.find(p => p.id === selPavimentoId) || null; }
-  function _plantaAtual(id) { return plantas.find(p => p.id === (id || selPlantaId)) || null; }
-  function _areasDoPavimento(pavId) { return areas.filter(a => a.pavimentoId === pavId); }
+  // ══════════════════════════════════════════
+  // ÁRVORE — helpers
+  // ══════════════════════════════════════════
+  function _acharNode(id, nodes = arvore, parent = null) {
+    for (const n of nodes) {
+      if (n.id === id) return { node: n, parent, lista: nodes };
+      const r = _acharNode(id, n.filhos || [], n);
+      if (r) return r;
+    }
+    return null;
+  }
+  function _idsComDescendentes(n) {
+    let ids = [n.id];
+    (n.filhos || []).forEach(f => { ids = ids.concat(_idsComDescendentes(f)); });
+    return ids;
+  }
+  function _ordenarNodes(nodes) { return [...nodes].sort((a, b) => (a.nome || '').localeCompare(b.nome || '', 'pt-BR')); }
+  function _areasDoNode(nodeId) { return areas.filter(a => a.nodeId === nodeId); }
+  function _plantaPorId(id) { return plantas.find(p => p.id === id) || null; }
 
   // ══════════════════════════════════════════
-  // RENDER — DISPATCH
+  // RENDER PRINCIPAL
   // ══════════════════════════════════════════
   function renderizar() {
-    const actions = document.getElementById('lp-header-actions');
     const el = document.getElementById('lp-content');
+    const actions = document.getElementById('lp-header-actions');
     if (!el) return;
-    if (view === 'plantas') { if (actions) actions.innerHTML = ''; _renderPlantas(el); }
-    else if (view === 'pavimentos') { if (actions) actions.innerHTML = ''; _renderPavimentos(el); }
-    else if (view === 'pavimento') { _renderPavimento(el, actions); }
-  }
-
-  // ══════════════════════════════════════════
-  // VIEW 1: LISTA DE PLANTAS
-  // ══════════════════════════════════════════
-  function _renderPlantas(el) {
+    if (actions) actions.innerHTML = '';
     el.innerHTML = `
       <div class="page-header">
         <div>
-          <h2>Plantas (PDF)</h2>
-          <span class="subtitulo">Envie a planta em PDF para calibrar a escala e medir os pisos direto no desenho</span>
+          <h2>🧩 Levantamento de Piso</h2>
+          <span class="subtitulo">${areas.length} área(s) medida(s) · ${fmt2(areas.reduce((s, a) => s + (a.areaM2 || 0), 0))} m²</span>
         </div>
-        <button class="btn btn-primario" onclick="LP.abrirModalPlanta()">+ Nova Planta</button>
       </div>
-      ${plantas.length === 0 ? `
-        <div class="estado-vazio"><div class="icone">📄</div><p>Nenhuma planta enviada ainda.</p></div>
-      ` : `
-        <div class="cards-grid">
-          ${plantas.map(pl => `
-            <div class="lp-planta-card" onclick="LP.abrirPlanta('${pl.id}')">
-              <div style="display:flex;justify-content:space-between;align-items:start;gap:8px;">
-                <div>
-                  <div style="font-weight:700;">📄 ${esc(pl.nome || 'Planta')}</div>
-                  <div class="text-sm" style="color:var(--cor-texto-muted);margin-top:4px;">${pl.numPaginas || 1} página(s)</div>
-                </div>
-                <button class="btn btn-secundario btn-sm" onclick="event.stopPropagation();LP.excluirPlanta('${pl.id}')" title="Excluir planta">✕</button>
-              </div>
-            </div>
-          `).join('')}
+      <div class="ar-layout">
+        <div class="ar-tree">
+          <div class="ar-tree-header">
+            <h3>Locais</h3>
+            <button class="btn btn-primario btn-sm" onclick="LP.novoNode(null)">+ Local</button>
+          </div>
+          <div class="ar-tree-body" id="lp-tree-body">${_renderArvore()}</div>
         </div>
-      `}
+        <div class="ar-painel" id="lp-painel">${_renderPainel()}</div>
+      </div>
+    `;
+    if (selNodeId) {
+      const r = _acharNode(selNodeId);
+      if (r && r.node.plantaId) _renderCanvasNode(r.node);
+    }
+  }
+
+  function _renderArvoreNivel(nodes) {
+    return _ordenarNodes(nodes).map(n => {
+      const aberto = openNodes.has(n.id);
+      const ativo = selNodeId === n.id;
+      const ids = _idsComDescendentes(n);
+      const nAreas = areas.filter(a => ids.includes(a.nodeId)).length;
+      let h = `<div class="tree-item${ativo ? ' ativo' : ''}" onclick="LP.toggleNode('${n.id}');LP.selNode('${n.id}')">
+        <span class="tree-toggle">${(n.filhos || []).length ? (aberto ? '▼' : '▶') : ''}</span>
+        <span class="tree-icon">${n.plantaId ? '📄' : '📍'}</span>
+        <span class="tree-label">${esc(n.nome)}</span>
+        ${nAreas ? `<span class="tree-badge">${nAreas}</span>` : ''}
+        <button class="tree-edit-btn" onclick="event.stopPropagation();LP.renomearNode('${n.id}')" title="Renomear">✎</button>
+        <button class="tree-del-btn" onclick="event.stopPropagation();LP.excluirNode('${n.id}')" title="Excluir">✕</button>
+      </div>`;
+      if (aberto) {
+        h += `<div class="tree-children">`;
+        h += _renderArvoreNivel(n.filhos || []);
+        h += `<div class="ar-add-inline" onclick="event.stopPropagation();LP.novoNode('${n.id}')">+ adicionar sublocal</div>`;
+        h += `</div>`;
+      }
+      return h;
+    }).join('');
+  }
+
+  function _renderArvore() {
+    let h = `<div class="tree-item${!selNodeId ? ' ativo' : ''}" onclick="LP.selGeral()">
+      <span class="tree-toggle"></span><span class="tree-icon">📊</span>
+      <span class="tree-label"><strong>Visão Geral</strong></span>
+    </div>`;
+    if (!arvore.length) {
+      h += `<div class="estado-vazio"><p class="text-sm">Nenhum local cadastrado. Clique em "+ Local" para começar (ex: Torre A, Térreo, Apto 101).</p></div>`;
+      return h;
+    }
+    h += _renderArvoreNivel(arvore);
+    return h;
+  }
+
+  function toggleNode(id) { if (openNodes.has(id)) openNodes.delete(id); else openNodes.add(id); }
+
+  function selNode(id) {
+    selNodeId = id; modo = 'nenhum'; calibPontos = []; poligonoPontos = [];
+    renderizar();
+  }
+  function selGeral() {
+    selNodeId = null; modo = 'nenhum'; calibPontos = []; poligonoPontos = [];
+    renderizar();
+  }
+
+  // ══════════════════════════════════════════
+  // CRUD DA ÁRVORE
+  // ══════════════════════════════════════════
+  async function novoNode(parentId) {
+    const nome = window.prompt('Nome do local:'); if (!nome) return;
+    const novo = { id: _uid(), nome: nome.trim(), filhos: [], plantaId: null, pagina: null, escalaMetrosPorPonto: null, linhaCalibracao: null };
+    if (parentId) {
+      const r = _acharNode(parentId); if (!r) return;
+      r.node.filhos = r.node.filhos || [];
+      r.node.filhos.push(novo);
+      openNodes.add(parentId);
+    } else {
+      arvore.push(novo);
+    }
+    Utils.mostrarLoading('Salvando...');
+    try {
+      await _salvarArvore();
+      selNodeId = novo.id;
+      await carregar();
+    } catch (e) {
+      console.error(e); Utils.toast('Erro ao criar local: ' + e.message, 'erro');
+    } finally {
+      Utils.esconderLoading();
+    }
+  }
+
+  async function renomearNode(id) {
+    const r = _acharNode(id); if (!r) return;
+    const nome = window.prompt('Renomear local:', r.node.nome); if (nome === null) return;
+    r.node.nome = nome.trim() || r.node.nome;
+    Utils.mostrarLoading('Salvando...');
+    try { await _salvarArvore(); await carregar(); }
+    catch (e) { console.error(e); Utils.toast('Erro ao renomear: ' + e.message, 'erro'); }
+    finally { Utils.esconderLoading(); }
+  }
+
+  async function excluirNode(id) {
+    const r = _acharNode(id); if (!r) return;
+    const ids = _idsComDescendentes(r.node);
+    const areasParaExcluir = areas.filter(a => ids.includes(a.nodeId));
+    const msg = areasParaExcluir.length
+      ? `Excluir "${r.node.nome}" e seus sublocais? Isso também excluirá ${areasParaExcluir.length} área(s) medida(s).`
+      : `Excluir "${r.node.nome}" e seus sublocais?`;
+    if (!Utils.confirmar(msg)) return;
+    Utils.mostrarLoading('Excluindo...');
+    try {
+      const lista = r.parent ? r.parent.filhos : arvore;
+      const idx = lista.findIndex(x => x.id === id);
+      if (idx > -1) lista.splice(idx, 1);
+      await _salvarArvore();
+      if (areasParaExcluir.length) {
+        const ops = areasParaExcluir.map(a => ({ type: 'delete', ref: Database.ref(obraId, COL_AREAS).doc(a.id) }));
+        await Database.batchWrite(ops);
+      }
+      if (selNodeId && ids.includes(selNodeId)) selNodeId = null;
+      Utils.toast('Local excluído.', 'sucesso');
+      await carregar();
+    } catch (e) {
+      console.error(e); Utils.toast('Erro ao excluir: ' + e.message, 'erro');
+    } finally {
+      Utils.esconderLoading();
+    }
+  }
+
+  // ══════════════════════════════════════════
+  // PAINEL — dispatch
+  // ══════════════════════════════════════════
+  function _renderPainel() {
+    if (!selNodeId) return _renderVisaoGeral();
+    const r = _acharNode(selNodeId);
+    if (!r) { selNodeId = null; return _renderVisaoGeral(); }
+    if (!r.node.plantaId) return _renderVincularPlanta(r.node);
+    return _renderWorkspace(r.node);
+  }
+
+  // ── VISÃO GERAL ──
+  function _renderVisaoGeral() {
+    const totalM2 = areas.reduce((s, a) => s + (a.areaM2 || 0), 0);
+    const nodesComVinculo = _contarNodesComVinculo(arvore);
+    return `
+      <div class="page-header">
+        <div><h2 style="font-size:1.1rem;">📊 Visão Geral</h2>
+          <span class="subtitulo">${areas.length} área(s) · ${fmt2(totalM2)} m² · ${nodesComVinculo} local(is) com planta vinculada</span></div>
+      </div>
+      <div class="lp-hint">Clique em um local na árvore ao lado (ou crie um novo com "+ Local") para vincular uma planta em PDF e começar a medir.</div>
+      <h3 class="mb-2" style="font-size:0.95rem;">📄 Plantas enviadas</h3>
+      ${plantas.length === 0 ? `<div class="estado-vazio" style="padding:16px;"><p class="text-sm">Nenhuma planta enviada ainda.</p></div>` : plantas.map(pl => `
+        <div class="lp-planta-lib-item">
+          <span>${esc(pl.nome)} <span style="color:var(--cor-texto-muted);">· ${pl.numPaginas || 1} página(s)</span></span>
+          <button class="btn btn-secundario btn-sm" onclick="LP.excluirPlanta('${pl.id}')" title="Excluir planta">✕</button>
+        </div>
+      `).join('')}
     `;
   }
 
-  function abrirModalPlanta() {
+  function _contarNodesComVinculo(nodes) {
+    let c = 0;
+    nodes.forEach(n => { if (n.plantaId) c++; c += _contarNodesComVinculo(n.filhos || []); });
+    return c;
+  }
+
+  // ── SEM VÍNCULO: escolher/enviar planta ──
+  function _renderVincularPlanta(node) {
+    return `
+      <div class="page-header">
+        <div><h2 style="font-size:1.1rem;">${esc(node.nome)}</h2>
+          <span class="subtitulo">Este local ainda não tem planta vinculada</span></div>
+      </div>
+      <div class="lp-vinc-card">
+        ${plantas.length ? `
+          <div class="form-grupo">
+            <label>Escolher planta já enviada</label>
+            <select id="lp-sel-planta-existente" class="form-control">
+              <option value="">Selecione...</option>
+              ${plantas.map(pl => `<option value="${pl.id}">${esc(pl.nome)} (${pl.numPaginas || 1} pág.)</option>`).join('')}
+            </select>
+          </div>
+          <div class="form-grupo">
+            <label>Página a usar</label>
+            <input type="number" id="lp-input-pagina-existente" class="form-control" min="1" value="1">
+          </div>
+          <button class="btn btn-primario mb-2" style="width:100%;" onclick="LP.vincularPlantaExistente('${node.id}')">Vincular esta página</button>
+          <div style="text-align:center;color:var(--cor-texto-muted);font-size:0.78rem;margin:8px 0;">— ou —</div>
+        ` : ''}
+        <button class="btn btn-secundario" style="width:100%;" onclick="LP.abrirModalPlanta('${node.id}')">+ Enviar nova planta em PDF</button>
+      </div>
+    `;
+  }
+
+  function abrirModalPlanta(nodeId) {
+    _pendingVincularNodeId = nodeId || null;
     document.getElementById('lp-planta-nome').value = '';
     document.getElementById('lp-planta-arquivo').value = '';
     Utils.abrirModal('modal-lp-planta');
@@ -215,8 +407,12 @@ const LP = (() => {
       await Database.criar(obraId, COL_PLANTAS, { nome, storagePath: path, downloadURL, numPaginas }, plantaId);
       Utils.fecharModal('modal-lp-planta');
       Utils.toast('Planta enviada!', 'sucesso');
-      await carregar();
-      abrirPlanta(plantaId);
+
+      if (_pendingVincularNodeId) {
+        await _vincularNode(_pendingVincularNodeId, plantaId, 1);
+      } else {
+        await carregar();
+      }
     } catch (e) {
       console.error(e);
       Utils.toast('Erro ao enviar planta: ' + e.message, 'erro');
@@ -228,163 +424,110 @@ const LP = (() => {
 
   async function excluirPlanta(id) {
     const pl = plantas.find(p => p.id === id); if (!pl) return;
-    const pavsLigados = pavimentos.filter(p => p.plantaId === id);
-    const msg = pavsLigados.length
-      ? `Excluir "${pl.nome}"? Isso também excluirá ${pavsLigados.length} pavimento(s) e todas as áreas medidas neles.`
-      : `Excluir a planta "${pl.nome}"?`;
-    if (!Utils.confirmar(msg)) return;
+    const nodesLigados = _contarNodesUsandoPlanta(arvore, id);
+    if (nodesLigados > 0) {
+      Utils.toast(`Não é possível excluir: ${nodesLigados} local(is) ainda usam esta planta.`, 'alerta');
+      return;
+    }
+    if (!Utils.confirmar(`Excluir a planta "${pl.nome}"?`)) return;
     Utils.mostrarLoading('Excluindo...');
     try {
-      const ops = [{ type: 'delete', ref: Database.ref(obraId, COL_PLANTAS).doc(id) }];
-      pavsLigados.forEach(pv => {
-        ops.push({ type: 'delete', ref: Database.ref(obraId, COL_PAV).doc(pv.id) });
-        _areasDoPavimento(pv.id).forEach(a => ops.push({ type: 'delete', ref: Database.ref(obraId, COL_AREAS).doc(a.id) }));
-      });
-      await Database.batchWrite(ops);
+      await Database.deletar(obraId, COL_PLANTAS, id);
       try { await storage.ref(pl.storagePath).delete(); } catch (e2) {}
       Utils.toast('Planta excluída.', 'sucesso');
       await carregar();
     } catch (e) {
-      console.error(e);
-      Utils.toast('Erro ao excluir: ' + e.message, 'erro');
+      console.error(e); Utils.toast('Erro ao excluir: ' + e.message, 'erro');
     } finally {
       Utils.esconderLoading();
     }
   }
 
-  function abrirPlanta(id) {
-    selPlantaId = id;
-    view = 'pavimentos';
-    renderizar();
+  function _contarNodesUsandoPlanta(nodes, plantaId) {
+    let c = 0;
+    nodes.forEach(n => { if (n.plantaId === plantaId) c++; c += _contarNodesUsandoPlanta(n.filhos || [], plantaId); });
+    return c;
+  }
+
+  async function vincularPlantaExistente(nodeId) {
+    const sel = document.getElementById('lp-sel-planta-existente');
+    const pagInput = document.getElementById('lp-input-pagina-existente');
+    const plantaId = sel.value;
+    const pagina = parseInt(pagInput.value, 10) || 1;
+    if (!plantaId) { Utils.toast('Escolha uma planta.', 'alerta'); return; }
+    const pl = _plantaPorId(plantaId);
+    if (pl && pagina > (pl.numPaginas || 1)) { Utils.toast(`Esta planta só tem ${pl.numPaginas || 1} página(s).`, 'alerta'); return; }
+    await _vincularNode(nodeId, plantaId, pagina);
+  }
+
+  async function _vincularNode(nodeId, plantaId, pagina) {
+    const r = _acharNode(nodeId); if (!r) return;
+    r.node.plantaId = plantaId; r.node.pagina = pagina;
+    r.node.escalaMetrosPorPonto = null; r.node.linhaCalibracao = null;
+    Utils.mostrarLoading('Vinculando planta...');
+    try {
+      await _salvarArvore();
+      Utils.toast('Planta vinculada! Agora calibre a escala.', 'sucesso');
+      await carregar();
+      selNode(nodeId);
+    } catch (e) {
+      console.error(e); Utils.toast('Erro ao vincular: ' + e.message, 'erro');
+    } finally {
+      Utils.esconderLoading();
+    }
+  }
+
+  async function trocarPlanta(nodeId) {
+    if (!Utils.confirmar('Trocar a planta/página deste local? As áreas já medidas continuam salvas, mas os polígonos ficam fora de referência visual até recalibrar a escala.')) return;
+    const r = _acharNode(nodeId); if (!r) return;
+    r.node.plantaId = null; r.node.pagina = null; r.node.escalaMetrosPorPonto = null; r.node.linhaCalibracao = null;
+    Utils.mostrarLoading('Salvando...');
+    try { await _salvarArvore(); await carregar(); selNode(nodeId); }
+    catch (e) { console.error(e); Utils.toast('Erro: ' + e.message, 'erro'); }
+    finally { Utils.esconderLoading(); }
   }
 
   // ══════════════════════════════════════════
-  // VIEW 2: PÁGINAS DA PLANTA -> PAVIMENTOS
+  // WORKSPACE (canvas + medição) — nó com planta vinculada
   // ══════════════════════════════════════════
-  function _renderPavimentos(el) {
-    const pl = _plantaAtual();
-    if (!pl) { view = 'plantas'; renderizar(); return; }
-    const pavsDestaPlanta = pavimentos.filter(p => p.plantaId === pl.id);
-    const paginas = [];
-    for (let i = 1; i <= (pl.numPaginas || 1); i++) paginas.push(i);
+  function _renderWorkspace(node) {
+    const temEscala = !!node.escalaMetrosPorPonto;
+    const areasN = _areasDoNode(node.id).sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
+    const totalNode = areasN.reduce((s, a) => s + (a.areaM2 || 0), 0);
+    const pl = _plantaPorId(node.plantaId);
 
-    el.innerHTML = `
-      <div class="lp-breadcrumb-mini"><a onclick="LP.voltarPlantas()">Plantas</a> › ${esc(pl.nome)}</div>
+    setTimeout(_popularDatalists, 0);
+
+    return `
       <div class="page-header">
-        <div><h2>${esc(pl.nome)}</h2><span class="subtitulo">Escolha a página para medir como pavimento</span></div>
+        <div><h2 style="font-size:1.1rem;">${esc(node.nome)}</h2>
+          <span class="subtitulo">${pl ? esc(pl.nome) : ''} — página ${node.pagina} · ${areasN.length} área(s) · ${fmt2(totalNode)} m²</span></div>
+        <button class="btn btn-secundario btn-sm" onclick="LP.trocarPlanta('${node.id}')">🔄 Trocar planta/página</button>
       </div>
-      <div class="cards-grid">
-        ${paginas.map(pagina => {
-          const pav = pavsDestaPlanta.find(p => p.pagina === pagina);
-          if (pav) {
-            const qtdAreas = _areasDoPavimento(pav.id).length;
-            const totalM2 = _areasDoPavimento(pav.id).reduce((s, a) => s + (a.areaM2 || 0), 0);
-            return `
-              <div class="lp-pav-card" onclick="LP.abrirPavimento('${pav.id}')">
-                <div style="display:flex;justify-content:space-between;align-items:start;gap:8px;">
-                  <div>
-                    <div style="font-weight:700;"><span class="lp-pag-badge">${pagina}</span>${esc(pav.nome)}</div>
-                    <div class="text-sm" style="color:var(--cor-texto-muted);margin-top:6px;">
-                      ${qtdAreas} área(s) · ${fmt2(totalM2)} m² ${pav.escalaMetrosPorPonto ? '' : '· <span style="color:#b45309;">escala não calibrada</span>'}
-                    </div>
-                  </div>
-                  <button class="btn btn-secundario btn-sm" onclick="event.stopPropagation();LP.excluirPavimento('${pav.id}')" title="Excluir pavimento">✕</button>
-                </div>
-              </div>
-            `;
-          }
-          return `
-            <div class="lp-pav-card" style="border-style:dashed;opacity:0.85;" onclick="LP.criarPavimento(${pagina})">
-              <div style="font-weight:700;"><span class="lp-pag-badge">${pagina}</span>Usar esta página</div>
-              <div class="text-sm" style="color:var(--cor-texto-muted);margin-top:6px;">Página ${pagina} ainda não usada como pavimento</div>
-            </div>
-          `;
-        }).join('')}
-      </div>
-    `;
-  }
-
-  function voltarPlantas() { view = 'plantas'; selPlantaId = null; renderizar(); }
-
-  async function criarPavimento(pagina) {
-    const pl = _plantaAtual(); if (!pl) return;
-    const nome = window.prompt('Nome deste pavimento:', `Página ${pagina}`);
-    if (nome === null) return;
-    Utils.mostrarLoading('Criando pavimento...');
-    try {
-      const id = await Database.criar(obraId, COL_PAV, {
-        plantaId: pl.id, pagina, nome: nome.trim() || `Página ${pagina}`,
-        escalaMetrosPorPonto: null, linhaCalibracao: null,
-      });
-      await carregar();
-      abrirPavimento(id);
-    } catch (e) {
-      console.error(e);
-      Utils.toast('Erro ao criar pavimento: ' + e.message, 'erro');
-    } finally {
-      Utils.esconderLoading();
-    }
-  }
-
-  async function excluirPavimento(id) {
-    const pv = pavimentos.find(p => p.id === id); if (!pv) return;
-    const qtdAreas = _areasDoPavimento(id).length;
-    const msg = qtdAreas ? `Excluir "${pv.nome}" e ${qtdAreas} área(s) medida(s) nele?` : `Excluir o pavimento "${pv.nome}"?`;
-    if (!Utils.confirmar(msg)) return;
-    Utils.mostrarLoading('Excluindo...');
-    try {
-      const ops = [{ type: 'delete', ref: Database.ref(obraId, COL_PAV).doc(id) }];
-      _areasDoPavimento(id).forEach(a => ops.push({ type: 'delete', ref: Database.ref(obraId, COL_AREAS).doc(a.id) }));
-      await Database.batchWrite(ops);
-      Utils.toast('Pavimento excluído.', 'sucesso');
-      await carregar();
-    } catch (e) {
-      console.error(e);
-      Utils.toast('Erro ao excluir: ' + e.message, 'erro');
-    } finally {
-      Utils.esconderLoading();
-    }
-  }
-
-  // ══════════════════════════════════════════
-  // VIEW 3: WORKSPACE DO PAVIMENTO (canvas + medição)
-  // ══════════════════════════════════════════
-  function _renderPavimento(el, actions) {
-    const pav = _pavAtual();
-    if (!pav) { view = 'pavimentos'; renderizar(); return; }
-    const pl = _plantaAtual(pav.plantaId);
-    const temEscala = !!pav.escalaMetrosPorPonto;
-    const areasP = _areasDoPavimento(pav.id).sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
-    const totalGeral = areasP.reduce((s, a) => s + (a.areaM2 || 0), 0);
-
-    if (actions) actions.innerHTML = `<button class="btn btn-secundario btn-sm" onclick="LP.voltarPavimentos()">← Voltar</button>`;
-
-    el.innerHTML = `
-      <div class="lp-breadcrumb-mini"><a onclick="LP.voltarPlantas()">Plantas</a> › <a onclick="LP.voltarPavimentos()">${esc(pl ? pl.nome : '')}</a> › ${esc(pav.nome)}</div>
       <div class="lp-toolbar">
         <button class="btn btn-secundario btn-sm ${modo === 'calibrar' ? 'lp-modo-ativo' : ''}" onclick="LP.toggleModoCalibrar()">📏 Calibrar Escala</button>
         <button class="btn btn-secundario btn-sm ${modo === 'medir' ? 'lp-modo-ativo' : ''}" onclick="LP.toggleModoMedir()" ${temEscala ? '' : 'disabled title="Calibre a escala primeiro"'}>⬟ Nova Área</button>
         ${modo === 'medir' ? `
-          <button class="btn btn-primario btn-sm" onclick="LP.finalizarPoligono()">✓ Finalizar Área (${poligonoPontos.length} pontos)</button>
+          <button class="btn btn-primario btn-sm" id="lp-btn-finalizar" onclick="LP.finalizarPoligono()">✓ Finalizar Área (${poligonoPontos.length} pontos)</button>
           <button class="btn btn-secundario btn-sm" onclick="LP.cancelarDesenho()">Cancelar</button>
         ` : ''}
         ${modo === 'calibrar' ? `<button class="btn btn-secundario btn-sm" onclick="LP.cancelarDesenho()">Cancelar</button>` : ''}
         <div class="sep"></div>
-        <span class="info">${temEscala ? `Escala: 1 ponto-PDF = ${(pav.escalaMetrosPorPonto * 1000).toFixed(3)} mm` : 'Escala não calibrada'}</span>
+        <span class="info">${temEscala ? `Escala: 1 ponto-PDF = ${(node.escalaMetrosPorPonto * 1000).toFixed(3)} mm` : 'Escala não calibrada'}</span>
       </div>
       ${!temEscala ? `<div class="lp-hint">Antes de medir, clique em "📏 Calibrar Escala", desenhe uma linha sobre uma medida conhecida do desenho (ex: uma cota) e informe a distância real.</div>` : ''}
-      ${modo === 'medir' ? `<div class="lp-hint">Clique para adicionar vértices do polígono da área. Quando terminar, clique em "Finalizar Área".</div>` : ''}
+      ${modo === 'medir' ? `<div class="lp-hint">Clique para adicionar vértices do polígono da área. Dê um duplo-clique ou clique em "Finalizar Área" quando terminar.</div>` : ''}
       ${modo === 'calibrar' ? `<div class="lp-hint">Clique em dois pontos sobre uma medida conhecida do desenho (ex: início e fim de uma cota).</div>` : ''}
       <div class="lp-workspace">
         <div class="lp-canvas-col" id="lp-canvas-col"><div class="loading-inline">Carregando página do PDF...</div></div>
         <div class="lp-painel-lateral">
           <div class="lp-totais">
             <table>
-              <tr><td>Total de áreas</td><td>${areasP.length}</td></tr>
-              <tr><td>Área total</td><td>${fmt2(totalGeral)} m²</td></tr>
+              <tr><td>Total de áreas</td><td>${areasN.length}</td></tr>
+              <tr><td>Área total</td><td>${fmt2(totalNode)} m²</td></tr>
             </table>
           </div>
-          ${areasP.length === 0 ? `<div class="estado-vazio" style="padding:20px;"><p style="font-size:0.85rem;">Nenhuma área medida ainda.</p></div>` : areasP.map(a => `
+          ${areasN.length === 0 ? `<div class="estado-vazio" style="padding:20px;"><p style="font-size:0.85rem;">Nenhuma área medida ainda.</p></div>` : areasN.map(a => `
             <div class="lp-area-card" onclick="LP.editarArea('${a.id}')">
               <div class="nome"><span>${esc(a.nome)}</span><span class="m2">${fmt2(a.areaM2)} m²</span></div>
               <div class="meta">
@@ -396,8 +539,6 @@ const LP = (() => {
         </div>
       </div>
     `;
-    _popularDatalists();
-    _renderCanvasPavimento(pav);
   }
 
   function _popularDatalists() {
@@ -413,28 +554,18 @@ const LP = (() => {
     });
   }
 
-  function voltarPavimentos() {
-    view = 'pavimentos'; selPavimentoId = null; modo = 'nenhum'; calibPontos = []; poligonoPontos = [];
-    renderizar();
-  }
-
-  async function abrirPavimento(id) {
-    selPavimentoId = id; view = 'pavimento'; modo = 'nenhum'; calibPontos = []; poligonoPontos = [];
-    renderizar();
-  }
-
-  async function _renderCanvasPavimento(pav) {
+  async function _renderCanvasNode(node) {
     const col = document.getElementById('lp-canvas-col');
     if (!col) return;
     try {
       await _garantirPdfjs();
-      const pl = _plantaAtual(pav.plantaId);
+      const pl = _plantaPorId(node.plantaId);
       if (!pl) return;
       if (pdfDocPlantaId !== pl.id) {
         pdfDoc = await _carregarPdfDoc(pl.downloadURL);
         pdfDocPlantaId = pl.id;
       }
-      const page = await pdfDoc.getPage(pav.pagina);
+      const page = await pdfDoc.getPage(node.pagina);
       const viewportBase = page.getViewport({ scale: 1 });
       const larguraDisponivel = Math.max(320, (col.clientWidth || 900) - 24);
       renderScale = Math.min(2.2, larguraDisponivel / viewportBase.width);
@@ -466,7 +597,7 @@ const LP = (() => {
       stage.addEventListener('click', _onStageClick);
       stage.addEventListener('dblclick', _onStageDblClick);
 
-      _desenharOverlay(pav);
+      _desenharOverlay(node);
     } catch (e) {
       console.error('Erro ao renderizar PDF:', e);
       col.innerHTML = `<div class="estado-vazio"><p>Erro ao carregar a página do PDF: ${esc(e.message)}</p></div>`;
@@ -507,8 +638,7 @@ const LP = (() => {
   }
 
   function _atualizarBotaoFinalizar() {
-    const el = document.getElementById('lp-content');
-    const btn = el && el.querySelector('.lp-toolbar .btn-primario');
+    const btn = document.getElementById('lp-btn-finalizar');
     if (btn) btn.textContent = `✓ Finalizar Área (${poligonoPontos.length} pontos)`;
   }
 
@@ -519,8 +649,8 @@ const LP = (() => {
   }
 
   function toggleModoMedir() {
-    const pav = _pavAtual();
-    if (!pav || !pav.escalaMetrosPorPonto) { Utils.toast('Calibre a escala antes de medir.', 'alerta'); return; }
+    const r = _acharNode(selNodeId);
+    if (!r || !r.node.escalaMetrosPorPonto) { Utils.toast('Calibre a escala antes de medir.', 'alerta'); return; }
     modo = modo === 'medir' ? 'nenhum' : 'medir';
     calibPontos = []; poligonoPontos = [];
     renderizar();
@@ -548,18 +678,17 @@ const LP = (() => {
     if (distPdf === 0) { Utils.toast('Linha inválida.', 'erro'); return; }
     const escalaMetrosPorPonto = distReal / distPdf;
 
-    const pav = _pavAtual();
+    const r = _acharNode(selNodeId); if (!r) return;
     Utils.mostrarLoading('Salvando escala...');
     try {
-      await Database.atualizar(obraId, COL_PAV, pav.id, {
-        escalaMetrosPorPonto,
-        linhaCalibracao: { x1: p1.x, y1: p1.y, x2: p2.x, y2: p2.y, distanciaReal: distReal },
-      });
+      r.node.escalaMetrosPorPonto = escalaMetrosPorPonto;
+      r.node.linhaCalibracao = { x1: p1.x, y1: p1.y, x2: p2.x, y2: p2.y, distanciaReal: distReal };
+      await _salvarArvore();
       Utils.fecharModal('modal-lp-calibrar');
       Utils.toast('Escala calibrada!', 'sucesso');
       modo = 'nenhum'; calibPontos = [];
       await carregar();
-      abrirPavimento(pav.id);
+      selNode(selNodeId);
     } catch (e) {
       console.error(e);
       Utils.toast('Erro ao salvar escala: ' + e.message, 'erro');
@@ -570,9 +699,9 @@ const LP = (() => {
 
   function finalizarPoligono() {
     if (poligonoPontos.length < 3) { Utils.toast('Desenhe pelo menos 3 pontos.', 'alerta'); return; }
-    const pav = _pavAtual();
+    const r = _acharNode(selNodeId); if (!r) return;
     const areaPdf = _areaPoligono(poligonoPontos);
-    const areaM2 = areaPdf * (pav.escalaMetrosPorPonto ** 2);
+    const areaM2 = areaPdf * (r.node.escalaMetrosPorPonto ** 2);
     areaPoligonoPendente = poligonoPontos.slice();
     areaM2Pendente = areaM2;
     areaEditId = null;
@@ -603,7 +732,6 @@ const LP = (() => {
   function fecharModalArea() {
     Utils.fecharModal('modal-lp-area');
     if (areaEditId === null) {
-      // era uma área nova recém desenhada e não salva — descarta o polígono temporário
       poligonoPontos = []; modo = 'nenhum'; areaPoligonoPendente = null;
       renderizar();
     }
@@ -614,13 +742,12 @@ const LP = (() => {
     if (!data.nome) { Utils.toast('Informe o nome da área.', 'alerta'); return; }
     if (!data.impermeabilizacao) data.tipoImpermeabilizacao = '';
 
-    const pav = _pavAtual();
     Utils.mostrarLoading('Salvando área...');
     try {
       if (areaEditId) {
         await Database.atualizar(obraId, COL_AREAS, areaEditId, data);
       } else {
-        data.pavimentoId = pav.id;
+        data.nodeId = selNodeId;
         data.poligono = areaPoligonoPendente;
         data.areaM2 = areaM2Pendente;
         await Database.criar(obraId, COL_AREAS, data);
@@ -629,7 +756,7 @@ const LP = (() => {
       Utils.toast('Área salva!', 'sucesso');
       poligonoPontos = []; modo = 'nenhum'; areaPoligonoPendente = null; areaEditId = null;
       await carregar();
-      abrirPavimento(pav.id);
+      selNode(selNodeId);
     } catch (e) {
       console.error(e);
       Utils.toast('Erro ao salvar área: ' + e.message, 'erro');
@@ -641,7 +768,6 @@ const LP = (() => {
   async function excluirAreaEmEdicao() {
     if (!areaEditId) return;
     if (!Utils.confirmar('Excluir esta área?')) return;
-    const pav = _pavAtual();
     Utils.mostrarLoading('Excluindo...');
     try {
       await Database.deletar(obraId, COL_AREAS, areaEditId);
@@ -649,7 +775,7 @@ const LP = (() => {
       Utils.toast('Área excluída.', 'sucesso');
       areaEditId = null;
       await carregar();
-      abrirPavimento(pav.id);
+      selNode(selNodeId);
     } catch (e) {
       console.error(e);
       Utils.toast('Erro ao excluir: ' + e.message, 'erro');
@@ -663,22 +789,19 @@ const LP = (() => {
   // ══════════════════════════════════════════
   function _ptsAttr(pts) { return pts.map(p => (p.x * renderScale).toFixed(1) + ',' + (p.y * renderScale).toFixed(1)).join(' '); }
 
-  function _desenharOverlay(pav) {
+  function _desenharOverlay(node) {
     const svg = document.querySelector('#lp-canvas-col svg.lp-svg-overlay');
     if (!svg) return;
-    const svgNS = 'http://www.w3.org/2000/svg';
     let h = '';
 
-    // Linha de calibração salva
-    if (pav.linhaCalibracao) {
-      const lc = pav.linhaCalibracao;
+    if (node.linhaCalibracao) {
+      const lc = node.linhaCalibracao;
       h += `<line x1="${lc.x1 * renderScale}" y1="${lc.y1 * renderScale}" x2="${lc.x2 * renderScale}" y2="${lc.y2 * renderScale}" stroke="#16a34a" stroke-width="2" stroke-dasharray="6,4"/>`;
       h += `<circle cx="${lc.x1 * renderScale}" cy="${lc.y1 * renderScale}" r="4" fill="#16a34a"/>`;
       h += `<circle cx="${lc.x2 * renderScale}" cy="${lc.y2 * renderScale}" r="4" fill="#16a34a"/>`;
     }
 
-    // Polígonos das áreas já salvas
-    _areasDoPavimento(pav.id).forEach(a => {
+    _areasDoNode(node.id).forEach(a => {
       if (!a.poligono || a.poligono.length < 3) return;
       const isEdit = a.id === areaEditId;
       h += `<polygon points="${_ptsAttr(a.poligono)}" fill="${isEdit ? 'rgba(37,99,235,0.28)' : 'rgba(37,99,235,0.14)'}" stroke="#2563eb" stroke-width="1.5"/>`;
@@ -720,8 +843,8 @@ const LP = (() => {
 
   return {
     init, recarregar,
-    abrirModalPlanta, enviarPlanta, excluirPlanta, abrirPlanta, voltarPlantas,
-    criarPavimento, excluirPavimento, abrirPavimento, voltarPavimentos,
+    novoNode, renomearNode, excluirNode, toggleNode, selNode, selGeral,
+    abrirModalPlanta, enviarPlanta, excluirPlanta, vincularPlantaExistente, trocarPlanta,
     toggleModoCalibrar, toggleModoMedir, cancelarDesenho,
     cancelarCalibracao, confirmarCalibracao,
     finalizarPoligono, editarArea, onToggleImperm, fecharModalArea, salvarArea, excluirAreaEmEdicao,
