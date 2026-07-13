@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.17.17',
+  versaoAtual: 'V2.17.18',
 
   versoes: [
     {
@@ -2036,7 +2036,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.17.17',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-12',
       tipo: 'funcionalidade',
       titulo: 'Levantamento de Fachada: mover peça para outro balancim',
@@ -2051,6 +2051,27 @@ const NotasVersao = {
         'Complementa o botão "⇄" (que só troca entre Externa e',
         '  Interna do MESMO balancim) — agora dá pra corrigir',
         '  peça lançada no balancim errado também',
+      ]
+    },
+    {
+      versao: 'V2.17.18',
+      status: 'aberta',
+      data: '2026-07-12',
+      tipo: 'melhoria',
+      titulo: 'Levantamento de Fachada: múltiplos tipos de janela por peça',
+      itens: [
+        '"Possui janela?" agora permite adicionar MAIS DE UMA',
+        '  janela na mesma peça (igual ao Vão Fechado e ao Friso)',
+        '  — botão "+ Janela" adiciona linha, cada uma com sua',
+        '  própria Largura, Altura e Qtd',
+        'O desconto de área por janela (segundo a Configuração de',
+        '  Cálculo) agora soma o desconto de TODOS os tipos de',
+        '  janela da peça, não só de um',
+        'Coluna "Jan" na tabela mostra "✓" e um "+N" quando a peça',
+        '  tem mais de um tipo de janela; passe o mouse em cima',
+        '  pra ver as medidas de cada uma',
+        'Peças com janela cadastrada no formato antigo (uma só)',
+        '  continuam funcionando normalmente',
       ]
     }
   ],

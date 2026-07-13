@@ -67,48 +67,48 @@ const LevantamentoFachada = (() => {
   function _proximoBAL(fachadaId){let max=0;balancins.filter(b=>b.fachadaId===fachadaId).forEach(b=>{const m=(b.codigo||b.nome||'').match(/(\d+)/);if(m)max=Math.max(max,parseInt(m[1]));});return 'BAL-'+String(max+1).padStart(2,'0');}
   function _m(cm){return _pn(cm)/100;}
 
+  // Calcula o desconto (m²) de UM tipo de janela, conforme o modo configurado
+  function _descontoJanela(larJ,altJ,qtJ,qt,cfg){
+    if(!(qtJ>0&&larJ>0&&altJ>0))return 0;
+    const areaUnitaria=larJ*altJ;            // m² de 1 janela
+    const areaTotal=areaUnitaria*qtJ*qt;     // m² de todas as janelas desse tipo
+    const limX=_pn(cfg.janela_limite_x)||1.5; // limite de tamanho X
+    const valY=_pn(cfg.janela_valor_y)||1.0;  // valor aplicado Y
+
+    if(cfg.janela_modo==='desconto_total'){
+      return areaTotal;
+    } else if(cfg.janela_modo==='parcial_considera'){
+      // Vão > X m²: considera apenas Y m², desconta o excedente (areaUnitaria - Y)
+      // Vão ≤ X m²: NÃO desconta nada
+      if(areaUnitaria>limX) return Math.max(0,(areaUnitaria-valY)*qtJ*qt);
+      return 0;
+    } else if(cfg.janela_modo==='parcial_desconta'){
+      // Vão > X m²: desconta apenas Y m² por vão (mantém o resto)
+      // Vão ≤ X m²: NÃO desconta nada
+      if(areaUnitaria>limX) return valY*qtJ*qt;
+      return 0;
+    } else if(cfg.janela_modo==='metade'){
+      return areaTotal/2;
+    }
+    return 0;
+  }
+
   // ===================== CÁLCULOS COM CONFIG =====================
   function _calc(pc, cfg){
     if(!cfg) cfg=_getCfg();
     const co=_m(_pn(pc.comprimento)), al=_m(_pn(pc.altura)), qt=_pn(pc.quantidade)||1;
-    const larJ=_m(_pn(pc.larguraJanela)), altJ=_m(_pn(pc.alturaJanela)), qtJ=_pn(pc.quantidadeJanelas)||0;
     const podeML=!!pc.podeSerML;
 
     const bruto=co*al*qt;
 
-    // ---- Desconto janela: 4 modos ----
+    // ---- Desconto janela: 4 modos, soma de todos os tipos de janela da peça ----
     let janela=0;
-    if(pc.possuiJanela && qtJ>0 && larJ>0 && altJ>0){
-      const areaUnitaria=larJ*altJ;            // m² de 1 janela
-      const areaTotal=areaUnitaria*qtJ*qt;     // m² de todas as janelas
-      const limX=_pn(cfg.janela_limite_x)||1.5; // limite de tamanho X
-      const valY=_pn(cfg.janela_valor_y)||1.0;  // valor aplicado Y
-
-      if(cfg.janela_modo==='desconto_total'){
-        janela=areaTotal;
-
-      } else if(cfg.janela_modo==='parcial_considera'){
-        // Vão > X m²: considera apenas Y m², desconta o excedente (areaUnitaria - Y)
-        // Vão ≤ X m²: NÃO desconta nada
-        if(areaUnitaria>limX){
-          const desconto=(areaUnitaria-valY)*qtJ*qt;
-          janela=Math.max(0,desconto);
-        } else {
-          janela=0;
-        }
-
-      } else if(cfg.janela_modo==='parcial_desconta'){
-        // Vão > X m²: desconta apenas Y m² por vão (mantém o resto)
-        // Vão ≤ X m²: NÃO desconta nada
-        if(areaUnitaria>limX){
-          janela=valY*qtJ*qt;
-        } else {
-          janela=0;
-        }
-
-      } else if(cfg.janela_modo==='metade'){
-        janela=areaTotal/2;
-      }
+    if(pc.possuiJanela){
+      const listaJ=(pc.janelas&&pc.janelas.length)?pc.janelas:((pc.larguraJanela||pc.quantidadeJanelas)?[{largura:pc.larguraJanela,altura:pc.alturaJanela,quantidade:pc.quantidadeJanelas}]:[]);
+      listaJ.forEach(j=>{
+        const larJ=_m(_pn(j.largura)), altJ=_m(_pn(j.altura)), qtJ=_pn(j.quantidade)||0;
+        janela+=_descontoJanela(larJ,altJ,qtJ,qt,cfg);
+      });
     }
 
     const areaLiq=Math.max(0,bruto-janela);
@@ -551,6 +551,8 @@ const LevantamentoFachada = (() => {
     let rows='';
     vPec.forEach((pc,i)=>{
       const c=_calc(pc);
+      const _janelasLista=pc.possuiJanela?((pc.janelas&&pc.janelas.length)?pc.janelas:((pc.larguraJanela||pc.quantidadeJanelas)?[{largura:pc.larguraJanela,altura:pc.alturaJanela,quantidade:pc.quantidadeJanelas}]:[])):[];
+      const janelaTitle=_janelasLista.map(j=>_pn(j.largura)+'x'+_pn(j.altura)+'cm (qtd '+(j.quantidade||0)+')').join(' · ');
       const _frisosLista=pc.possuiFriso?((pc.frisos&&pc.frisos.length)?pc.frisos:(pc.frisoComprimento?[{comprimento:pc.frisoComprimento,tipo:pc.frisoTipo,quantidade:pc.frisoQuantidade}]:[])):[];
       let frisoTxt='—',frisoTitle='';
       if(_frisosLista.length){
@@ -564,7 +566,7 @@ const LevantamentoFachada = (() => {
         '<td class="col-num">'+_pn(pc.comprimento)+'</td>'+
         '<td class="col-num">'+_pn(pc.altura)+'</td>'+
         '<td class="col-num col-centro">'+(pc.quantidade||1)+'</td>'+
-        '<td class="col-centro">'+(pc.possuiJanela?'✓':'')+'</td>'+
+        '<td class="col-centro" title="'+janelaTitle+'">'+(pc.possuiJanela?(_janelasLista.length>1?'✓ +'+(_janelasLista.length-1):'✓'):'')+'</td>'+
         '<td class="text-sm col-centro" title="'+frisoTitle+'">'+frisoTxt+'</td>'+
         '<td class="col-centro"><button class="btn btn-sm btn-icon" onclick="LF.togglePecaML(\''+pc.id+'\')" title="Pode ser considerado ML? (clique para alternar)">'+(c.podeML?'✅':'—')+'</button></td>'+
         '<td class="col-num" style="font-weight:600;color:var(--cor-primaria);">'+_f(c.m2semML)+'</td>'+
@@ -886,9 +888,9 @@ const LevantamentoFachada = (() => {
     editandoId=null;document.getElementById('modal-peca-titulo').textContent='Nova Peça';
     Utils.limparForm('form-peca');
     document.querySelector('#form-peca [name="quantidade"]').value=1;
-    document.querySelector('#form-peca [name="quantidadeJanelas"]').value=1;
     _mlManualTouch=false;
     _popularAcabamentos();
+    _renderJanelasForm([]);
     _renderFrisosForm([]);
     _togJ(false);_togF(false);Utils.abrirModal('modal-peca');
   }
@@ -900,6 +902,8 @@ const LevantamentoFachada = (() => {
     _popularAcabamentos();
     const frisosIniciais=(pc.frisos&&pc.frisos.length)?pc.frisos:(pc.frisoComprimento?[{comprimento:pc.frisoComprimento,tipo:pc.frisoTipo||'arquitetonico',quantidade:pc.frisoQuantidade||1}]:[]);
     _renderFrisosForm(frisosIniciais);
+    const janelasIniciais=(pc.janelas&&pc.janelas.length)?pc.janelas:((pc.larguraJanela||pc.quantidadeJanelas)?[{largura:pc.larguraJanela,altura:pc.alturaJanela,quantidade:pc.quantidadeJanelas||1}]:[]);
+    _renderJanelasForm(janelasIniciais);
     Utils.setFormData('form-peca',pc);_togJ(!!pc.possuiJanela);_togF(!!pc.possuiFriso);Utils.abrirModal('modal-peca');
   }
 
@@ -909,7 +913,8 @@ const LevantamentoFachada = (() => {
     data.tipo='peca';data.fachadaId=sel.fachadaId;data.balancimId=sel.balancimId;data.vistaId=sel.vistaId;
     data.comprimento=_pn(data.comprimento);data.altura=_pn(data.altura);data.quantidade=_pn(data.quantidade)||1;
     data.possuiJanela=!!data.possuiJanela;
-    data.larguraJanela=_pn(data.larguraJanela);data.alturaJanela=_pn(data.alturaJanela);data.quantidadeJanelas=_pn(data.quantidadeJanelas)||0;
+    data.janelas=data.possuiJanela?_getJanelasDoForm().filter(j=>j.largura>0&&j.altura>0):[];
+    delete data.larguraJanela;delete data.alturaJanela;delete data.quantidadeJanelas; // campos legados, substituídos por data.janelas
     data.comprimentoVao=_pn(data.comprimentoVao);data.alturaVao=_pn(data.alturaVao);
     data.podeSerML=!!data.podeSerML;
     data.possuiFriso=!!data.possuiFriso;
@@ -923,7 +928,7 @@ const LevantamentoFachada = (() => {
       else{await Database.criar(obraId,COL,data);}
       Utils.toast('Peça salva!','sucesso');editandoId=null;await carregar();
       if(fechar!==false)Utils.fecharModal('modal-peca');
-      else{Utils.limparForm('form-peca');document.querySelector('#form-peca [name="quantidade"]').value=1;document.querySelector('#form-peca [name="quantidadeJanelas"]').value=1;_togJ(false);_togF(false);_renderFrisosForm([]);document.querySelector('#form-peca [name="nome"]').focus();}
+      else{Utils.limparForm('form-peca');document.querySelector('#form-peca [name="quantidade"]').value=1;_togJ(false);_togF(false);_renderJanelasForm([]);_renderFrisosForm([]);document.querySelector('#form-peca [name="nome"]').focus();}
     }catch(e){console.error(e);Utils.toast('Erro.','erro');}
   }
 
@@ -1145,18 +1150,20 @@ const LevantamentoFachada = (() => {
   function exportarCSV(){_csv(pecas,'fachada_geral');}
   function exportarVista(){_csv(pecas.filter(x=>x.vistaId===sel.vistaId),'fachada_vista');}
   function _csv(lista,nome){
-    let csv='Peça;Comp cm;Alt cm;Qtd;Janela;L-Jan cm;A-Jan cm;Q-Jan;Comp Vão cm;Alt Vão cm;Pode ML;Friso;Frisos (comp x qtd - tipo);ML Friso Arq;ML Friso Est;m2 unitario;m2 sem ML;m2 com ML;ML;Acabamento;Conferido;Obs\n';
+    let csv='Peça;Comp cm;Alt cm;Qtd;Janela;Janelas (larg x alt x qtd);Comp Vão cm;Alt Vão cm;Pode ML;Friso;Frisos (comp x qtd - tipo);ML Friso Arq;ML Friso Est;m2 unitario;m2 sem ML;m2 com ML;ML;Acabamento;Conferido;Obs\n';
     lista.forEach(pc=>{
       const c=_calc(pc);
+      const janelasLista=pc.possuiJanela?((pc.janelas&&pc.janelas.length)?pc.janelas:((pc.larguraJanela||pc.quantidadeJanelas)?[{largura:pc.larguraJanela,altura:pc.alturaJanela,quantidade:pc.quantidadeJanelas}]:[])):[];
+      const janelasDescr=janelasLista.map(j=>(j.largura||0)+'x'+(j.altura||0)+'cm x'+(j.quantidade||0)).join(' | ');
       const frisosLista=pc.possuiFriso?((pc.frisos&&pc.frisos.length)?pc.frisos:(pc.frisoComprimento?[{comprimento:pc.frisoComprimento,tipo:pc.frisoTipo,quantidade:pc.frisoQuantidade}]:[])):[];
       const frisosDescr=frisosLista.map(f=>(f.comprimento||0)+'cm x'+(f.quantidade||0)+' ('+(f.tipo==='estrutural'?'Estrutural':'Arquitetônico')+')').join(' | ');
-      csv+=[pc.nome,pc.comprimento,pc.altura,pc.quantidade,pc.possuiJanela?'Sim':'Nao',pc.larguraJanela||'',pc.alturaJanela||'',pc.quantidadeJanelas||'',pc.comprimentoVao||'',pc.alturaVao||'',pc.podeSerML?'Sim':'Nao',pc.possuiFriso?'Sim':'Nao',frisosDescr,c.mlFrisoArq.toFixed(2),c.mlFrisoEst.toFixed(2),c.m2unitario.toFixed(2),c.m2semML.toFixed(2),c.m2comML_puro.toFixed(2),c.ml.toFixed(2),pc.acabamento||'',pc.conferido?'Sim':'Nao',pc.observacao||''].join(';')+'\n';
+      csv+=[pc.nome,pc.comprimento,pc.altura,pc.quantidade,pc.possuiJanela?'Sim':'Nao',janelasDescr,pc.comprimentoVao||'',pc.alturaVao||'',pc.podeSerML?'Sim':'Nao',pc.possuiFriso?'Sim':'Nao',frisosDescr,c.mlFrisoArq.toFixed(2),c.mlFrisoEst.toFixed(2),c.m2unitario.toFixed(2),c.m2semML.toFixed(2),c.m2comML_puro.toFixed(2),c.ml.toFixed(2),pc.acabamento||'',pc.conferido?'Sim':'Nao',pc.observacao||''].join(';')+'\n';
     });
     const b=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=nome+'.csv';a.click();URL.revokeObjectURL(u);Utils.toast('Exportado!','sucesso');
   }
 
   // ===================== HELPERS =====================
-  function _togJ(s){const e=document.getElementById('campos-janela');if(e)e.style.display=s?'grid':'none';}
+  function _togJ(s){const e=document.getElementById('campos-janela');if(e)e.style.display=s?'block':'none';}
   function _togF(s){const e=document.getElementById('campos-friso');if(e)e.style.display=s?'block':'none';}
   // Permite digitar contas simples nos campos de medida (ex: 291+100 + Enter = 391)
   function calcExprEnter(e){
@@ -1187,6 +1194,44 @@ const LevantamentoFachada = (() => {
 
   function onToggleJanela(cb){_togJ(cb.checked);}
   function onToggleFriso(cb){_togF(cb.checked);}
+
+  // ===================== JANELAS (múltiplos tipos por peça) =====================
+  function _renderJanelasForm(janelas){
+    const c=document.getElementById('janelas-container');if(!c)return;
+    if(!janelas||!janelas.length)janelas=[{largura:'',altura:'',quantidade:1}];
+    c.innerHTML=janelas.map((j,i)=>`
+      <div class="janela-row" id="janela-row-${i}" style="display:grid;grid-template-columns:1fr 1fr 70px 32px;gap:8px;align-items:end;margin-bottom:8px;">
+        <div class="form-grupo" style="margin:0"><label>Largura Janela (cm)</label>
+          <input type="text" inputmode="decimal" class="form-control janela-larg" data-i="${i}" placeholder="Ex: 291+100" value="${j.largura||''}" onkeydown="LF.calcExprEnter(event)"></div>
+        <div class="form-grupo" style="margin:0"><label>Altura Janela (cm)</label>
+          <input type="text" inputmode="decimal" class="form-control janela-alt" data-i="${i}" placeholder="Ex: 291+100" value="${j.altura||''}" onkeydown="LF.calcExprEnter(event)"></div>
+        <div class="form-grupo" style="margin:0"><label>Qtd</label>
+          <input type="number" class="form-control janela-qtd" data-i="${i}" min="0" value="${j.quantidade!=null?j.quantidade:1}"></div>
+        <div class="form-grupo" style="margin:0"><label>&nbsp;</label>
+          <button type="button" class="btn btn-perigo btn-sm btn-icon" onclick="LF.removerJanelaRow(${i})" ${janelas.length<=1?'disabled':''}>✕</button></div>
+      </div>`).join('');
+  }
+
+  function _getJanelasDoForm(){
+    const largs=document.querySelectorAll('.janela-larg');
+    const alts=document.querySelectorAll('.janela-alt');
+    const qtds=document.querySelectorAll('.janela-qtd');
+    return Array.from(largs).map((_,i)=>({
+      largura:_pn(largs[i].value), altura:_pn(alts[i].value), quantidade:_pn(qtds[i].value)||0
+    }));
+  }
+
+  function adicionarJanelaRow(){
+    const janelas=_getJanelasDoForm();
+    janelas.push({largura:'',altura:'',quantidade:1});
+    _renderJanelasForm(janelas);
+  }
+
+  function removerJanelaRow(i){
+    const janelas=_getJanelasDoForm();
+    janelas.splice(i,1);
+    _renderJanelasForm(janelas);
+  }
 
   // ===================== FRISOS (múltiplos por peça) =====================
   function _renderFrisosForm(frisos){
@@ -1338,7 +1383,7 @@ const LevantamentoFachada = (() => {
   function imgRZEv(e, el){ imgRZ(e, el.dataset.d); }
   function cxResizeEv(e){ cxResize(e, parseInt(e.currentTarget.dataset.i), e.currentTarget.dataset.d); }
 
-  return {init,carregar,sel:selecionar,setAba,criarFachada,criarBalancim,editar,salvarEntidade,excluir,novaPeca,editarPeca,salvarPeca,excluirPeca,duplicarPeca,moverPeca,abrirMoverPecaBal,confirmarMoverPecaBal,duplicarBal,editarNomeInline,abrirClonarBal,confirmarClonarBal,corrigirVinculos,conferirPeca,togglePecaML,onClickCheckML,onCompAltInput,calcExprEnter,onToggleFriso,adicionarFrisoRow,removerFrisoRow,exportarCSV,exportarVista,onToggleJanela,importarMapa,cxAdicionar,cxRemover,cxTravar,cxEditar,salvarCxEdit,cxMouseDown,cxDrop,cxResize,imgMouseDown,imgResize,entrarEditImg,sairEditImg,imgMD,imgRZEv,cxResizeEv,toggleEditImg,fecharEditImg,onImgResize,limparMapa,abrirVaoVista,salvarVaoVista,_atualizarPreviewVao,adicionarVaoRow,removerVaoRow,abrirConfig,salvarConfig,onChangeCfgJanela};
+  return {init,carregar,sel:selecionar,setAba,criarFachada,criarBalancim,editar,salvarEntidade,excluir,novaPeca,editarPeca,salvarPeca,excluirPeca,duplicarPeca,moverPeca,abrirMoverPecaBal,confirmarMoverPecaBal,duplicarBal,editarNomeInline,abrirClonarBal,confirmarClonarBal,corrigirVinculos,conferirPeca,togglePecaML,onClickCheckML,onCompAltInput,calcExprEnter,onToggleFriso,adicionarFrisoRow,removerFrisoRow,adicionarJanelaRow,removerJanelaRow,exportarCSV,exportarVista,onToggleJanela,importarMapa,cxAdicionar,cxRemover,cxTravar,cxEditar,salvarCxEdit,cxMouseDown,cxDrop,cxResize,imgMouseDown,imgResize,entrarEditImg,sairEditImg,imgMD,imgRZEv,cxResizeEv,toggleEditImg,fecharEditImg,onImgResize,limparMapa,abrirVaoVista,salvarVaoVista,_atualizarPreviewVao,adicionarVaoRow,removerVaoRow,abrirConfig,salvarConfig,onChangeCfgJanela};
 })();
 const LF=LevantamentoFachada;
 function onObraChanged(){LF.init();}
