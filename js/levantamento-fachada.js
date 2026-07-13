@@ -575,7 +575,7 @@ const LevantamentoFachada = (() => {
         '<button class="btn btn-secundario btn-sm" onclick="LF.editarPeca(\''+pc.id+'\')">✎</button> '+
         '<button class="btn btn-sm btn-icon" onclick="LF.moverPeca(\''+pc.id+'\')" title="Mover para '+(vi.tipoVista==='externa'?'Vista Interna':'Vista Externa')+'">⇄</button> '+
         '<button class="btn btn-sm btn-icon" onclick="LF.duplicarPeca(\''+pc.id+'\')" title="Duplicar">⧉</button> '+
-        '<button class="btn btn-sm btn-icon" onclick="LF.conferirPeca(\''+pc.id+'\')">'+(pc.conferido?'↩':'✓')+'</button> '+
+        '<button class="btn btn-sm btn-icon" onclick="LF.conferirPeca(\''+pc.id+'\')" title="'+(pc.conferido?'Desmarcar conferência':'Marcar peça como conferida')+'">'+(pc.conferido?'↩':'✓')+'</button> '+
         '<button class="btn btn-perigo btn-sm btn-icon" onclick="LF.excluirPeca(\''+pc.id+'\')">✕</button></td></tr>';
     });
     const path=(f?.nome||'')+' › '+(bl?.nome||'')+' › '+lbl;

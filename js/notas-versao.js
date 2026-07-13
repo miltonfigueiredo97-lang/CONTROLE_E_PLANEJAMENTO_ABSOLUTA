@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.17.15',
+  versaoAtual: 'V2.17.16',
 
   versoes: [
     {
@@ -2009,7 +2009,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.17.15',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-12',
       tipo: 'funcionalidade',
       titulo: 'Levantamento de Fachada: mover peça entre Vista Externa/Interna',
@@ -2019,6 +2019,19 @@ const NotasVersao = {
         '  Interna), sem precisar excluir e recadastrar tudo',
         'Útil pra quando a peça foi lançada na vista errada por',
         '  engano',
+      ]
+    },
+    {
+      versao: 'V2.17.16',
+      status: 'aberta',
+      data: '2026-07-12',
+      tipo: 'correcao',
+      titulo: 'Levantamento de Fachada: botão "✓" sem título explicativo',
+      itens: [
+        'O botão "✓" nas Ações da tabela de peças (marca a peça',
+        '  como conferida/já revisada) não tinha texto ao passar',
+        '  o mouse — agora mostra "Marcar peça como conferida" ou',
+        '  "Desmarcar conferência", conforme o estado atual',
       ]
     }
   ],
