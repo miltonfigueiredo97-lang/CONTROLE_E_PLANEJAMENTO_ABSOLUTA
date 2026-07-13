@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.19.3',
+  versaoAtual: 'V2.19.4',
 
   versoes: [
     {
@@ -2425,7 +2425,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.19.3',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-13',
       tipo: 'funcionalidade',
       titulo: 'Levantamento de Paredes: resumo por camadas, clonar local e ações de parede (mover/duplicar/conferir)',
@@ -2451,6 +2451,37 @@ const NotasVersao = {
         '  → ⧉ Duplicar: cria uma cópia da parede no mesmo local',
         '  → ✓ Conferir: marca/desmarca a parede como conferida',
         '  (linha fica destacada em verde quando conferida)',
+      ]
+    },
+    {
+      versao: 'V2.19.4',
+      status: 'aberta',
+      data: '2026-07-13',
+      tipo: 'funcionalidade',
+      titulo: 'Levantamento de Paredes: Lado B opcional, Metro Linear e configuração geral (igual Fachada)',
+      itens: [
+        'NOVO: checkbox "Possui Lado B?" na parede — cobre o caso de',
+        '  paredes que só têm acabamento de um lado (ex: divisa com',
+        '  outra unidade, parede de fundo). Quando desmarcado, o',
+        '  Lado B some do formulário e não entra em nenhum cálculo',
+        'NOVO: checkbox "Pode ser ML?" por parede — igual ao',
+        '  Levantamento de Fachada. Paredes muito estreitas (área',
+        '  bruta pequena) são sugeridas automaticamente como ML',
+        '  assim que Comprimento/Altura são preenchidos, mas o',
+        '  usuário pode marcar/desmarcar manualmente a qualquer',
+        '  momento — depois disso, a sugestão automática para de',
+        '  sobrescrever',
+        'NOVO: "⚙️ Configurações de Cálculo" (botão na árvore de',
+        '  Locais) — igual à Fachada, com:',
+        '  → Vãos: 5 modos configuráveis (Não Descontar, Desconto',
+        '  Total, 2 modos de Desconto Parcial com limite X/valor Y,',
+        '  e Metade) — antes o desconto de vão era sempre "total"',
+        '  → Metro Linear: a partir de quantos m² brutos considerar',
+        '  ML, e qual % do m² conta no equivalente',
+        'Alvenaria e Acabamento agora calculam ML separadamente',
+        '  (cada um com sua própria altura), com um painel novo',
+        '  "📏 Metro Linear" mostrando m² sem ML / ML / m² com ML',
+        '  equivalente — tanto na Visão Geral quanto em cada local',
       ]
     }
   ],

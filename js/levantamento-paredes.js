@@ -119,6 +119,37 @@ const LevantamentoParedes = (() => {
     return Number.isInteger(r) ? String(r) : String(r).replace('.', ',');
   }
 
+  // ══════════════════════════════════════════
+  // CONFIGURAÇÕES DE CÁLCULO (Vãos e Metro Linear)
+  // Mesmo mecanismo do Levantamento de Fachada — salvo por obra no localStorage.
+  // ══════════════════════════════════════════
+  function _getCfg() {
+    const d = {
+      vao_modo: 'desconto_total', // 'nenhum'|'desconto_total'|'parcial_considera'|'parcial_desconta'|'metade'
+      vao_limite_x: 1.5,          // m² — limite de tamanho do vão
+      vao_valor_y: 1.0,           // m² — valor considerado/descontado acima do limite
+      ml_menor_que: 0.50,         // m² — parede menor que isso pode virar ML
+      ml_percentual: 50,          // % do ML que conta como m² equivalente
+    };
+    try { return Object.assign(d, JSON.parse(localStorage.getItem('paredesCfg_' + obraId) || '{}')); } catch (e) { return d; }
+  }
+  function _saveCfg(cfg) { localStorage.setItem('paredesCfg_' + obraId, JSON.stringify(cfg)); }
+
+  // Calcula o desconto (m²) de UM vão (porta/janela), conforme o modo configurado
+  function _descontoVao(compV, altV, qtdV, cfg) {
+    if (!(qtdV > 0 && compV > 0 && altV > 0)) return 0;
+    if (cfg.vao_modo === 'nenhum') return 0;
+    const areaUnitaria = compV * altV;
+    const areaTotal = areaUnitaria * qtdV;
+    const limX = num(cfg.vao_limite_x) || 1.5;
+    const valY = num(cfg.vao_valor_y) || 1.0;
+    if (cfg.vao_modo === 'desconto_total') return areaTotal;
+    if (cfg.vao_modo === 'parcial_considera') return areaUnitaria > limX ? Math.max(0, (areaUnitaria - valY) * qtdV) : 0;
+    if (cfg.vao_modo === 'parcial_desconta') return areaUnitaria > limX ? valY * qtdV : 0;
+    if (cfg.vao_modo === 'metade') return areaTotal / 2;
+    return 0;
+  }
+
   // Percorre a árvore procurando um nó por id, retorna {node, path:[nomes]}
   function _acharNode(id, nodes = arvore, path = []) {
     for (const n of nodes) {
@@ -158,7 +189,8 @@ const LevantamentoParedes = (() => {
     return { alturaParede, alturaAcabamento };
   }
 
-  function _calcularPeca(p) {
+  function _calcularPeca(p, cfg) {
+    if (!cfg) cfg = _getCfg();
     const compM = num(p.comprimento) / 100;
     const { alturaParede, alturaAcabamento } = _alturas(p);
     const altParedeM = alturaParede / 100;
@@ -166,15 +198,26 @@ const LevantamentoParedes = (() => {
 
     const areaBrutaAlvenaria = compM * altParedeM;
     const areaBrutaAcabamento = compM * altAcabM;
-    const areaVaos = (p.vaos || []).reduce((s, v) => s + (num(v.comprimento) / 100) * (num(v.altura) / 100) * (num(v.qtd) || 1), 0);
+    const areaVaos = (p.vaos || []).reduce((s, v) => s + _descontoVao(num(v.comprimento) / 100, num(v.altura) / 100, num(v.qtd) || 1, cfg), 0);
     const areaLiquidaAlvenaria = Math.max(0, areaBrutaAlvenaria - areaVaos);
     const areaLiquidaAcabamento = Math.max(0, areaBrutaAcabamento - areaVaos);
 
+    // ML — igual ao Levantamento de Fachada: parede marcada como ML conta
+    // como metro linear (maior lado) em vez de m², usando o percentual
+    // configurado para chegar no m² equivalente.
+    const podeML = !!p.podeSerML;
+    const mlPct = (num(cfg.ml_percentual) || 50) / 100;
+    const mlAlvenaria = podeML ? Math.max(compM, altParedeM) : 0;
+    const mlAcabamento = podeML ? Math.max(compM, altAcabM) : 0;
+    const m2comMLAlvenaria_puro = podeML ? 0 : areaLiquidaAlvenaria;
+    const m2comMLAcabamento_puro = podeML ? 0 : areaLiquidaAcabamento;
+
+    const temLadoB = p.possuiLadoB !== false; // default true (compatível com peças antigas)
     const acabTotais = { gesso: 0, reboco: 0, revestimento: 0 };
     const pinturaTotais = {}; // cor -> m²
     let pinturaArea = 0;
 
-    ['ladoA', 'ladoB'].forEach(lado => {
+    (temLadoB ? ['ladoA', 'ladoB'] : ['ladoA']).forEach(lado => {
       const l = p[lado] || {};
       (l.acabamentos || []).forEach(a => {
         const area = areaLiquidaAcabamento * (num(a.pct) / 100);
@@ -193,6 +236,7 @@ const LevantamentoParedes = (() => {
     return {
       areaBrutaAlvenaria, areaBrutaAcabamento, areaVaos,
       areaLiquidaAlvenaria, areaLiquidaAcabamento,
+      podeML, mlPct, mlAlvenaria, mlAcabamento, m2comMLAlvenaria_puro, m2comMLAcabamento_puro,
       alvenariaVedacao: p.tipoAlvenaria === 'vedacao' ? areaLiquidaAlvenaria : 0,
       alvenariaEstrutural: p.tipoAlvenaria === 'estrutural' ? areaLiquidaAlvenaria : 0,
       gesso: acabTotais.gesso,
@@ -204,12 +248,15 @@ const LevantamentoParedes = (() => {
   }
 
   function _totaisDe(listaPecas) {
+    const cfg = _getCfg();
     const t = {
       alvenariaVedacao: 0, alvenariaEstrutural: 0, gesso: 0, reboco: 0, revestimento: 0, pintura: 0,
       pinturaPorCor: {}, areaLiquidaAlvenaria: 0, areaLiquidaAcabamento: 0, qtdPecas: listaPecas.length,
+      mlAlvenaria: 0, mlAcabamento: 0, mlEquivAlvenaria: 0, mlEquivAcabamento: 0,
+      m2comMLAlvenaria_puro: 0, m2comMLAcabamento_puro: 0,
     };
     listaPecas.forEach(p => {
-      const c = _calcularPeca(p);
+      const c = _calcularPeca(p, cfg);
       t.alvenariaVedacao += c.alvenariaVedacao;
       t.alvenariaEstrutural += c.alvenariaEstrutural;
       t.gesso += c.gesso;
@@ -218,9 +265,43 @@ const LevantamentoParedes = (() => {
       t.pintura += c.pintura;
       t.areaLiquidaAlvenaria += c.areaLiquidaAlvenaria;
       t.areaLiquidaAcabamento += c.areaLiquidaAcabamento;
+      t.mlAlvenaria += c.mlAlvenaria;
+      t.mlAcabamento += c.mlAcabamento;
+      t.mlEquivAlvenaria += c.mlAlvenaria * c.mlPct;
+      t.mlEquivAcabamento += c.mlAcabamento * c.mlPct;
+      t.m2comMLAlvenaria_puro += c.m2comMLAlvenaria_puro;
+      t.m2comMLAcabamento_puro += c.m2comMLAcabamento_puro;
       Object.entries(c.pinturaPorCor).forEach(([cor, area]) => { t.pinturaPorCor[cor] = (t.pinturaPorCor[cor] || 0) + area; });
     });
+    t.m2comMLAlvenaria_equiv = t.m2comMLAlvenaria_puro + t.mlEquivAlvenaria;
+    t.m2comMLAcabamento_equiv = t.m2comMLAcabamento_puro + t.mlEquivAcabamento;
     return t;
+  }
+
+  // Barra de informações de Metro Linear — igual ao conceito "m² sem ML / com ML" da Fachada
+  function _htmlBarraML(t) {
+    return `
+      <div class="cc-panel">
+        <div class="cc-panelTitle">📏 Metro Linear (peças marcadas como ML)</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+          <div>
+            <div class="text-sm text-muted mb-1">Alvenaria</div>
+            <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:0.85rem;">
+              <span>m² sem ML: <strong>${fmt2(t.areaLiquidaAlvenaria)}</strong></span>
+              <span>ML: <strong>${fmt2(t.mlAlvenaria)}</strong></span>
+              <span>m² com ML equivalente: <strong style="color:var(--cor-primaria-dark);">${fmt2(t.m2comMLAlvenaria_equiv)}</strong></span>
+            </div>
+          </div>
+          <div>
+            <div class="text-sm text-muted mb-1">Acabamento</div>
+            <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:0.85rem;">
+              <span>m² sem ML: <strong>${fmt2(t.areaLiquidaAcabamento)}</strong></span>
+              <span>ML: <strong>${fmt2(t.mlAcabamento)}</strong></span>
+              <span>m² com ML equivalente: <strong style="color:var(--cor-primaria-dark);">${fmt2(t.m2comMLAcabamento_equiv)}</strong></span>
+            </div>
+          </div>
+        </div>
+      </div>`;
   }
 
   // ══════════════════════════════════════════
@@ -240,7 +321,10 @@ const LevantamentoParedes = (() => {
         <div class="ar-tree">
           <div class="ar-tree-header">
             <h3>Locais</h3>
-            <button class="btn btn-secundario btn-sm" onclick="LP.novoNode(null)">+ Local</button>
+            <div style="display:flex;gap:6px;">
+              <button class="btn btn-secundario btn-sm" onclick="LP.abrirConfig()" title="Configurações de cálculo (vãos e Metro Linear)">⚙️</button>
+              <button class="btn btn-secundario btn-sm" onclick="LP.novoNode(null)">+ Local</button>
+            </div>
           </div>
           <div class="ar-tree-body">${_renderArvore()}</div>
         </div>
@@ -313,6 +397,8 @@ const LevantamentoParedes = (() => {
         <div class="cc-kpi"><div class="cc-kpiIcon">◻️</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Revestimento</div><div class="cc-kpiValue">${fmt2(t.revestimento)}<span class="cc-kpiUnit">m²</span></div><div class="cc-kpiSub">Porcelanato / cerâmica</div></div></div>
       </div>
 
+      ${_htmlBarraML(t)}
+
       <div class="cc-panel">
         <div class="cc-panelTitle">🎨 Pintura por Cor</div>
         ${!coresOrdenadas.length ? `<div class="cc-empty">Nenhuma pintura lançada ainda.</div>` : `
@@ -374,7 +460,9 @@ const LevantamentoParedes = (() => {
         <div class="cc-kpi"><div class="cc-kpiIcon">🪨</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Reboco</div><div class="cc-kpiValue">${fmt2(tSub.reboco)}<span class="cc-kpiUnit">m²</span></div></div></div>
         <div class="cc-kpi"><div class="cc-kpiIcon">◻️</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Revestimento</div><div class="cc-kpiValue">${fmt2(tSub.revestimento)}<span class="cc-kpiUnit">m²</span></div></div></div>
         <div class="cc-kpi"><div class="cc-kpiIcon">🎨</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Pintura</div><div class="cc-kpiValue">${fmt2(tSub.pintura)}<span class="cc-kpiUnit">m²</span></div></div></div>
-      </div>`;
+      </div>
+
+      ${_htmlBarraML(tSub)}`;
 
     if (temFilhos) {
       html += `
@@ -431,14 +519,15 @@ const LevantamentoParedes = (() => {
   function _renderLinhaPeca(p) {
     const c = _calcularPeca(p);
     const { alturaParede, alturaAcabamento } = _alturas(p);
+    const temLadoB = p.possuiLadoB !== false;
     return `<tr${p.conferido ? ' style="background:rgba(22,163,74,0.06);"' : ''}>
-      <td><strong>${esc(p.nome || 'Parede')}</strong>${p.conferido ? ' <span style="color:#16a34a;" title="Conferida">✓</span>' : ''}${p.vaos && p.vaos.length ? `<div class="text-sm text-muted">${p.vaos.length} vão(s)</div>` : ''}</td>
+      <td><strong>${esc(p.nome || 'Parede')}</strong>${p.conferido ? ' <span style="color:#16a34a;" title="Conferida">✓</span>' : ''}${p.podeSerML ? ' <span style="color:#b45309;" title="Marcada como ML">📏</span>' : ''}${p.vaos && p.vaos.length ? `<div class="text-sm text-muted">${p.vaos.length} vão(s)</div>` : ''}</td>
       <td>${num(p.comprimento)} x ${alturaParede}${alturaAcabamento !== alturaParede ? '/' + alturaAcabamento : ''}</td>
       <td style="text-align:right;">${fmt2(c.areaLiquidaAlvenaria)}</td>
       <td style="text-align:right;">${fmt2(c.areaLiquidaAcabamento)}</td>
       <td>${p.tipoAlvenaria === 'estrutural' ? 'Estrutural' : 'Vedação'}</td>
       <td class="text-sm">${_resumoLado(p.ladoA)}</td>
-      <td class="text-sm">${_resumoLado(p.ladoB)}</td>
+      <td class="text-sm">${temLadoB ? _resumoLado(p.ladoB) : '<span class="text-muted">— sem Lado B</span>'}</td>
       <td style="white-space:nowrap;">
         <button class="btn btn-secundario btn-sm" onclick="LP.editarParede('${p.id}')" title="Editar">✎</button>
         <button class="btn btn-sm btn-icon" onclick="LP.abrirMoverParede('${p.id}')" title="Mover para outro local">⇄</button>
@@ -594,6 +683,8 @@ const LevantamentoParedes = (() => {
       nome: `Parede ${_pecasDe(selNodeId).length + 1}`,
       comprimento: '', alturaParede: '', alturaAcabamento: '',
       tipoAlvenaria: 'vedacao',
+      possuiLadoB: true,
+      podeSerML: false, _mlManualTouch: false,
       possuiVao: false,
       vaos: [],
       ladoA: _novoLado(),
@@ -612,6 +703,9 @@ const LevantamentoParedes = (() => {
     const { alturaParede, alturaAcabamento } = _alturas(p);
     pecaForm.alturaParede = alturaParede || '';
     pecaForm.alturaAcabamento = alturaAcabamento || '';
+    pecaForm.possuiLadoB = p.possuiLadoB !== false;
+    pecaForm.podeSerML = !!p.podeSerML;
+    pecaForm._mlManualTouch = true; // ao editar, não sobrescreve a escolha já salva
     pecaForm.possuiVao = !!(pecaForm.vaos && pecaForm.vaos.length);
     pecaForm.ladoA = pecaForm.ladoA || _novoLado();
     pecaForm.ladoB = pecaForm.ladoB || _novoLado();
@@ -671,6 +765,14 @@ const LevantamentoParedes = (() => {
             <option value="vedacao" ${pecaForm.tipoAlvenaria === 'vedacao' ? 'selected' : ''}>Vedação</option>
             <option value="estrutural" ${pecaForm.tipoAlvenaria === 'estrutural' ? 'selected' : ''}>Estrutural</option>
           </select></div>
+        <div class="form-check" style="align-self:center;">
+          <input type="checkbox" id="lp-p-possuiladob" ${pecaForm.possuiLadoB !== false ? 'checked' : ''} onchange="LP.toggleLadoB(this.checked)">
+          <label for="lp-p-possuiladob">Possui Lado B?</label>
+        </div>
+        <div class="form-check" style="align-self:center;">
+          <input type="checkbox" id="lp-p-podeml" ${pecaForm.podeSerML ? 'checked' : ''} onchange="LP.onClickPodeML(this.checked)">
+          <label for="lp-p-podeml">Pode ser ML? (peça estreita)</label>
+        </div>
       </div>
 
       <div class="form-check mb-2">
@@ -681,32 +783,72 @@ const LevantamentoParedes = (() => {
 
       <div id="lp-resumo-areas">${_htmlResumoAreas()}</div>
 
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+      <div id="lp-lados-grid" style="display:grid;grid-template-columns:${pecaForm.possuiLadoB !== false ? '1fr 1fr' : '1fr'};gap:16px;">
         <div id="lp-lado-ladoA">${_renderLado('ladoA', 'Lado A')}</div>
-        <div id="lp-lado-ladoB">${_renderLado('ladoB', 'Lado B')}</div>
+        <div id="lp-lado-ladoB" style="${pecaForm.possuiLadoB !== false ? '' : 'display:none;'}">${_renderLado('ladoB', 'Lado B')}</div>
       </div>
     `;
   }
 
   function _htmlResumoAreas() {
+    const cfg = _getCfg();
     const compM = num(pecaForm.comprimento) / 100;
     const altParedeM = num(pecaForm.alturaParede) / 100;
     const altAcabM = (num(pecaForm.alturaAcabamento) || num(pecaForm.alturaParede)) / 100;
     const areaBrutaAlvenaria = compM * altParedeM;
     const areaBrutaAcabamento = compM * altAcabM;
-    const areaVaos = (pecaForm.vaos || []).reduce((s, v) => s + (num(v.comprimento) / 100) * (num(v.altura) / 100) * (num(v.qtd) || 1), 0);
+    const areaVaos = (pecaForm.vaos || []).reduce((s, v) => s + _descontoVao(num(v.comprimento) / 100, num(v.altura) / 100, num(v.qtd) || 1, cfg), 0);
     const areaLiquidaAlvenaria = Math.max(0, areaBrutaAlvenaria - areaVaos);
     const areaLiquidaAcabamento = Math.max(0, areaBrutaAcabamento - areaVaos);
-    return `
+    let html = `
       <div style="background:var(--cor-fundo);border-radius:8px;padding:10px 14px;margin:14px 0;font-size:0.85rem;display:flex;flex-direction:column;gap:4px;">
         <span>🧱 Alvenaria (Comp x Altura Parede): área bruta <strong>${fmt2(areaBrutaAlvenaria)} m²</strong> − vãos <strong>${fmt2(areaVaos)} m²</strong> = <strong style="color:var(--cor-primaria-dark);">${fmt2(areaLiquidaAlvenaria)} m²</strong></span>
-        <span>🎨 Acabamento (Comp x Altura Acabamento): área bruta <strong>${fmt2(areaBrutaAcabamento)} m²</strong> − vãos <strong>${fmt2(areaVaos)} m²</strong> = <strong style="color:var(--cor-primaria-dark);">${fmt2(areaLiquidaAcabamento)} m²</strong></span>
-      </div>`;
+        <span>🎨 Acabamento (Comp x Altura Acabamento): área bruta <strong>${fmt2(areaBrutaAcabamento)} m²</strong> − vãos <strong>${fmt2(areaVaos)} m²</strong> = <strong style="color:var(--cor-primaria-dark);">${fmt2(areaLiquidaAcabamento)} m²</strong></span>`;
+    if (pecaForm.podeSerML) {
+      const mlPct = (num(cfg.ml_percentual) || 50) / 100;
+      const mlAlv = Math.max(compM, altParedeM);
+      const mlAcab = Math.max(compM, altAcabM);
+      html += `<span style="color:#b45309;">📏 Marcada como ML — Alvenaria: <strong>${fmt2(mlAlv)} ML</strong> (≈${fmt2(mlAlv * mlPct)} m² equiv.) · Acabamento: <strong>${fmt2(mlAcab)} ML</strong> (≈${fmt2(mlAcab * mlPct)} m² equiv.)</span>`;
+    }
+    html += `</div>`;
+    return html;
   }
 
   function _atualizarResumoAreas() {
     const el = document.getElementById('lp-resumo-areas');
     if (el) el.innerHTML = _htmlResumoAreas();
+  }
+
+  // Sugere automaticamente "Pode ser ML?" quando a área bruta é pequena
+  // (igual ao Levantamento de Fachada), a menos que o usuário já tenha
+  // marcado/desmarcado manualmente nesta sessão de edição.
+  function _sugerirML() {
+    if (pecaForm._mlManualTouch) return;
+    const cfg = _getCfg();
+    const compM = num(pecaForm.comprimento) / 100;
+    const altParedeM = num(pecaForm.alturaParede) / 100;
+    const altAcabM = (num(pecaForm.alturaAcabamento) || num(pecaForm.alturaParede)) / 100;
+    if (!compM || !altParedeM) return;
+    const areaBrutaAlvenaria = compM * altParedeM;
+    const areaBrutaAcabamento = compM * altAcabM;
+    const menor = num(cfg.ml_menor_que) || 0.5;
+    const sugerido = areaBrutaAlvenaria <= menor || areaBrutaAcabamento <= menor;
+    pecaForm.podeSerML = sugerido;
+    const cb = document.getElementById('lp-p-podeml');
+    if (cb) cb.checked = sugerido;
+  }
+  function onClickPodeML(checked) {
+    pecaForm._mlManualTouch = true;
+    pecaForm.podeSerML = checked;
+    _atualizarResumoAreas();
+  }
+
+  function toggleLadoB(checked) {
+    pecaForm.possuiLadoB = checked;
+    const grid = document.getElementById('lp-lados-grid');
+    if (grid) grid.style.gridTemplateColumns = checked ? '1fr 1fr' : '1fr';
+    const ladoBDiv = document.getElementById('lp-lado-ladoB');
+    if (ladoBDiv) ladoBDiv.style.display = checked ? '' : 'none';
   }
 
   function _renderVaos() {
@@ -793,7 +935,10 @@ const LevantamentoParedes = (() => {
   // ── Handlers de edição do form (mutam pecaForm; SEM re-render do input) ──
   function updCampo(campo, valor) {
     pecaForm[campo] = valor;
-    if (campo === 'comprimento' || campo === 'alturaParede' || campo === 'alturaAcabamento') _atualizarResumoAreas();
+    if (campo === 'comprimento' || campo === 'alturaParede' || campo === 'alturaAcabamento') {
+      _sugerirML();
+      _atualizarResumoAreas();
+    }
   }
 
   function toggleVao(checked) {
@@ -905,6 +1050,48 @@ const LevantamentoParedes = (() => {
   }
 
   // ══════════════════════════════════════════
+  // CONFIGURAÇÕES DE CÁLCULO (modal) — Vãos e Metro Linear
+  // ══════════════════════════════════════════
+  function abrirConfig() {
+    const cfg = _getCfg();
+    document.getElementById('lp-cfg-vao-modo').value = cfg.vao_modo || 'desconto_total';
+    document.getElementById('lp-cfg-vao-limite').value = cfg.vao_limite_x || '';
+    document.getElementById('lp-cfg-vao-valor-y').value = cfg.vao_valor_y || '';
+    document.getElementById('lp-cfg-ml-menor').value = cfg.ml_menor_que || 0.50;
+    document.getElementById('lp-cfg-ml-pct').value = cfg.ml_percentual || 50;
+    _toggleCfgVao(cfg.vao_modo || 'desconto_total');
+    Utils.abrirModal('modal-lp-config');
+  }
+
+  function _toggleCfgVao(modo) {
+    const row = document.getElementById('lp-cfg-vao-limite-row');
+    const hint = document.getElementById('lp-cfg-vao-hint');
+    if (!row) return;
+    const mostra = modo === 'parcial_considera' || modo === 'parcial_desconta';
+    row.style.display = mostra ? 'block' : 'none';
+    if (hint) {
+      if (modo === 'parcial_considera') hint.textContent = 'Considera Y m² por vão';
+      else if (modo === 'parcial_desconta') hint.textContent = 'Desconta Y m² por vão';
+      else hint.textContent = '';
+    }
+  }
+  function onChangeCfgVao(sel) { _toggleCfgVao(sel.value); }
+
+  function salvarConfig() {
+    const cfg = {
+      vao_modo: document.getElementById('lp-cfg-vao-modo').value || 'desconto_total',
+      vao_limite_x: num(document.getElementById('lp-cfg-vao-limite').value) || 1.5,
+      vao_valor_y: num(document.getElementById('lp-cfg-vao-valor-y').value) || 1.0,
+      ml_menor_que: num(document.getElementById('lp-cfg-ml-menor').value) || 0.50,
+      ml_percentual: num(document.getElementById('lp-cfg-ml-pct').value) || 50,
+    };
+    _saveCfg(cfg);
+    Utils.fecharModal('modal-lp-config');
+    Utils.toast('✓ Configurações salvas! Recalculando...', 'sucesso');
+    renderizar();
+  }
+
+  // ══════════════════════════════════════════
   // SALVAR PEÇA
   // ══════════════════════════════════════════
   function _montarDadosPeca() {
@@ -915,6 +1102,8 @@ const LevantamentoParedes = (() => {
       alturaParede: num(pecaForm.alturaParede),
       alturaAcabamento: num(pecaForm.alturaAcabamento) || num(pecaForm.alturaParede),
       tipoAlvenaria: pecaForm.tipoAlvenaria,
+      possuiLadoB: pecaForm.possuiLadoB !== false,
+      podeSerML: !!pecaForm.podeSerML,
       vaos: pecaForm.possuiVao ? (pecaForm.vaos || []).filter(v => num(v.comprimento) && num(v.altura)).map(v => ({ tipo: v.tipo, comprimento: num(v.comprimento), altura: num(v.altura), qtd: num(v.qtd) || 1 })) : [],
       ladoA: {
         acabamentos: pecaForm.ladoA.acabamentos.map(a => ({ tipo: a.tipo, pct: num(a.pct) })),
@@ -933,7 +1122,8 @@ const LevantamentoParedes = (() => {
     if (!num(pecaForm.comprimento) || !num(pecaForm.alturaParede)) {
       Utils.toast('Informe comprimento e altura da parede.', 'alerta'); return false;
     }
-    for (const lado of ['ladoA', 'ladoB']) {
+    const lados = pecaForm.possuiLadoB !== false ? ['ladoA', 'ladoB'] : ['ladoA'];
+    for (const lado of lados) {
       const soma = _somaP(pecaForm[lado].acabamentos);
       if (Math.abs(soma - 100) > 0.5) {
         Utils.toast(`A soma dos % de acabamento do ${lado === 'ladoA' ? 'Lado A' : 'Lado B'} deve ser 100% (está em ${fmt2(soma)}%).`, 'alerta');
@@ -983,6 +1173,8 @@ const LevantamentoParedes = (() => {
     updCampo, calcExprEnter, toggleVao, addVao, remVao, updVao,
     addAcab, remAcab, updAcab,
     togglePintura, addPintura, remPintura, updPintura,
+    toggleLadoB, onClickPodeML,
+    abrirConfig, onChangeCfgVao, salvarConfig,
   };
 })();
 

@@ -45,7 +45,7 @@
       <a href="histograma.html"><span class="nav-icon">📊</span> Histograma</a>
       <a href="admin-permissoes.html"><span class="nav-icon">🔑</span> Permissões</a>
       <div class="sidebar-section-title">Sistema</div>
-      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V2.19.3</span></a>
+      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V2.19.4</span></a>
     </nav>
     <div class="sidebar-user">
       <div class="user-avatar">U</div>
@@ -101,6 +101,68 @@
       <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-lp-parede')">Cancelar</button>
       <button class="btn btn-dark" onclick="LP.salvarParede(true)">💾 Salvar e Nova Parede</button>
       <button class="btn btn-primario" onclick="LP.salvarParede(false)">Salvar Parede</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: configurações de cálculo (vãos + metro linear) -->
+<div class="modal-overlay" id="modal-lp-config">
+  <div class="modal" style="max-width:500px;">
+    <div class="modal-header">
+      <h3>⚙️ Configurações de Cálculo</h3>
+      <button class="modal-close" onclick="Utils.fecharModal('modal-lp-config')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p class="text-sm text-muted mb-3">Essas regras afetam como os totais são calculados em todo o Levantamento de Paredes. Ao salvar, os valores são recalculados imediatamente.</p>
+
+      <div style="border:1px solid var(--cor-borda-light);border-radius:8px;padding:16px;margin-bottom:16px;">
+        <div style="font-weight:600;font-size:0.9rem;margin-bottom:12px;">🚪 Vãos (Porta/Janela)</div>
+
+        <div class="form-grupo">
+          <label>Como considerar os vãos:</label>
+          <select id="lp-cfg-vao-modo" class="form-control" onchange="LP.onChangeCfgVao(this)">
+            <option value="nenhum">Não Descontar — vão não reduz o m² da parede</option>
+            <option value="desconto_total">Desconto Total — desconta toda a área do vão do m²</option>
+            <option value="parcial_considera">Desconto Parcial 1 — para vãos maiores que X m², considera apenas X m²</option>
+            <option value="parcial_desconta">Desconto Parcial 2 — para vãos maiores que X m², desconta apenas X m²</option>
+            <option value="metade">Metade — considera metade e descarta metade</option>
+          </select>
+        </div>
+
+        <div class="form-grupo" id="lp-cfg-vao-limite-row" style="display:none;">
+          <div class="form-row">
+            <div class="form-grupo">
+              <label>Limite do vão — X (m²)</label>
+              <input type="number" id="lp-cfg-vao-limite" class="form-control" step="0.01" min="0.01" placeholder="Ex: 1.50">
+              <p class="text-sm text-muted" style="margin-top:3px;">Vãos maiores que X são afetados</p>
+            </div>
+            <div class="form-grupo">
+              <label>Valor aplicado — Y (m²)</label>
+              <input type="number" id="lp-cfg-vao-valor-y" class="form-control" step="0.01" min="0.01" placeholder="Ex: 1.00">
+              <p class="text-sm text-muted" id="lp-cfg-vao-hint" style="margin-top:3px;"></p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="border:1px solid var(--cor-borda-light);border-radius:8px;padding:16px;">
+        <div style="font-weight:600;font-size:0.9rem;margin-bottom:12px;">📏 Metro Linear</div>
+        <div class="form-row">
+          <div class="form-grupo">
+            <label>Quando for menor que (m²)</label>
+            <input type="number" id="lp-cfg-ml-menor" class="form-control" step="0.01" min="0" placeholder="Ex: 0.50">
+          </div>
+          <div class="form-grupo">
+            <label>Considerar (% do m²)</label>
+            <input type="number" id="lp-cfg-ml-pct" class="form-control" step="1" min="0" max="100" placeholder="50">
+          </div>
+        </div>
+        <p class="text-sm text-muted">Paredes marcadas como ML com área bruta (alvenaria ou acabamento) menor que X m²: valor equivalente = m² × %/100</p>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-lp-config')">Cancelar</button>
+      <button class="btn btn-primario" onclick="LP.salvarConfig()">Salvar e Recalcular</button>
     </div>
   </div>
 </div>
