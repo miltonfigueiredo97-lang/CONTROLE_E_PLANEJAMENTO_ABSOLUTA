@@ -126,7 +126,7 @@
       <a href="histograma.html"><span class="nav-icon">📊</span> Histograma</a>
       <a href="admin-permissoes.html"><span class="nav-icon">🔑</span> Permissões</a>
       <div class="sidebar-section-title">Sistema</div>
-      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V2.17.19</span></a>
+      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V2.17.20</span></a>
     </nav>
     <div class="sidebar-user">
       <div class="user-avatar">U</div>
@@ -304,6 +304,7 @@
         <div class="form-grupo">
           <label>Como considerar os vãos:</label>
           <select id="cfg-janela-modo" class="form-control" onchange="LF.onChangeCfgJanela(this)">
+            <option value="nenhum">Não Descontar — janela não reduz o m² da peça</option>
             <option value="desconto_total">Desconto Total — desconta toda a área de janela do m²</option>
             <option value="parcial_considera">Desconto Parcial 1 — para vãos maiores que X m², considera apenas X m²</option>
             <option value="parcial_desconta">Desconto Parcial 2 — para vãos maiores que X m², desconta apenas X m²</option>

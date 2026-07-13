@@ -70,6 +70,7 @@ const LevantamentoFachada = (() => {
   // Calcula o desconto (m²) de UM tipo de janela, conforme o modo configurado
   function _descontoJanela(larJ,altJ,qtJ,qt,cfg){
     if(!(qtJ>0&&larJ>0&&altJ>0))return 0;
+    if(cfg.janela_modo==='nenhum')return 0; // não desconta nada, seja qual for o tamanho da janela
     const areaUnitaria=larJ*altJ;            // m² de 1 janela
     const areaTotal=areaUnitaria*qtJ*qt;     // m² de todas as janelas desse tipo
     const limX=_pn(cfg.janela_limite_x)||1.5; // limite de tamanho X
@@ -1200,13 +1201,14 @@ const LevantamentoFachada = (() => {
   function _renderJanelasForm(janelas){
     const c=document.getElementById('janelas-container');if(!c)return;
     if(!janelas||!janelas.length)janelas=[{largura:'',altura:'',quantidade:1}];
-    c.innerHTML=janelas.map((j,i)=>`
+    const qtPeca=_pn(document.querySelector('#form-peca [name="quantidade"]')?.value)||1;
+    c.innerHTML='<p style="font-size:0.75rem;color:#888;margin:0 0 8px;">Qtd = quantas janelas desse tipo tem em CADA peça (a peça tem Qtd '+qtPeca+'; o sistema já multiplica).</p>'+janelas.map((j,i)=>`
       <div class="janela-row" id="janela-row-${i}" style="display:grid;grid-template-columns:1fr 1fr 70px 32px;gap:8px;align-items:end;margin-bottom:8px;">
         <div class="form-grupo" style="margin:0"><label>Largura Janela (cm)</label>
           <input type="text" inputmode="decimal" class="form-control janela-larg" data-i="${i}" placeholder="Ex: 291+100" value="${j.largura||''}" onkeydown="LF.calcExprEnter(event)"></div>
         <div class="form-grupo" style="margin:0"><label>Altura Janela (cm)</label>
           <input type="text" inputmode="decimal" class="form-control janela-alt" data-i="${i}" placeholder="Ex: 291+100" value="${j.altura||''}" onkeydown="LF.calcExprEnter(event)"></div>
-        <div class="form-grupo" style="margin:0"><label>Qtd</label>
+        <div class="form-grupo" style="margin:0"><label>Qtd (por peça)</label>
           <input type="number" class="form-control janela-qtd" data-i="${i}" min="0" value="${j.quantidade!=null?j.quantidade:1}"></div>
         <div class="form-grupo" style="margin:0"><label>&nbsp;</label>
           <button type="button" class="btn btn-perigo btn-sm btn-icon" onclick="LF.removerJanelaRow(${i})" ${janelas.length<=1?'disabled':''}>✕</button></div>
@@ -1238,7 +1240,8 @@ const LevantamentoFachada = (() => {
   function _renderFrisosForm(frisos){
     const c=document.getElementById('frisos-container');if(!c)return;
     if(!frisos||!frisos.length)frisos=[{comprimento:'',tipo:'arquitetonico',quantidade:1}];
-    c.innerHTML=frisos.map((f,i)=>`
+    const qtPeca=_pn(document.querySelector('#form-peca [name="quantidade"]')?.value)||1;
+    c.innerHTML='<p style="font-size:0.75rem;color:#888;margin:0 0 8px;">Qtd = quantos frisos desse tipo tem em CADA peça (a peça tem Qtd '+qtPeca+'; o sistema já multiplica).</p>'+frisos.map((f,i)=>`
       <div class="friso-row" id="friso-row-${i}" style="display:grid;grid-template-columns:1fr 1fr 70px 32px;gap:8px;align-items:end;margin-bottom:8px;">
         <div class="form-grupo" style="margin:0"><label>Comprimento (cm)</label>
           <input type="text" inputmode="decimal" class="form-control friso-comp" data-i="${i}" placeholder="Ex: 291+100" value="${f.comprimento||''}" onkeydown="LF.calcExprEnter(event)"></div>
@@ -1247,7 +1250,7 @@ const LevantamentoFachada = (() => {
             <option value="arquitetonico"${f.tipo!=='estrutural'?' selected':''}>Arquitetônico</option>
             <option value="estrutural"${f.tipo==='estrutural'?' selected':''}>Estrutural</option>
           </select></div>
-        <div class="form-grupo" style="margin:0"><label>Qtd</label>
+        <div class="form-grupo" style="margin:0"><label>Qtd (por peça)</label>
           <input type="number" class="form-control friso-qtd" data-i="${i}" min="0" value="${f.quantidade!=null?f.quantidade:1}"></div>
         <div class="form-grupo" style="margin:0"><label>&nbsp;</label>
           <button type="button" class="btn btn-perigo btn-sm btn-icon" onclick="LF.removerFrisoRow(${i})" ${frisos.length<=1?'disabled':''}>✕</button></div>

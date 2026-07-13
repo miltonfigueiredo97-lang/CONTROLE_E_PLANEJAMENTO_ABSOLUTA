@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.17.19',
+  versaoAtual: 'V2.17.20',
 
   versoes: [
     {
@@ -2076,7 +2076,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.17.19',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-12',
       tipo: 'melhoria',
       titulo: 'Levantamento de Fachada: aviso quando desconto de janela zera a peça',
@@ -2089,6 +2089,25 @@ const NotasVersao = {
         '  janela foi digitada igual (ou maior) à da própria peça',
         '  por engano — o sistema não estava avisando, só zerava',
         '  o valor silenciosamente',
+      ]
+    },
+    {
+      versao: 'V2.17.20',
+      status: 'aberta',
+      data: '2026-07-12',
+      tipo: 'melhoria',
+      titulo: 'Levantamento de Fachada: opção "Não Descontar" na config de janela + clareza no Qtd por peça',
+      itens: [
+        'Nova opção na Configuração de Cálculo: "Não Descontar" —',
+        '  a janela não reduz nada do m² da peça, seja qual for',
+        '  o tamanho dela',
+        'CAUSA DO ZERAMENTO ANTERIOR (não era bug): o campo "Qtd"',
+        '  de Janela e de Friso é por PEÇA — se a peça tem',
+        '  Quantidade 16 e você bota Qtd Janela 16, o sistema',
+        '  entende 16 janelas em CADA uma das 16 peças (256 no',
+        '  total), não 16 no total. Adicionei um aviso no',
+        '  formulário mostrando isso, e troquei o rótulo do campo',
+        '  para "Qtd (por peça)" nos dois (Janela e Friso)',
       ]
     }
   ],
