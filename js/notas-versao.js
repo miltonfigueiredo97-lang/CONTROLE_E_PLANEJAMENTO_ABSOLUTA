@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.17.20',
+  versaoAtual: 'V2.17.21',
 
   versoes: [
     {
@@ -2093,7 +2093,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.17.20',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-12',
       tipo: 'melhoria',
       titulo: 'Levantamento de Fachada: opção "Não Descontar" na config de janela + clareza no Qtd por peça',
@@ -2108,6 +2108,21 @@ const NotasVersao = {
         '  total), não 16 no total. Adicionei um aviso no',
         '  formulário mostrando isso, e troquei o rótulo do campo',
         '  para "Qtd (por peça)" nos dois (Janela e Friso)',
+      ]
+    },
+    {
+      versao: 'V2.17.21',
+      status: 'aberta',
+      data: '2026-07-12',
+      tipo: 'melhoria',
+      titulo: 'Levantamento de Fachada: aviso "por peça" logo no checkbox de janela/friso',
+      itens: [
+        'Os checkboxes "Possui janela / abertura" e "Possui',
+        '  friso" agora já mostram, desde o início (antes de',
+        '  abrir os campos), a instrução "(coloque a quantidade',
+        '  para UMA única peça)" — pra evitar o erro de colocar a',
+        '  quantidade total (ex: 16) em vez da quantidade por',
+        '  peça (ex: 1)',
       ]
     }
   ],
