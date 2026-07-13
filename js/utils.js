@@ -252,11 +252,62 @@ const Utils = (() => {
     return ups;
   }
 
+  // ============================================================
+  // CÁLCULO DE M² LÍQUIDO DO LEVANTAMENTO DE FACHADA (com desconto de
+  // janela/vão, igual à lógica de js/levantamento-fachada.js). Usado por
+  // Materiais e Mão de Obra para vincular quantidade DIRETO ao levantamento
+  // (opção especial "[Levantamento] Fachada" na busca de tarefa) — assim,
+  // vários serviços (chapisco, reboco, limpeza...) podem usar o MESMO m²
+  // real da fachada, sem depender do campo quantidade da tarefa no
+  // Planejamento. Mantido em sincronia manual com levantamento-fachada.js;
+  // se a config de cálculo mudar lá, replicar aqui.
+  function calcularFachadaM2(pecas, obraId){
+    const pn=v=>{const n=parseFloat(String(v==null?'':v).replace(',','.'));return isNaN(n)?0:n;};
+    const m=cm=>pn(cm)/100;
+    let cfg={janela_modo:'desconto_total',janela_valor_fixo:1.0,ml_menor_que:0.50,ml_percentual:50};
+    try{cfg=Object.assign(cfg,JSON.parse(localStorage.getItem('fachadaCfg_'+obraId)||'{}'));}catch(e){}
+
+    function descontoJanela(larJ,altJ,qtJ,qt){
+      if(!(qtJ>0&&larJ>0&&altJ>0))return 0;
+      if(cfg.janela_modo==='nenhum')return 0;
+      const areaUnitaria=larJ*altJ;
+      const areaTotal=areaUnitaria*qtJ*qt;
+      const limX=pn(cfg.janela_limite_x)||1.5;
+      const valY=pn(cfg.janela_valor_y)||1.0;
+      if(cfg.janela_modo==='desconto_total')return areaTotal;
+      if(cfg.janela_modo==='parcial_considera')return areaUnitaria>limX?Math.max(0,(areaUnitaria-valY)*qtJ*qt):0;
+      if(cfg.janela_modo==='parcial_desconta')return areaUnitaria>limX?valY*qtJ*qt:0;
+      if(cfg.janela_modo==='metade')return areaTotal/2;
+      return 0;
+    }
+
+    let m2semML=0,m2comML_puro=0,ml=0,mlEquiv=0;
+    const mlPct=pn(cfg.ml_percentual)/100;
+    (pecas||[]).forEach(pc=>{
+      const co=m(pn(pc.comprimento)),al=m(pn(pc.altura)),qt=pn(pc.quantidade)||1;
+      const bruto=co*al*qt;
+      let janela=0;
+      if(pc.possuiJanela){
+        const listaJ=(pc.janelas&&pc.janelas.length)?pc.janelas:((pc.larguraJanela||pc.quantidadeJanelas)?[{largura:pc.larguraJanela,altura:pc.alturaJanela,quantidade:pc.quantidadeJanelas}]:[]);
+        listaJ.forEach(j=>{
+          const larJ=m(pn(j.largura)),altJ=m(pn(j.altura)),qtJ=pn(j.quantidade)||0;
+          janela+=descontoJanela(larJ,altJ,qtJ,qt);
+        });
+      }
+      const areaLiq=Math.max(0,bruto-janela);
+      const maiorLado=Math.max(co,al);
+      m2semML+=areaLiq;
+      if(pc.podeSerML){ml+=maiorLado*qt;mlEquiv+=maiorLado*qt*mlPct;}
+      else{m2comML_puro+=areaLiq;}
+    });
+    return {m2semML,m2comML_puro,ml,m2comML_equiv:m2comML_puro+mlEquiv};
+  }
+
   return {
     formatarNumero, formatarInteiro, formatarData, formatarDataHora, formatarM2, formatarML,
     parseNum, hoje, toast, abrirModal, fecharModal, fecharTodosModais, confirmar,
     mostrarLoading, esconderLoading, $, $$, limparForm, getFormData, setFormData, debounce,
-    initPagina, opcoesTarefaHierarquia,
+    initPagina, opcoesTarefaHierarquia, calcularFachadaM2,
     percFamilia, recalcularPercAncestrais, distribuirPercDescendentes,
   };
 })();

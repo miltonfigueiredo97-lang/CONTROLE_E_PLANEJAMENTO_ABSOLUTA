@@ -8,7 +8,7 @@
 // ============================================
 const MaoDeObra = (() => {
   let obraId=null;
-  let biblioteca=[], vinculos=[], tarefas=[];
+  let biblioteca=[], vinculos=[], tarefas=[], levFachadas=[];
   let abaAtiva='vinculos', filtroTarefa='';
   let editandoBiblId=null, editandoVincId=null, _modoVinc='vincular';
   let _buscaTarText='', _vincTarSelIds=[];
@@ -33,10 +33,11 @@ const MaoDeObra = (() => {
   async function carregar(){
     try{
       Utils.mostrarLoading('Carregando mão de obra...');
-      [biblioteca,vinculos,tarefas]=await Promise.all([
+      [biblioteca,vinculos,tarefas,levFachadas]=await Promise.all([
         Database.listar(obraId,COL_BIB,'nome').catch(()=>[]),
         Database.listar(obraId,COL_VIN,'createdAt').catch(()=>[]),
         Database.listar(obraId,'tarefas','ordem').catch(()=>[]),
+        Database.listar(obraId,'levantamentosFachada',null).catch(()=>[]),
       ]);
       renderizar();
     }catch(e){console.error(e);Utils.toast('Erro ao carregar.','erro');}
@@ -146,11 +147,17 @@ const MaoDeObra = (() => {
   // em Materiais) para permitir vincular tanto a um nível maior (grupo/etapa)
   // quanto a um nível menor (tarefa folha).
   function _getOpcoesTarefa(){
-    return Utils.opcoesTarefaHierarquia(tarefas);
+    const opts=Utils.opcoesTarefaHierarquia(tarefas);
+    if(levFachadas.some(d=>d.tipo==='fachada'))opts.push({id:'__fachada__',label:'[Levantamento] Fachada',nivel:0,tipo:'especial'});
+    return opts;
   }
 
   function _getTarefaInfo(id){
     if(!id)return null;
+    if(id==='__fachada__'){
+      const m2=Utils.calcularFachadaM2(levFachadas.filter(x=>x.tipo==='peca'),obraId).m2semML;
+      return {id,label:'[Levantamento] Fachada',quantidade:m2,unidade:'m²',tipo:'especial'};
+    }
     const t=tarefas.find(x=>x.id===id);
     if(!t)return null;
     return {id,label:t.nome||'',quantidade:t.quantidade||0,unidade:t.unidade||'un',tipo:t.tipo||'tarefa'};
@@ -296,7 +303,7 @@ const MaoDeObra = (() => {
     if(!resultados.length)return `<div class="text-sm text-muted" style="padding:8px;">Nenhuma tarefa/serviço encontrado.</div>`;
     return resultados.map(o=>`
       <div class="tree-item${_vincTarSelIds.includes(o.id)?' ativo':''}" style="padding:8px 10px;white-space:pre;" onclick="MaoDeObra.selecionarTarefaVinc('${o.id}')">
-        <span class="tree-icon">${_vincTarSelIds.includes(o.id)?'✅':(o.tipo==='grupo'?'📁':'📄')}</span>
+        <span class="tree-icon">${_vincTarSelIds.includes(o.id)?'✅':(o.tipo==='especial'?'🏗️':(o.tipo==='grupo'?'📁':'📄'))}</span>
         <span class="tree-label" style="white-space:pre;">${_destacar(o.label,_buscaTarText)}</span>
       </div>`).join('');
   }

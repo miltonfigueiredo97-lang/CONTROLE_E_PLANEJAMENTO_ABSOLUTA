@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.17.22',
+  versaoAtual: 'V2.17.23',
 
   versoes: [
     {
@@ -2127,7 +2127,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.17.22',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-12',
       tipo: 'funcionalidade',
       titulo: 'Levantamento de Fachada: copiar todas as peças da Vista oposta de uma vez',
@@ -2139,6 +2139,43 @@ const NotasVersao = {
         'Só aparece quando a vista oposta tem peças cadastradas',
         'Se a vista atual já tiver peças, avisa que elas serão',
         '  substituídas pelas copiadas antes de continuar',
+      ]
+    },
+    {
+      versao: 'V2.17.23',
+      status: 'aberta',
+      data: '2026-07-12',
+      tipo: 'funcionalidade',
+      titulo: 'Mão de Obra: vincular direto ao Levantamento de Fachada (m² real, com desconto de janela)',
+      itens: [
+        'PROBLEMA RESOLVIDO: serviços de fachada no Planejamento',
+        '  (chapisco, reboco, limpeza...) tinham cada um seu próprio',
+        '  campo "quantidade" na tarefa, que não necessariamente batia',
+        '  com o m² real calculado no Levantamento de Fachada',
+        '',
+        'Mão de Obra agora tem a mesma opção que já existia em',
+        '  Materiais: na busca de serviço/tarefa, aparece também',
+        '  "[Levantamento] Fachada" (ícone 🏗️) — ao selecionar essa',
+        '  opção em vez de uma tarefa do Planejamento, a quantidade',
+        '  usada no cálculo do custo passa a ser o m² real do',
+        '  levantamento, não o campo da tarefa',
+        '  → Chapisco, Reboco, Limpeza (e qualquer outro serviço de',
+        '    fachada) podem todos apontar para essa MESMA opção —',
+        '    todos usam o mesmo m² automaticamente, sem duplicar',
+        '    nem digitar quantidade manualmente em cada tarefa',
+        '',
+        'CORREÇÃO DE PRECISÃO: o cálculo desse m² (tanto em Mão de',
+        '  Obra quanto em Materiais) agora usa a mesma lógica de',
+        '  desconto de janela/vão do Levantamento de Fachada (antes,',
+        '  Materiais usava um cálculo simplificado que ignorava os',
+        '  descontos configurados) — novo helper compartilhado',
+        '  Utils.calcularFachadaM2()',
+        '',
+        'Observação: um vínculo apontado para "[Levantamento]',
+        '  Fachada" não aparece nas colunas de custo do Planejamento',
+        '  (que são por tarefa) — ele fica visível e correto dentro',
+        '  do próprio módulo Mão de Obra / Materiais, na aba Por',
+        '  Tarefa, filtrando por essa opção',
       ]
     }
   ],

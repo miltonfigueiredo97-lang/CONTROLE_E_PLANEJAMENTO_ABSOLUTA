@@ -248,8 +248,7 @@ const Materiais = (() => {
     const t=tarefas.find(x=>x.id===id);
     if(t)return {id,label:`[Plan] ${t.nome}`,quantidade:t.quantidade||0,unidade:t.unidade||'un'};
     if(id==='__fachada__'){
-      const m2=levFachadas.filter(x=>x.tipo==='peca')
-        .reduce((s,p)=>s+(parseFloat(p.comprimento)||0)/100*(parseFloat(p.altura)||0)/100*(parseFloat(p.quantidade)||1),0);
+      const m2=Utils.calcularFachadaM2(levFachadas.filter(x=>x.tipo==='peca'),obraId).m2semML;
       return {id,label:'[Levantamento] Fachada',quantidade:m2,unidade:'m²'};
     }
     return null;
