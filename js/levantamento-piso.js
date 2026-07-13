@@ -106,16 +106,23 @@ const LP = (() => {
 
   // Por padrão o pdf.js busca a URL diretamente e usa cabeçalho Range (streaming),
   // o que dispara um preflight OPTIONS que o Firebase Storage não libera via CORS
-  // (bucket sem CORS configurado para Range). Solução: baixar os bytes com um
-  // fetch simples (GET puro, sem headers extras) e entregar prontos ao pdf.js.
-  async function _carregarPdfDoc(url) {
+  // (bucket sem CORS configurado, e Storage não libera fetch/XHR cross-origin
+  // mesmo em GET simples). Solução: buscar via proxy serverless próprio
+  // (/api/pdf-proxy), que roda no servidor (sem restrição de CORS) e devolve
+  // os bytes para o navegador a partir do mesmo domínio.
+  async function _carregarPdfDoc(downloadURL) {
+    const proxyUrl = '/api/pdf-proxy?url=' + encodeURIComponent(downloadURL);
     let resp;
     try {
-      resp = await fetch(url);
+      resp = await fetch(proxyUrl);
     } catch (e) {
-      throw new Error('Não foi possível baixar o PDF (CORS/rede). Detalhe: ' + e.message);
+      throw new Error('Não foi possível baixar o PDF (rede). Detalhe: ' + e.message);
     }
-    if (!resp.ok) throw new Error('Falha ao baixar o PDF (HTTP ' + resp.status + ')');
+    if (!resp.ok) {
+      let msg = 'HTTP ' + resp.status;
+      try { const j = await resp.json(); if (j.error) msg = j.error; } catch (e2) {}
+      throw new Error('Falha ao baixar o PDF: ' + msg);
+    }
     const buf = await resp.arrayBuffer();
     return await pdfjsLib.getDocument({ data: buf }).promise;
   }

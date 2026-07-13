@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.21.1',
+  versaoAtual: 'V2.21.2',
 
   versoes: [
     {
@@ -2581,7 +2581,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.21.1',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-13',
       tipo: 'correcao',
       titulo: 'Levantamento de Piso: corrigido erro de CORS ao ler o PDF',
@@ -2592,6 +2592,24 @@ const NotasVersao = {
         'Agora o PDF é baixado com um fetch simples (GET puro, sem headers',
         '  extras) e os bytes são entregues prontos ao pdf.js — não depende',
         '  de configurar CORS no bucket do Storage',
+      ]
+    },
+    {
+      versao: 'V2.21.2',
+      status: 'aberta',
+      data: '2026-07-13',
+      tipo: 'correcao',
+      titulo: 'Levantamento de Piso: proxy serverless para ler o PDF (CORS definitivo)',
+      itens: [
+        'O Firebase Storage não libera CORS para fetch()/XHR por padrão',
+        '  (funciona sem CORS só em <img>/<embed>), então o fetch direto do',
+        '  navegador continuava bloqueado mesmo em GET simples',
+        'Nova função serverless api/pdf-proxy.js: busca o PDF no servidor',
+        '  (sem restrição de CORS) e devolve pro navegador a partir do',
+        '  mesmo domínio — não depende de configurar CORS no bucket',
+        'Só aceita URLs do bucket controle-absoluta.firebasestorage.app',
+        '  (evita virar um proxy aberto para qualquer URL da internet)',
+        'js/levantamento-piso.js agora busca o PDF via /api/pdf-proxy?url=...',
       ]
     }
   ],
