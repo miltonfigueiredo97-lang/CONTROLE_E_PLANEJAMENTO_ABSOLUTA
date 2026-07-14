@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.26.1',
+  versaoAtual: 'V2.26.2',
 
   versoes: [
     {
@@ -3007,7 +3007,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.26.1',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-13',
       tipo: 'correcao',
       titulo: 'Levantamento de Piso: corrige nome das áreas quebrando letra por letra + planta "se multiplica" ao mover',
@@ -3028,6 +3028,23 @@ const NotasVersao = {
         '  planta e com as demais áreas que ficaram lá',
         'Mesmo comportamento aplicado no mover individual (modal da',
         '  área) e no Clonar/Multiplicar Pavimento inteiro',
+      ]
+    },
+    {
+      versao: 'V2.26.2',
+      status: 'aberta',
+      data: '2026-07-13',
+      tipo: 'correcao',
+      titulo: 'Levantamento de Piso: simplifica nome do local (corta com "...", igual os outros levantamentos) + tira o ícone de esquadro',
+      itens: [
+        'Voltado ao padrão simples usado em todos os outros levantamentos:',
+        '  nome muito grande corta com "..." em vez de quebrar linha (a',
+        '  quebra de linha dava problema em nomes de uma palavra só,',
+        '  tipo "APARTAMENTO")',
+        'O nome completo continua disponível ao passar o mouse (tooltip)',
+        'Trocado o ícone de esquadro (📐) das áreas na árvore por um',
+        '  quadrado simples e discreto — menos poluído visualmente',
+        'Ícone do card "Total de Áreas" na Visão Geral também trocado',
       ]
     }
   ],

@@ -336,7 +336,7 @@ const LP = (() => {
           areasDoNo.forEach(a => {
             h += `<div class="tree-item tree-item-area" onclick="event.stopPropagation();LP.focarArea('${n.id}','${a.id}')" title="Ver esta área na planta">
               <input type="checkbox" class="lp-area-check" data-id="${a.id}" onclick="event.stopPropagation();LP.atualizarBarraSelecaoAreas()" style="margin-right:2px;flex-shrink:0;">
-              <span class="tree-icon">📐</span>
+              <span class="tree-icon" style="color:#2563eb;">▪</span>
               <span class="tree-label">${esc(a.nome)}</span>
               <span class="tree-badge tree-badge-area">${fmt2(a.areaM2)}m²</span>
             </div>`;
@@ -509,7 +509,7 @@ const LP = (() => {
       </div>
 
       <div class="cc-kpiGrid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));">
-        <div class="cc-kpi cc-kpiBlue"><div class="cc-kpiIcon">📐</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Total de Áreas</div><div class="cc-kpiValue">${totalAreas}</div></div></div>
+        <div class="cc-kpi cc-kpiBlue"><div class="cc-kpiIcon">📋</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Total de Áreas</div><div class="cc-kpiValue">${totalAreas}</div></div></div>
         <div class="cc-kpi"><div class="cc-kpiIcon">▦</div><div class="cc-kpiBody"><div class="cc-kpiLabel">M² de Piso</div><div class="cc-kpiValue">${fmt2(totalPiso)}<span class="cc-kpiUnit">m²</span></div></div></div>
         <div class="cc-kpi cc-kpiOrange"><div class="cc-kpiIcon">▤</div><div class="cc-kpiBody"><div class="cc-kpiLabel">M² de Contrapiso</div><div class="cc-kpiValue">${fmt2(totalContrapiso)}<span class="cc-kpiUnit">m²</span></div></div></div>
         <div class="cc-kpi cc-kpiBlue"><div class="cc-kpiIcon">💧</div><div class="cc-kpiBody"><div class="cc-kpiLabel">M² Impermeabilização</div><div class="cc-kpiValue">${fmt2(totalImperm)}<span class="cc-kpiUnit">m²</span></div></div></div>
