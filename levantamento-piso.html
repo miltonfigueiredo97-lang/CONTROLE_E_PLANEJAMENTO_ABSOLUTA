@@ -45,7 +45,11 @@
     #lp-content .ar-layout.tree-colapsada { grid-template-columns: 0 1fr; }
     #lp-content .ar-layout.tree-colapsada .ar-tree { display:none; }
     .lp-reabrir-arvore { position:absolute; left:4px; top:4px; z-index:20; }
-    #lp-content .ar-layout { position:relative; grid-template-columns: 220px 1fr; }
+    #lp-content .ar-layout { position:relative; grid-template-columns: 250px 1fr; }
+    /* Nome do local não corta com "...": quebra linha e mostra por inteiro */
+    #lp-content .tree-item { align-items:flex-start; }
+    #lp-content .tree-item .tree-label { white-space:normal; word-break:break-word; line-height:1.3; padding-top:1px; }
+    #lp-content .tree-item .tree-toggle, #lp-content .tree-item .tree-icon { margin-top:1px; }
     #lp-content .ar-layout.lp-workspace-ativo { height:calc(100vh - 130px); }
     /* Fora do modo de medição (Visão Geral, vincular planta): nada de scroll
        interno cortado — o conteúdo flui inteiro e quem rola é a página. */
@@ -97,7 +101,7 @@
       <a href="histograma.html"><span class="nav-icon">📊</span> Histograma</a>
       <a href="admin-permissoes.html"><span class="nav-icon">🔑</span> Permissões</a>
       <div class="sidebar-section-title">Sistema</div>
-      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V2.25.1</span></a>
+      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V2.25.2</span></a>
     </nav>
     <div class="sidebar-user">
       <div class="user-avatar">U</div>

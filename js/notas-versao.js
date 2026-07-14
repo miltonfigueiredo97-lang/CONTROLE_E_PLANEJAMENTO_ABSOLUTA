@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.25.1',
+  versaoAtual: 'V2.25.2',
 
   versoes: [
     {
@@ -2923,7 +2923,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.25.1',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-13',
       tipo: 'correcao',
       titulo: 'Levantamento de Piso: corrige seta de expandir local "travada" (não reagia ao clique)',
@@ -2941,6 +2941,23 @@ const NotasVersao = {
         'Bônus: esse ajuste também deixou o clique na seta mais rápido,',
         '  já que agora só atualiza a árvore em vez de recarregar a',
         '  planta inteira à toa',
+      ]
+    },
+    {
+      versao: 'V2.25.2',
+      status: 'aberta',
+      data: '2026-07-13',
+      tipo: 'correcao',
+      titulo: 'Levantamento de Piso: nome do local não corta mais com "..."',
+      itens: [
+        'Corrigido: nomes de locais mais longos (ex: "APARTAMENTO...")',
+        '  apareciam cortados com reticências na árvore',
+        'Agora o nome quebra linha e aparece por inteiro, em vez de',
+        '  truncar',
+        'Árvore de locais um pouco mais larga (250px) pra acomodar nomes',
+        '  maiores com menos quebras de linha',
+        'Adicionado tooltip com o nome completo ao passar o mouse, como',
+        '  reforço',
       ]
     }
   ],

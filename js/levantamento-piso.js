@@ -301,7 +301,7 @@ const LP = (() => {
       const nAreas = areas.filter(a => ids.includes(a.nodeId)).length;
       const areasDoNo = _areasDoNode(n.id).sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
       const temExpandir = (n.filhos || []).length > 0 || areasDoNo.length > 0;
-      let h = `<div class="tree-item${ativo ? ' ativo' : ''}" onclick="LP.selNode('${n.id}')">
+      let h = `<div class="tree-item${ativo ? ' ativo' : ''}" onclick="LP.selNode('${n.id}')" title="${esc(n.nome)}">
         <span class="tree-toggle" onclick="event.stopPropagation();LP.toggleNode('${n.id}')">${temExpandir ? (aberto ? '▼' : '▶') : ''}</span>
         <span class="tree-icon">${n.plantaId ? '📄' : '📍'}</span>
         <span class="tree-label">${esc(n.nome)}</span>
