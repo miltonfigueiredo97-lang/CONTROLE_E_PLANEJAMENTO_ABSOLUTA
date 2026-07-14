@@ -423,15 +423,97 @@ const LP = (() => {
   }
 
   // ── VISÃO GERAL ──
+  function _caminhoNode(id, nodes = arvore, caminho = []) {
+    for (const n of nodes) {
+      if (n.id === id) return [...caminho, n.nome].join(' › ');
+      const r = _caminhoNode(id, n.filhos || [], [...caminho, n.nome]);
+      if (r) return r;
+    }
+    return null;
+  }
+
   function _renderVisaoGeral() {
-    const totalM2 = areas.reduce((s, a) => s + (a.areaM2 || 0), 0);
+    const totalAreas = areas.length;
+    const totalPiso = areas.reduce((s, a) => s + (a.areaM2 || 0), 0);
+    const totalContrapiso = areas.reduce((s, a) => s + (a.tipoContrapiso ? (a.areaM2 || 0) : 0), 0);
+    const totalImperm = areas.reduce((s, a) => s + (a.impermeabilizacao ? (a.areaM2 || 0) : 0), 0);
+    const totalRodape = areas.reduce((s, a) => s + (a.mlRodape || 0), 0);
     const nodesComVinculo = _contarNodesComVinculo(arvore);
+
+    const porTipoPiso = {};
+    areas.forEach(a => { const k = a.tipoPiso || '(sem tipo definido)'; porTipoPiso[k] = (porTipoPiso[k] || 0) + (a.areaM2 || 0); });
+    const porTipoContrapiso = {};
+    areas.forEach(a => { if (!a.tipoContrapiso) return; porTipoContrapiso[a.tipoContrapiso] = (porTipoContrapiso[a.tipoContrapiso] || 0) + (a.areaM2 || 0); });
+    const porTipoImperm = {};
+    areas.forEach(a => { if (!a.impermeabilizacao) return; const k = a.tipoImpermeabilizacao || '(tipo não informado)'; porTipoImperm[k] = (porTipoImperm[k] || 0) + (a.areaM2 || 0); });
+
+    const linhasTabela = areas.slice().sort((a, b) => {
+      const ca = _caminhoNode(a.nodeId) || '', cb = _caminhoNode(b.nodeId) || '';
+      return ca === cb ? (a.nome || '').localeCompare(b.nome || '') : ca.localeCompare(cb);
+    });
+
+    const tabelaOrdenada = (obj) => Object.entries(obj).sort((a, b) => b[1] - a[1]);
+
     return `
       <div class="page-header">
         <div><h2 style="font-size:1.1rem;">📊 Visão Geral</h2>
-          <span class="subtitulo">${areas.length} área(s) · ${fmt2(totalM2)} m² · ${nodesComVinculo} local(is) com planta vinculada</span></div>
+          <span class="subtitulo">${totalAreas} área(s) · ${nodesComVinculo} local(is) com planta vinculada</span></div>
       </div>
-      <div class="lp-hint">Clique em um local na árvore ao lado (ou crie um novo com "+ Local") para vincular uma planta em PDF e começar a medir.</div>
+
+      <div class="cards-grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));margin-bottom:16px;">
+        <div class="lp-totais"><table><tr><td>Total de Áreas</td><td>${totalAreas}</td></tr></table></div>
+        <div class="lp-totais"><table><tr><td>M² de Piso</td><td>${fmt2(totalPiso)} m²</td></tr></table></div>
+        <div class="lp-totais"><table><tr><td>M² de Contrapiso</td><td>${fmt2(totalContrapiso)} m²</td></tr></table></div>
+        <div class="lp-totais"><table><tr><td>M² de Impermeabilização</td><td>${fmt2(totalImperm)} m²</td></tr></table></div>
+        <div class="lp-totais"><table><tr><td>ML de Rodapé</td><td>${fmt2(totalRodape)} m</td></tr></table></div>
+      </div>
+
+      ${totalAreas === 0 ? `<div class="lp-hint">Clique em um local na árvore ao lado (ou crie um novo com "+ Local") para vincular uma planta em PDF e começar a medir.</div>` : `
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-bottom:16px;">
+          <div class="lp-totais">
+            <strong style="display:block;margin-bottom:6px;font-size:0.85rem;">M² por Tipo de Piso</strong>
+            <table>${tabelaOrdenada(porTipoPiso).map(([k, v]) => `<tr><td>${esc(k)}</td><td>${fmt2(v)} m²</td></tr>`).join('')}</table>
+          </div>
+          <div class="lp-totais">
+            <strong style="display:block;margin-bottom:6px;font-size:0.85rem;">M² por Tipo de Contrapiso</strong>
+            <table>${Object.keys(porTipoContrapiso).length ? tabelaOrdenada(porTipoContrapiso).map(([k, v]) => `<tr><td>${esc(k)}</td><td>${fmt2(v)} m²</td></tr>`).join('') : `<tr><td style="color:var(--cor-texto-muted);">Nenhuma área com contrapiso definido</td></tr>`}</table>
+          </div>
+          <div class="lp-totais">
+            <strong style="display:block;margin-bottom:6px;font-size:0.85rem;">M² por Tipo de Impermeabilização</strong>
+            <table>${Object.keys(porTipoImperm).length ? tabelaOrdenada(porTipoImperm).map(([k, v]) => `<tr><td>${esc(k)}</td><td>${fmt2(v)} m²</td></tr>`).join('') : `<tr><td style="color:var(--cor-texto-muted);">Nenhuma área com impermeabilização marcada</td></tr>`}</table>
+          </div>
+        </div>
+
+        <div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;margin-bottom:16px;">
+          <table style="width:100%;font-size:0.82rem;border-collapse:collapse;">
+            <thead>
+              <tr>
+                <th style="text-align:left;padding:8px 10px;">Local</th>
+                <th style="text-align:left;padding:8px 10px;">Área</th>
+                <th style="text-align:right;padding:8px 10px;">M² Piso</th>
+                <th style="text-align:left;padding:8px 10px;">Tipo de Piso</th>
+                <th style="text-align:left;padding:8px 10px;">Contrapiso</th>
+                <th style="text-align:center;padding:8px 10px;">Imperm.</th>
+                <th style="text-align:right;padding:8px 10px;">ML Rodapé</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${linhasTabela.map(a => `
+                <tr style="cursor:pointer;border-top:1px solid #f1f5f9;" onclick="LP.focarArea('${a.nodeId}','${a.id}')">
+                  <td style="padding:6px 10px;color:var(--cor-texto-muted);">${esc(_caminhoNode(a.nodeId) || '—')}</td>
+                  <td style="padding:6px 10px;font-weight:600;">${esc(a.nome)}</td>
+                  <td style="padding:6px 10px;text-align:right;font-family:var(--font-mono);">${fmt2(a.areaM2)} m²</td>
+                  <td style="padding:6px 10px;">${esc(a.tipoPiso || '—')}</td>
+                  <td style="padding:6px 10px;">${esc(a.tipoContrapiso || '—')}</td>
+                  <td style="padding:6px 10px;text-align:center;">${a.impermeabilizacao ? '💧' : '—'}</td>
+                  <td style="padding:6px 10px;text-align:right;font-family:var(--font-mono);">${a.mlRodape ? fmt2(a.mlRodape) + ' m' : '—'}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      `}
+
       <h3 class="mb-2" style="font-size:0.95rem;">📄 Plantas enviadas</h3>
       ${plantas.length === 0 ? `<div class="estado-vazio" style="padding:16px;"><p class="text-sm">Nenhuma planta enviada ainda.</p></div>` : plantas.map(pl => `
         <div class="lp-planta-lib-item">

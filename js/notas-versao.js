@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.24.1',
+  versaoAtual: 'V2.24.2',
 
   versoes: [
     {
@@ -2806,7 +2806,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.24.1',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-13',
       tipo: 'correcao',
       titulo: 'Levantamento de Piso: dá pra minimizar a lista de áreas de um local sem fechar o pai',
@@ -2821,6 +2821,26 @@ const NotasVersao = {
         'A seta de expandir agora aparece também em locais que só têm',
         '  áreas medidas (sem sublocais) — antes só aparecia quando',
         '  havia sublocais cadastrados',
+      ]
+    },
+    {
+      versao: 'V2.24.2',
+      status: 'aberta',
+      data: '2026-07-13',
+      tipo: 'funcionalidade',
+      titulo: 'Levantamento de Piso: Visão Geral agora é um dashboard completo',
+      itens: [
+        'Visão Geral reformulada para mostrar tudo consolidado de toda',
+        '  a obra: total de áreas, M² de Piso, M² de Contrapiso, M² de',
+        '  Impermeabilização e ML de Rodapé',
+        'M² por Tipo de Piso, por Tipo de Contrapiso e por Tipo de',
+        '  Impermeabilização — soma agrupada por tipo, ordenada do maior',
+        '  para o menor',
+        'Tabela geral com todas as áreas medidas em todos os locais:',
+        '  local, nome, m² de piso, tipo de piso, contrapiso,',
+        '  impermeabilização e ML de rodapé — clicar numa linha leva',
+        '  direto pra ela na planta (mesma "visão" da árvore)',
+        'Biblioteca de plantas continua listada logo abaixo',
       ]
     }
   ],
