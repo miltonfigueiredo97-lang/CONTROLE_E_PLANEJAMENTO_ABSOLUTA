@@ -55,6 +55,12 @@ const LT = (() => {
   let _panPorNode = {};       // { [nodeId]: {left, top} } — última posição de pan/scroll do canvas
                                // em cada local, pra não perder a posição toda vez que o canvas é
                                // recriado do zero (ex: depois de salvar uma área, confirmar tabica)
+  let _zoomEfetivoPorNode = {}; // { [nodeId]: renderScale*zoomCss } — zoom "de verdade" (relativo ao
+                               // PDF, não só o zoomCss cru). Todo rebuild completo do canvas recalcula
+                               // renderScale do zero (auto-fit na largura do container); sem isso, o
+                               // zoomCss antigo reaplicado em cima de um renderScale novo faz a imagem
+                               // pular pra outro nível de zoom sem querer — mesmo bug que causava o
+                               // "voltar lá pra cima" (na prática era o zoom que mudava, não só o pan)
   let panAtivo = false;
   let panInicio = { x: 0, y: 0, scrollX: 0, scrollY: 0 };
   let fsAtivo = false;        // tela cheia do workspace de medição
@@ -464,7 +470,7 @@ const LT = (() => {
       const lista = r.parent ? r.parent.filhos : arvore;
       const idx = lista.findIndex(x => x.id === id);
       if (idx > -1) lista.splice(idx, 1);
-      ids.forEach(nid => delete _panPorNode[nid]);
+      ids.forEach(nid => { delete _panPorNode[nid]; delete _zoomEfetivoPorNode[nid]; });
       await _salvarArvore();
       if (areasParaExcluir.length) {
         const ops = areasParaExcluir.map(a => ({ type: 'delete', ref: Database.ref(obraId, COL_AREAS).doc(a.id) }));
@@ -751,6 +757,7 @@ const LT = (() => {
     const r = _acharNode(nodeId); if (!r) return;
     r.node.plantaId = null; r.node.pagina = null; r.node.escalaMetrosPorPonto = null; r.node.linhaCalibracao = null;
     delete _panPorNode[nodeId];
+    delete _zoomEfetivoPorNode[nodeId];
     Utils.mostrarLoading('Salvando...');
     try { await _salvarArvore(); await carregar(); selNode(nodeId); }
     catch (e) { console.error(e); Utils.toast('Erro: ' + e.message, 'erro'); }
@@ -984,6 +991,13 @@ const LT = (() => {
       pageWidthPts = viewportBase.width;
       renderScale = escalaCalculada;
 
+      // Recalcula o zoomCss a partir do zoom EFETIVO que o usuário tinha antes
+      // (se já visitou este local nesta sessão) — sem isso, o renderScale novo
+      // (auto-fit recalculado do zero) combinado com o zoomCss antigo faria a
+      // imagem pular pra outro nível de zoom sem querer, a cada rebuild completo.
+      const efetivoAntes = _zoomEfetivoPorNode[node.id];
+      if (efetivoAntes) zoomCss = Math.min(6, Math.max(0.15, efetivoAntes / renderScale));
+
       const stage = document.createElement('div');
       stage.className = 'lt-canvas-stage modo-' + modo;
       stage.style.width = viewport.width + 'px';
@@ -1109,6 +1123,7 @@ const LT = (() => {
     svg.style.width = w + 'px'; svg.style.height = h + 'px';
     const pct = document.getElementById('lt-zoom-pct');
     if (pct) pct.textContent = Math.round(zoomCss * 100) + '%';
+    if (selNodeId) _zoomEfetivoPorNode[selNodeId] = renderScale * zoomCss;
   }
 
   function _onWheelZoom(e) {

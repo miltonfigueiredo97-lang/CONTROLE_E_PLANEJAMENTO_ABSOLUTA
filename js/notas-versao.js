@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.29.3',
+  versaoAtual: 'V2.29.4',
 
   versoes: [
     {
@@ -3291,7 +3291,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.29.3',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-14',
       tipo: 'correcao',
       titulo: 'Levantamento de Teto: corrige de vez o "pular lá pra cima" — era o pan da planta resetando, não o scroll da página',
@@ -3308,6 +3308,31 @@ const NotasVersao = {
         'Trocar a planta/página de um local ou excluir o local limpa a',
         '  posição guardada dele (evita restaurar um pan sem sentido',
         '  numa planta diferente)',
+      ]
+    },
+    {
+      versao: 'V2.29.4',
+      status: 'aberta',
+      data: '2026-07-14',
+      tipo: 'correcao',
+      titulo: 'Levantamento de Teto: achada a causa raiz de vez — não era só o pan, era o ZOOM que resetava a cada rebuild do canvas',
+      itens: [
+        'Print a print com o usuário: confirmado que "Finalizar Área",',
+        '  "Confirmar Tabica" etc. jogavam a visão pra um zoom bem menor',
+        '  do que o usuário tinha configurado (ex: de 130% pra algo',
+        '  bem menor), não só perdendo a posição',
+        'Causa raiz: toda vez que o canvas é recriado do zero, o sistema',
+        '  recalcula a escala "auto-fit" (100% = encaixar na largura do',
+        '  painel) do zero — só que o zoom que o usuário tinha (zoomCss)',
+        '  continuava sendo aplicado em cima dessa NOVA escala base, que',
+        '  quase nunca é igual à escala base anterior. Resultado: o zoom',
+        '  visual mudava sem querer a cada rebuild, mesmo sem o código',
+        '  nunca ter mexido diretamente na variável de zoom',
+        'Corrigido guardando o zoom EFETIVO (relativo ao PDF, não o',
+        '  número cru) de cada local, e recalculando o zoomCss certo',
+        '  toda vez que o canvas é reconstruído, pra manter o mesmo',
+        '  nível visual de zoom em vez de herdar o valor antigo aplicado',
+        '  sobre uma escala base diferente',
       ]
     }
   ],
