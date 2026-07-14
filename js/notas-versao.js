@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.25.0',
+  versaoAtual: 'V2.25.1',
 
   versoes: [
     {
@@ -2897,7 +2897,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.25.0',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-13',
       tipo: 'funcionalidade',
       titulo: 'Levantamento de Piso: corrige áreas sumindo da árvore + mover/copiar várias áreas de uma vez',
@@ -2919,6 +2919,28 @@ const NotasVersao = {
         '  as originais) — não precisa remedir nada',
         'M² e ML de rodapé são recalculados na escala do destino, igual',
         '  já acontecia no clonar de pavimento inteiro',
+      ]
+    },
+    {
+      versao: 'V2.25.1',
+      status: 'aberta',
+      data: '2026-07-13',
+      tipo: 'correcao',
+      titulo: 'Levantamento de Piso: corrige seta de expandir local "travada" (não reagia ao clique)',
+      itens: [
+        'Corrigido: depois de separar o clique de "selecionar local" do',
+        '  clique de "expandir/recolher" (seta ▶/▼), a seta passou a só',
+        '  guardar o novo estado internamente, mas não redesenhava a',
+        '  árvore — resultado: clicar pra reabrir um local fechado',
+        '  parecia travado, não acontecia nada na tela',
+        'Agora a seta atualiza a árvore imediatamente ao clicar, sem',
+        '  precisar de nenhuma outra ação pra "destravar"',
+        'Revisado todo o fluxo da árvore de locais (selecionar, expandir,',
+        '  criar, renomear, excluir, auto-expandir no primeiro acesso) —',
+        '  tudo consistente e testado antes de publicar',
+        'Bônus: esse ajuste também deixou o clique na seta mais rápido,',
+        '  já que agora só atualiza a árvore em vez de recarregar a',
+        '  planta inteira à toa',
       ]
     }
   ],

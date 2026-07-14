@@ -346,7 +346,11 @@ const LP = (() => {
     return h;
   }
 
-  function toggleNode(id) { if (openNodes.has(id)) openNodes.delete(id); else openNodes.add(id); }
+  function toggleNode(id) {
+    if (openNodes.has(id)) openNodes.delete(id); else openNodes.add(id);
+    const treeBody = document.getElementById('lp-tree-body');
+    if (treeBody) treeBody.innerHTML = _renderArvore();
+  }
 
   function selNode(id) {
     const trocouNode = id !== selNodeId;
