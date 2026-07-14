@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.27.2',
+  versaoAtual: 'V2.28.0',
 
   versoes: [
     {
@@ -3116,7 +3116,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.27.2',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-13',
       tipo: 'correcao',
       titulo: 'Levantamento de Piso: Visão Geral mais limpa (menos cards, ícones que quebravam corrigidos)',
@@ -3130,6 +3130,23 @@ const NotasVersao = {
         'Com menos cards na fileira de cima, cada um ficou mais largo —',
         '  não corta mais o texto ("M² IMPERMEABILIZAÇÃO" não invade',
         '  mais o card ao lado)',
+      ]
+    },
+    {
+      versao: 'V2.28.0',
+      status: 'aberta',
+      data: '2026-07-13',
+      tipo: 'funcionalidade',
+      titulo: 'Levantamento de Piso: Visão Geral com seletor de nível (ver por Torre, Pavimento ou Apartamento)',
+      itens: [
+        'Removida a tabela "Todas as Áreas Medidas" da Visão Geral',
+        'Novo seletor "Ver dados de" na Visão Geral: escolha qualquer',
+        '  local da árvore (Torre, um Pavimento específico, um',
+        '  Apartamento etc.) e os totais/M² por tipo mostrados são',
+        '  recalculados só com os dados daquele local e dos sublocais',
+        '  dele — não precisa mais olhar só o total geral da obra',
+        'Opção "Toda a obra" continua disponível pra ver o consolidado',
+        '  geral, como era antes',
       ]
     }
   ],

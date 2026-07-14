@@ -37,6 +37,7 @@ const LP = (() => {
   let openNodes = new Set();
   let selNodeId = null;  // null = Visão Geral
   let treeColapsada = false;
+  let visaoGeralFiltroNodeId = null; // filtro de nível na Visão Geral (null = toda a obra)
 
   let pdfDoc = null;         // documento pdf.js carregado (da planta do nó aberto)
   let pdfDocPlantaId = null;
@@ -93,7 +94,7 @@ const LP = (() => {
 
   async function recarregar() {
     obraId = Router.getObraId();
-    selNodeId = null; modo = 'nenhum'; areasSelecionadasParaMover.clear();
+    selNodeId = null; modo = 'nenhum'; areasSelecionadasParaMover.clear(); visaoGeralFiltroNodeId = null;
     if (!obraId) { _renderSemObra(); return; }
     await carregar();
   }
@@ -484,24 +485,24 @@ const LP = (() => {
   }
 
   function _renderVisaoGeral() {
-    const totalAreas = areas.length;
-    const totalPiso = areas.reduce((s, a) => s + (a.areaM2 || 0), 0);
-    const totalContrapiso = areas.reduce((s, a) => s + (a.tipoContrapiso ? (a.areaM2 || 0) : 0), 0);
-    const totalImperm = areas.reduce((s, a) => s + (a.impermeabilizacao ? (a.areaM2 || 0) : 0), 0);
-    const totalRodape = areas.reduce((s, a) => s + (a.mlRodape || 0), 0);
+    const filtroR = visaoGeralFiltroNodeId ? _acharNode(visaoGeralFiltroNodeId) : null;
+    const areasFiltradas = filtroR
+      ? areas.filter(a => _idsComDescendentes(filtroR.node).includes(a.nodeId))
+      : areas;
+
+    const totalAreas = areasFiltradas.length;
+    const totalPiso = areasFiltradas.reduce((s, a) => s + (a.areaM2 || 0), 0);
+    const totalContrapiso = areasFiltradas.reduce((s, a) => s + (a.tipoContrapiso ? (a.areaM2 || 0) : 0), 0);
+    const totalImperm = areasFiltradas.reduce((s, a) => s + (a.impermeabilizacao ? (a.areaM2 || 0) : 0), 0);
+    const totalRodape = areasFiltradas.reduce((s, a) => s + (a.mlRodape || 0), 0);
     const nodesComVinculo = _contarNodesComVinculo(arvore);
 
     const porTipoPiso = {};
-    areas.forEach(a => { const k = a.tipoPiso || '(sem tipo definido)'; porTipoPiso[k] = (porTipoPiso[k] || 0) + (a.areaM2 || 0); });
+    areasFiltradas.forEach(a => { const k = a.tipoPiso || '(sem tipo definido)'; porTipoPiso[k] = (porTipoPiso[k] || 0) + (a.areaM2 || 0); });
     const porTipoContrapiso = {};
-    areas.forEach(a => { if (!a.tipoContrapiso) return; porTipoContrapiso[a.tipoContrapiso] = (porTipoContrapiso[a.tipoContrapiso] || 0) + (a.areaM2 || 0); });
+    areasFiltradas.forEach(a => { if (!a.tipoContrapiso) return; porTipoContrapiso[a.tipoContrapiso] = (porTipoContrapiso[a.tipoContrapiso] || 0) + (a.areaM2 || 0); });
     const porTipoImperm = {};
-    areas.forEach(a => { if (!a.impermeabilizacao) return; const k = a.tipoImpermeabilizacao || '(tipo não informado)'; porTipoImperm[k] = (porTipoImperm[k] || 0) + (a.areaM2 || 0); });
-
-    const linhasTabela = areas.slice().sort((a, b) => {
-      const ca = _caminhoNode(a.nodeId) || '', cb = _caminhoNode(b.nodeId) || '';
-      return ca === cb ? (a.nome || '').localeCompare(b.nome || '') : ca.localeCompare(cb);
-    });
+    areasFiltradas.forEach(a => { if (!a.impermeabilizacao) return; const k = a.tipoImpermeabilizacao || '(tipo não informado)'; porTipoImperm[k] = (porTipoImperm[k] || 0) + (a.areaM2 || 0); });
 
     const barras = (obj, cor) => {
       const entries = Object.entries(obj).sort((a, b) => b[1] - a[1]);
@@ -520,7 +521,15 @@ const LP = (() => {
     return `
       <div class="page-header">
         <div><h2 style="font-size:1.1rem;">📊 Visão Geral</h2>
-          <span class="subtitulo">${totalAreas} área(s) medida(s) · ${nodesComVinculo} local(is) com planta vinculada</span></div>
+          <span class="subtitulo">${areas.length} área(s) medida(s) no total · ${nodesComVinculo} local(is) com planta vinculada</span></div>
+      </div>
+
+      <div class="form-grupo" style="max-width:420px;margin-bottom:14px;">
+        <label style="font-size:0.8rem;">Ver dados de:</label>
+        <select class="form-control" onchange="LP.filtrarVisaoGeral(this.value)">
+          <option value="" ${!visaoGeralFiltroNodeId ? 'selected' : ''}>Toda a obra</option>
+          ${_listarNodesMedicao().map(o => `<option value="${o.id}" ${o.id === visaoGeralFiltroNodeId ? 'selected' : ''}>${esc(o.label)}</option>`).join('')}
+        </select>
       </div>
 
       <div class="cc-kpiGrid" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr));">
@@ -530,7 +539,7 @@ const LP = (() => {
         <div class="cc-kpi cc-kpiPurple"><div class="cc-kpiIcon">🦶</div><div class="cc-kpiBody"><div class="cc-kpiLabel">ML de Rodapé</div><div class="cc-kpiValue">${fmt2(totalRodape)}<span class="cc-kpiUnit">m</span></div></div></div>
       </div>
 
-      ${totalAreas === 0 ? `<div class="lp-hint">Clique em um local na árvore ao lado (ou crie um novo com "+ Local") para vincular uma planta em PDF e começar a medir.</div>` : `
+      ${totalAreas === 0 ? `<div class="lp-hint">${areas.length === 0 ? 'Clique em um local na árvore ao lado (ou crie um novo com "+ Local") para vincular uma planta em PDF e começar a medir.' : 'Nenhuma área medida neste local (ou nos sublocais dele).'}</div>` : `
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin:18px 0;">
           <div class="cc-kpi" style="display:block;">
             <strong style="display:flex;align-items:center;gap:7px;margin-bottom:10px;font-size:0.85rem;"><span style="width:9px;height:9px;border-radius:2px;background:var(--cor-primaria);display:inline-block;"></span>M² por Tipo de Piso</strong>
@@ -545,45 +554,6 @@ const LP = (() => {
             ${barras(porTipoImperm, 'var(--cv-blue)')}
           </div>
         </div>
-
-        <h3 class="mb-2" style="font-size:0.95rem;">Todas as Áreas Medidas</h3>
-        <div class="tabela-container" style="margin-bottom:18px;">
-          <table class="tabela">
-            <thead>
-              <tr>
-                <th>Local</th>
-                <th>Área</th>
-                <th class="col-num">M² Piso</th>
-                <th>Tipo de Piso</th>
-                <th>Contrapiso</th>
-                <th class="col-centro">Imperm.</th>
-                <th class="col-num">ML Rodapé</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${linhasTabela.map(a => `
-                <tr style="cursor:pointer;" onclick="LP.focarArea('${a.nodeId}','${a.id}')">
-                  <td style="color:var(--cor-texto-muted);">${esc(_caminhoNode(a.nodeId) || '—')}</td>
-                  <td style="font-weight:600;">${esc(a.nome)}</td>
-                  <td class="col-num">${fmt2(a.areaM2)} m²</td>
-                  <td>${esc(a.tipoPiso || '—')}</td>
-                  <td>${esc(a.tipoContrapiso || '—')}</td>
-                  <td class="col-centro">${a.impermeabilizacao ? '💧' : '—'}</td>
-                  <td class="col-num">${a.mlRodape ? fmt2(a.mlRodape) + ' m' : '—'}</td>
-                </tr>
-              `).join('')}
-            </tbody>
-            <tfoot>
-              <tr>
-                <td colspan="2">Total</td>
-                <td class="col-num">${fmt2(totalPiso)} m²</td>
-                <td colspan="2"></td>
-                <td class="col-centro"></td>
-                <td class="col-num">${fmt2(totalRodape)} m</td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
       `}
 
       <h3 class="mb-2" style="font-size:0.95rem;">📄 Plantas enviadas</h3>
@@ -594,6 +564,11 @@ const LP = (() => {
         </div>
       `).join('')}
     `;
+  }
+
+  function filtrarVisaoGeral(nodeId) {
+    visaoGeralFiltroNodeId = nodeId || null;
+    renderizar();
   }
 
   function _contarNodesComVinculo(nodes) {
@@ -1658,7 +1633,7 @@ const LP = (() => {
     toggleModoCalibrar, toggleModoMedir, cancelarDesenho,
     cancelarCalibracao, confirmarCalibracao,
     finalizarPoligono, editarArea, onToggleImperm, fecharModalArea, salvarArea, excluirAreaEmEdicao, moverArea,
-    filtrarAreas, abrirClonarPavimento, marcarTodosClonar, confirmarClonarPavimento, criarNovoLocalEClonar,
+    filtrarAreas, abrirClonarPavimento, marcarTodosClonar, confirmarClonarPavimento, criarNovoLocalEClonar, filtrarVisaoGeral,
     marcarTodasAreas, desmarcarTodasAreas, atualizarBarraSelecaoAreas, moverOuCopiarSelecionadas, toggleSelecaoArea,
     toggleRodapeEdge, cancelarRodape, confirmarRodape, iniciarEdicaoRodape,
     zoomIn, zoomOut, zoomReset,
