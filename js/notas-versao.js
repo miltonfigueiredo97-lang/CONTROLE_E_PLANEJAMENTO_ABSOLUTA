@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.27.0',
+  versaoAtual: 'V2.27.1',
 
   versoes: [
     {
@@ -3069,7 +3069,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.27.0',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-13',
       tipo: 'funcionalidade',
       titulo: 'Levantamento de Piso: nome completo na árvore (largura maior), aviso de exclusão bem mais claro, e clonar como novo local "ao lado"',
@@ -3088,6 +3088,30 @@ const NotasVersao = {
         '  para um local já existente',
         'Texto desatualizado corrigido no Clonar/Multiplicar e no mover',
         '  individual (não exigem mais planta vinculada no destino)',
+      ]
+    },
+    {
+      versao: 'V2.27.1',
+      status: 'aberta',
+      data: '2026-07-13',
+      tipo: 'correcao',
+      titulo: 'Levantamento de Piso: corrige desenho do projeto ficando com escala diferente da área medida',
+      itens: [
+        'Causa raiz encontrada: uma condição de corrida. Ao mover/copiar',
+        '  áreas, o sistema disparava duas renderizações da planta quase',
+        '  ao mesmo tempo (uma ao recarregar os dados, outra ao trocar de',
+        '  local) — e elas podiam se atropelar, deixando o desenho de',
+        '  fundo (a planta em si) numa escala de tela diferente da usada',
+        '  pelo contorno da área desenhada por cima',
+        'Importante: os dados medidos (m², rodapé etc.) nunca foram',
+        '  afetados — o problema era só visual, na exibição em tela',
+        'Corrigido com um controle de renderização: se uma renderização',
+        '  mais nova começar enquanto uma mais antiga ainda está em',
+        '  andamento, a mais antiga aborta em vez de terminar e bagunçar',
+        '  o estado — assim o desenho de fundo e o contorno da área',
+        '  sempre ficam na mesma escala de tela',
+        'Mesma proteção aplicada também na re-renderização em alta',
+        '  resolução (ao dar zoom)',
       ]
     }
   ],

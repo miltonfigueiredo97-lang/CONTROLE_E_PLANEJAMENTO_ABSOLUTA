@@ -41,6 +41,8 @@ const LP = (() => {
   let pdfDoc = null;         // documento pdf.js carregado (da planta do nó aberto)
   let pdfDocPlantaId = null;
   let renderScale = 1;        // px de tela por ponto-PDF, na renderização atual
+  let _renderToken = 0;       // evita corrida: se uma renderização mais nova começar, a antiga
+                               // aborta em vez de terminar e bagunçar o renderScale compartilhado
 
   let modo = 'nenhum';        // 'nenhum' | 'calibrar' | 'medir'
   let calibPontos = [];       // pontos-PDF da linha de calibração em progresso
@@ -936,20 +938,23 @@ const LP = (() => {
   async function _renderCanvasNode(node) {
     const col = document.getElementById('lp-canvas-col');
     if (!col) return;
+    const meuToken = ++_renderToken;
     try {
       await _garantirPdfjs();
+      if (meuToken !== _renderToken) return; // uma renderização mais nova já começou — abortar
       const pl = _plantaPorId(node.plantaId);
       if (!pl) return;
       if (pdfDocPlantaId !== pl.id) {
         pdfDoc = await _carregarPdfDoc(pl.downloadURL);
+        if (meuToken !== _renderToken) return;
         pdfDocPlantaId = pl.id;
       }
       const page = await pdfDoc.getPage(node.pagina);
+      if (meuToken !== _renderToken) return;
       const viewportBase = page.getViewport({ scale: 1 });
-      pageWidthPts = viewportBase.width;
       const larguraDisponivel = Math.max(320, (col.clientWidth || 900) - 24);
-      renderScale = Math.min(2.2, larguraDisponivel / viewportBase.width);
-      const viewport = page.getViewport({ scale: renderScale });
+      const escalaCalculada = Math.min(2.2, larguraDisponivel / viewportBase.width);
+      const viewport = page.getViewport({ scale: escalaCalculada });
 
       const canvas = document.createElement('canvas');
       canvas.className = 'lp-base';
@@ -957,6 +962,11 @@ const LP = (() => {
       canvas.height = viewport.height;
       const ctx = canvas.getContext('2d');
       await page.render({ canvasContext: ctx, viewport }).promise;
+      if (meuToken !== _renderToken) return; // aborta antes de tocar no DOM ou no estado compartilhado
+
+      // só agora, com a certeza de que ninguém mais começou depois, aplica de fato
+      pageWidthPts = viewportBase.width;
+      renderScale = escalaCalculada;
 
       const stage = document.createElement('div');
       stage.className = 'lp-canvas-stage modo-' + modo;
@@ -1131,13 +1141,17 @@ const LP = (() => {
     if (projLargura > MAX_DIM_PX) novaEscala = MAX_DIM_PX / pageWidthPts;
     const pl = _plantaPorId(node.plantaId);
     if (!pl || !pdfDoc || pdfDocPlantaId !== pl.id) return;
+    const meuToken = _renderToken; // se uma renderização nova (troca de local) começar
+                                    // enquanto isso roda, aborta em vez de bagunçar o renderScale
     try {
       const page = await pdfDoc.getPage(node.pagina);
+      if (meuToken !== _renderToken) return;
       const viewport = page.getViewport({ scale: novaEscala });
       const ctx = canvas.getContext('2d');
       canvas.width = viewport.width;
       canvas.height = viewport.height;
       await page.render({ canvasContext: ctx, viewport }).promise;
+      if (meuToken !== _renderToken) return;
       svg.setAttribute('width', viewport.width);
       svg.setAttribute('height', viewport.height);
       svg.setAttribute('viewBox', '0 0 ' + viewport.width + ' ' + viewport.height);
