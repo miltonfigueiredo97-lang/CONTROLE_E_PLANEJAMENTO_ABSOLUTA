@@ -90,7 +90,7 @@
       <a href="histograma.html"><span class="nav-icon">📊</span> Histograma</a>
       <a href="admin-permissoes.html"><span class="nav-icon">🔑</span> Permissões</a>
       <div class="sidebar-section-title">Sistema</div>
-      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V2.23.1</span></a>
+      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V2.24.0</span></a>
     </nav>
     <div class="sidebar-user">
       <div class="user-avatar">U</div>
@@ -223,6 +223,28 @@
       <button class="btn btn-secundario" onclick="LP.excluirAreaEmEdicao()" id="lp-btn-excluir-area" style="display:none;margin-right:auto;color:#dc2626;">Excluir</button>
       <button class="btn btn-secundario" onclick="LP.fecharModalArea()">Cancelar</button>
       <button class="btn btn-primario" onclick="LP.salvarArea()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Clonar/Multiplicar pavimento para outros locais -->
+<div class="modal-overlay" id="modal-lp-clonar">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="lp-clonar-titulo">Clonar/Multiplicar Pavimento</h3>
+      <button class="modal-close" onclick="Utils.fecharModal('modal-lp-clonar')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:0.85rem;color:var(--cor-texto-muted);margin-bottom:10px;">Copia todas as áreas medidas deste local (m², rodapé, tipo de piso/contrapiso/impermeabilização) para os locais marcados abaixo. Útil para pavimento tipo repetido em vários andares.</p>
+      <div style="margin-bottom:8px;">
+        <button type="button" class="btn btn-secundario btn-sm" onclick="LP.marcarTodosClonar(true)">Marcar todos</button>
+        <button type="button" class="btn btn-secundario btn-sm" onclick="LP.marcarTodosClonar(false)">Desmarcar todos</button>
+      </div>
+      <div id="lp-clonar-lista" style="max-height:320px;overflow-y:auto;display:flex;flex-direction:column;gap:4px;"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-lp-clonar')">Cancelar</button>
+      <button class="btn btn-primario" onclick="LP.confirmarClonarPavimento()">⧉ Clonar para selecionados</button>
     </div>
   </div>
 </div>

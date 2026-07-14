@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.23.1',
+  versaoAtual: 'V2.24.0',
 
   versoes: [
     {
@@ -2765,7 +2765,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.23.1',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-13',
       tipo: 'correcao',
       titulo: 'Levantamento de Piso: corrige área salva no local errado + clique na árvore abre edição',
@@ -2782,6 +2782,26 @@ const NotasVersao = {
         'Novo: botão "Mover esta área para outro local" no modal de',
         '  edição — caso uma área tenha ficado no local errado, dá pra',
         '  corrigir direto, sem precisar excluir e remedir',
+      ]
+    },
+    {
+      versao: 'V2.24.0',
+      status: 'aberta',
+      data: '2026-07-13',
+      tipo: 'funcionalidade',
+      titulo: 'Levantamento de Piso: clonar/multiplicar pavimento + filtro de áreas',
+      itens: [
+        'Novo botão "⧉ Clonar/Multiplicar" no local vinculado a uma',
+        '  planta: copia todas as áreas medidas dele (m², tipo de piso,',
+        '  contrapiso, impermeabilização, rodapé) para um ou vários',
+        '  outros locais de uma vez — pensado pra pavimento tipo repetido',
+        '  em vários andares da torre',
+        'M² e ML de rodapé são recalculados na escala de cada local de',
+        '  destino (a geometria do polígono é a mesma; só a escala pode',
+        '  mudar entre locais)',
+        'Se o destino já tiver áreas medidas, avisa antes de substituir',
+        'Novo campo de busca na lista de áreas do local (filtra por nome',
+        '  ou tipo de piso/contrapiso, sem precisar recarregar a planta)',
       ]
     }
   ],

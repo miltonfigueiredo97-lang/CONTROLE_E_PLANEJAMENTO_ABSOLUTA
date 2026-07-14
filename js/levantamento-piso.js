@@ -608,6 +608,7 @@ const LP = (() => {
           <div style="display:flex;gap:6px;">
             <button class="btn btn-primario btn-sm" onclick="LP.toggleFullscreen()">${fsAtivo ? '✕ Sair da tela cheia' : '⛶ Tela cheia'}</button>
             ${fsAtivo ? '' : `<button class="btn btn-secundario btn-sm" onclick="LP.trocarPlanta('${node.id}')">🔄 Trocar planta/página</button>`}
+            ${fsAtivo ? '' : `<button class="btn btn-secundario btn-sm" onclick="LP.abrirClonarPavimento('${node.id}')" title="Copiar as áreas deste local para outros (pavimento tipo)">⧉ Clonar/Multiplicar</button>`}
           </div>
         </div>
         <div class="lp-toolbar">
@@ -646,8 +647,9 @@ const LP = (() => {
                 <tr><td>ML de Rodapé</td><td>${fmt2(totalRodape)} m</td></tr>
               </table>
             </div>
+            ${areasN.length > 0 ? `<input type="text" id="lp-busca-areas" class="form-control" placeholder="🔍 Filtrar áreas por nome ou tipo..." oninput="LP.filtrarAreas(this.value)" style="margin-bottom:2px;">` : ''}
             ${areasN.length === 0 ? `<div class="estado-vazio" style="padding:20px;"><p style="font-size:0.85rem;">Nenhuma área medida ainda.</p></div>` : areasN.map(a => `
-              <div class="lp-area-card ${a.id === areaDestacadaId ? 'lp-area-card-destaque' : ''}" onclick="LP.editarArea('${a.id}')">
+              <div class="lp-area-card ${a.id === areaDestacadaId ? 'lp-area-card-destaque' : ''}" data-busca="${esc((a.nome + ' ' + (a.tipoPiso || '') + ' ' + (a.tipoContrapiso || '')).toLowerCase())}" onclick="LP.editarArea('${a.id}')">
                 <div class="nome"><span>${esc(a.nome)}</span><span class="m2">${fmt2(a.areaM2)} m²</span></div>
                 <div class="meta">
                   ${a.tipoPiso ? `Piso: ${esc(a.tipoPiso)}` : 'Piso: —'}${a.tipoContrapiso ? ` · Contrapiso: ${esc(a.tipoContrapiso)}` : ''}
@@ -660,6 +662,14 @@ const LP = (() => {
         </div>
       </div>
     `;
+  }
+
+  function filtrarAreas(termo) {
+    const t = (termo || '').toLowerCase().trim();
+    document.querySelectorAll('.lp-area-card').forEach(card => {
+      const alvo = card.getAttribute('data-busca') || '';
+      card.style.display = (!t || alvo.includes(t)) ? '' : 'none';
+    });
   }
 
   function _popularDatalists() {
@@ -1097,6 +1107,84 @@ const LP = (() => {
     }
   }
 
+  // ══════════════════════════════════════════
+  // CLONAR/MULTIPLICAR PAVIMENTO — copia todas as áreas medidas deste local
+  // para um ou vários outros locais de uma vez (útil pra pavimento tipo
+  // repetido em vários andares da torre).
+  // ══════════════════════════════════════════
+  let clonarOrigemId = null;
+
+  function abrirClonarPavimento(nodeId) {
+    const origem = _acharNode(nodeId); if (!origem) return;
+    clonarOrigemId = nodeId;
+    const opts = _listarNodesMedicao().filter(o => o.id !== nodeId);
+    document.getElementById('lp-clonar-titulo').textContent = `Clonar/Multiplicar "${origem.node.nome}"`;
+    const lista = document.getElementById('lp-clonar-lista');
+    lista.innerHTML = opts.length
+      ? opts.map(o => `
+          <label style="display:flex;align-items:center;gap:8px;padding:6px 8px;border:1px solid #e2e8f0;border-radius:6px;cursor:pointer;">
+            <input type="checkbox" class="lp-clonar-check" value="${o.id}">
+            <span>${esc(o.label)}</span>
+            <span style="margin-left:auto;color:var(--cor-texto-muted);font-size:0.75rem;">${_areasDoNode(o.id).length} área(s) hoje</span>
+          </label>
+        `).join('')
+      : `<p class="text-sm" style="color:var(--cor-texto-muted);">Nenhum outro local com planta vinculada ainda. Crie e vincule outros locais primeiro.</p>`;
+    Utils.abrirModal('modal-lp-clonar');
+  }
+
+  function marcarTodosClonar(marcar) {
+    document.querySelectorAll('.lp-clonar-check').forEach(cb => { cb.checked = marcar; });
+  }
+
+  async function confirmarClonarPavimento() {
+    const alvoIds = Array.from(document.querySelectorAll('.lp-clonar-check:checked')).map(cb => cb.value);
+    if (!alvoIds.length) { Utils.toast('Marque pelo menos um local de destino.', 'alerta'); return; }
+    const origemR = _acharNode(clonarOrigemId); if (!origemR) return;
+    const areasOrigem = _areasDoNode(clonarOrigemId);
+    if (!areasOrigem.length) { Utils.toast('Este local ainda não tem áreas medidas para clonar.', 'alerta'); return; }
+
+    const comDadosExistentes = alvoIds.filter(id => _areasDoNode(id).length > 0);
+    if (comDadosExistentes.length) {
+      const nomes = comDadosExistentes.map(id => { const r = _acharNode(id); return r ? r.node.nome : id; }).join(', ');
+      const ok = await Utils.confirmar(`${nomes} já ${comDadosExistentes.length > 1 ? 'têm' : 'tem'} áreas medidas. Elas serão substituídas pelas áreas clonadas de "${origemR.node.nome}". Continuar?`);
+      if (!ok) return;
+    }
+
+    Utils.fecharModal('modal-lp-clonar');
+    Utils.mostrarLoading('Clonando pavimento...');
+    try {
+      // Remove o que já existir nos destinos marcados
+      const delOps = [];
+      alvoIds.forEach(id => { _areasDoNode(id).forEach(a => delOps.push({ type: 'delete', ref: Database.ref(obraId, COL_AREAS).doc(a.id) })); });
+      for (let i = 0; i < delOps.length; i += 400) await Database.batchWrite(delOps.slice(i, i + 400));
+
+      // Clona as áreas da origem pra cada destino, recalculando m²/ML pela escala de cada destino
+      // (a geometria do polígono é a mesma; só a escala pode mudar entre locais)
+      const addOps = [];
+      alvoIds.forEach(alvoId => {
+        const alvoR = _acharNode(alvoId);
+        const escalaAlvo = alvoR ? (alvoR.node.escalaMetrosPorPonto || 0) : 0;
+        areasOrigem.forEach(a => {
+          const { id: _aid, nodeId: _nid, ...rest } = a;
+          const poligono = rest.poligono || [];
+          const novaAreaM2 = escalaAlvo ? _areaPoligono(poligono) * (escalaAlvo ** 2) : rest.areaM2;
+          const novoMlRodape = (rest.rodapeArestas && escalaAlvo) ? _calcularMlRodape(poligono, rest.rodapeArestas, escalaAlvo) : (rest.mlRodape || 0);
+          addOps.push({ type: 'set', ref: Database.ref(obraId, COL_AREAS).doc(), data: { ...rest, nodeId: alvoId, areaM2: novaAreaM2, mlRodape: novoMlRodape } });
+        });
+      });
+      for (let i = 0; i < addOps.length; i += 400) await Database.batchWrite(addOps.slice(i, i + 400));
+
+      Utils.toast(`✓ ${areasOrigem.length} área(s) clonadas para ${alvoIds.length} local(is)!`, 'sucesso');
+      await carregar();
+      selNode(clonarOrigemId);
+    } catch (e) {
+      console.error(e);
+      Utils.toast('Erro ao clonar: ' + e.message, 'erro');
+    } finally {
+      Utils.esconderLoading();
+    }
+  }
+
   function onToggleImperm(chk) {
     document.getElementById('lp-campo-imperm-tipo').style.display = chk.checked ? '' : 'none';
   }
@@ -1250,6 +1338,7 @@ const LP = (() => {
     toggleModoCalibrar, toggleModoMedir, cancelarDesenho,
     cancelarCalibracao, confirmarCalibracao,
     finalizarPoligono, editarArea, onToggleImperm, fecharModalArea, salvarArea, excluirAreaEmEdicao, moverArea,
+    filtrarAreas, abrirClonarPavimento, marcarTodosClonar, confirmarClonarPavimento,
     toggleRodapeEdge, cancelarRodape, confirmarRodape, iniciarEdicaoRodape,
     zoomIn, zoomOut, zoomReset,
   };
