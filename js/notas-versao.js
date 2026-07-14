@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.26.2',
+  versaoAtual: 'V2.26.3',
 
   versoes: [
     {
@@ -3032,7 +3032,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.26.2',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-13',
       tipo: 'correcao',
       titulo: 'Levantamento de Piso: simplifica nome do local (corta com "...", igual os outros levantamentos) + tira o ícone de esquadro',
@@ -3045,6 +3045,26 @@ const NotasVersao = {
         'Trocado o ícone de esquadro (📐) das áreas na árvore por um',
         '  quadrado simples e discreto — menos poluído visualmente',
         'Ícone do card "Total de Áreas" na Visão Geral também trocado',
+      ]
+    },
+    {
+      versao: 'V2.26.3',
+      status: 'aberta',
+      data: '2026-07-13',
+      tipo: 'correcao',
+      titulo: 'Levantamento de Piso: corrige seleção de áreas se perdendo com um clique quase certeiro',
+      itens: [
+        'Causa: a caixinha de marcar era muito pequena — um clique',
+        '  levemente fora dela caía no local em vez da caixinha, abrindo',
+        '  a área clicada. Como abrir uma área redesenha a árvore do',
+        '  zero, todas as outras caixinhas já marcadas eram perdidas',
+        '  silenciosamente',
+        'Corrigido: a seleção agora fica guardada à parte (não só na',
+        '  caixinha em si), então sobrevive a qualquer redesenho da',
+        '  árvore — mesmo que um clique errado abra outra área no meio',
+        '  do processo, o que já estava marcado continua marcado',
+        'Área de clique da caixinha aumentada (de ~13px pra 22px) pra',
+        '  ficar bem mais fácil de acertar',
       ]
     }
   ],

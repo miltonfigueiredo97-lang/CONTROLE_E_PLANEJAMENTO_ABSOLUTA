@@ -64,6 +64,9 @@ const LP = (() => {
   let poligonoRodapeSelecionado = []; // seleção em progresso (modo 'rodape'), array de booleans por aresta
   let _rodapeEditandoAreaId = null;   // se setado, o modo 'rodape' está editando o rodapé de uma área já salva
   let areaDestacadaId = null;      // área destacada temporariamente (ao focar pela árvore)
+  let areasSelecionadasParaMover = new Set(); // ids marcados p/ mover/copiar — guardado à parte
+                                               // (não só no DOM) pra não se perder se a árvore
+                                               // redesenhar por qualquer motivo (ex: clique errado)
   let _destacarTimer = null;
 
   let _pendingVincularNodeId = null; // para qual nó o upload do modal-lp-planta se destina
@@ -88,7 +91,7 @@ const LP = (() => {
 
   async function recarregar() {
     obraId = Router.getObraId();
-    selNodeId = null; modo = 'nenhum';
+    selNodeId = null; modo = 'nenhum'; areasSelecionadasParaMover.clear();
     if (!obraId) { _renderSemObra(); return; }
     await carregar();
   }
@@ -335,7 +338,9 @@ const LP = (() => {
           h += `<div class="tree-children tree-children-areas">`;
           areasDoNo.forEach(a => {
             h += `<div class="tree-item tree-item-area" onclick="event.stopPropagation();LP.focarArea('${n.id}','${a.id}')" title="Ver esta área na planta">
-              <input type="checkbox" class="lp-area-check" data-id="${a.id}" onclick="event.stopPropagation();LP.atualizarBarraSelecaoAreas()" style="margin-right:2px;flex-shrink:0;">
+              <span onclick="event.stopPropagation();LP.toggleSelecaoArea('${a.id}')" style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;flex-shrink:0;cursor:pointer;margin-left:-4px;">
+                <input type="checkbox" class="lp-area-check" data-id="${a.id}" ${areasSelecionadasParaMover.has(a.id) ? 'checked' : ''} style="width:15px;height:15px;pointer-events:none;">
+              </span>
               <span class="tree-icon" style="color:#2563eb;">▪</span>
               <span class="tree-label">${esc(a.nome)}</span>
               <span class="tree-badge tree-badge-area">${fmt2(a.areaM2)}m²</span>
@@ -805,18 +810,34 @@ const LP = (() => {
     `;
   }
 
+  function toggleSelecaoArea(id) {
+    if (areasSelecionadasParaMover.has(id)) areasSelecionadasParaMover.delete(id);
+    else areasSelecionadasParaMover.add(id);
+    const treeBody = document.getElementById('lp-tree-body');
+    if (treeBody) treeBody.innerHTML = _renderArvore();
+    atualizarBarraSelecaoAreas();
+  }
+
   function marcarTodasAreas(marcar) {
-    document.querySelectorAll('.lp-area-check').forEach(cb => { cb.checked = marcar; });
+    if (marcar) {
+      document.querySelectorAll('.lp-area-check').forEach(cb => areasSelecionadasParaMover.add(cb.getAttribute('data-id')));
+    } else {
+      areasSelecionadasParaMover.clear();
+    }
+    const treeBody = document.getElementById('lp-tree-body');
+    if (treeBody) treeBody.innerHTML = _renderArvore();
     atualizarBarraSelecaoAreas();
   }
 
   function desmarcarTodasAreas() {
-    document.querySelectorAll('.lp-area-check').forEach(cb => { cb.checked = false; });
+    areasSelecionadasParaMover.clear();
+    const treeBody = document.getElementById('lp-tree-body');
+    if (treeBody) treeBody.innerHTML = _renderArvore();
     atualizarBarraSelecaoAreas();
   }
 
   function atualizarBarraSelecaoAreas() {
-    const marcadas = document.querySelectorAll('.lp-area-check:checked').length;
+    const marcadas = areasSelecionadasParaMover.size;
     const bar = document.getElementById('lp-bulk-areas-bar');
     if (bar) bar.style.display = marcadas > 0 ? 'flex' : 'none';
     const info = document.getElementById('lp-bulk-areas-info');
@@ -845,7 +866,7 @@ const LP = (() => {
   }
 
   async function moverOuCopiarSelecionadas(acao) {
-    const marcados = Array.from(document.querySelectorAll('.lp-area-check:checked')).map(cb => cb.getAttribute('data-id'));
+    const marcados = Array.from(areasSelecionadasParaMover);
     if (!marcados.length) { Utils.toast('Selecione pelo menos uma área.', 'alerta'); return; }
     const sel = document.getElementById('lp-bulk-destino-select');
     const destino = sel.value;
@@ -872,6 +893,7 @@ const LP = (() => {
       });
       await Database.batchWrite(ops);
       Utils.toast(`✓ ${marcados.length} área(s) ${acao === 'copiar' ? 'copiadas' : 'movidas'}!`, 'sucesso');
+      areasSelecionadasParaMover.clear();
       await carregar();
       selNode(destino);
     } catch (e) {
@@ -1566,7 +1588,7 @@ const LP = (() => {
     cancelarCalibracao, confirmarCalibracao,
     finalizarPoligono, editarArea, onToggleImperm, fecharModalArea, salvarArea, excluirAreaEmEdicao, moverArea,
     filtrarAreas, abrirClonarPavimento, marcarTodosClonar, confirmarClonarPavimento,
-    marcarTodasAreas, desmarcarTodasAreas, atualizarBarraSelecaoAreas, moverOuCopiarSelecionadas,
+    marcarTodasAreas, desmarcarTodasAreas, atualizarBarraSelecaoAreas, moverOuCopiarSelecionadas, toggleSelecaoArea,
     toggleRodapeEdge, cancelarRodape, confirmarRodape, iniciarEdicaoRodape,
     zoomIn, zoomOut, zoomReset,
   };
