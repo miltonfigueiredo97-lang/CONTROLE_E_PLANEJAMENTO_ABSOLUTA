@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.24.3',
+  versaoAtual: 'V2.24.4',
 
   versoes: [
     {
@@ -2845,7 +2845,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.24.3',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-13',
       tipo: 'correcao',
       titulo: 'Levantamento de Piso: Visão Geral com o mesmo acabamento visual dos outros levantamentos',
@@ -2859,6 +2859,23 @@ const NotasVersao = {
         'Tabela de todas as áreas trocada pela tabela padrão do sistema',
         '  (cabeçalho escuro fixo, zebra no hover, linha de total no',
         '  rodapé) — a mesma usada em todo o resto do sistema',
+      ]
+    },
+    {
+      versao: 'V2.24.4',
+      status: 'aberta',
+      data: '2026-07-13',
+      tipo: 'correcao',
+      titulo: 'Levantamento de Piso: corrige scroll interno minúsculo na Visão Geral',
+      itens: [
+        'Corrigido: a altura fixa aplicada ao layout (pensada pra tela de',
+        '  medição com o canvas) também estava sendo aplicada à Visão',
+        '  Geral, espremendo tudo numa altura de tela e criando um scroll',
+        '  interno minúsculo que cortava a tabela em poucas linhas',
+        'Agora essa altura fixa só se aplica quando o local selecionado',
+        '  tem planta vinculada (tela de medição de verdade). Na Visão',
+        '  Geral e nas telas sem planta, o conteúdo flui inteiro na',
+        '  página normalmente, sem scroll interno cortado',
       ]
     }
   ],

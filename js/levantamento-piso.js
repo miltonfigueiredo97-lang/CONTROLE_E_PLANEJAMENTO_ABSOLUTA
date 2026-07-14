@@ -208,6 +208,8 @@ const LP = (() => {
     const actions = document.getElementById('lp-header-actions');
     if (!el) return;
     if (actions) actions.innerHTML = '';
+    const nodeAtual = selNodeId ? _acharNode(selNodeId) : null;
+    const emWorkspace = !!(nodeAtual && nodeAtual.node.plantaId);
     el.innerHTML = `
       ${!selNodeId ? `
         <div class="page-header">
@@ -217,7 +219,7 @@ const LP = (() => {
           </div>
         </div>
       ` : ''}
-      <div class="ar-layout ${treeColapsada ? 'tree-colapsada' : ''}">
+      <div class="ar-layout ${treeColapsada ? 'tree-colapsada' : ''} ${emWorkspace ? 'lp-workspace-ativo' : ''}">
         <div class="ar-tree">
           <div class="ar-tree-header">
             <h3>Locais</h3>
