@@ -1029,6 +1029,11 @@ const LT = (() => {
       const panSalvo = _panPorNode[node.id];
       if (panSalvo) { col.scrollLeft = panSalvo.left; col.scrollTop = panSalvo.top; }
       _desenharOverlay(node);
+      // Se o zoom restaurado for maior que o auto-fit recém-calculado, o canvas
+      // nativo (baixa resolução) está sendo esticado via CSS — fica borrado até
+      // re-renderizar em alta resolução. Antes isso só acontecia depois de um
+      // zoom in/out manual; agora dispara sozinho, igual acontece ao dar zoom.
+      if (zoomCss > 1.05) _agendarRerenderQualidade();
     } catch (e) {
       console.error('Erro ao renderizar PDF:', e);
       col.innerHTML = `<div class="estado-vazio"><p>Erro ao carregar a página do PDF: ${esc(e.message)}</p></div>`;

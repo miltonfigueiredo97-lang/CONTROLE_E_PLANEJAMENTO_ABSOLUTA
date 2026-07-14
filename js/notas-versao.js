@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.29.4',
+  versaoAtual: 'V2.29.5',
 
   versoes: [
     {
@@ -3312,7 +3312,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.29.4',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-14',
       tipo: 'correcao',
       titulo: 'Levantamento de Teto: achada a causa raiz de vez — não era só o pan, era o ZOOM que resetava a cada rebuild do canvas',
@@ -3333,6 +3333,25 @@ const NotasVersao = {
         '  toda vez que o canvas é reconstruído, pra manter o mesmo',
         '  nível visual de zoom em vez de herdar o valor antigo aplicado',
         '  sobre uma escala base diferente',
+      ]
+    },
+    {
+      versao: 'V2.29.5',
+      status: 'aberta',
+      data: '2026-07-14',
+      tipo: 'correcao',
+      titulo: 'Levantamento de Teto: corrige planta ficando borrada/travada até dar zoom in/out manualmente',
+      itens: [
+        'Efeito colateral da correção anterior (V2.29.4): ao restaurar o',
+        '  zoom efetivo do usuário, o canvas nativo continua na resolução',
+        '  baixa do auto-fit e é só esticado via CSS — o que deixa a',
+        '  imagem borrada até o sistema re-renderizar em alta resolução',
+        'Antes, esse re-render em alta resolução só disparava quando o',
+        '  usuário mexia manualmente na roda do mouse ou nos botões de',
+        '  zoom — nunca depois de "Finalizar Área", "Confirmar Tabica" etc.',
+        'Corrigido disparando esse re-render em alta resolução sozinho',
+        '  sempre que o zoom restaurado precisa de mais nitidez do que o',
+        '  auto-fit recém-calculado oferece — sem precisar de zoom manual',
       ]
     }
   ],
