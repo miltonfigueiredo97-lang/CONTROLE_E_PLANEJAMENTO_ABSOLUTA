@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.24.5',
+  versaoAtual: 'V2.25.0',
 
   versoes: [
     {
@@ -2880,7 +2880,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.24.5',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-13',
       tipo: 'correcao',
       titulo: 'Levantamento de Piso: remove de vez o scroll interno cortado fora da tela de medição',
@@ -2893,6 +2893,32 @@ const NotasVersao = {
         '  esse overflow interno é removido de vez — o conteúdo (tabela,',
         '  cards, árvore de locais) flui até o fim de verdade, e quem',
         '  rola é a página inteira, como deveria ser desde o início',
+      ]
+    },
+    {
+      versao: 'V2.25.0',
+      status: 'aberta',
+      data: '2026-07-13',
+      tipo: 'funcionalidade',
+      titulo: 'Levantamento de Piso: corrige áreas sumindo da árvore + mover/copiar várias áreas de uma vez',
+      itens: [
+        'Corrigido: clicar num local pra selecioná-lo (e abrir a tela de',
+        '  medição) também estava expandindo/recolhendo a lista de áreas',
+        '  dele — um clique fazia duas coisas ao mesmo tempo, e por isso',
+        '  as áreas "sumiam" sem querer',
+        'Agora selecionar o local (clicar nele) e expandir/recolher a',
+        '  lista de áreas (clicar na seta ▶/▼) são ações separadas',
+        'Locais agora começam expandidos por padrão ao abrir o módulo —',
+        '  o collapse manual continua disponível, mas só quando você',
+        '  realmente clicar na seta pra fechar',
+        'Novo: seleção múltipla de áreas — cada área na lista tem uma',
+        '  caixinha de marcar, mais um "Selecionar todas"',
+        'Com uma ou mais áreas marcadas, aparece uma barra com opção de',
+        '  escolher o local de destino e "➜ Mover" (envia as áreas',
+        '  marcadas para outro local) ou "⧉ Copiar" (duplica lá, mantendo',
+        '  as originais) — não precisa remedir nada',
+        'M² e ML de rodapé são recalculados na escala do destino, igual',
+        '  já acontecia no clonar de pavimento inteiro',
       ]
     }
   ],

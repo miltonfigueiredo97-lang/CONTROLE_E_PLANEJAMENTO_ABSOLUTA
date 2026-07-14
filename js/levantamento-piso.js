@@ -98,6 +98,12 @@ const LP = (() => {
     if (el) el.innerHTML = `<div class="estado-vazio"><div class="icone">🧩</div><p>Selecione uma obra na barra lateral.</p></div>`;
   }
 
+  let _openNodesInicializado = false;
+  function _todosNodeIds(nodes, out = []) {
+    nodes.forEach(n => { out.push(n.id); _todosNodeIds(n.filhos || [], out); });
+    return out;
+  }
+
   async function carregar() {
     Utils.mostrarLoading('Carregando levantamento de piso...');
     try {
@@ -108,6 +114,10 @@ const LP = (() => {
       ]);
       arvore = (cfgSnap.exists && Array.isArray(cfgSnap.data().arvore)) ? cfgSnap.data().arvore : [];
       plantas = lp; areas = ar;
+      if (!_openNodesInicializado) {
+        _todosNodeIds(arvore).forEach(id => openNodes.add(id));
+        _openNodesInicializado = true;
+      }
       renderizar();
     } catch (e) {
       console.error('Erro ao carregar levantamento de piso:', e);
@@ -291,8 +301,8 @@ const LP = (() => {
       const nAreas = areas.filter(a => ids.includes(a.nodeId)).length;
       const areasDoNo = _areasDoNode(n.id).sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
       const temExpandir = (n.filhos || []).length > 0 || areasDoNo.length > 0;
-      let h = `<div class="tree-item${ativo ? ' ativo' : ''}" onclick="LP.toggleNode('${n.id}');LP.selNode('${n.id}')">
-        <span class="tree-toggle">${temExpandir ? (aberto ? '▼' : '▶') : ''}</span>
+      let h = `<div class="tree-item${ativo ? ' ativo' : ''}" onclick="LP.selNode('${n.id}')">
+        <span class="tree-toggle" onclick="event.stopPropagation();LP.toggleNode('${n.id}')">${temExpandir ? (aberto ? '▼' : '▶') : ''}</span>
         <span class="tree-icon">${n.plantaId ? '📄' : '📍'}</span>
         <span class="tree-label">${esc(n.nome)}</span>
         ${nAreas ? `<span class="tree-badge">${nAreas}</span>` : ''}
@@ -363,6 +373,7 @@ const LP = (() => {
     } else {
       arvore.push(novo);
     }
+    openNodes.add(novo.id);
     Utils.mostrarLoading('Salvando...');
     try {
       await _salvarArvore();
@@ -756,13 +767,37 @@ const LP = (() => {
               </table>
             </div>
             ${areasN.length > 0 ? `<input type="text" id="lp-busca-areas" class="form-control" placeholder="🔍 Filtrar áreas por nome ou tipo..." oninput="LP.filtrarAreas(this.value)" style="margin-bottom:2px;">` : ''}
+            ${areasN.length > 0 ? `
+              <div id="lp-bulk-areas-bar" style="display:none;flex-direction:column;gap:6px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:8px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                  <strong id="lp-bulk-areas-info" style="font-size:0.78rem;color:#1e40af;">0 selecionada(s)</strong>
+                  <button type="button" class="btn btn-secundario btn-sm" onclick="LP.desmarcarTodasAreas()">Cancelar</button>
+                </div>
+                <select id="lp-bulk-destino-select" class="form-control" style="font-size:0.8rem;">
+                  <option value="">Escolha o local de destino...</option>
+                  ${_listarNodesMedicao().filter(o => o.id !== node.id).map(o => `<option value="${o.id}">${esc(o.label)}</option>`).join('')}
+                </select>
+                <div style="display:flex;gap:6px;">
+                  <button type="button" class="btn btn-primario btn-sm" style="flex:1;" onclick="LP.moverOuCopiarSelecionadas('mover')">➜ Mover</button>
+                  <button type="button" class="btn btn-secundario btn-sm" style="flex:1;" onclick="LP.moverOuCopiarSelecionadas('copiar')">⧉ Copiar</button>
+                </div>
+              </div>
+              <label style="display:flex;align-items:center;gap:6px;font-size:0.76rem;color:var(--cor-texto-muted);cursor:pointer;">
+                <input type="checkbox" onclick="LP.marcarTodasAreas(this.checked)"> Selecionar todas
+              </label>
+            ` : ''}
             ${areasN.length === 0 ? `<div class="estado-vazio" style="padding:20px;"><p style="font-size:0.85rem;">Nenhuma área medida ainda.</p></div>` : areasN.map(a => `
               <div class="lp-area-card ${a.id === areaDestacadaId ? 'lp-area-card-destaque' : ''}" data-busca="${esc((a.nome + ' ' + (a.tipoPiso || '') + ' ' + (a.tipoContrapiso || '')).toLowerCase())}" onclick="LP.editarArea('${a.id}')">
-                <div class="nome"><span>${esc(a.nome)}</span><span class="m2">${fmt2(a.areaM2)} m²</span></div>
-                <div class="meta">
-                  ${a.tipoPiso ? `Piso: ${esc(a.tipoPiso)}` : 'Piso: —'}${a.tipoContrapiso ? ` · Contrapiso: ${esc(a.tipoContrapiso)}` : ''}
-                  ${a.impermeabilizacao ? ` · 💧 Impermeabilizado${a.tipoImpermeabilizacao ? ' (' + esc(a.tipoImpermeabilizacao) + ')' : ''}` : ''}
-                  ${a.mlRodape ? ` · 🦶 ${fmt2(a.mlRodape)}m rodapé` : ''}
+                <div style="display:flex;gap:8px;align-items:flex-start;">
+                  <input type="checkbox" class="lp-area-check" data-id="${a.id}" onclick="event.stopPropagation();LP.atualizarBarraSelecaoAreas()" style="margin-top:3px;flex-shrink:0;">
+                  <div style="flex:1;min-width:0;">
+                    <div class="nome"><span>${esc(a.nome)}</span><span class="m2">${fmt2(a.areaM2)} m²</span></div>
+                    <div class="meta">
+                      ${a.tipoPiso ? `Piso: ${esc(a.tipoPiso)}` : 'Piso: —'}${a.tipoContrapiso ? ` · Contrapiso: ${esc(a.tipoContrapiso)}` : ''}
+                      ${a.impermeabilizacao ? ` · 💧 Impermeabilizado${a.tipoImpermeabilizacao ? ' (' + esc(a.tipoImpermeabilizacao) + ')' : ''}` : ''}
+                      ${a.mlRodape ? ` · 🦶 ${fmt2(a.mlRodape)}m rodapé` : ''}
+                    </div>
+                  </div>
                 </div>
               </div>
             `).join('')}
@@ -770,6 +805,61 @@ const LP = (() => {
         </div>
       </div>
     `;
+  }
+
+  function marcarTodasAreas(marcar) {
+    document.querySelectorAll('.lp-area-check').forEach(cb => { cb.checked = marcar; });
+    atualizarBarraSelecaoAreas();
+  }
+
+  function desmarcarTodasAreas() {
+    document.querySelectorAll('.lp-area-check').forEach(cb => { cb.checked = false; });
+    atualizarBarraSelecaoAreas();
+  }
+
+  function atualizarBarraSelecaoAreas() {
+    const marcadas = document.querySelectorAll('.lp-area-check:checked').length;
+    const bar = document.getElementById('lp-bulk-areas-bar');
+    if (bar) bar.style.display = marcadas > 0 ? 'flex' : 'none';
+    const info = document.getElementById('lp-bulk-areas-info');
+    if (info) info.textContent = `${marcadas} selecionada(s)`;
+  }
+
+  async function moverOuCopiarSelecionadas(acao) {
+    const marcados = Array.from(document.querySelectorAll('.lp-area-check:checked')).map(cb => cb.getAttribute('data-id'));
+    if (!marcados.length) { Utils.toast('Selecione pelo menos uma área.', 'alerta'); return; }
+    const sel = document.getElementById('lp-bulk-destino-select');
+    const destino = sel.value;
+    if (!destino) { Utils.toast('Escolha o local de destino.', 'alerta'); return; }
+    const destR = _acharNode(destino);
+    const escalaDestino = destR ? (destR.node.escalaMetrosPorPonto || 0) : 0;
+    const origemId = selNodeId;
+
+    Utils.mostrarLoading(acao === 'copiar' ? 'Copiando áreas...' : 'Movendo áreas...');
+    try {
+      const ops = [];
+      marcados.forEach(id => {
+        const a = areas.find(x => x.id === id); if (!a) return;
+        if (acao === 'mover') {
+          ops.push({ type: 'update', ref: Database.ref(obraId, COL_AREAS).doc(id), data: { nodeId: destino } });
+        } else {
+          const { id: _aid, nodeId: _nid, ...rest } = a;
+          const poligono = rest.poligono || [];
+          const novaAreaM2 = escalaDestino ? _areaPoligono(poligono) * (escalaDestino ** 2) : rest.areaM2;
+          const novoMlRodape = (rest.rodapeArestas && escalaDestino) ? _calcularMlRodape(poligono, rest.rodapeArestas, escalaDestino) : (rest.mlRodape || 0);
+          ops.push({ type: 'set', ref: Database.ref(obraId, COL_AREAS).doc(), data: { ...rest, nodeId: destino, areaM2: novaAreaM2, mlRodape: novoMlRodape } });
+        }
+      });
+      await Database.batchWrite(ops);
+      Utils.toast(`✓ ${marcados.length} área(s) ${acao === 'copiar' ? 'copiadas' : 'movidas'}!`, 'sucesso');
+      await carregar();
+      selNode(acao === 'mover' ? destino : origemId);
+    } catch (e) {
+      console.error(e);
+      Utils.toast('Erro: ' + e.message, 'erro');
+    } finally {
+      Utils.esconderLoading();
+    }
   }
 
   function filtrarAreas(termo) {
@@ -1447,6 +1537,7 @@ const LP = (() => {
     cancelarCalibracao, confirmarCalibracao,
     finalizarPoligono, editarArea, onToggleImperm, fecharModalArea, salvarArea, excluirAreaEmEdicao, moverArea,
     filtrarAreas, abrirClonarPavimento, marcarTodosClonar, confirmarClonarPavimento,
+    marcarTodasAreas, desmarcarTodasAreas, atualizarBarraSelecaoAreas, moverOuCopiarSelecionadas,
     toggleRodapeEdge, cancelarRodape, confirmarRodape, iniciarEdicaoRodape,
     zoomIn, zoomOut, zoomReset,
   };
