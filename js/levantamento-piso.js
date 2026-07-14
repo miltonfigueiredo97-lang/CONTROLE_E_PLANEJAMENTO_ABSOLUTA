@@ -239,8 +239,8 @@ const LP = (() => {
         </div>
       ` : ''}
       <div class="ar-layout ${treeColapsada ? 'tree-colapsada' : ''} ${emWorkspace ? 'lp-workspace-ativo' : ''}">
-        <div class="ar-tree">
-          <div class="ar-tree-header">
+        <div class="fachada-tree lp-tree-escura">
+          <div class="fachada-tree-header">
             <h3>Locais</h3>
             <div style="display:flex;gap:6px;">
               <button class="btn btn-secundario btn-sm" onclick="LP.marcarTodasAreas(true)" title="Selecionar todas as áreas visíveis (pra mover/copiar em lote)">☑</button>
@@ -248,9 +248,9 @@ const LP = (() => {
               <button class="btn btn-primario btn-sm" onclick="LP.novoNode(null)">+ Local</button>
             </div>
           </div>
-          <div id="lp-bulk-areas-bar" style="display:none;flex-direction:column;gap:6px;background:#eff6ff;border-bottom:1px solid #bfdbfe;padding:8px 10px;">
+          <div id="lp-bulk-areas-bar" style="display:none;flex-direction:column;gap:6px;background:rgba(37,99,235,0.18);border-bottom:1px solid rgba(191,219,254,0.25);padding:8px 10px;">
             <div style="display:flex;justify-content:space-between;align-items:center;">
-              <strong id="lp-bulk-areas-info" style="font-size:0.74rem;color:#1e40af;">0 selecionada(s)</strong>
+              <strong id="lp-bulk-areas-info" style="font-size:0.74rem;color:#bfdbfe;">0 selecionada(s)</strong>
               <button type="button" class="btn btn-secundario btn-sm" onclick="LP.desmarcarTodasAreas()">✕</button>
             </div>
             <select id="lp-bulk-destino-select" class="form-control" style="font-size:0.76rem;padding:5px 6px;">
@@ -262,7 +262,7 @@ const LP = (() => {
               <button type="button" class="btn btn-secundario btn-sm" style="flex:1;" onclick="LP.moverOuCopiarSelecionadas('copiar')">⧉ Copiar</button>
             </div>
           </div>
-          <div class="ar-tree-body" id="lp-tree-body">${_renderArvore()}</div>
+          <div class="fachada-tree-body" id="lp-tree-body">${_renderArvore()}</div>
         </div>
         <div class="ar-painel" id="lp-painel">
           ${treeColapsada ? `<button class="btn btn-secundario btn-sm lp-reabrir-arvore" onclick="LP.toggleArvore()" title="Mostrar árvore de locais">☰ Locais</button>` : ''}
@@ -532,24 +532,36 @@ const LP = (() => {
         </select>
       </div>
 
-      <div class="cc-kpiGrid" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr));">
-        <div class="cc-kpi"><div class="cc-kpiIcon">▦</div><div class="cc-kpiBody"><div class="cc-kpiLabel">M² de Piso</div><div class="cc-kpiValue">${fmt2(totalPiso)}<span class="cc-kpiUnit">m²</span></div></div></div>
-        <div class="cc-kpi cc-kpiOrange"><div class="cc-kpiIcon">▤</div><div class="cc-kpiBody"><div class="cc-kpiLabel">M² de Contrapiso</div><div class="cc-kpiValue">${fmt2(totalContrapiso)}<span class="cc-kpiUnit">m²</span></div></div></div>
-        <div class="cc-kpi cc-kpiBlue"><div class="cc-kpiIcon">💧</div><div class="cc-kpiBody"><div class="cc-kpiLabel">M² Impermeabilização</div><div class="cc-kpiValue">${fmt2(totalImperm)}<span class="cc-kpiUnit">m²</span></div></div></div>
-        <div class="cc-kpi cc-kpiPurple"><div class="cc-kpiIcon">🦶</div><div class="cc-kpiBody"><div class="cc-kpiLabel">ML de Rodapé</div><div class="cc-kpiValue">${fmt2(totalRodape)}<span class="cc-kpiUnit">m</span></div></div></div>
+      <div class="fachada-info-bar">
+        <div class="fachada-info-item">
+          <div class="info-label">M² de Piso</div>
+          <div class="info-valor destaque">${fmt2(totalPiso)}</div>
+        </div>
+        <div class="fachada-info-item">
+          <div class="info-label">M² de Contrapiso</div>
+          <div class="info-valor">${fmt2(totalContrapiso)}</div>
+        </div>
+        <div class="fachada-info-item">
+          <div class="info-label">M² Impermeabilização</div>
+          <div class="info-valor">${fmt2(totalImperm)}</div>
+        </div>
+        <div class="fachada-info-item">
+          <div class="info-label">ML de Rodapé</div>
+          <div class="info-valor" style="font-size:1.05rem;">${fmt2(totalRodape)}ML</div>
+        </div>
       </div>
 
       ${totalAreas === 0 ? `<div class="lp-hint">${areas.length === 0 ? 'Clique em um local na árvore ao lado (ou crie um novo com "+ Local") para vincular uma planta em PDF e começar a medir.' : 'Nenhuma área medida neste local (ou nos sublocais dele).'}</div>` : `
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin:18px 0;">
-          <div class="cc-kpi" style="display:block;">
+          <div class="fachada-info-item">
             <strong style="display:flex;align-items:center;gap:7px;margin-bottom:10px;font-size:0.85rem;"><span style="width:9px;height:9px;border-radius:2px;background:var(--cor-primaria);display:inline-block;"></span>M² por Tipo de Piso</strong>
             ${barras(porTipoPiso, 'var(--cor-primaria)')}
           </div>
-          <div class="cc-kpi" style="display:block;">
+          <div class="fachada-info-item">
             <strong style="display:flex;align-items:center;gap:7px;margin-bottom:10px;font-size:0.85rem;"><span style="width:9px;height:9px;border-radius:2px;background:var(--cv-orange);display:inline-block;"></span>M² por Tipo de Contrapiso</strong>
             ${barras(porTipoContrapiso, 'var(--cv-orange)')}
           </div>
-          <div class="cc-kpi" style="display:block;">
+          <div class="fachada-info-item">
             <strong style="display:flex;align-items:center;gap:7px;margin-bottom:10px;font-size:0.85rem;"><span style="width:9px;height:9px;border-radius:2px;background:var(--cv-blue);display:inline-block;"></span>M² por Tipo de Impermeabilização</strong>
             ${barras(porTipoImperm, 'var(--cv-blue)')}
           </div>

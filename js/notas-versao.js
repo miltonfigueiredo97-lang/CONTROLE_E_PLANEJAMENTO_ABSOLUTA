@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.28.0',
+  versaoAtual: 'V2.28.1',
 
   versoes: [
     {
@@ -3134,7 +3134,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.28.0',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-13',
       tipo: 'funcionalidade',
       titulo: 'Levantamento de Piso: Visão Geral com seletor de nível (ver por Torre, Pavimento ou Apartamento)',
@@ -3147,6 +3147,24 @@ const NotasVersao = {
         '  dele — não precisa mais olhar só o total geral da obra',
         'Opção "Toda a obra" continua disponível pra ver o consolidado',
         '  geral, como era antes',
+      ]
+    },
+    {
+      versao: 'V2.28.1',
+      status: 'aberta',
+      data: '2026-07-13',
+      tipo: 'melhoria',
+      titulo: 'Levantamento de Piso: acabamento visual alinhado com o Levantamento de Fachada',
+      itens: [
+        'Árvore de locais agora usa o mesmo visual escuro do Levantamento',
+        '  de Fachada (cabeçalho "Locais" com fundo escuro, itens da',
+        '  árvore com cores ajustadas pro tema escuro) — antes usava um',
+        '  visual claro diferente do resto do sistema',
+        'Cards de M² de Piso/Contrapiso/Impermeabilização/Rodapé na Visão',
+        '  Geral trocados pelo mesmo estilo simples e limpo usado no',
+        '  "Resumo Geral" da Fachada (label em cima, valor grande embaixo,',
+        '  sem bolha de ícone) em vez do estilo com ícone colorido usado',
+        '  antes',
       ]
     }
   ],
