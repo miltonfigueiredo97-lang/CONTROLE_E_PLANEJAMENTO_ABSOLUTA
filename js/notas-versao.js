@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.26.3',
+  versaoAtual: 'V2.27.0',
 
   versoes: [
     {
@@ -3049,7 +3049,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.26.3',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-13',
       tipo: 'correcao',
       titulo: 'Levantamento de Piso: corrige seleção de áreas se perdendo com um clique quase certeiro',
@@ -3065,6 +3065,29 @@ const NotasVersao = {
         '  do processo, o que já estava marcado continua marcado',
         'Área de clique da caixinha aumentada (de ~13px pra 22px) pra',
         '  ficar bem mais fácil de acertar',
+      ]
+    },
+    {
+      versao: 'V2.27.0',
+      status: 'aberta',
+      data: '2026-07-13',
+      tipo: 'funcionalidade',
+      titulo: 'Levantamento de Piso: nome completo na árvore (largura maior), aviso de exclusão bem mais claro, e clonar como novo local "ao lado"',
+      itens: [
+        'Árvore bem mais larga (320px) e nome do local volta a quebrar',
+        '  linha e aparecer por inteiro — dessa vez com espaço de sobra',
+        '  reservado pros botões de ação, sem espremer o texto',
+        'Aviso de exclusão de local bem mais claro: lista pelo nome cada',
+        '  sublocal que também será apagado junto (com a contagem de',
+        '  áreas de cada um), e o total geral de áreas que serão',
+        '  perdidas — pra nunca mais excluir um local sem perceber que',
+        '  ele tinha sublocais com dados dentro',
+        'Novo no Clonar/Multiplicar: campo "Criar um novo local ao lado',
+        '  e clonar pra lá" — cria um local irmão (no mesmo nível da',
+        '  árvore) já com as áreas clonadas, em vez de só poder copiar',
+        '  para um local já existente',
+        'Texto desatualizado corrigido no Clonar/Multiplicar e no mover',
+        '  individual (não exigem mais planta vinculada no destino)',
       ]
     }
   ],

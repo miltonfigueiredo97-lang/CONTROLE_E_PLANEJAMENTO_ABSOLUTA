@@ -45,25 +45,27 @@
     #lp-content .ar-layout.tree-colapsada { grid-template-columns: 0 1fr; }
     #lp-content .ar-layout.tree-colapsada .ar-tree { display:none; }
     .lp-reabrir-arvore { position:absolute; left:4px; top:4px; z-index:20; }
-    #lp-content .ar-layout { position:relative; grid-template-columns: 250px 1fr; }
-    /* Nome do local: mesmo padrão simples dos outros levantamentos — corta
-       com reticências se for muito grande, e mostra o nome completo no
-       tooltip (title) ao passar o mouse. Sem quebra de linha (dava problema). */
-    #lp-content .tree-item { position:relative; padding-right:60px; }
+    #lp-content .ar-layout { position:relative; grid-template-columns: 320px 1fr; }
+    /* Nome do local: quebra linha (mostra por inteiro) em vez de cortar com
+       "...". Dessa vez com largura de sobra reservada pros botões de ação,
+       pra não espremer o texto igual da última vez. */
+    #lp-content .tree-item { align-items:flex-start; position:relative; padding-right:64px; }
+    #lp-content .tree-item .tree-label { white-space:normal; overflow-wrap:break-word; word-break:normal; line-height:1.35; padding-top:1px; }
+    #lp-content .tree-item .tree-toggle, #lp-content .tree-item .tree-icon { margin-top:2px; }
+    #lp-content .tree-item.tree-item-area { padding-right:8px; }
     /* Botões de ação (clonar/renomear/excluir) fixos no canto — não competem
-       com o texto do nome. */
+       com o texto do nome, mesmo quando ele quebra em várias linhas. */
     #lp-content .tree-item .tree-clone-btn, #lp-content .tree-item .tree-edit-btn, #lp-content .tree-item .tree-del-btn {
-      position:absolute; top:50%; transform:translateY(-50%); margin-left:0; display:none;
+      position:absolute; top:4px; margin-left:0; display:none;
       background:none; border:none; cursor:pointer; padding:3px 5px; border-radius:4px; font-size:0.72rem;
     }
     #lp-content .tree-item:hover .tree-clone-btn, #lp-content .tree-item:hover .tree-edit-btn, #lp-content .tree-item:hover .tree-del-btn { display:inline-flex; }
-    #lp-content .tree-item .tree-clone-btn { right:40px; color:#666; }
+    #lp-content .tree-item .tree-clone-btn { right:44px; color:#666; }
     #lp-content .tree-item .tree-clone-btn:hover { color:var(--cor-primaria); background:#f1f5f9; }
-    #lp-content .tree-item .tree-edit-btn { right:20px; color:#666; }
+    #lp-content .tree-item .tree-edit-btn { right:22px; color:#666; }
     #lp-content .tree-item .tree-edit-btn:hover { color:var(--cor-primaria); background:#f1f5f9; }
     #lp-content .tree-item .tree-del-btn { right:0; color:#dc2626; }
     #lp-content .tree-item .tree-del-btn:hover { color:#991b1b; background:#fee2e2; }
-    #lp-content .tree-item.tree-item-area { padding-right:8px; }
     #lp-content .ar-layout.lp-workspace-ativo { height:calc(100vh - 130px); }
     /* Fora do modo de medição (Visão Geral, vincular planta): nada de scroll
        interno cortado — o conteúdo flui inteiro e quem rola é a página. */
@@ -115,7 +117,7 @@
       <a href="histograma.html"><span class="nav-icon">📊</span> Histograma</a>
       <a href="admin-permissoes.html"><span class="nav-icon">🔑</span> Permissões</a>
       <div class="sidebar-section-title">Sistema</div>
-      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V2.26.3</span></a>
+      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V2.27.0</span></a>
     </nav>
     <div class="sidebar-user">
       <div class="user-avatar">U</div>
@@ -260,7 +262,15 @@
       <button class="modal-close" onclick="Utils.fecharModal('modal-lp-clonar')">&times;</button>
     </div>
     <div class="modal-body">
-      <p style="font-size:0.85rem;color:var(--cor-texto-muted);margin-bottom:10px;">Copia todas as áreas medidas deste local (m², rodapé, tipo de piso/contrapiso/impermeabilização) para os locais marcados abaixo. Útil para pavimento tipo repetido em vários andares.</p>
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px;margin-bottom:12px;">
+        <label style="font-size:0.8rem;font-weight:600;display:block;margin-bottom:6px;">+ Criar um novo local ao lado e clonar pra lá</label>
+        <div style="display:flex;gap:8px;">
+          <input type="text" id="lp-clonar-novo-nome" class="form-control" placeholder="Nome do novo local (ex: Apartamento 2)">
+          <button type="button" class="btn btn-primario btn-sm" style="white-space:nowrap;" onclick="LP.criarNovoLocalEClonar()">Criar e clonar</button>
+        </div>
+      </div>
+      <p style="font-size:0.85rem;color:var(--cor-texto-muted);margin-bottom:6px;">— ou escolha um local já existente —</p>
+      <p style="font-size:0.8rem;color:var(--cor-texto-muted);margin-bottom:10px;">Copia todas as áreas medidas deste local (m², rodapé, tipo de piso/contrapiso/impermeabilização) para os locais marcados abaixo. Útil para pavimento tipo repetido em vários andares.</p>
       <div style="margin-bottom:8px;">
         <button type="button" class="btn btn-secundario btn-sm" onclick="LP.marcarTodosClonar(true)">Marcar todos</button>
         <button type="button" class="btn btn-secundario btn-sm" onclick="LP.marcarTodosClonar(false)">Desmarcar todos</button>

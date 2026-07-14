@@ -428,9 +428,17 @@ const LP = (() => {
     const r = _acharNode(id); if (!r) return;
     const ids = _idsComDescendentes(r.node);
     const areasParaExcluir = areas.filter(a => ids.includes(a.nodeId));
-    const msg = areasParaExcluir.length
-      ? `Excluir "${r.node.nome}" e seus sublocais? Isso também excluirá ${areasParaExcluir.length} área(s) medida(s).`
-      : `Excluir "${r.node.nome}" e seus sublocais?`;
+    const sublocais = [];
+    (function coletar(n) { (n.filhos || []).forEach(f => { sublocais.push(f); coletar(f); }); })(r.node);
+
+    let msg = `Excluir "${r.node.nome}"?`;
+    if (sublocais.length) {
+      msg += `\n\n⚠️ Isso também vai excluir os sublocais dentro dele:\n` +
+        sublocais.map(s => `• ${s.nome} (${_areasDoNode(s.id).length} área(s))`).join('\n');
+    }
+    if (areasParaExcluir.length) {
+      msg += `\n\nNo total, ${areasParaExcluir.length} área(s) medida(s) serão apagadas (contando "${r.node.nome}" e os sublocais acima).`;
+    }
     if (!Utils.confirmar(msg)) return;
     Utils.mostrarLoading('Excluindo...');
     try {
@@ -1359,6 +1367,8 @@ const LP = (() => {
   function abrirClonarPavimento(nodeId) {
     const origem = _acharNode(nodeId); if (!origem) return;
     clonarOrigemId = nodeId;
+    const nomeInput = document.getElementById('lp-clonar-novo-nome');
+    if (nomeInput) nomeInput.value = '';
     const opts = _listarNodesMedicao().filter(o => o.id !== nodeId);
     document.getElementById('lp-clonar-titulo').textContent = `Clonar/Multiplicar "${origem.node.nome}"`;
     const lista = document.getElementById('lp-clonar-lista');
@@ -1370,12 +1380,61 @@ const LP = (() => {
             <span style="margin-left:auto;color:var(--cor-texto-muted);font-size:0.75rem;">${_areasDoNode(o.id).length} área(s) hoje</span>
           </label>
         `).join('')
-      : `<p class="text-sm" style="color:var(--cor-texto-muted);">Nenhum outro local com planta vinculada ainda. Crie e vincule outros locais primeiro.</p>`;
+      : `<p class="text-sm" style="color:var(--cor-texto-muted);">Nenhum outro local cadastrado ainda. Crie um novo local primeiro (botão "+ Local").</p>`;
     Utils.abrirModal('modal-lp-clonar');
   }
 
   function marcarTodosClonar(marcar) {
     document.querySelectorAll('.lp-clonar-check').forEach(cb => { cb.checked = marcar; });
+  }
+
+  // Cria um local NOVO ao lado da origem (mesmo pai na árvore) e já clona
+  // as áreas pra ele — resolve o caso de querer "duplicar" um local inteiro
+  // como um novo local irmão, em vez de só copiar pra um local já existente.
+  async function criarNovoLocalEClonar() {
+    const nomeInput = document.getElementById('lp-clonar-novo-nome');
+    const nome = nomeInput.value.trim();
+    if (!nome) { Utils.toast('Digite o nome do novo local.', 'alerta'); return; }
+    const origemR = _acharNode(clonarOrigemId); if (!origemR) return;
+    const areasOrigem = _areasDoNode(clonarOrigemId);
+    if (!areasOrigem.length) { Utils.toast('Este local ainda não tem áreas medidas para clonar.', 'alerta'); return; }
+
+    Utils.mostrarLoading('Criando local e clonando...');
+    try {
+      const novo = { id: _uid(), nome, filhos: [], plantaId: null, pagina: null, escalaMetrosPorPonto: null, linhaCalibracao: null };
+      if (origemR.parent) {
+        origemR.parent.filhos = origemR.parent.filhos || [];
+        origemR.parent.filhos.push(novo);
+        openNodes.add(origemR.parent.id);
+      } else {
+        arvore.push(novo);
+      }
+      openNodes.add(novo.id);
+      await _salvarArvore();
+
+      const novoR = _acharNode(novo.id);
+      await _herdarPlantaSeNecessario(novoR, [areasOrigem[0].id]);
+      const escalaAlvo = novoR.node.escalaMetrosPorPonto || 0;
+
+      const addOps = areasOrigem.map(a => {
+        const { id: _aid, nodeId: _nid, ...rest } = a;
+        const poligono = rest.poligono || [];
+        const novaAreaM2 = escalaAlvo ? _areaPoligono(poligono) * (escalaAlvo ** 2) : rest.areaM2;
+        const novoMlRodape = (rest.rodapeArestas && escalaAlvo) ? _calcularMlRodape(poligono, rest.rodapeArestas, escalaAlvo) : (rest.mlRodape || 0);
+        return { type: 'set', ref: Database.ref(obraId, COL_AREAS).doc(), data: { ...rest, nodeId: novo.id, areaM2: novaAreaM2, mlRodape: novoMlRodape } };
+      });
+      await Database.batchWrite(addOps);
+
+      Utils.fecharModal('modal-lp-clonar');
+      Utils.toast(`✓ "${nome}" criado com ${areasOrigem.length} área(s) clonada(s)!`, 'sucesso');
+      await carregar();
+      selNode(novo.id);
+    } catch (e) {
+      console.error(e);
+      Utils.toast('Erro ao criar e clonar: ' + e.message, 'erro');
+    } finally {
+      Utils.esconderLoading();
+    }
   }
 
   async function confirmarClonarPavimento() {
@@ -1587,7 +1646,7 @@ const LP = (() => {
     toggleModoCalibrar, toggleModoMedir, cancelarDesenho,
     cancelarCalibracao, confirmarCalibracao,
     finalizarPoligono, editarArea, onToggleImperm, fecharModalArea, salvarArea, excluirAreaEmEdicao, moverArea,
-    filtrarAreas, abrirClonarPavimento, marcarTodosClonar, confirmarClonarPavimento,
+    filtrarAreas, abrirClonarPavimento, marcarTodosClonar, confirmarClonarPavimento, criarNovoLocalEClonar,
     marcarTodasAreas, desmarcarTodasAreas, atualizarBarraSelecaoAreas, moverOuCopiarSelecionadas, toggleSelecaoArea,
     toggleRodapeEdge, cancelarRodape, confirmarRodape, iniciarEdicaoRodape,
     zoomIn, zoomOut, zoomReset,
