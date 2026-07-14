@@ -69,10 +69,50 @@ const Planejamento = (() => {
   let _vincFatores={}; // id -> fração em texto ("1", "1/8", "0.5"...)
   const LEVANTAMENTO_MODULOS={
     fachada:{
-      label:'Levantamento de Fachada', colecao:'levantamentosFachada',
+      label:'Fachada', colecao:'levantamentosFachada',
       metricas:[
-        {id:'m2semML',label:'m² líquido (sem metro linear)'},
-        {id:'m2comML_equiv',label:'m² + metro linear equivalente'},
+        {id:'m2semML',    label:'m² líquido (sem ML)'},
+        {id:'m2comML_equiv', label:'m² + ML equivalente'},
+        {id:'ml',         label:'Metro Linear (ML)'},
+        {id:'vao',        label:'Vão Fechado (m²)'},
+      ],
+    },
+    piso:{
+      label:'Piso', colecao:'pisoAreas',
+      metricas:[
+        {id:'areaM2',     label:'Área (m²)'},
+        {id:'mlRodape',   label:'Rodapé (ML)'},
+      ],
+    },
+    paredes:{
+      label:'Paredes (Alvenaria/Acabamento)', colecao:'paredesAlvenariaPecas',
+      colecaoExtra:'paredesAcabamentoPecas',
+      metricas:[
+        {id:'areaLiquida',   label:'Área líquida (m²)'},
+        {id:'m2comPuro',     label:'m² com ML equiv.'},
+        {id:'ml',            label:'Metro Linear (ML)'},
+        {id:'vedacao',       label:'Vedação (m²)'},
+        {id:'estrutural',    label:'Estrutural (m²)'},
+      ],
+    },
+    teto:{
+      label:'Teto/Forro', colecao:'tetoAreas',
+      metricas:[
+        {id:'areaM2',     label:'Área (m²)'},
+        {id:'mlTabica',   label:'Tabica (ML)'},
+      ],
+    },
+    concreto:{
+      label:'Concreto', colecao:'concretoPecas',
+      metricas:[
+        {id:'volume',     label:'Volume (m³)'},
+      ],
+    },
+    arCondicionado:{
+      label:'Ar-Condicionado', colecao:'levantamentoAr',
+      metricas:[
+        {id:'qtdEquipamentos', label:'Qtd de equipamentos'},
+        {id:'btus',            label:'BTUs total'},
       ],
     },
   };
@@ -281,13 +321,16 @@ const Planejamento = (() => {
       <div style="font-size:.68rem;color:#444;margin-bottom:4px;">Ctrl++ inserir · Ctrl+- excluir · clique na célula para editar · clique direito no header para esconder coluna · Ctrl+botão direito+arrastar para reordenar</div>
       <div style="position:relative;margin-bottom:6px;display:flex;align-items:center;gap:6px;">
         <div style="position:relative;flex:1;max-width:360px;">
-          <input id="gantt-busca" type="text" value="${_buscaTexto}" placeholder="🔍 Buscar tarefa por nome, código ou responsável..." autocomplete="off"
+          <input id="gantt-busca" type="text" value="${_buscaTexto}" placeholder="🔍 Buscar por nome, código, responsável..." autocomplete="off"
             oninput="Planejamento.onBusca(this.value)"
             onkeydown="Planejamento._buscaKey(event)"
             style="width:100%;padding:6px 28px 6px 9px;border:1px solid #333;border-radius:7px;font-size:.8rem;box-sizing:border-box;background:#111;color:#ddd;">
-          ${_buscaTexto?`<button onclick="Planejamento.limparBusca()" title="Limpar" style="position:absolute;right:6px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#666;font-size:.9rem;padding:0;">✕</button>`:''}
+          <button id="gantt-busca-clear" onclick="Planejamento.limparBusca()" title="Limpar"
+            style="display:${_buscaTexto?'block':'none'};position:absolute;right:6px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#666;font-size:.9rem;padding:0;">✕</button>
         </div>
-        ${_buscaTexto?`<span style="font-size:.75rem;color:#666;">${_buscaResultados.length} resultado${_buscaResultados.length!==1?'s':''} · <span style="color:#aaa;">↑↓ navegar · Enter pular</span></span>`:''}
+        <span id="gantt-busca-info" style="font-size:.75rem;color:#888;display:${_buscaTexto?'':'none'};">${_buscaTexto?(_buscaResultados.length?`${_buscaCursor>=0?(_buscaCursor+1)+'/':''}${_buscaResultados.length} resultado${_buscaResultados.length!==1?'s':''}`:' Nenhum resultado'):''}</span>
+        <span style="font-size:.7rem;color:#555;">↑↓ navegar · Enter pular · Esc limpar</span>
+      </div>
       </div>
       ${_renderGantt(visCols)}
       ${_renderBarraSelecao()}`;
@@ -297,33 +340,90 @@ const Planejamento = (() => {
   // ===================== VÍNCULOS COM LEVANTAMENTO — TELA =====================
   async function abrirVinculosView(){
     modoView='vinculos';_vincBusca='';_render();
-    // Carrega a árvore do levantamento em segundo plano (a lista já aparece
-    // sem os rótulos de fonte estrutural e é reatualizada quando carregar).
-    await _carregarLevFachadaSeNecessario();
+    // Carrega todos os levantamentos em paralelo em background
+    await Promise.all(Object.keys(LEVANTAMENTO_MODULOS).map(m=>_carregarLevSeNecessario(m)));
     if(modoView==='vinculos')_atualizarTbodyVinculos();
   }
   function fecharVinculosView(){modoView='gantt';_render();}
 
-  async function _carregarLevFachadaSeNecessario(){
-    if(_levFachadasCarregado)return;
-    levFachadas=await Database.listar(obraId,'levantamentosFachada',null).catch(()=>[]);
-    _levFachadasCarregado=true;
+  // Cache de dados dos levantamentos (cada módulo carrega uma vez por sessão)
+  const _levCache={};
+
+  async function _carregarLevSeNecessario(modulo){
+    if(_levCache[modulo])return;
+    const mod=LEVANTAMENTO_MODULOS[modulo];if(!mod)return;
+    try{
+      const dados=await Database.listar(obraId,mod.colecao,null).catch(()=>[]);
+      const extra=mod.colecaoExtra?await Database.listar(obraId,mod.colecaoExtra,null).catch(()=>[]):[];
+      _levCache[modulo]={dados,extra};
+    }catch(e){console.error('Erro ao carregar levantamento',modulo,e);}
   }
 
-  // fachadaId/balancimId/vistaId filtram as peças ANTES de somar — permite
-  // vincular só uma fachada, um balancim ou uma vista específica, em vez de
-  // sempre o total da obra inteira. Vazio/null em qualquer nível = não filtra
-  // por ele (soma tudo abaixo do nível escolhido acima).
-  function _calcularMetrica(modulo,metrica,fachadaId,balancimId,vistaId){
+  // Função principal: calcula a métrica solicitada a partir dos dados brutos do levantamento.
+  // fachadaId/balancimId/vistaId filtram hierarquia da Fachada.
+  // nodeId filtra por nó da árvore Torre→Andar→Apto→Cômodo (Piso/Teto).
+  function _calcularMetrica(modulo,metrica,fachadaId,balancimId,vistaId,nodeId){
+    const cache=_levCache[modulo];
+    if(!cache)return 0;
+    const {dados,extra}=cache;
+
     if(modulo==='fachada'){
-      let pecas=levFachadas.filter(x=>x.tipo==='peca');
-      if(vistaId) pecas=pecas.filter(p=>p.vistaId===vistaId);
-      else if(balancimId) pecas=pecas.filter(p=>p.balancimId===balancimId);
-      else if(fachadaId) pecas=pecas.filter(p=>p.fachadaId===fachadaId);
+      let pecas=dados.filter(x=>x.tipo==='peca');
+      if(vistaId)pecas=pecas.filter(p=>p.vistaId===vistaId);
+      else if(balancimId)pecas=pecas.filter(p=>p.balancimId===balancimId);
+      else if(fachadaId)pecas=pecas.filter(p=>p.fachadaId===fachadaId);
       const r=Utils.calcularFachadaM2(pecas,obraId);
       return r[metrica]||0;
     }
+
+    if(modulo==='piso'){
+      let areas=dados;
+      if(nodeId)areas=areas.filter(a=>a.nodeId===nodeId||String(a.nodeId||'').startsWith(nodeId));
+      if(metrica==='areaM2')return areas.reduce((s,a)=>s+(a.areaM2||0),0);
+      if(metrica==='mlRodape')return areas.reduce((s,a)=>s+(a.mlRodape||0),0);
+      return 0;
+    }
+
+    if(modulo==='teto'){
+      let areas=dados;
+      if(nodeId)areas=areas.filter(a=>a.nodeId===nodeId||String(a.nodeId||'').startsWith(nodeId));
+      if(metrica==='areaM2')return areas.reduce((s,a)=>s+(a.areaM2||0),0);
+      if(metrica==='mlTabica')return areas.reduce((s,a)=>s+(a.mlTabica||0),0);
+      return 0;
+    }
+
+    if(modulo==='paredes'){
+      // dados = alvenaria, extra = acabamento
+      const todas=[...dados,...extra];
+      // Calcula cada peça com a lógica simplificada (campo gravado já calculado pelo módulo)
+      if(metrica==='areaLiquida')return todas.reduce((s,p)=>s+(p.areaLiquida||0),0);
+      if(metrica==='m2comPuro')return todas.reduce((s,p)=>s+(p.m2comPuro||0),0);
+      if(metrica==='ml')return todas.reduce((s,p)=>s+(p.ml||0),0);
+      if(metrica==='vedacao')return dados.reduce((s,p)=>s+(p.tipoAlvenaria==='vedacao'?(p.areaLiquida||0):0),0);
+      if(metrica==='estrutural')return dados.reduce((s,p)=>s+(p.tipoAlvenaria==='estrutural'?(p.areaLiquida||0):0),0);
+      return 0;
+    }
+
+    if(modulo==='concreto'){
+      if(metrica==='volume')return dados.reduce((s,p)=>s+(p.volume||0),0);
+      return 0;
+    }
+
+    if(modulo==='arCondicionado'){
+      const subareas=dados.flatMap(a=>a.subareas||[]);
+      if(metrica==='qtdEquipamentos')return subareas.reduce((s,sa)=>s+(sa.qtd||0),0);
+      if(metrica==='btus')return subareas.reduce((s,sa)=>s+(sa.btus||0),0);
+      return 0;
+    }
+
     return 0;
+  }
+
+  // Compatibilidade: carregamento antigo só para fachada
+  async function _carregarLevFachadaSeNecessario(){
+    await _carregarLevSeNecessario('fachada');
+    // compat: preenche levFachadas para o código de UI que ainda referencia ela
+    if(_levCache['fachada'])levFachadas=_levCache['fachada'].dados;
   }
 
   // Rótulo legível da fonte estrutural escolhida (fachada/balancim/vista),
@@ -2110,7 +2210,10 @@ const Planejamento = (() => {
     _buscaCursor=-1;
     if(!_buscaTexto){
       _buscaResultados=[];
-      _render();requestAnimationFrame(()=>_paintRows());
+      // Atualiza apenas o destaque visual sem recriar o DOM do input
+      requestAnimationFrame(()=>_paintRows());
+      // Atualiza o contador (acima do gantt) sem destruir o input
+      _atualizarBuscaInfo();
       return;
     }
     const q=_buscaTexto.toLowerCase();
@@ -2124,24 +2227,38 @@ const Planejamento = (() => {
         (t.grupo||'').toLowerCase().includes(q)||
         String(t._numLinha||'').includes(q)
       );
-    // Vai para o primeiro resultado automaticamente
+    _atualizarBuscaInfo();
     if(_buscaResultados.length){
       _buscaCursor=0;
       _pularParaResultado(0);
     } else {
-      _render();requestAnimationFrame(()=>_paintRows());
+      requestAnimationFrame(()=>_paintRows());
     }
-    // Preserva o foco no input após o re-render
-    requestAnimationFrame(()=>{
-      const inp=document.getElementById('gantt-busca');
-      if(inp){inp.focus();inp.setSelectionRange(inp.value.length,inp.value.length);}
-    });
+  }
+
+  function _atualizarBuscaInfo(){
+    // Atualiza só o span de contagem, sem recriar o input
+    const info=document.getElementById('gantt-busca-info');
+    if(!info)return;
+    if(_buscaTexto&&_buscaResultados.length){
+      info.textContent=`${_buscaCursor>=0?(_buscaCursor+1)+'/':''}${_buscaResultados.length} resultado${_buscaResultados.length!==1?'s':''}`;
+      info.style.display='';
+    } else if(_buscaTexto&&!_buscaResultados.length){
+      info.textContent='Nenhum resultado';
+      info.style.display='';
+    } else {
+      info.style.display='none';
+    }
+    const btn=document.getElementById('gantt-busca-clear');
+    if(btn)btn.style.display=_buscaTexto?'':'none';
   }
 
   function limparBusca(){
     _buscaTexto='';_buscaResultados=[];_buscaCursor=-1;
-    _render();requestAnimationFrame(()=>_paintRows());
-    requestAnimationFrame(()=>document.getElementById('gantt-busca')?.focus());
+    const inp=document.getElementById('gantt-busca');
+    if(inp){inp.value='';inp.focus();}
+    _atualizarBuscaInfo();
+    requestAnimationFrame(()=>_paintRows());
   }
 
   function _buscaKey(e){
@@ -2162,19 +2279,19 @@ const Planejamento = (() => {
   function _pularParaResultado(cursor){
     const res=_buscaResultados[cursor];if(!res)return;
     selectedIdx=res.i;
-    // Scrollar para a linha encontrada no painel esquerdo
     const esqS=document.getElementById('g-esq-s');
     if(esqS){
       const y=res.i*ROW_H;
       const visH=esqS.clientHeight;
       if(y<esqS.scrollTop||y+ROW_H>esqS.scrollTop+visH){
         esqS.scrollTop=Math.max(0,y-visH/2+ROW_H/2);
-        // Sincroniza o Gantt
         const dirS=document.getElementById('g-dir-s');
         if(dirS)dirS.scrollTop=esqS.scrollTop;
       }
     }
-    _render();requestAnimationFrame(()=>_paintRows());
+    _atualizarBuscaInfo();
+    // Só repinta as linhas — NÃO chama _render() para não destruir o input
+    requestAnimationFrame(()=>_paintRows());
   }
 
   return{init,carregar,setZoom,inserirTarefa,editarTarefa,salvarTarefa,excluirTarefa,

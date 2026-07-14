@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.29.5',
+  versaoAtual: 'V2.30.0',
 
   versoes: [
     {
@@ -3337,7 +3337,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.29.5',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-14',
       tipo: 'correcao',
       titulo: 'Levantamento de Teto: corrige planta ficando borrada/travada até dar zoom in/out manualmente',
@@ -3352,6 +3352,34 @@ const NotasVersao = {
         'Corrigido disparando esse re-render em alta resolução sozinho',
         '  sempre que o zoom restaurado precisa de mais nitidez do que o',
         '  auto-fit recém-calculado oferece — sem precisar de zoom manual',
+      ]
+    },
+    {
+      versao: 'V2.30.0',
+      status: 'aberta',
+      data: '2026-07-11',
+      tipo: 'correcao',
+      titulo: 'Busca corrigida (não travava mais) + vínculos com todos os levantamentos',
+      itens: [
+        'BUSCA CORRIGIDA:',
+        '  Causa: onBusca() chamava _render() internamente, que recriava',
+        '  o DOM inteiro incluindo o campo de busca — ao recriar o input,',
+        '  o cursor era perdido e a digitação "travava" após 1 caractere.',
+        '  Fix: busca agora atualiza só _paintRows() (destaque visual) e',
+        '  scroll — nunca mais _render(). O contador e o ✕ são atualizados',
+        '  via getElementById() sem destruir o input.',
+        '',
+        'VÍNCULOS COM TODOS OS LEVANTAMENTOS:',
+        '  Antes só existia o módulo Fachada no seletor de vínculo.',
+        '  Agora disponíveis:',
+        '  → Fachada: m² líquido, m²+ML equiv, Metro Linear, Vão Fechado',
+        '  → Piso: Área (m²), Rodapé (ML)',
+        '  → Teto/Forro: Área (m²), Tabica (ML)',
+        '  → Paredes: Área líquida, m²+ML, ML, Vedação, Estrutural',
+        '  → Concreto: Volume (m³)',
+        '  → Ar-Condicionado: Qtd de equipamentos, BTUs total',
+        '  Todos carregados em paralelo ao abrir o painel de vínculos.',
+        '  _calcularMetrica() expandida com lógica real de cada módulo.',
       ]
     }
   ],
