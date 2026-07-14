@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.24.4',
+  versaoAtual: 'V2.24.5',
 
   versoes: [
     {
@@ -2863,7 +2863,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.24.4',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-13',
       tipo: 'correcao',
       titulo: 'Levantamento de Piso: corrige scroll interno minúsculo na Visão Geral',
@@ -2876,6 +2876,23 @@ const NotasVersao = {
         '  tem planta vinculada (tela de medição de verdade). Na Visão',
         '  Geral e nas telas sem planta, o conteúdo flui inteiro na',
         '  página normalmente, sem scroll interno cortado',
+      ]
+    },
+    {
+      versao: 'V2.24.5',
+      status: 'aberta',
+      data: '2026-07-13',
+      tipo: 'correcao',
+      titulo: 'Levantamento de Piso: remove de vez o scroll interno cortado fora da tela de medição',
+      itens: [
+        'A correção anterior tirou a altura fixa, mas o painel e a',
+        '  árvore ainda tinham overflow-y:auto sempre ligado (herdado do',
+        '  estilo genérico), o que continuava criando um scroll interno',
+        '  minúsculo mesmo sem altura forçada',
+        'Agora, fora da tela de medição (Visão Geral, vincular planta),',
+        '  esse overflow interno é removido de vez — o conteúdo (tabela,',
+        '  cards, árvore de locais) flui até o fim de verdade, e quem',
+        '  rola é a página inteira, como deveria ser desde o início',
       ]
     }
   ],
