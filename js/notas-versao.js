@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.30.1',
+  versaoAtual: 'V2.31.0',
 
   versoes: [
     {
@@ -3384,10 +3384,10 @@ const NotasVersao = {
     },
     {
       versao: 'V2.30.1',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-11',
       tipo: 'correcao',
-      titulo: 'Vínculos: métricas reais de Piso, Teto, Paredes + módulo Pintura',
+      titulo: 'Vínculos: métricas reais de Piso, Teto, Paredes',
       itens: [
         'PISO — 4 métricas (antes só 2):',
         '  → Área total de piso (m²)',
@@ -3403,12 +3403,40 @@ const NotasVersao = {
         '  → Pintura de teto (m²) — áreas com temPintura=true',
         '',
         'PAREDES — adicionada métrica Pintura de parede (m²)',
-        '  (campo pintura já calculado pelo módulo em m²)',
+      ]
+    },
+    {
+      versao: 'V2.31.0',
+      status: 'aberta',
+      data: '2026-07-14',
+      tipo: 'funcionalidade',
+      titulo: 'Novo módulo: Levantamento de Pintura',
+      itens: [
+        'Módulo novo, 100% consolidador — não lança área nova, é',
+        '  alimentado pelos módulos de Paredes (aba Acabamento) e Teto.',
+        'Tem árvore de locais própria (Torre > Andar > Apto > Cômodo).',
+        '  Cada nó pode ser VINCULADO a 1 local de Paredes + 1 local de',
+        '  Teto (árvores independentes — vínculo manual com busca).',
+        'Ao vincular, soma automaticamente m² de pintura (parede + teto)',
+        '  daquele local e sublocais, com dash por cor (barras) e KPIs.',
+        'Edição de cor/% é feita DIRETO no mesmo documento que Paredes',
+        '  e Teto usam (paredesAcabamentoPecas / tetoAreas) — 100%',
+        '  sincronizado nos dois sentidos, sem duplicar dado.',
+        '"Aplicar em massa": escolhe uma mistura de cor e aplica de',
+        '  uma vez em todas as faces/áreas vinculadas a um local',
+        '  (com opção de incluir sublocais).',
+        'Visão Geral com total por cor, resumo por local e alerta de',
+        '  locais ainda sem vínculo.',
+        'Card novo em Levantamentos (hub).',
         '',
-        'PINTURA — novo módulo no seletor (stub, em desenvolvimento):',
-        '  Coleção pinturaAreas. Métricas: Área total, 1ª/2ª/3ª demão.',
-        '  Retorna 0 até o módulo existir — estrutura pronta para',
-        '  receber o módulo quando ficar pronto.',
+        'CORREÇÃO relacionada (vínculos do Planejamento):',
+        '  Removido o stub "Pintura (em desenvolvimento)" com campos de',
+        '  demão que tinha sido adicionado por engano — nunca fez parte',
+        '  do escopo. A pintura sempre viveu dentro de Paredes e Teto.',
+        '  Corrigido também um bug real: a métrica "Pintura de parede"',
+        '  estava somando o array de cores como se fosse um número',
+        '  (sempre resultava em NaN/0). Agora calcula a área líquida',
+        '  real (comp×alt − vãos) × % de cada cor.',
       ]
     }
   ],

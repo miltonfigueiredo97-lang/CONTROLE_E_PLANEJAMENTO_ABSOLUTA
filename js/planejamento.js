@@ -121,15 +121,6 @@ const Planejamento = (() => {
         {id:'btus',           label:'BTUs total'},
       ],
     },
-    pintura:{
-      label:'Pintura (em desenvolvimento)', colecao:'pinturaAreas',
-      metricas:[
-        {id:'areaM2',         label:'Área de pintura (m²)'},
-        {id:'demao1',         label:'1ª demão (m²)'},
-        {id:'demao2',         label:'2ª demão (m²)'},
-        {id:'demao3',         label:'3ª demão (m²)'},
-      ],
-    },
   };
 
   // Metadados de status: cor + rótulo, usado no badge da coluna e no filtro
@@ -424,8 +415,25 @@ const Planejamento = (() => {
       if(metrica==='ml')          return todas.reduce((s,p)=>s+(p.ml||0),0);
       if(metrica==='vedacao')     return dados.filter(p=>p.tipoAlvenaria==='vedacao').reduce((s,p)=>s+(p.areaLiquida||0),0);
       if(metrica==='estrutural')  return dados.filter(p=>p.tipoAlvenaria==='estrutural').reduce((s,p)=>s+(p.areaLiquida||0),0);
-      // Pintura de parede: campo pintura calculado pelo módulo (m² × % da cor)
-      if(metrica==='pintura')     return todas.reduce((s,p)=>s+(p.pintura||0),0);
+      // Pintura de parede: área líquida (comp×alt − vãos) × % de cada cor.
+      // Obs: assume desconto total de vão (não lê a config de vão do
+      // localStorage do módulo de Paredes, que não é acessível daqui).
+      if(metrica==='pintura') {
+        const calcPintura = p => {
+          if(!p.temPintura || !(p.pintura||[]).length) return 0;
+          const compM=(parseFloat(String(p.comprimento).replace(',','.'))||0)/100;
+          const altM=(parseFloat(String(p.altura).replace(',','.'))||0)/100;
+          const areaVaos=(p.vaos||[]).reduce((s,v)=>{
+            const cv=(parseFloat(String(v.comprimento).replace(',','.'))||0)/100;
+            const av=(parseFloat(String(v.altura).replace(',','.'))||0)/100;
+            const qv=parseFloat(v.qtd)||1;
+            return s+(cv>0&&av>0?cv*av*qv:0);
+          },0);
+          const areaLiq=Math.max(0,compM*altM-areaVaos);
+          return (p.pintura||[]).reduce((s,pt)=>s+areaLiq*((parseFloat(pt.pct)||0)/100),0);
+        };
+        return todas.reduce((s,p)=>s+calcPintura(p),0);
+      }
       return 0;
     }
 
@@ -438,15 +446,6 @@ const Planejamento = (() => {
       const subareas=dados.flatMap(a=>a.subareas||[]);
       if(metrica==='qtdEquipamentos') return subareas.reduce((s,sa)=>s+(sa.qtd||0),0);
       if(metrica==='btus')            return subareas.reduce((s,sa)=>s+(sa.btus||0),0);
-      return 0;
-    }
-
-    // Pintura (módulo em desenvolvimento — retorna 0 até o módulo existir)
-    if(modulo==='pintura'){
-      if(metrica==='areaM2') return dados.reduce((s,a)=>s+(a.areaM2||0),0);
-      if(metrica==='demao1') return dados.reduce((s,a)=>s+(a.demao1||0),0);
-      if(metrica==='demao2') return dados.reduce((s,a)=>s+(a.demao2||0),0);
-      if(metrica==='demao3') return dados.reduce((s,a)=>s+(a.demao3||0),0);
       return 0;
     }
 

@@ -72,6 +72,13 @@ const Levantamento = (() => {
             <div class="mt-1"><span class="badge badge-sucesso">Disponível</span></div>
           </div>
         </div>
+        <div class="card obra-card" onclick="Router.navegar('levantamento-pintura.html')">
+          <div class="card-body">
+            <div class="obra-nome">🎨 Pintura</div>
+            <div class="obra-info text-sm">Vincula os locais de Paredes e Teto e monta o dash de pintura por cor e por local — sem lançar nada novo, só consolida.</div>
+            <div class="mt-1"><span class="badge badge-sucesso">Disponível</span></div>
+          </div>
+        </div>
       </div>
 
       <h3 class="mb-2" style="font-size:1rem;">Bases de Quantitativos / Composições</h3>

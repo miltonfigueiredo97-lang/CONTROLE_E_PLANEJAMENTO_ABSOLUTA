@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Restrições — Controle e Planejamento de Obras</title>
+  <title>Levantamento de Pintura — Controle e Planejamento de Obras</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/base.css">
@@ -13,7 +13,7 @@
 </head>
 <body>
 <div class="app-container">
-    <aside class="sidebar">
+  <aside class="sidebar">
     <div class="sidebar-logo">
       <img src="assets/images/logo-absoluta.png" class="logo-full" alt="Absoluta"
            onerror="this.parentElement.innerHTML='<div class=\'logo-fallback\'><div class=\'logo-icon\'><span style=\'font-size:1.3rem;font-weight:900;color:#000;\'>A</span></div><div class=\'logo-text\'>ABSOLUTA<span>Controle de Obras</span></div></div>'">
@@ -28,7 +28,7 @@
       <a href="dashboard.html"><span class="nav-icon">📊</span> Dashboard</a>
       <div class="sidebar-section-title">Produção</div>
       <a href="planejamento.html"><span class="nav-icon">📅</span> Planejamento</a>
-      <a href="levantamento.html"><span class="nav-icon">📐</span> Levantamentos</a>
+      <a href="levantamento.html" class="ativo"><span class="nav-icon">📐</span> Levantamentos</a>
       <a href="controle.html"><span class="nav-icon">✅</span> Controle</a>
       <div class="sidebar-section-title">Gestão</div>
       <a href="restricoes.html"><span class="nav-icon">🚧</span> Restrições</a>
@@ -56,13 +56,84 @@
       <button class="btn-logout" onclick="Auth.logout()" title="Sair">⏻</button>
     </div>
   </aside>
-  <header class="header"><div class="header-title"><h1>Restrições</h1></div><div class="header-actions" id="header-actions"></div></header>
-  <main class="content">
-    <div id="modulo-content">
-      <div class="estado-vazio"><div class="icone">🚧</div><p>Módulo em desenvolvimento.</p><p class="text-sm text-muted">Será construído conforme o roadmap do projeto.</p></div>
+
+  <header class="header">
+    <div class="header-title"><h1>🎨 Levantamento de Pintura</h1></div>
+    <div class="header-actions" id="header-actions">
+      <button class="btn btn-secundario btn-sm" onclick="Router.navegar('levantamento.html')">← Levantamentos</button>
     </div>
+  </header>
+
+  <main class="content">
+    <div id="lpt-content"></div>
   </main>
 </div>
+
+<!-- Modal: estrutura (novo nó / renomear) -->
+<div class="modal-overlay" id="modal-lpt-node">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-header">
+      <h3 id="lpt-node-titulo">Novo Local</h3>
+      <button class="modal-close" onclick="Utils.fecharModal('modal-lpt-node')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grupo">
+        <label>Nome</label>
+        <input type="text" id="lpt-node-nome" class="form-control" placeholder="Ex: Torre, 1º Andar, Apto 11, Cozinha..." onkeydown="if(event.key==='Enter')LPT.salvarNode()">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-lpt-node')">Cancelar</button>
+      <button class="btn btn-primario" onclick="LPT.salvarNode()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: vincular local (Paredes + Teto) -->
+<div class="modal-overlay" id="modal-lpt-vinc">
+  <div class="modal" style="max-width:760px;">
+    <div class="modal-header">
+      <h3 id="lpt-vinc-titulo">Vincular Local</h3>
+      <button class="modal-close" onclick="Utils.fecharModal('modal-lpt-vinc')">✕</button>
+    </div>
+    <div class="modal-body" id="lpt-vinc-body" style="max-height:72vh;overflow-y:auto;"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-lpt-vinc')">Cancelar</button>
+      <button class="btn btn-primario" onclick="LPT.salvarVinculo()">Salvar Vínculo</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: editar pintura de uma face/área -->
+<div class="modal-overlay" id="modal-lpt-edit">
+  <div class="modal" style="max-width:520px;">
+    <div class="modal-header">
+      <h3 id="lpt-edit-titulo">Editar Pintura</h3>
+      <button class="modal-close" onclick="Utils.fecharModal('modal-lpt-edit')">✕</button>
+    </div>
+    <div class="modal-body" id="lpt-edit-body" style="max-height:72vh;overflow-y:auto;"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-lpt-edit')">Cancelar</button>
+      <button class="btn btn-primario" onclick="LPT.salvarEdicaoPintura()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: aplicar pintura em massa -->
+<div class="modal-overlay" id="modal-lpt-massa">
+  <div class="modal" style="max-width:520px;">
+    <div class="modal-header">
+      <h3 id="lpt-massa-titulo">Aplicar Pintura em Massa</h3>
+      <button class="modal-close" onclick="Utils.fecharModal('modal-lpt-massa')">✕</button>
+    </div>
+    <div class="modal-body" id="lpt-massa-body" style="max-height:72vh;overflow-y:auto;"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-lpt-massa')">Cancelar</button>
+      <button class="btn btn-primario" onclick="LPT.confirmarMassa()">Aplicar</button>
+    </div>
+  </div>
+</div>
+
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -74,7 +145,7 @@
 <script src="js/permissions.js"></script>
 <script src="js/audit.js"></script>
 <script src="js/utils.js"></script>
-<script src="js/restricoes.js"></script>
-<script>document.addEventListener('DOMContentLoaded', () => { Utils.initPagina(); });</script>
+<script src="js/levantamento-pintura.js"></script>
+<script>document.addEventListener('DOMContentLoaded', () => { LevantamentoPintura.init(); });</script>
 </body>
 </html>
