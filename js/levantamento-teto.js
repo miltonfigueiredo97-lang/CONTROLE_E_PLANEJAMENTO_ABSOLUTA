@@ -52,6 +52,9 @@ const LT = (() => {
 
   let zoomCss = 1;            // zoom de exibição (estilo CAD), aplicado via CSS por cima do canvas renderizado
   let pageWidthPts = 0;       // largura da página em pontos-PDF (viewport scale=1), usada pra converter clique -> ponto-PDF em qualquer zoom
+  let _panPorNode = {};       // { [nodeId]: {left, top} } — última posição de pan/scroll do canvas
+                               // em cada local, pra não perder a posição toda vez que o canvas é
+                               // recriado do zero (ex: depois de salvar uma área, confirmar tabica)
   let panAtivo = false;
   let panInicio = { x: 0, y: 0, scrollX: 0, scrollY: 0 };
   let fsAtivo = false;        // tela cheia do workspace de medição
@@ -461,6 +464,7 @@ const LT = (() => {
       const lista = r.parent ? r.parent.filhos : arvore;
       const idx = lista.findIndex(x => x.id === id);
       if (idx > -1) lista.splice(idx, 1);
+      ids.forEach(nid => delete _panPorNode[nid]);
       await _salvarArvore();
       if (areasParaExcluir.length) {
         const ops = areasParaExcluir.map(a => ({ type: 'delete', ref: Database.ref(obraId, COL_AREAS).doc(a.id) }));
@@ -746,6 +750,7 @@ const LT = (() => {
     if (!Utils.confirmar('Trocar a planta/página deste local? As áreas já medidas continuam salvas, mas os polígonos ficam fora de referência visual até recalibrar a escala.')) return;
     const r = _acharNode(nodeId); if (!r) return;
     r.node.plantaId = null; r.node.pagina = null; r.node.escalaMetrosPorPonto = null; r.node.linhaCalibracao = null;
+    delete _panPorNode[nodeId];
     Utils.mostrarLoading('Salvando...');
     try { await _salvarArvore(); await carregar(); selNode(nodeId); }
     catch (e) { console.error(e); Utils.toast('Erro: ' + e.message, 'erro'); }
@@ -1004,8 +1009,11 @@ const LT = (() => {
       stage.addEventListener('pointercancel', _finalizarPan);
       stage.addEventListener('contextmenu', e => { if (panAtivo) e.preventDefault(); });
       col.addEventListener('wheel', _onWheelZoom, { passive: false });
+      col.addEventListener('scroll', () => { _panPorNode[node.id] = { left: col.scrollLeft, top: col.scrollTop }; });
 
       _aplicarZoom();
+      const panSalvo = _panPorNode[node.id];
+      if (panSalvo) { col.scrollLeft = panSalvo.left; col.scrollTop = panSalvo.top; }
       _desenharOverlay(node);
     } catch (e) {
       console.error('Erro ao renderizar PDF:', e);

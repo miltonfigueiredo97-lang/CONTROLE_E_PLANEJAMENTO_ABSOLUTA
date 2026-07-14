@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.29.2',
+  versaoAtual: 'V2.29.3',
 
   versoes: [
     {
@@ -3274,7 +3274,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.29.2',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-14',
       tipo: 'correcao',
       titulo: 'Levantamento de Teto: corrige "Nova Área" e "Editar Tabica" jogando o scroll da página lá pra cima',
@@ -3287,6 +3287,27 @@ const NotasVersao = {
         'Corrigido guardando a posição de scroll do painel de conteúdo',
         '  antes de redesenhar e restaurando ela logo em seguida — a',
         '  tela agora fica onde estava em vez de pular pro topo',
+      ]
+    },
+    {
+      versao: 'V2.29.3',
+      status: 'aberta',
+      data: '2026-07-14',
+      tipo: 'correcao',
+      titulo: 'Levantamento de Teto: corrige de vez o "pular lá pra cima" — era o pan da planta resetando, não o scroll da página',
+      itens: [
+        'A correção anterior (V2.29.2) guardava o scroll do painel geral,',
+        '  mas o problema de verdade era outro: o canvas da planta é',
+        '  recriado do zero toda vez que a tela é redesenhada (depois de',
+        '  Salvar, Nova Área, Confirmar Área, Confirmar Tabica), e o',
+        '  navegador zera a posição de pan/scroll desse canvas novo',
+        'Corrigido guardando a posição de pan de cada local separadamente',
+        '  (atualizada a cada arrasto/scroll) e restaurando ela assim que',
+        '  o canvas termina de ser recriado — agora fica exatamente onde',
+        '  você deixou, mesmo depois de salvar várias áreas seguidas',
+        'Trocar a planta/página de um local ou excluir o local limpa a',
+        '  posição guardada dele (evita restaurar um pan sem sentido',
+        '  numa planta diferente)',
       ]
     }
   ],
