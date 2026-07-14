@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.30.0',
+  versaoAtual: 'V2.30.1',
 
   versoes: [
     {
@@ -3356,7 +3356,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.30.0',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-11',
       tipo: 'correcao',
       titulo: 'Busca corrigida (não travava mais) + vínculos com todos os levantamentos',
@@ -3380,6 +3380,35 @@ const NotasVersao = {
         '  → Ar-Condicionado: Qtd de equipamentos, BTUs total',
         '  Todos carregados em paralelo ao abrir o painel de vínculos.',
         '  _calcularMetrica() expandida com lógica real de cada módulo.',
+      ]
+    },
+    {
+      versao: 'V2.30.1',
+      status: 'aberta',
+      data: '2026-07-11',
+      tipo: 'correcao',
+      titulo: 'Vínculos: métricas reais de Piso, Teto, Paredes + módulo Pintura',
+      itens: [
+        'PISO — 4 métricas (antes só 2):',
+        '  → Área total de piso (m²)',
+        '  → Contrapiso (m²) — áreas com tipoContrapiso preenchido',
+        '  → Impermeabilização (m²) — áreas com impermeabilizacao=true',
+        '  → Rodapé (ML)',
+        '',
+        'TETO — 5 métricas (antes só 2):',
+        '  → Área total de teto (m²)',
+        '  → Forro de Drywall (m²) — áreas com tipoDryWall preenchido',
+        '  → Placa de Gesso (m²) — áreas com tipoPlacaGesso preenchido',
+        '  → Tabica (ML)',
+        '  → Pintura de teto (m²) — áreas com temPintura=true',
+        '',
+        'PAREDES — adicionada métrica Pintura de parede (m²)',
+        '  (campo pintura já calculado pelo módulo em m²)',
+        '',
+        'PINTURA — novo módulo no seletor (stub, em desenvolvimento):',
+        '  Coleção pinturaAreas. Métricas: Área total, 1ª/2ª/3ª demão.',
+        '  Retorna 0 até o módulo existir — estrutura pronta para',
+        '  receber o módulo quando ficar pronto.',
       ]
     }
   ],

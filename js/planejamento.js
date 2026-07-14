@@ -71,48 +71,63 @@ const Planejamento = (() => {
     fachada:{
       label:'Fachada', colecao:'levantamentosFachada',
       metricas:[
-        {id:'m2semML',    label:'m² líquido (sem ML)'},
-        {id:'m2comML_equiv', label:'m² + ML equivalente'},
-        {id:'ml',         label:'Metro Linear (ML)'},
-        {id:'vao',        label:'Vão Fechado (m²)'},
+        {id:'m2semML',        label:'m² líquido (sem ML)'},
+        {id:'m2comML_equiv',  label:'m² + ML equivalente'},
+        {id:'ml',             label:'Metro Linear (ML)'},
+        {id:'vao',            label:'Vão Fechado (m²)'},
       ],
     },
     piso:{
-      label:'Piso', colecao:'pisoAreas',
+      label:'Piso / Contrapiso / Impermeabilização', colecao:'pisoAreas',
       metricas:[
-        {id:'areaM2',     label:'Área (m²)'},
-        {id:'mlRodape',   label:'Rodapé (ML)'},
+        {id:'areaM2',         label:'Área total de piso (m²)'},
+        {id:'areaContrapiso', label:'Contrapiso (m²) — áreas com tipoContrapiso'},
+        {id:'areaImperm',     label:'Impermeabilização (m²) — áreas com impermeabilizacao'},
+        {id:'mlRodape',       label:'Rodapé (ML)'},
       ],
     },
     paredes:{
-      label:'Paredes (Alvenaria/Acabamento)', colecao:'paredesAlvenariaPecas',
+      label:'Paredes (Alvenaria / Acabamento)', colecao:'paredesAlvenariaPecas',
       colecaoExtra:'paredesAcabamentoPecas',
       metricas:[
-        {id:'areaLiquida',   label:'Área líquida (m²)'},
-        {id:'m2comPuro',     label:'m² com ML equiv.'},
-        {id:'ml',            label:'Metro Linear (ML)'},
-        {id:'vedacao',       label:'Vedação (m²)'},
-        {id:'estrutural',    label:'Estrutural (m²)'},
+        {id:'areaLiquida',    label:'Área líquida total (m²)'},
+        {id:'m2comPuro',      label:'m² com ML equiv.'},
+        {id:'ml',             label:'Metro Linear (ML)'},
+        {id:'vedacao',        label:'Alvenaria de Vedação (m²)'},
+        {id:'estrutural',     label:'Alvenaria Estrutural (m²)'},
+        {id:'pintura',        label:'Pintura de parede (m²)'},
       ],
     },
     teto:{
-      label:'Teto/Forro', colecao:'tetoAreas',
+      label:'Teto / Forro (Drywall, Gesso, Tabica)', colecao:'tetoAreas',
       metricas:[
-        {id:'areaM2',     label:'Área (m²)'},
-        {id:'mlTabica',   label:'Tabica (ML)'},
+        {id:'areaM2',         label:'Área total de teto (m²)'},
+        {id:'areaDrywall',    label:'Forro de Drywall (m²) — áreas com tipoDryWall'},
+        {id:'areaGesso',      label:'Placa de Gesso (m²) — áreas com tipoPlacaGesso'},
+        {id:'mlTabica',       label:'Tabica (ML)'},
+        {id:'areaPintura',    label:'Pintura de teto (m²)'},
       ],
     },
     concreto:{
       label:'Concreto', colecao:'concretoPecas',
       metricas:[
-        {id:'volume',     label:'Volume (m³)'},
+        {id:'volume',         label:'Volume total (m³)'},
       ],
     },
     arCondicionado:{
       label:'Ar-Condicionado', colecao:'levantamentoAr',
       metricas:[
-        {id:'qtdEquipamentos', label:'Qtd de equipamentos'},
-        {id:'btus',            label:'BTUs total'},
+        {id:'qtdEquipamentos',label:'Qtd de equipamentos'},
+        {id:'btus',           label:'BTUs total'},
+      ],
+    },
+    pintura:{
+      label:'Pintura (em desenvolvimento)', colecao:'pinturaAreas',
+      metricas:[
+        {id:'areaM2',         label:'Área de pintura (m²)'},
+        {id:'demao1',         label:'1ª demão (m²)'},
+        {id:'demao2',         label:'2ª demão (m²)'},
+        {id:'demao3',         label:'3ª demão (m²)'},
       ],
     },
   };
@@ -379,40 +394,59 @@ const Planejamento = (() => {
     if(modulo==='piso'){
       let areas=dados;
       if(nodeId)areas=areas.filter(a=>a.nodeId===nodeId||String(a.nodeId||'').startsWith(nodeId));
-      if(metrica==='areaM2')return areas.reduce((s,a)=>s+(a.areaM2||0),0);
-      if(metrica==='mlRodape')return areas.reduce((s,a)=>s+(a.mlRodape||0),0);
+      if(metrica==='areaM2')    return areas.reduce((s,a)=>s+(a.areaM2||0),0);
+      if(metrica==='mlRodape')  return areas.reduce((s,a)=>s+(a.mlRodape||0),0);
+      // Contrapiso: áreas que têm tipoContrapiso preenchido
+      if(metrica==='areaContrapiso') return areas.filter(a=>a.tipoContrapiso).reduce((s,a)=>s+(a.areaM2||0),0);
+      // Impermeabilização: áreas com campo impermeabilizacao = true
+      if(metrica==='areaImperm')     return areas.filter(a=>a.impermeabilizacao).reduce((s,a)=>s+(a.areaM2||0),0);
       return 0;
     }
 
     if(modulo==='teto'){
       let areas=dados;
       if(nodeId)areas=areas.filter(a=>a.nodeId===nodeId||String(a.nodeId||'').startsWith(nodeId));
-      if(metrica==='areaM2')return areas.reduce((s,a)=>s+(a.areaM2||0),0);
-      if(metrica==='mlTabica')return areas.reduce((s,a)=>s+(a.mlTabica||0),0);
+      if(metrica==='areaM2')      return areas.reduce((s,a)=>s+(a.areaM2||0),0);
+      if(metrica==='mlTabica')    return areas.reduce((s,a)=>s+(a.mlTabica||0),0);
+      // Forro de Drywall: áreas com tipoDryWall preenchido
+      if(metrica==='areaDrywall') return areas.filter(a=>a.tipoDryWall).reduce((s,a)=>s+(a.areaM2||0),0);
+      // Placa de Gesso: áreas com tipoPlacaGesso preenchido
+      if(metrica==='areaGesso')   return areas.filter(a=>a.tipoPlacaGesso).reduce((s,a)=>s+(a.areaM2||0),0);
+      // Pintura do teto: áreas com temPintura=true
+      if(metrica==='areaPintura') return areas.filter(a=>a.temPintura).reduce((s,a)=>s+(a.areaM2||0),0);
       return 0;
     }
 
     if(modulo==='paredes'){
-      // dados = alvenaria, extra = acabamento
       const todas=[...dados,...extra];
-      // Calcula cada peça com a lógica simplificada (campo gravado já calculado pelo módulo)
-      if(metrica==='areaLiquida')return todas.reduce((s,p)=>s+(p.areaLiquida||0),0);
-      if(metrica==='m2comPuro')return todas.reduce((s,p)=>s+(p.m2comPuro||0),0);
-      if(metrica==='ml')return todas.reduce((s,p)=>s+(p.ml||0),0);
-      if(metrica==='vedacao')return dados.reduce((s,p)=>s+(p.tipoAlvenaria==='vedacao'?(p.areaLiquida||0):0),0);
-      if(metrica==='estrutural')return dados.reduce((s,p)=>s+(p.tipoAlvenaria==='estrutural'?(p.areaLiquida||0):0),0);
+      if(metrica==='areaLiquida') return todas.reduce((s,p)=>s+(p.areaLiquida||0),0);
+      if(metrica==='m2comPuro')   return todas.reduce((s,p)=>s+(p.m2comPuro||0),0);
+      if(metrica==='ml')          return todas.reduce((s,p)=>s+(p.ml||0),0);
+      if(metrica==='vedacao')     return dados.filter(p=>p.tipoAlvenaria==='vedacao').reduce((s,p)=>s+(p.areaLiquida||0),0);
+      if(metrica==='estrutural')  return dados.filter(p=>p.tipoAlvenaria==='estrutural').reduce((s,p)=>s+(p.areaLiquida||0),0);
+      // Pintura de parede: campo pintura calculado pelo módulo (m² × % da cor)
+      if(metrica==='pintura')     return todas.reduce((s,p)=>s+(p.pintura||0),0);
       return 0;
     }
 
     if(modulo==='concreto'){
-      if(metrica==='volume')return dados.reduce((s,p)=>s+(p.volume||0),0);
+      if(metrica==='volume') return dados.reduce((s,p)=>s+(p.volume||0),0);
       return 0;
     }
 
     if(modulo==='arCondicionado'){
       const subareas=dados.flatMap(a=>a.subareas||[]);
-      if(metrica==='qtdEquipamentos')return subareas.reduce((s,sa)=>s+(sa.qtd||0),0);
-      if(metrica==='btus')return subareas.reduce((s,sa)=>s+(sa.btus||0),0);
+      if(metrica==='qtdEquipamentos') return subareas.reduce((s,sa)=>s+(sa.qtd||0),0);
+      if(metrica==='btus')            return subareas.reduce((s,sa)=>s+(sa.btus||0),0);
+      return 0;
+    }
+
+    // Pintura (módulo em desenvolvimento — retorna 0 até o módulo existir)
+    if(modulo==='pintura'){
+      if(metrica==='areaM2') return dados.reduce((s,a)=>s+(a.areaM2||0),0);
+      if(metrica==='demao1') return dados.reduce((s,a)=>s+(a.demao1||0),0);
+      if(metrica==='demao2') return dados.reduce((s,a)=>s+(a.demao2||0),0);
+      if(metrica==='demao3') return dados.reduce((s,a)=>s+(a.demao3||0),0);
       return 0;
     }
 
