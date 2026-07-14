@@ -198,13 +198,16 @@ const LP = (() => {
   function _areasDoNode(nodeId) { return areas.filter(a => a.nodeId === nodeId); }
   function _plantaPorId(id) { return plantas.find(p => p.id === id) || null; }
 
-  // Lista achatada de todos os locais que têm planta vinculada, com caminho
-  // completo (ex: "Torre › 1º Pavimento") — usada no seletor de mover área.
+  // Lista achatada de TODOS os locais (com ou sem planta vinculada), com
+  // caminho completo (ex: "Torre › 1º Pavimento › Apartamento 1") — usada
+  // nos seletores de mover/copiar/clonar áreas. Mover não exige planta no
+  // destino; copiar/clonar só recalcula m²/rodapé se o destino tiver escala
+  // (senão mantém os valores originais, sem quebrar nada).
   function _listarNodesMedicao(nodes = arvore, caminho = []) {
     let out = [];
     _ordenarNodes(nodes).forEach(n => {
       const novoCaminho = [...caminho, n.nome];
-      if (n.plantaId) out.push({ id: n.id, label: novoCaminho.join(' › ') });
+      out.push({ id: n.id, label: novoCaminho.join(' › ') + (n.plantaId ? '' : ' (sem planta)') });
       out = out.concat(_listarNodesMedicao(n.filhos || [], novoCaminho));
     });
     return out;
@@ -234,8 +237,23 @@ const LP = (() => {
           <div class="ar-tree-header">
             <h3>Locais</h3>
             <div style="display:flex;gap:6px;">
+              <button class="btn btn-secundario btn-sm" onclick="LP.marcarTodasAreas(true)" title="Selecionar todas as áreas visíveis (pra mover/copiar em lote)">☑</button>
               <button class="btn btn-secundario btn-sm" onclick="LP.toggleArvore()" title="Recolher árvore">⏴</button>
               <button class="btn btn-primario btn-sm" onclick="LP.novoNode(null)">+ Local</button>
+            </div>
+          </div>
+          <div id="lp-bulk-areas-bar" style="display:none;flex-direction:column;gap:6px;background:#eff6ff;border-bottom:1px solid #bfdbfe;padding:8px 10px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <strong id="lp-bulk-areas-info" style="font-size:0.74rem;color:#1e40af;">0 selecionada(s)</strong>
+              <button type="button" class="btn btn-secundario btn-sm" onclick="LP.desmarcarTodasAreas()">✕</button>
+            </div>
+            <select id="lp-bulk-destino-select" class="form-control" style="font-size:0.76rem;padding:5px 6px;">
+              <option value="">Escolha o local de destino...</option>
+              ${_listarNodesMedicao().map(o => `<option value="${o.id}">${esc(o.label)}</option>`).join('')}
+            </select>
+            <div style="display:flex;gap:6px;">
+              <button type="button" class="btn btn-primario btn-sm" style="flex:1;" onclick="LP.moverOuCopiarSelecionadas('mover')">➜ Mover</button>
+              <button type="button" class="btn btn-secundario btn-sm" style="flex:1;" onclick="LP.moverOuCopiarSelecionadas('copiar')">⧉ Copiar</button>
             </div>
           </div>
           <div class="ar-tree-body" id="lp-tree-body">${_renderArvore()}</div>
@@ -306,6 +324,7 @@ const LP = (() => {
         <span class="tree-icon">${n.plantaId ? '📄' : '📍'}</span>
         <span class="tree-label">${esc(n.nome)}</span>
         ${nAreas ? `<span class="tree-badge">${nAreas}</span>` : ''}
+        ${n.plantaId ? `<button class="tree-clone-btn" onclick="event.stopPropagation();LP.abrirClonarPavimento('${n.id}')" title="Clonar/Multiplicar as áreas deste local para outros">⧉</button>` : ''}
         <button class="tree-edit-btn" onclick="event.stopPropagation();LP.renomearNode('${n.id}')" title="Renomear">✎</button>
         <button class="tree-del-btn" onclick="event.stopPropagation();LP.excluirNode('${n.id}')" title="Excluir">✕</button>
       </div>`;
@@ -316,7 +335,7 @@ const LP = (() => {
           h += `<div class="tree-children tree-children-areas">`;
           areasDoNo.forEach(a => {
             h += `<div class="tree-item tree-item-area" onclick="event.stopPropagation();LP.focarArea('${n.id}','${a.id}')" title="Ver esta área na planta">
-              <span class="tree-toggle"></span>
+              <input type="checkbox" class="lp-area-check" data-id="${a.id}" onclick="event.stopPropagation();LP.atualizarBarraSelecaoAreas()" style="margin-right:2px;flex-shrink:0;">
               <span class="tree-icon">📐</span>
               <span class="tree-label">${esc(a.nome)}</span>
               <span class="tree-badge tree-badge-area">${fmt2(a.areaM2)}m²</span>
@@ -731,7 +750,6 @@ const LP = (() => {
           <div style="display:flex;gap:6px;">
             <button class="btn btn-primario btn-sm" onclick="LP.toggleFullscreen()">${fsAtivo ? '✕ Sair da tela cheia' : '⛶ Tela cheia'}</button>
             ${fsAtivo ? '' : `<button class="btn btn-secundario btn-sm" onclick="LP.trocarPlanta('${node.id}')">🔄 Trocar planta/página</button>`}
-            ${fsAtivo ? '' : `<button class="btn btn-secundario btn-sm" onclick="LP.abrirClonarPavimento('${node.id}')" title="Copiar as áreas deste local para outros (pavimento tipo)">⧉ Clonar/Multiplicar</button>`}
           </div>
         </div>
         <div class="lp-toolbar">
@@ -771,37 +789,13 @@ const LP = (() => {
               </table>
             </div>
             ${areasN.length > 0 ? `<input type="text" id="lp-busca-areas" class="form-control" placeholder="🔍 Filtrar áreas por nome ou tipo..." oninput="LP.filtrarAreas(this.value)" style="margin-bottom:2px;">` : ''}
-            ${areasN.length > 0 ? `
-              <div id="lp-bulk-areas-bar" style="display:none;flex-direction:column;gap:6px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:8px;">
-                <div style="display:flex;justify-content:space-between;align-items:center;">
-                  <strong id="lp-bulk-areas-info" style="font-size:0.78rem;color:#1e40af;">0 selecionada(s)</strong>
-                  <button type="button" class="btn btn-secundario btn-sm" onclick="LP.desmarcarTodasAreas()">Cancelar</button>
-                </div>
-                <select id="lp-bulk-destino-select" class="form-control" style="font-size:0.8rem;">
-                  <option value="">Escolha o local de destino...</option>
-                  ${_listarNodesMedicao().filter(o => o.id !== node.id).map(o => `<option value="${o.id}">${esc(o.label)}</option>`).join('')}
-                </select>
-                <div style="display:flex;gap:6px;">
-                  <button type="button" class="btn btn-primario btn-sm" style="flex:1;" onclick="LP.moverOuCopiarSelecionadas('mover')">➜ Mover</button>
-                  <button type="button" class="btn btn-secundario btn-sm" style="flex:1;" onclick="LP.moverOuCopiarSelecionadas('copiar')">⧉ Copiar</button>
-                </div>
-              </div>
-              <label style="display:flex;align-items:center;gap:6px;font-size:0.76rem;color:var(--cor-texto-muted);cursor:pointer;">
-                <input type="checkbox" onclick="LP.marcarTodasAreas(this.checked)"> Selecionar todas
-              </label>
-            ` : ''}
             ${areasN.length === 0 ? `<div class="estado-vazio" style="padding:20px;"><p style="font-size:0.85rem;">Nenhuma área medida ainda.</p></div>` : areasN.map(a => `
               <div class="lp-area-card ${a.id === areaDestacadaId ? 'lp-area-card-destaque' : ''}" data-busca="${esc((a.nome + ' ' + (a.tipoPiso || '') + ' ' + (a.tipoContrapiso || '')).toLowerCase())}" onclick="LP.editarArea('${a.id}')">
-                <div style="display:flex;gap:8px;align-items:flex-start;">
-                  <input type="checkbox" class="lp-area-check" data-id="${a.id}" onclick="event.stopPropagation();LP.atualizarBarraSelecaoAreas()" style="margin-top:3px;flex-shrink:0;">
-                  <div style="flex:1;min-width:0;">
-                    <div class="nome"><span>${esc(a.nome)}</span><span class="m2">${fmt2(a.areaM2)} m²</span></div>
-                    <div class="meta">
-                      ${a.tipoPiso ? `Piso: ${esc(a.tipoPiso)}` : 'Piso: —'}${a.tipoContrapiso ? ` · Contrapiso: ${esc(a.tipoContrapiso)}` : ''}
-                      ${a.impermeabilizacao ? ` · 💧 Impermeabilizado${a.tipoImpermeabilizacao ? ' (' + esc(a.tipoImpermeabilizacao) + ')' : ''}` : ''}
-                      ${a.mlRodape ? ` · 🦶 ${fmt2(a.mlRodape)}m rodapé` : ''}
-                    </div>
-                  </div>
+                <div class="nome"><span>${esc(a.nome)}</span><span class="m2">${fmt2(a.areaM2)} m²</span></div>
+                <div class="meta">
+                  ${a.tipoPiso ? `Piso: ${esc(a.tipoPiso)}` : 'Piso: —'}${a.tipoContrapiso ? ` · Contrapiso: ${esc(a.tipoContrapiso)}` : ''}
+                  ${a.impermeabilizacao ? ` · 💧 Impermeabilizado${a.tipoImpermeabilizacao ? ' (' + esc(a.tipoImpermeabilizacao) + ')' : ''}` : ''}
+                  ${a.mlRodape ? ` · 🦶 ${fmt2(a.mlRodape)}m rodapé` : ''}
                 </div>
               </div>
             `).join('')}
@@ -837,7 +831,6 @@ const LP = (() => {
     if (!destino) { Utils.toast('Escolha o local de destino.', 'alerta'); return; }
     const destR = _acharNode(destino);
     const escalaDestino = destR ? (destR.node.escalaMetrosPorPonto || 0) : 0;
-    const origemId = selNodeId;
 
     Utils.mostrarLoading(acao === 'copiar' ? 'Copiando áreas...' : 'Movendo áreas...');
     try {
@@ -857,7 +850,7 @@ const LP = (() => {
       await Database.batchWrite(ops);
       Utils.toast(`✓ ${marcados.length} área(s) ${acao === 'copiar' ? 'copiadas' : 'movidas'}!`, 'sucesso');
       await carregar();
-      selNode(acao === 'mover' ? destino : origemId);
+      selNode(destino);
     } catch (e) {
       console.error(e);
       Utils.toast('Erro: ' + e.message, 'erro');

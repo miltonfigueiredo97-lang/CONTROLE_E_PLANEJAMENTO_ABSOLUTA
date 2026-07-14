@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.25.3',
+  versaoAtual: 'V2.26.0',
 
   versoes: [
     {
@@ -2962,7 +2962,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.25.3',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-13',
       tipo: 'correcao',
       titulo: 'Levantamento de Piso: botão de excluir local sem estilo (feio) + botões desalinhados ao passar o mouse',
@@ -2977,6 +2977,32 @@ const NotasVersao = {
         '  os botões de renomear/excluir ficavam soltos/desalinhados ao',
         '  passar o mouse por cima. Agora ficam fixos no canto superior',
         '  direito do card, sem depender de quantas linhas o nome ocupa',
+      ]
+    },
+    {
+      versao: 'V2.26.0',
+      status: 'aberta',
+      data: '2026-07-13',
+      tipo: 'funcionalidade',
+      titulo: 'Levantamento de Piso: mover/clonar/copiar movidos pro menu de locais (esquerda), igual os outros levantamentos',
+      itens: [
+        'Corrigido o motivo de não conseguir mover as áreas para um',
+        '  sublocal recém-criado (ex: Apartamento 1): o seletor de',
+        '  destino só listava locais que já tinham planta vinculada —',
+        '  um sublocal novo criado só pra organizar não tinha, e por',
+        '  isso nunca aparecia como opção. Mover não depende disso;',
+        '  agora TODOS os locais aparecem como destino possível',
+        'Tirado do painel principal (onde só ocupava espaço) e movido',
+        '  pro menu de locais à esquerda, igual os outros levantamentos:',
+        '  botão "⧉" pra clonar/multiplicar direto no local, checkbox em',
+        '  cada área da árvore, e barra de mover/copiar logo abaixo do',
+        '  cabeçalho "Locais"',
+        'Botão "☑" no cabeçalho dos Locais seleciona de uma vez todas as',
+        '  áreas visíveis na árvore, de qualquer local, pra mover/copiar',
+        '  em lote sem precisar abrir cada uma',
+        'Painel principal (à direita) voltou a ficar limpo, só com a',
+        '  lista de áreas do local aberto e a busca — sem os controles',
+        '  de seleção em massa ocupando espaço ali',
       ]
     }
   ],
