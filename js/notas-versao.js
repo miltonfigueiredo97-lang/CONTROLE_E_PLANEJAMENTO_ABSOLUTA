@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.28.3',
+  versaoAtual: 'V2.28.4',
 
   versoes: [
     {
@@ -3186,7 +3186,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.28.3',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-13',
       tipo: 'correcao',
       titulo: 'Levantamento de Piso: corrige botão "Locais" flutuando por cima do título',
@@ -3196,6 +3196,24 @@ const NotasVersao = {
         '  Geral" e o texto embaixo dele',
         'Agora o botão faz parte do fluxo normal da página, sempre',
         '  acima do conteúdo, sem sobrepor nada',
+      ]
+    },
+    {
+      versao: 'V2.28.4',
+      status: 'aberta',
+      data: '2026-07-13',
+      tipo: 'correcao',
+      titulo: 'Levantamento de Piso: corrige letras claras demais na árvore (fundo escuro não estava aplicando)',
+      itens: [
+        'Causa raiz encontrada: existem duas definições conflitantes da',
+        '  classe usada no fundo da árvore — uma clara em modulos.css,',
+        '  outra escura em layout.css. A clara estava vencendo por causa',
+        '  da ordem de carregamento dos arquivos CSS do sistema',
+        'Resultado: o texto claro (ajustado pro tema escuro) ficava',
+        '  quase ilegível sobre um fundo branco, em vez de escuro',
+        'Corrigido forçando o fundo escuro direto na página do Piso, com',
+        '  força suficiente pra ganhar de qualquer uma das duas versões',
+        '  conflitantes, não importa a ordem de carregamento',
       ]
     }
   ],
