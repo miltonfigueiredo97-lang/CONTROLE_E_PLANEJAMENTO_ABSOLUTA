@@ -265,7 +265,7 @@ const LP = (() => {
           <div class="fachada-tree-body" id="lp-tree-body">${_renderArvore()}</div>
         </div>
         <div class="ar-painel" id="lp-painel">
-          ${treeColapsada ? `<button class="btn btn-secundario btn-sm lp-reabrir-arvore" onclick="LP.toggleArvore()" title="Mostrar árvore de locais">☰ Locais</button>` : ''}
+          ${treeColapsada ? `<div style="margin-bottom:10px;"><button class="btn btn-secundario btn-sm" onclick="LP.toggleArvore()" title="Mostrar árvore de locais">☰ Locais</button></div>` : ''}
           ${_renderPainel()}
         </div>
       </div>

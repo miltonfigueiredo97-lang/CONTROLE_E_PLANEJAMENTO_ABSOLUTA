@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.28.2',
+  versaoAtual: 'V2.28.3',
 
   versoes: [
     {
@@ -3169,7 +3169,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.28.2',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-13',
       tipo: 'correcao',
       titulo: 'Levantamento de Piso: corrige conteúdo espremido numa coluna estreita ao recolher a árvore',
@@ -3182,6 +3182,20 @@ const NotasVersao = {
         '  ocupar 100% da largura disponível de forma direta, sem',
         '  depender de um cálculo de grade que podia falhar em telas',
         '  estreitas',
+      ]
+    },
+    {
+      versao: 'V2.28.3',
+      status: 'aberta',
+      data: '2026-07-13',
+      tipo: 'correcao',
+      titulo: 'Levantamento de Piso: corrige botão "Locais" flutuando por cima do título',
+      itens: [
+        'Corrigido: o botão "☰ Locais" (pra reabrir a árvore recolhida)',
+        '  ficava flutuando fixo no canto, sobrepondo o título "Visão',
+        '  Geral" e o texto embaixo dele',
+        'Agora o botão faz parte do fluxo normal da página, sempre',
+        '  acima do conteúdo, sem sobrepor nada',
       ]
     }
   ],
