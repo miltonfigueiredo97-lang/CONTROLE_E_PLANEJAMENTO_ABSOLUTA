@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.26.0',
+  versaoAtual: 'V2.26.1',
 
   versoes: [
     {
@@ -2981,7 +2981,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.26.0',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-13',
       tipo: 'funcionalidade',
       titulo: 'Levantamento de Piso: mover/clonar/copiar movidos pro menu de locais (esquerda), igual os outros levantamentos',
@@ -3003,6 +3003,31 @@ const NotasVersao = {
         'Painel principal (à direita) voltou a ficar limpo, só com a',
         '  lista de áreas do local aberto e a busca — sem os controles',
         '  de seleção em massa ocupando espaço ali',
+      ]
+    },
+    {
+      versao: 'V2.26.1',
+      status: 'aberta',
+      data: '2026-07-13',
+      tipo: 'correcao',
+      titulo: 'Levantamento de Piso: corrige nome das áreas quebrando letra por letra + planta "se multiplica" ao mover',
+      itens: [
+        'Corrigido: nome das áreas na árvore estava quebrando letra por',
+        '  letra ("Ba/nh/eir/o..."). Causa: o espaço reservado pros',
+        '  botões de ação (clonar/renomear/excluir) estava sendo aplicado',
+        '  também nas linhas de área, que não têm esses botões — sobrava',
+        '  quase nenhuma largura pro nome',
+        'Áreas não usam mais esse espaço reservado, e a quebra de linha',
+        '  ficou mais suave (só quebra entre palavras; só quebra no meio',
+        '  de uma palavra se ela realmente não couber sozinha)',
+        'Novo: ao mover (ou copiar) uma área pra um local que ainda não',
+        '  tem planta vinculada, ele herda automaticamente a mesma',
+        '  planta/página/escala de onde a área veio — não precisa',
+        '  vincular e recalibrar tudo de novo',
+        'O local de origem nunca é afetado: continua com a própria',
+        '  planta e com as demais áreas que ficaram lá',
+        'Mesmo comportamento aplicado no mover individual (modal da',
+        '  área) e no Clonar/Multiplicar Pavimento inteiro',
       ]
     }
   ],

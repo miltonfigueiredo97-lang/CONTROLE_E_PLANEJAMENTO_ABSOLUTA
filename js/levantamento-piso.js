@@ -823,6 +823,27 @@ const LP = (() => {
     if (info) info.textContent = `${marcadas} selecionada(s)`;
   }
 
+  // Se o local de destino ainda não tem planta vinculada, herda a mesma
+  // planta/página/escala/linha de calibração de onde a área veio — assim ela
+  // continua aparecendo certinha sobre o desenho no novo local, sem precisar
+  // vincular e recalibrar tudo de novo. Só copia; nunca mexe na origem.
+  async function _herdarPlantaSeNecessario(destR, idsAreas) {
+    if (!destR || destR.node.plantaId) return false;
+    for (const id of idsAreas) {
+      const a = areas.find(x => x.id === id); if (!a) continue;
+      const origemR = _acharNode(a.nodeId);
+      if (origemR && origemR.node.plantaId) {
+        destR.node.plantaId = origemR.node.plantaId;
+        destR.node.pagina = origemR.node.pagina;
+        destR.node.escalaMetrosPorPonto = origemR.node.escalaMetrosPorPonto;
+        destR.node.linhaCalibracao = origemR.node.linhaCalibracao;
+        await _salvarArvore();
+        return true;
+      }
+    }
+    return false;
+  }
+
   async function moverOuCopiarSelecionadas(acao) {
     const marcados = Array.from(document.querySelectorAll('.lp-area-check:checked')).map(cb => cb.getAttribute('data-id'));
     if (!marcados.length) { Utils.toast('Selecione pelo menos uma área.', 'alerta'); return; }
@@ -830,10 +851,12 @@ const LP = (() => {
     const destino = sel.value;
     if (!destino) { Utils.toast('Escolha o local de destino.', 'alerta'); return; }
     const destR = _acharNode(destino);
-    const escalaDestino = destR ? (destR.node.escalaMetrosPorPonto || 0) : 0;
+    if (!destR) return;
 
     Utils.mostrarLoading(acao === 'copiar' ? 'Copiando áreas...' : 'Movendo áreas...');
     try {
+      await _herdarPlantaSeNecessario(destR, marcados);
+      const escalaDestino = destR.node.escalaMetrosPorPonto || 0;
       const ops = [];
       marcados.forEach(id => {
         const a = areas.find(x => x.id === id); if (!a) return;
@@ -1276,7 +1299,7 @@ const LP = (() => {
     const locais = _listarNodesMedicao().filter(n => n.id !== a.nodeId);
     selMover.innerHTML = locais.length
       ? `<option value="">Selecione...</option>` + locais.map(n => `<option value="${n.id}">${esc(n.label)}</option>`).join('')
-      : `<option value="">Nenhum outro local com planta vinculada</option>`;
+      : `<option value="">Nenhum outro local cadastrado ainda</option>`;
     document.getElementById('lp-campo-mover').style.display = '';
     Utils.abrirModal('modal-lp-area');
   }
@@ -1288,6 +1311,8 @@ const LP = (() => {
     if (!novoNodeId) { Utils.toast('Escolha o local de destino.', 'alerta'); return; }
     Utils.mostrarLoading('Movendo área...');
     try {
+      const destR = _acharNode(novoNodeId);
+      await _herdarPlantaSeNecessario(destR, [areaEditId]);
       await Database.atualizar(obraId, COL_AREAS, areaEditId, { nodeId: novoNodeId });
       Utils.fecharModal('modal-lp-area');
       Utils.toast('Área movida!', 'sucesso');
@@ -1352,6 +1377,13 @@ const LP = (() => {
       const delOps = [];
       alvoIds.forEach(id => { _areasDoNode(id).forEach(a => delOps.push({ type: 'delete', ref: Database.ref(obraId, COL_AREAS).doc(a.id) })); });
       for (let i = 0; i < delOps.length; i += 400) await Database.batchWrite(delOps.slice(i, i + 400));
+
+      // Se algum destino ainda não tiver planta nenhuma vinculada, herda a
+      // mesma planta/página/escala da origem (só nesse caso — locais que já
+      // têm sua própria planta continuam com a deles).
+      for (const alvoId of alvoIds) {
+        await _herdarPlantaSeNecessario(_acharNode(alvoId), areasOrigem.length ? [areasOrigem[0].id] : []);
+      }
 
       // Clona as áreas da origem pra cada destino, recalculando m²/ML pela escala de cada destino
       // (a geometria do polígono é a mesma; só a escala pode mudar entre locais)
