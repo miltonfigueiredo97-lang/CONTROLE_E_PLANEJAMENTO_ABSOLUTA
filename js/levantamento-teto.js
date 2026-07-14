@@ -229,6 +229,12 @@ const LT = (() => {
     const el = document.getElementById('lt-content');
     const actions = document.getElementById('lt-header-actions');
     if (!el) return;
+    // Substituir o innerHTML abaixo destrói e recria os elementos — se o
+    // elemento clicado (ex: botão "Nova Área", "Editar Tabica") estava com
+    // foco, o navegador pode jogar o scroll do container pai lá pra cima
+    // ao perder o foco. Guardamos e restauramos o scroll pra não pular.
+    const scrollEl = document.querySelector('.content');
+    const scrollTopAntes = scrollEl ? scrollEl.scrollTop : 0;
     if (actions) actions.innerHTML = '';
     const nodeAtual = selNodeId ? _acharNode(selNodeId) : null;
     const emWorkspace = !!(nodeAtual && nodeAtual.node.plantaId);
@@ -276,6 +282,10 @@ const LT = (() => {
     if (selNodeId) {
       const r = _acharNode(selNodeId);
       if (r && r.node.plantaId) _renderCanvasNode(r.node);
+    }
+    if (scrollEl) {
+      scrollEl.scrollTop = scrollTopAntes;
+      requestAnimationFrame(() => { scrollEl.scrollTop = scrollTopAntes; });
     }
   }
 

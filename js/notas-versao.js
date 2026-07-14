@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.29.1',
+  versaoAtual: 'V2.29.2',
 
   versoes: [
     {
@@ -3257,7 +3257,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.29.1',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-14',
       tipo: 'correcao',
       titulo: 'Levantamento de Teto: Drywall e Placa de Gesso viram opções exclusivas (antes dava pra preencher os dois ao mesmo tempo)',
@@ -3270,6 +3270,23 @@ const NotasVersao = {
         '  depois de escolher, e o outro é limpo automaticamente ao trocar',
         'KPI "M² de Drywall" adicionado na Visão Geral e no painel do',
         '  local (antes só existia o de Placa de Gesso)',
+      ]
+    },
+    {
+      versao: 'V2.29.2',
+      status: 'aberta',
+      data: '2026-07-14',
+      tipo: 'correcao',
+      titulo: 'Levantamento de Teto: corrige "Nova Área" e "Editar Tabica" jogando o scroll da página lá pra cima',
+      itens: [
+        'Causa: o botão clicado ("Nova Área" no toolbar, ou o modal',
+        '  fechando pra abrir a edição de tabica) fica com foco no',
+        '  momento em que a tela é redesenhada — e como o redesenho',
+        '  recria os elementos do zero, o elemento com foco é destruído,',
+        '  fazendo o navegador jogar o scroll do container pra o topo',
+        'Corrigido guardando a posição de scroll do painel de conteúdo',
+        '  antes de redesenhar e restaurando ela logo em seguida — a',
+        '  tela agora fica onde estava em vez de pular pro topo',
       ]
     }
   ],
