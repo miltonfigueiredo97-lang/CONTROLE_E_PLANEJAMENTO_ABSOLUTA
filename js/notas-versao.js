@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.25.2',
+  versaoAtual: 'V2.25.3',
 
   versoes: [
     {
@@ -2945,7 +2945,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.25.2',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-13',
       tipo: 'correcao',
       titulo: 'Levantamento de Piso: nome do local não corta mais com "..."',
@@ -2958,6 +2958,25 @@ const NotasVersao = {
         '  maiores com menos quebras de linha',
         'Adicionado tooltip com o nome completo ao passar o mouse, como',
         '  reforço',
+      ]
+    },
+    {
+      versao: 'V2.25.3',
+      status: 'aberta',
+      data: '2026-07-13',
+      tipo: 'correcao',
+      titulo: 'Levantamento de Piso: botão de excluir local sem estilo (feio) + botões desalinhados ao passar o mouse',
+      itens: [
+        'Encontrado: o botão de excluir local (✕) nunca teve estilo',
+        '  próprio no CSS — aparecia com a aparência crua padrão do',
+        '  navegador, feio e destoando do resto do sistema',
+        'Agora tem o mesmo acabamento do botão de renomear (✎), com',
+        '  cor vermelha (faz sentido pra uma ação de excluir) e destaque',
+        '  suave ao passar o mouse',
+        'Corrigido também: como o nome do local agora pode quebrar linha,',
+        '  os botões de renomear/excluir ficavam soltos/desalinhados ao',
+        '  passar o mouse por cima. Agora ficam fixos no canto superior',
+        '  direito do card, sem depender de quantas linhas o nome ocupa',
       ]
     }
   ],
