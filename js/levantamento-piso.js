@@ -523,32 +523,30 @@ const LP = (() => {
           <span class="subtitulo">${totalAreas} área(s) medida(s) · ${nodesComVinculo} local(is) com planta vinculada</span></div>
       </div>
 
-      <div class="cc-kpiGrid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));">
-        <div class="cc-kpi cc-kpiBlue"><div class="cc-kpiIcon">📋</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Total de Áreas</div><div class="cc-kpiValue">${totalAreas}</div></div></div>
+      <div class="cc-kpiGrid" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr));">
         <div class="cc-kpi"><div class="cc-kpiIcon">▦</div><div class="cc-kpiBody"><div class="cc-kpiLabel">M² de Piso</div><div class="cc-kpiValue">${fmt2(totalPiso)}<span class="cc-kpiUnit">m²</span></div></div></div>
         <div class="cc-kpi cc-kpiOrange"><div class="cc-kpiIcon">▤</div><div class="cc-kpiBody"><div class="cc-kpiLabel">M² de Contrapiso</div><div class="cc-kpiValue">${fmt2(totalContrapiso)}<span class="cc-kpiUnit">m²</span></div></div></div>
         <div class="cc-kpi cc-kpiBlue"><div class="cc-kpiIcon">💧</div><div class="cc-kpiBody"><div class="cc-kpiLabel">M² Impermeabilização</div><div class="cc-kpiValue">${fmt2(totalImperm)}<span class="cc-kpiUnit">m²</span></div></div></div>
         <div class="cc-kpi cc-kpiPurple"><div class="cc-kpiIcon">🦶</div><div class="cc-kpiBody"><div class="cc-kpiLabel">ML de Rodapé</div><div class="cc-kpiValue">${fmt2(totalRodape)}<span class="cc-kpiUnit">m</span></div></div></div>
-        <div class="cc-kpi cc-kpiGreen"><div class="cc-kpiIcon">📄</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Locais c/ Planta</div><div class="cc-kpiValue">${nodesComVinculo}</div></div></div>
       </div>
 
       ${totalAreas === 0 ? `<div class="lp-hint">Clique em um local na árvore ao lado (ou crie um novo com "+ Local") para vincular uma planta em PDF e começar a medir.</div>` : `
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin:18px 0;">
           <div class="cc-kpi" style="display:block;">
-            <strong style="display:block;margin-bottom:10px;font-size:0.85rem;">🧱 M² por Tipo de Piso</strong>
+            <strong style="display:flex;align-items:center;gap:7px;margin-bottom:10px;font-size:0.85rem;"><span style="width:9px;height:9px;border-radius:2px;background:var(--cor-primaria);display:inline-block;"></span>M² por Tipo de Piso</strong>
             ${barras(porTipoPiso, 'var(--cor-primaria)')}
           </div>
           <div class="cc-kpi" style="display:block;">
-            <strong style="display:block;margin-bottom:10px;font-size:0.85rem;">🪨 M² por Tipo de Contrapiso</strong>
+            <strong style="display:flex;align-items:center;gap:7px;margin-bottom:10px;font-size:0.85rem;"><span style="width:9px;height:9px;border-radius:2px;background:var(--cv-orange);display:inline-block;"></span>M² por Tipo de Contrapiso</strong>
             ${barras(porTipoContrapiso, 'var(--cv-orange)')}
           </div>
           <div class="cc-kpi" style="display:block;">
-            <strong style="display:block;margin-bottom:10px;font-size:0.85rem;">💧 M² por Tipo de Impermeabilização</strong>
+            <strong style="display:flex;align-items:center;gap:7px;margin-bottom:10px;font-size:0.85rem;"><span style="width:9px;height:9px;border-radius:2px;background:var(--cv-blue);display:inline-block;"></span>M² por Tipo de Impermeabilização</strong>
             ${barras(porTipoImperm, 'var(--cv-blue)')}
           </div>
         </div>
 
-        <h3 class="mb-2" style="font-size:0.95rem;">📋 Todas as Áreas Medidas</h3>
+        <h3 class="mb-2" style="font-size:0.95rem;">Todas as Áreas Medidas</h3>
         <div class="tabela-container" style="margin-bottom:18px;">
           <table class="tabela">
             <thead>

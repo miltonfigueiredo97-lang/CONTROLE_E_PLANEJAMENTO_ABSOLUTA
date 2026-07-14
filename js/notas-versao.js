@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.27.1',
+  versaoAtual: 'V2.27.2',
 
   versoes: [
     {
@@ -3092,7 +3092,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.27.1',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-13',
       tipo: 'correcao',
       titulo: 'Levantamento de Piso: corrige desenho do projeto ficando com escala diferente da área medida',
@@ -3112,6 +3112,24 @@ const NotasVersao = {
         '  sempre ficam na mesma escala de tela',
         'Mesma proteção aplicada também na re-renderização em alta',
         '  resolução (ao dar zoom)',
+      ]
+    },
+    {
+      versao: 'V2.27.2',
+      status: 'aberta',
+      data: '2026-07-13',
+      tipo: 'correcao',
+      titulo: 'Levantamento de Piso: Visão Geral mais limpa (menos cards, ícones que quebravam corrigidos)',
+      itens: [
+        'Removidos os cards "Total de Áreas" e "Locais c/ Planta" — a',
+        '  Visão Geral agora foca só no que importa: M² de Piso, M² de',
+        '  Contrapiso, M² de Impermeabilização e ML de Rodapé',
+        'Corrigido: alguns emojis (🧱 e 🪨) apareciam como quadrado',
+        '  quebrado em alguns computadores/navegadores — trocados por',
+        '  indicadores coloridos simples que sempre aparecem certinho',
+        'Com menos cards na fileira de cima, cada um ficou mais largo —',
+        '  não corta mais o texto ("M² IMPERMEABILIZAÇÃO" não invade',
+        '  mais o card ao lado)',
       ]
     }
   ],
