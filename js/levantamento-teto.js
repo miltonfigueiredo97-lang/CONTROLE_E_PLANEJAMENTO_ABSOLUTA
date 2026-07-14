@@ -10,7 +10,7 @@
 //     conhecida do desenho e informa a distância real em metros)
 //  2) MEDE-SE as áreas de teto desenhando polígonos direto sobre a
 //     página do PDF — cada polígono vira uma Área com m², tipo de
-//     Dry Wall, tipo de Placa de Gesso e Pintura (mistura de cores por %,
+//     Drywall, tipo de Placa de Gesso e Pintura (mistura de cores por %,
 //     mesmo modelo do Levantamento de Paredes — Acabamento)
 //
 // As páginas de PDF ficam numa biblioteca de "Plantas" (reaproveitável
@@ -495,13 +495,14 @@ const LT = (() => {
 
     const totalAreas = areasFiltradas.length;
     const totalTeto = areasFiltradas.reduce((s, a) => s + (a.areaM2 || 0), 0);
+    const totalDryWall = areasFiltradas.reduce((s, a) => s + (a.tipoDryWall ? (a.areaM2 || 0) : 0), 0);
     const totalPlacaGesso = areasFiltradas.reduce((s, a) => s + (a.tipoPlacaGesso ? (a.areaM2 || 0) : 0), 0);
     const totalPintura = areasFiltradas.reduce((s, a) => s + (a.temPintura ? (a.areaM2 || 0) : 0), 0);
     const totalTabica = areasFiltradas.reduce((s, a) => s + (a.mlTabica || 0), 0);
     const nodesComVinculo = _contarNodesComVinculo(arvore);
 
     const porTipoDryWall = {};
-    areasFiltradas.forEach(a => { const k = a.tipoDryWall || '(sem tipo definido)'; porTipoDryWall[k] = (porTipoDryWall[k] || 0) + (a.areaM2 || 0); });
+    areasFiltradas.forEach(a => { if (!a.tipoDryWall) return; porTipoDryWall[a.tipoDryWall] = (porTipoDryWall[a.tipoDryWall] || 0) + (a.areaM2 || 0); });
     const porTipoPlacaGesso = {};
     areasFiltradas.forEach(a => { if (!a.tipoPlacaGesso) return; porTipoPlacaGesso[a.tipoPlacaGesso] = (porTipoPlacaGesso[a.tipoPlacaGesso] || 0) + (a.areaM2 || 0); });
     const porCorPintura = {};
@@ -547,6 +548,10 @@ const LT = (() => {
           <div class="info-valor destaque">${fmt2(totalTeto)}</div>
         </div>
         <div class="fachada-info-item">
+          <div class="info-label">M² de Drywall</div>
+          <div class="info-valor">${fmt2(totalDryWall)}</div>
+        </div>
+        <div class="fachada-info-item">
           <div class="info-label">M² de Placa de Gesso</div>
           <div class="info-valor">${fmt2(totalPlacaGesso)}</div>
         </div>
@@ -563,7 +568,7 @@ const LT = (() => {
       ${totalAreas === 0 ? `<div class="lt-hint">${areas.length === 0 ? 'Clique em um local na árvore ao lado (ou crie um novo com "+ Local") para vincular uma planta em PDF e começar a medir.' : 'Nenhuma área medida neste local (ou nos sublocais dele).'}</div>` : `
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin:18px 0;">
           <div class="fachada-info-item">
-            <strong style="display:flex;align-items:center;gap:7px;margin-bottom:10px;font-size:0.85rem;"><span style="width:9px;height:9px;border-radius:2px;background:var(--cor-primaria);display:inline-block;"></span>M² por Tipo de Dry Wall</strong>
+            <strong style="display:flex;align-items:center;gap:7px;margin-bottom:10px;font-size:0.85rem;"><span style="width:9px;height:9px;border-radius:2px;background:var(--cor-primaria);display:inline-block;"></span>M² por Tipo de Drywall</strong>
             ${barras(porTipoDryWall, 'var(--cor-primaria)')}
           </div>
           <div class="fachada-info-item">
@@ -744,6 +749,7 @@ const LT = (() => {
     const temEscala = !!node.escalaMetrosPorPonto;
     const areasN = _areasDoNode(node.id).sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
     const totalTeto = areasN.reduce((s, a) => s + (a.areaM2 || 0), 0);
+    const totalDryWall = areasN.reduce((s, a) => s + (a.tipoDryWall ? (a.areaM2 || 0) : 0), 0);
     const totalPlacaGesso = areasN.reduce((s, a) => s + (a.tipoPlacaGesso ? (a.areaM2 || 0) : 0), 0);
     const totalPintura = areasN.reduce((s, a) => s + (a.temPintura ? (a.areaM2 || 0) : 0), 0);
     const totalTabica = areasN.reduce((s, a) => s + (a.mlTabica || 0), 0);
@@ -792,6 +798,7 @@ const LT = (() => {
               <table>
                 <tr><td>Total de áreas</td><td>${areasN.length}</td></tr>
                 <tr><td>M² de Teto</td><td>${fmt2(totalTeto)} m²</td></tr>
+                <tr><td>M² de Drywall</td><td>${fmt2(totalDryWall)} m²</td></tr>
                 <tr><td>M² de Placa de Gesso</td><td>${fmt2(totalPlacaGesso)} m²</td></tr>
                 <tr><td>M² com Pintura</td><td>${fmt2(totalPintura)} m²</td></tr>
                 <tr><td>ML de Tabica</td><td>${fmt2(totalTabica)} m</td></tr>
@@ -802,7 +809,7 @@ const LT = (() => {
               <div class="lt-area-card ${a.id === areaDestacadaId ? 'lt-area-card-destaque' : ''}" data-busca="${esc((a.nome + ' ' + (a.tipoDryWall || '') + ' ' + (a.tipoPlacaGesso || '') + ' ' + (a.pintura || []).map(pt => pt.cor || '').join(' ')).toLowerCase())}" onclick="LT.editarArea('${a.id}')">
                 <div class="nome"><span>${esc(a.nome)}</span><span class="m2">${fmt2(a.areaM2)} m²</span></div>
                 <div class="meta">
-                  ${a.tipoDryWall ? `Dry Wall: ${esc(a.tipoDryWall)}` : 'Dry Wall: —'}${a.tipoPlacaGesso ? ` · Placa de Gesso: ${esc(a.tipoPlacaGesso)}` : ''}
+                  ${a.tipoDryWall ? `Drywall: ${esc(a.tipoDryWall)}` : (a.tipoPlacaGesso ? `Placa de Gesso: ${esc(a.tipoPlacaGesso)}` : 'Sistema: —')}
                   ${a.temPintura ? ` · 🎨 ${(a.pintura || []).map(pt => `${esc(pt.cor || '?')} ${num(pt.pct)}%`).join(', ')}` : ''}
                   ${a.mlTabica ? ` · 🔲 ${fmt2(a.mlTabica)}m tabica` : ''}
                 </div>
@@ -1283,6 +1290,8 @@ const LT = (() => {
     Utils.limparForm('form-lt-area');
     document.getElementById('lt-area-m2-display').value = fmt2(areaM2Pendente);
     document.getElementById('lt-area-ml-tabica-display').value = fmt2(mlTabicaPendente) + ' m';
+    document.querySelector('#form-lt-area input[name="lt-sistema-teto"][value=""]').checked = true;
+    _mostrarCampoSistemaTeto('');
     pinturaAreaForm = [];
     document.getElementById('lt-check-pintura').checked = false;
     document.getElementById('lt-campo-pintura').style.display = 'none';
@@ -1331,6 +1340,9 @@ const LT = (() => {
     Utils.setFormData('form-lt-area', a);
     document.getElementById('lt-area-m2-display').value = fmt2(a.areaM2);
     document.getElementById('lt-area-ml-tabica-display').value = fmt2(a.mlTabica || 0) + ' m';
+    const sistemaAtual = a.tipoDryWall ? 'drywall' : (a.tipoPlacaGesso ? 'placagesso' : '');
+    document.querySelector(`#form-lt-area input[name="lt-sistema-teto"][value="${sistemaAtual}"]`).checked = true;
+    _mostrarCampoSistemaTeto(sistemaAtual);
     pinturaAreaForm = (a.pintura && a.pintura.length) ? JSON.parse(JSON.stringify(a.pintura)) : [{ cor: '', hex: '#ffffff', pct: 100 }];
     document.getElementById('lt-check-pintura').checked = !!a.temPintura;
     document.getElementById('lt-campo-pintura').style.display = a.temPintura ? '' : 'none';
@@ -1504,6 +1516,21 @@ const LT = (() => {
     } finally {
       Utils.esconderLoading();
     }
+  }
+
+  // ── Sistema de Forro (Drywall ou Placa de Gesso — mutuamente exclusivos) ──
+  function _mostrarCampoSistemaTeto(sistema) {
+    document.getElementById('lt-campo-drywall').style.display = sistema === 'drywall' ? '' : 'none';
+    document.getElementById('lt-campo-placagesso').style.display = sistema === 'placagesso' ? '' : 'none';
+  }
+  function toggleSistemaTeto(sistema) {
+    _mostrarCampoSistemaTeto(sistema);
+    // Limpa o campo que não se aplica, pra não salvar um valor "fantasma"
+    // digitado antes de trocar de sistema.
+    const dw = document.querySelector('#form-lt-area [name="tipoDryWall"]');
+    const pg = document.querySelector('#form-lt-area [name="tipoPlacaGesso"]');
+    if (sistema !== 'drywall' && dw) dw.value = '';
+    if (sistema !== 'placagesso' && pg) pg.value = '';
   }
 
   // ── Pintura (mistura de cores por %) — mesmo modelo do Levantamento de
@@ -1702,7 +1729,7 @@ const LT = (() => {
     abrirModalPlanta, enviarPlanta, excluirPlanta, vincularPlantaExistente, trocarPlanta,
     toggleModoCalibrar, toggleModoMedir, cancelarDesenho,
     cancelarCalibracao, confirmarCalibracao,
-    finalizarPoligono, editarArea, togglePintura, addPinturaItem, remPinturaItem, updPinturaItem, fecharModalArea, salvarArea, excluirAreaEmEdicao, moverArea,
+    finalizarPoligono, editarArea, toggleSistemaTeto, togglePintura, addPinturaItem, remPinturaItem, updPinturaItem, fecharModalArea, salvarArea, excluirAreaEmEdicao, moverArea,
     filtrarAreas, abrirClonarPavimento, marcarTodosClonar, confirmarClonarPavimento, criarNovoLocalEClonar, filtrarVisaoGeral,
     marcarTodasAreas, desmarcarTodasAreas, atualizarBarraSelecaoAreas, moverOuCopiarSelecionadas, toggleSelecaoArea,
     toggleTabicaEdge, cancelarTabica, confirmarTabica, iniciarEdicaoTabica,

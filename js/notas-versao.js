@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.29.0',
+  versaoAtual: 'V2.29.1',
 
   versoes: [
     {
@@ -3236,7 +3236,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.29.0',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-14',
       tipo: 'funcionalidade',
       titulo: 'Novo módulo: Levantamento de Teto',
@@ -3253,6 +3253,23 @@ const NotasVersao = {
         'Clone/Multiplicar pavimento, busca/filtro de áreas, mover/copiar',
         '  áreas entre locais em lote — tudo reaproveitado do Piso',
         'Card "🔲 Teto" adicionado no hub de Levantamentos',
+      ]
+    },
+    {
+      versao: 'V2.29.1',
+      status: 'aberta',
+      data: '2026-07-14',
+      tipo: 'correcao',
+      titulo: 'Levantamento de Teto: Drywall e Placa de Gesso viram opções exclusivas (antes dava pra preencher os dois ao mesmo tempo)',
+      itens: [
+        'Os dois campos de tipo eram independentes e podiam ficar',
+        '  preenchidos ao mesmo tempo, o que não faz sentido — um teto',
+        '  é Drywall OU Placa de Gesso, nunca os dois juntos',
+        'Trocado por um seletor "Sistema de Forro": Nenhum / Drywall /',
+        '  Placa de Gesso — o campo de tipo correspondente só aparece',
+        '  depois de escolher, e o outro é limpo automaticamente ao trocar',
+        'KPI "M² de Drywall" adicionado na Visão Geral e no painel do',
+        '  local (antes só existia o de Placa de Gesso)',
       ]
     }
   ],

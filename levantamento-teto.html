@@ -122,7 +122,7 @@
       <a href="histograma.html"><span class="nav-icon">📊</span> Histograma</a>
       <a href="admin-permissoes.html"><span class="nav-icon">🔑</span> Permissões</a>
       <div class="sidebar-section-title">Sistema</div>
-      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V2.29.0</span></a>
+      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V2.29.1</span></a>
     </nav>
     <div class="sidebar-user">
       <div class="user-avatar">U</div>
@@ -220,11 +220,25 @@
           </div>
         </div>
         <div class="form-grupo">
-          <label>Tipo de Dry Wall</label>
+          <label>Sistema de Forro</label>
+          <div style="display:flex;gap:14px;flex-wrap:wrap;padding:6px 0;">
+            <label style="display:flex;align-items:center;gap:5px;font-weight:400;cursor:pointer;">
+              <input type="radio" name="lt-sistema-teto" value="" onchange="LT.toggleSistemaTeto('')"> Nenhum
+            </label>
+            <label style="display:flex;align-items:center;gap:5px;font-weight:400;cursor:pointer;">
+              <input type="radio" name="lt-sistema-teto" value="drywall" onchange="LT.toggleSistemaTeto('drywall')"> Drywall
+            </label>
+            <label style="display:flex;align-items:center;gap:5px;font-weight:400;cursor:pointer;">
+              <input type="radio" name="lt-sistema-teto" value="placagesso" onchange="LT.toggleSistemaTeto('placagesso')"> Placa de Gesso
+            </label>
+          </div>
+        </div>
+        <div class="form-grupo" id="lt-campo-drywall" style="display:none;">
+          <label>Tipo de Drywall</label>
           <input type="text" name="tipoDryWall" class="form-control" list="lt-lista-drywall" placeholder="Ex: Drywall Standard, Drywall RU (verde), Drywall RF (rosa)">
           <datalist id="lt-lista-drywall"></datalist>
         </div>
-        <div class="form-grupo">
+        <div class="form-grupo" id="lt-campo-placagesso" style="display:none;">
           <label>Tipo de Placa de Gesso</label>
           <input type="text" name="tipoPlacaGesso" class="form-control" list="lt-lista-placagesso" placeholder="Ex: Placa Standard 12,5mm, Placa RU, Placa RF">
           <datalist id="lt-lista-placagesso"></datalist>
@@ -277,7 +291,7 @@
         </div>
       </div>
       <p style="font-size:0.85rem;color:var(--cor-texto-muted);margin-bottom:6px;">— ou escolha um local já existente —</p>
-      <p style="font-size:0.8rem;color:var(--cor-texto-muted);margin-bottom:10px;">Copia todas as áreas medidas deste local (m², tabica, Dry Wall/Placa de Gesso/Pintura) para os locais marcados abaixo. Útil para pavimento tipo repetido em vários andares.</p>
+      <p style="font-size:0.8rem;color:var(--cor-texto-muted);margin-bottom:10px;">Copia todas as áreas medidas deste local (m², tabica, Drywall/Placa de Gesso/Pintura) para os locais marcados abaixo. Útil para pavimento tipo repetido em vários andares.</p>
       <div style="margin-bottom:8px;">
         <button type="button" class="btn btn-secundario btn-sm" onclick="LT.marcarTodosClonar(true)">Marcar todos</button>
         <button type="button" class="btn btn-secundario btn-sm" onclick="LT.marcarTodosClonar(false)">Desmarcar todos</button>
