@@ -47,6 +47,10 @@
     #lp-content .ar-layout.tree-colapsada .ar-painel { width:100%; max-width:100%; }
     #lp-content .ar-layout.tree-colapsada.lp-workspace-ativo .ar-painel { height:100%; }
     #lp-content .ar-layout { position:relative; grid-template-columns: 320px 1fr; }
+    /* Fixando o fundo branco da árvore explicitamente (existem duas definições
+       conflitantes no sistema — clara em modulos.css, escura em layout.css —
+       e não queremos depender da ordem de carregamento pra decidir qual vale). */
+    #lp-content .fachada-tree { background:#fff; }
     /* Nome do local: quebra linha (mostra por inteiro) em vez de cortar com
        "...". Dessa vez com largura de sobra reservada pros botões de ação,
        pra não espremer o texto igual da última vez. */
@@ -67,31 +71,6 @@
     #lp-content .tree-item .tree-edit-btn:hover { color:var(--cor-primaria); background:#f1f5f9; }
     #lp-content .tree-item .tree-del-btn { right:0; color:#dc2626; }
     #lp-content .tree-item .tree-del-btn:hover { color:#991b1b; background:#fee2e2; }
-    /* Tema escuro da árvore (igual o Levantamento de Fachada) — o container
-       (.fachada-tree) já vem com fundo escuro; aqui ajustamos as cores dos
-       itens dentro (por padrão pensados pra fundo claro). Vem depois das
-       regras claras acima de propósito, pra ganhar no empate de especificidade. */
-    /* Existem duas definições conflitantes de .fachada-tree no sistema
-       (clara em modulos.css, escura em layout.css) — a clara vence pela
-       ordem de carregamento. Forçando o fundo escuro aqui, com força
-       suficiente pra ganhar de qualquer jeito. */
-    #lp-content .fachada-tree.lp-tree-escura { background:var(--cor-dark-800); }
-    #lp-content .fachada-tree.lp-tree-escura .fachada-tree-header { background:var(--cor-dark-700); border-bottom-color:rgba(255,255,255,0.08); }
-    #lp-content .fachada-tree.lp-tree-escura .fachada-tree-header h3 { color:#e0e0e0; }
-    #lp-content .lp-tree-escura .tree-item { color:#c9c9c9; }
-    #lp-content .lp-tree-escura .tree-item:hover { background:rgba(255,255,255,0.06); color:#fff; }
-    #lp-content .lp-tree-escura .tree-item.ativo { background:rgba(245,197,24,0.16); color:var(--cor-primaria); }
-    #lp-content .lp-tree-escura .tree-item .tree-toggle { color:#8a8a8a; }
-    #lp-content .lp-tree-escura .tree-item .tree-badge { background:rgba(255,255,255,0.1); color:#d4d4d4; }
-    #lp-content .lp-tree-escura .tree-item .tree-badge-area { background:rgba(37,99,235,0.25) !important; color:#93c5fd !important; }
-    #lp-content .lp-tree-escura .tree-children-areas { border-left-color:rgba(255,255,255,0.12); }
-    #lp-content .lp-tree-escura .ar-add-inline { color:var(--cor-primaria); opacity:0.85; }
-    #lp-content .lp-tree-escura .ar-add-inline:hover { opacity:1; background:rgba(255,255,255,0.05); }
-    #lp-content .lp-tree-escura .tree-item .tree-clone-btn, #lp-content .lp-tree-escura .tree-item .tree-edit-btn { color:#aaa; }
-    #lp-content .lp-tree-escura .tree-item .tree-clone-btn:hover, #lp-content .lp-tree-escura .tree-item .tree-edit-btn:hover { color:#fff; background:rgba(255,255,255,0.12); }
-    #lp-content .lp-tree-escura .tree-item .tree-del-btn { color:#f87171; }
-    #lp-content .lp-tree-escura .tree-item .tree-del-btn:hover { color:#fecaca; background:rgba(248,113,113,0.18); }
-    #lp-content .lp-tree-escura .estado-vazio p { color:#9a9a9a; }
     #lp-content .ar-layout.lp-workspace-ativo { height:calc(100vh - 130px); }
     /* Fora do modo de medição (Visão Geral, vincular planta): nada de scroll
        interno cortado — o conteúdo flui inteiro e quem rola é a página. */
@@ -143,7 +122,7 @@
       <a href="histograma.html"><span class="nav-icon">📊</span> Histograma</a>
       <a href="admin-permissoes.html"><span class="nav-icon">🔑</span> Permissões</a>
       <div class="sidebar-section-title">Sistema</div>
-      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V2.28.4</span></a>
+      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V2.28.5</span></a>
     </nav>
     <div class="sidebar-user">
       <div class="user-avatar">U</div>

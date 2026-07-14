@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.28.4',
+  versaoAtual: 'V2.28.5',
 
   versoes: [
     {
@@ -3200,7 +3200,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.28.4',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-13',
       tipo: 'correcao',
       titulo: 'Levantamento de Piso: corrige letras claras demais na árvore (fundo escuro não estava aplicando)',
@@ -3214,6 +3214,24 @@ const NotasVersao = {
         'Corrigido forçando o fundo escuro direto na página do Piso, com',
         '  força suficiente pra ganhar de qualquer uma das duas versões',
         '  conflitantes, não importa a ordem de carregamento',
+      ]
+    },
+    {
+      versao: 'V2.28.5',
+      status: 'aberta',
+      data: '2026-07-13',
+      tipo: 'correcao',
+      titulo: 'Levantamento de Piso: corrige árvore toda escura (só o cabeçalho "Locais" deveria ser escuro)',
+      itens: [
+        'A correção anterior foi longe demais: forcei o fundo escuro em',
+        '  toda a árvore, quando no exemplo do Fachada só o cabeçalho',
+        '  ("Estrutura") é escuro — a lista de locais embaixo é clara,',
+        '  com texto escuro normal',
+        'Corrigido: removido o tema escuro dos itens da árvore. Fundo da',
+        '  lista fixado como branco explicitamente (não depende mais da',
+        '  ordem de carregamento entre os dois arquivos CSS conflitantes)',
+        'O cabeçalho "Locais" continua escuro, como deveria — isso já',
+        '  funcionava certo sem precisar de nenhum ajuste',
       ]
     }
   ],

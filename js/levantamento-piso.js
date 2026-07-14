@@ -239,7 +239,7 @@ const LP = (() => {
         </div>
       ` : ''}
       <div class="ar-layout ${treeColapsada ? 'tree-colapsada' : ''} ${emWorkspace ? 'lp-workspace-ativo' : ''}">
-        <div class="fachada-tree lp-tree-escura">
+        <div class="fachada-tree">
           <div class="fachada-tree-header">
             <h3>Locais</h3>
             <div style="display:flex;gap:6px;">
