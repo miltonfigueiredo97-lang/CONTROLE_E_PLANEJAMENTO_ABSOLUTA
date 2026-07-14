@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.28.1',
+  versaoAtual: 'V2.28.2',
 
   versoes: [
     {
@@ -3151,7 +3151,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.28.1',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-13',
       tipo: 'melhoria',
       titulo: 'Levantamento de Piso: acabamento visual alinhado com o Levantamento de Fachada',
@@ -3165,6 +3165,23 @@ const NotasVersao = {
         '  "Resumo Geral" da Fachada (label em cima, valor grande embaixo,',
         '  sem bolha de ícone) em vez do estilo com ícone colorido usado',
         '  antes',
+      ]
+    },
+    {
+      versao: 'V2.28.2',
+      status: 'aberta',
+      data: '2026-07-13',
+      tipo: 'correcao',
+      titulo: 'Levantamento de Piso: corrige conteúdo espremido numa coluna estreita ao recolher a árvore',
+      itens: [
+        'Corrigido: ao clicar em "Recolher árvore", o conteúdo (Visão',
+        '  Geral, tela de medição etc.) continuava espremido numa coluna',
+        '  estreita à esquerda, com um monte de espaço vazio sobrando —',
+        '  em telas mais estreitas isso ficava bem ruim',
+        'Agora, com a árvore recolhida, o painel principal passa a',
+        '  ocupar 100% da largura disponível de forma direta, sem',
+        '  depender de um cálculo de grade que podia falhar em telas',
+        '  estreitas',
       ]
     }
   ],
