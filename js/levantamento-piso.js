@@ -287,30 +287,31 @@ const LP = (() => {
       const ativo = selNodeId === n.id;
       const ids = _idsComDescendentes(n);
       const nAreas = areas.filter(a => ids.includes(a.nodeId)).length;
+      const areasDoNo = _areasDoNode(n.id).sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
+      const temExpandir = (n.filhos || []).length > 0 || areasDoNo.length > 0;
       let h = `<div class="tree-item${ativo ? ' ativo' : ''}" onclick="LP.toggleNode('${n.id}');LP.selNode('${n.id}')">
-        <span class="tree-toggle">${(n.filhos || []).length ? (aberto ? '▼' : '▶') : ''}</span>
+        <span class="tree-toggle">${temExpandir ? (aberto ? '▼' : '▶') : ''}</span>
         <span class="tree-icon">${n.plantaId ? '📄' : '📍'}</span>
         <span class="tree-label">${esc(n.nome)}</span>
         ${nAreas ? `<span class="tree-badge">${nAreas}</span>` : ''}
         <button class="tree-edit-btn" onclick="event.stopPropagation();LP.renomearNode('${n.id}')" title="Renomear">✎</button>
         <button class="tree-del-btn" onclick="event.stopPropagation();LP.excluirNode('${n.id}')" title="Excluir">✕</button>
       </div>`;
-      // Áreas medidas diretamente neste local — sempre visíveis (não escondidas atrás
-      // do collapse), clicáveis pra focar/ver a área na planta.
-      const areasDoNo = _areasDoNode(n.id).sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
-      if (areasDoNo.length) {
-        h += `<div class="tree-children tree-children-areas">`;
-        areasDoNo.forEach(a => {
-          h += `<div class="tree-item tree-item-area" onclick="event.stopPropagation();LP.focarArea('${n.id}','${a.id}')" title="Ver esta área na planta">
-            <span class="tree-toggle"></span>
-            <span class="tree-icon">📐</span>
-            <span class="tree-label">${esc(a.nome)}</span>
-            <span class="tree-badge tree-badge-area">${fmt2(a.areaM2)}m²</span>
-          </div>`;
-        });
-        h += `</div>`;
-      }
       if (aberto) {
+        // Áreas medidas diretamente neste local — atrás do mesmo collapse do nó
+        // (clique na seta/local minimiza só isso, sem precisar fechar o pai).
+        if (areasDoNo.length) {
+          h += `<div class="tree-children tree-children-areas">`;
+          areasDoNo.forEach(a => {
+            h += `<div class="tree-item tree-item-area" onclick="event.stopPropagation();LP.focarArea('${n.id}','${a.id}')" title="Ver esta área na planta">
+              <span class="tree-toggle"></span>
+              <span class="tree-icon">📐</span>
+              <span class="tree-label">${esc(a.nome)}</span>
+              <span class="tree-badge tree-badge-area">${fmt2(a.areaM2)}m²</span>
+            </div>`;
+          });
+          h += `</div>`;
+        }
         h += `<div class="tree-children">`;
         h += _renderArvoreNivel(n.filhos || []);
         h += `<div class="ar-add-inline" onclick="event.stopPropagation();LP.novoNode('${n.id}')">+ adicionar sublocal</div>`;

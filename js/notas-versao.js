@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.24.0',
+  versaoAtual: 'V2.24.1',
 
   versoes: [
     {
@@ -2786,7 +2786,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.24.0',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-13',
       tipo: 'funcionalidade',
       titulo: 'Levantamento de Piso: clonar/multiplicar pavimento + filtro de áreas',
@@ -2802,6 +2802,25 @@ const NotasVersao = {
         'Se o destino já tiver áreas medidas, avisa antes de substituir',
         'Novo campo de busca na lista de áreas do local (filtra por nome',
         '  ou tipo de piso/contrapiso, sem precisar recarregar a planta)',
+      ]
+    },
+    {
+      versao: 'V2.24.1',
+      status: 'aberta',
+      data: '2026-07-13',
+      tipo: 'correcao',
+      titulo: 'Levantamento de Piso: dá pra minimizar a lista de áreas de um local sem fechar o pai',
+      itens: [
+        'Corrigido: as áreas medidas de um local (ex: "1º Pavimento")',
+        '  ficavam sempre abertas na árvore, e só dava pra escondê-las',
+        '  fechando o local pai inteiro (ex: "Torre") — o que também',
+        '  escondia os outros sublocais',
+        'Agora cada local tem seu próprio collapse: clicar nele (ou na',
+        '  seta ▶/▼) minimiza/expande só a lista de áreas dele, sem',
+        '  mexer no local pai nem nos outros sublocais',
+        'A seta de expandir agora aparece também em locais que só têm',
+        '  áreas medidas (sem sublocais) — antes só aparecia quando',
+        '  havia sublocais cadastrados',
       ]
     }
   ],
