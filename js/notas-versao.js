@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.28.5',
+  versaoAtual: 'V2.29.0',
 
   versoes: [
     {
@@ -3218,7 +3218,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.28.5',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-13',
       tipo: 'correcao',
       titulo: 'Levantamento de Piso: corrige árvore toda escura (só o cabeçalho "Locais" deveria ser escuro)',
@@ -3232,6 +3232,27 @@ const NotasVersao = {
         '  ordem de carregamento entre os dois arquivos CSS conflitantes)',
         'O cabeçalho "Locais" continua escuro, como deveria — isso já',
         '  funcionava certo sem precisar de nenhum ajuste',
+      ]
+    },
+    {
+      versao: 'V2.29.0',
+      status: 'aberta',
+      data: '2026-07-14',
+      tipo: 'funcionalidade',
+      titulo: 'Novo módulo: Levantamento de Teto',
+      itens: [
+        'Mesma arquitetura do Levantamento de Piso: árvore de locais',
+        '  (Torre → Andar → Apto → Cômodo), planta em PDF por nó, calibração',
+        '  de escala e medição de áreas desenhando polígonos sobre o desenho',
+        'Cada área medida tem: Tipo de Dry Wall, Tipo de Placa de Gesso e',
+        '  Pintura (mistura de cores por %, mesmo modelo do Levantamento de',
+        '  Paredes — Acabamento: nome + cor + percentual da área, com soma',
+        '  validada em 100%)',
+        'ML de Tabica: mesma mecânica do ML de Rodapé do Piso — seleciona',
+        '  as arestas do polígono que têm tabica direto na planta',
+        'Clone/Multiplicar pavimento, busca/filtro de áreas, mover/copiar',
+        '  áreas entre locais em lote — tudo reaproveitado do Piso',
+        'Card "🔲 Teto" adicionado no hub de Levantamentos',
       ]
     }
   ],
