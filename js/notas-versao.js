@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.24.2',
+  versaoAtual: 'V2.24.3',
 
   versoes: [
     {
@@ -2825,7 +2825,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.24.2',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-13',
       tipo: 'funcionalidade',
       titulo: 'Levantamento de Piso: Visão Geral agora é um dashboard completo',
@@ -2841,6 +2841,24 @@ const NotasVersao = {
         '  impermeabilização e ML de rodapé — clicar numa linha leva',
         '  direto pra ela na planta (mesma "visão" da árvore)',
         'Biblioteca de plantas continua listada logo abaixo',
+      ]
+    },
+    {
+      versao: 'V2.24.3',
+      status: 'aberta',
+      data: '2026-07-13',
+      tipo: 'correcao',
+      titulo: 'Levantamento de Piso: Visão Geral com o mesmo acabamento visual dos outros levantamentos',
+      itens: [
+        'Refeita a Visão Geral usando os mesmos componentes visuais já',
+        '  usados no Levantamento de Concreto e Paredes: cards de KPI',
+        '  coloridos (cc-kpi) em vez das caixinhas cruas de antes',
+        'M² por Tipo de Piso/Contrapiso/Impermeabilização agora aparecem',
+        '  como barras de progresso (maior valor primeiro), não mais',
+        '  tabela simples',
+        'Tabela de todas as áreas trocada pela tabela padrão do sistema',
+        '  (cabeçalho escuro fixo, zebra no hover, linha de total no',
+        '  rodapé) — a mesma usada em todo o resto do sistema',
       ]
     }
   ],
