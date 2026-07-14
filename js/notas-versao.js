@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.23.0',
+  versaoAtual: 'V2.23.1',
 
   versoes: [
     {
@@ -2735,7 +2735,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.23.0',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-13',
       tipo: 'funcionalidade',
       titulo: 'Levantamento de Piso: áreas na árvore com visão, ML de rodapé, m² contrapiso/impermeabilização',
@@ -2761,6 +2761,27 @@ const NotasVersao = {
         '  marcadas) e ML de Rodapé total',
         'Cards de área na lateral também mostram o ML de rodapé quando',
         '  houver',
+      ]
+    },
+    {
+      versao: 'V2.23.1',
+      status: 'aberta',
+      data: '2026-07-13',
+      tipo: 'correcao',
+      titulo: 'Levantamento de Piso: corrige área salva no local errado + clique na árvore abre edição',
+      itens: [
+        'Corrigido na raiz: o local (nodeId) da área agora é capturado no',
+        '  exato momento em que o polígono é fechado, em vez de reler a',
+        '  seleção da árvore só quando o usuário clica em "Salvar" — evita',
+        '  a área cair num local diferente do que estava aberto ao medir',
+        'Ao salvar, o sistema agora navega direto para o local onde a',
+        '  área realmente foi gravada, mesmo que a seleção na árvore',
+        '  tenha mudado nesse meio tempo',
+        'Clicar numa área na árvore agora também abre a edição das',
+        '  informações dela, além de centralizar e destacar na planta',
+        'Novo: botão "Mover esta área para outro local" no modal de',
+        '  edição — caso uma área tenha ficado no local errado, dá pra',
+        '  corrigir direto, sem precisar excluir e remedir',
       ]
     }
   ],

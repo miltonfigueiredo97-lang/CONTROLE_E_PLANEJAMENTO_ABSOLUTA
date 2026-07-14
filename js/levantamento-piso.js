@@ -53,6 +53,10 @@ const LP = (() => {
   let fsAtivo = false;        // tela cheia do workspace de medição
 
   let areaEditId = null;           // id da área em edição (null = nova)
+  let areaNodeIdPendente = null;   // nodeId capturado no momento em que o polígono foi fechado
+                                    // (não confiar em selNodeId "ao vivo" no momento de salvar —
+                                    // evita a área cair no local errado se algo mudar a seleção
+                                    // entre desenhar e salvar)
   let areaPoligonoPendente = null; // polígono (pontos-PDF) aguardando salvar no modal
   let areaM2Pendente = 0;
   let rodapeArestasPendente = null; // seleção de arestas com rodapé (nova área) aguardando salvar
@@ -184,6 +188,18 @@ const LP = (() => {
   function _areasDoNode(nodeId) { return areas.filter(a => a.nodeId === nodeId); }
   function _plantaPorId(id) { return plantas.find(p => p.id === id) || null; }
 
+  // Lista achatada de todos os locais que têm planta vinculada, com caminho
+  // completo (ex: "Torre › 1º Pavimento") — usada no seletor de mover área.
+  function _listarNodesMedicao(nodes = arvore, caminho = []) {
+    let out = [];
+    _ordenarNodes(nodes).forEach(n => {
+      const novoCaminho = [...caminho, n.nome];
+      if (n.plantaId) out.push({ id: n.id, label: novoCaminho.join(' › ') });
+      out = out.concat(_listarNodesMedicao(n.filhos || [], novoCaminho));
+    });
+    return out;
+  }
+
   // ══════════════════════════════════════════
   // RENDER PRINCIPAL
   // ══════════════════════════════════════════
@@ -227,12 +243,15 @@ const LP = (() => {
   function toggleArvore() { treeColapsada = !treeColapsada; renderizar(); }
   function toggleFullscreen() { fsAtivo = !fsAtivo; renderizar(); }
 
-  // Clique numa área da árvore: seleciona o local (se necessário) e centraliza
-  // a planta nela, com um destaque temporário — a "visão" pedida.
+  // Clique numa área da árvore: seleciona o local (se necessário), centraliza
+  // a planta nela com destaque temporário, e abre a edição das informações.
   function focarArea(nodeId, areaId) {
     const trocou = nodeId !== selNodeId;
     selNode(nodeId);
-    setTimeout(() => _focarAreaNoCanvas(areaId), trocou ? 650 : 150);
+    setTimeout(() => {
+      _focarAreaNoCanvas(areaId);
+      editarArea(areaId);
+    }, trocou ? 650 : 150);
   }
 
   function _focarAreaNoCanvas(areaId) {
@@ -932,6 +951,7 @@ const LP = (() => {
   function finalizarPoligono() {
     if (poligonoPontos.length < 3) { Utils.toast('Desenhe pelo menos 3 pontos.', 'alerta'); return; }
     const r = _acharNode(selNodeId); if (!r) return;
+    areaNodeIdPendente = r.node.id; // capturado aqui, não relido depois
     areaPoligonoPendente = poligonoPontos.slice();
     areaM2Pendente = _areaPoligono(areaPoligonoPendente) * (r.node.escalaMetrosPorPonto ** 2);
     areaEditId = null;
@@ -976,8 +996,16 @@ const LP = (() => {
   }
 
   function confirmarRodape() {
-    const r = _acharNode(selNodeId); if (!r) return;
-    const ml = _calcularMlRodape(areaPoligonoPendente, poligonoRodapeSelecionado, r.node.escalaMetrosPorPonto || 0);
+    let escala = 0;
+    if (_rodapeEditandoAreaId) {
+      const areaAtual = areas.find(x => x.id === _rodapeEditandoAreaId);
+      const rNode = areaAtual ? _acharNode(areaAtual.nodeId) : null;
+      escala = rNode ? (rNode.node.escalaMetrosPorPonto || 0) : 0;
+    } else {
+      const rNode = _acharNode(areaNodeIdPendente);
+      escala = rNode ? (rNode.node.escalaMetrosPorPonto || 0) : 0;
+    }
+    const ml = _calcularMlRodape(areaPoligonoPendente, poligonoRodapeSelecionado, escala);
     if (_rodapeEditandoAreaId) {
       _salvarRodapeDireto(_rodapeEditandoAreaId, poligonoRodapeSelecionado.slice(), ml);
       return;
@@ -992,6 +1020,7 @@ const LP = (() => {
     document.getElementById('lp-campo-imperm-tipo').style.display = 'none';
     document.getElementById('lp-btn-excluir-area').style.display = 'none';
     document.getElementById('lp-btn-editar-rodape').style.display = 'none';
+    document.getElementById('lp-campo-mover').style.display = 'none';
     Utils.abrirModal('modal-lp-area');
     renderizar();
   }
@@ -1038,7 +1067,34 @@ const LP = (() => {
     document.getElementById('lp-btn-excluir-area').style.display = '';
     document.getElementById('lp-btn-editar-rodape').style.display = '';
     document.getElementById('lp-btn-editar-rodape').setAttribute('onclick', `LP.iniciarEdicaoRodape('${id}')`);
+    const selMover = document.getElementById('lp-area-mover-select');
+    const locais = _listarNodesMedicao().filter(n => n.id !== a.nodeId);
+    selMover.innerHTML = locais.length
+      ? `<option value="">Selecione...</option>` + locais.map(n => `<option value="${n.id}">${esc(n.label)}</option>`).join('')
+      : `<option value="">Nenhum outro local com planta vinculada</option>`;
+    document.getElementById('lp-campo-mover').style.display = '';
     Utils.abrirModal('modal-lp-area');
+  }
+
+  async function moverArea() {
+    if (!areaEditId) return;
+    const sel = document.getElementById('lp-area-mover-select');
+    const novoNodeId = sel.value;
+    if (!novoNodeId) { Utils.toast('Escolha o local de destino.', 'alerta'); return; }
+    Utils.mostrarLoading('Movendo área...');
+    try {
+      await Database.atualizar(obraId, COL_AREAS, areaEditId, { nodeId: novoNodeId });
+      Utils.fecharModal('modal-lp-area');
+      Utils.toast('Área movida!', 'sucesso');
+      areaEditId = null;
+      await carregar();
+      selNode(novoNodeId);
+    } catch (e) {
+      console.error(e);
+      Utils.toast('Erro ao mover: ' + e.message, 'erro');
+    } finally {
+      Utils.esconderLoading();
+    }
   }
 
   function onToggleImperm(chk) {
@@ -1059,12 +1115,14 @@ const LP = (() => {
     if (!data.nome) { Utils.toast('Informe o nome da área.', 'alerta'); return; }
     if (!data.impermeabilizacao) data.tipoImpermeabilizacao = '';
 
+    const nodeIdDestino = areaEditId ? null : (areaNodeIdPendente || selNodeId);
+
     Utils.mostrarLoading('Salvando área...');
     try {
       if (areaEditId) {
         await Database.atualizar(obraId, COL_AREAS, areaEditId, data);
       } else {
-        data.nodeId = selNodeId;
+        data.nodeId = nodeIdDestino;
         data.poligono = areaPoligonoPendente;
         data.areaM2 = areaM2Pendente;
         data.rodapeArestas = rodapeArestasPendente || [];
@@ -1073,10 +1131,12 @@ const LP = (() => {
       }
       Utils.fecharModal('modal-lp-area');
       Utils.toast('Área salva!', 'sucesso');
+      const irParaNode = areaEditId ? selNodeId : nodeIdDestino;
       poligonoPontos = []; modo = 'nenhum'; areaPoligonoPendente = null; areaEditId = null;
+      areaNodeIdPendente = null;
       rodapeArestasPendente = null; mlRodapePendente = 0; poligonoRodapeSelecionado = [];
       await carregar();
-      selNode(selNodeId);
+      selNode(irParaNode);
     } catch (e) {
       console.error(e);
       Utils.toast('Erro ao salvar área: ' + e.message, 'erro');
@@ -1189,7 +1249,7 @@ const LP = (() => {
     abrirModalPlanta, enviarPlanta, excluirPlanta, vincularPlantaExistente, trocarPlanta,
     toggleModoCalibrar, toggleModoMedir, cancelarDesenho,
     cancelarCalibracao, confirmarCalibracao,
-    finalizarPoligono, editarArea, onToggleImperm, fecharModalArea, salvarArea, excluirAreaEmEdicao,
+    finalizarPoligono, editarArea, onToggleImperm, fecharModalArea, salvarArea, excluirAreaEmEdicao, moverArea,
     toggleRodapeEdge, cancelarRodape, confirmarRodape, iniciarEdicaoRodape,
     zoomIn, zoomOut, zoomReset,
   };

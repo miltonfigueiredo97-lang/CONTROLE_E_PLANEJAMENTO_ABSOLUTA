@@ -90,7 +90,7 @@
       <a href="histograma.html"><span class="nav-icon">📊</span> Histograma</a>
       <a href="admin-permissoes.html"><span class="nav-icon">🔑</span> Permissões</a>
       <div class="sidebar-section-title">Sistema</div>
-      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V2.23.0</span></a>
+      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V2.23.1</span></a>
     </nav>
     <div class="sidebar-user">
       <div class="user-avatar">U</div>
@@ -209,6 +209,13 @@
         <div class="form-grupo">
           <label>Observação</label>
           <textarea name="observacao" class="form-control" rows="2" placeholder="Opcional"></textarea>
+        </div>
+        <div class="form-grupo" id="lp-campo-mover" style="display:none;border-top:1px dashed #e2e8f0;padding-top:10px;">
+          <label>Mover esta área para outro local</label>
+          <div style="display:flex;gap:8px;">
+            <select id="lp-area-mover-select" class="form-control"></select>
+            <button type="button" class="btn btn-secundario btn-sm" style="white-space:nowrap;" onclick="LP.moverArea()">Mover</button>
+          </div>
         </div>
       </form>
     </div>
