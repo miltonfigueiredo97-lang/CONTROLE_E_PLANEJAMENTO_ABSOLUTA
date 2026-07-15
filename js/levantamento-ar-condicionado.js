@@ -22,6 +22,7 @@ const LevantamentoAr = (() => {
   // draft do modal de lançamento de máquina
   let maqDraft = null;
   let editandoMaqId = null;
+  let _buscaManualTexto = '';
 
   const COL_ITENS = 'levantamentoAr';
   const COL_MAQUINAS = 'levantamentoArMaquinas';
@@ -170,13 +171,13 @@ const LevantamentoAr = (() => {
       <span class="tree-icon">${depth === 0 ? '🏢' : '📍'}</span>
       <span class="tree-label">${n.nome}</span>
       ${nItens ? `<span class="tree-badge">${nItens}</span>` : ''}
+      <button class="tree-edit-btn" onclick="event.stopPropagation();LevantamentoAr.novoSublocal('${n.id}')" title="Adicionar sublocal aqui dentro" style="color:var(--cor-primaria-dark);font-weight:900;">+</button>
       <button class="tree-edit-btn" onclick="event.stopPropagation();LevantamentoAr.renomearNo('${n.id}')" title="Renomear">✎</button>
       <button class="tree-del-btn" onclick="event.stopPropagation();LevantamentoAr.excluirNo('${n.id}')" title="Excluir">✕</button>
     </div>`;
-    if (aberto) {
+    if (aberto && temFilhos) {
       h += `<div class="tree-children">`;
       (n.filhos || []).forEach(f => { h += _renderNo(f, depth + 1); });
-      h += `<div class="ar-add-inline" style="padding-left:${8 + (depth + 1) * 16}px;" onclick="event.stopPropagation();LevantamentoAr.novoSublocal('${n.id}')">+ adicionar sublocal dentro de "${n.nome}"</div>`;
       h += `</div>`;
     }
     return h;
@@ -258,7 +259,7 @@ const LevantamentoAr = (() => {
             </td></tr>`;
           if (aberto && kit) {
             linhas += `<tr><td colspan="5" style="background:var(--cor-fundo);padding:10px 16px;">
-              ${_expandirMaquina(doc, cfg, kit).map(l => `<div class="text-sm" style="padding:2px 0;">• ${l.nome}: <strong>${Utils.formatarNumero(l.quantidade)} ${l.unidade}</strong></div>`).join('')}
+              ${_expandirMaquina(doc, cfg, kit).map(l => `<div class="text-sm" style="padding:2px 0;">• ${l.nome}: <strong>${Utils.formatarNumero(l.quantidade)} ${l.unidade}</strong>${l.mPorUnidade ? ` (${Utils.formatarNumero(Math.ceil(l.quantidade / l.mPorUnidade), 0)} un de ${l.mPorUnidade}${l.unidade})` : ''}</div>`).join('')}
             </td></tr>`;
           }
           return linhas;
@@ -270,10 +271,11 @@ const LevantamentoAr = (() => {
     if (!linhas.length) return `<div class="text-sm text-muted">Nada levantado ainda.</div>`;
     return `
       <div class="tabela-container"><table class="tabela tabela-compacta">
-        <thead><tr><th>Material</th><th class="col-num">Total</th></tr></thead>
+        <thead><tr><th>Material</th><th class="col-num">Total</th><th class="col-num">Comprar</th></tr></thead>
         <tbody>${linhas.map(l => `<tr>
           <td>${l.nome}</td>
           <td class="col-num" style="font-family:var(--font-mono);font-weight:700;color:var(--cor-primaria);">${Utils.formatarNumero(l.quantidade)} ${l.unidade}</td>
+          <td class="col-num" style="font-family:var(--font-mono);">${l.mPorUnidade ? Utils.formatarNumero(Math.ceil(l.quantidade / l.mPorUnidade), 0) + ` un (${l.mPorUnidade}${l.unidade}/un)` : '—'}</td>
         </tr>`).join('')}</tbody></table></div>`;
   }
 
@@ -325,20 +327,23 @@ const LevantamentoAr = (() => {
     const linhas = [];
     if (kit.cobre) linhas.push({ materialId: kit.cobre.materialId, nome: kit.cobre.nome, quantidade: kit.cobre.metros, unidade: 'm' });
     kit.vinculados.forEach(v => linhas.push({ materialId: v.materialId, nome: v.nome, quantidade: v.metros, unidade: 'm' }));
-    kit.porMl.forEach(p => linhas.push({ materialId: p.materialId, nome: p.nome, quantidade: p.quantidade, unidade: p.tipo === 'uni_por_ml' ? 'un' : 'm' }));
-    (cfg.manuais || []).forEach(m => {
-      const qtd = (doc.manuais || {})[m.id] || 0;
-      if (qtd) linhas.push({ materialId: m.materialId, nome: m.nome, quantidade: qtd, unidade: 'un' });
+    kit.porMl.forEach(p => linhas.push({
+      materialId: p.materialId, nome: p.nome, quantidade: p.quantidade,
+      unidade: p.tipo === 'uni_por_ml' ? 'un' : 'm', mPorUnidade: p.mPorUnidade || null,
+    }));
+    (doc.manuaisAvulsos || []).forEach(m => {
+      if (m.quantidade) linhas.push({ materialId: m.materialId, nome: m.nome, quantidade: m.quantidade, unidade: m.unidade || 'un' });
     });
     return linhas;
   }
-  function _acumular(mapa, materialId, nomeFallback, quantidade, unidade) {
+  function _acumular(mapa, materialId, nomeFallback, quantidade, unidade, mPorUnidade) {
     if (!quantidade) return;
     const m = biblioteca.find(x => x.id === materialId);
     const nome = m ? m.nome : (nomeFallback || '(material removido)');
     const chave = materialId || nome;
-    if (!mapa[chave]) mapa[chave] = { nome, quantidade: 0, unidade };
+    if (!mapa[chave]) mapa[chave] = { nome, quantidade: 0, unidade, mPorUnidade: mPorUnidade || null };
     mapa[chave].quantidade += parseFloat(quantidade) || 0;
+    if (mPorUnidade && !mapa[chave].mPorUnidade) mapa[chave].mPorUnidade = mPorUnidade;
   }
   function _agregarLista(listaItens, listaMaquinas) {
     const mapa = {};
@@ -346,7 +351,7 @@ const LevantamentoAr = (() => {
     listaMaquinas.forEach(doc => {
       const cfg = _obterMaquinaConfig(doc.modeloTipo, doc.maquinaConfigId);
       const kit = cfg ? Utils.calcularKitAr(cfg, doc.mlBase) : null;
-      _expandirMaquina(doc, cfg, kit).forEach(l => _acumular(mapa, l.materialId, l.nome, l.quantidade, l.unidade));
+      _expandirMaquina(doc, cfg, kit).forEach(l => _acumular(mapa, l.materialId, l.nome, l.quantidade, l.unidade, l.mPorUnidade));
     });
     return mapa;
   }
@@ -581,16 +586,21 @@ const LevantamentoAr = (() => {
     }
     editandoMaqId = null;
     const modeloInicial = (maquinasCfg.cobre || []).length ? 'cobre' : 'pex';
-    maqDraft = { modeloTipo: modeloInicial, maquinaConfigId: (maquinasCfg[modeloInicial] || [])[0]?.id || '', mlBase: '', manuaisQtd: {}, observacoes: '' };
+    maqDraft = { modeloTipo: modeloInicial, maquinaConfigId: (maquinasCfg[modeloInicial] || [])[0]?.id || '', mlBase: '', manuaisAvulsos: [], observacoes: '' };
     document.getElementById('modal-armaq-titulo').textContent = 'Nova Máquina';
+    _buscaManualTexto = '';
     _renderMaquinaModal();
     Utils.abrirModal('modal-armaq-lancamento');
   }
   function editarMaquinaLancamento(id) {
     const doc = maquinasLanc.find(x => x.id === id); if (!doc) return;
     editandoMaqId = id;
-    maqDraft = { modeloTipo: doc.modeloTipo, maquinaConfigId: doc.maquinaConfigId, mlBase: doc.mlBase, manuaisQtd: { ...(doc.manuais || {}) }, observacoes: doc.observacoes || '' };
+    maqDraft = {
+      modeloTipo: doc.modeloTipo, maquinaConfigId: doc.maquinaConfigId, mlBase: doc.mlBase,
+      manuaisAvulsos: JSON.parse(JSON.stringify(doc.manuaisAvulsos || [])), observacoes: doc.observacoes || '',
+    };
     document.getElementById('modal-armaq-titulo').textContent = 'Editar Máquina';
+    _buscaManualTexto = '';
     _renderMaquinaModal();
     Utils.abrirModal('modal-armaq-lancamento');
   }
@@ -602,12 +612,41 @@ const LevantamentoAr = (() => {
   function setModeloLancamento(tipo) {
     maqDraft.modeloTipo = tipo;
     maqDraft.maquinaConfigId = (maquinasCfg[tipo] || [])[0]?.id || '';
-    maqDraft.manuaisQtd = {};
     _renderMaquinaModal();
   }
-  function setMaquinaLancamento(id) { maqDraft.maquinaConfigId = id; maqDraft.manuaisQtd = {}; _renderMaquinaModal(); }
+  function setMaquinaLancamento(id) { maqDraft.maquinaConfigId = id; _renderMaquinaModal(); }
   function onCampoMaquinaLancamento(campo, valor) { maqDraft[campo] = valor; _atualizarPreviewMaquina(); }
-  function onManualQtd(itemId, valor) { maqDraft.manuaisQtd[itemId] = parseFloat(valor) || 0; }
+
+  // ---- peça manual (avulsa) dentro do lançamento: busca/cria + quantidade ----
+  function onBuscaManual(texto) {
+    _buscaManualTexto = texto;
+    const lista = document.getElementById('armaq-busca-resultados');
+    if (lista) lista.innerHTML = _renderResultadosBuscaManual();
+  }
+  function _renderResultadosBuscaManual() {
+    if (!_buscaManualTexto.trim()) return '';
+    const resultados = _buscarMateriais(_buscaManualTexto).slice(0, 15);
+    if (!resultados.length) return `<div class="text-sm text-muted" style="padding:6px;">Nenhum material encontrado. <button class="btn btn-secundario btn-sm" onclick="LevantamentoAr.criarMaterialManual()">+ Criar "${_buscaManualTexto}"</button></div>`;
+    return resultados.map(m => `
+      <div class="tree-item" style="padding:6px 10px;" onclick="LevantamentoAr.adicionarPecaManual('${m.id}','${m.nome.replace(/'/g, "\\'")}','${m.unidade || 'un'}')">
+        <span class="tree-icon">🔩</span><span class="tree-label">${_destacar(m.nome, _buscaManualTexto)}</span><span class="tree-badge">${m.tipo}</span>
+      </div>`).join('');
+  }
+  async function criarMaterialManual() {
+    const nome = _buscaManualTexto.trim(); if (!nome) return;
+    try {
+      const materialId = await Database.criar(obraId, 'materiais', { nome, tipo: TIPOS_PERMITIDOS[0], unidade: 'un', fabricante: '', referencia: '' });
+      biblioteca.push({ id: materialId, nome, tipo: TIPOS_PERMITIDOS[0], unidade: 'un' });
+      adicionarPecaManual(materialId, nome, 'un');
+    } catch (e) { Utils.toast('Erro ao criar material.', 'erro'); }
+  }
+  function adicionarPecaManual(materialId, nome, unidade) {
+    maqDraft.manuaisAvulsos.push({ materialId, nome, unidade, quantidade: 1 });
+    _buscaManualTexto = '';
+    _renderMaquinaModal();
+  }
+  function onQtdPecaManual(idx, valor) { maqDraft.manuaisAvulsos[idx].quantidade = parseFloat(valor) || 0; }
+  function removerPecaManual(idx) { maqDraft.manuaisAvulsos.splice(idx, 1); _renderMaquinaModal(); }
 
   function _renderMaquinaModal() {
     const body = document.getElementById('armaq-modal-body'); if (!body || !maqDraft) return;
@@ -627,16 +666,21 @@ const LevantamentoAr = (() => {
       <div class="form-grupo"><label>ML lançado (comprimento base do projeto) *</label>
         <input type="number" step="0.01" class="form-control" value="${maqDraft.mlBase}" oninput="LevantamentoAr.onCampoMaquinaLancamento('mlBase', this.value)"></div>
 
-      ${cfg && (cfg.manuais || []).length ? `
-        <div style="margin:12px 0;">
-          <div style="font-size:0.8rem;font-weight:700;color:var(--cor-primaria-dark);margin-bottom:8px;">Itens manuais (informe a quantidade)</div>
-          ${cfg.manuais.map(m => `
-            <div class="form-row" style="align-items:end;">
-              <div class="form-grupo" style="flex:2;"><label style="font-weight:400;">${m.nome}</label></div>
-              <div class="form-grupo"><input type="number" step="1" min="0" class="form-control" value="${maqDraft.manuaisQtd[m.id] || ''}" placeholder="0"
-                oninput="LevantamentoAr.onManualQtd('${m.id}', this.value)"></div>
-            </div>`).join('')}
-        </div>` : ''}
+      <div style="margin:14px 0;">
+        <div style="font-size:0.8rem;font-weight:700;color:var(--cor-primaria-dark);margin-bottom:8px;">Peças manuais (ex: dreno) — adicione livremente</div>
+        <input type="text" id="armaq-busca-manual" class="form-control" placeholder="Buscar peça na biblioteca (ex: dreno)..." value="${_buscaManualTexto}"
+          oninput="LevantamentoAr.onBuscaManual(this.value)">
+        <div id="armaq-busca-resultados" style="max-height:160px;overflow-y:auto;">${_renderResultadosBuscaManual()}</div>
+        ${maqDraft.manuaisAvulsos.length ? `
+          <div style="margin-top:8px;">
+            ${maqDraft.manuaisAvulsos.map((m, idx) => `
+              <div style="display:grid;grid-template-columns:2fr 1fr 28px;gap:6px;align-items:center;margin-bottom:6px;">
+                <div class="text-sm">${m.nome}</div>
+                <input type="number" step="1" min="0" class="form-control" value="${m.quantidade}" oninput="LevantamentoAr.onQtdPecaManual(${idx}, this.value)">
+                <button class="arcfg-del-btn" style="width:28px;height:28px;border-radius:6px;border:none;background:rgba(220,38,38,0.1);color:#dc2626;cursor:pointer;" onclick="LevantamentoAr.removerPecaManual(${idx})">✕</button>
+              </div>`).join('')}
+          </div>` : `<div class="text-sm text-muted" style="margin-top:6px;">Nenhuma peça manual adicionada ainda.</div>`}
+      </div>
 
       <div class="form-grupo"><label>Observações</label><textarea class="form-control" rows="2" oninput="LevantamentoAr.onCampoMaquinaLancamento('observacoes', this.value)">${maqDraft.observacoes || ''}</textarea></div>
 
@@ -651,7 +695,11 @@ const LevantamentoAr = (() => {
     let h = `<div style="font-family:var(--font-mono);margin-bottom:6px;">ML total (com perda): <strong>${Utils.formatarNumero(kit.mlTotal)} m</strong></div>`;
     if (kit.cobre) h += `<div>• ${kit.cobre.nome}: <strong>${Utils.formatarNumero(kit.cobre.metros)} m</strong> (${Utils.formatarNumero(kit.cobre.rolos)} rolo(s))</div>`;
     kit.vinculados.forEach(v => { h += `<div>• ${v.nome}: <strong>${Utils.formatarNumero(v.metros)} m</strong> (${Utils.formatarNumero(v.rolos)} rolo(s))</div>`; });
-    kit.porMl.forEach(p => { h += `<div>• ${p.nome}: <strong>${Utils.formatarNumero(p.quantidade)} ${p.tipo === 'uni_por_ml' ? 'un' : 'm'}</strong></div>`; });
+    kit.porMl.forEach(p => {
+      if (p.tipo === 'uni_por_ml') { h += `<div>• ${p.nome}: <strong>${Utils.formatarNumero(p.quantidade, 0)} un</strong></div>`; return; }
+      const unTxt = p.unidades != null ? ` (${Utils.formatarNumero(Math.ceil(p.unidades), 0)} un de ${p.mPorUnidade}m)` : '';
+      h += `<div>• ${p.nome}: <strong>${Utils.formatarNumero(p.quantidade)} m</strong>${unTxt}</div>`;
+    });
     return h;
   }
   function _atualizarPreviewMaquina() {
@@ -665,7 +713,7 @@ const LevantamentoAr = (() => {
     if (!mlBase) { Utils.toast('Informe o ML lançado.', 'alerta'); return; }
     const data = {
       localId: sel.localId, modeloTipo: maqDraft.modeloTipo, maquinaConfigId: maqDraft.maquinaConfigId,
-      mlBase, manuais: maqDraft.manuaisQtd || {}, observacoes: maqDraft.observacoes || '',
+      mlBase, manuaisAvulsos: maqDraft.manuaisAvulsos || [], observacoes: maqDraft.observacoes || '',
     };
     try {
       if (editandoMaqId) await Database.atualizar(obraId, COL_MAQUINAS, editandoMaqId, data);
@@ -683,7 +731,8 @@ const LevantamentoAr = (() => {
     novaArea, novoSublocal, renomearNo, excluirNo,
     novoItem, editarItem, setModoItem, onBuscaMaterial, selecionarMaterialBusca, salvarItem, excluirItem,
     novaMaquinaLancamento, editarMaquinaLancamento, excluirMaquinaLancamento,
-    setModeloLancamento, setMaquinaLancamento, onCampoMaquinaLancamento, onManualQtd, salvarMaquinaLancamento,
+    setModeloLancamento, setMaquinaLancamento, onCampoMaquinaLancamento, salvarMaquinaLancamento,
+    onBuscaManual, criarMaterialManual, adicionarPecaManual, onQtdPecaManual, removerPecaManual,
   };
 })();
 

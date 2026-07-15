@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.32.0',
+  versaoAtual: 'V2.32.1',
 
   versoes: [
     {
@@ -3441,7 +3441,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.32.0',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-15',
       tipo: 'funcionalidade',
       titulo: 'Levantamento de Ar Condicionado: locais em árvore ilimitada + Configuração de Máquinas com cálculo automático',
@@ -3472,6 +3472,33 @@ const NotasVersao = {
         'Todo item de configuração (cobre, vinculados, por ML,',
         '  manuais) já nasce/mantém-se sincronizado com a biblioteca',
         '  de Materiais automaticamente',
+      ]
+    },
+    {
+      versao: 'V2.32.1',
+      status: 'aberta',
+      data: '2026-07-15',
+      tipo: 'correcao',
+      titulo: 'Levantamento de Ar Condicionado: correções de usabilidade (locais, diâmetro, layout, itens manuais, unidades)',
+      itens: [
+        'CORRIGIDO: não era possível criar sublocal dentro de sublocal',
+        '  (a opção só aparecia em nós já expandidos, e nós sem filhos',
+        '  não tinham como expandir). Agora todo local tem um botão "+"',
+        '  fixo para adicionar sublocal, em qualquer profundidade',
+        'Diâmetro do cobre/PEX agora aceita mm OU polegada em fração',
+        '  (ex: 5/8") — botão de alternância na Configuração de Máquinas',
+        'Corrigido layout dos Itens Vinculados e Itens por Metro Linear:',
+        '  cabeçalho de coluna fixo, grid consistente e botão de remover',
+        '  menor e alinhado (não quebra mais linha em telas estreitas)',
+        'Itens Manuais saíram da Configuração de Máquinas — agora são',
+        '  adicionados livremente na hora de lançar cada máquina',
+        '  (busca na biblioteca ou cria material novo na hora), em vez',
+        '  de depender de uma lista fixa pré-configurada',
+        'Itens por Metro Linear (cm/ML) ganharam campo opcional',
+        '  "1 UN = X metros" (ex: fita isolante 1 rolo = 100m) — o',
+        '  cálculo agora informa quantas unidades comprar, além dos',
+        '  metros totais, tanto na pré-visualização quanto no',
+        '  Resumo do Levantamento (nova coluna "Comprar")',
       ]
     }
   ],

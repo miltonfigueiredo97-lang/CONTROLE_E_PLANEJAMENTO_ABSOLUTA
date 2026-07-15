@@ -335,7 +335,10 @@ const Utils = (() => {
         return { ...p, quantidade: Math.ceil(taxa * mlTotal) };
       }
       // cm_por_ml -> converte para metros no total
-      return { ...p, quantidade: (taxa * mlTotal) / 100 };
+      const metros = (taxa * mlTotal) / 100;
+      const mPorUnidade = parseFloat(p.mPorUnidade) || 0;
+      const unidades = mPorUnidade > 0 ? metros / mPorUnidade : null;
+      return { ...p, quantidade: metros, unidades };
     });
 
     return { mlBase: Y, mlTotal, cobre, vinculados, porMl };

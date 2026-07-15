@@ -2,6 +2,8 @@
 // Configuração de Máquinas — Levantamento de Ar Condicionado
 // Modelos: Cobre (funcional), PEX (reaproveita motor do Cobre), Duto (em breve)
 // Cada item de config é auto-vinculado à biblioteca de Materiais.
+// Itens manuais (ex: dreno) NÃO são configurados aqui — são adicionados livremente
+// no momento do lançamento da máquina (ver levantamento-ar-condicionado.js).
 // ============================================
 const LevantamentoArConfig = (() => {
   let obraId = null;
@@ -49,6 +51,11 @@ const LevantamentoArConfig = (() => {
   }
 
   function _uid() { return 'm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+
+  function _formatarDiametro(m) {
+    if (!m || !m.diametroValor) return '?';
+    return m.diametroUnidade === 'pol' ? `${m.diametroValor}"` : `${m.diametroValor}mm`;
+  }
 
   // ===================== MATERIAL AUTO-LINK =====================
   async function _materialGetOrCreate(nome, unidade) {
@@ -112,9 +119,9 @@ const LevantamentoArConfig = (() => {
           <div class="card">
             <div class="card-body">
               <div class="obra-nome">${m.nome || '(sem nome)'}</div>
-              <div class="obra-info text-sm">Ø ${m.diametroMm || '?'}mm · perda ${m.perdaCm || 0}cm + ${m.perdaPercentual || 0}%</div>
+              <div class="obra-info text-sm">Ø ${_formatarDiametro(m)} · perda ${m.perdaCm || 0}cm + ${m.perdaPercentual || 0}%</div>
               <div class="text-sm text-muted" style="margin-top:6px;">
-                ${(m.vinculados || []).length} vinculado(s) · ${(m.porMl || []).length} item(ns)/ML · ${(m.manuais || []).length} manual(is)
+                ${(m.vinculados || []).length} vinculado(s) · ${(m.porMl || []).length} item(ns)/ML
               </div>
               <div style="display:flex;gap:6px;margin-top:12px;">
                 <button class="btn btn-secundario btn-sm" onclick="LevantamentoArConfig.editarMaquina('${m.id}')">✎ Editar</button>
@@ -133,18 +140,17 @@ const LevantamentoArConfig = (() => {
   function novaMaquina() {
     editandoId = null;
     draft = {
-      id: _uid(), nome: '', diametroMm: '', perdaCm: 10, perdaPercentual: 5,
+      id: _uid(), nome: '', diametroValor: '', diametroUnidade: 'mm', perdaCm: 10, perdaPercentual: 5,
       cobre: { nome: aba === 'pex' ? 'Tubo PEX' : 'Barra de Cobre', mPorRolo: 15, materialId: null },
       vinculados: [{ id: _uid(), nome: 'Espuma Polipex Ivertape IVL-A', mPorRolo: 2, materialId: null }],
       porMl: [
-        { id: _uid(), nome: 'Fita de PVC', tipo: 'cm_por_ml', taxa: 100, materialId: null },
-        { id: _uid(), nome: 'Silver Tape', tipo: 'cm_por_ml', taxa: 50, materialId: null },
-        { id: _uid(), nome: 'Fita Perfurada', tipo: 'cm_por_ml', taxa: 100, materialId: null },
-        { id: _uid(), nome: 'Bucha 6', tipo: 'uni_por_ml', taxa: 1, materialId: null },
-        { id: _uid(), nome: 'Parafuso 6', tipo: 'uni_por_ml', taxa: 1, materialId: null },
-        { id: _uid(), nome: 'Broca 6', tipo: 'uni_por_ml', taxa: 0.2, materialId: null },
+        { id: _uid(), nome: 'Fita de PVC', tipo: 'cm_por_ml', taxa: 100, mPorUnidade: 100, materialId: null },
+        { id: _uid(), nome: 'Silver Tape', tipo: 'cm_por_ml', taxa: 50, mPorUnidade: 100, materialId: null },
+        { id: _uid(), nome: 'Fita Perfurada', tipo: 'cm_por_ml', taxa: 100, mPorUnidade: 50, materialId: null },
+        { id: _uid(), nome: 'Bucha 6', tipo: 'uni_por_ml', taxa: 1, mPorUnidade: null, materialId: null },
+        { id: _uid(), nome: 'Parafuso 6', tipo: 'uni_por_ml', taxa: 1, mPorUnidade: null, materialId: null },
+        { id: _uid(), nome: 'Broca 6', tipo: 'uni_por_ml', taxa: 0.2, mPorUnidade: null, materialId: null },
       ],
-      manuais: [{ id: _uid(), nome: 'Dreno 25mm (7/8) PVC Marrom', materialId: null }],
     };
     mlTeste = 5;
     document.getElementById('modal-arcfg-titulo').textContent = 'Nova Máquina';
@@ -156,6 +162,13 @@ const LevantamentoArConfig = (() => {
     const m = (config[aba] || []).find(x => x.id === id); if (!m) return;
     editandoId = id;
     draft = JSON.parse(JSON.stringify(m)); // cópia de trabalho
+    // migração leve: máquinas antigas tinham diametroMm (número) sem unidade
+    if (draft.diametroValor === undefined) {
+      draft.diametroValor = draft.diametroMm || '';
+      draft.diametroUnidade = 'mm';
+    }
+    delete draft.manuais; // itens manuais não vivem mais na config
+    draft.porMl = (draft.porMl || []).map(p => ({ mPorUnidade: null, ...p }));
     mlTeste = 5;
     document.getElementById('modal-arcfg-titulo').textContent = `Editar Máquina — ${m.nome}`;
     _renderModal();
@@ -173,14 +186,24 @@ const LevantamentoArConfig = (() => {
   function _renderModal() {
     const body = document.getElementById('arcfg-modal-body'); if (!body || !draft) return;
     const kit = Utils.calcularKitAr(draft, mlTeste);
+    const rotulo = aba === 'pex' ? 'PEX' : 'Barra de Cobre';
 
     body.innerHTML = `
-      <div class="form-row">
-        <div class="form-grupo"><label>Nome da Máquina *</label>
-          <input id="am-nome" class="form-control" value="${draft.nome}" placeholder="Ex: 9.000 BTU" oninput="LevantamentoArConfig.onCampo('nome', this.value)"></div>
-        <div class="form-grupo"><label>Diâmetro do ${aba === 'pex' ? 'PEX' : 'cobre'} (mm)</label>
-          <input id="am-diam" type="number" step="0.1" class="form-control" value="${draft.diametroMm}" oninput="LevantamentoArConfig.onCampo('diametroMm', this.value)"></div>
+      <div class="form-grupo"><label>Nome da Máquina *</label>
+        <input id="am-nome" class="form-control" value="${draft.nome}" placeholder="Ex: 9.000 BTU" oninput="LevantamentoArConfig.onCampo('nome', this.value)"></div>
+
+      <div class="form-grupo"><label>Diâmetro do ${aba === 'pex' ? 'PEX' : 'cobre'}</label>
+        <div style="display:flex;gap:8px;">
+          <input id="am-diam" type="${draft.diametroUnidade === 'pol' ? 'text' : 'number'}" step="0.1" class="form-control"
+            style="flex:1;" placeholder="${draft.diametroUnidade === 'pol' ? 'Ex: 5/8' : 'Ex: 9.5'}"
+            value="${draft.diametroValor}" oninput="LevantamentoArConfig.onCampo('diametroValor', this.value)">
+          <div style="display:flex;gap:4px;">
+            <button type="button" class="btn btn-sm ${draft.diametroUnidade === 'mm' ? 'btn-primario' : 'btn-secundario'}" onclick="LevantamentoArConfig.setDiametroUnidade('mm')">mm</button>
+            <button type="button" class="btn btn-sm ${draft.diametroUnidade === 'pol' ? 'btn-primario' : 'btn-secundario'}" onclick="LevantamentoArConfig.setDiametroUnidade('pol')">pol (fração)</button>
+          </div>
+        </div>
       </div>
+
       <div class="form-row">
         <div class="form-grupo"><label>Perda fixa (cm) — Z</label>
           <input type="number" step="0.1" class="form-control" value="${draft.perdaCm}" oninput="LevantamentoArConfig.onCampo('perdaCm', this.value)"></div>
@@ -192,7 +215,7 @@ const LevantamentoArConfig = (() => {
       </div>
 
       <div style="background:var(--cor-fundo);border-radius:8px;padding:12px 14px;margin-bottom:16px;">
-        <div style="font-size:0.8rem;font-weight:700;color:var(--cor-primaria-dark);margin-bottom:10px;">Item Principal (${aba === 'pex' ? 'PEX' : 'Barra de Cobre'})</div>
+        <div style="font-size:0.8rem;font-weight:700;color:var(--cor-primaria-dark);margin-bottom:10px;">Item Principal (${rotulo})</div>
         <div class="form-row">
           <div class="form-grupo"><label>Nome</label>
             <input class="form-control" value="${draft.cobre.nome}" oninput="LevantamentoArConfig.onCampoCobre('nome', this.value)"></div>
@@ -201,48 +224,46 @@ const LevantamentoArConfig = (() => {
         </div>
       </div>
 
-      <div style="margin-bottom:16px;">
+      <div style="margin-bottom:18px;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
           <div style="font-size:0.8rem;font-weight:700;color:var(--cor-primaria-dark);">Itens Vinculados <span class="text-muted" style="font-weight:400;">(mesma metragem/qtd do item principal)</span></div>
           <button class="btn btn-secundario btn-sm" onclick="LevantamentoArConfig.addVinculado()">+ item</button>
         </div>
-        ${!draft.vinculados.length ? `<div class="text-sm text-muted">Nenhum item vinculado.</div>` : draft.vinculados.map(v => `
-          <div class="form-row" style="align-items:end;margin-bottom:6px;">
-            <div class="form-grupo" style="flex:2;"><input class="form-control" value="${v.nome}" placeholder="Nome" oninput="LevantamentoArConfig.onCampoVinculado('${v.id}','nome',this.value)"></div>
-            <div class="form-grupo"><input type="number" step="0.1" class="form-control" value="${v.mPorRolo}" placeholder="m/rolo" oninput="LevantamentoArConfig.onCampoVinculado('${v.id}','mPorRolo',this.value)"></div>
-            <button class="btn btn-perigo btn-sm" onclick="LevantamentoArConfig.removerVinculado('${v.id}')">✕</button>
-          </div>`).join('')}
+        ${!draft.vinculados.length ? `<div class="text-sm text-muted">Nenhum item vinculado.</div>` : `
+        <div class="arcfg-grid-header arcfg-grid-vinc"><span>Nome</span><span>1 rolo = X m</span><span></span></div>
+        ${draft.vinculados.map(v => `
+          <div class="arcfg-grid-row arcfg-grid-vinc">
+            <input class="form-control" value="${v.nome}" placeholder="Nome (ex: Espuma)" oninput="LevantamentoArConfig.onCampoVinculado('${v.id}','nome',this.value)">
+            <input type="number" step="0.1" class="form-control" value="${v.mPorRolo}" placeholder="m/rolo" oninput="LevantamentoArConfig.onCampoVinculado('${v.id}','mPorRolo',this.value)">
+            <button class="arcfg-del-btn" title="Remover" onclick="LevantamentoArConfig.removerVinculado('${v.id}')">✕</button>
+          </div>`).join('')}`}
       </div>
 
-      <div style="margin-bottom:16px;">
+      <div style="margin-bottom:18px;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
           <div style="font-size:0.8rem;font-weight:700;color:var(--cor-primaria-dark);">Itens por Metro Linear</div>
           <button class="btn btn-secundario btn-sm" onclick="LevantamentoArConfig.addPorMl()">+ item</button>
         </div>
-        ${!draft.porMl.length ? `<div class="text-sm text-muted">Nenhum item por ML.</div>` : draft.porMl.map(p => `
-          <div class="form-row" style="align-items:end;margin-bottom:6px;">
-            <div class="form-grupo" style="flex:2;"><input class="form-control" value="${p.nome}" placeholder="Nome" oninput="LevantamentoArConfig.onCampoPorMl('${p.id}','nome',this.value)"></div>
-            <div class="form-grupo">
-              <select class="form-control" onchange="LevantamentoArConfig.onCampoPorMl('${p.id}','tipo',this.value)">
-                <option value="cm_por_ml" ${p.tipo === 'cm_por_ml' ? 'selected' : ''}>cm / ML</option>
-                <option value="uni_por_ml" ${p.tipo === 'uni_por_ml' ? 'selected' : ''}>un / ML</option>
-              </select>
-            </div>
-            <div class="form-grupo"><input type="number" step="0.01" class="form-control" value="${p.taxa}" placeholder="taxa" oninput="LevantamentoArConfig.onCampoPorMl('${p.id}','taxa',this.value)"></div>
-            <button class="btn btn-perigo btn-sm" onclick="LevantamentoArConfig.removerPorMl('${p.id}')">✕</button>
-          </div>`).join('')}
+        ${!draft.porMl.length ? `<div class="text-sm text-muted">Nenhum item por ML.</div>` : `
+        <div class="arcfg-grid-header arcfg-grid-porml"><span>Nome</span><span>Regra</span><span>Taxa</span><span>1 un = X m</span><span></span></div>
+        ${draft.porMl.map(p => `
+          <div class="arcfg-grid-row arcfg-grid-porml">
+            <input class="form-control" value="${p.nome}" placeholder="Nome (ex: Fita de PVC)" oninput="LevantamentoArConfig.onCampoPorMl('${p.id}','nome',this.value)">
+            <select class="form-control" onchange="LevantamentoArConfig.onCampoPorMl('${p.id}','tipo',this.value)">
+              <option value="cm_por_ml" ${p.tipo === 'cm_por_ml' ? 'selected' : ''}>cm/ML</option>
+              <option value="uni_por_ml" ${p.tipo === 'uni_por_ml' ? 'selected' : ''}>un/ML</option>
+            </select>
+            <input type="number" step="0.01" class="form-control" value="${p.taxa}" placeholder="taxa" oninput="LevantamentoArConfig.onCampoPorMl('${p.id}','taxa',this.value)">
+            ${p.tipo === 'cm_por_ml'
+              ? `<input type="number" step="0.1" class="form-control" value="${p.mPorUnidade || ''}" placeholder="ex: 100" oninput="LevantamentoArConfig.onCampoPorMl('${p.id}','mPorUnidade',this.value)">`
+              : `<div class="text-sm text-muted" style="align-self:center;">—</div>`}
+            <button class="arcfg-del-btn" title="Remover" onclick="LevantamentoArConfig.removerPorMl('${p.id}')">✕</button>
+          </div>`).join('')}`}
+        <div class="text-sm text-muted" style="margin-top:6px;">"1 un = X m" é opcional — se preenchido (ex: fita isolante 1 rolo = 100m), o sistema já informa quantas unidades comprar, além dos metros.</div>
       </div>
 
-      <div style="margin-bottom:16px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-          <div style="font-size:0.8rem;font-weight:700;color:var(--cor-primaria-dark);">Itens Manuais <span class="text-muted" style="font-weight:400;">(quantidade informada em cada lançamento)</span></div>
-          <button class="btn btn-secundario btn-sm" onclick="LevantamentoArConfig.addManual()">+ item</button>
-        </div>
-        ${!draft.manuais.length ? `<div class="text-sm text-muted">Nenhum item manual.</div>` : draft.manuais.map(mm => `
-          <div class="form-row" style="align-items:end;margin-bottom:6px;">
-            <div class="form-grupo" style="flex:2;"><input class="form-control" value="${mm.nome}" placeholder="Nome" oninput="LevantamentoArConfig.onCampoManual('${mm.id}','nome',this.value)"></div>
-            <button class="btn btn-perigo btn-sm" onclick="LevantamentoArConfig.removerManual('${mm.id}')">✕</button>
-          </div>`).join('')}
+      <div style="background:rgba(59,130,246,0.06);border:1.5px solid rgba(59,130,246,0.25);border-radius:8px;padding:12px 14px;margin-bottom:16px;font-size:0.8rem;color:var(--cor-texto-secundario);">
+        💡 Itens manuais (ex: dreno, peças avulsas) não ficam aqui — eles são adicionados livremente na hora de lançar cada máquina no levantamento.
       </div>
 
       <div style="background:rgba(34,197,94,0.06);border:1.5px solid rgba(34,197,94,0.25);border-radius:8px;padding:14px;">
@@ -255,6 +276,20 @@ const LevantamentoArConfig = (() => {
         </div>
         <div class="text-sm" id="arcfg-preview">${_renderPreview(kit)}</div>
       </div>
+
+      <style>
+        .arcfg-grid-header, .arcfg-grid-row { display:grid; gap:6px; align-items:center; margin-bottom:6px; }
+        .arcfg-grid-vinc { grid-template-columns: 2fr 1fr 28px; }
+        .arcfg-grid-porml { grid-template-columns: 1.6fr 0.9fr 0.7fr 0.9fr 28px; }
+        .arcfg-grid-header span { font-size:0.7rem; color:var(--cor-texto-secundario); font-weight:700; text-transform:uppercase; }
+        .arcfg-del-btn { width:28px; height:28px; border-radius:6px; border:none; background:rgba(220,38,38,0.1); color:#dc2626;
+          font-size:0.8rem; cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0; }
+        .arcfg-del-btn:hover { background:rgba(220,38,38,0.2); }
+        @media (max-width: 640px) {
+          .arcfg-grid-vinc, .arcfg-grid-porml { grid-template-columns: 1fr 28px; }
+          .arcfg-grid-header { display:none; }
+        }
+      </style>
     `;
   }
 
@@ -262,8 +297,11 @@ const LevantamentoArConfig = (() => {
     let h = `<div style="font-family:var(--font-mono);margin-bottom:6px;">ML total (com perda): <strong>${Utils.formatarNumero(kit.mlTotal)} m</strong></div>`;
     if (kit.cobre) h += `<div>• ${kit.cobre.nome || 'Item principal'}: <strong>${Utils.formatarNumero(kit.cobre.metros)} m</strong> (${Utils.formatarNumero(kit.cobre.rolos)} rolo(s))</div>`;
     kit.vinculados.forEach(v => { h += `<div>• ${v.nome}: <strong>${Utils.formatarNumero(v.metros)} m</strong> (${Utils.formatarNumero(v.rolos)} rolo(s))</div>`; });
-    kit.porMl.forEach(p => { h += `<div>• ${p.nome}: <strong>${Utils.formatarNumero(p.quantidade)} ${p.tipo === 'uni_por_ml' ? 'un' : 'm'}</strong></div>`; });
-    if (draft.manuais.length) h += `<div class="text-muted" style="margin-top:6px;">+ ${draft.manuais.map(m => m.nome).join(', ')} (informado no lançamento)</div>`;
+    kit.porMl.forEach(p => {
+      if (p.tipo === 'uni_por_ml') { h += `<div>• ${p.nome}: <strong>${Utils.formatarNumero(p.quantidade, 0)} un</strong></div>`; return; }
+      const unTxt = p.unidades != null ? ` (${Utils.formatarNumero(Math.ceil(p.unidades), 0)} un de ${p.mPorUnidade}m)` : '';
+      h += `<div>• ${p.nome}: <strong>${Utils.formatarNumero(p.quantidade)} m</strong>${unTxt}</div>`;
+    });
     return h;
   }
 
@@ -276,42 +314,36 @@ const LevantamentoArConfig = (() => {
   function onCampo(campo, valor) { draft[campo] = valor; _atualizarPreview(); }
   function onCampoCobre(campo, valor) { draft.cobre[campo] = valor; _atualizarPreview(); }
   function onCampoVinculado(id, campo, valor) { const v = draft.vinculados.find(x => x.id === id); if (v) v[campo] = valor; _atualizarPreview(); }
-  function onCampoPorMl(id, campo, valor) { const p = draft.porMl.find(x => x.id === id); if (p) p[campo] = valor; _atualizarPreview(); }
-  function onCampoManual(id, campo, valor) { const m = draft.manuais.find(x => x.id === id); if (m) m[campo] = valor; }
+  function onCampoPorMl(id, campo, valor) {
+    const p = draft.porMl.find(x => x.id === id); if (!p) return;
+    p[campo] = valor;
+    if (campo === 'tipo' && valor === 'uni_por_ml') p.mPorUnidade = null;
+    _renderModal(); // tipo pode alternar a coluna "1 un = X m", precisa re-render completo
+  }
   function onMlTeste(valor) { mlTeste = parseFloat(valor) || 0; _atualizarPreview(); }
+  function setDiametroUnidade(u) { draft.diametroUnidade = u; draft.diametroValor = ''; _renderModal(); }
 
   function addVinculado() { draft.vinculados.push({ id: _uid(), nome: '', mPorRolo: 1, materialId: null }); _renderModal(); }
   function removerVinculado(id) { draft.vinculados = draft.vinculados.filter(x => x.id !== id); _renderModal(); }
-  function addPorMl() { draft.porMl.push({ id: _uid(), nome: '', tipo: 'cm_por_ml', taxa: 0, materialId: null }); _renderModal(); }
+  function addPorMl() { draft.porMl.push({ id: _uid(), nome: '', tipo: 'cm_por_ml', taxa: 0, mPorUnidade: null, materialId: null }); _renderModal(); }
   function removerPorMl(id) { draft.porMl = draft.porMl.filter(x => x.id !== id); _renderModal(); }
-  function addManual() { draft.manuais.push({ id: _uid(), nome: '', materialId: null }); _renderModal(); }
-  function removerManual(id) { draft.manuais = draft.manuais.filter(x => x.id !== id); _renderModal(); }
 
   // ===================== SALVAR MÁQUINA =====================
   async function salvarMaquina() {
     if (!draft.nome || !draft.nome.trim()) { Utils.toast('Informe o nome da máquina.', 'alerta'); return; }
     try {
       Utils.mostrarLoading('Salvando e sincronizando com a biblioteca...');
-      // item principal
       draft.cobre.materialId = await _materialSync(draft.cobre.materialId, draft.cobre.nome, 'm');
-      // vinculados
       for (const v of draft.vinculados) {
         if (!v.nome || !v.nome.trim()) continue;
         v.materialId = await _materialSync(v.materialId, v.nome, 'm');
       }
       draft.vinculados = draft.vinculados.filter(v => v.nome && v.nome.trim());
-      // por ML
       for (const p of draft.porMl) {
         if (!p.nome || !p.nome.trim()) continue;
         p.materialId = await _materialSync(p.materialId, p.nome, p.tipo === 'uni_por_ml' ? 'un' : 'm');
       }
       draft.porMl = draft.porMl.filter(p => p.nome && p.nome.trim());
-      // manuais
-      for (const m of draft.manuais) {
-        if (!m.nome || !m.nome.trim()) continue;
-        m.materialId = await _materialSync(m.materialId, m.nome, 'un');
-      }
-      draft.manuais = draft.manuais.filter(m => m.nome && m.nome.trim());
 
       const idx = (config[aba] || []).findIndex(x => x.id === draft.id);
       if (idx >= 0) config[aba][idx] = draft; else (config[aba] = config[aba] || []).push(draft);
@@ -330,8 +362,8 @@ const LevantamentoArConfig = (() => {
   return {
     init, carregar, renderizar, setAba,
     novaMaquina, editarMaquina, excluirMaquina, salvarMaquina,
-    onCampo, onCampoCobre, onCampoVinculado, onCampoPorMl, onCampoManual, onMlTeste,
-    addVinculado, removerVinculado, addPorMl, removerPorMl, addManual, removerManual,
+    onCampo, onCampoCobre, onCampoVinculado, onCampoPorMl, onMlTeste, setDiametroUnidade,
+    addVinculado, removerVinculado, addPorMl, removerPorMl,
   };
 })();
 
