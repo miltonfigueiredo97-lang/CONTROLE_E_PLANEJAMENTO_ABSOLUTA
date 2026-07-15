@@ -3,9 +3,9 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Levantamentos — Controle e Planejamento de Obras</title>
+  <title>Tarefas do Sistema — Controle e Planejamento de Obras Absoluta</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/base.css">
   <link rel="stylesheet" href="css/layout.css">
   <link rel="stylesheet" href="css/tabelas.css">
@@ -13,15 +13,12 @@
 </head>
 <body>
 <div class="app-container">
-    <aside class="sidebar">
+  <aside class="sidebar">
     <div class="sidebar-logo">
       <img src="assets/images/logo-absoluta.png" class="logo-full" alt="Absoluta"
-           onerror="this.parentElement.innerHTML='<div class=\'logo-fallback\'><div class=\'logo-icon\'><span style=\'font-size:1.3rem;font-weight:900;color:#000;\'>A</span></div><div class=\'logo-text\'>ABSOLUTA<span>Controle de Obras</span></div></div>'">
+           onerror="this.parentElement.innerHTML='<div class=\'logo-fallback\'><div class=\'logo-icon\'><span style=\'font-size:1.3rem;font-weight:900;color:#000;\'>A</span></div></div>'">
     </div>
-    <div class="sidebar-obra-selector">
-      <label>Obra ativa</label>
-      <select id="seletor-obra"><option value="">Selecione...</option></select>
-    </div>
+    <div class="sidebar-obra-selector"><label>Obra ativa</label><select id="seletor-obra"><option value="">Selecione...</option></select></div>
     <nav class="sidebar-nav">
       <div class="sidebar-section-title">Principal</div>
       <a href="obras.html"><span class="nav-icon">🏗️</span> Obras</a>
@@ -50,21 +47,17 @@
     </nav>
     <div class="sidebar-user">
       <div class="user-avatar">U</div>
-      <div class="user-info">
-        <div class="user-name">Usuário</div>
-        <div class="user-role">—</div>
-      </div>
+      <div class="user-info"><div class="user-name">Usuário</div><div class="user-role">—</div></div>
       <button class="btn-logout" onclick="Auth.logout()" title="Sair">⏻</button>
     </div>
   </aside>
-
-  <header class="header"><div class="header-title"><h1>Levantamentos</h1></div><div class="header-actions" id="header-actions"></div></header>
-
+  <header class="header">
+    <div class="header-title"><h1>Tarefas do Sistema</h1></div>
+  </header>
   <main class="content">
-    <div id="levantamento-content"></div>
+    <div id="modulo-content"></div>
   </main>
 </div>
-
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -76,7 +69,18 @@
 <script src="js/permissions.js"></script>
 <script src="js/audit.js"></script>
 <script src="js/utils.js"></script>
-<script src="js/levantamento.js"></script>
-<script>document.addEventListener('DOMContentLoaded', () => { Levantamento.init(); });</script>
+<script src="js/todo.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', async () => {
+    await Todo.init();
+    // Render user info
+    const p = Auth.getProfile();
+    if (p) {
+      const n = document.querySelector('.user-name'); if (n) n.textContent = p.nome || p.email;
+      const r = document.querySelector('.user-role'); if (r) r.textContent = p.perfil === 'admin' ? 'Administrador' : 'Usuário';
+      const a = document.querySelector('.user-avatar'); if (a) a.textContent = (p.nome || p.email).charAt(0).toUpperCase();
+    }
+  });
+</script>
 </body>
 </html>

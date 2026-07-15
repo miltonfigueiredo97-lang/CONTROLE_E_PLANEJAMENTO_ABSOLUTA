@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.32.3',
+  versaoAtual: 'V2.33.0',
 
   versoes: [
     {
@@ -3526,7 +3526,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.32.3',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-15',
       tipo: 'correcao',
       titulo: 'Levantamento de Pintura: "Pintar em Lote" não pintava mais tudo à força',
@@ -3544,6 +3544,26 @@ const NotasVersao = {
         '  "Nenhum" pra ajustar rápido a seleção.',
         'Aviso claro no topo do modal explicando que só os itens',
         '  marcados são alterados.',
+      ]
+    },
+    {
+      versao: 'V2.33.0',
+      status: 'aberta',
+      data: '2026-07-15',
+      tipo: 'funcionalidade',
+      titulo: 'Novo módulo: Tarefas do Sistema (To Do List)',
+      itens: [
+        'Novo item "✅ Tarefas" no menu Sistema da sidebar (todas as',
+        '  páginas).',
+        'Lista de tarefas/roadmap do próprio sistema, para organização',
+        '  pessoal — adicionar, editar (duplo clique ou ✎), concluir',
+        '  (checkbox), reordenar (↑/↓) e excluir.',
+        'Campo opcional "Projeto" por tarefa, com sugestões (datalist)',
+        '  e filtro por projeto.',
+        'Tarefas concluídas ficam ocultas por padrão, com botão pra',
+        '  mostrar/ocultar.',
+        'Coleção raiz "tarefasSistema" no Firestore (não vinculada a',
+        '  obra) — via novo módulo js/todo.js.',
       ]
     }
   ],
