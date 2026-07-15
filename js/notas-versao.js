@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.33.0',
+  versaoAtual: 'V2.33.1',
 
   versoes: [
     {
@@ -3548,7 +3548,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.33.0',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-15',
       tipo: 'funcionalidade',
       titulo: 'Novo módulo: Tarefas do Sistema (To Do List)',
@@ -3564,6 +3564,24 @@ const NotasVersao = {
         '  mostrar/ocultar.',
         'Coleção raiz "tarefasSistema" no Firestore (não vinculada a',
         '  obra) — via novo módulo js/todo.js.',
+      ]
+    },
+    {
+      versao: 'V2.33.1',
+      status: 'aberta',
+      data: '2026-07-15',
+      tipo: 'funcionalidade',
+      titulo: 'Tarefas: seed automático do backlog atual',
+      itens: [
+        'Na primeira vez que a tela Tarefas é aberta (por navegador),',
+        '  popula automaticamente com o backlog combinado no chat de',
+        '  planejamento: Fachada (Shaft + tipo de peça), atividades',
+        '  em execução na tela principal, edição da estrutura da obra,',
+        '  levantamento hidráulico por sistema (esgoto, água quente/',
+        '  fria, prumadas, registros, gás, ar condicionado), vínculo',
+        '  de m² material x mão de obra, vínculos de Gesso e Ar',
+        '  Condicionado, Controle de Solo Grampeado, Controle de',
+        '  Estacas, e a planilha do Patrick (projeto separado).',
       ]
     }
   ],

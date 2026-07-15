@@ -16,7 +16,40 @@ const Todo = (() => {
     const ok = await Utils.initPagina();
     if (!ok) return;
     await carregar();
+    await seedInicial();
     renderizar();
+  }
+
+  // Popula a lista, uma única vez, com o backlog atual combinado no
+  // chat de planejamento (só roda se a coleção estiver vazia e o
+  // navegador ainda não tiver feito o seed).
+  async function seedInicial() {
+    if (tarefas.length > 0) return;
+    if (localStorage.getItem('todo_seed_v1')) return;
+    const backlog = [
+      { texto: 'Finalizar Levantamento de Fachada: adicionar Shaft no miolo central', projeto: 'Sistema Absoluta' },
+      { texto: 'Finalizar Levantamento de Fachada: campo "tipo" por peça (ex: beiral) para filtrar/testar valores isolados por tipo — opções 1,2,3,4 pedidas pelo Gabriel', projeto: 'Sistema Absoluta' },
+      { texto: 'Tela principal: mostrar atividades em execução/próximas (visão obra e visão torre/apartamento), com acesso ao campo de conclusão', projeto: 'Sistema Absoluta' },
+      { texto: 'Edição da obra: tela para cadastrar áreas, apartamentos, etc.', projeto: 'Sistema Absoluta' },
+      { texto: 'Levantamento de material hidráulico por apartamento: Esgoto', projeto: 'Sistema Absoluta' },
+      { texto: 'Levantamento de material hidráulico por apartamento: Água quente/fria', projeto: 'Sistema Absoluta' },
+      { texto: 'Levantamento de material hidráulico por apartamento: Prumadas', projeto: 'Sistema Absoluta' },
+      { texto: 'Levantamento de material hidráulico por apartamento: Registros', projeto: 'Sistema Absoluta' },
+      { texto: 'Levantamento de material hidráulico por apartamento: Gás', projeto: 'Sistema Absoluta' },
+      { texto: 'Levantamento de material hidráulico por apartamento: Ar condicionado (aspiração central)', projeto: 'Sistema Absoluta' },
+      { texto: 'Vínculo de metragem quadrada: separar valor de material e de mão de obra (mão de obra paga vãos, material não)', projeto: 'Sistema Absoluta' },
+      { texto: 'Vínculos: incluir Gesso e Ar Condicionado nas possibilidades, além de paredes', projeto: 'Sistema Absoluta' },
+      { texto: 'Controle de Solo Grampeado — execução e levantamento', projeto: 'Sistema Absoluta' },
+      { texto: 'Controle de Estacas — execução e levantamento', projeto: 'Sistema Absoluta' },
+      { texto: 'Portar planilha do Patrick: nome, obra, função, salário base, produção e valor, detalhe do serviço, bônus fixo/variável, motivo, faltas e horas extras', projeto: 'Planilha Patrick' },
+    ];
+    let ordem = 1;
+    for (const item of backlog) {
+      const id = await Database.criarRaiz(COL, { texto: item.texto, projeto: item.projeto, concluida: false, ordem });
+      tarefas.push({ id, texto: item.texto, projeto: item.projeto, concluida: false, ordem });
+      ordem++;
+    }
+    localStorage.setItem('todo_seed_v1', '1');
   }
 
   async function carregar() {
