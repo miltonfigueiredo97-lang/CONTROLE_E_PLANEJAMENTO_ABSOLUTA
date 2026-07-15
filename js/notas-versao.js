@@ -3613,7 +3613,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.31.1',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-11',
       tipo: 'correcao',
       titulo: 'Vínculos: cálculo correto para Paredes (campos brutos) e Piso/Teto (booleanos)',
@@ -3637,6 +3637,34 @@ const NotasVersao = {
         '',
         'Filtro por nodeId unificado: usa _idsDescendentes() em vez',
         '  de String.startsWith (que era frágil com IDs aleatórios).',
+      ]
+    },
+    {
+      versao: 'V2.32.0',
+      status: 'aberta',
+      data: '2026-07-11',
+      tipo: 'correcao',
+      titulo: 'Migração localStorage → Firestore (configs de obra não ficam mais presas no navegador)',
+      itens: [
+        'PROBLEMA: configurações de cálculo da obra estavam no localStorage',
+        '  do navegador — invisíveis para outros dispositivos/usuários,',
+        '  perdidas ao limpar o cache, e inacessíveis ao Planejamento.',
+        '',
+        'MIGRADO para Firestore:',
+        '  → Fachada: fachadaCfg_obraId → config/fachadaCfg',
+        '     (modo de janela, valor fixo, limite ML, percentual ML)',
+        '  → Paredes: paredesCfg_obraId → config/paredesConfig',
+        '     (modo de vão, limite X, valor Y, limite ML, percentual ML)',
+        '  → Concreto: concretoLevantamento_obraId → config/concretoLevantamento',
+        '     (lista de peças do levantamento de concreto)',
+        '',
+        'MIGRAÇÃO AUTOMÁTICA: na primeira abertura após a atualização,',
+        '  o sistema detecta dados antigos no localStorage, os move para',
+        '  o Firestore, e apaga a chave local — sem perder nada.',
+        '',
+        'Planejamento: cfg da Fachada agora é carregada do Firestore',
+        '  ao calcular métricas de vínculo (antes usava localStorage,',
+        '  que ficava vazio em outro dispositivo/sessão).',
       ]
     }
   ],

@@ -77,6 +77,7 @@ const LevantamentoParedes = (() => {
   }
 
   async function carregar() {
+    if (!_cfg) await _loadCfgP();
     Utils.mostrarLoading('Carregando levantamento de paredes...');
     try {
       const [cfgSnap, listaAlv, listaAcab] = await Promise.all([
@@ -141,17 +142,20 @@ const LevantamentoParedes = (() => {
   // ══════════════════════════════════════════
   // CONFIGURAÇÕES DE CÁLCULO (Vãos e Metro Linear) — vale para os dois lançamentos
   // ══════════════════════════════════════════
-  function _getCfg() {
-    const d = {
-      vao_modo: 'desconto_total',
-      vao_limite_x: 1.5,
-      vao_valor_y: 1.0,
-      ml_menor_que: 0.50,
-      ml_percentual: 50,
-    };
-    try { return Object.assign(d, JSON.parse(localStorage.getItem('paredesCfg_' + obraId) || '{}')); } catch (e) { return d; }
+  let _cfg = null;
+  const _CFG_DOC_P = 'paredesConfig';
+  const _CFG_DEF_P = { vao_modo:'desconto_total', vao_limite_x:1.5, vao_valor_y:1.0, ml_menor_que:0.50, ml_percentual:50 };
+  function _getCfg() { return Object.assign({}, _CFG_DEF_P, _cfg || {}); }
+  async function _loadCfgP() {
+    try {
+      const snap = await db.collection('obras').doc(obraId).collection('config').doc(_CFG_DOC_P).get();
+      _cfg = snap.exists ? snap.data() : {};
+      const lsKey = 'paredesCfg_' + obraId;
+      const ls = localStorage.getItem(lsKey);
+      if (ls) { try { _cfg = Object.assign({}, JSON.parse(ls), _cfg); await _saveCfgP(_getCfg()); } catch(e) {} localStorage.removeItem(lsKey); }
+    } catch(e) { _cfg = {}; }
   }
-  function _saveCfg(cfg) { localStorage.setItem('paredesCfg_' + obraId, JSON.stringify(cfg)); }
+  async function _saveCfgP(cfg) { _cfg = cfg; try { await db.collection('obras').doc(obraId).collection('config').doc(_CFG_DOC_P).set(cfg, {merge:true}); } catch(e) { console.error(e); } }
 
   function _descontoVao(compV, altV, qtdV, cfg) {
     if (!(qtdV > 0 && compV > 0 && altV > 0)) return 0;
@@ -1421,7 +1425,7 @@ const LevantamentoParedes = (() => {
     }
   }
   function onChangeCfgVao(sel) { _toggleCfgVao(sel.value); }
-  function salvarConfig() {
+  async function salvarConfig() {
     const cfg = {
       vao_modo: document.getElementById('lp-cfg-vao-modo').value || 'desconto_total',
       vao_limite_x: num(document.getElementById('lp-cfg-vao-limite').value) || 1.5,
@@ -1429,7 +1433,7 @@ const LevantamentoParedes = (() => {
       ml_menor_que: num(document.getElementById('lp-cfg-ml-menor').value) || 0.50,
       ml_percentual: num(document.getElementById('lp-cfg-ml-pct').value) || 50,
     };
-    _saveCfg(cfg);
+    await _saveCfgP(cfg);
     Utils.fecharModal('modal-lp-config');
     Utils.toast('✓ Configurações salvas! Recalculando...', 'sucesso');
     renderizar();

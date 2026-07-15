@@ -17,16 +17,22 @@ const LevantamentoFachada = (() => {
 
   // ===================== CONFIGURAÇÕES DE CÁLCULO =====================
   // Salvas no localStorage por obra
-  function _getCfg(){
-    const d={
-      janela_modo:'desconto_total', // 'desconto_total' | 'valor_fixo' | 'metade'
-      janela_valor_fixo:1.0,        // m² fixo a considerar do vão
-      ml_menor_que:0.50,            // m² — peças menores que isso são ML
-      ml_percentual:50              // % do m² que conta (padrão 50%)
-    };
-    try{return Object.assign(d,JSON.parse(localStorage.getItem('fachadaCfg_'+obraId)||'{}'));}catch(e){return d;}
+  let _cfg=null;
+  const _CFG_DOC='fachadaCfg';
+  const _CFG_DEF={janela_modo:'desconto_total',janela_valor_fixo:1.0,ml_menor_que:0.50,ml_percentual:50};
+  function _getCfg(){return Object.assign({},_CFG_DEF,_cfg||{});}
+  async function _loadCfg(){
+    try{
+      const snap=await db.collection('obras').doc(obraId).collection('config').doc(_CFG_DOC).get();
+      _cfg=snap.exists?snap.data():{};
+      // Migração única: move do localStorage para Firestore se ainda existir lá
+      const lsKey='fachadaCfg_'+obraId;
+      const ls=localStorage.getItem(lsKey);
+      if(ls){try{_cfg=Object.assign({},JSON.parse(ls),_cfg);await _saveCfgFirestore(_getCfg());}catch(e){}localStorage.removeItem(lsKey);}
+    }catch(e){_cfg={};}
   }
-  function _saveCfg(cfg){localStorage.setItem('fachadaCfg_'+obraId,JSON.stringify(cfg));}
+  async function _saveCfgFirestore(cfg){_cfg=cfg;try{await db.collection('obras').doc(obraId).collection('config').doc(_CFG_DOC).set(cfg,{merge:true});}catch(e){console.error(e);}}
+  async function _saveCfg(cfg){await _saveCfgFirestore(cfg);}
 
   // ===================== INIT =====================
   async function init(){
@@ -38,6 +44,7 @@ const LevantamentoFachada = (() => {
   }
 
   async function carregar(){
+    if(!_cfg)await _loadCfg();
     try{
       Utils.mostrarLoading('Carregando...');
       let todos=[];
@@ -528,7 +535,7 @@ const LevantamentoFachada = (() => {
 
   function onChangeCfgJanela(sel){_toggleCfgJanela(sel.value);}
 
-  function salvarConfig(){
+  async function salvarConfig(){
     const cfg={
       janela_modo:document.getElementById('cfg-janela-modo').value||'desconto_total',
       janela_limite_x:_pn(document.getElementById('cfg-janela-limite').value)||1.5,
@@ -536,7 +543,7 @@ const LevantamentoFachada = (() => {
       ml_menor_que:_pn(document.getElementById('cfg-ml-menor').value)||0.50,
       ml_percentual:_pn(document.getElementById('cfg-ml-pct').value)||50
     };
-    _saveCfg(cfg);
+    await _saveCfg(cfg);
     Utils.fecharModal('modal-config');
     Utils.toast('Configurações salvas! Recalculando...','sucesso');
     renderPainel();

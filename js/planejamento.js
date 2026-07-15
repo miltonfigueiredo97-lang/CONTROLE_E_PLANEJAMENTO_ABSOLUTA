@@ -421,7 +421,12 @@ const Planejamento = (() => {
       ]);
       // arvore: array plano de nós com filhos recursivos, ou [] se não existir
       const arvore=cfg?.arvore||[];
-      _levCache[modulo]={dados,extra,arvore};
+      // Para fachada: também carrega a cfg do Firestore (evita usar localStorage)
+      let cfgDoc=null;
+      if(modulo==='fachada'){
+        try{const cs=await db.collection('obras').doc(obraId).collection('config').doc('fachadaCfg').get();cfgDoc=cs.exists?cs.data():null;}catch(e){}
+      }
+      _levCache[modulo]={dados,extra,arvore,cfg:cfgDoc};
     }catch(e){console.error('Erro ao carregar levantamento',modulo,e);}
   }
 
@@ -438,7 +443,8 @@ const Planejamento = (() => {
       if(vistaId)pecas=pecas.filter(p=>p.vistaId===vistaId);
       else if(balancimId)pecas=pecas.filter(p=>p.balancimId===balancimId);
       else if(fachadaId)pecas=pecas.filter(p=>p.fachadaId===fachadaId);
-      const r=Utils.calcularFachadaM2(pecas,obraId);
+      const fCfg=_levCache['fachada']?.cfg||null;
+      const r=Utils.calcularFachadaM2(pecas,obraId,fCfg);
       return r[metrica]||0;
     }
 

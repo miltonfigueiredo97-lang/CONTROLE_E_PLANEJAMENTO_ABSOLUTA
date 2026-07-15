@@ -68,7 +68,7 @@ const LevantamentoConcreto = (() => {
       ]);
       pecas = ps; concretagens = cs; pecaConc = pcs; btsConfig = bts; lancamentos = lans;
       await carregarConfig();
-      carregarLevantamentoLocal();
+      await carregarLevantamentoLocal();
       renderizar();
     } catch (e) {
       console.error(e);
@@ -89,14 +89,28 @@ const LevantamentoConcreto = (() => {
     }
   }
 
-  function carregarLevantamentoLocal() {
+  const _LEV_DOC = 'concretoLevantamento';
+  async function carregarLevantamentoLocal() {
     try {
-      levantamento = JSON.parse(localStorage.getItem('concretoLevantamento_' + obraId) || '[]');
-    } catch (e) { levantamento = []; }
+      const snap = await db.collection('obras').doc(obraId).collection('config').doc(_LEV_DOC).get();
+      levantamento = (snap.exists && Array.isArray(snap.data().itens)) ? snap.data().itens : [];
+      // Migração: move do localStorage se ainda existir
+      const lsKey = 'concretoLevantamento_' + obraId;
+      const ls = localStorage.getItem(lsKey);
+      if (ls) {
+        try {
+          const antigos = JSON.parse(ls);
+          if (antigos.length && !levantamento.length) { levantamento = antigos; await salvarLevantamentoLocal(); }
+        } catch(e) {}
+        localStorage.removeItem(lsKey);
+      }
+    } catch(e) { levantamento = []; }
   }
 
-  function salvarLevantamentoLocal() {
-    localStorage.setItem('concretoLevantamento_' + obraId, JSON.stringify(levantamento));
+  async function salvarLevantamentoLocal() {
+    try {
+      await db.collection('obras').doc(obraId).collection('config').doc(_LEV_DOC).set({ itens: levantamento }, { merge: false });
+    } catch(e) { console.error('Erro ao salvar levantamento concreto:', e); }
   }
 
   async function recarregar() {
@@ -556,7 +570,7 @@ const LevantamentoConcreto = (() => {
   function escRemDeg(i) { calc.degraus.splice(i, 1); renderCalc(); }
   function escUpdDeg(i, c, v) { calc.degraus[i][c] = v; atualizarVolumeCalc(); }
 
-  function calcAdicionar() {
+  async function calcAdicionar() {
     const volume = calcVolumeAtual();
     if (!calc.nome || !calc.andar || volume <= 0) return;
     levantamento.push({
@@ -566,7 +580,7 @@ const LevantamentoConcreto = (() => {
       tipo: calc.tipoPeca === 'pilar' ? 'Pilar' : calc.tipoPeca === 'escada' ? 'Escada' : 'Rampa',
       volume,
     });
-    salvarLevantamentoLocal();
+    await salvarLevantamentoLocal();
     Utils.toast(`✓ "${calc.nome}" adicionada ao levantamento (${volume.toFixed(4)} m³)`, 'sucesso');
     // Limpa campos, mantém andar e tipo
     calc.nome = '';
@@ -623,10 +637,10 @@ const LevantamentoConcreto = (() => {
     renderLevantamento();
   }
 
-  function levRemover(id) {
+  async function levRemover(id) {
     levantamento = levantamento.filter(i => i.id !== id);
     levSel.delete(id);
-    salvarLevantamentoLocal();
+    await salvarLevantamentoLocal();
     renderLevantamento();
     renderizar();
   }
@@ -639,7 +653,7 @@ const LevantamentoConcreto = (() => {
       await salvarPecasLote(itens.map(i => ({ nome: i.nome, tipo: i.tipo, andar: i.andar, volume: i.volume })));
       levantamento = levantamento.filter(i => !levSel.has(i.id));
       levSel.clear();
-      salvarLevantamentoLocal();
+      await salvarLevantamentoLocal();
       Utils.toast(`✓ ${itens.length} peça${itens.length !== 1 ? 's' : ''} enviada${itens.length !== 1 ? 's' : ''} para a base!`, 'sucesso');
       await carregar();
       Utils.fecharModal('modal-lc-lev');

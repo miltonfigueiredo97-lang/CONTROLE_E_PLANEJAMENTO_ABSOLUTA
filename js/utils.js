@@ -261,11 +261,13 @@ const Utils = (() => {
   // real da fachada, sem depender do campo quantidade da tarefa no
   // Planejamento. Mantido em sincronia manual com levantamento-fachada.js;
   // se a config de cálculo mudar lá, replicar aqui.
-  function calcularFachadaM2(pecas, obraId){
+  // cfg: objeto de configuração passado pelo módulo (já carregado do Firestore).
+  //      Se omitido, usa os defaults (desconto total de janela, ML < 0.5m²).
+  function calcularFachadaM2(pecas, obraId, cfg){
     const pn=v=>{const n=parseFloat(String(v==null?'':v).replace(',','.'));return isNaN(n)?0:n;};
     const m=cm=>pn(cm)/100;
-    let cfg={janela_modo:'desconto_total',janela_valor_fixo:1.0,ml_menor_que:0.50,ml_percentual:50};
-    try{cfg=Object.assign(cfg,JSON.parse(localStorage.getItem('fachadaCfg_'+obraId)||'{}'));}catch(e){}
+    // cfg vem do Firestore via levantamento-fachada.js — não mais do localStorage
+    if(!cfg)cfg={janela_modo:'desconto_total',janela_valor_fixo:1.0,ml_menor_que:0.50,ml_percentual:50};
 
     function descontoJanela(larJ,altJ,qtJ,qt){
       if(!(qtJ>0&&larJ>0&&altJ>0))return 0;
