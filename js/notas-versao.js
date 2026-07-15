@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.31.0',
+  versaoAtual: 'V2.32.0',
 
   versoes: [
     {
@@ -3407,7 +3407,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.31.0',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-14',
       tipo: 'funcionalidade',
       titulo: 'Novo módulo: Levantamento de Pintura',
@@ -3437,6 +3437,41 @@ const NotasVersao = {
         '  estava somando o array de cores como se fosse um número',
         '  (sempre resultava em NaN/0). Agora calcula a área líquida',
         '  real (comp×alt − vãos) × % de cada cor.',
+      ]
+    },
+    {
+      versao: 'V2.32.0',
+      status: 'aberta',
+      data: '2026-07-15',
+      tipo: 'funcionalidade',
+      titulo: 'Levantamento de Ar Condicionado: locais em árvore ilimitada + Configuração de Máquinas com cálculo automático',
+      itens: [
+        'Locais agora em árvore com profundidade ILIMITADA — pode criar',
+        '  sublocal dentro de sublocal quantos níveis quiser (ex: Área',
+        '  Comum > Pavimento 1 > Casa de Máquinas)',
+        'Nova tela "Configuração de Máquinas" (⚙️ no topo do',
+        '  Levantamento) com modelos Cobre (funcional), PEX (mesmo motor',
+        '  do Cobre) e Duto (em breve)',
+        'Para cada máquina configurada: diâmetro, perda fixa (cm) e',
+        '  perda percentual (%), item principal (barra de cobre/PEX)',
+        '  com conversão em rolo, itens vinculados (mesma metragem do',
+        '  item principal, ex: espuma), itens por metro linear (regra',
+        '  cm/ML ou un/ML, ex: fita, silver tape, bucha, parafuso,',
+        '  broca) e itens manuais (ex: dreno, lançado na hora)',
+        'Todo nome de item é editável e novos itens podem ser',
+        '  adicionados livremente à configuração, cada um já com',
+        '  regra de cálculo por ML própria',
+        'Pré-visualização ao vivo do cálculo dentro da tela de',
+        '  configuração (ML de teste ajustável)',
+        'No Levantamento: "+ Máquina" lança uma máquina em um local —',
+        '  basta informar o ML de projeto e as quantidades manuais',
+        '  (dreno); o sistema calcula automaticamente todas as peças',
+        'Resumo consolidado por local (incluindo sublocais) e Resumo',
+        '  Geral por material, somando itens avulsos + máquinas',
+        '  calculadas em toda a árvore',
+        'Todo item de configuração (cobre, vinculados, por ML,',
+        '  manuais) já nasce/mantém-se sincronizado com a biblioteca',
+        '  de Materiais automaticamente',
       ]
     }
   ],

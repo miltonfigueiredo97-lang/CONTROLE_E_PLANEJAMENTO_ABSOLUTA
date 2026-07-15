@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Diário de Obra — Controle e Planejamento de Obras</title>
+  <title>Configuração — Máquinas de Ar Condicionado — Controle e Planejamento de Obras</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/base.css">
@@ -13,7 +13,7 @@
 </head>
 <body>
 <div class="app-container">
-    <aside class="sidebar">
+  <aside class="sidebar">
     <div class="sidebar-logo">
       <img src="assets/images/logo-absoluta.png" class="logo-full" alt="Absoluta"
            onerror="this.parentElement.innerHTML='<div class=\'logo-fallback\'><div class=\'logo-icon\'><span style=\'font-size:1.3rem;font-weight:900;color:#000;\'>A</span></div><div class=\'logo-text\'>ABSOLUTA<span>Controle de Obras</span></div></div>'">
@@ -49,19 +49,36 @@
     </nav>
     <div class="sidebar-user">
       <div class="user-avatar">U</div>
-      <div class="user-info">
-        <div class="user-name">Usuário</div>
-        <div class="user-role">—</div>
-      </div>
+      <div class="user-info"><div class="user-name">Usuário</div><div class="user-role">—</div></div>
       <button class="btn-logout" onclick="Auth.logout()" title="Sair">⏻</button>
     </div>
   </aside>
-  <header class="header"><div class="header-title"><h1>Diário de Obra</h1></div><div class="header-actions" id="header-actions"></div></header>
-  <main class="content">
-    <div id="modulo-content">
-      <div class="estado-vazio"><div class="icone">📋</div><p>Carregando...</p></div>
+
+  <header class="header">
+    <div class="header-title"><h1>Configuração — Ar Condicionado</h1></div>
+    <div class="header-actions">
+      <button class="btn btn-secundario btn-sm" onclick="Router.navegar('levantamento-ar-condicionado.html')">← Voltar ao Levantamento</button>
     </div>
+  </header>
+
+  <main class="content">
+    <div id="arcfg-content"></div>
   </main>
+</div>
+
+<!-- MODAL: Editar/Nova Máquina -->
+<div class="modal-overlay" id="modal-arcfg-maquina">
+  <div class="modal" style="max-width:720px;">
+    <div class="modal-header">
+      <h3 id="modal-arcfg-titulo">Nova Máquina</h3>
+      <button class="modal-close" onclick="Utils.fecharModal('modal-arcfg-maquina')">&times;</button>
+    </div>
+    <div class="modal-body" id="arcfg-modal-body" style="max-height:70vh;overflow-y:auto;"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-arcfg-maquina')">Cancelar</button>
+      <button class="btn btn-primario" onclick="LevantamentoArConfig.salvarMaquina()">Salvar Máquina</button>
+    </div>
+  </div>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -75,7 +92,7 @@
 <script src="js/permissions.js"></script>
 <script src="js/audit.js"></script>
 <script src="js/utils.js"></script>
-<script src="js/diario.js"></script>
-<script>document.addEventListener('DOMContentLoaded', () => { Diario.init(); });</script>
+<script src="js/levantamento-ar-config.js"></script>
+<script>document.addEventListener('DOMContentLoaded', () => { LevantamentoArConfig.init(); });</script>
 </body>
 </html>

@@ -303,12 +303,50 @@ const Utils = (() => {
     return {m2semML,m2comML_puro,ml,m2comML_equiv:m2comML_puro+mlEquiv};
   }
 
+  // ===================== CÁLCULO DE KIT — LEVANTAMENTO AR CONDICIONADO =====================
+  // Dado uma máquina configurada (modelo Cobre) e o comprimento base (Y, do projeto/levantamento),
+  // calcula o metro linear total de cobre (com perda) e deriva todos os itens vinculados/por ML.
+  function calcularKitAr(maquina, mlBase) {
+    const Y = parseFloat(mlBase) || 0;
+    const Z = parseFloat(maquina?.perdaCm) || 0;   // perda em cm
+    const A = parseFloat(maquina?.perdaPercentual) || 0; // perda em %
+    const mlTotal = (Y + (Z / 100)) * (1 + (A / 100));
+
+    const rolo = (mPorRolo, metros) => {
+      const mr = parseFloat(mPorRolo) || 0;
+      return mr > 0 ? metros / mr : 0;
+    };
+
+    const cobre = maquina?.cobre ? {
+      ...maquina.cobre,
+      metros: mlTotal,
+      rolos: rolo(maquina.cobre.mPorRolo, mlTotal),
+    } : null;
+
+    const vinculados = (maquina?.vinculados || []).map(v => ({
+      ...v,
+      metros: mlTotal,
+      rolos: rolo(v.mPorRolo, mlTotal),
+    }));
+
+    const porMl = (maquina?.porMl || []).map(p => {
+      const taxa = parseFloat(p.taxa) || 0;
+      if (p.tipo === 'uni_por_ml') {
+        return { ...p, quantidade: Math.ceil(taxa * mlTotal) };
+      }
+      // cm_por_ml -> converte para metros no total
+      return { ...p, quantidade: (taxa * mlTotal) / 100 };
+    });
+
+    return { mlBase: Y, mlTotal, cobre, vinculados, porMl };
+  }
+
   return {
     formatarNumero, formatarInteiro, formatarData, formatarDataHora, formatarM2, formatarML,
     parseNum, hoje, toast, abrirModal, fecharModal, fecharTodosModais, confirmar,
     mostrarLoading, esconderLoading, $, $$, limparForm, getFormData, setFormData, debounce,
     initPagina, opcoesTarefaHierarquia, calcularFachadaM2,
-    percFamilia, recalcularPercAncestrais, distribuirPercDescendentes,
+    percFamilia, recalcularPercAncestrais, distribuirPercDescendentes, calcularKitAr,
   };
 })();
 

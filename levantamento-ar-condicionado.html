@@ -45,7 +45,7 @@
       <a href="histograma.html"><span class="nav-icon">📊</span> Histograma</a>
       <a href="admin-permissoes.html"><span class="nav-icon">🔑</span> Permissões</a>
       <div class="sidebar-section-title">Sistema</div>
-      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V2.31.0</span></a>
+      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V2.32.0</span></a>
     </nav>
     <div class="sidebar-user">
       <div class="user-avatar">U</div>
@@ -75,6 +75,21 @@
     <div class="modal-footer">
       <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-ar-item')">Cancelar</button>
       <button class="btn btn-primario" onclick="LevantamentoAr.salvarItem()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Lançar Máquina -->
+<div class="modal-overlay" id="modal-armaq-lancamento">
+  <div class="modal" style="max-width:640px;">
+    <div class="modal-header">
+      <h3 id="modal-armaq-titulo">Nova Máquina</h3>
+      <button class="modal-close" onclick="Utils.fecharModal('modal-armaq-lancamento')">&times;</button>
+    </div>
+    <div class="modal-body" id="armaq-modal-body" style="max-height:70vh;overflow-y:auto;"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-armaq-lancamento')">Cancelar</button>
+      <button class="btn btn-primario" onclick="LevantamentoAr.salvarMaquinaLancamento()">Salvar Máquina</button>
     </div>
   </div>
 </div>
