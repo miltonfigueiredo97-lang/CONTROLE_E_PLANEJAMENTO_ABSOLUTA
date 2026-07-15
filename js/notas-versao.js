@@ -3583,6 +3583,33 @@ const NotasVersao = {
         '  Condicionado, Controle de Solo Grampeado, Controle de',
         '  Estacas, e a planilha do Patrick (projeto separado).',
       ]
+    },
+    {
+      versao: 'V2.31.0',
+      status: 'aberta',
+      data: '2026-07-11',
+      tipo: 'funcionalidade',
+      titulo: 'Vínculos: seletor de área genérico por levantamento (árvore hierárquica real)',
+      itens: [
+        'PROBLEMA CORRIGIDO: o seletor de "Fonte estrutural" mostrava',
+        '  sempre a hierarquia da Fachada (fachada/balancim/vista) mesmo',
+        '  ao selecionar Piso, Teto ou Paredes.',
+        '',
+        'SOLUÇÃO — seletor genérico por módulo:',
+        '  → Fachada: mantém Fachada → Balancim → Vista (como antes)',
+        '  → Piso / Teto / Paredes: lê a árvore hierárquica real do',
+        '    levantamento (pisoArvore, tetoArvore, paredesArvore) e',
+        '    exibe em <select> com indentação por nível. Ex: Torre →',
+        '    Andar → Apartamento → Cômodo. Qualquer nó pode ser',
+        '    selecionado; o cálculo soma todas as áreas dos filhos.',
+        '  → Concreto / Ar-Cond / Pintura: não têm subdivisão por',
+        '    área — mostram mensagem explicativa.',
+        '',
+        'Novo campo salvo: levantamentoNodeId — persiste qual nó da',
+        '  árvore foi selecionado para cada vínculo.',
+        'Ao trocar de módulo, o filtro de área é limpo automaticamente.',
+        'Todos os módulos carregados em paralelo ao abrir o modal.',
+      ]
     }
   ],
 
