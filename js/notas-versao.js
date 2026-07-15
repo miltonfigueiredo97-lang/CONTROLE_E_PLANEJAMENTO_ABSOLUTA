@@ -3586,7 +3586,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.31.0',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-11',
       tipo: 'funcionalidade',
       titulo: 'Vínculos: seletor de área genérico por levantamento (árvore hierárquica real)',
@@ -3609,6 +3609,34 @@ const NotasVersao = {
         '  árvore foi selecionado para cada vínculo.',
         'Ao trocar de módulo, o filtro de área é limpo automaticamente.',
         'Todos os módulos carregados em paralelo ao abrir o modal.',
+      ]
+    },
+    {
+      versao: 'V2.31.1',
+      status: 'aberta',
+      data: '2026-07-11',
+      tipo: 'correcao',
+      titulo: 'Vínculos: cálculo correto para Paredes (campos brutos) e Piso/Teto (booleanos)',
+      itens: [
+        'PAREDES — causa do erro:',
+        '  O módulo de Paredes salva os campos BRUTOS no Firestore',
+        '  (comprimento, altura em cm, vaos[], tipoAlvenaria, pintura[]).',
+        '  Os campos areaLiquida/ml/pintura NÃO são gravados — são',
+        '  recalculados pelo módulo na hora de exibir.',
+        '  O Planejamento tentava ler p.areaLiquida que sempre era 0.',
+        '  Correção: replicas _calcParedeBruta() e _calcAcabBruta()',
+        '  que recalculam localmente com desconto total de vão.',
+        '',
+        'PISO / TETO — causa do erro:',
+        '  impermeabilizacao/temPintura são checkboxes: chegam como',
+        '  boolean true ou string "true". Filtro anterior usava apenas',
+        '  a.impermeabilizacao (truthy) — falha para string "false".',
+        '  Correção: ===true || ==="true" explícito.',
+        '  tipoContrapiso/tipoDryWall/tipoPlacaGesso: filtro agora',
+        '  verifica !="" além de existir.',
+        '',
+        'Filtro por nodeId unificado: usa _idsDescendentes() em vez',
+        '  de String.startsWith (que era frágil com IDs aleatórios).',
       ]
     }
   ],

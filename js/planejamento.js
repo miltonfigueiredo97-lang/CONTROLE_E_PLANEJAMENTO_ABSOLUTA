@@ -444,58 +444,42 @@ const Planejamento = (() => {
 
     if(modulo==='piso'){
       let areas=dados;
-      if(nodeId)areas=areas.filter(a=>a.nodeId===nodeId||String(a.nodeId||'').startsWith(nodeId));
-      if(metrica==='areaM2')    return areas.reduce((s,a)=>s+(a.areaM2||0),0);
-      if(metrica==='mlRodape')  return areas.reduce((s,a)=>s+(a.mlRodape||0),0);
-      // Contrapiso: áreas que têm tipoContrapiso preenchido
-      if(metrica==='areaContrapiso') return areas.filter(a=>a.tipoContrapiso).reduce((s,a)=>s+(a.areaM2||0),0);
-      // Impermeabilização: áreas com campo impermeabilizacao = true
-      if(metrica==='areaImperm')     return areas.filter(a=>a.impermeabilizacao).reduce((s,a)=>s+(a.areaM2||0),0);
+      if(nodeId){const ids=_idsDescendentes(_levCache[modulo]?.arvore||[],nodeId);areas=areas.filter(a=>ids.includes(a.nodeId));}
+      if(metrica==='areaM2')         return areas.reduce((s,a)=>s+(Number(a.areaM2)||0),0);
+      if(metrica==='mlRodape')        return areas.reduce((s,a)=>s+(Number(a.mlRodape)||0),0);
+      if(metrica==='areaContrapiso')  return areas.filter(a=>a.tipoContrapiso&&a.tipoContrapiso!=='').reduce((s,a)=>s+(Number(a.areaM2)||0),0);
+      if(metrica==='areaImperm')      return areas.filter(a=>a.impermeabilizacao===true||a.impermeabilizacao==='true').reduce((s,a)=>s+(Number(a.areaM2)||0),0);
       return 0;
     }
 
     if(modulo==='teto'){
       let areas=dados;
-      if(nodeId)areas=areas.filter(a=>a.nodeId===nodeId||String(a.nodeId||'').startsWith(nodeId));
-      if(metrica==='areaM2')      return areas.reduce((s,a)=>s+(a.areaM2||0),0);
-      if(metrica==='mlTabica')    return areas.reduce((s,a)=>s+(a.mlTabica||0),0);
-      // Forro de Drywall: áreas com tipoDryWall preenchido
-      if(metrica==='areaDrywall') return areas.filter(a=>a.tipoDryWall).reduce((s,a)=>s+(a.areaM2||0),0);
-      // Placa de Gesso: áreas com tipoPlacaGesso preenchido
-      if(metrica==='areaGesso')   return areas.filter(a=>a.tipoPlacaGesso).reduce((s,a)=>s+(a.areaM2||0),0);
-      // Pintura do teto: áreas com temPintura=true
-      if(metrica==='areaPintura') return areas.filter(a=>a.temPintura).reduce((s,a)=>s+(a.areaM2||0),0);
+      if(nodeId){const ids=_idsDescendentes(_levCache[modulo]?.arvore||[],nodeId);areas=areas.filter(a=>ids.includes(a.nodeId));}
+      if(metrica==='areaM2')         return areas.reduce((s,a)=>s+(Number(a.areaM2)||0),0);
+      if(metrica==='mlTabica')        return areas.reduce((s,a)=>s+(Number(a.mlTabica)||0),0);
+      if(metrica==='areaDrywall')     return areas.filter(a=>a.tipoDryWall&&a.tipoDryWall!=='').reduce((s,a)=>s+(Number(a.areaM2)||0),0);
+      if(metrica==='areaGesso')       return areas.filter(a=>a.tipoPlacaGesso&&a.tipoPlacaGesso!=='').reduce((s,a)=>s+(Number(a.areaM2)||0),0);
+      if(metrica==='areaPintura')     return areas.filter(a=>a.temPintura===true||a.temPintura==='true').reduce((s,a)=>s+(Number(a.areaM2)||0),0);
       return 0;
     }
 
     if(modulo==='paredes'){
-      const todas=[...dados,...extra];
-      if(metrica==='areaLiquida') return todas.reduce((s,p)=>s+(p.areaLiquida||0),0);
-      if(metrica==='m2comPuro')   return todas.reduce((s,p)=>s+(p.m2comPuro||0),0);
-      if(metrica==='ml')          return todas.reduce((s,p)=>s+(p.ml||0),0);
-      if(metrica==='vedacao')     return dados.filter(p=>p.tipoAlvenaria==='vedacao').reduce((s,p)=>s+(p.areaLiquida||0),0);
-      if(metrica==='estrutural')  return dados.filter(p=>p.tipoAlvenaria==='estrutural').reduce((s,p)=>s+(p.areaLiquida||0),0);
-      // Pintura de parede: área líquida (comp×alt − vãos) × % de cada cor.
-      // Obs: assume desconto total de vão (não lê a config de vão do
-      // localStorage do módulo de Paredes, que não é acessível daqui).
-      if(metrica==='pintura') {
-        const calcPintura = p => {
-          if(!p.temPintura || !(p.pintura||[]).length) return 0;
-          const compM=(parseFloat(String(p.comprimento).replace(',','.'))||0)/100;
-          const altM=(parseFloat(String(p.altura).replace(',','.'))||0)/100;
-          const areaVaos=(p.vaos||[]).reduce((s,v)=>{
-            const cv=(parseFloat(String(v.comprimento).replace(',','.'))||0)/100;
-            const av=(parseFloat(String(v.altura).replace(',','.'))||0)/100;
-            const qv=parseFloat(v.qtd)||1;
-            return s+(cv>0&&av>0?cv*av*qv:0);
-          },0);
-          const areaLiq=Math.max(0,compM*altM-areaVaos);
-          return (p.pintura||[]).reduce((s,pt)=>s+areaLiq*((parseFloat(pt.pct)||0)/100),0);
-        };
-        return todas.reduce((s,p)=>s+calcPintura(p),0);
-      }
+      // Paredes salva campos BRUTOS (comprimento/altura em cm, vaos[], tipoAlvenaria).
+      // areaLiquida/ml NÃO são gravados — recalculamos com _calcParedeBruta/_calcAcabBruta.
+      let alv=dados,acab=extra;
+      if(nodeId){const ids=_idsDescendentes(_levCache[modulo]?.arvore||[],nodeId);alv=alv.filter(p=>ids.includes(p.nodeId));acab=acab.filter(p=>ids.includes(p.nodeId));}
+      const calcsAlv=alv.map(_calcParedeBruta);
+      const calcsAcab=acab.map(_calcAcabBruta);
+      const todas=[...calcsAlv,...calcsAcab];
+      if(metrica==='areaLiquida')  return todas.reduce((s,c)=>s+c.areaLiquida,0);
+      if(metrica==='ml')           return todas.reduce((s,c)=>s+c.ml,0);
+      if(metrica==='m2comPuro')    return todas.filter(c=>!c.podeML).reduce((s,c)=>s+c.areaLiquida,0);
+      if(metrica==='vedacao')      return calcsAlv.filter(c=>c.tipoAlvenaria==='vedacao').reduce((s,c)=>s+c.areaLiquida,0);
+      if(metrica==='estrutural')   return calcsAlv.filter(c=>c.tipoAlvenaria==='estrutural').reduce((s,c)=>s+c.areaLiquida,0);
+      if(metrica==='pintura')      return todas.reduce((s,c)=>s+c.pinturaM2,0);
       return 0;
     }
+
 
     if(modulo==='concreto'){
       if(metrica==='volume') return dados.reduce((s,p)=>s+(p.volume||0),0);
@@ -756,6 +740,43 @@ const Planejamento = (() => {
   function onVincVistaChange(v){_vincVistaId=v||null;_renderVinculoModalBody();}
   function onVincNodeChange(v){_vincNodeId=v||null;_renderVinculoModalBody();}
 
+  // ---- Cálculo local de peça de parede (replica a lógica do módulo Paredes)
+  // O módulo Paredes salva os campos BRUTOS (comprimento, altura, vaos, tipoAlvenaria,
+  // acabamentos, pintura) — areaLiquida/ml/pintura NÃO são gravados no Firestore.
+  // Esta função replica o cálculo usando cfg padrão (desconto_total) como fallback
+  // caso a config real do localStorage não esteja disponível no contexto do Planejamento.
+  function _calcParedeBruta(p){
+    const comp=Number(p.comprimento||0)/100; // campo gravado em cm
+    const alt=Number(p.altura||0)/100;
+    const areaBruta=comp*alt;
+    // Vãos: desconto total por padrão (cfg do localStorage não está disponível aqui)
+    const areaVaos=(p.vaos||[]).reduce((s,v)=>{
+      const a=(Number(v.comprimento||0)/100)*(Number(v.altura||0)/100)*(Number(v.qtd)||1);
+      return s+a;
+    },0);
+    const areaLiquida=Math.max(0,areaBruta-areaVaos);
+    const podeML=!!p.podeSerML;
+    const ml=podeML?Math.max(comp,alt):0;
+    // Pintura: soma(areaLiquida * pct/100) para cada item de pintura
+    const pinturaM2=(p.pintura||[]).reduce((s,pt)=>s+areaLiquida*(Number(pt.pct||0)/100),0);
+    return {areaLiquida,ml,pinturaM2,podeML,tipoAlvenaria:p.tipoAlvenaria||''};
+  }
+
+  function _calcAcabBruta(p){
+    const comp=Number(p.comprimento||0)/100;
+    const alt=Number(p.altura||0)/100;
+    const areaBruta=comp*alt;
+    const areaVaos=(p.vaos||[]).reduce((s,v)=>{
+      const a=(Number(v.comprimento||0)/100)*(Number(v.altura||0)/100)*(Number(v.qtd)||1);
+      return s+a;
+    },0);
+    const areaLiquida=Math.max(0,areaBruta-areaVaos);
+    const podeML=!!p.podeSerML;
+    const ml=podeML?Math.max(comp,alt):0;
+    const pinturaM2=p.temPintura?(p.pintura||[]).reduce((s,pt)=>s+areaLiquida*(Number(pt.pct||0)/100),0):0;
+    return {areaLiquida,ml,pinturaM2};
+  }
+
   // Versão de _calcularMetrica que já recebe a lista de nodeIds filtrados
   function _calcularMetricaComNodeIds(modulo,metrica,nodeIds){
     const cache=_levCache[modulo];
@@ -765,34 +786,48 @@ const Planejamento = (() => {
     const filtrar=lista=>nodeIds?lista.filter(a=>nodeIds.includes(a.nodeId)):lista;
 
     if(modulo==='piso'){
+      // Campos gravados diretamente: areaM2, mlRodape, tipoPiso (string),
+      // tipoContrapiso (string, vazio se não tem), impermeabilizacao (boolean),
+      // tipoImpermeabilizacao (string)
       const areas=filtrar(dados);
-      if(metrica==='areaM2')         return areas.reduce((s,a)=>s+(a.areaM2||0),0);
-      if(metrica==='mlRodape')        return areas.reduce((s,a)=>s+(a.mlRodape||0),0);
-      if(metrica==='areaContrapiso')  return areas.filter(a=>a.tipoContrapiso).reduce((s,a)=>s+(a.areaM2||0),0);
-      if(metrica==='areaImperm')      return areas.filter(a=>a.impermeabilizacao).reduce((s,a)=>s+(a.areaM2||0),0);
+      if(metrica==='areaM2')         return areas.reduce((s,a)=>s+(Number(a.areaM2)||0),0);
+      if(metrica==='mlRodape')        return areas.reduce((s,a)=>s+(Number(a.mlRodape)||0),0);
+      if(metrica==='areaContrapiso')  return areas.filter(a=>a.tipoContrapiso&&a.tipoContrapiso!=='').reduce((s,a)=>s+(Number(a.areaM2)||0),0);
+      // impermeabilizacao é checkbox — pode vir como boolean true ou string 'true'
+      if(metrica==='areaImperm')      return areas.filter(a=>a.impermeabilizacao===true||a.impermeabilizacao==='true').reduce((s,a)=>s+(Number(a.areaM2)||0),0);
       return 0;
     }
+
     if(modulo==='teto'){
+      // Campos gravados: areaM2, mlTabica (float), tipoDryWall (string),
+      // tipoPlacaGesso (string), temPintura (boolean)
       const areas=filtrar(dados);
-      if(metrica==='areaM2')         return areas.reduce((s,a)=>s+(a.areaM2||0),0);
-      if(metrica==='mlTabica')        return areas.reduce((s,a)=>s+(a.mlTabica||0),0);
-      if(metrica==='areaDrywall')     return areas.filter(a=>a.tipoDryWall).reduce((s,a)=>s+(a.areaM2||0),0);
-      if(metrica==='areaGesso')       return areas.filter(a=>a.tipoPlacaGesso).reduce((s,a)=>s+(a.areaM2||0),0);
-      if(metrica==='areaPintura')     return areas.filter(a=>a.temPintura).reduce((s,a)=>s+(a.areaM2||0),0);
+      if(metrica==='areaM2')         return areas.reduce((s,a)=>s+(Number(a.areaM2)||0),0);
+      if(metrica==='mlTabica')        return areas.reduce((s,a)=>s+(Number(a.mlTabica)||0),0);
+      if(metrica==='areaDrywall')     return areas.filter(a=>a.tipoDryWall&&a.tipoDryWall!=='').reduce((s,a)=>s+(Number(a.areaM2)||0),0);
+      if(metrica==='areaGesso')       return areas.filter(a=>a.tipoPlacaGesso&&a.tipoPlacaGesso!=='').reduce((s,a)=>s+(Number(a.areaM2)||0),0);
+      if(metrica==='areaPintura')     return areas.filter(a=>a.temPintura===true||a.temPintura==='true').reduce((s,a)=>s+(Number(a.areaM2)||0),0);
       return 0;
     }
+
     if(modulo==='paredes'){
-      // Paredes usam nodeId como campo local/agrupador (vem do paredesArvore)
-      const alv=filtrar(dados); const acab=filtrar(extra);
-      const todas=[...alv,...acab];
-      if(metrica==='areaLiquida')  return todas.reduce((s,p)=>s+(p.areaLiquida||0),0);
-      if(metrica==='m2comPuro')    return todas.reduce((s,p)=>s+(p.m2comPuro||0),0);
-      if(metrica==='ml')           return todas.reduce((s,p)=>s+(p.ml||0),0);
-      if(metrica==='vedacao')      return alv.filter(p=>p.tipoAlvenaria==='vedacao').reduce((s,p)=>s+(p.areaLiquida||0),0);
-      if(metrica==='estrutural')   return alv.filter(p=>p.tipoAlvenaria==='estrutural').reduce((s,p)=>s+(p.areaLiquida||0),0);
-      if(metrica==='pintura')      return todas.reduce((s,p)=>s+(p.pintura||0),0);
+      // IMPORTANTE: campos brutos (comprimento/altura em cm, vaos[], tipoAlvenaria,
+      // acabamentos[], pintura[]) — areaLiquida/ml/pintura NÃO são gravados.
+      // Recalculamos localmente com _calcParedeBruta / _calcAcabBruta.
+      const alv=filtrar(dados);
+      const acab=filtrar(extra);
+      const calcsAlv=alv.map(_calcParedeBruta);
+      const calcsAcab=acab.map(_calcAcabBruta);
+      const todas=[...calcsAlv,...calcsAcab];
+      if(metrica==='areaLiquida')  return todas.reduce((s,c)=>s+c.areaLiquida,0);
+      if(metrica==='ml')           return todas.reduce((s,c)=>s+c.ml,0);
+      if(metrica==='m2comPuro')    return todas.filter(c=>!c.podeML).reduce((s,c)=>s+c.areaLiquida,0);
+      if(metrica==='vedacao')      return calcsAlv.filter(c=>c.tipoAlvenaria==='vedacao').reduce((s,c)=>s+c.areaLiquida,0);
+      if(metrica==='estrutural')   return calcsAlv.filter(c=>c.tipoAlvenaria==='estrutural').reduce((s,c)=>s+c.areaLiquida,0);
+      if(metrica==='pintura')      return todas.reduce((s,c)=>s+c.pinturaM2,0);
       return 0;
     }
+
     // Outros módulos sem filtro por nodeId
     return _calcularMetrica(modulo,metrica,null,null,null,null);
   }
