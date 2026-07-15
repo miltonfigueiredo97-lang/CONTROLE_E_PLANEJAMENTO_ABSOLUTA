@@ -62,6 +62,7 @@ const LevantamentoPintura = (() => {
   let massaTipo = 'parede'; // 'parede' | 'teto'
   let massaIncluirSublocais = true;
   let massaForm = [];
+  let massaSelecionados = new Set(); // ids marcados manualmente pra receber a cor
 
   // ══════════════════════════════════════════
   // INIT / CARREGAMENTO
@@ -616,7 +617,7 @@ const LevantamentoPintura = (() => {
         <div class="cc-kpi"><div class="cc-kpiIcon">🧱</div><div class="cc-kpiBody"><div class="cc-kpiLabel">M² Pintura Parede</div><div class="cc-kpiValue">${fmt2(t.total)}<span class="cc-kpiUnit">m²</span></div></div></div>
         <div class="cc-kpi"><div class="cc-kpiIcon">✅</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Faces com Pintura</div><div class="cc-kpiValue">${t.comPintura}<span class="cc-kpiUnit">/ ${t.qtd}</span></div></div></div>
         <div class="cc-kpi" style="display:flex;align-items:center;justify-content:center;">
-          <button class="btn btn-secundario btn-sm" onclick="LPT.abrirMassa('${n.id}','parede')">🖌️ Aplicar em massa</button>
+          <button class="btn btn-secundario btn-sm" onclick="LPT.abrirMassa('${n.id}','parede')">🖌️ Pintar em Lote</button>
         </div>
       </div>
       <div class="cc-panel"><div class="cc-panelTitle">🎨 Pintura por Cor</div>${_barras(t.porCor)}</div>
@@ -648,7 +649,7 @@ const LevantamentoPintura = (() => {
         <div class="cc-kpi"><div class="cc-kpiIcon">🔲</div><div class="cc-kpiBody"><div class="cc-kpiLabel">M² Pintura Teto</div><div class="cc-kpiValue">${fmt2(t.total)}<span class="cc-kpiUnit">m²</span></div></div></div>
         <div class="cc-kpi"><div class="cc-kpiIcon">✅</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Áreas com Pintura</div><div class="cc-kpiValue">${t.comPintura}<span class="cc-kpiUnit">/ ${t.qtd}</span></div></div></div>
         <div class="cc-kpi" style="display:flex;align-items:center;justify-content:center;">
-          <button class="btn btn-secundario btn-sm" onclick="LPT.abrirMassa('${n.id}','teto')">🖌️ Aplicar em massa</button>
+          <button class="btn btn-secundario btn-sm" onclick="LPT.abrirMassa('${n.id}','teto')">🖌️ Pintar em Lote</button>
         </div>
       </div>
       <div class="cc-panel"><div class="cc-panelTitle">🎨 Pintura por Cor</div>${_barras(t.porCor)}</div>
@@ -749,12 +750,19 @@ const LevantamentoPintura = (() => {
   }
 
   // ══════════════════════════════════════════
-  // APLICAR EM MASSA
+  // PINTAR EM LOTE (ex-"aplicar em massa")
+  //
+  // Antes isso aplicava a mistura em TODOS os itens do local, sem
+  // distinguir quem já tinha pintura de quem não tinha — resultado:
+  // itens sem pintura nenhuma viravam "pintados" à força. Agora o
+  // usuário escolhe item a item quem entra, com um padrão seguro
+  // (só marca quem já tinha pintura).
   // ══════════════════════════════════════════
   function abrirMassa(nodeId, tipo) {
     massaNodeId = nodeId; massaTipo = tipo; massaIncluirSublocais = true;
     massaForm = [{ cor: '', hex: '#ffffff', pct: 100 }];
-    document.getElementById('lpt-massa-titulo').textContent = 'Aplicar Pintura em Massa — ' + (tipo === 'parede' ? '🧱 Parede' : '🔲 Teto');
+    massaSelecionados = new Set(_listaMassaAtual().filter(x => x.temPintura).map(x => x.id));
+    document.getElementById('lpt-massa-titulo').textContent = 'Pintar em Lote — ' + (tipo === 'parede' ? '🧱 Parede' : '🔲 Teto');
     _renderMassaModal();
     Utils.abrirModal('modal-lpt-massa');
   }
@@ -768,18 +776,22 @@ const LevantamentoPintura = (() => {
       ? pecasAcabamento.filter(p => _targetIdsParede(alvo).has(p.nodeId))
       : areasTeto.filter(a => _targetIdsTeto(alvo).has(a.nodeId));
   }
+  function _corAtualLabel(item) {
+    if (!item.temPintura || !(item.pintura || []).length) return '<span class="text-muted">sem pintura</span>';
+    return (item.pintura || []).map(pt => `${esc(pt.cor || '?')} ${num(pt.pct)}%`).join(', ');
+  }
   function _renderMassaModal() {
     const body = document.getElementById('lpt-massa-body'); if (!body) return;
     const soma = _somaPct(massaForm);
-    const qtd = _listaMassaAtual().length;
+    const lista = _listaMassaAtual();
+    const qtdSel = massaSelecionados.size;
     body.innerHTML = `
-      <p class="text-sm text-muted mb-2">Isso substitui a mistura de cor/% em TODAS as ${massaTipo === 'parede' ? 'faces de acabamento' : 'áreas de teto'} listadas abaixo. Não dá pra desfazer — confira antes de aplicar.</p>
+      <div style="background:#fff7ed;border:1px solid #f59e0b;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:0.82rem;line-height:1.5;">
+        ⚠️ <strong>Isso troca a cor SOMENTE dos itens marcados</strong> na lista abaixo. Itens sem pintura não entram sozinhos — marque manualmente se quiser pintá-los pela primeira vez aqui.
+      </div>
       <div class="form-check mb-2">
         <input type="checkbox" id="lpt-massa-sub" ${massaIncluirSublocais ? 'checked' : ''} onchange="LPT.toggleMassaSublocais(this.checked)">
-        <label for="lpt-massa-sub">Incluir sublocais</label>
-      </div>
-      <div style="background:var(--cor-fundo);border-radius:8px;padding:8px 14px;margin-bottom:12px;font-size:0.82rem;">
-        <strong>${qtd}</strong> ${massaTipo === 'parede' ? 'face(s)' : 'área(s)'} será(ão) atualizada(s).
+        <label for="lpt-massa-sub">Incluir sublocais na lista</label>
       </div>
       <div id="lpt-massa-lista">${massaForm.map((pt, i) => `
         <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
@@ -788,22 +800,53 @@ const LevantamentoPintura = (() => {
           <input type="number" class="form-control" style="flex:0.7;" step="1" min="0" max="100" value="${esc(pt.pct)}" oninput="LPT.updMassaItem(${i},'pct',this.value)">
           ${massaForm.length > 1 ? `<button type="button" class="btn btn-secundario btn-sm" onclick="LPT.remMassaItem(${i})">✕</button>` : ''}
         </div>`).join('')}</div>
-      <div style="display:flex;justify-content:space-between;align-items:center;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
         <button class="btn btn-secundario btn-sm" onclick="LPT.addMassaItem()">+ cor</button>
         <span class="text-sm" style="color:${Math.abs(soma - 100) < 0.01 ? '#16a34a' : '#ef4444'};font-weight:700;">${fmt2(soma)}%</span>
       </div>
+
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+        <strong class="text-sm">Aplicar em quem? (${qtdSel} de ${lista.length} selecionado${qtdSel === 1 ? '' : 's'})</strong>
+        <div style="display:flex;gap:6px;">
+          <button type="button" class="btn btn-secundario btn-sm" onclick="LPT.massaSelecionarPintados()">Só já pintados</button>
+          <button type="button" class="btn btn-secundario btn-sm" onclick="LPT.massaSelecionarTodos()">Todos</button>
+          <button type="button" class="btn btn-secundario btn-sm" onclick="LPT.massaLimparSelecao()">Nenhum</button>
+        </div>
+      </div>
+      ${!lista.length ? `<div class="cc-empty">Nenhum item encontrado nesse local.</div>` : `
+      <div style="border:1px solid var(--cor-borda-light);border-radius:8px;max-height:280px;overflow-y:auto;">
+        ${lista.map(item => `
+          <label style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--cor-borda-light);cursor:pointer;">
+            <input type="checkbox" ${massaSelecionados.has(item.id) ? 'checked' : ''} onchange="LPT.massaToggleItem('${item.id}')">
+            <span style="flex:1;">
+              <div style="font-size:0.85rem;">${esc(item.nome || '(sem nome)')}</div>
+              <div class="text-sm text-muted">${_corAtualLabel(item)}</div>
+            </span>
+          </label>`).join('')}
+      </div>`}
     `;
   }
-  function toggleMassaSublocais(v) { massaIncluirSublocais = v; _renderMassaModal(); }
+  function toggleMassaSublocais(v) {
+    massaIncluirSublocais = v;
+    massaSelecionados = new Set(_listaMassaAtual().filter(x => x.temPintura).map(x => x.id));
+    _renderMassaModal();
+  }
+  function massaToggleItem(id) {
+    if (massaSelecionados.has(id)) massaSelecionados.delete(id); else massaSelecionados.add(id);
+    _renderMassaModal();
+  }
+  function massaSelecionarPintados() { massaSelecionados = new Set(_listaMassaAtual().filter(x => x.temPintura).map(x => x.id)); _renderMassaModal(); }
+  function massaSelecionarTodos() { massaSelecionados = new Set(_listaMassaAtual().map(x => x.id)); _renderMassaModal(); }
+  function massaLimparSelecao() { massaSelecionados = new Set(); _renderMassaModal(); }
   function addMassaItem() { massaForm.push({ cor: '', hex: '#ffffff', pct: 0 }); _renderMassaModal(); }
   function remMassaItem(i) { massaForm.splice(i, 1); _renderMassaModal(); }
   function updMassaItem(i, campo, valor) { massaForm[i][campo] = valor; _renderMassaModal(); }
   async function confirmarMassa() {
     const soma = _somaPct(massaForm);
     if (Math.abs(soma - 100) > 0.01) { Utils.toast(`A soma dos % deve ser 100% (está em ${fmt2(soma)}%).`, 'alerta'); return; }
-    const lista = _listaMassaAtual();
-    if (!lista.length) { Utils.toast('Nenhum item encontrado para aplicar.', 'alerta'); return; }
-    const ok = Utils.confirmar(`Aplicar essa mistura de cor em ${lista.length} item(ns)? Isso substitui a pintura atual de cada um.`);
+    const lista = _listaMassaAtual().filter(item => massaSelecionados.has(item.id));
+    if (!lista.length) { Utils.toast('Marque pelo menos 1 item na lista para aplicar.', 'alerta'); return; }
+    const ok = Utils.confirmar(`Aplicar essa mistura de cor em ${lista.length} item(ns) marcado(s)? Isso substitui a pintura atual de cada um.`);
     if (!ok) return;
     Utils.mostrarLoading('Aplicando...');
     const dados = { temPintura: true, pintura: massaForm.map(p => ({ cor: p.cor || '', hex: p.hex || '#ffffff', pct: num(p.pct) })) };
@@ -829,6 +872,7 @@ const LevantamentoPintura = (() => {
     abrirVincular, onBuscaVincParedes, onBuscaVincTeto, selVincParedes, selVincTeto, salvarVinculo,
     editarPintura, toggleEditPintura, addEditItem, remEditItem, updEditItem, salvarEdicaoPintura,
     abrirMassa, toggleMassaSublocais, addMassaItem, remMassaItem, updMassaItem, confirmarMassa,
+    massaToggleItem, massaSelecionarPintados, massaSelecionarTodos, massaLimparSelecao,
   };
 })();
 

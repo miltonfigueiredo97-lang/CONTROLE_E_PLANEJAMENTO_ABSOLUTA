@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.32.2',
+  versaoAtual: 'V2.32.3',
 
   versoes: [
     {
@@ -3503,7 +3503,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.32.2',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-15',
       tipo: 'correcao',
       titulo: 'Levantamento de Paredes: corrige Clonar e traz de volta o Duplicar Local',
@@ -3522,6 +3522,28 @@ const NotasVersao = {
         '  acabamento, sem mexer no que já existe — diferente do',
         '  Clonar, que substitui o conteúdo do local de destino',
         '  pelas peças de outro local escolhido',
+      ]
+    },
+    {
+      versao: 'V2.32.3',
+      status: 'aberta',
+      data: '2026-07-15',
+      tipo: 'correcao',
+      titulo: 'Levantamento de Pintura: "Pintar em Lote" não pintava mais tudo à força',
+      itens: [
+        'CORREÇÃO GRAVE: o antigo "Aplicar em massa" trocava a cor de',
+        '  TODOS os itens do local de uma vez, inclusive os que não',
+        '  tinham pintura nenhuma — forçando temPintura=true em itens',
+        '  que deveriam continuar sem pintura.',
+        'Renomeado para "🖌️ Pintar em Lote" (nome antigo não dizia',
+        '  nada sobre o que o botão fazia).',
+        'Agora mostra a lista de itens do local com CHECKBOX individual',
+        '  — a cor só é aplicada em quem estiver marcado.',
+        'Padrão ao abrir: marca automaticamente só quem JÁ tinha',
+        '  pintura (seguro). Botões "Só já pintados" / "Todos" /',
+        '  "Nenhum" pra ajustar rápido a seleção.',
+        'Aviso claro no topo do modal explicando que só os itens',
+        '  marcados são alterados.',
       ]
     }
   ],
