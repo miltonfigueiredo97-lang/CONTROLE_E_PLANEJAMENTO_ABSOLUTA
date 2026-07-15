@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.32.1',
+  versaoAtual: 'V2.32.2',
 
   versoes: [
     {
@@ -3476,7 +3476,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.32.1',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-15',
       tipo: 'correcao',
       titulo: 'Levantamento de Ar Condicionado: correções de usabilidade (locais, diâmetro, layout, itens manuais, unidades)',
@@ -3499,6 +3499,29 @@ const NotasVersao = {
         '  cálculo agora informa quantas unidades comprar, além dos',
         '  metros totais, tanto na pré-visualização quanto no',
         '  Resumo do Levantamento (nova coluna "Comprar")',
+      ]
+    },
+    {
+      versao: 'V2.32.2',
+      status: 'aberta',
+      data: '2026-07-15',
+      tipo: 'correcao',
+      titulo: 'Levantamento de Paredes: corrige Clonar e traz de volta o Duplicar Local',
+      itens: [
+        'CORREÇÃO: "Clonar de Outro Local" não dava nenhum retorno',
+        '  visível quando falhava (erro engolido silenciosamente).',
+        '  Agora toda falha mostra um toast com o motivo e registra',
+        '  no console para diagnóstico; também avisa claramente se',
+        '  não existe nenhum outro local cadastrado pra clonar de',
+        'Havia uma função duplicada no código (_acharArrayPai',
+        '  declarada duas vezes) que foi limpa',
+        'NOVO: "📋 Duplicar Local" — volta a existir ao lado do',
+        '  "⧉ Clonar de Outro Local" (árvore, painel do local e',
+        '  tabela de sublocais). Cria uma CÓPIA NOVA do local, com',
+        '  todos os sublocais, paredes de alvenaria e faces de',
+        '  acabamento, sem mexer no que já existe — diferente do',
+        '  Clonar, que substitui o conteúdo do local de destino',
+        '  pelas peças de outro local escolhido',
       ]
     }
   ],

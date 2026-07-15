@@ -422,6 +422,7 @@ const LevantamentoParedes = (() => {
         ${nPecas ? `<span class="tree-badge">${nPecas}</span>` : ''}
         <button class="tree-edit-btn" onclick="event.stopPropagation();LP.renomearNode('${n.id}')" title="Renomear">✎</button>
         <button class="tree-clone-btn" onclick="event.stopPropagation();LP.abrirClonarNode('${n.id}')" title="Clonar peças de outro local para este">⧉</button>
+        <button class="tree-clone-btn" onclick="event.stopPropagation();LP.duplicarNode('${n.id}')" title="Duplicar este local (cria uma cópia nova)">📋</button>
         <button class="tree-del-btn" onclick="event.stopPropagation();LP.excluirNode('${n.id}')" title="Excluir">✕</button>
       </div>`;
       if (aberto) {
@@ -545,6 +546,7 @@ const LevantamentoParedes = (() => {
           <span class="subtitulo">${listaSubtree.length} parede(s) no total${temFilhos ? ` (${listaDireta.length} direta[s] neste local)` : ''} · ${fmt2(tSub.areaLiquida)} m²</span></div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <button class="btn btn-secundario btn-sm" onclick="LP.abrirClonarNode('${selNodeId}')" title="Clonar peças de outro local para este">⧉ Clonar de Outro Local</button>
+          <button class="btn btn-secundario btn-sm" onclick="LP.duplicarNode('${selNodeId}')" title="Duplicar este local (cria uma cópia nova)">📋 Duplicar Local</button>
           <button class="btn btn-primario btn-sm" onclick="LP.novaAlvenaria()">+ Nova Parede</button>
         </div>
       </div>
@@ -570,7 +572,7 @@ const LevantamentoParedes = (() => {
                 <td style="text-align:right;">${tF.qtdPecas}</td>
                 <td style="text-align:right;">${fmt2(tF.vedacao)}</td>
                 <td style="text-align:right;">${fmt2(tF.estrutural)}</td>
-                <td style="white-space:nowrap;" onclick="event.stopPropagation();"><button class="btn btn-secundario btn-sm" onclick="LP.abrirClonarNode('${f.id}')" title="Clonar de outro local">⧉</button></td>
+                <td style="white-space:nowrap;" onclick="event.stopPropagation();"><button class="btn btn-secundario btn-sm" onclick="LP.abrirClonarNode('${f.id}')" title="Clonar de outro local">⧉</button> <button class="btn btn-secundario btn-sm" onclick="LP.duplicarNode('${f.id}')" title="Duplicar este local">📋</button></td>
               </tr>`;
             }).join('')}
           </tbody>
@@ -605,6 +607,7 @@ const LevantamentoParedes = (() => {
           <span class="subtitulo">${listaSubtree.length} face(s) no total${temFilhos ? ` (${listaDireta.length} direta[s] neste local)` : ''} · ${fmt2(tSub.areaLiquida)} m²</span></div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <button class="btn btn-secundario btn-sm" onclick="LP.abrirClonarNode('${selNodeId}')" title="Clonar peças de outro local para este">⧉ Clonar de Outro Local</button>
+          <button class="btn btn-secundario btn-sm" onclick="LP.duplicarNode('${selNodeId}')" title="Duplicar este local (cria uma cópia nova)">📋 Duplicar Local</button>
           <button class="btn btn-primario btn-sm" onclick="LP.novaAcabamento()">+ Nova Face</button>
         </div>
       </div>
@@ -634,7 +637,7 @@ const LevantamentoParedes = (() => {
                 <td style="text-align:right;">${fmt2(tF.reboco)}</td>
                 <td style="text-align:right;">${fmt2(tF.revestimento)}</td>
                 <td style="text-align:right;">${fmt2(tF.pintura)}</td>
-                <td style="white-space:nowrap;" onclick="event.stopPropagation();"><button class="btn btn-secundario btn-sm" onclick="LP.abrirClonarNode('${f.id}')" title="Clonar de outro local">⧉</button></td>
+                <td style="white-space:nowrap;" onclick="event.stopPropagation();"><button class="btn btn-secundario btn-sm" onclick="LP.abrirClonarNode('${f.id}')" title="Clonar de outro local">⧉</button> <button class="btn btn-secundario btn-sm" onclick="LP.duplicarNode('${f.id}')" title="Duplicar este local">📋</button></td>
               </tr>`;
             }).join('')}
           </tbody>
@@ -782,19 +785,70 @@ const LevantamentoParedes = (() => {
     }
   }
 
-  // Clonar peças de OUTRO local para dentro deste (mantém o local atual,
-  // igual ao mecanismo do Levantamento de Fachada) — substitui o que já
-  // existir no local de destino pelas peças clonadas da origem.
+  // Duplicar: cria uma CÓPIA NOVA do local (com sublocais, alvenaria e
+  // acabamento) como irmão do local original — não mexe em nada existente.
+  function _clonarSubarvore(node, novoNomeRaiz) {
+    const mapaIds = {};
+    function clone(n, nome) {
+      const novoId = _uid();
+      mapaIds[n.id] = novoId;
+      return { id: novoId, nome, filhos: (n.filhos || []).map(f => clone(f, f.nome)) };
+    }
+    const novoNode = clone(node, novoNomeRaiz);
+    return { novoNode, mapaIds };
+  }
+
+  async function duplicarNode(nodeId) {
+    const r = _acharNode(nodeId); if (!r) return;
+    const ok = await Utils.confirmar(`Duplicar "${r.node.nome}" com todos os sublocais, alvenaria e acabamento, como "${r.node.nome} (cópia)"?`);
+    if (!ok) return;
+    Utils.mostrarLoading('Duplicando...');
+    try {
+      const parentArr = _acharArrayPai(nodeId);
+      if (!parentArr) throw new Error('Não foi possível localizar o local pai na árvore.');
+      const { novoNode, mapaIds } = _clonarSubarvore(r.node, r.node.nome + ' (cópia)');
+      parentArr.push(novoNode);
+      const oldIds = _idsComDescendentes(r.node);
+      const novasAlv = pecasAlvenaria.filter(p => oldIds.includes(p.nodeId));
+      const novasAcab = pecasAcabamento.filter(p => oldIds.includes(p.nodeId));
+      const ops = [
+        ...novasAlv.map(p => { const { id: _pid, ...rest } = p; return { type: 'set', ref: Database.ref(obraId, COL_ALV).doc(), data: { ...rest, nodeId: mapaIds[p.nodeId], conferido: false } }; }),
+        ...novasAcab.map(p => { const { id: _pid, ...rest } = p; return { type: 'set', ref: Database.ref(obraId, COL_ACAB).doc(), data: { ...rest, nodeId: mapaIds[p.nodeId], conferido: false } }; }),
+      ];
+      for (let i = 0; i < ops.length; i += 400) await Database.batchWrite(ops.slice(i, i + 400));
+      await _salvarArvore();
+      Utils.toast(`✓ "${r.node.nome}" duplicado com ${novasAlv.length} parede(s) e ${novasAcab.length} face(s)!`, 'sucesso');
+      await carregar();
+    } catch (e) {
+      console.error('Erro ao duplicar local:', e);
+      Utils.toast('Erro ao duplicar: ' + e.message, 'erro');
+    } finally {
+      Utils.esconderLoading();
+    }
+  }
+
+  // Clonar: copia as peças de OUTRO local já existente para dentro do local
+  // selecionado (substitui o que já existir aqui) — igual ao Levantamento
+  // de Fachada.
   let clonarAlvoId = null;
 
   function abrirClonarNode(nodeId) {
-    const alvo = _acharNode(nodeId); if (!alvo) return;
-    clonarAlvoId = nodeId;
-    const opts = _listaNosFlat().filter(o => o.id !== nodeId);
-    const sel = document.getElementById('lp-clonar-origem');
-    if (sel) sel.innerHTML = '<option value="">Selecione...</option>' + opts.map(o => `<option value="${o.id}">${esc(o.label)}</option>`).join('');
-    document.getElementById('lp-clonar-titulo').textContent = `Clonar peças para "${alvo.node.nome}"`;
-    Utils.abrirModal('modal-lp-clonar');
+    try {
+      const alvo = _acharNode(nodeId);
+      if (!alvo) { Utils.toast('Local não encontrado na árvore.', 'erro'); return; }
+      clonarAlvoId = nodeId;
+      const opts = _listaNosFlat().filter(o => o.id !== nodeId);
+      if (!opts.length) { Utils.toast('Não há outro local cadastrado para clonar peças. Crie outro local primeiro, ou use "Duplicar Local".', 'alerta'); return; }
+      const sel = document.getElementById('lp-clonar-origem');
+      if (!sel) { Utils.toast('Erro interno: campo de origem não encontrado no modal.', 'erro'); return; }
+      sel.innerHTML = '<option value="">Selecione...</option>' + opts.map(o => `<option value="${o.id}">${esc(o.label)}</option>`).join('');
+      const tit = document.getElementById('lp-clonar-titulo');
+      if (tit) tit.textContent = `Clonar peças para "${alvo.node.nome}"`;
+      Utils.abrirModal('modal-lp-clonar');
+    } catch (e) {
+      console.error('Erro ao abrir modal de clonagem:', e);
+      Utils.toast('Erro ao abrir clonagem: ' + e.message, 'erro');
+    }
   }
 
   async function confirmarClonarNode() {
@@ -830,6 +884,7 @@ const LevantamentoParedes = (() => {
       Utils.toast(`✓ ${alvOrigem.length} parede(s) e ${acabOrigem.length} face(s) clonadas de "${origemR.node.nome}"!`, 'sucesso');
       await carregar();
     } catch (e) {
+      console.error('Erro ao clonar peças entre locais:', e);
       Utils.toast('Erro ao clonar: ' + e.message, 'erro');
     } finally {
       Utils.esconderLoading();
@@ -1383,7 +1438,7 @@ const LevantamentoParedes = (() => {
   return {
     init, recarregar, renderizar, setAba,
     selGeral, selNode, toggleNode,
-    novoNode, renomearNode, salvarNode, excluirNode, abrirClonarNode, confirmarClonarNode,
+    novoNode, renomearNode, salvarNode, excluirNode, abrirClonarNode, confirmarClonarNode, duplicarNode,
     duplicarPeca, conferirPeca, abrirMoverPeca, confirmarMoverPeca, excluirPeca,
     calcExprEnter, onClickPodeML,
     novaAlvenaria, editarAlvenaria, salvarAlvenaria, updAlv, toggleVaoAlv,
