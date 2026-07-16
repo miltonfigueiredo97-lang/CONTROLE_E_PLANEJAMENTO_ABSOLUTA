@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.39.0',
+  versaoAtual: 'V2.39.1',
 
   versoes: [
     {
@@ -3870,7 +3870,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.39.0',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-16',
       tipo: 'melhoria',
       titulo: 'Vínculos: títulos revisados, Paredes por tipo real, Pintura corrigida de verdade',
@@ -3900,6 +3900,21 @@ const NotasVersao = {
         '  (Paredes) e das áreas de Teto marcadas com pintura, navegando pela',
         '  árvore própria de locais da Pintura — mostrando os níveis como os',
         '  outros módulos. Removido "(em desenvolvimento)" do nome.',
+      ]
+    },
+    {
+      versao: 'V2.39.1',
+      status: 'aberta',
+      data: '2026-07-16',
+      tipo: 'melhoria',
+      titulo: 'Tarefas: barra de adicionar redesenhada + criar categoria direto por lá',
+      itens: [
+        'Barra de "+ Adicionar tarefa" estava cramped e confusa (campos',
+        '  colados, sem rótulo). Redesenhada em duas linhas: nome da tarefa',
+        '  em cima, Projeto / Categoria / Importância com rótulo embaixo.',
+        'NOVO — campo Categoria na própria barra de adicionar, com botão',
+        '  "+" ao lado pra criar uma categoria nova (nome + cor) sem sair',
+        '  dali e sem perder o que já tinha sido digitado.',
       ]
     }
   ],

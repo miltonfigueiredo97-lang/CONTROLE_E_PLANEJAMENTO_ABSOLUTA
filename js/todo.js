@@ -129,16 +129,35 @@ const Todo = (() => {
       .todo-progresso-legenda { font-size:12px; color:#999; }
 
       .todo-addbar {
-        flex:2; min-width:340px; display:flex; gap:8px; align-items:center; flex-wrap:wrap; background:#fff;
-        border:1.5px solid var(--cor-borda); border-radius:var(--borda-radius-lg); padding:8px 8px 8px 16px;
+        flex:2; min-width:360px; display:flex; flex-direction:column; gap:12px; background:#fff;
+        border:1.5px solid var(--cor-borda); border-radius:var(--borda-radius-lg); padding:16px;
         box-shadow:0 1px 2px rgba(0,0,0,.03);
       }
       .todo-addbar:focus-within { border-color:var(--cor-primaria); box-shadow:0 0 0 3px var(--cor-primaria-light); }
-      .todo-addbar input[type=text], .todo-addbar select { border:none; outline:none; background:transparent; font-size:14px; font-family:var(--font-principal); }
-      .todo-addbar-texto { flex:1; min-width:140px; }
-      .todo-addbar-projeto { width:130px; border-left:1.5px solid var(--cor-borda-light) !important; padding-left:10px !important; color:var(--cor-texto-secundario); }
-      .todo-addbar-imp { width:110px; border-left:1.5px solid var(--cor-borda-light) !important; padding-left:10px !important; color:var(--cor-texto-secundario); cursor:pointer; }
-      .todo-addbar button { flex-shrink:0; white-space:nowrap; }
+      .todo-addbar-texto {
+        width:100%; border:none; outline:none; background:transparent; font-size:15.5px; font-weight:600;
+        font-family:var(--font-principal); padding:2px;
+      }
+      .todo-addbar-texto::placeholder { color:var(--cor-texto-muted); font-weight:500; }
+      .todo-addbar-linha2 { display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap; border-top:1.5px solid var(--cor-borda-light); padding-top:12px; }
+      .todo-addbar-campo { display:flex; flex-direction:column; gap:5px; flex:1; min-width:110px; }
+      .todo-addbar-campo label { font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.4px; color:var(--cor-texto-muted); }
+      .todo-addbar-campo input, .todo-addbar-campo select {
+        border:1.5px solid var(--cor-borda-light); border-radius:8px; padding:7px 10px; font-size:13.5px;
+        font-family:var(--font-principal); outline:none; background:var(--cor-fundo); color:var(--cor-texto);
+        width:100%; cursor:pointer;
+      }
+      .todo-addbar-campo input { cursor:text; }
+      .todo-addbar-campo input:focus, .todo-addbar-campo select:focus { border-color:var(--cor-primaria); background:#fff; }
+      .todo-addbar-cat-row { display:flex; gap:6px; }
+      .todo-addbar-cat-row select { flex:1; min-width:0; }
+      .todo-addbar-cat-nova-btn {
+        width:32px; height:32px; flex-shrink:0; border-radius:8px; border:1.5px solid var(--cor-borda-light);
+        background:var(--cor-fundo); cursor:pointer; font-size:16px; font-weight:700; color:var(--cor-texto-secundario);
+        display:flex; align-items:center; justify-content:center; transition:.15s;
+      }
+      .todo-addbar-cat-nova-btn:hover { border-color:var(--cor-primaria); color:var(--cor-texto); background:#fff; }
+      .todo-addbar-submit { flex-shrink:0; height:33px; padding:0 18px; }
 
       .todo-searchbar { position:relative; margin-bottom:14px; }
       .todo-searchbar input {
@@ -254,7 +273,8 @@ const Todo = (() => {
       @media (max-width:720px) {
         .todo-topo { flex-direction:column; }
         .todo-addbar { flex-wrap:wrap; }
-        .todo-addbar-projeto, .todo-addbar-imp { border-left:none !important; padding-left:0 !important; border-top:1.5px solid var(--cor-borda-light); padding-top:8px !important; }
+        .todo-addbar-linha2 { flex-direction:column; align-items:stretch; }
+        .todo-addbar-submit { width:100%; height:38px; }
       }
     `;
     document.head.appendChild(style);
@@ -338,15 +358,33 @@ const Todo = (() => {
         </div>
 
         <form id="form-nova-tarefa" class="todo-addbar">
-          <input type="text" id="todo-texto" class="todo-addbar-texto" placeholder="+ Adicionar tarefa..." required>
-          <input type="text" id="todo-projeto" class="todo-addbar-projeto" list="todo-projetos-lista" placeholder="Projeto">
-          <datalist id="todo-projetos-lista">
-            ${projetos.map(p => `<option value="${esc(p.nome)}">`).join('')}
-          </datalist>
-          <select id="todo-importancia" class="todo-addbar-imp">
-            ${Object.entries(IMPORTANCIA_LABEL).map(([v, l]) => `<option value="${v}" ${v === '3' ? 'selected' : ''}>${l}</option>`).join('')}
-          </select>
-          <button type="submit" class="btn btn-primario">Adicionar</button>
+          <input type="text" id="todo-texto" class="todo-addbar-texto" placeholder="O que precisa ser feito?" required>
+          <div class="todo-addbar-linha2">
+            <div class="todo-addbar-campo">
+              <label>Projeto</label>
+              <input type="text" id="todo-projeto" list="todo-projetos-lista" placeholder="Sem projeto">
+              <datalist id="todo-projetos-lista">
+                ${projetos.map(p => `<option value="${esc(p.nome)}">`).join('')}
+              </datalist>
+            </div>
+            <div class="todo-addbar-campo">
+              <label>Categoria</label>
+              <div class="todo-addbar-cat-row">
+                <select id="todo-categoria">
+                  <option value="">Sem categoria</option>
+                  ${categorias.map(c => `<option value="${esc(c.nome)}">${esc(c.nome)}</option>`).join('')}
+                </select>
+                <button type="button" class="todo-addbar-cat-nova-btn" id="todo-addbar-nova-categoria" title="Criar nova categoria">+</button>
+              </div>
+            </div>
+            <div class="todo-addbar-campo">
+              <label>Importância</label>
+              <select id="todo-importancia">
+                ${Object.entries(IMPORTANCIA_LABEL).map(([v, l]) => `<option value="${v}" ${v === '3' ? 'selected' : ''}>${l}</option>`).join('')}
+              </select>
+            </div>
+            <button type="submit" class="btn btn-primario todo-addbar-submit">Adicionar</button>
+          </div>
         </form>
       </div>
 
@@ -425,9 +463,13 @@ const Todo = (() => {
       e.preventDefault();
       const texto = document.getElementById('todo-texto').value.trim();
       const projeto = document.getElementById('todo-projeto').value.trim();
+      const categoria = document.getElementById('todo-categoria').value;
       const importancia = parseInt(document.getElementById('todo-importancia').value, 10) || 3;
       if (!texto) return;
-      await adicionar(texto, projeto, importancia);
+      await adicionar(texto, projeto, categoria, importancia);
+    });
+    document.getElementById('todo-addbar-nova-categoria').addEventListener('click', () => {
+      abrirCriarCategoriaRapida();
     });
     let buscaTimer = null;
     document.getElementById('todo-busca').addEventListener('input', (e) => {
@@ -487,13 +529,13 @@ const Todo = (() => {
       </div>`;
   }
 
-  async function adicionar(texto, projeto, importancia) {
+  async function adicionar(texto, projeto, categoria, importancia) {
     if (projeto && !projetos.some(p => p.nome === projeto)) {
       const id = await Database.criarRaiz(COL_PROJ, { nome: projeto, importancia: 3 });
       projetos.push({ id, nome: projeto, importancia: 3 });
     }
     const maxOrdem = tarefas.reduce((m, t) => Math.max(m, t.ordem || 0), 0);
-    const dados = { texto, projeto: projeto || '', categoria: '', dependencia: '', concluida: false, ordem: maxOrdem + 1, importancia: importancia || 3 };
+    const dados = { texto, projeto: projeto || '', categoria: categoria || '', dependencia: '', concluida: false, ordem: maxOrdem + 1, importancia: importancia || 3 };
     const id = await Database.criarRaiz(COL, dados);
     tarefas.push({ id, ...dados });
     Utils.toast('Tarefa adicionada.', 'sucesso');
@@ -550,6 +592,60 @@ const Todo = (() => {
   }
   function fecharOverlay() {
     document.getElementById('todo-overlay')?.remove();
+  }
+
+  // ============================================
+  // Criação rápida de categoria a partir da barra de
+  // "+ Adicionar tarefa" — não chama renderizar() pra não apagar
+  // o que a pessoa já digitou no nome da tarefa.
+  // ============================================
+  function abrirCriarCategoriaRapida() {
+    const html = `
+      <div class="modal-header"><h3>Nova categoria</h3></div>
+      <div class="modal-body">
+        <div class="todo-form-grupo">
+          <label>Nome</label>
+          <input type="text" id="rc-nome" class="form-control" placeholder="Ex: Urgente, Cliente, Bug...">
+        </div>
+        <div class="todo-form-grupo">
+          <label>Cor</label>
+          <div class="todo-swatch-grid" id="rc-swatches">
+            ${SWATCHES.map((c, i) => `<div class="todo-swatch ${i === 0 ? 'selecionado' : ''}" style="background:${c}" data-cor="${c}"></div>`).join('')}
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer" style="justify-content:flex-end;">
+        <button type="button" class="btn btn-secundario" id="rc-cancelar">Cancelar</button>
+        <button type="button" class="btn btn-primario" id="rc-salvar">Criar categoria</button>
+      </div>`;
+    abrirOverlay(html, 'todo-modal');
+    document.getElementById('rc-nome').focus();
+
+    let corSelecionada = SWATCHES[0];
+    document.querySelectorAll('#rc-swatches .todo-swatch').forEach(sw => {
+      sw.addEventListener('click', () => {
+        document.querySelectorAll('#rc-swatches .todo-swatch').forEach(s => s.classList.remove('selecionado'));
+        sw.classList.add('selecionado');
+        corSelecionada = sw.dataset.cor;
+      });
+    });
+    document.getElementById('rc-cancelar').addEventListener('click', fecharOverlay);
+    document.getElementById('rc-salvar').addEventListener('click', async () => {
+      const nome = document.getElementById('rc-nome').value.trim();
+      if (!nome) { Utils.toast('Dê um nome pra categoria.', 'alerta'); return; }
+      if (categorias.some(c => c.nome === nome)) { Utils.toast('Já existe uma categoria com esse nome.', 'alerta'); return; }
+      const id = await Database.criarRaiz(COL_CAT, { nome, cor: corSelecionada, importancia: 3 });
+      categorias.push({ id, nome, cor: corSelecionada, importancia: 3 });
+      fecharOverlay();
+      Utils.toast('Categoria criada.', 'sucesso');
+      // Atualiza só o <select> da barra de adicionar, sem re-renderizar
+      // a tela inteira (preserva o que já foi digitado no nome da tarefa).
+      const sel = document.getElementById('todo-categoria');
+      if (sel) {
+        sel.insertAdjacentHTML('beforeend', `<option value="${esc(nome)}" selected>${esc(nome)}</option>`);
+        sel.value = nome;
+      }
+    });
   }
 
   // ============================================
