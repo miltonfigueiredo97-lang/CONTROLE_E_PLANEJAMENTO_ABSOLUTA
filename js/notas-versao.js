@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.34.0',
+  versaoAtual: 'V2.35.0',
 
   versoes: [
     {
@@ -3669,7 +3669,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.34.0',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-16',
       tipo: 'correcao',
       titulo: 'Vínculos com Levantamento: correção geral (dados errados, cache travado, árvore ilegível)',
@@ -3708,6 +3708,28 @@ const NotasVersao = {
         '',
         'Erros de carregamento (permissão/índice do Firestore) agora avisam',
         '  com um toast em vez de virar silenciosamente uma árvore vazia.',
+      ]
+    },
+    {
+      versao: 'V2.35.0',
+      status: 'aberta',
+      data: '2026-07-16',
+      tipo: 'melhoria',
+      titulo: 'Tarefas: redesenho visual completo',
+      itens: [
+        'Cartão de progresso: mostra "X / Y concluídas" e % com barra',
+        '  animada, refletindo o filtro de projeto ativo.',
+        'Tarefas agora agrupadas por projeto, cada grupo com uma cor',
+        '  própria (bolinha + barra lateral no card) — muito mais fácil',
+        '  de escanear a lista com vários projetos misturados.',
+        'Filtro por projeto virou chips clicáveis (com contagem), no',
+        '  lugar do <select> antigo.',
+        'Barra de adicionar tarefa reformulada: campo de texto + campo',
+        '  de projeto lado a lado, num único cartão com foco destacado.',
+        'Checkbox circular customizado com animação de check ao concluir.',
+        'Ações (subir/descer/editar/excluir) só aparecem no hover do',
+        '  card, deixando a lista mais limpa quando não em uso.',
+        'Concluídas: contador com seta que gira ao abrir/fechar a seção.',
       ]
     }
   ],
