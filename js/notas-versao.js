@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.35.0',
+  versaoAtual: 'V2.36.0',
 
   versoes: [
     {
@@ -3712,7 +3712,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.35.0',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-16',
       tipo: 'melhoria',
       titulo: 'Tarefas: redesenho visual completo',
@@ -3730,6 +3730,45 @@ const NotasVersao = {
         'Ações (subir/descer/editar/excluir) só aparecem no hover do',
         '  card, deixando a lista mais limpa quando não em uso.',
         'Concluídas: contador com seta que gira ao abrir/fechar a seção.',
+      ]
+    },
+    {
+      versao: 'V2.36.0',
+      status: 'aberta',
+      data: '2026-07-16',
+      tipo: 'melhoria',
+      titulo: 'Vínculos com Levantamento: reestruturação completa (navegação em pastas)',
+      itens: [
+        'A tela de Vínculos deixou de ser uma tabela com TODAS as tarefas do',
+        '  Planejamento (onde o vínculo ficava escondido dentro de cada linha).',
+        '  Agora é uma navegação em pastas, do jeito que o levantamento é',
+        '  pensado na obra: Módulo → Métrica → Local → Local → Local...',
+        '',
+        'Como funciona:',
+        '  1. Abre Vínculos → aparece um botão pra cada levantamento (Piso,',
+        '     Fachada, Teto, Ar-Condicionado...).',
+        '  2. Clica no módulo → aparecem as métricas dele (Área total,',
+        '     Contrapiso, Impermeabilização, Rodapé...). A métrica escolhida',
+        '     fica travada — todo o resto da navegação calcula só ela.',
+        '  3. Clica na métrica → navega pelos locais em pastas (Torre →',
+        '     Pavimento → Apartamento → Cômodo, ou Fachada → Balancim →',
+        '     Vista) — com breadcrumb clicável no topo pra pular direto',
+        '     pra qualquer nível já visitado.',
+        '  4. Em QUALQUER nível dessa navegação (módulo inteiro, uma métrica',
+        '     inteira, uma torre, um pavimento, um apto ou um cômodo) tem um',
+        '     botão "Vincular aqui" com a quantidade já calculada daquele',
+        '     nível pra baixo. Se aquele local já tem vínculo, o botão vira',
+        '     "Editar vínculo" e mostra quantas tarefas já recebem o valor.',
+        '',
+        'Dentro do vínculo: a fonte (módulo/métrica/local) não é mais editável',
+        '  ali — ela já vem travada de onde você clicou "Vincular aqui" — só',
+        '  falta escolher a tarefa "pai" (busca por nome) e distribuir entre',
+        '  as tarefas filhas dela, exatamente como a divisão de família já',
+        '  funcionava antes (não mexi nessa parte, só em como se chega nela).',
+        '',
+        'Removida a tabela de tarefas, a busca de tarefa por texto e o antigo',
+        '  seletor em árvore expansível dentro do modal — toda a navegação',
+        '  de local agora acontece na tela principal, não mais dentro do popup.',
       ]
     }
   ],

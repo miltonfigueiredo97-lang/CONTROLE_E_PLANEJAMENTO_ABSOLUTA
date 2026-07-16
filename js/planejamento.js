@@ -118,8 +118,10 @@ const Planejamento = (() => {
   // serve de fonte pro valor — vazio/null = nível inteiro (ex: sem balancim
   // selecionado = soma todos os balancins da fachada escolhida).
   let _vincFachadaId=null, _vincBalancimId=null, _vincVistaId=null;
-  let _vincArvoreAbertos=new Set(); // nodeIds expandidos no seletor de local em árvore (modal)
-  let _vincBusca=''; // filtro de busca na tela de Vínculos
+  // Navegação em pastas da tela principal de Vínculos: Módulo > Métrica > Local > Local...
+  // _vincNavPath é uma lista de {id,nome} — o último item é onde o usuário está agora.
+  let _vincNavModulo=null, _vincNavMetrica=null, _vincNavPath=[];
+  let _vincEscolhaBusca=''; // filtro ao escolher a tarefa "pai" dentro do modal
   let _vincIncluidos=new Set(); // ids marcados p/ incluir no vínculo (dentro do modal)
   let _vincFatores={}; // id -> fração em texto ("1", "1/8", "0.5"...)
   const LEVANTAMENTO_MODULOS={
@@ -416,11 +418,11 @@ const Planejamento = (() => {
 
   // ===================== VÍNCULOS COM LEVANTAMENTO — TELA =====================
   async function abrirVinculosView(){
-    modoView='vinculos';_vincBusca='';_render();
+    modoView='vinculos';_vincNavModulo=null;_vincNavMetrica=null;_vincNavPath=[];_render();
     // Recarrega TODOS os levantamentos do zero (não usa cache velho) em background,
-    // pra tabela mostrar quantidade/local sempre atualizados ao entrar na tela.
+    // pra tela mostrar quantidade/local sempre atualizados ao entrar.
     await _invalidarLevCache();
-    if(modoView==='vinculos')_atualizarTbodyVinculos();
+    if(modoView==='vinculos')_renderVinculosView();
   }
   function fecharVinculosView(){modoView='gantt';_render();}
 
@@ -576,25 +578,6 @@ const Planejamento = (() => {
     return txt;
   }
 
-  // Rótulo do local vinculado pra QUALQUER módulo — Fachada usa fachada/balancim/vista,
-  // Piso/Teto/Paredes usam o nodeId da árvore (Torre › Pavimento › Apto › Cômodo).
-  // ANTES: só existia rótulo pra Fachada — vínculos de Piso/Teto/Paredes não mostravam
-  // NENHUMA indicação de local na tabela, e olhe que essa é a informação mais importante.
-  function _fonteVinculoLabel(t){
-    const mod=LEVANTAMENTO_MODULOS[t.levantamentoModulo];
-    if(t.levantamentoModulo==='fachada'){
-      return _fonteEstruturalLabel(t.levantamentoFachadaId,t.levantamentoBalancimId,t.levantamentoVistaId);
-    }
-    if(mod?.configDoc){
-      if(!t.levantamentoNodeId)return 'Toda a obra';
-      const cache=_levCache[t.levantamentoModulo];
-      if(!cache)return 'Local — carregando...';
-      const caminho=_caminhoNode(cache.arvore,t.levantamentoNodeId);
-      return caminho?caminho.map(p=>p.nome).join(' › '):'Local removido';
-    }
-    return 'Toda a obra';
-  }
-
   // Aceita "1", "0.5" ou frações "1/8" — como as pessoas de obra pensam em partes.
   function _parseFracao(s){
     s=String(s==null?'1':s).trim();
@@ -611,79 +594,176 @@ const Planejamento = (() => {
     return String(f);
   }
 
-  function onBuscaVinculos(texto){
-    _vincBusca=texto;
-    const tb=document.getElementById('vinc-plan-tbody');
-    if(tb)tb.innerHTML=_renderLinhasVinculos();
+  function onBuscaEscolhaAlvoVinc(v){_vincEscolhaBusca=v;_renderVinculoModalBody();}
+
+  // Acha um grupo de tarefas já vinculado exatamente a esta fonte (módulo+métrica+local),
+  // pra "Vincular aqui" abrir editando o que já existe em vez de criar duplicado.
+  function _grupoExistente(modulo,metrica,ctx){
+    return tarefas.find(t=>t.fonteQuantidade==='levantamento'&&t.levantamentoModulo===modulo&&t.levantamentoMetrica===metrica&&(
+      modulo==='fachada'
+        ?(t.levantamentoFachadaId||'')===(ctx.fachadaId||'')&&(t.levantamentoBalancimId||'')===(ctx.balancimId||'')&&(t.levantamentoVistaId||'')===(ctx.vistaId||'')
+        :(t.levantamentoNodeId||'')===(ctx.nodeId||'')
+    ));
+  }
+  function _qtdTarefasNoGrupo(origemId){
+    return tarefas.filter(t=>t.id===origemId||t.levantamentoOrigemId===origemId).length;
   }
 
-  function _renderLinhasVinculos(){
-    let sorted=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
-    if(_vincBusca.trim()){
-      const q=_vincBusca.trim().toLowerCase();
-      sorted=sorted.filter(t=>(t.nome||'').toLowerCase().includes(q)||(t.codigo||'').toLowerCase().includes(q));
+  // Filhos (pastas) do nível atual de navegação — Fachada usa fachada/balancim/vista,
+  // Piso/Teto/Paredes usam a árvore real (Torre › Pavimento › Apto › Cômodo).
+  function _vincNavFilhos(){
+    const modulo=_vincNavModulo,mod=LEVANTAMENTO_MODULOS[modulo];
+    const cache=_levCache[modulo]||{dados:[],arvore:[]};
+    const path=_vincNavPath;
+    if(modulo==='fachada'){
+      if(path.length===0)return cache.dados.filter(x=>x.tipo==='fachada').map(f=>({id:f.id,nome:f.nome,temFilhos:true}));
+      if(path.length===1)return cache.dados.filter(x=>x.tipo==='balancim'&&x.fachadaId===path[0].id).map(b=>({id:b.id,nome:b.nome||b.codigo,temFilhos:true}));
+      if(path.length===2)return cache.dados.filter(x=>x.tipo==='vista'&&x.balancimId===path[1].id).sort((a,b)=>a.tipoVista==='externa'?-1:1).map(v=>({id:v.id,nome:v.tipoVista==='externa'?'Vista Externa':'Vista Interna',temFilhos:false}));
+      return [];
     }
-    if(!sorted.length)return `<tr><td colspan="4" class="text-sm text-muted" style="padding:16px;">Nenhuma tarefa encontrada.</td></tr>`;
-    return sorted.map(t=>{
-      const vinc=t.fonteQuantidade==='levantamento';
-      const mod=LEVANTAMENTO_MODULOS[t.levantamentoModulo];
-      const metricaLabel=mod?.metricas.find(m=>m.id===t.levantamentoMetrica)?.label||'';
-      const indent=_vincBusca.trim()?0:(t.nivel||0)*18; // busca ativa: mostra achatado, sem indentação
-      const fracaoTxt=vinc&&t.levantamentoFator!=null&&Math.abs(t.levantamentoFator-1)>1e-9?` (${_fracaoDeFator(t.levantamentoFator)})`:'';
-      const fonteTxt=vinc?' · '+_fonteVinculoLabel(t):'';
-      return `<tr>
-        <td style="padding-left:${8+indent}px;">${t.tipo==='grupo'?'📁 ':''}${t.nome}</td>
-        <td class="col-num" style="font-family:var(--font-mono);">${t.quantidade?_fQtd(t.quantidade)+' '+(t.unidade||''):'—'}</td>
-        <td>${vinc?`<span class="badge badge-amarelo">🔗 ${mod?.label||t.levantamentoModulo} — ${metricaLabel}${fracaoTxt}${fonteTxt}</span>`:'<span class="text-muted text-sm">Manual</span>'}</td>
-        <td class="col-acoes">
-          <button class="btn btn-secundario btn-sm" onclick="Planejamento.abrirVincularTarefa('${t.id}')">${vinc?'✎ Editar':'🔗 Vincular'}</button>
-          ${vinc?`<button class="btn btn-perigo btn-sm btn-icon" onclick="Planejamento.removerVinculoLevantamento('${t.id}')">✕</button>`:''}
-        </td></tr>`;
-    }).join('');
+    if(mod?.configDoc){
+      let nivel=cache.arvore;
+      for(const p of path){
+        const n=(nivel||[]).find(x=>x.id===p.id);
+        if(!n)return [];
+        nivel=n.filhos||[];
+      }
+      return (nivel||[]).map(n=>({id:n.id,nome:n.nome,temFilhos:!!(n.filhos&&n.filhos.length)}));
+    }
+    return []; // sem hierarquia (Concreto, Ar-Condicionado, Pintura)
+  }
+  function _vincNavCtx(){
+    if(_vincNavModulo==='fachada')return {fachadaId:_vincNavPath[0]?.id||null,balancimId:_vincNavPath[1]?.id||null,vistaId:_vincNavPath[2]?.id||null};
+    return {nodeId:_vincNavPath.length?_vincNavPath[_vincNavPath.length-1].id:null};
   }
 
-  // Atualiza só o corpo da tabela (não recria a tela toda) — preserva a posição
-  // de scroll e o foco/valor do campo de busca automaticamente.
-  function _atualizarTbodyVinculos(){
-    const tb=document.getElementById('vinc-plan-tbody');
-    if(tb)tb.innerHTML=_renderLinhasVinculos();
+  function onVincNavModulo(modulo){_vincNavModulo=modulo;_vincNavMetrica=null;_vincNavPath=[];_renderVinculosView();}
+  function onVincNavMetrica(metrica){_vincNavMetrica=metrica;_vincNavPath=[];_renderVinculosView();}
+  function onVincNavEntrar(id,nome){_vincNavPath=[..._vincNavPath,{id,nome}];_renderVinculosView();}
+  function onVincNavBreadcrumb(nivel){
+    // nivel: -2 = grade de módulos, -1 = grade de métricas, 0..N = trunca o caminho até ali
+    if(nivel===-2){_vincNavModulo=null;_vincNavMetrica=null;_vincNavPath=[];}
+    else if(nivel===-1){_vincNavMetrica=null;_vincNavPath=[];}
+    else{_vincNavPath=_vincNavPath.slice(0,nivel+1);}
+    _renderVinculosView();
+  }
+  function onVincNavVoltar(){
+    if(_vincNavPath.length){_vincNavPath=_vincNavPath.slice(0,-1);}
+    else if(_vincNavMetrica){_vincNavMetrica=null;}
+    else if(_vincNavModulo){_vincNavModulo=null;}
+    _renderVinculosView();
   }
 
   function _renderVinculosView(){
     const c=_el();
     c.style.cssText='display:flex;flex-direction:column;min-height:0;height:100%;overflow-y:auto;';
+
+    const crumbs=[`<span style="cursor:pointer;color:var(--cor-primaria-dark);" onclick="Planejamento.onVincNavBreadcrumb(-2)">🔗 Vínculos</span>`];
+    if(_vincNavModulo){
+      const mod=LEVANTAMENTO_MODULOS[_vincNavModulo];
+      crumbs.push(`<span style="cursor:pointer;color:${_vincNavMetrica?'var(--cor-primaria-dark)':'inherit'};" onclick="Planejamento.onVincNavBreadcrumb(-1)">${mod.label}</span>`);
+    }
+    if(_vincNavMetrica){
+      const metricaLabel=LEVANTAMENTO_MODULOS[_vincNavModulo].metricas.find(m=>m.id===_vincNavMetrica)?.label||_vincNavMetrica;
+      crumbs.push(`<span style="cursor:pointer;color:${_vincNavPath.length?'var(--cor-primaria-dark)':'inherit'};" onclick="Planejamento.onVincNavBreadcrumb(-1)">${metricaLabel}</span>`);
+      _vincNavPath.forEach((p,i)=>{
+        const ultimo=i===_vincNavPath.length-1;
+        crumbs.push(`<span style="cursor:${ultimo?'default':'pointer'};color:${ultimo?'inherit':'var(--cor-primaria-dark)'};" onclick="${ultimo?'':`Planejamento.onVincNavBreadcrumb(${i})`}">${p.nome}</span>`);
+      });
+    }
+    const breadcrumbHTML=`<div style="display:flex;flex-wrap:wrap;gap:4px;font-size:.85rem;margin-bottom:14px;">${crumbs.join('<span style="color:#bbb;">›</span>')}</div>`;
+
+    let corpoHTML='';
+    if(!_vincNavModulo){
+      // Grade de módulos de levantamento — some sozinha se um módulo não tiver dados carregados
+      corpoHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px;">
+        ${Object.entries(LEVANTAMENTO_MODULOS).map(([id,m])=>`
+          <div style="background:#fff;border:1px solid var(--cor-borda-light);border-radius:10px;padding:16px;cursor:pointer;" onclick="Planejamento.onVincNavModulo('${id}')">
+            <div style="font-weight:700;font-size:.9rem;">${m.label}</div>
+            <div style="font-size:.75rem;color:#888;margin-top:4px;">${m.metricas.length} métrica(s)</div>
+          </div>`).join('')}
+      </div>`;
+    } else if(!_vincNavMetrica){
+      const mod=LEVANTAMENTO_MODULOS[_vincNavModulo];
+      corpoHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;">
+        ${mod.metricas.map(m=>`
+          <div style="background:#fff;border:1px solid var(--cor-borda-light);border-radius:10px;padding:16px;cursor:pointer;" onclick="Planejamento.onVincNavMetrica('${m.id}')">
+            <div style="font-weight:700;font-size:.9rem;">${m.label}</div>
+            <div style="font-size:.75rem;color:#888;margin-top:4px;">unidade: ${m.unidade}</div>
+          </div>`).join('')}
+      </div>`;
+    } else {
+      const modulo=_vincNavModulo,metrica=_vincNavMetrica,mod=LEVANTAMENTO_MODULOS[modulo];
+      const ctx=_vincNavCtx();
+      const valor=_calcularBaseValor(modulo,metrica,ctx);
+      const unidade=_unidadeDaMetrica(modulo,metrica);
+      const existente=_grupoExistente(modulo,metrica,modulo==='fachada'?ctx:{nodeId:ctx.nodeId});
+      const filhos=_vincNavFilhos();
+      corpoHTML=`
+        <div style="background:#fff;border:1px solid var(--cor-borda-light);border-radius:10px;padding:18px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+          <div>
+            <div style="font-size:1.4rem;font-weight:800;font-family:var(--font-mono);">${_fQtd(valor)} ${unidade}</div>
+            <div style="font-size:.78rem;color:#888;margin-top:2px;">${existente?`🔗 já vinculado a ${_qtdTarefasNoGrupo(existente.levantamentoOrigemId||existente.id)} tarefa(s)`:'ainda sem vínculo'}</div>
+          </div>
+          <button class="btn ${existente?'btn-secundario':'btn-primario'} btn-sm" onclick="Planejamento.abrirVincularAqui()">${existente?'✎ Editar vínculo':'🔗 Vincular aqui'}</button>
+        </div>
+        ${filhos.length?`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px;">
+          ${filhos.map(f=>`<div style="background:#fff;border:1px solid var(--cor-borda-light);border-radius:10px;padding:14px;cursor:pointer;display:flex;align-items:center;gap:8px;" onclick="Planejamento.onVincNavEntrar('${f.id}','${f.nome.replace(/'/g,"\\'")}')">
+            <span style="font-size:.88rem;flex:1;">📁 ${f.nome}</span>
+            ${f.temFilhos?'<span style="color:#bbb;">›</span>':''}
+          </div>`).join('')}
+        </div>`:(mod.configDoc?'<div class="text-sm text-muted">Nenhum local mais específico aqui — este é o nível final.</div>':'')}
+      `;
+    }
+
     c.innerHTML=`
       <div class="page-header">
         <div><h2>🔗 Vínculos com Levantamento</h2>
-          <span class="subtitulo">Escolha, tarefa por tarefa, se a quantidade vem de um Levantamento ou é manual — Materiais e Mão de Obra continuam lendo a quantidade daqui, da tarefa.</span></div>
+          <span class="subtitulo">Navegue pelo levantamento (módulo → métrica → local) e vincule a quantidade exata a uma ou mais tarefas do Planejamento.</span></div>
         <div class="btn-grupo">
-          <button class="btn btn-secundario btn-sm" onclick="Planejamento.recalcularVinculosLevantamento()">🔄 Recalcular vínculos</button>
+          <button class="btn btn-secundario btn-sm" onclick="Planejamento.recalcularVinculosLevantamento()">🔄 Recalcular todos os vínculos</button>
           <button class="btn btn-secundario btn-sm" onclick="Planejamento.fecharVinculosView()">← Voltar ao Planejamento</button>
         </div>
       </div>
-      <div class="form-grupo" style="max-width:360px;">
-        <input type="text" id="vinc-plan-busca" class="form-control" placeholder="🔎 Buscar tarefa..." value="${_vincBusca}" oninput="Planejamento.onBuscaVinculos(this.value)">
-      </div>
-      <div class="tabela-container"><table class="tabela tabela-compacta">
-        <thead><tr><th>Tarefa</th><th class="col-num">Quantidade</th><th>Fonte</th><th class="col-acoes">Ações</th></tr></thead>
-        <tbody id="vinc-plan-tbody">${_renderLinhasVinculos()}</tbody>
-      </table></div>`;
+      ${breadcrumbHTML}
+      ${_vincNavModulo?`<button class="btn btn-secundario btn-sm" style="margin-bottom:14px;width:fit-content;" onclick="Planejamento.onVincNavVoltar()">← Voltar</button>`:''}
+      ${corpoHTML}`;
   }
 
   // ===== Modal de vínculo: seleção granular (tarefa + descendentes) =====
   // Cada tarefa pode ser incluída ou não, e ter uma fração própria (padrão "1" =
   // valor total do levantamento). Grupos de irmãos (ex: 8 "etapas") ganham um
   // botão "÷ Dividir" que marca todos e já preenche 1/N automaticamente.
+  //
+  // A fonte (módulo/métrica/local) NÃO é escolhida aqui dentro — ela já vem
+  // travada de onde o usuário clicou "Vincular aqui" na navegação em pastas.
+  // Se quiser outra fonte, fecha o modal e navega pra outra pasta.
+
+  // Abre o modal a partir da navegação em pastas (tela principal de Vínculos).
+  // Se já existe um vínculo pra essa fonte exata, abre editando o grupo existente.
+  async function abrirVincularAqui(){
+    const modulo=_vincNavModulo,metrica=_vincNavMetrica;
+    const ctx=_vincNavCtx();
+    const existente=_grupoExistente(modulo,metrica,ctx);
+    if(existente){await abrirVincularTarefa(existente.levantamentoOrigemId||existente.id);return;}
+    _vincModulo=modulo;_vincMetrica=metrica;
+    _vincFachadaId=ctx.fachadaId||null;_vincBalancimId=ctx.balancimId||null;_vincVistaId=ctx.vistaId||null;
+    _vincNodeId=ctx.nodeId||null;
+    _vincAlvoId=null;_vincEscolhaBusca='';
+    document.getElementById('modal-planej-vinculo-titulo').textContent='Vincular: '+LEVANTAMENTO_MODULOS[modulo].label;
+    Utils.abrirModal('modal-planej-vinculo');
+    _renderVinculoModalBody();
+  }
+
+  // Abre editando um vínculo já existente (a partir do id de qualquer tarefa do grupo).
   async function abrirVincularTarefa(tarefaId){
     const t=tarefas.find(x=>x.id===tarefaId);if(!t)return;
     _vincAlvoId=tarefaId;
     _vincModulo=t.levantamentoModulo||'fachada';
     _vincMetrica=t.levantamentoMetrica||LEVANTAMENTO_MODULOS[_vincModulo].metricas[0].id;
-    // Fachada: IDs hierárquicos antigos
     _vincFachadaId=t.levantamentoFachadaId||null;
     _vincBalancimId=t.levantamentoBalancimId||null;
     _vincVistaId=t.levantamentoVistaId||null;
-    // Outros módulos: nodeId do nó da árvore
     _vincNodeId=t.levantamentoNodeId||null;
     const grupoAtual=tarefas.filter(x=>x.levantamentoOrigemId===tarefaId);
     _vincIncluidos=new Set(grupoAtual.length?grupoAtual.map(x=>x.id):[tarefaId]);
@@ -696,77 +776,52 @@ const Planejamento = (() => {
     // Sempre lê do zero (não usa cache velho) — é aqui que o usuário decide o
     // valor do vínculo, não pode estar olhando pra dado desatualizado.
     await _invalidarLevCache();
-    // Se já havia um nó selecionado (editando vínculo existente), expande a
-    // árvore até ele pra aparecer visível assim que o modal abrir.
-    _vincArvoreAbertos=new Set();
-    if(_vincNodeId){
-      const cache=_levCache[_vincModulo];
-      const caminho=cache?_caminhoNode(cache.arvore,_vincNodeId):null;
-      if(caminho)caminho.forEach(p=>_vincArvoreAbertos.add(p.id));
-    }
     _renderVinculoModalBody();
+  }
+
+  function onEscolherAlvoVinc(id){
+    _vincAlvoId=id;
+    _vincIncluidos=new Set([id]);
+    _vincFatores={[id]:'1'};
+    _renderVinculoModalBody();
+  }
+  function onTrocarAlvoVinc(){_vincAlvoId=null;_vincEscolhaBusca='';_renderVinculoModalBody();}
+
+  function _renderEscolhaAlvo(){
+    const q=_vincEscolhaBusca.trim().toLowerCase();
+    const lista=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0)).filter(t=>!q||(t.nome||'').toLowerCase().includes(q));
+    return `
+      <div class="text-sm text-muted" style="margin-bottom:10px;">Escolha a tarefa "pai" do Planejamento que vai receber essa quantidade. As tarefas abaixo dela na hierarquia poderão dividir o valor entre si — igual já funciona a divisão de família hoje.</div>
+      <input type="text" class="form-control" placeholder="🔎 Buscar tarefa..." value="${_vincEscolhaBusca}" oninput="Planejamento.onBuscaEscolhaAlvoVinc(this.value)" style="margin-bottom:8px;">
+      <div style="border:1px solid var(--cor-borda-light);border-radius:8px;max-height:320px;overflow-y:auto;">
+        ${lista.length?lista.map(t=>`<div style="padding:6px 10px;padding-left:${8+(t.nivel||0)*16}px;cursor:pointer;border-bottom:1px solid var(--cor-borda-light);font-size:.83rem;" onclick="Planejamento.onEscolherAlvoVinc('${t.id}')">${t.tipo==='grupo'?'📁 ':''}${t.nome}</div>`).join(''):'<div class="text-sm text-muted" style="padding:10px;">Nenhuma tarefa encontrada.</div>'}
+      </div>`;
   }
 
   function _renderVinculoModalBody(){
     const body=document.getElementById('planej-vinculo-body');if(!body)return;
-    const t=tarefas.find(x=>x.id===_vincAlvoId);if(!t){body.innerHTML='';return;}
-    const mod=LEVANTAMENTO_MODULOS[_vincModulo];
+    const mod=LEVANTAMENTO_MODULOS[_vincModulo];if(!mod){body.innerHTML='';return;}
     const cache=_levCache[_vincModulo]||{dados:[],extra:[],arvore:[]};
+    const baseValor=_calcularBaseValor(_vincModulo,_vincMetrica,{fachadaId:_vincFachadaId,balancimId:_vincBalancimId,vistaId:_vincVistaId,nodeId:_vincNodeId});
+    const unidade=_unidadeDaMetrica(_vincModulo,_vincMetrica);
+    const metricaLabel=mod.metricas.find(m=>m.id===_vincMetrica)?.label||_vincMetrica;
+    const fonteLabel=_vincModulo==='fachada'
+      ?_fonteEstruturalLabel(_vincFachadaId,_vincBalancimId,_vincVistaId)
+      :(_vincNodeId?(_caminhoNode(cache.arvore,_vincNodeId)||[]).map(p=>p.nome).join(' › '):'Toda a obra');
+
+    const resumoFonte=`<div style="background:var(--cor-fundo-alt,#f7f7f7);border-radius:8px;padding:10px 12px;margin-bottom:12px;">
+      <div style="font-weight:700;font-size:.85rem;">${mod.label} — ${metricaLabel}</div>
+      <div style="font-size:.78rem;color:#888;margin-top:2px;">${fonteLabel}</div>
+      <div style="font-size:1.05rem;font-weight:800;margin-top:6px;font-family:var(--font-mono);">${_fQtd(baseValor)} ${unidade}</div>
+    </div>`;
+
+    if(!_vincAlvoId){body.innerHTML=resumoFonte+_renderEscolhaAlvo();return;}
+    const t=tarefas.find(x=>x.id===_vincAlvoId);
+    if(!t){_vincAlvoId=null;body.innerHTML=resumoFonte+_renderEscolhaAlvo();return;}
+
     const fam=Utils.percFamilia(tarefas);
     const arvoreAntiga=document.getElementById('planej-vinculo-arvore');
     const scrollAnterior=arvoreAntiga?arvoreAntiga.scrollTop:0;
-
-    // ---- Fonte estrutural: seletor genérico por módulo ----
-    let fonteHTML='';
-    let fonteLabel='Toda a obra';
-    let baseValor=0;
-
-    if(_vincModulo==='fachada'){
-      // Fachada usa tipos nos documentos (fachada/balancim/vista)
-      const fachadasDisp=cache.dados.filter(x=>x.tipo==='fachada');
-      const balancinsDisp=_vincFachadaId?cache.dados.filter(x=>x.tipo==='balancim'&&x.fachadaId===_vincFachadaId):[];
-      const vistasDisp=_vincBalancimId?cache.dados.filter(x=>x.tipo==='vista'&&x.balancimId===_vincBalancimId).sort((a,b)=>a.tipoVista==='externa'?-1:1):[];
-      baseValor=_calcularBaseValor(_vincModulo,_vincMetrica,{fachadaId:_vincFachadaId,balancimId:_vincBalancimId,vistaId:_vincVistaId});
-      fonteLabel=_fonteEstruturalLabel(_vincFachadaId,_vincBalancimId,_vincVistaId);
-      fonteHTML=`
-        <select class="form-control" style="flex:1;min-width:140px;" onchange="Planejamento.onVincFachadaChange(this.value)">
-          <option value="">— Toda a obra —</option>
-          ${fachadasDisp.map(f=>`<option value="${f.id}" ${f.id===_vincFachadaId?'selected':''}>${f.nome}</option>`).join('')}
-        </select>
-        ${_vincFachadaId?`<select class="form-control" style="flex:1;min-width:140px;" onchange="Planejamento.onVincBalancimChange(this.value)">
-          <option value="">— Toda a fachada —</option>
-          ${balancinsDisp.map(b=>`<option value="${b.id}" ${b.id===_vincBalancimId?'selected':''}>${b.nome||b.codigo}</option>`).join('')}
-        </select>`:''}
-        ${_vincBalancimId?`<select class="form-control" style="flex:1;min-width:140px;" onchange="Planejamento.onVincVistaChange(this.value)">
-          <option value="">— Todo o balancim —</option>
-          ${vistasDisp.map(v=>`<option value="${v.id}" ${v.id===_vincVistaId?'selected':''}>${v.tipoVista==='externa'?'Vista Externa':'Vista Interna'}</option>`).join('')}
-        </select>`:''}`;
-    } else if(mod?.configDoc){
-      // Módulos com árvore hierárquica (Piso, Teto, Paredes) — árvore visual
-      // expansível (era um <select> achatado com uma linha por nó da obra
-      // inteira: com Torre→Pavimento→Apto→Cômodo virava uma lista de centenas
-      // de itens ilegível. Agora só mostra expandido o que o usuário abrir.
-      baseValor=_calcularBaseValor(_vincModulo,_vincMetrica,{nodeId:_vincNodeId});
-      const caminho=_vincNodeId?_caminhoNode(cache.arvore,_vincNodeId):null;
-      fonteLabel=caminho?caminho.map(p=>p.nome).join(' › '):'Toda a obra';
-      if(!cache.arvore.length){
-        fonteHTML=`<span class="text-sm text-muted">Nenhum local cadastrado ainda no levantamento de ${mod.label} desta obra.</span>`;
-      } else {
-        fonteHTML=`<div style="width:100%;">
-          <div style="display:flex;align-items:center;gap:4px;padding:3px 4px;border-radius:6px;cursor:pointer;${!_vincNodeId?'background:var(--cor-primaria-bg,#eef2ff);font-weight:600;':''}"
-               onclick="Planejamento.onVincNodeChange('')">
-            <span style="width:14px;"></span><span style="font-size:.83rem;">🏗️ Toda a obra (todos os locais)</span>
-          </div>
-          <div style="border:1px solid var(--cor-borda-light);border-radius:8px;padding:4px;max-height:220px;overflow-y:auto;margin-top:4px;">
-            ${_renderArvoreLocalSeletor(cache.arvore,0)}
-          </div>
-        </div>`;
-      }
-    } else {
-      // Módulos sem hierarquia (Concreto, Ar-Condicionado, Pintura)
-      baseValor=_calcularBaseValor(_vincModulo,_vincMetrica,{});
-      fonteHTML=`<span class="text-sm text-muted">Este levantamento não tem subdivisão por área — usa o total da obra.</span>`;
-    }
 
     const linha=(node,nivelRel)=>{
       const incluso=_vincIncluidos.has(node.id);
@@ -794,65 +849,24 @@ const Planejamento = (() => {
       return html;
     };
 
-    body.innerHTML=`
-      <div class="form-grupo"><label>Levantamento</label>
-        <select class="form-control" onchange="Planejamento.onVincModuloChange(this.value)">
-          ${Object.entries(LEVANTAMENTO_MODULOS).map(([id,m])=>`<option value="${id}" ${id===_vincModulo?'selected':''}>${m.label}</option>`).join('')}
-        </select></div>
-      <div class="form-grupo"><label>Quantidade a usar</label>
-        <select class="form-control" onchange="Planejamento.onVincMetricaChange(this.value)">
-          ${mod.metricas.map(m=>`<option value="${m.id}" ${m.id===_vincMetrica?'selected':''}>${m.label}</option>`).join('')}
-        </select></div>
-      <div class="form-grupo"><label>Filtrar por área/local (opcional — restringe o valor a uma parte do levantamento)</label>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;">${fonteHTML}</div>
+    body.innerHTML=resumoFonte+
+      `<div class="text-sm text-muted" style="margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;">
+        <span>Tarefa "pai": <strong>${t.nome}</strong></span>
+        <span style="display:flex;gap:6px;">
+          <button class="btn btn-secundario btn-sm" style="padding:1px 8px;font-size:.68rem;" onclick="Planejamento.onTrocarAlvoVinc()">trocar</button>
+          ${tarefas.some(x=>x.levantamentoOrigemId===_vincAlvoId||x.id===_vincAlvoId&&x.fonteQuantidade==='levantamento')?`<button class="btn btn-perigo btn-sm" style="padding:1px 8px;font-size:.68rem;" onclick="Planejamento.removerVinculoLevantamento('${_vincAlvoId}')">excluir vínculo</button>`:''}
+        </span>
       </div>
-      <div class="text-sm text-muted" style="margin-bottom:6px;">Fonte: <strong>${fonteLabel}</strong> — valor: <strong>${_fQtd(baseValor)}</strong></div>
       <div style="display:flex;gap:6px;margin-bottom:8px;">
         <button class="btn btn-secundario btn-sm" onclick="Planejamento.marcarTodosVinc(true)">Marcar todos</button>
         <button class="btn btn-secundario btn-sm" onclick="Planejamento.marcarTodosVinc(false)">Desmarcar todos</button>
       </div>
-      <div id="plarej-vinculo-arvore" style="border:1px solid var(--cor-borda-light);border-radius:8px;padding:8px;max-height:340px;overflow-y:auto;" id="planej-vinculo-arvore">
+      <div id="planej-vinculo-arvore" style="border:1px solid var(--cor-borda-light);border-radius:8px;padding:8px;max-height:340px;overflow-y:auto;">
         ${renderNode(t,0)}
       </div>
       <div class="text-sm text-muted" style="margin-top:8px;">Marque as tarefas que devem receber essa quantidade. Use "÷ Dividir" para dividir igualmente entre irmãs, ou digite a fração manual (ex: <code>1/8</code>).</div>`;
     const arvoreNova=document.getElementById('planej-vinculo-arvore');
     if(arvoreNova)arvoreNova.scrollTop=scrollAnterior;
-  }
-
-  function onVincModuloChange(v){
-    _vincModulo=v;
-    _vincMetrica=LEVANTAMENTO_MODULOS[v].metricas[0].id;
-    // Limpa seleção de fonte ao trocar de módulo
-    _vincFachadaId=null;_vincBalancimId=null;_vincVistaId=null;_vincNodeId=null;
-    _renderVinculoModalBody();
-  }
-  function onVincMetricaChange(v){_vincMetrica=v;_renderVinculoModalBody();}
-  function onVincFachadaChange(v){_vincFachadaId=v||null;_vincBalancimId=null;_vincVistaId=null;_renderVinculoModalBody();}
-  function onVincBalancimChange(v){_vincBalancimId=v||null;_vincVistaId=null;_renderVinculoModalBody();}
-  function onVincVistaChange(v){_vincVistaId=v||null;_renderVinculoModalBody();}
-  function onVincNodeChange(v){_vincNodeId=v||null;_renderVinculoModalBody();}
-
-  // Árvore visual expansível do local (Torre → Pavimento → Apto → Cômodo) usada
-  // como filtro de fonte no modal de vínculo. Substitui o antigo <select> achatado
-  // com todos os nós da obra em uma lista única — ilegível com árvores fundas.
-  function _renderArvoreLocalSeletor(nodes,nivel){
-    return (nodes||[]).map(n=>{
-      const temFilhos=!!(n.filhos&&n.filhos.length);
-      const aberto=_vincArvoreAbertos.has(n.id);
-      const selecionado=n.id===_vincNodeId;
-      return `<div>
-        <div style="display:flex;align-items:center;gap:4px;padding:3px 4px;padding-left:${nivel*16+4}px;border-radius:6px;cursor:pointer;${selecionado?'background:var(--cor-primaria-bg,#eef2ff);font-weight:600;':''}"
-             onclick="Planejamento.onVincNodeChange('${n.id}')">
-          ${temFilhos?`<span onclick="event.stopPropagation();Planejamento.toggleVincArvoreNode('${n.id}')" style="width:14px;text-align:center;font-size:.7rem;color:#888;">${aberto?'▾':'▸'}</span>`:'<span style="width:14px;"></span>'}
-          <span style="font-size:.83rem;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${n.nome}</span>
-        </div>
-        ${temFilhos&&aberto?_renderArvoreLocalSeletor(n.filhos,nivel+1):''}
-      </div>`;
-    }).join('');
-  }
-  function toggleVincArvoreNode(id){
-    if(_vincArvoreAbertos.has(id))_vincArvoreAbertos.delete(id);else _vincArvoreAbertos.add(id);
-    _renderVinculoModalBody();
   }
 
   // ---- Cálculo local de peça de parede (replica a lógica do módulo Paredes)
@@ -972,7 +986,8 @@ const Planejamento = (() => {
   }
 
   async function salvarVinculoLevantamento(){
-    const t=tarefas.find(x=>x.id===_vincAlvoId);if(!t)return;
+    const t=tarefas.find(x=>x.id===_vincAlvoId);
+    if(!t){Utils.toast('Escolha a tarefa "pai" primeiro.','alerta');return;}
     if(!_vincIncluidos.size){Utils.toast('Marque ao menos uma tarefa.','alerta');return;}
     try{
       Utils.mostrarLoading('Calculando e salvando...');
@@ -1005,7 +1020,8 @@ const Planejamento = (() => {
       }
       Utils.fecharModal('modal-planej-vinculo');
       Utils.toast(`Vínculo salvo em ${_vincIncluidos.size} tarefa(s)!`,'sucesso');
-      _atualizarTbodyVinculos();
+      _vincAlvoId=null;
+      if(modoView==='vinculos')_renderVinculosView();
     }catch(e){console.error(e);Utils.toast('Erro ao salvar vínculo.','erro');}
     finally{Utils.esconderLoading();}
   }
@@ -1030,7 +1046,9 @@ const Planejamento = (() => {
         g.fonteQuantidade='manual';g.levantamentoOrigemId='';
       }
       Utils.toast(`${grupo.length} vínculo(s) removido(s).`,'sucesso');
-      _atualizarTbodyVinculos();
+      Utils.fecharModal('modal-planej-vinculo');
+      _vincAlvoId=null;
+      if(modoView==='vinculos')_renderVinculosView();
     }catch(e){Utils.toast('Erro.','erro');}
   }
 
@@ -1055,7 +1073,7 @@ const Planejamento = (() => {
         t.quantidade=valor;t.unidade=unidade;
       }
       Utils.toast(`${alvo.length} vínculo(s) recalculado(s)!`,'sucesso');
-      _atualizarTbodyVinculos();
+      if(modoView==='vinculos')_renderVinculosView();
     }catch(e){console.error(e);Utils.toast('Erro ao recalcular.','erro');}
     finally{Utils.esconderLoading();}
   }
@@ -2632,9 +2650,10 @@ const Planejamento = (() => {
     toggleStatusFiltro,_aplicarStatusFiltro,undo,
     onBusca,limparBusca,_buscaKey,
     importarExcel,exportar,exportarPNG,_gerarPNG,_predPopup,_predPreview,_predSalvar,
-    abrirVinculosView,fecharVinculosView,abrirVincularTarefa,onVincModuloChange,onVincMetricaChange,
-    onVincFachadaChange,onVincBalancimChange,onVincVistaChange,onVincNodeChange,toggleVincArvoreNode,
-    onBuscaVinculos,onToggleIncluirVinc,onFatorVincChange,marcarTodosVinc,dividirIrmaosVinc,
+    abrirVinculosView,fecharVinculosView,abrirVincularTarefa,abrirVincularAqui,
+    onVincNavModulo,onVincNavMetrica,onVincNavEntrar,onVincNavBreadcrumb,onVincNavVoltar,
+    onBuscaEscolhaAlvoVinc,onEscolherAlvoVinc,onTrocarAlvoVinc,
+    onToggleIncluirVinc,onFatorVincChange,marcarTodosVinc,dividirIrmaosVinc,
     salvarVinculoLevantamento,removerVinculoLevantamento,recalcularVinculosLevantamento};
 })();
 function onObraChanged(){Planejamento.init();}
