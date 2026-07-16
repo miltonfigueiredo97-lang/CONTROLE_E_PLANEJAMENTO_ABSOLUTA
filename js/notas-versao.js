@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.36.0',
+  versaoAtual: 'V2.37.0',
 
   versoes: [
     {
@@ -3734,7 +3734,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.36.0',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-16',
       tipo: 'melhoria',
       titulo: 'Vínculos com Levantamento: reestruturação completa (navegação em pastas)',
@@ -3769,6 +3769,37 @@ const NotasVersao = {
         'Removida a tabela de tarefas, a busca de tarefa por texto e o antigo',
         '  seletor em árvore expansível dentro do modal — toda a navegação',
         '  de local agora acontece na tela principal, não mais dentro do popup.',
+      ]
+    },
+    {
+      versao: 'V2.37.0',
+      status: 'aberta',
+      data: '2026-07-16',
+      tipo: 'funcionalidade',
+      titulo: 'Tarefas: projeto, categoria, dependência, importância e busca',
+      itens: [
+        'Editar tarefa agora abre um modal completo (não só o nome):',
+        '  Nome, Projeto, Categoria, Dependência e Importância.',
+        'Categoria: rótulo colorido e reutilizável — cria uma vez com nome',
+        '  + cor (seletor de 12 cores), e ela fica salva pra usar em',
+        '  qualquer outra tarefa depois. Gerenciável em ⚙ Gerenciar.',
+        'Dependência: campo de texto livre por tarefa (ex: "aguardando',
+        '  aprovação do Gabriel"), com sugestões dos valores já usados e',
+        '  um filtro dedicado pra achar todas as tarefas presas na mesma',
+        '  dependência.',
+        'Importância (Urgente/Alta/Média/Baixa) agora pode ser definida',
+        '  por tarefa, por categoria e por projeto — tudo pelo botão',
+        '  ⚙ Gerenciar projetos e categorias.',
+        'Ordenação padrão passou a respeitar essa importância: projetos',
+        '  mais importantes aparecem primeiro, e dentro de cada projeto',
+        '  as tarefas mais importantes (e categorias mais importantes)',
+        '  sobem — tudo isso ANTES de aplicar qualquer filtro.',
+        'Nova barra de busca (nome, projeto, categoria e dependência) e',
+        '  filtros por chip para projeto e categoria, além do filtro de',
+        '  dependência.',
+        'Menu lateral: removido o item "Tarefas" de todas as páginas —',
+        '  o acesso agora é só por link direto (todo.html), sem aparecer',
+        '  pra outros usuários do sistema.',
       ]
     }
   ],
