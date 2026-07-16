@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.33.1',
+  versaoAtual: 'V2.34.0',
 
   versoes: [
     {
@@ -3568,7 +3568,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.33.1',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-15',
       tipo: 'funcionalidade',
       titulo: 'Tarefas: seed automático do backlog atual',
@@ -3641,7 +3641,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.32.0',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-11',
       tipo: 'correcao',
       titulo: 'Migração localStorage → Firestore (configs de obra não ficam mais presas no navegador)',
@@ -3665,6 +3665,49 @@ const NotasVersao = {
         'Planejamento: cfg da Fachada agora é carregada do Firestore',
         '  ao calcular métricas de vínculo (antes usava localStorage,',
         '  que ficava vazio em outro dispositivo/sessão).',
+      ]
+    },
+    {
+      versao: 'V2.34.0',
+      status: 'aberta',
+      data: '2026-07-16',
+      tipo: 'correcao',
+      titulo: 'Vínculos com Levantamento: correção geral (dados errados, cache travado, árvore ilegível)',
+      itens: [
+        'CRÍTICO — "Recalcular vínculos" corrompia valores filtrados por local:',
+        '  a chamada de cálculo esquecia o nodeId. Um vínculo de Piso/Teto/',
+        '  Paredes filtrado por um local específico (ex: só o Apto 301) virava',
+        '  o TOTAL DA OBRA INTEIRA ao clicar em Recalcular. Corrigido: novo',
+        '  cálculo único (_calcularBaseValor) usado tanto ao salvar quanto',
+        '  ao recalcular, sempre respeitando o local selecionado.',
+        '',
+        'CRÍTICO — cache de levantamento nunca era invalidado:',
+        '  editar um Levantamento e voltar pro Planejamento sem F5 mostrava',
+        '  árvore e valores desatualizados. "Recalcular" também só recarregava',
+        '  Fachada, nunca Piso/Teto/Paredes/Concreto/Ar-Condicionado/Pintura.',
+        '  Corrigido: recarga forçada (_invalidarLevCache) ao entrar na tela',
+        '  de Vínculos, ao abrir o modal de vincular e ao recalcular.',
+        '',
+        'Unidade sempre gravada como "m²", mesmo para ML, BTU e Qtd de',
+        '  equipamentos (Ar-Condicionado). Cada métrica agora tem sua unidade',
+        '  própria (m², ml, m³, BTU, un) e ela é regravada certa ao recalcular.',
+        '',
+        'Tabela de Vínculos não mostrava ONDE um vínculo de Piso/Teto/Paredes',
+        '  estava filtrado — só Fachada tinha esse rótulo (e ele tinha um bug',
+        '  próprio: uma flag de controle nunca virava true, então nem pra',
+        '  Fachada o rótulo aparecia). Agora toda linha vinculada mostra o',
+        '  caminho completo do local (ex: "Torre A › Pav 3 › Apto 301 › Sala").',
+        '',
+        'Seletor de local no modal era um <select> achatado com TODOS os nós',
+        '  da obra em uma lista única — com 5 níveis de hierarquia (Torre,',
+        '  Pavimento, Apto, Cômodo) virava uma lista enorme e ilegível.',
+        '  Trocado por árvore visual expansível (clica pra abrir/fechar cada',
+        '  nível), igual ao padrão já usado dentro do próprio Piso/Teto/',
+        '  Paredes. Ao reabrir um vínculo existente, a árvore já abre',
+        '  expandida até o nó selecionado.',
+        '',
+        'Erros de carregamento (permissão/índice do Firestore) agora avisam',
+        '  com um toast em vez de virar silenciosamente uma árvore vazia.',
       ]
     }
   ],

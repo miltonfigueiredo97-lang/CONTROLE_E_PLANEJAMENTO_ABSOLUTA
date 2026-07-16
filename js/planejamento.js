@@ -58,7 +58,7 @@ const Planejamento = (() => {
   // quantidade da tarefa funciona automaticamente, sem precisar vincular
   // Materiais/Mão de Obra direto ao levantamento.
   let modoView='gantt'; // 'gantt' | 'vinculos'
-  let levFachadas=[], _levFachadasCarregado=false;
+  let levFachadas=[];
   let _vincAlvoId=null, _vincModulo='fachada', _vincMetrica='m2semML';
   // _vincNodeId: nó selecionado na árvore do levantamento (para piso/teto/paredes/etc.)
   // Substitui os antigos _vincFachadaId/_vincBalancimId/_vincVistaId para módulos com árvore.
@@ -99,10 +99,26 @@ const Planejamento = (() => {
     coletarAPartirDe(nodes);
     return result;
   }
+
+  // Caminho (breadcrumb) da raiz até o nó targetId: [{id,nome},...]. null se não achar.
+  // Usado pro rótulo "Torre A › Pav 3 › Apto 301 › Sala" e pra auto-expandir a
+  // árvore até o nó já selecionado quando o modal de vínculo é reaberto.
+  function _caminhoNode(nodes,targetId,caminho=[]){
+    for(const n of (nodes||[])){
+      const novo=[...caminho,{id:n.id,nome:n.nome}];
+      if(n.id===targetId)return novo;
+      if(n.filhos&&n.filhos.length){
+        const r=_caminhoNode(n.filhos,targetId,novo);
+        if(r)return r;
+      }
+    }
+    return null;
+  }
   // Seleção granular da árvore do levantamento (Fachada → Balancim → Vista) que
   // serve de fonte pro valor — vazio/null = nível inteiro (ex: sem balancim
   // selecionado = soma todos os balancins da fachada escolhida).
   let _vincFachadaId=null, _vincBalancimId=null, _vincVistaId=null;
+  let _vincArvoreAbertos=new Set(); // nodeIds expandidos no seletor de local em árvore (modal)
   let _vincBusca=''; // filtro de busca na tela de Vínculos
   let _vincIncluidos=new Set(); // ids marcados p/ incluir no vínculo (dentro do modal)
   let _vincFatores={}; // id -> fração em texto ("1", "1/8", "0.5"...)
@@ -114,20 +130,20 @@ const Planejamento = (() => {
       // Fachada usa tipos em vez de árvore config: tipo='fachada'|'balancim'|'vista'|'peca'
       usaTipos:true,
       metricas:[
-        {id:'m2semML',        label:'m² líquido (sem ML)'},
-        {id:'m2comML_equiv',  label:'m² + ML equivalente'},
-        {id:'ml',             label:'Metro Linear (ML)'},
-        {id:'vao',            label:'Vão Fechado (m²)'},
+        {id:'m2semML',        label:'m² líquido (sem ML)', unidade:'m²'},
+        {id:'m2comML_equiv',  label:'m² + ML equivalente', unidade:'m²'},
+        {id:'ml',             label:'Metro Linear (ML)',   unidade:'ml'},
+        {id:'vao',            label:'Vão Fechado (m²)',    unidade:'m²'},
       ],
     },
     piso:{
       label:'Piso / Contrapiso / Impermeabilização', colecao:'pisoAreas',
       configDoc:'pisoArvore',
       metricas:[
-        {id:'areaM2',         label:'Área total de piso (m²)'},
-        {id:'areaContrapiso', label:'Contrapiso (m²)'},
-        {id:'areaImperm',     label:'Impermeabilização (m²)'},
-        {id:'mlRodape',       label:'Rodapé (ML)'},
+        {id:'areaM2',         label:'Área total de piso (m²)', unidade:'m²'},
+        {id:'areaContrapiso', label:'Contrapiso (m²)',         unidade:'m²'},
+        {id:'areaImperm',     label:'Impermeabilização (m²)',  unidade:'m²'},
+        {id:'mlRodape',       label:'Rodapé (ML)',             unidade:'ml'},
       ],
     },
     paredes:{
@@ -135,45 +151,45 @@ const Planejamento = (() => {
       colecaoExtra:'paredesAcabamentoPecas',
       configDoc:'paredesArvore',
       metricas:[
-        {id:'areaLiquida',    label:'Área líquida total (m²)'},
-        {id:'m2comPuro',      label:'m² com ML equiv.'},
-        {id:'ml',             label:'Metro Linear (ML)'},
-        {id:'vedacao',        label:'Alvenaria de Vedação (m²)'},
-        {id:'estrutural',     label:'Alvenaria Estrutural (m²)'},
-        {id:'pintura',        label:'Pintura de parede (m²)'},
+        {id:'areaLiquida',    label:'Área líquida total (m²)',   unidade:'m²'},
+        {id:'m2comPuro',      label:'m² com ML equiv.',          unidade:'m²'},
+        {id:'ml',             label:'Metro Linear (ML)',         unidade:'ml'},
+        {id:'vedacao',        label:'Alvenaria de Vedação (m²)', unidade:'m²'},
+        {id:'estrutural',     label:'Alvenaria Estrutural (m²)', unidade:'m²'},
+        {id:'pintura',        label:'Pintura de parede (m²)',    unidade:'m²'},
       ],
     },
     teto:{
       label:'Teto / Forro (Drywall, Gesso, Tabica)', colecao:'tetoAreas',
       configDoc:'tetoArvore',
       metricas:[
-        {id:'areaM2',         label:'Área total de teto (m²)'},
-        {id:'areaDrywall',    label:'Forro de Drywall (m²)'},
-        {id:'areaGesso',      label:'Placa de Gesso (m²)'},
-        {id:'mlTabica',       label:'Tabica (ML)'},
-        {id:'areaPintura',    label:'Pintura de teto (m²)'},
+        {id:'areaM2',         label:'Área total de teto (m²)',   unidade:'m²'},
+        {id:'areaDrywall',    label:'Forro de Drywall (m²)',     unidade:'m²'},
+        {id:'areaGesso',      label:'Placa de Gesso (m²)',       unidade:'m²'},
+        {id:'mlTabica',       label:'Tabica (ML)',               unidade:'ml'},
+        {id:'areaPintura',    label:'Pintura de teto (m²)',      unidade:'m²'},
       ],
     },
     concreto:{
       label:'Concreto', colecao:'concretoPecas',
       metricas:[
-        {id:'volume',         label:'Volume total (m³)'},
+        {id:'volume',         label:'Volume total (m³)', unidade:'m³'},
       ],
     },
     arCondicionado:{
       label:'Ar-Condicionado', colecao:'levantamentoAr',
       metricas:[
-        {id:'qtdEquipamentos',label:'Qtd de equipamentos'},
-        {id:'btus',           label:'BTUs total'},
+        {id:'qtdEquipamentos',label:'Qtd de equipamentos', unidade:'un'},
+        {id:'btus',           label:'BTUs total',          unidade:'BTU'},
       ],
     },
     pintura:{
       label:'Pintura (em desenvolvimento)', colecao:'pinturaAreas',
       metricas:[
-        {id:'areaM2',         label:'Área de pintura (m²)'},
-        {id:'demao1',         label:'1ª demão (m²)'},
-        {id:'demao2',         label:'2ª demão (m²)'},
-        {id:'demao3',         label:'3ª demão (m²)'},
+        {id:'areaM2',         label:'Área de pintura (m²)', unidade:'m²'},
+        {id:'demao1',         label:'1ª demão (m²)',        unidade:'m²'},
+        {id:'demao2',         label:'2ª demão (m²)',        unidade:'m²'},
+        {id:'demao3',         label:'3ª demão (m²)',        unidade:'m²'},
       ],
     },
   };
@@ -401,8 +417,9 @@ const Planejamento = (() => {
   // ===================== VÍNCULOS COM LEVANTAMENTO — TELA =====================
   async function abrirVinculosView(){
     modoView='vinculos';_vincBusca='';_render();
-    // Carrega todos os levantamentos em paralelo em background
-    await Promise.all(Object.keys(LEVANTAMENTO_MODULOS).map(m=>_carregarLevSeNecessario(m)));
+    // Recarrega TODOS os levantamentos do zero (não usa cache velho) em background,
+    // pra tabela mostrar quantidade/local sempre atualizados ao entrar na tela.
+    await _invalidarLevCache();
     if(modoView==='vinculos')_atualizarTbodyVinculos();
   }
   function fecharVinculosView(){modoView='gantt';_render();}
@@ -427,7 +444,47 @@ const Planejamento = (() => {
         try{const cs=await db.collection('obras').doc(obraId).collection('config').doc('fachadaCfg').get();cfgDoc=cs.exists?cs.data():null;}catch(e){}
       }
       _levCache[modulo]={dados,extra,arvore,cfg:cfgDoc};
-    }catch(e){console.error('Erro ao carregar levantamento',modulo,e);}
+    }catch(e){
+      console.error('Erro ao carregar levantamento',modulo,e);
+      Utils.toast(`Erro ao carregar dados de ${LEVANTAMENTO_MODULOS[modulo]?.label||modulo}. Verifique sua conexão.`,'erro');
+    }
+  }
+
+  // Força reler do Firestore (BUG histórico: o cache nunca era invalidado,
+  // então editar um Levantamento e voltar pro Planejamento sem F5 mostrava
+  // árvore/valores velhos). Chamar sempre que o usuário for TOMAR UMA DECISÃO
+  // com base nesses dados: abrir a tela de Vínculos, abrir o modal de vincular,
+  // ou recalcular. Sem modulo = recarrega todos.
+  async function _invalidarLevCache(modulo){
+    if(modulo){
+      delete _levCache[modulo];
+      await _carregarLevSeNecessario(modulo);
+    } else {
+      Object.keys(_levCache).forEach(k=>delete _levCache[k]);
+      await Promise.all(Object.keys(LEVANTAMENTO_MODULOS).map(m=>_carregarLevSeNecessario(m)));
+    }
+    if(_levCache['fachada'])levFachadas=_levCache['fachada'].dados;
+  }
+
+  // Único ponto de cálculo do valor-base de um vínculo (obra inteira ou filtrado
+  // por local). Usado tanto ao salvar quanto ao recalcular — antes existiam dois
+  // caminhos que divergiam: "Recalcular" esquecia de filtrar por nó (Piso/Teto/
+  // Paredes) e devolvia o total da obra inteira em vez do valor do local vinculado.
+  function _calcularBaseValor(modulo,metrica,ctx){
+    const mod=LEVANTAMENTO_MODULOS[modulo];if(!mod)return 0;
+    ctx=ctx||{};
+    if(modulo==='fachada'){
+      return _calcularMetrica(modulo,metrica,ctx.fachadaId||null,ctx.balancimId||null,ctx.vistaId||null,null);
+    }
+    if(mod.configDoc){
+      const cache=_levCache[modulo]||{arvore:[]};
+      const nodeIds=ctx.nodeId?_idsDescendentes(cache.arvore,ctx.nodeId):null;
+      return _calcularMetricaComNodeIds(modulo,metrica,nodeIds);
+    }
+    return _calcularMetrica(modulo,metrica,null,null,null,null);
+  }
+  function _unidadeDaMetrica(modulo,metrica){
+    return LEVANTAMENTO_MODULOS[modulo]?.metricas.find(m=>m.id===metrica)?.unidade||'';
   }
 
   // Função principal: calcula a métrica solicitada a partir dos dados brutos do levantamento.
@@ -502,13 +559,6 @@ const Planejamento = (() => {
     return 0;
   }
 
-  // Compatibilidade: carregamento antigo só para fachada
-  async function _carregarLevFachadaSeNecessario(){
-    await _carregarLevSeNecessario('fachada');
-    // compat: preenche levFachadas para o código de UI que ainda referencia ela
-    if(_levCache['fachada'])levFachadas=_levCache['fachada'].dados;
-  }
-
   // Rótulo legível da fonte estrutural escolhida (fachada/balancim/vista),
   // usado tanto no modal quanto na lista de vínculos.
   function _fonteEstruturalLabel(fachadaId,balancimId,vistaId){
@@ -524,6 +574,25 @@ const Planejamento = (() => {
       }
     }
     return txt;
+  }
+
+  // Rótulo do local vinculado pra QUALQUER módulo — Fachada usa fachada/balancim/vista,
+  // Piso/Teto/Paredes usam o nodeId da árvore (Torre › Pavimento › Apto › Cômodo).
+  // ANTES: só existia rótulo pra Fachada — vínculos de Piso/Teto/Paredes não mostravam
+  // NENHUMA indicação de local na tabela, e olhe que essa é a informação mais importante.
+  function _fonteVinculoLabel(t){
+    const mod=LEVANTAMENTO_MODULOS[t.levantamentoModulo];
+    if(t.levantamentoModulo==='fachada'){
+      return _fonteEstruturalLabel(t.levantamentoFachadaId,t.levantamentoBalancimId,t.levantamentoVistaId);
+    }
+    if(mod?.configDoc){
+      if(!t.levantamentoNodeId)return 'Toda a obra';
+      const cache=_levCache[t.levantamentoModulo];
+      if(!cache)return 'Local — carregando...';
+      const caminho=_caminhoNode(cache.arvore,t.levantamentoNodeId);
+      return caminho?caminho.map(p=>p.nome).join(' › '):'Local removido';
+    }
+    return 'Toda a obra';
   }
 
   // Aceita "1", "0.5" ou frações "1/8" — como as pessoas de obra pensam em partes.
@@ -561,7 +630,7 @@ const Planejamento = (() => {
       const metricaLabel=mod?.metricas.find(m=>m.id===t.levantamentoMetrica)?.label||'';
       const indent=_vincBusca.trim()?0:(t.nivel||0)*18; // busca ativa: mostra achatado, sem indentação
       const fracaoTxt=vinc&&t.levantamentoFator!=null&&Math.abs(t.levantamentoFator-1)>1e-9?` (${_fracaoDeFator(t.levantamentoFator)})`:'';
-      const fonteTxt=vinc&&_levFachadasCarregado?' · '+_fonteEstruturalLabel(t.levantamentoFachadaId,t.levantamentoBalancimId,t.levantamentoVistaId):'';
+      const fonteTxt=vinc?' · '+_fonteVinculoLabel(t):'';
       return `<tr>
         <td style="padding-left:${8+indent}px;">${t.tipo==='grupo'?'📁 ':''}${t.nome}</td>
         <td class="col-num" style="font-family:var(--font-mono);">${t.quantidade?_fQtd(t.quantidade)+' '+(t.unidade||''):'—'}</td>
@@ -624,9 +693,17 @@ const Planejamento = (() => {
     document.getElementById('modal-planej-vinculo-titulo').textContent='Vincular quantidade: '+t.nome;
     Utils.abrirModal('modal-planej-vinculo');
     document.getElementById('planej-vinculo-body').innerHTML='<div class="text-sm text-muted">Carregando levantamentos...</div>';
-    await Promise.all(Object.keys(LEVANTAMENTO_MODULOS).map(m=>_carregarLevSeNecessario(m)));
-    // compat: mantém levFachadas para código que ainda usa ele
-    if(_levCache['fachada'])levFachadas=_levCache['fachada'].dados;
+    // Sempre lê do zero (não usa cache velho) — é aqui que o usuário decide o
+    // valor do vínculo, não pode estar olhando pra dado desatualizado.
+    await _invalidarLevCache();
+    // Se já havia um nó selecionado (editando vínculo existente), expande a
+    // árvore até ele pra aparecer visível assim que o modal abrir.
+    _vincArvoreAbertos=new Set();
+    if(_vincNodeId){
+      const cache=_levCache[_vincModulo];
+      const caminho=cache?_caminhoNode(cache.arvore,_vincNodeId):null;
+      if(caminho)caminho.forEach(p=>_vincArvoreAbertos.add(p.id));
+    }
     _renderVinculoModalBody();
   }
 
@@ -649,7 +726,7 @@ const Planejamento = (() => {
       const fachadasDisp=cache.dados.filter(x=>x.tipo==='fachada');
       const balancinsDisp=_vincFachadaId?cache.dados.filter(x=>x.tipo==='balancim'&&x.fachadaId===_vincFachadaId):[];
       const vistasDisp=_vincBalancimId?cache.dados.filter(x=>x.tipo==='vista'&&x.balancimId===_vincBalancimId).sort((a,b)=>a.tipoVista==='externa'?-1:1):[];
-      baseValor=_calcularMetrica(_vincModulo,_vincMetrica,_vincFachadaId,_vincBalancimId,_vincVistaId);
+      baseValor=_calcularBaseValor(_vincModulo,_vincMetrica,{fachadaId:_vincFachadaId,balancimId:_vincBalancimId,vistaId:_vincVistaId});
       fonteLabel=_fonteEstruturalLabel(_vincFachadaId,_vincBalancimId,_vincVistaId);
       fonteHTML=`
         <select class="form-control" style="flex:1;min-width:140px;" onchange="Planejamento.onVincFachadaChange(this.value)">
@@ -665,20 +742,29 @@ const Planejamento = (() => {
           ${vistasDisp.map(v=>`<option value="${v.id}" ${v.id===_vincVistaId?'selected':''}>${v.tipoVista==='externa'?'Vista Externa':'Vista Interna'}</option>`).join('')}
         </select>`:''}`;
     } else if(mod?.configDoc){
-      // Módulos com árvore hierárquica (Piso, Teto, Paredes)
-      const flat=_flattenArvore(cache.arvore);
-      const nodeIds=_vincNodeId?_idsDescendentes(cache.arvore,_vincNodeId):null;
-      baseValor=_calcularMetricaComNodeIds(_vincModulo,_vincMetrica,nodeIds);
-      const nodeAtual=flat.find(n=>n.id===_vincNodeId);
-      fonteLabel=_vincNodeId?(nodeAtual?.nome||'Nó selecionado'):'Toda a obra';
-      fonteHTML=`
-        <select class="form-control" onchange="Planejamento.onVincNodeChange(this.value)">
-          <option value="">— Toda a obra (todos os nós) —</option>
-          ${flat.map(n=>`<option value="${n.id}" ${n.id===_vincNodeId?'selected':''}>${'  '.repeat(n.nivel)}${n.nivel>0?'└ ':''}${n.nome}${n.temFilhos?' ▸':''}</option>`).join('')}
-        </select>`;
+      // Módulos com árvore hierárquica (Piso, Teto, Paredes) — árvore visual
+      // expansível (era um <select> achatado com uma linha por nó da obra
+      // inteira: com Torre→Pavimento→Apto→Cômodo virava uma lista de centenas
+      // de itens ilegível. Agora só mostra expandido o que o usuário abrir.
+      baseValor=_calcularBaseValor(_vincModulo,_vincMetrica,{nodeId:_vincNodeId});
+      const caminho=_vincNodeId?_caminhoNode(cache.arvore,_vincNodeId):null;
+      fonteLabel=caminho?caminho.map(p=>p.nome).join(' › '):'Toda a obra';
+      if(!cache.arvore.length){
+        fonteHTML=`<span class="text-sm text-muted">Nenhum local cadastrado ainda no levantamento de ${mod.label} desta obra.</span>`;
+      } else {
+        fonteHTML=`<div style="width:100%;">
+          <div style="display:flex;align-items:center;gap:4px;padding:3px 4px;border-radius:6px;cursor:pointer;${!_vincNodeId?'background:var(--cor-primaria-bg,#eef2ff);font-weight:600;':''}"
+               onclick="Planejamento.onVincNodeChange('')">
+            <span style="width:14px;"></span><span style="font-size:.83rem;">🏗️ Toda a obra (todos os locais)</span>
+          </div>
+          <div style="border:1px solid var(--cor-borda-light);border-radius:8px;padding:4px;max-height:220px;overflow-y:auto;margin-top:4px;">
+            ${_renderArvoreLocalSeletor(cache.arvore,0)}
+          </div>
+        </div>`;
+      }
     } else {
       // Módulos sem hierarquia (Concreto, Ar-Condicionado, Pintura)
-      baseValor=_calcularMetrica(_vincModulo,_vincMetrica,null,null,null,null);
+      baseValor=_calcularBaseValor(_vincModulo,_vincMetrica,{});
       fonteHTML=`<span class="text-sm text-muted">Este levantamento não tem subdivisão por área — usa o total da obra.</span>`;
     }
 
@@ -745,6 +831,29 @@ const Planejamento = (() => {
   function onVincBalancimChange(v){_vincBalancimId=v||null;_vincVistaId=null;_renderVinculoModalBody();}
   function onVincVistaChange(v){_vincVistaId=v||null;_renderVinculoModalBody();}
   function onVincNodeChange(v){_vincNodeId=v||null;_renderVinculoModalBody();}
+
+  // Árvore visual expansível do local (Torre → Pavimento → Apto → Cômodo) usada
+  // como filtro de fonte no modal de vínculo. Substitui o antigo <select> achatado
+  // com todos os nós da obra em uma lista única — ilegível com árvores fundas.
+  function _renderArvoreLocalSeletor(nodes,nivel){
+    return (nodes||[]).map(n=>{
+      const temFilhos=!!(n.filhos&&n.filhos.length);
+      const aberto=_vincArvoreAbertos.has(n.id);
+      const selecionado=n.id===_vincNodeId;
+      return `<div>
+        <div style="display:flex;align-items:center;gap:4px;padding:3px 4px;padding-left:${nivel*16+4}px;border-radius:6px;cursor:pointer;${selecionado?'background:var(--cor-primaria-bg,#eef2ff);font-weight:600;':''}"
+             onclick="Planejamento.onVincNodeChange('${n.id}')">
+          ${temFilhos?`<span onclick="event.stopPropagation();Planejamento.toggleVincArvoreNode('${n.id}')" style="width:14px;text-align:center;font-size:.7rem;color:#888;">${aberto?'▾':'▸'}</span>`:'<span style="width:14px;"></span>'}
+          <span style="font-size:.83rem;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${n.nome}</span>
+        </div>
+        ${temFilhos&&aberto?_renderArvoreLocalSeletor(n.filhos,nivel+1):''}
+      </div>`;
+    }).join('');
+  }
+  function toggleVincArvoreNode(id){
+    if(_vincArvoreAbertos.has(id))_vincArvoreAbertos.delete(id);else _vincArvoreAbertos.add(id);
+    _renderVinculoModalBody();
+  }
 
   // ---- Cálculo local de peça de parede (replica a lógica do módulo Paredes)
   // O módulo Paredes salva os campos BRUTOS (comprimento, altura, vaos, tipoAlvenaria,
@@ -867,8 +976,12 @@ const Planejamento = (() => {
     if(!_vincIncluidos.size){Utils.toast('Marque ao menos uma tarefa.','alerta');return;}
     try{
       Utils.mostrarLoading('Calculando e salvando...');
-      await _carregarLevFachadaSeNecessario();
-      const baseValor=_calcularMetrica(_vincModulo,_vincMetrica,_vincFachadaId,_vincBalancimId,_vincVistaId);
+      // Recarrega do zero o módulo em uso — garante que o valor gravado reflete
+      // o levantamento mais recente, mesmo que o modal tenha ficado aberto um tempo.
+      await _invalidarLevCache(_vincModulo);
+      const ctx={fachadaId:_vincFachadaId,balancimId:_vincBalancimId,vistaId:_vincVistaId,nodeId:_vincNodeId};
+      const baseValorReal=_calcularBaseValor(_vincModulo,_vincMetrica,ctx);
+      const unidade=_unidadeDaMetrica(_vincModulo,_vincMetrica);
 
       // Desfaz vínculos deste mesmo grupo que ficaram desmarcados agora
       // (edição declarativa: o que está marcado AGORA é o que vale).
@@ -883,22 +996,10 @@ const Planejamento = (() => {
       for(const id of _vincIncluidos){
         const alvo=tarefas.find(x=>x.id===id);if(!alvo)continue;
         const fator=_parseFracao(_vincFatores[id]||'1');
-        // Calcula o valor base correto para este módulo
-        const mod=LEVANTAMENTO_MODULOS[_vincModulo];
-        let baseValorReal=0;
-        if(_vincModulo==='fachada'){
-          baseValorReal=_calcularMetrica(_vincModulo,_vincMetrica,_vincFachadaId,_vincBalancimId,_vincVistaId,null);
-        } else if(mod?.configDoc){
-          const cache=_levCache[_vincModulo]||{arvore:[]};
-          const nodeIds=_vincNodeId?_idsDescendentes(cache.arvore,_vincNodeId):null;
-          baseValorReal=_calcularMetricaComNodeIds(_vincModulo,_vincMetrica,nodeIds);
-        } else {
-          baseValorReal=_calcularMetrica(_vincModulo,_vincMetrica,null,null,null,null);
-        }
         const data={fonteQuantidade:'levantamento',levantamentoModulo:_vincModulo,levantamentoMetrica:_vincMetrica,
           levantamentoFachadaId:_vincFachadaId||'',levantamentoBalancimId:_vincBalancimId||'',levantamentoVistaId:_vincVistaId||'',
           levantamentoNodeId:_vincNodeId||'',
-          levantamentoFator:fator,levantamentoOrigemId:_vincAlvoId,quantidade:baseValorReal*fator,unidade:'m²'};
+          levantamentoFator:fator,levantamentoOrigemId:_vincAlvoId,quantidade:baseValorReal*fator,unidade};
         await Database.atualizar(obraId,COL,id,data);
         Object.assign(alvo,data);
       }
@@ -938,14 +1039,20 @@ const Planejamento = (() => {
     if(!alvo.length){Utils.toast('Nenhuma tarefa vinculada a levantamento.','alerta');return;}
     try{
       Utils.mostrarLoading('Recalculando...');
-      _levFachadasCarregado=false; // força reler o levantamento mais recente
-      await _carregarLevFachadaSeNecessario();
+      // BUG CRÍTICO corrigido: recalculava chamando _calcularMetrica sem passar o
+      // nodeId — pra qualquer vínculo de Piso/Teto/Paredes filtrado por local
+      // (ex: só o Apto 301), o recálculo devolvia o total da OBRA INTEIRA por
+      // engano, substituindo um valor certo por um errado. Também só recarregava
+      // a Fachada; Piso/Teto/Paredes/Concreto/Ar continuavam com dado velho.
+      await _invalidarLevCache(); // recarrega TODOS os módulos do zero
       for(const t of alvo){
-        const base=_calcularMetrica(t.levantamentoModulo,t.levantamentoMetrica,t.levantamentoFachadaId,t.levantamentoBalancimId,t.levantamentoVistaId);
+        const ctx={fachadaId:t.levantamentoFachadaId,balancimId:t.levantamentoBalancimId,vistaId:t.levantamentoVistaId,nodeId:t.levantamentoNodeId};
+        const base=_calcularBaseValor(t.levantamentoModulo,t.levantamentoMetrica,ctx);
         const fator=t.levantamentoFator!=null?t.levantamentoFator:1;
         const valor=base*fator;
-        await Database.atualizar(obraId,COL,t.id,{quantidade:valor});
-        t.quantidade=valor;
+        const unidade=_unidadeDaMetrica(t.levantamentoModulo,t.levantamentoMetrica);
+        await Database.atualizar(obraId,COL,t.id,{quantidade:valor,unidade});
+        t.quantidade=valor;t.unidade=unidade;
       }
       Utils.toast(`${alvo.length} vínculo(s) recalculado(s)!`,'sucesso');
       _atualizarTbodyVinculos();
@@ -2526,7 +2633,7 @@ const Planejamento = (() => {
     onBusca,limparBusca,_buscaKey,
     importarExcel,exportar,exportarPNG,_gerarPNG,_predPopup,_predPreview,_predSalvar,
     abrirVinculosView,fecharVinculosView,abrirVincularTarefa,onVincModuloChange,onVincMetricaChange,
-    onVincFachadaChange,onVincBalancimChange,onVincVistaChange,onVincNodeChange,
+    onVincFachadaChange,onVincBalancimChange,onVincVistaChange,onVincNodeChange,toggleVincArvoreNode,
     onBuscaVinculos,onToggleIncluirVinc,onFatorVincChange,marcarTodosVinc,dividirIrmaosVinc,
     salvarVinculoLevantamento,removerVinculoLevantamento,recalcularVinculosLevantamento};
 })();
