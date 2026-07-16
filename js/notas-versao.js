@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.40.0',
+  versaoAtual: 'V2.41.0',
 
   versoes: [
     {
@@ -3919,7 +3919,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.40.0',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-16',
       tipo: 'melhoria',
       titulo: 'Vínculos: Pintura dentro de Paredes/Teto, Piso reorganizado, layout de pastas em lista vertical',
@@ -3950,6 +3950,45 @@ const NotasVersao = {
         '  valor + botão "Vincular aqui" viraram a primeira linha dessa',
         '  mesma lista — não é mais um bloco isolado flutuando sozinho',
         '  acima das pastas.',
+      ]
+    },
+    {
+      versao: 'V2.41.0',
+      status: 'aberta',
+      data: '2026-07-16',
+      tipo: 'funcionalidade',
+      titulo: 'Dashboard Principal — hero com capa da obra, Curva S, atividades e Resumo por Apartamento',
+      itens: [
+        'NOVO módulo Dashboard (substitui o stub "em desenvolvimento"):',
+        '  → Hero no topo com seletor de obra e a imagem de capa da obra',
+        '  sobreposta ao fundo (com gradiente escuro por trás do texto).',
+        '  → KPIs: % Executado, % Previsto Atual, Término Atual e',
+        '  Término Linha de Base, com selo de "No prazo" ou "X mês(es)',
+        '  atrasado" comparando as duas datas.',
+        '',
+        'Curva S do Planejamento: gráfico (SVG) com linha Esperado x',
+        '  Executado acumulado, mais barras de Esperado/Executado mensal',
+        '  por trás — calculado a partir da duração das tarefas-folha',
+        '  distribuída no tempo (linha de base quando existir) e do',
+        '  percentual concluído/datas reais para a curva executada.',
+        '  Linha vertical marca "hoje".',
+        '',
+        'Lista de Atividades: "Em Execução" e "Próximas", cada uma com',
+        '  prazo de conclusão e % concluído, com "Atualizado em" acima.',
+        '',
+        'Resumo por Apartamento: tabela com uma linha por métrica de',
+        '  levantamento (Contrapiso, Impermeabilização, Revestimento de',
+        '  Piso, Rodapé, Alvenaria de Vedação/Estrutural, Gesso Liso,',
+        '  Reboco, Revestimento de Parede, Pintura de Parede, Área de',
+        '  Teto, Forro de Drywall, Placa de Gesso, Tabica, Pintura de',
+        '  Teto) e uma coluna por apartamento (agrupadas por Torre),',
+        '  com toggle Unidade/Custo. O apartamento de cada área é',
+        '  inferido como o nó pai do local onde ela foi lançada na',
+        '  árvore (convenção Torre › Andar › Apto › Cômodo). Custo é',
+        '  uma estimativa: custo médio por unidade das tarefas do',
+        '  Planejamento vinculadas àquele módulo/métrica, aplicado à',
+        '  quantidade de cada apartamento — v1, sujeita a refinamento.',
+        '  Linhas sem nenhum dado lançado ainda não aparecem na tabela.',
       ]
     }
   ],

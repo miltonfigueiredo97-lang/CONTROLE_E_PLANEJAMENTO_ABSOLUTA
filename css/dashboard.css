@@ -33,3 +33,76 @@
   color: var(--cor-texto-secundario);
   margin-top: 6px;
 }
+
+/* ============================================
+   HERO — seletor de obra + imagem de capa + KPIs
+   ============================================ */
+.db-hero {
+  position: relative;
+  border-radius: var(--borda-radius-lg);
+  background-color: var(--cor-dark-800);
+  background-size: cover;
+  background-position: center;
+  overflow: hidden;
+  margin-bottom: 16px;
+  min-height: 220px;
+}
+.db-hero-overlay {
+  background: linear-gradient(100deg, rgba(13,13,13,0.92) 0%, rgba(13,13,13,0.78) 45%, rgba(13,13,13,0.55) 100%);
+  padding: 16px 22px 20px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.db-hero-top { display: flex; align-items: center; gap: 8px; }
+.db-hero-select-label { font-size: 0.7rem; color: rgba(255,255,255,0.6); text-transform: uppercase; letter-spacing: 0.4px; }
+.db-hero-select {
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.25);
+  color: #fff;
+  border-radius: var(--borda-radius);
+  padding: 5px 10px;
+  font-size: 0.82rem;
+  max-width: 260px;
+}
+.db-hero-info h1 { color: #fff; font-size: 1.5rem; font-weight: 800; margin-bottom: 2px; }
+.db-hero-sub { color: rgba(255,255,255,0.65); font-size: 0.85rem; margin-bottom: 14px; }
+.db-hero-kpis { display: flex; flex-wrap: wrap; gap: 28px; }
+.db-kpi-valor { font-family: var(--font-mono); font-size: 1.3rem; font-weight: 700; color: #fff; }
+.db-kpi-label { font-size: 0.72rem; color: rgba(255,255,255,0.6); margin-top: 2px; display: flex; align-items: center; }
+
+/* ============================================
+   Grid: Atividades + Curva S lado a lado
+   ============================================ */
+.db-grid-top {
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) minmax(360px, 1.6fr);
+  gap: 16px;
+  margin-bottom: 16px;
+}
+@media (max-width: 980px) {
+  .db-grid-top { grid-template-columns: 1fr; }
+}
+.db-secao-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; flex-wrap: wrap; gap: 8px; }
+.db-secao-header h3 { font-size: 0.95rem; font-weight: 700; color: var(--cor-texto); }
+
+/* ---- Atividades ---- */
+.db-card-atividades { display: flex; flex-direction: column; }
+#db-atividades { display: flex; flex-direction: column; gap: 14px; }
+.db-ativ-col-titulo { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: var(--cor-texto-muted); margin-bottom: 6px; }
+.db-ativ-item { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--cor-borda-light); }
+.db-ativ-item:last-child { border-bottom: none; }
+.db-ativ-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.db-ativ-info { flex: 1; min-width: 0; }
+.db-ativ-nome { font-size: 0.85rem; font-weight: 600; color: var(--cor-texto); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.db-ativ-sub { margin-top: 1px; }
+.db-ativ-perc { font-family: var(--font-mono); font-size: 0.8rem; font-weight: 700; color: var(--cor-primaria-dark); flex-shrink: 0; }
+
+/* ---- Curva S ---- */
+.db-legenda { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 8px; font-size: 0.72rem; color: var(--cor-texto-secundario); }
+.db-legenda span { display: flex; align-items: center; gap: 5px; }
+.db-legenda i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+
+/* ---- Resumo por Apartamento ---- */
+.db-resumo-categoria td { background: var(--cor-primaria-ultra-light); font-weight: 700; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.3px; padding: 6px 14px; color: var(--cor-primaria-dark); }

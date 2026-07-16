@@ -47,7 +47,7 @@
       <a href="histograma.html"><span class="nav-icon">📊</span> Histograma</a>
       <a href="admin-permissoes.html"><span class="nav-icon">🔑</span> Permissões</a>
       <div class="sidebar-section-title">Sistema</div>
-      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V2.40.0</span></a>
+      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V2.41.0</span></a>
     </nav>
     <div class="sidebar-user">
       <div class="user-avatar">U</div>
@@ -71,8 +71,7 @@
       <div id="modulo-content">
   <div class="estado-vazio">
     <div class="icone">📊</div>
-    <p>Dashboard em desenvolvimento.</p>
-    <p class="text-sm text-muted">Selecione uma obra e explore os módulos pelo menu lateral.</p>
+    <p>Carregando...</p>
   </div>
 </div>
     </main>
@@ -92,10 +91,11 @@
   <script src="js/permissions.js"></script>
   <script src="js/audit.js"></script>
   <script src="js/utils.js"></script>
+  <script src="js/dashboard.js"></script>
 
   <script>
     document.addEventListener('DOMContentLoaded', async () => {
-      await Utils.initPagina();
+      await Dashboard.init();
     });
   </script>
 </body>
