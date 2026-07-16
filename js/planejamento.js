@@ -114,43 +114,6 @@ const Planejamento = (() => {
     }
     return null;
   }
-  // Acha um nó (objeto, não só id) pelo id, em qualquer árvore genérica {id,nome,filhos}.
-  function _acharNodeObj(nodes,id){
-    for(const n of (nodes||[])){
-      if(n.id===id)return n;
-      if(n.filhos&&n.filhos.length){const r=_acharNodeObj(n.filhos,id);if(r)return r;}
-    }
-    return null;
-  }
-  // Nó + todos os descendentes, como OBJETOS (precisa dos campos próprios do nó,
-  // não só do id) — usado pela Pintura pra ler paredesNodeId/tetoNodeId de cada nó.
-  function _nosComDescendentes(nodes,rootId){
-    const raiz=rootId?_acharNodeObj(nodes,rootId):null;
-    const base=rootId?(raiz?[raiz]:[]):(nodes||[]);
-    const out=[];
-    (function coletar(ns){(ns||[]).forEach(n=>{out.push(n);coletar(n.filhos||[]);});})(base);
-    return out;
-  }
-
-  // Pintura tem árvore PRÓPRIA — cada nó dela aponta (paredesNodeId/tetoNodeId)
-  // pra um nó da árvore de Paredes e/ou de Teto. O m² pintado de um nó de Pintura
-  // é a soma da pintura das peças de Acabamento (Paredes) + áreas de Teto que
-  // caem dentro do(s) local(is) apontado(s), incluindo os sublocais deles.
-  function _calcularMetricaPintura(nodeId){
-    const cache=_levCache['pintura'];if(!cache)return 0;
-    const nosPintura=_nosComDescendentes(cache.arvore,nodeId);
-    const idsParede=new Set(),idsTeto=new Set();
-    nosPintura.forEach(n=>{
-      if(n.paredesNodeId)_idsDescendentes(cache.arvoreParedes,n.paredesNodeId).forEach(id=>idsParede.add(id));
-      if(n.tetoNodeId)_idsDescendentes(cache.arvoreTeto,n.tetoNodeId).forEach(id=>idsTeto.add(id));
-    });
-    const totalParede=(cache.pecasParede||[]).filter(p=>idsParede.has(p.nodeId)).reduce((s,p)=>s+_calcAcabBruta(p).pinturaM2,0);
-    const totalTeto=(cache.areasTeto||[]).filter(a=>idsTeto.has(a.nodeId)).reduce((s,a)=>{
-      if(!a.temPintura||!(a.pintura||[]).length)return s;
-      return s+a.pintura.reduce((s2,pt)=>s2+(Number(a.areaM2)||0)*(Number(pt.pct||0)/100),0);
-    },0);
-    return totalParede+totalTeto;
-  }
   // selecionado = soma todos os balancins da fachada escolhida).
   let _vincFachadaId=null, _vincBalancimId=null, _vincVistaId=null;
   // Navegação em pastas da tela principal de Vínculos: Módulo > Métrica > Local > Local...
@@ -181,11 +144,14 @@ const Planejamento = (() => {
     piso:{
       label:'Pisos', colecao:'pisoAreas',
       configDoc:'pisoArvore',
+      // Área de piso e Rodapé são as duas faces do mesmo revestimento de piso —
+      // agrupadas sob "Revestimento" em vez de aparecerem soltas.
+      cardsPorMetrica:true,
       metricas:[
-        {id:'areaM2',         label:'Área total de piso (m²)', unidade:'m²'},
-        {id:'areaContrapiso', label:'Contrapiso (m²)',         unidade:'m²'},
-        {id:'areaImperm',     label:'Impermeabilização (m²)',  unidade:'m²'},
-        {id:'mlRodape',       label:'Rodapé (ML)',             unidade:'ml'},
+        {id:'areaContrapiso', label:'Contrapiso',                     unidade:'m²'},
+        {id:'areaImperm',     label:'Impermeabilização',              unidade:'m²'},
+        {id:'areaM2',         label:'Revestimento',                   unidade:'m²'},
+        {id:'mlRodape',       label:'Revestimento — Rodapé',          unidade:'ml'},
       ],
     },
     paredes:{
@@ -200,8 +166,9 @@ const Planejamento = (() => {
         {id:'vedacao',        label:'Alvenaria de Vedação', unidade:'m²'},
         {id:'estrutural',     label:'Alvenaria Estrutural', unidade:'m²'},
         {id:'gesso',          label:'Gesso Liso',           unidade:'m²'},
-        {id:'reboco',         label:'Reboco / Chapisco',    unidade:'m²'},
-        {id:'revestimento',   label:'Revestimento Cerâmico',unidade:'m²'},
+        {id:'reboco',         label:'Reboco',               unidade:'m²'},
+        {id:'revestimento',   label:'Revestimento de Parede',unidade:'m²'},
+        {id:'pinturaParede',  label:'Pintura de Parede',    unidade:'m²'},
       ],
     },
     teto:{
@@ -212,6 +179,7 @@ const Planejamento = (() => {
         {id:'areaDrywall',    label:'Forro de Drywall (m²)',     unidade:'m²'},
         {id:'areaGesso',      label:'Placa de Gesso (m²)',       unidade:'m²'},
         {id:'mlTabica',       label:'Tabica (ML)',               unidade:'ml'},
+        {id:'pinturaTeto',    label:'Pintura de Teto',            unidade:'m²'},
       ],
     },
     concreto:{
@@ -227,16 +195,9 @@ const Planejamento = (() => {
         {id:'btus',           label:'BTUs total',          unidade:'BTU'},
       ],
     },
-    pintura:{
-      // Não tem coleção própria — soma a pintura das peças de Acabamento (Paredes)
-      // e das áreas de Teto marcadas com temPintura, através da árvore própria
-      // de locais da Pintura (pinturaArvore), igual carregamento especial em
-      // _carregarLevSeNecessario + _calcularMetricaPintura.
-      label:'Pintura', configDoc:'pinturaArvore',
-      metricas:[
-        {id:'areaPintura',    label:'Área pintada (m²)', unidade:'m²'},
-      ],
-    },
+    // Pintura não é mais um módulo à parte — "Pintura de Parede" mora dentro de
+    // Paredes e "Pintura de Teto" mora dentro de Teto, porque é isso que ela
+    // fisicamente é. Ter um módulo "Pintura" isolado misturava as duas coisas.
   };
 
   // Metadados de status: cor + rótulo, usado no badge da coluna e no filtro
@@ -461,7 +422,7 @@ const Planejamento = (() => {
 
   // ===================== VÍNCULOS COM LEVANTAMENTO — TELA =====================
   async function abrirVinculosView(){
-    modoView='vinculos';_vincNavModulo=null;_vincNavMetrica=null;_vincNavPath=[];_vincTipo='geral';_render();
+    modoView='vinculos';_vincNavModulo=null;_vincNavMetrica=null;_vincNavPath=[];_vincTipo='maoObra';_render();
     // Recarrega TODOS os levantamentos do zero (não usa cache velho) em background,
     // pra tela mostrar quantidade/local sempre atualizados ao entrar.
     await _invalidarLevCache();
@@ -476,25 +437,6 @@ const Planejamento = (() => {
     if(_levCache[modulo])return;
     const mod=LEVANTAMENTO_MODULOS[modulo];if(!mod)return;
     try{
-      if(modulo==='pintura'){
-        // Pintura não tem coleção própria — usa as peças de Acabamento (Paredes)
-        // e as áreas de Teto, filtradas via os nós paredesNodeId/tetoNodeId da
-        // própria árvore de Pintura. Precisa das 3 árvores (própria + Paredes + Teto).
-        const [cfgPintura,cfgParedes,cfgTeto,pecasParede,areasTeto]=await Promise.all([
-          Database.obter(obraId,'config','pinturaArvore').catch(()=>null),
-          Database.obter(obraId,'config','paredesArvore').catch(()=>null),
-          Database.obter(obraId,'config','tetoArvore').catch(()=>null),
-          Database.listar(obraId,'paredesAcabamentoPecas',null).catch(()=>[]),
-          Database.listar(obraId,'tetoAreas',null).catch(()=>[]),
-        ]);
-        _levCache['pintura']={
-          arvore:cfgPintura?.arvore||[],
-          arvoreParedes:cfgParedes?.arvore||[],
-          arvoreTeto:cfgTeto?.arvore||[],
-          pecasParede,areasTeto,dados:[],extra:[],
-        };
-        return;
-      }
       const [dados,extra,cfg]=await Promise.all([
         Database.listar(obraId,mod.colecao,null).catch(()=>[]),
         mod.colecaoExtra?Database.listar(obraId,mod.colecaoExtra,null).catch(()=>[]):Promise.resolve([]),
@@ -539,12 +481,6 @@ const Planejamento = (() => {
     ctx=ctx||{};
     if(modulo==='fachada'){
       return _calcularMetrica(modulo,metrica,ctx.fachadaId||null,ctx.balancimId||null,ctx.vistaId||null,null);
-    }
-    if(modulo==='pintura'){
-      // Pintura tem árvore PRÓPRIA (locais dela mesma), cujos nós apontam pra um
-      // nó de Paredes e/ou um nó de Teto (paredesNodeId/tetoNodeId) — não dá pra
-      // usar o filtro genérico por nodeId dos outros módulos.
-      return _calcularMetricaPintura(ctx.nodeId||null);
     }
     if(mod.configDoc){
       const cache=_levCache[modulo]||{arvore:[]};
@@ -600,6 +536,7 @@ const Planejamento = (() => {
       if(metrica==='mlTabica')        return areas.reduce((s,a)=>s+(Number(a.mlTabica)||0),0);
       if(metrica==='areaDrywall')     return areas.filter(a=>a.tipoDryWall&&a.tipoDryWall!=='').reduce((s,a)=>s+(Number(a.areaM2)||0),0);
       if(metrica==='areaGesso')       return areas.filter(a=>a.tipoPlacaGesso&&a.tipoPlacaGesso!=='').reduce((s,a)=>s+(Number(a.areaM2)||0),0);
+      if(metrica==='pinturaTeto')     return areas.reduce((s,a)=>s+_pinturaM2Teto(a),0);
       return 0;
     }
 
@@ -616,6 +553,7 @@ const Planejamento = (() => {
       if(metrica==='gesso')        return calcsAcab.reduce((s,c)=>s+c.gesso,0);
       if(metrica==='reboco')       return calcsAcab.reduce((s,c)=>s+c.reboco,0);
       if(metrica==='revestimento') return calcsAcab.reduce((s,c)=>s+c.revestimento,0);
+      if(metrica==='pinturaParede')return calcsAcab.reduce((s,c)=>s+c.pinturaM2,0);
       return 0;
     }
 
@@ -808,27 +746,26 @@ const Planejamento = (() => {
       const existente=_grupoExistente(modulo,metrica,modulo==='fachada'?ctx:{nodeId:ctx.nodeId},_vincTipo);
       const filhos=_vincNavFilhos();
       corpoHTML=`
-        <div class="vinc-resumo">
-          <div>
-            <div class="vinc-resumo-valor">${_fQtd(valor)} ${unidade}</div>
-            <div class="vinc-resumo-status ${existente?'tem-vinculo':''}">${existente?`🔗 já vinculado a ${_qtdTarefasNoGrupo(existente[_campo('levantamentoOrigemId',_vincTipo)]||existente.id,_vincTipo)} tarefa(s)`:'ainda sem vínculo'}</div>
+        <div class="vinc-lista">
+          <div class="vinc-linha vinc-linha-resumo">
+            <div style="flex:1;min-width:180px;">
+              <div class="vinc-resumo-valor" style="font-size:1.3rem;">${_fQtd(valor)} ${unidade}</div>
+              <div class="vinc-resumo-status ${existente?'tem-vinculo':''}">${existente?`🔗 já vinculado a ${_qtdTarefasNoGrupo(existente[_campo('levantamentoOrigemId',_vincTipo)]||existente.id,_vincTipo)} tarefa(s)`:'ainda sem vínculo'}</div>
+            </div>
+            <button class="btn ${existente?'btn-secundario':'btn-primario'} btn-sm" onclick="Planejamento.abrirVincularAqui()">${existente?'✎ Editar vínculo':'🔗 Vincular aqui'}</button>
           </div>
-          <button class="btn ${existente?'btn-secundario':'btn-primario'} btn-sm" onclick="Planejamento.abrirVincularAqui()">${existente?'✎ Editar vínculo':'🔗 Vincular aqui'}</button>
-        </div>
-        ${filhos.length?`<div class="vinc-grid">
-          ${filhos.map(f=>`<div class="vinc-card vinc-pasta" onclick="Planejamento.onVincNavEntrar('${f.id}','${f.nome.replace(/'/g,"\\'")}')">
+          ${filhos.length?filhos.map(f=>`<div class="vinc-linha vinc-linha-pasta" onclick="Planejamento.onVincNavEntrar('${f.id}','${f.nome.replace(/'/g,"\\'")}')">
             <span class="vinc-pasta-icone">📁</span>
-            <span class="vinc-pasta-nome">${f.nome}</span>
+            <span class="vinc-pasta-nome" style="flex:1;">${f.nome}</span>
             ${f.temFilhos?'<span class="vinc-pasta-seta">›</span>':''}
-          </div>`).join('')}
-        </div>`:(mod.configDoc?'<div class="vinc-vazio">Nenhum local mais específico aqui — este é o nível final.</div>':'')}
+          </div>`).join(''):(mod.configDoc?'<div class="vinc-linha vinc-vazio">Nenhum local mais específico aqui — este é o nível final.</div>':'')}
+        </div>
       `;
     }
 
     const tipoSeletorHTML=`<div style="margin-bottom:16px;">
       <div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;color:#666;margin-bottom:6px;">Tipo de vínculo — o que este vínculo vai alimentar</div>
       <div class="plan-abas" style="width:fit-content;">
-        <button class="plan-aba ${_vincTipo==='geral'?'ativo':''}" onclick="Planejamento.onVincTipoChange('geral')">Geral</button>
         <button class="plan-aba ${_vincTipo==='maoObra'?'ativo':''}" onclick="Planejamento.onVincTipoChange('maoObra')">Mão de Obra</button>
         <button class="plan-aba ${_vincTipo==='material'?'ativo':''}" onclick="Planejamento.onVincTipoChange('material')">Materiais</button>
       </div>
@@ -1036,6 +973,12 @@ const Planejamento = (() => {
     });
     return {areaLiquida,ml,pinturaM2,gesso:acab.gesso,reboco:acab.reboco,revestimento:acab.revestimento};
   }
+  // Mesma fórmula ponderada por % usada na peça de parede, só que pra área de
+  // teto (campo único areaM2, sem vãos a descontar).
+  function _pinturaM2Teto(a){
+    if(!a.temPintura||!(a.pintura||[]).length)return 0;
+    return (a.pintura||[]).reduce((s,pt)=>s+(Number(a.areaM2)||0)*(Number(pt.pct||0)/100),0);
+  }
 
   // Versão de _calcularMetrica que já recebe a lista de nodeIds filtrados
   function _calcularMetricaComNodeIds(modulo,metrica,nodeIds){
@@ -1066,6 +1009,7 @@ const Planejamento = (() => {
       if(metrica==='mlTabica')        return areas.reduce((s,a)=>s+(Number(a.mlTabica)||0),0);
       if(metrica==='areaDrywall')     return areas.filter(a=>a.tipoDryWall&&a.tipoDryWall!=='').reduce((s,a)=>s+(Number(a.areaM2)||0),0);
       if(metrica==='areaGesso')       return areas.filter(a=>a.tipoPlacaGesso&&a.tipoPlacaGesso!=='').reduce((s,a)=>s+(Number(a.areaM2)||0),0);
+      if(metrica==='pinturaTeto')     return areas.reduce((s,a)=>s+_pinturaM2Teto(a),0);
       return 0;
     }
 
@@ -1082,6 +1026,7 @@ const Planejamento = (() => {
       if(metrica==='gesso')        return calcsAcab.reduce((s,c)=>s+c.gesso,0);
       if(metrica==='reboco')       return calcsAcab.reduce((s,c)=>s+c.reboco,0);
       if(metrica==='revestimento') return calcsAcab.reduce((s,c)=>s+c.revestimento,0);
+      if(metrica==='pinturaParede')return calcsAcab.reduce((s,c)=>s+c.pinturaM2,0);
       return 0;
     }
 

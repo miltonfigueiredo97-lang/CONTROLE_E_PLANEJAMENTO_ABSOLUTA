@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.39.1',
+  versaoAtual: 'V2.40.0',
 
   versoes: [
     {
@@ -3904,7 +3904,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.39.1',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-16',
       tipo: 'melhoria',
       titulo: 'Tarefas: barra de adicionar redesenhada + criar categoria direto por lá',
@@ -3915,6 +3915,41 @@ const NotasVersao = {
         'NOVO — campo Categoria na própria barra de adicionar, com botão',
         '  "+" ao lado pra criar uma categoria nova (nome + cor) sem sair',
         '  dali e sem perder o que já tinha sido digitado.',
+      ]
+    },
+    {
+      versao: 'V2.40.0',
+      status: 'aberta',
+      data: '2026-07-16',
+      tipo: 'melhoria',
+      titulo: 'Vínculos: Pintura dentro de Paredes/Teto, Piso reorganizado, layout de pastas em lista vertical',
+      itens: [
+        'Pintura deixou de ser um módulo à parte — "Pintura de Parede" agora',
+        '  é mais um card dentro de Paredes, e "Pintura de Teto" é mais uma',
+        '  métrica dentro de Teto. Cada uma soma a área pintada real (peças',
+        '  de Acabamento e áreas de Teto marcadas com pintura, ponderada por',
+        '  % de cada cor) usando a própria árvore de local de Paredes/Teto —',
+        '  não precisa mais de nenhuma árvore ou mapeamento à parte.',
+        '',
+        'Paredes: rótulos corrigidos pra bater com o levantamento real',
+        '  ("Gesso Liso", "Reboco", "Revestimento de Parede"). Reboco e',
+        '  Revestimento puxam do mesmo campo acabamentos[] com tipo+% que',
+        '  já alimenta o Gesso Liso — nenhum dos três é inventado.',
+        '',
+        'Pisos: virou cards por tipo igual Paredes. "Área de piso" e',
+        '  "Rodapé" renomeados pra "Revestimento" e "Revestimento — Rodapé"',
+        '  — ficam lado a lado, deixando claro que são as duas faces do',
+        '  mesmo revestimento de piso.',
+        '',
+        'Seletor de tipo de vínculo: removida a aba "Geral" — só Mão de',
+        '  Obra e Materiais (vínculos antigos que usavam os campos gerais',
+        '  continuam funcionando normalmente como esses módulos já liam).',
+        '',
+        'Layout da navegação por pastas: as pastas agora abrem em lista',
+        '  vertical (uma embaixo da outra) em vez de grade horizontal, e o',
+        '  valor + botão "Vincular aqui" viraram a primeira linha dessa',
+        '  mesma lista — não é mais um bloco isolado flutuando sozinho',
+        '  acima das pastas.',
       ]
     }
   ],

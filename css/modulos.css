@@ -448,6 +448,13 @@
 .vinc-resumo-status.tem-vinculo { color:var(--cor-primaria); font-weight:600; }
 .vinc-vazio { font-size:0.85rem; color:#666; padding:16px 4px; }
 
+.vinc-lista { border:1px solid #222; border-radius:10px; overflow:hidden; }
+.vinc-linha { display:flex; align-items:center; gap:12px; padding:14px 18px; border-bottom:1px solid #1a1a1a; }
+.vinc-linha:last-child { border-bottom:none; }
+.vinc-linha-resumo { background:#0d0d0d; border-left:3px solid var(--cor-primaria); flex-wrap:wrap; gap:14px; }
+.vinc-linha-pasta { cursor:pointer; transition:background .15s; }
+.vinc-linha-pasta:hover { background:#161616; }
+
 /* ============================================
    MÓDULO: CONCRETO (Levantamento + Controle)
    ============================================ */
