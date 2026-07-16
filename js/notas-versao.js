@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.38.2',
+  versaoAtual: 'V2.39.0',
 
   versoes: [
     {
@@ -3854,7 +3854,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.38.2',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-16',
       tipo: 'melhoria',
       titulo: 'Tarefas: editar categoria e projeto já criados',
@@ -3866,6 +3866,40 @@ const NotasVersao = {
         'Projeto: dá pra trocar o nome.',
         'Ao renomear, todas as tarefas que já usavam o nome antigo são',
         '  atualizadas automaticamente pro nome novo — nada fica órfão.',
+      ]
+    },
+    {
+      versao: 'V2.39.0',
+      status: 'aberta',
+      data: '2026-07-16',
+      tipo: 'melhoria',
+      titulo: 'Vínculos: títulos revisados, Paredes por tipo real, Pintura corrigida de verdade',
+      itens: [
+        'Título "Tipo de vínculo" adicionado acima do seletor Geral / Mão de',
+        '  Obra / Materiais — antes não tinha nenhuma explicação do que aquilo',
+        '  significava.',
+        '',
+        'Módulos renomeados: "Fachada" → "Fachadas", "Piso / Contrapiso /',
+        '  Impermeabilização" → "Pisos".',
+        '',
+        'Paredes reestruturada — agora aparece na tela inicial de Vínculos já',
+        '  separada por tipo real (Alvenaria de Vedação, Alvenaria Estrutural,',
+        '  Gesso Liso, Reboco/Chapisco, Revestimento Cerâmico), sem passar por',
+        '  uma tela extra de métrica. Gesso/Reboco/Revestimento agora são',
+        '  calculados de verdade a partir do campo real da peça de Acabamento',
+        '  (acabamentos[] com tipo+percentual) — antes essas 3 nem existiam',
+        '  como opção de vínculo.',
+        '',
+        'Removida a métrica "Pintura" duplicada de dentro de Paredes e de',
+        '  dentro de Teto — já existe um módulo Pintura próprio.',
+        '',
+        'CORRIGIDO — módulo Pintura estava com dado inventado ("1ª/2ª/3ª',
+        '  demão" não existe no Levantamento de Pintura real, e a área não',
+        '  vinha de lugar nenhum, sempre dava zero). Agora usa o levantamento',
+        '  de Pintura de verdade: soma a área pintada das peças de Acabamento',
+        '  (Paredes) e das áreas de Teto marcadas com pintura, navegando pela',
+        '  árvore própria de locais da Pintura — mostrando os níveis como os',
+        '  outros módulos. Removido "(em desenvolvimento)" do nome.',
       ]
     }
   ],

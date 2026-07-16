@@ -114,8 +114,43 @@ const Planejamento = (() => {
     }
     return null;
   }
-  // Seleção granular da árvore do levantamento (Fachada → Balancim → Vista) que
-  // serve de fonte pro valor — vazio/null = nível inteiro (ex: sem balancim
+  // Acha um nó (objeto, não só id) pelo id, em qualquer árvore genérica {id,nome,filhos}.
+  function _acharNodeObj(nodes,id){
+    for(const n of (nodes||[])){
+      if(n.id===id)return n;
+      if(n.filhos&&n.filhos.length){const r=_acharNodeObj(n.filhos,id);if(r)return r;}
+    }
+    return null;
+  }
+  // Nó + todos os descendentes, como OBJETOS (precisa dos campos próprios do nó,
+  // não só do id) — usado pela Pintura pra ler paredesNodeId/tetoNodeId de cada nó.
+  function _nosComDescendentes(nodes,rootId){
+    const raiz=rootId?_acharNodeObj(nodes,rootId):null;
+    const base=rootId?(raiz?[raiz]:[]):(nodes||[]);
+    const out=[];
+    (function coletar(ns){(ns||[]).forEach(n=>{out.push(n);coletar(n.filhos||[]);});})(base);
+    return out;
+  }
+
+  // Pintura tem árvore PRÓPRIA — cada nó dela aponta (paredesNodeId/tetoNodeId)
+  // pra um nó da árvore de Paredes e/ou de Teto. O m² pintado de um nó de Pintura
+  // é a soma da pintura das peças de Acabamento (Paredes) + áreas de Teto que
+  // caem dentro do(s) local(is) apontado(s), incluindo os sublocais deles.
+  function _calcularMetricaPintura(nodeId){
+    const cache=_levCache['pintura'];if(!cache)return 0;
+    const nosPintura=_nosComDescendentes(cache.arvore,nodeId);
+    const idsParede=new Set(),idsTeto=new Set();
+    nosPintura.forEach(n=>{
+      if(n.paredesNodeId)_idsDescendentes(cache.arvoreParedes,n.paredesNodeId).forEach(id=>idsParede.add(id));
+      if(n.tetoNodeId)_idsDescendentes(cache.arvoreTeto,n.tetoNodeId).forEach(id=>idsTeto.add(id));
+    });
+    const totalParede=(cache.pecasParede||[]).filter(p=>idsParede.has(p.nodeId)).reduce((s,p)=>s+_calcAcabBruta(p).pinturaM2,0);
+    const totalTeto=(cache.areasTeto||[]).filter(a=>idsTeto.has(a.nodeId)).reduce((s,a)=>{
+      if(!a.temPintura||!(a.pintura||[]).length)return s;
+      return s+a.pintura.reduce((s2,pt)=>s2+(Number(a.areaM2)||0)*(Number(pt.pct||0)/100),0);
+    },0);
+    return totalParede+totalTeto;
+  }
   // selecionado = soma todos os balancins da fachada escolhida).
   let _vincFachadaId=null, _vincBalancimId=null, _vincVistaId=null;
   // Navegação em pastas da tela principal de Vínculos: Módulo > Métrica > Local > Local...
@@ -133,7 +168,7 @@ const Planejamento = (() => {
     // configDoc: documento em obras/{id}/config/{configDoc} que guarda a árvore hierárquica
     // A árvore tem formato [{id,nome,filhos:[...]}] — cada área/peça tem nodeId apontando pro nó
     fachada:{
-      label:'Fachada', colecao:'levantamentosFachada',
+      label:'Fachadas', colecao:'levantamentosFachada',
       // Fachada usa tipos em vez de árvore config: tipo='fachada'|'balancim'|'vista'|'peca'
       usaTipos:true,
       metricas:[
@@ -144,7 +179,7 @@ const Planejamento = (() => {
       ],
     },
     piso:{
-      label:'Piso / Contrapiso / Impermeabilização', colecao:'pisoAreas',
+      label:'Pisos', colecao:'pisoAreas',
       configDoc:'pisoArvore',
       metricas:[
         {id:'areaM2',         label:'Área total de piso (m²)', unidade:'m²'},
@@ -154,16 +189,19 @@ const Planejamento = (() => {
       ],
     },
     paredes:{
-      label:'Paredes (Alvenaria / Acabamento)', colecao:'paredesAlvenariaPecas',
+      label:'Paredes', colecao:'paredesAlvenariaPecas',
       colecaoExtra:'paredesAcabamentoPecas',
       configDoc:'paredesArvore',
+      // Cada tipo é fisicamente diferente (alvenaria x acabamento) — mostra um
+      // card por tipo direto na tela inicial de Vínculos, em vez de agrupar tudo
+      // sob "Paredes" e obrigar a passar por uma tela extra de métrica.
+      cardsPorMetrica:true,
       metricas:[
-        {id:'areaLiquida',    label:'Área líquida total (m²)',   unidade:'m²'},
-        {id:'m2comPuro',      label:'m² com ML equiv.',          unidade:'m²'},
-        {id:'ml',             label:'Metro Linear (ML)',         unidade:'ml'},
-        {id:'vedacao',        label:'Alvenaria de Vedação (m²)', unidade:'m²'},
-        {id:'estrutural',     label:'Alvenaria Estrutural (m²)', unidade:'m²'},
-        {id:'pintura',        label:'Pintura de parede (m²)',    unidade:'m²'},
+        {id:'vedacao',        label:'Alvenaria de Vedação', unidade:'m²'},
+        {id:'estrutural',     label:'Alvenaria Estrutural', unidade:'m²'},
+        {id:'gesso',          label:'Gesso Liso',           unidade:'m²'},
+        {id:'reboco',         label:'Reboco / Chapisco',    unidade:'m²'},
+        {id:'revestimento',   label:'Revestimento Cerâmico',unidade:'m²'},
       ],
     },
     teto:{
@@ -174,7 +212,6 @@ const Planejamento = (() => {
         {id:'areaDrywall',    label:'Forro de Drywall (m²)',     unidade:'m²'},
         {id:'areaGesso',      label:'Placa de Gesso (m²)',       unidade:'m²'},
         {id:'mlTabica',       label:'Tabica (ML)',               unidade:'ml'},
-        {id:'areaPintura',    label:'Pintura de teto (m²)',      unidade:'m²'},
       ],
     },
     concreto:{
@@ -191,12 +228,13 @@ const Planejamento = (() => {
       ],
     },
     pintura:{
-      label:'Pintura (em desenvolvimento)', colecao:'pinturaAreas',
+      // Não tem coleção própria — soma a pintura das peças de Acabamento (Paredes)
+      // e das áreas de Teto marcadas com temPintura, através da árvore própria
+      // de locais da Pintura (pinturaArvore), igual carregamento especial em
+      // _carregarLevSeNecessario + _calcularMetricaPintura.
+      label:'Pintura', configDoc:'pinturaArvore',
       metricas:[
-        {id:'areaM2',         label:'Área de pintura (m²)', unidade:'m²'},
-        {id:'demao1',         label:'1ª demão (m²)',        unidade:'m²'},
-        {id:'demao2',         label:'2ª demão (m²)',        unidade:'m²'},
-        {id:'demao3',         label:'3ª demão (m²)',        unidade:'m²'},
+        {id:'areaPintura',    label:'Área pintada (m²)', unidade:'m²'},
       ],
     },
   };
@@ -438,6 +476,25 @@ const Planejamento = (() => {
     if(_levCache[modulo])return;
     const mod=LEVANTAMENTO_MODULOS[modulo];if(!mod)return;
     try{
+      if(modulo==='pintura'){
+        // Pintura não tem coleção própria — usa as peças de Acabamento (Paredes)
+        // e as áreas de Teto, filtradas via os nós paredesNodeId/tetoNodeId da
+        // própria árvore de Pintura. Precisa das 3 árvores (própria + Paredes + Teto).
+        const [cfgPintura,cfgParedes,cfgTeto,pecasParede,areasTeto]=await Promise.all([
+          Database.obter(obraId,'config','pinturaArvore').catch(()=>null),
+          Database.obter(obraId,'config','paredesArvore').catch(()=>null),
+          Database.obter(obraId,'config','tetoArvore').catch(()=>null),
+          Database.listar(obraId,'paredesAcabamentoPecas',null).catch(()=>[]),
+          Database.listar(obraId,'tetoAreas',null).catch(()=>[]),
+        ]);
+        _levCache['pintura']={
+          arvore:cfgPintura?.arvore||[],
+          arvoreParedes:cfgParedes?.arvore||[],
+          arvoreTeto:cfgTeto?.arvore||[],
+          pecasParede,areasTeto,dados:[],extra:[],
+        };
+        return;
+      }
       const [dados,extra,cfg]=await Promise.all([
         Database.listar(obraId,mod.colecao,null).catch(()=>[]),
         mod.colecaoExtra?Database.listar(obraId,mod.colecaoExtra,null).catch(()=>[]):Promise.resolve([]),
@@ -482,6 +539,12 @@ const Planejamento = (() => {
     ctx=ctx||{};
     if(modulo==='fachada'){
       return _calcularMetrica(modulo,metrica,ctx.fachadaId||null,ctx.balancimId||null,ctx.vistaId||null,null);
+    }
+    if(modulo==='pintura'){
+      // Pintura tem árvore PRÓPRIA (locais dela mesma), cujos nós apontam pra um
+      // nó de Paredes e/ou um nó de Teto (paredesNodeId/tetoNodeId) — não dá pra
+      // usar o filtro genérico por nodeId dos outros módulos.
+      return _calcularMetricaPintura(ctx.nodeId||null);
     }
     if(mod.configDoc){
       const cache=_levCache[modulo]||{arvore:[]};
@@ -537,24 +600,22 @@ const Planejamento = (() => {
       if(metrica==='mlTabica')        return areas.reduce((s,a)=>s+(Number(a.mlTabica)||0),0);
       if(metrica==='areaDrywall')     return areas.filter(a=>a.tipoDryWall&&a.tipoDryWall!=='').reduce((s,a)=>s+(Number(a.areaM2)||0),0);
       if(metrica==='areaGesso')       return areas.filter(a=>a.tipoPlacaGesso&&a.tipoPlacaGesso!=='').reduce((s,a)=>s+(Number(a.areaM2)||0),0);
-      if(metrica==='areaPintura')     return areas.filter(a=>a.temPintura===true||a.temPintura==='true').reduce((s,a)=>s+(Number(a.areaM2)||0),0);
       return 0;
     }
 
     if(modulo==='paredes'){
-      // Paredes salva campos BRUTOS (comprimento/altura em cm, vaos[], tipoAlvenaria).
-      // areaLiquida/ml NÃO são gravados — recalculamos com _calcParedeBruta/_calcAcabBruta.
+      // Paredes salva campos BRUTOS (comprimento/altura em cm, vaos[], tipoAlvenaria,
+      // acabamentos[] com tipo+pct). areaLiquida/gesso/reboco/revestimento NÃO são
+      // gravados — recalculamos com _calcParedeBruta/_calcAcabBruta.
       let alv=dados,acab=extra;
       if(nodeId){const ids=_idsDescendentes(_levCache[modulo]?.arvore||[],nodeId);alv=alv.filter(p=>ids.includes(p.nodeId));acab=acab.filter(p=>ids.includes(p.nodeId));}
       const calcsAlv=alv.map(_calcParedeBruta);
       const calcsAcab=acab.map(_calcAcabBruta);
-      const todas=[...calcsAlv,...calcsAcab];
-      if(metrica==='areaLiquida')  return todas.reduce((s,c)=>s+c.areaLiquida,0);
-      if(metrica==='ml')           return todas.reduce((s,c)=>s+c.ml,0);
-      if(metrica==='m2comPuro')    return todas.filter(c=>!c.podeML).reduce((s,c)=>s+c.areaLiquida,0);
       if(metrica==='vedacao')      return calcsAlv.filter(c=>c.tipoAlvenaria==='vedacao').reduce((s,c)=>s+c.areaLiquida,0);
       if(metrica==='estrutural')   return calcsAlv.filter(c=>c.tipoAlvenaria==='estrutural').reduce((s,c)=>s+c.areaLiquida,0);
-      if(metrica==='pintura')      return todas.reduce((s,c)=>s+c.pinturaM2,0);
+      if(metrica==='gesso')        return calcsAcab.reduce((s,c)=>s+c.gesso,0);
+      if(metrica==='reboco')       return calcsAcab.reduce((s,c)=>s+c.reboco,0);
+      if(metrica==='revestimento') return calcsAcab.reduce((s,c)=>s+c.revestimento,0);
       return 0;
     }
 
@@ -655,6 +716,7 @@ const Planejamento = (() => {
   }
 
   function onVincNavModulo(modulo){_vincNavModulo=modulo;_vincNavMetrica=null;_vincNavPath=[];_renderVinculosView();}
+  function onVincNavModuloMetrica(modulo,metrica){_vincNavModulo=modulo;_vincNavMetrica=metrica;_vincNavPath=[];_renderVinculosView();}
   function onVincNavMetrica(metrica){_vincNavMetrica=metrica;_vincNavPath=[];_renderVinculosView();}
   function onVincNavEntrar(id,nome){_vincNavPath=[..._vincNavPath,{id,nome}];_renderVinculosView();}
   function onVincNavBreadcrumb(nivel){
@@ -666,7 +728,14 @@ const Planejamento = (() => {
   }
   function onVincNavVoltar(){
     if(_vincNavPath.length){_vincNavPath=_vincNavPath.slice(0,-1);}
-    else if(_vincNavMetrica){_vincNavMetrica=null;}
+    else if(_vincNavMetrica){
+      // Módulos "cardsPorMetrica" (ex: Paredes) não têm tela de métrica própria
+      // — o card já escolhe módulo+métrica juntos, então "voltar" pula direto
+      // pra grade de módulos em vez de uma tela de métrica que não existe.
+      const mod=LEVANTAMENTO_MODULOS[_vincNavModulo];
+      _vincNavMetrica=null;
+      if(mod?.cardsPorMetrica)_vincNavModulo=null;
+    }
     else if(_vincNavModulo){_vincNavModulo=null;}
     _renderVinculosView();
   }
@@ -676,30 +745,52 @@ const Planejamento = (() => {
     c.style.cssText='display:flex;flex-direction:column;min-height:0;height:100%;overflow-y:auto;';
 
     const crumbs=[`<span class="vinc-crumb" onclick="Planejamento.onVincNavBreadcrumb(-2)">🔗 Vínculos</span>`];
-    if(_vincNavModulo){
-      const mod=LEVANTAMENTO_MODULOS[_vincNavModulo];
-      crumbs.push(`<span class="vinc-crumb ${_vincNavMetrica?'':'atual'}" onclick="Planejamento.onVincNavBreadcrumb(-1)">${mod.label}</span>`);
-    }
-    if(_vincNavMetrica){
-      const metricaLabel=LEVANTAMENTO_MODULOS[_vincNavModulo].metricas.find(m=>m.id===_vincNavMetrica)?.label||_vincNavMetrica;
-      crumbs.push(`<span class="vinc-crumb ${_vincNavPath.length?'':'atual'}" onclick="Planejamento.onVincNavBreadcrumb(-1)">${metricaLabel}</span>`);
+    const modAtualCrumb=_vincNavModulo?LEVANTAMENTO_MODULOS[_vincNavModulo]:null;
+    if(modAtualCrumb?.cardsPorMetrica&&_vincNavMetrica){
+      // Card já escolhe módulo+métrica juntos (ex: "Gesso Liso") — um crumb só.
+      const metricaLabel=modAtualCrumb.metricas.find(m=>m.id===_vincNavMetrica)?.label||_vincNavMetrica;
+      crumbs.push(`<span class="vinc-crumb ${_vincNavPath.length?'':'atual'}" onclick="Planejamento.onVincNavBreadcrumb(-2)">${metricaLabel}</span>`);
       _vincNavPath.forEach((p,i)=>{
         const ultimo=i===_vincNavPath.length-1;
         crumbs.push(`<span class="vinc-crumb ${ultimo?'atual':''}" onclick="${ultimo?'':`Planejamento.onVincNavBreadcrumb(${i})`}">${p.nome}</span>`);
       });
+    } else {
+      if(_vincNavModulo){
+        crumbs.push(`<span class="vinc-crumb ${_vincNavMetrica?'':'atual'}" onclick="Planejamento.onVincNavBreadcrumb(-1)">${modAtualCrumb.label}</span>`);
+      }
+      if(_vincNavMetrica){
+        const metricaLabel=LEVANTAMENTO_MODULOS[_vincNavModulo].metricas.find(m=>m.id===_vincNavMetrica)?.label||_vincNavMetrica;
+        crumbs.push(`<span class="vinc-crumb ${_vincNavPath.length?'':'atual'}" onclick="Planejamento.onVincNavBreadcrumb(-1)">${metricaLabel}</span>`);
+        _vincNavPath.forEach((p,i)=>{
+          const ultimo=i===_vincNavPath.length-1;
+          crumbs.push(`<span class="vinc-crumb ${ultimo?'atual':''}" onclick="${ultimo?'':`Planejamento.onVincNavBreadcrumb(${i})`}">${p.nome}</span>`);
+        });
+      }
     }
     const breadcrumbHTML=`<div class="vinc-breadcrumb">${crumbs.join('<span class="vinc-sep">›</span>')}</div>`;
 
     let corpoHTML='';
     if(!_vincNavModulo){
-      // Grade de módulos de levantamento — some sozinha se um módulo não tiver dados carregados
-      corpoHTML=`<div class="vinc-grid">
-        ${Object.entries(LEVANTAMENTO_MODULOS).map(([id,m])=>`
-          <div class="vinc-card" onclick="Planejamento.onVincNavModulo('${id}')">
-            <div class="vinc-card-titulo">${m.label}</div>
-            <div class="vinc-card-sub">${m.metricas.length} métrica(s)</div>
-          </div>`).join('')}
-      </div>`;
+      // Grade de módulos de levantamento. Módulos "cardsPorMetrica" (ex: Paredes)
+      // aparecem já abertos por tipo — Alvenaria de Vedação, Gesso Liso etc,
+      // cada um seu próprio card — em vez de um card "Paredes" genérico.
+      const cards=[];
+      Object.entries(LEVANTAMENTO_MODULOS).forEach(([id,m])=>{
+        if(m.cardsPorMetrica){
+          m.metricas.forEach(met=>cards.push(`
+            <div class="vinc-card" onclick="Planejamento.onVincNavModuloMetrica('${id}','${met.id}')">
+              <div class="vinc-card-titulo">${met.label}</div>
+              <div class="vinc-card-sub">${m.label} · ${met.unidade}</div>
+            </div>`));
+        } else {
+          cards.push(`
+            <div class="vinc-card" onclick="Planejamento.onVincNavModulo('${id}')">
+              <div class="vinc-card-titulo">${m.label}</div>
+              <div class="vinc-card-sub">${m.metricas.length} métrica(s)</div>
+            </div>`);
+        }
+      });
+      corpoHTML=`<div class="vinc-grid">${cards.join('')}</div>`;
     } else if(!_vincNavMetrica){
       const mod=LEVANTAMENTO_MODULOS[_vincNavModulo];
       corpoHTML=`<div class="vinc-grid">
@@ -734,10 +825,13 @@ const Planejamento = (() => {
       `;
     }
 
-    const tipoSeletorHTML=`<div class="plan-abas" style="width:fit-content;margin-bottom:16px;">
-      <button class="plan-aba ${_vincTipo==='geral'?'ativo':''}" onclick="Planejamento.onVincTipoChange('geral')">Geral</button>
-      <button class="plan-aba ${_vincTipo==='maoObra'?'ativo':''}" onclick="Planejamento.onVincTipoChange('maoObra')">Mão de Obra</button>
-      <button class="plan-aba ${_vincTipo==='material'?'ativo':''}" onclick="Planejamento.onVincTipoChange('material')">Materiais</button>
+    const tipoSeletorHTML=`<div style="margin-bottom:16px;">
+      <div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;color:#666;margin-bottom:6px;">Tipo de vínculo — o que este vínculo vai alimentar</div>
+      <div class="plan-abas" style="width:fit-content;">
+        <button class="plan-aba ${_vincTipo==='geral'?'ativo':''}" onclick="Planejamento.onVincTipoChange('geral')">Geral</button>
+        <button class="plan-aba ${_vincTipo==='maoObra'?'ativo':''}" onclick="Planejamento.onVincTipoChange('maoObra')">Mão de Obra</button>
+        <button class="plan-aba ${_vincTipo==='material'?'ativo':''}" onclick="Planejamento.onVincTipoChange('material')">Materiais</button>
+      </div>
     </div>`;
 
     c.innerHTML=`
@@ -934,7 +1028,13 @@ const Planejamento = (() => {
     const podeML=!!p.podeSerML;
     const ml=podeML?Math.max(comp,alt):0;
     const pinturaM2=p.temPintura?(p.pintura||[]).reduce((s,pt)=>s+areaLiquida*(Number(pt.pct||0)/100),0):0;
-    return {areaLiquida,ml,pinturaM2};
+    // Acabamento por tipo (gesso liso / reboco-chapisco / revestimento cerâmico) —
+    // peça grava um array de partes com percentual, igual à pintura por cor.
+    const acab={gesso:0,reboco:0,revestimento:0};
+    (p.acabamentos||[]).forEach(a=>{
+      if(acab[a.tipo]!=null)acab[a.tipo]+=areaLiquida*(Number(a.pct||0)/100);
+    });
+    return {areaLiquida,ml,pinturaM2,gesso:acab.gesso,reboco:acab.reboco,revestimento:acab.revestimento};
   }
 
   // Versão de _calcularMetrica que já recebe a lista de nodeIds filtrados
@@ -966,25 +1066,22 @@ const Planejamento = (() => {
       if(metrica==='mlTabica')        return areas.reduce((s,a)=>s+(Number(a.mlTabica)||0),0);
       if(metrica==='areaDrywall')     return areas.filter(a=>a.tipoDryWall&&a.tipoDryWall!=='').reduce((s,a)=>s+(Number(a.areaM2)||0),0);
       if(metrica==='areaGesso')       return areas.filter(a=>a.tipoPlacaGesso&&a.tipoPlacaGesso!=='').reduce((s,a)=>s+(Number(a.areaM2)||0),0);
-      if(metrica==='areaPintura')     return areas.filter(a=>a.temPintura===true||a.temPintura==='true').reduce((s,a)=>s+(Number(a.areaM2)||0),0);
       return 0;
     }
 
     if(modulo==='paredes'){
       // IMPORTANTE: campos brutos (comprimento/altura em cm, vaos[], tipoAlvenaria,
-      // acabamentos[], pintura[]) — areaLiquida/ml/pintura NÃO são gravados.
-      // Recalculamos localmente com _calcParedeBruta / _calcAcabBruta.
+      // acabamentos[] com tipo 'gesso'|'reboco'|'revestimento' + pct) — nada disso
+      // vem pronto do Firestore. Recalculamos localmente com _calcParedeBruta / _calcAcabBruta.
       const alv=filtrar(dados);
       const acab=filtrar(extra);
       const calcsAlv=alv.map(_calcParedeBruta);
       const calcsAcab=acab.map(_calcAcabBruta);
-      const todas=[...calcsAlv,...calcsAcab];
-      if(metrica==='areaLiquida')  return todas.reduce((s,c)=>s+c.areaLiquida,0);
-      if(metrica==='ml')           return todas.reduce((s,c)=>s+c.ml,0);
-      if(metrica==='m2comPuro')    return todas.filter(c=>!c.podeML).reduce((s,c)=>s+c.areaLiquida,0);
       if(metrica==='vedacao')      return calcsAlv.filter(c=>c.tipoAlvenaria==='vedacao').reduce((s,c)=>s+c.areaLiquida,0);
       if(metrica==='estrutural')   return calcsAlv.filter(c=>c.tipoAlvenaria==='estrutural').reduce((s,c)=>s+c.areaLiquida,0);
-      if(metrica==='pintura')      return todas.reduce((s,c)=>s+c.pinturaM2,0);
+      if(metrica==='gesso')        return calcsAcab.reduce((s,c)=>s+c.gesso,0);
+      if(metrica==='reboco')       return calcsAcab.reduce((s,c)=>s+c.reboco,0);
+      if(metrica==='revestimento') return calcsAcab.reduce((s,c)=>s+c.revestimento,0);
       return 0;
     }
 
@@ -2704,7 +2801,7 @@ const Planejamento = (() => {
     onBusca,limparBusca,_buscaKey,
     importarExcel,exportar,exportarPNG,_gerarPNG,_predPopup,_predPreview,_predSalvar,
     abrirVinculosView,fecharVinculosView,abrirVincularTarefa,abrirVincularAqui,onVincTipoChange,
-    onVincNavModulo,onVincNavMetrica,onVincNavEntrar,onVincNavBreadcrumb,onVincNavVoltar,
+    onVincNavModulo,onVincNavModuloMetrica,onVincNavMetrica,onVincNavEntrar,onVincNavBreadcrumb,onVincNavVoltar,
     onBuscaEscolhaAlvoVinc,onEscolherAlvoVinc,onTrocarAlvoVinc,
     onToggleIncluirVinc,onFatorVincChange,marcarTodosVinc,dividirIrmaosVinc,
     salvarVinculoLevantamento,removerVinculoLevantamento,recalcularVinculosLevantamento};
