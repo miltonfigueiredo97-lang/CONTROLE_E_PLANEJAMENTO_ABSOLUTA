@@ -420,6 +420,35 @@
 }
 
 /* ============================================
+   VÍNCULOS COM LEVANTAMENTO — navegação em pastas
+   (vive dentro do Planejamento, que é escuro — segue a mesma
+   paleta do Gantt: #0d0d0d/#111/#1a1a1a, texto #ccc/#888, acento amarelo)
+   ============================================ */
+.vinc-breadcrumb { display:flex; flex-wrap:wrap; align-items:center; gap:6px; font-size:0.85rem; margin-bottom:16px; }
+.vinc-crumb { cursor:pointer; color:#888; transition:color .15s; }
+.vinc-crumb:hover { color:var(--cor-primaria); }
+.vinc-crumb.atual { color:#fff; font-weight:700; cursor:default; }
+.vinc-sep { color:#444; }
+
+.vinc-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:12px; }
+
+.vinc-card { background:#111; border:1px solid #222; border-radius:10px; padding:16px 18px; cursor:pointer; transition:all .15s; }
+.vinc-card:hover { border-color:var(--cor-primaria); background:#161616; transform:translateY(-1px); }
+.vinc-card-titulo { font-weight:700; font-size:0.92rem; color:#fff; }
+.vinc-card-sub { font-size:0.75rem; color:#777; margin-top:4px; }
+
+.vinc-pasta { display:flex; align-items:center; gap:10px; }
+.vinc-pasta-icone { color:var(--cor-primaria); font-size:1rem; flex-shrink:0; }
+.vinc-pasta-nome { flex:1; font-size:0.85rem; color:#ddd; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.vinc-pasta-seta { color:#555; flex-shrink:0; }
+
+.vinc-resumo { background:#0d0d0d; border:1px solid var(--cor-primaria); border-radius:10px; padding:18px 22px; margin-bottom:16px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px; }
+.vinc-resumo-valor { font-size:1.6rem; font-weight:800; font-family:var(--font-mono); color:#fff; }
+.vinc-resumo-status { font-size:0.78rem; color:#777; margin-top:4px; }
+.vinc-resumo-status.tem-vinculo { color:var(--cor-primaria); font-weight:600; }
+.vinc-vazio { font-size:0.85rem; color:#666; padding:16px 4px; }
+
+/* ============================================
    MÓDULO: CONCRETO (Levantamento + Controle)
    ============================================ */
 

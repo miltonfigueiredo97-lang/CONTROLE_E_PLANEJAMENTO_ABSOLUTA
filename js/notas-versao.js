@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.37.0',
+  versaoAtual: 'V2.38.0',
 
   versoes: [
     {
@@ -3773,7 +3773,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.37.0',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-16',
       tipo: 'funcionalidade',
       titulo: 'Tarefas: projeto, categoria, dependência, importância e busca',
@@ -3800,6 +3800,42 @@ const NotasVersao = {
         'Menu lateral: removido o item "Tarefas" de todas as páginas —',
         '  o acesso agora é só por link direto (todo.html), sem aparecer',
         '  pra outros usuários do sistema.',
+      ]
+    },
+    {
+      versao: 'V2.38.0',
+      status: 'aberta',
+      data: '2026-07-16',
+      tipo: 'correcao',
+      titulo: 'Vínculos: corrige duplicação no "Dividir", estética escura, e vínculo separado para Mão de Obra x Materiais',
+      itens: [
+        'BUG CORRIGIDO — "Dividir em partes iguais" duplicava valor:',
+        '  a tarefa "pai" ficava marcada com fração cheia (1) AO MESMO TEMPO',
+        '  que os filhos dividiam o mesmo valor entre si — dobrando o custo',
+        '  de Mão de Obra/Material pra quem já tinha usado "Dividir" antes.',
+        '  Agora, ao dividir, o pai (e qualquer neto marcado por engano) sai',
+        '  da seleção — só os filhos diretos ficam valendo o total.',
+        '  Vínculos JÁ SALVOS com esse problema precisam ser reabertos e',
+        '  salvos de novo (ou clicar em "Dividir" outra vez) pra corrigir.',
+        '',
+        'Tela de navegação em pastas (Módulo → Métrica → Local) redesenhada',
+        '  com a mesma paleta escura do Gantt (fundo #0d0d0d/#111, texto',
+        '  claro, acento amarelo) — antes usava cards brancos que destoavam',
+        '  do resto do Planejamento.',
+        '',
+        'NOVO — vínculo separado por Mão de Obra e Materiais:',
+        '  uma mesma tarefa pode precisar de uma quantidade pra calcular',
+        '  Mão de Obra e outra quantidade (de outro local/métrica do',
+        '  levantamento) pra calcular Materiais. Adicionado seletor',
+        '  Geral / Mão de Obra / Materiais no topo da tela de Vínculos —',
+        '  cada um grava em campos próprios na tarefa (quantidadeMaoObra/',
+        '  quantidadeMaterial, com todos os campos de rastreio do',
+        '  levantamento espelhados). "Geral" continua sendo os campos',
+        '  originais (compatível com tudo que já existia). Materiais e',
+        '  Mão de Obra agora usam sua quantidade específica quando ela',
+        '  existe, e caem para a quantidade Geral quando não existe —',
+        '  nenhum vínculo antigo quebra.',
+        '  "Recalcular todos os vínculos" agora recalcula os 3 tipos.',
       ]
     }
   ],

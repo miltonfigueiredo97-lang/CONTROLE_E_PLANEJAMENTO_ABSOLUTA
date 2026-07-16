@@ -121,6 +121,11 @@ const Planejamento = (() => {
   // Navegação em pastas da tela principal de Vínculos: Módulo > Métrica > Local > Local...
   // _vincNavPath é uma lista de {id,nome} — o último item é onde o usuário está agora.
   let _vincNavModulo=null, _vincNavMetrica=null, _vincNavPath=[];
+  // Tipo de vínculo: mesma tarefa pode precisar de quantidades DIFERENTES pra Mão
+  // de Obra e pra Materiais (ex: Chapisco pode ser pago por m² aplicado na mão de
+  // obra mas o material calculado por outro critério). 'geral' = campos antigos
+  // (quantidade/unidade/levantamento*), compatível com tudo que já existia.
+  let _vincTipo='geral'; // 'geral' | 'maoObra' | 'material'
   let _vincEscolhaBusca=''; // filtro ao escolher a tarefa "pai" dentro do modal
   let _vincIncluidos=new Set(); // ids marcados p/ incluir no vínculo (dentro do modal)
   let _vincFatores={}; // id -> fração em texto ("1", "1/8", "0.5"...)
@@ -418,7 +423,7 @@ const Planejamento = (() => {
 
   // ===================== VÍNCULOS COM LEVANTAMENTO — TELA =====================
   async function abrirVinculosView(){
-    modoView='vinculos';_vincNavModulo=null;_vincNavMetrica=null;_vincNavPath=[];_render();
+    modoView='vinculos';_vincNavModulo=null;_vincNavMetrica=null;_vincNavPath=[];_vincTipo='geral';_render();
     // Recarrega TODOS os levantamentos do zero (não usa cache velho) em background,
     // pra tela mostrar quantidade/local sempre atualizados ao entrar.
     await _invalidarLevCache();
@@ -488,6 +493,14 @@ const Planejamento = (() => {
   function _unidadeDaMetrica(modulo,metrica){
     return LEVANTAMENTO_MODULOS[modulo]?.metricas.find(m=>m.id===metrica)?.unidade||'';
   }
+
+  // ---- Nomes de campo na tarefa, por tipo de vínculo ----
+  // 'geral' usa os campos originais (quantidade, unidade, fonteQuantidade...) —
+  // 100% compatível com todos os vínculos que já existiam antes desta função
+  // existir. 'maoObra'/'material' usam campos NOVOS e independentes, pra uma
+  // mesma tarefa poder ter uma quantidade pra Mão de Obra e outra pra Materiais.
+  function _sufTipo(tipo){return tipo==='maoObra'?'MaoObra':tipo==='material'?'Material':'';}
+  function _campo(base,tipo){return base+_sufTipo(tipo);}
 
   // Função principal: calcula a métrica solicitada a partir dos dados brutos do levantamento.
   // fachadaId/balancimId/vistaId filtram hierarquia da Fachada.
@@ -598,16 +611,20 @@ const Planejamento = (() => {
 
   // Acha um grupo de tarefas já vinculado exatamente a esta fonte (módulo+métrica+local),
   // pra "Vincular aqui" abrir editando o que já existe em vez de criar duplicado.
-  function _grupoExistente(modulo,metrica,ctx){
-    return tarefas.find(t=>t.fonteQuantidade==='levantamento'&&t.levantamentoModulo===modulo&&t.levantamentoMetrica===metrica&&(
+  function _grupoExistente(modulo,metrica,ctx,tipo){
+    const cFonte=_campo('fonteQuantidade',tipo),cMod=_campo('levantamentoModulo',tipo),cMet=_campo('levantamentoMetrica',tipo);
+    const cFach=_campo('levantamentoFachadaId',tipo),cBal=_campo('levantamentoBalancimId',tipo),cVis=_campo('levantamentoVistaId',tipo),cNode=_campo('levantamentoNodeId',tipo);
+    return tarefas.find(t=>t[cFonte]==='levantamento'&&t[cMod]===modulo&&t[cMet]===metrica&&(
       modulo==='fachada'
-        ?(t.levantamentoFachadaId||'')===(ctx.fachadaId||'')&&(t.levantamentoBalancimId||'')===(ctx.balancimId||'')&&(t.levantamentoVistaId||'')===(ctx.vistaId||'')
-        :(t.levantamentoNodeId||'')===(ctx.nodeId||'')
+        ?(t[cFach]||'')===(ctx.fachadaId||'')&&(t[cBal]||'')===(ctx.balancimId||'')&&(t[cVis]||'')===(ctx.vistaId||'')
+        :(t[cNode]||'')===(ctx.nodeId||'')
     ));
   }
-  function _qtdTarefasNoGrupo(origemId){
-    return tarefas.filter(t=>t.id===origemId||t.levantamentoOrigemId===origemId).length;
+  function _qtdTarefasNoGrupo(origemId,tipo){
+    const cOrigem=_campo('levantamentoOrigemId',tipo);
+    return tarefas.filter(t=>t.id===origemId||t[cOrigem]===origemId).length;
   }
+  function onVincTipoChange(tipo){_vincTipo=tipo;_renderVinculosView();}
 
   // Filhos (pastas) do nível atual de navegação — Fachada usa fachada/balancim/vista,
   // Piso/Teto/Paredes usam a árvore real (Torre › Pavimento › Apto › Cômodo).
@@ -658,38 +675,38 @@ const Planejamento = (() => {
     const c=_el();
     c.style.cssText='display:flex;flex-direction:column;min-height:0;height:100%;overflow-y:auto;';
 
-    const crumbs=[`<span style="cursor:pointer;color:var(--cor-primaria-dark);" onclick="Planejamento.onVincNavBreadcrumb(-2)">🔗 Vínculos</span>`];
+    const crumbs=[`<span class="vinc-crumb" onclick="Planejamento.onVincNavBreadcrumb(-2)">🔗 Vínculos</span>`];
     if(_vincNavModulo){
       const mod=LEVANTAMENTO_MODULOS[_vincNavModulo];
-      crumbs.push(`<span style="cursor:pointer;color:${_vincNavMetrica?'var(--cor-primaria-dark)':'inherit'};" onclick="Planejamento.onVincNavBreadcrumb(-1)">${mod.label}</span>`);
+      crumbs.push(`<span class="vinc-crumb ${_vincNavMetrica?'':'atual'}" onclick="Planejamento.onVincNavBreadcrumb(-1)">${mod.label}</span>`);
     }
     if(_vincNavMetrica){
       const metricaLabel=LEVANTAMENTO_MODULOS[_vincNavModulo].metricas.find(m=>m.id===_vincNavMetrica)?.label||_vincNavMetrica;
-      crumbs.push(`<span style="cursor:pointer;color:${_vincNavPath.length?'var(--cor-primaria-dark)':'inherit'};" onclick="Planejamento.onVincNavBreadcrumb(-1)">${metricaLabel}</span>`);
+      crumbs.push(`<span class="vinc-crumb ${_vincNavPath.length?'':'atual'}" onclick="Planejamento.onVincNavBreadcrumb(-1)">${metricaLabel}</span>`);
       _vincNavPath.forEach((p,i)=>{
         const ultimo=i===_vincNavPath.length-1;
-        crumbs.push(`<span style="cursor:${ultimo?'default':'pointer'};color:${ultimo?'inherit':'var(--cor-primaria-dark)'};" onclick="${ultimo?'':`Planejamento.onVincNavBreadcrumb(${i})`}">${p.nome}</span>`);
+        crumbs.push(`<span class="vinc-crumb ${ultimo?'atual':''}" onclick="${ultimo?'':`Planejamento.onVincNavBreadcrumb(${i})`}">${p.nome}</span>`);
       });
     }
-    const breadcrumbHTML=`<div style="display:flex;flex-wrap:wrap;gap:4px;font-size:.85rem;margin-bottom:14px;">${crumbs.join('<span style="color:#bbb;">›</span>')}</div>`;
+    const breadcrumbHTML=`<div class="vinc-breadcrumb">${crumbs.join('<span class="vinc-sep">›</span>')}</div>`;
 
     let corpoHTML='';
     if(!_vincNavModulo){
       // Grade de módulos de levantamento — some sozinha se um módulo não tiver dados carregados
-      corpoHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px;">
+      corpoHTML=`<div class="vinc-grid">
         ${Object.entries(LEVANTAMENTO_MODULOS).map(([id,m])=>`
-          <div style="background:#fff;border:1px solid var(--cor-borda-light);border-radius:10px;padding:16px;cursor:pointer;" onclick="Planejamento.onVincNavModulo('${id}')">
-            <div style="font-weight:700;font-size:.9rem;">${m.label}</div>
-            <div style="font-size:.75rem;color:#888;margin-top:4px;">${m.metricas.length} métrica(s)</div>
+          <div class="vinc-card" onclick="Planejamento.onVincNavModulo('${id}')">
+            <div class="vinc-card-titulo">${m.label}</div>
+            <div class="vinc-card-sub">${m.metricas.length} métrica(s)</div>
           </div>`).join('')}
       </div>`;
     } else if(!_vincNavMetrica){
       const mod=LEVANTAMENTO_MODULOS[_vincNavModulo];
-      corpoHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;">
+      corpoHTML=`<div class="vinc-grid">
         ${mod.metricas.map(m=>`
-          <div style="background:#fff;border:1px solid var(--cor-borda-light);border-radius:10px;padding:16px;cursor:pointer;" onclick="Planejamento.onVincNavMetrica('${m.id}')">
-            <div style="font-weight:700;font-size:.9rem;">${m.label}</div>
-            <div style="font-size:.75rem;color:#888;margin-top:4px;">unidade: ${m.unidade}</div>
+          <div class="vinc-card" onclick="Planejamento.onVincNavMetrica('${m.id}')">
+            <div class="vinc-card-titulo">${m.label}</div>
+            <div class="vinc-card-sub">unidade: ${m.unidade}</div>
           </div>`).join('')}
       </div>`;
     } else {
@@ -697,24 +714,31 @@ const Planejamento = (() => {
       const ctx=_vincNavCtx();
       const valor=_calcularBaseValor(modulo,metrica,ctx);
       const unidade=_unidadeDaMetrica(modulo,metrica);
-      const existente=_grupoExistente(modulo,metrica,modulo==='fachada'?ctx:{nodeId:ctx.nodeId});
+      const existente=_grupoExistente(modulo,metrica,modulo==='fachada'?ctx:{nodeId:ctx.nodeId},_vincTipo);
       const filhos=_vincNavFilhos();
       corpoHTML=`
-        <div style="background:#fff;border:1px solid var(--cor-borda-light);border-radius:10px;padding:18px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+        <div class="vinc-resumo">
           <div>
-            <div style="font-size:1.4rem;font-weight:800;font-family:var(--font-mono);">${_fQtd(valor)} ${unidade}</div>
-            <div style="font-size:.78rem;color:#888;margin-top:2px;">${existente?`🔗 já vinculado a ${_qtdTarefasNoGrupo(existente.levantamentoOrigemId||existente.id)} tarefa(s)`:'ainda sem vínculo'}</div>
+            <div class="vinc-resumo-valor">${_fQtd(valor)} ${unidade}</div>
+            <div class="vinc-resumo-status ${existente?'tem-vinculo':''}">${existente?`🔗 já vinculado a ${_qtdTarefasNoGrupo(existente[_campo('levantamentoOrigemId',_vincTipo)]||existente.id,_vincTipo)} tarefa(s)`:'ainda sem vínculo'}</div>
           </div>
           <button class="btn ${existente?'btn-secundario':'btn-primario'} btn-sm" onclick="Planejamento.abrirVincularAqui()">${existente?'✎ Editar vínculo':'🔗 Vincular aqui'}</button>
         </div>
-        ${filhos.length?`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px;">
-          ${filhos.map(f=>`<div style="background:#fff;border:1px solid var(--cor-borda-light);border-radius:10px;padding:14px;cursor:pointer;display:flex;align-items:center;gap:8px;" onclick="Planejamento.onVincNavEntrar('${f.id}','${f.nome.replace(/'/g,"\\'")}')">
-            <span style="font-size:.88rem;flex:1;">📁 ${f.nome}</span>
-            ${f.temFilhos?'<span style="color:#bbb;">›</span>':''}
+        ${filhos.length?`<div class="vinc-grid">
+          ${filhos.map(f=>`<div class="vinc-card vinc-pasta" onclick="Planejamento.onVincNavEntrar('${f.id}','${f.nome.replace(/'/g,"\\'")}')">
+            <span class="vinc-pasta-icone">📁</span>
+            <span class="vinc-pasta-nome">${f.nome}</span>
+            ${f.temFilhos?'<span class="vinc-pasta-seta">›</span>':''}
           </div>`).join('')}
-        </div>`:(mod.configDoc?'<div class="text-sm text-muted">Nenhum local mais específico aqui — este é o nível final.</div>':'')}
+        </div>`:(mod.configDoc?'<div class="vinc-vazio">Nenhum local mais específico aqui — este é o nível final.</div>':'')}
       `;
     }
+
+    const tipoSeletorHTML=`<div class="plan-abas" style="width:fit-content;margin-bottom:16px;">
+      <button class="plan-aba ${_vincTipo==='geral'?'ativo':''}" onclick="Planejamento.onVincTipoChange('geral')">Geral</button>
+      <button class="plan-aba ${_vincTipo==='maoObra'?'ativo':''}" onclick="Planejamento.onVincTipoChange('maoObra')">Mão de Obra</button>
+      <button class="plan-aba ${_vincTipo==='material'?'ativo':''}" onclick="Planejamento.onVincTipoChange('material')">Materiais</button>
+    </div>`;
 
     c.innerHTML=`
       <div class="page-header">
@@ -725,6 +749,7 @@ const Planejamento = (() => {
           <button class="btn btn-secundario btn-sm" onclick="Planejamento.fecharVinculosView()">← Voltar ao Planejamento</button>
         </div>
       </div>
+      ${tipoSeletorHTML}
       ${breadcrumbHTML}
       ${_vincNavModulo?`<button class="btn btn-secundario btn-sm" style="margin-bottom:14px;width:fit-content;" onclick="Planejamento.onVincNavVoltar()">← Voltar</button>`:''}
       ${corpoHTML}`;
@@ -744,31 +769,37 @@ const Planejamento = (() => {
   async function abrirVincularAqui(){
     const modulo=_vincNavModulo,metrica=_vincNavMetrica;
     const ctx=_vincNavCtx();
-    const existente=_grupoExistente(modulo,metrica,ctx);
-    if(existente){await abrirVincularTarefa(existente.levantamentoOrigemId||existente.id);return;}
+    const existente=_grupoExistente(modulo,metrica,ctx,_vincTipo);
+    if(existente){await abrirVincularTarefa(existente[_campo('levantamentoOrigemId',_vincTipo)]||existente.id,_vincTipo);return;}
     _vincModulo=modulo;_vincMetrica=metrica;
     _vincFachadaId=ctx.fachadaId||null;_vincBalancimId=ctx.balancimId||null;_vincVistaId=ctx.vistaId||null;
     _vincNodeId=ctx.nodeId||null;
     _vincAlvoId=null;_vincEscolhaBusca='';
-    document.getElementById('modal-planej-vinculo-titulo').textContent='Vincular: '+LEVANTAMENTO_MODULOS[modulo].label;
+    const tipoLabel=_vincTipo==='maoObra'?' (Mão de Obra)':_vincTipo==='material'?' (Materiais)':'';
+    document.getElementById('modal-planej-vinculo-titulo').textContent='Vincular: '+LEVANTAMENTO_MODULOS[modulo].label+tipoLabel;
     Utils.abrirModal('modal-planej-vinculo');
     _renderVinculoModalBody();
   }
 
   // Abre editando um vínculo já existente (a partir do id de qualquer tarefa do grupo).
-  async function abrirVincularTarefa(tarefaId){
+  // tipo: 'geral'|'maoObra'|'material' — se omitido, usa o _vincTipo ativo no momento.
+  async function abrirVincularTarefa(tarefaId,tipo){
     const t=tarefas.find(x=>x.id===tarefaId);if(!t)return;
+    _vincTipo=tipo||_vincTipo;
+    const cMod=_campo('levantamentoModulo',_vincTipo),cMet=_campo('levantamentoMetrica',_vincTipo);
+    const cFach=_campo('levantamentoFachadaId',_vincTipo),cBal=_campo('levantamentoBalancimId',_vincTipo),cVis=_campo('levantamentoVistaId',_vincTipo),cNode=_campo('levantamentoNodeId',_vincTipo);
+    const cOrigem=_campo('levantamentoOrigemId',_vincTipo),cFator=_campo('levantamentoFator',_vincTipo);
     _vincAlvoId=tarefaId;
-    _vincModulo=t.levantamentoModulo||'fachada';
-    _vincMetrica=t.levantamentoMetrica||LEVANTAMENTO_MODULOS[_vincModulo].metricas[0].id;
-    _vincFachadaId=t.levantamentoFachadaId||null;
-    _vincBalancimId=t.levantamentoBalancimId||null;
-    _vincVistaId=t.levantamentoVistaId||null;
-    _vincNodeId=t.levantamentoNodeId||null;
-    const grupoAtual=tarefas.filter(x=>x.levantamentoOrigemId===tarefaId);
+    _vincModulo=t[cMod]||'fachada';
+    _vincMetrica=t[cMet]||LEVANTAMENTO_MODULOS[_vincModulo].metricas[0].id;
+    _vincFachadaId=t[cFach]||null;
+    _vincBalancimId=t[cBal]||null;
+    _vincVistaId=t[cVis]||null;
+    _vincNodeId=t[cNode]||null;
+    const grupoAtual=tarefas.filter(x=>x[cOrigem]===tarefaId);
     _vincIncluidos=new Set(grupoAtual.length?grupoAtual.map(x=>x.id):[tarefaId]);
     _vincFatores={};
-    grupoAtual.forEach(x=>{_vincFatores[x.id]=_fracaoDeFator(x.levantamentoFator);});
+    grupoAtual.forEach(x=>{_vincFatores[x.id]=_fracaoDeFator(x[cFator]);});
     if(!_vincFatores[tarefaId])_vincFatores[tarefaId]='1';
     document.getElementById('modal-planej-vinculo-titulo').textContent='Vincular quantidade: '+t.nome;
     Utils.abrirModal('modal-planej-vinculo');
@@ -854,7 +885,7 @@ const Planejamento = (() => {
         <span>Tarefa "pai": <strong>${t.nome}</strong></span>
         <span style="display:flex;gap:6px;">
           <button class="btn btn-secundario btn-sm" style="padding:1px 8px;font-size:.68rem;" onclick="Planejamento.onTrocarAlvoVinc()">trocar</button>
-          ${tarefas.some(x=>x.levantamentoOrigemId===_vincAlvoId||x.id===_vincAlvoId&&x.fonteQuantidade==='levantamento')?`<button class="btn btn-perigo btn-sm" style="padding:1px 8px;font-size:.68rem;" onclick="Planejamento.removerVinculoLevantamento('${_vincAlvoId}')">excluir vínculo</button>`:''}
+          ${tarefas.some(x=>x[_campo('levantamentoOrigemId',_vincTipo)]===_vincAlvoId||(x.id===_vincAlvoId&&x[_campo('fonteQuantidade',_vincTipo)]==='levantamento'))?`<button class="btn btn-perigo btn-sm" style="padding:1px 8px;font-size:.68rem;" onclick="Planejamento.removerVinculoLevantamento('${_vincAlvoId}','${_vincTipo}')">excluir vínculo</button>`:''}
         </span>
       </div>
       <div style="display:flex;gap:6px;margin-bottom:8px;">
@@ -981,6 +1012,12 @@ const Planejamento = (() => {
     const parent=tarefas.find(x=>x.id===parentId);if(!parent)return;
     const filhos=fam.filhosDiretos(parent);
     if(filhos.length<2)return;
+    // BUG corrigido: o pai ficava marcado com fração "1" (valor cheio) AO MESMO
+    // TEMPO que os filhos dividiam o mesmo valor entre si — dobrava o custo em
+    // Mão de Obra/Materiais. Ao dividir, o pai (e qualquer neto que já estivesse
+    // marcado por engano) sai da seleção; só os filhos diretos ficam valendo.
+    _vincIncluidos.delete(parentId);
+    fam.descendentes(parent).forEach(d=>_vincIncluidos.delete(d.id));
     filhos.forEach(f=>{_vincIncluidos.add(f.id);_vincFatores[f.id]='1/'+filhos.length;});
     _renderVinculoModalBody();
   }
@@ -997,24 +1034,28 @@ const Planejamento = (() => {
       const ctx={fachadaId:_vincFachadaId,balancimId:_vincBalancimId,vistaId:_vincVistaId,nodeId:_vincNodeId};
       const baseValorReal=_calcularBaseValor(_vincModulo,_vincMetrica,ctx);
       const unidade=_unidadeDaMetrica(_vincModulo,_vincMetrica);
+      const cFonte=_campo('fonteQuantidade',_vincTipo),cMod=_campo('levantamentoModulo',_vincTipo),cMet=_campo('levantamentoMetrica',_vincTipo);
+      const cFach=_campo('levantamentoFachadaId',_vincTipo),cBal=_campo('levantamentoBalancimId',_vincTipo),cVis=_campo('levantamentoVistaId',_vincTipo);
+      const cNode=_campo('levantamentoNodeId',_vincTipo),cFator=_campo('levantamentoFator',_vincTipo),cOrigem=_campo('levantamentoOrigemId',_vincTipo);
+      const cQtd=_campo('quantidade',_vincTipo),cUnid=_campo('unidade',_vincTipo);
 
-      // Desfaz vínculos deste mesmo grupo que ficaram desmarcados agora
+      // Desfaz vínculos deste mesmo grupo (mesmo tipo) que ficaram desmarcados agora
       // (edição declarativa: o que está marcado AGORA é o que vale).
-      const antigos=tarefas.filter(x=>x.levantamentoOrigemId===_vincAlvoId);
+      const antigos=tarefas.filter(x=>x[cOrigem]===_vincAlvoId);
       for(const antigo of antigos){
         if(!_vincIncluidos.has(antigo.id)){
-          await Database.atualizar(obraId,COL,antigo.id,{fonteQuantidade:'manual',levantamentoOrigemId:''});
-          antigo.fonteQuantidade='manual';antigo.levantamentoOrigemId='';
+          await Database.atualizar(obraId,COL,antigo.id,{[cFonte]:'manual',[cOrigem]:''});
+          antigo[cFonte]='manual';antigo[cOrigem]='';
         }
       }
       // Grava os marcados
       for(const id of _vincIncluidos){
         const alvo=tarefas.find(x=>x.id===id);if(!alvo)continue;
         const fator=_parseFracao(_vincFatores[id]||'1');
-        const data={fonteQuantidade:'levantamento',levantamentoModulo:_vincModulo,levantamentoMetrica:_vincMetrica,
-          levantamentoFachadaId:_vincFachadaId||'',levantamentoBalancimId:_vincBalancimId||'',levantamentoVistaId:_vincVistaId||'',
-          levantamentoNodeId:_vincNodeId||'',
-          levantamentoFator:fator,levantamentoOrigemId:_vincAlvoId,quantidade:baseValorReal*fator,unidade};
+        const data={[cFonte]:'levantamento',[cMod]:_vincModulo,[cMet]:_vincMetrica,
+          [cFach]:_vincFachadaId||'',[cBal]:_vincBalancimId||'',[cVis]:_vincVistaId||'',
+          [cNode]:_vincNodeId||'',
+          [cFator]:fator,[cOrigem]:_vincAlvoId,[cQtd]:baseValorReal*fator,[cUnid]:unidade};
         await Database.atualizar(obraId,COL,id,data);
         Object.assign(alvo,data);
       }
@@ -1027,14 +1068,16 @@ const Planejamento = (() => {
   }
 
   // Remover: cascateia para TODOS os descendentes reais (hierarquia do
-  // Planejamento) que também estejam vinculados a levantamento — não faz
-  // sentido o pai voltar a manual e os filhos ficarem com o valor antigo.
+  // Planejamento) que também estejam vinculados a levantamento NESSE MESMO TIPO
+  // — não faz sentido o pai voltar a manual e os filhos ficarem com o valor antigo.
   // Baseado na árvore de tarefas (não depende de nenhum campo de rastreio),
   // então funciona tanto pra vínculos novos quanto pra vínculos antigos.
-  async function removerVinculoLevantamento(tarefaId){
+  async function removerVinculoLevantamento(tarefaId,tipo){
+    tipo=tipo||_vincTipo;
+    const cFonte=_campo('fonteQuantidade',tipo),cOrigem=_campo('levantamentoOrigemId',tipo);
     const t=tarefas.find(x=>x.id===tarefaId);if(!t)return;
     const fam=Utils.percFamilia(tarefas);
-    const descVinculados=fam.descendentes(t).filter(d=>d.fonteQuantidade==='levantamento');
+    const descVinculados=fam.descendentes(t).filter(d=>d[cFonte]==='levantamento');
     const grupo=[t,...descVinculados];
     const msg=grupo.length>1
       ?`Remover o vínculo de "${t.nome}" e das outras ${grupo.length-1} tarefa(s) vinculada(s) abaixo dela (filhos/netos)?`
@@ -1042,8 +1085,8 @@ const Planejamento = (() => {
     if(!Utils.confirmar(msg))return;
     try{
       for(const g of grupo){
-        await Database.atualizar(obraId,COL,g.id,{fonteQuantidade:'manual',levantamentoOrigemId:''});
-        g.fonteQuantidade='manual';g.levantamentoOrigemId='';
+        await Database.atualizar(obraId,COL,g.id,{[cFonte]:'manual',[cOrigem]:''});
+        g[cFonte]='manual';g[cOrigem]='';
       }
       Utils.toast(`${grupo.length} vínculo(s) removido(s).`,'sucesso');
       Utils.fecharModal('modal-planej-vinculo');
@@ -1053,8 +1096,7 @@ const Planejamento = (() => {
   }
 
   async function recalcularVinculosLevantamento(){
-    const alvo=tarefas.filter(t=>t.fonteQuantidade==='levantamento');
-    if(!alvo.length){Utils.toast('Nenhuma tarefa vinculada a levantamento.','alerta');return;}
+    let totalRecalculado=0;
     try{
       Utils.mostrarLoading('Recalculando...');
       // BUG CRÍTICO corrigido: recalculava chamando _calcularMetrica sem passar o
@@ -1063,16 +1105,27 @@ const Planejamento = (() => {
       // engano, substituindo um valor certo por um errado. Também só recarregava
       // a Fachada; Piso/Teto/Paredes/Concreto/Ar continuavam com dado velho.
       await _invalidarLevCache(); // recarrega TODOS os módulos do zero
-      for(const t of alvo){
-        const ctx={fachadaId:t.levantamentoFachadaId,balancimId:t.levantamentoBalancimId,vistaId:t.levantamentoVistaId,nodeId:t.levantamentoNodeId};
-        const base=_calcularBaseValor(t.levantamentoModulo,t.levantamentoMetrica,ctx);
-        const fator=t.levantamentoFator!=null?t.levantamentoFator:1;
-        const valor=base*fator;
-        const unidade=_unidadeDaMetrica(t.levantamentoModulo,t.levantamentoMetrica);
-        await Database.atualizar(obraId,COL,t.id,{quantidade:valor,unidade});
-        t.quantidade=valor;t.unidade=unidade;
+      // Recalcula os 3 tipos de vínculo (Geral, Mão de Obra, Materiais) — cada
+      // um pode ter uma fonte diferente pra mesma tarefa.
+      for(const tipo of ['geral','maoObra','material']){
+        const cFonte=_campo('fonteQuantidade',tipo),cMod=_campo('levantamentoModulo',tipo),cMet=_campo('levantamentoMetrica',tipo);
+        const cFach=_campo('levantamentoFachadaId',tipo),cBal=_campo('levantamentoBalancimId',tipo),cVis=_campo('levantamentoVistaId',tipo);
+        const cNode=_campo('levantamentoNodeId',tipo),cFator=_campo('levantamentoFator',tipo);
+        const cQtd=_campo('quantidade',tipo),cUnid=_campo('unidade',tipo);
+        const alvo=tarefas.filter(t=>t[cFonte]==='levantamento');
+        for(const t of alvo){
+          const ctx={fachadaId:t[cFach],balancimId:t[cBal],vistaId:t[cVis],nodeId:t[cNode]};
+          const base=_calcularBaseValor(t[cMod],t[cMet],ctx);
+          const fator=t[cFator]!=null?t[cFator]:1;
+          const valor=base*fator;
+          const unidade=_unidadeDaMetrica(t[cMod],t[cMet]);
+          await Database.atualizar(obraId,COL,t.id,{[cQtd]:valor,[cUnid]:unidade});
+          t[cQtd]=valor;t[cUnid]=unidade;
+        }
+        totalRecalculado+=alvo.length;
       }
-      Utils.toast(`${alvo.length} vínculo(s) recalculado(s)!`,'sucesso');
+      if(!totalRecalculado){Utils.toast('Nenhuma tarefa vinculada a levantamento.','alerta');return;}
+      Utils.toast(`${totalRecalculado} vínculo(s) recalculado(s)!`,'sucesso');
       if(modoView==='vinculos')_renderVinculosView();
     }catch(e){console.error(e);Utils.toast('Erro ao recalcular.','erro');}
     finally{Utils.esconderLoading();}
@@ -2650,7 +2703,7 @@ const Planejamento = (() => {
     toggleStatusFiltro,_aplicarStatusFiltro,undo,
     onBusca,limparBusca,_buscaKey,
     importarExcel,exportar,exportarPNG,_gerarPNG,_predPopup,_predPreview,_predSalvar,
-    abrirVinculosView,fecharVinculosView,abrirVincularTarefa,abrirVincularAqui,
+    abrirVinculosView,fecharVinculosView,abrirVincularTarefa,abrirVincularAqui,onVincTipoChange,
     onVincNavModulo,onVincNavMetrica,onVincNavEntrar,onVincNavBreadcrumb,onVincNavVoltar,
     onBuscaEscolhaAlvoVinc,onEscolherAlvoVinc,onTrocarAlvoVinc,
     onToggleIncluirVinc,onFatorVincChange,marcarTodosVinc,dividirIrmaosVinc,

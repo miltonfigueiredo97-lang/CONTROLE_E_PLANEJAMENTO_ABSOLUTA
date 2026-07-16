@@ -153,7 +153,7 @@ const MaoDeObra = (() => {
     if(!id)return null;
     const t=tarefas.find(x=>x.id===id);
     if(!t)return null;
-    return {id,label:t.nome||'',quantidade:t.quantidade||0,unidade:t.unidade||'un',tipo:t.tipo||'tarefa'};
+    return {id,label:t.nome||'',quantidade:t.quantidadeMaoObra!=null?t.quantidadeMaoObra:(t.quantidade||0),unidade:t.unidadeMaoObra||t.unidade||'un',tipo:t.tipo||'tarefa'};
   }
 
   // Um vínculo pode estar ligado a mais de uma tarefa (tarefaIds). Docs
