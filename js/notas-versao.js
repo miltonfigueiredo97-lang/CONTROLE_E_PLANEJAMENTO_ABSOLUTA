@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.38.0',
+  versaoAtual: 'V2.38.1',
 
   versoes: [
     {
@@ -3804,7 +3804,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.38.0',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-16',
       tipo: 'correcao',
       titulo: 'Vínculos: corrige duplicação no "Dividir", estética escura, e vínculo separado para Mão de Obra x Materiais',
@@ -3836,6 +3836,20 @@ const NotasVersao = {
         '  existe, e caem para a quantidade Geral quando não existe —',
         '  nenhum vínculo antigo quebra.',
         '  "Recalcular todos os vínculos" agora recalcula os 3 tipos.',
+      ]
+    },
+    {
+      versao: 'V2.38.1',
+      status: 'aberta',
+      data: '2026-07-16',
+      tipo: 'melhoria',
+      titulo: 'Tarefas: acesso por gatilho secreto na logo (não mais por URL)',
+      itens: [
+        'A remoção do menu na V2.37.0 deixou o acesso só por digitar a',
+        '  URL direto — não era essa a ideia.',
+        'Agora: 5 cliques rápidos (em até 2s) na logo da Absoluta, no',
+        '  topo da sidebar, abrem a tela de Tarefas. Funciona em',
+        '  qualquer página do sistema — sem nenhum botão visível.',
       ]
     }
   ],

@@ -396,3 +396,30 @@ const Utils = (() => {
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',_setup);
   else _setup();
 })();
+
+// ============================================================
+// ACESSO SECRETO — Tarefas do Sistema
+// 5 cliques na logo da sidebar (em até 2s) abrem a lista de
+// tarefas. Não aparece em lugar nenhum do menu — só quem sabe.
+// ============================================================
+(function initAcessoSecreto(){
+  function _setup(){
+    const logo = document.querySelector('.sidebar-logo');
+    if(!logo || logo.dataset.segredoAtivo) return;
+    logo.dataset.segredoAtivo = '1';
+    logo.style.cursor = 'pointer';
+    let cliques = 0, timer = null;
+    logo.addEventListener('click', () => {
+      cliques++;
+      clearTimeout(timer);
+      timer = setTimeout(() => { cliques = 0; }, 2000);
+      if (cliques >= 5) {
+        cliques = 0;
+        clearTimeout(timer);
+        window.location.href = 'todo.html';
+      }
+    });
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',_setup);
+  else _setup();
+})();
