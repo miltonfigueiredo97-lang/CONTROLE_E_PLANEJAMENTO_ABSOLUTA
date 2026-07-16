@@ -20,6 +20,8 @@ const Todo = (() => {
   let filtroDependencia = '';
   let busca = '';
   let mostrarConcluidas = false;
+  let editandoCategoriaId = null;
+  let editandoProjetoId = null;
 
   const PALETA_PROJETO = ['#2563eb', '#16a34a', '#7c3aed', '#d97706', '#0891b2', '#dc2626', '#db2777'];
   const SWATCHES = ['#F5C800', '#2563eb', '#16a34a', '#7c3aed', '#d97706', '#dc2626', '#0891b2', '#db2777', '#059669', '#4f46e5', '#ea580c', '#64748b'];
@@ -662,6 +664,8 @@ const Todo = (() => {
   // Modal: Gerenciar Projetos e Categorias (nome, cor, importância)
   // ============================================
   function abrirModalGerenciar() {
+    editandoCategoriaId = null;
+    editandoProjetoId = null;
     const html = `
       <div class="modal-header"><h3>Gerenciar projetos e categorias</h3></div>
       <div class="modal-body">
@@ -699,52 +703,58 @@ const Todo = (() => {
 
   function renderListaProjetos() {
     if (projetos.length === 0) return `<p class="text-sm text-muted">Nenhum projeto cadastrado ainda.</p>`;
-    return projetosOrdenadosPorImportancia().map(p => `
+    return projetosOrdenadosPorImportancia().map(p => {
+      if (p.id === editandoProjetoId) {
+        return `
+          <div class="todo-manage-item todo-manage-item-editando">
+            <input type="text" id="mg-proj-edit-nome" class="form-control" value="${esc(p.nome)}" style="flex:1;">
+            <button class="todo-manage-del" id="mg-proj-edit-salvar" title="Salvar">✔</button>
+            <button class="todo-manage-del" id="mg-proj-edit-cancelar" title="Cancelar">✕</button>
+          </div>`;
+      }
+      return `
       <div class="todo-manage-item">
         <span class="todo-manage-dot" style="background:${corProjeto(p.nome)}"></span>
         <span class="nome">${esc(p.nome)}</span>
         <select data-id="${p.id}" class="mg-proj-imp">
           ${Object.entries(IMPORTANCIA_LABEL).map(([v, l]) => `<option value="${v}" ${(p.importancia ?? 3) == v ? 'selected' : ''}>${l}</option>`).join('')}
         </select>
-        <button class="todo-manage-del" data-id="${p.id}" data-tipo="projeto" title="Excluir">🗑</button>
-      </div>`).join('');
+        <button class="todo-manage-del" data-id="${p.id}" data-tipo="projeto" data-acao="editar" title="Editar">✎</button>
+        <button class="todo-manage-del" data-id="${p.id}" data-tipo="projeto" data-acao="excluir" title="Excluir">🗑</button>
+      </div>`;
+    }).join('');
   }
   function renderListaCategorias() {
     if (categorias.length === 0) return `<p class="text-sm text-muted">Nenhuma categoria cadastrada ainda.</p>`;
-    return categoriasOrdenadasPorImportancia().map(c => `
+    return categoriasOrdenadasPorImportancia().map(c => {
+      if (c.id === editandoCategoriaId) {
+        return `
+          <div class="todo-manage-item todo-manage-item-editando" style="flex-direction:column; align-items:stretch; gap:8px;">
+            <input type="text" id="mg-cat-edit-nome" class="form-control" value="${esc(c.nome)}">
+            <div class="todo-swatch-grid" id="mg-cat-edit-swatches">
+              ${SWATCHES.map(cor => `<div class="todo-swatch ${cor.toLowerCase() === c.cor.toLowerCase() ? 'selecionado' : ''}" style="background:${cor}" data-cor="${cor}"></div>`).join('')}
+            </div>
+            <div style="display:flex; gap:6px; justify-content:flex-end;">
+              <button class="btn btn-secundario btn-sm" id="mg-cat-edit-cancelar">Cancelar</button>
+              <button class="btn btn-primario btn-sm" id="mg-cat-edit-salvar">Salvar</button>
+            </div>
+          </div>`;
+      }
+      return `
       <div class="todo-manage-item">
         <span class="todo-manage-dot" style="background:${esc(c.cor)}"></span>
         <span class="nome">${esc(c.nome)}</span>
         <select data-id="${c.id}" class="mg-cat-imp">
           ${Object.entries(IMPORTANCIA_LABEL).map(([v, l]) => `<option value="${v}" ${(c.importancia ?? 3) == v ? 'selected' : ''}>${l}</option>`).join('')}
         </select>
-        <button class="todo-manage-del" data-id="${c.id}" data-tipo="categoria" title="Excluir">🗑</button>
-      </div>`).join('');
+        <button class="todo-manage-del" data-id="${c.id}" data-tipo="categoria" data-acao="editar" title="Editar">✎</button>
+        <button class="todo-manage-del" data-id="${c.id}" data-tipo="categoria" data-acao="excluir" title="Excluir">🗑</button>
+      </div>`;
+    }).join('');
   }
 
   function ligarEventosGerenciar() {
     document.getElementById('mg-fechar').addEventListener('click', () => { fecharOverlay(); renderizar(); });
-
-    document.querySelectorAll('.mg-proj-imp').forEach(sel => {
-      sel.addEventListener('change', async (e) => {
-        const id = e.target.dataset.id;
-        const importancia = parseInt(e.target.value, 10);
-        await Database.atualizarRaiz(COL_PROJ, id, { importancia });
-        const p = projetos.find(x => x.id === id); if (p) p.importancia = importancia;
-        document.getElementById('mg-lista-projetos').innerHTML = renderListaProjetos();
-        religarListasGerenciar();
-      });
-    });
-    document.querySelectorAll('.mg-cat-imp').forEach(sel => {
-      sel.addEventListener('change', async (e) => {
-        const id = e.target.dataset.id;
-        const importancia = parseInt(e.target.value, 10);
-        await Database.atualizarRaiz(COL_CAT, id, { importancia });
-        const c = categorias.find(x => x.id === id); if (c) c.importancia = importancia;
-        document.getElementById('mg-lista-categorias').innerHTML = renderListaCategorias();
-        religarListasGerenciar();
-      });
-    });
     religarListasGerenciar();
 
     let corSelecionadaMg = SWATCHES[0];
@@ -783,8 +793,8 @@ const Todo = (() => {
   }
 
   // Religa TODOS os eventos das listas de gerenciamento (selects de
-  // importância + botões de excluir) — chamada sempre que uma lista
-  // é reconstruída via innerHTML.
+  // importância, editar, excluir, e o mini-formulário de edição
+  // inline) — chamada sempre que uma lista é reconstruída via innerHTML.
   function religarListasGerenciar() {
     document.querySelectorAll('.mg-proj-imp').forEach(sel => {
       sel.onchange = async (e) => {
@@ -802,9 +812,18 @@ const Todo = (() => {
         const c = categorias.find(x => x.id === id); if (c) c.importancia = importancia;
       };
     });
-    document.querySelectorAll('.todo-manage-del').forEach(btn => {
+    document.querySelectorAll('.todo-manage-del[data-acao]').forEach(btn => {
       btn.onclick = async () => {
-        const id = btn.dataset.id, tipo = btn.dataset.tipo;
+        const id = btn.dataset.id, tipo = btn.dataset.tipo, acao = btn.dataset.acao;
+        if (acao === 'editar') {
+          if (tipo === 'projeto') editandoProjetoId = id; else editandoCategoriaId = id;
+          document.getElementById(tipo === 'projeto' ? 'mg-lista-projetos' : 'mg-lista-categorias').innerHTML =
+            tipo === 'projeto' ? renderListaProjetos() : renderListaCategorias();
+          religarListasGerenciar();
+          document.getElementById(tipo === 'projeto' ? 'mg-proj-edit-nome' : 'mg-cat-edit-nome')?.focus();
+          return;
+        }
+        // excluir
         const nomeItem = tipo === 'projeto' ? projetos.find(p => p.id === id)?.nome : categorias.find(c => c.id === id)?.nome;
         if (!confirm(`Excluir "${nomeItem}"? Tarefas que usam esse ${tipo} continuam existindo, só perdem essa referência.`)) return;
         if (tipo === 'projeto') {
@@ -819,6 +838,86 @@ const Todo = (() => {
         religarListasGerenciar();
       };
     });
+
+    // Formulário de edição inline — Projeto (só nome)
+    const btnProjSalvar = document.getElementById('mg-proj-edit-salvar');
+    if (btnProjSalvar) {
+      btnProjSalvar.onclick = async () => {
+        const id = editandoProjetoId;
+        const nomeNovo = document.getElementById('mg-proj-edit-nome').value.trim();
+        if (!nomeNovo) { Utils.toast('O nome do projeto não pode ficar em branco.', 'alerta'); return; }
+        if (projetos.some(p => p.id !== id && p.nome === nomeNovo)) { Utils.toast('Já existe um projeto com esse nome.', 'alerta'); return; }
+        const p = projetos.find(x => x.id === id);
+        const nomeAntigo = p.nome;
+        await Database.atualizarRaiz(COL_PROJ, id, { nome: nomeNovo });
+        p.nome = nomeNovo;
+        // Propaga o novo nome pra todas as tarefas que referenciavam o nome antigo
+        const afetadas = tarefas.filter(t => t.projeto === nomeAntigo);
+        for (const t of afetadas) {
+          await Database.atualizarRaiz(COL, t.id, { projeto: nomeNovo });
+          t.projeto = nomeNovo;
+        }
+        editandoProjetoId = null;
+        document.getElementById('mg-lista-projetos').innerHTML = renderListaProjetos();
+        religarListasGerenciar();
+        Utils.toast('Projeto atualizado.', 'sucesso');
+      };
+    }
+    const btnProjCancelar = document.getElementById('mg-proj-edit-cancelar');
+    if (btnProjCancelar) {
+      btnProjCancelar.onclick = () => {
+        editandoProjetoId = null;
+        document.getElementById('mg-lista-projetos').innerHTML = renderListaProjetos();
+        religarListasGerenciar();
+      };
+    }
+
+    // Formulário de edição inline — Categoria (nome + cor)
+    const catSwatches = document.getElementById('mg-cat-edit-swatches');
+    let corEdicaoCategoria = null;
+    if (catSwatches) {
+      const jaSelecionado = catSwatches.querySelector('.todo-swatch.selecionado');
+      corEdicaoCategoria = jaSelecionado ? jaSelecionado.dataset.cor : SWATCHES[0];
+      catSwatches.querySelectorAll('.todo-swatch').forEach(sw => {
+        sw.onclick = () => {
+          catSwatches.querySelectorAll('.todo-swatch').forEach(s => s.classList.remove('selecionado'));
+          sw.classList.add('selecionado');
+          corEdicaoCategoria = sw.dataset.cor;
+        };
+      });
+    }
+    const btnCatSalvar = document.getElementById('mg-cat-edit-salvar');
+    if (btnCatSalvar) {
+      btnCatSalvar.onclick = async () => {
+        const id = editandoCategoriaId;
+        const nomeNovo = document.getElementById('mg-cat-edit-nome').value.trim();
+        if (!nomeNovo) { Utils.toast('O nome da categoria não pode ficar em branco.', 'alerta'); return; }
+        if (categorias.some(c => c.id !== id && c.nome === nomeNovo)) { Utils.toast('Já existe uma categoria com esse nome.', 'alerta'); return; }
+        const c = categorias.find(x => x.id === id);
+        const nomeAntigo = c.nome;
+        const corNova = corEdicaoCategoria || c.cor;
+        await Database.atualizarRaiz(COL_CAT, id, { nome: nomeNovo, cor: corNova });
+        c.nome = nomeNovo; c.cor = corNova;
+        // Propaga o novo nome pra todas as tarefas que referenciavam o nome antigo
+        const afetadas = tarefas.filter(t => t.categoria === nomeAntigo);
+        for (const t of afetadas) {
+          await Database.atualizarRaiz(COL, t.id, { categoria: nomeNovo });
+          t.categoria = nomeNovo;
+        }
+        editandoCategoriaId = null;
+        document.getElementById('mg-lista-categorias').innerHTML = renderListaCategorias();
+        religarListasGerenciar();
+        Utils.toast('Categoria atualizada.', 'sucesso');
+      };
+    }
+    const btnCatCancelar = document.getElementById('mg-cat-edit-cancelar');
+    if (btnCatCancelar) {
+      btnCatCancelar.onclick = () => {
+        editandoCategoriaId = null;
+        document.getElementById('mg-lista-categorias').innerHTML = renderListaCategorias();
+        religarListasGerenciar();
+      };
+    }
   }
 
   return { init, alternarStatus, excluir, mover, abrirModalEditar };

@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.38.1',
+  versaoAtual: 'V2.38.2',
 
   versoes: [
     {
@@ -3840,7 +3840,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.38.1',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-16',
       tipo: 'melhoria',
       titulo: 'Tarefas: acesso por gatilho secreto na logo (não mais por URL)',
@@ -3850,6 +3850,22 @@ const NotasVersao = {
         'Agora: 5 cliques rápidos (em até 2s) na logo da Absoluta, no',
         '  topo da sidebar, abrem a tela de Tarefas. Funciona em',
         '  qualquer página do sistema — sem nenhum botão visível.',
+      ]
+    },
+    {
+      versao: 'V2.38.2',
+      status: 'aberta',
+      data: '2026-07-16',
+      tipo: 'melhoria',
+      titulo: 'Tarefas: editar categoria e projeto já criados',
+      itens: [
+        'No botão ⚙ Gerenciar, categorias e projetos agora têm um botão',
+        '  ✎ Editar, além do 🗑 Excluir.',
+        'Categoria: dá pra trocar o nome e a cor (mesmo seletor de 12',
+        '  cores usado na criação).',
+        'Projeto: dá pra trocar o nome.',
+        'Ao renomear, todas as tarefas que já usavam o nome antigo são',
+        '  atualizadas automaticamente pro nome novo — nada fica órfão.',
       ]
     }
   ],
