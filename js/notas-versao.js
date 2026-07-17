@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.43.2',
+  versaoAtual: 'V2.43.3',
 
   versoes: [
     {
@@ -4134,7 +4134,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.43.2',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-17',
       tipo: 'correcao',
       titulo: 'Dashboard: corrige ordem de prioridade (Atividades e Resumo por Apartamento primeiro, Curva S desceu pro "resto")',
@@ -4145,6 +4145,30 @@ const NotasVersao = {
         '  (incluindo a própria Curva S) abaixo. Ordem corrigida: Hero →',
         '  Atividades → Resumo por Apartamento → Curva S → PPC Semanal/',
         '  Motivos de Atraso → Suprimentos.',
+      ]
+    },
+    {
+      versao: 'V2.43.3',
+      status: 'aberta',
+      data: '2026-07-17',
+      tipo: 'correcao',
+      titulo: 'Resumo por Apartamento: Piso/Teto agora dividem por Apto (não só por Pavimento)',
+      itens: [
+        'CORREÇÃO — Piso, Teto e afins não estavam dividindo por apartamento,',
+        '  só por Pavimento. Causa: o "apartamento" era calculado como o NÓ',
+        '  PAI de onde a área foi lançada — funciona em Paredes (a área fica',
+        '  num Cômodo abaixo do Apto, então o pai é o Apto certinho), mas',
+        '  quebra em Piso/Teto, onde a área costuma ser lançada DIRETO no',
+        '  Apto (sem Cômodo por baixo) — nesse caso "pegar o pai" dava o',
+        '  Pavimento por engano, perdendo a divisão por apartamento.',
+        '',
+        'Agora o "apartamento" é sempre os 3 primeiros níveis do caminho —',
+        '  Torre (ou Subsolo/Térreo) / Nº do Pavimento / Nº do Ap — não',
+        '  importa se a área foi lançada direto no Apto ou um nível abaixo',
+        '  dele (Cômodo). Áreas realmente lançadas só no Pavimento (sem',
+        '  divisão por apto, ex: corredor/área comum) continuam aparecendo',
+        '  na própria coluna do Pavimento, sem inventar um Apto que não',
+        '  existe.',
       ]
     }
   ],

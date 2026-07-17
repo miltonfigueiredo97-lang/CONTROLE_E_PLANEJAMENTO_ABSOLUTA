@@ -1089,14 +1089,23 @@ const Dashboard = (() => {
   }
 
   // Constrói, a partir da árvore [{id,nome,filhos:[...]}], um mapa nodeId -> {label,chave,torre,torreChave}
-  // onde "apartamento" é o CAMINHO DE NOMES até o nó PAI do local onde a área/peça
-  // foi lançada (convenção Torre > Andar > Apto > Cômodo — a área é lançada no
-  // Cômodo, o pai é o Apto). "chave"/"torreChave" são a versão normalizada do
-  // caminho, usada pra agrupar entre árvores diferentes (Piso, Teto, Paredes) —
-  // ver comentário em _calcularResumoApartamento. "label"/"torre" mantêm o texto
-  // original para exibição.
+  // onde "apartamento" são SEMPRE os 3 primeiros níveis do caminho — Torre (ou
+  // Subsolo/Térreo) / Nº do Pavimento / Nº do Ap, convenção usada em todos os
+  // levantamentos do Milton. Isso é diferente de "pegar o nó pai de onde a área
+  // foi lançada": em Paredes a área fica num Cômodo ABAIXO do Apto (parent =
+  // Apto, ok), mas em Piso/Teto a área costuma ser lançada DIRETO no Apto (sem
+  // Cômodo) — nesse caso "pegar o pai" dava o Pavimento por engano, perdendo a
+  // divisão por apartamento. Cravar a profundidade em 3 resolve os dois casos:
+  // se a área está no próprio Apto (profundidade 3) ou um nível abaixo dele
+  // (Cômodo, profundidade 4+), o resultado é o mesmo caminho de 3 segmentos.
+  // Locais mais rasos (ex: área comum lançada direto no Pavimento, sem Apto)
+  // mantêm o caminho que tiverem (2 ou 1 segmentos) — viram sua própria coluna.
+  // "chave"/"torreChave" são a versão normalizada do caminho, usada pra agrupar
+  // entre árvores diferentes (Piso, Teto, Paredes) — ver comentário em
+  // _calcularResumoApartamento. "label"/"torre" mantêm o texto original.
   function _mapaApartamentosPorLabel(arvore) {
     const mapaNode = new Map();
+    const PROFUNDIDADE_APTO = 3; // Torre > Pavimento > Apto
     function ordenar(nodes) { return [...(nodes || [])].sort((a, b) => (a.nome || '').localeCompare(b.nome || '', 'pt-BR', { numeric: true })); }
     function walk(nodes, caminho, caminhoChave) {
       ordenar(nodes).forEach(n => {
@@ -1104,8 +1113,9 @@ const Dashboard = (() => {
         const novoCaminho = [...caminho, nome];
         const novoCaminhoChave = [...caminhoChave, _normalizarChave(nome)];
         const filhos = n.filhos || [];
-        const aptoCaminho = novoCaminho.length > 1 ? novoCaminho.slice(0, -1) : novoCaminho;
-        const aptoCaminhoChave = novoCaminhoChave.length > 1 ? novoCaminhoChave.slice(0, -1) : novoCaminhoChave;
+        const corte = Math.min(novoCaminho.length, PROFUNDIDADE_APTO);
+        const aptoCaminho = novoCaminho.slice(0, corte);
+        const aptoCaminhoChave = novoCaminhoChave.slice(0, corte);
         mapaNode.set(n.id, {
           label: aptoCaminho.join(' › '), chave: aptoCaminhoChave.join(' › '),
           torre: novoCaminho[0] || '', torreChave: novoCaminhoChave[0] || '',
