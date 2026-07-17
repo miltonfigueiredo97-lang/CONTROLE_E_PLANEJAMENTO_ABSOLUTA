@@ -12,6 +12,7 @@ const Dashboard = (() => {
   let _resumoView = 'unidade';
   let _resumoDados = null;
   let _curvaCache = null; // último cálculo da Curva S (usado pelo tooltip)
+  let _curvaGranularidade = 'mensal'; // 'mensal' | 'semanal'
 
   const MOTIVOS_COR = {
     'Frente/Predecessora Não Liberada': '#f59e0b',
@@ -161,12 +162,10 @@ const Dashboard = (() => {
       el.innerHTML = _htmlEsqueleto();
       _renderHero();
       _renderCurvaS();
-      _renderIDP();
       _renderAtividades();
-      _renderPacotes();
+      await _renderResumoApartamento();
       _renderPpcSemanal();
       _renderMotivosAtraso();
-      await _renderResumoApartamento();
     } catch (e) {
       console.error(e);
       Utils.toast('Erro ao carregar dashboard.', 'erro');
@@ -205,15 +204,14 @@ const Dashboard = (() => {
 
       <div class="card db-row">
         <div class="card-body">
-          <div class="db-secao-header"><h3>Curva S — Planejamento</h3></div>
+          <div class="db-secao-header">
+            <h3>Curva S — Planejamento</h3>
+            <div class="aba-toggle" id="db-curva-toggle">
+              <button class="aba-btn ativo" data-v="mensal" onclick="Dashboard.setCurvaGranularidade('mensal')">Mensal</button>
+              <button class="aba-btn" data-v="semanal" onclick="Dashboard.setCurvaGranularidade('semanal')">Semanal</button>
+            </div>
+          </div>
           <div id="db-curva-s" class="db-tooltip-wrap"></div>
-        </div>
-      </div>
-
-      <div class="card db-row">
-        <div class="card-body">
-          <div class="db-secao-header"><h3>Índice de Desempenho de Prazo (IDP)</h3></div>
-          <div id="db-idp" class="db-tooltip-wrap"></div>
         </div>
       </div>
 
@@ -230,17 +228,17 @@ const Dashboard = (() => {
       <div class="card db-row">
         <div class="card-body">
           <div class="db-secao-header">
-            <h3>Avanço por Pacotes</h3>
-            <div class="aba-toggle" id="db-pacotes-toggle">
-              <button class="aba-btn ativo" data-v="pacotes" onclick="Dashboard.setPacotesView('pacotes')">Pacotes</button>
-              <button class="aba-btn" data-v="agrupadores" onclick="Dashboard.setPacotesView('agrupadores')">Agrupadores</button>
-              <button class="aba-btn" data-v="locais" onclick="Dashboard.setPacotesView('locais')">Locais</button>
-              <button class="aba-btn" data-v="responsaveis" onclick="Dashboard.setPacotesView('responsaveis')">Responsáveis</button>
+            <h3>Resumo por Apartamento</h3>
+            <div class="aba-toggle" id="db-resumo-toggle">
+              <button class="aba-btn ativo" data-v="unidade" onclick="Dashboard.setResumoView('unidade')">Unidade</button>
+              <button class="aba-btn" data-v="custo" onclick="Dashboard.setResumoView('custo')">Custo (R$)</button>
             </div>
           </div>
-          <div id="db-pacotes" class="db-tooltip-wrap"></div>
+          <div id="db-resumo-apartamento"></div>
         </div>
       </div>
+
+      <!-- ===== Resto (prioridade menor) ===== -->
 
       <div class="db-grid-2">
         <div class="card">
@@ -254,19 +252,6 @@ const Dashboard = (() => {
             <div class="db-secao-header"><h3>Motivos de Atraso Semanais</h3></div>
             <div id="db-motivos-atraso" class="db-tooltip-wrap"></div>
           </div>
-        </div>
-      </div>
-
-      <div class="card db-row">
-        <div class="card-body">
-          <div class="db-secao-header">
-            <h3>Resumo por Apartamento</h3>
-            <div class="aba-toggle" id="db-resumo-toggle">
-              <button class="aba-btn ativo" data-v="unidade" onclick="Dashboard.setResumoView('unidade')">Unidade</button>
-              <button class="aba-btn" data-v="custo" onclick="Dashboard.setResumoView('custo')">Custo (R$)</button>
-            </div>
-          </div>
-          <div id="db-resumo-apartamento"></div>
         </div>
       </div>
 
@@ -429,8 +414,41 @@ const Dashboard = (() => {
 
   // ===================== CURVA S =====================
   function _mesLabel(d) { return d.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' }).replace('.', ''); }
+  // Mesmo cálculo de semana ISO usado em js/semanal.js (rótulo "S<semana> A<ano>") —
+  // mantém a mesma convenção de numeração de semana em todo o sistema.
+  function _isoWeek(d) {
+    const t = new Date(d); t.setHours(0, 0, 0, 0); t.setDate(t.getDate() + 3 - ((t.getDay() + 6) % 7));
+    const w1 = new Date(t.getFullYear(), 0, 4);
+    return { w: 1 + Math.round(((t - w1) / 864e5 - 3 + ((w1.getDay() + 6) % 7)) / 7), y: t.getFullYear() };
+  }
 
-  function _calcCurvaS(tf, historico) {
+  function _gerarBuckets(dMin, dMax, granularidade) {
+    const buckets = [];
+    if (granularidade === 'semanal') {
+      // Semana de domingo a sábado, igual à convenção do módulo Semanal.
+      let cursor = new Date(dMin); cursor.setDate(cursor.getDate() - cursor.getDay());
+      const fimCursor = new Date(dMax);
+      while (cursor <= fimCursor) {
+        const inicioSemana = new Date(cursor);
+        const fimSemana = new Date(cursor); fimSemana.setDate(fimSemana.getDate() + 7);
+        const { w, y } = _isoWeek(new Date(inicioSemana.getTime() + 864e5));
+        buckets.push({ label: `S${w} ${String(y).slice(2)}`, inicio: inicioSemana, fim: fimSemana, planMensal: 0, realMensalEstimado: 0 });
+        cursor = fimSemana;
+      }
+    } else {
+      let cursor = new Date(dMin.getFullYear(), dMin.getMonth(), 1);
+      const fimCursor = new Date(dMax.getFullYear(), dMax.getMonth(), 1);
+      while (cursor <= fimCursor) {
+        const inicioMes = new Date(cursor.getFullYear(), cursor.getMonth(), 1);
+        const fimMes = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1);
+        buckets.push({ label: _mesLabel(cursor), inicio: inicioMes, fim: fimMes, planMensal: 0, realMensalEstimado: 0 });
+        cursor = fimMes;
+      }
+    }
+    return buckets;
+  }
+
+  function _calcCurvaS(tf, historico, granularidade) {
     const leaves = tf.filter(t => t.tipo !== 'grupo' && (t.inicioPlanejado || t.inicioPlanejadoBase));
     if (!leaves.length) return null;
     const hoje = new Date();
@@ -445,15 +463,7 @@ const Dashboard = (() => {
     if (!dMin || !dMax) return null;
     if (hoje > dMax) dMax = hoje;
 
-    const meses = [];
-    let cursor = new Date(dMin.getFullYear(), dMin.getMonth(), 1);
-    const fimCursor = new Date(dMax.getFullYear(), dMax.getMonth(), 1);
-    while (cursor <= fimCursor) {
-      const inicioMes = new Date(cursor.getFullYear(), cursor.getMonth(), 1);
-      const fimMes = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1);
-      meses.push({ label: _mesLabel(cursor), inicio: inicioMes, fim: fimMes, planMensal: 0, realMensalEstimado: 0 });
-      cursor = fimMes;
-    }
+    const meses = _gerarBuckets(dMin, dMax, granularidade);
 
     function overlapFrac(iniA, fimA, iniB, fimB) {
       const iniOverlap = Math.max(iniA.getTime(), iniB.getTime());
@@ -550,15 +560,22 @@ const Dashboard = (() => {
     return { meses, hojeIdx, idxInicioHistorico };
   }
 
+  function setCurvaGranularidade(g) {
+    _curvaGranularidade = g;
+    document.querySelectorAll('#db-curva-toggle .aba-btn').forEach(b => b.classList.toggle('ativo', b.dataset.v === g));
+    _renderCurvaS();
+  }
+
   function _renderCurvaS() {
     const host = document.getElementById('db-curva-s');
     if (!host) return;
-    const curva = _calcCurvaS(tarefas, historicoExecucao);
+    const curva = _calcCurvaS(tarefas, historicoExecucao, _curvaGranularidade);
     _curvaCache = curva;
     if (!curva || !curva.meses.length) {
       host.innerHTML = '<div class="estado-vazio"><p class="text-sm">Sem dados de planejamento suficientes para montar a Curva S.</p></div>';
       return;
     }
+    const rotuloPeriodo = _curvaGranularidade === 'semanal' ? 'Semanal' : 'Mensal';
     host.innerHTML = _svgCurva(curva.meses, curva.hojeIdx, {
       idTooltip: 'db-curva-tooltip',
       idHits: 'db-curva-hit-',
@@ -568,8 +585,8 @@ const Dashboard = (() => {
     });
     _attachHover(host, curva.meses, (m) => `
       <div class="db-tt-titulo">${m.label} ${m.origemReal === 'historico' ? '<span class="badge badge-sucesso" style="font-size:.6rem;">real</span>' : '<span class="badge badge-neutro" style="font-size:.6rem;">estimado</span>'}</div>
-      <div class="db-tt-linha"><i style="background:#999;"></i>Esperado Mensal: <b>${m.planMensalPct.toFixed(2)}%</b></div>
-      <div class="db-tt-linha"><i style="background:var(--cor-primaria);"></i>Executado Mensal: <b>${m.realMensalPct.toFixed(2)}%</b></div>
+      <div class="db-tt-linha"><i style="background:#999;"></i>Esperado ${rotuloPeriodo}: <b>${m.planMensalPct.toFixed(2)}%</b></div>
+      <div class="db-tt-linha"><i style="background:var(--cor-primaria);"></i>Executado ${rotuloPeriodo}: <b>${m.realMensalPct.toFixed(2)}%</b></div>
       <div class="db-tt-linha"><i style="background:#999;border-radius:50%;"></i>Esperado Acumulado: <b>${m.planAcum.toFixed(2)}%</b></div>
       <div class="db-tt-linha"><i style="background:var(--cor-primaria-dark);border-radius:50%;"></i>Executado Acumulado: <b>${m.realAcum.toFixed(2)}%</b></div>
     `);
@@ -1214,5 +1231,5 @@ const Dashboard = (() => {
       </div>`;
   }
 
-  return { init, onObraChanged, setResumoView, setPacotesView };
+  return { init, onObraChanged, setResumoView, setPacotesView, setCurvaGranularidade };
 })();

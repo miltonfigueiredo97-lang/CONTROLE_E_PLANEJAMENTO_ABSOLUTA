@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.43.0',
+  versaoAtual: 'V2.43.1',
 
   versoes: [
     {
@@ -4078,7 +4078,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.43.0',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-17',
       tipo: 'funcionalidade',
       titulo: 'Histórico de Execução (snapshot diário do Planejamento) e correção do agrupamento no Resumo por Apartamento',
@@ -4109,6 +4109,27 @@ const NotasVersao = {
         '  original. O agrupamento por Torre também passou a usar um mapa em',
         '  vez de comparar itens vizinhos, então não depende mais da ordem em',
         '  que os apartamentos aparecem.',
+      ]
+    },
+    {
+      versao: 'V2.43.1',
+      status: 'aberta',
+      data: '2026-07-17',
+      tipo: 'melhoria',
+      titulo: 'Dashboard: remove IDP e Avanço por Pacotes da tela, reordena prioridades e Curva S ganha toggle Mensal/Semanal',
+      itens: [
+        'Índice de Desempenho de Prazo e Avanço por Pacotes saíram da tela',
+        '  a pedido do Milton — ficaram mal resolvidos nesta primeira versão.',
+        '  O código continua no arquivo (não foi apagado), então dá pra',
+        '  reativar rápido se decidirmos retomar os dois no futuro.',
+        '',
+        'Nova ordem de prioridade da tela: Curva S → Atividades (Em',
+        '  Execução / Próximas) → Resumo por Apartamento. O restante (PPC',
+        '  Semanal, Motivos de Atraso, Suprimentos) desceu pro fim da página.',
+        '',
+        'Curva S ganhou toggle Mensal/Semanal (igual ao modelo de',
+        '  referência) — Semanal usa a mesma numeração de semana (S<n> do',
+        '  ano) já usada no módulo Semanal, domingo a sábado.',
       ]
     }
   ],
