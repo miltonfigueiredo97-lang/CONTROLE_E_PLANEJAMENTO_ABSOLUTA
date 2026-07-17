@@ -1311,12 +1311,12 @@ const Dashboard = (() => {
         colsNaTorre += pav.cols.length + 1; // +1 pelo subtotal do pavimento
         headerPav += `<th colspan="${pav.cols.length + 1}" style="text-align:center;">${pav.label}</th>`;
         pav.cols.forEach(a => {
-          headerApto += `<th class="col-num" title="${a.label}">${a.label.split(' › ').pop()}</th>`;
+          headerApto += `<th class="col-num" style="text-align:center;" title="${a.label}">${a.label.split(' › ').pop()}</th>`;
         });
-        headerApto += `<th class="col-num db-subtotal-col">Subtot.</th>`;
+        headerApto += `<th class="col-num db-subtotal-col" style="text-align:center;">Subtot.</th>`;
       });
       headerTorre += `<th colspan="${colsNaTorre}" style="text-align:center;">${tg.torre}</th>`;
-      headerPav += `<th rowspan="2" class="col-num db-subtotal-col">Subtot.<br>Torre</th>`;
+      headerPav += `<th rowspan="2" class="col-num db-subtotal-col" style="text-align:center;">Subtot.<br>Torre</th>`;
     });
 
     let categoriaAtual = null;
@@ -1339,7 +1339,7 @@ const Dashboard = (() => {
       <div class="tabela-container" style="max-height:520px;">
         <table class="tabela">
           <thead>
-            <tr><th rowspan="3"></th>${headerTorre}<th rowspan="3"></th></tr>
+            <tr><th rowspan="3">Item</th>${headerTorre}<th rowspan="3" class="col-num">Total</th></tr>
             <tr>${headerPav}</tr>
             <tr>${headerApto}</tr>
           </thead>

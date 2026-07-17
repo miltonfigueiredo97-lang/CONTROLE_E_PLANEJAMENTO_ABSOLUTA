@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.44.0',
+  versaoAtual: 'V2.44.1',
 
   versoes: [
     {
@@ -4173,7 +4173,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.44.0',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-17',
       tipo: 'melhoria',
       titulo: 'Dashboard: KPIs do topo corrigidos (detecção de folha por posição), Resumo por Apartamento com subtotal por Pavimento/Torre e ordem Piso/Parede/Teto',
@@ -4201,6 +4201,23 @@ const NotasVersao = {
         '  aparecer antes de "Escada Andar" quando a Escada só tem valor de',
         '  pintura ainda.',
         '  → Ordem das categorias trocada para Piso → Paredes → Teto/Forro.',
+      ]
+    },
+    {
+      versao: 'V2.44.1',
+      status: 'aberta',
+      data: '2026-07-17',
+      tipo: 'correcao',
+      titulo: 'Resumo por Apartamento: centraliza texto dos cabeçalhos de coluna e devolve rótulos "Item"/"Total"',
+      itens: [
+        'Nome de coluna longo (ex: "Hall do Elevador de Serviço") estava',
+        '  alinhado à direita igual os números — ficava esteticamente',
+        '  estranho, muito afastado do centro da coluna. Agora o texto do',
+        '  cabeçalho (nome do Apto e "Subtot."/"Subtot. Torre") fica',
+        '  centralizado, alinhado com os títulos de Torre/Pavimento acima.',
+        'Corrigido também: as células de canto superior esquerdo/direito',
+        '  do cabeçalho tinham ficado vazias na versão com hierarquia de',
+        '  Torre/Pavimento — voltaram a mostrar "Item" e "Total".',
       ]
     }
   ],
