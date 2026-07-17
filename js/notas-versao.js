@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.41.0',
+  versaoAtual: 'V2.41.1',
 
   versoes: [
     {
@@ -3954,7 +3954,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.41.0',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-16',
       tipo: 'funcionalidade',
       titulo: 'Dashboard Principal — hero com capa da obra, Curva S, atividades e Resumo por Apartamento',
@@ -3989,6 +3989,22 @@ const NotasVersao = {
         '  Planejamento vinculadas àquele módulo/métrica, aplicado à',
         '  quantidade de cada apartamento — v1, sujeita a refinamento.',
         '  Linhas sem nenhum dado lançado ainda não aparecem na tabela.',
+      ]
+    },
+    {
+      versao: 'V2.41.1',
+      status: 'aberta',
+      data: '2026-07-16',
+      tipo: 'melhoria',
+      titulo: 'Tarefas: editar categoria direto de onde ela é usada',
+      itens: [
+        'Botão ✎ ao lado do seletor de Categoria na barra de "+ Adicionar',
+        '  tarefa" — edita nome/cor da categoria escolhida sem precisar',
+        '  abrir o ⚙ Gerenciar.',
+        'Mesmo recurso dentro do modal "Editar tarefa": link "✎ Editar',
+        '  categoria selecionada" ao lado de "+ Criar nova categoria".',
+        'Ao salvar, o nome novo é propagado pra todas as tarefas que já',
+        '  usavam essa categoria — igual já acontecia no ⚙ Gerenciar.',
       ]
     }
   ],

@@ -374,6 +374,7 @@ const Todo = (() => {
                   <option value="">Sem categoria</option>
                   ${categorias.map(c => `<option value="${esc(c.nome)}">${esc(c.nome)}</option>`).join('')}
                 </select>
+                <button type="button" class="todo-addbar-cat-nova-btn" id="todo-addbar-editar-categoria" title="Editar categoria selecionada">✎</button>
                 <button type="button" class="todo-addbar-cat-nova-btn" id="todo-addbar-nova-categoria" title="Criar nova categoria">+</button>
               </div>
             </div>
@@ -470,6 +471,20 @@ const Todo = (() => {
     });
     document.getElementById('todo-addbar-nova-categoria').addEventListener('click', () => {
       abrirCriarCategoriaRapida();
+    });
+    document.getElementById('todo-addbar-editar-categoria').addEventListener('click', () => {
+      const nomeAtual = document.getElementById('todo-categoria').value;
+      if (!nomeAtual) { Utils.toast('Escolha uma categoria pra editar.', 'alerta'); return; }
+      const cat = categorias.find(c => c.nome === nomeAtual);
+      if (!cat) return;
+      abrirEditarCategoriaRapida(cat.id, (nomeNovo) => {
+        const sel = document.getElementById('todo-categoria');
+        if (sel) {
+          const opt = [...sel.options].find(o => o.value === nomeAtual);
+          if (opt) { opt.value = nomeNovo; opt.textContent = nomeNovo; }
+          sel.value = nomeNovo;
+        }
+      });
     });
     let buscaTimer = null;
     document.getElementById('todo-busca').addEventListener('input', (e) => {
@@ -649,6 +664,76 @@ const Todo = (() => {
   }
 
   // ============================================
+  // Edição rápida de uma categoria já existente, a partir de
+  // qualquer lugar que tenha o seletor de Categoria (barra de
+  // adicionar, modal de editar tarefa) — recebe um callback pra
+  // atualizar só aquele seletor, sem re-renderizar a tela inteira.
+  // ============================================
+  function abrirEditarCategoriaRapida(id, aoSalvar) {
+    const cat = categorias.find(c => c.id === id);
+    if (!cat) return;
+    const html = `
+      <div class="modal-header"><h3>Editar categoria</h3></div>
+      <div class="modal-body">
+        <div class="todo-form-grupo">
+          <label>Nome</label>
+          <input type="text" id="rc-nome" class="form-control" value="${esc(cat.nome)}">
+        </div>
+        <div class="todo-form-grupo">
+          <label>Cor</label>
+          <div class="todo-swatch-grid" id="rc-swatches">
+            ${SWATCHES.map(c => `<div class="todo-swatch ${c.toLowerCase() === cat.cor.toLowerCase() ? 'selecionado' : ''}" style="background:${c}" data-cor="${c}"></div>`).join('')}
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer" style="justify-content:space-between;">
+        <button type="button" class="btn btn-secundario" id="rc-excluir" style="color:var(--cor-perigo);">Excluir categoria</button>
+        <div style="display:flex; gap:8px;">
+          <button type="button" class="btn btn-secundario" id="rc-cancelar">Cancelar</button>
+          <button type="button" class="btn btn-primario" id="rc-salvar">Salvar</button>
+        </div>
+      </div>`;
+    abrirOverlay(html, 'todo-modal');
+    document.getElementById('rc-nome').focus();
+    document.getElementById('rc-nome').select();
+
+    let corSelecionada = cat.cor;
+    document.querySelectorAll('#rc-swatches .todo-swatch').forEach(sw => {
+      sw.addEventListener('click', () => {
+        document.querySelectorAll('#rc-swatches .todo-swatch').forEach(s => s.classList.remove('selecionado'));
+        sw.classList.add('selecionado');
+        corSelecionada = sw.dataset.cor;
+      });
+    });
+    document.getElementById('rc-cancelar').addEventListener('click', fecharOverlay);
+    document.getElementById('rc-excluir').addEventListener('click', async () => {
+      if (!confirm(`Excluir a categoria "${cat.nome}"? Tarefas que usam ela continuam existindo, só perdem essa referência.`)) return;
+      await Database.deletarRaiz(COL_CAT, id);
+      categorias = categorias.filter(c => c.id !== id);
+      fecharOverlay();
+      Utils.toast('Categoria excluída.', 'info');
+      renderizar();
+    });
+    document.getElementById('rc-salvar').addEventListener('click', async () => {
+      const nomeNovo = document.getElementById('rc-nome').value.trim();
+      if (!nomeNovo) { Utils.toast('O nome da categoria não pode ficar em branco.', 'alerta'); return; }
+      if (categorias.some(c => c.id !== id && c.nome === nomeNovo)) { Utils.toast('Já existe uma categoria com esse nome.', 'alerta'); return; }
+      const nomeAntigo = cat.nome;
+      await Database.atualizarRaiz(COL_CAT, id, { nome: nomeNovo, cor: corSelecionada });
+      cat.nome = nomeNovo; cat.cor = corSelecionada;
+      // Propaga o novo nome pra todas as tarefas que referenciavam o nome antigo
+      const afetadas = tarefas.filter(t => t.categoria === nomeAntigo);
+      for (const t of afetadas) {
+        await Database.atualizarRaiz(COL, t.id, { categoria: nomeNovo });
+        t.categoria = nomeNovo;
+      }
+      fecharOverlay();
+      Utils.toast('Categoria atualizada.', 'sucesso');
+      if (aoSalvar) aoSalvar(nomeNovo);
+    });
+  }
+
+  // ============================================
   // Modal: Editar tarefa (nome, projeto, categoria, dependência, importância)
   // ============================================
   function abrirModalEditar(id) {
@@ -673,7 +758,10 @@ const Todo = (() => {
             <option value="">Sem categoria</option>
             ${categorias.map(c => `<option value="${esc(c.nome)}" ${t.categoria === c.nome ? 'selected' : ''}>${esc(c.nome)}</option>`).join('')}
           </select>
-          <div style="margin-top:6px;"><a href="#" id="ed-nova-categoria-link" style="font-size:12.5px;">+ Criar nova categoria</a></div>
+          <div style="margin-top:6px; display:flex; gap:14px;">
+            <a href="#" id="ed-nova-categoria-link" style="font-size:12.5px;">+ Criar nova categoria</a>
+            <a href="#" id="ed-editar-categoria-link" style="font-size:12.5px;">✎ Editar categoria selecionada</a>
+          </div>
           <div class="todo-cat-nova-form" id="ed-cat-nova-form">
             <div style="flex:1; min-width:140px;">
               <input type="text" id="ed-cat-nome" class="form-control" placeholder="Nome da categoria">
@@ -682,6 +770,15 @@ const Todo = (() => {
               </div>
             </div>
             <button type="button" class="btn btn-secundario btn-sm" id="ed-cat-salvar">Salvar categoria</button>
+          </div>
+          <div class="todo-cat-nova-form" id="ed-cat-editar-form">
+            <div style="flex:1; min-width:140px;">
+              <input type="text" id="ed-cat-edit-nome" class="form-control" placeholder="Nome da categoria">
+              <div class="todo-swatch-grid" id="ed-cat-edit-swatches">
+                ${SWATCHES.map(c => `<div class="todo-swatch" style="background:${c}" data-cor="${c}"></div>`).join('')}
+              </div>
+            </div>
+            <button type="button" class="btn btn-secundario btn-sm" id="ed-cat-edit-salvar">Salvar edição</button>
           </div>
         </div>
         <div class="todo-form-grupo">
@@ -707,6 +804,7 @@ const Todo = (() => {
 
     document.getElementById('ed-nova-categoria-link').addEventListener('click', (e) => {
       e.preventDefault();
+      document.getElementById('ed-cat-editar-form').classList.remove('aberto');
       document.getElementById('ed-cat-nova-form').classList.toggle('aberto');
     });
     let corSelecionada = SWATCHES[0];
@@ -728,6 +826,53 @@ const Todo = (() => {
       sel.value = nome;
       document.getElementById('ed-cat-nova-form').classList.remove('aberto');
       Utils.toast('Categoria criada.', 'sucesso');
+    });
+
+    document.getElementById('ed-editar-categoria-link').addEventListener('click', (e) => {
+      e.preventDefault();
+      const nomeAtual = document.getElementById('ed-categoria').value;
+      if (!nomeAtual) { Utils.toast('Escolha uma categoria pra editar.', 'alerta'); return; }
+      const catAlvo = categorias.find(c => c.nome === nomeAtual);
+      if (!catAlvo) return;
+      document.getElementById('ed-cat-nova-form').classList.remove('aberto');
+      const form = document.getElementById('ed-cat-editar-form');
+      form.classList.toggle('aberto');
+      if (!form.classList.contains('aberto')) return;
+      document.getElementById('ed-cat-edit-nome').value = catAlvo.nome;
+      document.querySelectorAll('#ed-cat-edit-swatches .todo-swatch').forEach(sw => {
+        sw.classList.toggle('selecionado', sw.dataset.cor.toLowerCase() === catAlvo.cor.toLowerCase());
+      });
+    });
+    let corEdicaoCategoriaModal = null;
+    document.querySelectorAll('#ed-cat-edit-swatches .todo-swatch').forEach(sw => {
+      sw.addEventListener('click', () => {
+        document.querySelectorAll('#ed-cat-edit-swatches .todo-swatch').forEach(s => s.classList.remove('selecionado'));
+        sw.classList.add('selecionado');
+        corEdicaoCategoriaModal = sw.dataset.cor;
+      });
+    });
+    document.getElementById('ed-cat-edit-salvar').addEventListener('click', async () => {
+      const nomeAtual = document.getElementById('ed-categoria').value;
+      const catAlvo = categorias.find(c => c.nome === nomeAtual);
+      if (!catAlvo) return;
+      const nomeNovo = document.getElementById('ed-cat-edit-nome').value.trim();
+      if (!nomeNovo) { Utils.toast('O nome da categoria não pode ficar em branco.', 'alerta'); return; }
+      if (categorias.some(c => c.id !== catAlvo.id && c.nome === nomeNovo)) { Utils.toast('Já existe uma categoria com esse nome.', 'alerta'); return; }
+      const nomeAntigo = catAlvo.nome;
+      const corNova = corEdicaoCategoriaModal || catAlvo.cor;
+      await Database.atualizarRaiz(COL_CAT, catAlvo.id, { nome: nomeNovo, cor: corNova });
+      catAlvo.nome = nomeNovo; catAlvo.cor = corNova;
+      const afetadas = tarefas.filter(x => x.categoria === nomeAntigo);
+      for (const x of afetadas) {
+        await Database.atualizarRaiz(COL, x.id, { categoria: nomeNovo });
+        x.categoria = nomeNovo;
+      }
+      const sel = document.getElementById('ed-categoria');
+      const opt = [...sel.options].find(o => o.value === nomeAntigo);
+      if (opt) { opt.value = nomeNovo; opt.textContent = nomeNovo; }
+      sel.value = nomeNovo;
+      document.getElementById('ed-cat-editar-form').classList.remove('aberto');
+      Utils.toast('Categoria atualizada.', 'sucesso');
     });
     document.getElementById('ed-cancelar').addEventListener('click', fecharOverlay);
     document.getElementById('ed-excluir').addEventListener('click', async () => {
