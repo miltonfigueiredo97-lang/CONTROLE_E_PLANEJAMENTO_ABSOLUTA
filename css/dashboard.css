@@ -73,23 +73,24 @@
 .db-kpi-label { font-size: 0.72rem; color: rgba(255,255,255,0.6); margin-top: 2px; display: flex; align-items: center; }
 
 /* ============================================
-   Grid: Atividades + Curva S lado a lado
+   Seções em linha cheia (Curva S, IDP, Pacotes, Atividades, Resumo)
    ============================================ */
-.db-grid-top {
+.db-row { margin-bottom: 16px; }
+.db-grid-2 {
   display: grid;
-  grid-template-columns: minmax(280px, 1fr) minmax(360px, 1.6fr);
+  grid-template-columns: 1fr 1fr;
   gap: 16px;
   margin-bottom: 16px;
 }
 @media (max-width: 980px) {
-  .db-grid-top { grid-template-columns: 1fr; }
+  .db-grid-2 { grid-template-columns: 1fr; }
 }
 .db-secao-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; flex-wrap: wrap; gap: 8px; }
 .db-secao-header h3 { font-size: 0.95rem; font-weight: 700; color: var(--cor-texto); }
 
 /* ---- Atividades ---- */
-.db-card-atividades { display: flex; flex-direction: column; }
-#db-atividades { display: flex; flex-direction: column; gap: 14px; }
+.db-ativ-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+@media (max-width: 700px) { .db-ativ-grid { grid-template-columns: 1fr; } }
 .db-ativ-col-titulo { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: var(--cor-texto-muted); margin-bottom: 6px; }
 .db-ativ-item { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--cor-borda-light); }
 .db-ativ-item:last-child { border-bottom: none; }
@@ -99,10 +100,29 @@
 .db-ativ-sub { margin-top: 1px; }
 .db-ativ-perc { font-family: var(--font-mono); font-size: 0.8rem; font-weight: 700; color: var(--cor-primaria-dark); flex-shrink: 0; }
 
-/* ---- Curva S ---- */
+/* ---- Gráficos: legenda + tooltip flutuante (Curva S, IDP, Pacotes) ---- */
 .db-legenda { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 8px; font-size: 0.72rem; color: var(--cor-texto-secundario); }
 .db-legenda span { display: flex; align-items: center; gap: 5px; }
 .db-legenda i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+
+.db-tooltip-wrap { position: relative; }
+.db-tooltip {
+  display: none;
+  position: absolute;
+  background: #fff;
+  border: 1px solid var(--cor-borda);
+  border-radius: 8px;
+  box-shadow: var(--sombra-lg);
+  padding: 10px 14px;
+  font-size: 0.78rem;
+  min-width: 200px;
+  z-index: 30;
+  pointer-events: none;
+}
+.db-tt-titulo { font-weight: 700; margin-bottom: 6px; color: var(--cor-texto); }
+.db-tt-linha { display: flex; align-items: center; gap: 6px; padding: 2px 0; color: var(--cor-texto-secundario); }
+.db-tt-linha i { width: 9px; height: 9px; display: inline-block; flex-shrink: 0; }
+.db-tt-linha b { color: var(--cor-texto); margin-left: auto; font-family: var(--font-mono); }
 
 /* ---- Resumo por Apartamento ---- */
 .db-resumo-categoria td { background: var(--cor-primaria-ultra-light); font-weight: 700; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.3px; padding: 6px 14px; color: var(--cor-primaria-dark); }

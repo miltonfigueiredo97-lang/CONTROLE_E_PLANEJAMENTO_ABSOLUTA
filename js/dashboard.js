@@ -1,14 +1,34 @@
 // ============================================
 // Dashboard Principal
-// Visão geral da obra: hero com seletor, KPIs, Curva S,
-// atividades em execução/próximas e resumo por apartamento
-// (quantidade/custo) alimentado pelos Levantamentos.
+// Visão geral da obra: hero com seletor, Curva S, Índice de Desempenho
+// de Prazo, atividades, avanço por pacotes, PPC semanal/motivos de
+// atraso e resumo por apartamento (quantidade/custo).
 // ============================================
 const Dashboard = (() => {
   let obraAtual = null;
   let tarefas = [];
-  let _resumoView = 'unidade'; // 'unidade' | 'custo'
-  let _resumoDados = null; // cache do último cálculo (linhas, aptos, torres)
+  let semanas = [];
+  let _resumoView = 'unidade';
+  let _resumoDados = null;
+  let _curvaCache = null; // último cálculo da Curva S (usado pelo tooltip)
+
+  const MOTIVOS_COR = {
+    'Frente/Predecessora Não Liberada': '#f59e0b',
+    'Atraso Entrega de Material': '#8b5cf6',
+    'Atraso Programação de Material': '#64748b',
+    'Falta de Material (Sobreconsumo)': '#ef4444',
+    'Material Não Conforme': '#ec4899',
+    'Material Não Comprado': '#f97316',
+    'Necessidade Não Prevista (EAP)': '#0ea5e9',
+    'Especificação de Projeto': '#a3a3a3',
+    'Equipamentos Indisponíveis': '#14b8a6',
+    'Serviço Não Contratado': '#84cc16',
+    'Mudança no Plano de Ataque': '#1e293b',
+    'Atraso em Documentações': '#6366f1',
+    'Baixa Produtividade Prevista': '#eab308',
+    'Intempéries': '#06b6d4',
+    'Outros': '#d4d4d4',
+  };
 
   // Módulos de levantamento com árvore hierárquica (Torre > Andar > Apto > Cômodo)
   // usados no Resumo por Apartamento. Espelha (subconjunto) do LEVANTAMENTO_MODULOS
@@ -110,7 +130,6 @@ const Dashboard = (() => {
     await carregar();
   }
 
-  // Chamado pelo Router quando o seletor da sidebar muda (sem precisar reload)
   async function onObraChanged(obra) {
     obraAtual = obra;
     await carregar();
@@ -128,16 +147,22 @@ const Dashboard = (() => {
     try {
       Utils.mostrarLoading('Carregando dashboard...');
       const obraId = obraAtual.id;
-      const [obraCompleta, tf] = await Promise.all([
+      const [obraCompleta, tf, sem] = await Promise.all([
         Database.getObra(obraId),
         Database.listar(obraId, 'tarefas', 'ordem').catch(() => []),
+        Database.listar(obraId, 'semanas', 'fim').catch(() => []),
       ]);
       obraAtual = obraCompleta || obraAtual;
       tarefas = tf;
+      semanas = sem;
       el.innerHTML = _htmlEsqueleto();
       _renderHero();
-      _renderAtividades();
       _renderCurvaS();
+      _renderIDP();
+      _renderAtividades();
+      _renderPacotes();
+      _renderPpcSemanal();
+      _renderMotivosAtraso();
       await _renderResumoApartamento();
     } catch (e) {
       console.error(e);
@@ -174,24 +199,54 @@ const Dashboard = (() => {
   function _htmlEsqueleto() {
     return `
       <div id="db-hero"></div>
-      <div class="db-grid-top">
-        <div class="card db-card-atividades">
+
+      <div class="card db-row">
+        <div class="card-body">
+          <div class="db-secao-header"><h3>Curva S — Planejamento</h3></div>
+          <div id="db-curva-s" class="db-tooltip-wrap"></div>
+        </div>
+      </div>
+
+      <div class="card db-row">
+        <div class="card-body">
+          <div class="db-secao-header"><h3>Índice de Desempenho de Prazo (IDP)</h3></div>
+          <div id="db-idp" class="db-tooltip-wrap"></div>
+        </div>
+      </div>
+
+      <div class="card db-row">
+        <div class="card-body">
+          <div class="db-secao-header">
+            <h3>Atividades</h3>
+            <span class="text-sm text-muted" id="db-atualizado-em"></span>
+          </div>
+          <div id="db-atividades"></div>
+        </div>
+      </div>
+
+      <div class="card db-row">
+        <div class="card-body">
+          <div class="db-secao-header"><h3>Avanço por Pacotes</h3></div>
+          <div id="db-pacotes" class="db-tooltip-wrap"></div>
+        </div>
+      </div>
+
+      <div class="db-grid-2">
+        <div class="card">
           <div class="card-body">
-            <div class="db-secao-header">
-              <h3>Atividades</h3>
-              <span class="text-sm text-muted" id="db-atualizado-em"></span>
-            </div>
-            <div id="db-atividades"></div>
+            <div class="db-secao-header"><h3>Curto Prazo — PPC Semanal</h3></div>
+            <div id="db-ppc-semanal" class="db-tooltip-wrap"></div>
           </div>
         </div>
-        <div class="card db-card-curva">
+        <div class="card">
           <div class="card-body">
-            <div class="db-secao-header"><h3>Curva S — Planejamento</h3></div>
-            <div id="db-curva-s"></div>
+            <div class="db-secao-header"><h3>Motivos de Atraso Semanais</h3></div>
+            <div id="db-motivos-atraso" class="db-tooltip-wrap"></div>
           </div>
         </div>
       </div>
-      <div class="card db-card-resumo">
+
+      <div class="card db-row">
         <div class="card-body">
           <div class="db-secao-header">
             <h3>Resumo por Apartamento</h3>
@@ -201,6 +256,17 @@ const Dashboard = (() => {
             </div>
           </div>
           <div id="db-resumo-apartamento"></div>
+        </div>
+      </div>
+
+      <div class="card db-row">
+        <div class="card-body">
+          <div class="db-secao-header"><h3>Suprimentos</h3></div>
+          <div class="estado-vazio">
+            <div class="icone">📦</div>
+            <p>O módulo Suprimentos ainda não tem dados cadastrados.</p>
+            <p class="text-sm text-muted">Assim que Suprimentos for implementado (cadastro de solicitação, cotação, pedido de compra, mobilização), este painel passa a mostrar o status real aqui.</p>
+          </div>
         </div>
       </div>
     `;
@@ -278,6 +344,7 @@ const Dashboard = (() => {
   function _leaves() {
     return tarefas.filter(t => t.tipo !== 'grupo');
   }
+  function _peso(t) { return Math.max(1, Number(t.duracao) || 1); }
 
   function _calcProgresso(tf) {
     const leaves = tf.filter(t => t.tipo !== 'grupo');
@@ -285,7 +352,7 @@ const Dashboard = (() => {
     let somaPeso = 0, somaConc = 0, somaEsp = 0;
     let terminoAtual = null, terminoBase = null, inicioReal = null;
     leaves.forEach(t => {
-      const peso = Math.max(1, Number(t.duracao) || 1);
+      const peso = _peso(t);
       somaPeso += peso;
       somaConc += Math.min(100, Number(t.percentualConcluido) || 0) * peso;
       somaEsp += Math.min(100, Number(t.percentualEsperado) || 0) * peso;
@@ -330,18 +397,19 @@ const Dashboard = (() => {
       </div>`;
 
     host.innerHTML = `
-      <div class="db-ativ-col">
-        <div class="db-ativ-col-titulo">Em Execução</div>
-        ${emExecucao.length ? emExecucao.map(t => item(t, '#facc15')).join('') : '<div class="text-sm text-muted" style="padding:10px 0;">Nenhuma atividade em execução.</div>'}
-      </div>
-      <div class="db-ativ-col">
-        <div class="db-ativ-col-titulo">Próximas</div>
-        ${proximas.length ? proximas.map(t => item(t, '#60a5fa')).join('') : '<div class="text-sm text-muted" style="padding:10px 0;">Nenhuma atividade pendente.</div>'}
+      <div class="db-ativ-grid">
+        <div class="db-ativ-col">
+          <div class="db-ativ-col-titulo">Em Execução</div>
+          ${emExecucao.length ? emExecucao.map(t => item(t, '#facc15')).join('') : '<div class="text-sm text-muted" style="padding:10px 0;">Nenhuma atividade em execução.</div>'}
+        </div>
+        <div class="db-ativ-col">
+          <div class="db-ativ-col-titulo">Próximas</div>
+          ${proximas.length ? proximas.map(t => item(t, '#60a5fa')).join('') : '<div class="text-sm text-muted" style="padding:10px 0;">Nenhuma atividade pendente.</div>'}
+        </div>
       </div>`;
   }
 
   // ===================== CURVA S =====================
-  function _mesKey(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); }
   function _mesLabel(d) { return d.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' }).replace('.', ''); }
 
   function _calcCurvaS(tf) {
@@ -359,7 +427,6 @@ const Dashboard = (() => {
     if (!dMin || !dMax) return null;
     if (hoje > dMax) dMax = hoje;
 
-    // Monta buckets mensais [dMin..dMax]
     const meses = [];
     let cursor = new Date(dMin.getFullYear(), dMin.getMonth(), 1);
     const fimCursor = new Date(dMax.getFullYear(), dMax.getMonth(), 1);
@@ -379,18 +446,16 @@ const Dashboard = (() => {
     }
 
     let totalPeso = 0;
-    leaves.forEach(t => { totalPeso += Math.max(1, Number(t.duracao) || 1); });
+    leaves.forEach(t => { totalPeso += _peso(t); });
     if (!totalPeso) totalPeso = 1;
 
     leaves.forEach(t => {
-      const peso = Math.max(1, Number(t.duracao) || 1);
-      // Planejado (linha de base se existir)
+      const peso = _peso(t);
       const iniP = new Date(t.inicioPlanejadoBase || t.inicioPlanejado);
       const fimP = new Date(t.terminoPlanejadoBase || t.terminoPlanejado || t.inicioPlanejado);
       const fimPValido = fimP > iniP ? fimP : new Date(iniP.getTime() + 864e5);
       meses.forEach(m => { m.planMensal += peso * overlapFrac(iniP, fimPValido, m.inicio, m.fim); });
 
-      // Real
       const perc = Math.min(100, Number(t.percentualConcluido) || 0);
       if (perc > 0) {
         const pesoReal = peso * (perc / 100);
@@ -411,6 +476,8 @@ const Dashboard = (() => {
       acumP += m.planMensal; acumR += m.realMensal;
       m.planAcum = Math.min(100, acumP / totalPeso * 100);
       m.realAcum = Math.min(100, acumR / totalPeso * 100);
+      m.planMensalPct = m.planMensal / totalPeso * 100;
+      m.realMensalPct = m.realMensal / totalPeso * 100;
       if (m.inicio <= hoje) hojeIdx = i;
     });
     return { meses, hojeIdx };
@@ -420,48 +487,70 @@ const Dashboard = (() => {
     const host = document.getElementById('db-curva-s');
     if (!host) return;
     const curva = _calcCurvaS(tarefas);
+    _curvaCache = curva;
     if (!curva || !curva.meses.length) {
       host.innerHTML = '<div class="estado-vazio"><p class="text-sm">Sem dados de planejamento suficientes para montar a Curva S.</p></div>';
       return;
     }
-    host.innerHTML = _svgCurvaS(curva);
+    host.innerHTML = _svgCurva(curva.meses, curva.hojeIdx, {
+      idTooltip: 'db-curva-tooltip',
+      idHits: 'db-curva-hit-',
+      alturaGrafico: 420,
+      comBarras: true,
+    });
+    _attachHover(host, curva.meses, (m) => `
+      <div class="db-tt-titulo">${m.label}</div>
+      <div class="db-tt-linha"><i style="background:#999;"></i>Esperado Mensal: <b>${m.planMensalPct.toFixed(2)}%</b></div>
+      <div class="db-tt-linha"><i style="background:var(--cor-primaria);"></i>Executado Mensal: <b>${m.realMensalPct.toFixed(2)}%</b></div>
+      <div class="db-tt-linha"><i style="background:#999;border-radius:50%;"></i>Esperado Acumulado: <b>${m.planAcum.toFixed(2)}%</b></div>
+      <div class="db-tt-linha"><i style="background:var(--cor-primaria-dark);border-radius:50%;"></i>Executado Acumulado: <b>${m.realAcum.toFixed(2)}%</b></div>
+    `);
   }
 
-  function _svgCurvaS(curva) {
-    const meses = curva.meses;
-    const W = 900, H = 300, padL = 34, padR = 12, padT = 16, padB = 34;
-    const plotW = W - padL - padR, plotH = H - padT - padB;
+  // SVG genérico usado pela Curva S (linhas acumuladas + barras mensais).
+  function _svgCurva(meses, hojeIdx, opts) {
     const n = meses.length;
+    const W = Math.max(900, n * 46), H = opts.alturaGrafico || 380;
+    const padL = 40, padR = 40, padT = 16, padB = 34;
+    const plotW = W - padL - padR, plotH = H - padT - padB;
     const x = i => padL + (n === 1 ? 0 : (i / (n - 1)) * plotW);
     const yAcum = v => padT + plotH - (Math.max(0, Math.min(100, v)) / 100) * plotH;
 
-    const maxMensal = Math.max(1, ...meses.map(m => Math.max(m.planMensal, m.realMensal)));
-    const barH = v => (v / maxMensal) * (plotH * 0.32);
-
-    const barW = Math.max(2, (plotW / n) * 0.32);
     let bars = '';
-    meses.forEach((m, i) => {
-      const cx = x(i);
-      const hP = barH(m.planMensal), hR = barH(m.realMensal);
-      bars += `<rect x="${cx - barW - 1}" y="${padT + plotH - hP}" width="${barW}" height="${hP}" fill="#c9c9c9" opacity="0.8"><title>Esperado mensal — ${m.label}</title></rect>`;
-      bars += `<rect x="${cx + 1}" y="${padT + plotH - hR}" width="${barW}" height="${hR}" fill="var(--cor-primaria)" opacity="0.9"><title>Executado mensal — ${m.label}</title></rect>`;
-    });
+    if (opts.comBarras) {
+      const maxMensal = Math.max(1, ...meses.map(m => Math.max(m.planMensalPct, m.realMensalPct)));
+      const barH = v => (v / maxMensal) * (plotH * 0.34);
+      const barW = Math.max(3, (plotW / n) * 0.32);
+      meses.forEach((m, i) => {
+        const cx = x(i);
+        const hP = barH(m.planMensalPct), hR = barH(m.realMensalPct);
+        bars += `<rect x="${cx - barW - 1}" y="${padT + plotH - hP}" width="${barW}" height="${hP}" fill="#c9c9c9" opacity="0.85"/>`;
+        bars += `<rect x="${cx + 1}" y="${padT + plotH - hR}" width="${barW}" height="${hR}" fill="var(--cor-primaria)" opacity="0.95"/>`;
+      });
+    }
 
     const pathPlan = meses.map((m, i) => `${i === 0 ? 'M' : 'L'}${x(i).toFixed(1)},${yAcum(m.planAcum).toFixed(1)}`).join(' ');
     const pathReal = meses.map((m, i) => `${i === 0 ? 'M' : 'L'}${x(i).toFixed(1)},${yAcum(m.realAcum).toFixed(1)}`).join(' ');
 
-    const hojeX = x(curva.hojeIdx);
-    const labelStep = Math.max(1, Math.ceil(n / 14));
+    const hojeX = x(hojeIdx);
+    const labelStep = Math.max(1, Math.ceil(n / 18));
     let labels = '';
     meses.forEach((m, i) => {
       if (i % labelStep !== 0 && i !== n - 1) return;
-      labels += `<text x="${x(i).toFixed(1)}" y="${H - 10}" font-size="10" fill="var(--cor-texto-muted, #888)" text-anchor="middle">${m.label}</text>`;
+      labels += `<text x="${x(i).toFixed(1)}" y="${H - 10}" font-size="10" fill="#888" text-anchor="middle">${m.label}</text>`;
     });
 
     const gridY = [0, 25, 50, 75, 100].map(v => `<line x1="${padL}" x2="${W - padR}" y1="${yAcum(v).toFixed(1)}" y2="${yAcum(v).toFixed(1)}" stroke="#eee" stroke-width="1"/><text x="4" y="${(yAcum(v) + 3).toFixed(1)}" font-size="9" fill="#999">${v}%</text>`).join('');
 
+    let hits = '';
+    meses.forEach((m, i) => {
+      const cx = x(i);
+      const larguraHit = plotW / n;
+      hits += `<rect class="db-hit" data-idx="${i}" x="${(cx - larguraHit / 2).toFixed(1)}" y="${padT}" width="${larguraHit.toFixed(1)}" height="${plotH}" fill="transparent" style="cursor:pointer;"/>`;
+    });
+
     return `
-      <svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block;">
+      <svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block;min-width:${W}px;">
         ${gridY}
         <line x1="${hojeX.toFixed(1)}" x2="${hojeX.toFixed(1)}" y1="${padT}" y2="${padT + plotH}" stroke="#ef4444" stroke-width="1" stroke-dasharray="4,3"/>
         <text x="${hojeX.toFixed(1)}" y="${padT - 4}" font-size="9" fill="#ef4444" text-anchor="middle">hoje</text>
@@ -469,13 +558,295 @@ const Dashboard = (() => {
         <path d="${pathPlan}" fill="none" stroke="#999" stroke-width="2" stroke-dasharray="5,3"/>
         <path d="${pathReal}" fill="none" stroke="var(--cor-primaria-dark, #B89400)" stroke-width="2.5"/>
         ${labels}
+        ${hits}
       </svg>
-      <div class="db-legenda">
+      <div class="db-tooltip" id="${opts.idTooltip}"></div>
+      ${opts.comBarras ? `<div class="db-legenda">
         <span><i style="background:#999;"></i> Esperado (acumulado)</span>
         <span><i style="background:var(--cor-primaria-dark,#B89400);"></i> Executado (acumulado)</span>
         <span><i style="background:#c9c9c9;"></i> Esperado mensal</span>
         <span><i style="background:var(--cor-primaria);"></i> Executado mensal</span>
+      </div>` : ''}`;
+  }
+
+  // Liga hover nos retângulos invisíveis (.db-hit) de um gráfico já renderizado,
+  // mostrando uma tooltip flutuante com o conteúdo retornado por conteudoFn(item).
+  function _attachHover(wrap, itens, conteudoFn) {
+    const tooltip = wrap.querySelector('.db-tooltip');
+    if (!tooltip) return;
+    wrap.querySelectorAll('.db-hit').forEach(hit => {
+      const idx = Number(hit.dataset.idx);
+      hit.addEventListener('mouseenter', () => {
+        tooltip.innerHTML = conteudoFn(itens[idx]);
+        tooltip.style.display = 'block';
+      });
+      hit.addEventListener('mousemove', (e) => {
+        const rectWrap = wrap.getBoundingClientRect();
+        let left = e.clientX - rectWrap.left + 14;
+        const maxLeft = rectWrap.width - 220;
+        if (left > maxLeft) left = e.clientX - rectWrap.left - 220 - 14;
+        tooltip.style.left = Math.max(4, left) + 'px';
+        tooltip.style.top = (e.clientY - rectWrap.top - 20) + 'px';
+      });
+      hit.addEventListener('mouseleave', () => { tooltip.style.display = 'none'; });
+    });
+  }
+
+  // ===================== ÍNDICE DE DESEMPENHO DE PRAZO (IDP) =====================
+  function _renderIDP() {
+    const host = document.getElementById('db-idp');
+    if (!host) return;
+    if (!_curvaCache || !_curvaCache.meses.length) {
+      host.innerHTML = '<div class="estado-vazio"><p class="text-sm">Sem dados suficientes para calcular o IDP.</p></div>';
+      return;
+    }
+    const meses = _curvaCache.meses.map(m => ({
+      label: m.label,
+      idp: m.planAcum > 0.01 ? (m.realAcum / m.planAcum) : null,
+    }));
+    host.innerHTML = _svgIDP(meses, _curvaCache.hojeIdx);
+    _attachHover(host, meses, (m) => `
+      <div class="db-tt-titulo">${m.label}</div>
+      <div class="db-tt-linha">IDP: <b>${m.idp != null ? m.idp.toFixed(2) : '—'}</b></div>
+      <div class="text-sm text-muted" style="margin-top:4px;max-width:190px;">IDP ≥ 1 significa que o executado está igual ou à frente do esperado até este mês.</div>
+    `);
+  }
+
+  function _svgIDP(meses, hojeIdx) {
+    const n = meses.length;
+    const W = Math.max(900, n * 46), H = 260;
+    const padL = 34, padR = 30, padT = 34, padB = 30;
+    const plotW = W - padL - padR, plotH = H - padT - padB;
+    const valores = meses.map(m => m.idp).filter(v => v != null);
+    const maxV = Math.max(2, ...(valores.length ? valores : [1]) .map(v => v * 1.15));
+    const x = i => padL + (n === 1 ? 0 : (i / (n - 1)) * plotW);
+    const y = v => padT + plotH - (Math.max(0, v) / maxV) * plotH;
+
+    let pathD = '', pontos = '', hits = '';
+    let iniciado = false;
+    meses.forEach((m, i) => {
+      const larguraHit = plotW / n;
+      hits += `<rect class="db-hit" data-idx="${i}" x="${(x(i) - larguraHit / 2).toFixed(1)}" y="${padT}" width="${larguraHit.toFixed(1)}" height="${plotH}" fill="transparent" style="cursor:pointer;"/>`;
+      if (m.idp == null) return;
+      pathD += `${!iniciado ? 'M' : 'L'}${x(i).toFixed(1)},${y(m.idp).toFixed(1)} `;
+      iniciado = true;
+      pontos += `<circle cx="${x(i).toFixed(1)}" cy="${y(m.idp).toFixed(1)}" r="3.5" fill="var(--cor-primaria-dark,#B89400)"/>
+        <rect x="${(x(i) - 17).toFixed(1)}" y="${(y(m.idp) - 24).toFixed(1)}" width="34" height="16" rx="4" fill="#1a1a1a"/>
+        <text x="${x(i).toFixed(1)}" y="${(y(m.idp) - 12.5).toFixed(1)}" font-size="9.5" fill="#fff" text-anchor="middle">${m.idp.toFixed(2)}</text>`;
+    });
+
+    const labelStep = Math.max(1, Math.ceil(n / 18));
+    let labels = '';
+    meses.forEach((m, i) => {
+      if (i % labelStep !== 0 && i !== n - 1) return;
+      labels += `<text x="${x(i).toFixed(1)}" y="${H - 8}" font-size="10" fill="#888" text-anchor="middle">${m.label}</text>`;
+    });
+
+    const gridVals = [0, 0.5, 1, 1.5, 2].filter(v => v <= maxV);
+    const gridY = gridVals.map(v => `<line x1="${padL}" x2="${W - padR}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}" stroke="#eee" stroke-width="1"/><text x="4" y="${(y(v) + 3).toFixed(1)}" font-size="9" fill="#999">${v.toFixed(2)}</text>`).join('');
+
+    return `
+      <svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block;min-width:${W}px;">
+        ${gridY}
+        <line x1="${padL}" x2="${W - padR}" y1="${y(1).toFixed(1)}" y2="${y(1).toFixed(1)}" stroke="#ef4444" stroke-width="1.5" stroke-dasharray="6,3"/>
+        <text x="${W - padR}" y="${(y(1) - 5).toFixed(1)}" font-size="10" fill="#ef4444" text-anchor="end">Ideal</text>
+        <line x1="${x(hojeIdx).toFixed(1)}" x2="${x(hojeIdx).toFixed(1)}" y1="${padT}" y2="${padT + plotH}" stroke="#94a3b8" stroke-width="1" stroke-dasharray="4,3"/>
+        <path d="${pathD}" fill="none" stroke="var(--cor-primaria-dark,#B89400)" stroke-width="2"/>
+        ${pontos}
+        ${labels}
+        ${hits}
+      </svg>
+      <div class="db-tooltip"></div>`;
+  }
+
+  // ===================== AVANÇO POR PACOTES =====================
+  function _calcPacotes(tf) {
+    const leaves = tf.filter(t => t.tipo !== 'grupo');
+    if (!leaves.length) return [];
+    const totalPeso = leaves.reduce((s, t) => s + _peso(t), 0) || 1;
+    const grupos = new Map();
+    leaves.forEach(t => {
+      const nome = (t.grupo && String(t.grupo).trim()) || 'Sem Grupo';
+      const peso = _peso(t);
+      if (!grupos.has(nome)) grupos.set(nome, { nome, peso: 0, somaEsp: 0, somaConc: 0 });
+      const g = grupos.get(nome);
+      g.peso += peso;
+      g.somaEsp += Math.min(100, Number(t.percentualEsperado) || 0) * peso;
+      g.somaConc += Math.min(100, Number(t.percentualConcluido) || 0) * peso;
+    });
+    return [...grupos.values()]
+      .map(g => ({ nome: g.nome, pesoPct: g.peso / totalPeso * 100, esperado: g.somaEsp / g.peso, executado: g.somaConc / g.peso }))
+      .sort((a, b) => b.pesoPct - a.pesoPct);
+  }
+
+  function _renderPacotes() {
+    const host = document.getElementById('db-pacotes');
+    if (!host) return;
+    const pacotes = _calcPacotes(tarefas);
+    if (!pacotes.length) {
+      host.innerHTML = '<div class="estado-vazio"><p class="text-sm">Sem tarefas com Grupo definido no Planejamento.</p></div>';
+      return;
+    }
+    host.innerHTML = _svgPacotes(pacotes);
+    _attachHover(host, pacotes, (p) => `
+      <div class="db-tt-titulo">${p.nome}</div>
+      <div class="db-tt-linha">Peso no projeto: <b>${p.pesoPct.toFixed(2)}%</b></div>
+      <div class="db-tt-linha"><i style="background:#1a1a1a;"></i>Esperado: <b>${Math.round(p.esperado)}%</b></div>
+      <div class="db-tt-linha"><i style="background:var(--cor-primaria);"></i>Executado: <b>${Math.round(p.executado)}%</b></div>
+    `);
+  }
+
+  function _svgPacotes(pacotes) {
+    const n = pacotes.length;
+    const grupoW = 58;
+    const W = Math.max(900, n * grupoW + 60), H = 340;
+    const padL = 40, padR = 20, padT = 30, padB = 90;
+    const plotW = W - padL - padR, plotH = H - padT - padB;
+    const barW = Math.min(18, (plotW / n) * 0.32);
+
+    let bars = '', labels = '', pesos = '', hits = '';
+    pacotes.forEach((p, i) => {
+      const cx = padL + (i + 0.5) * (plotW / n);
+      const hEsp = (p.esperado / 100) * plotH, hExec = (p.executado / 100) * plotH;
+      bars += `<rect x="${(cx - barW - 1).toFixed(1)}" y="${(padT + plotH - hEsp).toFixed(1)}" width="${barW}" height="${hEsp.toFixed(1)}" fill="#1a1a1a"/>`;
+      bars += `<text x="${(cx - barW / 2 - 1).toFixed(1)}" y="${(padT + plotH - hEsp - 4).toFixed(1)}" font-size="9" fill="#1a1a1a" text-anchor="middle">${Math.round(p.esperado)}%</text>`;
+      bars += `<rect x="${(cx + 1).toFixed(1)}" y="${(padT + plotH - hExec).toFixed(1)}" width="${barW}" height="${hExec.toFixed(1)}" fill="var(--cor-primaria)"/>`;
+      bars += `<text x="${(cx + barW / 2 + 1).toFixed(1)}" y="${(padT + plotH - hExec - 4).toFixed(1)}" font-size="9" fill="var(--cor-primaria-dark,#B89400)" text-anchor="middle">${Math.round(p.executado)}%</text>`;
+      labels += `<text x="${cx.toFixed(1)}" y="${(padT + plotH + 14).toFixed(1)}" font-size="9.5" fill="#333" text-anchor="end" transform="rotate(-40 ${cx.toFixed(1)} ${(padT + plotH + 14).toFixed(1)})">${_esc(p.nome)}</text>`;
+      pesos += `<text x="${cx.toFixed(1)}" y="${(padT + plotH + 62).toFixed(1)}" font-size="9" fill="#999" text-anchor="middle">${p.pesoPct.toFixed(2)}%</text>`;
+      hits += `<rect class="db-hit" data-idx="${i}" x="${(cx - (plotW / n) / 2).toFixed(1)}" y="${padT}" width="${(plotW / n).toFixed(1)}" height="${plotH}" fill="transparent" style="cursor:pointer;"/>`;
+    });
+
+    const gridY = [0, 25, 50, 75, 100].map(v => `<line x1="${padL}" x2="${W - padR}" y1="${(padT + plotH - (v / 100) * plotH).toFixed(1)}" y2="${(padT + plotH - (v / 100) * plotH).toFixed(1)}" stroke="#eee" stroke-width="1"/><text x="4" y="${(padT + plotH - (v / 100) * plotH + 3).toFixed(1)}" font-size="9" fill="#999">${v}%</text>`).join('');
+
+    return `
+      <div style="overflow-x:auto;">
+        <svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block;min-width:${W}px;">
+          ${gridY}
+          ${bars}
+          ${labels}
+          ${pesos}
+          ${hits}
+        </svg>
+      </div>
+      <div class="db-tooltip"></div>
+      <div class="db-legenda">
+        <span><i style="background:#1a1a1a;"></i> Esperado</span>
+        <span><i style="background:var(--cor-primaria);"></i> Executado</span>
+        <span style="color:#999;">Peso = participação do pacote no total do projeto</span>
       </div>`;
+  }
+
+  function _esc(s) { return String(s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+
+  // ===================== PPC SEMANAL =====================
+  function _periodosFechados() {
+    return semanas.filter(s => s.status === 'fechada' && s.relatorio).sort((a, b) => String(a.fim).localeCompare(String(b.fim))).slice(-12);
+  }
+
+  function _renderPpcSemanal() {
+    const host = document.getElementById('db-ppc-semanal');
+    if (!host) return;
+    const periodos = _periodosFechados();
+    if (!periodos.length) {
+      host.innerHTML = '<div class="estado-vazio"><p class="text-sm">Nenhum período fechado no Semanal ainda.</p></div>';
+      return;
+    }
+    host.innerHTML = _svgPpc(periodos);
+    _attachHover(host, periodos, (p) => `
+      <div class="db-tt-titulo">${p.label}</div>
+      <div class="db-tt-linha">PPC: <b>${p.relatorio.resumo.ppc}%</b></div>
+      <div class="db-tt-linha text-muted">${p.relatorio.resumo.concluidasNoEsperado}/${p.relatorio.resumo.tarefas} tarefas dentro do esperado</div>
+    `);
+  }
+
+  function _svgPpc(periodos) {
+    const n = periodos.length;
+    const W = Math.max(500, n * 60), H = 260;
+    const padL = 34, padR = 20, padT = 30, padB = 34;
+    const plotW = W - padL - padR, plotH = H - padT - padB;
+    const maxY = 110;
+    const y = v => padT + plotH - (Math.min(v, maxY) / maxY) * plotH;
+    const barW = Math.min(34, (plotW / n) * 0.55);
+
+    let bars = '', labels = '', hits = '';
+    periodos.forEach((p, i) => {
+      const cx = padL + (i + 0.5) * (plotW / n);
+      const ppc = p.relatorio.resumo.ppc || 0;
+      const h = plotH - (y(ppc) - padT);
+      bars += `<rect x="${(cx - barW / 2).toFixed(1)}" y="${y(ppc).toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" fill="#1a1a1a" rx="2"/>`;
+      bars += `<text x="${cx.toFixed(1)}" y="${(y(ppc) - 6).toFixed(1)}" font-size="10" fill="#1a1a1a" text-anchor="middle" font-weight="700">${ppc}%</text>`;
+      labels += `<text x="${cx.toFixed(1)}" y="${H - 12}" font-size="10" fill="#666" text-anchor="middle">${p.label}</text>`;
+      hits += `<rect class="db-hit" data-idx="${i}" x="${(cx - (plotW / n) / 2).toFixed(1)}" y="${padT}" width="${(plotW / n).toFixed(1)}" height="${plotH}" fill="transparent" style="cursor:pointer;"/>`;
+    });
+
+    return `
+      <svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block;">
+        <line x1="${padL}" x2="${W - padR}" y1="${y(100).toFixed(1)}" y2="${y(100).toFixed(1)}" stroke="#ef4444" stroke-width="1.5" stroke-dasharray="6,3"/>
+        <text x="${W - padR}" y="${(y(100) - 5).toFixed(1)}" font-size="10" fill="#ef4444" text-anchor="end">Ideal</text>
+        ${bars}
+        ${labels}
+        ${hits}
+      </svg>
+      <div class="db-tooltip"></div>`;
+  }
+
+  // ===================== MOTIVOS DE ATRASO SEMANAIS =====================
+  function _motivosDoPeriodo(p) {
+    const contagem = {};
+    (p.relatorio.itens || []).forEach(i => { if (i.justificativa && i.justificativa.motivo) contagem[i.justificativa.motivo] = (contagem[i.justificativa.motivo] || 0) + 1; });
+    Object.values(p.omitidas || {}).forEach(o => { if (o.motivo) contagem[o.motivo] = (contagem[o.motivo] || 0) + 1; });
+    return contagem;
+  }
+
+  function _renderMotivosAtraso() {
+    const host = document.getElementById('db-motivos-atraso');
+    if (!host) return;
+    const periodos = _periodosFechados();
+    if (!periodos.length) {
+      host.innerHTML = '<div class="estado-vazio"><p class="text-sm">Nenhum período fechado no Semanal ainda.</p></div>';
+      return;
+    }
+    const porPeriodo = periodos.map(p => ({ label: p.label, contagem: _motivosDoPeriodo(p) }));
+    const motivosUsados = [...new Set(porPeriodo.flatMap(p => Object.keys(p.contagem)))];
+    if (!motivosUsados.length) {
+      host.innerHTML = '<div class="estado-vazio"><p class="text-sm">Nenhum motivo de atraso registrado nos períodos recentes.</p></div>';
+      return;
+    }
+    host.innerHTML = _svgMotivos(porPeriodo, motivosUsados);
+  }
+
+  function _svgMotivos(porPeriodo, motivos) {
+    const n = porPeriodo.length;
+    const W = Math.max(500, n * 60), H = 260;
+    const padL = 30, padR = 20, padT = 20, padB = 34;
+    const plotW = W - padL - padR, plotH = H - padT - padB;
+    const maxTotal = Math.max(1, ...porPeriodo.map(p => Object.values(p.contagem).reduce((s, v) => s + v, 0)));
+    const barW = Math.min(34, (plotW / n) * 0.55);
+
+    let bars = '', labels = '';
+    porPeriodo.forEach((p, i) => {
+      const cx = padL + (i + 0.5) * (plotW / n);
+      let acumH = 0;
+      motivos.forEach(m => {
+        const v = p.contagem[m] || 0;
+        if (!v) return;
+        const h = (v / maxTotal) * plotH;
+        const y = padT + plotH - acumH - h;
+        bars += `<rect x="${(cx - barW / 2).toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" fill="${MOTIVOS_COR[m] || '#ccc'}"><title>${_esc(m)}: ${v}</title></rect>`;
+        acumH += h;
+      });
+      labels += `<text x="${cx.toFixed(1)}" y="${H - 12}" font-size="10" fill="#666" text-anchor="middle">${p.label}</text>`;
+    });
+
+    const legenda = motivos.map(m => `<span><i style="background:${MOTIVOS_COR[m] || '#ccc'};"></i>${m}</span>`).join('');
+
+    return `
+      <svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block;">
+        ${bars}
+        ${labels}
+      </svg>
+      <div class="db-legenda" style="margin-top:10px;">${legenda}</div>`;
   }
 
   // ===================== RESUMO POR APARTAMENTO =====================
@@ -502,8 +873,6 @@ const Dashboard = (() => {
     const obraId = obraAtual.id;
     const chaves = Object.keys(LEV_TREE);
 
-    // Carrega config (árvore) + dados de cada módulo em paralelo
-    const cfgsCache = {}; // configDoc -> arvore (evita buscar 2x pra paredesAlvenaria/paredesAcabamento que usam o mesmo configDoc)
     const resultados = await Promise.all(chaves.map(async (chave) => {
       const mod = LEV_TREE[chave];
       const [dados, cfg] = await Promise.all([
@@ -513,7 +882,6 @@ const Dashboard = (() => {
       return { chave, dados, arvore: cfg?.arvore || [] };
     }));
 
-    // Custos: carrega tarefas do planejamento + materiais/mão de obra pra estimar custo médio por unidade
     const [materiaisBib, materiaisVinc, maoDeObraVinc] = await Promise.all([
       Database.listar(obraId, 'materiais', 'nome').catch(() => []),
       Database.listar(obraId, 'materiais_vinculos', 'createdAt').catch(() => []),
@@ -521,41 +889,48 @@ const Dashboard = (() => {
     ]);
     const { custoMaterialPorTarefa, custoMaoObraPorTarefa } = _calcularCustosTarefas(materiaisBib, materiaisVinc, maoDeObraVinc);
 
-    // Mapa nodeId -> {apartamentoId, apartamentoLabel, torreLabel} construído a partir da(s) árvore(s)
-    // (paredesAlvenaria e paredesAcabamento compartilham a mesma árvore 'paredesArvore', então
-    // qualquer uma das duas serve de fonte — usamos a que tiver árvore não-vazia).
-    const apartamentosPorArvore = {}; // configDoc -> {mapaNode, ordemAptos:[{id,label,torre}]}
-    resultados.forEach(r => {
-      const mod = LEV_TREE[r.chave];
-      if (!apartamentosPorArvore[mod.configDoc] || !apartamentosPorArvore[mod.configDoc].ordemAptos.length) {
-        apartamentosPorArvore[mod.configDoc] = _mapaApartamentos(r.arvore);
-      }
+    // IMPORTANTE: Piso, Teto e Paredes têm árvores INDEPENDENTES entre si (cada
+    // módulo guarda seu próprio configDoc). Isso significa que "Torre A" na
+    // árvore do Piso e "Torre A" na árvore de Paredes são nós com IDs
+    // diferentes, mesmo representando o mesmo lugar físico — então o
+    // agrupamento por apartamento não pode usar o ID do nó como chave (cada
+    // levantamento apareceria como uma "torre" separada). A chave usada aqui
+    // é o CAMINHO/NOME (ex: "Torre A › Pav 3 › Apto 301"), que é comum aos
+    // três módulos desde que o usuário nomeie os locais de forma consistente.
+    const mapaPorModulo = {}; // chave (piso/teto/paredesAlvenaria/...) -> Map(nodeId -> {label,torre})
+    Object.keys(LEV_TREE).forEach(chave => {
+      const r = resultados.find(x => x.chave === chave);
+      mapaPorModulo[chave] = _mapaApartamentosPorLabel(r ? r.arvore : []);
     });
 
-    // Conjunto de todos os apartamentos (union, na ordem em que apareceram)
-    const apartamentosMap = new Map(); // id -> {id,label,torre}
-    Object.values(apartamentosPorArvore).forEach(({ ordemAptos }) => {
-      ordemAptos.forEach(a => { if (!apartamentosMap.has(a.id)) apartamentosMap.set(a.id, a); });
+    // União de todos os apartamentos (por label) na ordem em que apareceram,
+    // com ordenação final por Torre e depois natural (Apto 92 antes de Apto 101 etc.)
+    const apartamentosMap = new Map(); // label -> {label,torre}
+    Object.values(mapaPorModulo).forEach(mapa => {
+      mapa.forEach(info => { if (!apartamentosMap.has(info.label)) apartamentosMap.set(info.label, info); });
     });
-    const apartamentos = [...apartamentosMap.values()];
+    const apartamentos = [...apartamentosMap.values()].sort((a, b) => {
+      const t = a.torre.localeCompare(b.torre, 'pt-BR', { numeric: true });
+      if (t !== 0) return t;
+      return a.label.localeCompare(b.label, 'pt-BR', { numeric: true });
+    });
 
-    // Linhas: para cada módulo/métrica, soma por apartamento
     const linhas = [];
     resultados.forEach(r => {
       const mod = LEV_TREE[r.chave];
-      const { mapaNode } = apartamentosPorArvore[mod.configDoc] || { mapaNode: new Map() };
+      const mapaNode = mapaPorModulo[r.chave];
       mod.linhas.forEach(linhaCfg => {
-        const porApto = new Map(); // apartamentoId -> valor
+        const porApto = new Map(); // label (apartamento) -> valor
         let total = 0;
         r.dados.forEach(reg => {
           const v = mod.valor(reg, linhaCfg.metrica);
           if (!v) return;
           total += v;
           const info = mapaNode.get(reg.nodeId);
-          const aptoId = info ? info.id : '__sem_local__';
-          porApto.set(aptoId, (porApto.get(aptoId) || 0) + v);
+          const aptoLabel = info ? info.label : '__sem_local__';
+          porApto.set(aptoLabel, (porApto.get(aptoLabel) || 0) + v);
         });
-        if (total <= 0) return; // linha sem nenhum dado lançado ainda — não polui a tabela
+        if (total <= 0) return;
         const moduloVinculo = mod.moduloVinculo || r.chave;
         const custoInfo = _custoMedioPorUnidade(moduloVinculo, linhaCfg.metrica, custoMaterialPorTarefa, custoMaoObraPorTarefa);
         linhas.push({
@@ -568,38 +943,26 @@ const Dashboard = (() => {
     return { apartamentos, linhas };
   }
 
-  // Constrói, a partir da árvore [{id,nome,filhos:[...]}], um mapa nodeId -> {id,label,torre}
-  // onde o "apartamento" é o NÓ PAI do local onde a área/peça foi lançada (convenção
-  // Torre > Andar > Apto > Cômodo — a área é lançada no Cômodo, o pai é o Apto).
-  // Também devolve a lista de apartamentos na ordem de varredura (alfabética por nível,
-  // igual à convenção já usada nos módulos de Levantamento).
-  function _mapaApartamentos(arvore) {
-    const mapaNode = new Map(); // nodeId (do registro) -> {id,label,torre} do apartamento
-    const ordemAptos = [];
-    const vistos = new Set();
-
-    function ordenar(nodes) { return [...(nodes || [])].sort((a, b) => (a.nome || '').localeCompare(b.nome || '', 'pt-BR')); }
-
+  // Constrói, a partir da árvore [{id,nome,filhos:[...]}], um mapa nodeId -> {label,torre}
+  // onde "apartamento" é o CAMINHO DE NOMES até o nó PAI do local onde a área/peça
+  // foi lançada (convenção Torre > Andar > Apto > Cômodo — a área é lançada no
+  // Cômodo, o pai é o Apto). A chave de agrupamento é o texto do caminho (não o
+  // ID do nó), pra permitir unir o mesmo apartamento entre árvores diferentes
+  // (Piso, Teto, Paredes) — ver comentário em _calcularResumoApartamento.
+  function _mapaApartamentosPorLabel(arvore) {
+    const mapaNode = new Map();
+    function ordenar(nodes) { return [...(nodes || [])].sort((a, b) => (a.nome || '').localeCompare(b.nome || '', 'pt-BR', { numeric: true })); }
     function walk(nodes, caminho) {
       ordenar(nodes).forEach(n => {
-        const novoCaminho = [...caminho, { id: n.id, nome: n.nome }];
+        const novoCaminho = [...caminho, n.nome || ''];
         const filhos = n.filhos || [];
-        // Nó "apartamento" = pai imediato de quem tiver filhos folha (sem filhos) OU
-        // qualquer nó — resolvido de baixo pra cima quando um registro referenciar este nodeId.
-        if (!vistos.has(n.id)) {
-          vistos.add(n.id);
-          const apto = novoCaminho.length > 1 ? novoCaminho[novoCaminho.length - 2] : novoCaminho[novoCaminho.length - 1];
-          const label = novoCaminho.slice(0, novoCaminho.length > 1 ? -1 : undefined).map(c => c.nome).join(' › ');
-          const torre = novoCaminho[0].nome;
-          const info = { id: apto.id, label, torre };
-          mapaNode.set(n.id, info);
-          if (!ordemAptos.find(a => a.id === info.id)) ordemAptos.push(info);
-        }
+        const caminhoApto = novoCaminho.length > 1 ? novoCaminho.slice(0, -1) : novoCaminho;
+        mapaNode.set(n.id, { label: caminhoApto.join(' › '), torre: novoCaminho[0] || '' });
         if (filhos.length) walk(filhos, novoCaminho);
       });
     }
     walk(arvore, []);
-    return { mapaNode, ordemAptos };
+    return mapaNode;
   }
 
   // Réplica simplificada de Planejamento._calcularCustos — só o necessário pra
@@ -635,10 +998,6 @@ const Dashboard = (() => {
     return { custoMaterialPorTarefa, custoMaoObraPorTarefa };
   }
 
-  // Custo médio por unidade = soma (custo material+mão de obra) das tarefas vinculadas
-  // a este módulo+métrica de levantamento, dividido pela quantidade total vinculada.
-  // Aproximação: assume custo uniforme por unidade em toda a obra (V1 — refinar depois
-  // se for preciso diferenciar custo por local).
   function _custoMedioPorUnidade(modulo, metrica, custoMaterialPorTarefa, custoMaoObraPorTarefa) {
     const alvo = tarefas.filter(t => t.fonteQuantidade === 'levantamento' && t.levantamentoModulo === modulo && t.levantamentoMetrica === metrica);
     if (!alvo.length) return null;
@@ -668,10 +1027,10 @@ const Dashboard = (() => {
     const fmt = (v, unidade) => v ? Utils.formatarNumero(v) + ' ' + unidade : '—';
     const fmtCusto = (v) => (v != null) ? 'R$ ' + Utils.formatarNumero(v) : '<span class="text-muted">—</span>';
 
-    const semLocal = apartamentos.length ? false : true;
-    const colunas = apartamentos.length ? apartamentos : [{ id: '__sem_local__', label: 'Toda a obra', torre: '' }];
+    const semLocal = apartamentos.length === 0;
+    const colunas = apartamentos.length ? apartamentos : [{ label: 'Toda a obra', torre: '' }];
+    const chaveCol = (a) => apartamentos.length ? a.label : '__sem_local__';
 
-    // Cabeçalho agrupado por Torre
     const grupos = [];
     colunas.forEach(a => {
       const ultimo = grupos[grupos.length - 1];
@@ -687,7 +1046,8 @@ const Dashboard = (() => {
         headerCategoria = `<tr class="db-resumo-categoria"><td colspan="${colunas.length + 2}">${l.categoria}</td></tr>`;
       }
       const cels = colunas.map(a => {
-        const v = l.porApto.get(a.id) || 0;
+        const key = chaveCol(a);
+        const v = l.porApto.get(key) || 0;
         if (_resumoView === 'custo') {
           const custo = (l.custoUnitario != null) ? v * l.custoUnitario : null;
           return `<td class="col-num">${fmtCusto(custo)}</td>`;

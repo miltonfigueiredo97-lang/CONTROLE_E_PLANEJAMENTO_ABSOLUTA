@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.41.1',
+  versaoAtual: 'V2.42.0',
 
   versoes: [
     {
@@ -3993,7 +3993,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.41.1',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-16',
       tipo: 'melhoria',
       titulo: 'Tarefas: editar categoria direto de onde ela é usada',
@@ -4005,6 +4005,49 @@ const NotasVersao = {
         '  categoria selecionada" ao lado de "+ Criar nova categoria".',
         'Ao salvar, o nome novo é propagado pra todas as tarefas que já',
         '  usavam essa categoria — igual já acontecia no ⚙ Gerenciar.',
+      ]
+    },
+    {
+      versao: 'V2.42.0',
+      status: 'aberta',
+      data: '2026-07-17',
+      tipo: 'melhoria',
+      titulo: 'Dashboard: Curva S grande com tooltip, IDP, Avanço por Pacotes, PPC Semanal/Motivos de Atraso e correção do Resumo por Apartamento',
+      itens: [
+        'Curva S ampliada (era um gráfico pequeno dividindo espaço com',
+        '  Atividades — agora ocupa a linha inteira, bem maior) e ganhou',
+        '  tooltip ao passar o mouse sobre qualquer mês, mostrando Esperado',
+        '  Mensal, Executado Mensal, Esperado Acumulado e Executado',
+        '  Acumulado — igual ao comportamento pedido.',
+        '',
+        'NOVO — Índice de Desempenho de Prazo (IDP): gráfico separado',
+        '  (Executado Acumulado ÷ Esperado Acumulado por mês), com linha',
+        '  "Ideal" em 1.0 e rótulo do valor em cada ponto.',
+        '',
+        'NOVO — Avanço por Pacotes: agrupa as tarefas-folha do Planejamento',
+        '  pelo campo Grupo, mostra Esperado x Executado por pacote (barras',
+        '  pareadas) e o peso de cada pacote no total do projeto.',
+        '',
+        'NOVO — Curto Prazo: PPC Semanal (barra por período fechado do',
+        '  módulo Semanal, com linha "Ideal" em 100%) e Motivos de Atraso',
+        '  Semanais (barras empilhadas por motivo, usando a mesma lista de',
+        '  motivos já cadastrada no Semanal). Some sozinho se não houver',
+        '  período fechado ainda.',
+        '',
+        'Suprimentos: como o módulo ainda é só um stub sem dados reais,',
+        '  o Dashboard mostra um aviso honesto em vez de inventar números',
+        '  — assim que Suprimentos existir de verdade, este painel é',
+        '  ligado aos dados reais.',
+        '',
+        'CORREÇÃO no Resumo por Apartamento: Piso, Teto e Paredes têm',
+        '  árvores de local INDEPENDENTES entre si — "Torre A" no Piso e',
+        '  "Torre A" em Paredes são nós com IDs diferentes mesmo sendo o',
+        '  mesmo lugar físico. O agrupamento por apartamento comparava por',
+        '  ID e por isso duplicava torres/apartamentos que já existiam em',
+        '  mais de um levantamento. Agora agrupa pelo CAMINHO DE NOMES',
+        '  (ex: "Torre A › Pav 3 › Apto 301"), unindo corretamente os três',
+        '  levantamentos na mesma coluna — desde que os locais sejam',
+        '  nomeados de forma consistente entre eles.',
       ]
     }
   ],
