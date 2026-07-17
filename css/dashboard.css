@@ -126,3 +126,5 @@
 
 /* ---- Resumo por Apartamento ---- */
 .db-resumo-categoria td { background: var(--cor-primaria-ultra-light); font-weight: 700; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.3px; padding: 6px 14px; color: var(--cor-primaria-dark); }
+.db-subtotal-col { background: var(--cor-fundo-hover, #f7f7f7); font-weight: 600; }
+th.db-subtotal-col { font-size: 0.68rem; line-height: 1.15; }

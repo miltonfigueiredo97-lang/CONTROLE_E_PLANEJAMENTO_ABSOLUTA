@@ -53,24 +53,6 @@ const Dashboard = (() => {
         return 0;
       }
     },
-    teto: {
-      label: 'Teto / Forro', configDoc: 'tetoArvore', colecao: 'tetoAreas',
-      linhas: [
-        { metrica: 'areaM2', label: 'Área de Teto', unidade: 'm²' },
-        { metrica: 'areaDrywall', label: 'Forro de Drywall', unidade: 'm²' },
-        { metrica: 'areaGesso', label: 'Placa de Gesso', unidade: 'm²' },
-        { metrica: 'mlTabica', label: 'Tabica', unidade: 'ml' },
-        { metrica: 'pinturaTeto', label: 'Pintura de Teto', unidade: 'm²' },
-      ],
-      valor(reg, metrica) {
-        if (metrica === 'areaM2') return Number(reg.areaM2) || 0;
-        if (metrica === 'areaDrywall') return (reg.tipoDryWall && reg.tipoDryWall !== '') ? (Number(reg.areaM2) || 0) : 0;
-        if (metrica === 'areaGesso') return (reg.tipoPlacaGesso && reg.tipoPlacaGesso !== '') ? (Number(reg.areaM2) || 0) : 0;
-        if (metrica === 'mlTabica') return Number(reg.mlTabica) || 0;
-        if (metrica === 'pinturaTeto') return _pinturaM2Teto(reg);
-        return 0;
-      }
-    },
     paredesAlvenaria: {
       label: 'Paredes', configDoc: 'paredesArvore', colecao: 'paredesAlvenariaPecas', moduloVinculo: 'paredes',
       linhas: [
@@ -98,6 +80,24 @@ const Dashboard = (() => {
         if (metrica === 'reboco') return c.reboco;
         if (metrica === 'revestimento') return c.revestimento;
         if (metrica === 'pinturaParede') return c.pinturaM2;
+        return 0;
+      }
+    },
+    teto: {
+      label: 'Teto / Forro', configDoc: 'tetoArvore', colecao: 'tetoAreas',
+      linhas: [
+        { metrica: 'areaM2', label: 'Área de Teto', unidade: 'm²' },
+        { metrica: 'areaDrywall', label: 'Forro de Drywall', unidade: 'm²' },
+        { metrica: 'areaGesso', label: 'Placa de Gesso', unidade: 'm²' },
+        { metrica: 'mlTabica', label: 'Tabica', unidade: 'ml' },
+        { metrica: 'pinturaTeto', label: 'Pintura de Teto', unidade: 'm²' },
+      ],
+      valor(reg, metrica) {
+        if (metrica === 'areaM2') return Number(reg.areaM2) || 0;
+        if (metrica === 'areaDrywall') return (reg.tipoDryWall && reg.tipoDryWall !== '') ? (Number(reg.areaM2) || 0) : 0;
+        if (metrica === 'areaGesso') return (reg.tipoPlacaGesso && reg.tipoPlacaGesso !== '') ? (Number(reg.areaM2) || 0) : 0;
+        if (metrica === 'mlTabica') return Number(reg.mlTabica) || 0;
+        if (metrica === 'pinturaTeto') return _pinturaM2Teto(reg);
         return 0;
       }
     },
@@ -337,8 +337,26 @@ const Dashboard = (() => {
   }
 
   // ===================== PROGRESSO / KPIs =====================
+  // Detecta tarefa-folha pela MESMA lógica já usada (e comprovada) em
+  // obras.js e semanal.js: uma tarefa é folha se a próxima na ORDEM tem
+  // nível igual ou menor (ou seja, ninguém "entra" dentro dela). Isso é
+  // mais confiável do que confiar no campo `tipo==='grupo'` — se esse
+  // campo não estiver 100% consistente nos dados, filtrar por ele pode
+  // incluir linha de grupo vazia (derrubando a média pra perto de 0) ou
+  // excluir folha de verdade. Por posição, é igual ao que já funciona em
+  // Obras (card de % Executado) e Semanal (PPC).
+  function _folhas(tf) {
+    const sorted = [...tf].sort((a, b) => (a.ordem || 0) - (b.ordem || 0));
+    const folhas = [];
+    sorted.forEach((t, i) => {
+      const nxt = sorted[i + 1];
+      const isFolha = !nxt || (nxt.nivel || 0) <= (t.nivel || 0);
+      if (isFolha) folhas.push(t);
+    });
+    return folhas;
+  }
   function _leaves() {
-    return tarefas.filter(t => t.tipo !== 'grupo');
+    return _folhas(tarefas);
   }
   // Peso de cada tarefa nos cálculos agregados (Curva S, Pacotes, KPIs).
   // IMPORTANTE: usa QUANTIDADE — a mesma convenção de Utils.percFamilia,
@@ -350,7 +368,7 @@ const Dashboard = (() => {
   function _peso(t) { const q = parseFloat(t.quantidade); return (q && q > 0) ? q : 1; }
 
   function _calcProgresso(tf) {
-    const leaves = tf.filter(t => t.tipo !== 'grupo');
+    const leaves = _folhas(tf);
     if (!leaves.length) return { percConcluido: 0, percEsperado: 0, inicioReal: null, terminoAtual: null, terminoBase: null };
     let somaPeso = 0, somaConc = 0, somaEsp = 0;
     let terminoAtual = null, terminoBase = null, inicioReal = null;
@@ -449,7 +467,7 @@ const Dashboard = (() => {
   }
 
   function _calcCurvaS(tf, historico, granularidade) {
-    const leaves = tf.filter(t => t.tipo !== 'grupo' && (t.inicioPlanejado || t.inicioPlanejadoBase));
+    const leaves = _folhas(tf).filter(t => t.inicioPlanejado || t.inicioPlanejadoBase);
     if (!leaves.length) return null;
     const hoje = new Date();
 
@@ -772,7 +790,7 @@ const Dashboard = (() => {
   }
 
   function _calcPacotes(tf, modo) {
-    const leaves = tf.filter(t => t.tipo !== 'grupo');
+    const leaves = _folhas(tf);
     if (!leaves.length) return [];
     const totalPeso = leaves.reduce((s, t) => s + _peso(t), 0) || 1;
 
@@ -1034,17 +1052,11 @@ const Dashboard = (() => {
       mapaPorModulo[chave] = _mapaApartamentosPorLabel(r ? r.arvore : []);
     });
 
-    // União de todos os apartamentos (pela chave normalizada) na ordem em que
-    // apareceram, com ordenação final por Torre e depois natural (Apto 92
-    // antes de Apto 101 etc.)
-    const apartamentosMap = new Map(); // chave -> {label,chave,torre,torreChave}
+    // Índice reverso chave-normalizada -> info de exibição (usado só pra
+    // "traduzir" as chaves que realmente aparecerem nos dados — ver abaixo).
+    const infoPorChave = new Map();
     Object.values(mapaPorModulo).forEach(mapa => {
-      mapa.forEach(info => { if (!apartamentosMap.has(info.chave)) apartamentosMap.set(info.chave, info); });
-    });
-    const apartamentos = [...apartamentosMap.values()].sort((a, b) => {
-      const t = a.torreChave.localeCompare(b.torreChave, 'pt-BR', { numeric: true });
-      if (t !== 0) return t;
-      return a.chave.localeCompare(b.chave, 'pt-BR', { numeric: true });
+      mapa.forEach(info => { if (!infoPorChave.has(info.chave)) infoPorChave.set(info.chave, info); });
     });
 
     const linhas = [];
@@ -1071,6 +1083,35 @@ const Dashboard = (() => {
         });
       });
     });
+
+    // Só entram na lista de colunas as chaves que REALMENTE têm algum dado
+    // lançado em pelo menos uma linha — antes eu montava essa lista andando
+    // por TODOS os nós da árvore (Torre, Pavimento, Apto, Cômodo...), então
+    // "Torre" e "1º Pavimento" apareciam como colunas fantasma, 100% vazias,
+    // só porque esses nós existem na árvore — mesmo sem nenhuma área jamais
+    // ter sido lançada neles diretamente.
+    const chavesUsadas = new Map(); // chave -> completude (nº de linhas com valor > 0)
+    linhas.forEach(l => {
+      l.porApto.forEach((v, chave) => {
+        if (chave === '__sem_local__' || !(v > 0)) return;
+        chavesUsadas.set(chave, (chavesUsadas.get(chave) || 0) + 1);
+      });
+    });
+
+    function _nivel(caminho, n) { const p = caminho.split(' › '); return p.slice(0, Math.min(p.length, n)).join(' › '); }
+
+    const apartamentos = [...chavesUsadas.keys()]
+      .map(chave => infoPorChave.get(chave))
+      .filter(Boolean)
+      .map(info => ({ ...info, completude: chavesUsadas.get(info.chave) || 0, pavimentoChave: _nivel(info.chave, 2) }))
+      .sort((a, b) => {
+        const t = a.torreChave.localeCompare(b.torreChave, 'pt-BR', { numeric: true });
+        if (t !== 0) return t;
+        const p = a.pavimentoChave.localeCompare(b.pavimentoChave, 'pt-BR', { numeric: true });
+        if (p !== 0) return p;
+        if (b.completude !== a.completude) return b.completude - a.completude; // mais dado lançado primeiro (ex: Hall antes de Escada, que só tem pintura)
+        return a.chave.localeCompare(b.chave, 'pt-BR', { numeric: true });
+      });
 
     return { apartamentos, linhas };
   }
@@ -1188,53 +1229,119 @@ const Dashboard = (() => {
 
     const fmt = (v, unidade) => v ? Utils.formatarNumero(v) + ' ' + unidade : '—';
     const fmtCusto = (v) => (v != null) ? 'R$ ' + Utils.formatarNumero(v) : '<span class="text-muted">—</span>';
+    const valorLinha = (l, chave) => l.porApto.get(chave) || 0;
+    const celula = (l, v) => {
+      if (_resumoView === 'custo') {
+        const custo = (l.custoUnitario != null) ? v * l.custoUnitario : null;
+        return fmtCusto(custo);
+      }
+      return fmt(v, l.unidade);
+    };
 
     const semLocal = apartamentos.length === 0;
-    const colunas = apartamentos.length ? apartamentos : [{ label: 'Toda a obra', torre: '' }];
-    const chaveCol = (a) => apartamentos.length ? a.chave : '__sem_local__';
 
-    // Agrupa por torreChave via Map — não depende de adjacência no array,
-    // então nunca duplica o cabeçalho de uma torre por causa de ordenação.
-    const gruposMap = new Map();
-    colunas.forEach(a => {
-      const key = apartamentos.length ? a.torreChave : '';
-      if (!gruposMap.has(key)) gruposMap.set(key, { torre: a.torre || '', cols: [] });
-      gruposMap.get(key).cols.push(a);
+    // ---------- Sem árvore de local: uma única coluna "Toda a obra" ----------
+    if (semLocal) {
+      let categoriaAtual = null;
+      const linhasHtml = linhas.map(l => {
+        let headerCategoria = '';
+        if (l.categoria !== categoriaAtual) {
+          categoriaAtual = l.categoria;
+          headerCategoria = `<tr class="db-resumo-categoria"><td colspan="3">${l.categoria}</td></tr>`;
+        }
+        const v = valorLinha(l, '__sem_local__');
+        return `${headerCategoria}<tr><td>${l.label}</td><td class="col-num">${celula(l, v)}</td><td class="col-num" style="font-weight:700;">${celula(l, l.total)}</td></tr>`;
+      }).join('');
+      host.innerHTML = `
+        <div class="text-sm text-muted" style="margin-bottom:8px;">Nenhuma árvore de local configurada ainda — mostrando totais da obra.</div>
+        <div class="tabela-container" style="max-height:520px;">
+          <table class="tabela">
+            <thead><tr><th>Item</th><th class="col-num">Toda a obra</th><th class="col-num">Total</th></tr></thead>
+            <tbody>${linhasHtml}</tbody>
+          </table>
+        </div>`;
+      return;
+    }
+
+    // ---------- Com árvore de local: Torre > Pavimento > Apto, com subtotal ----------
+    // Estrutura: cada Torre agrupa Pavimentos (na ordem já definida em
+    // _calcularResumoApartamento); cada Pavimento agrupa seus Apartamentos +
+    // uma coluna de Subtotal do Pavimento; cada Torre fecha com uma coluna de
+    // Subtotal da Torre. Isso evita repetir "Torre"/"Pavimento" como se
+    // fossem apartamentos soltos — eles só aparecem como somatório no final.
+    const torresMap = new Map(); // torreChave -> { torre, pavimentos: Map(pavChave -> {label, cols:[]}) }
+    apartamentos.forEach(a => {
+      if (!torresMap.has(a.torreChave)) torresMap.set(a.torreChave, { torre: a.torre || '—', pavimentos: new Map() });
+      const tg = torresMap.get(a.torreChave);
+      if (!tg.pavimentos.has(a.pavimentoChave)) {
+        const labelPav = a.label.split(' › ').slice(0, 2).join(' › ');
+        tg.pavimentos.set(a.pavimentoChave, { label: labelPav, cols: [] });
+      }
+      tg.pavimentos.get(a.pavimentoChave).cols.push(a);
     });
-    const grupos = [...gruposMap.values()];
+    const torres = [...torresMap.values()];
+
+    // Lista "achatada" de colunas na ordem exata em que vão aparecer no corpo
+    // da tabela — usada tanto pro cabeçalho quanto pras linhas, garantindo
+    // que os dois batam sempre.
+    const colunasOrdenadas = [];
+    torres.forEach(tg => {
+      [...tg.pavimentos.values()].forEach(pav => {
+        pav.cols.forEach(a => colunasOrdenadas.push({ tipo: 'apto', a }));
+        colunasOrdenadas.push({ tipo: 'subtotalPav', pav });
+      });
+      colunasOrdenadas.push({ tipo: 'subtotalTorre', tg });
+    });
+
+    function valorColuna(l, col) {
+      if (col.tipo === 'apto') return valorLinha(l, col.a.chave);
+      if (col.tipo === 'subtotalPav') return col.pav.cols.reduce((s, a) => s + valorLinha(l, a.chave), 0);
+      let s = 0; col.tg.pavimentos.forEach(pav => { s += pav.cols.reduce((s2, a) => s2 + valorLinha(l, a.chave), 0); });
+      return s;
+    }
+
+    // ---- Cabeçalho: 3 linhas (Torre / Pavimento / Apto+Subtotais) ----
+    let headerTorre = '';
+    let headerPav = '';
+    let headerApto = '';
+    torres.forEach(tg => {
+      const pavimentos = [...tg.pavimentos.values()];
+      let colsNaTorre = 1; // +1 pelo subtotal da própria torre
+      pavimentos.forEach(pav => {
+        colsNaTorre += pav.cols.length + 1; // +1 pelo subtotal do pavimento
+        headerPav += `<th colspan="${pav.cols.length + 1}" style="text-align:center;">${pav.label}</th>`;
+        pav.cols.forEach(a => {
+          headerApto += `<th class="col-num" title="${a.label}">${a.label.split(' › ').pop()}</th>`;
+        });
+        headerApto += `<th class="col-num db-subtotal-col">Subtot.</th>`;
+      });
+      headerTorre += `<th colspan="${colsNaTorre}" style="text-align:center;">${tg.torre}</th>`;
+      headerPav += `<th rowspan="2" class="col-num db-subtotal-col">Subtot.<br>Torre</th>`;
+    });
 
     let categoriaAtual = null;
     const linhasHtml = linhas.map(l => {
       let headerCategoria = '';
       if (l.categoria !== categoriaAtual) {
         categoriaAtual = l.categoria;
-        headerCategoria = `<tr class="db-resumo-categoria"><td colspan="${colunas.length + 2}">${l.categoria}</td></tr>`;
+        headerCategoria = `<tr class="db-resumo-categoria"><td colspan="${colunasOrdenadas.length + 2}">${l.categoria}</td></tr>`;
       }
-      const cels = colunas.map(a => {
-        const key = chaveCol(a);
-        const v = l.porApto.get(key) || 0;
-        if (_resumoView === 'custo') {
-          const custo = (l.custoUnitario != null) ? v * l.custoUnitario : null;
-          return `<td class="col-num">${fmtCusto(custo)}</td>`;
-        }
-        return `<td class="col-num">${fmt(v, l.unidade)}</td>`;
+      const cels = colunasOrdenadas.map(col => {
+        const v = valorColuna(l, col);
+        const cls = col.tipo === 'apto' ? 'col-num' : 'col-num db-subtotal-col';
+        return `<td class="${cls}">${celula(l, v)}</td>`;
       }).join('');
-      const totalCel = _resumoView === 'custo'
-        ? `<td class="col-num" style="font-weight:700;">${fmtCusto(l.custoUnitario != null ? l.total * l.custoUnitario : null)}</td>`
-        : `<td class="col-num" style="font-weight:700;">${fmt(l.total, l.unidade)}</td>`;
+      const totalCel = `<td class="col-num" style="font-weight:700;">${celula(l, l.total)}</td>`;
       return `${headerCategoria}<tr><td>${l.label}</td>${cels}${totalCel}</tr>`;
     }).join('');
 
-    const gruposHtml = grupos.map(g => `<th colspan="${g.cols.length}" style="text-align:center;border-bottom:1px solid var(--cor-borda-light);">${g.torre || '—'}</th>`).join('');
-    const aptosHtml = colunas.map(a => `<th class="col-num" title="${a.label}">${a.label.split(' › ').pop()}</th>`).join('');
-
     host.innerHTML = `
-      ${semLocal ? '<div class="text-sm text-muted" style="margin-bottom:8px;">Nenhuma árvore de local configurada ainda — mostrando totais da obra.</div>' : ''}
       <div class="tabela-container" style="max-height:520px;">
         <table class="tabela">
           <thead>
-            <tr><th></th>${gruposHtml}<th></th></tr>
-            <tr><th>Item</th>${aptosHtml}<th class="col-num">Total</th></tr>
+            <tr><th rowspan="3"></th>${headerTorre}<th rowspan="3"></th></tr>
+            <tr>${headerPav}</tr>
+            <tr>${headerApto}</tr>
           </thead>
           <tbody>${linhasHtml}</tbody>
         </table>

@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.43.3',
+  versaoAtual: 'V2.44.0',
 
   versoes: [
     {
@@ -4149,7 +4149,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.43.3',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-17',
       tipo: 'correcao',
       titulo: 'Resumo por Apartamento: Piso/Teto agora dividem por Apto (não só por Pavimento)',
@@ -4169,6 +4169,38 @@ const NotasVersao = {
         '  divisão por apto, ex: corredor/área comum) continuam aparecendo',
         '  na própria coluna do Pavimento, sem inventar um Apto que não',
         '  existe.',
+      ]
+    },
+    {
+      versao: 'V2.44.0',
+      status: 'aberta',
+      data: '2026-07-17',
+      tipo: 'melhoria',
+      titulo: 'Dashboard: KPIs do topo corrigidos (detecção de folha por posição), Resumo por Apartamento com subtotal por Pavimento/Torre e ordem Piso/Parede/Teto',
+      itens: [
+        'CORREÇÃO — % Executado e % Previsto Atual do topo do Dashboard',
+        '  apareciam zerados. Causa: a tela detectava tarefa-folha pelo campo',
+        '  `tipo===\'grupo\'`, que pode não estar 100% consistente nos dados;',
+        '  isso podia incluir linha de grupo vazia na conta (derrubando a',
+        '  média) ou excluir folha de verdade. Trocado pela MESMA lógica já',
+        '  comprovada em Obras (card de % Executado) e Semanal (PPC): uma',
+        '  tarefa é folha se a próxima na ordem tem nível igual ou menor —',
+        '  não depende do campo tipo. Vale também pra Curva S.',
+        '',
+        'Resumo por Apartamento — reformulado:',
+        '  → Colunas fantasma "Torre"/"1º Pavimento" (que apareciam 100%',
+        '  vazias) sumiram — agora só viram coluna os locais que realmente',
+        '  têm algum dado lançado.',
+        '  → Em vez de misturar Torre/Pavimento como se fossem apartamentos',
+        '  soltos, agora o cabeçalho é hierárquico de verdade: Torre → cada',
+        '  Pavimento → cada Apto, com uma coluna de "Subtot." ao final de',
+        '  cada Pavimento e uma de "Subtot. Torre" ao final de cada Torre.',
+        '  → Dentro de cada Pavimento, as colunas (Ap 1, Ap 2, Hall, Escada',
+        '  Andar...) são ordenadas pela quantidade de dado lançado (quem tem',
+        '  mais linhas preenchidas vem primeiro) — resolve casos como "Hall"',
+        '  aparecer antes de "Escada Andar" quando a Escada só tem valor de',
+        '  pintura ainda.',
+        '  → Ordem das categorias trocada para Piso → Paredes → Teto/Forro.',
       ]
     }
   ],
