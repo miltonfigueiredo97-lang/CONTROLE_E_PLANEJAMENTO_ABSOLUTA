@@ -273,8 +273,8 @@ const Dashboard = (() => {
     const host = document.getElementById('db-hero');
     if (!host) return;
     const prog = _calcProgresso(tarefas);
-    const perc = Math.round(prog.percConcluido);
-    const percEsp = Math.round(prog.percEsperado);
+    const perc = Utils.formatarNumero(prog.percConcluido);
+    const percEsp = Utils.formatarNumero(prog.percEsperado);
     const atraso = _labelAtraso(prog.terminoAtual, prog.terminoBase);
     const bg = obraAtual.imagemUrl ? `background-image:url('${obraAtual.imagemUrl}');` : '';
 

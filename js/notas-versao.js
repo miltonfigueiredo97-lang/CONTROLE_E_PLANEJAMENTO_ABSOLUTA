@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.44.3',
+  versaoAtual: 'V2.44.4',
 
   versoes: [
     {
@@ -4245,7 +4245,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.44.3',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-17',
       tipo: 'correcao',
       titulo: 'Dashboard: corrige de vez o %Executado/%Previsto zerados (peso voltou a ser duração) e remove debug',
@@ -4264,6 +4264,19 @@ const NotasVersao = {
         '  aparece lá. Afeta %Executado/%Previsto Atual do Hero e a Curva S.',
         '',
         'Removida a linha de debug amarela adicionada na versão anterior.',
+      ]
+    },
+    {
+      versao: 'V2.44.4',
+      status: 'aberta',
+      data: '2026-07-17',
+      tipo: 'melhoria',
+      titulo: 'Dashboard: %Executado/%Previsto Atual do Hero com 2 casas decimais (ex: 9,80%)',
+      itens: [
+        'KPIs do Hero (Executado e Previsto Atual) agora mostram 2 casas',
+        '  decimais em vez de arredondar pro inteiro mais próximo — ex:',
+        '  "9,80%" em vez de "10%". Usa Utils.formatarNumero, o mesmo',
+        '  padrão de vírgula/2 casas já usado no resto do sistema.',
       ]
     }
   ],
