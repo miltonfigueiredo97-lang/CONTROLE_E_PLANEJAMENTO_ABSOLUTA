@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.43.1',
+  versaoAtual: 'V2.43.2',
 
   versoes: [
     {
@@ -4113,7 +4113,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.43.1',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-17',
       tipo: 'melhoria',
       titulo: 'Dashboard: remove IDP e Avanço por Pacotes da tela, reordena prioridades e Curva S ganha toggle Mensal/Semanal',
@@ -4130,6 +4130,21 @@ const NotasVersao = {
         'Curva S ganhou toggle Mensal/Semanal (igual ao modelo de',
         '  referência) — Semanal usa a mesma numeração de semana (S<n> do',
         '  ano) já usada no módulo Semanal, domingo a sábado.',
+      ]
+    },
+    {
+      versao: 'V2.43.2',
+      status: 'aberta',
+      data: '2026-07-17',
+      tipo: 'correcao',
+      titulo: 'Dashboard: corrige ordem de prioridade (Atividades e Resumo por Apartamento primeiro, Curva S desceu pro "resto")',
+      itens: [
+        'A versão anterior deixou a Curva S no topo por engano — Milton',
+        '  pediu explicitamente que Atividades (Em Execução/Próximas) e',
+        '  Resumo por Apartamento fossem as duas prioridades, com "o resto"',
+        '  (incluindo a própria Curva S) abaixo. Ordem corrigida: Hero →',
+        '  Atividades → Resumo por Apartamento → Curva S → PPC Semanal/',
+        '  Motivos de Atraso → Suprimentos.',
       ]
     }
   ],

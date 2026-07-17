@@ -161,9 +161,9 @@ const Dashboard = (() => {
       historicoExecucao = hist;
       el.innerHTML = _htmlEsqueleto();
       _renderHero();
-      _renderCurvaS();
       _renderAtividades();
       await _renderResumoApartamento();
+      _renderCurvaS();
       _renderPpcSemanal();
       _renderMotivosAtraso();
     } catch (e) {
@@ -205,19 +205,6 @@ const Dashboard = (() => {
       <div class="card db-row">
         <div class="card-body">
           <div class="db-secao-header">
-            <h3>Curva S — Planejamento</h3>
-            <div class="aba-toggle" id="db-curva-toggle">
-              <button class="aba-btn ativo" data-v="mensal" onclick="Dashboard.setCurvaGranularidade('mensal')">Mensal</button>
-              <button class="aba-btn" data-v="semanal" onclick="Dashboard.setCurvaGranularidade('semanal')">Semanal</button>
-            </div>
-          </div>
-          <div id="db-curva-s" class="db-tooltip-wrap"></div>
-        </div>
-      </div>
-
-      <div class="card db-row">
-        <div class="card-body">
-          <div class="db-secao-header">
             <h3>Atividades</h3>
             <span class="text-sm text-muted" id="db-atualizado-em"></span>
           </div>
@@ -239,6 +226,19 @@ const Dashboard = (() => {
       </div>
 
       <!-- ===== Resto (prioridade menor) ===== -->
+
+      <div class="card db-row">
+        <div class="card-body">
+          <div class="db-secao-header">
+            <h3>Curva S — Planejamento</h3>
+            <div class="aba-toggle" id="db-curva-toggle">
+              <button class="aba-btn ativo" data-v="mensal" onclick="Dashboard.setCurvaGranularidade('mensal')">Mensal</button>
+              <button class="aba-btn" data-v="semanal" onclick="Dashboard.setCurvaGranularidade('semanal')">Semanal</button>
+            </div>
+          </div>
+          <div id="db-curva-s" class="db-tooltip-wrap"></div>
+        </div>
+      </div>
 
       <div class="db-grid-2">
         <div class="card">
