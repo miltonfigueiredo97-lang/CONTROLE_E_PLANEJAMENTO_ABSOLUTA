@@ -278,13 +278,6 @@ const Dashboard = (() => {
     const atraso = _labelAtraso(prog.terminoAtual, prog.terminoBase);
     const bg = obraAtual.imagemUrl ? `background-image:url('${obraAtual.imagemUrl}');` : '';
 
-    // DEBUG TEMPORÁRIO — remover depois de descobrir por que %Executado/%Previsto
-    // zeram mesmo com progresso lançado no Planejamento. Mostra contagens brutas.
-    const _leavesDebug = _folhas(tarefas);
-    const _comProgresso = _leavesDebug.filter(t => (Number(t.percentualConcluido) || 0) > 0);
-    const _debugMsg = `DEBUG: ${tarefas.length} tarefas · ${_leavesDebug.length} folhas · ${_comProgresso.length} folhas com %Concluído>0 · somaPeso=${_leavesDebug.reduce((s, t) => s + _peso(t), 0).toFixed(1)}`;
-    console.log('[Dashboard DEBUG]', _debugMsg, { leaves: _leavesDebug.slice(0, 5), comProgresso: _comProgresso.slice(0, 5) });
-
     host.className = 'db-hero';
     host.style.cssText = bg;
     host.innerHTML = `
@@ -314,7 +307,6 @@ const Dashboard = (() => {
               <div class="db-kpi-label">Término Linha de Base</div>
             </div>
           </div>
-          <div style="color:#fbbf24;font-size:.7rem;margin-top:8px;font-family:monospace;">${_debugMsg}</div>
         </div>
       </div>`;
     _popularSeletorHero();
@@ -366,14 +358,15 @@ const Dashboard = (() => {
   function _leaves() {
     return _folhas(tarefas);
   }
-  // Peso de cada tarefa nos cálculos agregados (Curva S, Pacotes, KPIs).
-  // IMPORTANTE: usa QUANTIDADE — a mesma convenção de Utils.percFamilia,
-  // já usada em Planejamento/Semanal/Diário para ponderar % entre pai e
-  // filhos. Antes esta tela usava duração (dias), o que gerava números
-  // sem relação com o peso real de cada tarefa no projeto (ex: uma tarefa
-  // de 1 dia mas com 500m² pesava igual a uma de 1 dia com 5m²). Cai para
-  // peso 1 (uniforme) quando a tarefa não tem quantidade lançada.
-  function _peso(t) { const q = parseFloat(t.quantidade); return (q && q > 0) ? q : 1; }
+  // Peso de cada tarefa nos cálculos agregados (Curva S, KPIs do Hero).
+  // HISTÓRICO: já foi trocado pra ponderar por QUANTIDADE (convenção de
+  // Utils.percFamilia), mas isso distorceu o % geral pra perto de 0 nesta
+  // obra — algumas tarefas com quantidade gigante e 0% de progresso afogam
+  // o peso de quem já avançou. Revertido pra DURAÇÃO, a mesma fórmula já
+  // usada (e comprovadamente correta) no card de % Executado da listagem de
+  // Obras (js/obras.js:_calcularProgresso) — garante que o Hero do Dashboard
+  // bate com o que já aparece lá.
+  function _peso(t) { return Math.max(1, Number(t.duracao) || 1); }
 
   function _calcProgresso(tf) {
     const leaves = _folhas(tf);
@@ -687,7 +680,7 @@ const Dashboard = (() => {
         <span><i style="background:#c9c9c9;"></i> Esperado mensal</span>
         <span><i style="background:var(--cor-primaria);"></i> Executado mensal</span>
       </div>
-      <div class="text-sm text-muted" style="margin-top:6px;">Esperado: distribuído pelas datas de início/término (linha de base) de cada tarefa, ponderado por quantidade. Executado: ${opts.idxInicioHistorico > 0 ? 'a partir da linha verde é reconstruído com o histórico real salvo diariamente (obras/{obra}/historicoExecucao); antes dela é uma estimativa retroativa, porque o sistema só passou a guardar o % de cada dia a partir daquele ponto' : (opts.idxInicioHistorico === 0 ? 'já 100% reconstruído a partir do histórico real salvo diariamente' : 'ainda não há histórico salvo nesta obra — os valores mostrados são uma estimativa a partir do % concluído atual; a partir de agora, toda atualização de tarefa vai gerar um registro real e a curva passa a ficar precisa')}.</div>` : ''}`;
+      <div class="text-sm text-muted" style="margin-top:6px;">Esperado: distribuído pelas datas de início/término (linha de base) de cada tarefa, ponderado por duração. Executado: ${opts.idxInicioHistorico > 0 ? 'a partir da linha verde é reconstruído com o histórico real salvo diariamente (obras/{obra}/historicoExecucao); antes dela é uma estimativa retroativa, porque o sistema só passou a guardar o % de cada dia a partir daquele ponto' : (opts.idxInicioHistorico === 0 ? 'já 100% reconstruído a partir do histórico real salvo diariamente' : 'ainda não há histórico salvo nesta obra — os valores mostrados são uma estimativa a partir do % concluído atual; a partir de agora, toda atualização de tarefa vai gerar um registro real e a curva passa a ficar precisa')}.</div>` : ''}`;
   }
 
   // Liga hover nos retângulos invisíveis (.db-hit) de um gráfico já renderizado,

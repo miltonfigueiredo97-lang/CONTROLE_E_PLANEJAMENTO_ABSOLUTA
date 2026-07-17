@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.44.2',
+  versaoAtual: 'V2.44.3',
 
   versoes: [
     {
@@ -4222,7 +4222,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.44.2',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-17',
       tipo: 'correcao',
       titulo: '[DEBUG TEMPORÁRIO] Dashboard: linha de diagnóstico no Hero pra investigar %Executado/%Previsto zerados',
@@ -4241,6 +4241,29 @@ const NotasVersao = {
         '  loga no console do navegador as 5 primeiras folhas e as 5',
         '  primeiras com progresso, pra comparar campo a campo. Assim que a',
         '  causa for identificada, essa linha sai.',
+      ]
+    },
+    {
+      versao: 'V2.44.3',
+      status: 'aberta',
+      data: '2026-07-17',
+      tipo: 'correcao',
+      titulo: 'Dashboard: corrige de vez o %Executado/%Previsto zerados (peso voltou a ser duração) e remove debug',
+      itens: [
+        'CAUSA ENCONTRADA com a ajuda do debug da versão anterior: o debug',
+        '  mostrou 2400 tarefas, 2195 folhas, 203 com progresso lançado e',
+        '  soma de peso de 440.870 — os números batiam, mas o peso usado',
+        '  era por QUANTIDADE. Algumas tarefas com quantidade gigante e 0%',
+        '  de progresso afogavam completamente o peso de quem já tinha',
+        '  avançado, derrubando a média ponderada pra perto de 0% (e o',
+        '  Math.round arredondava pra "0%" na tela).',
+        '',
+        'Peso voltou a ser por DURAÇÃO — a mesma fórmula já usada (e',
+        '  comprovadamente correta) no card de % Executado da listagem de',
+        '  Obras — garantindo que o Hero do Dashboard bate com o que já',
+        '  aparece lá. Afeta %Executado/%Previsto Atual do Hero e a Curva S.',
+        '',
+        'Removida a linha de debug amarela adicionada na versão anterior.',
       ]
     }
   ],
