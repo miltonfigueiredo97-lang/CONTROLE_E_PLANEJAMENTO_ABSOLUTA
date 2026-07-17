@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.44.1',
+  versaoAtual: 'V2.44.2',
 
   versoes: [
     {
@@ -4205,7 +4205,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.44.1',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-17',
       tipo: 'correcao',
       titulo: 'Resumo por Apartamento: centraliza texto dos cabeçalhos de coluna e devolve rótulos "Item"/"Total"',
@@ -4218,6 +4218,29 @@ const NotasVersao = {
         'Corrigido também: as células de canto superior esquerdo/direito',
         '  do cabeçalho tinham ficado vazias na versão com hierarquia de',
         '  Torre/Pavimento — voltaram a mostrar "Item" e "Total".',
+      ]
+    },
+    {
+      versao: 'V2.44.2',
+      status: 'aberta',
+      data: '2026-07-17',
+      tipo: 'correcao',
+      titulo: '[DEBUG TEMPORÁRIO] Dashboard: linha de diagnóstico no Hero pra investigar %Executado/%Previsto zerados',
+      itens: [
+        'Milton confirmou que o Planejamento tem tarefa com progresso',
+        '  lançado, mas o Hero do Dashboard continua mostrando 0%/0% — ou',
+        '  seja, não é falta de dado, é algo na conta/leitura. Como Término',
+        '  Atual e Término Linha de Base aparecem certos (não vazios), as',
+        '  tarefas estão sendo carregadas; o problema está isolado nos',
+        '  campos de percentual.',
+        '',
+        'Adicionada uma linha de debug (temporária, cor amarela, abaixo dos',
+        '  KPIs do Hero) mostrando: quantas tarefas foram carregadas,',
+        '  quantas foram detectadas como folha, quantas folhas têm',
+        '  %Concluído maior que 0, e a soma de peso usada na conta. Também',
+        '  loga no console do navegador as 5 primeiras folhas e as 5',
+        '  primeiras com progresso, pra comparar campo a campo. Assim que a',
+        '  causa for identificada, essa linha sai.',
       ]
     }
   ],

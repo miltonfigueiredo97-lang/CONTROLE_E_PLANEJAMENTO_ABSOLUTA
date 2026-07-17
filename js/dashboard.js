@@ -278,6 +278,13 @@ const Dashboard = (() => {
     const atraso = _labelAtraso(prog.terminoAtual, prog.terminoBase);
     const bg = obraAtual.imagemUrl ? `background-image:url('${obraAtual.imagemUrl}');` : '';
 
+    // DEBUG TEMPORÁRIO — remover depois de descobrir por que %Executado/%Previsto
+    // zeram mesmo com progresso lançado no Planejamento. Mostra contagens brutas.
+    const _leavesDebug = _folhas(tarefas);
+    const _comProgresso = _leavesDebug.filter(t => (Number(t.percentualConcluido) || 0) > 0);
+    const _debugMsg = `DEBUG: ${tarefas.length} tarefas · ${_leavesDebug.length} folhas · ${_comProgresso.length} folhas com %Concluído>0 · somaPeso=${_leavesDebug.reduce((s, t) => s + _peso(t), 0).toFixed(1)}`;
+    console.log('[Dashboard DEBUG]', _debugMsg, { leaves: _leavesDebug.slice(0, 5), comProgresso: _comProgresso.slice(0, 5) });
+
     host.className = 'db-hero';
     host.style.cssText = bg;
     host.innerHTML = `
@@ -307,6 +314,7 @@ const Dashboard = (() => {
               <div class="db-kpi-label">Término Linha de Base</div>
             </div>
           </div>
+          <div style="color:#fbbf24;font-size:.7rem;margin-top:8px;font-family:monospace;">${_debugMsg}</div>
         </div>
       </div>`;
     _popularSeletorHero();
