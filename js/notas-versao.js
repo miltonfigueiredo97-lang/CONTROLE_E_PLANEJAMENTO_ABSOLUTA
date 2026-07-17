@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.42.1',
+  versaoAtual: 'V2.43.0',
 
   versoes: [
     {
@@ -4052,7 +4052,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.42.1',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-17',
       tipo: 'correcao',
       titulo: 'Dashboard: corrige overflow da Curva S/IDP, pondera por quantidade (não duração) e Avanço por Pacotes ganha abas Pacotes/Agrupadores/Locais/Responsáveis',
@@ -4074,6 +4074,41 @@ const NotasVersao = {
         '  agrupar — é a visão padrão), "Agrupadores" (pelo campo Grupo),',
         '  "Locais" (pelo campo Local) e "Responsáveis" (pelo campo',
         '  Responsável). Todas ordenadas por peso decrescente.',
+      ]
+    },
+    {
+      versao: 'V2.43.0',
+      status: 'aberta',
+      data: '2026-07-17',
+      tipo: 'funcionalidade',
+      titulo: 'Histórico de Execução (snapshot diário do Planejamento) e correção do agrupamento no Resumo por Apartamento',
+      itens: [
+        'NOVO — Histórico de Execução: toda vez que uma tarefa é criada ou',
+        '  atualizada com % Concluído ou Quantidade (por Medições, Semanal,',
+        '  Diário ou o próprio Planejamento — todos gravam tarefa pelo mesmo',
+        '  caminho no Database, então isso vale pra qualquer um deles), o',
+        '  sistema agora grava um snapshot do dia em',
+        '  obras/{obra}/historicoExecucao/{AAAA-MM-DD}. É o registro real que',
+        '  faltava pra Curva S e o IDP pararem de estimar o passado.',
+        '',
+        'Curva S / IDP: a partir do dia em que o histórico começar a existir',
+        '  pra esta obra, os dois passam a usar o valor REAL registrado',
+        '  naquele dia (marcado com uma linha verde pontilhada no gráfico e',
+        '  um selo "real" no tooltip). Antes dessa linha, continua sendo uma',
+        '  estimativa retroativa (selo "estimado") — não tem como reconstruir',
+        '  um histórico que nunca foi salvo. Daqui pra frente, quanto mais',
+        '  Milton usar Medições/Semanal/Diário, mais precisa a curva fica.',
+        '',
+        'CORREÇÃO no Resumo por Apartamento: o agrupamento por Torre estava',
+        '  duplicando cabeçalhos quando a árvore de um levantamento tinha uma',
+        '  pequena diferença de digitação em relação a outro (ex: "1° Pavimento"',
+        '  vs "1º Pavimento", ou espaços/maiúsculas diferentes) — cada variação',
+        '  virava uma coluna/torre separada. Agora a comparação usa uma chave',
+        '  normalizada (sem acento, sem símbolo de grau, sem diferença de',
+        '  maiúsculas) só para AGRUPAR; o texto exibido na tabela continua o',
+        '  original. O agrupamento por Torre também passou a usar um mapa em',
+        '  vez de comparar itens vizinhos, então não depende mais da ordem em',
+        '  que os apartamentos aparecem.',
       ]
     }
   ],

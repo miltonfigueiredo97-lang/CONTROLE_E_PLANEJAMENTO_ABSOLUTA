@@ -142,19 +142,53 @@ const Database = (() => {
   async function criar(obraId, subcollection, data, customId = null) {
     _addMeta(data);
     data.obraId = obraId;
-    
+
+    let novoId;
     if (customId) {
       await _obraSubRef(obraId, subcollection).doc(customId).set(data);
-      return customId;
+      novoId = customId;
+    } else {
+      const ref = await _obraSubRef(obraId, subcollection).add(data);
+      novoId = ref.id;
     }
-    const ref = await _obraSubRef(obraId, subcollection).add(data);
-    return ref.id;
+    if (subcollection === 'tarefas') _registrarSnapshotExecucao(obraId, novoId, data);
+    return novoId;
   }
 
   // Genérica: atualizar documento
   async function atualizar(obraId, subcollection, docId, data) {
     _addMeta(data, false);
     await _obraSubRef(obraId, subcollection).doc(docId).update(data);
+    if (subcollection === 'tarefas') _registrarSnapshotExecucao(obraId, docId, data);
+  }
+
+  // ============================================================
+  // HISTÓRICO DE EXECUÇÃO — snapshot diário do Planejamento.
+  // Toda vez que uma tarefa é criada/atualizada com percentualConcluido
+  // ou quantidade (os dois campos que alimentam a Curva S / IDP), grava
+  // o valor do dia em obras/{id}/historicoExecucao/{AAAA-MM-DD}, no campo
+  // tarefas.{tarefaId}. Como TODOS os módulos (Medições, Semanal, Diário,
+  // o próprio Planejamento) gravam tarefa através de Database.criar/atualizar,
+  // este é o único ponto de captura — não precisa duplicar em cada módulo.
+  // Não bloqueia nem quebra a operação principal se falhar (fire-and-forget
+  // com catch silencioso), pois isso é auxiliar (histórico), não a gravação
+  // principal da tarefa em si.
+  // ============================================================
+  function _dataHojeISO() {
+    const d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+
+  function _registrarSnapshotExecucao(obraId, tarefaId, data) {
+    const relevante = {};
+    if (data.percentualConcluido != null) relevante.percentualConcluido = parseFloat(data.percentualConcluido) || 0;
+    if (data.quantidade != null) relevante.quantidade = parseFloat(data.quantidade) || 0;
+    if (!Object.keys(relevante).length) return;
+    const dia = _dataHojeISO();
+    const ref = db.collection('obras').doc(obraId).collection('historicoExecucao').doc(dia);
+    const campoTarefa = `tarefas.${tarefaId}`;
+    ref.set({ data: dia, atualizadoEm: _timestamp(), [campoTarefa]: relevante }, { merge: true })
+      .catch(e => console.warn('Snapshot de histórico de execução falhou (não bloqueia a operação principal):', e.message));
   }
 
   // Genérica: deletar documento

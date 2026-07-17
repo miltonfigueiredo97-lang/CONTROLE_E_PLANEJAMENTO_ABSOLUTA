@@ -8,6 +8,7 @@ const Dashboard = (() => {
   let obraAtual = null;
   let tarefas = [];
   let semanas = [];
+  let historicoExecucao = [];
   let _resumoView = 'unidade';
   let _resumoDados = null;
   let _curvaCache = null; // último cálculo da Curva S (usado pelo tooltip)
@@ -147,14 +148,16 @@ const Dashboard = (() => {
     try {
       Utils.mostrarLoading('Carregando dashboard...');
       const obraId = obraAtual.id;
-      const [obraCompleta, tf, sem] = await Promise.all([
+      const [obraCompleta, tf, sem, hist] = await Promise.all([
         Database.getObra(obraId),
         Database.listar(obraId, 'tarefas', 'ordem').catch(() => []),
         Database.listar(obraId, 'semanas', 'fim').catch(() => []),
+        Database.listar(obraId, 'historicoExecucao', 'data', 'asc').catch(() => []),
       ]);
       obraAtual = obraCompleta || obraAtual;
       tarefas = tf;
       semanas = sem;
+      historicoExecucao = hist;
       el.innerHTML = _htmlEsqueleto();
       _renderHero();
       _renderCurvaS();
@@ -427,7 +430,7 @@ const Dashboard = (() => {
   // ===================== CURVA S =====================
   function _mesLabel(d) { return d.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' }).replace('.', ''); }
 
-  function _calcCurvaS(tf) {
+  function _calcCurvaS(tf, historico) {
     const leaves = tf.filter(t => t.tipo !== 'grupo' && (t.inicioPlanejado || t.inicioPlanejadoBase));
     if (!leaves.length) return null;
     const hoje = new Date();
@@ -448,7 +451,7 @@ const Dashboard = (() => {
     while (cursor <= fimCursor) {
       const inicioMes = new Date(cursor.getFullYear(), cursor.getMonth(), 1);
       const fimMes = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1);
-      meses.push({ label: _mesLabel(cursor), inicio: inicioMes, fim: fimMes, planMensal: 0, realMensal: 0 });
+      meses.push({ label: _mesLabel(cursor), inicio: inicioMes, fim: fimMes, planMensal: 0, realMensalEstimado: 0 });
       cursor = fimMes;
     }
 
@@ -464,6 +467,9 @@ const Dashboard = (() => {
     leaves.forEach(t => { totalPeso += _peso(t); });
     if (!totalPeso) totalPeso = 1;
 
+    // ---- Esperado (sempre pelas datas — não depende de histórico) e uma
+    // ESTIMATIVA do Executado (usada só como fallback pros meses anteriores
+    // ao início do histórico real, ver abaixo). ----
     leaves.forEach(t => {
       const peso = _peso(t);
       const iniP = new Date(t.inicioPlanejadoBase || t.inicioPlanejado);
@@ -477,31 +483,77 @@ const Dashboard = (() => {
         if (perc >= 100 && t.terminoReal) {
           const dConcl = new Date(t.terminoReal);
           const mAlvo = meses.find(m => dConcl >= m.inicio && dConcl < m.fim) || meses[meses.length - 1];
-          mAlvo.realMensal += pesoReal;
+          mAlvo.realMensalEstimado += pesoReal;
         } else {
           const iniR = new Date(t.inicioReal || t.inicioPlanejado || iniP);
           const fimR = hoje > iniR ? hoje : new Date(iniR.getTime() + 864e5);
-          meses.forEach(m => { m.realMensal += pesoReal * overlapFrac(iniR, fimR, m.inicio, m.fim); });
+          meses.forEach(m => { m.realMensalEstimado += pesoReal * overlapFrac(iniR, fimR, m.inicio, m.fim); });
         }
       }
     });
 
-    let acumP = 0, acumR = 0, hojeIdx = 0;
+    // ---- Executado REAL, reconstruído a partir do histórico salvo em
+    // obras/{id}/historicoExecucao (ver Database.js: toda vez que uma tarefa
+    // é criada/atualizada com percentualConcluido, o dia fica registrado).
+    // Semeia o "estado" de cada tarefa com o valor ATUAL (percentualConcluido
+    // de hoje) e depois REAPLICA os snapshots em ordem cronológica — assim,
+    // qualquer tarefa nunca tocada durante o período rastreado mantém
+    // corretamente o valor de hoje (nada mudou nela), e qualquer tarefa que
+    // mudou tem seu valor de cada dia reconstruído com precisão.
+    const historicoOrdenado = (historico || []).filter(h => h && h.data).sort((a, b) => String(a.data).localeCompare(String(b.data)));
+    let idxInicioHistorico = -1;
+    if (historicoOrdenado.length) {
+      const dataInicio = new Date(historicoOrdenado[0].data + 'T00:00:00');
+      idxInicioHistorico = meses.findIndex(m => m.fim > dataInicio);
+      if (idxInicioHistorico === -1) idxInicioHistorico = meses.length - 1;
+
+      const estado = new Map();
+      leaves.forEach(t => estado.set(t.id, Math.min(100, Number(t.percentualConcluido) || 0)));
+      let hIdx = 0;
+      meses.forEach((m, i) => {
+        const limite = m.fim < hoje ? m.fim : hoje;
+        while (hIdx < historicoOrdenado.length && new Date(historicoOrdenado[hIdx].data + 'T00:00:00') < limite) {
+          const diaObj = historicoOrdenado[hIdx].tarefas || {};
+          Object.keys(diaObj).forEach(tarefaId => {
+            const v = diaObj[tarefaId];
+            if (v && v.percentualConcluido != null) estado.set(tarefaId, Math.min(100, Number(v.percentualConcluido) || 0));
+          });
+          hIdx++;
+        }
+        if (i >= idxInicioHistorico) {
+          let soma = 0;
+          leaves.forEach(t => { soma += (estado.get(t.id) || 0) * _peso(t); });
+          m.realAcumReal = soma / totalPeso * 100;
+        }
+      });
+    }
+
+    let acumP = 0, acumREstimado = 0, hojeIdx = 0;
+    let acumRealAnterior = 0;
     meses.forEach((m, i) => {
-      acumP += m.planMensal; acumR += m.realMensal;
+      acumP += m.planMensal; acumREstimado += m.realMensalEstimado;
       m.planAcum = Math.min(100, acumP / totalPeso * 100);
-      m.realAcum = Math.min(100, acumR / totalPeso * 100);
       m.planMensalPct = m.planMensal / totalPeso * 100;
-      m.realMensalPct = m.realMensal / totalPeso * 100;
+
+      if (idxInicioHistorico !== -1 && i >= idxInicioHistorico) {
+        m.realAcum = Math.min(100, m.realAcumReal);
+        m.realMensalPct = Math.max(0, m.realAcum - acumRealAnterior);
+        m.origemReal = 'historico';
+      } else {
+        m.realAcum = Math.min(100, acumREstimado / totalPeso * 100);
+        m.realMensalPct = m.realMensalEstimado / totalPeso * 100;
+        m.origemReal = 'estimado';
+      }
+      acumRealAnterior = m.realAcum;
       if (m.inicio <= hoje) hojeIdx = i;
     });
-    return { meses, hojeIdx };
+    return { meses, hojeIdx, idxInicioHistorico };
   }
 
   function _renderCurvaS() {
     const host = document.getElementById('db-curva-s');
     if (!host) return;
-    const curva = _calcCurvaS(tarefas);
+    const curva = _calcCurvaS(tarefas, historicoExecucao);
     _curvaCache = curva;
     if (!curva || !curva.meses.length) {
       host.innerHTML = '<div class="estado-vazio"><p class="text-sm">Sem dados de planejamento suficientes para montar a Curva S.</p></div>';
@@ -512,9 +564,10 @@ const Dashboard = (() => {
       idHits: 'db-curva-hit-',
       alturaGrafico: 420,
       comBarras: true,
+      idxInicioHistorico: curva.idxInicioHistorico,
     });
     _attachHover(host, curva.meses, (m) => `
-      <div class="db-tt-titulo">${m.label}</div>
+      <div class="db-tt-titulo">${m.label} ${m.origemReal === 'historico' ? '<span class="badge badge-sucesso" style="font-size:.6rem;">real</span>' : '<span class="badge badge-neutro" style="font-size:.6rem;">estimado</span>'}</div>
       <div class="db-tt-linha"><i style="background:#999;"></i>Esperado Mensal: <b>${m.planMensalPct.toFixed(2)}%</b></div>
       <div class="db-tt-linha"><i style="background:var(--cor-primaria);"></i>Executado Mensal: <b>${m.realMensalPct.toFixed(2)}%</b></div>
       <div class="db-tt-linha"><i style="background:#999;border-radius:50%;"></i>Esperado Acumulado: <b>${m.planAcum.toFixed(2)}%</b></div>
@@ -548,6 +601,12 @@ const Dashboard = (() => {
     const pathReal = meses.map((m, i) => `${i === 0 ? 'M' : 'L'}${x(i).toFixed(1)},${yAcum(m.realAcum).toFixed(1)}`).join(' ');
 
     const hojeX = x(hojeIdx);
+    let marcadorHistorico = '';
+    if (opts.idxInicioHistorico != null && opts.idxInicioHistorico > 0 && opts.idxInicioHistorico < n) {
+      const hx = x(opts.idxInicioHistorico);
+      marcadorHistorico = `<line x1="${hx.toFixed(1)}" x2="${hx.toFixed(1)}" y1="${padT}" y2="${padT + plotH}" stroke="#16a34a" stroke-width="1" stroke-dasharray="2,3"/>
+        <text x="${hx.toFixed(1)}" y="${H - 22}" font-size="9" fill="#16a34a" text-anchor="middle">início do histórico real ▸</text>`;
+    }
     const labelStep = Math.max(1, Math.ceil(n / 18));
     let labels = '';
     meses.forEach((m, i) => {
@@ -570,6 +629,7 @@ const Dashboard = (() => {
           ${gridY}
           <line x1="${hojeX.toFixed(1)}" x2="${hojeX.toFixed(1)}" y1="${padT}" y2="${padT + plotH}" stroke="#ef4444" stroke-width="1" stroke-dasharray="4,3"/>
           <text x="${hojeX.toFixed(1)}" y="${padT - 4}" font-size="9" fill="#ef4444" text-anchor="middle">hoje</text>
+          ${marcadorHistorico}
           ${bars}
           <path d="${pathPlan}" fill="none" stroke="#999" stroke-width="2" stroke-dasharray="5,3"/>
           <path d="${pathReal}" fill="none" stroke="var(--cor-primaria-dark, #B89400)" stroke-width="2.5"/>
@@ -584,7 +644,7 @@ const Dashboard = (() => {
         <span><i style="background:#c9c9c9;"></i> Esperado mensal</span>
         <span><i style="background:var(--cor-primaria);"></i> Executado mensal</span>
       </div>
-      <div class="text-sm text-muted" style="margin-top:6px;">Esperado: distribuído pelas datas de início/término (linha de base) de cada tarefa, ponderado por quantidade. Executado: aproximado a partir do % concluído atual de cada tarefa e das datas reais — o sistema ainda não guarda o % histórico mês a mês, então meses passados são uma estimativa, não um registro exato daquele momento.</div>` : ''}`;
+      <div class="text-sm text-muted" style="margin-top:6px;">Esperado: distribuído pelas datas de início/término (linha de base) de cada tarefa, ponderado por quantidade. Executado: ${opts.idxInicioHistorico > 0 ? 'a partir da linha verde é reconstruído com o histórico real salvo diariamente (obras/{obra}/historicoExecucao); antes dela é uma estimativa retroativa, porque o sistema só passou a guardar o % de cada dia a partir daquele ponto' : (opts.idxInicioHistorico === 0 ? 'já 100% reconstruído a partir do histórico real salvo diariamente' : 'ainda não há histórico salvo nesta obra — os valores mostrados são uma estimativa a partir do % concluído atual; a partir de agora, toda atualização de tarefa vai gerar um registro real e a curva passa a ficar precisa')}.</div>` : ''}`;
   }
 
   // Liga hover nos retângulos invisíveis (.db-hit) de um gráfico já renderizado,
@@ -621,10 +681,11 @@ const Dashboard = (() => {
     const meses = _curvaCache.meses.map(m => ({
       label: m.label,
       idp: m.planAcum > 0.01 ? (m.realAcum / m.planAcum) : null,
+      origemReal: m.origemReal,
     }));
     host.innerHTML = _svgIDP(meses, _curvaCache.hojeIdx);
     _attachHover(host, meses, (m) => `
-      <div class="db-tt-titulo">${m.label}</div>
+      <div class="db-tt-titulo">${m.label} ${m.origemReal === 'historico' ? '<span class="badge badge-sucesso" style="font-size:.6rem;">real</span>' : '<span class="badge badge-neutro" style="font-size:.6rem;">estimado</span>'}</div>
       <div class="db-tt-linha">IDP: <b>${m.idp != null ? m.idp.toFixed(2) : '—'}</b></div>
       <div class="text-sm text-muted" style="margin-top:4px;max-width:190px;">IDP ≥ 1 significa que o executado está igual ou à frente do esperado até este mês.</div>
     `);
@@ -677,7 +738,7 @@ const Dashboard = (() => {
         </svg>
       </div>
       <div class="db-tooltip"></div>
-      <div class="text-sm text-muted" style="margin-top:6px;">IDP = Executado Acumulado ÷ Esperado Acumulado da Curva S acima. Herda a mesma aproximação: preciso a partir de hoje, estimado para meses passados.</div>`;
+      <div class="text-sm text-muted" style="margin-top:6px;">IDP = Executado Acumulado ÷ Esperado Acumulado da Curva S acima. A partir da linha verde na Curva S, usa histórico real salvo diariamente; antes dela, é uma estimativa retroativa.</div>`;
   }
 
   // ===================== AVANÇO POR PACOTES =====================
@@ -944,24 +1005,29 @@ const Dashboard = (() => {
     // diferentes, mesmo representando o mesmo lugar físico — então o
     // agrupamento por apartamento não pode usar o ID do nó como chave (cada
     // levantamento apareceria como uma "torre" separada). A chave usada aqui
-    // é o CAMINHO/NOME (ex: "Torre A › Pav 3 › Apto 301"), que é comum aos
-    // três módulos desde que o usuário nomeie os locais de forma consistente.
-    const mapaPorModulo = {}; // chave (piso/teto/paredesAlvenaria/...) -> Map(nodeId -> {label,torre})
+    // é o CAMINHO/NOME NORMALIZADO (sem acento, maiúsculas ou símbolo de grau —
+    // "1° Pavimento" e "1º Pavimento" viram a mesma chave), que é comum aos
+    // três módulos desde que o usuário nomeie os locais de forma parecida —
+    // pequenas diferenças de digitação entre levantamentos não quebram mais
+    // o agrupamento. O texto exibido na tabela continua o original (não o
+    // normalizado).
+    const mapaPorModulo = {}; // chave (piso/teto/paredesAlvenaria/...) -> Map(nodeId -> {label,chave,torre,torreChave})
     Object.keys(LEV_TREE).forEach(chave => {
       const r = resultados.find(x => x.chave === chave);
       mapaPorModulo[chave] = _mapaApartamentosPorLabel(r ? r.arvore : []);
     });
 
-    // União de todos os apartamentos (por label) na ordem em que apareceram,
-    // com ordenação final por Torre e depois natural (Apto 92 antes de Apto 101 etc.)
-    const apartamentosMap = new Map(); // label -> {label,torre}
+    // União de todos os apartamentos (pela chave normalizada) na ordem em que
+    // apareceram, com ordenação final por Torre e depois natural (Apto 92
+    // antes de Apto 101 etc.)
+    const apartamentosMap = new Map(); // chave -> {label,chave,torre,torreChave}
     Object.values(mapaPorModulo).forEach(mapa => {
-      mapa.forEach(info => { if (!apartamentosMap.has(info.label)) apartamentosMap.set(info.label, info); });
+      mapa.forEach(info => { if (!apartamentosMap.has(info.chave)) apartamentosMap.set(info.chave, info); });
     });
     const apartamentos = [...apartamentosMap.values()].sort((a, b) => {
-      const t = a.torre.localeCompare(b.torre, 'pt-BR', { numeric: true });
+      const t = a.torreChave.localeCompare(b.torreChave, 'pt-BR', { numeric: true });
       if (t !== 0) return t;
-      return a.label.localeCompare(b.label, 'pt-BR', { numeric: true });
+      return a.chave.localeCompare(b.chave, 'pt-BR', { numeric: true });
     });
 
     const linhas = [];
@@ -969,15 +1035,15 @@ const Dashboard = (() => {
       const mod = LEV_TREE[r.chave];
       const mapaNode = mapaPorModulo[r.chave];
       mod.linhas.forEach(linhaCfg => {
-        const porApto = new Map(); // label (apartamento) -> valor
+        const porApto = new Map(); // chave (apartamento normalizado) -> valor
         let total = 0;
         r.dados.forEach(reg => {
           const v = mod.valor(reg, linhaCfg.metrica);
           if (!v) return;
           total += v;
           const info = mapaNode.get(reg.nodeId);
-          const aptoLabel = info ? info.label : '__sem_local__';
-          porApto.set(aptoLabel, (porApto.get(aptoLabel) || 0) + v);
+          const aptoChave = info ? info.chave : '__sem_local__';
+          porApto.set(aptoChave, (porApto.get(aptoChave) || 0) + v);
         });
         if (total <= 0) return;
         const moduloVinculo = mod.moduloVinculo || r.chave;
@@ -992,25 +1058,45 @@ const Dashboard = (() => {
     return { apartamentos, linhas };
   }
 
-  // Constrói, a partir da árvore [{id,nome,filhos:[...]}], um mapa nodeId -> {label,torre}
+  // Remove acentos, símbolo de grau/ordinal (° º) e normaliza espaços/maiúsculas
+  // — usado só como CHAVE de agrupamento (comparação), nunca como texto exibido.
+  // É o que permite "1° Pavimento" (Piso) e "1º Pavimento" (Teto) caírem na
+  // mesma coluna mesmo com digitação levemente diferente entre levantamentos.
+  function _normalizarChave(s) {
+    return String(s || '')
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/[°º]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  // Constrói, a partir da árvore [{id,nome,filhos:[...]}], um mapa nodeId -> {label,chave,torre,torreChave}
   // onde "apartamento" é o CAMINHO DE NOMES até o nó PAI do local onde a área/peça
   // foi lançada (convenção Torre > Andar > Apto > Cômodo — a área é lançada no
-  // Cômodo, o pai é o Apto). A chave de agrupamento é o texto do caminho (não o
-  // ID do nó), pra permitir unir o mesmo apartamento entre árvores diferentes
-  // (Piso, Teto, Paredes) — ver comentário em _calcularResumoApartamento.
+  // Cômodo, o pai é o Apto). "chave"/"torreChave" são a versão normalizada do
+  // caminho, usada pra agrupar entre árvores diferentes (Piso, Teto, Paredes) —
+  // ver comentário em _calcularResumoApartamento. "label"/"torre" mantêm o texto
+  // original para exibição.
   function _mapaApartamentosPorLabel(arvore) {
     const mapaNode = new Map();
     function ordenar(nodes) { return [...(nodes || [])].sort((a, b) => (a.nome || '').localeCompare(b.nome || '', 'pt-BR', { numeric: true })); }
-    function walk(nodes, caminho) {
+    function walk(nodes, caminho, caminhoChave) {
       ordenar(nodes).forEach(n => {
-        const novoCaminho = [...caminho, n.nome || ''];
+        const nome = n.nome || '';
+        const novoCaminho = [...caminho, nome];
+        const novoCaminhoChave = [...caminhoChave, _normalizarChave(nome)];
         const filhos = n.filhos || [];
-        const caminhoApto = novoCaminho.length > 1 ? novoCaminho.slice(0, -1) : novoCaminho;
-        mapaNode.set(n.id, { label: caminhoApto.join(' › '), torre: novoCaminho[0] || '' });
-        if (filhos.length) walk(filhos, novoCaminho);
+        const aptoCaminho = novoCaminho.length > 1 ? novoCaminho.slice(0, -1) : novoCaminho;
+        const aptoCaminhoChave = novoCaminhoChave.length > 1 ? novoCaminhoChave.slice(0, -1) : novoCaminhoChave;
+        mapaNode.set(n.id, {
+          label: aptoCaminho.join(' › '), chave: aptoCaminhoChave.join(' › '),
+          torre: novoCaminho[0] || '', torreChave: novoCaminhoChave[0] || '',
+        });
+        if (filhos.length) walk(filhos, novoCaminho, novoCaminhoChave);
       });
     }
-    walk(arvore, []);
+    walk(arvore, [], []);
     return mapaNode;
   }
 
@@ -1078,14 +1164,17 @@ const Dashboard = (() => {
 
     const semLocal = apartamentos.length === 0;
     const colunas = apartamentos.length ? apartamentos : [{ label: 'Toda a obra', torre: '' }];
-    const chaveCol = (a) => apartamentos.length ? a.label : '__sem_local__';
+    const chaveCol = (a) => apartamentos.length ? a.chave : '__sem_local__';
 
-    const grupos = [];
+    // Agrupa por torreChave via Map — não depende de adjacência no array,
+    // então nunca duplica o cabeçalho de uma torre por causa de ordenação.
+    const gruposMap = new Map();
     colunas.forEach(a => {
-      const ultimo = grupos[grupos.length - 1];
-      if (ultimo && ultimo.torre === (a.torre || '')) ultimo.cols.push(a);
-      else grupos.push({ torre: a.torre || '', cols: [a] });
+      const key = apartamentos.length ? a.torreChave : '';
+      if (!gruposMap.has(key)) gruposMap.set(key, { torre: a.torre || '', cols: [] });
+      gruposMap.get(key).cols.push(a);
     });
+    const grupos = [...gruposMap.values()];
 
     let categoriaAtual = null;
     const linhasHtml = linhas.map(l => {
