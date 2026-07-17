@@ -226,7 +226,15 @@ const Dashboard = (() => {
 
       <div class="card db-row">
         <div class="card-body">
-          <div class="db-secao-header"><h3>Avanço por Pacotes</h3></div>
+          <div class="db-secao-header">
+            <h3>Avanço por Pacotes</h3>
+            <div class="aba-toggle" id="db-pacotes-toggle">
+              <button class="aba-btn ativo" data-v="pacotes" onclick="Dashboard.setPacotesView('pacotes')">Pacotes</button>
+              <button class="aba-btn" data-v="agrupadores" onclick="Dashboard.setPacotesView('agrupadores')">Agrupadores</button>
+              <button class="aba-btn" data-v="locais" onclick="Dashboard.setPacotesView('locais')">Locais</button>
+              <button class="aba-btn" data-v="responsaveis" onclick="Dashboard.setPacotesView('responsaveis')">Responsáveis</button>
+            </div>
+          </div>
           <div id="db-pacotes" class="db-tooltip-wrap"></div>
         </div>
       </div>
@@ -344,7 +352,14 @@ const Dashboard = (() => {
   function _leaves() {
     return tarefas.filter(t => t.tipo !== 'grupo');
   }
-  function _peso(t) { return Math.max(1, Number(t.duracao) || 1); }
+  // Peso de cada tarefa nos cálculos agregados (Curva S, Pacotes, KPIs).
+  // IMPORTANTE: usa QUANTIDADE — a mesma convenção de Utils.percFamilia,
+  // já usada em Planejamento/Semanal/Diário para ponderar % entre pai e
+  // filhos. Antes esta tela usava duração (dias), o que gerava números
+  // sem relação com o peso real de cada tarefa no projeto (ex: uma tarefa
+  // de 1 dia mas com 500m² pesava igual a uma de 1 dia com 5m²). Cai para
+  // peso 1 (uniforme) quando a tarefa não tem quantidade lançada.
+  function _peso(t) { const q = parseFloat(t.quantidade); return (q && q > 0) ? q : 1; }
 
   function _calcProgresso(tf) {
     const leaves = tf.filter(t => t.tipo !== 'grupo');
@@ -550,23 +565,26 @@ const Dashboard = (() => {
     });
 
     return `
-      <svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block;min-width:${W}px;">
-        ${gridY}
-        <line x1="${hojeX.toFixed(1)}" x2="${hojeX.toFixed(1)}" y1="${padT}" y2="${padT + plotH}" stroke="#ef4444" stroke-width="1" stroke-dasharray="4,3"/>
-        <text x="${hojeX.toFixed(1)}" y="${padT - 4}" font-size="9" fill="#ef4444" text-anchor="middle">hoje</text>
-        ${bars}
-        <path d="${pathPlan}" fill="none" stroke="#999" stroke-width="2" stroke-dasharray="5,3"/>
-        <path d="${pathReal}" fill="none" stroke="var(--cor-primaria-dark, #B89400)" stroke-width="2.5"/>
-        ${labels}
-        ${hits}
-      </svg>
+      <div style="overflow-x:auto;">
+        <svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block;min-width:${W}px;">
+          ${gridY}
+          <line x1="${hojeX.toFixed(1)}" x2="${hojeX.toFixed(1)}" y1="${padT}" y2="${padT + plotH}" stroke="#ef4444" stroke-width="1" stroke-dasharray="4,3"/>
+          <text x="${hojeX.toFixed(1)}" y="${padT - 4}" font-size="9" fill="#ef4444" text-anchor="middle">hoje</text>
+          ${bars}
+          <path d="${pathPlan}" fill="none" stroke="#999" stroke-width="2" stroke-dasharray="5,3"/>
+          <path d="${pathReal}" fill="none" stroke="var(--cor-primaria-dark, #B89400)" stroke-width="2.5"/>
+          ${labels}
+          ${hits}
+        </svg>
+      </div>
       <div class="db-tooltip" id="${opts.idTooltip}"></div>
       ${opts.comBarras ? `<div class="db-legenda">
         <span><i style="background:#999;"></i> Esperado (acumulado)</span>
         <span><i style="background:var(--cor-primaria-dark,#B89400);"></i> Executado (acumulado)</span>
         <span><i style="background:#c9c9c9;"></i> Esperado mensal</span>
         <span><i style="background:var(--cor-primaria);"></i> Executado mensal</span>
-      </div>` : ''}`;
+      </div>
+      <div class="text-sm text-muted" style="margin-top:6px;">Esperado: distribuído pelas datas de início/término (linha de base) de cada tarefa, ponderado por quantidade. Executado: aproximado a partir do % concluído atual de cada tarefa e das datas reais — o sistema ainda não guarda o % histórico mês a mês, então meses passados são uma estimativa, não um registro exato daquele momento.</div>` : ''}`;
   }
 
   // Liga hover nos retângulos invisíveis (.db-hit) de um gráfico já renderizado,
@@ -646,27 +664,57 @@ const Dashboard = (() => {
     const gridY = gridVals.map(v => `<line x1="${padL}" x2="${W - padR}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}" stroke="#eee" stroke-width="1"/><text x="4" y="${(y(v) + 3).toFixed(1)}" font-size="9" fill="#999">${v.toFixed(2)}</text>`).join('');
 
     return `
-      <svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block;min-width:${W}px;">
-        ${gridY}
-        <line x1="${padL}" x2="${W - padR}" y1="${y(1).toFixed(1)}" y2="${y(1).toFixed(1)}" stroke="#ef4444" stroke-width="1.5" stroke-dasharray="6,3"/>
-        <text x="${W - padR}" y="${(y(1) - 5).toFixed(1)}" font-size="10" fill="#ef4444" text-anchor="end">Ideal</text>
-        <line x1="${x(hojeIdx).toFixed(1)}" x2="${x(hojeIdx).toFixed(1)}" y1="${padT}" y2="${padT + plotH}" stroke="#94a3b8" stroke-width="1" stroke-dasharray="4,3"/>
-        <path d="${pathD}" fill="none" stroke="var(--cor-primaria-dark,#B89400)" stroke-width="2"/>
-        ${pontos}
-        ${labels}
-        ${hits}
-      </svg>
-      <div class="db-tooltip"></div>`;
+      <div style="overflow-x:auto;">
+        <svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block;min-width:${W}px;">
+          ${gridY}
+          <line x1="${padL}" x2="${W - padR}" y1="${y(1).toFixed(1)}" y2="${y(1).toFixed(1)}" stroke="#ef4444" stroke-width="1.5" stroke-dasharray="6,3"/>
+          <text x="${W - padR}" y="${(y(1) - 5).toFixed(1)}" font-size="10" fill="#ef4444" text-anchor="end">Ideal</text>
+          <line x1="${x(hojeIdx).toFixed(1)}" x2="${x(hojeIdx).toFixed(1)}" y1="${padT}" y2="${padT + plotH}" stroke="#94a3b8" stroke-width="1" stroke-dasharray="4,3"/>
+          <path d="${pathD}" fill="none" stroke="var(--cor-primaria-dark,#B89400)" stroke-width="2"/>
+          ${pontos}
+          ${labels}
+          ${hits}
+        </svg>
+      </div>
+      <div class="db-tooltip"></div>
+      <div class="text-sm text-muted" style="margin-top:6px;">IDP = Executado Acumulado ÷ Esperado Acumulado da Curva S acima. Herda a mesma aproximação: preciso a partir de hoje, estimado para meses passados.</div>`;
   }
 
   // ===================== AVANÇO POR PACOTES =====================
-  function _calcPacotes(tf) {
+  // 4 visões, igual ao modelo de referência: "Pacotes" mostra cada tarefa-folha
+  // individualmente (sem agrupar) — é a granularidade real do Planejamento.
+  // "Agrupadores"/"Locais"/"Responsáveis" agrupam pelos campos correspondentes
+  // da tarefa (grupo/local/responsavel). Todas ponderadas por quantidade.
+  let _pacotesView = 'pacotes';
+
+  function setPacotesView(v) {
+    _pacotesView = v;
+    document.querySelectorAll('#db-pacotes-toggle .aba-btn').forEach(b => b.classList.toggle('ativo', b.dataset.v === v));
+    _renderPacotes();
+  }
+
+  function _calcPacotes(tf, modo) {
     const leaves = tf.filter(t => t.tipo !== 'grupo');
     if (!leaves.length) return [];
     const totalPeso = leaves.reduce((s, t) => s + _peso(t), 0) || 1;
+
+    if (modo === 'pacotes') {
+      // Sem agrupar: cada tarefa-folha é o seu próprio "pacote".
+      return leaves.map(t => {
+        const peso = _peso(t);
+        return {
+          nome: t.nome || 'Sem nome', pesoPct: peso / totalPeso * 100,
+          esperado: Math.min(100, Number(t.percentualEsperado) || 0),
+          executado: Math.min(100, Number(t.percentualConcluido) || 0),
+        };
+      }).sort((a, b) => b.pesoPct - a.pesoPct);
+    }
+
+    const campo = modo === 'agrupadores' ? 'grupo' : modo === 'locais' ? 'local' : 'responsavel';
+    const semRotulo = modo === 'agrupadores' ? 'Sem Agrupador' : modo === 'locais' ? 'Sem Local' : 'Sem Responsável';
     const grupos = new Map();
     leaves.forEach(t => {
-      const nome = (t.grupo && String(t.grupo).trim()) || 'Sem Grupo';
+      const nome = (t[campo] && String(t[campo]).trim()) || semRotulo;
       const peso = _peso(t);
       if (!grupos.has(nome)) grupos.set(nome, { nome, peso: 0, somaEsp: 0, somaConc: 0 });
       const g = grupos.get(nome);
@@ -682,14 +730,14 @@ const Dashboard = (() => {
   function _renderPacotes() {
     const host = document.getElementById('db-pacotes');
     if (!host) return;
-    const pacotes = _calcPacotes(tarefas);
+    const pacotes = _calcPacotes(tarefas, _pacotesView);
     if (!pacotes.length) {
-      host.innerHTML = '<div class="estado-vazio"><p class="text-sm">Sem tarefas com Grupo definido no Planejamento.</p></div>';
+      host.innerHTML = `<div class="estado-vazio"><p class="text-sm">${_pacotesView === 'pacotes' ? 'Nenhuma tarefa no Planejamento.' : 'Nenhuma tarefa com esse campo preenchido no Planejamento.'}</p></div>`;
       return;
     }
     host.innerHTML = _svgPacotes(pacotes);
     _attachHover(host, pacotes, (p) => `
-      <div class="db-tt-titulo">${p.nome}</div>
+      <div class="db-tt-titulo">${_esc(p.nome)}</div>
       <div class="db-tt-linha">Peso no projeto: <b>${p.pesoPct.toFixed(2)}%</b></div>
       <div class="db-tt-linha"><i style="background:#1a1a1a;"></i>Esperado: <b>${Math.round(p.esperado)}%</b></div>
       <div class="db-tt-linha"><i style="background:var(--cor-primaria);"></i>Executado: <b>${Math.round(p.executado)}%</b></div>
@@ -712,7 +760,8 @@ const Dashboard = (() => {
       bars += `<text x="${(cx - barW / 2 - 1).toFixed(1)}" y="${(padT + plotH - hEsp - 4).toFixed(1)}" font-size="9" fill="#1a1a1a" text-anchor="middle">${Math.round(p.esperado)}%</text>`;
       bars += `<rect x="${(cx + 1).toFixed(1)}" y="${(padT + plotH - hExec).toFixed(1)}" width="${barW}" height="${hExec.toFixed(1)}" fill="var(--cor-primaria)"/>`;
       bars += `<text x="${(cx + barW / 2 + 1).toFixed(1)}" y="${(padT + plotH - hExec - 4).toFixed(1)}" font-size="9" fill="var(--cor-primaria-dark,#B89400)" text-anchor="middle">${Math.round(p.executado)}%</text>`;
-      labels += `<text x="${cx.toFixed(1)}" y="${(padT + plotH + 14).toFixed(1)}" font-size="9.5" fill="#333" text-anchor="end" transform="rotate(-40 ${cx.toFixed(1)} ${(padT + plotH + 14).toFixed(1)})">${_esc(p.nome)}</text>`;
+      const nomeCurto = p.nome.length > 22 ? p.nome.slice(0, 21) + '…' : p.nome;
+      labels += `<text x="${cx.toFixed(1)}" y="${(padT + plotH + 14).toFixed(1)}" font-size="9.5" fill="#333" text-anchor="end" transform="rotate(-40 ${cx.toFixed(1)} ${(padT + plotH + 14).toFixed(1)})"><title>${_esc(p.nome)}</title>${_esc(nomeCurto)}</text>`;
       pesos += `<text x="${cx.toFixed(1)}" y="${(padT + plotH + 62).toFixed(1)}" font-size="9" fill="#999" text-anchor="middle">${p.pesoPct.toFixed(2)}%</text>`;
       hits += `<rect class="db-hit" data-idx="${i}" x="${(cx - (plotW / n) / 2).toFixed(1)}" y="${padT}" width="${(plotW / n).toFixed(1)}" height="${plotH}" fill="transparent" style="cursor:pointer;"/>`;
     });
@@ -733,7 +782,7 @@ const Dashboard = (() => {
       <div class="db-legenda">
         <span><i style="background:#1a1a1a;"></i> Esperado</span>
         <span><i style="background:var(--cor-primaria);"></i> Executado</span>
-        <span style="color:#999;">Peso = participação do pacote no total do projeto</span>
+        <span style="color:#999;">Peso = participação (por quantidade) no total do projeto</span>
       </div>`;
   }
 
@@ -1076,5 +1125,5 @@ const Dashboard = (() => {
       </div>`;
   }
 
-  return { init, onObraChanged, setResumoView };
+  return { init, onObraChanged, setResumoView, setPacotesView };
 })();

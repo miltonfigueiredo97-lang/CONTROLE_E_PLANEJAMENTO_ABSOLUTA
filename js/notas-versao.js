@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.42.0',
+  versaoAtual: 'V2.42.1',
 
   versoes: [
     {
@@ -4009,7 +4009,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.42.0',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-17',
       tipo: 'melhoria',
       titulo: 'Dashboard: Curva S grande com tooltip, IDP, Avanço por Pacotes, PPC Semanal/Motivos de Atraso e correção do Resumo por Apartamento',
@@ -4048,6 +4048,32 @@ const NotasVersao = {
         '  (ex: "Torre A › Pav 3 › Apto 301"), unindo corretamente os três',
         '  levantamentos na mesma coluna — desde que os locais sejam',
         '  nomeados de forma consistente entre eles.',
+      ]
+    },
+    {
+      versao: 'V2.42.1',
+      status: 'aberta',
+      data: '2026-07-17',
+      tipo: 'correcao',
+      titulo: 'Dashboard: corrige overflow da Curva S/IDP, pondera por quantidade (não duração) e Avanço por Pacotes ganha abas Pacotes/Agrupadores/Locais/Responsáveis',
+      itens: [
+        'CORREÇÃO — Curva S e IDP estavam vazando pra fora do card (o',
+        '  gráfico ficava mais largo que a tela quando havia muitos meses).',
+        '  Agora ficam dentro de um container com rolagem horizontal',
+        '  própria, sem quebrar o layout da página.',
+        '',
+        'CORREÇÃO — ponderação trocada de duração (dias) para QUANTIDADE',
+        '  em todos os cálculos agregados do Dashboard (Curva S, IDP, KPIs',
+        '  do topo e Avanço por Pacotes) — é a mesma convenção que',
+        '  Utils.percFamilia já usa em Planejamento/Semanal/Diário. Antes,',
+        '  uma tarefa de 1 dia com 500m² pesava igual a uma de 1 dia com',
+        '  5m², distorcendo a curva inteira.',
+        '',
+        'Avanço por Pacotes reformulado: agora tem 4 abas — "Pacotes"',
+        '  (cada tarefa-folha do Planejamento aparece individualmente, sem',
+        '  agrupar — é a visão padrão), "Agrupadores" (pelo campo Grupo),',
+        '  "Locais" (pelo campo Local) e "Responsáveis" (pelo campo',
+        '  Responsável). Todas ordenadas por peso decrescente.',
       ]
     }
   ],
