@@ -221,13 +221,91 @@ const ConcretoCalculos = (() => {
     return (lista || []).reduce((s, d) => s + (num(d.pisada) * num(d.espelho) / 2 * num(d.larg) * num(d.qtd)) / 1000000, 0);
   }
 
+  // ── Viga (retangular simples, medidas em cm) ──────
+  // Port fiel de "Vigas" do Obra Essence: Lado × Altura × Comprimento
+  function calcVolViga(lado, altura, comprimento) {
+    return (num(lado) * num(altura) * num(comprimento)) / 1000000;
+  }
+
+  // ── Fundação — 9 tipos (port fiel da aba "Fundações" do Obra Essence) ──
+  // Todas as medidas de entrada em cm; retorna volume em m³.
+  const TIPOS_FUNDACAO = [
+    'Viga Baldrame', 'Estacas', 'Bloco Retângular', 'Bloco Triângular',
+    'Sapata Isolada Piramidal', 'Sapata de Divisa Piramidal', 'Tubulão a Céu Aberto',
+    'Sapata de Divisa em Bloco', 'Sapata Isolada em Bloco',
+  ];
+
+  function calcVolFundacao(tipo, p) {
+    const A = num(p.A), B = num(p.B), C = num(p.C), D = num(p.D), E = num(p.E), F = num(p.F);
+    switch (tipo) {
+      case 'Viga Baldrame':
+      case 'Bloco Retângular':
+      case 'Sapata de Divisa em Bloco':
+      case 'Sapata Isolada em Bloco':
+        // Bloco retangular simples: comprimento × largura × altura
+        return (A * B * C) / 1000000;
+
+      case 'Estacas':
+        // A = comprimento/profundidade [m], B = diâmetro [cm]
+        return (((Math.PI * (B * B)) / 4) * (A * 100)) / 1000000;
+
+      case 'Bloco Triângular':
+        // Sem D/E/F: fórmula empírica. Com D/E/F: seção trapezoidal.
+        if (!p.D && !p.E && !p.F) {
+          return ((1.74 * A * B) + (0.44 * B * B) + (0.44 * A * A)) * C / 1000000;
+        }
+        return ((((B + D) / 2) * E) + (((A + D) / 2) * F)) * C / 1000000;
+
+      case 'Sapata Isolada Piramidal':
+        // A,B = base maior (embaixo) · C,D = base menor/pescoço (em cima) · E = altura base reta · F = altura total
+        return (((F - E) / 3) * ((A * B) + (C * D) + Math.sqrt(A * B * C * D)) + (A * B * E)) / 1000000;
+
+      case 'Sapata de Divisa Piramidal':
+        // Mesmos parâmetros da Isolada Piramidal — fundação cortada na divisa (metade de uma pirâmide espelhada)
+        return ((((F - E) / 3) * (((C * 2) * D) + (B * (A * 2)) + Math.sqrt(B * (A * 2) * (C * 2) * D))) + (B * (A * 2) * E)) / 1000000 / 2;
+
+      case 'Tubulão a Céu Aberto':
+        // A = diâmetro do fuste · B = altura do fuste · C = diâmetro da base/bulbo · D = altura total · E = altura reta da base
+        return ((Math.PI * (A / 2) ** 2 * B) + (Math.PI * (C / 2) ** 2 * E) +
+          (((Math.PI * (D - E)) / 3) * ((A / 2) ** 2 + (C / 2) ** 2 + ((A / 2) * (B / 2))))) / 1000000;
+
+      default:
+        return 0;
+    }
+  }
+
+  // ── Laje (port fiel da aba "Lajes" do Obra Essence) ──
+  // Volume de concreto (convencional ou pré-moldada com isopor) + metragem de treliça / área de isopor
+  function calcAreaIsopor(p) {
+    // (Qtd de painéis × Comprimento do painel [cm] × Largura do isopor [cm]) / 10.000 → m²
+    return (num(p.qtdPaineis) * num(p.compPainel) * num(p.largIsopor)) / 10000;
+  }
+  function calcMetragemTrelica(p) {
+    // Perímetro-base por linha: (x + y) × 2 [cm]
+    return (num(p.x) + num(p.y)) * 2;
+  }
+  function calcTotalTrelica(p) {
+    // Máximo de linhas da laje × metragem de treliça por linha
+    return num(p.maxLinhas) * calcMetragemTrelica(p);
+  }
+  function calcVolLaje(p) {
+    const x = num(p.x), y = num(p.y), desconto = num(p.desconto);
+    const hLaje = num(p.hLaje), hPainel = num(p.hPainel);
+    const hConcreto = hLaje - hPainel;
+    const areaIsopor = calcAreaIsopor(p);
+    const hIsopor = num(p.hIsopor);
+    return ((hConcreto * y * x) / 1000000) - ((desconto * hConcreto) / 1000000) - (areaIsopor * (hIsopor / 100));
+  }
+
   return {
     fmt2, fmt1, fmt4,
-    TIPOS, TIPO_ORDEM, CORES,
+    TIPOS, TIPO_ORDEM, CORES, TIPOS_FUNDACAO,
     genId, normalizarAndar, ordenarAndares,
     volLancadoPeca, pctConcretado,
     calcVolumePrevisto, calcIndicePerda, calcKPIs, calcAndares, calcPorTipo, statusPeca,
     num, calcVolPilar, calcVolRampa,
     calcVolLajesInclinadas, calcVolPatamares, calcVolDegraus,
+    calcVolViga, calcVolFundacao,
+    calcAreaIsopor, calcMetragemTrelica, calcTotalTrelica, calcVolLaje,
   };
 })();

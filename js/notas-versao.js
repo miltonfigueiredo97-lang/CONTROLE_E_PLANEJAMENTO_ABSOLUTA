@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.44.4',
+  versaoAtual: 'V2.45.0',
 
   versoes: [
     {
@@ -4268,7 +4268,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.44.4',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-17',
       tipo: 'melhoria',
       titulo: 'Dashboard: %Executado/%Previsto Atual do Hero com 2 casas decimais (ex: 9,80%)',
@@ -4277,6 +4277,37 @@ const NotasVersao = {
         '  decimais em vez de arredondar pro inteiro mais próximo — ex:',
         '  "9,80%" em vez de "10%". Usa Utils.formatarNumero, o mesmo',
         '  padrão de vírgula/2 casas já usado no resto do sistema.',
+      ]
+    },
+    {
+      versao: 'V2.45.0',
+      status: 'aberta',
+      data: '2026-07-21',
+      tipo: 'funcionalidade',
+      titulo: 'Calculadora de Concreto ganha Viga, Laje e Fundação (9 tipos)',
+      itens: [
+        'Port fiel das fórmulas da planilha pessoal do Milton (Obra Essence',
+        '  V9.6.6) para dentro da Calculadora de Concreto, no Levantamento:',
+        '',
+        'VIGA: comp × altura × lado, igual ao pilar retangular',
+        '',
+        'LAJE: convencional ou pré-moldada com isopor —',
+        '  Volume = (Hconcreto×x×y) − (desconto de área×Hconcreto) −',
+        '  (área de isopor×Hisopor), onde Hconcreto = Hlaje − Hpainel',
+        '  → Controle de treliça/isopor incluído: metragem de treliça e',
+        '    área de isopor calculadas e salvas na peça (não entram no',
+        '    volume de concreto, são só para controle de material)',
+        '  → Novo painel "Resumo de Treliça/Isopor" no Levantamento de',
+        '    Concreto, somando os totais de todas as lajes cadastradas',
+        '',
+        'FUNDAÇÃO: os 9 tipos da planilha original, num seletor único —',
+        '  Viga Baldrame, Bloco Retângular, Bloco Triângular (fórmula',
+        '  empírica ou trapezoidal detalhada), Estacas, Sapata Isolada',
+        '  Piramidal, Sapata de Divisa Piramidal, Tubulão a Céu Aberto,',
+        '  Sapata de Divisa em Bloco, Sapata Isolada em Bloco — cada um',
+        '  com seu próprio desenho e campos',
+        '  → Fórmulas conferidas uma a uma contra os dados reais da',
+        '    planilha do Milton antes de publicar',
       ]
     }
   ],

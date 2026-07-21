@@ -145,6 +145,9 @@ const LevantamentoConcreto = (() => {
     if (!c) return;
     const volTotal = pecas.reduce((s, p) => s + (p.volume || 0), 0);
     const volBTs = btsConfig.reduce((s, b) => s + (b.volumePrevisto || 0), 0);
+    const lajesComDados = pecas.filter(p => p.tipo === 'Laje' && (p.metragemTrelica || p.areaIsopor));
+    const totalTrelica = lajesComDados.reduce((s, p) => s + (p.metragemTrelica || 0), 0);
+    const totalIsopor = lajesComDados.reduce((s, p) => s + (p.areaIsopor || 0), 0);
 
     c.innerHTML = `
       <div class="cc-view">
@@ -168,6 +171,15 @@ const LevantamentoConcreto = (() => {
         <div class="cc-kpi"><div class="cc-kpiIcon">◈</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Concretagens montadas</div><div class="cc-kpiValue">${concretagens.length}</div></div></div>
         <div class="cc-kpi"><div class="cc-kpiIcon">📋</div><div class="cc-kpiBody"><div class="cc-kpiLabel">BTs configuradas</div><div class="cc-kpiValue">${btsConfig.length}</div><div class="cc-kpiSub">${CC.fmt4(volBTs)} m³ previstos</div></div></div>
       </div>
+
+      ${lajesComDados.length ? `
+      <div class="cc-panel">
+        <div class="cc-panelTitle">📐 Resumo de Treliça / Isopor <span style="font-family:var(--cv-mono);font-size:10px;color:var(--cv-text3);font-weight:400;text-transform:none;letter-spacing:0;">${lajesComDados.length} laje${lajesComDados.length !== 1 ? 's' : ''} pré-moldada${lajesComDados.length !== 1 ? 's' : ''}</span></div>
+        <div style="display:flex;gap:24px;flex-wrap:wrap;">
+          <div><div class="cc-kpiLabel">Metragem total de treliça</div><div class="cc-kpiValue" style="font-size:18px;">${CC.fmt4(totalTrelica)}<span class="cc-kpiUnit">m</span></div></div>
+          <div><div class="cc-kpiLabel">Área total de isopor</div><div class="cc-kpiValue" style="font-size:18px;">${CC.fmt4(totalIsopor)}<span class="cc-kpiUnit">m²</span></div></div>
+        </div>
+      </div>` : ''}
 
       <div class="cc-panel">
         <div class="cc-panelTitle">⬡ Peças</div>
@@ -303,6 +315,13 @@ const LevantamentoConcreto = (() => {
       lajeInc: [{ compIncl: '', larg: '', esp: '' }],
       patamares: [{ comp: '', larg: '', esp: '' }],
       degraus: [{ pisada: '', espelho: '', larg: '', qtd: '' }],
+      // Viga
+      vLado: '', vAltura: '', vComprimento: '',
+      // Fundação (9 tipos)
+      tipoFund: 'Bloco Retângular', fA: '', fB: '', fC: '', fD: '', fE: '', fF: '',
+      // Laje
+      ljX: '', ljY: '', ljDesconto: '', ljHlaje: '', ljHpainel: '', ljPreMoldada: false,
+      ljQtdPaineis: '', ljCompPainel: '', ljLargIsopor: '', ljHisopor: '', ljMaxLinhas: '',
     };
     renderCalc();
     Utils.abrirModal('modal-lc-calc');
@@ -313,6 +332,12 @@ const LevantamentoConcreto = (() => {
     if (calc.tipoPeca === 'pilar') return CC.calcVolPilar(calc.tipoP, calc.peDireito, calc.mA, calc.mB, calc.mC, calc.mD);
     if (calc.tipoPeca === 'rampa') return CC.calcVolRampa(calc.comprimento, calc.largura, calc.altLaje);
     if (calc.tipoPeca === 'escada') return CC.calcVolLajesInclinadas(calc.lajeInc) + CC.calcVolPatamares(calc.patamares) + CC.calcVolDegraus(calc.degraus);
+    if (calc.tipoPeca === 'viga') return CC.calcVolViga(calc.vLado, calc.vAltura, calc.vComprimento);
+    if (calc.tipoPeca === 'fundacao') return CC.calcVolFundacao(calc.tipoFund, { A: calc.fA, B: calc.fB, C: calc.fC, D: calc.fD, E: calc.fE, F: calc.fF });
+    if (calc.tipoPeca === 'laje') return CC.calcVolLaje({
+      x: calc.ljX, y: calc.ljY, desconto: calc.ljDesconto, hLaje: calc.ljHlaje, hPainel: calc.ljPreMoldada ? calc.ljHpainel : 0,
+      qtdPaineis: calc.ljQtdPaineis, compPainel: calc.ljCompPainel, largIsopor: calc.ljLargIsopor, hIsopor: calc.ljHisopor,
+    });
     return 0;
   }
 
@@ -362,6 +387,82 @@ const LevantamentoConcreto = (() => {
     </div>`;
   }
 
+  function esquemaViga() {
+    return `
+      <svg viewBox="0 0 180 120" width="100%">
+        <rect x="20" y="40" width="140" height="30" fill="rgba(245,200,0,0.15)" stroke="var(--cor-primaria)" stroke-width="2.5" rx="2"/>
+        <line x1="20" y1="80" x2="160" y2="80" stroke="#3b82f6" stroke-width="1.5" stroke-dasharray="4,2"/>
+        <text x="90" y="94" text-anchor="middle" font-size="11" fill="#3b82f6" font-weight="bold">Comprimento</text>
+        <line x1="8" y1="40" x2="8" y2="70" stroke="#16a34a" stroke-width="1.5" stroke-dasharray="4,2"/>
+        <text x="8" y="34" text-anchor="middle" font-size="11" fill="#16a34a" font-weight="bold">Altura</text>
+        <text x="90" y="59" text-anchor="middle" font-size="11" fill="#ef4444" font-weight="bold">Lado</text>
+      </svg>`;
+  }
+
+  function esquemaFundacao(tipo) {
+    const az = '#3b82f6', vd = '#16a34a', vm = '#ef4444', rx = '#a855f7', am = 'var(--cor-primaria)';
+    if (tipo === 'Estacas') return `
+      <svg viewBox="0 0 160 140" width="100%">
+        <rect x="65" y="15" width="30" height="105" fill="rgba(245,200,0,0.15)" stroke="${am}" stroke-width="2.5" rx="15"/>
+        <line x1="100" y1="15" x2="100" y2="120" stroke="${az}" stroke-width="1.5" stroke-dasharray="4,2"/>
+        <text x="112" y="70" text-anchor="middle" font-size="11" fill="${az}" font-weight="bold" transform="rotate(90,112,70)">A (m)</text>
+        <line x1="65" y1="128" x2="95" y2="128" stroke="${vd}" stroke-width="1.5" stroke-dasharray="4,2"/>
+        <text x="80" y="138" text-anchor="middle" font-size="11" fill="${vd}" font-weight="bold">B = diâmetro</text>
+      </svg>`;
+    if (tipo === 'Tubulão a Céu Aberto') return `
+      <svg viewBox="0 0 160 150" width="100%">
+        <rect x="65" y="15" width="30" height="55" fill="rgba(245,200,0,0.15)" stroke="${am}" stroke-width="2.5"/>
+        <path d="M65,70 L95,70 L120,110 L40,110 Z" fill="rgba(245,200,0,0.15)" stroke="${am}" stroke-width="2.5"/>
+        <rect x="40" y="110" width="80" height="20" fill="rgba(245,200,0,0.15)" stroke="${am}" stroke-width="2.5"/>
+        <text x="105" y="45" text-anchor="middle" font-size="10" fill="${az}" font-weight="bold">A</text>
+        <text x="20" y="42" text-anchor="middle" font-size="10" fill="${vd}" font-weight="bold">B</text>
+        <text x="130" y="122" text-anchor="middle" font-size="10" fill="${vm}" font-weight="bold">C</text>
+        <text x="20" y="122" text-anchor="middle" font-size="10" fill="${rx}" font-weight="bold">E</text>
+        <text x="20" y="90" text-anchor="middle" font-size="10" fill="#666" font-weight="bold">D total</text>
+      </svg>`;
+    if (tipo === 'Sapata Isolada Piramidal' || tipo === 'Sapata de Divisa Piramidal') return `
+      <svg viewBox="0 0 160 150" width="100%">
+        <path d="M45,55 L115,55 L140,120 L20,120 Z" fill="rgba(245,200,0,0.15)" stroke="${am}" stroke-width="2.5"/>
+        <rect x="20" y="120" width="120" height="15" fill="rgba(245,200,0,0.15)" stroke="${am}" stroke-width="2.5"/>
+        <text x="80" y="48" text-anchor="middle" font-size="10" fill="${az}" font-weight="bold">C×D (topo)</text>
+        <text x="80" y="143" text-anchor="middle" font-size="10" fill="${vd}" font-weight="bold">A×B (base)</text>
+        <text x="150" y="90" text-anchor="middle" font-size="10" fill="${vm}" font-weight="bold">F</text>
+        <text x="10" y="128" text-anchor="middle" font-size="10" fill="${rx}" font-weight="bold">E</text>
+      </svg>`;
+    if (tipo === 'Bloco Triângular') return `
+      <svg viewBox="0 0 160 140" width="100%">
+        <path d="M30,110 L80,25 L130,110 Z" fill="rgba(245,200,0,0.15)" stroke="${am}" stroke-width="2.5"/>
+        <text x="80" y="123" text-anchor="middle" font-size="11" fill="${az}" font-weight="bold">A / B</text>
+        <text x="145" y="70" text-anchor="middle" font-size="10" fill="${vm}" font-weight="bold">C = altura</text>
+      </svg>`;
+    // Bloco Retângular / Viga Baldrame / Sapata Isolada/Divisa em Bloco
+    return `
+      <svg viewBox="0 0 160 130" width="100%">
+        <rect x="30" y="35" width="100" height="60" fill="rgba(245,200,0,0.15)" stroke="${am}" stroke-width="2.5" rx="2"/>
+        <line x1="30" y1="105" x2="130" y2="105" stroke="${az}" stroke-width="1.5" stroke-dasharray="4,2"/>
+        <text x="80" y="118" text-anchor="middle" font-size="11" fill="${az}" font-weight="bold">A</text>
+        <line x1="140" y1="35" x2="140" y2="95" stroke="${vd}" stroke-width="1.5" stroke-dasharray="4,2"/>
+        <text x="150" y="65" text-anchor="middle" font-size="11" fill="${vd}" font-weight="bold">B</text>
+        <text x="80" y="68" text-anchor="middle" font-size="11" fill="${vm}" font-weight="bold">C = altura</text>
+      </svg>`;
+  }
+
+  function esquemaLaje() {
+    return `
+      <svg viewBox="0 0 180 140" width="100%">
+        <rect x="20" y="20" width="140" height="90" fill="rgba(245,200,0,0.12)" stroke="var(--cor-primaria)" stroke-width="2.5" rx="3"/>
+        <circle cx="55" cy="45" r="9" fill="#e2e8f0" stroke="#94a3b8"/>
+        <circle cx="85" cy="45" r="9" fill="#e2e8f0" stroke="#94a3b8"/>
+        <circle cx="55" cy="75" r="9" fill="#e2e8f0" stroke="#94a3b8"/>
+        <circle cx="85" cy="75" r="9" fill="#e2e8f0" stroke="#94a3b8"/>
+        <text x="120" y="60" text-anchor="middle" font-size="8" fill="#94a3b8">isopor</text>
+        <line x1="20" y1="118" x2="160" y2="118" stroke="#3b82f6" stroke-width="1.5" stroke-dasharray="4,2"/>
+        <text x="90" y="130" text-anchor="middle" font-size="11" fill="#3b82f6" font-weight="bold">x</text>
+        <line x1="8" y1="20" x2="8" y2="110" stroke="#16a34a" stroke-width="1.5" stroke-dasharray="4,2"/>
+        <text x="8" y="14" text-anchor="middle" font-size="11" fill="#16a34a" font-weight="bold">y</text>
+      </svg>`;
+  }
+
   function renderCalc() {
     const el = document.getElementById('lc-calc-body');
     if (!el || !calc) return;
@@ -397,6 +498,9 @@ const LevantamentoConcreto = (() => {
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;">
           ${[
             { id: 'pilar', icon: '▭', label: 'Pilar', sub: 'Ret, Redondo, L ou T' },
+            { id: 'viga', icon: '▬', label: 'Viga', sub: 'Lado × Altura × Comprimento' },
+            { id: 'laje', icon: '▦', label: 'Laje', sub: 'Convencional ou pré-moldada + isopor' },
+            { id: 'fundacao', icon: '⏚', label: 'Fundação', sub: '9 tipos: bloco, sapata, estaca, tubulão' },
             { id: 'rampa', icon: '⟋', label: 'Rampa', sub: 'Comp × Larg × Esp. Laje' },
             { id: 'escada', icon: '🪜', label: 'Escada', sub: 'Laje + Patamares + Degraus' },
           ].map(t => `
@@ -462,6 +566,145 @@ const LevantamentoConcreto = (() => {
       return;
     }
 
+    if (calc.tipoPeca === 'viga') {
+      el.innerHTML = `
+        <div style="display:grid;grid-template-columns:190px 1fr;gap:16px;align-items:start;" class="lc-calc-grid">
+          <div style="background:#f8fafc;border:1px solid var(--cor-borda-light);border-radius:8px;padding:12px;">${esquemaViga()}</div>
+          <div>
+            ${camposNomeAndar}
+            ${campoNum('Lado [cm]', 'vLado', calc.vLado, '#ef4444', '14')}
+            <div class="form-row">
+              ${campoNum('Altura [cm]', 'vAltura', calc.vAltura, '#16a34a', '60')}
+              ${campoNum('Comprimento [cm]', 'vComprimento', calc.vComprimento, '#3b82f6', '135')}
+            </div>
+          </div>
+        </div>
+        ${painelVolume}`;
+      return;
+    }
+
+    if (calc.tipoPeca === 'fundacao') {
+      const grupo = tipoF => {
+        if (tipoF === 'Estacas') return 'estaca';
+        if (tipoF === 'Tubulão a Céu Aberto') return 'tubulao';
+        if (tipoF === 'Sapata Isolada Piramidal' || tipoF === 'Sapata de Divisa Piramidal') return 'piramide';
+        if (tipoF === 'Bloco Triângular') return 'triangular';
+        return 'bloco';
+      };
+      const g = grupo(calc.tipoFund);
+      let campos = '';
+      if (g === 'bloco') {
+        campos = `
+          <div class="form-row">
+            ${campoNum('A — Comprimento [cm]', 'fA', calc.fA, '#3b82f6', '244')}
+            ${campoNum('B — Largura [cm]', 'fB', calc.fB, '#16a34a', '359')}
+          </div>
+          ${campoNum('C — Altura [cm]', 'fC', calc.fC, '#ef4444', '100')}`;
+      } else if (g === 'estaca') {
+        campos = `
+          ${campoNum('A — Comprimento / Profundidade [m]', 'fA', calc.fA, '#3b82f6', '6')}
+          ${campoNum('B — Diâmetro [cm]', 'fB', calc.fB, '#16a34a', '40')}`;
+      } else if (g === 'triangular') {
+        campos = `
+          <div class="form-row">
+            ${campoNum('A [cm]', 'fA', calc.fA, '#3b82f6', '150')}
+            ${campoNum('B [cm]', 'fB', calc.fB, '#16a34a', '150')}
+          </div>
+          ${campoNum('C — Altura [cm]', 'fC', calc.fC, '#ef4444', '100')}
+          <p class="text-sm text-muted mb-1" style="margin-top:6px;">Preencha D/E/F apenas se quiser a geometria trapezoidal detalhada — deixando em branco, usa a fórmula padrão (empírica).</p>
+          <div class="form-row">
+            ${campoNum('D [cm] (opcional)', 'fD', calc.fD, '#a855f7', '')}
+            ${campoNum('E [cm] (opcional)', 'fE', calc.fE, '#a855f7', '')}
+          </div>
+          ${campoNum('F [cm] (opcional)', 'fF', calc.fF, '#a855f7', '')}`;
+      } else if (g === 'piramide') {
+        campos = `
+          <p class="text-sm text-muted mb-1">A/B = base maior (embaixo) · C/D = base menor / pescoço (em cima)</p>
+          <div class="form-row">
+            ${campoNum('A — Base maior, comp. [cm]', 'fA', calc.fA, '#16a34a', '420')}
+            ${campoNum('B — Base maior, larg. [cm]', 'fB', calc.fB, '#16a34a', '510')}
+          </div>
+          <div class="form-row">
+            ${campoNum('C — Base menor, comp. [cm]', 'fC', calc.fC, '#3b82f6', '150')}
+            ${campoNum('D — Base menor, larg. [cm]', 'fD', calc.fD, '#3b82f6', '50')}
+          </div>
+          <div class="form-row">
+            ${campoNum('E — Altura da base reta [cm]', 'fE', calc.fE, '#ef4444', '50')}
+            ${campoNum('F — Altura total [cm]', 'fF', calc.fF, '#a855f7', '125')}
+          </div>`;
+      } else if (g === 'tubulao') {
+        campos = `
+          <div class="form-row">
+            ${campoNum('A — Diâmetro do fuste [cm]', 'fA', calc.fA, '#3b82f6', '40')}
+            ${campoNum('B — Altura do fuste [cm]', 'fB', calc.fB, '#16a34a', '300')}
+          </div>
+          <div class="form-row">
+            ${campoNum('C — Diâmetro da base/bulbo [cm]', 'fC', calc.fC, '#ef4444', '100')}
+            ${campoNum('E — Altura reta da base [cm]', 'fE', calc.fE, '#a855f7', '40')}
+          </div>
+          ${campoNum('D — Altura total [cm]', 'fD', calc.fD, '#666', '380')}`;
+      }
+      el.innerHTML = `
+        <div class="form-grupo" style="margin-bottom:12px;">
+          <label>Tipo de Fundação</label>
+          <select class="form-control" onchange="LC.calcTipoFundacao(this.value)">
+            ${CC.TIPOS_FUNDACAO.map(t => `<option value="${esc(t)}" ${calc.tipoFund === t ? 'selected' : ''}>${esc(t)}</option>`).join('')}
+          </select>
+        </div>
+        <div style="display:grid;grid-template-columns:170px 1fr;gap:16px;align-items:start;" class="lc-calc-grid">
+          <div style="background:#f8fafc;border:1px solid var(--cor-borda-light);border-radius:8px;padding:12px;">${esquemaFundacao(calc.tipoFund)}</div>
+          <div>
+            ${camposNomeAndar}
+            ${campos}
+          </div>
+        </div>
+        ${painelVolume}`;
+      return;
+    }
+
+    if (calc.tipoPeca === 'laje') {
+      const areaIsopor = CC.calcAreaIsopor({ qtdPaineis: calc.ljQtdPaineis, compPainel: calc.ljCompPainel, largIsopor: calc.ljLargIsopor });
+      const totalTrelica = CC.calcTotalTrelica({ x: calc.ljX, y: calc.ljY, maxLinhas: calc.ljMaxLinhas });
+      el.innerHTML = `
+        <div style="display:grid;grid-template-columns:170px 1fr;gap:16px;align-items:start;" class="lc-calc-grid">
+          <div style="background:#f8fafc;border:1px solid var(--cor-borda-light);border-radius:8px;padding:12px;">${esquemaLaje()}</div>
+          <div>
+            ${camposNomeAndar}
+            <div class="form-row">
+              ${campoNum('x [cm]', 'ljX', calc.ljX, '#3b82f6', '193')}
+              ${campoNum('y [cm]', 'ljY', calc.ljY, '#16a34a', '1516')}
+            </div>
+            <div class="form-row">
+              ${campoNum('Descontos de área [cm²]', 'ljDesconto', calc.ljDesconto, null, '0')}
+              ${campoNum('Hlaje — altura total [cm]', 'ljHlaje', calc.ljHlaje, '#ef4444', '12')}
+            </div>
+          </div>
+        </div>
+        <label style="display:flex;align-items:center;gap:8px;margin:12px 0;cursor:pointer;font-size:0.85rem;font-weight:600;">
+          <input type="checkbox" ${calc.ljPreMoldada ? 'checked' : ''} onchange="LC.calcTogglePreMoldada(this.checked)"> Laje pré-moldada (painéis + isopor)
+        </label>
+        ${calc.ljPreMoldada ? `
+          <div style="border:1px solid var(--cor-primaria);border-radius:8px;padding:12px;margin-bottom:10px;">
+            ${campoNum('Hpainel — altura do painel pré-moldado [cm]', 'ljHpainel', calc.ljHpainel, '#a855f7', '4')}
+            <div class="form-row">
+              ${campoNum('Qtd. de painéis (isopor)', 'ljQtdPaineis', calc.ljQtdPaineis, null, '10')}
+              ${campoNum('Comprimento do painel [cm]', 'ljCompPainel', calc.ljCompPainel, null, '110')}
+            </div>
+            <div class="form-row">
+              ${campoNum('Largura do isopor [cm]', 'ljLargIsopor', calc.ljLargIsopor, null, '50')}
+              ${campoNum('Hisopor — altura do isopor [cm]', 'ljHisopor', calc.ljHisopor, null, '8')}
+            </div>
+            <div style="font-family:var(--font-mono);font-size:0.78rem;color:var(--cor-texto-secundario);">Área de isopor: <b id="lc-lj-isopor">${CC.fmt4(areaIsopor)} m²</b></div>
+          </div>` : ''}
+        <div style="border-top:1px solid var(--cor-borda-light);padding-top:10px;margin-top:4px;">
+          <p class="text-sm text-muted mb-1">Treliça (para controle de material — não entra no volume de concreto)</p>
+          ${campoNum('Máximo de linhas da laje', 'ljMaxLinhas', calc.ljMaxLinhas, null, '2')}
+          <div style="font-family:var(--font-mono);font-size:0.78rem;color:var(--cor-texto-secundario);">Metragem total de treliça: <b id="lc-lj-trelica">${CC.fmt4(totalTrelica / 100)} m</b></div>
+        </div>
+        ${painelVolume}`;
+      return;
+    }
+
     // Escada
     const volLaje = CC.calcVolLajesInclinadas(calc.lajeInc);
     const volPat = CC.calcVolPatamares(calc.patamares);
@@ -519,6 +762,8 @@ const LevantamentoConcreto = (() => {
 
   function calcTipoPeca(t) { calc.tipoPeca = t; renderCalc(); }
   function calcTipoPilar(t) { calc.tipoP = t; renderCalc(); }
+  function calcTipoFundacao(t) { calc.tipoFund = t; renderCalc(); }
+  function calcTogglePreMoldada(v) { calc.ljPreMoldada = v; renderCalc(); }
   function calcVoltar() { calc.tipoPeca = null; renderCalc(); }
   function calcAbaEscada(aba) { calc.abaEscada = calc.abaEscada === aba ? null : aba; renderCalc(); }
 
@@ -557,6 +802,19 @@ const LevantamentoConcreto = (() => {
       upd('lc-vol-pat', CC.calcVolPatamares(calc.patamares));
       upd('lc-vol-deg', CC.calcVolDegraus(calc.degraus));
     }
+    // Laje: área de isopor e metragem de treliça (informativos, não fazem parte do volume)
+    if (calc.tipoPeca === 'laje') {
+      const isoporEl = document.getElementById('lc-lj-isopor');
+      if (isoporEl) {
+        const areaIsopor = CC.calcAreaIsopor({ qtdPaineis: calc.ljQtdPaineis, compPainel: calc.ljCompPainel, largIsopor: calc.ljLargIsopor });
+        isoporEl.textContent = CC.fmt4(areaIsopor) + ' m²';
+      }
+      const trelicaEl = document.getElementById('lc-lj-trelica');
+      if (trelicaEl) {
+        const totalTrelica = CC.calcTotalTrelica({ x: calc.ljX, y: calc.ljY, maxLinhas: calc.ljMaxLinhas });
+        trelicaEl.textContent = CC.fmt4(totalTrelica / 100) + ' m';
+      }
+    }
   }
 
   // Escada: segmentos dinâmicos
@@ -573,13 +831,21 @@ const LevantamentoConcreto = (() => {
   async function calcAdicionar() {
     const volume = calcVolumeAtual();
     if (!calc.nome || !calc.andar || volume <= 0) return;
-    levantamento.push({
-      id: 'lev_' + Date.now(),
-      nome: calc.nome,
-      andar: calc.andar,
-      tipo: calc.tipoPeca === 'pilar' ? 'Pilar' : calc.tipoPeca === 'escada' ? 'Escada' : 'Rampa',
-      volume,
-    });
+    const tipoLabel = {
+      pilar: 'Pilar', escada: 'Escada', rampa: 'Rampa',
+      viga: 'Viga', laje: 'Laje', fundacao: 'Fundação',
+    }[calc.tipoPeca] || 'Outro';
+    const item = { id: 'lev_' + Date.now(), nome: calc.nome, andar: calc.andar, tipo: tipoLabel, volume };
+    if (calc.tipoPeca === 'fundacao') {
+      item.subTipo = calc.tipoFund;
+    }
+    if (calc.tipoPeca === 'laje') {
+      item.areaIsopor = calc.ljPreMoldada
+        ? CC.calcAreaIsopor({ qtdPaineis: calc.ljQtdPaineis, compPainel: calc.ljCompPainel, largIsopor: calc.ljLargIsopor })
+        : 0;
+      item.metragemTrelica = CC.calcTotalTrelica({ x: calc.ljX, y: calc.ljY, maxLinhas: calc.ljMaxLinhas }) / 100;
+    }
+    levantamento.push(item);
     await salvarLevantamentoLocal();
     Utils.toast(`✓ "${calc.nome}" adicionada ao levantamento (${volume.toFixed(4)} m³)`, 'sucesso');
     // Limpa campos, mantém andar e tipo
@@ -589,6 +855,10 @@ const LevantamentoConcreto = (() => {
     calc.lajeInc = [{ compIncl: '', larg: '', esp: '' }];
     calc.patamares = [{ comp: '', larg: '', esp: '' }];
     calc.degraus = [{ pisada: '', espelho: '', larg: '', qtd: '' }];
+    calc.vLado = ''; calc.vAltura = ''; calc.vComprimento = '';
+    calc.fA = ''; calc.fB = ''; calc.fC = ''; calc.fD = ''; calc.fE = ''; calc.fF = '';
+    calc.ljX = ''; calc.ljY = ''; calc.ljDesconto = ''; calc.ljHlaje = ''; calc.ljHpainel = ''; calc.ljPreMoldada = false;
+    calc.ljQtdPaineis = ''; calc.ljCompPainel = ''; calc.ljLargIsopor = ''; calc.ljHisopor = ''; calc.ljMaxLinhas = '';
     renderCalc();
     renderizar();
   }
@@ -650,7 +920,10 @@ const LevantamentoConcreto = (() => {
     if (!itens.length) return;
     Utils.mostrarLoading();
     try {
-      await salvarPecasLote(itens.map(i => ({ nome: i.nome, tipo: i.tipo, andar: i.andar, volume: i.volume })));
+      await salvarPecasLote(itens.map(i => ({
+        nome: i.nome, tipo: i.tipo, andar: i.andar, volume: i.volume,
+        subTipo: i.subTipo, areaIsopor: i.areaIsopor, metragemTrelica: i.metragemTrelica,
+      })));
       levantamento = levantamento.filter(i => !levSel.has(i.id));
       levSel.clear();
       await salvarLevantamentoLocal();
@@ -749,11 +1022,13 @@ const LevantamentoConcreto = (() => {
   async function salvarPecasLote(itens) {
     for (let i = 0; i < itens.length; i += 400) {
       const chunk = itens.slice(i, i + 400);
-      const ops = chunk.map(item => ({
-        type: 'set',
-        ref: Database.ref(obraId, COL_PECAS).doc(CC.genId('p')),
-        data: { nome: item.nome, tipo: item.tipo, andar: item.andar, volume: item.volume, obraId },
-      }));
+      const ops = chunk.map(item => {
+        const data = { nome: item.nome, tipo: item.tipo, andar: item.andar, volume: item.volume, obraId };
+        if (item.subTipo) data.subTipo = item.subTipo;
+        if (item.areaIsopor) data.areaIsopor = item.areaIsopor;
+        if (item.metragemTrelica) data.metragemTrelica = item.metragemTrelica;
+        return { type: 'set', ref: Database.ref(obraId, COL_PECAS).doc(CC.genId('p')), data };
+      });
       await Database.batchWrite(ops);
     }
   }
@@ -1387,7 +1662,7 @@ const LevantamentoConcreto = (() => {
   return {
     init, recarregar, renderizar,
     onFiltro,
-    abrirCalculadora, calcTipoPeca, calcTipoPilar, calcVoltar, calcAbaEscada,
+    abrirCalculadora, calcTipoPeca, calcTipoPilar, calcTipoFundacao, calcTogglePreMoldada, calcVoltar, calcAbaEscada,
     updCalc, updCalcSilent, calcAdicionar,
     escAddLaje, escRemLaje, escUpdLaje,
     escAddPat, escRemPat, escUpdPat,
