@@ -10,7 +10,15 @@ const Planejamento = (() => {
   // Base = inicioPlanejadoBase/terminoPlanejadoBase (Linha de Base — imutável por design).
   // Desafio = inicioDesafio/terminoDesafio (meta otimista).
   // Editar em qualquer versão só grava nos campos DAQUELA versão — nunca mistura.
-  let _versaoData=(typeof localStorage!=='undefined'&&localStorage.getItem('planej_versaoData'))||'atual';
+  // _versaoData controla qual versão de datas é exibida nas colunas Início/Término:
+  // 'atual' = inicioPlanejado/terminoPlanejado (padrão — o que todo mundo usa)
+  // 'base'  = inicioPlanejadoBase/terminoPlanejadoBase
+  // 'desafio' = inicioDesafio/terminoDesafio
+  // IMPORTANTE: se o valor salvo não for reconhecido, volta para 'atual'
+  let _versaoData=(()=>{
+    try{const v=localStorage.getItem('planej_versaoData');return ['atual','base','desafio'].includes(v)?v:'atual';}
+    catch(e){return 'atual';}
+  })();
   const VERSAO_CAMPOS={atual:{ini:'inicioPlanejado',fim:'terminoPlanejado'},
     base:{ini:'inicioPlanejadoBase',fim:'terminoPlanejadoBase'},
     desafio:{ini:'inicioDesafio',fim:'terminoDesafio'}};
@@ -406,9 +414,10 @@ const Planejamento = (() => {
           <span style="font-size:.75rem;color:#555;">${filtradas.length} tarefas</span>
         </div>
         <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center;">
-          <span style="display:inline-flex;border:1.5px solid #333;border-radius:8px;overflow:hidden;font-size:.7rem;font-weight:700;" title="Qual versão de datas ver/editar nas colunas Início e Término">
+          <span style="display:inline-flex;border:1.5px solid ${_versaoData!=='atual'?'#ef4444':'#333'};border-radius:8px;overflow:hidden;font-size:.7rem;font-weight:700;" title="Qual versão de datas ver/editar nas colunas Início e Término">
             ${['atual','base','desafio'].map(v=>`<button onclick="Planejamento.setVersaoData('${v}')" style="border:none;padding:4px 10px;cursor:pointer;${_versaoData===v?'background:var(--cor-primaria);color:#000;':'background:#111;color:#888;'}">${VERSAO_LABEL[v]}</button>`).join('')}
           </span>
+          ${_versaoData!=='atual'?`<span style="background:#ef4444;color:#fff;font-size:.68rem;font-weight:800;padding:2px 8px;border-radius:5px;">⚠️ Visualizando ${VERSAO_LABEL[_versaoData]} — clique em "Atual" para voltar</span>`:''}
           <span style="color:#333;margin:0 4px;">|</span>
           ${['dia','semana','mes','trimestre','ano'].map(z=>`<button class="btn btn-sm ${zoomGantt===z?'btn-primario':'btn-secundario'}" onclick="Planejamento.setZoom('${z}')" style="font-size:.7rem;padding:2px 8px;">${z.charAt(0).toUpperCase()+z.slice(1)}</button>`).join('')}
           <span style="color:#333;margin:0 4px;">|</span>

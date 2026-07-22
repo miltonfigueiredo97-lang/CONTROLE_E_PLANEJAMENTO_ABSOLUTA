@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.53.0',
+  versaoAtual: 'V2.53.1',
 
   versoes: [
     {
@@ -4553,7 +4553,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.53.0',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-09',
       tipo: 'funcionalidade',
       titulo: 'Versões de Planejamento (Atual/Base/Desafio) + Backup de Planejamentos',
@@ -4645,6 +4645,25 @@ const NotasVersao = {
         '   tinham stopPropagation(). O evento subia para o',
         '   container #arv-corpo com targetId=null, fazendo tudo',
         '   virar nível 0. Adicionado stopPropagation() em ambos.',
+      ]
+    }
+    {
+      versao: 'V2.53.1',
+      status: 'aberta',
+      data: '2026-07-22',
+      tipo: 'correcao',
+      titulo: 'CRÍTICO: início/término sumindo — versão Base/Desafio ficando ativa',
+      itens: [
+        'A feature de versões de datas (V2.53) salva a versão ativa no',
+        '  localStorage. Se ficou em Base ou Desafio, as colunas',
+        '  Início/Término mostram os campos inicioPlanejadoBase/',
+        '  terminoPlanejadoBase (que a maioria das tarefas não tem)',
+        '  resultando em — em toda a tabela.',
+        'Correção: _versaoData valida o valor do localStorage',
+        '  (só aceita atual/base/desafio, senão volta para atual).',
+        'Aviso vermelho aparece na toolbar quando não está em Atual,',
+        '  com instrução clara de como voltar.',
+        'Borda do seletor fica vermelha quando não está em Atual.',
       ]
     }
   ],
