@@ -3027,14 +3027,15 @@ const Planejamento = (() => {
     e.dataTransfer.dropEffect='move';
     if(!_arvDragId||_arvDragId===targetId)return;
 
+    // Zona de drop: 10% topo = before, 80% meio = inside (filho), 10% base = after
     const rect=e.currentTarget?.getBoundingClientRect();
     let pos='inside';
     if(rect){
       const relY=(e.clientY-rect.top)/rect.height;
-      if(relY<0.25)pos='before';
-      else if(relY>0.75)pos='after';
+      if(relY<0.10)pos='before';
+      else if(relY>0.90)pos='after';
     }
-    if(_arvDropId===targetId&&_arvDropPos===pos)return; // nada mudou
+    if(_arvDropId===targetId&&_arvDropPos===pos)return;
 
     // Remove indicadores anteriores sem recriar o DOM inteiro
     document.querySelectorAll('[data-arvid]').forEach(el=>{
@@ -3085,15 +3086,15 @@ const Planejamento = (() => {
     const dragT=sorted[dragIdx];
     const dragNivel=dragT.nivel||0;
 
-    // Bloco = tarefa arrastada + todos os filhos
+    // Bloco = tarefa arrastada + todos os filhos contíguos
     let fimBloco=dragIdx+1;
     while(fimBloco<sorted.length&&(sorted[fimBloco].nivel||0)>dragNivel)fimBloco++;
     const bloco=sorted.splice(dragIdx,fimBloco-dragIdx);
 
     if(!targetId){
-      // Drop na raiz: coloca no final como nível 0
-      const difNivel=0-dragNivel;
-      bloco.forEach(t=>{t.nivel=Math.max(0,(t.nivel||0)+difNivel);});
+      // Drop na área vazia = raiz (nível 0)
+      const dif=0-dragNivel;
+      bloco.forEach(t=>{t.nivel=Math.max(0,(t.nivel||0)+dif);});
       sorted.push(...bloco);
     } else {
       const targetIdx=sorted.findIndex(t=>t.id===targetId);
@@ -3102,44 +3103,48 @@ const Planejamento = (() => {
       const targetNivel=targetT.nivel||0;
 
       if(pos==='inside'){
-        // Inserir como primeiro filho do target
+        // Filho do target → nível = targetNivel + 1
         const novoNivel=targetNivel+1;
-        const difNivel=novoNivel-dragNivel;
-        bloco.forEach(t=>{t.nivel=Math.max(0,(t.nivel||0)+difNivel);});
+        const dif=novoNivel-dragNivel;
+        bloco.forEach(t=>{t.nivel=Math.max(0,(t.nivel||0)+dif);});
+        // Insere logo após o target (antes dos filhos existentes do target)
         sorted.splice(targetIdx+1,0,...bloco);
-        _arvAbertos.add(targetId); // expande o pai destino
+        _arvAbertos.add(targetId);
       } else {
-        // Inserir como irmão (before/after) — mesmo nível do target
+        // Irmão do target (before/after) → nível = targetNivel
+        // O nível NÃO muda a hierarquia pai — fica exatamente no mesmo nível do target
         const novoNivel=targetNivel;
-        const difNivel=novoNivel-dragNivel;
-        bloco.forEach(t=>{t.nivel=Math.max(0,(t.nivel||0)+difNivel);});
+        const dif=novoNivel-dragNivel;
+        bloco.forEach(t=>{t.nivel=Math.max(0,(t.nivel||0)+dif);});
         const insertAt=pos==='before'?targetIdx:targetIdx+1;
         sorted.splice(insertAt,0,...bloco);
       }
     }
 
-    // Renormaliza ordens
     sorted.forEach((t,i)=>{t.ordem=i+1;});
     const numAntes=new Map(tarefas.map(t=>[t.id,t._numLinha||0]));
     tarefas=sorted;
     _buildFiltradas();_render();
+
     const mudancasNum=new Map();
     for(const t of tarefas){
       const antes=numAntes.get(t.id)||0;
       const depois=t._numLinha||0;
       if(antes!==depois)mudancasNum.set(t.id,{antes,depois});
     }
-    await _remapearPredecessoras(mudancasNum);
 
+    // Loading + save + remap tudo no mesmo try/finally para evitar loading infinito
     Utils.mostrarLoading('Salvando...');
     try{
+      await _remapearPredecessoras(mudancasNum);
       const LOTE=30;
       for(let i=0;i<sorted.length;i+=LOTE){
         await Promise.all(sorted.slice(i,i+LOTE).map(t=>
           Database.atualizar(obraId,COL,t.id,{ordem:t.ordem,nivel:t.nivel}).catch(console.error)
         ));
       }
-    }finally{Utils.esconderLoading();}
+    }catch(e){console.error('Erro ao mover tarefa:',e);Utils.toast('Erro ao salvar. Tente Ctrl+Z.','erro');}
+    finally{Utils.esconderLoading();}
   }
 
   // ---- Modal "Mover para" (mudar pai via seletor) ----

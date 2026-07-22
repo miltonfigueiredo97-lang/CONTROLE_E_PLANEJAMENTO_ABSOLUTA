@@ -4581,6 +4581,28 @@ const NotasVersao = {
         '  pelo Levantamento de Fachada) — agora Planejamento, Semanal,',
         '  Diário e Medições também registram cada mudança de campo',
       ]
+    },
+    {
+      versao: 'V2.51.3',
+      status: 'aberta',
+      data: '2026-07-11',
+      tipo: 'correcao',
+      titulo: 'Editor de Estrutura: drag mais fácil + loading infinito corrigido',
+      itens: [
+        'ZONA DE DROP AMPLIADA: inside (virar filho) agora ocupa 80%',
+        '  da altura da linha. Antes era 50%, ficava fácil de acionar',
+        '  before/after sem querer e mudar o nível errado.',
+        '  Topo 10% = before (irmão antes), base 10% = after (irmão depois).',
+        '',
+        'LOADING INFINITO CORRIGIDO: _remapearPredecessoras() estava',
+        '  fora do try/finally do loading. Se ela travasse, o loading',
+        '  nunca fechava. Agora tudo (remap + save) está no mesmo',
+        '  try/catch/finally com mensagem de erro se falhar.',
+        '',
+        'NÍVEL CORRETO: before/after usa o nível do target (irmão),',
+        '  não muda hierarquia de pai — apenas reordena dentro do',
+        '  mesmo grupo. Inside adiciona como filho (nível+1).',
+      ]
     }
   ],
 
