@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.53.4',
+  versaoAtual: 'V2.53.5',
 
   versoes: [
     {
@@ -4705,7 +4705,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.53.4',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-22',
       tipo: 'correcao',
       titulo: 'Calculadora de Fundação: desenhos corrigidos com base nos originais',
@@ -4727,6 +4727,26 @@ const NotasVersao = {
         '  → Bloco Retangular: retângulo com os 4 pilares nos cantos',
         '  As fórmulas não mudaram — só os desenhos e a organização',
         '  visual dos campos, que já estavam corretos e validados.',
+      ]
+    },
+    {
+      versao: 'V2.53.5',
+      status: 'aberta',
+      data: '2026-07-22',
+      tipo: 'correcao',
+      titulo: 'Calculadora de Fundação: imagens originais, sem redesenhar',
+      itens: [
+        'A V2.53.4 tinha redesenhado os diagramas à mão em SVG — Milton',
+        '  pediu pra usar as imagens que ele mandou direto, sem',
+        '  reinterpretar, e com qualidade máxima. Corrigido:',
+        '  → As 6 imagens originais (extraídas em alta resolução, sem',
+        '    nenhuma perda — conferido por checksum bit a bit) foram',
+        '    salvas em assets/images/fundacoes/ e são exibidas direto',
+        '    na calculadora, sem nenhum desenho customizado',
+        '  → Layout do formulário mudado: a imagem agora ocupa a largura',
+        '    toda acima dos campos (até 480px), em vez de uma coluna',
+        '    estreita de 170px — as imagens originais têm textos',
+        '    pequenos e ficariam ilegíveis espremidas naquele tamanho',
       ]
     }
   ],
