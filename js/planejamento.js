@@ -57,7 +57,7 @@ const Planejamento = (() => {
   // o MESMO m² real, e o custo (Material/Mão de Obra) que já lê a
   // quantidade da tarefa funciona automaticamente, sem precisar vincular
   // Materiais/Mão de Obra direto ao levantamento.
-  let modoView='gantt'; // 'gantt' | 'vinculos'
+  let modoView='gantt'; // 'gantt' | 'vinculos' | 'arvore'
   let levFachadas=[];
   let _vincAlvoId=null, _vincModulo='fachada', _vincMetrica='m2semML';
   // _vincNodeId: nó selecionado na árvore do levantamento (para piso/teto/paredes/etc.)
@@ -378,6 +378,7 @@ const Planejamento = (() => {
   // ===================== RENDER =====================
   function _render(){
     if(modoView==='vinculos'){_renderVinculosView();return;}
+    if(modoView==='arvore'){_renderArvoreEditor();return;}
     const c=_el();
     const visCols=colOrdem.filter(id=>!colsHidden.has(id));
 
@@ -398,6 +399,7 @@ const Planejamento = (() => {
           ${colsHidden.size?`<button class="btn btn-secundario btn-sm" onclick="Planejamento.showColsMenu()" style="font-size:.72rem;">＋ Colunas (${colsHidden.size})</button>`:''}
           <span style="color:#333;margin:0 4px;">|</span>
           <button class="btn btn-secundario btn-sm" onclick="Planejamento.abrirVinculosView()" style="font-size:.72rem;">🔗 Vínculos com Levantamento</button>
+          <button class="btn ${modoView==='arvore'?'btn-primario':'btn-secundario'} btn-sm" onclick="Planejamento.toggleArvoreEditor()" style="font-size:.72rem;">🌳 Editor de Estrutura</button>
           <button class="btn btn-primario btn-sm" onclick="Planejamento.inserirTarefa()" style="font-size:.72rem;">＋ Tarefa</button>
         </div>
       </div>
@@ -2740,9 +2742,406 @@ const Planejamento = (() => {
     requestAnimationFrame(()=>_paintRows());
   }
 
+  // ===================================================================
+  // EDITOR DE ESTRUTURA (Árvore Hierárquica)
+  // Permite reorganizar a hierarquia do cronograma de forma visual:
+  // - Ver a árvore completa de famílias colapsáveis
+  // - Criar novas tarefas num clique dentro de qualquer família
+  // - Arrastar para mover uma tarefa (e seus filhos) para outro pai
+  // - Mudar o pai via seletor ("Mover para...")
+  // - Renomear inline
+  // Tudo preservando: duração, %, predecessoras (remapeadas), vínculos
+  // ===================================================================
+  let _arvAbertos=new Set();    // nós expandidos
+  let _arvDragId=null;          // id da tarefa sendo arrastada
+  let _arvDropId=null;          // id do alvo de drop
+  let _arvDropPos='inside';     // 'before'|'inside'|'after'
+  let _arvEditId=null;          // id em edição inline de nome
+  let _arvMoverModalId=null;    // id da tarefa no modal "Mover para"
+
+  function toggleArvoreEditor(){
+    modoView=modoView==='arvore'?'gantt':'arvore';
+    if(modoView==='arvore'){
+      // Expandir raiz por padrão
+      const sorted=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
+      sorted.filter(t=>(t.nivel||0)===0).forEach(t=>_arvAbertos.add(t.id));
+    }
+    _render();
+  }
+
+  function _arvFilhos(pai,sorted){
+    const pn=pai.nivel||0;
+    const pi=sorted.findIndex(t=>t.id===pai.id);
+    const filhos=[];
+    for(let i=pi+1;i<sorted.length;i++){
+      const t=sorted[i];
+      if((t.nivel||0)<=pn)break;
+      if((t.nivel||0)===pn+1)filhos.push(t);
+    }
+    return filhos;
+  }
+
+  function _arvTemFilhos(t,sorted){return _arvFilhos(t,sorted).length>0;}
+
+  function _renderArvoreEditor(){
+    const c=_el();
+    const sorted=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
+    const raizes=sorted.filter(t=>(t.nivel||0)===0);
+
+    const renderNo=(t,sorted)=>{
+      const filhos=_arvFilhos(t,sorted);
+      const temF=filhos.length>0;
+      const aberto=_arvAbertos.has(t.id);
+      const isDrag=t.id===_arvDragId;
+      const isDrop=t.id===_arvDropId;
+      const nv=t.nivel||0;
+      const cor=['#F5C800','#60a5fa','#4ade80','#f472b6','#fb923c','#a78bfa','#2dd4bf'][nv%7];
+
+      const dropBefore=isDrop&&_arvDropPos==='before'?'border-top:2px solid var(--cor-primaria);':'';
+      const dropInside=isDrop&&_arvDropPos==='inside'?'background:rgba(245,200,0,.15);border:1px dashed var(--cor-primaria);':'';
+      const dropAfter=isDrop&&_arvDropPos==='after'?'border-bottom:2px solid var(--cor-primaria);':'';
+
+      let html=`<div data-arvid="${t.id}" style="position:relative;${dropBefore}${dropAfter}">`;
+
+      // Linha do nó
+      html+=`<div draggable="true"
+        ondragstart="Planejamento._arvDragStart(event,'${t.id}')"
+        ondragover="Planejamento._arvDragOver(event,'${t.id}')"
+        ondrop="Planejamento._arvDrop(event,'${t.id}')"
+        ondragend="Planejamento._arvDragEnd()"
+        style="display:flex;align-items:center;gap:6px;padding:5px 8px;border-radius:6px;cursor:grab;
+          background:${isDrag?'rgba(255,255,255,.04)':'rgba(255,255,255,.02)'};
+          opacity:${isDrag?.4:1};${dropInside}
+          border:1px solid ${isDrop&&_arvDropPos==='inside'?'var(--cor-primaria)':'transparent'};
+          margin:1px 0;user-select:none;"
+        onmouseenter="this.style.background='rgba(255,255,255,.06)'"
+        onmouseleave="this.style.background='${isDrag?'rgba(255,255,255,.04)':'rgba(255,255,255,.02)'}'">
+
+        <!-- Indentação -->
+        <span style="display:inline-block;width:${nv*18}px;flex-shrink:0;"></span>
+
+        <!-- Toggle expand -->
+        <span style="width:18px;flex-shrink:0;text-align:center;cursor:pointer;font-size:.75rem;color:#666;"
+          onclick="event.stopPropagation();Planejamento._arvToggle('${t.id}')">
+          ${temF?(aberto?'▼':'▶'):'·'}
+        </span>
+
+        <!-- Badge de nível -->
+        <span style="background:${cor};color:#000;font-weight:800;font-size:.6rem;padding:1px 5px;border-radius:3px;flex-shrink:0;">${nv}</span>
+
+        <!-- Nome (clique duplo para editar inline) -->
+        ${_arvEditId===t.id
+          ? `<input id="arv-edit-input" type="text" value="${_esc(t.nome||'')}"
+              style="flex:1;background:#1a1a1a;border:1px solid var(--cor-primaria);color:#fff;border-radius:4px;padding:2px 6px;font-size:.82rem;"
+              onblur="Planejamento._arvSalvarNome('${t.id}',this.value)"
+              onkeydown="if(event.key==='Enter')this.blur();if(event.key==='Escape'){Planejamento._arvCancelarEdit();}">`
+          : `<span style="flex:1;font-size:.82rem;font-weight:${nv===0?700:nv===1?600:400};
+              color:${nv===0?'var(--cor-primaria)':nv===1?'#ddd':'#bbb'};
+              overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"
+              ondblclick="event.stopPropagation();Planejamento._arvIniciarEdit('${t.id}')"
+              title="Clique duplo para renomear">${_esc(t.nome||'(sem nome)')}</span>`}
+
+        <!-- Info rápida -->
+        <span style="font-size:.68rem;color:#555;flex-shrink:0;font-family:var(--font-mono);">${t.codigo||''}</span>
+        ${t.duracao?`<span style="font-size:.65rem;color:#444;flex-shrink:0;">${t.duracao}d</span>`:''}
+        ${(t.percentualConcluido||0)>0?`<span style="font-size:.65rem;color:${(t.percentualConcluido||0)>=100?'#4ade80':'#60a5fa'};flex-shrink:0;">${t.percentualConcluido||0}%</span>`:''}
+
+        <!-- Ações -->
+        <div style="display:flex;gap:3px;flex-shrink:0;margin-left:4px;" onclick="event.stopPropagation()">
+          <button title="Criar filho" onclick="Planejamento._arvCriarFilho('${t.id}')"
+            style="background:#1a3a1a;color:#4ade80;border:1px solid #2a5a2a;border-radius:4px;cursor:pointer;font-size:.7rem;padding:1px 6px;line-height:1.4;">＋</button>
+          <button title="Mover para outro pai" onclick="Planejamento._arvAbrirMover('${t.id}')"
+            style="background:#1a2a3a;color:#60a5fa;border:1px solid #2a4a6a;border-radius:4px;cursor:pointer;font-size:.7rem;padding:1px 6px;line-height:1.4;">↗</button>
+          <button title="Recuar nível (tornar irmão do pai)" onclick="Planejamento.recuarNivel('${t.id}')"
+            style="background:#2a2a1a;color:#aaa;border:1px solid #3a3a2a;border-radius:4px;cursor:pointer;font-size:.7rem;padding:1px 6px;line-height:1.4;">←</button>
+          <button title="Excluir" onclick="Planejamento.excluirTarefa('${t.id}')"
+            style="background:#3a1a1a;color:#f87171;border:1px solid #5a2a2a;border-radius:4px;cursor:pointer;font-size:.7rem;padding:1px 6px;line-height:1.4;">✕</button>
+        </div>
+      </div>`;
+
+      // Filhos (se expandido)
+      if(temF&&aberto){
+        html+=`<div style="border-left:1px solid #222;margin-left:${nv*18+9}px;padding-left:0;">`;
+        filhos.forEach(f=>{html+=renderNo(f,sorted);});
+        html+=`</div>`;
+      }
+
+      html+=`</div>`;
+      return html;
+    };
+
+    c.style.cssText='display:flex;flex-direction:column;min-height:0;height:100%;';
+    c.innerHTML=`
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px;">
+        <div style="display:flex;gap:8px;align-items:center;">
+          <h2 style="margin:0;font-size:1.1rem;color:var(--cor-primaria);">🌳 Editor de Estrutura</h2>
+          <span style="font-size:.75rem;color:#555;">${tarefas.length} tarefas</span>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <button class="btn btn-secundario btn-sm" onclick="Planejamento._arvExpandirTudo(true)" style="font-size:.72rem;">▼ Expandir tudo</button>
+          <button class="btn btn-secundario btn-sm" onclick="Planejamento._arvExpandirTudo(false)" style="font-size:.72rem;">▶ Recolher tudo</button>
+          <button class="btn btn-secundario btn-sm" onclick="Planejamento._arvCriarRaiz()" style="font-size:.72rem;">＋ Nova raiz</button>
+          <button class="btn btn-primario btn-sm" onclick="Planejamento.toggleArvoreEditor()" style="font-size:.72rem;">← Voltar ao Gantt</button>
+        </div>
+      </div>
+      <div style="font-size:.7rem;color:#555;margin-bottom:10px;">
+        Arraste para reorganizar · Clique duplo no nome para renomear · ＋ cria filho · ↗ muda o pai · ← sobe um nível
+      </div>
+      <div id="arv-corpo" style="flex:1;overflow-y:auto;overflow-x:hidden;"
+        ondragover="Planejamento._arvDragOver(event,null)"
+        ondrop="Planejamento._arvDrop(event,null)">
+        ${raizes.length
+          ? raizes.map(t=>renderNo(t,sorted)).join('')
+          : '<div style="text-align:center;color:#555;padding:40px;font-size:.9rem;">Nenhuma tarefa. Clique em "＋ Nova raiz" para começar.</div>'}
+      </div>
+
+      <!-- Modal: Mover para -->
+      <div id="arv-mover-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:500;align-items:center;justify-content:center;">
+        <div style="background:#1a1a1a;border:1px solid #333;border-radius:10px;padding:20px;width:420px;max-width:95vw;max-height:80vh;display:flex;flex-direction:column;gap:10px;">
+          <div style="font-weight:700;color:var(--cor-primaria);">↗ Mover para...</div>
+          <div style="font-size:.78rem;color:#888;" id="arv-mover-desc"></div>
+          <input type="text" id="arv-mover-busca" placeholder="🔍 Buscar tarefa pai..." autocomplete="off"
+            oninput="Planejamento._arvFiltrarMover(this.value)"
+            style="padding:7px 9px;border:1px solid #333;border-radius:7px;font-size:.82rem;background:#111;color:#ddd;">
+          <div id="arv-mover-lista" style="flex:1;overflow-y:auto;max-height:320px;border:1px solid #222;border-radius:7px;"></div>
+          <div style="display:flex;gap:8px;justify-content:flex-end;">
+            <button class="btn btn-secundario btn-sm" onclick="Planejamento._arvFecharMover()">Cancelar</button>
+          </div>
+        </div>
+      </div>`;
+
+    // Focar o input de edição se houver
+    if(_arvEditId){
+      requestAnimationFrame(()=>{
+        const inp=document.getElementById('arv-edit-input');
+        if(inp){inp.focus();inp.select();}
+      });
+    }
+  }
+
+  // ---- Toggle expand/recolher ----
+  function _arvToggle(id){
+    if(_arvAbertos.has(id))_arvAbertos.delete(id);else _arvAbertos.add(id);
+    _render();
+  }
+  function _arvExpandirTudo(abrir){
+    const sorted=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
+    if(abrir)sorted.forEach(t=>{if(_arvTemFilhos(t,sorted))_arvAbertos.add(t.id);});
+    else _arvAbertos.clear();
+    _render();
+  }
+
+  // ---- Edição inline de nome ----
+  function _arvIniciarEdit(id){_arvEditId=id;_render();}
+  function _arvCancelarEdit(){_arvEditId=null;_render();}
+  async function _arvSalvarNome(id,nome){
+    _arvEditId=null;
+    const t=tarefas.find(x=>x.id===id);
+    if(!t||nome.trim()===t.nome){_render();return;}
+    _undoPush();
+    t.nome=nome.trim();
+    _buildFiltradas();_render();
+    await Database.atualizar(obraId,COL,id,{nome:t.nome}).catch(console.error);
+  }
+
+  // ---- Criar filho ----
+  async function _arvCriarFilho(paiId){
+    const sorted=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
+    const pai=sorted.find(t=>t.id===paiId);if(!pai)return;
+    // Inserir depois do último descendente do pai
+    let fimBloco=sorted.findIndex(t=>t.id===paiId)+1;
+    while(fimBloco<sorted.length&&(sorted[fimBloco].nivel||0)>(pai.nivel||0))fimBloco++;
+    const ordemAnterior=fimBloco>0?sorted[fimBloco-1].ordem||fimBloco-1:pai.ordem||0;
+    const ordemAntes=fimBloco<sorted.length?sorted[fimBloco].ordem||fimBloco:ordemAnterior+2;
+    const novaOrdem=ordemAnterior+(ordemAntes-ordemAnterior)/2;
+    const novaTarefa={nome:'Nova Tarefa',nivel:(pai.nivel||0)+1,ordem:novaOrdem,duracao:'',percentualEsperado:0,percentualConcluido:0,codigo:'',predecessora:'',responsavel:'',local:'',grupo:'',tipo:'tarefa'};
+    Utils.mostrarLoading('Criando...');
+    try{
+      const id=await Database.criar(obraId,COL,novaTarefa);
+      novaTarefa.id=id;
+      tarefas.push(novaTarefa);
+      _arvAbertos.add(paiId); // expande o pai
+      // Renormaliza ordens
+      const rs=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
+      rs.forEach((t,i)=>{t.ordem=i+1;});
+      tarefas=rs;
+      _buildFiltradas();_render();
+      // Inicia edição do nome imediatamente
+      _arvEditId=id;_render();
+      Utils.toast('Tarefa criada!','sucesso');
+    }catch(e){console.error(e);Utils.toast('Erro ao criar.','erro');}
+    finally{Utils.esconderLoading();}
+  }
+
+  async function _arvCriarRaiz(){
+    const sorted=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
+    const ultimaOrdem=sorted.length?sorted[sorted.length-1].ordem||sorted.length:0;
+    const novaTarefa={nome:'Novo Grupo',nivel:0,ordem:ultimaOrdem+1,duracao:'',percentualEsperado:0,percentualConcluido:0,codigo:'',predecessora:'',responsavel:'',local:'',grupo:'',tipo:'grupo'};
+    Utils.mostrarLoading('Criando...');
+    try{
+      const id=await Database.criar(obraId,COL,novaTarefa);
+      novaTarefa.id=id;
+      tarefas.push(novaTarefa);
+      _buildFiltradas();
+      _arvEditId=id;_render();
+      Utils.toast('Grupo raiz criado!','sucesso');
+    }catch(e){console.error(e);Utils.toast('Erro ao criar.','erro');}
+    finally{Utils.esconderLoading();}
+  }
+
+  // ---- Drag & Drop ----
+  function _arvDragStart(e,id){
+    _arvDragId=id;
+    e.dataTransfer.effectAllowed='move';
+    e.dataTransfer.setData('text/plain',id);
+    _render();
+  }
+  function _arvDragOver(e,targetId){
+    e.preventDefault();
+    e.dataTransfer.dropEffect='move';
+    if(!_arvDragId||_arvDragId===targetId){return;}
+    // Determina posição: top 30% = before, middle 40% = inside, bottom 30% = after
+    const rect=e.currentTarget?.getBoundingClientRect();
+    let pos='inside';
+    if(rect){
+      const relY=(e.clientY-rect.top)/rect.height;
+      if(relY<0.25)pos='before';
+      else if(relY>0.75)pos='after';
+    }
+    if(_arvDropId!==targetId||_arvDropPos!==pos){
+      _arvDropId=targetId;_arvDropPos=pos;
+      _render();
+    }
+  }
+  function _arvDragEnd(){_arvDragId=null;_arvDropId=null;_arvDropPos='inside';_render();}
+
+  async function _arvDrop(e,targetId){
+    e.preventDefault();
+    const dragId=_arvDragId, dropId=_arvDropId, dropPos=_arvDropPos;
+    _arvDragId=null;_arvDropId=null;_arvDropPos='inside';
+    if(!dragId||dragId===dropId){_render();return;}
+    await _arvMoverTarefa(dragId,dropId,dropPos);
+  }
+
+  // Move tarefa (e filhos) para novo pai ou posição
+  // pos='inside' → filho do target; 'before'/'after' → irmão do target
+  async function _arvMoverTarefa(dragId,targetId,pos){
+    _undoPush();
+    const sorted=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
+    const dragIdx=sorted.findIndex(t=>t.id===dragId);
+    if(dragIdx<0)return;
+    const dragT=sorted[dragIdx];
+    const dragNivel=dragT.nivel||0;
+
+    // Bloco = tarefa arrastada + todos os filhos
+    let fimBloco=dragIdx+1;
+    while(fimBloco<sorted.length&&(sorted[fimBloco].nivel||0)>dragNivel)fimBloco++;
+    const bloco=sorted.splice(dragIdx,fimBloco-dragIdx);
+
+    if(!targetId){
+      // Drop na raiz: coloca no final como nível 0
+      const difNivel=0-dragNivel;
+      bloco.forEach(t=>{t.nivel=Math.max(0,(t.nivel||0)+difNivel);});
+      sorted.push(...bloco);
+    } else {
+      const targetIdx=sorted.findIndex(t=>t.id===targetId);
+      if(targetIdx<0){tarefas=[...sorted,...bloco];_buildFiltradas();_render();return;}
+      const targetT=sorted[targetIdx];
+      const targetNivel=targetT.nivel||0;
+
+      if(pos==='inside'){
+        // Inserir como primeiro filho do target
+        const novoNivel=targetNivel+1;
+        const difNivel=novoNivel-dragNivel;
+        bloco.forEach(t=>{t.nivel=Math.max(0,(t.nivel||0)+difNivel);});
+        sorted.splice(targetIdx+1,0,...bloco);
+        _arvAbertos.add(targetId); // expande o pai destino
+      } else {
+        // Inserir como irmão (before/after) — mesmo nível do target
+        const novoNivel=targetNivel;
+        const difNivel=novoNivel-dragNivel;
+        bloco.forEach(t=>{t.nivel=Math.max(0,(t.nivel||0)+difNivel);});
+        const insertAt=pos==='before'?targetIdx:targetIdx+1;
+        sorted.splice(insertAt,0,...bloco);
+      }
+    }
+
+    // Renormaliza ordens
+    sorted.forEach((t,i)=>{t.ordem=i+1;});
+    const numAntes=new Map(tarefas.map(t=>[t.id,t._numLinha||0]));
+    tarefas=sorted;
+    _buildFiltradas();_render();
+    const mudancasNum=new Map();
+    for(const t of tarefas){
+      const antes=numAntes.get(t.id)||0;
+      const depois=t._numLinha||0;
+      if(antes!==depois)mudancasNum.set(t.id,{antes,depois});
+    }
+    await _remapearPredecessoras(mudancasNum);
+
+    Utils.mostrarLoading('Salvando...');
+    try{
+      const LOTE=30;
+      for(let i=0;i<sorted.length;i+=LOTE){
+        await Promise.all(sorted.slice(i,i+LOTE).map(t=>
+          Database.atualizar(obraId,COL,t.id,{ordem:t.ordem,nivel:t.nivel}).catch(console.error)
+        ));
+      }
+    }finally{Utils.esconderLoading();}
+  }
+
+  // ---- Modal "Mover para" (mudar pai via seletor) ----
+  function _arvAbrirMover(id){
+    _arvMoverModalId=id;
+    const t=tarefas.find(x=>x.id===id);
+    const modal=document.getElementById('arv-mover-modal');
+    if(!modal)return;
+    modal.style.display='flex';
+    const desc=document.getElementById('arv-mover-desc');
+    if(desc)desc.textContent=`Tarefa: "${t?.nome||''}" → selecione o novo pai (ou raiz)`;
+    const busca=document.getElementById('arv-mover-busca');
+    if(busca){busca.value='';busca.focus();}
+    _arvFiltrarMover('');
+  }
+  function _arvFecharMover(){
+    _arvMoverModalId=null;
+    const modal=document.getElementById('arv-mover-modal');
+    if(modal)modal.style.display='none';
+  }
+  function _arvFiltrarMover(q){
+    const lista=document.getElementById('arv-mover-lista');if(!lista)return;
+    const sorted=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
+    const norm=s=>(s||'').toLowerCase();
+    const opts=sorted.filter(t=>t.id!==_arvMoverModalId&&(
+      !q||norm(t.nome).includes(norm(q))||norm(t.codigo).includes(norm(q))
+    ));
+    lista.innerHTML=`
+      <div style="padding:8px;border-bottom:1px solid #222;cursor:pointer;font-size:.8rem;color:#facc15;"
+        onclick="Planejamento._arvConfirmarMover(null)">
+        📁 Raiz (nível 0, sem pai)
+      </div>
+      ${opts.map(t=>`
+        <div style="padding:7px 10px 7px ${(t.nivel||0)*14+10}px;border-bottom:1px solid #1a1a1a;cursor:pointer;font-size:.8rem;color:#ccc;"
+          onclick="Planejamento._arvConfirmarMover('${t.id}')"
+          onmouseenter="this.style.background='rgba(255,255,255,.06)'"
+          onmouseleave="this.style.background=''">
+          ${'–'.repeat(t.nivel||0)} ${_esc(t.nome||'')}
+          <span style="color:#555;font-size:.72rem;margin-left:6px;">${t.codigo||''}</span>
+        </div>`).join('')}`;
+  }
+  async function _arvConfirmarMover(novoPaiId){
+    const id=_arvMoverModalId;
+    _arvFecharMover();
+    if(!id)return;
+    await _arvMoverTarefa(id,novoPaiId,novoPaiId?'inside':null);
+  }
+
   return{init,carregar,setZoom,inserirTarefa,editarTarefa,salvarTarefa,excluirTarefa,
     selectIdx,toggleRecolher,recuarNivel,avancarNivel,
     toggleGantt,hideCol,showColsMenu,_showCol,_showAll,
+    toggleArvoreEditor,_arvToggle,_arvExpandirTudo,_arvIniciarEdit,_arvCancelarEdit,_arvSalvarNome,
+    _arvCriarFilho,_arvCriarRaiz,_arvDragStart,_arvDragOver,_arvDragEnd,_arvDrop,
+    _arvAbrirMover,_arvFecharMover,_arvFiltrarMover,_arvConfirmarMover,
     _colResizeStart,moveColLeft,moveColRight,_hideCol,_divStart,_sync,_editCell,_esqDragStart,
     _rowDragStart,toggleSel,_limparSelecao,_moverSel,_bulkNivel,_bulkDuplicar,_bulkExcluir,
     toggleStatusFiltro,_aplicarStatusFiltro,undo,

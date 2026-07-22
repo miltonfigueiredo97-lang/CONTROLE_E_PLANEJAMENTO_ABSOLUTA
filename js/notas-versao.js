@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.50.0',
+  versaoAtual: 'V2.51.0',
 
   versoes: [
     {
@@ -4465,7 +4465,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.50.0',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-09',
       tipo: 'funcionalidade',
       titulo: 'Pauta do Diário: visão Por Serviço / Por Local',
@@ -4487,6 +4487,37 @@ const NotasVersao = {
         'Cabeçalho da categoria ganhou barrinha de progresso das',
         '  tratadas — mais rápido de varrer na reunião',
         'Atrasadas seguem a mesma visão selecionada',
+      ]
+    },
+    {
+      versao: 'V2.51.0',
+      status: 'aberta',
+      data: '2026-07-11',
+      tipo: 'funcionalidade',
+      titulo: 'Novo: Editor de Estrutura (árvore hierárquica do cronograma)',
+      itens: [
+        'Botão "🌳 Editor de Estrutura" na toolbar do Planejamento.',
+        '',
+        'O editor mostra a hierarquia como árvore colapsável e permite:',
+        '  → Expandir/recolher famílias clicando em ▼/▶',
+        '  → Renomear qualquer tarefa com clique duplo no nome',
+        '  → ＋ Criar filho direto: insere uma nova tarefa como filho',
+        '    do nó clicado, já abrindo para edição do nome',
+        '  → ＋ Nova raiz: cria um grupo de nível 0 no final',
+        '  → ↗ Mover para: abre seletor de destino — escolha o novo',
+        '    pai numa lista buscável; "Raiz" move para nível 0',
+        '  → Arrastar: drag & drop visual direto na árvore —',
+        '    soltar no meio do nó = filho, no topo = antes, na base = depois',
+        '  → ← Recuar nível: sobe um nível (torna irmão do pai atual)',
+        '  → ✕ Excluir',
+        '',
+        'Tudo preservado ao mover:',
+        '  → Todos os dados da tarefa (duração, %, predecessora,',
+        '    vínculos de levantamento, materiais, mão de obra)',
+        '  → Predecessoras remapeadas automaticamente se o número',
+        '    de linha mudar (mesmo mecanismo já existente)',
+        '  → Filhos se movem junto com o pai',
+        'Botão "← Voltar ao Gantt" retorna à visualização normal.',
       ]
     }
   ],
