@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.48.0',
+  versaoAtual: 'V2.49.0',
 
   versoes: [
     {
@@ -4405,7 +4405,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.48.0',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-22',
       tipo: 'funcionalidade',
       titulo: 'Novo módulo: Produção',
@@ -4434,6 +4434,33 @@ const NotasVersao = {
         '  por tarefa, editável igual às demais colunas. Alimenta a',
         '  produção por pessoa em Produção (mesmo campo nos dois',
         '  módulos — equipeAlocada).',
+      ]
+    },
+    {
+      versao: 'V2.49.0',
+      status: 'aberta',
+      data: '2026-07-09',
+      tipo: 'funcionalidade',
+      titulo: 'Diário: pauta por categoria + % recomendadas + datas reais',
+      itens: [
+        'Pauta agrupada por CATEGORIA (campo "Grupo" da tarefa no',
+        '  Planejamento — ex: Estrutura, Elétrica, Hidráulica...),',
+        '  recolhível, com contador de tratadas. Dentro da categoria,',
+        '  as famílias (pais) viram divisores com % e quantidade,',
+        '  mantendo o botão "Lançar no grupo" (distribui p/ subtarefas)',
+        'Card mostra as 4 DATAS: Prev: início→término planejado e',
+        '  Real: início→término real (— quando ainda não houve)',
+        'Card mostra % PREVISTO PARA O DIA pelo planejamento (cálculo',
+        '  linear pelas datas planejadas), verde se em dia, vermelho',
+        '  se abaixo do previsto',
+        'Ao lançar avanço: linha "💡 Recomendado" com o % do',
+        '  Planejamento para o dia e o % do Controle (mostra "sem',
+        '  vínculo ainda" — estrutura pronta p/ quando o Controle',
+        '  ganhar vínculo com tarefas)',
+        'NOVO campo DATA no lançamento (padrão = dia do diário aberto):',
+        '  lançamento retroativo grava início/término REAL na data',
+        '  certa no Planejamento. Lançar 100% atualiza o término real',
+        '  para a data informada. CORRIGIDO: antes gravava a data de hoje.',
       ]
     }
   ],

@@ -152,6 +152,39 @@ const Diario = (() => {
     return grupos;
   }
 
+  // Agrupa por CATEGORIA (campo "grupo" da tarefa no Planejamento, ex:
+  // Estrutura, Elétrica, Hidráulica...) e, dentro, por pai direto.
+  // Categoria vazia cai em "Sem grupo". Ordem: primeira aparição.
+  function _agruparPorCategoria(folhas){
+    const cats=[],idx=new Map();
+    for(const t of folhas){
+      const nome=(t.grupo||'').trim()||'Sem grupo';
+      if(!idx.has(nome)){idx.set(nome,cats.length);cats.push({nome,itens:[]});}
+      cats[idx.get(nome)].itens.push(t);
+    }
+    for(const c of cats)c.subgrupos=_agruparPorPai(c.itens);
+    return cats;
+  }
+
+  // % previsto pelo planejamento para o dia do diário (linear pelas
+  // datas planejadas): antes do início 0, depois do término 100,
+  // no meio proporcional ao prazo decorrido.
+  function _percPrevisto(t){
+    const i=_d(t.inicioPlanejado),f=_d(t.terminoPlanejado);
+    if(!i||!f)return null;
+    if(diaRef<i)return 0;
+    if(diaRef>=f)return 100;
+    const total=(f-i)/86400000+1;
+    const dec=(diaRef-i)/86400000+1;
+    return Math.round(dec/total*1000)/10;
+  }
+
+  // % recomendada pelo CONTROLE — módulo ainda em construção; quando
+  // houver vínculo tarefa↔controle, calcular aqui. Por ora, sem vínculo.
+  function _percControle(t){
+    return null; // null = sem vínculo com o Controle ainda
+  }
+
   // Produção física: delta% × quantidade, na unidade da própria tarefa.
   function _prodFisica(t,percAntes,percDepois){
     const q=parseFloat(t?.quantidade)||0;
@@ -164,11 +197,13 @@ const Diario = (() => {
 
   // Gravação de avanço no Planejamento — caminho ÚNICO de escrita.
   // Regras do Semanal (inicioReal/terminoReal) + % em família (Utils).
-  async function _gravarAvanco(t,percDepois){
+  // dataISO: data do lançamento (padrão = dia do diário aberto, então
+  // lançamento retroativo grava início/término real na data certa).
+  async function _gravarAvanco(t,percDepois,dataISO){
+    const dt=dataISO||_iso(diaRef);
     const upd={percentualConcluido:percDepois};
-    const hoje=_iso(_hoje());
-    if(percDepois>0&&!t.inicioReal)upd.inicioReal=hoje;
-    if(percDepois>=100&&!t.terminoReal)upd.terminoReal=hoje;
+    if(percDepois>0&&!t.inicioReal)upd.inicioReal=dt;
+    if(percDepois>=100)upd.terminoReal=dt;
     if(percDepois<100&&t.terminoReal)upd.terminoReal='';
     await Database.atualizar(obraId,COL,t.id,upd);
     Object.assign(t,upd);
@@ -222,6 +257,8 @@ const Diario = (() => {
     const percDepois=Math.min(100,Math.max(0,v));
     const percAntes=t.percentualConcluido||0;
     const atv=(document.getElementById('pt-atv-'+tid)?.value||'').trim();
+    const dtRaw=(document.getElementById('pt-dt-'+tid)?.value||'').trim();
+    const dtISO=dtRaw||_iso(diaRef);
     try{
       Utils.mostrarLoading('Salvando...');
       const ehPai=Utils.percFamilia(tarefas).filhosDiretos(t).length>0;
@@ -233,7 +270,7 @@ const Diario = (() => {
         percAntes,percDepois,motivo:'',detalhe:'',obraId,
         createdAt:new Date().toISOString(),
       });
-      const nFam=await _gravarAvanco(t,percDepois);
+      const nFam=await _gravarAvanco(t,percDepois,dtISO);
       delete _pautaExp[tid];
       await _loadDia();_render();
       const pf=_prodFisica(t,percAntes,percDepois);
@@ -296,8 +333,15 @@ const Diario = (() => {
   function pautaAddExtra(id){
     _extras.add(id);_skips.delete(id);_buscaPauta='';
     const t=tarefas.find(x=>x.id===id);
-    // Abre o grupo do pai para o card aparecer na hora
-    if(t){const pai=Utils.percFamilia(tarefas).ancestrais(t)[0];if(pai)_grpAberto.add(pai.id);}
+    // Abre a categoria da tarefa para o card aparecer na hora
+    if(t){
+      const {previstas}=_pautaItens();
+      const vis=previstas.filter(x=>!_skips.has(x.id));
+      const cats=_agruparPorCategoria(vis);
+      const nome=(((t.grupo||'').trim())||'Sem grupo');
+      const ci=cats.findIndex(c=>c.nome===nome);
+      if(ci>=0)_grpAberto.add('cat:'+ci);
+    }
     _render();
     Utils.toast('Tarefa adicionada à pauta.','sucesso');
   }
@@ -338,9 +382,11 @@ const Diario = (() => {
     const lanc=lancMap.get(t.id);
     const exp=_pautaExp[t.id];
     const st=lanc?D_STATUS[lanc.status]:null;
-    const inf=[`${perc}%`];
+    const pPrev=_percPrevisto(t);
+    const inf=[`<b>${perc}%</b>${pPrev!=null?` <span style="color:${perc>=pPrev?'#16a34a':'#dc2626'};">(prev. ${pPrev}%)</span>`:''}`];
     if(q)inf.push(`${_fmtQtd(q)} ${_esc(t.unidade||'un')}`);
-    if(atrasada)inf.push(`término ${_fmt(t.terminoPlanejado)}`);
+    inf.push(`Prev: ${_fmt(t.inicioPlanejado)}→${_fmt(t.terminoPlanejado)}`);
+    inf.push(`Real: ${t.inicioReal?_fmt(t.inicioReal):'—'}→${t.terminoReal?_fmt(t.terminoReal):'—'}`);
     let acoes='';
     if(lanc&&st){
       acoes=`<span class="pt-badge" style="background:${st.bg};color:${st.cor};">${st.label}${lanc.percDepois!=null?` ${lanc.percAntes??'?'}→${lanc.percDepois}%`:''}</span>`;
@@ -353,11 +399,16 @@ const Diario = (() => {
     }
     let expH='';
     if(exp==='andou'){
+      const pCtrl=_percControle(t);
       expH=`<div class="pt-exp">
+        <div style="width:100%;font-size:.72rem;color:#475569;">
+          💡 Recomendado — Planejamento: <b>${pPrev!=null?pPrev+'%':'sem datas'}</b> · Controle: <b>${pCtrl!=null?pCtrl+'%':'sem vínculo ainda'}</b>
+        </div>
         <div><label>% atual</label><input type="number" id="pt-perc-${t.id}" min="0" max="100" step="1" value="${perc}" style="width:90px;" oninput="Diario.pautaPreview('${t.id}')" onkeydown="if(event.key==='Enter')Diario.pautaSalvarAvanco('${t.id}')"></div>
-        <div style="flex:1;min-width:180px;"><label>O que foi feito (opcional)</label><input type="text" id="pt-atv-${t.id}" style="width:100%;" placeholder="Ex: eixo A-B, 2 pedreiros" onkeydown="if(event.key==='Enter')Diario.pautaSalvarAvanco('${t.id}')"></div>
-        <button class="btn btn-sm btn-primario" onclick="Diario.pautaSalvarAvanco('${t.id}')">Lançar</button>
-        <button class="btn btn-sm btn-outline" onclick="Diario.pautaFechar()">✕</button>
+        <div><label title="Data usada para início/término real no Planejamento">Data</label><input type="date" id="pt-dt-${t.id}" value="${_iso(diaRef)}" style="width:135px;" title="Data do lançamento — vira início/término real no Planejamento (retroativo ok)"></div>
+        <div style="flex:1;min-width:160px;"><label>O que foi feito (opcional)</label><input type="text" id="pt-atv-${t.id}" style="width:100%;" placeholder="Ex: eixo A-B, 2 pedreiros" onkeydown="if(event.key==='Enter')Diario.pautaSalvarAvanco('${t.id}')"></div>
+        <button class="btn btn-sm btn-primario" title="Salvar e gravar no Planejamento" onclick="Diario.pautaSalvarAvanco('${t.id}')">Lançar</button>
+        <button class="btn btn-sm btn-outline" title="Fechar sem salvar" onclick="Diario.pautaFechar()">✕</button>
         <div class="pt-prev" id="pt-prev-${t.id}"></div>
       </div>`;
     } else if(exp==='parado'){
@@ -383,36 +434,44 @@ const Diario = (() => {
     lancamentosDia.forEach(l=>{if(l.tarefaId)lancMap.set(l.tarefaId,l);});
     const fam=Utils.percFamilia(tarefas);
     const vis=previstas.filter(t=>!_skips.has(t.id));
-    const grupos=_agruparPorPai(vis);
+    const cats=_agruparPorCategoria(vis);
     const feitos=vis.filter(t=>lancMap.has(t.id)).length;
 
-    const grupoH=g=>{
-      if(!g.pai)return g.itens.map(t=>_cardPauta(t,lancMap,false)).join('');
-      const p=g.pai;
+    // Divisor de pai dentro da categoria, com "Lançar no grupo"
+    const paiDivH=(p,itens)=>{
+      if(!p)return'';
       const percPai=Math.round(fam.percCalculado(p)*10)/10;
       const qPai=parseFloat(p.quantidade)||0;
       const exp=_pautaExp[p.id];
-      // Grupo abre: por clique, se algum card interno está expandido, ou se o pai está em lançamento
-      const aberto=_grpAberto.has(p.id)||exp||g.itens.some(t=>_pautaExp[t.id]);
-      const tratadas=g.itens.filter(t=>lancMap.has(t.id)).length;
       let paiExp='';
       if(exp==='andou'){
         paiExp=`<div class="pt-exp" style="margin:8px 12px;">
           <div><label>% do grupo</label><input type="number" id="pt-perc-${p.id}" min="0" max="100" step="1" value="${percPai}" style="width:90px;" oninput="Diario.pautaPreview('${p.id}')" onkeydown="if(event.key==='Enter')Diario.pautaSalvarAvanco('${p.id}')"></div>
-          <div style="flex:1;min-width:160px;"><label>O que foi feito (opcional)</label><input type="text" id="pt-atv-${p.id}" style="width:100%;"></div>
+          <div><label title="Data usada para início/término real">Data</label><input type="date" id="pt-dt-${p.id}" value="${_iso(diaRef)}" style="width:135px;"></div>
+          <div style="flex:1;min-width:140px;"><label>O que foi feito (opcional)</label><input type="text" id="pt-atv-${p.id}" style="width:100%;"></div>
           <button class="btn btn-sm btn-primario" title="Grava o % no grupo e distribui para todas as subtarefas" onclick="Diario.pautaSalvarAvanco('${p.id}')">Lançar no grupo</button>
           <button class="btn btn-sm btn-outline" title="Fechar sem salvar" onclick="Diario.pautaFechar()">✕</button>
           <div class="pt-prev" style="color:#b45309;">⚠ Distribui o % para TODAS as subtarefas do grupo.</div>
         </div>`;
       }
+      return `<div style="padding:6px 12px;background:#f1f5f9;font-size:.76rem;font-weight:800;color:#334155;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;gap:8px;">
+        <span style="flex:1;">${_esc(p.nome||'')}</span>
+        <span style="font-weight:600;color:#64748b;">${percPai}%${qPai?` · ${_fmtQtd(qPai)} ${_esc(p.unidade||'un')}`:''}</span>
+        ${exp?'':`<button style="border:1px solid #cbd5e1;background:#fff;border-radius:6px;padding:2px 8px;cursor:pointer;font-size:.68rem;font-weight:700;color:#475569;" title="Lança o % no grupo inteiro e distribui para as subtarefas" onclick="Diario.pautaAbrir('${p.id}','andou')">Lançar no grupo</button>`}
+      </div>${paiExp}`;
+    };
+
+    // Categoria (campo "grupo" do Planejamento) — recolhível
+    const catH=(c,ci)=>{
+      const k='cat:'+ci;
+      const aberto=_grpAberto.has(k)||c.itens.some(t=>_pautaExp[t.id])||c.subgrupos.some(g=>g.pai&&_pautaExp[g.pai.id]);
+      const tratadas=c.itens.filter(t=>lancMap.has(t.id)).length;
       return `<div class="pt-grupo">
-        <div class="pt-grupo-h" style="cursor:pointer;" title="${aberto?'Recolher':'Expandir'} grupo" onclick="Diario.toggleGrupo('${p.id}')">
-          <span class="nm">${aberto?'▾':'▸'} ${_esc(p.nome||'')}</span>
-          <span class="inf">${tratadas}/${g.itens.length} tratadas · ${percPai}%${qPai?` · ${_fmtQtd(qPai)} ${_esc(p.unidade||'un')}`:''}</span>
-          ${exp?'':`<div class="pt-acao"><button title="Lança o % no grupo inteiro e distribui para as subtarefas" onclick="event.stopPropagation();Diario.pautaAbrir('${p.id}','andou')">Lançar no grupo</button></div>`}
+        <div class="pt-grupo-h" style="cursor:pointer;" title="${aberto?'Recolher':'Expandir'} categoria" onclick="Diario.toggleGrupo('${k}')">
+          <span class="nm">${aberto?'▾':'▸'} ${_esc(c.nome)}</span>
+          <span class="inf">${tratadas}/${c.itens.length} tratadas</span>
         </div>
-        ${paiExp}
-        ${aberto?g.itens.map(t=>_cardPauta(t,lancMap,false)).join(''):''}
+        ${aberto?c.subgrupos.map(g=>paiDivH(g.pai,g.itens)+g.itens.map(t=>_cardPauta(t,lancMap,false)).join('')).join(''):''}
       </div>`;
     };
 
@@ -425,7 +484,7 @@ const Diario = (() => {
     <div class="dia-sec-t" style="color:#0f172a;margin-top:0;">📌 Pauta do dia
       <span style="color:#94a3b8;font-weight:600;">(${feitos}/${vis.length} tratadas)</span>
     </div>
-    ${vis.length?grupos.map(grupoH).join(''):
+    ${vis.length?cats.map(catH).join(''):
       `<div style="background:#fff;border:1px dashed #cbd5e1;border-radius:10px;padding:18px;text-align:center;color:#94a3b8;font-size:.82rem;margin-bottom:10px;">Nenhuma tarefa prevista para este dia no Planejamento.</div>`}
 
     <div class="pt-grupo">
@@ -659,7 +718,7 @@ const Diario = (() => {
       // Grava o avanço no Planejamento — caminho único (_gravarAvanco):
       // regras do Semanal (inicioReal/terminoReal) + % em família (Utils)
       if(percDepois!=null&&t){
-        await _gravarAvanco(t,percDepois);
+        await _gravarAvanco(t,percDepois,_iso(diaRef));
       }
 
       _editId=null;_busca='';_tarSel='';_status='executado';_atividadeTmp='';_percTmp='';
