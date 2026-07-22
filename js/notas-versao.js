@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.51.0',
+  versaoAtual: 'V2.51.1',
 
   versoes: [
     {
@@ -4491,7 +4491,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.51.0',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-11',
       tipo: 'funcionalidade',
       titulo: 'Novo: Editor de Estrutura (árvore hierárquica do cronograma)',
@@ -4518,6 +4518,19 @@ const NotasVersao = {
         '    de linha mudar (mesmo mecanismo já existente)',
         '  → Filhos se movem junto com o pai',
         'Botão "← Voltar ao Gantt" retorna à visualização normal.',
+      ]
+    },
+    {
+      versao: 'V2.51.1',
+      status: 'aberta',
+      data: '2026-07-11',
+      tipo: 'correcao',
+      titulo: 'CRÍTICO: Editor de Estrutura não abria (_esc não definida)',
+      itens: [
+        '_esc() usada dentro do Editor mas não definida no módulo de',
+        '  Planejamento — ReferenceError ao primeiro render.',
+        'Adicionada definição local de _esc no escopo do módulo.',
+        'Corrigido também crash ao mover tarefa para raiz (targetId null).',
       ]
     }
   ],

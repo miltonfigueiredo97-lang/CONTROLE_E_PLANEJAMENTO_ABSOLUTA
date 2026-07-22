@@ -2744,7 +2744,8 @@ const Planejamento = (() => {
 
   // ===================================================================
   // EDITOR DE ESTRUTURA (Árvore Hierárquica)
-  // Permite reorganizar a hierarquia do cronograma de forma visual:
+  // ===================================================================
+  const _esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   // - Ver a árvore completa de famílias colapsáveis
   // - Criar novas tarefas num clique dentro de qualquer família
   // - Arrastar para mover uma tarefa (e seus filhos) para outro pai
@@ -3133,7 +3134,12 @@ const Planejamento = (() => {
     const id=_arvMoverModalId;
     _arvFecharMover();
     if(!id)return;
-    await _arvMoverTarefa(id,novoPaiId,novoPaiId?'inside':null);
+    if(novoPaiId===null){
+      // Mover para raiz: sem pai, nível 0
+      await _arvMoverTarefa(id,null,null);
+    } else {
+      await _arvMoverTarefa(id,novoPaiId,'inside');
+    }
   }
 
   return{init,carregar,setZoom,inserirTarefa,editarTarefa,salvarTarefa,excluirTarefa,
