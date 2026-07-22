@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.53.2',
+  versaoAtual: 'V2.53.3',
 
   versoes: [
     {
@@ -4668,7 +4668,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.53.2',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-22',
       tipo: 'correcao',
       titulo: 'Diário: cascata de % em família ponderava por quantidade, não duração',
@@ -4683,6 +4683,24 @@ const NotasVersao = {
         '  (peso = Math.max(1, duracao || 1)), igual ao Dashboard.',
         'Efeito: o % que o Diário grava nos pais/avós ao dar baixa numa',
         '  tarefa-folha agora bate exatamente com o % mostrado no Dashboard.',
+      ]
+    },
+    {
+      versao: 'V2.53.3',
+      status: 'aberta',
+      data: '2026-07-22',
+      tipo: 'funcionalidade',
+      titulo: 'Editor de Estrutura: inserir acima/abaixo + nível editável direto',
+      itens: [
+        'INSERIR ACIMA (↑＋): cria irmão imediatamente antes da tarefa,',
+        '  mesmo nível, já abre para editar o nome.',
+        'INSERIR ABAIXO (↓＋): cria irmão logo depois do bloco da tarefa',
+        '  (depois dos filhos dela, se tiver), mesmo nível.',
+        'CRIAR FILHO (＋▸): igual ao ＋ anterior, cria filho (nível+1).',
+        'NÍVEL EDITÁVEL (campo "nv"): input numérico ao lado dos botões.',
+        '  Clica e digita o nível desejado (0-10) → aplica na hora.',
+        '  Muda só essa tarefa, não arrasta os filhos junto.',
+        '  Útil para corrigir nível errado rapidamente sem arrastar.',
       ]
     }
   ],

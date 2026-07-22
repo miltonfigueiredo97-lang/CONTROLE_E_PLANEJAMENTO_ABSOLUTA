@@ -2878,14 +2878,26 @@ const Planejamento = (() => {
 
         <!-- Ações -->
         <div style="display:flex;gap:3px;flex-shrink:0;margin-left:4px;" onclick="event.stopPropagation()">
-          <button title="Criar filho" onclick="Planejamento._arvCriarFilho('${t.id}')"
-            style="background:#1a3a1a;color:#4ade80;border:1px solid #2a5a2a;border-radius:4px;cursor:pointer;font-size:.7rem;padding:1px 6px;line-height:1.4;">＋</button>
+          <button title="Inserir acima (irmão, mesmo nível)" onclick="Planejamento._arvInserirAcima('${t.id}')"
+            style="background:#1a2a1a;color:#86efac;border:1px solid #2a4a2a;border-radius:4px;cursor:pointer;font-size:.65rem;padding:1px 5px;line-height:1.4;" >↑＋</button>
+          <button title="Inserir abaixo (irmão, mesmo nível)" onclick="Planejamento._arvInserirAbaixo('${t.id}')"
+            style="background:#1a2a1a;color:#86efac;border:1px solid #2a4a2a;border-radius:4px;cursor:pointer;font-size:.65rem;padding:1px 5px;line-height:1.4;">↓＋</button>
+          <button title="Criar filho (nível abaixo)" onclick="Planejamento._arvCriarFilho('${t.id}')"
+            style="background:#1a3a1a;color:#4ade80;border:1px solid #2a5a2a;border-radius:4px;cursor:pointer;font-size:.65rem;padding:1px 5px;line-height:1.4;">＋▸</button>
           <button title="Mover para outro pai" onclick="Planejamento._arvAbrirMover('${t.id}')"
-            style="background:#1a2a3a;color:#60a5fa;border:1px solid #2a4a6a;border-radius:4px;cursor:pointer;font-size:.7rem;padding:1px 6px;line-height:1.4;">↗</button>
-          <button title="Recuar nível (tornar irmão do pai)" onclick="Planejamento.recuarNivel('${t.id}')"
-            style="background:#2a2a1a;color:#aaa;border:1px solid #3a3a2a;border-radius:4px;cursor:pointer;font-size:.7rem;padding:1px 6px;line-height:1.4;">←</button>
+            style="background:#1a2a3a;color:#60a5fa;border:1px solid #2a4a6a;border-radius:4px;cursor:pointer;font-size:.65rem;padding:1px 5px;line-height:1.4;">↗</button>
+          <!-- Nível editável inline: clica no número e digita o nível desejado -->
+          <span style="display:flex;align-items:center;gap:2px;background:#1a1a2a;border:1px solid #333;border-radius:4px;padding:0 4px;">
+            <span style="font-size:.58rem;color:#666;">nv</span>
+            <input type="number" min="0" max="10" value="${nv}"
+              style="width:28px;background:transparent;border:none;color:#aaa;font-size:.72rem;font-weight:700;text-align:center;padding:0;"
+              onclick="event.stopPropagation()"
+              onchange="event.stopPropagation();Planejamento._arvMudarNivel('${t.id}',parseInt(this.value))"
+              onkeydown="event.stopPropagation();if(event.key==='Enter')this.blur()"
+              title="Nível hierárquico — edite diretamente">
+          </span>
           <button title="Excluir" onclick="Planejamento.excluirTarefa('${t.id}')"
-            style="background:#3a1a1a;color:#f87171;border:1px solid #5a2a2a;border-radius:4px;cursor:pointer;font-size:.7rem;padding:1px 6px;line-height:1.4;">✕</button>
+            style="background:#3a1a1a;color:#f87171;border:1px solid #5a2a2a;border-radius:4px;cursor:pointer;font-size:.65rem;padding:1px 5px;line-height:1.4;">✕</button>
         </div>
       </div>`;
 
@@ -2949,7 +2961,65 @@ const Planejamento = (() => {
     }
   }
 
-  // ---- Toggle expand/recolher ----
+  // Insere irmão imediatamente ACIMA da tarefa (mesmo nível, mesma família)
+  async function _arvInserirAcima(refId){
+    const sorted=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
+    const refIdx=sorted.findIndex(t=>t.id===refId);
+    if(refIdx<0)return;
+    const ref=sorted[refIdx];
+    const nv=ref.nivel||0;
+    const ordemAnterior=refIdx>0?sorted[refIdx-1].ordem||refIdx-1:0;
+    const novaOrdem=ordemAnterior+(ref.ordem-ordemAnterior)/2;
+    const nova={nome:'Nova Tarefa',nivel:nv,ordem:novaOrdem,tipo:'tarefa',
+      duracao:'',percentualEsperado:0,percentualConcluido:0,codigo:'',predecessora:'',responsavel:'',local:'',grupo:''};
+    Utils.mostrarLoading('Criando...');
+    try{
+      const id=await Database.criar(obraId,COL,nova);
+      nova.id=id;tarefas.push(nova);
+      const rs=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
+      rs.forEach((t,i)=>{t.ordem=i+1;});tarefas=rs;
+      _buildFiltradas();_arvEditId=id;_render();
+    }catch(e){console.error(e);Utils.toast('Erro.','erro');}
+    finally{Utils.esconderLoading();}
+  }
+
+  // Insere irmão imediatamente ABAIXO da tarefa (depois do bloco de filhos)
+  async function _arvInserirAbaixo(refId){
+    const sorted=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
+    const refIdx=sorted.findIndex(t=>t.id===refId);
+    if(refIdx<0)return;
+    const ref=sorted[refIdx];
+    const nv=ref.nivel||0;
+    // Pular filhos: encontrar o fim do bloco
+    let fimBloco=refIdx+1;
+    while(fimBloco<sorted.length&&(sorted[fimBloco].nivel||0)>nv)fimBloco++;
+    const ordemAnterior=sorted[fimBloco-1].ordem||fimBloco-1;
+    const ordemProxima=fimBloco<sorted.length?sorted[fimBloco].ordem||fimBloco+1:ordemAnterior+2;
+    const novaOrdem=ordemAnterior+(ordemProxima-ordemAnterior)/2;
+    const nova={nome:'Nova Tarefa',nivel:nv,ordem:novaOrdem,tipo:'tarefa',
+      duracao:'',percentualEsperado:0,percentualConcluido:0,codigo:'',predecessora:'',responsavel:'',local:'',grupo:''};
+    Utils.mostrarLoading('Criando...');
+    try{
+      const id=await Database.criar(obraId,COL,nova);
+      nova.id=id;tarefas.push(nova);
+      const rs=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
+      rs.forEach((t,i)=>{t.ordem=i+1;});tarefas=rs;
+      _buildFiltradas();_arvEditId=id;_render();
+    }catch(e){console.error(e);Utils.toast('Erro.','erro');}
+    finally{Utils.esconderLoading();}
+  }
+
+  // Muda o nível de uma tarefa diretamente para o valor digitado
+  // Não move filhos — apenas altera o nível desta tarefa
+  async function _arvMudarNivel(id,novoNivel){
+    if(isNaN(novoNivel)||novoNivel<0||novoNivel>10)return;
+    const t=tarefas.find(x=>x.id===id);
+    if(!t||(t.nivel||0)===novoNivel)return;
+    _undoPush();
+    t.nivel=novoNivel;
+    _buildFiltradas();_render();
+    Database.atualizar(obraId,COL,id,{nivel:novoNivel}).catch(console.error);
+  }
   function _arvToggle(id){
     if(_arvAbertos.has(id))_arvAbertos.delete(id);else _arvAbertos.add(id);
     _render();
@@ -3242,6 +3312,7 @@ const Planejamento = (() => {
     selectIdx,toggleRecolher,recuarNivel,avancarNivel,
     toggleGantt,hideCol,showColsMenu,_showCol,_showAll,
     toggleArvoreEditor,_arvToggle,_arvExpandirTudo,_arvIniciarEdit,_arvCancelarEdit,_arvSalvarNome,
+    _arvInserirAcima,_arvInserirAbaixo,_arvMudarNivel,
     _arvCriarFilho,_arvCriarRaiz,_arvDragStart,_arvDragOver,_arvDragEnd,_arvDrop,
     _arvAbrirMover,_arvFecharMover,_arvFiltrarMover,_arvConfirmarMover,
     _colResizeStart,moveColLeft,moveColRight,_hideCol,_divStart,_sync,_editCell,_esqDragStart,
