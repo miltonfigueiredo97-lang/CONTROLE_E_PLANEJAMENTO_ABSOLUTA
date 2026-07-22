@@ -4584,7 +4584,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.51.3',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-11',
       tipo: 'correcao',
       titulo: 'Editor de Estrutura: drag mais fácil + loading infinito corrigido',
@@ -4602,6 +4602,25 @@ const NotasVersao = {
         'NÍVEL CORRETO: before/after usa o nível do target (irmão),',
         '  não muda hierarquia de pai — apenas reordena dentro do',
         '  mesmo grupo. Inside adiciona como filho (nível+1).',
+      ]
+    },
+    {
+      versao: 'V2.51.4',
+      status: 'aberta',
+      data: '2026-07-11',
+      tipo: 'correcao',
+      titulo: 'CRÍTICO: Editor de Estrutura salvava 2400 tarefas a cada movimento',
+      itens: [
+        'CAUSA do loading infinito: ao mover qualquer tarefa, o código',
+        '  renormalizava a ordem (1,2,3...) de TODAS as tarefas e depois',
+        '  salvava TODAS no Firestore — 2400 ÷ 30 por lote = 80 lotes',
+        '  em sequência, cada um com ~300ms de latência = ~24 segundos.',
+        '',
+        'CORREÇÃO: compara o estado antes/depois e salva APENAS as',
+        '  tarefas cujo ordem ou nivel realmente mudou.',
+        '  → Mover 1 tarefa entre grupos próximos: tipicamente <50',
+        '    mudanças → <2 segundos.',
+        '  → Loading agora mostra quantas tarefas estão sendo salvas.',
       ]
     }
   ],

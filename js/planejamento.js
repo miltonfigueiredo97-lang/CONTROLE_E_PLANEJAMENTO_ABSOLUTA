@@ -3121,6 +3121,9 @@ const Planejamento = (() => {
       }
     }
 
+    // Captura o estado ANTES de atualizar tarefas[] para comparar depois
+    const ordemAntes=new Map(tarefas.map(t=>[t.id,{ordem:t.ordem||0,nivel:t.nivel||0}]));
+
     sorted.forEach((t,i)=>{t.ordem=i+1;});
     const numAntes=new Map(tarefas.map(t=>[t.id,t._numLinha||0]));
     tarefas=sorted;
@@ -3133,13 +3136,20 @@ const Planejamento = (() => {
       if(antes!==depois)mudancasNum.set(t.id,{antes,depois});
     }
 
-    // Loading + save + remap tudo no mesmo try/finally para evitar loading infinito
-    Utils.mostrarLoading('Salvando...');
+    // Salva APENAS as tarefas que mudaram de ordem ou nível
+    // Com 2400 tarefas, salvar tudo levaria minutos — ao mover um bloco pequeno
+    // normalmente só ~10-50 tarefas realmente mudam de posição/nível
+    const changed=sorted.filter(t=>{
+      const ant=ordemAntes.get(t.id);
+      return !ant||(t.ordem||0)!==ant.ordem||(t.nivel||0)!==ant.nivel;
+    });
+
+    Utils.mostrarLoading(`Salvando ${changed.length} tarefa(s) alterada(s)...`);
     try{
       await _remapearPredecessoras(mudancasNum);
       const LOTE=30;
-      for(let i=0;i<sorted.length;i+=LOTE){
-        await Promise.all(sorted.slice(i,i+LOTE).map(t=>
+      for(let i=0;i<changed.length;i+=LOTE){
+        await Promise.all(changed.slice(i,i+LOTE).map(t=>
           Database.atualizar(obraId,COL,t.id,{ordem:t.ordem,nivel:t.nivel}).catch(console.error)
         ));
       }
