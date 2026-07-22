@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.51.1',
+  versaoAtual: 'V2.51.2',
 
   versoes: [
     {
@@ -4522,7 +4522,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.51.1',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-11',
       tipo: 'correcao',
       titulo: 'CRÍTICO: Editor de Estrutura não abria (_esc não definida)',
@@ -4531,6 +4531,24 @@ const NotasVersao = {
         '  Planejamento — ReferenceError ao primeiro render.',
         'Adicionada definição local de _esc no escopo do módulo.',
         'Corrigido também crash ao mover tarefa para raiz (targetId null).',
+      ]
+    },
+    {
+      versao: 'V2.51.2',
+      status: 'aberta',
+      data: '2026-07-11',
+      tipo: 'correcao',
+      titulo: 'Editor de Estrutura: drag & drop funcionando',
+      itens: [
+        'CAUSA: _arvDragStart e _arvDragOver chamavam _render(), que',
+        '  reconstruía o DOM inteiro durante o drag — o navegador',
+        '  perde a referência ao elemento arrastado e cancela o drag.',
+        'CORREÇÃO: drag agora nunca chama _render():',
+        '  → _arvDragStart: só marca opacidade via DOM direto',
+        '  → _arvDragOver: atualiza borda/fundo do nó alvo via',
+        '    querySelector, sem recriar nenhum elemento',
+        '  → _arvDragEnd: limpa todos os indicadores via DOM',
+        '  → Drop final: aí sim chama _arvMoverTarefa que re-renderiza',
       ]
     }
   ],

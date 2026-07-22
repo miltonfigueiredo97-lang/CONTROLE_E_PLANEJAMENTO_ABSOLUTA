@@ -2793,30 +2793,23 @@ const Planejamento = (() => {
       const filhos=_arvFilhos(t,sorted);
       const temF=filhos.length>0;
       const aberto=_arvAbertos.has(t.id);
-      const isDrag=t.id===_arvDragId;
-      const isDrop=t.id===_arvDropId;
       const nv=t.nivel||0;
       const cor=['#F5C800','#60a5fa','#4ade80','#f472b6','#fb923c','#a78bfa','#2dd4bf'][nv%7];
 
-      const dropBefore=isDrop&&_arvDropPos==='before'?'border-top:2px solid var(--cor-primaria);':'';
-      const dropInside=isDrop&&_arvDropPos==='inside'?'background:rgba(245,200,0,.15);border:1px dashed var(--cor-primaria);':'';
-      const dropAfter=isDrop&&_arvDropPos==='after'?'border-bottom:2px solid var(--cor-primaria);':'';
+      let html=`<div data-arvid="${t.id}" style="position:relative;">`;
 
-      let html=`<div data-arvid="${t.id}" style="position:relative;${dropBefore}${dropAfter}">`;
-
-      // Linha do nó
+      // Linha do nó — indicadores de drag aplicados via DOM em _arvDragOver
       html+=`<div draggable="true"
+        data-arvrow="1"
         ondragstart="Planejamento._arvDragStart(event,'${t.id}')"
         ondragover="Planejamento._arvDragOver(event,'${t.id}')"
         ondrop="Planejamento._arvDrop(event,'${t.id}')"
         ondragend="Planejamento._arvDragEnd()"
         style="display:flex;align-items:center;gap:6px;padding:5px 8px;border-radius:6px;cursor:grab;
-          background:${isDrag?'rgba(255,255,255,.04)':'rgba(255,255,255,.02)'};
-          opacity:${isDrag?.4:1};${dropInside}
-          border:1px solid ${isDrop&&_arvDropPos==='inside'?'var(--cor-primaria)':'transparent'};
+          background:rgba(255,255,255,.02);border:1px solid transparent;
           margin:1px 0;user-select:none;"
         onmouseenter="this.style.background='rgba(255,255,255,.06)'"
-        onmouseleave="this.style.background='${isDrag?'rgba(255,255,255,.04)':'rgba(255,255,255,.02)'}'">
+        onmouseleave="this.style.background='rgba(255,255,255,.02)'">
 
         <!-- Indentação -->
         <span style="display:inline-block;width:${nv*18}px;flex-shrink:0;"></span>
@@ -2995,13 +2988,18 @@ const Planejamento = (() => {
     _arvDragId=id;
     e.dataTransfer.effectAllowed='move';
     e.dataTransfer.setData('text/plain',id);
-    _render();
+    // Não chama _render() — reconstruir o DOM cancela o drag nativo do HTML5
+    // Marca o elemento visualmente via DOM direto
+    requestAnimationFrame(()=>{
+      const el=document.querySelector(`[data-arvid="${id}"] [data-arvrow]`);
+      if(el)el.style.opacity='.35';
+    });
   }
   function _arvDragOver(e,targetId){
     e.preventDefault();
     e.dataTransfer.dropEffect='move';
-    if(!_arvDragId||_arvDragId===targetId){return;}
-    // Determina posição: top 30% = before, middle 40% = inside, bottom 30% = after
+    if(!_arvDragId||_arvDragId===targetId)return;
+
     const rect=e.currentTarget?.getBoundingClientRect();
     let pos='inside';
     if(rect){
@@ -3009,12 +3007,38 @@ const Planejamento = (() => {
       if(relY<0.25)pos='before';
       else if(relY>0.75)pos='after';
     }
-    if(_arvDropId!==targetId||_arvDropPos!==pos){
-      _arvDropId=targetId;_arvDropPos=pos;
-      _render();
+    if(_arvDropId===targetId&&_arvDropPos===pos)return; // nada mudou
+
+    // Remove indicadores anteriores sem recriar o DOM inteiro
+    document.querySelectorAll('[data-arvid]').forEach(el=>{
+      el.style.borderTop='';el.style.borderBottom='';
+      const row=el.querySelector('[data-arvrow]');
+      if(row){row.style.background='';row.style.border='1px solid transparent';}
+    });
+
+    _arvDropId=targetId;_arvDropPos=pos;
+
+    if(targetId){
+      const el=document.querySelector(`[data-arvid="${targetId}"]`);
+      if(el){
+        if(pos==='before')el.style.borderTop='2px solid var(--cor-primaria)';
+        else if(pos==='after')el.style.borderBottom='2px solid var(--cor-primaria)';
+        else {
+          const row=el.querySelector('[data-arvrow]');
+          if(row){row.style.background='rgba(245,200,0,.15)';row.style.border='1px dashed var(--cor-primaria)';}
+        }
+      }
     }
   }
-  function _arvDragEnd(){_arvDragId=null;_arvDropId=null;_arvDropPos='inside';_render();}
+  function _arvDragEnd(){
+    _arvDragId=null;_arvDropId=null;_arvDropPos='inside';
+    // Limpa todos os indicadores visuais e restaura opacidade
+    document.querySelectorAll('[data-arvid]').forEach(el=>{
+      el.style.borderTop='';el.style.borderBottom='';
+      const row=el.querySelector('[data-arvrow]');
+      if(row){row.style.opacity='1';row.style.background='';row.style.border='1px solid transparent';}
+    });
+  }
 
   async function _arvDrop(e,targetId){
     e.preventDefault();
