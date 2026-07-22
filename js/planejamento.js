@@ -3024,6 +3024,7 @@ const Planejamento = (() => {
   }
   function _arvDragOver(e,targetId){
     e.preventDefault();
+    e.stopPropagation(); // impede o container (#arv-corpo) de interceptar
     e.dataTransfer.dropEffect='move';
     if(!_arvDragId||_arvDragId===targetId)return;
 
@@ -3070,6 +3071,7 @@ const Planejamento = (() => {
 
   async function _arvDrop(e,targetId){
     e.preventDefault();
+    e.stopPropagation();
     const dragId=_arvDragId, dropId=_arvDropId, dropPos=_arvDropPos;
     _arvDragId=null;_arvDropId=null;_arvDropPos='inside';
     if(!dragId||dragId===dropId){_render();return;}
@@ -3079,55 +3081,57 @@ const Planejamento = (() => {
   // Move tarefa (e filhos) para novo pai ou posição
   // pos='inside' → filho do target; 'before'/'after' → irmão do target
   async function _arvMoverTarefa(dragId,targetId,pos){
+    if(!dragId)return;
     _undoPush();
     const sorted=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
     const dragIdx=sorted.findIndex(t=>t.id===dragId);
     if(dragIdx<0)return;
-    const dragT=sorted[dragIdx];
-    const dragNivel=dragT.nivel||0;
+    const dragNivel=sorted[dragIdx].nivel||0;
 
-    // Bloco = tarefa arrastada + todos os filhos contíguos
+    // Bloco = tarefa + filhos contíguos
     let fimBloco=dragIdx+1;
     while(fimBloco<sorted.length&&(sorted[fimBloco].nivel||0)>dragNivel)fimBloco++;
     const bloco=sorted.splice(dragIdx,fimBloco-dragIdx);
 
+    // Captura estado ANTES de qualquer mudança (precisa ser aqui, antes do splice)
+    const ordemAntes=new Map(tarefas.map(t=>[t.id,{ordem:t.ordem||0,nivel:t.nivel||0}]));
+    const numAntes=new Map(tarefas.map(t=>[t.id,t._numLinha||0]));
+
     if(!targetId){
-      // Drop na área vazia = raiz (nível 0)
-      const dif=0-dragNivel;
+      // Raiz: nível 0
+      const dif=-dragNivel;
       bloco.forEach(t=>{t.nivel=Math.max(0,(t.nivel||0)+dif);});
       sorted.push(...bloco);
     } else {
       const targetIdx=sorted.findIndex(t=>t.id===targetId);
-      if(targetIdx<0){tarefas=[...sorted,...bloco];_buildFiltradas();_render();return;}
-      const targetT=sorted[targetIdx];
-      const targetNivel=targetT.nivel||0;
+      if(targetIdx<0){sorted.splice(dragIdx,0,...bloco);tarefas=sorted;_buildFiltradas();_render();return;}
+      const targetNivel=sorted[targetIdx].nivel||0;
 
       if(pos==='inside'){
-        // Filho do target → nível = targetNivel + 1
-        const novoNivel=targetNivel+1;
-        const dif=novoNivel-dragNivel;
+        // Filho do target
+        const dif=(targetNivel+1)-dragNivel;
         bloco.forEach(t=>{t.nivel=Math.max(0,(t.nivel||0)+dif);});
-        // Insere logo após o target (antes dos filhos existentes do target)
         sorted.splice(targetIdx+1,0,...bloco);
         _arvAbertos.add(targetId);
       } else {
-        // Irmão do target (before/after) → nível = targetNivel
-        // O nível NÃO muda a hierarquia pai — fica exatamente no mesmo nível do target
-        const novoNivel=targetNivel;
-        const dif=novoNivel-dragNivel;
+        // Irmão do target (before/after)
+        const dif=targetNivel-dragNivel;
         bloco.forEach(t=>{t.nivel=Math.max(0,(t.nivel||0)+dif);});
-        const insertAt=pos==='before'?targetIdx:targetIdx+1;
-        sorted.splice(insertAt,0,...bloco);
+        sorted.splice(pos==='before'?targetIdx:targetIdx+1,0,...bloco);
       }
     }
 
-    // Captura o estado ANTES de atualizar tarefas[] para comparar depois
-    const ordemAntes=new Map(tarefas.map(t=>[t.id,{ordem:t.ordem||0,nivel:t.nivel||0}]));
-
     sorted.forEach((t,i)=>{t.ordem=i+1;});
-    const numAntes=new Map(tarefas.map(t=>[t.id,t._numLinha||0]));
     tarefas=sorted;
+
+    // Atualiza UI IMEDIATAMENTE — sem loading, sem esperar Firestore
     _buildFiltradas();_render();
+
+    // Identifica o que realmente mudou para salvar só isso
+    const changed=sorted.filter(t=>{
+      const ant=ordemAntes.get(t.id);
+      return !ant||(t.ordem||0)!==ant.ordem||(t.nivel||0)!==ant.nivel;
+    });
 
     const mudancasNum=new Map();
     for(const t of tarefas){
@@ -3136,25 +3140,18 @@ const Planejamento = (() => {
       if(antes!==depois)mudancasNum.set(t.id,{antes,depois});
     }
 
-    // Salva APENAS as tarefas que mudaram de ordem ou nível
-    // Com 2400 tarefas, salvar tudo levaria minutos — ao mover um bloco pequeno
-    // normalmente só ~10-50 tarefas realmente mudam de posição/nível
-    const changed=sorted.filter(t=>{
-      const ant=ordemAntes.get(t.id);
-      return !ant||(t.ordem||0)!==ant.ordem||(t.nivel||0)!==ant.nivel;
+    // Salva em background sem bloquear a UI
+    Promise.resolve().then(async()=>{
+      try{
+        if(mudancasNum.size)await _remapearPredecessoras(mudancasNum);
+        const LOTE=50;
+        for(let i=0;i<changed.length;i+=LOTE){
+          await Promise.all(changed.slice(i,i+LOTE).map(t=>
+            Database.atualizar(obraId,COL,t.id,{ordem:t.ordem,nivel:t.nivel}).catch(console.error)
+          ));
+        }
+      }catch(e){console.error('Erro ao salvar movimento:',e);}
     });
-
-    Utils.mostrarLoading(`Salvando ${changed.length} tarefa(s) alterada(s)...`);
-    try{
-      await _remapearPredecessoras(mudancasNum);
-      const LOTE=30;
-      for(let i=0;i<changed.length;i+=LOTE){
-        await Promise.all(changed.slice(i,i+LOTE).map(t=>
-          Database.atualizar(obraId,COL,t.id,{ordem:t.ordem,nivel:t.nivel}).catch(console.error)
-        ));
-      }
-    }catch(e){console.error('Erro ao mover tarefa:',e);Utils.toast('Erro ao salvar. Tente Ctrl+Z.','erro');}
-    finally{Utils.esconderLoading();}
   }
 
   // ---- Modal "Mover para" (mudar pai via seletor) ----

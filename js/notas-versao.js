@@ -4606,7 +4606,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.51.4',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-11',
       tipo: 'correcao',
       titulo: 'CRÍTICO: Editor de Estrutura salvava 2400 tarefas a cada movimento',
@@ -4621,6 +4621,30 @@ const NotasVersao = {
         '  → Mover 1 tarefa entre grupos próximos: tipicamente <50',
         '    mudanças → <2 segundos.',
         '  → Loading agora mostra quantas tarefas estão sendo salvas.',
+      ]
+    },
+    {
+      versao: 'V2.51.5',
+      status: 'aberta',
+      data: '2026-07-11',
+      tipo: 'correcao',
+      titulo: 'Editor de Estrutura: mover funciona + instantâneo (sem loading)',
+      itens: [
+        '3 correções simultâneas:',
+        '',
+        '1. CAPTURA DE ESTADO NO MOMENTO CERTO: ordemAntes/numAntes',
+        '   eram capturados DEPOIS do splice do bloco, então a',
+        '   comparação estava errada e salvava mais tarefas que o',
+        '   necessário (ou as erradas). Agora capturado ANTES.',
+        '',
+        '2. SEM LOADING — UI instantânea: a movimentação atualiza',
+        '   a tela imediatamente (local-first). O save vai pro',
+        '   Firestore em background sem bloquear nada.',
+        '',
+        '3. DRAG CAÍA NO CONTAINER: _arvDragOver e _arvDrop não',
+        '   tinham stopPropagation(). O evento subia para o',
+        '   container #arv-corpo com targetId=null, fazendo tudo',
+        '   virar nível 0. Adicionado stopPropagation() em ambos.',
       ]
     }
   ],
