@@ -414,10 +414,10 @@ const Planejamento = (() => {
           <span style="font-size:.75rem;color:#555;">${filtradas.length} tarefas</span>
         </div>
         <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center;">
-          <span style="display:inline-flex;border:1.5px solid ${_versaoData!=='atual'?'#ef4444':'#333'};border-radius:8px;overflow:hidden;font-size:.7rem;font-weight:700;" title="Qual versão de datas ver/editar nas colunas Início e Término">
+          <span style="display:inline-flex;border:1.5px solid #333;border-radius:8px;overflow:hidden;font-size:.7rem;font-weight:700;" title="Qual versão de datas ver/editar nas colunas Início e Término">
             ${['atual','base','desafio'].map(v=>`<button onclick="Planejamento.setVersaoData('${v}')" style="border:none;padding:4px 10px;cursor:pointer;${_versaoData===v?'background:var(--cor-primaria);color:#000;':'background:#111;color:#888;'}">${VERSAO_LABEL[v]}</button>`).join('')}
           </span>
-          ${_versaoData!=='atual'?`<span style="background:#ef4444;color:#fff;font-size:.68rem;font-weight:800;padding:2px 8px;border-radius:5px;">⚠️ Visualizando ${VERSAO_LABEL[_versaoData]} — clique em "Atual" para voltar</span>`:''}
+          ${_versaoData!=='atual'?`<button class="btn btn-secundario btn-sm" onclick="Planejamento.copiarDatasDeAtual()" style="font-size:.7rem;" title="Preenche as datas de ${VERSAO_LABEL[_versaoData]} copiando de Atual em todas as tarefas que ainda não têm valor">📋 Copiar datas de Atual → ${VERSAO_LABEL[_versaoData]}</button>`:''}
           <span style="color:#333;margin:0 4px;">|</span>
           ${['dia','semana','mes','trimestre','ano'].map(z=>`<button class="btn btn-sm ${zoomGantt===z?'btn-primario':'btn-secundario'}" onclick="Planejamento.setZoom('${z}')" style="font-size:.7rem;padding:2px 8px;">${z.charAt(0).toUpperCase()+z.slice(1)}</button>`).join('')}
           <span style="color:#333;margin:0 4px;">|</span>
@@ -3214,7 +3214,31 @@ const Planejamento = (() => {
     }
   }
 
-  return{init,carregar,setZoom,setVersaoData,inserirTarefa,editarTarefa,salvarTarefa,excluirTarefa,
+  async function copiarDatasDeAtual(){
+    const v=_versaoData;
+    if(v==='atual')return;
+    const campos=VERSAO_CAMPOS[v];
+    // Só copia tarefas que NÃO têm valor na versão de destino
+    const semDatas=tarefas.filter(t=>!t[campos.ini]&&!t[campos.fim]&&(t.inicioPlanejado||t.terminoPlanejado));
+    if(!semDatas.length){Utils.toast('Todas as tarefas já têm datas na versão '+VERSAO_LABEL[v]+'.','alerta');return;}
+    if(!confirm(`Copiar datas de Atual para ${VERSAO_LABEL[v]} em ${semDatas.length} tarefa(s) que ainda não têm valor? Tarefas que já têm datas em ${VERSAO_LABEL[v]} não serão afetadas.`))return;
+    Utils.mostrarLoading(`Copiando datas para ${VERSAO_LABEL[v]}...`);
+    try{
+      const LOTE=50;
+      for(let i=0;i<semDatas.length;i+=LOTE){
+        await Promise.all(semDatas.slice(i,i+LOTE).map(t=>{
+          const upd={[campos.ini]:t.inicioPlanejado||'',[campos.fim]:t.terminoPlanejado||''};
+          t[campos.ini]=upd[campos.ini];t[campos.fim]=upd[campos.fim];
+          return Database.atualizar(obraId,COL,t.id,upd).catch(console.error);
+        }));
+      }
+      _buildFiltradas();_render();
+      Utils.toast(`${semDatas.length} tarefas atualizadas em ${VERSAO_LABEL[v]}.`,'sucesso');
+    }catch(e){console.error(e);Utils.toast('Erro ao copiar datas.','erro');}
+    finally{Utils.esconderLoading();}
+  }
+
+  return{init,carregar,setZoom,setVersaoData,copiarDatasDeAtual,inserirTarefa,editarTarefa,salvarTarefa,excluirTarefa,
     selectIdx,toggleRecolher,recuarNivel,avancarNivel,
     toggleGantt,hideCol,showColsMenu,_showCol,_showAll,
     toggleArvoreEditor,_arvToggle,_arvExpandirTudo,_arvIniciarEdit,_arvCancelarEdit,_arvSalvarNome,
