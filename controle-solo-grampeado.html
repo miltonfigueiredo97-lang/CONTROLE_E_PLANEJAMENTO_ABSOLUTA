@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Mão de Obra — Controle e Planejamento de Obras</title>
+  <title>Controle de Solo Grampeado — Controle e Planejamento de Obras</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/base.css">
@@ -13,7 +13,7 @@
 </head>
 <body>
 <div class="app-container">
-  <aside class="sidebar">
+    <aside class="sidebar">
     <div class="sidebar-logo">
       <img src="assets/images/logo-absoluta.png" class="logo-full" alt="Absoluta"
            onerror="this.parentElement.innerHTML='<div class=\'logo-fallback\'><div class=\'logo-icon\'><span style=\'font-size:1.3rem;font-weight:900;color:#000;\'>A</span></div><div class=\'logo-text\'>ABSOLUTA<span>Controle de Obras</span></div></div>'">
@@ -49,72 +49,81 @@
     </nav>
     <div class="sidebar-user">
       <div class="user-avatar">U</div>
-      <div class="user-info"><div class="user-name">Usuário</div><div class="user-role">—</div></div>
+      <div class="user-info">
+        <div class="user-name">Usuário</div>
+        <div class="user-role">—</div>
+      </div>
       <button class="btn-logout" onclick="Auth.logout()" title="Sair">⏻</button>
     </div>
   </aside>
+
   <header class="header">
-    <div class="header-title"><h1>Mão de Obra</h1></div>
-    <div class="header-actions" id="header-actions"></div>
+    <div class="header-title">
+      <h1>Controle de Solo Grampeado</h1>
+      <div class="header-breadcrumb"><a href="controle.html">Controle</a><span class="sep">›</span><span>Solo Grampeado</span></div>
+    </div>
+    <div class="header-actions"></div>
   </header>
-  <main class="content">
-    <div id="mdo-content"></div>
-  </main>
+
+  <main class="content" id="sgc-content"></main>
 </div>
 
-<!-- MODAL: Biblioteca — Nova/Editar Mão de Obra -->
-<div class="modal-overlay" id="modal-mdo-bib">
-  <div class="modal" style="max-width:520px;">
+<!-- MODAL: Lançar Execução do Chumbador -->
+<div class="modal-overlay" id="modal-sgc-execucao">
+  <div class="modal" style="max-width:480px;">
     <div class="modal-header">
-      <h3 id="modal-mdo-bib-titulo">Nova Mão de Obra</h3>
-      <button class="modal-close" onclick="Utils.fecharModal('modal-mdo-bib')">&times;</button>
+      <h3 id="sgc-modal-exec-titulo">✎ Execução</h3>
+      <button class="modal-close" onclick="Utils.fecharModal('modal-sgc-execucao')">&times;</button>
     </div>
     <div class="modal-body">
-      <form id="form-mdo-bib" onsubmit="event.preventDefault()">
-        <div class="form-grupo"><label>Nome *</label>
-          <input type="text" name="nome" class="form-control" placeholder="Ex: Pedreiro, Empreiteira Alvenaria" required></div>
-        <div class="form-grupo"><label>Categoria</label>
-          <select name="categoria" class="form-control">
-            <option value="">— Selecione —</option>
-            <option value="Pedreiro">Pedreiro</option>
-            <option value="Servente">Servente</option>
-            <option value="Ajudante">Ajudante</option>
-            <option value="Carpinteiro">Carpinteiro</option>
-            <option value="Armador">Armador</option>
-            <option value="Eletricista">Eletricista</option>
-            <option value="Encanador / Hidráulica">Encanador / Hidráulica</option>
-            <option value="Pintor">Pintor</option>
-            <option value="Gesseiro">Gesseiro</option>
-            <option value="Azulejista">Azulejista</option>
-            <option value="Empreiteira / Terceirizado">Empreiteira / Terceirizado</option>
-            <option value="Outro">Outro</option>
-          </select></div>
-        <div class="form-grupo"><label>Observações</label>
-          <textarea name="observacoes" class="form-control" rows="2"></textarea></div>
+      <form id="form-sgc-execucao" onsubmit="event.preventDefault()">
+        <p class="text-sm text-muted mb-1">Preencha as datas conforme as etapas forem concluídas (deixe em branco se ainda não realizada):</p>
+        <div class="form-row">
+          <div class="form-grupo"><label>Furo</label><input type="date" name="dataFuro" class="form-control"></div>
+          <div class="form-grupo"><label>Injeção 1ª Parte</label><input type="date" name="dataInjecao1" class="form-control"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-grupo"><label>Injeção 2ª Parte</label><input type="date" name="dataInjecao2" class="form-control"></div>
+          <div class="form-grupo"><label>Conclusão</label><input type="date" name="dataConclusao" class="form-control"></div>
+        </div>
       </form>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-mdo-bib')">Cancelar</button>
-      <button class="btn btn-primario" onclick="MaoDeObra.salvarMaoDeObraBib()">Salvar na Biblioteca</button>
+      <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-sgc-execucao')">Cancelar</button>
+      <button class="btn btn-primario" onclick="SGC_UI.salvarExecucao()">Salvar</button>
     </div>
   </div>
 </div>
 
-<!-- MODAL: Vincular / Criar Mão de Obra -->
-<div class="modal-overlay" id="modal-mdo-vinc">
-  <div class="modal" style="max-width:580px;">
+<!-- MODAL: Produção Diária -->
+<div class="modal-overlay" id="modal-sgc-producao">
+  <div class="modal modal-lg">
     <div class="modal-header">
-      <h3 id="modal-mdo-vinc-titulo">Vincular Mão de Obra à Tarefa</h3>
-      <button class="modal-close" onclick="Utils.fecharModal('modal-mdo-vinc')">&times;</button>
+      <h3>📅 Produção Diária</h3>
+      <button class="modal-close" onclick="Utils.fecharModal('modal-sgc-producao')">&times;</button>
     </div>
-    <div class="modal-body" id="mdo-vinc-body"></div>
+    <div class="modal-body" id="sgc-producao-body"></div>
     <div class="modal-footer">
-      <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-mdo-vinc')">Cancelar</button>
-      <button class="btn btn-primario" onclick="MaoDeObra.salvarVinculo()">Salvar</button>
+      <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-sgc-producao')">Fechar</button>
     </div>
   </div>
 </div>
 
+<!-- MODAL: Área Executada -->
+<div class="modal-overlay" id="modal-sgc-area">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <h3>📐 Área Executada por Vista</h3>
+      <button class="modal-close" onclick="Utils.fecharModal('modal-sgc-area')">&times;</button>
+    </div>
+    <div class="modal-body" id="sgc-area-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-sgc-area')">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Firebase SDKs -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -126,7 +135,8 @@
 <script src="js/permissions.js"></script>
 <script src="js/audit.js"></script>
 <script src="js/utils.js"></script>
-<script src="js/mao-de-obra.js"></script>
-<script>document.addEventListener('DOMContentLoaded', () => { MaoDeObra.init(); });</script>
+<script src="js/solo-grampeado-calculos.js"></script>
+<script src="js/controle-solo-grampeado.js"></script>
+<script>document.addEventListener('DOMContentLoaded', () => { ControleSoloGrampeado.init(); });</script>
 </body>
 </html>

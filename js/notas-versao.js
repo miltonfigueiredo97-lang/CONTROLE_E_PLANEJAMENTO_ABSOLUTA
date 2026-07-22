@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.46.0',
+  versaoAtual: 'V2.47.0',
 
   versoes: [
     {
@@ -4312,7 +4312,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.46.0',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-21',
       tipo: 'funcionalidade',
       titulo: 'Novos módulos: Solo Grampeado e Terraplanagem (Levantamento)',
@@ -4361,6 +4361,46 @@ const NotasVersao = {
         'Fórmulas conferidas contra os dados reais da planilha do Milton',
         '  antes de publicar (ex: área da seção V1 = 285,71 m² bateu',
         '  exatamente com o valor calculado no Excel).',
+      ]
+    },
+    {
+      versao: 'V2.47.0',
+      status: 'aberta',
+      data: '2026-07-22',
+      tipo: 'melhoria',
+      titulo: 'Solo Grampeado e Terraplanagem separados em Levantamento x Controle',
+      itens: [
+        'ORDEM DO HUB DE LEVANTAMENTOS: Solo Grampeado, Terraplanagem,',
+        '  Concreto, Aço, Paredes, Piso, Teto, Pintura, Fachada (nessa',
+        '  ordem). A seção de Bases de Quantitativos/Composições não',
+        '  foi alterada.',
+        '',
+        'SEPARAÇÃO LEVANTAMENTO x CONTROLE: os dois módulos novos da',
+        '  V2.46.0 misturavam cadastro (quantitativo) com execução',
+        '  (datas, produção diária) numa página só. Corrigido para',
+        '  seguir o mesmo padrão do Concreto:',
+        '',
+        '⛏️ Levantamento de Solo Grampeado agora só tem Vistas e o',
+        '  cadastro/importação de Chumbadores (número, vista, tipo,',
+        '  comprimento — sem datas de execução).',
+        '✅ Controle de Solo Grampeado (NOVO — card no hub de Controle):',
+        '  lançamento da execução de cada chumbador (datas de Furo,',
+        '  Injeção 1ª/2ª Parte, Conclusão — status derivado igual antes),',
+        '  Produção Diária, Área Executada por Vista e a Curva de',
+        '  Progresso migraram todos pra cá.',
+        '',
+        '🚚 Levantamento de Terraplanagem agora só tem a Calculadora de',
+        '  Corte de Terra (seções), Config (empolamento/capacidades) e',
+        '  Cadastro de Caminhões.',
+        '✅ Controle de Terraplanagem (NOVO — card no hub de Controle):',
+        '  Registro de Viagens/Remoções e o progresso de volume',
+        '  removido x previsto migraram pra cá.',
+        '',
+        'Navegação: cada módulo só é alcançado pelo seu próprio hub',
+        '  (Levantamentos ou Controle) — sem atalho de Levantamento',
+        '  para Controle no cabeçalho, mesma regra já aplicada ao',
+        '  Concreto. Controle ainda linka de volta pro Levantamento',
+        '  quando não há dados cadastrados (mesmo padrão do Concreto).',
       ]
     }
   ],

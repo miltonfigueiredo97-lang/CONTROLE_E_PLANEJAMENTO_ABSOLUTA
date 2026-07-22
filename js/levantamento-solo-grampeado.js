@@ -1,9 +1,9 @@
 // ============================================
 // Módulo: Levantamento de Solo Grampeado
-// Chumbadores (grampos/ancoragens), vistas (faces),
-// produção diária e área executada por vista.
-// Port do sistema de acompanhamento das abas S.GRAMPEADO*
-// do Obra Essence V9.6.6.
+// Vistas (faces) e Chumbadores (grampos/ancoragens) —
+// cadastro/quantitativo, sem dados de execução.
+// A execução (datas, produção diária, área executada,
+// curva de progresso) fica em Controle de Solo Grampeado.
 // Dados: Firestore obras/{obraId}/sg*
 // ============================================
 
@@ -11,20 +11,13 @@ const LevantamentoSoloGrampeado = (() => {
   const SG = SoloGrampeadoCalculos;
   const COL_VISTAS = 'sgVistas';
   const COL_CHUMBADORES = 'sgChumbadores';
-  const COL_PRODUCAO = 'sgProducaoDiaria';
-  const COL_AREA = 'sgAreaExecutada';
 
   let obraId = null;
   let vistas = [];
   let chumbadores = [];
-  let producao = [];
-  let areaExecutada = [];
 
-  let fBusca = '', fVista = 'todas', fTipo = 'todos', fStatus = 'todos';
+  let fBusca = '', fVista = 'todas', fTipo = 'todos';
   let chumbEditId = null;
-  let vistaEditId = null;
-  let producaoEditId = null;
-  let areaEditId = null;
   let previewImport = [];
 
   // ══════════════════════════════════════════
@@ -46,13 +39,11 @@ const LevantamentoSoloGrampeado = (() => {
   async function carregar() {
     Utils.mostrarLoading();
     try {
-      const [vs, cs, ps, as_] = await Promise.all([
+      const [vs, cs] = await Promise.all([
         Database.listar(obraId, COL_VISTAS, null),
         Database.listar(obraId, COL_CHUMBADORES, null),
-        Database.listar(obraId, COL_PRODUCAO, null),
-        Database.listar(obraId, COL_AREA, null),
       ]);
-      vistas = vs; chumbadores = cs; producao = ps; areaExecutada = as_;
+      vistas = vs; chumbadores = cs;
       renderizar();
     } catch (e) {
       console.error(e);
@@ -65,7 +56,7 @@ const LevantamentoSoloGrampeado = (() => {
   async function recarregar() {
     obraId = Router.getObraId();
     if (!obraId) return;
-    fBusca = ''; fVista = 'todas'; fTipo = 'todos'; fStatus = 'todos';
+    fBusca = ''; fVista = 'todas'; fTipo = 'todos';
     await carregar();
   }
 
@@ -82,37 +73,29 @@ const LevantamentoSoloGrampeado = (() => {
   function renderizar() {
     const c = document.getElementById('sg-content');
     if (!c) return;
-    const kpis = SG.calcKPIsChumbadores(chumbadores);
-    const totalArea = areaExecutada.reduce((s, a) => s + (SG.num(a.area)), 0);
-    const diasProducao = producao.length;
+    const mlTotal = chumbadores.reduce((s, c) => s + SG.num(c.comprimento), 0);
+    const verticais = chumbadores.filter(c => c.tipo === 'Vertical').length;
+    const horizontais = chumbadores.filter(c => c.tipo === 'Horizontal').length;
 
     c.innerHTML = `
       <div class="cc-view">
       <div class="page-header">
         <div>
           <h2>⛏️ Levantamento de Solo Grampeado</h2>
-          <span class="subtitulo">Chumbadores, produção diária e área executada por vista</span>
+          <span class="subtitulo">Vistas e chumbadores (grampos/ancoragens) — cadastro e quantitativo</span>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <button class="btn btn-secundario btn-sm" onclick="SG_UI.abrirVistas()">◈ Vistas</button>
           <button class="btn btn-secundario btn-sm" onclick="SG_UI.abrirImportar()">⊞ Importar Lote</button>
-          <button class="btn btn-secundario btn-sm" onclick="SG_UI.abrirProducaoDiaria()">📅 Produção Diária</button>
-          <button class="btn btn-secundario btn-sm" onclick="SG_UI.abrirAreaExecutada()">📐 Área Executada</button>
           <button class="btn btn-primario btn-sm" onclick="SG_UI.abrirNovoChumbador()">+ Novo Chumbador</button>
         </div>
       </div>
 
-      <div class="cc-kpiGrid" style="grid-template-columns:repeat(5,1fr);">
-        <div class="cc-kpi"><div class="cc-kpiIcon">⛏️</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Chumbadores</div><div class="cc-kpiValue">${kpis.total}</div><div class="cc-kpiSub">${kpis.verticais} vert. · ${kpis.horizontais} horiz.</div></div></div>
-        <div class="cc-kpi cc-kpiGreen"><div class="cc-kpiIcon">✅</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Concluídos</div><div class="cc-kpiValue">${kpis.concluidos}</div><div class="cc-kpiSub">${SG.fmt1(kpis.pct)}%</div></div></div>
-        <div class="cc-kpi cc-kpiBlue"><div class="cc-kpiIcon">📏</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Metros Lineares</div><div class="cc-kpiValue">${SG.fmt1(kpis.mlFeito)}<span class="cc-kpiUnit">ml</span></div><div class="cc-kpiSub">de ${SG.fmt1(kpis.mlTotal)} ml previstos</div></div></div>
-        <div class="cc-kpi cc-kpiPurple"><div class="cc-kpiIcon">📐</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Área Executada</div><div class="cc-kpiValue">${SG.fmt1(totalArea)}<span class="cc-kpiUnit">m²</span></div></div></div>
-        <div class="cc-kpi cc-kpiOrange"><div class="cc-kpiIcon">📅</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Dias com produção</div><div class="cc-kpiValue">${diasProducao}</div></div></div>
-      </div>
-
-      <div class="cc-panel">
-        <div class="cc-panelTitle">📈 Curva de Progresso (Chumbadores Concluídos)</div>
-        <div id="sg-curva"></div>
+      <div class="cc-kpiGrid" style="grid-template-columns:repeat(4,1fr);">
+        <div class="cc-kpi"><div class="cc-kpiIcon">⛏️</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Chumbadores</div><div class="cc-kpiValue">${chumbadores.length}</div><div class="cc-kpiSub">${verticais} vert. · ${horizontais} horiz.</div></div></div>
+        <div class="cc-kpi cc-kpiBlue"><div class="cc-kpiIcon">📏</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Metros Lineares Previstos</div><div class="cc-kpiValue">${SG.fmt1(mlTotal)}<span class="cc-kpiUnit">ml</span></div></div></div>
+        <div class="cc-kpi"><div class="cc-kpiIcon">◈</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Vistas cadastradas</div><div class="cc-kpiValue">${vistas.length}</div></div></div>
+        <div class="cc-kpi"><div class="cc-kpiIcon">✅</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Execução</div><div class="cc-kpiValue" style="font-size:14px;">Ver em Controle</div></div></div>
       </div>
 
       <div class="cc-panel">
@@ -127,16 +110,11 @@ const LevantamentoSoloGrampeado = (() => {
             <option value="todos">Todos os tipos</option>
             ${SG.TIPOS_CHUMBADOR.map(t => `<option value="${t}" ${fTipo === t ? 'selected' : ''}>${t}</option>`).join('')}
           </select>
-          <select class="form-control" id="sg-f-status" style="max-width:170px;" onchange="SG_UI.onFiltro()">
-            <option value="todos">Todos os status</option>
-            ${['Pendente', 'Furo feito', 'Injeção 1ª Parte', 'Injeção 2ª Parte', 'Concluído'].map(s => `<option value="${esc(s)}" ${fStatus === s ? 'selected' : ''}>${esc(s)}</option>`).join('')}
-          </select>
         </div>
         <div id="sg-tabela-chumbadores"></div>
       </div>
       </div>
     `;
-    renderCurva();
     renderTabelaChumbadores();
   }
 
@@ -144,43 +122,10 @@ const LevantamentoSoloGrampeado = (() => {
     fBusca = document.getElementById('sg-busca').value;
     fVista = document.getElementById('sg-f-vista').value;
     fTipo = document.getElementById('sg-f-tipo').value;
-    fStatus = document.getElementById('sg-f-status').value;
     renderTabelaChumbadores();
   }
 
-  // ── Curva de progresso (SVG simples) ──
-  function renderCurva() {
-    const el = document.getElementById('sg-curva');
-    if (!el) return;
-    const dados = SG.calcCurvaProgresso(chumbadores);
-    if (!dados.length) { el.innerHTML = `<div class="cc-empty">Nenhum chumbador concluído ainda.</div>`; return; }
-    const w = 600, h = 180, padL = 44, padB = 26, padT = 14;
-    const chartW = w - padL - 10, chartH = h - padT - padB;
-    const maxPct = 100;
-    const pts = dados.map((d, i) => {
-      const x = padL + (dados.length > 1 ? (i / (dados.length - 1)) * chartW : 0);
-      const y = padT + chartH - (d.pctAcumulado / maxPct) * chartH;
-      return `${x.toFixed(1)},${y.toFixed(1)}`;
-    }).join(' ');
-    const grades = [0, 25, 50, 75, 100].map(g => {
-      const y = padT + chartH - (g / maxPct) * chartH;
-      return `<line x1="${padL}" y1="${y}" x2="${w - 10}" y2="${y}" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="${g === 0 ? '0' : '4,4'}"/>
-        <text x="${padL - 6}" y="${y + 4}" text-anchor="end" font-size="10" fill="#94a3b8" font-family="JetBrains Mono,monospace">${g}%</text>`;
-    }).join('');
-    const ultimo = dados[dados.length - 1];
-    el.innerHTML = `
-      <svg viewBox="0 0 ${w} ${h}" width="100%" style="max-width:${w}px;">
-        ${grades}
-        <polyline points="${pts}" fill="none" stroke="var(--cor-primaria)" stroke-width="2.5"/>
-        <circle cx="${pts.split(' ').pop().split(',')[0]}" cy="${pts.split(' ').pop().split(',')[1]}" r="4" fill="var(--cor-primaria-dark,#b8960a)"/>
-        <line x1="${padL}" y1="${padT + chartH}" x2="${w - 10}" y2="${padT + chartH}" stroke="#cbd5e1" stroke-width="1.5"/>
-      </svg>
-      <div style="font-family:var(--font-mono);font-size:0.78rem;color:var(--cor-texto-secundario);margin-top:6px;">
-        Último registro: ${esc(ultimo.data)} · ${SG.fmt1(ultimo.pctAcumulado)}% acumulado (${ultimo.acumulado} chumbadores)
-      </div>`;
-  }
-
-  // ── Tabela de chumbadores ──
+  // ── Tabela de chumbadores (spec, sem status de execução) ──
   function renderTabelaChumbadores() {
     const el = document.getElementById('sg-tabela-chumbadores');
     if (!el) return;
@@ -188,7 +133,6 @@ const LevantamentoSoloGrampeado = (() => {
     const lista = chumbadores.filter(c => {
       if (fVista !== 'todas' && c.vista !== fVista) return false;
       if (fTipo !== 'todos' && c.tipo !== fTipo) return false;
-      if (fStatus !== 'todos' && SG.statusChumbador(c) !== fStatus) return false;
       if (busca && !String(c.numero).toLowerCase().includes(busca)) return false;
       return true;
     }).sort((a, b) => (a.numero || 0) - (b.numero || 0));
@@ -197,21 +141,19 @@ const LevantamentoSoloGrampeado = (() => {
       el.innerHTML = `<div class="cc-empty">⛏️<br>Nenhum chumbador cadastrado. Adicione um ou importe em lote.</div>`;
       return;
     }
+    const mlFiltro = lista.reduce((s, c) => s + SG.num(c.comprimento), 0);
     el.innerHTML = `
       <div class="cc-tableWrap" style="max-height:480px;overflow-y:auto;">
       <table class="cc-table">
-        <thead><tr><th>Nº</th><th>Vista</th><th>Tipo</th><th class="col-num">Comp. (ml)</th><th>Status</th><th class="col-acoes"></th></tr></thead>
+        <thead><tr><th>Nº</th><th>Vista</th><th>Tipo</th><th class="col-num">Comp. (ml)</th><th class="col-acoes"></th></tr></thead>
         <tbody>
           ${lista.map(c => {
-            const status = SG.statusChumbador(c);
-            const badge = status === 'Concluído' ? 'cc-badgeComplete' : status === 'Pendente' ? 'cc-badgePending' : 'cc-badgePartial';
             const v = vistas.find(x => x.id === c.vista);
             return `<tr>
               <td style="font-weight:600;">${esc(c.numero)}</td>
               <td>${esc(v ? vistaLabel(v) : '—')}</td>
               <td>${esc(c.tipo)}</td>
               <td class="col-num cc-tdMono">${SG.fmt1(c.comprimento)}</td>
-              <td><span class="cc-badge ${badge}">${esc(status)}</span></td>
               <td class="col-acoes">
                 <button class="btn btn-secundario btn-sm" onclick="SG_UI.abrirEditarChumbador('${c.id}')">✎</button>
                 <button class="btn btn-secundario btn-sm" style="color:var(--cv-red);" onclick="SG_UI.excluirChumbador('${c.id}')">🗑</button>
@@ -219,6 +161,7 @@ const LevantamentoSoloGrampeado = (() => {
             </tr>`;
           }).join('')}
         </tbody>
+        <tfoot><tr><td colspan="3" style="font-weight:700;">${lista.length} chumbador${lista.length !== 1 ? 'es' : ''}</td><td class="col-num cc-tdMono" style="font-weight:700;">${SG.fmt1(mlFiltro)}</td><td></td></tr></tfoot>
       </table>
       </div>`;
   }
@@ -298,7 +241,7 @@ const LevantamentoSoloGrampeado = (() => {
   }
 
   // ══════════════════════════════════════════
-  // CRUD DE CHUMBADORES
+  // CRUD DE CHUMBADORES (spec — sem datas de execução)
   // ══════════════════════════════════════════
   function optVistas(sel) {
     return `<option value="">— sem vista —</option>` + vistasOrdenadas().map(v =>
@@ -325,10 +268,6 @@ const LevantamentoSoloGrampeado = (() => {
     f.querySelector('[name=tipo]').innerHTML = SG.TIPOS_CHUMBADOR.map(t => `<option value="${t}" ${t === c.tipo ? 'selected' : ''}>${t}</option>`).join('');
     f.querySelector('[name=numero]').value = c.numero ?? '';
     f.querySelector('[name=comprimento]').value = c.comprimento ?? '';
-    f.querySelector('[name=dataFuro]').value = c.dataFuro || '';
-    f.querySelector('[name=dataInjecao1]').value = c.dataInjecao1 || '';
-    f.querySelector('[name=dataInjecao2]').value = c.dataInjecao2 || '';
-    f.querySelector('[name=dataConclusao]').value = c.dataConclusao || '';
     Utils.abrirModal('modal-sg-chumbador');
   }
 
@@ -338,17 +277,13 @@ const LevantamentoSoloGrampeado = (() => {
     const vista = f.querySelector('[name=vista]').value;
     const tipo = f.querySelector('[name=tipo]').value;
     const comprimento = SG.num(f.querySelector('[name=comprimento]').value);
-    const dataFuro = f.querySelector('[name=dataFuro]').value;
-    const dataInjecao1 = f.querySelector('[name=dataInjecao1]').value;
-    const dataInjecao2 = f.querySelector('[name=dataInjecao2]').value;
-    const dataConclusao = f.querySelector('[name=dataConclusao]').value;
     if (!numero || !(comprimento > 0)) {
       Utils.toast('Preencha o número e o comprimento (maior que zero).', 'alerta');
       return;
     }
     Utils.mostrarLoading();
     try {
-      const data = { numero, vista, tipo, comprimento, dataFuro, dataInjecao1, dataInjecao2, dataConclusao };
+      const data = { numero, vista, tipo, comprimento };
       if (chumbEditId) {
         await Database.atualizar(obraId, COL_CHUMBADORES, chumbEditId, data);
         Utils.toast(`✓ Chumbador ${numero} atualizado!`, 'sucesso');
@@ -368,11 +303,15 @@ const LevantamentoSoloGrampeado = (() => {
   async function excluirChumbador(id) {
     const c = chumbadores.find(x => x.id === id);
     if (!c) return;
-    const ok = await Utils.confirmar(`Excluir o chumbador ${c.numero}?`);
+    const ok = await Utils.confirmar(`Excluir o chumbador ${c.numero}? Isso também remove o histórico de execução dele em Controle.`);
     if (!ok) return;
     Utils.mostrarLoading();
     try {
-      await Database.deletar(obraId, COL_CHUMBADORES, id);
+      const ops = [{ type: 'delete', ref: Database.ref(obraId, COL_CHUMBADORES).doc(id) }];
+      // Remove também a execução vinculada (Controle), se existir
+      const execSnap = await db.collection('obras').doc(obraId).collection('sgExecucoes').where('chumbadorId', '==', id).get();
+      execSnap.forEach(doc => ops.push({ type: 'delete', ref: doc.ref }));
+      await Database.batchWrite(ops);
       Utils.toast('Chumbador excluído.', 'sucesso');
       await carregar();
     } catch (e) {
@@ -474,7 +413,6 @@ const LevantamentoSoloGrampeado = (() => {
         data: {
           numero: p.numero, tipo: p.tipo, comprimento: p.comprimento,
           vista: vistasExistentes.get(String(p.vistaNum)) || '',
-          dataFuro: '', dataInjecao1: '', dataInjecao2: '', dataConclusao: '',
           obraId,
         },
       }));
@@ -492,180 +430,11 @@ const LevantamentoSoloGrampeado = (() => {
     }
   }
 
-  // ══════════════════════════════════════════
-  // PRODUÇÃO DIÁRIA (Grampos/Extras/Estacas)
-  // ══════════════════════════════════════════
-  function abrirProducaoDiaria() {
-    producaoEditId = null;
-    renderProducaoDiaria();
-    Utils.abrirModal('modal-sg-producao');
-  }
-
-  function renderProducaoDiaria() {
-    const el = document.getElementById('sg-producao-body');
-    if (!el) return;
-    const lista = [...producao].sort((a, b) => (b.data || '').localeCompare(a.data || ''));
-    const totalMl = producao.reduce((s, p) => s + SG.mlDiaProducao(p), 0);
-    el.innerHTML = `
-      <div class="form-row">
-        <div class="form-grupo"><label>Data</label><input type="date" id="sg-prod-data" class="form-control" value="${esc(Utils.hoje())}"></div>
-      </div>
-      <div class="form-row">
-        <div class="form-grupo"><label>Grampos (uni)</label><input type="text" inputmode="decimal" id="sg-prod-grampos" class="form-control" placeholder="0"></div>
-        <div class="form-grupo"><label>Tamanho Grampos (m)</label><input type="text" inputmode="decimal" id="sg-prod-tgrampos" class="form-control" placeholder="0"></div>
-      </div>
-      <div class="form-row">
-        <div class="form-grupo"><label>Extras (uni)</label><input type="text" inputmode="decimal" id="sg-prod-extras" class="form-control" placeholder="0"></div>
-        <div class="form-grupo"><label>Tamanho Extras (m)</label><input type="text" inputmode="decimal" id="sg-prod-textras" class="form-control" placeholder="0"></div>
-      </div>
-      <div class="form-row">
-        <div class="form-grupo"><label>Estacas (uni)</label><input type="text" inputmode="decimal" id="sg-prod-estacas" class="form-control" placeholder="0"></div>
-        <div class="form-grupo"><label>Tamanho Estacas (m)</label><input type="text" inputmode="decimal" id="sg-prod-testacas" class="form-control" placeholder="0"></div>
-      </div>
-      <button class="btn btn-primario btn-sm" onclick="SG_UI.salvarProducaoDiaria()">+ Registrar dia</button>
-      <div class="cc-divider"></div>
-      <div style="font-family:var(--font-mono);font-size:0.8rem;color:var(--cor-texto-secundario);margin-bottom:8px;">Total acumulado: <b>${SG.fmt1(totalMl)} ml</b></div>
-      ${!lista.length ? `<div class="cc-empty">Nenhum dia registrado ainda.</div>` : `
-      <div class="cc-tableWrap" style="max-height:260px;overflow-y:auto;">
-        <table class="cc-table">
-          <thead><tr><th>Data</th><th class="col-num">Grampos</th><th class="col-num">Extras</th><th class="col-num">Estacas</th><th class="col-num">ml/dia</th><th class="col-acoes"></th></tr></thead>
-          <tbody>
-            ${lista.map(p => `
-              <tr>
-                <td class="cc-tdMono">${esc(p.data)}</td>
-                <td class="col-num cc-tdMono">${p.grampos || 0}</td>
-                <td class="col-num cc-tdMono">${p.extras || 0}</td>
-                <td class="col-num cc-tdMono">${p.estacas || 0}</td>
-                <td class="col-num cc-tdAccent" style="font-weight:700;">${SG.fmt1(SG.mlDiaProducao(p))}</td>
-                <td class="col-acoes"><button class="btn btn-secundario btn-sm" style="color:var(--cv-red);" onclick="SG_UI.excluirProducaoDiaria('${p.id}')">🗑</button></td>
-              </tr>`).join('')}
-          </tbody>
-        </table>
-      </div>`}`;
-  }
-
-  async function salvarProducaoDiaria() {
-    const data = document.getElementById('sg-prod-data').value;
-    if (!data) { Utils.toast('Informe a data.', 'alerta'); return; }
-    const reg = {
-      data,
-      grampos: SG.num(document.getElementById('sg-prod-grampos').value),
-      tamanhoGrampos: SG.num(document.getElementById('sg-prod-tgrampos').value),
-      extras: SG.num(document.getElementById('sg-prod-extras').value),
-      tamanhoExtras: SG.num(document.getElementById('sg-prod-textras').value),
-      estacas: SG.num(document.getElementById('sg-prod-estacas').value),
-      tamanhoEstacas: SG.num(document.getElementById('sg-prod-testacas').value),
-    };
-    Utils.mostrarLoading();
-    try {
-      await Database.criar(obraId, COL_PRODUCAO, reg, SG.genId('pd'));
-      Utils.toast('✓ Produção do dia registrada!', 'sucesso');
-      await carregar();
-      renderProducaoDiaria();
-    } catch (e) {
-      Utils.toast('Erro: ' + e.message, 'erro');
-    } finally {
-      Utils.esconderLoading();
-    }
-  }
-
-  async function excluirProducaoDiaria(id) {
-    const ok = await Utils.confirmar('Excluir este registro de produção diária?');
-    if (!ok) return;
-    Utils.mostrarLoading();
-    try {
-      await Database.deletar(obraId, COL_PRODUCAO, id);
-      await carregar();
-      renderProducaoDiaria();
-    } catch (e) {
-      Utils.toast('Erro: ' + e.message, 'erro');
-    } finally {
-      Utils.esconderLoading();
-    }
-  }
-
-  // ══════════════════════════════════════════
-  // ÁREA EXECUTADA POR VISTA
-  // ══════════════════════════════════════════
-  function abrirAreaExecutada() {
-    areaEditId = null;
-    renderAreaExecutada();
-    Utils.abrirModal('modal-sg-area');
-  }
-
-  function renderAreaExecutada() {
-    const el = document.getElementById('sg-area-body');
-    if (!el) return;
-    const lista = [...areaExecutada].sort((a, b) => (b.data || '').localeCompare(a.data || ''));
-    const total = areaExecutada.reduce((s, a) => s + SG.num(a.area), 0);
-    el.innerHTML = `
-      <div class="form-row">
-        <div class="form-grupo"><label>Data</label><input type="date" id="sg-area-data" class="form-control" value="${esc(Utils.hoje())}"></div>
-        <div class="form-grupo"><label>Vista</label><select id="sg-area-vista" class="form-control">${optVistas('')}</select></div>
-      </div>
-      <div class="form-grupo"><label>Área executada (m²)</label><input type="text" inputmode="decimal" id="sg-area-valor" class="form-control" placeholder="0"></div>
-      <button class="btn btn-primario btn-sm" onclick="SG_UI.salvarAreaExecutada()">+ Registrar</button>
-      <div class="cc-divider"></div>
-      <div style="font-family:var(--font-mono);font-size:0.8rem;color:var(--cor-texto-secundario);margin-bottom:8px;">Total acumulado: <b>${SG.fmt1(total)} m²</b></div>
-      ${!lista.length ? `<div class="cc-empty">Nenhum registro de área ainda.</div>` : `
-      <div class="cc-tableWrap" style="max-height:260px;overflow-y:auto;">
-        <table class="cc-table">
-          <thead><tr><th>Data</th><th>Vista</th><th class="col-num">Área (m²)</th><th class="col-acoes"></th></tr></thead>
-          <tbody>
-            ${lista.map(a => {
-              const v = vistas.find(x => x.id === a.vista);
-              return `<tr>
-                <td class="cc-tdMono">${esc(a.data)}</td>
-                <td>${esc(v ? vistaLabel(v) : '—')}</td>
-                <td class="col-num cc-tdAccent" style="font-weight:700;">${SG.fmt1(a.area)}</td>
-                <td class="col-acoes"><button class="btn btn-secundario btn-sm" style="color:var(--cv-red);" onclick="SG_UI.excluirAreaExecutada('${a.id}')">🗑</button></td>
-              </tr>`;
-            }).join('')}
-          </tbody>
-        </table>
-      </div>`}`;
-  }
-
-  async function salvarAreaExecutada() {
-    const data = document.getElementById('sg-area-data').value;
-    const vista = document.getElementById('sg-area-vista').value;
-    const area = SG.num(document.getElementById('sg-area-valor').value);
-    if (!data || !(area > 0)) { Utils.toast('Informe data e área maior que zero.', 'alerta'); return; }
-    Utils.mostrarLoading();
-    try {
-      await Database.criar(obraId, COL_AREA, { data, vista, area }, SG.genId('ae'));
-      Utils.toast('✓ Área registrada!', 'sucesso');
-      await carregar();
-      renderAreaExecutada();
-    } catch (e) {
-      Utils.toast('Erro: ' + e.message, 'erro');
-    } finally {
-      Utils.esconderLoading();
-    }
-  }
-
-  async function excluirAreaExecutada(id) {
-    const ok = await Utils.confirmar('Excluir este registro de área?');
-    if (!ok) return;
-    Utils.mostrarLoading();
-    try {
-      await Database.deletar(obraId, COL_AREA, id);
-      await carregar();
-      renderAreaExecutada();
-    } catch (e) {
-      Utils.toast('Erro: ' + e.message, 'erro');
-    } finally {
-      Utils.esconderLoading();
-    }
-  }
-
   return {
     init, recarregar, renderizar, onFiltro,
     abrirVistas, salvarVista, excluirVista,
     abrirNovoChumbador, abrirEditarChumbador, salvarChumbador, excluirChumbador,
     abrirImportar, baixarModeloTSV, onImportTexto, onImportArquivo, salvarImport,
-    abrirProducaoDiaria, salvarProducaoDiaria, excluirProducaoDiaria,
-    abrirAreaExecutada, salvarAreaExecutada, excluirAreaExecutada,
   };
 })();
 
