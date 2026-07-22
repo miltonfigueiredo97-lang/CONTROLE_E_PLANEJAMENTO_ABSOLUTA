@@ -203,13 +203,14 @@ const Utils = (() => {
       }
       return out;
     }
+    // Peso = duração da tarefa (nunca quantidade) — mesma regra de
+    // obras.js:_calcularProgresso, pra não divergir do Dashboard/KPIs.
     function percCalculado(t){
       const f=filhosDiretos(t);
       if(!f.length)return Math.min(100,Math.max(0,parseFloat(t.percentualConcluido)||0));
-      const todosComQtd=f.every(x=>parseFloat(x.quantidade)>0);
       let sp=0,sw=0;
       for(const x of f){
-        const w=todosComQtd?parseFloat(x.quantidade):1;
+        const w=Math.max(1,parseFloat(x.duracao)||1);
         sp+=percCalculado(x)*w;sw+=w;
       }
       return sw?sp/sw:0;

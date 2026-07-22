@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.53.1',
+  versaoAtual: 'V2.53.2',
 
   versoes: [
     {
@@ -4649,7 +4649,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.53.1',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-22',
       tipo: 'correcao',
       titulo: 'CRÍTICO: início/término sumindo — versão Base/Desafio ficando ativa',
@@ -4664,6 +4664,25 @@ const NotasVersao = {
         'Aviso vermelho aparece na toolbar quando não está em Atual,',
         '  com instrução clara de como voltar.',
         'Borda do seletor fica vermelha quando não está em Atual.',
+      ]
+    },
+    {
+      versao: 'V2.53.2',
+      status: 'aberta',
+      data: '2026-07-22',
+      tipo: 'correcao',
+      titulo: 'Diário: cascata de % em família ponderava por quantidade, não duração',
+      itens: [
+        'CAUSA: Utils.percFamilia().percCalculado() (usada pelo Diário para',
+        '  recalcular % dos pais/avós ao salvar avanço de uma tarefa-folha)',
+        '  ponderava os filhos por quantidade quando todos tinham quantidade',
+        '  preenchida. obras.js:_calcularProgresso (Dashboard/KPIs/Curva S)',
+        '  sempre pondera por duração — os dois podiam divergir para a',
+        '  mesma tarefa-pai.',
+        'CORREÇÃO: percCalculado agora pondera sempre por duração',
+        '  (peso = Math.max(1, duracao || 1)), igual ao Dashboard.',
+        'Efeito: o % que o Diário grava nos pais/avós ao dar baixa numa',
+        '  tarefa-folha agora bate exatamente com o % mostrado no Dashboard.',
       ]
     }
   ],
