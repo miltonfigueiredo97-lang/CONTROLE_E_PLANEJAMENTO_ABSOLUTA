@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.47.0',
+  versaoAtual: 'V2.48.0',
 
   versoes: [
     {
@@ -4365,7 +4365,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.47.0',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-22',
       tipo: 'melhoria',
       titulo: 'Solo Grampeado e Terraplanagem separados em Levantamento x Controle',
@@ -4401,6 +4401,39 @@ const NotasVersao = {
         '  para Controle no cabeçalho, mesma regra já aplicada ao',
         '  Concreto. Controle ainda linka de volta pro Levantamento',
         '  quando não há dados cadastrados (mesmo padrão do Concreto).',
+      ]
+    },
+    {
+      versao: 'V2.48.0',
+      status: 'aberta',
+      data: '2026-07-22',
+      tipo: 'funcionalidade',
+      titulo: 'Novo módulo: Produção',
+      itens: [
+        'NOVO MÓDULO PRODUÇÃO (aba Produção, logo abaixo de Controle):',
+        '  calcula a produtividade real (unidade/dia) de cada tarefa',
+        '  do Planejamento, cruzando quantidade total (do Levantamento',
+        '  ou digitada manualmente), % concluído e o histórico diário',
+        '  de execução já gravado automaticamente pelo sistema.',
+        '',
+        '  → Fórmula: qtdProduzida = quantidade × variação de % desde',
+        '    o início real da tarefa; dias = do 1º snapshot de execução',
+        '    até hoje; produção = qtdProduzida ÷ dias.',
+        '  → Tarefa sem histórico ainda (pré-existente ao sistema de',
+        '    snapshots) usa o Início Planejado como estimativa,',
+        '    marcada com ≈ pra não confundir com dado real.',
+        '  → Tarefas-pai (ex: Fachada) agregam os filhos somando a',
+        '    quantidade produzida real e dividindo pelos dias corridos',
+        '    do período — nunca faz média das taxas dos filhos.',
+        '  → Unidades diferentes entre irmãos não são somadas (mostra',
+        '    "unid. mistas").',
+        '  → Tarefa sem quantidade vinculada permite digitar o total',
+        '    manualmente direto na tela de Produção.',
+        '',
+        'NOVA COLUNA "Equipe" no Planejamento: nº de pessoas alocadas',
+        '  por tarefa, editável igual às demais colunas. Alimenta a',
+        '  produção por pessoa em Produção (mesmo campo nos dois',
+        '  módulos — equipeAlocada).',
       ]
     }
   ],

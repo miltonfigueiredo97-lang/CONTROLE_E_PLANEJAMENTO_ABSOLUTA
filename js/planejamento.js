@@ -42,13 +42,13 @@ const Planejamento = (() => {
   }
 
   // Colunas: ordem editável, largura editável
-  let colOrdem=['sel','num','status','nivel','codigo','nome','inicio','termino','duracao','percEsp','percConc','predecessora','responsavel','local','grupo','quantidade','custoMaterial','custoMaoObra','acoes'];
-  let colLarguras={sel:28,num:36,status:34,nivel:42,codigo:70,nome:250,inicio:88,termino:88,duracao:60,percEsp:72,percConc:78,predecessora:80,responsavel:100,local:80,grupo:80,quantidade:110,custoMaterial:100,custoMaoObra:100,acoes:64};
+  let colOrdem=['sel','num','status','nivel','codigo','nome','inicio','termino','duracao','percEsp','percConc','predecessora','responsavel','local','grupo','quantidade','equipe','custoMaterial','custoMaoObra','acoes'];
+  let colLarguras={sel:28,num:36,status:34,nivel:42,codigo:70,nome:250,inicio:88,termino:88,duracao:60,percEsp:72,percConc:78,predecessora:80,responsavel:100,local:80,grupo:80,quantidade:110,equipe:60,custoMaterial:100,custoMaoObra:100,acoes:64};
   let colsHidden=new Set();
 
-  const COL_LABELS={sel:'',num:'#',status:'',nivel:'Nível',codigo:'Código',nome:'Tarefa',inicio:'Início',termino:'Término',duracao:'Duração',percEsp:'% Esperado',percConc:'% Concluído',predecessora:'Predecessora',responsavel:'Responsável',local:'Local',grupo:'Grupo',quantidade:'Quantidade',custoMaterial:'Custo Material',custoMaoObra:'Custo M.Obra',acoes:''};
+  const COL_LABELS={sel:'',num:'#',status:'',nivel:'Nível',codigo:'Código',nome:'Tarefa',inicio:'Início',termino:'Término',duracao:'Duração',percEsp:'% Esperado',percConc:'% Concluído',predecessora:'Predecessora',responsavel:'Responsável',local:'Local',grupo:'Grupo',quantidade:'Quantidade',equipe:'Equipe',custoMaterial:'Custo Material',custoMaoObra:'Custo M.Obra',acoes:''};
   const COL_FIXED=new Set(['sel','num','status','nome','acoes']);
-  const COL_EDITABLE=new Set(['codigo','nome','inicio','termino','duracao','percEsp','percConc','predecessora','responsavel','local','grupo','nivel']);
+  const COL_EDITABLE=new Set(['codigo','nome','inicio','termino','duracao','percEsp','percConc','predecessora','responsavel','local','grupo','nivel','equipe']);
 
   // ===================== VÍNCULOS COM LEVANTAMENTO =====================
   // Tela separada (não é a visão de Gantt) onde cada tarefa do Planejamento
@@ -1318,6 +1318,8 @@ const Planejamento = (() => {
           cells+=`<div style="${base}color:${vinc?'var(--cor-primaria)':'#555'};font-size:.7rem;justify-content:flex-end;font-family:var(--font-mono);gap:3px;"
             title="${vinc?'Vinculado a '+(LEVANTAMENTO_MODULOS[t.levantamentoModulo]?.label||t.levantamentoModulo):'Manual'}">
             ${vinc?'🔗 ':''}${t.quantidade?_fQtd(t.quantidade)+' '+(t.unidade||''):'—'}</div>`;
+        } else if(cid==='equipe'){
+          cells+=`<div style="${base}color:#555;font-size:.7rem;justify-content:center;cursor:pointer;" ${clickEdit}>${t.equipeAlocada?t.equipeAlocada+' 👷':'—'}</div>`;
         } else if(cid==='custoMaterial'){
           const cm=custoMaterialPorTarefa.get(t.id)||0;
           cells+=`<div style="${base}color:#8a8;font-size:.68rem;justify-content:flex-end;font-family:var(--font-mono);">${cm?'R$ '+_fMoeda(cm):'—'}</div>`;
@@ -1407,11 +1409,12 @@ const Planejamento = (() => {
     const cell=e.currentTarget;
     const map={codigo:'codigo',nome:'nome',inicio:'inicioPlanejado',termino:'terminoPlanejado',
       duracao:'duracao',percEsp:'percentualEsperado',percConc:'percentualConcluido',
-      predecessora:'predecessora',responsavel:'responsavel',local:'local',grupo:'grupo',nivel:'nivel'};
+      predecessora:'predecessora',responsavel:'responsavel',local:'local',grupo:'grupo',nivel:'nivel',
+      equipe:'equipeAlocada'};
     const field=map[colId]; if(!field)return;
     const val=t[field]||'';
     const isDate=colId==='inicio'||colId==='termino';
-    const isNum=colId==='duracao'||colId==='percEsp'||colId==='percConc'||colId==='nivel';
+    const isNum=colId==='duracao'||colId==='percEsp'||colId==='percConc'||colId==='nivel'||colId==='equipe';
 
     const input=document.createElement('input');
     input.type=isDate?'date':isNum?'number':'text';
@@ -1430,7 +1433,7 @@ const Planejamento = (() => {
       _editandoCelula=false;
       let v=input.value.trim();
       if(isNum)v=parseFloat(v)||0;
-      if(field==='duracao')v=parseInt(v)||0;
+      if(field==='duracao'||field==='equipeAlocada')v=parseInt(v)||0;
       
       // Lógica de datas automática
       const updates={[field]:v};
