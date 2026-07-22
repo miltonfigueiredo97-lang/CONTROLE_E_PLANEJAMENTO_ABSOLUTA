@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.49.0',
+  versaoAtual: 'V2.50.0',
 
   versoes: [
     {
@@ -4438,7 +4438,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.49.0',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-09',
       tipo: 'funcionalidade',
       titulo: 'Diário: pauta por categoria + % recomendadas + datas reais',
@@ -4461,6 +4461,32 @@ const NotasVersao = {
         '  lançamento retroativo grava início/término REAL na data',
         '  certa no Planejamento. Lançar 100% atualiza o término real',
         '  para a data informada. CORRIGIDO: antes gravava a data de hoje.',
+      ]
+    },
+    {
+      versao: 'V2.50.0',
+      status: 'aberta',
+      data: '2026-07-09',
+      tipo: 'funcionalidade',
+      titulo: 'Pauta do Diário: visão Por Serviço / Por Local',
+      itens: [
+        'NOVO seletor no topo da pauta: "Por Serviço" x "Por Local"',
+        '  (a escolha fica salva no navegador). Por Serviço agrupa por',
+        '  Gesso Liso, Alvenaria, Prumadas... (extraído do prefixo do',
+        '  nome da tarefa antes dos dois pontos); Por Local agrupa por',
+        '  Térreo, 1° Pavimento... (campo Grupo do Planejamento)',
+        'CORRIGIDO: ordenação — locais em ordem natural de obra',
+        '  (Subsolo → Térreo → 1° → 2° → ... → Cobertura) e serviços',
+        '  em ordem alfabética. Antes ficava na ordem de aparição.',
+        'Dentro de cada categoria, subdivisores da visão oposta',
+        '  (serviço dentro do andar, ou andar dentro do serviço),',
+        '  também ordenados',
+        'NOVO "Lançar em todas" no subdivisor: aplica o mesmo % de',
+        '  uma vez a todas as tarefas pendentes do bloco (1 lançamento',
+        '  por tarefa, com percAntes correto e data retroativa)',
+        'Cabeçalho da categoria ganhou barrinha de progresso das',
+        '  tratadas — mais rápido de varrer na reunião',
+        'Atrasadas seguem a mesma visão selecionada',
       ]
     }
   ],

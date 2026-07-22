@@ -23,6 +23,9 @@ const Diario = (() => {
   let _buscaPauta='';      // busca p/ adicionar tarefa do planejamento à pauta
   let _formAberto=false;   // formulário "fora da pauta"
   let _atrasAberto=false;  // seção de atrasadas expandida
+  let _visao=(typeof localStorage!=='undefined'&&localStorage.getItem('diario_visao'))||'servico'; // 'local'|'servico'
+  let _subExp=null;        // subgrupo com "Lançar em todos" aberto
+  let _subReg={};          // {chave:[ids das folhas]} — montado no render
   let _avulsas=[];         // tarefas avulsas pendentes (rolam entre dias)
   const COL='tarefas', COLD='diario';
   const DIAS=['dom','seg','ter','qua','qui','sex','sáb'];
@@ -152,18 +155,53 @@ const Diario = (() => {
     return grupos;
   }
 
-  // Agrupa por CATEGORIA (campo "grupo" da tarefa no Planejamento, ex:
-  // Estrutura, Elétrica, Hidráulica...) e, dentro, por pai direto.
-  // Categoria vazia cai em "Sem grupo". Ordem: primeira aparição.
-  function _agruparPorCategoria(folhas){
-    const cats=[],idx=new Map();
+  // ===== VISÃO DA PAUTA: por LOCAL (campo grupo) ou por SERVIÇO =====
+  // Serviço = prefixo do nome antes de ':' (ex: "Gesso Liso: 1° Pav - F02"
+  // → "Gesso Liso"); sem ':', usa o nome do pai; sem pai, o próprio nome.
+  function _servico(t){
+    const n=(t.nome||'').trim();
+    if(n.includes(':'))return n.split(':')[0].trim()||'Sem serviço';
+    const pai=Utils.percFamilia(tarefas).ancestrais(t)[0];
+    return (pai&&(pai.nome||'').trim())||n||'Sem serviço';
+  }
+  function _local(t){return ((t.grupo||'').trim())||'Sem local';}
+
+  // Ordenação natural de locais de obra: Subsolo → Térreo → 1°..N° → Cobertura → resto
+  function _ordLocal(nome){
+    const n=_norm(nome);
+    const num=parseInt((n.match(/\d+/)||[])[0]||'0',10);
+    if(n.includes('subsolo'))return -1000+num;
+    if(n.includes('terreo'))return -500;
+    if(n.includes('cobertura'))return 100000;
+    if(/\d/.test(n))return num;
+    return 200000; // sem número: vai pro fim, ordem alfabética
+  }
+  function _cmpLocal(a,b){const d=_ordLocal(a)-_ordLocal(b);return d!==0?d:a.localeCompare(b,'pt-BR');}
+  function _cmpAlfa(a,b){return a.localeCompare(b,'pt-BR');}
+
+  // Agrupa em 2 níveis conforme a visão:
+  // 'local'  → categoria = local (andar), sub = serviço (alfabético)
+  // 'servico'→ categoria = serviço (alfabético), sub = local (natural)
+  function _agruparPauta(folhas){
+    const catFn=_visao==='servico'?_servico:_local;
+    const subFn=_visao==='servico'?_local:_servico;
+    const catCmp=_visao==='servico'?_cmpAlfa:_cmpLocal;
+    const subCmp=_visao==='servico'?_cmpLocal:_cmpAlfa;
+    const map=new Map();
     for(const t of folhas){
-      const nome=(t.grupo||'').trim()||'Sem grupo';
-      if(!idx.has(nome)){idx.set(nome,cats.length);cats.push({nome,itens:[]});}
-      cats[idx.get(nome)].itens.push(t);
+      const cn=catFn(t);
+      if(!map.has(cn))map.set(cn,new Map());
+      const sub=map.get(cn);
+      const sn=subFn(t);
+      if(!sub.has(sn))sub.set(sn,[]);
+      sub.get(sn).push(t);
     }
-    for(const c of cats)c.subgrupos=_agruparPorPai(c.itens);
-    return cats;
+    return [...map.keys()].sort(catCmp).map(cn=>{
+      const sub=map.get(cn);
+      const subgrupos=[...sub.keys()].sort(subCmp).map(sn=>({nome:sn,itens:sub.get(sn)}));
+      const itens=subgrupos.flatMap(s=>s.itens);
+      return {nome:cn,subgrupos,itens};
+    });
   }
 
   // % previsto pelo planejamento para o dia do diário (linear pelas
@@ -300,6 +338,45 @@ const Diario = (() => {
     finally{Utils.esconderLoading();}
   }
   function toggleAtrasadas(){_atrasAberto=!_atrasAberto;_render();}
+  function setVisao(v){
+    _visao=v==='local'?'local':'servico';
+    try{localStorage.setItem('diario_visao',_visao);}catch(e){}
+    _subExp=null;_render();
+  }
+  function pautaAbrirSub(sk){_subExp=sk;_pautaExp={};_render();
+    requestAnimationFrame(()=>{const i=document.querySelector('[id^="sb-perc-"]');if(i)i.focus();});}
+  function pautaFecharSub(){_subExp=null;_render();}
+  // Aplica o mesmo % a todas as folhas pendentes do subgrupo:
+  // 1 lançamento por tarefa (percAntes correto) + gravação no Planejamento.
+  async function pautaSalvarSub(sk,sfx){
+    const ids=_subReg[sk]||[];
+    if(!ids.length){Utils.toast('Nenhuma tarefa pendente neste bloco.','alerta');return;}
+    const v=parseFloat(document.getElementById('sb-perc-'+sfx)?.value);
+    if(isNaN(v)){Utils.toast('Informe o %.','alerta');return;}
+    const percDepois=Math.min(100,Math.max(0,v));
+    const dtISO=(document.getElementById('sb-dt-'+sfx)?.value||'').trim()||_iso(diaRef);
+    const atv=(document.getElementById('sb-atv-'+sfx)?.value||'').trim();
+    try{
+      Utils.mostrarLoading(`Lançando em ${ids.length} tarefa(s)...`);
+      for(const tid of ids){
+        const t=tarefas.find(x=>x.id===tid);if(!t)continue;
+        await Database.criar(obraId,COLD,{
+          data:_iso(diaRef),tarefaId:tid,
+          tarefaLabel:(t.codigo?t.codigo+' ':'')+(t.nome||''),
+          atividade:atv||'Avanço lançado em lote pela pauta',
+          status:percDepois>=100?'executado':'parcial',
+          percAntes:t.percentualConcluido||0,percDepois,
+          motivo:'',detalhe:'',obraId,
+          createdAt:new Date().toISOString(),
+        });
+        await _gravarAvanco(t,percDepois,dtISO);
+      }
+      _subExp=null;
+      await _loadDia();_render();
+      Utils.toast(`Lançado em ${ids.length} tarefa(s)!`,'sucesso');
+    }catch(e){console.error(e);Utils.toast('Erro ao salvar.','erro');}
+    finally{Utils.esconderLoading();}
+  }
   function toggleGrupo(pid){
     if(_grpAberto.has(pid))_grpAberto.delete(pid);else _grpAberto.add(pid);
     _render();
@@ -333,14 +410,14 @@ const Diario = (() => {
   function pautaAddExtra(id){
     _extras.add(id);_skips.delete(id);_buscaPauta='';
     const t=tarefas.find(x=>x.id===id);
-    // Abre a categoria da tarefa para o card aparecer na hora
+    // Abre a categoria da tarefa (na visão atual) para o card aparecer na hora
     if(t){
       const {previstas}=_pautaItens();
-      const vis=previstas.filter(x=>!_skips.has(x.id));
-      const cats=_agruparPorCategoria(vis);
-      const nome=(((t.grupo||'').trim())||'Sem grupo');
+      const visL=previstas.filter(x=>!_skips.has(x.id));
+      const cats=_agruparPauta(visL);
+      const nome=_visao==='servico'?_servico(t):_local(t);
       const ci=cats.findIndex(c=>c.nome===nome);
-      if(ci>=0)_grpAberto.add('cat:'+ci);
+      if(ci>=0)_grpAberto.add('cat:'+_visao+':'+ci);
     }
     _render();
     Utils.toast('Tarefa adicionada à pauta.','sucesso');
@@ -434,55 +511,63 @@ const Diario = (() => {
     lancamentosDia.forEach(l=>{if(l.tarefaId)lancMap.set(l.tarefaId,l);});
     const fam=Utils.percFamilia(tarefas);
     const vis=previstas.filter(t=>!_skips.has(t.id));
-    const cats=_agruparPorCategoria(vis);
+    const cats=_agruparPauta(vis);
     const feitos=vis.filter(t=>lancMap.has(t.id)).length;
+    _subReg={};
 
-    // Divisor de pai dentro da categoria, com "Lançar no grupo"
-    const paiDivH=(p,itens)=>{
-      if(!p)return'';
-      const percPai=Math.round(fam.percCalculado(p)*10)/10;
-      const qPai=parseFloat(p.quantidade)||0;
-      const exp=_pautaExp[p.id];
-      let paiExp='';
-      if(exp==='andou'){
-        paiExp=`<div class="pt-exp" style="margin:8px 12px;">
-          <div><label>% do grupo</label><input type="number" id="pt-perc-${p.id}" min="0" max="100" step="1" value="${percPai}" style="width:90px;" oninput="Diario.pautaPreview('${p.id}')" onkeydown="if(event.key==='Enter')Diario.pautaSalvarAvanco('${p.id}')"></div>
-          <div><label title="Data usada para início/término real">Data</label><input type="date" id="pt-dt-${p.id}" value="${_iso(diaRef)}" style="width:135px;"></div>
-          <div style="flex:1;min-width:140px;"><label>O que foi feito (opcional)</label><input type="text" id="pt-atv-${p.id}" style="width:100%;"></div>
-          <button class="btn btn-sm btn-primario" title="Grava o % no grupo e distribui para todas as subtarefas" onclick="Diario.pautaSalvarAvanco('${p.id}')">Lançar no grupo</button>
-          <button class="btn btn-sm btn-outline" title="Fechar sem salvar" onclick="Diario.pautaFechar()">✕</button>
-          <div class="pt-prev" style="color:#b45309;">⚠ Distribui o % para TODAS as subtarefas do grupo.</div>
+    // Sub-divisor (serviço ou local, conforme a visão) com "Lançar em todos"
+    const subDivH=(s,ci,si)=>{
+      const sk=`sub:${ci}:${si}`;
+      const pend=s.itens.filter(t=>!lancMap.has(t.id));
+      _subReg[sk]=pend.map(t=>t.id);
+      const exp=_subExp===sk;
+      let expH='';
+      if(exp){
+        expH=`<div class="pt-exp" style="margin:8px 12px;">
+          <div><label>% p/ todas</label><input type="number" id="sb-perc-${ci}-${si}" min="0" max="100" step="1" style="width:90px;" onkeydown="if(event.key==='Enter')Diario.pautaSalvarSub('${sk}','${ci}-${si}')"></div>
+          <div><label title="Data usada para início/término real">Data</label><input type="date" id="sb-dt-${ci}-${si}" value="${_iso(diaRef)}" style="width:135px;"></div>
+          <div style="flex:1;min-width:140px;"><label>O que foi feito (opcional)</label><input type="text" id="sb-atv-${ci}-${si}" style="width:100%;"></div>
+          <button class="btn btn-sm btn-primario" title="Aplica o % a todas as tarefas pendentes deste bloco" onclick="Diario.pautaSalvarSub('${sk}','${ci}-${si}')">Lançar em todas</button>
+          <button class="btn btn-sm btn-outline" title="Fechar sem salvar" onclick="Diario.pautaFecharSub()">✕</button>
+          <div class="pt-prev" style="color:#b45309;">⚠ Aplica o mesmo % às ${pend.length} tarefa(s) ainda não tratadas deste bloco.</div>
         </div>`;
       }
       return `<div style="padding:6px 12px;background:#f1f5f9;font-size:.76rem;font-weight:800;color:#334155;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;gap:8px;">
-        <span style="flex:1;">${_esc(p.nome||'')}</span>
-        <span style="font-weight:600;color:#64748b;">${percPai}%${qPai?` · ${_fmtQtd(qPai)} ${_esc(p.unidade||'un')}`:''}</span>
-        ${exp?'':`<button style="border:1px solid #cbd5e1;background:#fff;border-radius:6px;padding:2px 8px;cursor:pointer;font-size:.68rem;font-weight:700;color:#475569;" title="Lança o % no grupo inteiro e distribui para as subtarefas" onclick="Diario.pautaAbrir('${p.id}','andou')">Lançar no grupo</button>`}
-      </div>${paiExp}`;
+        <span style="flex:1;">${_esc(s.nome)}</span>
+        <span style="font-weight:600;color:#64748b;">${s.itens.length-pend.length}/${s.itens.length}</span>
+        ${exp||!pend.length?'':`<button style="border:1px solid #cbd5e1;background:#fff;border-radius:6px;padding:2px 8px;cursor:pointer;font-size:.68rem;font-weight:700;color:#475569;" title="Lançar o mesmo % em todas as tarefas pendentes deste bloco" onclick="Diario.pautaAbrirSub('${sk}')">Lançar em todas</button>`}
+      </div>${expH}`;
     };
 
-    // Categoria (campo "grupo" do Planejamento) — recolhível
+    // Categoria (nível 1: local ou serviço, conforme a visão) — recolhível
     const catH=(c,ci)=>{
-      const k='cat:'+ci;
-      const aberto=_grpAberto.has(k)||c.itens.some(t=>_pautaExp[t.id])||c.subgrupos.some(g=>g.pai&&_pautaExp[g.pai.id]);
+      const k='cat:'+_visao+':'+ci;
+      const aberto=_grpAberto.has(k)||c.itens.some(t=>_pautaExp[t.id])||(_subExp&&_subExp.startsWith(`sub:${ci}:`));
       const tratadas=c.itens.filter(t=>lancMap.has(t.id)).length;
+      const pct=c.itens.length?Math.round(tratadas/c.itens.length*100):0;
       return `<div class="pt-grupo">
-        <div class="pt-grupo-h" style="cursor:pointer;" title="${aberto?'Recolher':'Expandir'} categoria" onclick="Diario.toggleGrupo('${k}')">
+        <div class="pt-grupo-h" style="cursor:pointer;" title="${aberto?'Recolher':'Expandir'}" onclick="Diario.toggleGrupo('${k}')">
           <span class="nm">${aberto?'▾':'▸'} ${_esc(c.nome)}</span>
-          <span class="inf">${tratadas}/${c.itens.length} tratadas</span>
+          <span class="inf">${tratadas}/${c.itens.length}</span>
+          <span style="width:70px;height:6px;background:#e2e8f0;border-radius:3px;overflow:hidden;flex-shrink:0;"><span style="display:block;height:100%;width:${pct}%;background:${pct>=100?'#16a34a':'#3b82f6'};"></span></span>
         </div>
-        ${aberto?c.subgrupos.map(g=>paiDivH(g.pai,g.itens)+g.itens.map(t=>_cardPauta(t,lancMap,false)).join('')).join(''):''}
+        ${aberto?c.subgrupos.map((s,si)=>subDivH(s,ci,si)+s.itens.map(t=>_cardPauta(t,lancMap,false)).join('')).join(''):''}
       </div>`;
     };
 
     const atrasVis=atrasadas.filter(t=>!_skips.has(t.id));
-    const gruposAtras=_agruparPorPai(atrasVis);
+    const catsAtras=_agruparPauta(atrasVis);
     const avPend=_avulsas.filter(a=>!a.concluida);
     const avDia=_avulsas.filter(a=>a.concluida);
 
     return `
     <div class="dia-sec-t" style="color:#0f172a;margin-top:0;">📌 Pauta do dia
       <span style="color:#94a3b8;font-weight:600;">(${feitos}/${vis.length} tratadas)</span>
+      <span style="flex:1;"></span>
+      <span style="display:inline-flex;border:1.5px solid #cbd5e1;border-radius:8px;overflow:hidden;font-size:.72rem;font-weight:800;">
+        <button title="Agrupar por serviço (Gesso, Alvenaria...)" onclick="Diario.setVisao('servico')" style="border:none;padding:5px 12px;cursor:pointer;${_visao==='servico'?'background:#0f172a;color:#fff;':'background:#fff;color:#64748b;'}">Por Serviço</button>
+        <button title="Agrupar por local (Térreo, 1° Pavimento...)" onclick="Diario.setVisao('local')" style="border:none;padding:5px 12px;cursor:pointer;${_visao==='local'?'background:#0f172a;color:#fff;':'background:#fff;color:#64748b;'}">Por Local</button>
+      </span>
     </div>
     ${vis.length?cats.map(catH).join(''):
       `<div style="background:#fff;border:1px dashed #cbd5e1;border-radius:10px;padding:18px;text-align:center;color:#94a3b8;font-size:.82rem;margin-bottom:10px;">Nenhuma tarefa prevista para este dia no Planejamento.</div>`}
@@ -501,9 +586,11 @@ const Diario = (() => {
         <span class="nm" style="color:#b45309;">⚠ Atrasadas — término já passou e não concluíram</span>
         <span class="inf" style="color:#b45309;font-weight:800;">${atrasVis.length} ${_atrasAberto?'▴':'▾'}</span>
       </div>
-      ${_atrasAberto?gruposAtras.map(g=>`
-        ${g.pai?`<div style="padding:6px 12px;background:#fef3c7;font-size:.76rem;font-weight:800;color:#92400e;border-bottom:1px solid #fde68a;">${_esc(g.pai.nome||'')}</div>`:''}
-        ${g.itens.map(t=>_cardPauta(t,lancMap,true)).join('')}`).join(''):''}
+      ${_atrasAberto?catsAtras.map(c=>`
+        <div style="padding:6px 12px;background:#fef3c7;font-size:.76rem;font-weight:800;color:#92400e;border-bottom:1px solid #fde68a;">${_esc(c.nome)}</div>
+        ${c.subgrupos.map(s=>`
+          ${c.subgrupos.length>1||s.nome!==c.nome?`<div style="padding:4px 12px;background:#fffbeb;font-size:.7rem;font-weight:700;color:#a16207;border-bottom:1px solid #fde68a;">${_esc(s.nome)}</div>`:''}
+          ${s.itens.map(t=>_cardPauta(t,lancMap,true)).join('')}`).join('')}`).join(''):''}
     </div>`:''}
 
     <div class="pt-grupo">
@@ -842,6 +929,7 @@ const Diario = (() => {
     salvar,editar,cancelarEdicao,excluir,gerarRelatorio,imprimirRelatorio,
     pautaAbrir,pautaFechar,pautaPular,pautaPreview,pautaSalvarAvanco,pautaSalvarParado,
     toggleAtrasadas,toggleGrupo,toggleForm,pautaBuscar,pautaAddExtra,
+    setVisao,pautaAbrirSub,pautaFecharSub,pautaSalvarSub,
     avulsaAdd,avulsaConcluir,avulsaExcluir};
 })();
 function onObraChanged(){Diario.init();}
