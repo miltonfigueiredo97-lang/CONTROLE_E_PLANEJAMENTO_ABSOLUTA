@@ -58,6 +58,20 @@ const Levantamento = (() => {
             <div class="mt-1"><span class="badge badge-sucesso">Disponível</span></div>
           </div>
         </div>
+        <div class="card obra-card" onclick="Router.navegar('levantamento-solo-grampeado.html')">
+          <div class="card-body">
+            <div class="obra-nome">⛏️ Solo Grampeado</div>
+            <div class="obra-info text-sm">Chumbadores (grampos/ancoragens) por vista, produção diária e área executada.</div>
+            <div class="mt-1"><span class="badge badge-sucesso">Disponível</span></div>
+          </div>
+        </div>
+        <div class="card obra-card" onclick="Router.navegar('levantamento-terraplanagem.html')">
+          <div class="card-body">
+            <div class="obra-nome">🚚 Terraplanagem</div>
+            <div class="obra-info text-sm">Volume de corte de terra por seções transversais, caminhões e remoção acumulada.</div>
+            <div class="mt-1"><span class="badge badge-sucesso">Disponível</span></div>
+          </div>
+        </div>
         <div class="card obra-card" onclick="Router.navegar('levantamento-piso.html')">
           <div class="card-body">
             <div class="obra-nome">🧩 Piso</div>

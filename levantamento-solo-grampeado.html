@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Levantamento de Concreto — Controle e Planejamento de Obras</title>
+  <title>Levantamento de Solo Grampeado — Controle e Planejamento de Obras</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/base.css">
@@ -59,124 +59,118 @@
 
   <header class="header">
     <div class="header-title">
-      <h1>Levantamento de Concreto</h1>
-      <div class="header-breadcrumb"><a href="levantamento.html">Levantamentos</a><span class="sep">›</span><span>Concreto</span></div>
+      <h1>Levantamento de Solo Grampeado</h1>
+      <div class="header-breadcrumb"><a href="levantamento.html">Levantamentos</a><span class="sep">›</span><span>Solo Grampeado</span></div>
     </div>
-    <div class="header-actions">
-      <button class="btn btn-secundario btn-sm" onclick="LC.abrirConfig()" title="Ordem dos andares">⚙️ Config</button>
-    </div>
+    <div class="header-actions"></div>
   </header>
 
-  <main class="content" id="lc-content"></main>
+  <main class="content" id="sg-content"></main>
 </div>
 
-<!-- MODAL: Calculadora de Concreto -->
-<div class="modal-overlay" id="modal-lc-calc">
-  <div class="modal modal-lg">
+<!-- MODAL: Vistas -->
+<div class="modal-overlay" id="modal-sg-vistas">
+  <div class="modal" style="max-width:560px;">
     <div class="modal-header">
-      <h3>📐 Calcular Concreto</h3>
-      <button class="modal-close" onclick="Utils.fecharModal('modal-lc-calc')">&times;</button>
+      <h3>◈ Vistas (Faces)</h3>
+      <button class="modal-close" onclick="Utils.fecharModal('modal-sg-vistas')">&times;</button>
     </div>
-    <div class="modal-body" id="lc-calc-body"></div>
+    <div class="modal-body" id="sg-vistas-body"></div>
     <div class="modal-footer">
-      <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-lc-calc')">Fechar</button>
+      <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-sg-vistas')">Fechar</button>
     </div>
   </div>
 </div>
 
-<!-- MODAL: Levantamento local -->
-<div class="modal-overlay" id="modal-lc-lev">
-  <div class="modal" style="max-width:620px;">
-    <div class="modal-header">
-      <h3>📋 Levantamento de Concreto</h3>
-      <button class="modal-close" onclick="Utils.fecharModal('modal-lc-lev')">&times;</button>
-    </div>
-    <div class="modal-body" id="lc-lev-body"></div>
-    <div class="modal-footer">
-      <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-lc-lev')">Fechar</button>
-    </div>
-  </div>
-</div>
-
-<!-- MODAL: Nova / Editar Peça -->
-<div class="modal-overlay" id="modal-lc-peca">
+<!-- MODAL: Novo/Editar Chumbador -->
+<div class="modal-overlay" id="modal-sg-chumbador">
   <div class="modal" style="max-width:520px;">
     <div class="modal-header">
-      <h3 id="lc-modal-peca-titulo">⬡ Nova Peça</h3>
-      <button class="modal-close" onclick="Utils.fecharModal('modal-lc-peca')">&times;</button>
+      <h3 id="sg-modal-chumb-titulo">⛏️ Novo Chumbador</h3>
+      <button class="modal-close" onclick="Utils.fecharModal('modal-sg-chumbador')">&times;</button>
     </div>
     <div class="modal-body">
-      <form id="form-lc-peca" onsubmit="event.preventDefault()">
-        <div class="form-grupo"><label>Nome</label><input type="text" name="nome" class="form-control" placeholder="ex: Pilar P-01" required></div>
+      <form id="form-sg-chumbador" onsubmit="event.preventDefault()">
+        <div class="form-row">
+          <div class="form-grupo"><label>Número</label><input type="text" name="numero" class="form-control" placeholder="1" required></div>
+          <div class="form-grupo"><label>Vista</label><select name="vista" class="form-control"></select></div>
+        </div>
         <div class="form-row">
           <div class="form-grupo"><label>Tipo</label><select name="tipo" class="form-control"></select></div>
-          <div class="form-grupo"><label>Andar</label><input type="text" name="andar" class="form-control" placeholder="ex: Térreo" list="lc-datalist-andares"><datalist id="lc-datalist-andares"></datalist></div>
+          <div class="form-grupo"><label>Comprimento (ml)</label><input type="number" name="comprimento" step="0.1" min="0.1" class="form-control" placeholder="5"></div>
         </div>
-        <div class="form-grupo"><label>Volume (m³)</label><input type="number" name="volume" class="form-control" step="0.0001" min="0.0001" placeholder="0.0000"></div>
+        <p class="text-sm text-muted mb-1">Datas das etapas (deixe em branco se ainda não realizada):</p>
+        <div class="form-row">
+          <div class="form-grupo"><label>Furo</label><input type="date" name="dataFuro" class="form-control"></div>
+          <div class="form-grupo"><label>Injeção 1ª Parte</label><input type="date" name="dataInjecao1" class="form-control"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-grupo"><label>Injeção 2ª Parte</label><input type="date" name="dataInjecao2" class="form-control"></div>
+          <div class="form-grupo"><label>Conclusão</label><input type="date" name="dataConclusao" class="form-control"></div>
+        </div>
       </form>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-lc-peca')">Cancelar</button>
-      <button class="btn btn-primario" onclick="LC.salvarPeca()">Salvar</button>
+      <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-sg-chumbador')">Cancelar</button>
+      <button class="btn btn-primario" onclick="SG_UI.salvarChumbador()">Salvar</button>
     </div>
   </div>
 </div>
 
 <!-- MODAL: Importar em lote -->
-<div class="modal-overlay" id="modal-lc-importar">
+<div class="modal-overlay" id="modal-sg-importar">
   <div class="modal modal-lg">
     <div class="modal-header">
-      <h3>⊞ Importar Peças em Lote</h3>
-      <button class="modal-close" onclick="Utils.fecharModal('modal-lc-importar')">&times;</button>
+      <h3>⊞ Importar Chumbadores em Lote</h3>
+      <button class="modal-close" onclick="Utils.fecharModal('modal-sg-importar')">&times;</button>
     </div>
     <div class="modal-body">
       <div style="background:var(--cor-primaria-light,#fef9e7);border:1px solid var(--cor-primaria);border-radius:8px;padding:10px 14px;font-size:0.82rem;margin-bottom:12px;">
-        <strong>Como usar:</strong> cole do Excel as colunas: Nome | Tipo | Andar | Volume (m³) — ou baixe o modelo abaixo.
+        <strong>Como usar:</strong> cole do Excel as colunas: Numero | Vista (número) | Tipo (Vertical/Horizontal) | Comprimento (ml). Vistas novas são criadas automaticamente.
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
-        <button class="btn btn-secundario" onclick="LC.baixarModeloTSV()">⬇ Baixar Modelo</button>
+        <button class="btn btn-secundario" onclick="SG_UI.baixarModeloTSV()">⬇ Baixar Modelo</button>
         <label class="btn btn-secundario" style="text-align:center;cursor:pointer;">
           📂 Carregar Arquivo (TSV/CSV)
-          <input type="file" accept=".tsv,.csv,.txt" style="display:none;" onchange="LC.onImportArquivo(this)">
+          <input type="file" accept=".tsv,.csv,.txt" style="display:none;" onchange="SG_UI.onImportArquivo(this)">
         </label>
       </div>
       <p class="text-sm text-muted mb-1" style="text-align:center;">— ou cole o conteúdo abaixo —</p>
-      <div id="lc-import-erro" style="display:none;background:#fee2e2;border:1px solid #ef4444;color:#991b1b;border-radius:8px;padding:8px 12px;font-size:0.8rem;margin-bottom:8px;"></div>
-      <textarea id="lc-import-texto" class="form-control" style="height:120px;font-family:var(--font-mono);font-size:0.8rem;resize:vertical;" placeholder="V201	VIGA	1º subsolo	3,17&#10;V202	VIGA	1º subsolo	1,32" oninput="LC.onImportTexto()"></textarea>
-      <div id="lc-import-preview"></div>
+      <div id="sg-import-erro" style="display:none;background:#fee2e2;border:1px solid #ef4444;color:#991b1b;border-radius:8px;padding:8px 12px;font-size:0.8rem;margin-bottom:8px;"></div>
+      <textarea id="sg-import-texto" class="form-control" style="height:120px;font-family:var(--font-mono);font-size:0.8rem;resize:vertical;" placeholder="1	1	Vertical	5&#10;2	1	Vertical	5" oninput="SG_UI.onImportTexto()"></textarea>
+      <div id="sg-import-preview"></div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-lc-importar')">Cancelar</button>
-      <button class="btn btn-primario" id="lc-import-btn" disabled onclick="LC.salvarImport()">✓ Importar</button>
+      <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-sg-importar')">Cancelar</button>
+      <button class="btn btn-primario" id="sg-import-btn" disabled onclick="SG_UI.salvarImport()">✓ Importar</button>
     </div>
   </div>
 </div>
 
-<!-- MODAL: Concretagens -->
-<div class="modal-overlay" id="modal-lc-conc">
+<!-- MODAL: Produção Diária -->
+<div class="modal-overlay" id="modal-sg-producao">
   <div class="modal modal-lg">
     <div class="modal-header">
-      <h3>◈ Concretagens</h3>
-      <button class="modal-close" onclick="Utils.fecharModal('modal-lc-conc')">&times;</button>
+      <h3>📅 Produção Diária</h3>
+      <button class="modal-close" onclick="Utils.fecharModal('modal-sg-producao')">&times;</button>
     </div>
-    <div class="modal-body" id="lc-conc-body"></div>
+    <div class="modal-body" id="sg-producao-body"></div>
     <div class="modal-footer">
-      <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-lc-conc')">Fechar</button>
+      <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-sg-producao')">Fechar</button>
     </div>
   </div>
 </div>
 
-<!-- MODAL: Configuração (ordem de andares) -->
-<div class="modal-overlay" id="modal-lc-config">
-  <div class="modal" style="max-width:560px;">
+<!-- MODAL: Área Executada -->
+<div class="modal-overlay" id="modal-sg-area">
+  <div class="modal modal-lg">
     <div class="modal-header">
-      <h3>⚙️ Configuração — Andares</h3>
-      <button class="modal-close" onclick="Utils.fecharModal('modal-lc-config')">&times;</button>
+      <h3>📐 Área Executada por Vista</h3>
+      <button class="modal-close" onclick="Utils.fecharModal('modal-sg-area')">&times;</button>
     </div>
-    <div class="modal-body" id="lc-config-body"></div>
+    <div class="modal-body" id="sg-area-body"></div>
     <div class="modal-footer">
-      <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-lc-config')">Cancelar</button>
-      <button class="btn btn-primario" onclick="LC.cfgSalvar()">✓ Salvar Configuração</button>
+      <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-sg-area')">Fechar</button>
     </div>
   </div>
 </div>
@@ -193,8 +187,8 @@
 <script src="js/permissions.js"></script>
 <script src="js/audit.js"></script>
 <script src="js/utils.js"></script>
-<script src="js/concreto-calculos.js"></script>
-<script src="js/levantamento-concreto.js"></script>
-<script>document.addEventListener('DOMContentLoaded', () => { LevantamentoConcreto.init(); });</script>
+<script src="js/solo-grampeado-calculos.js"></script>
+<script src="js/levantamento-solo-grampeado.js"></script>
+<script>document.addEventListener('DOMContentLoaded', () => { LevantamentoSoloGrampeado.init(); });</script>
 </body>
 </html>

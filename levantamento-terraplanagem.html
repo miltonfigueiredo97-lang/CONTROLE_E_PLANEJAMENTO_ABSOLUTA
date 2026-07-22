@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Levantamentos — Controle e Planejamento de Obras</title>
+  <title>Levantamento de Terraplanagem — Controle e Planejamento de Obras</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/base.css">
@@ -57,13 +57,58 @@
     </div>
   </aside>
 
-  <header class="header"><div class="header-title"><h1>Levantamentos</h1></div><div class="header-actions" id="header-actions"></div></header>
+  <header class="header">
+    <div class="header-title">
+      <h1>Levantamento de Terraplanagem</h1>
+      <div class="header-breadcrumb"><a href="levantamento.html">Levantamentos</a><span class="sep">›</span><span>Terraplanagem</span></div>
+    </div>
+    <div class="header-actions"></div>
+  </header>
 
-  <main class="content">
-    <div id="levantamento-content"></div>
-  </main>
+  <main class="content" id="tp-content"></main>
 </div>
 
+<!-- MODAL: Config -->
+<div class="modal-overlay" id="modal-tp-config">
+  <div class="modal" style="max-width:520px;">
+    <div class="modal-header">
+      <h3>⚙️ Configuração</h3>
+      <button class="modal-close" onclick="Utils.fecharModal('modal-tp-config')">&times;</button>
+    </div>
+    <div class="modal-body" id="tp-config-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-tp-config')">Cancelar</button>
+      <button class="btn btn-primario" onclick="TP_UI.salvarConfigBtn()">✓ Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Caminhões -->
+<div class="modal-overlay" id="modal-tp-caminhoes">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <h3>🚚 Caminhões</h3>
+      <button class="modal-close" onclick="Utils.fecharModal('modal-tp-caminhoes')">&times;</button>
+    </div>
+    <div class="modal-body" id="tp-caminhoes-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-tp-caminhoes')">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Registrar Viagem/Entrega -->
+<div class="modal-overlay" id="modal-tp-entrega">
+  <div class="modal" style="max-width:520px;">
+    <div class="modal-header">
+      <h3>+ Registrar Viagem</h3>
+      <button class="modal-close" onclick="Utils.fecharModal('modal-tp-entrega')">&times;</button>
+    </div>
+    <div class="modal-body" id="tp-entrega-form"></div>
+  </div>
+</div>
+
+<!-- Firebase SDKs -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -75,7 +120,8 @@
 <script src="js/permissions.js"></script>
 <script src="js/audit.js"></script>
 <script src="js/utils.js"></script>
-<script src="js/levantamento.js"></script>
-<script>document.addEventListener('DOMContentLoaded', () => { Levantamento.init(); });</script>
+<script src="js/terraplanagem-calculos.js"></script>
+<script src="js/levantamento-terraplanagem.js"></script>
+<script>document.addEventListener('DOMContentLoaded', () => { LevantamentoTerraplanagem.init(); });</script>
 </body>
 </html>
