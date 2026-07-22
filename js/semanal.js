@@ -379,8 +379,13 @@ const Semanal = (() => {
 
   async function _salvarTarefa(id,upd){
     try{
+      const tAntes=_t(id);
+      const camposAntes=tAntes?{...tAntes}:{};
       await Database.atualizar(obraId,COL,id,upd);
       const t=_t(id);if(t)Object.assign(t,upd);
+      for(const k of Object.keys(upd)){
+        Audit.campo(obraId,'Semanal',id,t?.nome,k,camposAntes[k],upd[k]).catch(()=>{});
+      }
       // ===== % EM FAMÍLIA =====
       // Helper compartilhado do Utils (mesma regra do Planejamento):
       // % em folha → recalcula ancestrais; % em pai → distribui p/ descendentes.

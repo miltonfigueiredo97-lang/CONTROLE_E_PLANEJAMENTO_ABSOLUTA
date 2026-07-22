@@ -317,6 +317,7 @@ const Medicoes = (() => {
           catch(e){console.error('foto',e);}
         }
         if(Object.keys(upd).length)await Database.atualizar(obraId,COL,id,upd).catch(console.error);
+        if(upd.percentualConcluido!=null)Audit.campo(obraId,'Medições',id,t.nome,'percentualConcluido',de,upd.percentualConcluido).catch(()=>{});
         Object.assign(t,upd);
         itens.push({taskId:id,nome:t.nome||'',de,para:novo,inicioReal:upd.inicioReal||t.inicioReal||'',terminoReal:(upd.terminoReal!=null?upd.terminoReal:t.terminoReal)||'',fotos:urls});
         n++;

@@ -5,6 +5,22 @@
 const Planejamento = (() => {
   let obraId=null, tarefas=[], filtradas=[];
   let zoomGantt='mes', editandoId=null, selectedIdx=-1;
+  // Versão de datas visualizada/editada: 'atual'|'base'|'desafio'.
+  // Atual = inicioPlanejado/terminoPlanejado (o cronograma de trabalho).
+  // Base = inicioPlanejadoBase/terminoPlanejadoBase (Linha de Base — imutável por design).
+  // Desafio = inicioDesafio/terminoDesafio (meta otimista).
+  // Editar em qualquer versão só grava nos campos DAQUELA versão — nunca mistura.
+  let _versaoData=(typeof localStorage!=='undefined'&&localStorage.getItem('planej_versaoData'))||'atual';
+  const VERSAO_CAMPOS={atual:{ini:'inicioPlanejado',fim:'terminoPlanejado'},
+    base:{ini:'inicioPlanejadoBase',fim:'terminoPlanejadoBase'},
+    desafio:{ini:'inicioDesafio',fim:'terminoDesafio'}};
+  const VERSAO_LABEL={atual:'Atual',base:'Linha de Base',desafio:'Desafio'};
+  function setVersaoData(v){
+    if(!VERSAO_CAMPOS[v])return;
+    _versaoData=v;
+    try{localStorage.setItem('planej_versaoData',v);}catch(e){}
+    _render();
+  }
   let splitX=440, ganttVisible=true;
   let _dragTaskId=null, _dropTargetId=null, _dropPos='before';
   let colsRecolhidas=new Set();
@@ -390,6 +406,10 @@ const Planejamento = (() => {
           <span style="font-size:.75rem;color:#555;">${filtradas.length} tarefas</span>
         </div>
         <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center;">
+          <span style="display:inline-flex;border:1.5px solid #333;border-radius:8px;overflow:hidden;font-size:.7rem;font-weight:700;" title="Qual versão de datas ver/editar nas colunas Início e Término">
+            ${['atual','base','desafio'].map(v=>`<button onclick="Planejamento.setVersaoData('${v}')" style="border:none;padding:4px 10px;cursor:pointer;${_versaoData===v?'background:var(--cor-primaria);color:#000;':'background:#111;color:#888;'}">${VERSAO_LABEL[v]}</button>`).join('')}
+          </span>
+          <span style="color:#333;margin:0 4px;">|</span>
           ${['dia','semana','mes','trimestre','ano'].map(z=>`<button class="btn btn-sm ${zoomGantt===z?'btn-primario':'btn-secundario'}" onclick="Planejamento.setZoom('${z}')" style="font-size:.7rem;padding:2px 8px;">${z.charAt(0).toUpperCase()+z.slice(1)}</button>`).join('')}
           <span style="color:#333;margin:0 4px;">|</span>
           <label class="btn btn-secundario btn-sm" style="cursor:pointer;font-size:.72rem;">📥 Importar<input type="file" accept=".xlsx,.xls" style="display:none" onchange="Planejamento.importarExcel(event)"></label>
@@ -1298,9 +1318,11 @@ const Planejamento = (() => {
           cells+=`<div data-col="nome" style="${base}padding-left:${ind+4}px;cursor:pointer;position:relative;" ${clickEdit} title="${t.nome}">
             ${guia}${tog}<span style="color:${isG?'var(--cor-primaria)':'#ccc'};font-weight:${isG?700:400};overflow:hidden;text-overflow:ellipsis;">${t.nome||''}</span></div>`;
         } else if(cid==='inicio'){
-          cells+=`<div style="${base}color:#666;font-size:.7rem;justify-content:center;cursor:pointer;" ${clickEdit}>${_fd(t.inicioPlanejado)}</div>`;
+          const vv=t[VERSAO_CAMPOS[_versaoData].ini];
+          cells+=`<div style="${base}color:${vv?'#666':'#3a3a3a'};font-size:.7rem;justify-content:center;cursor:pointer;" ${clickEdit}>${vv?_fd(vv):'—'}</div>`;
         } else if(cid==='termino'){
-          cells+=`<div style="${base}color:#666;font-size:.7rem;justify-content:center;cursor:pointer;" ${clickEdit}>${_fd(t.terminoPlanejado)}</div>`;
+          const vv=t[VERSAO_CAMPOS[_versaoData].fim];
+          cells+=`<div style="${base}color:${vv?'#666':'#3a3a3a'};font-size:.7rem;justify-content:center;cursor:pointer;" ${clickEdit}>${vv?_fd(vv):'—'}</div>`;
         } else if(cid==='duracao'){
           cells+=`<div style="${base}color:#666;font-size:.7rem;justify-content:center;cursor:pointer;" ${clickEdit}>${t.duracao||'—'}</div>`;
         } else if(cid==='percEsp'){
@@ -1409,7 +1431,8 @@ const Planejamento = (() => {
     const t=filtradas[idx]; if(!t)return;
     selectedIdx=idx;
     const cell=e.currentTarget;
-    const map={codigo:'codigo',nome:'nome',inicio:'inicioPlanejado',termino:'terminoPlanejado',
+    const map={codigo:'codigo',nome:'nome',
+      inicio:VERSAO_CAMPOS[_versaoData].ini,termino:VERSAO_CAMPOS[_versaoData].fim,
       duracao:'duracao',percEsp:'percentualEsperado',percConc:'percentualConcluido',
       predecessora:'predecessora',responsavel:'responsavel',local:'local',grupo:'grupo',nivel:'nivel',
       equipe:'equipeAlocada'};
@@ -1437,12 +1460,14 @@ const Planejamento = (() => {
       if(isNum)v=parseFloat(v)||0;
       if(field==='duracao'||field==='equipeAlocada')v=parseInt(v)||0;
       
-      // Lógica de datas automática
+      // Lógica de datas automática — só recalcula Duração quando a
+      // versão em edição é a Atual (o campo duracao é único, não
+      // versionado; editar Base/Desafio não deve mexer nele).
       const updates={[field]:v};
-      if(field==='inicioPlanejado'&&v&&t.terminoPlanejado){
+      if(_versaoData==='atual'&&field==='inicioPlanejado'&&v&&t.terminoPlanejado){
         // Início + Fim → calcula Duração
         updates.duracao=Math.max(0,Math.ceil((new Date(t.terminoPlanejado)-new Date(v))/864e5));
-      } else if(field==='terminoPlanejado'&&v&&t.inicioPlanejado){
+      } else if(_versaoData==='atual'&&field==='terminoPlanejado'&&v&&t.inicioPlanejado){
         // Fim + Início → calcula Duração
         updates.duracao=Math.max(0,Math.ceil((new Date(v)-new Date(t.inicioPlanejado))/864e5));
       } else if(field==='duracao'&&v>0&&t.inicioPlanejado){
@@ -1482,8 +1507,10 @@ const Planejamento = (() => {
       
       // Salva estado para undo antes de qualquer mudança
       _undoPush();
+      const _valAntes=t[field];
       // Atualiza local
       Object.assign(t, updates);
+      Audit.campo(obraId,'Planejamento',t.id,t.nome,field,_valAntes,v).catch(()=>{});
 
       // ===== % EM FAMÍLIA (mão dupla) =====
       // Editou % de um PAI → distribui para todos os descendentes.
@@ -3166,7 +3193,7 @@ const Planejamento = (() => {
     }
   }
 
-  return{init,carregar,setZoom,inserirTarefa,editarTarefa,salvarTarefa,excluirTarefa,
+  return{init,carregar,setZoom,setVersaoData,inserirTarefa,editarTarefa,salvarTarefa,excluirTarefa,
     selectIdx,toggleRecolher,recuarNivel,avancarNivel,
     toggleGantt,hideCol,showColsMenu,_showCol,_showAll,
     toggleArvoreEditor,_arvToggle,_arvExpandirTudo,_arvIniciarEdit,_arvCancelarEdit,_arvSalvarNome,

@@ -240,11 +240,13 @@ const Diario = (() => {
   async function _gravarAvanco(t,percDepois,dataISO){
     const dt=dataISO||_iso(diaRef);
     const upd={percentualConcluido:percDepois};
+    const percAntesAudit=t.percentualConcluido||0;
     if(percDepois>0&&!t.inicioReal)upd.inicioReal=dt;
     if(percDepois>=100)upd.terminoReal=dt;
     if(percDepois<100&&t.terminoReal)upd.terminoReal='';
     await Database.atualizar(obraId,COL,t.id,upd);
     Object.assign(t,upd);
+    Audit.campo(obraId,'Diário de Obra',t.id,t.nome,'percentualConcluido',percAntesAudit,percDepois).catch(()=>{});
     const fam=Utils.percFamilia(tarefas);
     let famUps=[];
     if(fam.filhosDiretos(t).length>0){

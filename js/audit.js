@@ -45,5 +45,15 @@ const Audit = (() => {
     return registrar(obraId, 'excluir', { modulo, entidade, entidadeId, descricao });
   }
 
-  return { registrar, criar, editar, excluir };
+  // Atalho para edição de UM campo, com valor antes/depois — é o que
+  // alimenta o "Desfazer" da tela de Backup de Planejamentos.
+  function campo(obraId, modulo, entidadeId, entidadeLabel, campo, antes, depois){
+    return registrar(obraId, 'editar', {
+      modulo, entidade:'tarefa', entidadeId,
+      descricao: `${entidadeLabel||entidadeId} — ${campo}: ${antes??'—'} → ${depois??'—'}`,
+      dados: {campo, antes: antes??null, depois: depois??null},
+    });
+  }
+
+  return { registrar, criar, editar, excluir, campo };
 })();

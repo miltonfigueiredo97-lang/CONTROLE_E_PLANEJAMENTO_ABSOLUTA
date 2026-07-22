@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.51.2',
+  versaoAtual: 'V2.53.0',
 
   versoes: [
     {
@@ -4535,7 +4535,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.51.2',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-11',
       tipo: 'correcao',
       titulo: 'Editor de Estrutura: drag & drop funcionando',
@@ -4549,6 +4549,37 @@ const NotasVersao = {
         '    querySelector, sem recriar nenhum elemento',
         '  → _arvDragEnd: limpa todos os indicadores via DOM',
         '  → Drop final: aí sim chama _arvMoverTarefa que re-renderiza',
+      ]
+    },
+    {
+      versao: 'V2.53.0',
+      status: 'aberta',
+      data: '2026-07-09',
+      tipo: 'funcionalidade',
+      titulo: 'Versões de Planejamento (Atual/Base/Desafio) + Backup de Planejamentos',
+      itens: [
+        'PLANEJAMENTO — novo seletor Atual | Linha de Base | Desafio',
+        '  no topo da tabela: escolhe qual par de datas as colunas',
+        '  Início/Término mostram e editam. Os 3 já eram campos',
+        '  separados no banco (inicioPlanejado/terminoPlanejado,',
+        '  inicioPlanejadoBase/terminoPlanejadoBase, inicioDesafio/',
+        '  terminoDesafio) — editar o Atual NUNCA mexe na Linha de',
+        '  Base ou no Desafio, e vice-versa. Duração automática (ao',
+        '  editar início+fim) só recalcula na versão Atual.',
+        'NOVO módulo BACKUP DE PLANEJAMENTOS (menu Sistema): histórico',
+        '  de todas as alterações de % e datas feitas via Planejamento,',
+        '  Semanal, Diário de Obra e Medições — quem, quando, tarefa,',
+        '  campo, valor antes → depois',
+        'Filtros por módulo, texto (tarefa/campo/e-mail) e período',
+        'DESFAZER linha a linha: volta o campo ao valor anterior na',
+        '  tarefa (marca a entrada como "desfeito", não desfaz 2x)',
+        'EXCLUIR linha a linha ou em lote (filtro atual): remove só',
+        '  o registro do histórico, não mexe no dado',
+        '"Desfazer filtradas" em lote: reverte todas as alterações',
+        '  do filtro atual de uma vez',
+        'Alimentado pelo módulo Audit (já existia, mas só era usado',
+        '  pelo Levantamento de Fachada) — agora Planejamento, Semanal,',
+        '  Diário e Medições também registram cada mudança de campo',
       ]
     }
   ],
