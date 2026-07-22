@@ -400,50 +400,111 @@ const LevantamentoConcreto = (() => {
   }
 
   function esquemaFundacao(tipo) {
-    const az = '#3b82f6', vd = '#16a34a', vm = '#ef4444', rx = '#a855f7', am = 'var(--cor-primaria)';
+    const az = '#3b82f6', vd = '#16a34a', vm = '#ef4444', rx = '#a855f7', am = 'var(--cor-primaria)', tx = '#444';
     if (tipo === 'Estacas') return `
-      <svg viewBox="0 0 160 140" width="100%">
-        <rect x="65" y="15" width="30" height="105" fill="rgba(245,200,0,0.15)" stroke="${am}" stroke-width="2.5" rx="15"/>
-        <line x1="100" y1="15" x2="100" y2="120" stroke="${az}" stroke-width="1.5" stroke-dasharray="4,2"/>
-        <text x="112" y="70" text-anchor="middle" font-size="11" fill="${az}" font-weight="bold" transform="rotate(90,112,70)">A (m)</text>
-        <line x1="65" y1="128" x2="95" y2="128" stroke="${vd}" stroke-width="1.5" stroke-dasharray="4,2"/>
-        <text x="80" y="138" text-anchor="middle" font-size="11" fill="${vd}" font-weight="bold">B = diâmetro</text>
+      <svg viewBox="0 0 220 190" width="100%">
+        <!-- vista da seção (diâmetro) -->
+        <circle cx="42" cy="38" r="20" fill="none" stroke="${tx}" stroke-width="1.5"/>
+        <circle cx="42" cy="38" r="11" fill="none" stroke="${tx}" stroke-width="1.2" stroke-dasharray="2,2"/>
+        <line x1="22" y1="14" x2="62" y2="14" stroke="${az}" stroke-width="1.2"/>
+        <line x1="22" y1="10" x2="22" y2="18" stroke="${az}" stroke-width="1.2"/>
+        <line x1="62" y1="10" x2="62" y2="18" stroke="${az}" stroke-width="1.2"/>
+        <text x="42" y="10" text-anchor="middle" font-size="10" fill="${az}" font-weight="bold">B</text>
+        <text x="42" y="72" text-anchor="middle" font-size="8.5" fill="${tx}">B=DIÂMETRO DA ESTACA</text>
+        <!-- vista do fuste -->
+        <line x1="90" y1="18" x2="185" y2="18" stroke="#999" stroke-width="1" stroke-dasharray="3,2"/>
+        <text x="95" y="14" font-size="8" fill="#888">F.S.F.</text>
+        <rect x="118" y="18" width="26" height="92" fill="rgba(245,200,0,0.12)" stroke="${am}" stroke-width="2"/>
+        <path d="M118,25 L144,33 M144,25 L118,33 M118,41 L144,49 M144,41 L118,49 M118,57 L144,65 M144,57 L118,65 M118,73 L144,81 M144,73 L118,81 M118,89 L144,97 M144,89 L118,97 M118,102 L144,108 M144,102 L118,108" stroke="${tx}" stroke-width="0.8"/>
+        <path d="M118,110 L144,110 L136,150 L126,150 Z" fill="rgba(245,200,0,0.12)" stroke="${am}" stroke-width="2"/>
+        <line x1="128" y1="152" x2="134" y2="152" stroke="${tx}" stroke-width="1.5"/>
+        <line x1="160" y1="18" x2="160" y2="150" stroke="${az}" stroke-width="1.2" stroke-dasharray="4,2"/>
+        <text x="172" y="86" text-anchor="middle" font-size="11" fill="${az}" font-weight="bold">A</text>
+        <text x="150" y="16" font-size="7.5" fill="${vm}" font-weight="bold">COTA DE</text>
+        <text x="150" y="24" font-size="7.5" fill="${vm}" font-weight="bold">ARRASAMENTO</text>
       </svg>`;
     if (tipo === 'Tubulão a Céu Aberto') return `
-      <svg viewBox="0 0 160 150" width="100%">
-        <rect x="65" y="15" width="30" height="55" fill="rgba(245,200,0,0.15)" stroke="${am}" stroke-width="2.5"/>
-        <path d="M65,70 L95,70 L120,110 L40,110 Z" fill="rgba(245,200,0,0.15)" stroke="${am}" stroke-width="2.5"/>
-        <rect x="40" y="110" width="80" height="20" fill="rgba(245,200,0,0.15)" stroke="${am}" stroke-width="2.5"/>
-        <text x="105" y="45" text-anchor="middle" font-size="10" fill="${az}" font-weight="bold">A</text>
-        <text x="20" y="42" text-anchor="middle" font-size="10" fill="${vd}" font-weight="bold">B</text>
-        <text x="130" y="122" text-anchor="middle" font-size="10" fill="${vm}" font-weight="bold">C</text>
-        <text x="20" y="122" text-anchor="middle" font-size="10" fill="${rx}" font-weight="bold">E</text>
-        <text x="20" y="90" text-anchor="middle" font-size="10" fill="#666" font-weight="bold">D total</text>
+      <svg viewBox="0 0 180 190" width="100%">
+        <rect x="65" y="15" width="30" height="70" fill="rgba(245,200,0,0.14)" stroke="${am}" stroke-width="2.2"/>
+        <path d="M65,85 L95,85 L128,140 L32,140 Z" fill="rgba(245,200,0,0.14)" stroke="${am}" stroke-width="2.2"/>
+        <rect x="32" y="140" width="96" height="16" fill="rgba(245,200,0,0.14)" stroke="${am}" stroke-width="2.2"/>
+        <line x1="65" y1="6" x2="95" y2="6" stroke="${az}" stroke-width="1.2"/>
+        <text x="80" y="4" text-anchor="middle" font-size="10" fill="${az}" font-weight="bold">A</text>
+        <line x1="108" y1="15" x2="108" y2="85" stroke="${vd}" stroke-width="1.2" stroke-dasharray="4,2"/>
+        <text x="118" y="53" text-anchor="middle" font-size="10" fill="${vd}" font-weight="bold" transform="rotate(90,118,53)">B</text>
+        <line x1="32" y1="140" x2="128" y2="140" stroke="${vm}" stroke-width="1" stroke-dasharray="3,2"/>
+        <line x1="140" y1="15" x2="140" y2="156" stroke="${tx}" stroke-width="1.2" stroke-dasharray="4,2"/>
+        <text x="152" y="88" text-anchor="middle" font-size="10" fill="${tx}" font-weight="bold" transform="rotate(90,152,88)">D</text>
+        <line x1="10" y1="140" x2="10" y2="156" stroke="${rx}" stroke-width="1.2" stroke-dasharray="4,2"/>
+        <text x="4" y="150" text-anchor="middle" font-size="10" fill="${rx}" font-weight="bold">E</text>
+        <line x1="32" y1="166" x2="128" y2="166" stroke="${vm}" stroke-width="1.2"/>
+        <text x="80" y="178" text-anchor="middle" font-size="10" fill="${vm}" font-weight="bold">C</text>
       </svg>`;
-    if (tipo === 'Sapata Isolada Piramidal' || tipo === 'Sapata de Divisa Piramidal') return `
-      <svg viewBox="0 0 160 150" width="100%">
-        <path d="M45,55 L115,55 L140,120 L20,120 Z" fill="rgba(245,200,0,0.15)" stroke="${am}" stroke-width="2.5"/>
-        <rect x="20" y="120" width="120" height="15" fill="rgba(245,200,0,0.15)" stroke="${am}" stroke-width="2.5"/>
-        <text x="80" y="48" text-anchor="middle" font-size="10" fill="${az}" font-weight="bold">C×D (topo)</text>
-        <text x="80" y="143" text-anchor="middle" font-size="10" fill="${vd}" font-weight="bold">A×B (base)</text>
-        <text x="150" y="90" text-anchor="middle" font-size="10" fill="${vm}" font-weight="bold">F</text>
-        <text x="10" y="128" text-anchor="middle" font-size="10" fill="${rx}" font-weight="bold">E</text>
-      </svg>`;
+    if (tipo === 'Sapata Isolada Piramidal') return `
+      <svg viewBox="0 0 210 175" width="100%">
+        <!-- elevação (simétrica: F dos dois lados) -->
+        <path d="M15,140 L15,110 L38,82 L62,82 L62,55 L92,55 L92,82 L116,82 L139,110 L139,140 Z" fill="none" stroke="${tx}" stroke-width="1.2"/>
+        <line x1="8" y1="82" x2="8" y2="140" stroke="${rx}" stroke-width="1" stroke-dasharray="4,2"/>
+        <text x="2" y="114" text-anchor="middle" font-size="8.5" fill="${rx}" font-weight="bold">F</text>
+        <line x1="146" y1="82" x2="146" y2="140" stroke="${rx}" stroke-width="1" stroke-dasharray="4,2"/>
+        <text x="154" y="114" text-anchor="middle" font-size="8.5" fill="${rx}" font-weight="bold">F</text>
+        <!-- corte frontal -->
+        <rect x="168" y="20" width="32" height="35" fill="rgba(245,200,0,0.14)" stroke="${am}" stroke-width="1.8"/>
+        <path d="M168,55 L200,55 L210,95 L158,95 Z" fill="rgba(245,200,0,0.14)" stroke="${am}" stroke-width="1.8"/>
+        <line x1="168" y1="12" x2="200" y2="12" stroke="${az}" stroke-width="1"/>
+        <text x="184" y="10" text-anchor="middle" font-size="8" fill="${az}" font-weight="bold">D</text>
+        <line x1="20" y1="150" x2="140" y2="150" stroke="${vd}" stroke-width="1"/>
+        <text x="80" y="162" text-anchor="middle" font-size="8.5" fill="${vd}" font-weight="bold">C (pescoço) / B (base)</text>
+      </svg>
+      <div style="text-align:center;font-size:8.5px;color:#888;margin-top:2px;">A/B = base maior (embaixo) · C/D = pescoço (em cima) · E = altura da base reta · F = altura total</div>`;
+    if (tipo === 'Sapata de Divisa Piramidal') return `
+      <svg viewBox="0 0 210 175" width="100%">
+        <path d="M15,140 L15,82 L45,82 L45,55 L100,55 L100,140 Z" fill="none" stroke="${tx}" stroke-width="1.2"/>
+        <line x1="8" y1="82" x2="8" y2="140" stroke="${rx}" stroke-width="1" stroke-dasharray="4,2"/>
+        <text x="2" y="114" text-anchor="middle" font-size="8.5" fill="${rx}" font-weight="bold">F</text>
+        <line x1="25" y1="82" x2="25" y2="140" stroke="${vm}" stroke-width="1" stroke-dasharray="4,2"/>
+        <text x="34" y="114" text-anchor="middle" font-size="8.5" fill="${vm}" font-weight="bold">E</text>
+        <line x1="45" y1="46" x2="185" y2="46" stroke="#666" stroke-width="1" stroke-dasharray="3,2"/>
+        <text x="150" y="42" text-anchor="middle" font-size="8" fill="#666">Linha de Divisa</text>
+        <!-- corte frontal -->
+        <rect x="150" y="55" width="34" height="35" fill="rgba(245,200,0,0.14)" stroke="${am}" stroke-width="1.8"/>
+        <path d="M150,90 L184,90 L195,130 L140,130 Z" fill="rgba(245,200,0,0.14)" stroke="${am}" stroke-width="1.8"/>
+        <line x1="195" y1="55" x2="195" y2="90" stroke="${az}" stroke-width="1"/>
+        <text x="204" y="74" text-anchor="middle" font-size="8" fill="${az}" font-weight="bold" transform="rotate(90,204,74)">C</text>
+      </svg>
+      <div style="text-align:center;font-size:8.5px;color:#888;margin-top:2px;">A/B = base maior · C/D = pescoço · E = altura da base reta (lado da divisa) · F = altura total</div>`;
     if (tipo === 'Bloco Triângular') return `
-      <svg viewBox="0 0 160 140" width="100%">
-        <path d="M30,110 L80,25 L130,110 Z" fill="rgba(245,200,0,0.15)" stroke="${am}" stroke-width="2.5"/>
-        <text x="80" y="123" text-anchor="middle" font-size="11" fill="${az}" font-weight="bold">A / B</text>
-        <text x="145" y="70" text-anchor="middle" font-size="10" fill="${vm}" font-weight="bold">C = altura</text>
-      </svg>`;
+      <svg viewBox="0 0 190 170" width="100%">
+        <path d="M95,25 L165,130 L25,130 Z" fill="rgba(245,200,0,0.12)" stroke="${am}" stroke-width="2"/>
+        <circle cx="95" cy="55" r="12" fill="none" stroke="${tx}" stroke-width="1" stroke-dasharray="2,2"/>
+        <circle cx="55" cy="115" r="12" fill="none" stroke="${tx}" stroke-width="1" stroke-dasharray="2,2"/>
+        <circle cx="135" cy="115" r="12" fill="none" stroke="${tx}" stroke-width="1" stroke-dasharray="2,2"/>
+        <line x1="75" y1="14" x2="115" y2="14" stroke="${az}" stroke-width="1.2"/>
+        <text x="95" y="11" text-anchor="middle" font-size="10" fill="${az}" font-weight="bold">A</text>
+        <line x1="25" y1="142" x2="165" y2="142" stroke="${vd}" stroke-width="1.2"/>
+        <text x="95" y="154" text-anchor="middle" font-size="10" fill="${vd}" font-weight="bold">B</text>
+        <line x1="45" y1="150" x2="145" y2="150" stroke="${rx}" stroke-width="1.1" stroke-dasharray="3,2"/>
+        <text x="95" y="163" text-anchor="middle" font-size="9" fill="${rx}" font-weight="bold">D (opcional)</text>
+        <line x1="178" y1="25" x2="178" y2="90" stroke="${vm}" stroke-width="1.1" stroke-dasharray="3,2"/>
+        <text x="184" y="60" text-anchor="middle" font-size="9" fill="${vm}" font-weight="bold" transform="rotate(90,184,60)">F</text>
+        <line x1="178" y1="90" x2="178" y2="130" stroke="#666" stroke-width="1.1" stroke-dasharray="3,2"/>
+        <text x="184" y="112" text-anchor="middle" font-size="9" fill="#666" font-weight="bold" transform="rotate(90,184,112)">E</text>
+      </svg>
+      <div style="text-align:center;font-size:9px;color:#888;margin-top:2px;">Altura do Bloco = C · D/E/F opcionais (geometria detalhada)</div>`;
     // Bloco Retângular / Viga Baldrame / Sapata Isolada/Divisa em Bloco
     return `
-      <svg viewBox="0 0 160 130" width="100%">
-        <rect x="30" y="35" width="100" height="60" fill="rgba(245,200,0,0.15)" stroke="${am}" stroke-width="2.5" rx="2"/>
-        <line x1="30" y1="105" x2="130" y2="105" stroke="${az}" stroke-width="1.5" stroke-dasharray="4,2"/>
-        <text x="80" y="118" text-anchor="middle" font-size="11" fill="${az}" font-weight="bold">A</text>
-        <line x1="140" y1="35" x2="140" y2="95" stroke="${vd}" stroke-width="1.5" stroke-dasharray="4,2"/>
-        <text x="150" y="65" text-anchor="middle" font-size="11" fill="${vd}" font-weight="bold">B</text>
-        <text x="80" y="68" text-anchor="middle" font-size="11" fill="${vm}" font-weight="bold">C = altura</text>
+      <svg viewBox="0 0 190 150" width="100%">
+        <rect x="30" y="30" width="130" height="80" fill="rgba(245,200,0,0.12)" stroke="${am}" stroke-width="2"/>
+        <circle cx="42" cy="42" r="9" fill="none" stroke="${tx}" stroke-width="1" stroke-dasharray="2,2"/>
+        <circle cx="148" cy="42" r="9" fill="none" stroke="${tx}" stroke-width="1" stroke-dasharray="2,2"/>
+        <circle cx="42" cy="98" r="9" fill="none" stroke="${tx}" stroke-width="1" stroke-dasharray="2,2"/>
+        <circle cx="148" cy="98" r="9" fill="none" stroke="${tx}" stroke-width="1" stroke-dasharray="2,2"/>
+        <rect x="65" y="63" width="60" height="14" fill="#ddd" stroke="${tx}" stroke-width="1"/>
+        <line x1="30" y1="120" x2="160" y2="120" stroke="${az}" stroke-width="1.2"/>
+        <text x="95" y="132" text-anchor="middle" font-size="11" fill="${az}" font-weight="bold">A</text>
+        <line x1="172" y1="30" x2="172" y2="110" stroke="${vd}" stroke-width="1.2" stroke-dasharray="4,2"/>
+        <text x="182" y="70" text-anchor="middle" font-size="11" fill="${vd}" font-weight="bold" transform="rotate(90,182,70)">B</text>
+        <text x="95" y="20" text-anchor="middle" font-size="9.5" fill="${tx}">Altura do Bloco = C</text>
       </svg>`;
   }
 

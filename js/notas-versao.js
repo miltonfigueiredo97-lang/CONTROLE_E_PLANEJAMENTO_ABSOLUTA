@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.53.3',
+  versaoAtual: 'V2.53.4',
 
   versoes: [
     {
@@ -4625,7 +4625,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.51.5',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-11',
       tipo: 'correcao',
       titulo: 'Editor de Estrutura: mover funciona + instantâneo (sem loading)',
@@ -4687,7 +4687,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.53.3',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-22',
       tipo: 'funcionalidade',
       titulo: 'Editor de Estrutura: inserir acima/abaixo + nível editável direto',
@@ -4701,6 +4701,32 @@ const NotasVersao = {
         '  Clica e digita o nível desejado (0-10) → aplica na hora.',
         '  Muda só essa tarefa, não arrasta os filhos junto.',
         '  Útil para corrigir nível errado rapidamente sem arrastar.',
+      ]
+    },
+    {
+      versao: 'V2.53.4',
+      status: 'aberta',
+      data: '2026-07-22',
+      tipo: 'correcao',
+      titulo: 'Calculadora de Fundação: desenhos corrigidos com base nos originais',
+      itens: [
+        'Milton enviou os desenhos reais da calculadora de Fundações da',
+        '  planilha antiga (imagens que estavam embutidas no Excel e não',
+        '  dava pra ler o texto) — os desenhos da calculadora de concreto',
+        '  foram refeitos para bater com eles:',
+        '  → Estacas: vista da seção (B = diâmetro) + vista do fuste com',
+        '    marcação em X e cota de arrasamento (A = comprimento)',
+        '  → Tubulão a Céu Aberto: fuste + transição + base, com A/B/C/D/E',
+        '    nas posições certas',
+        '  → Sapata Isolada Piramidal: elevação simétrica (F dos dois',
+        '    lados) + corte frontal (A/B base maior, C/D pescoço)',
+        '  → Sapata de Divisa Piramidal: elevação assimétrica (E do lado',
+        '    da divisa, F do lado livre) + linha de divisa marcada',
+        '  → Bloco Triângular: triângulo com os 3 pilares nos cantos,',
+        '    A no topo, B/D na base, E/F de altura (modo detalhado)',
+        '  → Bloco Retangular: retângulo com os 4 pilares nos cantos',
+        '  As fórmulas não mudaram — só os desenhos e a organização',
+        '  visual dos campos, que já estavam corretos e validados.',
       ]
     }
   ],
