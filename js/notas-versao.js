@@ -4646,7 +4646,7 @@ const NotasVersao = {
         '   container #arv-corpo com targetId=null, fazendo tudo',
         '   virar nível 0. Adicionado stopPropagation() em ambos.',
       ]
-    }
+    },
     {
       versao: 'V2.53.1',
       status: 'aberta',
