@@ -13,6 +13,7 @@ const Dashboard = (() => {
   let _resumoDados = null;
   let _curvaCache = null; // último cálculo da Curva S (usado pelo tooltip)
   let _curvaGranularidade = 'mensal'; // 'mensal' | 'semanal'
+  let _mostrarConcreto = localStorage.getItem('db_mostrar_fundacao_estrutura') === 'true';
 
   const MOTIVOS_COR = {
     'Frente/Predecessora Não Liberada': '#f59e0b',
@@ -129,6 +130,7 @@ const Dashboard = (() => {
     const ok = await Utils.initPagina();
     if (!ok) return;
     obraAtual = Router.getObra();
+    _renderToggleConcreto();
     await carregar();
   }
 
@@ -137,6 +139,25 @@ const Dashboard = (() => {
     await carregar();
   }
   window.onObraChanged = onObraChanged;
+
+  // Toggle "Mostrar Contenção, Fundação e Estrutura" — preferência pessoal de
+  // exibição (não é dado da obra), por isso fica em localStorage, igual outras
+  // preferências de UI do sistema.
+  function _renderToggleConcreto() {
+    const host = document.getElementById('header-actions');
+    if (!host) return;
+    host.innerHTML = `
+      <label class="db-toggle-concreto" style="display:flex;align-items:center;gap:6px;font-size:0.78rem;color:var(--cor-texto-secundario);cursor:pointer;">
+        <input type="checkbox" id="db-check-concreto" ${_mostrarConcreto ? 'checked' : ''} onchange="Dashboard.toggleMostrarConcreto()">
+        Mostrar Contenção, Fundação e Estrutura
+      </label>`;
+  }
+
+  async function toggleMostrarConcreto() {
+    _mostrarConcreto = document.getElementById('db-check-concreto')?.checked || false;
+    localStorage.setItem('db_mostrar_fundacao_estrutura', _mostrarConcreto ? 'true' : 'false');
+    await _renderFundacaoEstrutura();
+  }
 
   async function carregar() {
     const el = document.getElementById('modulo-content');
@@ -166,6 +187,7 @@ const Dashboard = (() => {
       _renderCurvaS();
       _renderPpcSemanal();
       _renderMotivosAtraso();
+      await _renderFundacaoEstrutura();
     } catch (e) {
       console.error(e);
       Utils.toast('Erro ao carregar dashboard.', 'erro');
@@ -255,13 +277,15 @@ const Dashboard = (() => {
         </div>
       </div>
 
+      <div id="db-fundacao-estrutura-wrap"></div>
+
       <div class="card db-row">
         <div class="card-body">
           <div class="db-secao-header"><h3>Suprimentos</h3></div>
           <div class="estado-vazio">
             <div class="icone">📦</div>
-            <p>O módulo Suprimentos ainda não tem dados cadastrados.</p>
-            <p class="text-sm text-muted">Assim que Suprimentos for implementado (cadastro de solicitação, cotação, pedido de compra, mobilização), este painel passa a mostrar o status real aqui.</p>
+            <p>O resumo de Suprimentos ainda não foi construído aqui no Dashboard.</p>
+            <p class="text-sm text-muted">O módulo Suprimentos já tem dados reais (pipeline de compra por tarefa) — só falta trazer o resumo pra esta tela.</p>
           </div>
         </div>
       </div>
@@ -995,6 +1019,101 @@ const Dashboard = (() => {
       <div class="db-legenda" style="margin-top:10px;">${legenda}</div>`;
   }
 
+  // ===================== FUNDAÇÃO / ESTRUTURA / CONTENÇÃO =====================
+  // Ligado pelo toggle "Mostrar Contenção, Fundação e Estrutura" no topo da
+  // página (preferência de UI, guardada em localStorage — não é dado da obra).
+  // Fundação e Estrutura: barra simples Volume Previsto x Executado (m³),
+  // somado a partir de Controle de Concreto (concretoPecas + concretoLancamentos),
+  // "Fundação" = peças com tipo==='Fundação'; "Estrutura" = todas as outras
+  // (Pilar/Viga/Laje/Cortina/Escada/Rampa/Caixa D'água/Outro).
+  // Contenção (Solo Grampeado): por enquanto só um placeholder — o mapa de
+  // vistas de verdade fica pra depois (a pedido do Milton).
+  async function _renderFundacaoEstrutura() {
+    const host = document.getElementById('db-fundacao-estrutura-wrap');
+    if (!host) return;
+    if (!_mostrarConcreto) { host.innerHTML = ''; return; }
+    host.innerHTML = `
+      <div class="card db-row">
+        <div class="card-body">
+          <div class="db-secao-header"><h3>Fundação e Estrutura</h3></div>
+          <div id="db-fundacao-estrutura">Carregando...</div>
+        </div>
+      </div>
+      <div class="card db-row">
+        <div class="card-body">
+          <div class="db-secao-header"><h3>Contenção (Solo Grampeado)</h3></div>
+          <div class="estado-vazio">
+            <div class="icone">🗺️</div>
+            <p>Mapa de vistas em desenvolvimento.</p>
+            <p class="text-sm text-muted">Por enquanto este painel é só um placeholder — o desenho da vista com os chumbadores marcados vem depois.</p>
+          </div>
+        </div>
+      </div>`;
+
+    const elFE = document.getElementById('db-fundacao-estrutura');
+    try {
+      const obraId = obraAtual.id;
+      const [pecas, lancamentos] = await Promise.all([
+        Database.listar(obraId, 'concretoPecas', null).catch(() => []),
+        Database.listar(obraId, 'concretoLancamentos', null).catch(() => []),
+      ]);
+      if (!pecas.length) {
+        elFE.innerHTML = '<div class="estado-vazio"><p class="text-sm">Nenhuma peça cadastrada no Controle de Concreto ainda.</p></div>';
+        return;
+      }
+      const pecaPorId = new Map(pecas.map(p => [p.id, p]));
+      const isFundacao = (p) => p && p.tipo === 'Fundação';
+
+      let prevFund = 0, prevEstr = 0;
+      pecas.forEach(p => { if (isFundacao(p)) prevFund += Number(p.volume) || 0; else prevEstr += Number(p.volume) || 0; });
+
+      let execFund = 0, execEstr = 0;
+      lancamentos.forEach(l => {
+        const p = pecaPorId.get(l.pecaId);
+        const v = Number(l.volume) || 0;
+        if (isFundacao(p)) execFund += v; else execEstr += v;
+      });
+
+      elFE.innerHTML = _svgFundacaoEstrutura([
+        { label: 'Fundação', previsto: prevFund, executado: execFund },
+        { label: 'Estrutura', previsto: prevEstr, executado: execEstr },
+      ]);
+    } catch (e) {
+      console.error(e);
+      elFE.innerHTML = '<div class="estado-vazio"><p class="text-sm">Erro ao carregar dados do Controle de Concreto.</p></div>';
+    }
+  }
+
+  function _svgFundacaoEstrutura(grupos) {
+    const W = 700, H = 190, padL = 90, padR = 70, padT = 20, padB = 20;
+    const plotW = W - padL - padR;
+    const barH = 22, gap = 46;
+    const maxV = Math.max(1, ...grupos.map(g => Math.max(g.previsto, g.executado)));
+    const x = (v) => (v / maxV) * plotW;
+
+    let linhas = '';
+    grupos.forEach((g, i) => {
+      const yTop = padT + i * (gap + barH * 2 + 6);
+      const wPrev = x(g.previsto), wExec = x(g.executado);
+      linhas += `
+        <text x="0" y="${yTop + barH + 2}" font-size="12" font-weight="700" fill="var(--cor-texto,#222)">${g.label}</text>
+        <rect x="${padL}" y="${yTop}" width="${wPrev.toFixed(1)}" height="${barH}" fill="#999" rx="3"/>
+        <text x="${(padL + wPrev + 6).toFixed(1)}" y="${yTop + barH / 2 + 4}" font-size="11" fill="#666">Previsto: ${Utils.formatarNumero(g.previsto)} m³</text>
+        <rect x="${padL}" y="${(yTop + barH + 6).toFixed(1)}" width="${wExec.toFixed(1)}" height="${barH}" fill="var(--cor-primaria)" rx="3"/>
+        <text x="${(padL + wExec + 6).toFixed(1)}" y="${(yTop + barH + 6 + barH / 2 + 4).toFixed(1)}" font-size="11" fill="var(--cor-primaria-dark,#B89400)">Executado: ${Utils.formatarNumero(g.executado)} m³</text>`;
+    });
+
+    const alturaTotal = padT + grupos.length * (gap + barH * 2 + 6) + padB;
+    return `
+      <svg viewBox="0 0 ${W} ${alturaTotal}" style="width:100%;height:auto;display:block;max-width:600px;">
+        ${linhas}
+      </svg>
+      <div class="db-legenda">
+        <span><i style="background:#999;"></i> Previsto</span>
+        <span><i style="background:var(--cor-primaria);"></i> Executado</span>
+      </div>`;
+  }
+
   // ===================== RESUMO POR APARTAMENTO =====================
   function setResumoView(v) {
     _resumoView = v;
@@ -1349,5 +1468,5 @@ const Dashboard = (() => {
       </div>`;
   }
 
-  return { init, onObraChanged, setResumoView, setPacotesView, setCurvaGranularidade };
+  return { init, onObraChanged, setResumoView, setPacotesView, setCurvaGranularidade, toggleMostrarConcreto };
 })();

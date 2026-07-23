@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.54.1',
+  versaoAtual: 'V2.55.0',
 
   versoes: [
     {
@@ -4825,7 +4825,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.54.1',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-23',
       tipo: 'correcao',
       titulo: 'Suprimentos: edição direto na célula (sem pop-up)',
@@ -4838,6 +4838,33 @@ const NotasVersao = {
         '  não trava o recálculo automático das outras 4 etapas',
         'Tarefas novas continuam sempre no automático até serem',
         '  editadas manualmente pela 1ª vez',
+      ]
+    },
+    {
+      versao: 'V2.55.0',
+      status: 'aberta',
+      data: '2026-07-23',
+      tipo: 'funcionalidade',
+      titulo: 'Dashboard: toggle "Mostrar Contenção, Fundação e Estrutura" — Fundação/Estrutura real, Contenção placeholder',
+      itens: [
+        'NOVO — checkbox no topo do Dashboard ("Mostrar Contenção,',
+        '  Fundação e Estrutura"), desligado por padrão. Preferência de',
+        '  tela (localStorage), não é dado da obra.',
+        '',
+        'Fundação e Estrutura: barra simples Previsto x Executado (m³),',
+        '  somada a partir do Controle de Concreto (concretoPecas +',
+        '  concretoLancamentos) — "Fundação" = peças com tipo===\'Fundação\',',
+        '  "Estrutura" = todas as outras (Pilar/Viga/Laje/Cortina/Escada/',
+        '  Rampa/Caixa D\'água/Outro), somadas juntas numa barra só.',
+        '',
+        'Contenção (Solo Grampeado): por enquanto só um placeholder — o',
+        '  mapa de vistas (desenho da vista com os chumbadores marcados,',
+        '  colorido por status) fica pra depois, a pedido do Milton.',
+        '',
+        'De passagem: card de Suprimentos no Dashboard tinha texto',
+        '  desatualizado dizendo "módulo não implementado" — o módulo já',
+        '  saiu do estágio de stub (V2.54.0). Texto corrigido pra deixar',
+        '  claro que só o RESUMO aqui no Dashboard ainda não foi feito.',
       ]
     }
   ],
