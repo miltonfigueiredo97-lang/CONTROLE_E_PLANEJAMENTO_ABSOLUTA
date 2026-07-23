@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.53.7',
+  versaoAtual: 'V2.54.0',
 
   versoes: [
     {
@@ -4781,7 +4781,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.53.7',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-22',
       tipo: 'correcao',
       titulo: 'Concreto: popup maior, salvar-e-próxima, limpar base, fix import duplicado',
@@ -4796,6 +4796,31 @@ const NotasVersao = {
         'CORREÇÃO DE BUG: importação em lote duplicava tudo — o botão',
         '  não travava durante o processamento, então um clique duplo',
         '  disparava a gravação duas vezes. Corrigido com trava.',
+      ]
+    },
+    {
+      versao: 'V2.54.0',
+      status: 'aberta',
+      data: '2026-07-23',
+      tipo: 'lancamento',
+      titulo: 'Módulo Suprimentos — pipeline de compra por tarefa (padrão CSO)',
+      itens: [
+        'Nova tabela: 1 linha por tarefa-folha do Planejamento, com 5',
+        '  etapas em cascata contando pra trás a partir do Início:',
+        '  Cadastro de Solicitação → Mapa de Cotação → Pedido de Compra',
+        '  → Mobilização e Produção → Folga → Início',
+        'Datas planejadas de cada etapa calculadas automaticamente ao',
+        '  detectar tarefa nova com Início Planejado definido, com',
+        '  prazos configuráveis (⚙️ Prazos das Etapas) — padrão garante',
+        '  que o Mapa de Cotação comece pelo menos 30 dias antes do Início',
+        'Cada etapa tem Data + Status (Não Iniciado/Concluído), editáveis',
+        '  por célula — tooltip mostra Planejado × Real quando divergem',
+        'Coloração por prazo: verde (concluído), vermelho (prazo já',
+        '  vencido), laranja (prazo em até 15 dias), neutro (distante)',
+        'Coluna Desvio (Dias): diferença entre Início Real e Planejado',
+        '  da tarefa, puxada do Planejamento para dar contexto',
+        'Recalcular prazos preserva tarefas já editadas manualmente',
+        '  (evita sobrescrever ajustes reais feitos por Milton)',
       ]
     }
   ],
