@@ -3022,7 +3022,10 @@ const Planejamento = (() => {
   }
   function _arvToggle(id){
     if(_arvAbertos.has(id))_arvAbertos.delete(id);else _arvAbertos.add(id);
+    const corpo=document.getElementById('arv-corpo');
+    const st=corpo?corpo.scrollTop:0;
     _render();
+    requestAnimationFrame(()=>{const c=document.getElementById('arv-corpo');if(c)c.scrollTop=st;});
   }
   function _arvExpandirTudo(abrir){
     const sorted=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
@@ -3159,25 +3162,26 @@ const Planejamento = (() => {
 
   // Move tarefa (e filhos) para novo pai ou posição
   // pos='inside' → filho do target; 'before'/'after' → irmão do target
+  let _arvSaveQueue=Promise.resolve(); // serializa saves — evita concorrência
+
   async function _arvMoverTarefa(dragId,targetId,pos){
     if(!dragId)return;
-    _undoPush();
+
     const sorted=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
     const dragIdx=sorted.findIndex(t=>t.id===dragId);
     if(dragIdx<0)return;
     const dragNivel=sorted[dragIdx].nivel||0;
+
+    // Captura estado ANTES de qualquer modificação
+    const ordemAntes=new Map(sorted.map(t=>[t.id,{ordem:t.ordem||0,nivel:t.nivel||0}]));
+    const numAntes=new Map(tarefas.map(t=>[t.id,t._numLinha||0]));
 
     // Bloco = tarefa + filhos contíguos
     let fimBloco=dragIdx+1;
     while(fimBloco<sorted.length&&(sorted[fimBloco].nivel||0)>dragNivel)fimBloco++;
     const bloco=sorted.splice(dragIdx,fimBloco-dragIdx);
 
-    // Captura estado ANTES de qualquer mudança (precisa ser aqui, antes do splice)
-    const ordemAntes=new Map(tarefas.map(t=>[t.id,{ordem:t.ordem||0,nivel:t.nivel||0}]));
-    const numAntes=new Map(tarefas.map(t=>[t.id,t._numLinha||0]));
-
     if(!targetId){
-      // Raiz: nível 0
       const dif=-dragNivel;
       bloco.forEach(t=>{t.nivel=Math.max(0,(t.nivel||0)+dif);});
       sorted.push(...bloco);
@@ -3185,28 +3189,23 @@ const Planejamento = (() => {
       const targetIdx=sorted.findIndex(t=>t.id===targetId);
       if(targetIdx<0){sorted.splice(dragIdx,0,...bloco);tarefas=sorted;_buildFiltradas();_render();return;}
       const targetNivel=sorted[targetIdx].nivel||0;
-
       if(pos==='inside'){
-        // Filho do target
         const dif=(targetNivel+1)-dragNivel;
         bloco.forEach(t=>{t.nivel=Math.max(0,(t.nivel||0)+dif);});
         sorted.splice(targetIdx+1,0,...bloco);
         _arvAbertos.add(targetId);
       } else {
-        // Irmão do target (before/after)
         const dif=targetNivel-dragNivel;
         bloco.forEach(t=>{t.nivel=Math.max(0,(t.nivel||0)+dif);});
         sorted.splice(pos==='before'?targetIdx:targetIdx+1,0,...bloco);
       }
     }
 
+    _undoPush(); // snapshot ANTES de sobrescrever tarefas[]
     sorted.forEach((t,i)=>{t.ordem=i+1;});
     tarefas=sorted;
-
-    // Atualiza UI IMEDIATAMENTE — sem loading, sem esperar Firestore
     _buildFiltradas();_render();
 
-    // Identifica o que realmente mudou para salvar só isso
     const changed=sorted.filter(t=>{
       const ant=ordemAntes.get(t.id);
       return !ant||(t.ordem||0)!==ant.ordem||(t.nivel||0)!==ant.nivel;
@@ -3219,8 +3218,8 @@ const Planejamento = (() => {
       if(antes!==depois)mudancasNum.set(t.id,{antes,depois});
     }
 
-    // Salva em background sem bloquear a UI
-    Promise.resolve().then(async()=>{
+    // Serializa saves — não permite concorrência entre movimentos rápidos
+    _arvSaveQueue=_arvSaveQueue.then(async()=>{
       try{
         if(mudancasNum.size)await _remapearPredecessoras(mudancasNum);
         const LOTE=50;
@@ -3229,7 +3228,7 @@ const Planejamento = (() => {
             Database.atualizar(obraId,COL,t.id,{ordem:t.ordem,nivel:t.nivel}).catch(console.error)
           ));
         }
-      }catch(e){console.error('Erro ao salvar movimento:',e);}
+      }catch(e){console.error('Erro save arvore:',e);}
     });
   }
 

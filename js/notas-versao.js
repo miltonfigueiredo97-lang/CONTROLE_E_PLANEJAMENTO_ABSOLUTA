@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.55.2',
+  versaoAtual: 'V2.55.3',
 
   versoes: [
     {
@@ -4890,7 +4890,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.55.2',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-23',
       tipo: 'correcao',
       titulo: 'Levantamento de Ar Condicionado: botão de criar material novo sempre visível na busca de peça manual',
@@ -4905,6 +4905,11 @@ const NotasVersao = {
         '  embaixo dele, numa área rolável própria',
       ]
     }
+    {versao:'V2.55.3',status:'aberta',data:'2026-07-22',tipo:'correcao',
+      titulo:'Editor: 3 fixes críticos (filhos sumindo, scroll, saves concorrentes)',
+      itens:['Filhos sumindo: ordemAntes capturado ANTES do splice (estava depois).',
+        'Saves concorrentes: fila serializada _arvSaveQueue — movimentos rápidos não se sobrepõem.',
+        'Scroll subindo: _arvToggle preserva scrollTop do arv-corpo.']}
   ],
 
   render(containerId) {
