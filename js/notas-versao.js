@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.55.0',
+  versaoAtual: 'V2.55.1',
 
   versoes: [
     {
@@ -4842,7 +4842,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.55.0',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-23',
       tipo: 'funcionalidade',
       titulo: 'Dashboard: toggle "Mostrar Contenção, Fundação e Estrutura" — Fundação/Estrutura real, Contenção placeholder',
@@ -4865,6 +4865,27 @@ const NotasVersao = {
         '  desatualizado dizendo "módulo não implementado" — o módulo já',
         '  saiu do estágio de stub (V2.54.0). Texto corrigido pra deixar',
         '  claro que só o RESUMO aqui no Dashboard ainda não foi feito.',
+      ]
+    },
+    {
+      versao: 'V2.55.1',
+      status: 'aberta',
+      data: '2026-07-23',
+      tipo: 'funcionalidade',
+      titulo: 'Levantamento de Ar Condicionado: Resumo separa por diâmetro do cobre + exportar CSV para compras',
+      itens: [
+        'CORRIGIDO: o Resumo Geral podia juntar diâmetros diferentes de',
+        '  cobre na mesma linha (ou separar de forma inconsistente,',
+        '  dependendo de como o material foi nomeado na biblioteca).',
+        '  Agora a barra de cobre/PEX é SEMPRE separada por diâmetro',
+        '  configurado na máquina (ex: "Barra de Cobre (Ø 1/4\")" e',
+        '  "Barra de Cobre (Ø 5/8\")" aparecem como linhas distintas),',
+        '  independente do nome que foi dado ao material',
+        'NOVO — botão "Exportar CSV" no Resumo Geral e em qualquer',
+        '  local com sublocais (Resumo consolidado). Baixa um arquivo',
+        '  .csv (Material, Total, Unidade, Comprar em unidades) pronto',
+        '  pra abrir no Excel/Sheets e mandar direto pra equipe de',
+        '  compras — sem precisar copiar dado por dado da tela',
       ]
     }
   ],

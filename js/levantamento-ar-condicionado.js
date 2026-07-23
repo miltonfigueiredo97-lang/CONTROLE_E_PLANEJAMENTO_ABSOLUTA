@@ -212,7 +212,10 @@ const LevantamentoAr = (() => {
 
       ${temDescendentes ? `
         <div style="margin-top:8px;">
-          <h3 style="font-size:0.9rem;margin-bottom:8px;">Resumo consolidado (${no.nome} + sublocais)</h3>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+            <h3 style="font-size:0.9rem;margin:0;">Resumo consolidado (${no.nome} + sublocais)</h3>
+            <button class="btn btn-secundario btn-sm" onclick="LevantamentoAr.exportarResumo('local')">📤 Exportar CSV</button>
+          </div>
           ${_renderTabelaResumo(_agregarSubarvore(sel.localId))}
         </div>` : ''}
     `;
@@ -301,6 +304,7 @@ const LevantamentoAr = (() => {
       <div class="page-header">
         <div><h2 style="font-size:1.1rem;">Resumo Geral — Todos os Locais</h2>
           <span class="subtitulo">Consolidado por material (itens avulsos + máquinas calculadas)</span></div>
+        <button class="btn btn-primario btn-sm" onclick="LevantamentoAr.exportarResumo('geral')">📤 Exportar para Compras (CSV)</button>
       </div>
       ${_renderTabelaResumo(mapa)}
       ${porLocal.length ? `
@@ -326,7 +330,10 @@ const LevantamentoAr = (() => {
   function _expandirMaquina(doc, cfg, kit) {
     if (!cfg || !kit) return [];
     const linhas = [];
-    if (kit.cobre) linhas.push({ materialId: kit.cobre.materialId, nome: kit.cobre.nomeExibicao || kit.cobre.nome, quantidade: kit.cobre.metros, unidade: 'm' });
+    if (kit.cobre) linhas.push({
+      materialId: kit.cobre.materialId, nome: kit.cobre.nomeExibicao || kit.cobre.nome,
+      quantidade: kit.cobre.metros, unidade: 'm', chaveExtra: kit.diametroLabel || '', forcarNome: true,
+    });
     kit.vinculados.forEach(v => linhas.push({ materialId: v.materialId, nome: v.nome, quantidade: v.metros, unidade: 'm' }));
     kit.porMl.forEach(p => linhas.push({
       materialId: p.materialId, nome: p.nome, quantidade: p.quantidade,
@@ -337,11 +344,16 @@ const LevantamentoAr = (() => {
     });
     return linhas;
   }
-  function _acumular(mapa, materialId, nomeFallback, quantidade, unidade, mPorUnidade) {
+  // chaveExtra separa o mesmo material em linhas diferentes no resumo (ex: diâmetros distintos de cobre).
+  // forcarNome usa o nome informado (com diâmetro) em vez do nome cru da biblioteca.
+  function _acumular(mapa, materialId, nomeFallback, quantidade, unidade, mPorUnidade, chaveExtra, forcarNome) {
     if (!quantidade) return;
-    const m = biblioteca.find(x => x.id === materialId);
-    const nome = m ? m.nome : (nomeFallback || '(material removido)');
-    const chave = materialId || nome;
+    let nome = nomeFallback;
+    if (!forcarNome) {
+      const m = biblioteca.find(x => x.id === materialId);
+      nome = m ? m.nome : (nomeFallback || '(material removido)');
+    }
+    const chave = (materialId || nome) + (chaveExtra ? '|' + chaveExtra : '');
     if (!mapa[chave]) mapa[chave] = { nome, quantidade: 0, unidade, mPorUnidade: mPorUnidade || null };
     mapa[chave].quantidade += parseFloat(quantidade) || 0;
     if (mPorUnidade && !mapa[chave].mPorUnidade) mapa[chave].mPorUnidade = mPorUnidade;
@@ -352,7 +364,7 @@ const LevantamentoAr = (() => {
     listaMaquinas.forEach(doc => {
       const cfg = _obterMaquinaConfig(doc.modeloTipo, doc.maquinaConfigId);
       const kit = cfg ? Utils.calcularKitAr(cfg, doc.mlBase) : null;
-      _expandirMaquina(doc, cfg, kit).forEach(l => _acumular(mapa, l.materialId, l.nome, l.quantidade, l.unidade, l.mPorUnidade));
+      _expandirMaquina(doc, cfg, kit).forEach(l => _acumular(mapa, l.materialId, l.nome, l.quantidade, l.unidade, l.mPorUnidade, l.chaveExtra, l.forcarNome));
     });
     return mapa;
   }
@@ -361,6 +373,38 @@ const LevantamentoAr = (() => {
     return _agregarLista(itens.filter(it => ids.has(_localDoItem(it))), maquinasLanc.filter(m => ids.has(m.localId)));
   }
   function _agregarTudo() { return _agregarLista(itens, maquinasLanc); }
+
+  // ===================== EXPORTAR PARA COMPRAS (CSV) =====================
+  function exportarResumo(escopo) {
+    let mapa, nomeArquivo, tituloLocal;
+    if (escopo === 'local' && sel.localId) {
+      const no = _encontrarNo(sel.localId);
+      mapa = _agregarSubarvore(sel.localId);
+      tituloLocal = no ? no.nome : 'Local';
+      nomeArquivo = 'levantamento-ar-' + tituloLocal.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+    } else {
+      mapa = _agregarTudo();
+      tituloLocal = 'Resumo Geral';
+      nomeArquivo = 'levantamento-ar-resumo-geral';
+    }
+    const linhas = Object.values(mapa).sort((a, b) => a.nome.localeCompare(b.nome));
+    if (!linhas.length) { Utils.toast('Nada para exportar ainda.', 'alerta'); return; }
+
+    let csv = `Levantamento de Ar Condicionado / Hidraulica - ${tituloLocal}\r\n`;
+    csv += `Material;Total;Unidade;Comprar (unidades)\r\n`;
+    linhas.forEach(l => {
+      const comprar = l.mPorUnidade ? `${Math.ceil(l.quantidade / l.mPorUnidade)} un de ${l.mPorUnidade}${l.unidade}` : '';
+      csv += `"${l.nome}";${Utils.formatarNumero(l.quantidade)};${l.unidade};"${comprar}"\r\n`;
+    });
+
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `${nomeArquivo}.csv`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    Utils.toast('CSV exportado — pronto pra mandar pra equipe de compras.', 'sucesso');
+  }
 
   // ===================== SELEÇÃO / EXPANSÃO =====================
   function selGeral() { sel = { localId: null }; renderizar(); }
@@ -760,6 +804,7 @@ const LevantamentoAr = (() => {
     novaMaquinaLancamento, editarMaquinaLancamento, excluirMaquinaLancamento,
     setModeloLancamento, setMaquinaLancamento, onCampoMaquinaLancamento, salvarMaquinaLancamento,
     onBuscaManual, criarMaterialManual, adicionarPecaManual, onQtdPecaManual, removerPecaManual,
+    exportarResumo,
   };
 })();
 
