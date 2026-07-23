@@ -15,7 +15,6 @@ const Suprimentos = (() => {
   let tarefas = [];
   let supPorTarefa = {}; // tarefaId -> doc suprimentos
   let cfg = _cfgDefault();
-  let editando = null; // {tarefaId, etapaId}
 
   const COL = 'suprimentos';
   const CFG_DOC = 'suprimentosConfig';
@@ -82,8 +81,8 @@ const Suprimentos = (() => {
       if (!isFolha || !t.inicioPlanejado || supPorTarefa[t.id]) return;
       const datas = _calcularDatas(t.inicioPlanejado, cfg);
       const etapasDoc = {};
-      ETAPAS.forEach(e => { etapasDoc[e.id] = { planejada: datas[e.id], data: datas[e.id], status: 'nao_iniciado' }; });
-      const doc = { tarefaId: t.id, etapas: etapasDoc, editadoManual: false };
+      ETAPAS.forEach(e => { etapasDoc[e.id] = { planejada: datas[e.id], data: datas[e.id], status: 'nao_iniciado', manual: false }; });
+      const doc = { tarefaId: t.id, etapas: etapasDoc };
       criacoes.push(Database.criar(obraId, COL, doc, t.id).then(() => { supPorTarefa[t.id] = doc; }));
     });
     if (criacoes.length) await Promise.all(criacoes).catch(e => console.warn('Falha ao gerar suprimentos pendentes:', e.message));
@@ -140,7 +139,6 @@ const Suprimentos = (() => {
         </table>
       </div>
       ${_modalConfigHTML()}
-      ${editando ? _modalEditarHTML() : ''}
     `;
   }
 
@@ -187,78 +185,46 @@ const Suprimentos = (() => {
     else if (e.data < hoje) { cor = 'var(--cor-perigo)'; corBg = 'var(--cor-perigo-bg)'; }
     else if ((new Date(e.data) - new Date(hoje)) / 864e5 <= LIMIAR_PROXIMO_DIAS) { cor = 'var(--cor-alerta)'; corBg = 'var(--cor-alerta-bg)'; }
     else { cor = 'var(--cor-texto-muted)'; corBg = 'transparent'; }
-    const divergiu = e.data !== e.planejada;
-    const tooltip = divergiu ? `Planejado: ${Utils.formatarData(e.planejada)} | ${e.status==='concluido'?'Real':'Atual'}: ${Utils.formatarData(e.data)}` : `Planejado: ${Utils.formatarData(e.planejada)}`;
+    const tooltip = e.manual ? `Editado manualmente (automático seria ${Utils.formatarData(e.planejada)})` : 'Automático — ainda não editado';
+    const inputStyle = `width:100%;border:1px solid ${e.manual?cor:'var(--cor-borda)'};background:${corBg};color:${cor};font-size:.72rem;font-family:var(--font-mono);padding:4px 3px;border-radius:4px;box-sizing:border-box;text-align:center;`;
+    const selStyle = `width:100%;border:1px solid ${e.manual?cor:'var(--cor-borda)'};background:${corBg};color:${cor};font-size:.72rem;font-weight:600;padding:4px 3px;border-radius:4px;box-sizing:border-box;`;
     return `
-      <td style="background:${corBg};cursor:pointer;text-align:center;font-family:var(--font-mono);font-size:.72rem;color:${cor};" title="${tooltip}" onclick="Suprimentos.onEditarEtapa('${tarefaId}','${etapaId}')">
-        ${Utils.formatarData(e.data)} ${divergiu ? '✎' : ''}
+      <td style="padding:3px;" title="${tooltip}">
+        <input type="date" value="${e.data}" style="${inputStyle}" onchange="Suprimentos.onDataInlineChange('${tarefaId}','${etapaId}',this.value)">
       </td>
-      <td style="background:${corBg};text-align:center;">
-        <span style="color:${cor};font-weight:600;font-size:.72rem;">${e.status === 'concluido' ? '✓ Concluído' : 'Não Iniciado'}</span>
+      <td style="padding:3px;">
+        <select style="${selStyle}" onchange="Suprimentos.onStatusInlineChange('${tarefaId}','${etapaId}',this.value)">
+          <option value="nao_iniciado" ${e.status==='nao_iniciado'?'selected':''}>Não Iniciado</option>
+          <option value="concluido" ${e.status==='concluido'?'selected':''}>Concluído</option>
+        </select>
       </td>`;
   }
 
-  // ---- Edição de etapa ----
-  function onEditarEtapa(tarefaId, etapaId) {
-    editando = { tarefaId, etapaId };
-    renderizar();
-    Utils.abrirModal('modal-editar-etapa');
-  }
-
-  function _modalEditarHTML() {
-    if (!editando) return '';
-    const s = supPorTarefa[editando.tarefaId];
-    const e = s?.etapas?.[editando.etapaId];
-    const label = ETAPAS.find(x => x.id === editando.etapaId)?.label || '';
-    const t = tarefas.find(x => x.id === editando.tarefaId);
-    if (!e) return '';
-    return `
-      <div class="modal-overlay ativo" id="modal-editar-etapa">
-        <div class="modal">
-          <div class="modal-header"><h3>${label}</h3><span class="text-sm text-muted">${t?.nome || ''}</span></div>
-          <div class="modal-body">
-            <div class="form-grupo"><label>Data</label>
-              <input type="date" class="form-control" id="edt-data" value="${e.data}"></div>
-            <div class="form-grupo"><label>Status</label>
-              <select class="form-control" id="edt-status">
-                <option value="nao_iniciado" ${e.status==='nao_iniciado'?'selected':''}>Não Iniciado</option>
-                <option value="concluido" ${e.status==='concluido'?'selected':''}>Concluído</option>
-              </select></div>
-            <div class="text-sm text-muted">Planejado originalmente: ${Utils.formatarData(e.planejada)}</div>
-          </div>
-          <div class="modal-footer">
-            <button class="btn btn-secundario" onclick="Suprimentos.onCancelarEdicaoEtapa()">Cancelar</button>
-            <button class="btn btn-primario" onclick="Suprimentos.onSalvarEtapa()">Salvar</button>
-          </div>
-        </div>
-      </div>`;
-  }
-
-  function onCancelarEdicaoEtapa() {
-    editando = null;
-    Utils.fecharModal('modal-editar-etapa');
-    renderizar();
-  }
-
-  async function onSalvarEtapa() {
-    if (!editando) return;
-    const data = document.getElementById('edt-data')?.value;
-    const status = document.getElementById('edt-status')?.value;
-    if (!data) { Utils.toast('Informe a data', 'alerta'); return; }
-    const s = supPorTarefa[editando.tarefaId];
-    if (!s) return;
-    s.etapas[editando.etapaId].data = data;
-    s.etapas[editando.etapaId].status = status;
-    s.editadoManual = true;
+  // ---- Edição inline (sem popup) ----
+  async function onDataInlineChange(tarefaId, etapaId, novaData) {
+    const s = supPorTarefa[tarefaId];
+    if (!s || !novaData) return;
+    s.etapas[etapaId].data = novaData;
+    s.etapas[etapaId].manual = true; // essa etapa deixou de ser automática
     try {
-      await Database.atualizar(obraId, COL, editando.tarefaId, { etapas: s.etapas, editadoManual: true });
-      Utils.toast('Atualizado', 'sucesso');
-    } catch (e2) {
-      console.error(e2);
-      Utils.toast('Erro ao salvar: ' + e2.message, 'erro');
+      await Database.atualizar(obraId, COL, tarefaId, { etapas: s.etapas });
+    } catch (e) {
+      console.error(e);
+      Utils.toast('Erro ao salvar data: ' + e.message, 'erro');
     }
-    editando = null;
-    Utils.fecharModal('modal-editar-etapa');
+    renderizar();
+  }
+
+  async function onStatusInlineChange(tarefaId, etapaId, novoStatus) {
+    const s = supPorTarefa[tarefaId];
+    if (!s) return;
+    s.etapas[etapaId].status = novoStatus;
+    try {
+      await Database.atualizar(obraId, COL, tarefaId, { etapas: s.etapas });
+    } catch (e) {
+      console.error(e);
+      Utils.toast('Erro ao salvar status: ' + e.message, 'erro');
+    }
     renderizar();
   }
 
@@ -310,24 +276,28 @@ const Suprimentos = (() => {
     }
   }
 
-  // Recalcula as datas planejadas de tarefas cujo mapa nunca foi editado
-  // manualmente (evita sobrescrever ajustes reais já feitos por Milton).
+  // Recalcula a data planejada de cada etapa que NÃO foi editada manualmente
+  // (etapa por etapa — se só o Pedido de Compra foi editado à mão, as outras
+  // 4 etapas daquela mesma tarefa continuam recalculando normal).
   async function _recalcularNaoEditados() {
     const atualizacoes = [];
     Object.values(supPorTarefa).forEach(s => {
-      if (s.editadoManual) return;
       const t = tarefas.find(x => x.id === s.tarefaId);
       if (!t || !t.inicioPlanejado) return;
       const datas = _calcularDatas(t.inicioPlanejado, cfg);
-      const etapasDoc = {};
-      ETAPAS.forEach(e => { etapasDoc[e.id] = { planejada: datas[e.id], data: datas[e.id], status: 'nao_iniciado' }; });
-      s.etapas = etapasDoc;
-      atualizacoes.push(Database.atualizar(obraId, COL, s.tarefaId, { etapas: etapasDoc }));
+      let mudou = false;
+      ETAPAS.forEach(e => {
+        const et = s.etapas[e.id];
+        if (!et) return;
+        et.planejada = datas[e.id];
+        if (!et.manual) { et.data = datas[e.id]; mudou = true; }
+      });
+      if (mudou) atualizacoes.push(Database.atualizar(obraId, COL, s.tarefaId, { etapas: s.etapas }));
     });
     if (atualizacoes.length) await Promise.all(atualizacoes).catch(e => console.warn('Falha ao recalcular:', e.message));
   }
 
-  return { init, renderizar, abrirConfig, fecharConfig, salvarConfig, onEditarEtapa, onCancelarEdicaoEtapa, onSalvarEtapa };
+  return { init, renderizar, abrirConfig, fecharConfig, salvarConfig, onDataInlineChange, onStatusInlineChange };
 })();
 
 function onObraChanged() { Suprimentos.init(); }

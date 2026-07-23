@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.54.0',
+  versaoAtual: 'V2.54.1',
 
   versoes: [
     {
@@ -4800,7 +4800,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.54.0',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-23',
       tipo: 'lancamento',
       titulo: 'Módulo Suprimentos — pipeline de compra por tarefa (padrão CSO)',
@@ -4821,6 +4821,23 @@ const NotasVersao = {
         '  da tarefa, puxada do Planejamento para dar contexto',
         'Recalcular prazos preserva tarefas já editadas manualmente',
         '  (evita sobrescrever ajustes reais feitos por Milton)',
+      ]
+    },
+    {
+      versao: 'V2.54.1',
+      status: 'aberta',
+      data: '2026-07-23',
+      tipo: 'correcao',
+      titulo: 'Suprimentos: edição direto na célula (sem pop-up)',
+      itens: [
+        'CORREÇÃO DE UX: removido o pop-up que abria pra editar cada',
+        '  etapa — agora Data e Status são input/select direto na',
+        '  célula, igual ao padrão do Planejamento (clica e edita ali)',
+        'Flag de "editado manualmente" agora é por ETAPA individual,',
+        '  não mais pela tarefa inteira — editar só o Pedido de Compra',
+        '  não trava o recálculo automático das outras 4 etapas',
+        'Tarefas novas continuam sempre no automático até serem',
+        '  editadas manualmente pela 1ª vez',
       ]
     }
   ],
