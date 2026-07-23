@@ -1,10 +1,12 @@
 // ============================================
 // Módulo: Levantamento de Solo Grampeado
-// Vistas = grid de chumbadores (vertical x horizontal), com
-// escala calibrada por linha + cm real, m² da vista, imagem de
-// fundo opcional (planta), e Especificações de Materiais
-// (modelo do chumbador, barra de aço, mangueira/espaguete,
-// cimento de injeção) vinculadas à Biblioteca de Materiais.
+// Cada vista = uma imagem de fundo (PDF de elevação renderizado,
+// ou foto/planta) sobre a qual os chumbadores são posicionados
+// livremente (clique = ponto), pois as vistas reais são
+// irregulares (espaçamento variável, terreno inclinado — não dá
+// pra usar um grid regular). Escala calibrada por 2 cliques +
+// comprimento real (cm). Especificações de Materiais vinculadas
+// à Biblioteca de Materiais.
 // A execução (etapas, % e minimapa de progresso) fica em
 // Controle de Solo Grampeado.
 // Dados: Firestore obras/{obraId}/sg* e config/sgEspecificacoes,
@@ -20,15 +22,17 @@ const LevantamentoSoloGrampeado = (() => {
   let vistas = [];
   let chumbadores = [];
   let biblioteca = [];
-  let especificacoes = []; // config/sgEspecificacoes.especificacoes
+  let especificacoes = [];
 
   let vistaAtivaId = null;
   let imagemCacheVistaId = null, imagemCacheBase64 = null;
-
-  let calibClicks = []; // pontos clicados no SVG durante calibração
-  let modoCalibrando = false;
+  let zoom = 1;
+  let modo = null; // null | 'adicionar' | 'calibrar'
+  let calibPontos = [];
+  let novoPontoTemp = null; // {x,y} aguardando confirmação no modal
   let chumbEditId = null;
   let especEditId = null;
+  let pdfjsCarregado = false;
 
   const esc = SG.esc;
 
@@ -79,8 +83,16 @@ const LevantamentoSoloGrampeado = (() => {
   function vistaLabel(v) { return v ? (v.nome ? `${v.numero} — ${v.nome}` : `Vista ${v.numero}`) : '—'; }
   function vistasOrdenadas() { return [...vistas].sort((a, b) => (a.numero || 0) - (b.numero || 0)); }
   function vistaAtiva() { return vistas.find(v => v.id === vistaAtivaId) || null; }
-  function chumbadoresDaVista(vistaId) { return chumbadores.filter(c => c.vista === vistaId).sort((a, b) => (a.linha - b.linha) || (a.coluna - b.coluna)); }
+  function chumbadoresDaVista(vistaId) { return chumbadores.filter(c => c.vista === vistaId); }
   function especLabel(e) { return e ? e.nome : '—'; }
+
+  // Próximo número sugerido: maior número (numérico) já usado em
+  // QUALQUER vista + 1 — a numeração no desenho real é sequencial
+  // entre vistas (ex.: termina 211 na Elevação 1, começa 215 na 2).
+  function _sugerirProximoNumero() {
+    const nums = chumbadores.map(c => parseInt(c.numero)).filter(n => !isNaN(n));
+    return nums.length ? Math.max(...nums) + 1 : 1;
+  }
 
   // ══════════════════════════════════════════
   // RENDER PRINCIPAL
@@ -98,7 +110,7 @@ const LevantamentoSoloGrampeado = (() => {
       <div class="page-header">
         <div>
           <h2>⛏️ Levantamento de Solo Grampeado</h2>
-          <span class="subtitulo">Grid de chumbadores por vista — quantitativo e especificações de materiais</span>
+          <span class="subtitulo">Posicione os chumbadores sobre a elevação (PDF/imagem) de cada vista</span>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <button class="btn btn-secundario btn-sm" onclick="SG_UI.abrirVistas()">◈ Vistas</button>
@@ -114,19 +126,24 @@ const LevantamentoSoloGrampeado = (() => {
       </div>
 
       <div class="cc-panel">
-        <div class="cc-panelTitle">🗺️ Grid da Vista</div>
+        <div class="cc-panelTitle">🗺️ Vista</div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center;">
           <select class="form-control" id="sg-vista-ativa" style="max-width:240px;" onchange="SG_UI.onTrocarVistaAtiva()">
             ${!vistas.length ? '<option value="">— nenhuma vista cadastrada —</option>' : ''}
             ${vistasOrdenadas().map(vv => `<option value="${vv.id}" ${vv.id === vistaAtivaId ? 'selected' : ''}>${esc(vistaLabel(vv))}</option>`).join('')}
           </select>
           ${v ? `
-          <button class="btn btn-secundario btn-sm" onclick="SG_UI.abrirConfigGrid('${v.id}')">⚙ Config. Grid</button>
-          <button class="btn btn-secundario btn-sm" onclick="SG_UI.abrirImagemFundo('${v.id}')">🖼 Imagem de Fundo</button>
-          <button class="btn ${modoCalibrando ? 'btn-primario' : 'btn-secundario'} btn-sm" onclick="SG_UI.toggleCalibrar()">📏 ${modoCalibrando ? 'Clique 2 pontos...' : 'Calibrar Escala'}</button>
+          <button class="btn btn-secundario btn-sm" onclick="SG_UI.abrirImagem('${v.id}')">🖼 PDF/Imagem da Vista</button>
+          <button class="btn ${modo === 'adicionar' ? 'btn-primario' : 'btn-secundario'} btn-sm" onclick="SG_UI.toggleModo('adicionar')">⛏️ ${modo === 'adicionar' ? 'Clique no mapa...' : 'Adicionar Chumbador'}</button>
+          <button class="btn ${modo === 'calibrar' ? 'btn-primario' : 'btn-secundario'} btn-sm" onclick="SG_UI.toggleModo('calibrar')">📏 ${modo === 'calibrar' ? 'Clique 2 pontos...' : 'Calibrar Escala'}</button>
+          <span style="display:flex;gap:2px;align-items:center;margin-left:auto;">
+            <button class="btn btn-secundario btn-sm" onclick="SG_UI.zoomAjustar(-0.25)">−</button>
+            <span class="text-sm text-muted" style="width:48px;text-align:center;">${Math.round(zoom * 100)}%</span>
+            <button class="btn btn-secundario btn-sm" onclick="SG_UI.zoomAjustar(0.25)">+</button>
+          </span>
           ` : ''}
         </div>
-        <div id="sg-grid-host"></div>
+        <div id="sg-mapa-host"></div>
       </div>
 
       <div class="cc-panel">
@@ -135,28 +152,35 @@ const LevantamentoSoloGrampeado = (() => {
       </div>
       </div>
     `;
-    renderGrid();
+    renderMapa();
     renderTabelaChumbadores();
   }
 
-  async function onTrocarVistaAtiva() {
+  function onTrocarVistaAtiva() {
     vistaAtivaId = document.getElementById('sg-vista-ativa').value || null;
-    calibClicks = []; modoCalibrando = false;
+    modo = null; calibPontos = []; zoom = 1;
     renderizar();
+  }
+  function toggleModo(m) {
+    modo = (modo === m) ? null : m;
+    calibPontos = [];
+    renderizar();
+  }
+  function zoomAjustar(delta) {
+    zoom = Math.min(4, Math.max(0.25, +(zoom + delta).toFixed(2)));
+    renderMapa();
+    const el = document.querySelector('#sg-mapa-host + *');
   }
 
   // ══════════════════════════════════════════
-  // GRID VISUAL (SVG) — configuração, não execução
+  // MAPA (imagem + pontos) — construção via SG.mapaHTML e
+  // interatividade ligada manualmente após inserir no DOM.
   // ══════════════════════════════════════════
-  async function renderGrid() {
-    const host = document.getElementById('sg-grid-host');
+  async function renderMapa() {
+    const host = document.getElementById('sg-mapa-host');
     if (!host) return;
     const v = vistaAtiva();
     if (!v) { host.innerHTML = `<div class="cc-empty">⛏️<br>Cadastre uma vista para começar.</div>`; return; }
-    if (!(SG.num(v.gridCols) > 0) || !(SG.num(v.gridRows) > 0)) {
-      host.innerHTML = `<div class="cc-empty">⚙ Configure a quantidade de chumbadores (vertical/horizontal) desta vista em <b>Config. Grid</b>.</div>`;
-      return;
-    }
     let imagem = null;
     if (imagemCacheVistaId === v.id) imagem = imagemCacheBase64;
     else {
@@ -166,66 +190,196 @@ const LevantamentoSoloGrampeado = (() => {
         imagemCacheVistaId = v.id; imagemCacheBase64 = imagem;
       } catch (e) { imagem = null; }
     }
-    const execMap = {}; // Levantamento não tem execução — grid usado só p/ posicionar
+    if (!imagem) {
+      host.innerHTML = `<div class="cc-empty">🖼 Carregue o PDF ou imagem desta vista em <b>"PDF/Imagem da Vista"</b> para começar a posicionar os chumbadores.</div>`;
+      return;
+    }
     const lista = chumbadoresDaVista(v.id);
-    const svg = SG.svgMinimapa(v, lista, execMap, null, imagem, {
-      interativo: true, chumbadorClickFn: 'SG_UI.onClickBolinha', mostrarCalibracao: true,
-    });
+    const html = SG.mapaHTML(v, imagem, lista, {}, [], { interativo: true, readonlyCor: true, zoom, stageId: 'sg-stage', maxHeight: 600 });
     const info = SG.num(v.escalaCmPorPx) > 0
-      ? `Escala: 1px ≈ ${SG.fmt2(v.escalaCmPorPx)} cm · m² sugerido: ${SG.fmt1(SG.calcM2Sugerido(v))}`
+      ? `Escala: 1px da imagem ≈ ${SG.fmt2(v.escalaCmPorPx)} cm`
       : 'Sem escala calibrada ainda';
     host.innerHTML = `
-      <div id="sg-svg-wrap" onclick="SG_UI.onClickSvg(event)">${svg}</div>
+      ${html}
       <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-top:8px;font-size:0.78rem;color:var(--cor-texto-secundario);font-family:var(--font-mono);">
         <span>${esc(info)}</span>
         <span>m² total da vista: <b style="color:var(--cor-texto);">${SG.fmt1(v.m2Total)}</b> <button class="btn btn-secundario btn-sm" style="padding:2px 8px;" onclick="SG_UI.abrirEditarM2('${v.id}')">✎</button></span>
       </div>
-      ${modoCalibrando ? `<div class="cc-empty" style="margin-top:8px;">Clique dois pontos no grid marcando uma distância conhecida.</div>` : ''}
+      ${modo === 'adicionar' ? `<div class="cc-empty" style="margin-top:8px;">Clique no mapa onde fica o chumbador.</div>` : ''}
+      ${modo === 'calibrar' ? `<div class="cc-empty" style="margin-top:8px;">Clique dois pontos marcando uma distância conhecida (${calibPontos.length}/2).</div>` : ''}
     `;
+    _ligarEventosMapa(v);
   }
 
-  function onClickSvg(ev) {
-    if (!modoCalibrando) return;
-    const svg = ev.currentTarget.querySelector('svg');
-    if (!svg) return;
-    const pt = svg.createSVGPoint();
-    pt.x = ev.clientX; pt.y = ev.clientY;
-    const loc = pt.matrixTransform(svg.getScreenCTM().inverse());
-    calibClicks.push({ x: loc.x, y: loc.y });
-    if (calibClicks.length === 2) {
-      const linha = { x1: calibClicks[0].x, y1: calibClicks[0].y, x2: calibClicks[1].x, y2: calibClicks[1].y };
-      calibClicks = []; modoCalibrando = false;
-      abrirConfirmarCalibracao(linha);
-    } else {
-      renderGrid();
+  function _ligarEventosMapa(v) {
+    const stage = document.getElementById('sg-stage');
+    if (!stage) return;
+    stage.addEventListener('click', ev => {
+      const marcador = ev.target.closest('.sg-marcador');
+      if (marcador) {
+        if (modo) return; // em modo adicionar/calibrar, clique é sobre o mapa, não editar
+        abrirEditarChumbador(marcador.dataset.id);
+        return;
+      }
+      const pos = SG.posRelativa(ev, stage);
+      if (modo === 'adicionar') {
+        novoPontoTemp = pos;
+        abrirNovoChumbador();
+      } else if (modo === 'calibrar') {
+        calibPontos.push(pos);
+        if (calibPontos.length === 2) {
+          const distPx = SG.distanciaPxEntrePontos(calibPontos[0], calibPontos[1], v);
+          calibPontos = []; modo = null;
+          abrirConfirmarCalibracao(distPx);
+        } else {
+          renderMapa();
+        }
+      }
+    });
+  }
+
+  // ── Tabela de chumbadores ──
+  function renderTabelaChumbadores() {
+    const el = document.getElementById('sg-tabela-chumbadores');
+    if (!el) return;
+    const v = vistaAtiva();
+    if (!v) { el.innerHTML = `<div class="cc-empty">Nenhuma vista selecionada.</div>`; return; }
+    const lista = chumbadoresDaVista(v.id).sort((a, b) => (parseInt(a.numero) || 0) - (parseInt(b.numero) || 0));
+    if (!lista.length) {
+      el.innerHTML = `<div class="cc-empty">⛏️<br>Nenhum chumbador ainda. Use "Adicionar Chumbador" e clique no mapa.</div>`;
+      return;
+    }
+    const mlTotal = lista.reduce((s, c) => s + SG.num(c.comprimento), 0);
+    el.innerHTML = `
+      <div class="cc-tableWrap" style="max-height:360px;overflow-y:auto;">
+      <table class="cc-table">
+        <thead><tr><th>Nº</th><th>Tipo</th><th class="col-num">Comp. (ml)</th><th class="col-num">Prof. (cm)</th><th>Especificação</th><th class="col-acoes"></th></tr></thead>
+        <tbody>
+          ${lista.map(c => {
+            const e = especificacoes.find(x => x.id === c.especId);
+            return `<tr>
+              <td style="font-weight:600;">${esc(c.numero)}</td>
+              <td>${esc(c.tipo)}</td>
+              <td class="col-num cc-tdMono">${SG.fmt1(c.comprimento)}</td>
+              <td class="col-num cc-tdMono">${c.profundidade ? SG.fmt1(c.profundidade) : '—'}</td>
+              <td>${esc(especLabel(e))}</td>
+              <td class="col-acoes">
+                <button class="btn btn-secundario btn-sm" onclick="SG_UI.abrirEditarChumbador('${c.id}')">✎</button>
+                <button class="btn btn-secundario btn-sm" style="color:var(--cv-red);" onclick="SG_UI.excluirChumbador('${c.id}')">🗑</button>
+              </td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+        <tfoot><tr><td style="font-weight:700;">${lista.length} chumb.</td><td></td><td class="col-num cc-tdMono" style="font-weight:700;">${SG.fmt1(mlTotal)}</td><td colspan="3"></td></tr></tfoot>
+      </table>
+      </div>`;
+  }
+
+  // ══════════════════════════════════════════
+  // NOVO / EDITAR CHUMBADOR
+  // ══════════════════════════════════════════
+  function abrirNovoChumbador() {
+    chumbEditId = null;
+    document.getElementById('sg-modal-chumb-titulo').textContent = '⛏️ Novo Chumbador';
+    const f = document.getElementById('form-sg-chumbador');
+    f.querySelector('[name=numero]').value = _sugerirProximoNumero();
+    f.querySelector('[name=tipo]').innerHTML = SG.TIPOS_CHUMBADOR.map(t => `<option value="${t}">${t}</option>`).join('');
+    f.querySelector('[name=especId]').innerHTML = `<option value="">— sem especificação —</option>` +
+      especificacoes.map(e => `<option value="${e.id}">${esc(e.nome)}</option>`).join('');
+    f.querySelector('[name=comprimento]').value = '';
+    f.querySelector('[name=profundidade]').value = '';
+    Utils.abrirModal('modal-sg-chumbador');
+  }
+
+  function abrirEditarChumbador(id) {
+    const c = chumbadores.find(x => x.id === id);
+    if (!c) return;
+    chumbEditId = id;
+    novoPontoTemp = null;
+    document.getElementById('sg-modal-chumb-titulo').textContent = `✎ Chumbador ${c.numero}`;
+    const f = document.getElementById('form-sg-chumbador');
+    f.querySelector('[name=numero]').value = c.numero ?? '';
+    f.querySelector('[name=tipo]').innerHTML = SG.TIPOS_CHUMBADOR.map(t => `<option value="${t}" ${t === c.tipo ? 'selected' : ''}>${t}</option>`).join('');
+    f.querySelector('[name=especId]').innerHTML = `<option value="">— sem especificação —</option>` +
+      especificacoes.map(e => `<option value="${e.id}" ${e.id === c.especId ? 'selected' : ''}>${esc(e.nome)}</option>`).join('');
+    f.querySelector('[name=comprimento]').value = c.comprimento ?? '';
+    f.querySelector('[name=profundidade]').value = c.profundidade ?? '';
+    Utils.abrirModal('modal-sg-chumbador');
+  }
+
+  async function salvarChumbador() {
+    const v = vistaAtiva();
+    const f = document.getElementById('form-sg-chumbador');
+    const numero = f.querySelector('[name=numero]').value.trim();
+    const tipo = f.querySelector('[name=tipo]').value;
+    const comprimento = SG.num(f.querySelector('[name=comprimento]').value);
+    const profundidade = SG.num(f.querySelector('[name=profundidade]').value);
+    const especId = f.querySelector('[name=especId]').value;
+    if (!numero) { Utils.toast('Informe o número do chumbador.', 'alerta'); return; }
+    if (!(comprimento > 0)) { Utils.toast('Informe o comprimento (maior que zero).', 'alerta'); return; }
+    Utils.mostrarLoading();
+    try {
+      if (chumbEditId) {
+        await Database.atualizar(obraId, COL_CHUMBADORES, chumbEditId, { numero, tipo, comprimento, profundidade, especId });
+        Utils.toast('✓ Chumbador atualizado!', 'sucesso');
+      } else {
+        if (!novoPontoTemp || !v) { Utils.toast('Erro: posição do chumbador perdida. Clique no mapa novamente.', 'erro'); return; }
+        await Database.criar(obraId, COL_CHUMBADORES, {
+          vista: v.id, numero, tipo, comprimento, profundidade, especId,
+          x: novoPontoTemp.x, y: novoPontoTemp.y, obraId,
+        }, SG.genId('ch'));
+        Utils.toast('✓ Chumbador adicionado!', 'sucesso');
+      }
+      novoPontoTemp = null; modo = null;
+      Utils.fecharModal('modal-sg-chumbador');
+      await carregar();
+    } catch (e) {
+      Utils.toast('Erro ao salvar: ' + e.message, 'erro');
+    } finally {
+      Utils.esconderLoading();
     }
   }
 
-  function toggleCalibrar() {
-    modoCalibrando = !modoCalibrando;
-    calibClicks = [];
-    renderGrid();
-    renderizar();
+  async function excluirChumbador(id) {
+    const c = chumbadores.find(x => x.id === id);
+    if (!c) return;
+    const ok = await Utils.confirmar(`Excluir o chumbador ${c.numero}? Isso também remove o histórico de execução dele em Controle.`);
+    if (!ok) return;
+    Utils.mostrarLoading();
+    try {
+      const ops = [{ type: 'delete', ref: Database.ref(obraId, COL_CHUMBADORES).doc(id) }];
+      const execSnap = await db.collection('obras').doc(obraId).collection('sgExecucoes').where('chumbadorId', '==', id).get();
+      execSnap.forEach(doc => ops.push({ type: 'delete', ref: doc.ref }));
+      await Database.batchWrite(ops);
+      Utils.toast('Chumbador excluído.', 'sucesso');
+      await carregar();
+    } catch (e) {
+      Utils.toast('Erro ao excluir: ' + e.message, 'erro');
+    } finally {
+      Utils.esconderLoading();
+    }
   }
 
-  function abrirConfirmarCalibracao(linha) {
+  // ══════════════════════════════════════════
+  // CALIBRAÇÃO DE ESCALA e m² TOTAL
+  // ══════════════════════════════════════════
+  function abrirConfirmarCalibracao(distPx) {
     document.getElementById('sg-calib-cm').value = '';
-    document.getElementById('form-sg-calib').dataset.linha = JSON.stringify(linha);
+    document.getElementById('form-sg-calib').dataset.distpx = distPx;
     Utils.abrirModal('modal-sg-calibracao');
   }
 
   async function salvarCalibracao() {
     const v = vistaAtiva();
     if (!v) return;
-    const linha = JSON.parse(document.getElementById('form-sg-calib').dataset.linha || 'null');
+    const distPx = SG.num(document.getElementById('form-sg-calib').dataset.distpx);
     const cm = SG.num(document.getElementById('sg-calib-cm').value);
-    if (!linha || !(cm > 0)) { Utils.toast('Informe o comprimento real (cm) da linha.', 'alerta'); return; }
-    const escala = SG.calcEscalaCmPorPx(linha, cm);
+    if (!(distPx > 0) || !(cm > 0)) { Utils.toast('Informe o comprimento real (cm) da linha.', 'alerta'); return; }
+    const escala = SG.calcEscalaCmPorPx(distPx, cm);
+    const m2Sugerido = SG.calcM2Imagem(v.imgWidthPx, v.imgHeightPx, escala);
     Utils.mostrarLoading();
     try {
-      const vTemp = { ...v, escalaCmPorPx: escala, linhaCalibracao: linha };
-      const m2Sugerido = SG.calcM2Sugerido(vTemp);
-      await Database.atualizar(obraId, COL_VISTAS, v.id, { escalaCmPorPx: escala, linhaCalibracao: linha, m2Total: m2Sugerido });
+      await Database.atualizar(obraId, COL_VISTAS, v.id, { escalaCmPorPx: escala, m2Total: m2Sugerido });
       Utils.toast(`✓ Escala calibrada! m² sugerido: ${SG.fmt1(m2Sugerido)}`, 'sucesso');
       Utils.fecharModal('modal-sg-calibracao');
       await carregar();
@@ -259,195 +413,81 @@ const LevantamentoSoloGrampeado = (() => {
     }
   }
 
-  // Clique numa bolinha do grid (no Levantamento = editar specs do chumbador)
-  function onClickBolinha(chumbadorId) {
-    abrirEditarChumbador(chumbadorId);
-  }
-
-  // ── Tabela de chumbadores (spec, sem status de execução) ──
-  function renderTabelaChumbadores() {
-    const el = document.getElementById('sg-tabela-chumbadores');
-    if (!el) return;
-    const v = vistaAtiva();
-    if (!v) { el.innerHTML = `<div class="cc-empty">Nenhuma vista selecionada.</div>`; return; }
-    const lista = chumbadoresDaVista(v.id);
-    if (!lista.length) {
-      el.innerHTML = `<div class="cc-empty">⛏️<br>Nenhum chumbador ainda. Configure o grid (linhas × colunas) em "Config. Grid".</div>`;
-      return;
-    }
-    const mlTotal = lista.reduce((s, c) => s + SG.num(c.comprimento), 0);
-    el.innerHTML = `
-      <div class="cc-tableWrap" style="max-height:420px;overflow-y:auto;">
-      <table class="cc-table">
-        <thead><tr><th>Nº</th><th>Posição</th><th>Tipo</th><th class="col-num">Comp. (ml)</th><th class="col-num">Prof. (cm)</th><th>Especificação</th><th class="col-acoes"></th></tr></thead>
-        <tbody>
-          ${lista.map(c => {
-            const e = especificacoes.find(x => x.id === c.especId);
-            return `<tr>
-              <td style="font-weight:600;">${esc(c.numero)}</td>
-              <td class="cc-tdMono">L${(c.linha ?? 0) + 1}·C${(c.coluna ?? 0) + 1}</td>
-              <td>${esc(c.tipo)}</td>
-              <td class="col-num cc-tdMono">${SG.fmt1(c.comprimento)}</td>
-              <td class="col-num cc-tdMono">${c.profundidade ? SG.fmt1(c.profundidade) : '—'}</td>
-              <td>${esc(especLabel(e))}</td>
-              <td class="col-acoes">
-                <button class="btn btn-secundario btn-sm" onclick="SG_UI.abrirEditarChumbador('${c.id}')">✎</button>
-              </td>
-            </tr>`;
-          }).join('')}
-        </tbody>
-        <tfoot><tr><td colspan="3" style="font-weight:700;">${lista.length} chumbador${lista.length !== 1 ? 'es' : ''}</td><td class="col-num cc-tdMono" style="font-weight:700;">${SG.fmt1(mlTotal)}</td><td colspan="3"></td></tr></tfoot>
-      </table>
-      </div>`;
-  }
-
   // ══════════════════════════════════════════
-  // EDITAR CHUMBADOR (tipo, comprimento, profundidade, especificação)
+  // IMAGEM/PDF DA VISTA
   // ══════════════════════════════════════════
-  function abrirEditarChumbador(id) {
-    const c = chumbadores.find(x => x.id === id);
-    if (!c) return;
-    chumbEditId = id;
-    document.getElementById('sg-modal-chumb-titulo').textContent = `✎ Chumbador ${c.numero} (L${(c.linha ?? 0) + 1}·C${(c.coluna ?? 0) + 1})`;
-    const f = document.getElementById('form-sg-chumbador');
-    f.querySelector('[name=tipo]').innerHTML = SG.TIPOS_CHUMBADOR.map(t => `<option value="${t}" ${t === c.tipo ? 'selected' : ''}>${t}</option>`).join('');
-    f.querySelector('[name=especId]').innerHTML = `<option value="">— sem especificação —</option>` +
-      especificacoes.map(e => `<option value="${e.id}" ${e.id === c.especId ? 'selected' : ''}>${esc(e.nome)}</option>`).join('');
-    f.querySelector('[name=comprimento]').value = c.comprimento ?? '';
-    f.querySelector('[name=profundidade]').value = c.profundidade ?? '';
-    Utils.abrirModal('modal-sg-chumbador');
-  }
-
-  async function salvarChumbador() {
-    if (!chumbEditId) return;
-    const f = document.getElementById('form-sg-chumbador');
-    const tipo = f.querySelector('[name=tipo]').value;
-    const comprimento = SG.num(f.querySelector('[name=comprimento]').value);
-    const profundidade = SG.num(f.querySelector('[name=profundidade]').value);
-    const especId = f.querySelector('[name=especId]').value;
-    if (!(comprimento > 0)) { Utils.toast('Informe o comprimento (maior que zero).', 'alerta'); return; }
-    Utils.mostrarLoading();
-    try {
-      await Database.atualizar(obraId, COL_CHUMBADORES, chumbEditId, { tipo, comprimento, profundidade, especId });
-      Utils.toast('✓ Chumbador atualizado!', 'sucesso');
-      Utils.fecharModal('modal-sg-chumbador');
-      await carregar();
-    } catch (e) {
-      Utils.toast('Erro ao salvar: ' + e.message, 'erro');
-    } finally {
-      Utils.esconderLoading();
-    }
-  }
-
-  // ══════════════════════════════════════════
-  // CONFIG. DE GRID DA VISTA (gera/reconcilia chumbadores)
-  // ══════════════════════════════════════════
-  function abrirConfigGrid(vistaId) {
-    const v = vistas.find(x => x.id === vistaId);
-    if (!v) return;
-    document.getElementById('sg-cfg-vistaid').value = vistaId;
-    document.getElementById('sg-cfg-cols').value = v.gridCols || '';
-    document.getElementById('sg-cfg-rows').value = v.gridRows || '';
-    document.getElementById('sg-cfg-comp-vert').value = v.comprimentoPadraoVertical ?? '';
-    document.getElementById('sg-cfg-comp-horiz').value = v.comprimentoPadraoHorizontal ?? '';
-    document.getElementById('sg-cfg-espec').innerHTML = `<option value="">— sem especificação padrão —</option>` +
-      especificacoes.map(e => `<option value="${e.id}" ${e.id === v.especIdPadrao ? 'selected' : ''}>${esc(e.nome)}</option>`).join('');
-    Utils.abrirModal('modal-sg-config-grid');
-  }
-
-  async function salvarConfigGrid() {
-    const vistaId = document.getElementById('sg-cfg-vistaid').value;
-    const cols = parseInt(document.getElementById('sg-cfg-cols').value) || 0;
-    const rows = parseInt(document.getElementById('sg-cfg-rows').value) || 0;
-    const compVert = SG.num(document.getElementById('sg-cfg-comp-vert').value) || 1;
-    const compHoriz = SG.num(document.getElementById('sg-cfg-comp-horiz').value) || 1;
-    const especIdPadrao = document.getElementById('sg-cfg-espec').value;
-    if (!(cols > 0) || !(rows > 0)) { Utils.toast('Informe quantidade de colunas e linhas maior que zero.', 'alerta'); return; }
-    if (cols * rows > 400) { Utils.toast('Grid muito grande (máx. 400 chumbadores por vista). Divida em mais vistas.', 'alerta'); return; }
-
-    Utils.mostrarLoading();
-    try {
-      await Database.atualizar(obraId, COL_VISTAS, vistaId, {
-        gridCols: cols, gridRows: rows,
-        comprimentoPadraoVertical: compVert, comprimentoPadraoHorizontal: compHoriz,
-        especIdPadrao,
-      });
-      await _reconciliarChumbadoresDoGrid(vistaId, cols, rows, compVert, compHoriz, especIdPadrao);
-      Utils.toast('✓ Grid configurado!', 'sucesso');
-      Utils.fecharModal('modal-sg-config-grid');
-      await carregar();
-    } catch (e) {
-      Utils.toast('Erro ao salvar: ' + e.message, 'erro');
-    } finally {
-      Utils.esconderLoading();
-    }
-  }
-
-  // Cria os chumbadores que faltam para o novo grid e remove os que
-  // ficaram fora dele. Chumbadores já existentes na mesma posição
-  // (linha/coluna) mantêm tipo/comprimento/profundidade/especId.
-  async function _reconciliarChumbadoresDoGrid(vistaId, cols, rows, compVert, compHoriz, especIdPadrao) {
-    const existentes = chumbadores.filter(c => c.vista === vistaId);
-    const existentesPorPos = new Map(existentes.map(c => [`${c.linha}_${c.coluna}`, c]));
-    const ops = [];
-    let numero = 1;
-    for (let r = 0; r < rows; r++) {
-      for (let c = 0; c < cols; c++) {
-        const key = `${r}_${c}`;
-        if (!existentesPorPos.has(key)) {
-          const tipo = 'Vertical';
-          ops.push({
-            type: 'set',
-            ref: Database.ref(obraId, COL_CHUMBADORES).doc(SG.genId('ch')),
-            data: { vista: vistaId, numero: numero, linha: r, coluna: c, tipo, comprimento: compVert, profundidade: 0, especId: especIdPadrao || '', obraId },
-          });
-        } else {
-          existentesPorPos.delete(key);
-        }
-        numero++;
-      }
-    }
-    // Sobrou nesse Map = fora do novo grid → remove
-    for (const c of existentesPorPos.values()) {
-      ops.push({ type: 'delete', ref: Database.ref(obraId, COL_CHUMBADORES).doc(c.id) });
-    }
-    for (let i = 0; i < ops.length; i += 400) {
-      await Database.batchWrite(ops.slice(i, i + 400));
-    }
-  }
-
-  // ══════════════════════════════════════════
-  // IMAGEM DE FUNDO (planta) — mesmo padrão do mapa de fachada
-  // ══════════════════════════════════════════
-  function abrirImagemFundo(vistaId) {
+  function abrirImagem(vistaId) {
     document.getElementById('sg-img-vistaid').value = vistaId;
+    document.getElementById('sg-img-status').textContent = '';
     Utils.abrirModal('modal-sg-imagem');
   }
-  function onImagemArquivo(input) {
+
+  async function _carregarPdfjs() {
+    if (pdfjsCarregado || typeof pdfjsLib !== 'undefined') { pdfjsCarregado = true; return; }
+    await new Promise((res, rej) => {
+      const s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+      s.onload = res; s.onerror = rej;
+      document.head.appendChild(s);
+    });
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    pdfjsCarregado = true;
+  }
+
+  async function onImagemArquivo(input) {
     const file = input.files && input.files[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = async e => {
-      const vistaId = document.getElementById('sg-img-vistaid').value;
-      const img = e.target.result;
-      if (img.length > 950000) { Utils.toast('Imagem muito grande. Tente um arquivo menor.', 'erro'); return; }
-      Utils.mostrarLoading();
-      try {
-        await db.collection('obras').doc(obraId).collection('config').doc('sgImagem_' + vistaId).set({ img });
-        imagemCacheVistaId = null;
-        Utils.toast('✓ Imagem de fundo salva!', 'sucesso');
-        Utils.fecharModal('modal-sg-imagem');
-        renderGrid();
-      } catch (err) {
-        Utils.toast('Erro ao salvar imagem: ' + err.message, 'erro');
-      } finally {
-        Utils.esconderLoading();
+    const vistaId = document.getElementById('sg-img-vistaid').value;
+    const statusEl = document.getElementById('sg-img-status');
+    statusEl.textContent = 'Processando...';
+    try {
+      let canvas;
+      if (file.type === 'application/pdf' || /\.pdf$/i.test(file.name)) {
+        await _carregarPdfjs();
+        const buf = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+        const page = await pdf.getPage(1);
+        const viewportBase = page.getViewport({ scale: 1 });
+        const alvo = 2200; // px no maior lado, boa qualidade pra zoom sem exagerar no tamanho
+        const escala = Math.min(4, alvo / Math.max(viewportBase.width, viewportBase.height));
+        const viewport = page.getViewport({ scale: escala });
+        canvas = document.createElement('canvas');
+        canvas.width = viewport.width; canvas.height = viewport.height;
+        await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+      } else {
+        const img = await new Promise((res, rej) => {
+          const im = new Image();
+          im.onload = () => res(im); im.onerror = rej;
+          im.src = URL.createObjectURL(file);
+        });
+        const alvo = 2200;
+        const fator = Math.min(1, alvo / Math.max(img.naturalWidth, img.naturalHeight));
+        canvas = document.createElement('canvas');
+        canvas.width = Math.round(img.naturalWidth * fator);
+        canvas.height = Math.round(img.naturalHeight * fator);
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
       }
-    };
-    reader.readAsDataURL(file);
-    input.value = '';
+      const { url, width, height, ok } = SG.canvasParaDataURLLimitado(canvas);
+      if (!ok) { statusEl.textContent = 'Arquivo grande demais mesmo após compressão. Tente uma exportação menor.'; return; }
+      Utils.mostrarLoading();
+      await db.collection('obras').doc(obraId).collection('config').doc('sgImagem_' + vistaId).set({ img: url });
+      await Database.atualizar(obraId, COL_VISTAS, vistaId, { imgWidthPx: width, imgHeightPx: height });
+      imagemCacheVistaId = null;
+      statusEl.textContent = '✓ Imagem carregada!';
+      Utils.toast('✓ Imagem da vista salva!', 'sucesso');
+      Utils.fecharModal('modal-sg-imagem');
+      await carregar();
+    } catch (e) {
+      console.error(e);
+      statusEl.textContent = 'Erro: ' + e.message;
+      Utils.toast('Erro ao processar arquivo: ' + e.message, 'erro');
+    } finally {
+      Utils.esconderLoading();
+      input.value = '';
+    }
   }
-  async function removerImagemFundo() {
+
+  async function removerImagem() {
     const vistaId = document.getElementById('sg-img-vistaid').value;
     Utils.mostrarLoading();
     try {
@@ -455,7 +495,7 @@ const LevantamentoSoloGrampeado = (() => {
       imagemCacheVistaId = null;
       Utils.toast('Imagem removida.', 'sucesso');
       Utils.fecharModal('modal-sg-imagem');
-      renderGrid();
+      renderMapa();
     } catch (e) {
       Utils.toast('Erro: ' + e.message, 'erro');
     } finally {
@@ -476,7 +516,7 @@ const LevantamentoSoloGrampeado = (() => {
     if (!el) return;
     el.innerHTML = `
       <div style="display:flex;gap:8px;margin-bottom:12px;">
-        <input type="text" class="form-control" id="sg-nova-vista-nome" placeholder="Nome da vista (ex: Face Norte)">
+        <input type="text" class="form-control" id="sg-nova-vista-nome" placeholder="Nome da vista (ex: Elevação 1)">
         <button class="btn btn-primario btn-sm" onclick="SG_UI.salvarVista()">+ Adicionar</button>
       </div>
       ${!vistas.length ? '<div class="cc-empty">Nenhuma vista cadastrada.</div>' : `
@@ -501,7 +541,7 @@ const LevantamentoSoloGrampeado = (() => {
     const proxNumero = vistas.length ? Math.max(...vistas.map(v => v.numero || 0)) + 1 : 1;
     Utils.mostrarLoading();
     try {
-      await Database.criar(obraId, COL_VISTAS, { numero: proxNumero, nome, gridCols: 0, gridRows: 0, m2Total: 0, obraId }, SG.genId('v'));
+      await Database.criar(obraId, COL_VISTAS, { numero: proxNumero, nome, m2Total: 0, obraId }, SG.genId('v'));
       Utils.toast('✓ Vista adicionada!', 'sucesso');
       document.getElementById('sg-nova-vista-nome').value = '';
       await carregar();
@@ -536,9 +576,6 @@ const LevantamentoSoloGrampeado = (() => {
 
   // ══════════════════════════════════════════
   // ESPECIFICAÇÕES DE MATERIAIS (config/sgEspecificacoes)
-  // Modelo do chumbador + barra de aço + mangueira (espaguete)
-  // + cimento de injeção — cada um vinculado à Biblioteca de
-  // Materiais (criando o material ali se ainda não existir).
   // ══════════════════════════════════════════
   function abrirEspecificacoes() {
     especEditId = null;
@@ -567,9 +604,7 @@ const LevantamentoSoloGrampeado = (() => {
       const id = await Database.criar(obraId, 'materiais', { nome, tipo: '', unidade: 'un', fabricante: '', referencia: '' });
       biblioteca.push({ id, nome, tipo: '', unidade: 'un' });
       const select = document.querySelector(`select.sg-mat-select[data-campo="${campo}"]`);
-      if (select) {
-        select.innerHTML += `<option value="${id}" selected>${esc(nome)}</option>`;
-      }
+      if (select) select.innerHTML += `<option value="${id}" selected>${esc(nome)}</option>`;
       input.value = '';
       Utils.toast('✓ Material criado e vinculado!', 'sucesso');
     } catch (e) {
@@ -679,12 +714,11 @@ const LevantamentoSoloGrampeado = (() => {
   }
 
   return {
-    init, recarregar, renderizar, onTrocarVistaAtiva,
+    init, recarregar, renderizar, onTrocarVistaAtiva, toggleModo, zoomAjustar,
     abrirVistas, salvarVista, excluirVista,
-    abrirConfigGrid, salvarConfigGrid,
-    abrirImagemFundo, onImagemArquivo, removerImagemFundo,
-    toggleCalibrar, onClickSvg, salvarCalibracao, abrirEditarM2, salvarM2,
-    onClickBolinha, abrirEditarChumbador, salvarChumbador,
+    abrirImagem, onImagemArquivo, removerImagem,
+    salvarCalibracao, abrirEditarM2, salvarM2,
+    abrirNovoChumbador, abrirEditarChumbador, salvarChumbador, excluirChumbador,
     abrirEspecificacoes, criarMaterialInline, editarEspecificacao, cancelarEdicaoEspec, salvarEspecificacao, excluirEspecificacao,
   };
 })();

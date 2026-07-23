@@ -1081,9 +1081,9 @@ const Dashboard = (() => {
     }
   }
 
-  // Minimapas de Solo Grampeado (Contenção) — um SVG por vista, somente
-  // leitura, reaproveitando o motor de cálculo/renderização do Controle
-  // de Solo Grampeado (SoloGrampeadoCalculos.svgMinimapa).
+  // Minimapas de Solo Grampeado (Contenção) — um mapa por vista, na
+  // proporção real da imagem dela (larga/baixa nas elevações compridas,
+  // quadrada nas menores), somente leitura.
   async function _renderSoloGrampeadoMinimapas() {
     const host = document.getElementById('db-solo-grampeado');
     if (!host) return;
@@ -1097,34 +1097,37 @@ const Dashboard = (() => {
         Database.listar(obraId, 'sgExecucoes', null).catch(() => []),
         Database.listar(obraId, 'sgAreaExecutada', null).catch(() => []),
       ]);
-      if (!vistas.length) {
-        host.innerHTML = '<div class="estado-vazio"><p class="text-sm">Nenhuma vista cadastrada no Levantamento de Solo Grampeado ainda.</p></div>';
-        return;
-      }
-      const vistasComGrid = vistas.filter(v => (Number(v.gridCols) > 0) && (Number(v.gridRows) > 0))
+      const vistasComImagem = vistas.filter(v => Number(v.imgWidthPx) > 0 && Number(v.imgHeightPx) > 0)
         .sort((a, b) => (a.numero || 0) - (b.numero || 0));
-      if (!vistasComGrid.length) {
-        host.innerHTML = '<div class="estado-vazio"><p class="text-sm">Nenhuma vista com grid configurado ainda.</p></div>';
+      if (!vistasComImagem.length) {
+        host.innerHTML = '<div class="estado-vazio"><p class="text-sm">Nenhuma vista com imagem/PDF cadastrado no Levantamento de Solo Grampeado ainda.</p></div>';
         return;
       }
-      host.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;">
-        ${vistasComGrid.map(v => {
-          const lista = chumbadores.filter(c => c.vista === v.id);
-          const execMap = {};
-          lista.forEach(c => { const e = execucoes.find(x => x.chumbadorId === c.id); if (e) execMap[c.id] = e; });
-          const areaDoc = areas.find(a => a.vistaId === v.id) || null;
-          const resumo = SG.calcPctVista(v, lista, execMap, areaDoc);
-          const label = v.nome ? `${v.numero} — ${v.nome}` : `Vista ${v.numero}`;
-          const svg = SG.svgMinimapa(v, lista, execMap, areaDoc, null, { interativo: false, mini: true });
-          return `<div>
-            <div style="font-weight:700;font-size:0.85rem;margin-bottom:4px;">${label}</div>
-            ${svg}
-            <div style="font-size:0.78rem;color:var(--cor-texto-secundario);font-family:var(--font-mono);margin-top:4px;">
-              ${SG.fmt1(resumo.pct)}% · ${SG.fmt1(resumo.m2Executado)} / ${SG.fmt1(v.m2Total)} m²
-            </div>
-          </div>`;
-        }).join('')}
-      </div>`;
+      const LARGURA_CARD = 340; // px — altura de cada card se ajusta à proporção real da imagem
+      const cardsHtml = await Promise.all(vistasComImagem.map(async v => {
+        let imagem = null;
+        try {
+          const doc = await db.collection('obras').doc(obraId).collection('config').doc('sgImagem_' + v.id).get();
+          imagem = doc.exists ? (doc.data().img || null) : null;
+        } catch (e) {}
+        const lista = chumbadores.filter(c => c.vista === v.id);
+        const execMap = {};
+        lista.forEach(c => { const e = execucoes.find(x => x.chumbadorId === c.id); if (e) execMap[c.id] = e; });
+        const areasDaVista = areas.filter(a => a.vistaId === v.id);
+        const resumo = SG.calcPctVista(v, lista, execMap, areasDaVista);
+        const label = v.nome ? `${v.numero} — ${v.nome}` : `Vista ${v.numero}`;
+        const zoom = LARGURA_CARD / Number(v.imgWidthPx);
+        const alturaCard = Math.round(Number(v.imgHeightPx) * zoom);
+        const svg = SG.mapaHTML(v, imagem, lista, execMap, areasDaVista, { interativo: false, mini: true, zoom, maxHeight: Math.min(280, Math.max(60, alturaCard)) });
+        return `<div style="width:${LARGURA_CARD}px;">
+          <div style="font-weight:700;font-size:0.85rem;margin-bottom:4px;">${label}</div>
+          ${svg}
+          <div style="font-size:0.78rem;color:var(--cor-texto-secundario);font-family:var(--font-mono);margin-top:4px;">
+            ${SG.fmt1(resumo.pct)}% · ${SG.fmt1(resumo.m2Executado)} / ${SG.fmt1(v.m2Total)} m²
+          </div>
+        </div>`;
+      }));
+      host.innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:16px;">${cardsHtml.join('')}</div>`;
     } catch (e) {
       console.error(e);
       host.innerHTML = '<div class="estado-vazio"><p class="text-sm">Erro ao carregar dados de Solo Grampeado.</p></div>';

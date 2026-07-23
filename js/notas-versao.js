@@ -4911,16 +4911,17 @@ const NotasVersao = {
         'Saves concorrentes: fila serializada _arvSaveQueue — movimentos rápidos não se sobrepõem.',
         'Scroll subindo: _arvToggle preserva scrollTop do arv-corpo.']},
     {versao:'V2.56.0',status:'aberta',data:'2026-07-23',tipo:'funcionalidade',
-      titulo:'Levantamento e Controle de Solo Grampeado: grid visual de chumbadores, escala calibrada e execução por etapas',
-      itens:['Levantamento: vista vira um grid configurável (linhas × colunas) de chumbadores, gerado e reconciliado automaticamente ao mudar a configuração.',
-        'Escala calibrada por linha desenhada + comprimento real (cm), com m² da vista sugerido automaticamente (editável).',
-        'Imagem de fundo (planta) opcional por vista, mesmo padrão de armazenamento do mapa de visão da Fachada.',
+      titulo:'Levantamento e Controle de Solo Grampeado: mapa sobre PDF/imagem da elevação, escala calibrada e execução por etapas',
+      itens:['Levantamento: cada vista recebe um PDF (elevação) ou imagem — chumbadores são posicionados livremente por clique sobre ela (as vistas reais são irregulares: espaçamento variável, terreno inclinado — não davam pra usar um grid regular).',
+        'PDF renderizado via pdf.js e comprimido (JPEG, redimensionado se preciso) antes de salvar, respeitando o limite de ~950KB do Firestore.',
+        'Escala calibrada por 2 cliques no mapa + comprimento real (cm), com m² da vista sugerido automaticamente (editável).',
+        'Zoom (+/−) no editor do Levantamento pra marcar com precisão em desenhos compridos.',
+        'Número do chumbador: sugestão automática (sequencial entre vistas, igual ao desenho real) sempre editável manualmente.',
         'Especificações de Materiais por chumbador (modelo, barra de aço, mangueira/espaguete, cimento de injeção) vinculadas à Biblioteca de Materiais, com criação de material novo direto no formulário.',
-        'Clique na bolinha do grid no Levantamento edita tipo/comprimento/profundidade/especificação do chumbador.',
-        'Controle: minimapa interativo reaproveitando o mesmo grid — clique no chumbador marca etapas (Perfuração 20%, Injeção 1 15%, Injeção 2 15%); modo Projeção (30%) e Acabamento (20%) marca células de área.',
-        '% de execução da vista calculada pelo peso das 5 etapas; cada marcação gera lançamento automático no Relatório Diário.',
+        'Controle: mesmo mapa, interativo — clique no chumbador marca etapas (Perfuração 20%, Injeção 1 15%, Injeção 2 15%); modo Projeção (30%) e Acabamento (20%) marca área arrastando um retângulo, convertido em m² reais pela escala.',
+        '% de execução da vista pelo peso das 5 etapas; cada marcação gera lançamento automático no Relatório Diário.',
         'Vínculo com o Planejamento: métricas de Metro Linear, Quantidade de Chumbadores e Área (m²) de Solo Grampeado.',
-        'Dashboard: painel "Contenção (Solo Grampeado)" com o minimapa de cada vista e % de execução.']}
+        'Dashboard: painel "Contenção (Solo Grampeado)" com o mapa de cada vista na proporção real da imagem (larga/baixa nas elevações compridas).']}
   ],
 
   render(containerId) {

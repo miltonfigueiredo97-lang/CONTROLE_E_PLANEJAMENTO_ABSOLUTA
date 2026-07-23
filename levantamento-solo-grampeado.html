@@ -84,50 +84,24 @@
   </div>
 </div>
 
-<!-- MODAL: Config. Grid da Vista -->
-<div class="modal-overlay" id="modal-sg-config-grid">
-  <div class="modal" style="max-width:520px;">
-    <div class="modal-header">
-      <h3>⚙ Configuração do Grid</h3>
-      <button class="modal-close" onclick="Utils.fecharModal('modal-sg-config-grid')">&times;</button>
-    </div>
-    <div class="modal-body">
-      <input type="hidden" id="sg-cfg-vistaid">
-      <div class="form-row">
-        <div class="form-grupo"><label>Chumbadores por linha (colunas)</label><input type="number" id="sg-cfg-cols" min="1" class="form-control" placeholder="8"></div>
-        <div class="form-grupo"><label>Quantidade de linhas</label><input type="number" id="sg-cfg-rows" min="1" class="form-control" placeholder="5"></div>
-      </div>
-      <div class="form-row">
-        <div class="form-grupo"><label>Comprimento padrão — Vertical (ml)</label><input type="number" step="0.1" id="sg-cfg-comp-vert" class="form-control" placeholder="6"></div>
-        <div class="form-grupo"><label>Comprimento padrão — Horizontal (ml)</label><input type="number" step="0.1" id="sg-cfg-comp-horiz" class="form-control" placeholder="6"></div>
-      </div>
-      <div class="form-grupo"><label>Especificação padrão (materiais)</label><select id="sg-cfg-espec" class="form-control"></select></div>
-      <p class="text-sm text-muted mb-1">Chumbadores existentes fora do novo tamanho do grid são removidos; os que continuam mantêm tipo/comprimento/profundidade já preenchidos.</p>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-sg-config-grid')">Cancelar</button>
-      <button class="btn btn-primario" onclick="SG_UI.salvarConfigGrid()">Salvar</button>
-    </div>
-  </div>
-</div>
-
-<!-- MODAL: Imagem de Fundo -->
+<!-- MODAL: PDF/Imagem da Vista -->
 <div class="modal-overlay" id="modal-sg-imagem">
   <div class="modal" style="max-width:480px;">
     <div class="modal-header">
-      <h3>🖼 Imagem de Fundo (planta)</h3>
+      <h3>🖼 PDF/Imagem da Vista</h3>
       <button class="modal-close" onclick="Utils.fecharModal('modal-sg-imagem')">&times;</button>
     </div>
     <div class="modal-body">
       <input type="hidden" id="sg-img-vistaid">
-      <p class="text-sm text-muted mb-1">A imagem fica atrás do grid como referência visual (não altera a escala/m²).</p>
+      <p class="text-sm text-muted mb-1">Envie o PDF da elevação (1ª página) ou uma foto/imagem — os chumbadores serão posicionados sobre ela.</p>
       <label class="btn btn-secundario" style="display:block;text-align:center;cursor:pointer;">
-        📂 Carregar Imagem
-        <input type="file" accept="image/*" style="display:none;" onchange="SG_UI.onImagemArquivo(this)">
+        📂 Carregar PDF ou Imagem
+        <input type="file" accept=".pdf,image/*" style="display:none;" onchange="SG_UI.onImagemArquivo(this)">
       </label>
+      <div id="sg-img-status" class="text-sm text-muted" style="margin-top:8px;"></div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-secundario" style="color:var(--cv-red);" onclick="SG_UI.removerImagemFundo()">Remover Imagem</button>
+      <button class="btn btn-secundario" style="color:var(--cv-red);" onclick="SG_UI.removerImagem()">Remover Imagem</button>
       <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-sg-imagem')">Fechar</button>
     </div>
   </div>
@@ -171,7 +145,7 @@
   </div>
 </div>
 
-<!-- MODAL: Editar Chumbador (do grid) -->
+<!-- MODAL: Novo/Editar Chumbador -->
 <div class="modal-overlay" id="modal-sg-chumbador">
   <div class="modal" style="max-width:480px;">
     <div class="modal-header">
@@ -181,13 +155,14 @@
     <div class="modal-body">
       <form id="form-sg-chumbador" onsubmit="event.preventDefault()">
         <div class="form-row">
+          <div class="form-grupo"><label>Número (igual ao desenho)</label><input type="text" name="numero" class="form-control" required></div>
           <div class="form-grupo"><label>Tipo</label><select name="tipo" class="form-control"></select></div>
-          <div class="form-grupo"><label>Comprimento (ml)</label><input type="number" name="comprimento" step="0.1" min="0.1" class="form-control"></div>
         </div>
         <div class="form-row">
+          <div class="form-grupo"><label>Comprimento (ml)</label><input type="number" name="comprimento" step="0.1" min="0.1" class="form-control"></div>
           <div class="form-grupo"><label>Profundidade (cm)</label><input type="number" name="profundidade" step="0.1" min="0" class="form-control"></div>
-          <div class="form-grupo"><label>Especificação</label><select name="especId" class="form-control"></select></div>
         </div>
+        <div class="form-grupo"><label>Especificação</label><select name="especId" class="form-control"></select></div>
       </form>
     </div>
     <div class="modal-footer">

@@ -1,9 +1,12 @@
 // ============================================
 // Módulo: SoloGrampeadoCalculos
-// Motor de cálculo compartilhado entre Levantamento e Controle
-// de Solo Grampeado: geometria do grid, escala, % de execução
-// e renderização do minimapa (SVG) reaproveitado nos dois módulos
-// e no Dashboard.
+// Motor compartilhado (Levantamento/Controle/Dashboard).
+// Chumbadores são pontos livres (x,y relativos 0..1) sobre uma
+// imagem de fundo (PDF renderizado ou foto/planta) — não um grid
+// regular, pois as vistas reais são irregulares (ver elevações
+// do Solo Grampeado: espaçamento variável, terreno inclinado).
+// Escala calibrada por 2 cliques + comprimento real (cm), usando
+// as dimensões naturais (px) da imagem armazenadas em cada vista.
 // ============================================
 
 const SoloGrampeadoCalculos = (() => {
@@ -17,7 +20,7 @@ const SoloGrampeadoCalculos = (() => {
 
   // Pesos das etapas — somam 100% da vista.
   // Perfuração/Injeção 1/Injeção 2 são por CHUMBADOR (50% no total).
-  // Projeção/Acabamento são por CÉLULA DE ÁREA (50% no total).
+  // Projeção/Acabamento são por ÁREA MARCADA, em m² (50% no total).
   const ETAPAS_CHUMBADOR = [
     { key: 'perfuracao', label: 'Perfuração do Chumbador', peso: 20 },
     { key: 'injecao1', label: 'Injeção 1', peso: 15 },
@@ -31,49 +34,25 @@ const SoloGrampeadoCalculos = (() => {
   const PESO_AREA_TOTAL = ETAPAS_AREA.reduce((s, e) => s + e.peso, 0); // 50
 
   // ══════════════════════════════════════════
-  // GEOMETRIA DO GRID (posições dos chumbadores no SVG)
+  // ESCALA e ÁREA (a partir das dimensões naturais da imagem)
   // ══════════════════════════════════════════
-  const SVG_W = 760, SVG_H = 440, SVG_PAD = 42;
-
-  function gridColX(col, cols) {
-    const usable = SVG_W - 2 * SVG_PAD;
-    return SVG_PAD + (cols > 1 ? (col / (cols - 1)) * usable : usable / 2);
+  function calcEscalaCmPorPx(distanciaPx, cmReal) {
+    if (!(distanciaPx > 0) || !(cmReal > 0)) return 0;
+    return cmReal / distanciaPx;
   }
-  function gridRowY(row, rows) {
-    const usable = SVG_H - 2 * SVG_PAD;
-    return SVG_PAD + (rows > 1 ? (row / (rows - 1)) * usable : usable / 2);
+  function calcM2Imagem(imgWpx, imgHpx, escalaCmPorPx) {
+    if (!(escalaCmPorPx > 0)) return 0;
+    const largCm = num(imgWpx) * escalaCmPorPx;
+    const altCm = num(imgHpx) * escalaCmPorPx;
+    return (largCm / 100) * (altCm / 100);
   }
-  // Células de área ficam ENTRE os chumbadores (malha rows-1 x cols-1, mínimo 1x1)
-  function celulasDim(vista) {
-    const cols = Math.max(1, parseInt(vista.gridCols) || 1);
-    const rows = Math.max(1, parseInt(vista.gridRows) || 1);
-    return { cellCols: Math.max(1, cols - 1), cellRows: Math.max(1, rows - 1), cols, rows };
-  }
-  function celulaKey(r, c) { return `${r}_${c}`; }
-  function celulaRect(r, c, vista) {
-    const { cols, rows } = celulasDim(vista);
-    const x1 = cols > 1 ? gridColX(c, cols) : SVG_PAD;
-    const x2 = cols > 1 ? gridColX(c + 1, cols) : SVG_W - SVG_PAD;
-    const y1 = rows > 1 ? gridRowY(r, rows) : SVG_PAD;
-    const y2 = rows > 1 ? gridRowY(r + 1, rows) : SVG_H - SVG_PAD;
-    return { x: Math.min(x1, x2), y: Math.min(y1, y2), w: Math.abs(x2 - x1), h: Math.abs(y2 - y1) };
-  }
-
-  // ══════════════════════════════════════════
-  // ESCALA (linha de calibração) e m² sugerido
-  // ══════════════════════════════════════════
-  function distPx(l) { return Math.hypot((l.x2 - l.x1), (l.y2 - l.y1)); }
-  function calcEscalaCmPorPx(linha, cmReal) {
-    if (!linha || !(cmReal > 0)) return 0;
-    const d = distPx(linha);
-    return d > 0 ? cmReal / d : 0;
-  }
-  function calcM2Sugerido(vista) {
+  // rect com x1,y1,x2,y2 relativos (0..1) de uma vista
+  function calcM2Retangulo(rect, vista) {
     const escala = num(vista.escalaCmPorPx);
     if (!(escala > 0)) return 0;
-    const larguraCm = (SVG_W - 2 * SVG_PAD) * escala;
-    const alturaCm = (SVG_H - 2 * SVG_PAD) * escala;
-    return (larguraCm / 100) * (alturaCm / 100);
+    const wPx = Math.abs(rect.x2 - rect.x1) * num(vista.imgWidthPx);
+    const hPx = Math.abs(rect.y2 - rect.y1) * num(vista.imgHeightPx);
+    return ((wPx * escala) / 100) * ((hPx * escala) / 100);
   }
 
   // ══════════════════════════════════════════
@@ -92,116 +71,121 @@ const SoloGrampeadoCalculos = (() => {
     if (exec.perfuracao && exec.perfuracao.feito) return 'Perfurado';
     return 'Pendente';
   }
-  // execMap: { [chumbadorId]: execDoc }
-  function calcPctVista(vista, chumbadoresDaVista, execMap, areaDoc) {
+  function corChumbador(pct) {
+    if (pct >= PESO_CHUMBADOR_TOTAL) return '#22c55e';
+    if (pct > 0) return '#f59e0b';
+    return '#94a3b8';
+  }
+  // areasDaVista: array de marcações {etapa, m2}
+  function calcPctVista(vista, chumbadoresDaVista, execMap, areasDaVista) {
     const qtd = chumbadoresDaVista.length;
     let contribChumb = 0;
     if (qtd > 0) {
       const somaPct = chumbadoresDaVista.reduce((s, c) => s + pctChumbador(execMap[c.id]), 0);
       contribChumb = somaPct / qtd; // já em escala 0..50
     }
-    const { cellCols, cellRows } = celulasDim(vista);
-    const totalCelulas = cellCols * cellRows;
-    const projFeitas = areaDoc?.celulasProjecao?.length || 0;
-    const acabFeitas = areaDoc?.celulasAcabamento?.length || 0;
-    const contribProj = totalCelulas > 0 ? (projFeitas / totalCelulas) * ETAPAS_AREA[0].peso : 0;
-    const contribAcab = totalCelulas > 0 ? (acabFeitas / totalCelulas) * ETAPAS_AREA[1].peso : 0;
-    const pct = contribChumb + contribProj + contribAcab;
     const m2Total = num(vista.m2Total);
-    const m2PorCelula = totalCelulas > 0 ? m2Total / totalCelulas : 0;
+    const areas = areasDaVista || [];
+    const m2Projetado = areas.filter(a => a.etapa === 'projecao').reduce((s, a) => s + num(a.m2), 0);
+    const m2Acabado = areas.filter(a => a.etapa === 'acabamento').reduce((s, a) => s + num(a.m2), 0);
+    const fracProj = m2Total > 0 ? Math.min(1, m2Projetado / m2Total) : 0;
+    const fracAcab = m2Total > 0 ? Math.min(1, m2Acabado / m2Total) : 0;
+    const contribProj = fracProj * ETAPAS_AREA[0].peso;
+    const contribAcab = fracAcab * ETAPAS_AREA[1].peso;
+    const pct = contribChumb + contribProj + contribAcab;
     return {
       pct: Math.min(100, pct),
       qtdChumbadores: qtd,
       chumbadoresFeitos: chumbadoresDaVista.filter(c => pctChumbador(execMap[c.id]) >= PESO_CHUMBADOR_TOTAL).length,
-      totalCelulas, projFeitas, acabFeitas,
-      m2Projetado: projFeitas * m2PorCelula,
-      m2Acabado: acabFeitas * m2PorCelula,
+      m2Projetado, m2Acabado,
       m2Executado: Math.min(m2Total, (pct / 100) * m2Total),
     };
   }
 
   // ══════════════════════════════════════════
-  // RENDER DO MINIMAPA (SVG) — reaproveitado em Levantamento,
-  // Controle e Dashboard. `opts.interativo` liga os onclick.
+  // RENDER DO MAPA (HTML absoluto — não SVG) — reaproveitado em
+  // Levantamento (editor com zoom/scroll), Controle (interativo,
+  // sem zoom customizado) e Dashboard (miniatura, sem interação).
+  // Retorna só HTML; a interatividade (cliques) é ligada pelo
+  // módulo chamador via posRelativa() sobre o elemento #stageId.
   // ══════════════════════════════════════════
-  function corChumbador(pct) {
-    if (pct >= PESO_CHUMBADOR_TOTAL) return '#22c55e';
-    if (pct > 0) return '#f59e0b';
-    return '#94a3b8';
-  }
-  function svgMinimapa(vista, chumbadoresDaVista, execMap, areaDoc, imagemBase64, opts) {
+  function mapaHTML(vista, imagemBase64, pontos, execMap, areas, opts) {
     opts = opts || {};
-    const cols = Math.max(1, parseInt(vista.gridCols) || 1);
-    const rows = Math.max(1, parseInt(vista.gridRows) || 1);
-    const { cellCols, cellRows } = celulasDim(vista);
-    const modoArea = opts.modoArea || null; // 'projecao' | 'acabamento' | null
-    const celProj = new Set(areaDoc?.celulasProjecao || []);
-    const celAcab = new Set(areaDoc?.celulasAcabamento || []);
+    const W = num(vista.imgWidthPx) || 800, H = num(vista.imgHeightPx) || 500;
+    const zoom = opts.zoom || 1;
+    const w = W * zoom, h = H * zoom;
+    const raio = opts.mini ? 3 : 7;
+    const marcadores = (pontos || []).map(p => {
+      const pct = pctChumbador((execMap || {})[p.id]);
+      const cor = opts.readonlyCor ? '#3b82f6' : corChumbador(pct);
+      const cursor = (opts.interativo && !opts.mini) ? 'cursor:pointer;' : '';
+      const titulo = opts.mini ? '' : ` title="${esc(p.numero)} — ${esc(statusChumbador((execMap || {})[p.id]))}"`;
+      return `<div class="sg-marcador" data-id="${p.id}" style="position:absolute;left:${(p.x * 100).toFixed(3)}%;top:${(p.y * 100).toFixed(3)}%;width:${raio * 2}px;height:${raio * 2}px;margin:-${raio}px;border-radius:50%;background:${cor};border:1px solid #1e293b;${cursor}z-index:2;"${titulo}></div>`;
+    }).join('');
+    const areasHtml = (areas || []).map(a => {
+      const fill = a.etapa === 'acabamento' ? 'rgba(22,163,74,.55)' : 'rgba(187,247,208,.65)';
+      const x = Math.min(a.x1, a.x2), y = Math.min(a.y1, a.y2);
+      const ww = Math.abs(a.x2 - a.x1), hh = Math.abs(a.y2 - a.y1);
+      return `<div class="sg-area" data-id="${a.id || ''}" style="position:absolute;left:${(x * 100).toFixed(3)}%;top:${(y * 100).toFixed(3)}%;width:${(ww * 100).toFixed(3)}%;height:${(hh * 100).toFixed(3)}%;background:${fill};border:1px solid rgba(22,101,52,.45);z-index:1;"></div>`;
+    }).join('');
+    const bg = imagemBase64
+      ? `<img src="${imagemBase64}" style="width:100%;height:100%;display:block;user-select:none;pointer-events:none;" draggable="false">`
+      : `<div style="width:100%;height:100%;background:repeating-linear-gradient(45deg,#f1f5f9,#f1f5f9 10px,#e2e8f0 10px,#e2e8f0 20px);"></div>`;
+    const maxH = opts.mini ? (opts.maxHeight || 240) : (opts.maxHeight || 560);
+    return `<div class="sg-map-scroll" style="overflow:${opts.mini ? 'hidden' : 'auto'};max-height:${maxH}px;border:1px solid #e2e8f0;border-radius:8px;background:#fff;">
+      <div id="${opts.stageId || 'sg-stage'}" class="sg-map-stage" style="position:relative;width:${w}px;height:${h}px;">
+        ${bg}${areasHtml}${marcadores}
+      </div>
+    </div>`;
+  }
 
-    let bg = '';
-    if (imagemBase64) {
-      bg = `<image href="${imagemBase64}" x="${SVG_PAD}" y="${SVG_PAD}" width="${SVG_W - 2 * SVG_PAD}" height="${SVG_H - 2 * SVG_PAD}" preserveAspectRatio="none" opacity="0.55"/>`;
-    }
-
-    // Células de área
-    let celulasSvg = '';
-    for (let r = 0; r < cellRows; r++) {
-      for (let c = 0; c < cellCols; c++) {
-        const key = celulaKey(r, c);
-        const rect = celulaRect(r, c, vista);
-        const feitoAcab = celAcab.has(key);
-        const feitoProj = celProj.has(key);
-        const fill = feitoAcab ? '#16a34a' : feitoProj ? '#bbf7d0' : 'transparent';
-        const opacity = feitoAcab ? 0.55 : feitoProj ? 0.7 : 1;
-        const clickAttr = (opts.interativo && opts.celulaClickFn && modoArea)
-          ? `onclick="${opts.celulaClickFn}('${key}')" style="cursor:pointer;"` : '';
-        celulasSvg += `<rect x="${rect.x.toFixed(1)}" y="${rect.y.toFixed(1)}" width="${rect.w.toFixed(1)}" height="${rect.h.toFixed(1)}" fill="${fill}" fill-opacity="${opacity}" stroke="#cbd5e1" stroke-width="0.75" ${clickAttr}><title>Célula ${r + 1}.${c + 1}</title></rect>`;
-      }
-    }
-
-    // Linha de calibração (se ainda estiver sendo mostrada/editada)
-    let calibSvg = '';
-    if (opts.mostrarCalibracao && vista.linhaCalibracao) {
-      const l = vista.linhaCalibracao;
-      calibSvg = `<line x1="${l.x1}" y1="${l.y1}" x2="${l.x2}" y2="${l.y2}" stroke="#dc2626" stroke-width="2" stroke-dasharray="5,3"/>
-        <circle cx="${l.x1}" cy="${l.y1}" r="4" fill="#dc2626"/><circle cx="${l.x2}" cy="${l.y2}" r="4" fill="#dc2626"/>`;
-    }
-
-    // Chumbadores (bolinhas)
-    let bolinhasSvg = '';
-    chumbadoresDaVista.forEach(ch => {
-      const x = gridColX(ch.coluna || 0, cols);
-      const y = gridRowY(ch.linha || 0, rows);
-      const pct = pctChumbador(execMap[ch.id]);
-      const cor = corChumbador(pct);
-      const clickAttr = (opts.interativo && opts.chumbadorClickFn && !modoArea)
-        ? `onclick="${opts.chumbadorClickFn}('${ch.id}')" style="cursor:pointer;"` : '';
-      const raio = opts.mini ? 4 : 8;
-      bolinhasSvg += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${raio}" fill="${cor}" stroke="#1e293b" stroke-width="1" ${clickAttr}><title>Chumbador ${esc(ch.numero)} — ${statusChumbador(execMap[ch.id])}</title></circle>`;
-      if (!opts.mini) {
-        bolinhasSvg += `<text x="${x.toFixed(1)}" y="${(y - 12).toFixed(1)}" text-anchor="middle" font-size="9" fill="#334155" font-family="JetBrains Mono,monospace">${esc(ch.numero)}</text>`;
-      }
-    });
-
-    return `<svg viewBox="0 0 ${SVG_W} ${SVG_H}" width="100%" style="max-width:${SVG_W}px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;">
-      ${bg}${celulasSvg}${calibSvg}${bolinhasSvg}
-    </svg>`;
+  // Posição relativa (0..1) de um clique dentro do elemento "stage"
+  function posRelativa(evt, stageEl) {
+    const r = stageEl.getBoundingClientRect();
+    if (!r.width || !r.height) return { x: 0, y: 0 };
+    return {
+      x: Math.min(1, Math.max(0, (evt.clientX - r.left) / r.width)),
+      y: Math.min(1, Math.max(0, (evt.clientY - r.top) / r.height)),
+    };
+  }
+  function distanciaPxEntrePontos(p1, p2, vista) {
+    const dx = (p2.x - p1.x) * num(vista.imgWidthPx);
+    const dy = (p2.y - p1.y) * num(vista.imgHeightPx);
+    return Math.hypot(dx, dy);
   }
 
   // ══════════════════════════════════════════
-  // PRODUÇÃO DIÁRIA (legado — Grampos/Extras/Estacas)
+  // Compactar imagem (canvas) — usado ao processar PDF/foto no
+  // upload, pra não estourar o limite de ~950KB do doc Firestore.
   // ══════════════════════════════════════════
-  function mlDiaProducao(p) {
-    return (num(p.grampos) * num(p.tamanhoGrampos)) + (num(p.extras) * num(p.tamanhoExtras)) + (num(p.estacas) * num(p.tamanhoEstacas));
+  function canvasParaDataURLLimitado(canvas, limiteBytes) {
+    limiteBytes = limiteBytes || 950000;
+    let quality = 0.85;
+    let url = canvas.toDataURL('image/jpeg', quality);
+    let tentativas = 0;
+    while (url.length > limiteBytes && tentativas < 5) {
+      quality -= 0.15;
+      if (quality < 0.35) {
+        // reduz dimensão em vez de piorar mais a qualidade
+        const c2 = document.createElement('canvas');
+        c2.width = Math.round(canvas.width * 0.75);
+        c2.height = Math.round(canvas.height * 0.75);
+        c2.getContext('2d').drawImage(canvas, 0, 0, c2.width, c2.height);
+        canvas = c2;
+        quality = 0.7;
+      }
+      url = canvas.toDataURL('image/jpeg', quality);
+      tentativas++;
+    }
+    return { url, width: canvas.width, height: canvas.height, ok: url.length <= limiteBytes };
   }
 
   return {
     fmt2, fmt1, num, genId, esc,
     TIPOS_CHUMBADOR, ETAPAS_CHUMBADOR, ETAPAS_AREA, PESO_CHUMBADOR_TOTAL, PESO_AREA_TOTAL,
-    SVG_W, SVG_H, SVG_PAD,
-    gridColX, gridRowY, celulasDim, celulaKey, celulaRect,
-    distPx, calcEscalaCmPorPx, calcM2Sugerido,
-    pctChumbador, statusChumbador, calcPctVista, corChumbador, svgMinimapa,
-    mlDiaProducao,
+    calcEscalaCmPorPx, calcM2Imagem, calcM2Retangulo,
+    pctChumbador, statusChumbador, corChumbador, calcPctVista,
+    mapaHTML, posRelativa, distanciaPxEntrePontos,
+    canvasParaDataURLLimitado,
   };
 })();

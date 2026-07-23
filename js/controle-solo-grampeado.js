@@ -1,12 +1,12 @@
 // ============================================
 // Módulo: Controle de Solo Grampeado
-// Minimapa interativo por vista: clicar num chumbador marca as
-// etapas (Perfuração 20% / Injeção 1 15% / Injeção 2 15%);
-// clicar em células da malha marca Projeção (30%) e Acabamento
-// (20%) da área. Cada marcação gera um lançamento no relatório
-// diário (sgProducaoDiaria). % e m² executados por vista.
-// Chumbadores/Vistas vêm do Levantamento de Solo Grampeado —
-// aqui só se registra a EXECUÇÃO.
+// Mesmo mapa (imagem + pontos) do Levantamento, agora interativo
+// pra EXECUÇÃO: clicar num chumbador marca as etapas (Perfuração
+// 20% / Injeção 1 15% / Injeção 2 15%); num modo de área ativo,
+// arrastar um retângulo sobre o mapa marca Projeção (30%) ou
+// Acabamento (20%) daquele trecho, em m² reais (via escala da
+// vista). Cada marcação gera lançamento no relatório diário.
+// Chumbadores/Vistas vêm do Levantamento — aqui só a EXECUÇÃO.
 // Dados: Firestore obras/{obraId}/sg*
 // ============================================
 
@@ -22,13 +22,14 @@ const ControleSoloGrampeado = (() => {
   let vistas = [];
   let chumbadores = [];
   let execucoes = []; // 1 doc por chumbador: {chumbadorId, vistaId, perfuracao:{feito,data}, injecao1:{...}, injecao2:{...}}
-  let producao = []; // log diário (sgProducaoDiaria)
-  let areaExecutada = []; // 1 doc por vista: {vistaId, celulasProjecao:[...], celulasAcabamento:[...]}
+  let producao = []; // log diário (etapas de chumbador)
+  let areaExecutada = []; // N docs por vista: {vistaId, etapa, x1,y1,x2,y2, m2, data}
 
   let vistaAtivaId = null;
   let modoArea = null; // 'projecao' | 'acabamento' | null
   let chumbAtivoId = null;
   let imagemCacheVistaId = null, imagemCacheBase64 = null;
+  let arrastoInicio = null; // {x,y} durante drag de área
 
   const esc = SG.esc;
 
@@ -79,14 +80,14 @@ const ControleSoloGrampeado = (() => {
   function vistaLabel(v) { return v ? (v.nome ? `${v.numero} — ${v.nome}` : `Vista ${v.numero}`) : '—'; }
   function vistasOrdenadas() { return [...vistas].sort((a, b) => (a.numero || 0) - (b.numero || 0)); }
   function vistaAtiva() { return vistas.find(v => v.id === vistaAtivaId) || null; }
-  function chumbadoresDaVista(vistaId) { return chumbadores.filter(c => c.vista === vistaId).sort((a, b) => (a.linha - b.linha) || (a.coluna - b.coluna)); }
+  function chumbadoresDaVista(vistaId) { return chumbadores.filter(c => c.vista === vistaId); }
   function execDoChumbador(chumbadorId) { return execucoes.find(e => e.chumbadorId === chumbadorId) || null; }
   function execMapDaVista(vistaId) {
     const map = {};
     chumbadoresDaVista(vistaId).forEach(c => { const e = execDoChumbador(c.id); if (e) map[c.id] = e; });
     return map;
   }
-  function areaDocDaVista(vistaId) { return areaExecutada.find(a => a.vistaId === vistaId) || null; }
+  function areasDaVista(vistaId) { return areaExecutada.filter(a => a.vistaId === vistaId); }
 
   // ══════════════════════════════════════════
   // RENDER PRINCIPAL
@@ -99,29 +100,26 @@ const ControleSoloGrampeado = (() => {
       c.innerHTML = `
         <div class="cc-view">
         <div class="page-header">
-          <div><h2>✅ Controle de Solo Grampeado</h2><span class="subtitulo">Minimapa de execução por vista</span></div>
+          <div><h2>✅ Controle de Solo Grampeado</h2><span class="subtitulo">Execução por vista</span></div>
         </div>
-        <div class="cc-empty">⛏️<br>Nenhuma vista/grid cadastrado ainda.<br>Configure no <a href="levantamento-solo-grampeado.html" style="color:var(--cor-primaria-dark);font-weight:600;">Levantamento de Solo Grampeado</a>.</div>
+        <div class="cc-empty">⛏️<br>Nenhuma vista cadastrada ainda.<br>Configure no <a href="levantamento-solo-grampeado.html" style="color:var(--cor-primaria-dark);font-weight:600;">Levantamento de Solo Grampeado</a>.</div>
         </div>`;
       return;
     }
 
-    // KPIs gerais (todas as vistas)
-    const resumos = vistasOrdenadas().map(v => SG.calcPctVista(v, chumbadoresDaVista(v.id), execMapDaVista(v.id), areaDocDaVista(v.id)));
+    const resumos = vistasOrdenadas().map(v => SG.calcPctVista(v, chumbadoresDaVista(v.id), execMapDaVista(v.id), areasDaVista(v.id)));
     const m2TotalObra = vistas.reduce((s, v) => s + SG.num(v.m2Total), 0);
     const m2ExecObra = resumos.reduce((s, r) => s + r.m2Executado, 0);
     const pctMedioObra = vistas.length ? resumos.reduce((s, r) => s + r.pct, 0) / vistas.length : 0;
     const chumbTotal = chumbadores.length;
     const chumbFeitos = resumos.reduce((s, r) => s + r.chumbadoresFeitos, 0);
 
-    const v = vistaAtiva();
-
     c.innerHTML = `
       <div class="cc-view">
       <div class="page-header">
         <div>
           <h2>✅ Controle de Solo Grampeado</h2>
-          <span class="subtitulo">Clique num chumbador para marcar etapas, ou ative um modo de área para marcar projeção/acabamento</span>
+          <span class="subtitulo">Clique num chumbador para marcar etapas, ou ative um modo de área e arraste um retângulo</span>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <a class="btn btn-secundario btn-sm" href="levantamento-solo-grampeado.html">⛏️ Levantamento Solo Grampeado</a>
@@ -137,7 +135,7 @@ const ControleSoloGrampeado = (() => {
       </div>
 
       <div class="cc-panel">
-        <div class="cc-panelTitle">🗺️ Minimapa de Execução</div>
+        <div class="cc-panelTitle">🗺️ Mapa de Execução</div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center;">
           <select class="form-control" id="sgc-vista-ativa" style="max-width:240px;" onchange="SGC_UI.onTrocarVistaAtiva()">
             ${vistasOrdenadas().map(vv => `<option value="${vv.id}" ${vv.id === vistaAtivaId ? 'selected' : ''}>${esc(vistaLabel(vv))}</option>`).join('')}
@@ -145,7 +143,7 @@ const ControleSoloGrampeado = (() => {
           <button class="btn ${modoArea === 'projecao' ? 'btn-primario' : 'btn-secundario'} btn-sm" onclick="SGC_UI.toggleModoArea('projecao')">▦ Marcar Projeção (30%)</button>
           <button class="btn ${modoArea === 'acabamento' ? 'btn-primario' : 'btn-secundario'} btn-sm" onclick="SGC_UI.toggleModoArea('acabamento')">▦ Marcar Acabamento (20%)</button>
         </div>
-        <div id="sgc-grid-host"></div>
+        <div id="sgc-mapa-host"></div>
       </div>
 
       <div class="cc-panel">
@@ -154,7 +152,7 @@ const ControleSoloGrampeado = (() => {
       </div>
       </div>
     `;
-    renderGrid();
+    renderMapa();
     renderTabelaVistas(resumos);
   }
 
@@ -163,24 +161,19 @@ const ControleSoloGrampeado = (() => {
     modoArea = null;
     renderizar();
   }
-
   function toggleModoArea(m) {
     modoArea = (modoArea === m) ? null : m;
     renderizar();
   }
 
   // ══════════════════════════════════════════
-  // MINIMAPA INTERATIVO
+  // MAPA INTERATIVO
   // ══════════════════════════════════════════
-  async function renderGrid() {
-    const host = document.getElementById('sgc-grid-host');
+  async function renderMapa() {
+    const host = document.getElementById('sgc-mapa-host');
     if (!host) return;
     const v = vistaAtiva();
     if (!v) { host.innerHTML = `<div class="cc-empty">Nenhuma vista selecionada.</div>`; return; }
-    if (!(SG.num(v.gridCols) > 0) || !(SG.num(v.gridRows) > 0)) {
-      host.innerHTML = `<div class="cc-empty">Esta vista ainda não tem grid configurado no Levantamento.</div>`;
-      return;
-    }
     let imagem = null;
     if (imagemCacheVistaId === v.id) imagem = imagemCacheBase64;
     else {
@@ -190,34 +183,120 @@ const ControleSoloGrampeado = (() => {
         imagemCacheVistaId = v.id; imagemCacheBase64 = imagem;
       } catch (e) { imagem = null; }
     }
+    if (!imagem) {
+      host.innerHTML = `<div class="cc-empty">Esta vista ainda não tem imagem/PDF cadastrado no Levantamento.</div>`;
+      return;
+    }
     const lista = chumbadoresDaVista(v.id);
     const execMap = execMapDaVista(v.id);
-    const areaDoc = areaDocDaVista(v.id);
-    const resumo = SG.calcPctVista(v, lista, execMap, areaDoc);
-    const svg = SG.svgMinimapa(v, lista, execMap, areaDoc, imagem, {
-      interativo: true,
-      chumbadorClickFn: 'SGC_UI.onClickChumbador',
-      celulaClickFn: 'SGC_UI.onClickCelula',
-      modoArea,
+    const areas = areasDaVista(v.id);
+    const resumo = SG.calcPctVista(v, lista, execMap, areas);
+    const html = SG.mapaHTML(v, imagem, lista, execMap, areas, {
+      interativo: true, zoom: 1, stageId: 'sgc-stage', maxHeight: 600,
     });
     host.innerHTML = `
-      <div>${svg}</div>
+      ${html}
+      <div id="sgc-arrasto-preview" style="position:relative;"></div>
       <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:8px;font-size:0.8rem;font-family:var(--font-mono);">
         <span>🟢 concluído · 🟠 parcial · ⚪ pendente</span>
-        <span>Projeção: <b>${resumo.projFeitas}/${resumo.totalCelulas}</b> células (${SG.fmt1(resumo.m2Projetado)} m²)</span>
-        <span>Acabamento: <b>${resumo.acabFeitas}/${resumo.totalCelulas}</b> células (${SG.fmt1(resumo.m2Acabado)} m²)</span>
+        <span>Projeção: <b>${SG.fmt1(resumo.m2Projetado)} m²</b></span>
+        <span>Acabamento: <b>${SG.fmt1(resumo.m2Acabado)} m²</b></span>
         <span style="font-weight:700;color:var(--cor-primaria-dark,#b8960a);">% da vista: ${SG.fmt1(resumo.pct)}%</span>
       </div>
-      ${modoArea ? `<div class="cc-empty" style="margin-top:8px;">Modo ativo: <b>${modoArea === 'projecao' ? 'Projeção da Área' : 'Acabamento da Área'}</b>. Clique nas células do grid para marcar/desmarcar.</div>` : ''}
+      ${modoArea ? `<div class="cc-empty" style="margin-top:8px;">Modo ativo: <b>${modoArea === 'projecao' ? 'Projeção da Área' : 'Acabamento da Área'}</b>. Arraste um retângulo sobre o trecho executado.</div>` : ''}
+      ${!modoArea && areas.length ? _htmlListaAreas(areas) : ''}
     `;
+    _ligarEventosMapa(v);
   }
 
-  // ── Clique num chumbador → abre modal de etapas ──
-  function onClickChumbador(chumbadorId) {
-    if (modoArea) return; // em modo área, cliques vão pras células, não pro chumbador
-    abrirMarcarEtapas(chumbadorId);
+  function _htmlListaAreas(areas) {
+    return `<div class="cc-tableWrap" style="max-height:160px;overflow-y:auto;margin-top:10px;">
+      <table class="cc-table">
+        <thead><tr><th>Etapa</th><th class="col-num">m²</th><th>Data</th><th class="col-acoes"></th></tr></thead>
+        <tbody>
+          ${areas.map(a => `<tr>
+            <td>${a.etapa === 'acabamento' ? 'Acabamento' : 'Projeção'}</td>
+            <td class="col-num cc-tdMono">${SG.fmt1(a.m2)}</td>
+            <td class="cc-tdMono">${esc(a.data)}</td>
+            <td class="col-acoes"><button class="btn btn-secundario btn-sm" style="color:var(--cv-red);" onclick="SGC_UI.excluirArea('${a.id}')">🗑</button></td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`;
   }
 
+  function _ligarEventosMapa(v) {
+    const stage = document.getElementById('sgc-stage');
+    if (!stage) return;
+
+    if (modoArea) {
+      stage.style.cursor = 'crosshair';
+      stage.addEventListener('mousedown', ev => {
+        ev.preventDefault();
+        arrastoInicio = SG.posRelativa(ev, stage);
+        const preview = document.createElement('div');
+        preview.id = 'sgc-preview-rect';
+        preview.style.cssText = 'position:absolute;border:2px dashed #1e293b;background:rgba(59,130,246,.25);pointer-events:none;z-index:5;';
+        stage.appendChild(preview);
+        const mover = mv => {
+          const pos = SG.posRelativa(mv, stage);
+          const x = Math.min(arrastoInicio.x, pos.x) * 100, y = Math.min(arrastoInicio.y, pos.y) * 100;
+          const w = Math.abs(pos.x - arrastoInicio.x) * 100, h = Math.abs(pos.y - arrastoInicio.y) * 100;
+          preview.style.left = x + '%'; preview.style.top = y + '%';
+          preview.style.width = w + '%'; preview.style.height = h + '%';
+        };
+        const soltar = async up => {
+          document.removeEventListener('mousemove', mover);
+          document.removeEventListener('mouseup', soltar);
+          preview.remove();
+          const fim = SG.posRelativa(up, stage);
+          const rect = { x1: arrastoInicio.x, y1: arrastoInicio.y, x2: fim.x, y2: fim.y };
+          arrastoInicio = null;
+          if (Math.abs(rect.x2 - rect.x1) < 0.005 || Math.abs(rect.y2 - rect.y1) < 0.005) return; // arrasto minúsculo, ignora
+          await _salvarAreaMarcada(v, rect);
+        };
+        document.addEventListener('mousemove', mover);
+        document.addEventListener('mouseup', soltar);
+      });
+      return;
+    }
+
+    stage.addEventListener('click', ev => {
+      const marcador = ev.target.closest('.sg-marcador');
+      if (marcador) abrirMarcarEtapas(marcador.dataset.id);
+    });
+  }
+
+  async function _salvarAreaMarcada(v, rect) {
+    const m2 = SG.calcM2Retangulo(rect, v);
+    Utils.mostrarLoading();
+    try {
+      const data = Utils.hoje();
+      await Database.criar(obraId, COL_AREA, { vistaId: v.id, etapa: modoArea, x1: rect.x1, y1: rect.y1, x2: rect.x2, y2: rect.y2, m2, data, obraId }, SG.genId('ae'));
+      Utils.toast(`✓ ${modoArea === 'acabamento' ? 'Acabamento' : 'Projeção'} marcado: ${SG.fmt1(m2)} m²`, 'sucesso');
+      await carregar();
+    } catch (e) {
+      Utils.toast('Erro ao marcar área: ' + e.message, 'erro');
+    } finally {
+      Utils.esconderLoading();
+    }
+  }
+
+  async function excluirArea(id) {
+    const ok = await Utils.confirmar('Excluir esta marcação de área?');
+    if (!ok) return;
+    Utils.mostrarLoading();
+    try {
+      await Database.deletar(obraId, COL_AREA, id);
+      await carregar();
+    } catch (e) {
+      Utils.toast('Erro: ' + e.message, 'erro');
+    } finally {
+      Utils.esconderLoading();
+    }
+  }
+
+  // ── Marcar etapas do chumbador ──
   function abrirMarcarEtapas(chumbadorId) {
     const chb = chumbadores.find(x => x.id === chumbadorId);
     if (!chb) return;
@@ -268,37 +347,6 @@ const ControleSoloGrampeado = (() => {
     }
   }
 
-  // ── Clique numa célula (modo Projeção/Acabamento) ──
-  async function onClickCelula(key) {
-    if (!modoArea) return;
-    const v = vistaAtiva();
-    if (!v) return;
-    let doc = areaDocDaVista(v.id);
-    const campo = modoArea === 'projecao' ? 'celulasProjecao' : 'celulasAcabamento';
-    const atual = new Set((doc && doc[campo]) || []);
-    const jaMarcada = atual.has(key);
-    if (jaMarcada) atual.delete(key); else atual.add(key);
-    const novaLista = [...atual];
-
-    Utils.mostrarLoading();
-    try {
-      const payload = { vistaId: v.id, [campo]: novaLista };
-      if (doc) {
-        await Database.atualizar(obraId, COL_AREA, doc.id, payload);
-      } else {
-        await Database.criar(obraId, COL_AREA, { vistaId: v.id, celulasProjecao: [], celulasAcabamento: [], ...payload }, SG.genId('ae'));
-      }
-      if (!jaMarcada) {
-        await Database.criar(obraId, COL_PRODUCAO, { data: Utils.hoje(), vistaId: v.id, tipo: 'area', etapa: modoArea, celula: key, obraId }, SG.genId('pd'));
-      }
-      await carregar();
-    } catch (e) {
-      Utils.toast('Erro ao marcar célula: ' + e.message, 'erro');
-    } finally {
-      Utils.esconderLoading();
-    }
-  }
-
   // ══════════════════════════════════════════
   // TABELA DE PROGRESSO POR VISTA
   // ══════════════════════════════════════════
@@ -328,7 +376,7 @@ const ControleSoloGrampeado = (() => {
   }
 
   // ══════════════════════════════════════════
-  // RELATÓRIO DIÁRIO (log automático das marcações)
+  // RELATÓRIO DIÁRIO
   // ══════════════════════════════════════════
   function abrirRelatorioDiario() {
     renderRelatorioDiario();
@@ -343,16 +391,16 @@ const ControleSoloGrampeado = (() => {
       return `Chumbador ${esc(chb ? chb.numero : '?')} (${esc(vistaLabel(v))}) — ${esc(et ? et.label : p.etapa)}`;
     }
     const et = SG.ETAPAS_AREA.find(e => e.key === p.etapa);
-    return `${esc(et ? et.label : p.etapa)} — célula ${esc(p.celula)} (${esc(vistaLabel(v))})`;
+    return `${esc(et ? et.label : p.etapa)} — ${SG.fmt1(p.m2)} m² (${esc(vistaLabel(v))})`;
   }
 
   function renderRelatorioDiario() {
     const el = document.getElementById('sgc-relatorio-body');
     if (!el) return;
     const porData = {};
-    [...producao].forEach(p => { (porData[p.data] = porData[p.data] || []).push(p); });
+    [...producao, ...areaExecutada.map(a => ({ ...a, tipo: 'area' }))].forEach(p => { (porData[p.data] = porData[p.data] || []).push(p); });
     const datas = Object.keys(porData).sort((a, b) => b.localeCompare(a));
-    if (!datas.length) { el.innerHTML = '<div class="cc-empty">Nenhum lançamento registrado ainda. Marque etapas ou área no minimapa.</div>'; return; }
+    if (!datas.length) { el.innerHTML = '<div class="cc-empty">Nenhum lançamento registrado ainda. Marque etapas ou área no mapa.</div>'; return; }
     el.innerHTML = datas.map(d => `
       <div class="cc-panel" style="padding:10px 14px;margin-bottom:10px;">
         <div style="font-weight:700;font-family:var(--font-mono);margin-bottom:6px;">${esc(d)} <span class="text-sm text-muted">(${porData[d].length} lançamento${porData[d].length !== 1 ? 's' : ''})</span></div>
@@ -364,8 +412,8 @@ const ControleSoloGrampeado = (() => {
   }
 
   return {
-    init, recarregar, renderizar, onTrocarVistaAtiva, toggleModoArea,
-    onClickChumbador, salvarEtapasChumbador, onClickCelula,
+    init, recarregar, renderizar, onTrocarVistaAtiva, toggleModoArea, excluirArea,
+    salvarEtapasChumbador,
     abrirRelatorioDiario,
   };
 })();
