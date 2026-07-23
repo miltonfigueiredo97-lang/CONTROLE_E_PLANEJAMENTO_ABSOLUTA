@@ -688,20 +688,21 @@ const LevantamentoAr = (() => {
     _buscaManualTexto = texto;
     const lista = document.getElementById('armaq-busca-resultados');
     if (lista) lista.innerHTML = _renderResultadosBuscaManual();
+    const criarBox = document.getElementById('armaq-criar-manual');
+    if (criarBox) criarBox.innerHTML = _renderBotaoCriarManual();
+  }
+  function _renderBotaoCriarManual() {
+    if (!_buscaManualTexto.trim()) return '';
+    return `<button class="btn btn-primario btn-sm" style="width:100%;margin-top:6px;" onclick="LevantamentoAr.criarMaterialManual()">+ Criar material novo: "${_buscaManualTexto}"</button>`;
   }
   function _renderResultadosBuscaManual() {
     if (!_buscaManualTexto.trim()) return '';
     const resultados = _buscarMateriais(_buscaManualTexto).slice(0, 10);
-    const criarBtn = `<div style="padding:6px 10px;border-top:${resultados.length ? '1px solid var(--cor-borda-light)' : 'none'};">
-      <button class="btn btn-secundario btn-sm" onclick="LevantamentoAr.criarMaterialManual()">+ Criar material novo: "${_buscaManualTexto}"</button>
-    </div>`;
-    if (!resultados.length) {
-      return `<div class="text-sm text-muted" style="padding:6px;">Nenhum material parecido encontrado na biblioteca.</div>${criarBtn}`;
-    }
+    if (!resultados.length) return `<div class="text-sm text-muted" style="padding:6px;">Nenhum material parecido encontrado na biblioteca.</div>`;
     return resultados.map(m => `
       <div class="tree-item" style="padding:6px 10px;" onclick="LevantamentoAr.adicionarPecaManual('${m.id}','${m.nome.replace(/'/g, "\\'")}','${m.unidade || 'un'}')">
         <span class="tree-icon">🔩</span><span class="tree-label">${_destacar(m.nome, _buscaManualTexto)}</span><span class="tree-badge">${m.tipo}</span>
-      </div>`).join('') + criarBtn;
+      </div>`).join('');
   }
   async function criarMaterialManual() {
     const nome = _buscaManualTexto.trim(); if (!nome) return;
@@ -741,7 +742,8 @@ const LevantamentoAr = (() => {
         <div style="font-size:0.8rem;font-weight:700;color:var(--cor-primaria-dark);margin-bottom:8px;">Peças manuais (ex: dreno) — adicione livremente</div>
         <input type="text" id="armaq-busca-manual" class="form-control" placeholder="Buscar peça na biblioteca (ex: dreno)..." value="${_buscaManualTexto}"
           oninput="LevantamentoAr.onBuscaManual(this.value)">
-        <div id="armaq-busca-resultados" style="max-height:160px;overflow-y:auto;">${_renderResultadosBuscaManual()}</div>
+        <div id="armaq-criar-manual">${_renderBotaoCriarManual()}</div>
+        <div id="armaq-busca-resultados" style="max-height:140px;overflow-y:auto;margin-top:4px;">${_renderResultadosBuscaManual()}</div>
         ${maqDraft.manuaisAvulsos.length ? `
           <div style="margin-top:8px;">
             ${maqDraft.manuaisAvulsos.map((m, idx) => `

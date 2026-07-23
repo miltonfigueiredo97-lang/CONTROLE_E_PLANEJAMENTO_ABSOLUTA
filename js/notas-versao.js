@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.55.1',
+  versaoAtual: 'V2.55.2',
 
   versoes: [
     {
@@ -4869,7 +4869,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.55.1',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-23',
       tipo: 'funcionalidade',
       titulo: 'Levantamento de Ar Condicionado: Resumo separa por diâmetro do cobre + exportar CSV para compras',
@@ -4886,6 +4886,23 @@ const NotasVersao = {
         '  .csv (Material, Total, Unidade, Comprar em unidades) pronto',
         '  pra abrir no Excel/Sheets e mandar direto pra equipe de',
         '  compras — sem precisar copiar dado por dado da tela',
+      ]
+    },
+    {
+      versao: 'V2.55.2',
+      status: 'aberta',
+      data: '2026-07-23',
+      tipo: 'correcao',
+      titulo: 'Levantamento de Ar Condicionado: botão de criar material novo sempre visível na busca de peça manual',
+      itens: [
+        'CORRIGIDO: o botão "+ Criar material novo" ficava dentro da',
+        '  lista rolável de resultados da busca por aproximação — se a',
+        '  busca trouxesse vários resultados parecidos, o botão de criar',
+        '  ficava escondido lá embaixo e passava despercebido',
+        'Agora o botão "+ Criar material novo: [texto buscado]" fica',
+        '  fixo logo abaixo do campo de busca, sempre visível, e a',
+        '  lista de resultados encontrados na biblioteca fica separada',
+        '  embaixo dele, numa área rolável própria',
       ]
     }
   ],
