@@ -7,8 +7,9 @@
 const Dashboard = (() => {
   let obraAtual = null;
   let tarefas = [];
-  let semanas = [];
+  let semanas = []; // não é mais buscado (PPC Semanal/Motivos de Atraso saíram da tela a pedido do Milton) — funções mortas mantidas, operam sobre array vazio
   let historicoExecucao = [];
+  let suprimentos = []; // coleção 'suprimentos' (pipeline de compra por tarefa)
   let _resumoView = 'unidade';
   let _resumoDados = null;
   let _curvaCache = null; // último cálculo da Curva S (usado pelo tooltip)
@@ -170,24 +171,23 @@ const Dashboard = (() => {
     try {
       Utils.mostrarLoading('Carregando dashboard...');
       const obraId = obraAtual.id;
-      const [obraCompleta, tf, sem, hist] = await Promise.all([
+      const [obraCompleta, tf, hist, sup] = await Promise.all([
         Database.getObra(obraId),
         Database.listar(obraId, 'tarefas', 'ordem').catch(() => []),
-        Database.listar(obraId, 'semanas', 'fim').catch(() => []),
         Database.listar(obraId, 'historicoExecucao', 'data', 'asc').catch(() => []),
+        Database.listar(obraId, 'suprimentos', null).catch(() => []),
       ]);
       obraAtual = obraCompleta || obraAtual;
       tarefas = tf;
-      semanas = sem;
       historicoExecucao = hist;
+      suprimentos = sup;
       el.innerHTML = _htmlEsqueleto();
       _renderHero();
       _renderAtividades();
-      await _renderResumoApartamento();
-      _renderCurvaS();
-      _renderPpcSemanal();
-      _renderMotivosAtraso();
+      _renderSuprimentosDash();
       await _renderFundacaoEstrutura();
+      _renderCurvaS();
+      await _renderResumoApartamento();
     } catch (e) {
       console.error(e);
       Utils.toast('Erro ao carregar dashboard.', 'erro');
@@ -236,18 +236,12 @@ const Dashboard = (() => {
 
       <div class="card db-row">
         <div class="card-body">
-          <div class="db-secao-header">
-            <h3>Resumo por Apartamento</h3>
-            <div class="aba-toggle" id="db-resumo-toggle">
-              <button class="aba-btn ativo" data-v="unidade" onclick="Dashboard.setResumoView('unidade')">Unidade</button>
-              <button class="aba-btn" data-v="custo" onclick="Dashboard.setResumoView('custo')">Custo (R$)</button>
-            </div>
-          </div>
-          <div id="db-resumo-apartamento"></div>
+          <div class="db-secao-header"><h3>Suprimentos</h3></div>
+          <div id="db-suprimentos-dash"></div>
         </div>
       </div>
 
-      <!-- ===== Resto (prioridade menor) ===== -->
+      <div id="db-fundacao-estrutura-wrap"></div>
 
       <div class="card db-row">
         <div class="card-body">
@@ -262,31 +256,16 @@ const Dashboard = (() => {
         </div>
       </div>
 
-      <div class="db-grid-2">
-        <div class="card">
-          <div class="card-body">
-            <div class="db-secao-header"><h3>Curto Prazo — PPC Semanal</h3></div>
-            <div id="db-ppc-semanal" class="db-tooltip-wrap"></div>
-          </div>
-        </div>
-        <div class="card">
-          <div class="card-body">
-            <div class="db-secao-header"><h3>Motivos de Atraso Semanais</h3></div>
-            <div id="db-motivos-atraso" class="db-tooltip-wrap"></div>
-          </div>
-        </div>
-      </div>
-
-      <div id="db-fundacao-estrutura-wrap"></div>
-
       <div class="card db-row">
         <div class="card-body">
-          <div class="db-secao-header"><h3>Suprimentos</h3></div>
-          <div class="estado-vazio">
-            <div class="icone">📦</div>
-            <p>O resumo de Suprimentos ainda não foi construído aqui no Dashboard.</p>
-            <p class="text-sm text-muted">O módulo Suprimentos já tem dados reais (pipeline de compra por tarefa) — só falta trazer o resumo pra esta tela.</p>
+          <div class="db-secao-header">
+            <h3>Resumo por Apartamento</h3>
+            <div class="aba-toggle" id="db-resumo-toggle">
+              <button class="aba-btn ativo" data-v="unidade" onclick="Dashboard.setResumoView('unidade')">Unidade</button>
+              <button class="aba-btn" data-v="custo" onclick="Dashboard.setResumoView('custo')">Custo (R$)</button>
+            </div>
           </div>
+          <div id="db-resumo-apartamento"></div>
         </div>
       </div>
     `;
@@ -453,6 +432,48 @@ const Dashboard = (() => {
           ${proximas.length ? proximas.map(t => item(t, '#60a5fa')).join('') : '<div class="text-sm text-muted" style="padding:10px 0;">Nenhuma atividade pendente.</div>'}
         </div>
       </div>`;
+  }
+
+  // ===================== SUPRIMENTOS (resumo no Dashboard) =====================
+  // Mostra as Próximas Atividades (ainda não iniciadas no Planejamento) cujo
+  // pipeline de Suprimentos ainda não foi tocado (todas as 5 etapas em
+  // "não iniciado", ou nem existe doc de suprimentos ainda pra essa tarefa) —
+  // ou seja, "falta providenciar suprimento" pras que estão chegando.
+  function _statusSuprimento(tarefaId) {
+    const doc = suprimentos.find(s => s.tarefaId === tarefaId || s.id === tarefaId);
+    if (!doc || !doc.etapas) return 'sem_doc';
+    const etapas = Object.values(doc.etapas);
+    const tocada = etapas.some(e => e && e.status && e.status !== 'nao_iniciado');
+    return tocada ? 'iniciado' : 'nao_iniciado';
+  }
+
+  function _renderSuprimentosDash() {
+    const host = document.getElementById('db-suprimentos-dash');
+    if (!host) return;
+    const leaves = _leaves();
+    const pendentes = leaves
+      .filter(t => !(Number(t.percentualConcluido) > 0) && t.inicioPlanejado)
+      .filter(t => _statusSuprimento(t.id) !== 'iniciado')
+      .sort((a, b) => new Date(a.inicioPlanejado) - new Date(b.inicioPlanejado))
+      .slice(0, 10);
+
+    if (!pendentes.length) {
+      host.innerHTML = '<div class="estado-vazio"><p class="text-sm">Nenhuma próxima atividade sem Suprimentos iniciado — tudo em dia.</p></div>';
+      return;
+    }
+    host.innerHTML = `
+      <div class="text-sm text-muted" style="margin-bottom:8px;">Próximas atividades cujo pipeline de Suprimentos ainda não foi iniciado:</div>
+      ${pendentes.map(t => {
+        const semDoc = _statusSuprimento(t.id) === 'sem_doc';
+        return `<div class="db-ativ-item">
+          <span class="db-ativ-dot" style="background:${semDoc ? '#ef4444' : '#f59e0b'};"></span>
+          <div class="db-ativ-info">
+            <div class="db-ativ-nome">${t.nome || 'Sem nome'}</div>
+            <div class="db-ativ-sub text-sm text-muted">${t.local ? t.local + ' · ' : ''}Início: ${Utils.formatarData(t.inicioPlanejado)}</div>
+          </div>
+          <span class="badge ${semDoc ? 'badge-perigo' : 'badge-alerta'}" style="font-size:.65rem;">${semDoc ? 'Sem registro' : 'Não iniciado'}</span>
+        </div>`;
+      }).join('')}`;
   }
 
   // ===================== CURVA S =====================
@@ -1019,15 +1040,15 @@ const Dashboard = (() => {
       <div class="db-legenda" style="margin-top:10px;">${legenda}</div>`;
   }
 
-  // ===================== FUNDAÇÃO / ESTRUTURA / CONTENÇÃO =====================
+  // ===================== CONTENÇÃO / FUNDAÇÃO / ESTRUTURA =====================
   // Ligado pelo toggle "Mostrar Contenção, Fundação e Estrutura" no topo da
   // página (preferência de UI, guardada em localStorage — não é dado da obra).
-  // Fundação e Estrutura: barra simples Volume Previsto x Executado (m³),
-  // somado a partir de Controle de Concreto (concretoPecas + concretoLancamentos),
-  // "Fundação" = peças com tipo==='Fundação'; "Estrutura" = todas as outras
-  // (Pilar/Viga/Laje/Cortina/Escada/Rampa/Caixa D'água/Outro).
-  // Contenção (Solo Grampeado): por enquanto só um placeholder — o mapa de
-  // vistas de verdade fica pra depois (a pedido do Milton).
+  // Ordem pedida pelo Milton: Contenção primeiro, Fundação e Estrutura depois.
+  // Fundação e Estrutura: Previsto x Executado (m³) POR ANDAR, somado a partir
+  // de Controle de Concreto (concretoPecas + concretoLancamentos), na mesma
+  // ordem de andar usada lá (CC.ordenarAndares, respeitando ordem customizada
+  // se existir). "Fundação" = peças com tipo==='Fundação'; "Estrutura" = todas
+  // as outras (Pilar/Viga/Laje/Cortina/Escada/Rampa/Caixa D'água/Outro).
   async function _renderFundacaoEstrutura() {
     const host = document.getElementById('db-fundacao-estrutura-wrap');
     if (!host) return;
@@ -1035,14 +1056,14 @@ const Dashboard = (() => {
     host.innerHTML = `
       <div class="card db-row">
         <div class="card-body">
-          <div class="db-secao-header"><h3>Fundação e Estrutura</h3></div>
-          <div id="db-fundacao-estrutura">Carregando...</div>
+          <div class="db-secao-header"><h3>Contenção (Solo Grampeado)</h3></div>
+          <div id="db-solo-grampeado">Carregando...</div>
         </div>
       </div>
       <div class="card db-row">
         <div class="card-body">
-          <div class="db-secao-header"><h3>Contenção (Solo Grampeado)</h3></div>
-          <div id="db-solo-grampeado">Carregando...</div>
+          <div class="db-secao-header"><h3>Fundação e Estrutura</h3></div>
+          <div id="db-fundacao-estrutura" class="db-tooltip-wrap">Carregando...</div>
         </div>
       </div>`;
 
@@ -1050,31 +1071,52 @@ const Dashboard = (() => {
     const elFE = document.getElementById('db-fundacao-estrutura');
     try {
       const obraId = obraAtual.id;
-      const [pecas, lancamentos] = await Promise.all([
+      const [pecas, lancamentos, cfgDoc] = await Promise.all([
         Database.listar(obraId, 'concretoPecas', null).catch(() => []),
         Database.listar(obraId, 'concretoLancamentos', null).catch(() => []),
+        Database.obter(obraId, 'config', 'concreto').catch(() => null),
       ]);
       if (!pecas.length) {
         elFE.innerHTML = '<div class="estado-vazio"><p class="text-sm">Nenhuma peça cadastrada no Controle de Concreto ainda.</p></div>';
         return;
       }
-      const pecaPorId = new Map(pecas.map(p => [p.id, p]));
+      const CC = window.ConcretoCalculos;
       const isFundacao = (p) => p && p.tipo === 'Fundação';
+      const ordemAndares = cfgDoc?.ordemAndares || [];
+      const andaresBrutos = [...new Set(pecas.map(p => p.andar || 'Sem andar'))];
+      const andares = CC ? CC.ordenarAndares(andaresBrutos, ordemAndares) : andaresBrutos.sort();
 
-      let prevFund = 0, prevEstr = 0;
-      pecas.forEach(p => { if (isFundacao(p)) prevFund += Number(p.volume) || 0; else prevEstr += Number(p.volume) || 0; });
-
-      let execFund = 0, execEstr = 0;
+      const pecaPorId = new Map(pecas.map(p => [p.id, p]));
+      const lancsPorPeca = new Map();
       lancamentos.forEach(l => {
-        const p = pecaPorId.get(l.pecaId);
-        const v = Number(l.volume) || 0;
-        if (isFundacao(p)) execFund += v; else execEstr += v;
+        if (!lancsPorPeca.has(l.pecaId)) lancsPorPeca.set(l.pecaId, []);
+        lancsPorPeca.get(l.pecaId).push(l);
       });
 
-      elFE.innerHTML = _svgFundacaoEstrutura([
-        { label: 'Fundação', previsto: prevFund, executado: execFund },
-        { label: 'Estrutura', previsto: prevEstr, executado: execEstr },
-      ]);
+      const dadosPorAndar = andares.map(andar => {
+        const pecasDoAndar = pecas.filter(p => (p.andar || 'Sem andar') === andar);
+        const previsto = pecasDoAndar.reduce((s, p) => s + (Number(p.volume) || 0), 0);
+        let executado = 0, ultimaData = null;
+        pecasDoAndar.forEach(p => {
+          (lancsPorPeca.get(p.id) || []).forEach(l => {
+            executado += Number(l.volume) || 0;
+            if (l.data && (!ultimaData || l.data > ultimaData)) ultimaData = l.data;
+          });
+        });
+        return { andar, previsto, executado, ultimaData, temFundacao: pecasDoAndar.some(isFundacao) };
+      }).filter(d => d.previsto > 0 || d.executado > 0);
+
+      if (!dadosPorAndar.length) {
+        elFE.innerHTML = '<div class="estado-vazio"><p class="text-sm">Nenhum volume previsto ou executado lançado ainda.</p></div>';
+        return;
+      }
+      elFE.innerHTML = _svgFundacaoEstruturaPorAndar(dadosPorAndar);
+      _attachHover(elFE, dadosPorAndar, (d) => `
+        <div class="db-tt-titulo">${d.andar}</div>
+        <div class="db-tt-linha"><i style="background:#999;"></i>Previsto: <b>${Utils.formatarNumero(d.previsto)} m³</b></div>
+        <div class="db-tt-linha"><i style="background:var(--cor-primaria);"></i>Executado: <b>${Utils.formatarNumero(d.executado)} m³</b></div>
+        <div class="text-sm text-muted" style="margin-top:4px;">${d.ultimaData ? 'Último lançamento: ' + Utils.formatarData(d.ultimaData) : 'Nenhum lançamento ainda'}</div>
+      `);
     } catch (e) {
       console.error(e);
       elFE.innerHTML = '<div class="estado-vazio"><p class="text-sm">Erro ao carregar dados do Controle de Concreto.</p></div>';
@@ -1134,34 +1176,48 @@ const Dashboard = (() => {
     }
   }
 
-  function _svgFundacaoEstrutura(grupos) {
-    const W = 700, H = 190, padL = 90, padR = 70, padT = 20, padB = 20;
-    const plotW = W - padL - padR;
-    const barH = 22, gap = 46;
-    const maxV = Math.max(1, ...grupos.map(g => Math.max(g.previsto, g.executado)));
-    const x = (v) => (v / maxV) * plotW;
+  function _svgFundacaoEstruturaPorAndar(dados) {
+    const n = dados.length;
+    const larguraGrupo = 70;
+    const W = Math.max(700, n * larguraGrupo + 100), H = 320;
+    const padL = 50, padR = 20, padT = 20, padB = 90;
+    const plotW = W - padL - padR, plotH = H - padT - padB;
+    const maxV = Math.max(1, ...dados.map(d => Math.max(d.previsto, d.executado)));
+    const barW = Math.min(20, (plotW / n) * 0.32);
 
-    let linhas = '';
-    grupos.forEach((g, i) => {
-      const yTop = padT + i * (gap + barH * 2 + 6);
-      const wPrev = x(g.previsto), wExec = x(g.executado);
-      linhas += `
-        <text x="0" y="${yTop + barH + 2}" font-size="12" font-weight="700" fill="var(--cor-texto,#222)">${g.label}</text>
-        <rect x="${padL}" y="${yTop}" width="${wPrev.toFixed(1)}" height="${barH}" fill="#999" rx="3"/>
-        <text x="${(padL + wPrev + 6).toFixed(1)}" y="${yTop + barH / 2 + 4}" font-size="11" fill="#666">Previsto: ${Utils.formatarNumero(g.previsto)} m³</text>
-        <rect x="${padL}" y="${(yTop + barH + 6).toFixed(1)}" width="${wExec.toFixed(1)}" height="${barH}" fill="var(--cor-primaria)" rx="3"/>
-        <text x="${(padL + wExec + 6).toFixed(1)}" y="${(yTop + barH + 6 + barH / 2 + 4).toFixed(1)}" font-size="11" fill="var(--cor-primaria-dark,#B89400)">Executado: ${Utils.formatarNumero(g.executado)} m³</text>`;
+    let bars = '', labels = '', hits = '';
+    dados.forEach((d, i) => {
+      const cx = padL + (i + 0.5) * (plotW / n);
+      const hPrev = (d.previsto / maxV) * plotH, hExec = (d.executado / maxV) * plotH;
+      bars += `<rect x="${(cx - barW - 1).toFixed(1)}" y="${(padT + plotH - hPrev).toFixed(1)}" width="${barW}" height="${hPrev.toFixed(1)}" fill="#999"/>`;
+      bars += `<text x="${(cx - barW / 2 - 1).toFixed(1)}" y="${(padT + plotH - hPrev - 4).toFixed(1)}" font-size="9" fill="#666" text-anchor="middle">${Utils.formatarNumero(d.previsto, 1)}</text>`;
+      bars += `<rect x="${(cx + 1).toFixed(1)}" y="${(padT + plotH - hExec).toFixed(1)}" width="${barW}" height="${hExec.toFixed(1)}" fill="var(--cor-primaria)"/>`;
+      bars += `<text x="${(cx + barW / 2 + 1).toFixed(1)}" y="${(padT + plotH - hExec - 4).toFixed(1)}" font-size="9" fill="var(--cor-primaria-dark,#B89400)" text-anchor="middle">${Utils.formatarNumero(d.executado, 1)}</text>`;
+      const nomeCurto = d.andar.length > 16 ? d.andar.slice(0, 15) + '…' : d.andar;
+      labels += `<text x="${cx.toFixed(1)}" y="${(padT + plotH + 14).toFixed(1)}" font-size="9.5" fill="#333" text-anchor="end" transform="rotate(-40 ${cx.toFixed(1)} ${(padT + plotH + 14).toFixed(1)})"><title>${d.andar}</title>${nomeCurto}</text>`;
+      hits += `<rect class="db-hit" data-idx="${i}" x="${(cx - (plotW / n) / 2).toFixed(1)}" y="${padT}" width="${(plotW / n).toFixed(1)}" height="${plotH}" fill="transparent" style="cursor:pointer;"/>`;
     });
 
-    const alturaTotal = padT + grupos.length * (gap + barH * 2 + 6) + padB;
+    const gridY = [0, 0.25, 0.5, 0.75, 1].map(f => {
+      const y = padT + plotH - f * plotH;
+      return `<line x1="${padL}" x2="${W - padR}" y1="${y.toFixed(1)}" y2="${y.toFixed(1)}" stroke="#eee" stroke-width="1"/><text x="4" y="${(y + 3).toFixed(1)}" font-size="9" fill="#999">${Utils.formatarNumero(f * maxV, 0)}</text>`;
+    }).join('');
+
     return `
-      <svg viewBox="0 0 ${W} ${alturaTotal}" style="width:100%;height:auto;display:block;max-width:600px;">
-        ${linhas}
-      </svg>
+      <div style="overflow-x:auto;">
+        <svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block;min-width:${W}px;">
+          ${gridY}
+          ${bars}
+          ${labels}
+          ${hits}
+        </svg>
+      </div>
+      <div class="db-tooltip"></div>
       <div class="db-legenda">
-        <span><i style="background:#999;"></i> Previsto</span>
-        <span><i style="background:var(--cor-primaria);"></i> Executado</span>
-      </div>`;
+        <span><i style="background:#999;"></i> Volume Previsto (m³)</span>
+        <span><i style="background:var(--cor-primaria);"></i> Volume Executado (m³)</span>
+      </div>
+      <div class="text-sm text-muted" style="margin-top:6px;">Somado do Controle de Concreto por andar. Passe o mouse pra ver a data do último lançamento daquele andar.</div>`;
   }
 
   // ===================== RESUMO POR APARTAMENTO =====================

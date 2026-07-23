@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.56.0',
+  versaoAtual: 'V2.57.0',
 
   versoes: [
     {
@@ -4910,7 +4910,7 @@ const NotasVersao = {
       itens:['Filhos sumindo: ordemAntes capturado ANTES do splice (estava depois).',
         'Saves concorrentes: fila serializada _arvSaveQueue — movimentos rápidos não se sobrepõem.',
         'Scroll subindo: _arvToggle preserva scrollTop do arv-corpo.']},
-    {versao:'V2.56.0',status:'aberta',data:'2026-07-23',tipo:'funcionalidade',
+    {versao:'V2.56.0',status:'fechada',data:'2026-07-23',tipo:'funcionalidade',
       titulo:'Levantamento e Controle de Solo Grampeado: mapa sobre PDF/imagem da elevação, escala calibrada e execução por etapas',
       itens:['Levantamento: cada vista recebe um PDF (elevação) ou imagem — chumbadores são posicionados livremente por clique sobre ela (as vistas reais são irregulares: espaçamento variável, terreno inclinado — não davam pra usar um grid regular).',
         'PDF renderizado via pdf.js e comprimido (JPEG, redimensionado se preciso) antes de salvar, respeitando o limite de ~950KB do Firestore.',
@@ -4921,7 +4921,13 @@ const NotasVersao = {
         'Controle: mesmo mapa, interativo — clique no chumbador marca etapas (Perfuração 20%, Injeção 1 15%, Injeção 2 15%); modo Projeção (30%) e Acabamento (20%) marca área arrastando um retângulo, convertido em m² reais pela escala.',
         '% de execução da vista pelo peso das 5 etapas; cada marcação gera lançamento automático no Relatório Diário.',
         'Vínculo com o Planejamento: métricas de Metro Linear, Quantidade de Chumbadores e Área (m²) de Solo Grampeado.',
-        'Dashboard: painel "Contenção (Solo Grampeado)" com o mapa de cada vista na proporção real da imagem (larga/baixa nas elevações compridas).']}
+        'Dashboard: painel "Contenção (Solo Grampeado)" com o mapa de cada vista na proporção real da imagem (larga/baixa nas elevações compridas).']},
+    {versao:'V2.57.0',status:'aberta',data:'2026-07-23',tipo:'melhoria',
+      titulo:'Dashboard: reordenado (Atividades → Suprimentos → Contenção/Fundação/Estrutura → Curva S → Resumo por Apartamento), PPC Semanal/Motivos de Atraso removidos, Suprimentos e Fundação/Estrutura com dados reais',
+      itens:['Nova ordem pedida pelo Milton: Atividades, Suprimentos, Contenção, Fundação e Estrutura, Curva S, Resumo por Apartamento — o resto (PPC Semanal, Motivos de Atraso Semanais) foi removido da tela.',
+        'Suprimentos: card deixou de ser texto fixo — mostra as Próximas Atividades (ainda não iniciadas no Planejamento) cujo pipeline de Suprimentos ainda não foi tocado (todas as 5 etapas em "não iniciado", ou nem tem doc ainda). Selo vermelho "Sem registro" vs laranja "Não iniciado".',
+        'Fundação e Estrutura: o gráfico comparava só 2 totais (Fundação x Estrutura) — trocado por Previsto x Executado (m³) POR ANDAR, na mesma ordem de andar do Controle de Concreto (CC.ordenarAndares, respeita ordem customizada se existir), com tooltip mostrando a data do último lançamento daquele andar.',
+        'Contenção e Fundação/Estrutura trocaram de posição (Contenção primeiro, como pedido).']}
   ],
 
   render(containerId) {
