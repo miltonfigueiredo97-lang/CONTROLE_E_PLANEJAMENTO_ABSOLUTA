@@ -4904,7 +4904,7 @@ const NotasVersao = {
         '  lista de resultados encontrados na biblioteca fica separada',
         '  embaixo dele, numa área rolável própria',
       ]
-    }
+    },
     {versao:'V2.55.3',status:'aberta',data:'2026-07-22',tipo:'correcao',
       titulo:'Editor: 3 fixes críticos (filhos sumindo, scroll, saves concorrentes)',
       itens:['Filhos sumindo: ordemAntes capturado ANTES do splice (estava depois).',
