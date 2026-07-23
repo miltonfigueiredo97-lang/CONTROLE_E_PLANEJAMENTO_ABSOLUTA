@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.55.3',
+  versaoAtual: 'V2.56.0',
 
   versoes: [
     {
@@ -4905,11 +4905,22 @@ const NotasVersao = {
         '  embaixo dele, numa área rolável própria',
       ]
     },
-    {versao:'V2.55.3',status:'aberta',data:'2026-07-22',tipo:'correcao',
+    {versao:'V2.55.3',status:'fechada',data:'2026-07-22',tipo:'correcao',
       titulo:'Editor: 3 fixes críticos (filhos sumindo, scroll, saves concorrentes)',
       itens:['Filhos sumindo: ordemAntes capturado ANTES do splice (estava depois).',
         'Saves concorrentes: fila serializada _arvSaveQueue — movimentos rápidos não se sobrepõem.',
-        'Scroll subindo: _arvToggle preserva scrollTop do arv-corpo.']}
+        'Scroll subindo: _arvToggle preserva scrollTop do arv-corpo.']},
+    {versao:'V2.56.0',status:'aberta',data:'2026-07-23',tipo:'funcionalidade',
+      titulo:'Levantamento e Controle de Solo Grampeado: grid visual de chumbadores, escala calibrada e execução por etapas',
+      itens:['Levantamento: vista vira um grid configurável (linhas × colunas) de chumbadores, gerado e reconciliado automaticamente ao mudar a configuração.',
+        'Escala calibrada por linha desenhada + comprimento real (cm), com m² da vista sugerido automaticamente (editável).',
+        'Imagem de fundo (planta) opcional por vista, mesmo padrão de armazenamento do mapa de visão da Fachada.',
+        'Especificações de Materiais por chumbador (modelo, barra de aço, mangueira/espaguete, cimento de injeção) vinculadas à Biblioteca de Materiais, com criação de material novo direto no formulário.',
+        'Clique na bolinha do grid no Levantamento edita tipo/comprimento/profundidade/especificação do chumbador.',
+        'Controle: minimapa interativo reaproveitando o mesmo grid — clique no chumbador marca etapas (Perfuração 20%, Injeção 1 15%, Injeção 2 15%); modo Projeção (30%) e Acabamento (20%) marca células de área.',
+        '% de execução da vista calculada pelo peso das 5 etapas; cada marcação gera lançamento automático no Relatório Diário.',
+        'Vínculo com o Planejamento: métricas de Metro Linear, Quantidade de Chumbadores e Área (m²) de Solo Grampeado.',
+        'Dashboard: painel "Contenção (Solo Grampeado)" com o minimapa de cada vista e % de execução.']}
   ],
 
   render(containerId) {

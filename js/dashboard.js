@@ -1042,14 +1042,11 @@ const Dashboard = (() => {
       <div class="card db-row">
         <div class="card-body">
           <div class="db-secao-header"><h3>Contenção (Solo Grampeado)</h3></div>
-          <div class="estado-vazio">
-            <div class="icone">🗺️</div>
-            <p>Mapa de vistas em desenvolvimento.</p>
-            <p class="text-sm text-muted">Por enquanto este painel é só um placeholder — o desenho da vista com os chumbadores marcados vem depois.</p>
-          </div>
+          <div id="db-solo-grampeado">Carregando...</div>
         </div>
       </div>`;
 
+    _renderSoloGrampeadoMinimapas();
     const elFE = document.getElementById('db-fundacao-estrutura');
     try {
       const obraId = obraAtual.id;
@@ -1081,6 +1078,56 @@ const Dashboard = (() => {
     } catch (e) {
       console.error(e);
       elFE.innerHTML = '<div class="estado-vazio"><p class="text-sm">Erro ao carregar dados do Controle de Concreto.</p></div>';
+    }
+  }
+
+  // Minimapas de Solo Grampeado (Contenção) — um SVG por vista, somente
+  // leitura, reaproveitando o motor de cálculo/renderização do Controle
+  // de Solo Grampeado (SoloGrampeadoCalculos.svgMinimapa).
+  async function _renderSoloGrampeadoMinimapas() {
+    const host = document.getElementById('db-solo-grampeado');
+    if (!host) return;
+    const SG = window.SoloGrampeadoCalculos;
+    if (!SG) { host.innerHTML = '<div class="estado-vazio"><p class="text-sm">Motor de cálculo de Solo Grampeado não carregado.</p></div>'; return; }
+    try {
+      const obraId = obraAtual.id;
+      const [vistas, chumbadores, execucoes, areas] = await Promise.all([
+        Database.listar(obraId, 'sgVistas', null).catch(() => []),
+        Database.listar(obraId, 'sgChumbadores', null).catch(() => []),
+        Database.listar(obraId, 'sgExecucoes', null).catch(() => []),
+        Database.listar(obraId, 'sgAreaExecutada', null).catch(() => []),
+      ]);
+      if (!vistas.length) {
+        host.innerHTML = '<div class="estado-vazio"><p class="text-sm">Nenhuma vista cadastrada no Levantamento de Solo Grampeado ainda.</p></div>';
+        return;
+      }
+      const vistasComGrid = vistas.filter(v => (Number(v.gridCols) > 0) && (Number(v.gridRows) > 0))
+        .sort((a, b) => (a.numero || 0) - (b.numero || 0));
+      if (!vistasComGrid.length) {
+        host.innerHTML = '<div class="estado-vazio"><p class="text-sm">Nenhuma vista com grid configurado ainda.</p></div>';
+        return;
+      }
+      host.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;">
+        ${vistasComGrid.map(v => {
+          const lista = chumbadores.filter(c => c.vista === v.id);
+          const execMap = {};
+          lista.forEach(c => { const e = execucoes.find(x => x.chumbadorId === c.id); if (e) execMap[c.id] = e; });
+          const areaDoc = areas.find(a => a.vistaId === v.id) || null;
+          const resumo = SG.calcPctVista(v, lista, execMap, areaDoc);
+          const label = v.nome ? `${v.numero} — ${v.nome}` : `Vista ${v.numero}`;
+          const svg = SG.svgMinimapa(v, lista, execMap, areaDoc, null, { interativo: false, mini: true });
+          return `<div>
+            <div style="font-weight:700;font-size:0.85rem;margin-bottom:4px;">${label}</div>
+            ${svg}
+            <div style="font-size:0.78rem;color:var(--cor-texto-secundario);font-family:var(--font-mono);margin-top:4px;">
+              ${SG.fmt1(resumo.pct)}% · ${SG.fmt1(resumo.m2Executado)} / ${SG.fmt1(v.m2Total)} m²
+            </div>
+          </div>`;
+        }).join('')}
+      </div>`;
+    } catch (e) {
+      console.error(e);
+      host.innerHTML = '<div class="estado-vazio"><p class="text-sm">Erro ao carregar dados de Solo Grampeado.</p></div>';
     }
   }
 

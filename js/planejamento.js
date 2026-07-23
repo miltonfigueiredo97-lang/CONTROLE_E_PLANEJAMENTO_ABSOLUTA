@@ -212,6 +212,14 @@ const Planejamento = (() => {
         {id:'volume',         label:'Volume total (m³)', unidade:'m³'},
       ],
     },
+    soloGrampeado:{
+      label:'Solo Grampeado', colecao:'sgChumbadores', colecaoExtra:'sgVistas',
+      metricas:[
+        {id:'ml',  label:'Metro Linear de Chumbadores', unidade:'ml'},
+        {id:'qtd', label:'Quantidade de Chumbadores',    unidade:'un'},
+        {id:'m2',  label:'Área de Solo Grampeado',       unidade:'m²'},
+      ],
+    },
     arCondicionado:{
       label:'Ar-Condicionado', colecao:'levantamentoAr',
       metricas:[
@@ -591,6 +599,14 @@ const Planejamento = (() => {
 
     if(modulo==='concreto'){
       if(metrica==='volume') return dados.reduce((s,p)=>s+(p.volume||0),0);
+      return 0;
+    }
+
+    if(modulo==='soloGrampeado'){
+      // dados=sgChumbadores (colecao), extra=sgVistas (colecaoExtra)
+      if(metrica==='ml')  return dados.reduce((s,c)=>s+(Number(c.comprimento)||0),0);
+      if(metrica==='qtd') return dados.length;
+      if(metrica==='m2')  return (extra||[]).reduce((s,v)=>s+(Number(v.m2Total)||0),0);
       return 0;
     }
 

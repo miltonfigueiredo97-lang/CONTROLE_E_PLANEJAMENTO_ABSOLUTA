@@ -47,7 +47,7 @@
       <a href="admin-permissoes.html"><span class="nav-icon">🔑</span> Permissões</a>
       <div class="sidebar-section-title">Sistema</div>
       <a href="backup-planejamento.html"><span class="nav-icon">🗂️</span> Backup de Planejamentos</a>
-      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V2.55.3</span></a>
+      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V2.56.0</span></a>
     </nav>
     <div class="sidebar-user">
       <div class="user-avatar">U</div>
@@ -84,31 +84,109 @@
   </div>
 </div>
 
-<!-- MODAL: Novo/Editar Chumbador -->
-<div class="modal-overlay" id="modal-sg-chumbador">
+<!-- MODAL: Config. Grid da Vista -->
+<div class="modal-overlay" id="modal-sg-config-grid">
   <div class="modal" style="max-width:520px;">
     <div class="modal-header">
-      <h3 id="sg-modal-chumb-titulo">⛏️ Novo Chumbador</h3>
+      <h3>⚙ Configuração do Grid</h3>
+      <button class="modal-close" onclick="Utils.fecharModal('modal-sg-config-grid')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="sg-cfg-vistaid">
+      <div class="form-row">
+        <div class="form-grupo"><label>Chumbadores por linha (colunas)</label><input type="number" id="sg-cfg-cols" min="1" class="form-control" placeholder="8"></div>
+        <div class="form-grupo"><label>Quantidade de linhas</label><input type="number" id="sg-cfg-rows" min="1" class="form-control" placeholder="5"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-grupo"><label>Comprimento padrão — Vertical (ml)</label><input type="number" step="0.1" id="sg-cfg-comp-vert" class="form-control" placeholder="6"></div>
+        <div class="form-grupo"><label>Comprimento padrão — Horizontal (ml)</label><input type="number" step="0.1" id="sg-cfg-comp-horiz" class="form-control" placeholder="6"></div>
+      </div>
+      <div class="form-grupo"><label>Especificação padrão (materiais)</label><select id="sg-cfg-espec" class="form-control"></select></div>
+      <p class="text-sm text-muted mb-1">Chumbadores existentes fora do novo tamanho do grid são removidos; os que continuam mantêm tipo/comprimento/profundidade já preenchidos.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-sg-config-grid')">Cancelar</button>
+      <button class="btn btn-primario" onclick="SG_UI.salvarConfigGrid()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Imagem de Fundo -->
+<div class="modal-overlay" id="modal-sg-imagem">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-header">
+      <h3>🖼 Imagem de Fundo (planta)</h3>
+      <button class="modal-close" onclick="Utils.fecharModal('modal-sg-imagem')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="sg-img-vistaid">
+      <p class="text-sm text-muted mb-1">A imagem fica atrás do grid como referência visual (não altera a escala/m²).</p>
+      <label class="btn btn-secundario" style="display:block;text-align:center;cursor:pointer;">
+        📂 Carregar Imagem
+        <input type="file" accept="image/*" style="display:none;" onchange="SG_UI.onImagemArquivo(this)">
+      </label>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secundario" style="color:var(--cv-red);" onclick="SG_UI.removerImagemFundo()">Remover Imagem</button>
+      <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-sg-imagem')">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Confirmar Calibração de Escala -->
+<div class="modal-overlay" id="modal-sg-calibracao">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-header">
+      <h3>📏 Calibrar Escala</h3>
+      <button class="modal-close" onclick="Utils.fecharModal('modal-sg-calibracao')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <form id="form-sg-calib" onsubmit="event.preventDefault()">
+        <div class="form-grupo"><label>Comprimento real da linha desenhada (cm)</label><input type="number" step="0.1" id="sg-calib-cm" class="form-control" placeholder="300" autofocus></div>
+      </form>
+      <p class="text-sm text-muted mb-1">O m² total da vista será sugerido a partir dessa escala — você ainda pode ajustá-lo manualmente depois.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-sg-calibracao')">Cancelar</button>
+      <button class="btn btn-primario" onclick="SG_UI.salvarCalibracao()">Calcular e Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Editar m² Total -->
+<div class="modal-overlay" id="modal-sg-m2">
+  <div class="modal" style="max-width:380px;">
+    <div class="modal-header">
+      <h3>📐 m² Total da Vista</h3>
+      <button class="modal-close" onclick="Utils.fecharModal('modal-sg-m2')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="sg-m2-vistaid">
+      <div class="form-grupo"><label>m² total</label><input type="number" step="0.01" id="sg-m2-valor" class="form-control"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-sg-m2')">Cancelar</button>
+      <button class="btn btn-primario" onclick="SG_UI.salvarM2()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Editar Chumbador (do grid) -->
+<div class="modal-overlay" id="modal-sg-chumbador">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-header">
+      <h3 id="sg-modal-chumb-titulo">⛏️ Chumbador</h3>
       <button class="modal-close" onclick="Utils.fecharModal('modal-sg-chumbador')">&times;</button>
     </div>
     <div class="modal-body">
       <form id="form-sg-chumbador" onsubmit="event.preventDefault()">
         <div class="form-row">
-          <div class="form-grupo"><label>Número</label><input type="text" name="numero" class="form-control" placeholder="1" required></div>
-          <div class="form-grupo"><label>Vista</label><select name="vista" class="form-control"></select></div>
-        </div>
-        <div class="form-row">
           <div class="form-grupo"><label>Tipo</label><select name="tipo" class="form-control"></select></div>
-          <div class="form-grupo"><label>Comprimento (ml)</label><input type="number" name="comprimento" step="0.1" min="0.1" class="form-control" placeholder="5"></div>
-        </div>
-        <p class="text-sm text-muted mb-1">Datas das etapas (deixe em branco se ainda não realizada):</p>
-        <div class="form-row">
-          <div class="form-grupo"><label>Furo</label><input type="date" name="dataFuro" class="form-control"></div>
-          <div class="form-grupo"><label>Injeção 1ª Parte</label><input type="date" name="dataInjecao1" class="form-control"></div>
+          <div class="form-grupo"><label>Comprimento (ml)</label><input type="number" name="comprimento" step="0.1" min="0.1" class="form-control"></div>
         </div>
         <div class="form-row">
-          <div class="form-grupo"><label>Injeção 2ª Parte</label><input type="date" name="dataInjecao2" class="form-control"></div>
-          <div class="form-grupo"><label>Conclusão</label><input type="date" name="dataConclusao" class="form-control"></div>
+          <div class="form-grupo"><label>Profundidade (cm)</label><input type="number" name="profundidade" step="0.1" min="0" class="form-control"></div>
+          <div class="form-grupo"><label>Especificação</label><select name="especId" class="form-control"></select></div>
         </div>
       </form>
     </div>
@@ -119,32 +197,16 @@
   </div>
 </div>
 
-<!-- MODAL: Importar em lote -->
-<div class="modal-overlay" id="modal-sg-importar">
+<!-- MODAL: Especificações de Materiais -->
+<div class="modal-overlay" id="modal-sg-especificacoes">
   <div class="modal modal-lg">
     <div class="modal-header">
-      <h3>⊞ Importar Chumbadores em Lote</h3>
-      <button class="modal-close" onclick="Utils.fecharModal('modal-sg-importar')">&times;</button>
+      <h3>🧱 Especificações de Materiais — Chumbadores</h3>
+      <button class="modal-close" onclick="Utils.fecharModal('modal-sg-especificacoes')">&times;</button>
     </div>
-    <div class="modal-body">
-      <div style="background:var(--cor-primaria-light,#fef9e7);border:1px solid var(--cor-primaria);border-radius:8px;padding:10px 14px;font-size:0.82rem;margin-bottom:12px;">
-        <strong>Como usar:</strong> cole do Excel as colunas: Numero | Vista (número) | Tipo (Vertical/Horizontal) | Comprimento (ml). Vistas novas são criadas automaticamente.
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
-        <button class="btn btn-secundario" onclick="SG_UI.baixarModeloTSV()">⬇ Baixar Modelo</button>
-        <label class="btn btn-secundario" style="text-align:center;cursor:pointer;">
-          📂 Carregar Arquivo (TSV/CSV)
-          <input type="file" accept=".tsv,.csv,.txt" style="display:none;" onchange="SG_UI.onImportArquivo(this)">
-        </label>
-      </div>
-      <p class="text-sm text-muted mb-1" style="text-align:center;">— ou cole o conteúdo abaixo —</p>
-      <div id="sg-import-erro" style="display:none;background:#fee2e2;border:1px solid #ef4444;color:#991b1b;border-radius:8px;padding:8px 12px;font-size:0.8rem;margin-bottom:8px;"></div>
-      <textarea id="sg-import-texto" class="form-control" style="height:120px;font-family:var(--font-mono);font-size:0.8rem;resize:vertical;" placeholder="1	1	Vertical	5&#10;2	1	Vertical	5" oninput="SG_UI.onImportTexto()"></textarea>
-      <div id="sg-import-preview"></div>
-    </div>
+    <div class="modal-body" id="sg-espec-body"></div>
     <div class="modal-footer">
-      <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-sg-importar')">Cancelar</button>
-      <button class="btn btn-primario" id="sg-import-btn" disabled onclick="SG_UI.salvarImport()">✓ Importar</button>
+      <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-sg-especificacoes')">Fechar</button>
     </div>
   </div>
 </div>

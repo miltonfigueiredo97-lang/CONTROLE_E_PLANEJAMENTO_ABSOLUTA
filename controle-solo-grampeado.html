@@ -47,7 +47,7 @@
       <a href="admin-permissoes.html"><span class="nav-icon">🔑</span> Permissões</a>
       <div class="sidebar-section-title">Sistema</div>
       <a href="backup-planejamento.html"><span class="nav-icon">🗂️</span> Backup de Planejamentos</a>
-      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V2.55.3</span></a>
+      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V2.56.0</span></a>
     </nav>
     <div class="sidebar-user">
       <div class="user-avatar">U</div>
@@ -70,57 +70,44 @@
   <main class="content" id="sgc-content"></main>
 </div>
 
-<!-- MODAL: Lançar Execução do Chumbador -->
+<!-- MODAL: Marcar Etapas do Chumbador -->
 <div class="modal-overlay" id="modal-sgc-execucao">
-  <div class="modal" style="max-width:480px;">
+  <div class="modal" style="max-width:460px;">
     <div class="modal-header">
-      <h3 id="sgc-modal-exec-titulo">✎ Execução</h3>
+      <h3 id="sgc-modal-exec-titulo">⛏️ Chumbador — Etapas</h3>
       <button class="modal-close" onclick="Utils.fecharModal('modal-sgc-execucao')">&times;</button>
     </div>
     <div class="modal-body">
-      <form id="form-sgc-execucao" onsubmit="event.preventDefault()">
-        <p class="text-sm text-muted mb-1">Preencha as datas conforme as etapas forem concluídas (deixe em branco se ainda não realizada):</p>
-        <div class="form-row">
-          <div class="form-grupo"><label>Furo</label><input type="date" name="dataFuro" class="form-control"></div>
-          <div class="form-grupo"><label>Injeção 1ª Parte</label><input type="date" name="dataInjecao1" class="form-control"></div>
-        </div>
-        <div class="form-row">
-          <div class="form-grupo"><label>Injeção 2ª Parte</label><input type="date" name="dataInjecao2" class="form-control"></div>
-          <div class="form-grupo"><label>Conclusão</label><input type="date" name="dataConclusao" class="form-control"></div>
-        </div>
-      </form>
+      <div class="form-row" style="align-items:center;">
+        <div class="form-grupo" style="flex:0;"><label><input type="checkbox" id="sgc-et-perfuracao-check"> Perfuração (20%)</label></div>
+        <div class="form-grupo"><input type="date" id="sgc-et-perfuracao-data" class="form-control"></div>
+      </div>
+      <div class="form-row" style="align-items:center;">
+        <div class="form-grupo" style="flex:0;"><label><input type="checkbox" id="sgc-et-injecao1-check"> Injeção 1 (15%)</label></div>
+        <div class="form-grupo"><input type="date" id="sgc-et-injecao1-data" class="form-control"></div>
+      </div>
+      <div class="form-row" style="align-items:center;">
+        <div class="form-grupo" style="flex:0;"><label><input type="checkbox" id="sgc-et-injecao2-check"> Injeção 2 (15%)</label></div>
+        <div class="form-grupo"><input type="date" id="sgc-et-injecao2-data" class="form-control"></div>
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-sgc-execucao')">Cancelar</button>
-      <button class="btn btn-primario" onclick="SGC_UI.salvarExecucao()">Salvar</button>
+      <button class="btn btn-primario" onclick="SGC_UI.salvarEtapasChumbador()">Salvar</button>
     </div>
   </div>
 </div>
 
-<!-- MODAL: Produção Diária -->
-<div class="modal-overlay" id="modal-sgc-producao">
+<!-- MODAL: Relatório Diário -->
+<div class="modal-overlay" id="modal-sgc-relatorio">
   <div class="modal modal-lg">
     <div class="modal-header">
-      <h3>📅 Produção Diária</h3>
-      <button class="modal-close" onclick="Utils.fecharModal('modal-sgc-producao')">&times;</button>
+      <h3>📅 Relatório Diário</h3>
+      <button class="modal-close" onclick="Utils.fecharModal('modal-sgc-relatorio')">&times;</button>
     </div>
-    <div class="modal-body" id="sgc-producao-body"></div>
+    <div class="modal-body" id="sgc-relatorio-body"></div>
     <div class="modal-footer">
-      <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-sgc-producao')">Fechar</button>
-    </div>
-  </div>
-</div>
-
-<!-- MODAL: Área Executada -->
-<div class="modal-overlay" id="modal-sgc-area">
-  <div class="modal modal-lg">
-    <div class="modal-header">
-      <h3>📐 Área Executada por Vista</h3>
-      <button class="modal-close" onclick="Utils.fecharModal('modal-sgc-area')">&times;</button>
-    </div>
-    <div class="modal-body" id="sgc-area-body"></div>
-    <div class="modal-footer">
-      <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-sgc-area')">Fechar</button>
+      <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-sgc-relatorio')">Fechar</button>
     </div>
   </div>
 </div>

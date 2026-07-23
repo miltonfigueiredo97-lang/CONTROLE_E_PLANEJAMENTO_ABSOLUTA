@@ -1,10 +1,14 @@
 // ============================================
 // Módulo: Levantamento de Solo Grampeado
-// Vistas (faces) e Chumbadores (grampos/ancoragens) —
-// cadastro/quantitativo, sem dados de execução.
-// A execução (datas, produção diária, área executada,
-// curva de progresso) fica em Controle de Solo Grampeado.
-// Dados: Firestore obras/{obraId}/sg*
+// Vistas = grid de chumbadores (vertical x horizontal), com
+// escala calibrada por linha + cm real, m² da vista, imagem de
+// fundo opcional (planta), e Especificações de Materiais
+// (modelo do chumbador, barra de aço, mangueira/espaguete,
+// cimento de injeção) vinculadas à Biblioteca de Materiais.
+// A execução (etapas, % e minimapa de progresso) fica em
+// Controle de Solo Grampeado.
+// Dados: Firestore obras/{obraId}/sg* e config/sgEspecificacoes,
+// config/sgImagem_{vistaId}
 // ============================================
 
 const LevantamentoSoloGrampeado = (() => {
@@ -15,10 +19,18 @@ const LevantamentoSoloGrampeado = (() => {
   let obraId = null;
   let vistas = [];
   let chumbadores = [];
+  let biblioteca = [];
+  let especificacoes = []; // config/sgEspecificacoes.especificacoes
 
-  let fBusca = '', fVista = 'todas', fTipo = 'todos';
+  let vistaAtivaId = null;
+  let imagemCacheVistaId = null, imagemCacheBase64 = null;
+
+  let calibClicks = []; // pontos clicados no SVG durante calibração
+  let modoCalibrando = false;
   let chumbEditId = null;
-  let previewImport = [];
+  let especEditId = null;
+
+  const esc = SG.esc;
 
   // ══════════════════════════════════════════
   // INIT / CARREGAMENTO
@@ -39,11 +51,15 @@ const LevantamentoSoloGrampeado = (() => {
   async function carregar() {
     Utils.mostrarLoading();
     try {
-      const [vs, cs] = await Promise.all([
+      const [vs, cs, mats, cfg] = await Promise.all([
         Database.listar(obraId, COL_VISTAS, null),
         Database.listar(obraId, COL_CHUMBADORES, null),
+        Database.listar(obraId, 'materiais', 'nome').catch(() => []),
+        Database.obter(obraId, 'config', 'sgEspecificacoes').catch(() => null),
       ]);
-      vistas = vs; chumbadores = cs;
+      vistas = vs; chumbadores = cs; biblioteca = mats;
+      especificacoes = (cfg && cfg.especificacoes) || [];
+      if (!vistaAtivaId && vistas.length) vistaAtivaId = vistasOrdenadas()[0].id;
       renderizar();
     } catch (e) {
       console.error(e);
@@ -56,16 +72,15 @@ const LevantamentoSoloGrampeado = (() => {
   async function recarregar() {
     obraId = Router.getObraId();
     if (!obraId) return;
-    fBusca = ''; fVista = 'todas'; fTipo = 'todos';
+    vistaAtivaId = null;
     await carregar();
-  }
-
-  function esc(s) {
-    return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
   function vistaLabel(v) { return v ? (v.nome ? `${v.numero} — ${v.nome}` : `Vista ${v.numero}`) : '—'; }
   function vistasOrdenadas() { return [...vistas].sort((a, b) => (a.numero || 0) - (b.numero || 0)); }
+  function vistaAtiva() { return vistas.find(v => v.id === vistaAtivaId) || null; }
+  function chumbadoresDaVista(vistaId) { return chumbadores.filter(c => c.vista === vistaId).sort((a, b) => (a.linha - b.linha) || (a.coluna - b.coluna)); }
+  function especLabel(e) { return e ? e.nome : '—'; }
 
   // ══════════════════════════════════════════
   // RENDER PRINCIPAL
@@ -73,6 +88,7 @@ const LevantamentoSoloGrampeado = (() => {
   function renderizar() {
     const c = document.getElementById('sg-content');
     if (!c) return;
+    const v = vistaAtiva();
     const mlTotal = chumbadores.reduce((s, c) => s + SG.num(c.comprimento), 0);
     const verticais = chumbadores.filter(c => c.tipo === 'Vertical').length;
     const horizontais = chumbadores.filter(c => c.tipo === 'Horizontal').length;
@@ -82,12 +98,11 @@ const LevantamentoSoloGrampeado = (() => {
       <div class="page-header">
         <div>
           <h2>⛏️ Levantamento de Solo Grampeado</h2>
-          <span class="subtitulo">Vistas e chumbadores (grampos/ancoragens) — cadastro e quantitativo</span>
+          <span class="subtitulo">Grid de chumbadores por vista — quantitativo e especificações de materiais</span>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <button class="btn btn-secundario btn-sm" onclick="SG_UI.abrirVistas()">◈ Vistas</button>
-          <button class="btn btn-secundario btn-sm" onclick="SG_UI.abrirImportar()">⊞ Importar Lote</button>
-          <button class="btn btn-primario btn-sm" onclick="SG_UI.abrirNovoChumbador()">+ Novo Chumbador</button>
+          <button class="btn btn-secundario btn-sm" onclick="SG_UI.abrirEspecificacoes()">🧱 Especificações de Materiais</button>
         </div>
       </div>
 
@@ -99,71 +114,353 @@ const LevantamentoSoloGrampeado = (() => {
       </div>
 
       <div class="cc-panel">
-        <div class="cc-panelTitle">⛏️ Chumbadores</div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
-          <input type="text" class="form-control" id="sg-busca" placeholder="🔍 Buscar por nº..." style="flex:1;min-width:140px;" value="${esc(fBusca)}" oninput="SG_UI.onFiltro()">
-          <select class="form-control" id="sg-f-vista" style="max-width:180px;" onchange="SG_UI.onFiltro()">
-            <option value="todas">Todas as vistas</option>
-            ${vistasOrdenadas().map(v => `<option value="${v.id}" ${fVista === v.id ? 'selected' : ''}>${esc(vistaLabel(v))}</option>`).join('')}
+        <div class="cc-panelTitle">🗺️ Grid da Vista</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center;">
+          <select class="form-control" id="sg-vista-ativa" style="max-width:240px;" onchange="SG_UI.onTrocarVistaAtiva()">
+            ${!vistas.length ? '<option value="">— nenhuma vista cadastrada —</option>' : ''}
+            ${vistasOrdenadas().map(vv => `<option value="${vv.id}" ${vv.id === vistaAtivaId ? 'selected' : ''}>${esc(vistaLabel(vv))}</option>`).join('')}
           </select>
-          <select class="form-control" id="sg-f-tipo" style="max-width:150px;" onchange="SG_UI.onFiltro()">
-            <option value="todos">Todos os tipos</option>
-            ${SG.TIPOS_CHUMBADOR.map(t => `<option value="${t}" ${fTipo === t ? 'selected' : ''}>${t}</option>`).join('')}
-          </select>
+          ${v ? `
+          <button class="btn btn-secundario btn-sm" onclick="SG_UI.abrirConfigGrid('${v.id}')">⚙ Config. Grid</button>
+          <button class="btn btn-secundario btn-sm" onclick="SG_UI.abrirImagemFundo('${v.id}')">🖼 Imagem de Fundo</button>
+          <button class="btn ${modoCalibrando ? 'btn-primario' : 'btn-secundario'} btn-sm" onclick="SG_UI.toggleCalibrar()">📏 ${modoCalibrando ? 'Clique 2 pontos...' : 'Calibrar Escala'}</button>
+          ` : ''}
         </div>
+        <div id="sg-grid-host"></div>
+      </div>
+
+      <div class="cc-panel">
+        <div class="cc-panelTitle">⛏️ Chumbadores da Vista</div>
         <div id="sg-tabela-chumbadores"></div>
       </div>
       </div>
     `;
+    renderGrid();
     renderTabelaChumbadores();
   }
 
-  function onFiltro() {
-    fBusca = document.getElementById('sg-busca').value;
-    fVista = document.getElementById('sg-f-vista').value;
-    fTipo = document.getElementById('sg-f-tipo').value;
-    renderTabelaChumbadores();
+  async function onTrocarVistaAtiva() {
+    vistaAtivaId = document.getElementById('sg-vista-ativa').value || null;
+    calibClicks = []; modoCalibrando = false;
+    renderizar();
+  }
+
+  // ══════════════════════════════════════════
+  // GRID VISUAL (SVG) — configuração, não execução
+  // ══════════════════════════════════════════
+  async function renderGrid() {
+    const host = document.getElementById('sg-grid-host');
+    if (!host) return;
+    const v = vistaAtiva();
+    if (!v) { host.innerHTML = `<div class="cc-empty">⛏️<br>Cadastre uma vista para começar.</div>`; return; }
+    if (!(SG.num(v.gridCols) > 0) || !(SG.num(v.gridRows) > 0)) {
+      host.innerHTML = `<div class="cc-empty">⚙ Configure a quantidade de chumbadores (vertical/horizontal) desta vista em <b>Config. Grid</b>.</div>`;
+      return;
+    }
+    let imagem = null;
+    if (imagemCacheVistaId === v.id) imagem = imagemCacheBase64;
+    else {
+      try {
+        const doc = await db.collection('obras').doc(obraId).collection('config').doc('sgImagem_' + v.id).get();
+        imagem = doc.exists ? (doc.data().img || null) : null;
+        imagemCacheVistaId = v.id; imagemCacheBase64 = imagem;
+      } catch (e) { imagem = null; }
+    }
+    const execMap = {}; // Levantamento não tem execução — grid usado só p/ posicionar
+    const lista = chumbadoresDaVista(v.id);
+    const svg = SG.svgMinimapa(v, lista, execMap, null, imagem, {
+      interativo: true, chumbadorClickFn: 'SG_UI.onClickBolinha', mostrarCalibracao: true,
+    });
+    const info = SG.num(v.escalaCmPorPx) > 0
+      ? `Escala: 1px ≈ ${SG.fmt2(v.escalaCmPorPx)} cm · m² sugerido: ${SG.fmt1(SG.calcM2Sugerido(v))}`
+      : 'Sem escala calibrada ainda';
+    host.innerHTML = `
+      <div id="sg-svg-wrap" onclick="SG_UI.onClickSvg(event)">${svg}</div>
+      <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-top:8px;font-size:0.78rem;color:var(--cor-texto-secundario);font-family:var(--font-mono);">
+        <span>${esc(info)}</span>
+        <span>m² total da vista: <b style="color:var(--cor-texto);">${SG.fmt1(v.m2Total)}</b> <button class="btn btn-secundario btn-sm" style="padding:2px 8px;" onclick="SG_UI.abrirEditarM2('${v.id}')">✎</button></span>
+      </div>
+      ${modoCalibrando ? `<div class="cc-empty" style="margin-top:8px;">Clique dois pontos no grid marcando uma distância conhecida.</div>` : ''}
+    `;
+  }
+
+  function onClickSvg(ev) {
+    if (!modoCalibrando) return;
+    const svg = ev.currentTarget.querySelector('svg');
+    if (!svg) return;
+    const pt = svg.createSVGPoint();
+    pt.x = ev.clientX; pt.y = ev.clientY;
+    const loc = pt.matrixTransform(svg.getScreenCTM().inverse());
+    calibClicks.push({ x: loc.x, y: loc.y });
+    if (calibClicks.length === 2) {
+      const linha = { x1: calibClicks[0].x, y1: calibClicks[0].y, x2: calibClicks[1].x, y2: calibClicks[1].y };
+      calibClicks = []; modoCalibrando = false;
+      abrirConfirmarCalibracao(linha);
+    } else {
+      renderGrid();
+    }
+  }
+
+  function toggleCalibrar() {
+    modoCalibrando = !modoCalibrando;
+    calibClicks = [];
+    renderGrid();
+    renderizar();
+  }
+
+  function abrirConfirmarCalibracao(linha) {
+    document.getElementById('sg-calib-cm').value = '';
+    document.getElementById('form-sg-calib').dataset.linha = JSON.stringify(linha);
+    Utils.abrirModal('modal-sg-calibracao');
+  }
+
+  async function salvarCalibracao() {
+    const v = vistaAtiva();
+    if (!v) return;
+    const linha = JSON.parse(document.getElementById('form-sg-calib').dataset.linha || 'null');
+    const cm = SG.num(document.getElementById('sg-calib-cm').value);
+    if (!linha || !(cm > 0)) { Utils.toast('Informe o comprimento real (cm) da linha.', 'alerta'); return; }
+    const escala = SG.calcEscalaCmPorPx(linha, cm);
+    Utils.mostrarLoading();
+    try {
+      const vTemp = { ...v, escalaCmPorPx: escala, linhaCalibracao: linha };
+      const m2Sugerido = SG.calcM2Sugerido(vTemp);
+      await Database.atualizar(obraId, COL_VISTAS, v.id, { escalaCmPorPx: escala, linhaCalibracao: linha, m2Total: m2Sugerido });
+      Utils.toast(`✓ Escala calibrada! m² sugerido: ${SG.fmt1(m2Sugerido)}`, 'sucesso');
+      Utils.fecharModal('modal-sg-calibracao');
+      await carregar();
+    } catch (e) {
+      Utils.toast('Erro ao salvar: ' + e.message, 'erro');
+    } finally {
+      Utils.esconderLoading();
+    }
+  }
+
+  function abrirEditarM2(vistaId) {
+    const v = vistas.find(x => x.id === vistaId);
+    if (!v) return;
+    document.getElementById('sg-m2-vistaid').value = vistaId;
+    document.getElementById('sg-m2-valor').value = v.m2Total ?? '';
+    Utils.abrirModal('modal-sg-m2');
+  }
+  async function salvarM2() {
+    const vistaId = document.getElementById('sg-m2-vistaid').value;
+    const m2 = SG.num(document.getElementById('sg-m2-valor').value);
+    Utils.mostrarLoading();
+    try {
+      await Database.atualizar(obraId, COL_VISTAS, vistaId, { m2Total: m2 });
+      Utils.toast('✓ m² total atualizado!', 'sucesso');
+      Utils.fecharModal('modal-sg-m2');
+      await carregar();
+    } catch (e) {
+      Utils.toast('Erro: ' + e.message, 'erro');
+    } finally {
+      Utils.esconderLoading();
+    }
+  }
+
+  // Clique numa bolinha do grid (no Levantamento = editar specs do chumbador)
+  function onClickBolinha(chumbadorId) {
+    abrirEditarChumbador(chumbadorId);
   }
 
   // ── Tabela de chumbadores (spec, sem status de execução) ──
   function renderTabelaChumbadores() {
     const el = document.getElementById('sg-tabela-chumbadores');
     if (!el) return;
-    const busca = fBusca.toLowerCase();
-    const lista = chumbadores.filter(c => {
-      if (fVista !== 'todas' && c.vista !== fVista) return false;
-      if (fTipo !== 'todos' && c.tipo !== fTipo) return false;
-      if (busca && !String(c.numero).toLowerCase().includes(busca)) return false;
-      return true;
-    }).sort((a, b) => (a.numero || 0) - (b.numero || 0));
-
+    const v = vistaAtiva();
+    if (!v) { el.innerHTML = `<div class="cc-empty">Nenhuma vista selecionada.</div>`; return; }
+    const lista = chumbadoresDaVista(v.id);
     if (!lista.length) {
-      el.innerHTML = `<div class="cc-empty">⛏️<br>Nenhum chumbador cadastrado. Adicione um ou importe em lote.</div>`;
+      el.innerHTML = `<div class="cc-empty">⛏️<br>Nenhum chumbador ainda. Configure o grid (linhas × colunas) em "Config. Grid".</div>`;
       return;
     }
-    const mlFiltro = lista.reduce((s, c) => s + SG.num(c.comprimento), 0);
+    const mlTotal = lista.reduce((s, c) => s + SG.num(c.comprimento), 0);
     el.innerHTML = `
-      <div class="cc-tableWrap" style="max-height:480px;overflow-y:auto;">
+      <div class="cc-tableWrap" style="max-height:420px;overflow-y:auto;">
       <table class="cc-table">
-        <thead><tr><th>Nº</th><th>Vista</th><th>Tipo</th><th class="col-num">Comp. (ml)</th><th class="col-acoes"></th></tr></thead>
+        <thead><tr><th>Nº</th><th>Posição</th><th>Tipo</th><th class="col-num">Comp. (ml)</th><th class="col-num">Prof. (cm)</th><th>Especificação</th><th class="col-acoes"></th></tr></thead>
         <tbody>
           ${lista.map(c => {
-            const v = vistas.find(x => x.id === c.vista);
+            const e = especificacoes.find(x => x.id === c.especId);
             return `<tr>
               <td style="font-weight:600;">${esc(c.numero)}</td>
-              <td>${esc(v ? vistaLabel(v) : '—')}</td>
+              <td class="cc-tdMono">L${(c.linha ?? 0) + 1}·C${(c.coluna ?? 0) + 1}</td>
               <td>${esc(c.tipo)}</td>
               <td class="col-num cc-tdMono">${SG.fmt1(c.comprimento)}</td>
+              <td class="col-num cc-tdMono">${c.profundidade ? SG.fmt1(c.profundidade) : '—'}</td>
+              <td>${esc(especLabel(e))}</td>
               <td class="col-acoes">
                 <button class="btn btn-secundario btn-sm" onclick="SG_UI.abrirEditarChumbador('${c.id}')">✎</button>
-                <button class="btn btn-secundario btn-sm" style="color:var(--cv-red);" onclick="SG_UI.excluirChumbador('${c.id}')">🗑</button>
               </td>
             </tr>`;
           }).join('')}
         </tbody>
-        <tfoot><tr><td colspan="3" style="font-weight:700;">${lista.length} chumbador${lista.length !== 1 ? 'es' : ''}</td><td class="col-num cc-tdMono" style="font-weight:700;">${SG.fmt1(mlFiltro)}</td><td></td></tr></tfoot>
+        <tfoot><tr><td colspan="3" style="font-weight:700;">${lista.length} chumbador${lista.length !== 1 ? 'es' : ''}</td><td class="col-num cc-tdMono" style="font-weight:700;">${SG.fmt1(mlTotal)}</td><td colspan="3"></td></tr></tfoot>
       </table>
       </div>`;
+  }
+
+  // ══════════════════════════════════════════
+  // EDITAR CHUMBADOR (tipo, comprimento, profundidade, especificação)
+  // ══════════════════════════════════════════
+  function abrirEditarChumbador(id) {
+    const c = chumbadores.find(x => x.id === id);
+    if (!c) return;
+    chumbEditId = id;
+    document.getElementById('sg-modal-chumb-titulo').textContent = `✎ Chumbador ${c.numero} (L${(c.linha ?? 0) + 1}·C${(c.coluna ?? 0) + 1})`;
+    const f = document.getElementById('form-sg-chumbador');
+    f.querySelector('[name=tipo]').innerHTML = SG.TIPOS_CHUMBADOR.map(t => `<option value="${t}" ${t === c.tipo ? 'selected' : ''}>${t}</option>`).join('');
+    f.querySelector('[name=especId]').innerHTML = `<option value="">— sem especificação —</option>` +
+      especificacoes.map(e => `<option value="${e.id}" ${e.id === c.especId ? 'selected' : ''}>${esc(e.nome)}</option>`).join('');
+    f.querySelector('[name=comprimento]').value = c.comprimento ?? '';
+    f.querySelector('[name=profundidade]').value = c.profundidade ?? '';
+    Utils.abrirModal('modal-sg-chumbador');
+  }
+
+  async function salvarChumbador() {
+    if (!chumbEditId) return;
+    const f = document.getElementById('form-sg-chumbador');
+    const tipo = f.querySelector('[name=tipo]').value;
+    const comprimento = SG.num(f.querySelector('[name=comprimento]').value);
+    const profundidade = SG.num(f.querySelector('[name=profundidade]').value);
+    const especId = f.querySelector('[name=especId]').value;
+    if (!(comprimento > 0)) { Utils.toast('Informe o comprimento (maior que zero).', 'alerta'); return; }
+    Utils.mostrarLoading();
+    try {
+      await Database.atualizar(obraId, COL_CHUMBADORES, chumbEditId, { tipo, comprimento, profundidade, especId });
+      Utils.toast('✓ Chumbador atualizado!', 'sucesso');
+      Utils.fecharModal('modal-sg-chumbador');
+      await carregar();
+    } catch (e) {
+      Utils.toast('Erro ao salvar: ' + e.message, 'erro');
+    } finally {
+      Utils.esconderLoading();
+    }
+  }
+
+  // ══════════════════════════════════════════
+  // CONFIG. DE GRID DA VISTA (gera/reconcilia chumbadores)
+  // ══════════════════════════════════════════
+  function abrirConfigGrid(vistaId) {
+    const v = vistas.find(x => x.id === vistaId);
+    if (!v) return;
+    document.getElementById('sg-cfg-vistaid').value = vistaId;
+    document.getElementById('sg-cfg-cols').value = v.gridCols || '';
+    document.getElementById('sg-cfg-rows').value = v.gridRows || '';
+    document.getElementById('sg-cfg-comp-vert').value = v.comprimentoPadraoVertical ?? '';
+    document.getElementById('sg-cfg-comp-horiz').value = v.comprimentoPadraoHorizontal ?? '';
+    document.getElementById('sg-cfg-espec').innerHTML = `<option value="">— sem especificação padrão —</option>` +
+      especificacoes.map(e => `<option value="${e.id}" ${e.id === v.especIdPadrao ? 'selected' : ''}>${esc(e.nome)}</option>`).join('');
+    Utils.abrirModal('modal-sg-config-grid');
+  }
+
+  async function salvarConfigGrid() {
+    const vistaId = document.getElementById('sg-cfg-vistaid').value;
+    const cols = parseInt(document.getElementById('sg-cfg-cols').value) || 0;
+    const rows = parseInt(document.getElementById('sg-cfg-rows').value) || 0;
+    const compVert = SG.num(document.getElementById('sg-cfg-comp-vert').value) || 1;
+    const compHoriz = SG.num(document.getElementById('sg-cfg-comp-horiz').value) || 1;
+    const especIdPadrao = document.getElementById('sg-cfg-espec').value;
+    if (!(cols > 0) || !(rows > 0)) { Utils.toast('Informe quantidade de colunas e linhas maior que zero.', 'alerta'); return; }
+    if (cols * rows > 400) { Utils.toast('Grid muito grande (máx. 400 chumbadores por vista). Divida em mais vistas.', 'alerta'); return; }
+
+    Utils.mostrarLoading();
+    try {
+      await Database.atualizar(obraId, COL_VISTAS, vistaId, {
+        gridCols: cols, gridRows: rows,
+        comprimentoPadraoVertical: compVert, comprimentoPadraoHorizontal: compHoriz,
+        especIdPadrao,
+      });
+      await _reconciliarChumbadoresDoGrid(vistaId, cols, rows, compVert, compHoriz, especIdPadrao);
+      Utils.toast('✓ Grid configurado!', 'sucesso');
+      Utils.fecharModal('modal-sg-config-grid');
+      await carregar();
+    } catch (e) {
+      Utils.toast('Erro ao salvar: ' + e.message, 'erro');
+    } finally {
+      Utils.esconderLoading();
+    }
+  }
+
+  // Cria os chumbadores que faltam para o novo grid e remove os que
+  // ficaram fora dele. Chumbadores já existentes na mesma posição
+  // (linha/coluna) mantêm tipo/comprimento/profundidade/especId.
+  async function _reconciliarChumbadoresDoGrid(vistaId, cols, rows, compVert, compHoriz, especIdPadrao) {
+    const existentes = chumbadores.filter(c => c.vista === vistaId);
+    const existentesPorPos = new Map(existentes.map(c => [`${c.linha}_${c.coluna}`, c]));
+    const ops = [];
+    let numero = 1;
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const key = `${r}_${c}`;
+        if (!existentesPorPos.has(key)) {
+          const tipo = 'Vertical';
+          ops.push({
+            type: 'set',
+            ref: Database.ref(obraId, COL_CHUMBADORES).doc(SG.genId('ch')),
+            data: { vista: vistaId, numero: numero, linha: r, coluna: c, tipo, comprimento: compVert, profundidade: 0, especId: especIdPadrao || '', obraId },
+          });
+        } else {
+          existentesPorPos.delete(key);
+        }
+        numero++;
+      }
+    }
+    // Sobrou nesse Map = fora do novo grid → remove
+    for (const c of existentesPorPos.values()) {
+      ops.push({ type: 'delete', ref: Database.ref(obraId, COL_CHUMBADORES).doc(c.id) });
+    }
+    for (let i = 0; i < ops.length; i += 400) {
+      await Database.batchWrite(ops.slice(i, i + 400));
+    }
+  }
+
+  // ══════════════════════════════════════════
+  // IMAGEM DE FUNDO (planta) — mesmo padrão do mapa de fachada
+  // ══════════════════════════════════════════
+  function abrirImagemFundo(vistaId) {
+    document.getElementById('sg-img-vistaid').value = vistaId;
+    Utils.abrirModal('modal-sg-imagem');
+  }
+  function onImagemArquivo(input) {
+    const file = input.files && input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async e => {
+      const vistaId = document.getElementById('sg-img-vistaid').value;
+      const img = e.target.result;
+      if (img.length > 950000) { Utils.toast('Imagem muito grande. Tente um arquivo menor.', 'erro'); return; }
+      Utils.mostrarLoading();
+      try {
+        await db.collection('obras').doc(obraId).collection('config').doc('sgImagem_' + vistaId).set({ img });
+        imagemCacheVistaId = null;
+        Utils.toast('✓ Imagem de fundo salva!', 'sucesso');
+        Utils.fecharModal('modal-sg-imagem');
+        renderGrid();
+      } catch (err) {
+        Utils.toast('Erro ao salvar imagem: ' + err.message, 'erro');
+      } finally {
+        Utils.esconderLoading();
+      }
+    };
+    reader.readAsDataURL(file);
+    input.value = '';
+  }
+  async function removerImagemFundo() {
+    const vistaId = document.getElementById('sg-img-vistaid').value;
+    Utils.mostrarLoading();
+    try {
+      await db.collection('obras').doc(obraId).collection('config').doc('sgImagem_' + vistaId).delete();
+      imagemCacheVistaId = null;
+      Utils.toast('Imagem removida.', 'sucesso');
+      Utils.fecharModal('modal-sg-imagem');
+      renderGrid();
+    } catch (e) {
+      Utils.toast('Erro: ' + e.message, 'erro');
+    } finally {
+      Utils.esconderLoading();
+    }
   }
 
   // ══════════════════════════════════════════
@@ -179,20 +476,19 @@ const LevantamentoSoloGrampeado = (() => {
     if (!el) return;
     el.innerHTML = `
       <div style="display:flex;gap:8px;margin-bottom:12px;">
-        <input type="text" id="sg-vista-numero" class="form-control" placeholder="Número (ex: 1)" style="max-width:120px;">
-        <input type="text" id="sg-vista-nome" class="form-control" placeholder="Nome (opcional, ex: Face Norte)" style="flex:1;">
+        <input type="text" class="form-control" id="sg-nova-vista-nome" placeholder="Nome da vista (ex: Face Norte)">
         <button class="btn btn-primario btn-sm" onclick="SG_UI.salvarVista()">+ Adicionar</button>
       </div>
-      ${!vistas.length ? `<div class="cc-empty">Nenhuma vista cadastrada ainda.</div>` : `
-      <div class="cc-tableWrap">
+      ${!vistas.length ? '<div class="cc-empty">Nenhuma vista cadastrada.</div>' : `
+      <div class="cc-tableWrap" style="max-height:320px;overflow-y:auto;">
         <table class="cc-table">
-          <thead><tr><th>Nº</th><th>Nome</th><th class="col-centro">Chumbadores</th><th class="col-acoes"></th></tr></thead>
+          <thead><tr><th>Nº</th><th>Nome</th><th class="col-num">Chumbadores</th><th class="col-acoes"></th></tr></thead>
           <tbody>
             ${vistasOrdenadas().map(v => `
               <tr>
-                <td class="cc-tdAccent" style="font-weight:700;">${esc(v.numero)}</td>
+                <td>${esc(v.numero)}</td>
                 <td>${esc(v.nome || '—')}</td>
-                <td class="col-centro">${chumbadores.filter(c => c.vista === v.id).length}</td>
+                <td class="col-num cc-tdMono">${chumbadoresDaVista(v.id).length}</td>
                 <td class="col-acoes"><button class="btn btn-secundario btn-sm" style="color:var(--cv-red);" onclick="SG_UI.excluirVista('${v.id}')">🗑</button></td>
               </tr>`).join('')}
           </tbody>
@@ -201,15 +497,15 @@ const LevantamentoSoloGrampeado = (() => {
   }
 
   async function salvarVista() {
-    const numero = document.getElementById('sg-vista-numero').value.trim();
-    const nome = document.getElementById('sg-vista-nome').value.trim();
-    if (!numero) { Utils.toast('Informe o número da vista.', 'alerta'); return; }
+    const nome = document.getElementById('sg-nova-vista-nome').value.trim();
+    const proxNumero = vistas.length ? Math.max(...vistas.map(v => v.numero || 0)) + 1 : 1;
     Utils.mostrarLoading();
     try {
-      await Database.criar(obraId, COL_VISTAS, { numero: parseInt(numero) || numero, nome }, SG.genId('v'));
+      await Database.criar(obraId, COL_VISTAS, { numero: proxNumero, nome, gridCols: 0, gridRows: 0, m2Total: 0, obraId }, SG.genId('v'));
+      Utils.toast('✓ Vista adicionada!', 'sucesso');
+      document.getElementById('sg-nova-vista-nome').value = '';
       await carregar();
       renderVistas();
-      Utils.toast('✓ Vista adicionada!', 'sucesso');
     } catch (e) {
       Utils.toast('Erro: ' + e.message, 'erro');
     } finally {
@@ -218,19 +514,17 @@ const LevantamentoSoloGrampeado = (() => {
   }
 
   async function excluirVista(id) {
-    const v = vistas.find(x => x.id === id);
-    if (!v) return;
-    const emUso = chumbadores.filter(c => c.vista === id).length;
-    if (emUso > 0) {
-      const ok = await Utils.confirmar(`Esta vista tem ${emUso} chumbador(es) vinculado(s). Excluir mesmo assim? Os chumbadores continuarão existindo, apenas sem vista.`);
-      if (!ok) return;
-    } else {
-      const ok = await Utils.confirmar(`Excluir a vista "${vistaLabel(v)}"?`);
-      if (!ok) return;
-    }
+    const qtd = chumbadoresDaVista(id).length;
+    const ok = await Utils.confirmar(`Excluir esta vista? ${qtd ? `Isso também remove os ${qtd} chumbadores cadastrados nela.` : ''}`);
+    if (!ok) return;
     Utils.mostrarLoading();
     try {
-      await Database.deletar(obraId, COL_VISTAS, id);
+      const ops = [{ type: 'delete', ref: Database.ref(obraId, COL_VISTAS).doc(id) }];
+      chumbadores.filter(c => c.vista === id).forEach(c => ops.push({ type: 'delete', ref: Database.ref(obraId, COL_CHUMBADORES).doc(c.id) }));
+      await Database.batchWrite(ops);
+      try { await db.collection('obras').doc(obraId).collection('config').doc('sgImagem_' + id).delete(); } catch (e) {}
+      Utils.toast('Vista excluída.', 'sucesso');
+      if (vistaAtivaId === id) vistaAtivaId = null;
       await carregar();
       renderVistas();
     } catch (e) {
@@ -241,58 +535,124 @@ const LevantamentoSoloGrampeado = (() => {
   }
 
   // ══════════════════════════════════════════
-  // CRUD DE CHUMBADORES (spec — sem datas de execução)
+  // ESPECIFICAÇÕES DE MATERIAIS (config/sgEspecificacoes)
+  // Modelo do chumbador + barra de aço + mangueira (espaguete)
+  // + cimento de injeção — cada um vinculado à Biblioteca de
+  // Materiais (criando o material ali se ainda não existir).
   // ══════════════════════════════════════════
-  function optVistas(sel) {
-    return `<option value="">— sem vista —</option>` + vistasOrdenadas().map(v =>
-      `<option value="${v.id}" ${v.id === sel ? 'selected' : ''}>${esc(vistaLabel(v))}</option>`).join('');
+  function abrirEspecificacoes() {
+    especEditId = null;
+    renderEspecificacoes();
+    Utils.abrirModal('modal-sg-especificacoes');
   }
 
-  function abrirNovoChumbador() {
-    chumbEditId = null;
-    document.getElementById('sg-modal-chumb-titulo').textContent = '⛏️ Novo Chumbador';
-    const f = document.getElementById('form-sg-chumbador');
-    f.reset();
-    f.querySelector('[name=vista]').innerHTML = optVistas('');
-    f.querySelector('[name=tipo]').innerHTML = SG.TIPOS_CHUMBADOR.map(t => `<option value="${t}">${t}</option>`).join('');
-    Utils.abrirModal('modal-sg-chumbador');
+  function _seletorMaterial(campo, valorId) {
+    return `
+      <select class="form-control sg-mat-select" data-campo="${campo}" style="margin-bottom:4px;">
+        <option value="">— selecione —</option>
+        ${biblioteca.map(m => `<option value="${m.id}" ${m.id === valorId ? 'selected' : ''}>${esc(m.nome)}${m.fabricante ? ' — ' + esc(m.fabricante) : ''}</option>`).join('')}
+      </select>
+      <div style="display:flex;gap:4px;">
+        <input type="text" class="form-control" placeholder="Novo material..." id="sg-novo-${campo}" style="font-size:0.78rem;">
+        <button type="button" class="btn btn-secundario btn-sm" onclick="SG_UI.criarMaterialInline('${campo}')">+ Criar</button>
+      </div>`;
   }
 
-  function abrirEditarChumbador(id) {
-    const c = chumbadores.find(x => x.id === id);
-    if (!c) return;
-    chumbEditId = id;
-    document.getElementById('sg-modal-chumb-titulo').textContent = `✎ Editando Chumbador ${c.numero}`;
-    const f = document.getElementById('form-sg-chumbador');
-    f.querySelector('[name=vista]').innerHTML = optVistas(c.vista || '');
-    f.querySelector('[name=tipo]').innerHTML = SG.TIPOS_CHUMBADOR.map(t => `<option value="${t}" ${t === c.tipo ? 'selected' : ''}>${t}</option>`).join('');
-    f.querySelector('[name=numero]').value = c.numero ?? '';
-    f.querySelector('[name=comprimento]').value = c.comprimento ?? '';
-    Utils.abrirModal('modal-sg-chumbador');
-  }
-
-  async function salvarChumbador() {
-    const f = document.getElementById('form-sg-chumbador');
-    const numero = f.querySelector('[name=numero]').value.trim();
-    const vista = f.querySelector('[name=vista]').value;
-    const tipo = f.querySelector('[name=tipo]').value;
-    const comprimento = SG.num(f.querySelector('[name=comprimento]').value);
-    if (!numero || !(comprimento > 0)) {
-      Utils.toast('Preencha o número e o comprimento (maior que zero).', 'alerta');
-      return;
-    }
+  async function criarMaterialInline(campo) {
+    const input = document.getElementById(`sg-novo-${campo}`);
+    const nome = input.value.trim();
+    if (!nome) { Utils.toast('Digite o nome do material.', 'alerta'); return; }
     Utils.mostrarLoading();
     try {
-      const data = { numero, vista, tipo, comprimento };
-      if (chumbEditId) {
-        await Database.atualizar(obraId, COL_CHUMBADORES, chumbEditId, data);
-        Utils.toast(`✓ Chumbador ${numero} atualizado!`, 'sucesso');
-      } else {
-        await Database.criar(obraId, COL_CHUMBADORES, data, SG.genId('ch'));
-        Utils.toast(`✓ Chumbador ${numero} adicionado!`, 'sucesso');
+      const id = await Database.criar(obraId, 'materiais', { nome, tipo: '', unidade: 'un', fabricante: '', referencia: '' });
+      biblioteca.push({ id, nome, tipo: '', unidade: 'un' });
+      const select = document.querySelector(`select.sg-mat-select[data-campo="${campo}"]`);
+      if (select) {
+        select.innerHTML += `<option value="${id}" selected>${esc(nome)}</option>`;
       }
-      Utils.fecharModal('modal-sg-chumbador');
+      input.value = '';
+      Utils.toast('✓ Material criado e vinculado!', 'sucesso');
+    } catch (e) {
+      Utils.toast('Erro ao criar material: ' + e.message, 'erro');
+    } finally {
+      Utils.esconderLoading();
+    }
+  }
+
+  function renderEspecificacoes() {
+    const el = document.getElementById('sg-espec-body');
+    if (!el) return;
+    const editando = especEditId ? especificacoes.find(e => e.id === especEditId) : null;
+    el.innerHTML = `
+      <div class="cc-panel" style="padding:12px;margin-bottom:12px;">
+        <div class="cc-panelTitle" style="font-size:0.9rem;">${editando ? '✎ Editando especificação' : '+ Nova especificação'}</div>
+        <div class="form-grupo"><label>Nome (ex: Chumbador CA-50 Ø10mm)</label><input type="text" class="form-control" id="sg-espec-nome" value="${esc(editando?.nome || '')}"></div>
+        <div class="form-row">
+          <div class="form-grupo"><label>Modelo do chumbador (material)</label>${_seletorMaterial('modelo', editando?.materialModeloId)}</div>
+          <div class="form-grupo"><label>Barra de aço (material)</label>${_seletorMaterial('barraAco', editando?.materialBarraAcoId)}</div>
+        </div>
+        <div class="form-row">
+          <div class="form-grupo"><label>Mangueira / espaguete (material)</label>${_seletorMaterial('mangueira', editando?.materialMangueiraId)}
+            <label style="margin-top:4px;">Consumo (m de mangueira por ml de chumbador)</label><input type="number" step="0.01" class="form-control" id="sg-espec-mangueira-consumo" value="${editando?.mangueiraMlPorMl ?? ''}" placeholder="1.0"></div>
+          <div class="form-grupo"><label>Cimento de injeção (material)</label>${_seletorMaterial('cimento', editando?.materialCimentoId)}
+            <label style="margin-top:4px;">Consumo médio (kg por injeção/chumbador)</label><input type="number" step="0.01" class="form-control" id="sg-espec-cimento-consumo" value="${editando?.cimentoConsumoPorInjecao ?? ''}" placeholder="0"></div>
+        </div>
+        <div class="form-grupo"><label>Volume de calda injetada (m³ por ml de chumbador)</label><input type="number" step="0.001" class="form-control" id="sg-espec-volume" value="${editando?.volumeConcretoPorMl ?? ''}" placeholder="0"></div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-primario btn-sm" onclick="SG_UI.salvarEspecificacao()">${editando ? 'Salvar alterações' : '+ Adicionar especificação'}</button>
+          ${editando ? `<button class="btn btn-secundario btn-sm" onclick="SG_UI.cancelarEdicaoEspec()">Cancelar</button>` : ''}
+        </div>
+      </div>
+      ${!especificacoes.length ? '<div class="cc-empty">Nenhuma especificação cadastrada ainda.</div>' : `
+      <div class="cc-tableWrap" style="max-height:260px;overflow-y:auto;">
+        <table class="cc-table">
+          <thead><tr><th>Nome</th><th>Modelo</th><th>Barra Aço</th><th>Mangueira</th><th>Cimento</th><th class="col-acoes"></th></tr></thead>
+          <tbody>
+            ${especificacoes.map(e => `
+              <tr>
+                <td style="font-weight:600;">${esc(e.nome)}</td>
+                <td>${esc(biblioteca.find(m => m.id === e.materialModeloId)?.nome || '—')}</td>
+                <td>${esc(biblioteca.find(m => m.id === e.materialBarraAcoId)?.nome || '—')}</td>
+                <td>${esc(biblioteca.find(m => m.id === e.materialMangueiraId)?.nome || '—')}</td>
+                <td>${esc(biblioteca.find(m => m.id === e.materialCimentoId)?.nome || '—')}</td>
+                <td class="col-acoes">
+                  <button class="btn btn-secundario btn-sm" onclick="SG_UI.editarEspecificacao('${e.id}')">✎</button>
+                  <button class="btn btn-secundario btn-sm" style="color:var(--cv-red);" onclick="SG_UI.excluirEspecificacao('${e.id}')">🗑</button>
+                </td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>`}`;
+  }
+
+  function editarEspecificacao(id) { especEditId = id; renderEspecificacoes(); }
+  function cancelarEdicaoEspec() { especEditId = null; renderEspecificacoes(); }
+
+  async function salvarEspecificacao() {
+    const nome = document.getElementById('sg-espec-nome').value.trim();
+    if (!nome) { Utils.toast('Informe o nome da especificação.', 'alerta'); return; }
+    const getSel = campo => document.querySelector(`select.sg-mat-select[data-campo="${campo}"]`)?.value || '';
+    const nova = {
+      id: especEditId || SG.genId('esp'),
+      nome,
+      materialModeloId: getSel('modelo'),
+      materialBarraAcoId: getSel('barraAco'),
+      materialMangueiraId: getSel('mangueira'),
+      mangueiraMlPorMl: SG.num(document.getElementById('sg-espec-mangueira-consumo').value),
+      materialCimentoId: getSel('cimento'),
+      cimentoConsumoPorInjecao: SG.num(document.getElementById('sg-espec-cimento-consumo').value),
+      volumeConcretoPorMl: SG.num(document.getElementById('sg-espec-volume').value),
+    };
+    Utils.mostrarLoading();
+    try {
+      const novaLista = especEditId
+        ? especificacoes.map(e => e.id === especEditId ? nova : e)
+        : [...especificacoes, nova];
+      await db.collection('obras').doc(obraId).collection('config').doc('sgEspecificacoes').set({ especificacoes: novaLista });
+      Utils.toast('✓ Especificação salva!', 'sucesso');
+      especEditId = null;
       await carregar();
+      renderEspecificacoes();
     } catch (e) {
       Utils.toast('Erro ao salvar: ' + e.message, 'erro');
     } finally {
@@ -300,141 +660,32 @@ const LevantamentoSoloGrampeado = (() => {
     }
   }
 
-  async function excluirChumbador(id) {
-    const c = chumbadores.find(x => x.id === id);
-    if (!c) return;
-    const ok = await Utils.confirmar(`Excluir o chumbador ${c.numero}? Isso também remove o histórico de execução dele em Controle.`);
+  async function excluirEspecificacao(id) {
+    const emUso = chumbadores.filter(c => c.especId === id).length;
+    const ok = await Utils.confirmar(`Excluir esta especificação?${emUso ? ` ${emUso} chumbador(es) usam ela — ficarão sem especificação.` : ''}`);
     if (!ok) return;
     Utils.mostrarLoading();
     try {
-      const ops = [{ type: 'delete', ref: Database.ref(obraId, COL_CHUMBADORES).doc(id) }];
-      // Remove também a execução vinculada (Controle), se existir
-      const execSnap = await db.collection('obras').doc(obraId).collection('sgExecucoes').where('chumbadorId', '==', id).get();
-      execSnap.forEach(doc => ops.push({ type: 'delete', ref: doc.ref }));
-      await Database.batchWrite(ops);
-      Utils.toast('Chumbador excluído.', 'sucesso');
+      const novaLista = especificacoes.filter(e => e.id !== id);
+      await db.collection('obras').doc(obraId).collection('config').doc('sgEspecificacoes').set({ especificacoes: novaLista });
+      Utils.toast('Especificação excluída.', 'sucesso');
       await carregar();
+      renderEspecificacoes();
     } catch (e) {
-      Utils.toast('Erro ao excluir: ' + e.message, 'erro');
-    } finally {
-      Utils.esconderLoading();
-    }
-  }
-
-  // ══════════════════════════════════════════
-  // IMPORTAÇÃO EM LOTE (chumbadores)
-  // ══════════════════════════════════════════
-  function abrirImportar() {
-    previewImport = [];
-    document.getElementById('sg-import-texto').value = '';
-    document.getElementById('sg-import-preview').innerHTML = '';
-    document.getElementById('sg-import-erro').style.display = 'none';
-    document.getElementById('sg-import-btn').disabled = true;
-    Utils.abrirModal('modal-sg-importar');
-  }
-
-  function baixarModeloTSV() {
-    const header = 'Numero\tVista\tTipo\tComprimento (ml)\n';
-    const exemplo = '1\t1\tVertical\t5\n2\t1\tVertical\t5\n3\t2\tHorizontal\t6';
-    const blob = new Blob([header + exemplo], { type: 'text/tab-separated-values' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = 'modelo_chumbadores.tsv'; a.click();
-    URL.revokeObjectURL(url);
-  }
-
-  function parsearImport(txt) {
-    const erroEl = document.getElementById('sg-import-erro');
-    erroEl.style.display = 'none';
-    const linhas = String(txt || '').trim().split(/\r?\n/).filter(l => l.trim());
-    const itens = [];
-    linhas.forEach((linha, i) => {
-      if (i === 0 && linha.toLowerCase().includes('numero')) return;
-      const cols = linha.split('\t').map(c => c.trim());
-      const numero = cols[0], vistaNum = cols[1], tipo = cols[2], compRaw = cols[3];
-      if (!numero) return;
-      const comp = parseFloat((compRaw || '').replace(',', '.'));
-      if (isNaN(comp) || comp <= 0) return;
-      const tipoNorm = /horiz/i.test(tipo || '') ? 'Horizontal' : 'Vertical';
-      itens.push({ numero, vistaNum, tipo: tipoNorm, comprimento: comp });
-    });
-    previewImport = itens;
-    renderPreviewImport();
-    if (!itens.length && linhas.length) {
-      erroEl.textContent = 'Nenhuma linha válida encontrada. Verifique o formato (colunas separadas por TAB).';
-      erroEl.style.display = 'block';
-    }
-  }
-
-  function renderPreviewImport() {
-    const el = document.getElementById('sg-import-preview');
-    const btn = document.getElementById('sg-import-btn');
-    btn.disabled = !previewImport.length;
-    btn.textContent = previewImport.length ? `✓ Importar ${previewImport.length} chumbadores` : '✓ Importar';
-    if (!previewImport.length) { el.innerHTML = ''; return; }
-    el.innerHTML = `
-      <div class="cc-tableWrap" style="max-height:220px;overflow-y:auto;margin-top:10px;">
-        <table class="cc-table">
-          <thead><tr><th>#</th><th>Nº</th><th>Vista</th><th>Tipo</th><th class="col-num">ml</th></tr></thead>
-          <tbody>${previewImport.map((p, i) => `
-            <tr><td>${i + 1}</td><td>${esc(p.numero)}</td><td>${esc(p.vistaNum)}</td><td>${esc(p.tipo)}</td><td class="col-num cc-tdMono">${SG.fmt1(p.comprimento)}</td></tr>`).join('')}
-          </tbody>
-        </table>
-      </div>`;
-  }
-
-  function onImportTexto() { parsearImport(document.getElementById('sg-import-texto').value); }
-
-  function onImportArquivo(input) {
-    const file = input.files && input.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = e => parsearImport(e.target.result);
-    reader.readAsText(file, 'UTF-8');
-    input.value = '';
-  }
-
-  async function salvarImport() {
-    if (!previewImport.length) return;
-    Utils.mostrarLoading();
-    try {
-      // Cria vistas ausentes automaticamente
-      const vistasExistentes = new Map(vistas.map(v => [String(v.numero), v.id]));
-      const novasVistas = [...new Set(previewImport.map(p => p.vistaNum).filter(Boolean))]
-        .filter(vn => !vistasExistentes.has(String(vn)));
-      for (const vn of novasVistas) {
-        const ref = Database.ref(obraId, COL_VISTAS).doc(SG.genId('v'));
-        await Database.batchWrite([{ type: 'set', ref, data: { numero: parseInt(vn) || vn, nome: '', obraId } }]);
-        vistasExistentes.set(String(vn), ref.id);
-      }
-      const ops = previewImport.map(p => ({
-        type: 'set',
-        ref: Database.ref(obraId, COL_CHUMBADORES).doc(SG.genId('ch')),
-        data: {
-          numero: p.numero, tipo: p.tipo, comprimento: p.comprimento,
-          vista: vistasExistentes.get(String(p.vistaNum)) || '',
-          obraId,
-        },
-      }));
-      for (let i = 0; i < ops.length; i += 400) {
-        await Database.batchWrite(ops.slice(i, i + 400));
-      }
-      Utils.toast(`✓ ${previewImport.length} chumbadores importados!`, 'sucesso');
-      previewImport = [];
-      Utils.fecharModal('modal-sg-importar');
-      await carregar();
-    } catch (e) {
-      Utils.toast('Erro ao importar: ' + e.message, 'erro');
+      Utils.toast('Erro: ' + e.message, 'erro');
     } finally {
       Utils.esconderLoading();
     }
   }
 
   return {
-    init, recarregar, renderizar, onFiltro,
+    init, recarregar, renderizar, onTrocarVistaAtiva,
     abrirVistas, salvarVista, excluirVista,
-    abrirNovoChumbador, abrirEditarChumbador, salvarChumbador, excluirChumbador,
-    abrirImportar, baixarModeloTSV, onImportTexto, onImportArquivo, salvarImport,
+    abrirConfigGrid, salvarConfigGrid,
+    abrirImagemFundo, onImagemArquivo, removerImagemFundo,
+    toggleCalibrar, onClickSvg, salvarCalibracao, abrirEditarM2, salvarM2,
+    onClickBolinha, abrirEditarChumbador, salvarChumbador,
+    abrirEspecificacoes, criarMaterialInline, editarEspecificacao, cancelarEdicaoEspec, salvarEspecificacao, excluirEspecificacao,
   };
 })();
 

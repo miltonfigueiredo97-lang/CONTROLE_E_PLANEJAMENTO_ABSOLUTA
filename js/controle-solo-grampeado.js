@@ -1,10 +1,12 @@
 // ============================================
 // Módulo: Controle de Solo Grampeado
-// Execução dos chumbadores (datas de furo/injeção/
-// conclusão), produção diária, área executada por
-// vista e curva de progresso.
-// Chumbadores/Vistas vêm do Levantamento de Solo
-// Grampeado — aqui só se registra a EXECUÇÃO.
+// Minimapa interativo por vista: clicar num chumbador marca as
+// etapas (Perfuração 20% / Injeção 1 15% / Injeção 2 15%);
+// clicar em células da malha marca Projeção (30%) e Acabamento
+// (20%) da área. Cada marcação gera um lançamento no relatório
+// diário (sgProducaoDiaria). % e m² executados por vista.
+// Chumbadores/Vistas vêm do Levantamento de Solo Grampeado —
+// aqui só se registra a EXECUÇÃO.
 // Dados: Firestore obras/{obraId}/sg*
 // ============================================
 
@@ -19,12 +21,16 @@ const ControleSoloGrampeado = (() => {
   let obraId = null;
   let vistas = [];
   let chumbadores = [];
-  let execucoes = []; // 1 doc por chumbador executado: {chumbadorId, dataFuro, dataInjecao1, dataInjecao2, dataConclusao}
-  let producao = [];
-  let areaExecutada = [];
+  let execucoes = []; // 1 doc por chumbador: {chumbadorId, vistaId, perfuracao:{feito,data}, injecao1:{...}, injecao2:{...}}
+  let producao = []; // log diário (sgProducaoDiaria)
+  let areaExecutada = []; // 1 doc por vista: {vistaId, celulasProjecao:[...], celulasAcabamento:[...]}
 
-  let fBusca = '', fVista = 'todas', fTipo = 'todos', fStatus = 'todos';
-  let execEditId = null; // id do chumbador sendo editado (não da execução)
+  let vistaAtivaId = null;
+  let modoArea = null; // 'projecao' | 'acabamento' | null
+  let chumbAtivoId = null;
+  let imagemCacheVistaId = null, imagemCacheBase64 = null;
+
+  const esc = SG.esc;
 
   // ══════════════════════════════════════════
   // INIT / CARREGAMENTO
@@ -53,6 +59,7 @@ const ControleSoloGrampeado = (() => {
         Database.listar(obraId, COL_AREA, null),
       ]);
       vistas = vs; chumbadores = cs; execucoes = exs; producao = ps; areaExecutada = as_;
+      if (!vistaAtivaId && vistas.length) vistaAtivaId = vistasOrdenadas()[0].id;
       renderizar();
     } catch (e) {
       console.error(e);
@@ -65,24 +72,21 @@ const ControleSoloGrampeado = (() => {
   async function recarregar() {
     obraId = Router.getObraId();
     if (!obraId) return;
-    fBusca = ''; fVista = 'todas'; fTipo = 'todos'; fStatus = 'todos';
+    vistaAtivaId = null;
     await carregar();
-  }
-
-  function esc(s) {
-    return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
   function vistaLabel(v) { return v ? (v.nome ? `${v.numero} — ${v.nome}` : `Vista ${v.numero}`) : '—'; }
   function vistasOrdenadas() { return [...vistas].sort((a, b) => (a.numero || 0) - (b.numero || 0)); }
-  function execDoChumbador(chumbadorId) { return execucoes.find(e => e.chumbadorId === chumbadorId) || {}; }
-
-  // ══════════════════════════════════════════
-  // KPIs / cálculos combinando chumbador + execução
-  // ══════════════════════════════════════════
-  function chumbadoresComExecucao() {
-    return chumbadores.map(c => ({ ...c, ...execDoChumbador(c.id), chumbadorId: c.id }));
+  function vistaAtiva() { return vistas.find(v => v.id === vistaAtivaId) || null; }
+  function chumbadoresDaVista(vistaId) { return chumbadores.filter(c => c.vista === vistaId).sort((a, b) => (a.linha - b.linha) || (a.coluna - b.coluna)); }
+  function execDoChumbador(chumbadorId) { return execucoes.find(e => e.chumbadorId === chumbadorId) || null; }
+  function execMapDaVista(vistaId) {
+    const map = {};
+    chumbadoresDaVista(vistaId).forEach(c => { const e = execDoChumbador(c.id); if (e) map[c.id] = e; });
+    return map;
   }
+  function areaDocDaVista(vistaId) { return areaExecutada.find(a => a.vistaId === vistaId) || null; }
 
   // ══════════════════════════════════════════
   // RENDER PRINCIPAL
@@ -91,191 +95,170 @@ const ControleSoloGrampeado = (() => {
     const c = document.getElementById('sgc-content');
     if (!c) return;
 
-    if (!chumbadores.length) {
+    if (!vistas.length) {
       c.innerHTML = `
         <div class="cc-view">
         <div class="page-header">
-          <div><h2>✅ Controle de Solo Grampeado</h2><span class="subtitulo">Execução dos chumbadores, produção diária e área executada</span></div>
+          <div><h2>✅ Controle de Solo Grampeado</h2><span class="subtitulo">Minimapa de execução por vista</span></div>
         </div>
-        <div class="cc-empty">⛏️<br>Nenhum chumbador cadastrado ainda.<br>Cadastre no <a href="levantamento-solo-grampeado.html" style="color:var(--cor-primaria-dark);font-weight:600;">Levantamento de Solo Grampeado</a>.</div>
+        <div class="cc-empty">⛏️<br>Nenhuma vista/grid cadastrado ainda.<br>Configure no <a href="levantamento-solo-grampeado.html" style="color:var(--cor-primaria-dark);font-weight:600;">Levantamento de Solo Grampeado</a>.</div>
         </div>`;
       return;
     }
 
-    const combinados = chumbadoresComExecucao();
-    const kpis = SG.calcKPIsChumbadores(combinados);
-    const totalArea = areaExecutada.reduce((s, a) => s + SG.num(a.area), 0);
+    // KPIs gerais (todas as vistas)
+    const resumos = vistasOrdenadas().map(v => SG.calcPctVista(v, chumbadoresDaVista(v.id), execMapDaVista(v.id), areaDocDaVista(v.id)));
+    const m2TotalObra = vistas.reduce((s, v) => s + SG.num(v.m2Total), 0);
+    const m2ExecObra = resumos.reduce((s, r) => s + r.m2Executado, 0);
+    const pctMedioObra = vistas.length ? resumos.reduce((s, r) => s + r.pct, 0) / vistas.length : 0;
+    const chumbTotal = chumbadores.length;
+    const chumbFeitos = resumos.reduce((s, r) => s + r.chumbadoresFeitos, 0);
+
+    const v = vistaAtiva();
 
     c.innerHTML = `
       <div class="cc-view">
       <div class="page-header">
         <div>
           <h2>✅ Controle de Solo Grampeado</h2>
-          <span class="subtitulo">Execução dos chumbadores, produção diária e área executada</span>
+          <span class="subtitulo">Clique num chumbador para marcar etapas, ou ative um modo de área para marcar projeção/acabamento</span>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <a class="btn btn-secundario btn-sm" href="levantamento-solo-grampeado.html">⛏️ Levantamento Solo Grampeado</a>
-          <button class="btn btn-secundario btn-sm" onclick="SGC_UI.abrirProducaoDiaria()">📅 Produção Diária</button>
-          <button class="btn btn-secundario btn-sm" onclick="SGC_UI.abrirAreaExecutada()">📐 Área Executada</button>
+          <button class="btn btn-secundario btn-sm" onclick="SGC_UI.abrirRelatorioDiario()">📅 Relatório Diário</button>
         </div>
       </div>
 
-      <div class="cc-kpiGrid" style="grid-template-columns:repeat(5,1fr);">
-        <div class="cc-kpi cc-kpiGreen"><div class="cc-kpiIcon">✅</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Concluídos</div><div class="cc-kpiValue">${kpis.concluidos}<span class="cc-kpiUnit">/ ${kpis.total}</span></div><div class="cc-kpiSub">${SG.fmt1(kpis.pct)}%</div></div></div>
-        <div class="cc-kpi cc-kpiBlue"><div class="cc-kpiIcon">📏</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Metros Lineares</div><div class="cc-kpiValue">${SG.fmt1(kpis.mlFeito)}<span class="cc-kpiUnit">ml</span></div><div class="cc-kpiSub">de ${SG.fmt1(kpis.mlTotal)} ml previstos</div></div></div>
-        <div class="cc-kpi cc-kpiPurple"><div class="cc-kpiIcon">📐</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Área Executada</div><div class="cc-kpiValue">${SG.fmt1(totalArea)}<span class="cc-kpiUnit">m²</span></div></div></div>
-        <div class="cc-kpi cc-kpiOrange"><div class="cc-kpiIcon">📅</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Dias com produção</div><div class="cc-kpiValue">${producao.length}</div></div></div>
-        <div class="cc-kpi"><div class="cc-kpiIcon">⛏️</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Pendentes</div><div class="cc-kpiValue">${kpis.total - kpis.concluidos}</div></div></div>
+      <div class="cc-kpiGrid" style="grid-template-columns:repeat(4,1fr);">
+        <div class="cc-kpi cc-kpiGreen"><div class="cc-kpiIcon">✅</div><div class="cc-kpiBody"><div class="cc-kpiLabel">% Execução Média</div><div class="cc-kpiValue">${SG.fmt1(pctMedioObra)}<span class="cc-kpiUnit">%</span></div></div></div>
+        <div class="cc-kpi cc-kpiPurple"><div class="cc-kpiIcon">📐</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Área Executada</div><div class="cc-kpiValue">${SG.fmt1(m2ExecObra)}<span class="cc-kpiUnit">m²</span></div><div class="cc-kpiSub">de ${SG.fmt1(m2TotalObra)} m²</div></div></div>
+        <div class="cc-kpi cc-kpiBlue"><div class="cc-kpiIcon">⛏️</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Chumbadores Concluídos</div><div class="cc-kpiValue">${chumbFeitos}<span class="cc-kpiUnit">/ ${chumbTotal}</span></div></div></div>
+        <div class="cc-kpi cc-kpiOrange"><div class="cc-kpiIcon">📅</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Lançamentos no diário</div><div class="cc-kpiValue">${producao.length}</div></div></div>
       </div>
 
       <div class="cc-panel">
-        <div class="cc-panelTitle">📈 Curva de Progresso (Chumbadores Concluídos)</div>
-        <div id="sgc-curva"></div>
-      </div>
-
-      <div class="cc-panel">
-        <div class="cc-panelTitle">⛏️ Execução por Chumbador</div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
-          <input type="text" class="form-control" id="sgc-busca" placeholder="🔍 Buscar por nº..." style="flex:1;min-width:140px;" value="${esc(fBusca)}" oninput="SGC_UI.onFiltro()">
-          <select class="form-control" id="sgc-f-vista" style="max-width:180px;" onchange="SGC_UI.onFiltro()">
-            <option value="todas">Todas as vistas</option>
-            ${vistasOrdenadas().map(v => `<option value="${v.id}" ${fVista === v.id ? 'selected' : ''}>${esc(vistaLabel(v))}</option>`).join('')}
+        <div class="cc-panelTitle">🗺️ Minimapa de Execução</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center;">
+          <select class="form-control" id="sgc-vista-ativa" style="max-width:240px;" onchange="SGC_UI.onTrocarVistaAtiva()">
+            ${vistasOrdenadas().map(vv => `<option value="${vv.id}" ${vv.id === vistaAtivaId ? 'selected' : ''}>${esc(vistaLabel(vv))}</option>`).join('')}
           </select>
-          <select class="form-control" id="sgc-f-tipo" style="max-width:150px;" onchange="SGC_UI.onFiltro()">
-            <option value="todos">Todos os tipos</option>
-            ${SG.TIPOS_CHUMBADOR.map(t => `<option value="${t}" ${fTipo === t ? 'selected' : ''}>${t}</option>`).join('')}
-          </select>
-          <select class="form-control" id="sgc-f-status" style="max-width:170px;" onchange="SGC_UI.onFiltro()">
-            <option value="todos">Todos os status</option>
-            ${['Pendente', 'Furo feito', 'Injeção 1ª Parte', 'Injeção 2ª Parte', 'Concluído'].map(s => `<option value="${esc(s)}" ${fStatus === s ? 'selected' : ''}>${esc(s)}</option>`).join('')}
-          </select>
+          <button class="btn ${modoArea === 'projecao' ? 'btn-primario' : 'btn-secundario'} btn-sm" onclick="SGC_UI.toggleModoArea('projecao')">▦ Marcar Projeção (30%)</button>
+          <button class="btn ${modoArea === 'acabamento' ? 'btn-primario' : 'btn-secundario'} btn-sm" onclick="SGC_UI.toggleModoArea('acabamento')">▦ Marcar Acabamento (20%)</button>
         </div>
-        <div id="sgc-tabela"></div>
+        <div id="sgc-grid-host"></div>
+      </div>
+
+      <div class="cc-panel">
+        <div class="cc-panelTitle">◈ Progresso por Vista</div>
+        <div id="sgc-tabela-vistas"></div>
       </div>
       </div>
     `;
-    renderCurva(combinados);
-    renderTabela(combinados);
+    renderGrid();
+    renderTabelaVistas(resumos);
   }
 
-  function onFiltro() {
-    fBusca = document.getElementById('sgc-busca').value;
-    fVista = document.getElementById('sgc-f-vista').value;
-    fTipo = document.getElementById('sgc-f-tipo').value;
-    fStatus = document.getElementById('sgc-f-status').value;
-    renderTabela(chumbadoresComExecucao());
+  function onTrocarVistaAtiva() {
+    vistaAtivaId = document.getElementById('sgc-vista-ativa').value || null;
+    modoArea = null;
+    renderizar();
   }
 
-  // ── Curva de progresso ──
-  function renderCurva(combinados) {
-    const el = document.getElementById('sgc-curva');
-    if (!el) return;
-    const dados = SG.calcCurvaProgresso(combinados);
-    if (!dados.length) { el.innerHTML = `<div class="cc-empty">Nenhum chumbador concluído ainda.</div>`; return; }
-    const w = 600, h = 180, padL = 44, padB = 26, padT = 14;
-    const chartW = w - padL - 10, chartH = h - padT - padB;
-    const maxPct = 100;
-    const pts = dados.map((d, i) => {
-      const x = padL + (dados.length > 1 ? (i / (dados.length - 1)) * chartW : 0);
-      const y = padT + chartH - (d.pctAcumulado / maxPct) * chartH;
-      return `${x.toFixed(1)},${y.toFixed(1)}`;
-    }).join(' ');
-    const grades = [0, 25, 50, 75, 100].map(g => {
-      const y = padT + chartH - (g / maxPct) * chartH;
-      return `<line x1="${padL}" y1="${y}" x2="${w - 10}" y2="${y}" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="${g === 0 ? '0' : '4,4'}"/>
-        <text x="${padL - 6}" y="${y + 4}" text-anchor="end" font-size="10" fill="#94a3b8" font-family="JetBrains Mono,monospace">${g}%</text>`;
-    }).join('');
-    const ultimo = dados[dados.length - 1];
-    el.innerHTML = `
-      <svg viewBox="0 0 ${w} ${h}" width="100%" style="max-width:${w}px;">
-        ${grades}
-        <polyline points="${pts}" fill="none" stroke="var(--cor-primaria)" stroke-width="2.5"/>
-        <circle cx="${pts.split(' ').pop().split(',')[0]}" cy="${pts.split(' ').pop().split(',')[1]}" r="4" fill="var(--cor-primaria-dark,#b8960a)"/>
-        <line x1="${padL}" y1="${padT + chartH}" x2="${w - 10}" y2="${padT + chartH}" stroke="#cbd5e1" stroke-width="1.5"/>
-      </svg>
-      <div style="font-family:var(--font-mono);font-size:0.78rem;color:var(--cor-texto-secundario);margin-top:6px;">
-        Último registro: ${esc(ultimo.data)} · ${SG.fmt1(ultimo.pctAcumulado)}% acumulado (${ultimo.acumulado} chumbadores)
-      </div>`;
+  function toggleModoArea(m) {
+    modoArea = (modoArea === m) ? null : m;
+    renderizar();
   }
 
-  // ── Tabela de execução por chumbador ──
-  function renderTabela(combinados) {
-    const el = document.getElementById('sgc-tabela');
-    if (!el) return;
-    const busca = fBusca.toLowerCase();
-    const lista = combinados.filter(c => {
-      if (fVista !== 'todas' && c.vista !== fVista) return false;
-      if (fTipo !== 'todos' && c.tipo !== fTipo) return false;
-      if (fStatus !== 'todos' && SG.statusChumbador(c) !== fStatus) return false;
-      if (busca && !String(c.numero).toLowerCase().includes(busca)) return false;
-      return true;
-    }).sort((a, b) => (a.numero || 0) - (b.numero || 0));
-
-    if (!lista.length) {
-      el.innerHTML = `<div class="cc-empty">Nenhum chumbador encontrado para este filtro.</div>`;
+  // ══════════════════════════════════════════
+  // MINIMAPA INTERATIVO
+  // ══════════════════════════════════════════
+  async function renderGrid() {
+    const host = document.getElementById('sgc-grid-host');
+    if (!host) return;
+    const v = vistaAtiva();
+    if (!v) { host.innerHTML = `<div class="cc-empty">Nenhuma vista selecionada.</div>`; return; }
+    if (!(SG.num(v.gridCols) > 0) || !(SG.num(v.gridRows) > 0)) {
+      host.innerHTML = `<div class="cc-empty">Esta vista ainda não tem grid configurado no Levantamento.</div>`;
       return;
     }
-    el.innerHTML = `
-      <div class="cc-tableWrap" style="max-height:480px;overflow-y:auto;">
-      <table class="cc-table">
-        <thead><tr><th>Nº</th><th>Vista</th><th>Tipo</th><th class="col-num">Comp. (ml)</th><th>Status</th><th class="col-acoes"></th></tr></thead>
-        <tbody>
-          ${lista.map(c => {
-            const status = SG.statusChumbador(c);
-            const badge = status === 'Concluído' ? 'cc-badgeComplete' : status === 'Pendente' ? 'cc-badgePending' : 'cc-badgePartial';
-            const v = vistas.find(x => x.id === c.vista);
-            return `<tr>
-              <td style="font-weight:600;">${esc(c.numero)}</td>
-              <td>${esc(v ? vistaLabel(v) : '—')}</td>
-              <td>${esc(c.tipo)}</td>
-              <td class="col-num cc-tdMono">${SG.fmt1(c.comprimento)}</td>
-              <td><span class="cc-badge ${badge}">${esc(status)}</span></td>
-              <td class="col-acoes">
-                <button class="btn btn-secundario btn-sm" onclick="SGC_UI.abrirLancarExecucao('${c.chumbadorId}')">✎ Lançar</button>
-              </td>
-            </tr>`;
-          }).join('')}
-        </tbody>
-      </table>
-      </div>`;
+    let imagem = null;
+    if (imagemCacheVistaId === v.id) imagem = imagemCacheBase64;
+    else {
+      try {
+        const doc = await db.collection('obras').doc(obraId).collection('config').doc('sgImagem_' + v.id).get();
+        imagem = doc.exists ? (doc.data().img || null) : null;
+        imagemCacheVistaId = v.id; imagemCacheBase64 = imagem;
+      } catch (e) { imagem = null; }
+    }
+    const lista = chumbadoresDaVista(v.id);
+    const execMap = execMapDaVista(v.id);
+    const areaDoc = areaDocDaVista(v.id);
+    const resumo = SG.calcPctVista(v, lista, execMap, areaDoc);
+    const svg = SG.svgMinimapa(v, lista, execMap, areaDoc, imagem, {
+      interativo: true,
+      chumbadorClickFn: 'SGC_UI.onClickChumbador',
+      celulaClickFn: 'SGC_UI.onClickCelula',
+      modoArea,
+    });
+    host.innerHTML = `
+      <div>${svg}</div>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:8px;font-size:0.8rem;font-family:var(--font-mono);">
+        <span>🟢 concluído · 🟠 parcial · ⚪ pendente</span>
+        <span>Projeção: <b>${resumo.projFeitas}/${resumo.totalCelulas}</b> células (${SG.fmt1(resumo.m2Projetado)} m²)</span>
+        <span>Acabamento: <b>${resumo.acabFeitas}/${resumo.totalCelulas}</b> células (${SG.fmt1(resumo.m2Acabado)} m²)</span>
+        <span style="font-weight:700;color:var(--cor-primaria-dark,#b8960a);">% da vista: ${SG.fmt1(resumo.pct)}%</span>
+      </div>
+      ${modoArea ? `<div class="cc-empty" style="margin-top:8px;">Modo ativo: <b>${modoArea === 'projecao' ? 'Projeção da Área' : 'Acabamento da Área'}</b>. Clique nas células do grid para marcar/desmarcar.</div>` : ''}
+    `;
   }
 
-  // ══════════════════════════════════════════
-  // LANÇAR EXECUÇÃO DE UM CHUMBADOR
-  // ══════════════════════════════════════════
-  function abrirLancarExecucao(chumbadorId) {
+  // ── Clique num chumbador → abre modal de etapas ──
+  function onClickChumbador(chumbadorId) {
+    if (modoArea) return; // em modo área, cliques vão pras células, não pro chumbador
+    abrirMarcarEtapas(chumbadorId);
+  }
+
+  function abrirMarcarEtapas(chumbadorId) {
     const chb = chumbadores.find(x => x.id === chumbadorId);
     if (!chb) return;
-    execEditId = chumbadorId;
-    const exec = execDoChumbador(chumbadorId);
-    document.getElementById('sgc-modal-exec-titulo').textContent = `✎ Execução — Chumbador ${chb.numero}`;
-    const f = document.getElementById('form-sgc-execucao');
-    f.querySelector('[name=dataFuro]').value = exec.dataFuro || '';
-    f.querySelector('[name=dataInjecao1]').value = exec.dataInjecao1 || '';
-    f.querySelector('[name=dataInjecao2]').value = exec.dataInjecao2 || '';
-    f.querySelector('[name=dataConclusao]').value = exec.dataConclusao || '';
+    chumbAtivoId = chumbadorId;
+    const exec = execDoChumbador(chumbadorId) || {};
+    document.getElementById('sgc-modal-exec-titulo').textContent = `⛏️ Chumbador ${chb.numero} — Etapas`;
+    SG.ETAPAS_CHUMBADOR.forEach(et => {
+      const dados = exec[et.key] || {};
+      document.getElementById(`sgc-et-${et.key}-check`).checked = !!dados.feito;
+      document.getElementById(`sgc-et-${et.key}-data`).value = dados.data || Utils.hoje();
+    });
     Utils.abrirModal('modal-sgc-execucao');
   }
 
-  async function salvarExecucao() {
-    if (!execEditId) return;
-    const f = document.getElementById('form-sgc-execucao');
-    const data = {
-      chumbadorId: execEditId,
-      dataFuro: f.querySelector('[name=dataFuro]').value,
-      dataInjecao1: f.querySelector('[name=dataInjecao1]').value,
-      dataInjecao2: f.querySelector('[name=dataInjecao2]').value,
-      dataConclusao: f.querySelector('[name=dataConclusao]').value,
-    };
+  async function salvarEtapasChumbador() {
+    if (!chumbAtivoId) return;
+    const chb = chumbadores.find(x => x.id === chumbAtivoId);
+    const existente = execDoChumbador(chumbAtivoId);
+    const dadosAntigos = existente || {};
+    const novoExec = { chumbadorId: chumbAtivoId, vistaId: chb.vista };
+    const novosLancamentos = [];
+    SG.ETAPAS_CHUMBADOR.forEach(et => {
+      const marcado = document.getElementById(`sgc-et-${et.key}-check`).checked;
+      const data = document.getElementById(`sgc-et-${et.key}-data`).value || Utils.hoje();
+      novoExec[et.key] = { feito: marcado, data: marcado ? data : (dadosAntigos[et.key]?.data || '') };
+      const jaEraFeito = !!(dadosAntigos[et.key] && dadosAntigos[et.key].feito);
+      if (marcado && !jaEraFeito) {
+        novosLancamentos.push({ data, vistaId: chb.vista, tipo: 'chumbador', chumbadorId: chumbAtivoId, etapa: et.key, obraId });
+      }
+    });
     Utils.mostrarLoading();
     try {
-      const existente = execucoes.find(e => e.chumbadorId === execEditId);
       if (existente) {
-        await Database.atualizar(obraId, COL_EXECUCOES, existente.id, data);
+        await Database.atualizar(obraId, COL_EXECUCOES, existente.id, novoExec);
       } else {
-        await Database.criar(obraId, COL_EXECUCOES, data, SG.genId('exec'));
+        await Database.criar(obraId, COL_EXECUCOES, novoExec, SG.genId('exec'));
       }
-      Utils.toast('✓ Execução registrada!', 'sucesso');
+      for (const l of novosLancamentos) {
+        await Database.criar(obraId, COL_PRODUCAO, l, SG.genId('pd'));
+      }
+      Utils.toast('✓ Etapas do chumbador atualizadas!', 'sucesso');
       Utils.fecharModal('modal-sgc-execucao');
       await carregar();
     } catch (e) {
@@ -285,176 +268,105 @@ const ControleSoloGrampeado = (() => {
     }
   }
 
-  // ══════════════════════════════════════════
-  // PRODUÇÃO DIÁRIA (Grampos/Extras/Estacas)
-  // ══════════════════════════════════════════
-  function abrirProducaoDiaria() {
-    renderProducaoDiaria();
-    Utils.abrirModal('modal-sgc-producao');
+  // ── Clique numa célula (modo Projeção/Acabamento) ──
+  async function onClickCelula(key) {
+    if (!modoArea) return;
+    const v = vistaAtiva();
+    if (!v) return;
+    let doc = areaDocDaVista(v.id);
+    const campo = modoArea === 'projecao' ? 'celulasProjecao' : 'celulasAcabamento';
+    const atual = new Set((doc && doc[campo]) || []);
+    const jaMarcada = atual.has(key);
+    if (jaMarcada) atual.delete(key); else atual.add(key);
+    const novaLista = [...atual];
+
+    Utils.mostrarLoading();
+    try {
+      const payload = { vistaId: v.id, [campo]: novaLista };
+      if (doc) {
+        await Database.atualizar(obraId, COL_AREA, doc.id, payload);
+      } else {
+        await Database.criar(obraId, COL_AREA, { vistaId: v.id, celulasProjecao: [], celulasAcabamento: [], ...payload }, SG.genId('ae'));
+      }
+      if (!jaMarcada) {
+        await Database.criar(obraId, COL_PRODUCAO, { data: Utils.hoje(), vistaId: v.id, tipo: 'area', etapa: modoArea, celula: key, obraId }, SG.genId('pd'));
+      }
+      await carregar();
+    } catch (e) {
+      Utils.toast('Erro ao marcar célula: ' + e.message, 'erro');
+    } finally {
+      Utils.esconderLoading();
+    }
   }
 
-  function renderProducaoDiaria() {
-    const el = document.getElementById('sgc-producao-body');
+  // ══════════════════════════════════════════
+  // TABELA DE PROGRESSO POR VISTA
+  // ══════════════════════════════════════════
+  function renderTabelaVistas(resumos) {
+    const el = document.getElementById('sgc-tabela-vistas');
     if (!el) return;
-    const lista = [...producao].sort((a, b) => (b.data || '').localeCompare(a.data || ''));
-    const totalMl = producao.reduce((s, p) => s + SG.mlDiaProducao(p), 0);
+    const lista = vistasOrdenadas();
+    if (!lista.length) { el.innerHTML = '<div class="cc-empty">Nenhuma vista cadastrada.</div>'; return; }
     el.innerHTML = `
-      <div class="form-row">
-        <div class="form-grupo"><label>Data</label><input type="date" id="sgc-prod-data" class="form-control" value="${esc(Utils.hoje())}"></div>
-      </div>
-      <div class="form-row">
-        <div class="form-grupo"><label>Grampos (uni)</label><input type="text" inputmode="decimal" id="sgc-prod-grampos" class="form-control" placeholder="0"></div>
-        <div class="form-grupo"><label>Tamanho Grampos (m)</label><input type="text" inputmode="decimal" id="sgc-prod-tgrampos" class="form-control" placeholder="0"></div>
-      </div>
-      <div class="form-row">
-        <div class="form-grupo"><label>Extras (uni)</label><input type="text" inputmode="decimal" id="sgc-prod-extras" class="form-control" placeholder="0"></div>
-        <div class="form-grupo"><label>Tamanho Extras (m)</label><input type="text" inputmode="decimal" id="sgc-prod-textras" class="form-control" placeholder="0"></div>
-      </div>
-      <div class="form-row">
-        <div class="form-grupo"><label>Estacas (uni)</label><input type="text" inputmode="decimal" id="sgc-prod-estacas" class="form-control" placeholder="0"></div>
-        <div class="form-grupo"><label>Tamanho Estacas (m)</label><input type="text" inputmode="decimal" id="sgc-prod-testacas" class="form-control" placeholder="0"></div>
-      </div>
-      <button class="btn btn-primario btn-sm" onclick="SGC_UI.salvarProducaoDiaria()">+ Registrar dia</button>
-      <div class="cc-divider"></div>
-      <div style="font-family:var(--font-mono);font-size:0.8rem;color:var(--cor-texto-secundario);margin-bottom:8px;">Total acumulado: <b>${SG.fmt1(totalMl)} ml</b></div>
-      ${!lista.length ? `<div class="cc-empty">Nenhum dia registrado ainda.</div>` : `
-      <div class="cc-tableWrap" style="max-height:260px;overflow-y:auto;">
-        <table class="cc-table">
-          <thead><tr><th>Data</th><th class="col-num">Grampos</th><th class="col-num">Extras</th><th class="col-num">Estacas</th><th class="col-num">ml/dia</th><th class="col-acoes"></th></tr></thead>
-          <tbody>
-            ${lista.map(p => `
-              <tr>
-                <td class="cc-tdMono">${esc(p.data)}</td>
-                <td class="col-num cc-tdMono">${p.grampos || 0}</td>
-                <td class="col-num cc-tdMono">${p.extras || 0}</td>
-                <td class="col-num cc-tdMono">${p.estacas || 0}</td>
-                <td class="col-num cc-tdAccent" style="font-weight:700;">${SG.fmt1(SG.mlDiaProducao(p))}</td>
-                <td class="col-acoes"><button class="btn btn-secundario btn-sm" style="color:var(--cv-red);" onclick="SGC_UI.excluirProducaoDiaria('${p.id}')">🗑</button></td>
-              </tr>`).join('')}
-          </tbody>
-        </table>
-      </div>`}`;
-  }
-
-  async function salvarProducaoDiaria() {
-    const data = document.getElementById('sgc-prod-data').value;
-    if (!data) { Utils.toast('Informe a data.', 'alerta'); return; }
-    const reg = {
-      data,
-      grampos: SG.num(document.getElementById('sgc-prod-grampos').value),
-      tamanhoGrampos: SG.num(document.getElementById('sgc-prod-tgrampos').value),
-      extras: SG.num(document.getElementById('sgc-prod-extras').value),
-      tamanhoExtras: SG.num(document.getElementById('sgc-prod-textras').value),
-      estacas: SG.num(document.getElementById('sgc-prod-estacas').value),
-      tamanhoEstacas: SG.num(document.getElementById('sgc-prod-testacas').value),
-    };
-    Utils.mostrarLoading();
-    try {
-      await Database.criar(obraId, COL_PRODUCAO, reg, SG.genId('pd'));
-      Utils.toast('✓ Produção do dia registrada!', 'sucesso');
-      await carregar();
-      renderProducaoDiaria();
-    } catch (e) {
-      Utils.toast('Erro: ' + e.message, 'erro');
-    } finally {
-      Utils.esconderLoading();
-    }
-  }
-
-  async function excluirProducaoDiaria(id) {
-    const ok = await Utils.confirmar('Excluir este registro de produção diária?');
-    if (!ok) return;
-    Utils.mostrarLoading();
-    try {
-      await Database.deletar(obraId, COL_PRODUCAO, id);
-      await carregar();
-      renderProducaoDiaria();
-    } catch (e) {
-      Utils.toast('Erro: ' + e.message, 'erro');
-    } finally {
-      Utils.esconderLoading();
-    }
+      <div class="cc-tableWrap">
+      <table class="cc-table">
+        <thead><tr><th>Vista</th><th class="col-num">Chumbadores</th><th class="col-num">m² total</th><th class="col-num">m² executado</th><th class="col-num">% Execução</th></tr></thead>
+        <tbody>
+          ${lista.map((v, i) => {
+            const r = resumos[i];
+            return `<tr>
+              <td style="font-weight:600;">${esc(vistaLabel(v))}</td>
+              <td class="col-num cc-tdMono">${r.chumbadoresFeitos}/${r.qtdChumbadores}</td>
+              <td class="col-num cc-tdMono">${SG.fmt1(v.m2Total)}</td>
+              <td class="col-num cc-tdMono">${SG.fmt1(r.m2Executado)}</td>
+              <td class="col-num cc-tdAccent" style="font-weight:700;">${SG.fmt1(r.pct)}%</td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+      </div>`;
   }
 
   // ══════════════════════════════════════════
-  // ÁREA EXECUTADA POR VISTA
+  // RELATÓRIO DIÁRIO (log automático das marcações)
   // ══════════════════════════════════════════
-  function abrirAreaExecutada() {
-    renderAreaExecutada();
-    Utils.abrirModal('modal-sgc-area');
+  function abrirRelatorioDiario() {
+    renderRelatorioDiario();
+    Utils.abrirModal('modal-sgc-relatorio');
   }
 
-  function renderAreaExecutada() {
-    const el = document.getElementById('sgc-area-body');
+  function _labelLancamento(p) {
+    const v = vistas.find(x => x.id === p.vistaId);
+    if (p.tipo === 'chumbador') {
+      const chb = chumbadores.find(x => x.id === p.chumbadorId);
+      const et = SG.ETAPAS_CHUMBADOR.find(e => e.key === p.etapa);
+      return `Chumbador ${esc(chb ? chb.numero : '?')} (${esc(vistaLabel(v))}) — ${esc(et ? et.label : p.etapa)}`;
+    }
+    const et = SG.ETAPAS_AREA.find(e => e.key === p.etapa);
+    return `${esc(et ? et.label : p.etapa)} — célula ${esc(p.celula)} (${esc(vistaLabel(v))})`;
+  }
+
+  function renderRelatorioDiario() {
+    const el = document.getElementById('sgc-relatorio-body');
     if (!el) return;
-    const lista = [...areaExecutada].sort((a, b) => (b.data || '').localeCompare(a.data || ''));
-    const total = areaExecutada.reduce((s, a) => s + SG.num(a.area), 0);
-    el.innerHTML = `
-      <div class="form-row">
-        <div class="form-grupo"><label>Data</label><input type="date" id="sgc-area-data" class="form-control" value="${esc(Utils.hoje())}"></div>
-        <div class="form-grupo"><label>Vista</label><select id="sgc-area-vista" class="form-control">${vistasOrdenadas().map(v => `<option value="${v.id}">${esc(vistaLabel(v))}</option>`).join('') || '<option value="">— sem vistas cadastradas —</option>'}</select></div>
+    const porData = {};
+    [...producao].forEach(p => { (porData[p.data] = porData[p.data] || []).push(p); });
+    const datas = Object.keys(porData).sort((a, b) => b.localeCompare(a));
+    if (!datas.length) { el.innerHTML = '<div class="cc-empty">Nenhum lançamento registrado ainda. Marque etapas ou área no minimapa.</div>'; return; }
+    el.innerHTML = datas.map(d => `
+      <div class="cc-panel" style="padding:10px 14px;margin-bottom:10px;">
+        <div style="font-weight:700;font-family:var(--font-mono);margin-bottom:6px;">${esc(d)} <span class="text-sm text-muted">(${porData[d].length} lançamento${porData[d].length !== 1 ? 's' : ''})</span></div>
+        <ul style="margin:0;padding-left:18px;font-size:0.85rem;">
+          ${porData[d].map(p => `<li>${_labelLancamento(p)}</li>`).join('')}
+        </ul>
       </div>
-      <div class="form-grupo"><label>Área executada (m²)</label><input type="text" inputmode="decimal" id="sgc-area-valor" class="form-control" placeholder="0"></div>
-      <button class="btn btn-primario btn-sm" onclick="SGC_UI.salvarAreaExecutada()">+ Registrar</button>
-      <div class="cc-divider"></div>
-      <div style="font-family:var(--font-mono);font-size:0.8rem;color:var(--cor-texto-secundario);margin-bottom:8px;">Total acumulado: <b>${SG.fmt1(total)} m²</b></div>
-      ${!lista.length ? `<div class="cc-empty">Nenhum registro de área ainda.</div>` : `
-      <div class="cc-tableWrap" style="max-height:260px;overflow-y:auto;">
-        <table class="cc-table">
-          <thead><tr><th>Data</th><th>Vista</th><th class="col-num">Área (m²)</th><th class="col-acoes"></th></tr></thead>
-          <tbody>
-            ${lista.map(a => {
-              const v = vistas.find(x => x.id === a.vista);
-              return `<tr>
-                <td class="cc-tdMono">${esc(a.data)}</td>
-                <td>${esc(v ? vistaLabel(v) : '—')}</td>
-                <td class="col-num cc-tdAccent" style="font-weight:700;">${SG.fmt1(a.area)}</td>
-                <td class="col-acoes"><button class="btn btn-secundario btn-sm" style="color:var(--cv-red);" onclick="SGC_UI.excluirAreaExecutada('${a.id}')">🗑</button></td>
-              </tr>`;
-            }).join('')}
-          </tbody>
-        </table>
-      </div>`}`;
-  }
-
-  async function salvarAreaExecutada() {
-    const data = document.getElementById('sgc-area-data').value;
-    const vista = document.getElementById('sgc-area-vista').value;
-    const area = SG.num(document.getElementById('sgc-area-valor').value);
-    if (!data || !(area > 0)) { Utils.toast('Informe data e área maior que zero.', 'alerta'); return; }
-    Utils.mostrarLoading();
-    try {
-      await Database.criar(obraId, COL_AREA, { data, vista, area }, SG.genId('ae'));
-      Utils.toast('✓ Área registrada!', 'sucesso');
-      await carregar();
-      renderAreaExecutada();
-    } catch (e) {
-      Utils.toast('Erro: ' + e.message, 'erro');
-    } finally {
-      Utils.esconderLoading();
-    }
-  }
-
-  async function excluirAreaExecutada(id) {
-    const ok = await Utils.confirmar('Excluir este registro de área?');
-    if (!ok) return;
-    Utils.mostrarLoading();
-    try {
-      await Database.deletar(obraId, COL_AREA, id);
-      await carregar();
-      renderAreaExecutada();
-    } catch (e) {
-      Utils.toast('Erro: ' + e.message, 'erro');
-    } finally {
-      Utils.esconderLoading();
-    }
+    `).join('');
   }
 
   return {
-    init, recarregar, renderizar, onFiltro,
-    abrirLancarExecucao, salvarExecucao,
-    abrirProducaoDiaria, salvarProducaoDiaria, excluirProducaoDiaria,
-    abrirAreaExecutada, salvarAreaExecutada, excluirAreaExecutada,
+    init, recarregar, renderizar, onTrocarVistaAtiva, toggleModoArea,
+    onClickChumbador, salvarEtapasChumbador, onClickCelula,
+    abrirRelatorioDiario,
   };
 })();
 
