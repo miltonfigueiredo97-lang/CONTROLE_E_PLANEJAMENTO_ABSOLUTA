@@ -162,6 +162,7 @@ const LevantamentoConcreto = (() => {
           <button class="btn btn-secundario btn-sm" onclick="LC.abrirImportar()">⊞ Importar Lote</button>
           <button class="btn btn-dark btn-sm" onclick="LC.abrirConcretagens()">◈ Concretagens</button>
           <button class="btn btn-primario btn-sm" onclick="LC.abrirNovaPeca()">+ Nova Peça</button>
+          <button class="btn btn-secundario btn-sm" style="color:var(--cv-red,#ef4444);" onclick="LC.limparBasePecas()">🗑 Limpar Base</button>
         </div>
       </div>
 
@@ -407,7 +408,7 @@ const LevantamentoConcreto = (() => {
       'Sapata de Divisa Piramidal': 'sapata-divisa-piramidal.png',
       'Bloco Triângular': 'blocos-triangulares.png',
     }[tipo] || 'blocos-retangulares.png'; // Bloco Retângular / Viga Baldrame / Sapata Isolada/Divisa em Bloco
-    return `<img src="assets/images/fundacoes/${arquivo}" alt="${esc(tipo)}" style="width:100%;max-width:480px;height:auto;display:block;margin:0 auto;image-rendering:-webkit-optimize-contrast;">`;
+    return `<img src="assets/images/fundacoes/${arquivo}" alt="${esc(tipo)}" style="max-height:380px;max-width:100%;width:auto;height:auto;display:block;margin:0 auto;image-rendering:-webkit-optimize-contrast;">`;
   }
 
   function esquemaLaje() {
@@ -438,7 +439,7 @@ const LevantamentoConcreto = (() => {
           <div style="font-size:0.7rem;color:var(--cor-texto-muted);text-transform:uppercase;letter-spacing:0.5px;">Volume calculado</div>
           <div id="lc-vol-num" style="font-family:var(--font-mono);font-size:1.6rem;font-weight:700;color:${volume > 0 ? 'var(--cor-primaria-dark,#b8960a)' : 'var(--cor-texto-muted)'};">${volume > 0 ? volume.toFixed(4) : '—'} <span style="font-size:0.85rem;">m³</span></div>
         </div>
-        <button id="lc-vol-btn" class="btn btn-primario" ${podeAdd ? '' : 'disabled'} onclick="LC.calcAdicionar()">+ Adicionar ao Levantamento</button>
+        <button id="lc-vol-btn" class="btn btn-primario" ${podeAdd ? '' : 'disabled'} onclick="LC.calcAdicionar()">💾 Salvar e Próxima Peça</button>
       </div>
       <div style="margin-top:10px;"><button class="btn btn-secundario btn-sm" onclick="LC.calcVoltar()">← Voltar</button></div>
     `;
@@ -932,7 +933,7 @@ const LevantamentoConcreto = (() => {
     if (dl) dl.innerHTML = todosAndares().map(a => `<option value="${esc(a)}">`).join('');
   }
 
-  async function salvarPeca() {
+  async function salvarPeca(continuar) {
     const f = document.getElementById('form-lc-peca');
     const nome = f.querySelector('[name=nome]').value.trim();
     const tipo = f.querySelector('[name=tipo]').value;
@@ -951,8 +952,15 @@ const LevantamentoConcreto = (() => {
         await Database.criar(obraId, COL_PECAS, { nome, tipo, andar, volume }, CC.genId('p'));
         Utils.toast(`✓ "${nome}" adicionada!`, 'sucesso');
       }
-      Utils.fecharModal('modal-lc-peca');
       await carregar();
+      if (continuar && !pecaEditId) {
+        f.querySelector('[name=nome]').value = '';
+        f.querySelector('[name=volume]').value = '';
+        montarDatalistAndares();
+        f.querySelector('[name=nome]').focus();
+      } else {
+        Utils.fecharModal('modal-lc-peca');
+      }
     } catch (e) {
       Utils.toast('Erro ao salvar: ' + e.message, 'erro');
     } finally {
@@ -976,6 +984,31 @@ const LevantamentoConcreto = (() => {
       await carregar();
     } catch (e) {
       Utils.toast('Erro ao excluir: ' + e.message, 'erro');
+    } finally {
+      Utils.esconderLoading();
+    }
+  }
+
+  // Apaga TODAS as peças da obra + vínculos com concretagens (irreversível)
+  async function limparBasePecas() {
+    if (!pecas.length) { Utils.toast('A base de peças já está vazia.', 'info'); return; }
+    const ok1 = await Utils.confirmar(`Isso vai apagar TODAS as ${pecas.length} peças da base e seus vínculos com concretagens. Não afeta BTs já lançadas. Continuar?`);
+    if (!ok1) return;
+    const ok2 = await Utils.confirmar('Tem certeza? Essa ação não pode ser desfeita.');
+    if (!ok2) return;
+    Utils.mostrarLoading();
+    try {
+      const ops = [
+        ...pecas.map(p => ({ type: 'delete', ref: Database.ref(obraId, COL_PECAS).doc(p.id) })),
+        ...pecaConc.map(pc => ({ type: 'delete', ref: Database.ref(obraId, COL_PC).doc(pc.id) })),
+      ];
+      for (let i = 0; i < ops.length; i += 400) {
+        await Database.batchWrite(ops.slice(i, i + 400));
+      }
+      Utils.toast('✓ Base de peças limpa.', 'sucesso');
+      await carregar();
+    } catch (e) {
+      Utils.toast('Erro ao limpar base: ' + e.message, 'erro');
     } finally {
       Utils.esconderLoading();
     }
@@ -1082,8 +1115,12 @@ const LevantamentoConcreto = (() => {
     input.value = '';
   }
 
+  let importando = false;
   async function salvarImport() {
-    if (!previewImport.length) return;
+    if (!previewImport.length || importando) return;
+    importando = true;
+    const btn = document.getElementById('lc-import-btn');
+    if (btn) btn.disabled = true;
     Utils.mostrarLoading();
     try {
       await salvarPecasLote(previewImport);
@@ -1095,6 +1132,7 @@ const LevantamentoConcreto = (() => {
       Utils.toast('Erro ao importar: ' + e.message, 'erro');
     } finally {
       Utils.esconderLoading();
+      importando = false;
     }
   }
 
@@ -1631,7 +1669,7 @@ const LevantamentoConcreto = (() => {
     escAddPat, escRemPat, escUpdPat,
     escAddDeg, escRemDeg, escUpdDeg,
     abrirLevantamento, levToggle, levRemover, levEnviarBase,
-    abrirNovaPeca, abrirEditarPeca, salvarPeca, excluirPeca,
+    abrirNovaPeca, abrirEditarPeca, salvarPeca, excluirPeca, limparBasePecas,
     abrirImportar, baixarModeloTSV, onImportTexto, onImportArquivo, salvarImport,
     abrirConcretagens, iniciarNovaConc, editarConcretagem, excluirConcretagem,
     cwSetConcSel, cwIniciarEditar, cwExcluirSelecionada,

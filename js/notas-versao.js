@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.53.6',
+  versaoAtual: 'V2.53.7',
 
   versoes: [
     {
@@ -4751,7 +4751,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.53.6',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-22',
       tipo: 'correcao',
       titulo: 'Levantamento de Ar Condicionado: mais correções de usabilidade',
@@ -4777,6 +4777,25 @@ const NotasVersao = {
         '  IDs (sem copiar itens/máquinas já lançados) e já abre o',
         '  campo para renomear (ex: duplicar "Apto 1" → renomear para',
         '  "Apto 2"; funciona em qualquer nível, inclusive andares)',
+      ]
+    },
+    {
+      versao: 'V2.53.7',
+      status: 'aberta',
+      data: '2026-07-22',
+      tipo: 'correcao',
+      titulo: 'Concreto: popup maior, salvar-e-próxima, limpar base, fix import duplicado',
+      itens: [
+        'Popup da Calculadora de Concreto maior (960px) e imagem de',
+        '  Fundação limitada por altura (não largura) — não fica mais',
+        '  gigante nas imagens verticais (Estacas, Tubulão)',
+        'Botão "💾 Salvar e Nova" em Nova/Editar Peça — salva sem fechar',
+        '  o modal, pronto pra próxima peça (calculadora já fazia isso)',
+        'Novo botão "🗑 Limpar Base" — apaga todas as peças e vínculos',
+        '  com concretagens (dupla confirmação, não afeta BTs lançadas)',
+        'CORREÇÃO DE BUG: importação em lote duplicava tudo — o botão',
+        '  não travava durante o processamento, então um clique duplo',
+        '  disparava a gravação duas vezes. Corrigido com trava.',
       ]
     }
   ],

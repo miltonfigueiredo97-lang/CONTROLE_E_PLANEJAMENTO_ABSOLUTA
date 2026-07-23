@@ -47,7 +47,7 @@
       <a href="admin-permissoes.html"><span class="nav-icon">🔑</span> Permissões</a>
       <div class="sidebar-section-title">Sistema</div>
       <a href="backup-planejamento.html"><span class="nav-icon">🗂️</span> Backup de Planejamentos</a>
-      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V2.53.6</span></a>
+      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V2.53.7</span></a>
     </nav>
     <div class="sidebar-user">
       <div class="user-avatar">U</div>
@@ -74,7 +74,7 @@
 
 <!-- MODAL: Calculadora de Concreto -->
 <div class="modal-overlay" id="modal-lc-calc">
-  <div class="modal modal-lg">
+  <div class="modal" style="max-width:960px;">
     <div class="modal-header">
       <h3>📐 Calcular Concreto</h3>
       <button class="modal-close" onclick="Utils.fecharModal('modal-lc-calc')">&times;</button>
@@ -119,7 +119,8 @@
     </div>
     <div class="modal-footer">
       <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-lc-peca')">Cancelar</button>
-      <button class="btn btn-primario" onclick="LC.salvarPeca()">Salvar</button>
+      <button class="btn btn-secundario" onclick="LC.salvarPeca(true)">💾 Salvar e Nova</button>
+      <button class="btn btn-primario" onclick="LC.salvarPeca(false)">Salvar</button>
     </div>
   </div>
 </div>
