@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.53.5',
+  versaoAtual: 'V2.53.6',
 
   versoes: [
     {
@@ -4731,7 +4731,7 @@ const NotasVersao = {
     },
     {
       versao: 'V2.53.5',
-      status: 'aberta',
+      status: 'fechada',
       data: '2026-07-22',
       tipo: 'correcao',
       titulo: 'Calculadora de Fundação: imagens originais, sem redesenhar',
@@ -4747,6 +4747,36 @@ const NotasVersao = {
         '    toda acima dos campos (até 480px), em vez de uma coluna',
         '    estreita de 170px — as imagens originais têm textos',
         '    pequenos e ficariam ilegíveis espremidas naquele tamanho',
+      ]
+    },
+    {
+      versao: 'V2.53.6',
+      status: 'aberta',
+      data: '2026-07-22',
+      tipo: 'correcao',
+      titulo: 'Levantamento de Ar Condicionado: mais correções de usabilidade',
+      itens: [
+        'CORRIGIDO: pop-up de editar máquina descia até o final da tela',
+        '  a cada letra digitada ou seleção — causa era um re-render',
+        '  completo do modal a cada tecla (nome/taxa dos itens por ML).',
+        '  Agora só re-renderiza tudo quando o TIPO (cm/ML ↔ un/ML) muda;',
+        '  demais campos só atualizam a prévia, sem perder o scroll/foco',
+        'Nova opção "⧉ Duplicar" na Configuração de Máquinas — duplica',
+        '  toda a composição de peças de uma máquina para criar uma',
+        '  variante rapidamente (ex: outro BTU com poucos ajustes)',
+        'O diâmetro configurado (mm ou polegada, ex: 5/8") agora aparece',
+        '  junto ao nome da barra de cobre/PEX em todas as prévias e no',
+        '  detalhamento de peças da máquina lançada',
+        'CORRIGIDO: ao lançar uma máquina, a busca de peça manual quase',
+        '  nunca mostrava a opção de criar material novo (a busca por',
+        '  aproximação retornava algum resultado quase sempre). Agora a',
+        '  opção "+ Criar material novo" aparece sempre, além dos',
+        '  resultados encontrados na biblioteca',
+        'Nova opção "⧉ Duplicar" em cada local da árvore (Locais da',
+        '  Obra) — duplica o local e todos os seus sublocais com novos',
+        '  IDs (sem copiar itens/máquinas já lançados) e já abre o',
+        '  campo para renomear (ex: duplicar "Apto 1" → renomear para',
+        '  "Apto 2"; funciona em qualquer nível, inclusive andares)',
       ]
     }
   ],

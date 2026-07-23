@@ -309,11 +309,17 @@ const Utils = (() => {
   // ===================== CÁLCULO DE KIT — LEVANTAMENTO AR CONDICIONADO =====================
   // Dado uma máquina configurada (modelo Cobre) e o comprimento base (Y, do projeto/levantamento),
   // calcula o metro linear total de cobre (com perda) e deriva todos os itens vinculados/por ML.
+  function formatarDiametroAr(maquina) {
+    if (!maquina || !maquina.diametroValor) return '';
+    return maquina.diametroUnidade === 'pol' ? `${maquina.diametroValor}"` : `${maquina.diametroValor}mm`;
+  }
+
   function calcularKitAr(maquina, mlBase) {
     const Y = parseFloat(mlBase) || 0;
     const Z = parseFloat(maquina?.perdaCm) || 0;   // perda em cm
     const A = parseFloat(maquina?.perdaPercentual) || 0; // perda em %
     const mlTotal = (Y + (Z / 100)) * (1 + (A / 100));
+    const diametroLabel = formatarDiametroAr(maquina);
 
     const rolo = (mPorRolo, metros) => {
       const mr = parseFloat(mPorRolo) || 0;
@@ -324,6 +330,7 @@ const Utils = (() => {
       ...maquina.cobre,
       metros: mlTotal,
       rolos: rolo(maquina.cobre.mPorRolo, mlTotal),
+      nomeExibicao: maquina.cobre.nome + (diametroLabel ? ` (Ø ${diametroLabel})` : ''),
     } : null;
 
     const vinculados = (maquina?.vinculados || []).map(v => ({
@@ -344,7 +351,7 @@ const Utils = (() => {
       return { ...p, quantidade: metros, unidades };
     });
 
-    return { mlBase: Y, mlTotal, cobre, vinculados, porMl };
+    return { mlBase: Y, mlTotal, cobre, vinculados, porMl, diametroLabel };
   }
 
   return {
@@ -352,7 +359,7 @@ const Utils = (() => {
     parseNum, hoje, toast, abrirModal, fecharModal, fecharTodosModais, confirmar,
     mostrarLoading, esconderLoading, $, $$, limparForm, getFormData, setFormData, debounce,
     initPagina, opcoesTarefaHierarquia, calcularFachadaM2,
-    percFamilia, recalcularPercAncestrais, distribuirPercDescendentes, calcularKitAr,
+    percFamilia, recalcularPercAncestrais, distribuirPercDescendentes, calcularKitAr, formatarDiametroAr,
   };
 })();
 

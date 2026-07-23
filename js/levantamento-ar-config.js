@@ -53,8 +53,8 @@ const LevantamentoArConfig = (() => {
   function _uid() { return 'm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
 
   function _formatarDiametro(m) {
-    if (!m || !m.diametroValor) return '?';
-    return m.diametroUnidade === 'pol' ? `${m.diametroValor}"` : `${m.diametroValor}mm`;
+    const d = Utils.formatarDiametroAr(m);
+    return d || '?';
   }
 
   // ===================== MATERIAL AUTO-LINK =====================
@@ -125,6 +125,7 @@ const LevantamentoArConfig = (() => {
               </div>
               <div style="display:flex;gap:6px;margin-top:12px;">
                 <button class="btn btn-secundario btn-sm" onclick="LevantamentoArConfig.editarMaquina('${m.id}')">✎ Editar</button>
+                <button class="btn btn-secundario btn-sm" onclick="LevantamentoArConfig.duplicarMaquina('${m.id}')" title="Duplicar máquina">⧉ Duplicar</button>
                 <button class="btn btn-perigo btn-sm" onclick="LevantamentoArConfig.excluirMaquina('${m.id}')">✕ Excluir</button>
               </div>
             </div>
@@ -180,6 +181,21 @@ const LevantamentoArConfig = (() => {
     config[aba] = (config[aba] || []).filter(x => x.id !== id);
     try { await _salvarConfig(); Utils.toast('Máquina excluída.', 'sucesso'); renderizar(); }
     catch (e) { Utils.toast('Erro ao salvar.', 'erro'); }
+  }
+
+  async function duplicarMaquina(id) {
+    const original = (config[aba] || []).find(x => x.id === id); if (!original) return;
+    const copia = JSON.parse(JSON.stringify(original));
+    copia.id = _uid();
+    copia.nome = (original.nome || '') + ' (cópia)';
+    // materialId é mantido — a cópia usa os mesmos materiais da biblioteca até serem renomeados
+    (config[aba] = config[aba] || []).push(copia);
+    try {
+      await _salvarConfig();
+      Utils.toast('Máquina duplicada. Renomeie e ajuste o que precisar.', 'sucesso');
+      renderizar();
+      editarMaquina(copia.id);
+    } catch (e) { Utils.toast('Erro ao salvar.', 'erro'); }
   }
 
   // ===================== MODAL: EDIÇÃO DA MÁQUINA =====================
@@ -295,7 +311,7 @@ const LevantamentoArConfig = (() => {
 
   function _renderPreview(kit) {
     let h = `<div style="font-family:var(--font-mono);margin-bottom:6px;">ML total (com perda): <strong>${Utils.formatarNumero(kit.mlTotal)} m</strong></div>`;
-    if (kit.cobre) h += `<div>• ${kit.cobre.nome || 'Item principal'}: <strong>${Utils.formatarNumero(kit.cobre.metros)} m</strong> (${Utils.formatarNumero(kit.cobre.rolos)} rolo(s))</div>`;
+    if (kit.cobre) h += `<div>• ${kit.cobre.nomeExibicao || kit.cobre.nome || 'Item principal'}: <strong>${Utils.formatarNumero(kit.cobre.metros)} m</strong> (${Utils.formatarNumero(kit.cobre.rolos)} rolo(s))</div>`;
     kit.vinculados.forEach(v => { h += `<div>• ${v.nome}: <strong>${Utils.formatarNumero(v.metros)} m</strong> (${Utils.formatarNumero(v.rolos)} rolo(s))</div>`; });
     kit.porMl.forEach(p => {
       if (p.tipo === 'uni_por_ml') { h += `<div>• ${p.nome}: <strong>${Utils.formatarNumero(p.quantidade, 0)} un</strong></div>`; return; }
@@ -317,8 +333,12 @@ const LevantamentoArConfig = (() => {
   function onCampoPorMl(id, campo, valor) {
     const p = draft.porMl.find(x => x.id === id); if (!p) return;
     p[campo] = valor;
-    if (campo === 'tipo' && valor === 'uni_por_ml') p.mPorUnidade = null;
-    _renderModal(); // tipo pode alternar a coluna "1 un = X m", precisa re-render completo
+    if (campo === 'tipo') {
+      if (valor === 'uni_por_ml') p.mPorUnidade = null;
+      _renderModal(); // tipo alterna a coluna "1 un = X m", precisa re-render completo
+    } else {
+      _atualizarPreview(); // nome/taxa/mPorUnidade: só atualiza a prévia, preserva foco e scroll
+    }
   }
   function onMlTeste(valor) { mlTeste = parseFloat(valor) || 0; _atualizarPreview(); }
   function setDiametroUnidade(u) { draft.diametroUnidade = u; draft.diametroValor = ''; _renderModal(); }
@@ -361,7 +381,7 @@ const LevantamentoArConfig = (() => {
 
   return {
     init, carregar, renderizar, setAba,
-    novaMaquina, editarMaquina, excluirMaquina, salvarMaquina,
+    novaMaquina, editarMaquina, excluirMaquina, duplicarMaquina, salvarMaquina,
     onCampo, onCampoCobre, onCampoVinculado, onCampoPorMl, onMlTeste, setDiametroUnidade,
     addVinculado, removerVinculado, addPorMl, removerPorMl,
   };

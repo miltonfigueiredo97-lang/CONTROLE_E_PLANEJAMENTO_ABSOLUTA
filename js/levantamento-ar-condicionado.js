@@ -172,6 +172,7 @@ const LevantamentoAr = (() => {
       <span class="tree-label">${n.nome}</span>
       ${nItens ? `<span class="tree-badge">${nItens}</span>` : ''}
       <button class="tree-edit-btn" onclick="event.stopPropagation();LevantamentoAr.novoSublocal('${n.id}')" title="Adicionar sublocal aqui dentro" style="color:var(--cor-primaria-dark);font-weight:900;">+</button>
+      <button class="tree-edit-btn" onclick="event.stopPropagation();LevantamentoAr.duplicarNo('${n.id}')" title="Duplicar (com sublocais)">⧉</button>
       <button class="tree-edit-btn" onclick="event.stopPropagation();LevantamentoAr.renomearNo('${n.id}')" title="Renomear">✎</button>
       <button class="tree-del-btn" onclick="event.stopPropagation();LevantamentoAr.excluirNo('${n.id}')" title="Excluir">✕</button>
     </div>`;
@@ -325,7 +326,7 @@ const LevantamentoAr = (() => {
   function _expandirMaquina(doc, cfg, kit) {
     if (!cfg || !kit) return [];
     const linhas = [];
-    if (kit.cobre) linhas.push({ materialId: kit.cobre.materialId, nome: kit.cobre.nome, quantidade: kit.cobre.metros, unidade: 'm' });
+    if (kit.cobre) linhas.push({ materialId: kit.cobre.materialId, nome: kit.cobre.nomeExibicao || kit.cobre.nome, quantidade: kit.cobre.metros, unidade: 'm' });
     kit.vinculados.forEach(v => linhas.push({ materialId: v.materialId, nome: v.nome, quantidade: v.metros, unidade: 'm' }));
     kit.porMl.forEach(p => linhas.push({
       materialId: p.materialId, nome: p.nome, quantidade: p.quantidade,
@@ -407,6 +408,27 @@ const LevantamentoAr = (() => {
     if (sel.localId && idsAfetados.has(sel.localId)) sel = { localId: null };
     try { await _salvarAreas(); Utils.toast('Local excluído.', 'sucesso'); renderizar(); }
     catch (e) { Utils.toast('Erro ao salvar.', 'erro'); }
+  }
+
+  // Clona um nó (e todos os sublocais dentro dele) com IDs novos, sem copiar itens/máquinas lançadas.
+  // Útil para duplicar "Apto 1" -> "Apto 1 (cópia)" e depois só renomear para "Apto 2".
+  function _clonarNo(n) {
+    return { id: _uid(), nome: n.nome, filhos: (n.filhos || []).map(_clonarNo) };
+  }
+  async function duplicarNo(id) {
+    const listaPai = _encontrarPaiLista(id) || areas;
+    const idx = listaPai.findIndex(n => n.id === id);
+    if (idx < 0) return;
+    const original = listaPai[idx];
+    const copia = _clonarNo(original);
+    copia.nome = original.nome + ' (cópia)';
+    listaPai.splice(idx + 1, 0, copia);
+    try {
+      await _salvarAreas();
+      Utils.toast('Local duplicado. Renomeie para o novo local (ex: Apto 2).', 'sucesso');
+      renderizar();
+      renomearNo(copia.id);
+    } catch (e) { Utils.toast('Erro ao salvar.', 'erro'); }
   }
 
   // ===================== BUSCA FUZZY DE MATERIAL =====================
@@ -625,12 +647,17 @@ const LevantamentoAr = (() => {
   }
   function _renderResultadosBuscaManual() {
     if (!_buscaManualTexto.trim()) return '';
-    const resultados = _buscarMateriais(_buscaManualTexto).slice(0, 15);
-    if (!resultados.length) return `<div class="text-sm text-muted" style="padding:6px;">Nenhum material encontrado. <button class="btn btn-secundario btn-sm" onclick="LevantamentoAr.criarMaterialManual()">+ Criar "${_buscaManualTexto}"</button></div>`;
+    const resultados = _buscarMateriais(_buscaManualTexto).slice(0, 10);
+    const criarBtn = `<div style="padding:6px 10px;border-top:${resultados.length ? '1px solid var(--cor-borda-light)' : 'none'};">
+      <button class="btn btn-secundario btn-sm" onclick="LevantamentoAr.criarMaterialManual()">+ Criar material novo: "${_buscaManualTexto}"</button>
+    </div>`;
+    if (!resultados.length) {
+      return `<div class="text-sm text-muted" style="padding:6px;">Nenhum material parecido encontrado na biblioteca.</div>${criarBtn}`;
+    }
     return resultados.map(m => `
       <div class="tree-item" style="padding:6px 10px;" onclick="LevantamentoAr.adicionarPecaManual('${m.id}','${m.nome.replace(/'/g, "\\'")}','${m.unidade || 'un'}')">
         <span class="tree-icon">🔩</span><span class="tree-label">${_destacar(m.nome, _buscaManualTexto)}</span><span class="tree-badge">${m.tipo}</span>
-      </div>`).join('');
+      </div>`).join('') + criarBtn;
   }
   async function criarMaterialManual() {
     const nome = _buscaManualTexto.trim(); if (!nome) return;
@@ -693,7 +720,7 @@ const LevantamentoAr = (() => {
     if (!cfg) return `<div class="text-muted">Nenhuma máquina configurada para este modelo. <a href="levantamento-ar-config.html" style="color:var(--cor-primaria-dark);">Configurar agora</a>.</div>`;
     const kit = Utils.calcularKitAr(cfg, maqDraft.mlBase);
     let h = `<div style="font-family:var(--font-mono);margin-bottom:6px;">ML total (com perda): <strong>${Utils.formatarNumero(kit.mlTotal)} m</strong></div>`;
-    if (kit.cobre) h += `<div>• ${kit.cobre.nome}: <strong>${Utils.formatarNumero(kit.cobre.metros)} m</strong> (${Utils.formatarNumero(kit.cobre.rolos)} rolo(s))</div>`;
+    if (kit.cobre) h += `<div>• ${kit.cobre.nomeExibicao || kit.cobre.nome}: <strong>${Utils.formatarNumero(kit.cobre.metros)} m</strong> (${Utils.formatarNumero(kit.cobre.rolos)} rolo(s))</div>`;
     kit.vinculados.forEach(v => { h += `<div>• ${v.nome}: <strong>${Utils.formatarNumero(v.metros)} m</strong> (${Utils.formatarNumero(v.rolos)} rolo(s))</div>`; });
     kit.porMl.forEach(p => {
       if (p.tipo === 'uni_por_ml') { h += `<div>• ${p.nome}: <strong>${Utils.formatarNumero(p.quantidade, 0)} un</strong></div>`; return; }
@@ -728,7 +755,7 @@ const LevantamentoAr = (() => {
   return {
     init, carregar, renderizar,
     selGeral, selNo, toggleNo, toggleExpandirMaquina,
-    novaArea, novoSublocal, renomearNo, excluirNo,
+    novaArea, novoSublocal, renomearNo, excluirNo, duplicarNo,
     novoItem, editarItem, setModoItem, onBuscaMaterial, selecionarMaterialBusca, salvarItem, excluirItem,
     novaMaquinaLancamento, editarMaquinaLancamento, excluirMaquinaLancamento,
     setModeloLancamento, setMaquinaLancamento, onCampoMaquinaLancamento, salvarMaquinaLancamento,
