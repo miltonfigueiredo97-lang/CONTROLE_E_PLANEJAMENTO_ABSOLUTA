@@ -2879,10 +2879,13 @@ const Planejamento = (() => {
   // ===================================================================
   let _arvAbertos=new Set();    // nós expandidos
   let _arvDragId=null;          // id da tarefa sendo arrastada
+  let _arvDragSel=null;         // Set de ids sendo arrastados juntos (seleção múltipla), ou null = só _arvDragId
   let _arvDropId=null;          // id do alvo de drop
   let _arvDropPos='inside';     // 'before'|'inside'|'after'
   let _arvEditId=null;          // id em edição inline de nome
   let _arvMoverModalId=null;    // id da tarefa no modal "Mover para"
+  let _arvSel=new Set();        // seleção múltipla: clique=1, Shift+clique=intervalo, Ctrl/Cmd+clique=alterna
+  let _arvSelAnchor=null;       // âncora do Shift+clique
 
   function toggleArvoreEditor(){
     modoView=modoView==='arvore'?'gantt':'arvore';
@@ -2925,15 +2928,16 @@ const Planejamento = (() => {
       // Linha do nó — indicadores de drag aplicados via DOM em _arvDragOver
       html+=`<div draggable="true"
         data-arvrow="1"
+        onclick="Planejamento._arvRowClick(event,'${t.id}')"
         ondragstart="Planejamento._arvDragStart(event,'${t.id}')"
         ondragover="Planejamento._arvDragOver(event,'${t.id}')"
         ondrop="Planejamento._arvDrop(event,'${t.id}')"
         ondragend="Planejamento._arvDragEnd()"
         style="display:flex;align-items:center;gap:6px;padding:5px 8px;border-radius:6px;cursor:grab;
-          background:rgba(255,255,255,.02);border:1px solid transparent;
+          background:${_arvSel.has(t.id)?'rgba(245,200,0,.14)':'rgba(255,255,255,.02)'};border:1px solid ${_arvSel.has(t.id)?'var(--cor-primaria)':'transparent'};
           margin:1px 0;user-select:none;"
-        onmouseenter="this.style.background='rgba(255,255,255,.06)'"
-        onmouseleave="this.style.background='rgba(255,255,255,.02)'">
+        onmouseenter="if(!Planejamento._arvSelTem('${t.id}'))this.style.background='rgba(255,255,255,.06)'"
+        onmouseleave="if(!Planejamento._arvSelTem('${t.id}'))this.style.background='rgba(255,255,255,.02)'">
 
         <!-- Indentação -->
         <span style="display:inline-block;width:${nv*18}px;flex-shrink:0;"></span>
@@ -3014,8 +3018,9 @@ const Planejamento = (() => {
           <button class="btn btn-primario btn-sm" onclick="Planejamento.toggleArvoreEditor()" style="font-size:.72rem;">← Voltar ao Gantt</button>
         </div>
       </div>
-      <div style="font-size:.7rem;color:#555;margin-bottom:10px;">
-        Arraste para reorganizar · Clique duplo no nome para renomear · ＋ cria filho · ↗ muda o pai · ← sobe um nível
+      <div style="font-size:.7rem;color:#555;margin-bottom:10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <span>Arraste para reorganizar · Clique duplo no nome para renomear · ＋ cria filho · ↗ muda o pai · ← sobe um nível · Clique+Shift seleciona intervalo, Clique+Ctrl seleciona avulsas — depois arraste juntas</span>
+        ${_arvSel.size>1?`<span style="background:var(--cor-primaria);color:#000;font-weight:700;padding:2px 8px;border-radius:100px;">${_arvSel.size} selecionadas <span style="cursor:pointer;text-decoration:underline;" onclick="Planejamento._arvLimparSel()">limpar</span></span>`:''}
       </div>
       <div id="arv-corpo" style="flex:1;overflow-y:auto;overflow-x:hidden;"
         ondragover="Planejamento._arvDragOver(event,null)"
@@ -3181,15 +3186,42 @@ const Planejamento = (() => {
   // ---- Drag & Drop ----
   function _arvDragStart(e,id){
     _arvDragId=id;
+    // Se o item arrastado faz parte de uma seleção múltipla, arrasta o conjunto todo junto
+    _arvDragSel=(_arvSel.has(id)&&_arvSel.size>1)?new Set(_arvSel):null;
     e.dataTransfer.effectAllowed='move';
     e.dataTransfer.setData('text/plain',id);
     // Não chama _render() — reconstruir o DOM cancela o drag nativo do HTML5
-    // Marca o elemento visualmente via DOM direto
+    // Marca o(s) elemento(s) visualmente via DOM direto
     requestAnimationFrame(()=>{
-      const el=document.querySelector(`[data-arvid="${id}"] [data-arvrow]`);
-      if(el)el.style.opacity='.35';
+      const ids=_arvDragSel?[..._arvDragSel]:[id];
+      ids.forEach(i=>{
+        const el=document.querySelector(`[data-arvid="${i}"] [data-arvrow]`);
+        if(el)el.style.opacity='.35';
+      });
     });
   }
+  // Seleção de linhas: clique=só esta; Shift+clique=intervalo (pela ordem atual);
+  // Ctrl/Cmd+clique=alterna esta na seleção sem mexer nas outras.
+  function _arvRowClick(e,id){
+    if(e.shiftKey&&_arvSelAnchor){
+      const sorted=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
+      const ids=sorted.map(t=>t.id);
+      const i1=ids.indexOf(_arvSelAnchor),i2=ids.indexOf(id);
+      if(i1>=0&&i2>=0){
+        const [lo,hi]=i1<i2?[i1,i2]:[i2,i1];
+        _arvSel=new Set(ids.slice(lo,hi+1));
+      }
+    } else if(e.ctrlKey||e.metaKey){
+      if(_arvSel.has(id))_arvSel.delete(id);else _arvSel.add(id);
+      _arvSelAnchor=id;
+    } else {
+      _arvSel=(_arvSel.size===1&&_arvSel.has(id))?new Set():new Set([id]);
+      _arvSelAnchor=id;
+    }
+    _render();
+  }
+  function _arvSelTem(id){return _arvSel.has(id);}
+  function _arvLimparSel(){_arvSel=new Set();_arvSelAnchor=null;_render();}
   function _arvDragOver(e,targetId){
     e.preventDefault();
     e.stopPropagation(); // impede o container (#arv-corpo) de interceptar
@@ -3228,7 +3260,7 @@ const Planejamento = (() => {
     }
   }
   function _arvDragEnd(){
-    _arvDragId=null;_arvDropId=null;_arvDropPos='inside';
+    _arvDragId=null;_arvDragSel=null;_arvDropId=null;_arvDropPos='inside';
     // Limpa todos os indicadores visuais e restaura opacidade
     document.querySelectorAll('[data-arvid]').forEach(el=>{
       el.style.borderTop='';el.style.borderBottom='';
@@ -3240,66 +3272,102 @@ const Planejamento = (() => {
   async function _arvDrop(e,targetId){
     e.preventDefault();
     e.stopPropagation();
-    const dragId=_arvDragId, dropId=_arvDropId, dropPos=_arvDropPos;
-    _arvDragId=null;_arvDropId=null;_arvDropPos='inside';
+    const dragId=_arvDragId, dragSel=_arvDragSel, dropId=_arvDropId, dropPos=_arvDropPos;
+    _arvDragId=null;_arvDragSel=null;_arvDropId=null;_arvDropPos='inside';
     if(!dragId||dragId===dropId){_render();return;}
-    await _arvMoverTarefa(dragId,dropId,dropPos);
+    await _arvMoverMultiplas(dragSel||new Set([dragId]),dropId,dropPos);
   }
 
-  // Move tarefa (e filhos) para novo pai ou posição
-  // pos='inside' → filho do target; 'before'/'after' → irmão do target
+  // Move 1+ tarefas (cada uma + seus filhos contíguos) para um novo pai/posição.
+  // dragIds pode ser um único id (Set ou array com 1 item) ou uma seleção múltipla —
+  // nesse caso cada item de nível mais alto (que não seja filho de outro selecionado)
+  // vira um bloco próprio, e todos os blocos são movidos juntos, na mesma ordem visual,
+  // para o mesmo destino. pos='inside' → filho do target; 'before'/'after' → irmão do target.
   let _arvSaveQueue=Promise.resolve(); // serializa saves — evita concorrência
 
   async function _arvMoverTarefa(dragId,targetId,pos){
-    if(!dragId)return;
-    // Soltar em qualquer espaço vazio da árvore (fora de uma linha) cai aqui
-    // com targetId=null → "mover para raiz". Isso zera o nível do galho
-    // inteiro (dragNivel vira 0) e é fácil de disparar sem querer arrastando
-    // perto da borda de uma linha. Por ser destrutivo e difícil de notar na
-    // hora, exige confirmação — mover para raiz de propósito continua
-    // disponível pelo botão ↗ "Mover para".
-    if(!targetId){
-      const t=tarefas.find(x=>x.id===dragId);
-      if(!confirm(`Mover "${t?.nome||'esta tarefa'}" (e seus filhos) para a RAIZ da árvore, nível 0? Isso costuma ser acidental — solte exatamente sobre outra linha se a intenção era reordenar.`))return;
-    }
+    return _arvMoverMultiplas(new Set([dragId]),targetId,pos);
+  }
 
-    const sorted=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
-    const dragIdx=sorted.findIndex(t=>t.id===dragId);
-    if(dragIdx<0)return;
-    const dragNivel=sorted[dragIdx].nivel||0;
+  async function _arvMoverMultiplas(dragIds,targetId,pos){
+    const idsSet=dragIds instanceof Set?dragIds:new Set(dragIds);
+    idsSet.delete(null);idsSet.delete(undefined);
+    if(!idsSet.size)return;
+
+    // Soltar em qualquer espaço vazio da árvore (fora de uma linha) cai aqui
+    // com targetId=null → "mover para raiz". Isso zera o nível do(s) galho(s)
+    // inteiro(s) e é fácil de disparar sem querer arrastando perto da borda
+    // de uma linha. Por ser destrutivo e difícil de notar na hora, exige
+    // confirmação — mover para raiz de propósito continua disponível pelo
+    // botão ↗ "Mover para".
+    if(!targetId){
+      const nomes=[...idsSet].map(id=>tarefas.find(x=>x.id===id)?.nome||'tarefa').slice(0,3).join(', ');
+      const extra=idsSet.size>3?` e mais ${idsSet.size-3}`:'';
+      if(!confirm(`Mover ${idsSet.size>1?`${idsSet.size} tarefas (${nomes}${extra})`:`"${nomes}"`} (e filhos) para a RAIZ da árvore, nível 0? Isso costuma ser acidental — solte exatamente sobre outra linha se a intenção era reordenar.`))return;
+    }
+    if(idsSet.has(targetId)){Utils.toast('Não é possível soltar dentro do próprio grupo selecionado.','alerta');return;}
+
+    let sorted=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
 
     // Captura estado ANTES de qualquer modificação
     const ordemAntes=new Map(sorted.map(t=>[t.id,{ordem:t.ordem||0,nivel:t.nivel||0}]));
     const numAntes=new Map(tarefas.map(t=>[t.id,t._numLinha||0]));
 
-    // Bloco = tarefa + filhos contíguos
-    let fimBloco=dragIdx+1;
-    while(fimBloco<sorted.length&&(sorted[fimBloco].nivel||0)>dragNivel)fimBloco++;
-    const bloco=sorted.splice(dragIdx,fimBloco-dragIdx);
+    const idxOf=new Map(sorted.map((t,i)=>[t.id,i]));
+    const blocoRange=idx=>{
+      const niv=sorted[idx].nivel||0;
+      let fim=idx+1;
+      while(fim<sorted.length&&(sorted[fim].nivel||0)>niv)fim++;
+      return [idx,fim];
+    };
+    const selIdxs=[...idsSet].map(id=>idxOf.get(id)).filter(i=>i!=null).sort((a,b)=>a-b);
+    if(!selIdxs.length)return;
+    const ranges=selIdxs.map(i=>[i,blocoRange(i)]);
+    // Só os "de nível mais alto" viram bloco próprio — os que já estão contidos
+    // no bloco de outro selecionado (ex: selecionou pai e filho junto) são
+    // ignorados aqui, pois já vão junto dentro do bloco do pai.
+    const topRanges=ranges.filter(([i])=>!ranges.some(([j,[s,e]])=>j!==i&&i>s&&i<e)).map(([,r])=>r);
+    // Extrai do array (de trás pra frente, pra não bagunçar os índices dos que faltam)
+    const extraidosDesc=[...topRanges].sort((a,b)=>b[0]-a[0]);
+    const blocos=[]; // vai ficar na ordem visual original após os unshifts
+    for(const [s,e] of extraidosDesc) blocos.unshift(sorted.splice(s,e-s));
 
     if(!targetId){
-      const dif=-dragNivel;
-      bloco.forEach(t=>{t.nivel=Math.max(0,(t.nivel||0)+dif);});
-      sorted.push(...bloco);
+      for(const bloco of blocos){
+        const dif=-(bloco[0].nivel||0);
+        bloco.forEach(t=>{t.nivel=Math.max(0,(t.nivel||0)+dif);});
+      }
+      blocos.forEach(bloco=>sorted.push(...bloco));
     } else {
       const targetIdx=sorted.findIndex(t=>t.id===targetId);
-      if(targetIdx<0){sorted.splice(dragIdx,0,...bloco);tarefas=sorted;_buildFiltradas();_render();return;}
+      if(targetIdx<0){ // alvo sumiu (era um dos extraídos por engano) — desfaz a extração
+        let ins=selIdxs[0];
+        blocos.forEach(bloco=>{sorted.splice(ins,0,...bloco);ins+=bloco.length;});
+        tarefas=sorted;_buildFiltradas();_render();return;
+      }
       const targetNivel=sorted[targetIdx].nivel||0;
+      let insertAt;
       if(pos==='inside'){
-        const dif=(targetNivel+1)-dragNivel;
-        bloco.forEach(t=>{t.nivel=Math.max(0,(t.nivel||0)+dif);});
-        sorted.splice(targetIdx+1,0,...bloco);
+        for(const bloco of blocos){
+          const dif=(targetNivel+1)-(bloco[0].nivel||0);
+          bloco.forEach(t=>{t.nivel=Math.max(0,(t.nivel||0)+dif);});
+        }
+        insertAt=targetIdx+1;
         _arvAbertos.add(targetId);
       } else {
-        const dif=targetNivel-dragNivel;
-        bloco.forEach(t=>{t.nivel=Math.max(0,(t.nivel||0)+dif);});
-        sorted.splice(pos==='before'?targetIdx:targetIdx+1,0,...bloco);
+        for(const bloco of blocos){
+          const dif=targetNivel-(bloco[0].nivel||0);
+          bloco.forEach(t=>{t.nivel=Math.max(0,(t.nivel||0)+dif);});
+        }
+        insertAt=pos==='before'?targetIdx:targetIdx+1;
       }
+      blocos.forEach(bloco=>{sorted.splice(insertAt,0,...bloco);insertAt+=bloco.length;});
     }
 
     _undoPush(); // snapshot ANTES de sobrescrever tarefas[]
     sorted.forEach((t,i)=>{t.ordem=i+1;});
     tarefas=sorted;
+    _arvSel=new Set();_arvSelAnchor=null; // limpa seleção após mover
     _buildFiltradas();_render();
 
     const changed=sorted.filter(t=>{
@@ -3409,6 +3477,7 @@ const Planejamento = (() => {
     toggleArvoreEditor,_arvToggle,_arvExpandirTudo,_arvIniciarEdit,_arvCancelarEdit,_arvSalvarNome,
     _arvInserirAcima,_arvInserirAbaixo,_arvMudarNivel,
     _arvCriarFilho,_arvCriarRaiz,_arvDragStart,_arvDragOver,_arvDragEnd,_arvDrop,
+    _arvRowClick,_arvSelTem,_arvLimparSel,_arvMoverMultiplas,
     _arvAbrirMover,_arvFecharMover,_arvFiltrarMover,_arvConfirmarMover,
     _colResizeStart,moveColLeft,moveColRight,_hideCol,_divStart,_sync,_editCell,_esqDragStart,
     _rowDragStart,toggleSel,_limparSelecao,_moverSel,_bulkNivel,_bulkDuplicar,_bulkExcluir,
