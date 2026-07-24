@@ -3218,7 +3218,10 @@ const Planejamento = (() => {
       _arvSel=(_arvSel.size===1&&_arvSel.has(id))?new Set():new Set([id]);
       _arvSelAnchor=id;
     }
+    const corpo=document.getElementById('arv-corpo');
+    const st=corpo?corpo.scrollTop:0;
     _render();
+    requestAnimationFrame(()=>{const c=document.getElementById('arv-corpo');if(c)c.scrollTop=st;});
   }
   function _arvSelTem(id){return _arvSel.has(id);}
   function _arvLimparSel(){_arvSel=new Set();_arvSelAnchor=null;_render();}

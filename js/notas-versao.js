@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.57.8',
+  versaoAtual: 'V2.57.9',
 
   versoes: [
     {
@@ -4961,12 +4961,15 @@ const NotasVersao = {
     {versao:'V2.57.7',status:'fechada',data:'2026-07-24',tipo:'melhoria',
       titulo:'Planejamento: barra de ferramentas cabe numa linha só — Importar/Exportar/Corrigir Ordens/PNG/Vínculos agrupados em um menu "⚙ Ferramentas"',
       itens:['Reduz de 12 para 8 elementos na barra, cabendo numa linha só na maioria das telas sem quebrar nem espremer o seletor Atual/Linha de Base/Desafio.']},
-    {versao:'V2.57.8',status:'aberta',data:'2026-07-24',tipo:'funcionalidade',
+    {versao:'V2.57.8',status:'fechada',data:'2026-07-24',tipo:'funcionalidade',
       titulo:'Editor de Estrutura: seleção múltipla de tarefas — clique+Shift (intervalo) ou clique+Ctrl (avulsas), depois arrasta todas juntas para dentro de uma nova tarefa/pai',
       itens:['Clique numa linha seleciona só ela; Shift+clique seleciona o intervalo entre a última clicada e essa; Ctrl/Cmd+clique adiciona/remove uma linha avulsa da seleção — linhas selecionadas ficam destacadas em amarelo.',
         'Arrastar qualquer linha selecionada move o grupo inteiro junto (cada uma com seus próprios filhos) para o novo pai/posição, de uma vez só — sem precisar arrastar uma de cada vez.',
         'Se a seleção incluir um pai e algum filho dele junto, o filho não é movido em duplicidade — só o bloco do pai (que já leva o filho junto).',
-        'Mesma proteção da V2.57.4 se aplica: soltar fora de uma linha (mover tudo para a raiz) pede confirmação.']}
+        'Mesma proteção da V2.57.4 se aplica: soltar fora de uma linha (mover tudo para a raiz) pede confirmação.']},
+    {versao:'V2.57.9',status:'aberta',data:'2026-07-24',tipo:'correcao',
+      titulo:'Editor de Estrutura: clicar numa linha para selecioná-la pulava a tela pro topo',
+      itens:['Selecionar não preservava a posição do scroll. Corrigido.']}
   ],
 
   render(containerId) {
