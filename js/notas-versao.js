@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.57.12',
+  versaoAtual: 'V2.57.13',
 
   versoes: [
     {
@@ -4982,10 +4982,15 @@ const NotasVersao = {
       itens:['Causa: toda tarefa criada também grava um snapshot em historicoExecucao/{hoje} — um único documento no Firestore. Ao importar centenas/milhares de tarefas de uma vez em paralelo, todas competem para escrever nesse MESMO documento, e o Firestore derruba parte dessas escritas concorrentes (limite prático de throughput por documento) — o import parava silenciosamente na metade sem erro visível.',
         'Import em massa agora pula esse snapshot (ele é só um histórico auxiliar de % concluído/quantidade por dia, não a tarefa em si).',
         'Import agora também informa se alguma tarefa falhou, em vez de contar silenciosamente menos do que o esperado.']},
-    {versao:'V2.57.12',status:'aberta',data:'2026-07-24',tipo:'correcao',
+    {versao:'V2.57.12',status:'fechada',data:'2026-07-24',tipo:'correcao',
       titulo:'Importar Excel: mesmo após a V2.57.11, planilha de 1755 linhas ainda travava sempre exatamente na linha 1000',
       itens:['O corte reprodutível sempre na mesma linha (não aleatório) indicava o SDK do Firestore travando por excesso de escrita simultânea — 200 tarefas em paralelo por lote era demais, mesmo sem o snapshot da V2.57.11 (provavelmente agravado pelo cache offline do navegador).',
-        'Reduzido o lote de 200 para 20 escritas simultâneas, e adicionado timeout de 15s por tarefa: se uma escrita travar, ela vira uma falha reportada em vez de travar o import inteiro para sempre.']}
+        'Reduzido o lote de 200 para 20 escritas simultâneas, e adicionado timeout de 15s por tarefa: se uma escrita travar, ela vira uma falha reportada em vez de travar o import inteiro para sempre.']},
+    {versao:'V2.57.13',status:'aberta',data:'2026-07-24',tipo:'correcao',
+      titulo:'Importar Excel: o corte em ~1000 persistia mesmo com lote menor — causa era o import reiniciar do ZERO a cada tentativa (apagava tudo antes de recriar), travando sempre no mesmo ponto e nunca progredindo',
+      itens:['Import agora NÃO apaga mais as tarefas existentes antes de importar. Em vez disso, faz upsert por Código: tarefa com Código já existente é ATUALIZADA, tarefa nova é CRIADA. Tarefas antigas que não estão mais na planilha não são apagadas.',
+        'Isso torna o import retomável: se travar/falhar no meio de uma planilha grande por qualquer motivo de ambiente, importar de novo (o mesmo arquivo) completa só o que faltou, em vez de reiniciar do zero e travar no mesmo lugar de novo.',
+        'Recomendado rodar "🔧 Corrigir Ordens" depois de um import grande, para garantir que a ordem de exibição fique limpa.']}
   ],
 
   render(containerId) {

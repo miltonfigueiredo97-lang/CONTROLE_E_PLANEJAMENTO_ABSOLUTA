@@ -2239,7 +2239,7 @@ const Planejamento = (() => {
   // ===================== IMPORTAR =====================
   async function importarExcel(event){
     const file=event.target.files[0];if(!file)return;event.target.value='';
-    if(!confirm(`Importar substituirá as ${tarefas.length} tarefas atuais. Confirmar?`))return;
+    if(!confirm(`Importar vai criar tarefas novas e ATUALIZAR as que já existem com o mesmo Código (tarefas antigas que não estão mais na planilha NÃO são apagadas). Confirmar?`))return;
     try{
       Utils.mostrarLoading('Lendo...');
       if(typeof XLSX==='undefined')await _ls('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');
@@ -2258,9 +2258,10 @@ const Planejamento = (() => {
         iniD:['inicio desafio'],terD:['termino desafio']};
         for(const al of(a[n]||[])){const i=hdrs.indexOf(al);if(i>=0)return i;}return-1;};
       const iN=ci('nome');if(iN<0){Utils.toast('Coluna Nome não encontrada.','erro');return;}
-      Utils.mostrarLoading('Limpando...');
-      const LDEL=200;
-      for(let i=0;i<tarefas.length;i+=LDEL)await Promise.all(tarefas.slice(i,i+LDEL).map(t=>Database.deletar(obraId,COL,t.id).catch(()=>{})));
+      // Mapa das tarefas JÁ EXISTENTES por Código — permite reconhecer o que já foi
+      // importado numa tentativa anterior (mesmo que ela tenha parado no meio) e só
+      // atualizar/criar o que falta, em vez de apagar tudo e recomeçar do zero.
+      const existentesPorCod=new Map(tarefas.filter(t=>t.codigo).map(t=>[t.codigo,t]));
       const regs=[];
       for(let r=1;r<rows.length;r++){
         const row=rows[r],nR=String(row[iN]||''),nm=nR.trim();if(!nm)continue;
@@ -2277,7 +2278,8 @@ const Planejamento = (() => {
         const nivelBySpace=Math.floor((nR.length-nR.trimStart().length)/2);
         const niv=!isNaN(nivColuna)?nivColuna:(cd?nivelByCod:nivelBySpace);
         const tipo=niv<=1&&cd?'grupo':'tarefa';
-        regs.push({tipo,codigo:cd,nome:nm,nivel:niv,ordem:regs.length+1,
+        const existente=cd?existentesPorCod.get(cd):null;
+        regs.push({_idExistente:existente?.id||null,tipo,codigo:cd,nome:nm,nivel:niv,ordem:regs.length+1,
           inicioPlanejado:_pd(row[ci('inicio')]),terminoPlanejado:_pd(row[ci('termino')]),
           duracao:_pDur(row[ci('duracao')]),percentualEsperado:_pN(row[ci('percEsp')]),
           percentualConcluido:_pN(row[ci('percConc')]),predecessora:String(row[ci('pred')]||'').trim(),
@@ -2297,11 +2299,15 @@ const Planejamento = (() => {
       let imp=0,falhas=0;
       for(let i=0;i<regs.length;i+=L){
         Utils.mostrarLoading(`Importando ${Math.min(i+L,regs.length)}/${regs.length}...`);
-        await Promise.all(regs.slice(i,i+L).map(d=>
-          comTimeout(Database.criar(obraId,COL,d,null,true)).then(()=>imp++).catch(e=>{falhas++;console.error('Falha ao importar:',d.nome,e);})
-        ));
+        await Promise.all(regs.slice(i,i+L).map(d=>{
+          const {_idExistente,...dados}=d;
+          const op=_idExistente
+            ?comTimeout(Database.atualizar(obraId,COL,_idExistente,dados))
+            :comTimeout(Database.criar(obraId,COL,dados,null,true));
+          return op.then(()=>imp++).catch(e=>{falhas++;console.error('Falha ao importar:',d.nome,e);});
+        }));
       }
-      Utils.toast(falhas?`⚠ ${imp} importadas, ${falhas} falharam — veja o console.`:`✅ ${imp} tarefas importadas!`,falhas?'alerta':'sucesso');await carregar();
+      Utils.toast(falhas?`⚠ ${imp} ok, ${falhas} falharam — importe de novo pra completar (retoma de onde parou).`:`✅ ${imp} tarefas importadas/atualizadas!`,falhas?'alerta':'sucesso');await carregar();
     }catch(e){console.error(e);Utils.toast('Erro: '+e.message,'erro');}finally{Utils.esconderLoading();}
   }
 
