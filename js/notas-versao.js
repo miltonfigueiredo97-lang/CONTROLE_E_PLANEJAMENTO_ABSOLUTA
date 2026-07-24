@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.57.1',
+  versaoAtual: 'V2.57.2',
 
   versoes: [
     {
@@ -4928,11 +4928,17 @@ const NotasVersao = {
         'Suprimentos: card deixou de ser texto fixo — mostra as Próximas Atividades (ainda não iniciadas no Planejamento) cujo pipeline de Suprimentos ainda não foi tocado (todas as 5 etapas em "não iniciado", ou nem tem doc ainda). Selo vermelho "Sem registro" vs laranja "Não iniciado".',
         'Fundação e Estrutura: o gráfico comparava só 2 totais (Fundação x Estrutura) — trocado por Previsto x Executado (m³) POR ANDAR, na mesma ordem de andar do Controle de Concreto (CC.ordenarAndares, respeita ordem customizada se existir), com tooltip mostrando a data do último lançamento daquele andar.',
         'Contenção e Fundação/Estrutura trocaram de posição (Contenção primeiro, como pedido).']},
-    {versao:'V2.57.1',status:'aberta',data:'2026-07-24',tipo:'correcao',
+    {versao:'V2.57.1',status:'fechada',data:'2026-07-24',tipo:'correcao',
       titulo:'Produção: % Concl. de tarefa-pai usava campo cru, não o cálculo ponderado por duração',
       itens:['Coluna "% Concl." de tarefas-pai (grupos) na tela de Produção lia t.percentualConcluido direto do Firestore, que só é sincronizado quando alguém edita % pelo próprio Planejamento — podendo ficar dessincronizado do valor real quando o % do pai muda por outros caminhos.',
         'Corrigido para usar fam.percCalculado(t) — mesma convenção já usada por Dashboard/obras.js e Diário de Obra, ponderando por duração dos filhos.',
-        'Sem impacto em tarefas-folha (continuam lendo percentualConcluido direto, que é o valor real editável).']}
+        'Sem impacto em tarefas-folha (continuam lendo percentualConcluido direto, que é o valor real editável).']},
+    {versao:'V2.57.2',status:'aberta',data:'2026-07-24',tipo:'correcao',
+      titulo:'Planejamento: corrigido bug crítico que fazia tarefas mudarem de posição sozinhas ao salvar/recarregar',
+      itens:['Causa raiz: o botão "+ Tarefa" calculava a ordem da tarefa nova como sel.ordem+1 — que colide exatamente com a ordem da próxima tarefa já existente (lista normalizada em inteiros sequenciais). Esse empate era resolvido pelo Firestore por ID do documento, não pela ordem pretendida, e por isso a posição (e o numLinha, usado nas Predecessoras) mudava sozinha no reload seguinte — carregar() roda a cada Salvar/Excluir/Importar.',
+        'inserirTarefa() agora calcula a ordem da tarefa nova como um valor estritamente entre a tarefa selecionada e a próxima (mesma técnica já usada no Editor de Estrutura), garantindo que nunca colide.',
+        'salvarTarefa() ganhou um guard anti-colisão: se o valor de "Ordem" (calculado ou digitado manualmente no formulário) já pertencer a outra tarefa, é ajustado em micro-incremento antes de salvar.',
+        'Novo botão "🔧 Corrigir Ordens" na barra do Planejamento: renumera e persiste a ordem de TODAS as tarefas da obra em sequência única, corrigindo qualquer duplicata que já exista em produção (causada pelo bug antes desta versão). Preserva a ordem visual atual — só remove os empates internos. Recomendado rodar uma vez em cada obra.']}
   ],
 
   render(containerId) {

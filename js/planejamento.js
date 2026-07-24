@@ -431,6 +431,7 @@ const Planejamento = (() => {
           <span style="color:#333;margin:0 4px;">|</span>
           <label class="btn btn-secundario btn-sm" style="cursor:pointer;font-size:.72rem;">📥 Importar<input type="file" accept=".xlsx,.xls" style="display:none" onchange="Planejamento.importarExcel(event)"></label>
           <button class="btn btn-secundario btn-sm" onclick="Planejamento.exportar()" style="font-size:.72rem;">📤 Exportar</button>
+          <button class="btn btn-secundario btn-sm" onclick="Planejamento.corrigirOrdensDuplicadas()" style="font-size:.72rem;" title="Corrige tarefas com número de ordem duplicado (causa de mudanças de posição sozinhas)">🔧 Corrigir Ordens</button>
           <button class="btn btn-secundario btn-sm" onclick="Planejamento.exportarPNG()" style="font-size:.72rem;">🖼 PNG</button>
           <button class="btn btn-secundario btn-sm" onclick="Planejamento.toggleGantt()" id="btn-tg" style="font-size:.72rem;">${ganttVisible?'◀ Esconder Gantt':'▶ Mostrar Gantt'}</button>
           ${colsHidden.size?`<button class="btn btn-secundario btn-sm" onclick="Planejamento.showColsMenu()" style="font-size:.72rem;">＋ Colunas (${colsHidden.size})</button>`:''}
@@ -2113,9 +2114,20 @@ const Planejamento = (() => {
       f.querySelector('[name="nivel"]').value=sel.nivel||0;
       f.querySelector('[name="grupo"]').value=sel.grupo||'';
       f.querySelector('[name="local"]').value=sel.local||'';
-      f.querySelector('[name="ordem"]').value=(sel.ordem||0)+1;
+      // Ordem: precisa ficar ESTRITAMENTE entre a tarefa selecionada e a próxima.
+      // Antes era sel.ordem+1, que colide com a ordem da própria próxima tarefa
+      // sempre que a lista está normalizada em inteiros sequenciais (o caso comum) —
+      // essa colisão é o que fazia o Firestore desempatar por ID do doc no reload
+      // seguinte, mudando a posição/numLinha "sozinha".
+      const sortedIns=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
+      const idxIns=sortedIns.findIndex(t=>t.id===sel.id);
+      const proxIns=idxIns>=0?sortedIns[idxIns+1]:null;
+      const baseIns=sel.ordem||0;
+      const novaOrdemIns=proxIns?baseIns+(((proxIns.ordem||(baseIns+2))-baseIns)/2):baseIns+1;
+      f.querySelector('[name="ordem"]').value=novaOrdemIns;
     } else {
-      document.querySelector('#form-tarefa [name="ordem"]').value=tarefas.length+1;
+      const maxOrdemIns=tarefas.length?Math.max(...tarefas.map(t=>t.ordem||0)):0;
+      document.querySelector('#form-tarefa [name="ordem"]').value=maxOrdemIns+1;
     }
     Utils.abrirModal('modal-tarefa');
   }
@@ -2148,8 +2160,18 @@ const Planejamento = (() => {
     const ini=g('inicioPlanejado'),ter=g('terminoPlanejado');
     let dur=parseInt(g('duracao'))||0;
     if(ini&&ter&&!dur)dur=Math.max(0,Math.ceil((new Date(ter)-new Date(ini))/864e5));
+    // Guard anti-colisão: 'ordem' nunca pode ser igual à de outra tarefa já
+    // existente — um empate é resolvido pelo Firestore por ID do documento
+    // (não pela ordem que a gente quer), e é isso que causava tarefas
+    // "pulando" de posição sozinhas no reload seguinte (carregar() roda a
+    // cada Salvar). Se colidir, empurra em micro-incrementos até achar um
+    // valor livre — não afeta a ordem visual, só desempata de forma estável.
+    let ordemCandidata=parseFloat(g('ordem'));
+    if(isNaN(ordemCandidata))ordemCandidata=tarefas.length+1;
+    const ordensUsadas=new Set(tarefas.filter(t=>t.id!==editandoId).map(t=>t.ordem));
+    while(ordensUsadas.has(ordemCandidata))ordemCandidata+=0.0001;
     const data={tipo:g('tipo')||'tarefa',codigo:g('codigo')||'',nome,nivel:parseInt(g('nivel'))||0,
-      ordem:parseFloat(g('ordem'))||tarefas.length+1,inicioPlanejado:ini||'',terminoPlanejado:ter||'',duracao:dur,
+      ordem:ordemCandidata,inicioPlanejado:ini||'',terminoPlanejado:ter||'',duracao:dur,
       percentualEsperado:parseFloat(g('percentualEsperado'))||0,percentualConcluido:parseFloat(g('percentualConcluido'))||0,
       predecessora:g('predecessora')||'',tarefaPai:g('tarefaPai')||'',grupo:g('grupo')||'',local:g('local')||'',
       custo:parseFloat(g('custo'))||0,receita:parseFloat(g('receita'))||0,responsavel:g('responsavel')||'',
@@ -2240,6 +2262,40 @@ const Planejamento = (() => {
       }
       Utils.toast(`✅ ${imp} tarefas importadas!`,'sucesso');await carregar();
     }catch(e){console.error(e);Utils.toast('Erro: '+e.message,'erro');}finally{Utils.esconderLoading();}
+  }
+
+  // ===================== REPARO: ORDENS DUPLICADAS =====================
+  // Corrige o estrago já feito em produção pelo bug de 'ordem' colidindo
+  // (inserirTarefa() usava sel.ordem+1, que empatava com a próxima tarefa).
+  // Renormaliza TODAS as tarefas para ordem inteira sequencial única,
+  // baseada na ordem atualmente exibida em tela (que reflete o que já foi
+  // organizado manualmente), e persiste TODAS no Firestore — não só as que
+  // mudaram localmente, para eliminar de vez qualquer duplicata antiga.
+  async function corrigirOrdensDuplicadas(){
+    const sorted=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
+    const usados=new Map();
+    let duplicatas=0;
+    for(const t of sorted){
+      const chave=t.ordem||0;
+      if(usados.has(chave))duplicatas++;
+      usados.set(chave,(usados.get(chave)||0)+1);
+    }
+    if(!duplicatas){Utils.toast('Nenhuma ordem duplicada encontrada.','sucesso');return;}
+    if(!confirm(`Encontradas ${duplicatas} tarefa(s) com 'ordem' duplicada (causa das mudanças de posição sozinhas). Corrigir agora? A ordem visual atual será preservada, só os números internos serão renumerados.`))return;
+    Utils.mostrarLoading('Corrigindo ordens...');
+    try{
+      sorted.forEach((t,i)=>{t.ordem=i+1;});
+      tarefas=sorted;
+      const LOTE=30;
+      for(let i=0;i<sorted.length;i+=LOTE){
+        await Promise.all(sorted.slice(i,i+LOTE).map(t=>
+          Database.atualizar(obraId,COL,t.id,{ordem:t.ordem}).catch(e=>console.error('Erro corrigir ordem:',t.id,e))
+        ));
+      }
+      _buildFiltradas();_render();
+      Utils.toast(`✅ ${duplicatas} duplicata(s) corrigida(s).`,'sucesso');
+    }catch(e){console.error(e);Utils.toast('Erro ao corrigir.','erro');}
+    finally{Utils.esconderLoading();}
   }
 
   // ===================== EXPORTAR =====================
@@ -3334,7 +3390,7 @@ const Planejamento = (() => {
     _rowDragStart,toggleSel,_limparSelecao,_moverSel,_bulkNivel,_bulkDuplicar,_bulkExcluir,
     toggleStatusFiltro,_aplicarStatusFiltro,undo,
     onBusca,limparBusca,_buscaKey,
-    importarExcel,exportar,exportarPNG,_gerarPNG,_predPopup,_predPreview,_predSalvar,
+    importarExcel,exportar,exportarPNG,corrigirOrdensDuplicadas,_gerarPNG,_predPopup,_predPreview,_predSalvar,
     abrirVinculosView,fecharVinculosView,abrirVincularTarefa,abrirVincularAqui,onVincTipoChange,
     onVincNavModulo,onVincNavModuloMetrica,onVincNavMetrica,onVincNavEntrar,onVincNavBreadcrumb,onVincNavVoltar,
     onBuscaEscolhaAlvoVinc,onEscolherAlvoVinc,onTrocarAlvoVinc,
