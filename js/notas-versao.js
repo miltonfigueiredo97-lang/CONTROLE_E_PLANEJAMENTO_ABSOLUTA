@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.57.10',
+  versaoAtual: 'V2.57.11',
 
   versoes: [
     {
@@ -4970,13 +4970,18 @@ const NotasVersao = {
     {versao:'V2.57.9',status:'fechada',data:'2026-07-24',tipo:'correcao',
       titulo:'Editor de Estrutura: clicar numa linha para selecioná-la pulava a tela pro topo',
       itens:['Selecionar não preservava a posição do scroll. Corrigido.']},
-    {versao:'V2.57.10',status:'aberta',data:'2026-07-24',tipo:'correcao',
+    {versao:'V2.57.10',status:'fechada',data:'2026-07-24',tipo:'correcao',
       titulo:'Predecessoras: suporte a múltiplas predecessoras (ex: "7TI; 98II+10d") e a sufixo de dias no atraso (ex: "+10d") — formato usado pelo cronograma do CSO',
       itens:['Causa: o cálculo automático de datas por predecessora só entendia UMA predecessora por tarefa (regex ancorada do início ao fim da string) e não tolerava a letra "d" no atraso. Qualquer tarefa com mais de uma predecessora (separadas por ";") ou com atraso escrito como "+10d" em vez de "+10" tinha o cálculo de data silenciosamente ignorado.',
         'Agora aceita múltiplas predecessoras separadas por ";" e usa a mais restritiva (data mais tardia) entre elas — mesma regra do MS Project/CPM.',
         'Aceita sufixo "d"/"dd" no atraso.',
         'Remapeamento de predecessoras ao reordenar tarefas (_remapearPredecessoras) também corrigido para atualizar TODAS as predecessoras de uma tarefa, não só a primeira.',
-        'Relevante para importar cronogramas vindos do CSO: cerca de 60% das tarefas de um cronograma típico usam múltiplas predecessoras.']}
+        'Relevante para importar cronogramas vindos do CSO: cerca de 60% das tarefas de um cronograma típico usam múltiplas predecessoras.']},
+    {versao:'V2.57.11',status:'aberta',data:'2026-07-24',tipo:'correcao',
+      titulo:'Importar Excel: travava/parava na metade em planilhas grandes (ex: 1755 tarefas só importava ~1000)',
+      itens:['Causa: toda tarefa criada também grava um snapshot em historicoExecucao/{hoje} — um único documento no Firestore. Ao importar centenas/milhares de tarefas de uma vez em paralelo, todas competem para escrever nesse MESMO documento, e o Firestore derruba parte dessas escritas concorrentes (limite prático de throughput por documento) — o import parava silenciosamente na metade sem erro visível.',
+        'Import em massa agora pula esse snapshot (ele é só um histórico auxiliar de % concluído/quantidade por dia, não a tarefa em si).',
+        'Import agora também informa se alguma tarefa falhou, em vez de contar silenciosamente menos do que o esperado.']}
   ],
 
   render(containerId) {

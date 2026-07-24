@@ -2287,12 +2287,12 @@ const Planejamento = (() => {
           terminoPlanejadoBase:_pd(row[ci('terB')]),inicioDesafio:_pd(row[ci('iniD')]),
           terminoDesafio:_pd(row[ci('terD')]),obraId});
       }
-      let imp=0;
+      let imp=0,falhas=0;
       for(let i=0;i<regs.length;i+=L){
         Utils.mostrarLoading(`Importando ${Math.min(i+L,regs.length)}/${regs.length}...`);
-        await Promise.all(regs.slice(i,i+L).map(d=>Database.criar(obraId,COL,d).then(()=>imp++).catch(console.error)));
+        await Promise.all(regs.slice(i,i+L).map(d=>Database.criar(obraId,COL,d,null,true).then(()=>imp++).catch(e=>{falhas++;console.error(e);})));
       }
-      Utils.toast(`✅ ${imp} tarefas importadas!`,'sucesso');await carregar();
+      Utils.toast(falhas?`⚠ ${imp} importadas, ${falhas} falharam — veja o console.`:`✅ ${imp} tarefas importadas!`,falhas?'alerta':'sucesso');await carregar();
     }catch(e){console.error(e);Utils.toast('Erro: '+e.message,'erro');}finally{Utils.esconderLoading();}
   }
 

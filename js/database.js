@@ -139,7 +139,7 @@ const Database = (() => {
   }
 
   // Genérica: criar documento
-  async function criar(obraId, subcollection, data, customId = null) {
+  async function criar(obraId, subcollection, data, customId = null, skipSnapshot = false) {
     _addMeta(data);
     data.obraId = obraId;
 
@@ -151,7 +151,11 @@ const Database = (() => {
       const ref = await _obraSubRef(obraId, subcollection).add(data);
       novoId = ref.id;
     }
-    if (subcollection === 'tarefas') _registrarSnapshotExecucao(obraId, novoId, data);
+    // skipSnapshot: usado por imports em massa (centenas/milhares de tarefas de uma vez).
+    // Cada chamada normal também grava em historicoExecucao/{hoje}, um único documento —
+    // com muitas gravações concorrentes nesse mesmo doc, o Firestore enfileira/derruba
+    // parte delas (limite prático de escrita por documento), travando o import na metade.
+    if (subcollection === 'tarefas' && !skipSnapshot) _registrarSnapshotExecucao(obraId, novoId, data);
     return novoId;
   }
 
