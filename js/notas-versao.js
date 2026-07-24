@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.57.6',
+  versaoAtual: 'V2.57.7',
 
   versoes: [
     {
@@ -4955,9 +4955,12 @@ const NotasVersao = {
         'Exportar agora grava uma coluna "Nível" explícita, sempre fiel à árvore atual.',
         'Importar agora prioriza essa coluna "Nível" quando presente — Código/indentação viram apenas fallback para planilhas externas que não tenham essa coluna.',
         'Recomendado: para editar e reimportar sem perder a estrutura, sempre exporte deste sistema primeiro (a coluna Nível vai junto) em vez de reaproveitar uma planilha antiga sem essa coluna.']},
-    {versao:'V2.57.6',status:'aberta',data:'2026-07-24',tipo:'correcao',
+    {versao:'V2.57.6',status:'fechada',data:'2026-07-24',tipo:'correcao',
       titulo:'Planejamento: revertida a troca de quebra-de-linha por scroll horizontal na barra de ferramentas — espremia o seletor Atual/Linha de Base/Desafio em telas estreitas',
-      itens:['O fix da V2.57.4 (nowrap+scroll horizontal) evitava a 2ª linha, mas em telas mais estreitas forçava o grupo de botões "Atual/Linha de Base/Desafio" a encolher e sobrepor o próprio texto. Voltou a quebrar linha (flex-wrap), que é só cosmético e não causa esse problema visual.']}
+      itens:['O fix da V2.57.4 (nowrap+scroll horizontal) evitava a 2ª linha, mas em telas mais estreitas forçava o grupo de botões "Atual/Linha de Base/Desafio" a encolher e sobrepor o próprio texto. Voltou a quebrar linha (flex-wrap), que é só cosmético e não causa esse problema visual.']},
+    {versao:'V2.57.7',status:'aberta',data:'2026-07-24',tipo:'melhoria',
+      titulo:'Planejamento: barra de ferramentas cabe numa linha só — Importar/Exportar/Corrigir Ordens/PNG/Vínculos agrupados em um menu "⚙ Ferramentas"',
+      itens:['Reduz de 12 para 8 elementos na barra, cabendo numa linha só na maioria das telas sem quebrar nem espremer o seletor Atual/Linha de Base/Desafio.']}
   ],
 
   render(containerId) {

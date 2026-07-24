@@ -429,14 +429,10 @@ const Planejamento = (() => {
           <span style="color:#333;margin:0 4px;">|</span>
           ${['dia','semana','mes','trimestre','ano'].map(z=>`<button class="btn btn-sm ${zoomGantt===z?'btn-primario':'btn-secundario'}" onclick="Planejamento.setZoom('${z}')" style="font-size:.7rem;padding:2px 8px;">${z.charAt(0).toUpperCase()+z.slice(1)}</button>`).join('')}
           <span style="color:#333;margin:0 4px;">|</span>
-          <label class="btn btn-secundario btn-sm" style="cursor:pointer;font-size:.72rem;">📥 Importar<input type="file" accept=".xlsx,.xls" style="display:none" onchange="Planejamento.importarExcel(event)"></label>
-          <button class="btn btn-secundario btn-sm" onclick="Planejamento.exportar()" style="font-size:.72rem;">📤 Exportar</button>
-          <button class="btn btn-secundario btn-sm" onclick="Planejamento.corrigirOrdensDuplicadas()" style="font-size:.72rem;" title="Corrige tarefas com número de ordem duplicado (causa de mudanças de posição sozinhas)">🔧 Corrigir Ordens</button>
-          <button class="btn btn-secundario btn-sm" onclick="Planejamento.exportarPNG()" style="font-size:.72rem;">🖼 PNG</button>
+          <button class="btn btn-secundario btn-sm" onclick="Planejamento._toggleMenuFerramentas()" style="font-size:.72rem;">⚙ Ferramentas</button>
           <button class="btn btn-secundario btn-sm" onclick="Planejamento.toggleGantt()" id="btn-tg" style="font-size:.72rem;">${ganttVisible?'◀ Esconder Gantt':'▶ Mostrar Gantt'}</button>
           ${colsHidden.size?`<button class="btn btn-secundario btn-sm" onclick="Planejamento.showColsMenu()" style="font-size:.72rem;">＋ Colunas (${colsHidden.size})</button>`:''}
           <span style="color:#333;margin:0 4px;">|</span>
-          <button class="btn btn-secundario btn-sm" onclick="Planejamento.abrirVinculosView()" style="font-size:.72rem;">🔗 Vínculos com Levantamento</button>
           <button class="btn ${modoView==='arvore'?'btn-primario':'btn-secundario'} btn-sm" onclick="Planejamento.toggleArvoreEditor()" style="font-size:.72rem;">🌳 Editor de Estrutura</button>
           <button class="btn btn-primario btn-sm" onclick="Planejamento.inserirTarefa()" style="font-size:.72rem;">＋ Tarefa</button>
         </div>
@@ -2022,6 +2018,20 @@ const Planejamento = (() => {
   function _showCol(id){colsHidden.delete(id);const p=document.getElementById('sc-pop');if(p)p.remove();_render();}
   function _showAll(){colsHidden.clear();const p=document.getElementById('sc-pop');if(p)p.remove();_render();}
 
+  function _toggleMenuFerramentas(){
+    let pop=document.getElementById('ft-pop');if(pop){pop.remove();return;}
+    pop=document.createElement('div');pop.id='ft-pop';
+    pop.style.cssText='position:fixed;top:90px;right:20px;background:#1a1a1a;border:1px solid #333;border-radius:8px;padding:8px;z-index:1000;min-width:170px;box-shadow:0 8px 32px rgba(0,0,0,.5);display:flex;flex-direction:column;gap:4px;';
+    pop.innerHTML=
+      '<label class="btn btn-secundario btn-sm" style="cursor:pointer;font-size:.75rem;display:block;text-align:left;">📥 Importar<input type="file" accept=".xlsx,.xls" style="display:none" onchange="Planejamento.importarExcel(event)"></label>'+
+      '<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.exportar()">📤 Exportar</button>'+
+      '<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.corrigirOrdensDuplicadas()" title="Corrige tarefas com número de ordem duplicado">🔧 Corrigir Ordens</button>'+
+      '<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.exportarPNG()">🖼 PNG</button>'+
+      '<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.abrirVinculosView()">🔗 Vínculos com Levantamento</button>';
+    document.body.appendChild(pop);
+    setTimeout(()=>document.addEventListener('click',function h(e){if(!pop.contains(e.target)&&!e.target.closest('[onclick*="_toggleMenuFerramentas"]')){pop.remove();document.removeEventListener('click',h);}},false),50);
+  }
+
   // ===================== DIVIDER =====================
   function _divStart(e){
     e.preventDefault();
@@ -3395,7 +3405,7 @@ const Planejamento = (() => {
 
   return{init,carregar,setZoom,setVersaoData,copiarDatasDeAtual,inserirTarefa,editarTarefa,salvarTarefa,excluirTarefa,
     selectIdx,toggleRecolher,recuarNivel,avancarNivel,
-    toggleGantt,hideCol,showColsMenu,_showCol,_showAll,
+    toggleGantt,hideCol,showColsMenu,_showCol,_showAll,_toggleMenuFerramentas,
     toggleArvoreEditor,_arvToggle,_arvExpandirTudo,_arvIniciarEdit,_arvCancelarEdit,_arvSalvarNome,
     _arvInserirAcima,_arvInserirAbaixo,_arvMudarNivel,
     _arvCriarFilho,_arvCriarRaiz,_arvDragStart,_arvDragOver,_arvDragEnd,_arvDrop,
