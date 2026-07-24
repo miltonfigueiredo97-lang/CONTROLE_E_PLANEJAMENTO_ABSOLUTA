@@ -2223,7 +2223,7 @@ const Planejamento = (() => {
       const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
       if(rows.length<2){Utils.toast('Planilha vazia.','alerta');return;}
       const hdrs=rows[0].map(h=>String(h||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' '));
-      const ci=n=>{const a={id:['id'],codigo:['codigo','code'],nome:['nome','name','tarefa'],duracao:['duracao','duration'],
+      const ci=n=>{const a={id:['id'],codigo:['codigo','code'],nivel:['nivel','nível','level'],nome:['nome','name','tarefa'],duracao:['duracao','duration'],
         inicio:['inicio','start','inicio planejado'],termino:['termino','finish','fim','termino planejado'],
         percEsp:['esperado','% esperado'],percConc:['concluido','% concluido','% complete'],
         pred:['predecessora','predecessor','prececessora'],pai:['tarefa pai','parent'],grupo:['grupo','group'],
@@ -2239,12 +2239,18 @@ const Planejamento = (() => {
       for(let r=1;r<rows.length;r++){
         const row=rows[r],nR=String(row[iN]||''),nm=nR.trim();if(!nm)continue;
         const cd=String(row[ci('codigo')]||'').trim();
-        // Nível: pelo código (1=0, 1.1=1, 1.1.1=2) OU pelo recuo de espaços
+        // Nível: prioriza a coluna "Nível" explícita (exportada por este sistema e sempre
+        // fiel à árvore atual). Código/indentação só entram como fallback para planilhas
+        // externas sem essa coluna — código fica desatualizado quando a árvore é
+        // reestruturada no Editor de Estrutura (agrupar/mover não recalcula o código),
+        // e usá-lo como prioridade era o que achatava a hierarquia num reimport.
+        const iNiv=ci('nivel');
+        const nivColuna=iNiv>=0?parseInt(row[iNiv]):NaN;
         const pts=(cd.match(/\./g)||[]).length;
         const nivelByCod=pts; // 0 pontos = nível 0, 1 ponto = nível 1, etc.
         const nivelBySpace=Math.floor((nR.length-nR.trimStart().length)/2);
-        const niv=cd?nivelByCod:nivelBySpace; // prioriza código se existir
-        const tipo=pts<=1&&cd?'grupo':'tarefa';
+        const niv=!isNaN(nivColuna)?nivColuna:(cd?nivelByCod:nivelBySpace);
+        const tipo=niv<=1&&cd?'grupo':'tarefa';
         regs.push({tipo,codigo:cd,nome:nm,nivel:niv,ordem:regs.length+1,
           inicioPlanejado:_pd(row[ci('inicio')]),terminoPlanejado:_pd(row[ci('termino')]),
           duracao:_pDur(row[ci('duracao')]),percentualEsperado:_pN(row[ci('percEsp')]),
@@ -2302,17 +2308,17 @@ const Planejamento = (() => {
   async function exportar(){
     try{Utils.mostrarLoading('Gerando...');
       if(typeof XLSX==='undefined')await _ls('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');
-      const H=['ID','Código','Nome','Duração','Início','Término','% Esperado','% Concluído',
+      const H=['ID','Código','Nível','Nome','Duração','Início','Término','% Esperado','% Concluído',
         'Prececessora','Tarefa Pai','Grupo','Local','Custo','Receita','Responsável',
         'Inicio Linha de Base','Termino Linha de Base','Inicio Desafio','Termino Desafio'];
       const sorted=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
-      const rows=sorted.map((t,i)=>[i+1,t.codigo||'','  '.repeat(t.nivel||0)+(t.nome||''),
+      const rows=sorted.map((t,i)=>[i+1,t.codigo||'',t.nivel||0,'  '.repeat(t.nivel||0)+(t.nome||''),
         t.duracao?t.duracao+'d':'',_fBR(t.inicioPlanejado),_fBR(t.terminoPlanejado),
         t.percentualEsperado||0,t.percentualConcluido||0,t.predecessora||'',t.tarefaPai||'',
         t.grupo||'',t.local||'',t.custo||0,t.receita||0,t.responsavel||'',
         _fBR(t.inicioPlanejadoBase),_fBR(t.terminoPlanejadoBase),_fBR(t.inicioDesafio),_fBR(t.terminoDesafio)]);
       const ws=XLSX.utils.aoa_to_sheet([H,...rows]);
-      ws['!cols']=[{wch:6},{wch:10},{wch:45},{wch:8},{wch:13},{wch:13},{wch:11},{wch:11},
+      ws['!cols']=[{wch:6},{wch:10},{wch:7},{wch:45},{wch:8},{wch:13},{wch:13},{wch:11},{wch:11},
         {wch:13},{wch:20},{wch:18},{wch:15},{wch:10},{wch:10},{wch:18},{wch:22},{wch:22},{wch:15},{wch:15}];
       const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Cronograma');
       const obra=Router.getObra();
