@@ -1575,12 +1575,28 @@ const Planejamento = (() => {
   }
   
   // Calcula datas baseado na predecessora (tipo MS Project)
+  // Aceita uma ou várias predecessoras separadas por ";" (ex: "7TI; 98II+10d") —
+  // nesse caso usa a mais restritiva (a que resulta na data mais tardia),
+  // que é a regra padrão de CPM/MS Project para múltiplas dependências.
   function _calcPredecessora(t, predStr, updates){
-    // Formato: "3TI" ou "1.2TI" ou "5" (default TI)
-    // TI = Término-Início (mais comum)
-    // II = Início-Início, TT = Término-Término, IT = Início-Término
-    const match=predStr.match(/^([\d.]+)\s*(TI|II|TT|IT)?\s*([+-]?\d+)?$/i);
-    if(!match)return;
+    const partes=String(predStr||'').split(';').map(s=>s.trim()).filter(Boolean);
+    if(!partes.length)return;
+    let melhorIni=null, melhorFim=null;
+    for(const parte of partes){
+      const r=_calcUmaPredecessora(t,parte);
+      if(!r)continue;
+      if(r.inicioPlanejado&&(!melhorIni||r.inicioPlanejado>melhorIni))melhorIni=r.inicioPlanejado;
+      if(r.terminoPlanejado&&(!melhorFim||r.terminoPlanejado>melhorFim))melhorFim=r.terminoPlanejado;
+    }
+    if(melhorIni)updates.inicioPlanejado=melhorIni;
+    if(melhorFim)updates.terminoPlanejado=melhorFim;
+  }
+
+  // Formato de cada predecessora individual: "3TI" ou "1.2TI" ou "5" (default TI)
+  // TI = Término-Início (mais comum) · II = Início-Início · TT = Término-Término · IT = Início-Término
+  function _calcUmaPredecessora(t, predStr){
+    const match=predStr.match(/^([\d.]+)\s*(TI|II|TT|IT)?\s*([+-]?\d+)?\s*d{0,2}$/i);
+    if(!match)return null;
     const codPred=match[1];
     const tipo=(match[2]||'TI').toUpperCase();
     const defasagem=parseInt(match[3])||0;
@@ -1591,7 +1607,7 @@ const Planejamento = (() => {
     const pred=isNaN(numBusca)
       ? tarefas.find(x=>x.codigo===codPred)    // fallback: busca por código
       : tarefas.find(x=>x._numLinha===numBusca);
-    if(!pred)return;
+    if(!pred)return null;
     
     let dataRef;
     if(tipo==='TI') dataRef=pred.terminoPlanejado; // Após término da pred
@@ -1599,26 +1615,26 @@ const Planejamento = (() => {
     else if(tipo==='TT') dataRef=pred.terminoPlanejado; // Término junto com término da pred
     else if(tipo==='IT') dataRef=pred.inicioPlanejado; // Término junto com início da pred
     
-    if(!dataRef)return;
+    if(!dataRef)return null;
     
     const dt=new Date(dataRef);
     dt.setDate(dt.getDate()+defasagem+(tipo==='TI'?1:0)); // TI: começa no dia seguinte
     
+    const r={};
     if(tipo==='TI'||tipo==='II'){
-      updates.inicioPlanejado=dt.toISOString().split('T')[0];
-      // Se tem duração, calcula fim
+      r.inicioPlanejado=dt.toISOString().split('T')[0];
       if(t.duracao){
         const fim=new Date(dt);fim.setDate(fim.getDate()+t.duracao);
-        updates.terminoPlanejado=fim.toISOString().split('T')[0];
+        r.terminoPlanejado=fim.toISOString().split('T')[0];
       }
     } else {
-      updates.terminoPlanejado=dt.toISOString().split('T')[0];
-      // Se tem duração, calcula início
+      r.terminoPlanejado=dt.toISOString().split('T')[0];
       if(t.duracao){
         const ini=new Date(dt);ini.setDate(ini.getDate()-t.duracao);
-        updates.inicioPlanejado=ini.toISOString().split('T')[0];
+        r.inicioPlanejado=ini.toISOString().split('T')[0];
       }
     }
+    return r;
   }
 
   // ===================== SYNC SCROLL =====================
@@ -2696,11 +2712,14 @@ const Planejamento = (() => {
     const atualizacoes=[];
     for(const t of tarefas){
       if(!t.predecessora)continue;
-      // Formato: "3TI+2" ou "3" ou "3TI"
-      const novo=t.predecessora.replace(/^(\d+)/,(match,num)=>{
-        const n=parseInt(num);
-        return lookup.has(n)?String(lookup.get(n)):match;
+      // Formato: "3TI+2" ou "3" ou "3TI" — pode ter várias, separadas por ";" (ex: "7TI; 98II+10d")
+      const partes=t.predecessora.split(';').map(p=>{
+        return p.replace(/^\s*(\d+)/,(match,num)=>{
+          const n=parseInt(num);
+          return lookup.has(n)?match.replace(String(n),String(lookup.get(n))):match;
+        });
       });
+      const novo=partes.join(';');
       if(novo!==t.predecessora){
         t.predecessora=novo;
         atualizacoes.push({id:t.id,predecessora:novo});

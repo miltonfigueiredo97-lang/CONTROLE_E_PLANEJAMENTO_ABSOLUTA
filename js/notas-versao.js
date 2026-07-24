@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.57.9',
+  versaoAtual: 'V2.57.10',
 
   versoes: [
     {
@@ -4967,9 +4967,16 @@ const NotasVersao = {
         'Arrastar qualquer linha selecionada move o grupo inteiro junto (cada uma com seus próprios filhos) para o novo pai/posição, de uma vez só — sem precisar arrastar uma de cada vez.',
         'Se a seleção incluir um pai e algum filho dele junto, o filho não é movido em duplicidade — só o bloco do pai (que já leva o filho junto).',
         'Mesma proteção da V2.57.4 se aplica: soltar fora de uma linha (mover tudo para a raiz) pede confirmação.']},
-    {versao:'V2.57.9',status:'aberta',data:'2026-07-24',tipo:'correcao',
+    {versao:'V2.57.9',status:'fechada',data:'2026-07-24',tipo:'correcao',
       titulo:'Editor de Estrutura: clicar numa linha para selecioná-la pulava a tela pro topo',
-      itens:['Selecionar não preservava a posição do scroll. Corrigido.']}
+      itens:['Selecionar não preservava a posição do scroll. Corrigido.']},
+    {versao:'V2.57.10',status:'aberta',data:'2026-07-24',tipo:'correcao',
+      titulo:'Predecessoras: suporte a múltiplas predecessoras (ex: "7TI; 98II+10d") e a sufixo de dias no atraso (ex: "+10d") — formato usado pelo cronograma do CSO',
+      itens:['Causa: o cálculo automático de datas por predecessora só entendia UMA predecessora por tarefa (regex ancorada do início ao fim da string) e não tolerava a letra "d" no atraso. Qualquer tarefa com mais de uma predecessora (separadas por ";") ou com atraso escrito como "+10d" em vez de "+10" tinha o cálculo de data silenciosamente ignorado.',
+        'Agora aceita múltiplas predecessoras separadas por ";" e usa a mais restritiva (data mais tardia) entre elas — mesma regra do MS Project/CPM.',
+        'Aceita sufixo "d"/"dd" no atraso.',
+        'Remapeamento de predecessoras ao reordenar tarefas (_remapearPredecessoras) também corrigido para atualizar TODAS as predecessoras de uma tarefa, não só a primeira.',
+        'Relevante para importar cronogramas vindos do CSO: cerca de 60% das tarefas de um cronograma típico usam múltiplas predecessoras.']}
   ],
 
   render(containerId) {
