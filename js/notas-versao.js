@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.57.0',
+  versaoAtual: 'V2.57.1',
 
   versoes: [
     {
@@ -4922,12 +4922,17 @@ const NotasVersao = {
         '% de execução da vista pelo peso das 5 etapas; cada marcação gera lançamento automático no Relatório Diário.',
         'Vínculo com o Planejamento: métricas de Metro Linear, Quantidade de Chumbadores e Área (m²) de Solo Grampeado.',
         'Dashboard: painel "Contenção (Solo Grampeado)" com o mapa de cada vista na proporção real da imagem (larga/baixa nas elevações compridas).']},
-    {versao:'V2.57.0',status:'aberta',data:'2026-07-23',tipo:'melhoria',
+    {versao:'V2.57.0',status:'fechada',data:'2026-07-23',tipo:'melhoria',
       titulo:'Dashboard: reordenado (Atividades → Suprimentos → Contenção/Fundação/Estrutura → Curva S → Resumo por Apartamento), PPC Semanal/Motivos de Atraso removidos, Suprimentos e Fundação/Estrutura com dados reais',
       itens:['Nova ordem pedida pelo Milton: Atividades, Suprimentos, Contenção, Fundação e Estrutura, Curva S, Resumo por Apartamento — o resto (PPC Semanal, Motivos de Atraso Semanais) foi removido da tela.',
         'Suprimentos: card deixou de ser texto fixo — mostra as Próximas Atividades (ainda não iniciadas no Planejamento) cujo pipeline de Suprimentos ainda não foi tocado (todas as 5 etapas em "não iniciado", ou nem tem doc ainda). Selo vermelho "Sem registro" vs laranja "Não iniciado".',
         'Fundação e Estrutura: o gráfico comparava só 2 totais (Fundação x Estrutura) — trocado por Previsto x Executado (m³) POR ANDAR, na mesma ordem de andar do Controle de Concreto (CC.ordenarAndares, respeita ordem customizada se existir), com tooltip mostrando a data do último lançamento daquele andar.',
-        'Contenção e Fundação/Estrutura trocaram de posição (Contenção primeiro, como pedido).']}
+        'Contenção e Fundação/Estrutura trocaram de posição (Contenção primeiro, como pedido).']},
+    {versao:'V2.57.1',status:'aberta',data:'2026-07-24',tipo:'correcao',
+      titulo:'Produção: % Concl. de tarefa-pai usava campo cru, não o cálculo ponderado por duração',
+      itens:['Coluna "% Concl." de tarefas-pai (grupos) na tela de Produção lia t.percentualConcluido direto do Firestore, que só é sincronizado quando alguém edita % pelo próprio Planejamento — podendo ficar dessincronizado do valor real quando o % do pai muda por outros caminhos.',
+        'Corrigido para usar fam.percCalculado(t) — mesma convenção já usada por Dashboard/obras.js e Diário de Obra, ponderando por duração dos filhos.',
+        'Sem impacto em tarefas-folha (continuam lendo percentualConcluido direto, que é o valor real editável).']}
   ],
 
   render(containerId) {

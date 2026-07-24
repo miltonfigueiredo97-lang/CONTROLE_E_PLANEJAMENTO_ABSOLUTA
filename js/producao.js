@@ -216,7 +216,7 @@ const Producao = (() => {
         : `<span onclick="Producao.editarQtd('${t.id}')" style="cursor:pointer;color:#999;text-decoration:underline dotted;">+ digitar quantidade</span>`;
     }
 
-    const percCel = _fPerc(t.percentualConcluido || 0);
+    const percCel = _fPerc(ehPai ? fam.percCalculado(t) : (t.percentualConcluido || 0));
 
     const qtdProdCel = calc && !calc.multiUnidade ? `${_fNum(calc.qtdProduzida)} ${calc.unidade || ''}` : '—';
     const diasCel = calc && !calc.multiUnidade ? `${calc.dias}${calc.estimado ? ' <span title="Sem histórico diário para esta tarefa — dias estimados a partir do Início Planejado, não da execução real." style="color:#c99;">≈</span>' : ''}` : '—';
