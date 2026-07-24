@@ -2307,8 +2307,65 @@ const Planejamento = (() => {
           return op.then(()=>imp++).catch(e=>{falhas++;console.error('Falha ao importar:',d.nome,e);});
         }));
       }
+      // Órfãs: tarefas que JÁ EXISTIAM (com Código) e não vieram nesta planilha —
+      // não apaga sozinho (pode ser intencional manter, ou pode ter sido removida
+      // de propósito na revisão do CSO). Mostra pra decisão manual.
+      const codigosDaPlanilha=new Set(regs.map(r=>r.codigo).filter(Boolean));
+      const orfas=tarefas.filter(t=>t.codigo&&!codigosDaPlanilha.has(t.codigo));
+
       Utils.toast(falhas?`⚠ ${imp} ok, ${falhas} falharam — importe de novo pra completar (retoma de onde parou).`:`✅ ${imp} tarefas importadas/atualizadas!`,falhas?'alerta':'sucesso');await carregar();
+      if(orfas.length)_mostrarOrfasImport(orfas);
     }catch(e){console.error(e);Utils.toast('Erro: '+e.message,'erro');}finally{Utils.esconderLoading();}
+  }
+
+  // Painel de revisão pós-import: lista tarefas que existiam antes e não vieram
+  // na planilha importada, com checkbox pra escolher quais excluir. Nada é
+  // apagado sozinho — decisão manual, uma a uma ou em bloco.
+  let _orfasAtuais=[];
+  function _mostrarOrfasImport(orfas){
+    _orfasAtuais=orfas;
+    let modal=document.getElementById('orfas-modal');
+    if(modal)modal.remove();
+    modal=document.createElement('div');
+    modal.id='orfas-modal';
+    modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:2000;display:flex;align-items:center;justify-content:center;';
+    modal.innerHTML=`
+      <div style="background:#1a1a1a;border:1px solid #333;border-radius:10px;padding:20px;width:560px;max-width:95vw;max-height:80vh;display:flex;flex-direction:column;gap:10px;">
+        <div style="font-weight:700;color:var(--cor-primaria);">⚠ ${orfas.length} tarefa(s) não vieram nesta planilha</div>
+        <div style="font-size:.78rem;color:#888;">Já existiam na obra e têm Código, mas esse Código não apareceu no arquivo importado — pode ser algo removido de propósito na revisão, ou apenas um código que mudou. Marque as que quer excluir; o resto fica como está.</div>
+        <div style="display:flex;gap:8px;font-size:.75rem;">
+          <span style="cursor:pointer;color:var(--cor-primaria);text-decoration:underline;" onclick="Planejamento._orfasMarcarTodas(true)">Marcar todas</span>
+          <span style="cursor:pointer;color:#888;text-decoration:underline;" onclick="Planejamento._orfasMarcarTodas(false)">Desmarcar todas</span>
+        </div>
+        <div id="orfas-lista" style="flex:1;overflow-y:auto;border:1px solid #222;border-radius:7px;padding:6px;">
+          ${orfas.map(t=>`<label style="display:flex;align-items:center;gap:8px;padding:5px 4px;font-size:.8rem;border-bottom:1px solid #222;cursor:pointer;">
+            <input type="checkbox" data-orfa-id="${t.id}">
+            <span style="color:#666;font-family:var(--font-mono);font-size:.68rem;">${t.codigo||''}</span>
+            <span style="flex:1;color:#ddd;">${_esc(t.nome||'')}</span>
+          </label>`).join('')}
+        </div>
+        <div style="display:flex;gap:8px;justify-content:flex-end;">
+          <button class="btn btn-secundario btn-sm" onclick="document.getElementById('orfas-modal').remove()">Manter tudo / Fechar</button>
+          <button class="btn btn-primario btn-sm" style="background:#c0392b;border-color:#c0392b;" onclick="Planejamento._orfasExcluirMarcadas()">🗑 Excluir marcadas</button>
+        </div>
+      </div>`;
+    document.body.appendChild(modal);
+  }
+  function _orfasMarcarTodas(v){
+    document.querySelectorAll('#orfas-lista input[data-orfa-id]').forEach(cb=>cb.checked=v);
+  }
+  async function _orfasExcluirMarcadas(){
+    const ids=[...document.querySelectorAll('#orfas-lista input[data-orfa-id]:checked')].map(cb=>cb.dataset.orfaId);
+    if(!ids.length){Utils.toast('Nada marcado.','alerta');return;}
+    if(!confirm(`Excluir ${ids.length} tarefa(s)? Não pode ser desfeito.`))return;
+    Utils.mostrarLoading('Excluindo...');
+    try{
+      await Promise.all(ids.map(id=>Database.deletar(obraId,COL,id).catch(console.error)));
+      const modal=document.getElementById('orfas-modal');if(modal)modal.remove();
+      Utils.toast(`${ids.length} tarefa(s) excluída(s).`,'sucesso');
+      await carregar();
+    }catch(e){console.error(e);Utils.toast('Erro ao excluir.','erro');}
+    finally{Utils.esconderLoading();}
   }
 
   // ===================== REPARO: ORDENS DUPLICADAS =====================
@@ -3520,7 +3577,7 @@ const Planejamento = (() => {
     _rowDragStart,toggleSel,_limparSelecao,_moverSel,_bulkNivel,_bulkDuplicar,_bulkExcluir,
     toggleStatusFiltro,_aplicarStatusFiltro,undo,
     onBusca,limparBusca,_buscaKey,
-    importarExcel,exportar,exportarPNG,corrigirOrdensDuplicadas,_gerarPNG,_predPopup,_predPreview,_predSalvar,
+    importarExcel,exportar,exportarPNG,corrigirOrdensDuplicadas,_orfasMarcarTodas,_orfasExcluirMarcadas,_gerarPNG,_predPopup,_predPreview,_predSalvar,
     abrirVinculosView,fecharVinculosView,abrirVincularTarefa,abrirVincularAqui,onVincTipoChange,
     onVincNavModulo,onVincNavModuloMetrica,onVincNavMetrica,onVincNavEntrar,onVincNavBreadcrumb,onVincNavVoltar,
     onBuscaEscolhaAlvoVinc,onEscolherAlvoVinc,onTrocarAlvoVinc,
