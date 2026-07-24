@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.57.3',
+  versaoAtual: 'V2.57.4',
 
   versoes: [
     {
@@ -4939,11 +4939,16 @@ const NotasVersao = {
         'inserirTarefa() agora calcula a ordem da tarefa nova como um valor estritamente entre a tarefa selecionada e a próxima (mesma técnica já usada no Editor de Estrutura), garantindo que nunca colide.',
         'salvarTarefa() ganhou um guard anti-colisão: se o valor de "Ordem" (calculado ou digitado manualmente no formulário) já pertencer a outra tarefa, é ajustado em micro-incremento antes de salvar.',
         'Novo botão "🔧 Corrigir Ordens" na barra do Planejamento: renumera e persiste a ordem de TODAS as tarefas da obra em sequência única, corrigindo qualquer duplicata que já exista em produção (causada pelo bug antes desta versão). Preserva a ordem visual atual — só remove os empates internos. Recomendado rodar uma vez em cada obra.']},
-    {versao:'V2.57.3',status:'aberta',data:'2026-07-24',tipo:'correcao',
+    {versao:'V2.57.3',status:'fechada',data:'2026-07-24',tipo:'correcao',
       titulo:'Editor de Estrutura: corrigido o segundo bug que quebrava a estrutura — inserir tarefa (irmã acima/abaixo ou filha) desalinhava a ordem de TODAS as outras tarefas no Firestore',
       itens:['Causa raiz #2: _arvInserirAcima, _arvInserirAbaixo e _arvCriarFilho renumeravam a ordem de TODAS as tarefas localmente (para ficar 1,2,3... "bonito" na tela), mas só salvavam essa renumeração da tarefa recém-criada no Firestore. Todas as outras tarefas ficavam com a ordem antiga, desatualizada, gravada no banco — invisível na sessão atual, mas exposta assim que a tela era recarregada (ou lida pela outra conta Claude/sessão), reaparecendo em posições e níveis diferentes do esperado.',
         'As 3 funções agora só inserem a tarefa nova com uma ordem fracionária única entre as vizinhas (sem tocar na ordem das demais) — elimina de vez a divergência entre o que a tela mostra e o que está gravado.',
-        'Se a Estrutura de alguma obra específica ainda estiver com posições/níveis errados (resíduo do bug antes desta versão), use o botão "🔧 Corrigir Ordens" (Gantt → barra superior) uma vez para renumerar e persistir tudo corretamente.']}
+        'Se a Estrutura de alguma obra específica ainda estiver com posições/níveis errados (resíduo do bug antes desta versão), use o botão "🔧 Corrigir Ordens" (Gantt → barra superior) uma vez para renumerar e persistir tudo corretamente.']},
+    {versao:'V2.57.4',status:'aberta',data:'2026-07-24',tipo:'correcao',
+      titulo:'Editor de Estrutura: corrigido o terceiro bug — soltar o card fora de uma linha (espaço vazio da árvore) movia o galho inteiro para a raiz sem querer, zerando o nível',
+      itens:['Causa raiz #3: o container da árvore tem seu próprio ondrop escutando "mover para raiz" (targetId=null) — usado para permitir soltar após a última linha. Como o alvo de drop no navegador é determinado pela posição exata do cursor, soltar perto da borda de uma linha (ou num espaço entre linhas) cai no container em vez da linha, disparando "mover para raiz" sem intenção. Isso zera o nível da tarefa arrastada e desloca todo o galho de filhos junto, na mesma proporção — exatamente o padrão de "vários níveis 0 fantasmas com estrutura interna intacta" visto pelo Milton.',
+        'Mover para raiz via drop no espaço vazio agora exige confirmação explícita antes de aplicar. Mover para raiz de propósito continua disponível e direto pelo botão ↗ "Mover para" → Raiz.',
+        'Barra de ferramentas do Planejamento: os botões não quebram mais para uma segunda linha (rolagem horizontal em vez de quebra).']}
   ],
 
   render(containerId) {

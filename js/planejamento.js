@@ -421,7 +421,7 @@ const Planejamento = (() => {
           <h2 style="margin:0;font-size:1.1rem;color:var(--cor-primaria);">📊 Planejamento</h2>
           <span style="font-size:.75rem;color:#555;">${filtradas.length} tarefas</span>
         </div>
-        <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center;">
+        <div style="display:flex;gap:5px;flex-wrap:nowrap;align-items:center;overflow-x:auto;max-width:100%;padding-bottom:2px;">
           <span style="display:inline-flex;border:1.5px solid #333;border-radius:8px;overflow:hidden;font-size:.7rem;font-weight:700;" title="Qual versão de datas ver/editar nas colunas Início e Término">
             ${['atual','base','desafio'].map(v=>`<button onclick="Planejamento.setVersaoData('${v}')" style="border:none;padding:4px 10px;cursor:pointer;${_versaoData===v?'background:var(--cor-primaria);color:#000;':'background:#111;color:#888;'}">${VERSAO_LABEL[v]}</button>`).join('')}
           </span>
@@ -3236,6 +3236,16 @@ const Planejamento = (() => {
 
   async function _arvMoverTarefa(dragId,targetId,pos){
     if(!dragId)return;
+    // Soltar em qualquer espaço vazio da árvore (fora de uma linha) cai aqui
+    // com targetId=null → "mover para raiz". Isso zera o nível do galho
+    // inteiro (dragNivel vira 0) e é fácil de disparar sem querer arrastando
+    // perto da borda de uma linha. Por ser destrutivo e difícil de notar na
+    // hora, exige confirmação — mover para raiz de propósito continua
+    // disponível pelo botão ↗ "Mover para".
+    if(!targetId){
+      const t=tarefas.find(x=>x.id===dragId);
+      if(!confirm(`Mover "${t?.nome||'esta tarefa'}" (e seus filhos) para a RAIZ da árvore, nível 0? Isso costuma ser acidental — solte exatamente sobre outra linha se a intenção era reordenar.`))return;
+    }
 
     const sorted=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
     const dragIdx=sorted.findIndex(t=>t.id===dragId);
