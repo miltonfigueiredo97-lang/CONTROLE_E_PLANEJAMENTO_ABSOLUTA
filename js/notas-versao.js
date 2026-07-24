@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.57.2',
+  versaoAtual: 'V2.57.3',
 
   versoes: [
     {
@@ -4933,12 +4933,17 @@ const NotasVersao = {
       itens:['Coluna "% Concl." de tarefas-pai (grupos) na tela de Produção lia t.percentualConcluido direto do Firestore, que só é sincronizado quando alguém edita % pelo próprio Planejamento — podendo ficar dessincronizado do valor real quando o % do pai muda por outros caminhos.',
         'Corrigido para usar fam.percCalculado(t) — mesma convenção já usada por Dashboard/obras.js e Diário de Obra, ponderando por duração dos filhos.',
         'Sem impacto em tarefas-folha (continuam lendo percentualConcluido direto, que é o valor real editável).']},
-    {versao:'V2.57.2',status:'aberta',data:'2026-07-24',tipo:'correcao',
+    {versao:'V2.57.2',status:'fechada',data:'2026-07-24',tipo:'correcao',
       titulo:'Planejamento: corrigido bug crítico que fazia tarefas mudarem de posição sozinhas ao salvar/recarregar',
       itens:['Causa raiz: o botão "+ Tarefa" calculava a ordem da tarefa nova como sel.ordem+1 — que colide exatamente com a ordem da próxima tarefa já existente (lista normalizada em inteiros sequenciais). Esse empate era resolvido pelo Firestore por ID do documento, não pela ordem pretendida, e por isso a posição (e o numLinha, usado nas Predecessoras) mudava sozinha no reload seguinte — carregar() roda a cada Salvar/Excluir/Importar.',
         'inserirTarefa() agora calcula a ordem da tarefa nova como um valor estritamente entre a tarefa selecionada e a próxima (mesma técnica já usada no Editor de Estrutura), garantindo que nunca colide.',
         'salvarTarefa() ganhou um guard anti-colisão: se o valor de "Ordem" (calculado ou digitado manualmente no formulário) já pertencer a outra tarefa, é ajustado em micro-incremento antes de salvar.',
-        'Novo botão "🔧 Corrigir Ordens" na barra do Planejamento: renumera e persiste a ordem de TODAS as tarefas da obra em sequência única, corrigindo qualquer duplicata que já exista em produção (causada pelo bug antes desta versão). Preserva a ordem visual atual — só remove os empates internos. Recomendado rodar uma vez em cada obra.']}
+        'Novo botão "🔧 Corrigir Ordens" na barra do Planejamento: renumera e persiste a ordem de TODAS as tarefas da obra em sequência única, corrigindo qualquer duplicata que já exista em produção (causada pelo bug antes desta versão). Preserva a ordem visual atual — só remove os empates internos. Recomendado rodar uma vez em cada obra.']},
+    {versao:'V2.57.3',status:'aberta',data:'2026-07-24',tipo:'correcao',
+      titulo:'Editor de Estrutura: corrigido o segundo bug que quebrava a estrutura — inserir tarefa (irmã acima/abaixo ou filha) desalinhava a ordem de TODAS as outras tarefas no Firestore',
+      itens:['Causa raiz #2: _arvInserirAcima, _arvInserirAbaixo e _arvCriarFilho renumeravam a ordem de TODAS as tarefas localmente (para ficar 1,2,3... "bonito" na tela), mas só salvavam essa renumeração da tarefa recém-criada no Firestore. Todas as outras tarefas ficavam com a ordem antiga, desatualizada, gravada no banco — invisível na sessão atual, mas exposta assim que a tela era recarregada (ou lida pela outra conta Claude/sessão), reaparecendo em posições e níveis diferentes do esperado.',
+        'As 3 funções agora só inserem a tarefa nova com uma ordem fracionária única entre as vizinhas (sem tocar na ordem das demais) — elimina de vez a divergência entre o que a tela mostra e o que está gravado.',
+        'Se a Estrutura de alguma obra específica ainda estiver com posições/níveis errados (resíduo do bug antes desta versão), use o botão "🔧 Corrigir Ordens" (Gantt → barra superior) uma vez para renumerar e persistir tudo corretamente.']}
   ],
 
   render(containerId) {

@@ -3048,13 +3048,15 @@ const Planejamento = (() => {
     try{
       const id=await Database.criar(obraId,COL,nova);
       nova.id=id;tarefas.push(nova);
-      const rs=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
-      rs.forEach((t,i)=>{t.ordem=i+1;});tarefas=rs;
+      // NÃO renormalizar ordem de todas as tarefas aqui — a ordem fracionária
+      // já posiciona a nova tarefa corretamente entre as vizinhas. Renormalizar
+      // localmente sem persistir no Firestore (como era antes) deixava as
+      // outras tarefas com 'ordem' desatualizada lá, causando desalinhamento
+      // no reload seguinte. Use "🔧 Corrigir Ordens" se quiser números limpos.
       _buildFiltradas();_arvEditId=id;_render();
     }catch(e){console.error(e);Utils.toast('Erro.','erro');}
     finally{Utils.esconderLoading();}
   }
-
   // Insere irmão imediatamente ABAIXO da tarefa (depois do bloco de filhos)
   async function _arvInserirAbaixo(refId){
     const sorted=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
@@ -3074,8 +3076,7 @@ const Planejamento = (() => {
     try{
       const id=await Database.criar(obraId,COL,nova);
       nova.id=id;tarefas.push(nova);
-      const rs=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
-      rs.forEach((t,i)=>{t.ordem=i+1;});tarefas=rs;
+      // Idem _arvInserirAcima: sem renormalização local não-persistida.
       _buildFiltradas();_arvEditId=id;_render();
     }catch(e){console.error(e);Utils.toast('Erro.','erro');}
     finally{Utils.esconderLoading();}
@@ -3136,10 +3137,7 @@ const Planejamento = (() => {
       novaTarefa.id=id;
       tarefas.push(novaTarefa);
       _arvAbertos.add(paiId); // expande o pai
-      // Renormaliza ordens
-      const rs=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
-      rs.forEach((t,i)=>{t.ordem=i+1;});
-      tarefas=rs;
+      // Sem renormalização local não-persistida — ver nota em _arvInserirAcima.
       _buildFiltradas();_render();
       // Inicia edição do nome imediatamente
       _arvEditId=id;_render();
