@@ -2259,8 +2259,8 @@ const Planejamento = (() => {
         for(const al of(a[n]||[])){const i=hdrs.indexOf(al);if(i>=0)return i;}return-1;};
       const iN=ci('nome');if(iN<0){Utils.toast('Coluna Nome não encontrada.','erro');return;}
       Utils.mostrarLoading('Limpando...');
-      const L=200;
-      for(let i=0;i<tarefas.length;i+=L)await Promise.all(tarefas.slice(i,i+L).map(t=>Database.deletar(obraId,COL,t.id).catch(()=>{})));
+      const LDEL=200;
+      for(let i=0;i<tarefas.length;i+=LDEL)await Promise.all(tarefas.slice(i,i+LDEL).map(t=>Database.deletar(obraId,COL,t.id).catch(()=>{})));
       const regs=[];
       for(let r=1;r<rows.length;r++){
         const row=rows[r],nR=String(row[iN]||''),nm=nR.trim();if(!nm)continue;
@@ -2287,10 +2287,19 @@ const Planejamento = (() => {
           terminoPlanejadoBase:_pd(row[ci('terB')]),inicioDesafio:_pd(row[ci('iniD')]),
           terminoDesafio:_pd(row[ci('terD')]),obraId});
       }
+      // Lote pequeno (20) e sequencial + timeout por escrita: lotes grandes (200) em
+      // paralelo já travaram silenciosamente na mesma linha em planilhas grandes —
+      // sinal de que o SDK do Firestore engasga com muita escrita simultânea
+      // (agravado pelo cache offline habilitado). Timeout garante que uma escrita
+      // travada vira FALHA reportada, em vez de travar o import inteiro pra sempre.
+      const L=20, TIMEOUT_MS=15000;
+      const comTimeout=p=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),TIMEOUT_MS))]);
       let imp=0,falhas=0;
       for(let i=0;i<regs.length;i+=L){
         Utils.mostrarLoading(`Importando ${Math.min(i+L,regs.length)}/${regs.length}...`);
-        await Promise.all(regs.slice(i,i+L).map(d=>Database.criar(obraId,COL,d,null,true).then(()=>imp++).catch(e=>{falhas++;console.error(e);})));
+        await Promise.all(regs.slice(i,i+L).map(d=>
+          comTimeout(Database.criar(obraId,COL,d,null,true)).then(()=>imp++).catch(e=>{falhas++;console.error('Falha ao importar:',d.nome,e);})
+        ));
       }
       Utils.toast(falhas?`⚠ ${imp} importadas, ${falhas} falharam — veja o console.`:`✅ ${imp} tarefas importadas!`,falhas?'alerta':'sucesso');await carregar();
     }catch(e){console.error(e);Utils.toast('Erro: '+e.message,'erro');}finally{Utils.esconderLoading();}

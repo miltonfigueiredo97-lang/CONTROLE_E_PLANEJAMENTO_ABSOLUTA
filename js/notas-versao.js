@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.57.11',
+  versaoAtual: 'V2.57.12',
 
   versoes: [
     {
@@ -4977,11 +4977,15 @@ const NotasVersao = {
         'Aceita sufixo "d"/"dd" no atraso.',
         'Remapeamento de predecessoras ao reordenar tarefas (_remapearPredecessoras) também corrigido para atualizar TODAS as predecessoras de uma tarefa, não só a primeira.',
         'Relevante para importar cronogramas vindos do CSO: cerca de 60% das tarefas de um cronograma típico usam múltiplas predecessoras.']},
-    {versao:'V2.57.11',status:'aberta',data:'2026-07-24',tipo:'correcao',
+    {versao:'V2.57.11',status:'fechada',data:'2026-07-24',tipo:'correcao',
       titulo:'Importar Excel: travava/parava na metade em planilhas grandes (ex: 1755 tarefas só importava ~1000)',
       itens:['Causa: toda tarefa criada também grava um snapshot em historicoExecucao/{hoje} — um único documento no Firestore. Ao importar centenas/milhares de tarefas de uma vez em paralelo, todas competem para escrever nesse MESMO documento, e o Firestore derruba parte dessas escritas concorrentes (limite prático de throughput por documento) — o import parava silenciosamente na metade sem erro visível.',
         'Import em massa agora pula esse snapshot (ele é só um histórico auxiliar de % concluído/quantidade por dia, não a tarefa em si).',
-        'Import agora também informa se alguma tarefa falhou, em vez de contar silenciosamente menos do que o esperado.']}
+        'Import agora também informa se alguma tarefa falhou, em vez de contar silenciosamente menos do que o esperado.']},
+    {versao:'V2.57.12',status:'aberta',data:'2026-07-24',tipo:'correcao',
+      titulo:'Importar Excel: mesmo após a V2.57.11, planilha de 1755 linhas ainda travava sempre exatamente na linha 1000',
+      itens:['O corte reprodutível sempre na mesma linha (não aleatório) indicava o SDK do Firestore travando por excesso de escrita simultânea — 200 tarefas em paralelo por lote era demais, mesmo sem o snapshot da V2.57.11 (provavelmente agravado pelo cache offline do navegador).',
+        'Reduzido o lote de 200 para 20 escritas simultâneas, e adicionado timeout de 15s por tarefa: se uma escrita travar, ela vira uma falha reportada em vez de travar o import inteiro para sempre.']}
   ],
 
   render(containerId) {
