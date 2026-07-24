@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.57.5',
+  versaoAtual: 'V2.57.6',
 
   versoes: [
     {
@@ -4949,12 +4949,15 @@ const NotasVersao = {
       itens:['Causa raiz #3: o container da árvore tem seu próprio ondrop escutando "mover para raiz" (targetId=null) — usado para permitir soltar após a última linha. Como o alvo de drop no navegador é determinado pela posição exata do cursor, soltar perto da borda de uma linha (ou num espaço entre linhas) cai no container em vez da linha, disparando "mover para raiz" sem intenção. Isso zera o nível da tarefa arrastada e desloca todo o galho de filhos junto, na mesma proporção — exatamente o padrão de "vários níveis 0 fantasmas com estrutura interna intacta" visto pelo Milton.',
         'Mover para raiz via drop no espaço vazio agora exige confirmação explícita antes de aplicar. Mover para raiz de propósito continua disponível e direto pelo botão ↗ "Mover para" → Raiz.',
         'Barra de ferramentas do Planejamento: os botões não quebram mais para uma segunda linha (rolagem horizontal em vez de quebra).']},
-    {versao:'V2.57.5',status:'aberta',data:'2026-07-24',tipo:'correcao',
+    {versao:'V2.57.5',status:'fechada',data:'2026-07-24',tipo:'correcao',
       titulo:'Importar/Exportar Excel: hierarquia (Nível) não sobrevivia a uma reestruturação manual da árvore seguida de reimportação',
       itens:['Causa raiz: o Código (texto digitado manualmente, ex. "1.3.2.4.1") não é recalculado quando a árvore é reestruturada no Editor de Estrutura (criar um grupo novo por cima de tarefas existentes, mover, etc.) — só o campo Nível (numérico) reflete a estrutura real. Só que o Importar priorizava o Código (contagem de pontos) para calcular o nível, e por estar desatualizado, tarefas reagrupadas voltavam "soltas" (irmãs) em vez de aninhadas dentro do novo grupo pai ao reimportar.',
         'Exportar agora grava uma coluna "Nível" explícita, sempre fiel à árvore atual.',
         'Importar agora prioriza essa coluna "Nível" quando presente — Código/indentação viram apenas fallback para planilhas externas que não tenham essa coluna.',
-        'Recomendado: para editar e reimportar sem perder a estrutura, sempre exporte deste sistema primeiro (a coluna Nível vai junto) em vez de reaproveitar uma planilha antiga sem essa coluna.']}
+        'Recomendado: para editar e reimportar sem perder a estrutura, sempre exporte deste sistema primeiro (a coluna Nível vai junto) em vez de reaproveitar uma planilha antiga sem essa coluna.']},
+    {versao:'V2.57.6',status:'aberta',data:'2026-07-24',tipo:'correcao',
+      titulo:'Planejamento: revertida a troca de quebra-de-linha por scroll horizontal na barra de ferramentas — espremia o seletor Atual/Linha de Base/Desafio em telas estreitas',
+      itens:['O fix da V2.57.4 (nowrap+scroll horizontal) evitava a 2ª linha, mas em telas mais estreitas forçava o grupo de botões "Atual/Linha de Base/Desafio" a encolher e sobrepor o próprio texto. Voltou a quebrar linha (flex-wrap), que é só cosmético e não causa esse problema visual.']}
   ],
 
   render(containerId) {

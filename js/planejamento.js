@@ -421,8 +421,8 @@ const Planejamento = (() => {
           <h2 style="margin:0;font-size:1.1rem;color:var(--cor-primaria);">📊 Planejamento</h2>
           <span style="font-size:.75rem;color:#555;">${filtradas.length} tarefas</span>
         </div>
-        <div style="display:flex;gap:5px;flex-wrap:nowrap;align-items:center;overflow-x:auto;max-width:100%;padding-bottom:2px;">
-          <span style="display:inline-flex;border:1.5px solid #333;border-radius:8px;overflow:hidden;font-size:.7rem;font-weight:700;" title="Qual versão de datas ver/editar nas colunas Início e Término">
+        <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center;">
+          <span style="display:inline-flex;flex-shrink:0;border:1.5px solid #333;border-radius:8px;overflow:hidden;font-size:.7rem;font-weight:700;" title="Qual versão de datas ver/editar nas colunas Início e Término">
             ${['atual','base','desafio'].map(v=>`<button onclick="Planejamento.setVersaoData('${v}')" style="border:none;padding:4px 10px;cursor:pointer;${_versaoData===v?'background:var(--cor-primaria);color:#000;':'background:#111;color:#888;'}">${VERSAO_LABEL[v]}</button>`).join('')}
           </span>
           ${_versaoData!=='atual'?`<button class="btn btn-secundario btn-sm" onclick="Planejamento.copiarDatasDeAtual()" style="font-size:.7rem;" title="Preenche as datas de ${VERSAO_LABEL[_versaoData]} copiando de Atual em todas as tarefas que ainda não têm valor">📋 Copiar datas de Atual → ${VERSAO_LABEL[_versaoData]}</button>`:''}
