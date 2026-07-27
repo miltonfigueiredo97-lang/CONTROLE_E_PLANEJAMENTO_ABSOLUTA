@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.57.16',
+  versaoAtual: 'V2.57.17',
 
   versoes: [
     {
@@ -4999,12 +4999,18 @@ const NotasVersao = {
       itens:['Novo seletor no topo dos cards "Atividades" e "Suprimentos" pra restringir a lista ao grupo-pai escolhido (ex: só "Alvenaria", em vez de todos os apartamentos misturados de todos os serviços).',
         'O pai de cada tarefa-folha é achado pela mesma lógica de ordem/nível já usada no resto do sistema (não existe parentId nos dados) — é o registro mais próximo acima dela na ordem geral com nível menor.',
         'O filtro é independente entre os dois cards: pode ver "Alvenaria" em Atividades e "Todos os grupos" em Suprimentos ao mesmo tempo.']},
-    {versao:'V2.57.16',status:'aberta',data:'2026-07-27',tipo:'melhoria',
+    {versao:'V2.57.16',status:'fechada',data:'2026-07-27',tipo:'melhoria',
       titulo:'Dashboard: filtro da V2.57.15 substituído por árvore navegável (igual ao Editor de Estrutura do Planejamento) em Atividades e Suprimentos',
       itens:['O filtro por grupo-pai escondia grupos cujas tarefas mais próximas estavam fora do corte de "8 mais próximas" (ex: "1ª Demão" com tudo daqui a meses simplesmente não aparecia na lista de opções).',
         'Substituído por árvore expansível: cada card mostra os grupos a partir de um nível fixo escolhido (botões "Nível 0/1/2/3..."), com clique pra abrir/fechar e ver os níveis abaixo ou o grupo acima.',
         'Grupo recolhido mostra resumo agregado das tarefas-folha dentro dele (peso por duração, mesma convenção do resto do Dashboard): quantidade de itens, % médio e a data mais próxima (prazo em Em Execução, início em Próximas/Suprimentos) — sem limite de 8, então grupos só com tarefas distantes no tempo continuam aparecendo.',
-        'Estado de nível/expansão independente entre Atividades e Suprimentos.']}
+        'Estado de nível/expansão independente entre Atividades e Suprimentos.']},
+    {versao:'V2.57.17',status:'aberta',data:'2026-07-27',tipo:'melhoria',
+      titulo:'Dashboard: horizonte de tempo em Próximas/Suprimentos + Em Execução e Próximas empilhadas (não mais lado a lado) + nível sem teto',
+      itens:['Sem limite de tempo, "Próximas" e "Suprimentos" mostrariam literalmente TODA tarefa futura da obra (anos à frente) — agora tem seletor de horizonte (7 dias / 1 mês / 3 meses / 6 meses / 1 ano / Tudo), padrão 1 mês. "Em Execução" não usa horizonte (é o que está rolando agora).',
+        '"Em Execução" e "Próximas" deixaram de ficar lado a lado (um ficava vazio enquanto o outro lotava com o filtro) — agora empilhadas, cada uma com seu próprio nível fixo e (no caso de Próximas) seu próprio horizonte.',
+        'Botões de nível fixo não travam mais em 4 — vão até o nível mais profundo que existir de fato nos dados da obra.',
+        'Grupo recolhido não mostra mais a linha de data (só nome, contagem e %) — some ao abrir, deixando a árvore mais enxuta conforme desce de nível.']}
   ],
 
   render(containerId) {

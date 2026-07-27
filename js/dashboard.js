@@ -388,13 +388,19 @@ const Dashboard = (() => {
     return out;
   }
 
-  // Estado da árvore navegável dos cards Atividades/Suprimentos: independente
-  // um do outro. 'nivelFixo' = nível em que a árvore sempre começa ao trocar
-  // de obra/recarregar; 'abertos' = Set de ids expandidos além do nível fixo.
+  // Estado da árvore navegável: cada card tem SUAS DUAS colunas com estado
+  // próprio (nível fixo, expandidos, horizonte de tempo), pra poder abrir
+  // fundo em "Próximas" sem afetar "Em Execução" ao lado.
+  // horizonteDias: null = sem limite; caso contrário só entram folhas com
+  // data dentro de hoje+horizonteDias (aplica-se a Próximas/Suprimentos —
+  // Em Execução não usa, já é "agora").
+  function _novoEstadoColuna() { return { nivelFixo: 0, abertos: new Set(), horizonteDias: 30 }; }
   const _arvoreState = {
-    atividades: { nivelFixo: 0, abertos: new Set() },
-    suprimentos: { nivelFixo: 0, abertos: new Set() },
+    ativ_execucao: _novoEstadoColuna(),
+    ativ_proximas: _novoEstadoColuna(),
+    suprimentos: _novoEstadoColuna(),
   };
+  _arvoreState.ativ_execucao.horizonteDias = null; // Em Execução nunca filtra por tempo
   function _resetArvore(chave, nivel) {
     const st = _arvoreState[chave];
     st.nivelFixo = nivel;
@@ -412,12 +418,23 @@ const Dashboard = (() => {
     if ((t.nivel || 0) < st.nivelFixo) return true;
     return st.abertos.has(t.id);
   }
+  function _dentroHorizonte(chave, data) {
+    const st = _arvoreState[chave];
+    if (st.horizonteDias == null) return true;
+    if (!data) return true; // sem data planejada não é excluído por horizonte
+    const limite = new Date(); limite.setHours(0, 0, 0, 0); limite.setDate(limite.getDate() + st.horizonteDias);
+    return new Date(data) <= limite;
+  }
 
   // Agrega % concluído/esperado (peso por duração, mesma convenção do resto
   // do Dashboard — ver _peso), contagem e data mais próxima entre as folhas
-  // descendentes de um nó, filtradas por status (execução/próximas).
-  function _resumoNo(no, sorted, statusFiltro) {
-    const folhas = _folhasDescendentes(no, sorted).filter(statusFiltro);
+  // descendentes de um nó, filtradas por status (execução/próximas) E pelo
+  // horizonte de tempo da coluna (Próximas/Suprimentos só, ver _dentroHorizonte).
+  function _resumoNo(chave, no, sorted, statusFiltro) {
+    const campoData = t => (statusFiltro === _emExecucaoFiltro ? t.terminoPlanejado : t.inicioPlanejado);
+    const folhas = _folhasDescendentes(no, sorted)
+      .filter(statusFiltro)
+      .filter(t => _dentroHorizonte(chave, campoData(t)));
     if (!folhas.length) return null;
     let somaPeso = 0, somaConc = 0, dataMaisProxima = null;
     folhas.forEach(t => {
@@ -475,16 +492,19 @@ const Dashboard = (() => {
   // Estrutura do Planejamento): começa no nível fixo escolhido, nós com
   // filhos mostram resumo agregado (qtd + % médio + data) quando recolhidos,
   // e abrem/fecham por clique. `statusFiltro` decide quais folhas contam
-  // (_emExecucaoFiltro ou _proximasFiltro) e qual data mostrar.
+  // (_emExecucaoFiltro ou _proximasFiltro) e qual data mostrar. `chave`
+  // identifica a COLUNA (ativ_execucao / ativ_proximas / suprimentos), cada
+  // uma com seu próprio nível fixo, expandidos e horizonte de tempo.
   function _renderArvoreColuna(chave, raizesNivelFixo, sorted, statusFiltro, corDot, vazioMsg) {
-    const st = _arvoreState[chave];
+    const campoData = t => (statusFiltro === _emExecucaoFiltro ? t.terminoPlanejado : t.inicioPlanejado);
+    const rotuloData = statusFiltro === _emExecucaoFiltro ? 'Prazo' : 'Início';
 
     const linhaFolha = (t) => `
       <div class="db-ativ-item">
         <span class="db-ativ-dot" style="background:${corDot};"></span>
         <div class="db-ativ-info">
           <div class="db-ativ-nome">${t.nome || 'Sem nome'}</div>
-          <div class="db-ativ-sub text-sm text-muted">${t.local ? t.local + ' · ' : ''}${statusFiltro === _emExecucaoFiltro ? 'Prazo' : 'Início'}: ${Utils.formatarData(statusFiltro === _emExecucaoFiltro ? t.terminoPlanejado : t.inicioPlanejado)}</div>
+          <div class="db-ativ-sub text-sm text-muted">${t.local ? t.local + ' · ' : ''}${rotuloData}: ${Utils.formatarData(campoData(t))}</div>
         </div>
         <div class="db-ativ-perc">${Math.round(Number(t.percentualConcluido) || 0)}%</div>
       </div>`;
@@ -495,7 +515,7 @@ const Dashboard = (() => {
         <span style="width:14px;flex-shrink:0;text-align:center;color:#777;font-size:.7rem;">${aberto ? '▼' : '▶'}</span>
         <div class="db-ativ-info">
           <div class="db-ativ-nome">${t.nome || 'Sem nome'} <span class="text-sm text-muted" style="font-weight:400;">(${resumo.qtd})</span></div>
-          <div class="db-ativ-sub text-sm text-muted">${resumo.dataMaisProxima ? (statusFiltro === _emExecucaoFiltro ? 'Prazo mais próximo: ' : 'Início mais próximo: ') + Utils.formatarData(resumo.dataMaisProxima) : 'Sem data'}</div>
+          ${aberto ? '' : `<div class="db-ativ-sub text-sm text-muted">${resumo.dataMaisProxima ? rotuloData + ' mais próximo: ' + Utils.formatarData(resumo.dataMaisProxima) : 'Sem data'}</div>`}
         </div>
         <div class="db-ativ-perc">${Math.round(resumo.percMedio)}%</div>
       </div>`;
@@ -506,15 +526,17 @@ const Dashboard = (() => {
       nos.forEach(t => {
         const filhos = _filhosDiretos(t, sorted);
         if (!filhos.length) {
-          // É folha de verdade — só entra se bater no filtro de status.
-          if (statusFiltro(t)) html += `<div style="padding-left:${indent}px;">${linhaFolha(t)}</div>`;
+          // É folha de verdade — só entra se bater no filtro de status E no horizonte.
+          if (statusFiltro(t) && _dentroHorizonte(chave, campoData(t))) {
+            html += `<div style="padding-left:${indent}px;">${linhaFolha(t)}</div>`;
+          }
           return;
         }
-        const resumo = _resumoNo(t, sorted, statusFiltro);
-        if (!resumo) return; // nenhum descendente bate no filtro — não mostra o grupo
+        const resumo = _resumoNo(chave, t, sorted, statusFiltro);
+        if (!resumo) return; // nenhum descendente bate no filtro/horizonte — não mostra o grupo
         const aberto = _noAberto(chave, t);
         html += `<div style="padding-left:${indent}px;">${linhaGrupo(t, resumo, aberto)}</div>`;
-        if (aberto) html += renderNivel(filhos, indent + 16);
+        if (aberto) html += renderNivel(filhos, indent + 14);
       });
       return html;
     };
@@ -523,27 +545,56 @@ const Dashboard = (() => {
     return corpo || `<div class="text-sm text-muted" style="padding:10px 0;">${vazioMsg}</div>`;
   }
 
-  // Botões de nível fixo (0,1,2,3...) — detecta a profundidade máxima real
-  // da árvore pra não oferecer nível que não existe.
+  // Roteia o re-render pra função certa (renderAtividades cuida de ambas as
+  // colunas ativ_execucao/ativ_proximas; suprimentos tem a sua própria).
+  function _rerenderColuna(chave) {
+    if (chave === 'suprimentos') _renderSuprimentosDash(); else _renderAtividades();
+  }
+
+  // Controle de NÍVEL fixo: sem teto artificial (o "trava no 4" reportado
+  // era um Math.min(4,...) — removido; o único teto real é a profundidade
+  // que existir nos dados). Botão "+" aparece só se houver nível mais fundo
+  // disponível além dos já exibidos.
   function _nivelMaximo(sorted) {
     return sorted.reduce((max, t) => Math.max(max, t.nivel || 0), 0);
   }
   function _controleNivel(chave) {
-    const max = Math.min(4, _nivelMaximo([...tarefas]));
+    const sorted = [...tarefas].sort((a, b) => (a.ordem || 0) - (b.ordem || 0));
+    const max = _nivelMaximo(sorted);
     const st = _arvoreState[chave];
     let botoes = '';
     for (let n = 0; n <= max; n++) {
-      botoes += `<button class="btn btn-sm ${st.nivelFixo === n ? 'btn-primario' : 'btn-secundario'}" style="font-size:.68rem;padding:3px 9px;" onclick="Dashboard._arvNivelFixo('${chave}',${n})">Nível ${n}</button>`;
+      botoes += `<button class="btn btn-sm ${st.nivelFixo === n ? 'btn-primario' : 'btn-secundario'}" style="font-size:.66rem;padding:2px 8px;" onclick="Dashboard._arvNivelFixo('${chave}',${n})">Nível ${n}</button>`;
     }
-    return `<div style="display:flex;gap:4px;margin-bottom:10px;flex-wrap:wrap;">${botoes}</div>`;
+    return `<div style="display:flex;gap:4px;margin-bottom:8px;flex-wrap:wrap;">${botoes}</div>`;
+  }
+  // Seletor de horizonte de tempo (só pra colunas que usam — Em Execução não
+  // chama isto). Opções em dias; "Tudo" remove o teto.
+  const HORIZONTE_OPCOES = [
+    { dias: 7, label: '7 dias' },
+    { dias: 30, label: '1 mês' },
+    { dias: 90, label: '3 meses' },
+    { dias: 180, label: '6 meses' },
+    { dias: 365, label: '1 ano' },
+    { dias: null, label: 'Tudo' },
+  ];
+  function _controleHorizonte(chave) {
+    const st = _arvoreState[chave];
+    return `<select class="input" style="max-width:130px;font-size:.72rem;padding:3px 6px;" onchange="Dashboard._arvHorizonte('${chave}',this.value)">
+      ${HORIZONTE_OPCOES.map(o => `<option value="${o.dias}" ${st.horizonteDias === o.dias ? 'selected' : ''}>${o.label}</option>`).join('')}
+    </select>`;
   }
   function _arvNivelFixo(chave, nivel) {
     _resetArvore(chave, nivel);
-    if (chave === 'atividades') _renderAtividades(); else _renderSuprimentosDash();
+    _rerenderColuna(chave);
+  }
+  function _arvHorizonte(chave, valor) {
+    _arvoreState[chave].horizonteDias = valor === 'null' ? null : Number(valor);
+    _rerenderColuna(chave);
   }
   function _arvToggle(chave, id) {
     _toggleNo(chave, id);
-    if (chave === 'atividades') _renderAtividades(); else _renderSuprimentosDash();
+    _rerenderColuna(chave);
   }
 
   // ===================== ATIVIDADES =====================
@@ -554,22 +605,25 @@ const Dashboard = (() => {
     if (!host) return;
 
     const sorted = [...tarefas].sort((a, b) => (a.ordem || 0) - (b.ordem || 0));
-    const raizes = sorted.filter(t => (t.nivel || 0) === _arvoreState.atividades.nivelFixo);
+    const raizesExec = sorted.filter(t => (t.nivel || 0) === _arvoreState.ativ_execucao.nivelFixo);
+    const raizesProx = sorted.filter(t => (t.nivel || 0) === _arvoreState.ativ_proximas.nivelFixo);
 
-    const colExecucao = _renderArvoreColuna('atividades', raizes, sorted, _emExecucaoFiltro, '#facc15', 'Nenhuma atividade em execução.');
-    const colProximas = _renderArvoreColuna('atividades', raizes, sorted, _proximasFiltro, '#60a5fa', 'Nenhuma atividade pendente.');
+    const corpoExec = _renderArvoreColuna('ativ_execucao', raizesExec, sorted, _emExecucaoFiltro, '#facc15', 'Nenhuma atividade em execução.');
+    const corpoProx = _renderArvoreColuna('ativ_proximas', raizesProx, sorted, _proximasFiltro, '#60a5fa', 'Nenhuma atividade pendente neste período.');
 
     host.innerHTML = `
-      ${_controleNivel('atividades')}
-      <div class="db-ativ-grid">
-        <div class="db-ativ-col">
-          <div class="db-ativ-col-titulo">Em Execução</div>
-          ${colExecucao}
+      <div class="db-ativ-bloco">
+        <div class="db-ativ-col-titulo">Em Execução</div>
+        ${_controleNivel('ativ_execucao')}
+        ${corpoExec}
+      </div>
+      <div class="db-ativ-bloco" style="margin-top:16px;">
+        <div class="db-ativ-col-titulo" style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+          <span>Próximas</span>
+          ${_controleHorizonte('ativ_proximas')}
         </div>
-        <div class="db-ativ-col">
-          <div class="db-ativ-col-titulo">Próximas</div>
-          ${colProximas}
-        </div>
+        ${_controleNivel('ativ_proximas')}
+        ${corpoProx}
       </div>`;
   }
 
@@ -598,11 +652,14 @@ const Dashboard = (() => {
     const sorted = [...tarefas].sort((a, b) => (a.ordem || 0) - (b.ordem || 0));
     const raizes = sorted.filter(t => (t.nivel || 0) === _arvoreState.suprimentos.nivelFixo);
     const corpo = _renderArvoreColuna('suprimentos', raizes, sorted, _pendenteSuprimentoFiltro, '#f59e0b',
-      'Nenhuma próxima atividade sem Suprimentos iniciado — tudo em dia.');
+      'Nenhuma próxima atividade sem Suprimentos iniciado neste período.');
 
     host.innerHTML = `
+      <div class="db-ativ-col-titulo" style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+        <span class="text-sm text-muted" style="font-weight:400;">Próximas atividades cujo pipeline de Suprimentos ainda não foi iniciado:</span>
+        ${_controleHorizonte('suprimentos')}
+      </div>
       ${_controleNivel('suprimentos')}
-      <div class="text-sm text-muted" style="margin-bottom:8px;">Próximas atividades cujo pipeline de Suprimentos ainda não foi iniciado:</div>
       ${corpo}`;
   }
 
@@ -1704,5 +1761,5 @@ const Dashboard = (() => {
       </div>`;
   }
 
-  return { init, onObraChanged, setResumoView, setPacotesView, setCurvaGranularidade, toggleMostrarConcreto, _arvToggle, _arvNivelFixo };
+  return { init, onObraChanged, setResumoView, setPacotesView, setCurvaGranularidade, toggleMostrarConcreto, _arvToggle, _arvNivelFixo, _arvHorizonte };
 })();
