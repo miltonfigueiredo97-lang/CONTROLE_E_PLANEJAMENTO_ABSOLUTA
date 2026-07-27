@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.57.20',
+  versaoAtual: 'V2.57.21',
 
   versoes: [
     {
@@ -5019,9 +5019,13 @@ const NotasVersao = {
       titulo:'Levantamento AC: fix V2.57.18 duplicava diâmetro no nome (ex: "(Ø 1/4) (Ø 3/8)") quando usuário já escreve o diâmetro manualmente no nome do item',
       itens:['Máquina não tem campo estruturado de diâmetro por item — usuário digita o diâmetro no próprio nome. V2.57.18 concatenava o diâmetro da máquina por cima, duplicando.',
         'Revertida concatenação automática; separação no resumo agora usa o nome completo como chave (sem sobrescrever nome digitado).']},
-    {versao:'V2.57.20',status:'aberta',data:'2026-07-27',tipo:'correcao',
+    {versao:'V2.57.20',status:'fechada',data:'2026-07-27',tipo:'correcao',
       titulo:'Levantamento AC: fix V2.57.19 removeu diâmetro do Cobre principal no resumo (campo estruturado da máquina, diferente do texto livre dos vinculados)',
-      itens:['Cobre principal tem campo de diâmetro estruturado próprio (separado do texto livre dos vinculados) — restaurado no nome do resumo.']}
+      itens:['Cobre principal tem campo de diâmetro estruturado próprio (separado do texto livre dos vinculados) — restaurado no nome do resumo.']},
+    {versao:'V2.57.21',status:'aberta',data:'2026-07-27',tipo:'correcao',
+      titulo:'Dashboard: árvore de Atividades/Suprimentos esquecia o nível e o horizonte de tempo escolhidos a cada F5',
+      itens:['Nível fixo e horizonte de tempo dos cards Em Execução/Próximas/Suprimentos agora persistem em localStorage (preferência de UI, não dado da obra) — a árvore volta a abrir onde o usuário deixou, em vez de sempre no Nível 0.',
+        'Quais grupos estavam abertos/fechados continua reiniciando a cada carregamento (não faz sentido persistir isso entre trocas de obra).']}
   ],
 
   render(containerId) {

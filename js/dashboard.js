@@ -394,17 +394,32 @@ const Dashboard = (() => {
   // horizonteDias: null = sem limite; caso contrário só entram folhas com
   // data dentro de hoje+horizonteDias (aplica-se a Próximas/Suprimentos —
   // Em Execução não usa, já é "agora").
-  function _novoEstadoColuna() { return { nivelFixo: 0, abertos: new Set(), horizonteDias: 30 }; }
+  //
+  // Persistência: nivelFixo e horizonteDias são preferência de UI (igual ao
+  // checkbox de Contenção/Fundação), salvos em localStorage por chave de
+  // coluna — não são dado da obra, só lembram onde o usuário deixou a árvore.
+  // 'abertos' (quais nós estão expandidos) NÃO persiste: muda a cada troca
+  // de obra e não faz sentido sobreviver a um F5.
+  function _chaveLS(chave, campo) { return `db_arvore_${chave}_${campo}`; }
+  function _novoEstadoColuna(chave, horizontePadrao) {
+    const nivelSalvo = parseInt(localStorage.getItem(_chaveLS(chave, 'nivel')), 10);
+    const horizSalvo = localStorage.getItem(_chaveLS(chave, 'horizonte'));
+    return {
+      nivelFixo: Number.isFinite(nivelSalvo) ? nivelSalvo : 0,
+      abertos: new Set(),
+      horizonteDias: horizSalvo != null ? (horizSalvo === 'null' ? null : Number(horizSalvo)) : horizontePadrao,
+    };
+  }
   const _arvoreState = {
-    ativ_execucao: _novoEstadoColuna(),
-    ativ_proximas: _novoEstadoColuna(),
-    suprimentos: _novoEstadoColuna(),
+    ativ_execucao: _novoEstadoColuna('ativ_execucao', null), // Em Execução nunca filtra por tempo
+    ativ_proximas: _novoEstadoColuna('ativ_proximas', 30),
+    suprimentos: _novoEstadoColuna('suprimentos', 30),
   };
-  _arvoreState.ativ_execucao.horizonteDias = null; // Em Execução nunca filtra por tempo
   function _resetArvore(chave, nivel) {
     const st = _arvoreState[chave];
     st.nivelFixo = nivel;
     st.abertos = new Set();
+    localStorage.setItem(_chaveLS(chave, 'nivel'), String(nivel));
   }
   function _toggleNo(chave, id) {
     const st = _arvoreState[chave];
@@ -589,7 +604,9 @@ const Dashboard = (() => {
     _rerenderColuna(chave);
   }
   function _arvHorizonte(chave, valor) {
-    _arvoreState[chave].horizonteDias = valor === 'null' ? null : Number(valor);
+    const dias = valor === 'null' ? null : Number(valor);
+    _arvoreState[chave].horizonteDias = dias;
+    localStorage.setItem(_chaveLS(chave, 'horizonte'), String(dias));
     _rerenderColuna(chave);
   }
   function _arvToggle(chave, id) {
