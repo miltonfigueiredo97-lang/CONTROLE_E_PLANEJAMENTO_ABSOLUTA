@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.57.21',
+  versaoAtual: 'V2.57.22',
 
   versoes: [
     {
@@ -5022,10 +5022,15 @@ const NotasVersao = {
     {versao:'V2.57.20',status:'fechada',data:'2026-07-27',tipo:'correcao',
       titulo:'Levantamento AC: fix V2.57.19 removeu diâmetro do Cobre principal no resumo (campo estruturado da máquina, diferente do texto livre dos vinculados)',
       itens:['Cobre principal tem campo de diâmetro estruturado próprio (separado do texto livre dos vinculados) — restaurado no nome do resumo.']},
-    {versao:'V2.57.21',status:'aberta',data:'2026-07-27',tipo:'correcao',
+    {versao:'V2.57.21',status:'fechada',data:'2026-07-27',tipo:'correcao',
       titulo:'Dashboard: árvore de Atividades/Suprimentos esquecia o nível e o horizonte de tempo escolhidos a cada F5',
       itens:['Nível fixo e horizonte de tempo dos cards Em Execução/Próximas/Suprimentos agora persistem em localStorage (preferência de UI, não dado da obra) — a árvore volta a abrir onde o usuário deixou, em vez de sempre no Nível 0.',
-        'Quais grupos estavam abertos/fechados continua reiniciando a cada carregamento (não faz sentido persistir isso entre trocas de obra).']}
+        'Quais grupos estavam abertos/fechados continua reiniciando a cada carregamento (não faz sentido persistir isso entre trocas de obra).']},
+    {versao:'V2.57.22',status:'aberta',data:'2026-07-27',tipo:'melhoria',
+      titulo:'Dashboard: nível/horizonte da árvore agora seguem o usuário entre PCs (não só localStorage)',
+      itens:['Preferência salva em Firestore (users/{uid}.dashboardArvorePrefs), por ser pessoal do usuário — não da obra. Abrir em outro computador já traz o nível e o horizonte que o usuário deixou da última vez.',
+        'localStorage continua sendo usado como cache local instantâneo (evita a árvore nascer no Nível 0 e só "pular" pro nível certo depois que o Firestore responder).',
+        'Gravação com pequeno atraso (debounce) pra não gerar uma escrita a cada clique isolado se o usuário mexer em vários controles em sequência.']}
   ],
 
   render(containerId) {

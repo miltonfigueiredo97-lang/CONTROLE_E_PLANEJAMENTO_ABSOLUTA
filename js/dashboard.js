@@ -132,7 +132,22 @@ const Dashboard = (() => {
     if (!ok) return;
     obraAtual = Router.getObra();
     _renderToggleConcreto();
+    await _carregarPrefsArvoreRemotas();
     await carregar();
+  }
+
+  // Busca uma vez (não depende de obra) a preferência salva do usuário pra
+  // nível/horizonte da árvore de Atividades/Suprimentos — permite abrir em
+  // outro PC e a árvore já nascer onde o usuário deixou da última vez.
+  async function _carregarPrefsArvoreRemotas() {
+    const uid = Auth.getUid();
+    if (!uid) return;
+    try {
+      const user = await Database.getUser(uid);
+      _aplicarPrefsRemotas(user?.dashboardArvorePrefs);
+    } catch (e) {
+      // Sem prefs remotas ainda ou erro de rede — segue com o cache local.
+    }
   }
 
   async function onObraChanged(obra) {
@@ -395,11 +410,13 @@ const Dashboard = (() => {
   // data dentro de hoje+horizonteDias (aplica-se a Próximas/Suprimentos —
   // Em Execução não usa, já é "agora").
   //
-  // Persistência: nivelFixo e horizonteDias são preferência de UI (igual ao
-  // checkbox de Contenção/Fundação), salvos em localStorage por chave de
-  // coluna — não são dado da obra, só lembram onde o usuário deixou a árvore.
-  // 'abertos' (quais nós estão expandidos) NÃO persiste: muda a cada troca
-  // de obra e não faz sentido sobreviver a um F5.
+  // Persistência: nivelFixo e horizonteDias são preferência PESSOAL do
+  // usuário (não da obra) — precisa seguir o usuário entre PCs, então vai
+  // pra Firestore em users/{uid}.dashboardArvorePrefs. localStorage continua
+  // sendo usado só como CACHE local instantâneo (evita a árvore nascer no
+  // Nível 0 e "pular" pro nível salvo só depois que o Firestore responder).
+  // 'abertos' (quais nós estão expandidos) NÃO persiste em lugar nenhum:
+  // muda a cada troca de obra e não faz sentido sobreviver a um F5.
   function _chaveLS(chave, campo) { return `db_arvore_${chave}_${campo}`; }
   function _novoEstadoColuna(chave, horizontePadrao) {
     const nivelSalvo = parseInt(localStorage.getItem(_chaveLS(chave, 'nivel')), 10);
@@ -415,11 +432,49 @@ const Dashboard = (() => {
     ativ_proximas: _novoEstadoColuna('ativ_proximas', 30),
     suprimentos: _novoEstadoColuna('suprimentos', 30),
   };
+  // Aplica prefs vindas do Firestore por cima do cache local (Firestore
+  // manda, é a fonte de verdade entre PCs) — chamado uma vez no carregar().
+  function _aplicarPrefsRemotas(prefs) {
+    if (!prefs) return;
+    ['ativ_execucao', 'ativ_proximas', 'suprimentos'].forEach(chave => {
+      const p = prefs[chave];
+      if (!p) return;
+      const st = _arvoreState[chave];
+      if (typeof p.nivelFixo === 'number') st.nivelFixo = p.nivelFixo;
+      if ('horizonteDias' in p) st.horizonteDias = p.horizonteDias;
+      // espelha no cache local pra próxima abertura já nascer certa
+      localStorage.setItem(_chaveLS(chave, 'nivel'), String(st.nivelFixo));
+      localStorage.setItem(_chaveLS(chave, 'horizonte'), String(st.horizonteDias));
+    });
+  }
+  // Salva no Firestore (users/{uid}.dashboardArvorePrefs) — debounced (900ms)
+  // pra não gravar a cada clique isolado se o usuário mexer rápido em vários
+  // controles seguidos.
+  let _salvarPrefsTimer = null;
+  function _salvarPrefsRemotas() {
+    clearTimeout(_salvarPrefsTimer);
+    _salvarPrefsTimer = setTimeout(async () => {
+      const uid = Auth.getUid();
+      if (!uid) return;
+      const payload = {};
+      ['ativ_execucao', 'ativ_proximas', 'suprimentos'].forEach(chave => {
+        const st = _arvoreState[chave];
+        payload[chave] = { nivelFixo: st.nivelFixo, horizonteDias: st.horizonteDias };
+      });
+      try {
+        await Database.atualizarRaiz('users', uid, { dashboardArvorePrefs: payload });
+      } catch (e) {
+        // Falha silenciosa — preferência de UI, cache local já garante a
+        // experiência na mesma máquina; não vale interromper o usuário.
+      }
+    }, 900);
+  }
   function _resetArvore(chave, nivel) {
     const st = _arvoreState[chave];
     st.nivelFixo = nivel;
     st.abertos = new Set();
     localStorage.setItem(_chaveLS(chave, 'nivel'), String(nivel));
+    _salvarPrefsRemotas();
   }
   function _toggleNo(chave, id) {
     const st = _arvoreState[chave];
@@ -607,6 +662,7 @@ const Dashboard = (() => {
     const dias = valor === 'null' ? null : Number(valor);
     _arvoreState[chave].horizonteDias = dias;
     localStorage.setItem(_chaveLS(chave, 'horizonte'), String(dias));
+    _salvarPrefsRemotas();
     _rerenderColuna(chave);
   }
   function _arvToggle(chave, id) {
