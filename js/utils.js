@@ -337,6 +337,7 @@ const Utils = (() => {
       ...v,
       metros: mlTotal,
       rolos: rolo(v.mPorRolo, mlTotal),
+      nomeExibicao: v.nome + (diametroLabel ? ` (Ø ${diametroLabel})` : ''),
     }));
 
     const porMl = (maquina?.porMl || []).map(p => {

@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.57.17',
+  versaoAtual: 'V2.57.18',
 
   versoes: [
     {
@@ -5005,12 +5005,16 @@ const NotasVersao = {
         'Substituído por árvore expansível: cada card mostra os grupos a partir de um nível fixo escolhido (botões "Nível 0/1/2/3..."), com clique pra abrir/fechar e ver os níveis abaixo ou o grupo acima.',
         'Grupo recolhido mostra resumo agregado das tarefas-folha dentro dele (peso por duração, mesma convenção do resto do Dashboard): quantidade de itens, % médio e a data mais próxima (prazo em Em Execução, início em Próximas/Suprimentos) — sem limite de 8, então grupos só com tarefas distantes no tempo continuam aparecendo.',
         'Estado de nível/expansão independente entre Atividades e Suprimentos.']},
-    {versao:'V2.57.17',status:'aberta',data:'2026-07-27',tipo:'melhoria',
+    {versao:'V2.57.17',status:'fechada',data:'2026-07-27',tipo:'melhoria',
       titulo:'Dashboard: horizonte de tempo em Próximas/Suprimentos + Em Execução e Próximas empilhadas (não mais lado a lado) + nível sem teto',
       itens:['Sem limite de tempo, "Próximas" e "Suprimentos" mostrariam literalmente TODA tarefa futura da obra (anos à frente) — agora tem seletor de horizonte (7 dias / 1 mês / 3 meses / 6 meses / 1 ano / Tudo), padrão 1 mês. "Em Execução" não usa horizonte (é o que está rolando agora).',
         '"Em Execução" e "Próximas" deixaram de ficar lado a lado (um ficava vazio enquanto o outro lotava com o filtro) — agora empilhadas, cada uma com seu próprio nível fixo e (no caso de Próximas) seu próprio horizonte.',
         'Botões de nível fixo não travam mais em 4 — vão até o nível mais profundo que existir de fato nos dados da obra.',
-        'Grupo recolhido não mostra mais a linha de data (só nome, contagem e %) — some ao abrir, deixando a árvore mais enxuta conforme desce de nível.']}
+        'Grupo recolhido não mostra mais a linha de data (só nome, contagem e %) — some ao abrir, deixando a árvore mais enxuta conforme desce de nível.']},
+    {versao:'V2.57.18',status:'aberta',data:'2026-07-27',tipo:'correcao',
+      titulo:'Levantamento Ar Condicionado: itens vinculados (ex: espuma) sumiam/se fundiam no Resumo consolidado quando duas máquinas com diâmetros diferentes usavam o mesmo material',
+      itens:['Só o item principal de cobre separava por diâmetro no resumo (chave materialId+diâmetro); os itens vinculados (espuma etc.) agregavam só por materialId — se duas máquinas de diâmetros diferentes (ex: Ø 1/2" e Ø 1/4") usassem o mesmo material vinculado, uma entrada sobrescrevia/fundia com a outra e sumia do resumo.',
+        'Corrigido: itens vinculados agora também separam por diâmetro no resumo (mesma lógica do cobre), com o diâmetro aparecendo no nome (ex: "Espuma Polipex (Ø 1/2)").']}
   ],
 
   render(containerId) {

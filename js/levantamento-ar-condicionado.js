@@ -334,7 +334,10 @@ const LevantamentoAr = (() => {
       materialId: kit.cobre.materialId, nome: kit.cobre.nomeExibicao || kit.cobre.nome,
       quantidade: kit.cobre.metros, unidade: 'm', chaveExtra: kit.diametroLabel || '', forcarNome: true,
     });
-    kit.vinculados.forEach(v => linhas.push({ materialId: v.materialId, nome: v.nome, quantidade: v.metros, unidade: 'm' }));
+    kit.vinculados.forEach(v => linhas.push({
+      materialId: v.materialId, nome: v.nomeExibicao || v.nome,
+      quantidade: v.metros, unidade: 'm', chaveExtra: kit.diametroLabel || '', forcarNome: true,
+    }));
     kit.porMl.forEach(p => linhas.push({
       materialId: p.materialId, nome: p.nome, quantidade: p.quantidade,
       unidade: p.tipo === 'uni_por_ml' ? 'un' : 'm', mPorUnidade: p.mPorUnidade || null,
