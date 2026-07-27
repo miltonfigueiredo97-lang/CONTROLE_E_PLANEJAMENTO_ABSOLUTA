@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.57.14',
+  versaoAtual: 'V2.57.15',
 
   versoes: [
     {
@@ -4991,9 +4991,14 @@ const NotasVersao = {
       itens:['Import agora NÃO apaga mais as tarefas existentes antes de importar. Em vez disso, faz upsert por Código: tarefa com Código já existente é ATUALIZADA, tarefa nova é CRIADA. Tarefas antigas que não estão mais na planilha não são apagadas.',
         'Isso torna o import retomável: se travar/falhar no meio de uma planilha grande por qualquer motivo de ambiente, importar de novo (o mesmo arquivo) completa só o que faltou, em vez de reiniciar do zero e travar no mesmo lugar de novo.',
         'Recomendado rodar "🔧 Corrigir Ordens" depois de um import grande, para garantir que a ordem de exibição fique limpa.']},
-    {versao:'V2.57.14',status:'aberta',data:'2026-07-24',tipo:'melhoria',
+    {versao:'V2.57.14',status:'fechada',data:'2026-07-24',tipo:'melhoria',
       titulo:'Importar Excel: tarefas que existiam antes e não vieram na planilha agora aparecem num painel de revisão pra decidir excluir ou manter — em vez de ficarem soltas',
-      itens:['Depois do import (upsert por Código da V2.57.13), abre um painel listando as tarefas que tinham Código mas não apareceram na planilha importada — com checkbox por tarefa, "marcar/desmarcar todas" e botão para excluir só as marcadas. Fechar sem marcar nada mantém tudo como está.']}
+      itens:['Depois do import (upsert por Código da V2.57.13), abre um painel listando as tarefas que tinham Código mas não apareceram na planilha importada — com checkbox por tarefa, "marcar/desmarcar todas" e botão para excluir só as marcadas. Fechar sem marcar nada mantém tudo como está.']},
+    {versao:'V2.57.15',status:'aberta',data:'2026-07-27',tipo:'melhoria',
+      titulo:'Dashboard: filtro por grupo-pai nos cards Atividades e Suprimentos',
+      itens:['Novo seletor no topo dos cards "Atividades" e "Suprimentos" pra restringir a lista ao grupo-pai escolhido (ex: só "Alvenaria", em vez de todos os apartamentos misturados de todos os serviços).',
+        'O pai de cada tarefa-folha é achado pela mesma lógica de ordem/nível já usada no resto do sistema (não existe parentId nos dados) — é o registro mais próximo acima dela na ordem geral com nível menor.',
+        'O filtro é independente entre os dois cards: pode ver "Alvenaria" em Atividades e "Todos os grupos" em Suprimentos ao mesmo tempo.']}
   ],
 
   render(containerId) {

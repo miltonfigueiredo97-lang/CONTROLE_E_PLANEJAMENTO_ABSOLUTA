@@ -15,6 +15,8 @@ const Dashboard = (() => {
   let _curvaCache = null; // último cálculo da Curva S (usado pelo tooltip)
   let _curvaGranularidade = 'mensal'; // 'mensal' | 'semanal'
   let _mostrarConcreto = localStorage.getItem('db_mostrar_fundacao_estrutura') === 'true';
+  let _filtroPaiAtividades = ''; // id do grupo-pai selecionado no card Atividades ('' = todos)
+  let _filtroPaiSuprimentos = ''; // idem, card Suprimentos
 
   const MOTIVOS_COR = {
     'Frente/Predecessora Não Liberada': '#f59e0b',
@@ -181,6 +183,7 @@ const Dashboard = (() => {
       tarefas = tf;
       historicoExecucao = hist;
       suprimentos = sup;
+      _paisCache = null; // tarefas recarregadas — invalida o cache de grupo-pai
       el.innerHTML = _htmlEsqueleto();
       _renderHero();
       _renderAtividades();
@@ -361,6 +364,39 @@ const Dashboard = (() => {
   function _leaves() {
     return _folhas(tarefas);
   }
+
+  // Grupo-pai imediato de cada tarefa-folha, pela mesma lógica de ordem/nível
+  // já usada em _folhas: percorrendo pra trás na ORDEM geral, o pai é o
+  // primeiro registro com nível menor que o da folha (não existe parentId
+  // nos dados — hierarquia é só posição+nível, igual ao resto do sistema).
+  // Cacheado em Map por id de folha pra não recalcular em todo render.
+  let _paisCache = null; // Map<tarefaId, {id, nome}>
+  function _mapaPais(tf) {
+    const sorted = [...tf].sort((a, b) => (a.ordem || 0) - (b.ordem || 0));
+    const mapa = new Map();
+    sorted.forEach((t, i) => {
+      let pai = null;
+      for (let j = i - 1; j >= 0; j--) {
+        if ((sorted[j].nivel || 0) < (t.nivel || 0)) { pai = sorted[j]; break; }
+      }
+      mapa.set(t.id, pai ? { id: pai.id, nome: pai.nome || 'Sem nome' } : null);
+    });
+    return mapa;
+  }
+  function _paiDe(t) {
+    if (!_paisCache) _paisCache = _mapaPais(tarefas);
+    return _paisCache.get(t.id) || null;
+  }
+  // Lista de grupos-pai distintos presentes num conjunto de folhas, ordenada
+  // por nome, pra popular o <select> de filtro dos cards.
+  function _listaPaisDisponiveis(leaves) {
+    const vistos = new Map();
+    leaves.forEach(t => {
+      const p = _paiDe(t);
+      if (p && !vistos.has(p.id)) vistos.set(p.id, p.nome);
+    });
+    return [...vistos.entries()].map(([id, nome]) => ({ id, nome })).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+  }
   // Peso de cada tarefa nos cálculos agregados (Curva S, KPIs do Hero).
   // HISTÓRICO: já foi trocado pra ponderar por QUANTIDADE (convenção de
   // Utils.percFamilia), mas isso distorceu o % geral pra perto de 0 nesta
@@ -401,7 +437,12 @@ const Dashboard = (() => {
     if (atualizado) atualizado.textContent = 'Atualizado em ' + Utils.formatarDataHora(new Date());
     if (!host) return;
 
-    const leaves = _leaves();
+    const todasLeaves = _leaves();
+    const paisDisp = _listaPaisDisponiveis(todasLeaves);
+    const leaves = _filtroPaiAtividades
+      ? todasLeaves.filter(t => { const p = _paiDe(t); return p && p.id === _filtroPaiAtividades; })
+      : todasLeaves;
+
     const emExecucao = leaves
       .filter(t => (Number(t.percentualConcluido) || 0) > 0 && (Number(t.percentualConcluido) || 0) < 100)
       .sort((a, b) => new Date(a.terminoPlanejado || '9999-12-31') - new Date(b.terminoPlanejado || '9999-12-31'))
@@ -421,7 +462,16 @@ const Dashboard = (() => {
         <div class="db-ativ-perc">${Math.round(Number(t.percentualConcluido) || 0)}%</div>
       </div>`;
 
+    const filtroHtml = paisDisp.length ? `
+      <div class="db-filtro-pai" style="margin-bottom:10px;">
+        <select id="db-filtro-atividades" class="input" style="max-width:260px;">
+          <option value="">Todos os grupos</option>
+          ${paisDisp.map(p => `<option value="${p.id}" ${_filtroPaiAtividades === p.id ? 'selected' : ''}>${p.nome}</option>`).join('')}
+        </select>
+      </div>` : '';
+
     host.innerHTML = `
+      ${filtroHtml}
       <div class="db-ativ-grid">
         <div class="db-ativ-col">
           <div class="db-ativ-col-titulo">Em Execução</div>
@@ -432,6 +482,9 @@ const Dashboard = (() => {
           ${proximas.length ? proximas.map(t => item(t, '#60a5fa')).join('') : '<div class="text-sm text-muted" style="padding:10px 0;">Nenhuma atividade pendente.</div>'}
         </div>
       </div>`;
+
+    const sel = document.getElementById('db-filtro-atividades');
+    if (sel) sel.addEventListener('change', () => { _filtroPaiAtividades = sel.value; _renderAtividades(); });
   }
 
   // ===================== SUPRIMENTOS (resumo no Dashboard) =====================
@@ -450,30 +503,46 @@ const Dashboard = (() => {
   function _renderSuprimentosDash() {
     const host = document.getElementById('db-suprimentos-dash');
     if (!host) return;
-    const leaves = _leaves();
-    const pendentes = leaves
+    const todasLeaves = _leaves();
+    const paisDisp = _listaPaisDisponiveis(todasLeaves);
+    const leavesBase = _filtroPaiSuprimentos
+      ? todasLeaves.filter(t => { const p = _paiDe(t); return p && p.id === _filtroPaiSuprimentos; })
+      : todasLeaves;
+    const pendentes = leavesBase
       .filter(t => !(Number(t.percentualConcluido) > 0) && t.inicioPlanejado)
       .filter(t => _statusSuprimento(t.id) !== 'iniciado')
       .sort((a, b) => new Date(a.inicioPlanejado) - new Date(b.inicioPlanejado))
       .slice(0, 10);
 
+    const filtroHtml = paisDisp.length ? `
+      <div class="db-filtro-pai" style="margin-bottom:10px;">
+        <select id="db-filtro-suprimentos" class="input" style="max-width:260px;">
+          <option value="">Todos os grupos</option>
+          ${paisDisp.map(p => `<option value="${p.id}" ${_filtroPaiSuprimentos === p.id ? 'selected' : ''}>${p.nome}</option>`).join('')}
+        </select>
+      </div>` : '';
+
     if (!pendentes.length) {
-      host.innerHTML = '<div class="estado-vazio"><p class="text-sm">Nenhuma próxima atividade sem Suprimentos iniciado — tudo em dia.</p></div>';
-      return;
+      host.innerHTML = filtroHtml + '<div class="estado-vazio"><p class="text-sm">Nenhuma próxima atividade sem Suprimentos iniciado — tudo em dia.</p></div>';
+    } else {
+      host.innerHTML = `
+        ${filtroHtml}
+        <div class="text-sm text-muted" style="margin-bottom:8px;">Próximas atividades cujo pipeline de Suprimentos ainda não foi iniciado:</div>
+        ${pendentes.map(t => {
+          const semDoc = _statusSuprimento(t.id) === 'sem_doc';
+          return `<div class="db-ativ-item">
+            <span class="db-ativ-dot" style="background:${semDoc ? '#ef4444' : '#f59e0b'};"></span>
+            <div class="db-ativ-info">
+              <div class="db-ativ-nome">${t.nome || 'Sem nome'}</div>
+              <div class="db-ativ-sub text-sm text-muted">${t.local ? t.local + ' · ' : ''}Início: ${Utils.formatarData(t.inicioPlanejado)}</div>
+            </div>
+            <span class="badge ${semDoc ? 'badge-perigo' : 'badge-alerta'}" style="font-size:.65rem;">${semDoc ? 'Sem registro' : 'Não iniciado'}</span>
+          </div>`;
+        }).join('')}`;
     }
-    host.innerHTML = `
-      <div class="text-sm text-muted" style="margin-bottom:8px;">Próximas atividades cujo pipeline de Suprimentos ainda não foi iniciado:</div>
-      ${pendentes.map(t => {
-        const semDoc = _statusSuprimento(t.id) === 'sem_doc';
-        return `<div class="db-ativ-item">
-          <span class="db-ativ-dot" style="background:${semDoc ? '#ef4444' : '#f59e0b'};"></span>
-          <div class="db-ativ-info">
-            <div class="db-ativ-nome">${t.nome || 'Sem nome'}</div>
-            <div class="db-ativ-sub text-sm text-muted">${t.local ? t.local + ' · ' : ''}Início: ${Utils.formatarData(t.inicioPlanejado)}</div>
-          </div>
-          <span class="badge ${semDoc ? 'badge-perigo' : 'badge-alerta'}" style="font-size:.65rem;">${semDoc ? 'Sem registro' : 'Não iniciado'}</span>
-        </div>`;
-      }).join('')}`;
+
+    const sel = document.getElementById('db-filtro-suprimentos');
+    if (sel) sel.addEventListener('change', () => { _filtroPaiSuprimentos = sel.value; _renderSuprimentosDash(); });
   }
 
   // ===================== CURVA S =====================
