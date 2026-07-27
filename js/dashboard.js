@@ -15,8 +15,6 @@ const Dashboard = (() => {
   let _curvaCache = null; // último cálculo da Curva S (usado pelo tooltip)
   let _curvaGranularidade = 'mensal'; // 'mensal' | 'semanal'
   let _mostrarConcreto = localStorage.getItem('db_mostrar_fundacao_estrutura') === 'true';
-  let _filtroPaiAtividades = ''; // id do grupo-pai selecionado no card Atividades ('' = todos)
-  let _filtroPaiSuprimentos = ''; // idem, card Suprimentos
 
   const MOTIVOS_COR = {
     'Frente/Predecessora Não Liberada': '#f59e0b',
@@ -183,7 +181,6 @@ const Dashboard = (() => {
       tarefas = tf;
       historicoExecucao = hist;
       suprimentos = sup;
-      _paisCache = null; // tarefas recarregadas — invalida o cache de grupo-pai
       el.innerHTML = _htmlEsqueleto();
       _renderHero();
       _renderAtividades();
@@ -365,38 +362,81 @@ const Dashboard = (() => {
     return _folhas(tarefas);
   }
 
-  // Grupo-pai imediato de cada tarefa-folha, pela mesma lógica de ordem/nível
-  // já usada em _folhas: percorrendo pra trás na ORDEM geral, o pai é o
-  // primeiro registro com nível menor que o da folha (não existe parentId
-  // nos dados — hierarquia é só posição+nível, igual ao resto do sistema).
-  // Cacheado em Map por id de folha pra não recalcular em todo render.
-  let _paisCache = null; // Map<tarefaId, {id, nome}>
-  function _mapaPais(tf) {
-    const sorted = [...tf].sort((a, b) => (a.ordem || 0) - (b.ordem || 0));
-    const mapa = new Map();
-    sorted.forEach((t, i) => {
-      let pai = null;
-      for (let j = i - 1; j >= 0; j--) {
-        if ((sorted[j].nivel || 0) < (t.nivel || 0)) { pai = sorted[j]; break; }
-      }
-      mapa.set(t.id, pai ? { id: pai.id, nome: pai.nome || 'Sem nome' } : null);
+  // Filhos DIRETOS de um nó, pela mesma lógica de ordem/nível usada no
+  // Editor de Estrutura do Planejamento (js/planejamento.js:_arvFilhos) —
+  // não existe parentId nos dados, hierarquia é só posição+nível.
+  function _filhosDiretos(pai, sorted) {
+    const pn = pai.nivel || 0;
+    const pi = sorted.findIndex(t => t.id === pai.id);
+    const filhos = [];
+    for (let i = pi + 1; i < sorted.length; i++) {
+      const t = sorted[i];
+      if ((t.nivel || 0) <= pn) break;
+      if ((t.nivel || 0) === pn + 1) filhos.push(t);
+    }
+    return filhos;
+  }
+  function _temFilhos(t, sorted) { return _filhosDiretos(t, sorted).length > 0; }
+
+  // Todas as folhas (recursivo, qualquer profundidade) descendentes de um nó —
+  // usado pra agregar % / contagem / datas quando o nó está recolhido.
+  function _folhasDescendentes(no, sorted) {
+    const filhos = _filhosDiretos(no, sorted);
+    if (!filhos.length) return [no]; // já é folha
+    let out = [];
+    filhos.forEach(f => { out = out.concat(_folhasDescendentes(f, sorted)); });
+    return out;
+  }
+
+  // Estado da árvore navegável dos cards Atividades/Suprimentos: independente
+  // um do outro. 'nivelFixo' = nível em que a árvore sempre começa ao trocar
+  // de obra/recarregar; 'abertos' = Set de ids expandidos além do nível fixo.
+  const _arvoreState = {
+    atividades: { nivelFixo: 0, abertos: new Set() },
+    suprimentos: { nivelFixo: 0, abertos: new Set() },
+  };
+  function _resetArvore(chave, nivel) {
+    const st = _arvoreState[chave];
+    st.nivelFixo = nivel;
+    st.abertos = new Set();
+  }
+  function _toggleNo(chave, id) {
+    const st = _arvoreState[chave];
+    if (st.abertos.has(id)) st.abertos.delete(id); else st.abertos.add(id);
+  }
+  // Um nó aparece "aberto por padrão" se o nível dele é MENOR que o nível fixo
+  // (precisa estar aberto pra dar acesso aos descendentes do nível fixo) —
+  // e a partir do nível fixo, só abre se estiver explicitamente em 'abertos'.
+  function _noAberto(chave, t) {
+    const st = _arvoreState[chave];
+    if ((t.nivel || 0) < st.nivelFixo) return true;
+    return st.abertos.has(t.id);
+  }
+
+  // Agrega % concluído/esperado (peso por duração, mesma convenção do resto
+  // do Dashboard — ver _peso), contagem e data mais próxima entre as folhas
+  // descendentes de um nó, filtradas por status (execução/próximas).
+  function _resumoNo(no, sorted, statusFiltro) {
+    const folhas = _folhasDescendentes(no, sorted).filter(statusFiltro);
+    if (!folhas.length) return null;
+    let somaPeso = 0, somaConc = 0, dataMaisProxima = null;
+    folhas.forEach(t => {
+      const peso = _peso(t);
+      somaPeso += peso;
+      somaConc += Math.min(100, Number(t.percentualConcluido) || 0) * peso;
+      const campoData = statusFiltro === _emExecucaoFiltro ? t.terminoPlanejado : t.inicioPlanejado;
+      const d = campoData ? new Date(campoData) : null;
+      if (d && (!dataMaisProxima || d < dataMaisProxima)) dataMaisProxima = d;
     });
-    return mapa;
+    return {
+      qtd: folhas.length,
+      percMedio: somaPeso ? somaConc / somaPeso : 0,
+      dataMaisProxima,
+    };
   }
-  function _paiDe(t) {
-    if (!_paisCache) _paisCache = _mapaPais(tarefas);
-    return _paisCache.get(t.id) || null;
-  }
-  // Lista de grupos-pai distintos presentes num conjunto de folhas, ordenada
-  // por nome, pra popular o <select> de filtro dos cards.
-  function _listaPaisDisponiveis(leaves) {
-    const vistos = new Map();
-    leaves.forEach(t => {
-      const p = _paiDe(t);
-      if (p && !vistos.has(p.id)) vistos.set(p.id, p.nome);
-    });
-    return [...vistos.entries()].map(([id, nome]) => ({ id, nome })).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
-  }
+  function _emExecucaoFiltro(t) { return (Number(t.percentualConcluido) || 0) > 0 && (Number(t.percentualConcluido) || 0) < 100; }
+  function _proximasFiltro(t) { return !(Number(t.percentualConcluido) > 0); }
+
   // Peso de cada tarefa nos cálculos agregados (Curva S, KPIs do Hero).
   // HISTÓRICO: já foi trocado pra ponderar por QUANTIDADE (convenção de
   // Utils.percFamilia), mas isso distorceu o % geral pra perto de 0 nesta
@@ -430,6 +470,82 @@ const Dashboard = (() => {
     };
   }
 
+  // ===================== ÁRVORE NAVEGÁVEL (Atividades / Suprimentos) =====================
+  // Renderiza uma coluna como árvore expansível (mesmo padrão do Editor de
+  // Estrutura do Planejamento): começa no nível fixo escolhido, nós com
+  // filhos mostram resumo agregado (qtd + % médio + data) quando recolhidos,
+  // e abrem/fecham por clique. `statusFiltro` decide quais folhas contam
+  // (_emExecucaoFiltro ou _proximasFiltro) e qual data mostrar.
+  function _renderArvoreColuna(chave, raizesNivelFixo, sorted, statusFiltro, corDot, vazioMsg) {
+    const st = _arvoreState[chave];
+
+    const linhaFolha = (t) => `
+      <div class="db-ativ-item">
+        <span class="db-ativ-dot" style="background:${corDot};"></span>
+        <div class="db-ativ-info">
+          <div class="db-ativ-nome">${t.nome || 'Sem nome'}</div>
+          <div class="db-ativ-sub text-sm text-muted">${t.local ? t.local + ' · ' : ''}${statusFiltro === _emExecucaoFiltro ? 'Prazo' : 'Início'}: ${Utils.formatarData(statusFiltro === _emExecucaoFiltro ? t.terminoPlanejado : t.inicioPlanejado)}</div>
+        </div>
+        <div class="db-ativ-perc">${Math.round(Number(t.percentualConcluido) || 0)}%</div>
+      </div>`;
+
+    const linhaGrupo = (t, resumo, aberto) => `
+      <div class="db-ativ-item db-ativ-grupo" style="cursor:pointer;" onclick="Dashboard._arvToggle('${chave}','${t.id}')">
+        <span class="db-ativ-dot" style="background:${corDot};opacity:.5;"></span>
+        <span style="width:14px;flex-shrink:0;text-align:center;color:#777;font-size:.7rem;">${aberto ? '▼' : '▶'}</span>
+        <div class="db-ativ-info">
+          <div class="db-ativ-nome">${t.nome || 'Sem nome'} <span class="text-sm text-muted" style="font-weight:400;">(${resumo.qtd})</span></div>
+          <div class="db-ativ-sub text-sm text-muted">${resumo.dataMaisProxima ? (statusFiltro === _emExecucaoFiltro ? 'Prazo mais próximo: ' : 'Início mais próximo: ') + Utils.formatarData(resumo.dataMaisProxima) : 'Sem data'}</div>
+        </div>
+        <div class="db-ativ-perc">${Math.round(resumo.percMedio)}%</div>
+      </div>`;
+
+    // Renderiza recursivamente a partir de uma lista de nós de um mesmo nível.
+    const renderNivel = (nos, indent) => {
+      let html = '';
+      nos.forEach(t => {
+        const filhos = _filhosDiretos(t, sorted);
+        if (!filhos.length) {
+          // É folha de verdade — só entra se bater no filtro de status.
+          if (statusFiltro(t)) html += `<div style="padding-left:${indent}px;">${linhaFolha(t)}</div>`;
+          return;
+        }
+        const resumo = _resumoNo(t, sorted, statusFiltro);
+        if (!resumo) return; // nenhum descendente bate no filtro — não mostra o grupo
+        const aberto = _noAberto(chave, t);
+        html += `<div style="padding-left:${indent}px;">${linhaGrupo(t, resumo, aberto)}</div>`;
+        if (aberto) html += renderNivel(filhos, indent + 16);
+      });
+      return html;
+    };
+
+    const corpo = renderNivel(raizesNivelFixo, 0);
+    return corpo || `<div class="text-sm text-muted" style="padding:10px 0;">${vazioMsg}</div>`;
+  }
+
+  // Botões de nível fixo (0,1,2,3...) — detecta a profundidade máxima real
+  // da árvore pra não oferecer nível que não existe.
+  function _nivelMaximo(sorted) {
+    return sorted.reduce((max, t) => Math.max(max, t.nivel || 0), 0);
+  }
+  function _controleNivel(chave) {
+    const max = Math.min(4, _nivelMaximo([...tarefas]));
+    const st = _arvoreState[chave];
+    let botoes = '';
+    for (let n = 0; n <= max; n++) {
+      botoes += `<button class="btn btn-sm ${st.nivelFixo === n ? 'btn-primario' : 'btn-secundario'}" style="font-size:.68rem;padding:3px 9px;" onclick="Dashboard._arvNivelFixo('${chave}',${n})">Nível ${n}</button>`;
+    }
+    return `<div style="display:flex;gap:4px;margin-bottom:10px;flex-wrap:wrap;">${botoes}</div>`;
+  }
+  function _arvNivelFixo(chave, nivel) {
+    _resetArvore(chave, nivel);
+    if (chave === 'atividades') _renderAtividades(); else _renderSuprimentosDash();
+  }
+  function _arvToggle(chave, id) {
+    _toggleNo(chave, id);
+    if (chave === 'atividades') _renderAtividades(); else _renderSuprimentosDash();
+  }
+
   // ===================== ATIVIDADES =====================
   function _renderAtividades() {
     const host = document.getElementById('db-atividades');
@@ -437,54 +553,24 @@ const Dashboard = (() => {
     if (atualizado) atualizado.textContent = 'Atualizado em ' + Utils.formatarDataHora(new Date());
     if (!host) return;
 
-    const todasLeaves = _leaves();
-    const paisDisp = _listaPaisDisponiveis(todasLeaves);
-    const leaves = _filtroPaiAtividades
-      ? todasLeaves.filter(t => { const p = _paiDe(t); return p && p.id === _filtroPaiAtividades; })
-      : todasLeaves;
+    const sorted = [...tarefas].sort((a, b) => (a.ordem || 0) - (b.ordem || 0));
+    const raizes = sorted.filter(t => (t.nivel || 0) === _arvoreState.atividades.nivelFixo);
 
-    const emExecucao = leaves
-      .filter(t => (Number(t.percentualConcluido) || 0) > 0 && (Number(t.percentualConcluido) || 0) < 100)
-      .sort((a, b) => new Date(a.terminoPlanejado || '9999-12-31') - new Date(b.terminoPlanejado || '9999-12-31'))
-      .slice(0, 8);
-    const proximas = leaves
-      .filter(t => !(Number(t.percentualConcluido) > 0))
-      .sort((a, b) => new Date(a.inicioPlanejado || '9999-12-31') - new Date(b.inicioPlanejado || '9999-12-31'))
-      .slice(0, 8);
-
-    const item = (t, corBase) => `
-      <div class="db-ativ-item">
-        <span class="db-ativ-dot" style="background:${corBase};"></span>
-        <div class="db-ativ-info">
-          <div class="db-ativ-nome">${t.nome || 'Sem nome'}</div>
-          <div class="db-ativ-sub text-sm text-muted">${t.local ? t.local + ' · ' : ''}Prazo: ${Utils.formatarData(t.terminoPlanejado)}</div>
-        </div>
-        <div class="db-ativ-perc">${Math.round(Number(t.percentualConcluido) || 0)}%</div>
-      </div>`;
-
-    const filtroHtml = paisDisp.length ? `
-      <div class="db-filtro-pai" style="margin-bottom:10px;">
-        <select id="db-filtro-atividades" class="input" style="max-width:260px;">
-          <option value="">Todos os grupos</option>
-          ${paisDisp.map(p => `<option value="${p.id}" ${_filtroPaiAtividades === p.id ? 'selected' : ''}>${p.nome}</option>`).join('')}
-        </select>
-      </div>` : '';
+    const colExecucao = _renderArvoreColuna('atividades', raizes, sorted, _emExecucaoFiltro, '#facc15', 'Nenhuma atividade em execução.');
+    const colProximas = _renderArvoreColuna('atividades', raizes, sorted, _proximasFiltro, '#60a5fa', 'Nenhuma atividade pendente.');
 
     host.innerHTML = `
-      ${filtroHtml}
+      ${_controleNivel('atividades')}
       <div class="db-ativ-grid">
         <div class="db-ativ-col">
           <div class="db-ativ-col-titulo">Em Execução</div>
-          ${emExecucao.length ? emExecucao.map(t => item(t, '#facc15')).join('') : '<div class="text-sm text-muted" style="padding:10px 0;">Nenhuma atividade em execução.</div>'}
+          ${colExecucao}
         </div>
         <div class="db-ativ-col">
           <div class="db-ativ-col-titulo">Próximas</div>
-          ${proximas.length ? proximas.map(t => item(t, '#60a5fa')).join('') : '<div class="text-sm text-muted" style="padding:10px 0;">Nenhuma atividade pendente.</div>'}
+          ${colProximas}
         </div>
       </div>`;
-
-    const sel = document.getElementById('db-filtro-atividades');
-    if (sel) sel.addEventListener('change', () => { _filtroPaiAtividades = sel.value; _renderAtividades(); });
   }
 
   // ===================== SUPRIMENTOS (resumo no Dashboard) =====================
@@ -499,50 +585,25 @@ const Dashboard = (() => {
     const tocada = etapas.some(e => e && e.status && e.status !== 'nao_iniciado');
     return tocada ? 'iniciado' : 'nao_iniciado';
   }
+  // Próxima (ainda não iniciada) E com pipeline de Suprimentos parado —
+  // é o filtro de status usado só na árvore do card Suprimentos.
+  function _pendenteSuprimentoFiltro(t) {
+    return _proximasFiltro(t) && !!t.inicioPlanejado && _statusSuprimento(t.id) !== 'iniciado';
+  }
 
   function _renderSuprimentosDash() {
     const host = document.getElementById('db-suprimentos-dash');
     if (!host) return;
-    const todasLeaves = _leaves();
-    const paisDisp = _listaPaisDisponiveis(todasLeaves);
-    const leavesBase = _filtroPaiSuprimentos
-      ? todasLeaves.filter(t => { const p = _paiDe(t); return p && p.id === _filtroPaiSuprimentos; })
-      : todasLeaves;
-    const pendentes = leavesBase
-      .filter(t => !(Number(t.percentualConcluido) > 0) && t.inicioPlanejado)
-      .filter(t => _statusSuprimento(t.id) !== 'iniciado')
-      .sort((a, b) => new Date(a.inicioPlanejado) - new Date(b.inicioPlanejado))
-      .slice(0, 10);
 
-    const filtroHtml = paisDisp.length ? `
-      <div class="db-filtro-pai" style="margin-bottom:10px;">
-        <select id="db-filtro-suprimentos" class="input" style="max-width:260px;">
-          <option value="">Todos os grupos</option>
-          ${paisDisp.map(p => `<option value="${p.id}" ${_filtroPaiSuprimentos === p.id ? 'selected' : ''}>${p.nome}</option>`).join('')}
-        </select>
-      </div>` : '';
+    const sorted = [...tarefas].sort((a, b) => (a.ordem || 0) - (b.ordem || 0));
+    const raizes = sorted.filter(t => (t.nivel || 0) === _arvoreState.suprimentos.nivelFixo);
+    const corpo = _renderArvoreColuna('suprimentos', raizes, sorted, _pendenteSuprimentoFiltro, '#f59e0b',
+      'Nenhuma próxima atividade sem Suprimentos iniciado — tudo em dia.');
 
-    if (!pendentes.length) {
-      host.innerHTML = filtroHtml + '<div class="estado-vazio"><p class="text-sm">Nenhuma próxima atividade sem Suprimentos iniciado — tudo em dia.</p></div>';
-    } else {
-      host.innerHTML = `
-        ${filtroHtml}
-        <div class="text-sm text-muted" style="margin-bottom:8px;">Próximas atividades cujo pipeline de Suprimentos ainda não foi iniciado:</div>
-        ${pendentes.map(t => {
-          const semDoc = _statusSuprimento(t.id) === 'sem_doc';
-          return `<div class="db-ativ-item">
-            <span class="db-ativ-dot" style="background:${semDoc ? '#ef4444' : '#f59e0b'};"></span>
-            <div class="db-ativ-info">
-              <div class="db-ativ-nome">${t.nome || 'Sem nome'}</div>
-              <div class="db-ativ-sub text-sm text-muted">${t.local ? t.local + ' · ' : ''}Início: ${Utils.formatarData(t.inicioPlanejado)}</div>
-            </div>
-            <span class="badge ${semDoc ? 'badge-perigo' : 'badge-alerta'}" style="font-size:.65rem;">${semDoc ? 'Sem registro' : 'Não iniciado'}</span>
-          </div>`;
-        }).join('')}`;
-    }
-
-    const sel = document.getElementById('db-filtro-suprimentos');
-    if (sel) sel.addEventListener('change', () => { _filtroPaiSuprimentos = sel.value; _renderSuprimentosDash(); });
+    host.innerHTML = `
+      ${_controleNivel('suprimentos')}
+      <div class="text-sm text-muted" style="margin-bottom:8px;">Próximas atividades cujo pipeline de Suprimentos ainda não foi iniciado:</div>
+      ${corpo}`;
   }
 
   // ===================== CURVA S =====================
@@ -1643,5 +1704,5 @@ const Dashboard = (() => {
       </div>`;
   }
 
-  return { init, onObraChanged, setResumoView, setPacotesView, setCurvaGranularidade, toggleMostrarConcreto };
+  return { init, onObraChanged, setResumoView, setPacotesView, setCurvaGranularidade, toggleMostrarConcreto, _arvToggle, _arvNivelFixo };
 })();

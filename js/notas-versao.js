@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.57.15',
+  versaoAtual: 'V2.57.16',
 
   versoes: [
     {
@@ -4994,11 +4994,17 @@ const NotasVersao = {
     {versao:'V2.57.14',status:'fechada',data:'2026-07-24',tipo:'melhoria',
       titulo:'Importar Excel: tarefas que existiam antes e não vieram na planilha agora aparecem num painel de revisão pra decidir excluir ou manter — em vez de ficarem soltas',
       itens:['Depois do import (upsert por Código da V2.57.13), abre um painel listando as tarefas que tinham Código mas não apareceram na planilha importada — com checkbox por tarefa, "marcar/desmarcar todas" e botão para excluir só as marcadas. Fechar sem marcar nada mantém tudo como está.']},
-    {versao:'V2.57.15',status:'aberta',data:'2026-07-27',tipo:'melhoria',
-      titulo:'Dashboard: filtro por grupo-pai nos cards Atividades e Suprimentos',
+    {versao:'V2.57.15',status:'fechada',data:'2026-07-27',tipo:'melhoria',
+      titulo:'Dashboard: filtro por grupo-pai nos cards Atividades e Suprimentos (substituído na V2.57.16)',
       itens:['Novo seletor no topo dos cards "Atividades" e "Suprimentos" pra restringir a lista ao grupo-pai escolhido (ex: só "Alvenaria", em vez de todos os apartamentos misturados de todos os serviços).',
         'O pai de cada tarefa-folha é achado pela mesma lógica de ordem/nível já usada no resto do sistema (não existe parentId nos dados) — é o registro mais próximo acima dela na ordem geral com nível menor.',
-        'O filtro é independente entre os dois cards: pode ver "Alvenaria" em Atividades e "Todos os grupos" em Suprimentos ao mesmo tempo.']}
+        'O filtro é independente entre os dois cards: pode ver "Alvenaria" em Atividades e "Todos os grupos" em Suprimentos ao mesmo tempo.']},
+    {versao:'V2.57.16',status:'aberta',data:'2026-07-27',tipo:'melhoria',
+      titulo:'Dashboard: filtro da V2.57.15 substituído por árvore navegável (igual ao Editor de Estrutura do Planejamento) em Atividades e Suprimentos',
+      itens:['O filtro por grupo-pai escondia grupos cujas tarefas mais próximas estavam fora do corte de "8 mais próximas" (ex: "1ª Demão" com tudo daqui a meses simplesmente não aparecia na lista de opções).',
+        'Substituído por árvore expansível: cada card mostra os grupos a partir de um nível fixo escolhido (botões "Nível 0/1/2/3..."), com clique pra abrir/fechar e ver os níveis abaixo ou o grupo acima.',
+        'Grupo recolhido mostra resumo agregado das tarefas-folha dentro dele (peso por duração, mesma convenção do resto do Dashboard): quantidade de itens, % médio e a data mais próxima (prazo em Em Execução, início em Próximas/Suprimentos) — sem limite de 8, então grupos só com tarefas distantes no tempo continuam aparecendo.',
+        'Estado de nível/expansão independente entre Atividades e Suprimentos.']}
   ],
 
   render(containerId) {
