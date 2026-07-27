@@ -330,14 +330,14 @@ const Utils = (() => {
       ...maquina.cobre,
       metros: mlTotal,
       rolos: rolo(maquina.cobre.mPorRolo, mlTotal),
-      nomeExibicao: maquina.cobre.nome + (diametroLabel ? ` (Ø ${diametroLabel})` : ''),
+      nomeExibicao: maquina.cobre.nome,
     } : null;
 
     const vinculados = (maquina?.vinculados || []).map(v => ({
       ...v,
       metros: mlTotal,
       rolos: rolo(v.mPorRolo, mlTotal),
-      nomeExibicao: v.nome + (diametroLabel ? ` (Ø ${diametroLabel})` : ''),
+      nomeExibicao: v.nome,
     }));
 
     const porMl = (maquina?.porMl || []).map(p => {

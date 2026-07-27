@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.57.18',
+  versaoAtual: 'V2.57.19',
 
   versoes: [
     {
@@ -5011,10 +5011,14 @@ const NotasVersao = {
         '"Em Execução" e "Próximas" deixaram de ficar lado a lado (um ficava vazio enquanto o outro lotava com o filtro) — agora empilhadas, cada uma com seu próprio nível fixo e (no caso de Próximas) seu próprio horizonte.',
         'Botões de nível fixo não travam mais em 4 — vão até o nível mais profundo que existir de fato nos dados da obra.',
         'Grupo recolhido não mostra mais a linha de data (só nome, contagem e %) — some ao abrir, deixando a árvore mais enxuta conforme desce de nível.']},
-    {versao:'V2.57.18',status:'aberta',data:'2026-07-27',tipo:'correcao',
+    {versao:'V2.57.18',status:'fechada',data:'2026-07-27',tipo:'correcao',
       titulo:'Levantamento Ar Condicionado: itens vinculados (ex: espuma) sumiam/se fundiam no Resumo consolidado quando duas máquinas com diâmetros diferentes usavam o mesmo material',
       itens:['Só o item principal de cobre separava por diâmetro no resumo (chave materialId+diâmetro); os itens vinculados (espuma etc.) agregavam só por materialId — se duas máquinas de diâmetros diferentes (ex: Ø 1/2" e Ø 1/4") usassem o mesmo material vinculado, uma entrada sobrescrevia/fundia com a outra e sumia do resumo.',
-        'Corrigido: itens vinculados agora também separam por diâmetro no resumo (mesma lógica do cobre), com o diâmetro aparecendo no nome (ex: "Espuma Polipex (Ø 1/2)").']}
+        'Corrigido: itens vinculados agora também separam por diâmetro no resumo (mesma lógica do cobre), com o diâmetro aparecendo no nome (ex: "Espuma Polipex (Ø 1/2)").']},
+    {versao:'V2.57.19',status:'aberta',data:'2026-07-27',tipo:'correcao',
+      titulo:'Levantamento AC: fix V2.57.18 duplicava diâmetro no nome (ex: "(Ø 1/4) (Ø 3/8)") quando usuário já escreve o diâmetro manualmente no nome do item',
+      itens:['Máquina não tem campo estruturado de diâmetro por item — usuário digita o diâmetro no próprio nome. V2.57.18 concatenava o diâmetro da máquina por cima, duplicando.',
+        'Revertida concatenação automática; separação no resumo agora usa o nome completo como chave (sem sobrescrever nome digitado).']}
   ],
 
   render(containerId) {
