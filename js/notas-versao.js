@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.57.25',
+  versaoAtual: 'V2.57.26',
 
   versoes: [
     {
@@ -5044,13 +5044,19 @@ const NotasVersao = {
         'Editar o prazo de uma tarefa que tem filhos aplica o mesmo prazo a todos os descendentes dela (cascata pai → filhos).',
         'Botão para remover a customização e voltar ao padrão global.',
         'Cálculo de datas (geração de pendentes e recálculo) agora usa o prazo customizado da tarefa quando existir; senão usa o padrão global — sem mudar o comportamento de quem nunca customizou nada.']},
-    {versao:'V2.57.25',status:'aberta',data:'2026-07-28',tipo:'melhoria',
+    {versao:'V2.57.25',status:'fechada',data:'2026-07-28',tipo:'melhoria',
       titulo:'Suprimentos: seleção manual de quais tarefas entram no pipeline (troca o filtro por nível)',
       itens:['Removido o filtro por nível hierárquico da tela principal — causava linhas de grupo vazias/"undefined" e escondia dados em níveis intermediários.',
         'Novo botão "☑️ Configurar Suprimentos" abre a árvore inteira do Planejamento (todos os níveis) com checkbox por linha — o usuário escolhe exatamente quais tarefas precisam de suprimento (ex.: só "Alvenaria Estrutural", sem repetir por lado A/B).',
         'Tela principal agora é uma lista plana só com as tarefas marcadas — sempre com dados completos, sem depender de folha/grupo.',
         'Dados antigos gerados automaticamente (por tarefa-folha) foram zerados ao trocar de modelo — a seleção começa do zero, conforme combinado.',
-        'Salvar a seleção apaga o pipeline das tarefas desmarcadas e gera pendentes das que entraram, sem duplicar quem já tinha doc.']}
+        'Salvar a seleção apaga o pipeline das tarefas desmarcadas e gera pendentes das que entraram, sem duplicar quem já tinha doc.']},
+    {versao:'V2.57.26',status:'aberta',data:'2026-07-28',tipo:'melhoria',
+      titulo:'Suprimentos: marcador de 3 estados (dados/título/oculto) e formatação visual das células',
+      itens:['Marcador de seleção agora tem 3 estados ao clicar: vazio → ✓ (linha com dados/pipeline completo) → ● (linha só como título, sem pipeline) → vazio de novo.',
+        'Linha em modo "título" mostra só o nome da tarefa, útil pra organizar visualmente sem gerar suprimento pra ela (ex.: mostrar o pai acima de um grupo de filhos).',
+        'Correção visual: selects de status com fonte maior e seta customizada (o texto "Não Iniciado" cortava dentro da caixa antes), inputs de data com contorno mais grosso e cores mais sólidas.',
+        'Colunas de Data/Status com largura mínima maior para não espremer o conteúdo.']}
   ],
 
   render(containerId) {

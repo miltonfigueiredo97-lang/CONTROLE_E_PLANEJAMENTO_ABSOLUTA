@@ -16,7 +16,7 @@ const Suprimentos = (() => {
   let supPorTarefa = {}; // tarefaId -> doc suprimentos
   let cfg = _cfgDefault();
   let overrides = {}; // tarefaId -> {duracaoCadastro,...} (prazo customizado, sobrepõe cfg global)
-  let tarefasSelecionadas = new Set(); // tarefaId -> está marcada para aparecer no pipeline de Suprimentos
+  let tarefasSelecionadas = {}; // tarefaId -> 'dados' | 'titulo' (ausente = não aparece no Suprimentos)
   let nivelFixoModal = 0; // nível do filtro dentro do modal de config de prazos (independente da seleção)
   // etapaId -> Set de status marcados no filtro (vazio = mostra tudo)
   const statusFiltro = {};
@@ -64,7 +64,14 @@ const Suprimentos = (() => {
       ]);
       tarefas = tf;
       if (cfgDoc) { cfg = { ..._cfgDefault(), ...cfgDoc }; overrides = cfgDoc.overrides || {}; delete cfg.overrides; }
-      tarefasSelecionadas = new Set(selecaoDoc && Array.isArray(selecaoDoc.tarefaIds) ? selecaoDoc.tarefaIds : []);
+      // Retrocompatível: versão antiga salvava um array simples de tarefaIds
+      // (todas em modo 'dados'). Versão nova salva { tarefaId: modo }.
+      if (selecaoDoc && Array.isArray(selecaoDoc.tarefaIds)) {
+        tarefasSelecionadas = {};
+        selecaoDoc.tarefaIds.forEach(id => { tarefasSelecionadas[id] = 'dados'; });
+      } else {
+        tarefasSelecionadas = (selecaoDoc && selecaoDoc.modos) || {};
+      }
       supPorTarefa = {};
       supList.forEach(s => { supPorTarefa[s.tarefaId] = s; });
 
@@ -90,7 +97,7 @@ const Suprimentos = (() => {
   async function _gerarPendentes() {
     const criacoes = [];
     tarefas.forEach((t) => {
-      if (!tarefasSelecionadas.has(t.id) || !t.inicioPlanejado || supPorTarefa[t.id]) return;
+      if (tarefasSelecionadas[t.id] !== 'dados' || !t.inicioPlanejado || supPorTarefa[t.id]) return;
       const datas = _calcularDatas(t.inicioPlanejado, _cfgPara(t.id));
       const etapasDoc = {};
       ETAPAS.forEach(e => { etapasDoc[e.id] = { planejada: datas[e.id], data: datas[e.id], status: 'nao_iniciado', manual: false }; });
@@ -131,7 +138,7 @@ const Suprimentos = (() => {
       return;
     }
 
-    if (!tarefasSelecionadas.size) {
+    if (!Object.keys(tarefasSelecionadas).length) {
       container.innerHTML = `<div class="estado-vazio"><div class="icone">📦</div><p>Nenhuma tarefa selecionada para Suprimentos ainda.</p><p class="text-sm text-muted">Clique em "☑️ Configurar Suprimentos" e marque as tarefas do cronograma que precisam de suprimento.</p></div>
         ${_modalSelecaoHTML()}
         ${_modalConfigHTML()}`;
@@ -141,8 +148,9 @@ const Suprimentos = (() => {
     const sorted = [...tarefas].sort((a, b) => (a.ordem || 0) - (b.ordem || 0));
     let linhas = '';
     sorted.forEach((t) => {
-      if (!tarefasSelecionadas.has(t.id)) return;
-      linhas += _linhaFolha(t);
+      const modo = tarefasSelecionadas[t.id];
+      if (!modo) return;
+      linhas += modo === 'titulo' ? _linhaTitulo(t) : _linhaFolha(t);
     });
     if (!linhas) linhas = `<tr><td colspan="${ETAPAS.length * 2 + 3}" class="text-sm text-muted" style="text-align:center;padding:20px;">Nenhuma tarefa selecionada bate com o filtro de status.</td></tr>`;
 
@@ -152,12 +160,12 @@ const Suprimentos = (() => {
           <thead>
             <tr>
               <th rowspan="2" style="min-width:260px;">Nome da Tarefa</th>
-              ${ETAPAS.map(e => `<th colspan="2" style="text-align:center;">${e.label}</th>`).join('')}
+              ${ETAPAS.map(e => `<th colspan="2" style="text-align:center;min-width:230px;">${e.label}</th>`).join('')}
               <th rowspan="2">Desvio (Dias)</th>
               <th rowspan="2">Início</th>
             </tr>
             <tr>
-              ${ETAPAS.map(e => `<th style="font-weight:400;">Data</th><th style="font-weight:400;position:relative;">
+              ${ETAPAS.map(e => `<th style="font-weight:400;min-width:110px;">Data</th><th style="font-weight:400;position:relative;min-width:120px;">
                 <span style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;" onclick="event.stopPropagation();Suprimentos._toggleFiltroStatus('${e.id}')">
                   Status <span style="font-size:.7rem;color:${statusFiltro[e.id]&&statusFiltro[e.id].size?'var(--cor-primaria)':'#999'};">▼</span>
                 </span>
@@ -170,6 +178,17 @@ const Suprimentos = (() => {
       ${_modalSelecaoHTML()}
       ${_modalConfigHTML()}
     `;
+  }
+
+  // Linha "título" (2º clique no checkbox de seleção): só o nome, sem
+  // pipeline nenhum — serve pra organizar visualmente, ex. mostrar um pai
+  // acima de um grupo de filhos sem gerar dados de suprimento pra ele.
+  function _linhaTitulo(t) {
+    const ind = 8 + (t.nivel || 0) * 16;
+    return `<tr class="linha-grupo-suprimentos">
+      <td style="padding-left:${ind}px;font-weight:700;color:#555;">${t.nome}</td>
+      <td colspan="${ETAPAS.length * 2 + 2}"></td>
+    </tr>`;
   }
 
   function _linhaFolha(t) {
@@ -202,12 +221,15 @@ const Suprimentos = (() => {
 
   // ---- Modal de Seleção: escolher manualmente quais tarefas do Planejamento
   // entram no pipeline de Suprimentos. Mostra a árvore inteira (todos os
-  // níveis), com checkbox por linha — evita ter que filtrar por nível ou
-  // lidar com grupos sem dados: o usuário decide exatamente o que aparece.
-  let _selecaoTemp = null; // Set local editado dentro do modal, só vira "oficial" ao Salvar
+  // níveis), com um marcador de 3 estados por linha:
+  //  vazio → não aparece | ✓ (dados) → linha completa com pipeline
+  //  ● (titulo) → aparece só como título/cabeçalho, sem dados nem pipeline
+  // Evita ter que filtrar por nível ou lidar com grupos sem dados: o
+  // usuário decide exatamente o que aparece e como.
+  let _selecaoTemp = null; // {tarefaId: modo} local editado no modal, só vira oficial ao Salvar
 
   function abrirSelecao() {
-    _selecaoTemp = new Set(tarefasSelecionadas);
+    _selecaoTemp = { ...tarefasSelecionadas };
     _reabrirModalSelecao();
     Utils.abrirModal('modal-selecao-suprimentos');
   }
@@ -216,14 +238,27 @@ const Suprimentos = (() => {
     Utils.fecharModal('modal-selecao-suprimentos');
   }
 
+  // Aparência do marcador de 3 estados conforme o modo atual.
+  function _marcadorHTML(tarefaId, modo) {
+    if (modo === 'dados') {
+      return `<div data-sel-marcador="${tarefaId}" onclick="Suprimentos._cicloSelecao('${tarefaId}')" title="Aparece com dados (pipeline completo) — clique para mudar" style="width:18px;height:18px;flex-shrink:0;border:2px solid var(--cor-sucesso);background:var(--cor-sucesso);border-radius:4px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#fff;font-size:.7rem;font-weight:900;line-height:1;">✓</div>`;
+    }
+    if (modo === 'titulo') {
+      return `<div data-sel-marcador="${tarefaId}" onclick="Suprimentos._cicloSelecao('${tarefaId}')" title="Aparece só como título (sem pipeline) — clique para mudar" style="width:18px;height:18px;flex-shrink:0;border:2px solid var(--cor-info);border-radius:4px;display:flex;align-items:center;justify-content:center;cursor:pointer;">
+        <span style="width:8px;height:8px;border-radius:50%;background:var(--cor-info);"></span>
+      </div>`;
+    }
+    return `<div data-sel-marcador="${tarefaId}" onclick="Suprimentos._cicloSelecao('${tarefaId}')" title="Não aparece no Suprimentos — clique para mudar" style="width:18px;height:18px;flex-shrink:0;border:2px solid var(--cor-borda);border-radius:4px;cursor:pointer;"></div>`;
+  }
+
   function _modalSelecaoHTML() {
     const sorted = [...tarefas].sort((a, b) => (a.ordem || 0) - (b.ordem || 0));
-    const marcado = _selecaoTemp || tarefasSelecionadas;
+    const modos = _selecaoTemp || tarefasSelecionadas;
     const linhas = sorted.map(t => {
       const ind = 8 + (t.nivel || 0) * 18;
       const icone = t.tipo === 'grupo' ? '📁 ' : '';
       return `<div style="display:flex;align-items:center;gap:8px;padding:5px 4px;padding-left:${ind}px;border-bottom:1px solid var(--cor-borda-light);">
-        <input type="checkbox" data-sel-tarefa="${t.id}" ${marcado.has(t.id) ? 'checked' : ''} style="width:15px;height:15px;flex-shrink:0;" onchange="Suprimentos._marcarSelecao('${t.id}',this.checked)">
+        ${_marcadorHTML(t.id, modos[t.id])}
         <span style="font-size:.82rem;${t.tipo==='grupo'?'font-weight:700;color:#555;':''}">${icone}${t.nome}</span>
       </div>`;
     }).join('');
@@ -232,7 +267,7 @@ const Suprimentos = (() => {
         <div class="modal" style="max-width:700px;width:95%;">
           <div class="modal-header"><h3>Configurar Suprimentos — selecionar tarefas</h3></div>
           <div class="modal-body" style="max-height:65vh;overflow-y:auto;">
-            <p class="text-sm text-muted" style="margin-bottom:10px;">Marque as tarefas do cronograma que precisam de pipeline de Suprimentos. Só o que estiver marcado aparece na tela principal.</p>
+            <p class="text-sm text-muted" style="margin-bottom:10px;">Clique no marcador pra alternar: vazio → <b style="color:var(--cor-sucesso);">✓ com dados</b> (pipeline completo) → <b style="color:var(--cor-info);">● só título</b> (linha em branco, sem pipeline) → vazio de novo.</p>
             <div>${linhas || '<p class="text-sm text-muted">Nenhuma tarefa no Planejamento.</p>'}</div>
           </div>
           <div class="modal-footer">
@@ -251,25 +286,36 @@ const Suprimentos = (() => {
     if (antigo) antigo.replaceWith(novo);
   }
 
-  function _marcarSelecao(tarefaId, marcado) {
+  // Cicla o estado do marcador: ausente → 'dados' → 'titulo' → ausente.
+  // Atualiza só o marcador clicado no DOM (sem re-render do modal inteiro).
+  function _cicloSelecao(tarefaId) {
     if (!_selecaoTemp) return;
-    if (marcado) _selecaoTemp.add(tarefaId); else _selecaoTemp.delete(tarefaId);
+    const atual = _selecaoTemp[tarefaId];
+    let novo;
+    if (!atual) novo = 'dados';
+    else if (atual === 'dados') novo = 'titulo';
+    else novo = null;
+    if (novo) _selecaoTemp[tarefaId] = novo; else delete _selecaoTemp[tarefaId];
+    const el = document.querySelector(`[data-sel-marcador="${tarefaId}"]`);
+    if (el) el.outerHTML = _marcadorHTML(tarefaId, novo);
   }
 
   // Salva a seleção e sincroniza o pipeline: apaga docs de suprimentos de
-  // tarefas que saíram da lista, gera pendentes das que entraram.
+  // tarefas que saíram da lista OU viraram 'titulo' (título não tem
+  // pipeline), gera pendentes das que entraram em modo 'dados'.
   async function salvarSelecao() {
     if (!_selecaoTemp) return;
     try {
       Utils.mostrarLoading('Salvando seleção...');
       const novaSelecao = _selecaoTemp;
-      const removidas = [...tarefasSelecionadas].filter(id => !novaSelecao.has(id) && supPorTarefa[id]);
+      const idsAntigos = Object.keys(tarefasSelecionadas);
+      const removidas = idsAntigos.filter(id => novaSelecao[id] !== 'dados' && supPorTarefa[id]);
       await Promise.all(removidas.map(id => Database.deletar(obraId, COL, id).catch(e => console.warn('Falha ao remover suprimento:', e.message))));
       removidas.forEach(id => { delete supPorTarefa[id]; });
 
       tarefasSelecionadas = novaSelecao;
-      await Database.criar(obraId, 'config', { tarefaIds: [...tarefasSelecionadas] }, SELECAO_DOC)
-        .catch(() => Database.atualizar(obraId, 'config', SELECAO_DOC, { tarefaIds: [...tarefasSelecionadas] }));
+      await Database.criar(obraId, 'config', { modos: tarefasSelecionadas }, SELECAO_DOC)
+        .catch(() => Database.atualizar(obraId, 'config', SELECAO_DOC, { modos: tarefasSelecionadas }));
 
       await _gerarPendentes();
       Utils.toast('Seleção de Suprimentos atualizada', 'sucesso');
@@ -338,13 +384,13 @@ const Suprimentos = (() => {
     const { cor, bg } = _corPrazo(e, hoje);
     const st = STATUS_INFO[e.status] || STATUS_INFO.nao_iniciado;
     const tooltip = e.manual ? `Editado manualmente (automático seria ${Utils.formatarData(e.planejada)})` : 'Automático — ainda não editado';
-    const inputStyle = `width:100%;border:1.5px solid ${e.manual?cor:'var(--cor-borda)'};background:${bg};color:${cor};font-size:.72rem;font-family:var(--font-mono);padding:4px 3px;border-radius:5px;box-sizing:border-box;text-align:center;cursor:pointer;`;
-    const selStyle = `width:100%;border:1.5px solid ${st.cor};background:${st.bg};color:${st.cor};font-size:.71rem;font-weight:700;padding:4px 3px;border-radius:5px;box-sizing:border-box;cursor:pointer;`;
+    const inputStyle = `width:100%;border:2px solid ${e.manual?cor:'var(--cor-borda)'};background:${bg};color:${cor};font-size:.8rem;font-weight:600;font-family:var(--font-mono);padding:6px 4px;border-radius:5px;box-sizing:border-box;text-align:center;cursor:pointer;`;
+    const selStyle = `width:100%;min-width:108px;border:2px solid ${st.cor};background:${st.bg};color:${st.cor};font-size:.78rem;font-weight:700;padding:6px 24px 6px 8px;border-radius:5px;box-sizing:border-box;cursor:pointer;appearance:none;-webkit-appearance:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'><path fill='${encodeURIComponent(st.cor)}' d='M0 0l6 8 6-8z'/></svg>");background-repeat:no-repeat;background-position:right 6px center;background-size:10px 7px;`;
     return `
-      <td class="sup-cel-data" data-tarefa="${tarefaId}" data-etapa="${etapaId}" style="padding:3px;" title="${tooltip}">
+      <td class="sup-cel-data" data-tarefa="${tarefaId}" data-etapa="${etapaId}" style="padding:4px;" title="${tooltip}">
         <input type="date" value="${e.data}" style="${inputStyle}" onchange="Suprimentos.onDataInlineChange('${tarefaId}','${etapaId}',this.value)">
       </td>
-      <td class="sup-cel-status" data-tarefa="${tarefaId}" data-etapa="${etapaId}" style="padding:3px;">
+      <td class="sup-cel-status" data-tarefa="${tarefaId}" data-etapa="${etapaId}" style="padding:4px;">
         <select style="${selStyle}" onchange="Suprimentos.onStatusInlineChange('${tarefaId}','${etapaId}',this.value)">
           ${Object.entries(STATUS_INFO).map(([key, info]) => `<option value="${key}" ${e.status===key?'selected':''}>${info.label}</option>`).join('')}
         </select>
@@ -597,7 +643,7 @@ const Suprimentos = (() => {
 
   return {
     init, renderizar, abrirConfig, fecharConfig, salvarConfig, onDataInlineChange, onStatusInlineChange,
-    abrirSelecao, fecharSelecao, salvarSelecao, _marcarSelecao,
+    abrirSelecao, fecharSelecao, salvarSelecao, _cicloSelecao,
     _toggleFiltroStatus, _aplicarFiltroStatus,
     _setNivelModal, _editarOverride, _fecharModalOverride, _confirmarOverride, _removerOverride,
   };
