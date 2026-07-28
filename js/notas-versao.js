@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.57.30',
+  versaoAtual: 'V2.57.31',
 
   versoes: [
     {
@@ -5072,11 +5072,17 @@ const NotasVersao = {
       titulo:'Suprimentos: correção V2.57.28 (sticky) piorou o corte de colunas — revertida',
       itens:['O position:sticky na coluna Nome da Tarefa não funcionou bem junto com o scroll da tabela e piorou o corte à direita — removido.',
         'Larguras mínimas de todas as colunas (Data, Status, Desvio, Início) reduzidas mais uma vez, para caber mais colunas na tela antes de precisar rolar.']},
-    {versao:'V2.57.30',status:'aberta',data:'2026-07-28',tipo:'correcao',
+    {versao:'V2.57.30',status:'fechada',data:'2026-07-28',tipo:'correcao',
       titulo:'Suprimentos: tabela agora usa table-layout:fixed — todas as colunas cabem na tela sem scroll horizontal',
       itens:['Causa raiz: os min-width somados de todas as colunas ultrapassavam a largura da tela, empurrando as últimas colunas (Mobilização, Folga) pra fora — cada correção anterior só mexeu nos números sem resolver a causa.',
         'Removidos todos os min-width forçados de colunas e do select de status. A tabela agora usa table-layout:fixed, que distribui o espaço disponível entre as colunas em vez de deixá-las "vazar" pra fora.',
-        'Nome da Tarefa quebra em 2 linhas quando necessário, em vez de empurrar as demais colunas.']}
+        'Nome da Tarefa quebra em 2 linhas quando necessário, em vez de empurrar as demais colunas.']},
+    {versao:'V2.57.31',status:'aberta',data:'2026-07-28',tipo:'correcao',
+      titulo:'Suprimentos: célula de data virou pill compacto sem ícone de calendário nativo — testado sem overflow em 1366px/1920px antes de publicar',
+      itens:['O input date nativo do navegador reserva espaço fixo pro ícone de calendário, e isso — somado ao select de status — não deixava as 5 etapas caberem lado a lado em nenhuma largura de tela testada.',
+        'Data agora aparece como texto colorido compacto (mesmo padrão do exemplo enviado), sem o ícone nativo — clicar em qualquer parte da célula ainda abre o calendário do navegador normalmente.',
+        'Status voltou a ser um select simples com fundo branco (mais parecido com o exemplo de referência), sem seta customizada nem cores fortes no fundo.',
+        'Desta vez a correção foi validada com medição real de largura (Playwright/Chromium headless) em 1366px, 1550px e 1920px antes do commit — sem overflow em nenhuma delas.']}
   ],
 
   render(containerId) {

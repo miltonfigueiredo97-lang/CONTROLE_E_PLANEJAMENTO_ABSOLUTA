@@ -384,13 +384,16 @@ const Suprimentos = (() => {
     const { cor, bg } = _corPrazo(e, hoje);
     const st = STATUS_INFO[e.status] || STATUS_INFO.nao_iniciado;
     const tooltip = e.manual ? `Editado manualmente (automático seria ${Utils.formatarData(e.planejada)})` : 'Automático — ainda não editado';
-    const inputStyle = `width:100%;max-width:100%;border:1.5px solid ${e.manual?cor:'var(--cor-borda)'};background:${bg};color:${cor};font-size:.72rem;font-weight:600;font-family:var(--font-mono);padding:4px 2px;border-radius:4px;box-sizing:border-box;text-align:center;cursor:pointer;`;
-    const selStyle = `width:100%;max-width:100%;border:1.5px solid ${st.cor};background:${st.bg};color:${st.cor};font-size:.68rem;font-weight:700;padding:4px 16px 4px 4px;border-radius:4px;box-sizing:border-box;cursor:pointer;appearance:none;-webkit-appearance:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'><path fill='${encodeURIComponent(st.cor)}' d='M0 0l6 8 6-8z'/></svg>");background-repeat:no-repeat;background-position:right 4px center;background-size:8px 5px;`;
+    // Pill compacto: o <input type="date"> real fica por baixo (funcional,
+    // abre o calendário do navegador ao clicar), mas sem o ícone/borda
+    // nativos — só o texto formatado com fundo colorido, no padrão pedido.
+    const inputStyle = `width:100%;border:none;background:${bg};color:${cor};font-size:.74rem;font-weight:700;font-family:var(--font-mono);padding:5px 2px;border-radius:4px;box-sizing:border-box;text-align:center;cursor:pointer;-webkit-appearance:none;appearance:none;`;
+    const selStyle = `width:100%;border:1px solid var(--cor-borda);background:#fff;color:var(--cor-texto);font-size:.72rem;padding:5px 2px;border-radius:4px;box-sizing:border-box;cursor:pointer;`;
     return `
-      <td class="sup-cel-data" data-tarefa="${tarefaId}" data-etapa="${etapaId}" style="padding:2px;overflow:hidden;" title="${tooltip}">
+      <td class="sup-cel-data" data-tarefa="${tarefaId}" data-etapa="${etapaId}" style="padding:2px;" title="${tooltip}">
         <input type="date" value="${e.data}" style="${inputStyle}" onchange="Suprimentos.onDataInlineChange('${tarefaId}','${etapaId}',this.value)">
       </td>
-      <td class="sup-cel-status" data-tarefa="${tarefaId}" data-etapa="${etapaId}" style="padding:2px;overflow:hidden;">
+      <td class="sup-cel-status" data-tarefa="${tarefaId}" data-etapa="${etapaId}" style="padding:2px;">
         <select style="${selStyle}" onchange="Suprimentos.onStatusInlineChange('${tarefaId}','${etapaId}',this.value)">
           ${Object.entries(STATUS_INFO).map(([key, info]) => `<option value="${key}" ${e.status===key?'selected':''}>${info.label}</option>`).join('')}
         </select>
