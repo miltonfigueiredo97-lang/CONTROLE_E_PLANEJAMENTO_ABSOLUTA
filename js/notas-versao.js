@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.57.36',
+  versaoAtual: 'V2.57.37',
 
   versoes: [
     {
@@ -5100,9 +5100,14 @@ const NotasVersao = {
       itens:['A cor verde usada antes (#66bb6a) era mais escura/dessaturada que a do modelo — extraída a cor exata do print enviado (#54F777) e conferida pixel a pixel antes de publicar.',
         'Vermelho e amarelo recalculados com a mesma saturação/luminosidade do verde de referência, pra manter a família de cores consistente.',
         'Altura da célula estava quase o dobro do modelo (o <input type="date"> escondido estava reservando espaço extra) — corrigida para bater com a proporção do print de referência.']},
-    {versao:'V2.57.36',status:'aberta',data:'2026-07-28',tipo:'correcao',
+    {versao:'V2.57.36',status:'fechada',data:'2026-07-28',tipo:'correcao',
       titulo:'Editor de Estrutura: soltar uma tarefa "depois" de outra quase sempre virava filho por engano',
-      itens:['Zona de drop para "depois" (irmã, não filha) era só 10% da altura da linha — quase impossível de acertar. Alargada para 30%.']}
+      itens:['Zona de drop para "depois" (irmã, não filha) era só 10% da altura da linha — quase impossível de acertar. Alargada para 30%.']},
+    {versao:'V2.57.37',status:'aberta',data:'2026-07-28',tipo:'correcao',
+      titulo:'Editor de Estrutura: bug real por trás dos "filhos trocando de dono" — soltar "depois" de uma tarefa que já tem filhos próprios entrava NO MEIO dela e dos filhos dela',
+      itens:['Causa raiz: soltar "depois" de uma tarefa X inseria logo após a LINHA de X (índice+1) — mas se X já tinha filhos próprios logo em seguida, a tarefa recém-movida entrava bem ali no meio, entre X e os filhos dele. Como "quem é filho de quem" é decidido só pela sequência (nível maior logo depois = filho), os filhos verdadeiros de X ficaram "órfãos" de X e a tarefa recém-inserida roubou esse vínculo — exatamente o sintoma relatado: a tarefa de cima perde a setinha de expandir (vira um pontinho, sem filhos) e o que estava dentro dela aparece dentro da de baixo.',
+        'Corrigido: soltar "depois" agora pula o bloco INTEIRO da tarefa-alvo (ela + todos os filhos próprios dela) antes de inserir — a nova tarefa vira irmã de verdade, depois de tudo que já pertencia ao alvo.',
+        'Também corrigido: soltar/mover na árvore não pula mais o scroll pro topo — mantém a posição de onde você estava mexendo.']}
   ],
 
   render(containerId) {

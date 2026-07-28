@@ -3435,7 +3435,10 @@ const Planejamento = (() => {
     const dragId=_arvDragId, dragSel=_arvDragSel, dropId=_arvDropId, dropPos=_arvDropPos;
     _arvDragId=null;_arvDragSel=null;_arvDropId=null;_arvDropPos='inside';
     if(!dragId||dragId===dropId){_render();return;}
+    const corpo=document.getElementById('arv-corpo');
+    const st=corpo?corpo.scrollTop:0;
     await _arvMoverMultiplas(dragSel||new Set([dragId]),dropId,dropPos);
+    requestAnimationFrame(()=>{const c=document.getElementById('arv-corpo');if(c)c.scrollTop=st;});
   }
 
   // Move 1+ tarefas (cada uma + seus filhos contíguos) para um novo pai/posição.
@@ -3519,7 +3522,19 @@ const Planejamento = (() => {
           const dif=targetNivel-(bloco[0].nivel||0);
           bloco.forEach(t=>{t.nivel=Math.max(0,(t.nivel||0)+dif);});
         }
-        insertAt=pos==='before'?targetIdx:targetIdx+1;
+        if(pos==='before'){
+          insertAt=targetIdx;
+        } else {
+          // 'after': pula o bloco INTEIRO do alvo (ele + os próprios filhos contíguos).
+          // Inserir logo após a linha do alvo (targetIdx+1) entra NO MEIO do alvo com
+          // os filhos dele — quebra a contiguidade nivel>own que define quem são os
+          // filhos de quem, e os filhos verdadeiros do alvo passam a "pertencer" à
+          // tarefa recém-inserida por engano (mesmo sintoma relatado: item logo acima
+          // perde a setinha de expandir e vira um pontinho).
+          let fimBlocoAlvo=targetIdx+1;
+          while(fimBlocoAlvo<sorted.length&&(sorted[fimBlocoAlvo].nivel||0)>targetNivel)fimBlocoAlvo++;
+          insertAt=fimBlocoAlvo;
+        }
       }
       blocos.forEach(bloco=>{sorted.splice(insertAt,0,...bloco);insertAt+=bloco.length;});
     }
