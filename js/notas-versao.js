@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.57.34',
+  versaoAtual: 'V2.57.35',
 
   versoes: [
     {
@@ -5092,9 +5092,14 @@ const NotasVersao = {
       titulo:'Suprimentos: célula de data com fundo colorido sólido (verde/vermelho/amarelo), igual ao modelo de referência',
       itens:['A versão anterior deixava a data como um "pill" pequeno dentro de uma célula branca — o modelo de referência enviado pede o fundo preenchendo a célula toda, cor sólida forte (verde = ok/concluído, vermelho = atrasado, amarelo = próximo do prazo).',
         'Mantido o clique em qualquer parte da célula abrindo o calendário nativo do navegador (input date real por baixo, só visualmente escondido).']},
-    {versao:'V2.57.34',status:'aberta',data:'2026-07-28',tipo:'correcao',
+    {versao:'V2.57.34',status:'fechada',data:'2026-07-28',tipo:'correcao',
       titulo:'Suprimentos: texto da data agora é preto (era branco/marrom em alguns estados), igual ao modelo de referência',
-      itens:['Cor do texto dentro do fundo colorido (verde/vermelho/amarelo) padronizada pra preto em todos os estados.']}
+      itens:['Cor do texto dentro do fundo colorido (verde/vermelho/amarelo) padronizada pra preto em todos os estados.']},
+    {versao:'V2.57.35',status:'aberta',data:'2026-07-28',tipo:'correcao',
+      titulo:'Suprimentos: cor do fundo verde e altura da célula corrigidas — extraídas pixel a pixel do print de referência',
+      itens:['A cor verde usada antes (#66bb6a) era mais escura/dessaturada que a do modelo — extraída a cor exata do print enviado (#54F777) e conferida pixel a pixel antes de publicar.',
+        'Vermelho e amarelo recalculados com a mesma saturação/luminosidade do verde de referência, pra manter a família de cores consistente.',
+        'Altura da célula estava quase o dobro do modelo (o <input type="date"> escondido estava reservando espaço extra) — corrigida para bater com a proporção do print de referência.']}
   ],
 
   render(containerId) {

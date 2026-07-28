@@ -372,10 +372,10 @@ const Suprimentos = (() => {
   };
 
   function _corPrazo(e, hoje) {
-    if (e.status === 'concluido') return { cor: '#000', bg: '#66bb6a' };
-    if (e.data < hoje) return { cor: '#000', bg: '#ef5350' };
-    if ((new Date(e.data) - new Date(hoje)) / 864e5 <= LIMIAR_PROXIMO_DIAS) return { cor: '#000', bg: '#ffca28' };
-    return { cor: '#000', bg: '#66bb6a' };
+    if (e.status === 'concluido') return { cor: '#000', bg: '#54F777' };
+    if (e.data < hoje) return { cor: '#000', bg: '#F75454' };
+    if ((new Date(e.data) - new Date(hoje)) / 864e5 <= LIMIAR_PROXIMO_DIAS) return { cor: '#000', bg: '#F7F754' };
+    return { cor: '#000', bg: '#54F777' };
   }
 
   function _celulaEtapa(tarefaId, etapaId, e) {
@@ -388,11 +388,11 @@ const Suprimentos = (() => {
     const selStyle = `width:100%;border:1px solid var(--cor-borda);background:#fff;color:var(--cor-texto);font-size:.72rem;padding:5px 2px;border-radius:4px;box-sizing:border-box;cursor:pointer;`;
     return `
       <td class="sup-cel-data" data-tarefa="${tarefaId}" data-etapa="${etapaId}" style="padding:2px;" title="${tooltip}">
-        <div style="position:relative;background:${bg};color:${cor};border-radius:4px;">
-          <div style="display:flex;align-items:center;justify-content:center;gap:4px;font-size:.74rem;font-weight:700;font-family:var(--font-mono);padding:5px 2px;pointer-events:none;">
+        <div style="position:relative;background:${bg};color:${cor};border-radius:4px;height:26px;">
+          <div style="display:flex;align-items:center;justify-content:center;gap:4px;height:100%;font-size:.74rem;font-weight:700;font-family:var(--font-mono);pointer-events:none;">
             <span>${dataLabel}</span><span style="font-size:.68rem;opacity:.75;">✎</span>
           </div>
-          <input type="date" value="${e.data}" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;border:none;" onchange="Suprimentos.onDataInlineChange('${tarefaId}','${etapaId}',this.value)">
+          <input type="date" value="${e.data}" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;border:none;margin:0;padding:0;display:block;" onchange="Suprimentos.onDataInlineChange('${tarefaId}','${etapaId}',this.value)">
         </div>
       </td>
       <td class="sup-cel-status" data-tarefa="${tarefaId}" data-etapa="${etapaId}" style="padding:2px;">
