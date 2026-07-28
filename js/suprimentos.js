@@ -155,17 +155,17 @@ const Suprimentos = (() => {
     if (!linhas) linhas = `<tr><td colspan="${ETAPAS.length * 2 + 3}" class="text-sm text-muted" style="text-align:center;padding:20px;">Nenhuma tarefa selecionada bate com o filtro de status.</td></tr>`;
 
     container.innerHTML = `
-      <div class="tabela-container" style="overflow-x:auto;">
-        <table class="tabela tabela-compacta" style="min-width:max-content;">
+      <div class="tabela-container">
+        <table class="tabela tabela-compacta">
           <thead>
             <tr>
-              <th rowspan="2" style="min-width:220px;position:sticky;left:0;z-index:6;background:var(--cor-dark-800);">Nome da Tarefa</th>
-              ${ETAPAS.map(e => `<th colspan="2" style="text-align:center;min-width:190px;">${e.label}</th>`).join('')}
-              <th rowspan="2" style="min-width:90px;">Desvio (Dias)</th>
-              <th rowspan="2" style="min-width:100px;">Início</th>
+              <th rowspan="2" style="min-width:180px;">Nome da Tarefa</th>
+              ${ETAPAS.map(e => `<th colspan="2" style="text-align:center;min-width:150px;">${e.label}</th>`).join('')}
+              <th rowspan="2" style="min-width:80px;">Desvio (Dias)</th>
+              <th rowspan="2" style="min-width:90px;">Início</th>
             </tr>
             <tr>
-              ${ETAPAS.map(e => `<th style="font-weight:400;min-width:95px;">Data</th><th style="font-weight:400;position:relative;min-width:95px;">
+              ${ETAPAS.map(e => `<th style="font-weight:400;min-width:75px;">Data</th><th style="font-weight:400;position:relative;min-width:75px;">
                 <span style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;" onclick="event.stopPropagation();Suprimentos._toggleFiltroStatus('${e.id}')">
                   Status <span style="font-size:.7rem;color:${statusFiltro[e.id]&&statusFiltro[e.id].size?'var(--cor-primaria)':'#999'};">▼</span>
                 </span>
@@ -186,7 +186,7 @@ const Suprimentos = (() => {
   function _linhaTitulo(t) {
     const ind = 8 + (t.nivel || 0) * 16;
     return `<tr class="linha-grupo-suprimentos">
-      <td style="padding-left:${ind}px;font-weight:700;color:#555;position:sticky;left:0;z-index:2;background:#f7f7f7;">${t.nome}</td>
+      <td style="padding-left:${ind}px;font-weight:700;color:#555;">${t.nome}</td>
       <td colspan="${ETAPAS.length * 2 + 2}"></td>
     </tr>`;
   }
@@ -196,7 +196,7 @@ const Suprimentos = (() => {
     const s = supPorTarefa[t.id];
     if (!t.inicioPlanejado || !s) {
       return `<tr>
-        <td style="padding-left:${ind}px;position:sticky;left:0;z-index:2;background:#fff;">${t.nome}</td>
+        <td style="padding-left:${ind}px;">${t.nome}</td>
         <td colspan="${ETAPAS.length * 2}" class="text-sm text-muted" style="text-align:center;">Sem Início Planejado — defina no Planejamento</td>
         <td></td><td></td>
       </tr>`;
@@ -212,7 +212,7 @@ const Suprimentos = (() => {
     const desvio = _calcDesvio(t);
     const inicioLabel = Utils.formatarData(t.inicioReal || t.inicioPlanejado);
     return `<tr>
-      <td style="padding-left:${ind}px;position:sticky;left:0;z-index:2;background:#fff;">${t.nome}</td>
+      <td style="padding-left:${ind}px;">${t.nome}</td>
       ${celulas}
       <td class="col-num" style="text-align:center;${desvio!=null&&desvio>0?'color:var(--cor-perigo);font-weight:700;':'color:var(--cor-texto-muted);'}">${desvio==null?'—':(desvio>0?'+':'')+desvio}</td>
       <td class="col-num" style="text-align:center;font-family:var(--font-mono);">${inicioLabel}</td>
@@ -385,7 +385,7 @@ const Suprimentos = (() => {
     const st = STATUS_INFO[e.status] || STATUS_INFO.nao_iniciado;
     const tooltip = e.manual ? `Editado manualmente (automático seria ${Utils.formatarData(e.planejada)})` : 'Automático — ainda não editado';
     const inputStyle = `width:100%;border:2px solid ${e.manual?cor:'var(--cor-borda)'};background:${bg};color:${cor};font-size:.8rem;font-weight:600;font-family:var(--font-mono);padding:6px 4px;border-radius:5px;box-sizing:border-box;text-align:center;cursor:pointer;`;
-    const selStyle = `width:100%;min-width:108px;border:2px solid ${st.cor};background:${st.bg};color:${st.cor};font-size:.78rem;font-weight:700;padding:6px 24px 6px 8px;border-radius:5px;box-sizing:border-box;cursor:pointer;appearance:none;-webkit-appearance:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'><path fill='${encodeURIComponent(st.cor)}' d='M0 0l6 8 6-8z'/></svg>");background-repeat:no-repeat;background-position:right 6px center;background-size:10px 7px;`;
+    const selStyle = `width:100%;min-width:80px;border:2px solid ${st.cor};background:${st.bg};color:${st.cor};font-size:.72rem;font-weight:700;padding:6px 20px 6px 6px;border-radius:5px;box-sizing:border-box;cursor:pointer;appearance:none;-webkit-appearance:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'><path fill='${encodeURIComponent(st.cor)}' d='M0 0l6 8 6-8z'/></svg>");background-repeat:no-repeat;background-position:right 5px center;background-size:9px 6px;`;
     return `
       <td class="sup-cel-data" data-tarefa="${tarefaId}" data-etapa="${etapaId}" style="padding:4px;" title="${tooltip}">
         <input type="date" value="${e.data}" style="${inputStyle}" onchange="Suprimentos.onDataInlineChange('${tarefaId}','${etapaId}',this.value)">

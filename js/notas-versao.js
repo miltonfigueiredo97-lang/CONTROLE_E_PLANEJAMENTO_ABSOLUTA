@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.57.28',
+  versaoAtual: 'V2.57.29',
 
   versoes: [
     {
@@ -5064,10 +5064,14 @@ const NotasVersao = {
         'Roda automaticamente depois de: importar Excel, salvar uma tarefa pelo formulário, editar Início/Término/Início Real/Término Real direto na célula.',
         'Também disponível manualmente em ⚙ Ferramentas → "📐 Recalcular Datas dos Pais", pra rodar em obras que já tinham pais com data errada/em branco de antes desta versão.',
         'Novas colunas Início Real e Término Real na tabela do Planejamento (visualização — preenchidas pelo Diário de Obra, Medições e Semanal, que já alimentavam esses campos mas não apareciam aqui).']},
-    {versao:'V2.57.28',status:'aberta',data:'2026-07-28',tipo:'correcao',
+    {versao:'V2.57.28',status:'fechada',data:'2026-07-28',tipo:'correcao',
       titulo:'Suprimentos: colunas da direita cortadas — coluna Nome da Tarefa agora fixa (sticky) ao rolar',
       itens:['Larguras mínimas das colunas reduzidas (estavam exageradas, empurrando a tabela pra fora da tela sem indicação clara de rolagem).',
-        'Coluna "Nome da Tarefa" fixa (sticky) na lateral esquerda — ao rolar horizontalmente pra ver Mobilização/Folga/Desvio, o nome da tarefa não some mais.']}
+        'Coluna "Nome da Tarefa" fixa (sticky) na lateral esquerda — ao rolar horizontalmente pra ver Mobilização/Folga/Desvio, o nome da tarefa não some mais.']},
+    {versao:'V2.57.29',status:'aberta',data:'2026-07-28',tipo:'correcao',
+      titulo:'Suprimentos: correção V2.57.28 (sticky) piorou o corte de colunas — revertida',
+      itens:['O position:sticky na coluna Nome da Tarefa não funcionou bem junto com o scroll da tabela e piorou o corte à direita — removido.',
+        'Larguras mínimas de todas as colunas (Data, Status, Desvio, Início) reduzidas mais uma vez, para caber mais colunas na tela antes de precisar rolar.']}
   ],
 
   render(containerId) {
