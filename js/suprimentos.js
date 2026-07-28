@@ -372,10 +372,10 @@ const Suprimentos = (() => {
   };
 
   function _corPrazo(e, hoje) {
-    if (e.status === 'concluido') return { cor: '#1b5e20', bg: '#66bb6a' };
-    if (e.data < hoje) return { cor: '#fff', bg: '#ef5350' };
-    if ((new Date(e.data) - new Date(hoje)) / 864e5 <= LIMIAR_PROXIMO_DIAS) return { cor: '#5d4400', bg: '#ffca28' };
-    return { cor: '#1b5e20', bg: '#66bb6a' };
+    if (e.status === 'concluido') return { cor: '#000', bg: '#66bb6a' };
+    if (e.data < hoje) return { cor: '#000', bg: '#ef5350' };
+    if ((new Date(e.data) - new Date(hoje)) / 864e5 <= LIMIAR_PROXIMO_DIAS) return { cor: '#000', bg: '#ffca28' };
+    return { cor: '#000', bg: '#66bb6a' };
   }
 
   function _celulaEtapa(tarefaId, etapaId, e) {

@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.57.33',
+  versaoAtual: 'V2.57.34',
 
   versoes: [
     {
@@ -5088,10 +5088,13 @@ const NotasVersao = {
       itens:['Causa raiz do "undefined": a edição inline reconstruía a célula usando um <tr> criado solto (fora de uma <table>) e definia innerHTML nele — isso não é um contexto válido de tabela, e o navegador descartava as tags <td>, deixando texto solto aparecer na tela. Corrigido usando uma <table> completa como contêiner temporário antes de mover as células — testado em navegador real antes de publicar.',
         'Ao marcar uma etapa como "Concluído", agora abre um pequeno popup pedindo a data real em que foi concluída (padrão: hoje) — antes o sistema só trocava o status sem perguntar a data, então "Concluído" ficava com a data planejada em vez da data real.',
         'Cancelar o popup de conclusão desfaz a troca de status (volta pro que estava salvo antes).']},
-    {versao:'V2.57.33',status:'aberta',data:'2026-07-28',tipo:'correcao',
+    {versao:'V2.57.33',status:'fechada',data:'2026-07-28',tipo:'correcao',
       titulo:'Suprimentos: célula de data com fundo colorido sólido (verde/vermelho/amarelo), igual ao modelo de referência',
       itens:['A versão anterior deixava a data como um "pill" pequeno dentro de uma célula branca — o modelo de referência enviado pede o fundo preenchendo a célula toda, cor sólida forte (verde = ok/concluído, vermelho = atrasado, amarelo = próximo do prazo).',
-        'Mantido o clique em qualquer parte da célula abrindo o calendário nativo do navegador (input date real por baixo, só visualmente escondido).']}
+        'Mantido o clique em qualquer parte da célula abrindo o calendário nativo do navegador (input date real por baixo, só visualmente escondido).']},
+    {versao:'V2.57.34',status:'aberta',data:'2026-07-28',tipo:'correcao',
+      titulo:'Suprimentos: texto da data agora é preto (era branco/marrom em alguns estados), igual ao modelo de referência',
+      itens:['Cor do texto dentro do fundo colorido (verde/vermelho/amarelo) padronizada pra preto em todos os estados.']}
   ],
 
   render(containerId) {
