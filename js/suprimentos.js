@@ -15,8 +15,10 @@ const Suprimentos = (() => {
   let tarefas = [];
   let supPorTarefa = {}; // tarefaId -> doc suprimentos
   let cfg = _cfgDefault();
+  let overrides = {}; // tarefaId -> {duracaoCadastro,...} (prazo customizado, sobrepõe cfg global)
   let nivelFixo = parseInt(localStorage.getItem('sup_nivel_fixo'), 10);
   if (!Number.isFinite(nivelFixo)) nivelFixo = 0;
+  let nivelFixoModal = 0; // nível do filtro dentro do modal de config (independente do da tabela)
   // etapaId -> Set de status marcados no filtro (vazio = mostra tudo)
   const statusFiltro = {};
 
@@ -60,7 +62,7 @@ const Suprimentos = (() => {
         Database.listar(obraId, COL, 'createdAt').catch(() => []),
       ]);
       tarefas = tf;
-      if (cfgDoc) cfg = { ..._cfgDefault(), ...cfgDoc };
+      if (cfgDoc) { cfg = { ..._cfgDefault(), ...cfgDoc }; overrides = cfgDoc.overrides || {}; delete cfg.overrides; }
       supPorTarefa = {};
       supList.forEach(s => { supPorTarefa[s.tarefaId] = s; });
 
@@ -74,6 +76,11 @@ const Suprimentos = (() => {
     }
   }
 
+  // Prazo efetivo de uma tarefa: override próprio, senão o global.
+  function _cfgPara(tarefaId) {
+    return overrides[tarefaId] || cfg;
+  }
+
   // Cria o doc de suprimentos (com datas planejadas congeladas) para toda
   // tarefa-folha com Início Planejado que ainda não tem doc.
   async function _gerarPendentes() {
@@ -83,7 +90,7 @@ const Suprimentos = (() => {
       const nxt = sorted[i + 1];
       const isFolha = !nxt || (nxt.nivel || 0) <= (t.nivel || 0);
       if (!isFolha || !t.inicioPlanejado || supPorTarefa[t.id]) return;
-      const datas = _calcularDatas(t.inicioPlanejado, cfg);
+      const datas = _calcularDatas(t.inicioPlanejado, _cfgPara(t.id));
       const etapasDoc = {};
       ETAPAS.forEach(e => { etapasDoc[e.id] = { planejada: datas[e.id], data: datas[e.id], status: 'nao_iniciado', manual: false }; });
       const doc = { tarefaId: t.id, etapas: etapasDoc };
@@ -331,33 +338,162 @@ const Suprimentos = (() => {
     }
   }
 
-  // ---- Config (prazos entre etapas) ----
+  // ---- Config (prazos padrão + override por tarefa) ----
   function abrirConfig() {
+    nivelFixoModal = 0;
     Utils.abrirModal('modal-config-suprimentos');
   }
   function fecharConfig() {
     Utils.fecharModal('modal-config-suprimentos');
   }
 
+  function _descendentes(t, sorted, i) {
+    const niv = t.nivel || 0;
+    const filhos = [];
+    for (let k = i + 1; k < sorted.length; k++) {
+      const s2 = sorted[k];
+      if ((s2.nivel || 0) <= niv) break;
+      filhos.push(s2);
+    }
+    return filhos;
+  }
+
   function _modalConfigHTML() {
+    const sorted = [...tarefas].sort((a, b) => (a.ordem || 0) - (b.ordem || 0));
+    const max = _nivelMaximo(sorted);
+    const nivelEfetivo = Math.min(nivelFixoModal, max);
+    let botoesNivel = '';
+    for (let n = 0; n <= max; n++) {
+      botoesNivel += `<button class="btn btn-sm ${nivelFixoModal === n ? 'btn-primario' : 'btn-secundario'}" style="font-size:.7rem;padding:2px 8px;" onclick="Suprimentos._setNivelModal(${n})">Nível ${n}</button>`;
+    }
+    const itensLista = sorted
+      .map((t, i) => ({ t, i }))
+      .filter(({ t }) => (t.nivel || 0) === nivelEfetivo)
+      .map(({ t }) => {
+        const customizado = !!overrides[t.id];
+        return `<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 4px;border-bottom:1px solid var(--cor-borda-light);">
+          <div>
+            <div style="font-size:.85rem;">${t.nome}</div>
+            <div class="text-sm" style="color:${customizado?'var(--cor-info)':'var(--cor-texto-muted)'};">${customizado?'Customizado':'Padrão'}</div>
+          </div>
+          <div style="display:flex;gap:6px;flex-shrink:0;">
+            <button class="btn btn-sm btn-secundario" onclick="Suprimentos._editarOverride('${t.id}')" title="Editar prazo desta tarefa (e filhos, se houver)">✏️</button>
+            ${customizado ? `<button class="btn btn-sm btn-secundario" onclick="Suprimentos._removerOverride('${t.id}')" title="Voltar ao padrão">↺</button>` : ''}
+          </div>
+        </div>`;
+      }).join('');
+
     return `
       <div class="modal-overlay" id="modal-config-suprimentos">
-        <div class="modal">
-          <div class="modal-header"><h3>Prazos das Etapas</h3></div>
-          <div class="modal-body">
-            <p class="text-sm text-muted" style="margin-bottom:12px;">Duração (em dias) de cada etapa, contada para trás a partir do Início Planejado da tarefa. Vale só para tarefas cujo mapa ainda não foi gerado ou não foi editado manualmente.</p>
-            ${ETAPAS.map(e => `
-              <div class="form-grupo">
-                <label>${e.label} (dias)</label>
-                <input type="number" min="0" class="form-control" id="cfg-${e.cfgKey}" value="${cfg[e.cfgKey]}">
-              </div>`).join('')}
+        <div class="modal" style="max-width:900px;width:95%;">
+          <div class="modal-header"><h3>Configurações de Suprimentos</h3></div>
+          <div class="modal-body" style="display:flex;gap:20px;max-height:70vh;">
+            <div style="flex:1;min-width:220px;overflow-y:auto;">
+              <h4 style="margin-bottom:10px;">Leadtimes Padrão</h4>
+              <p class="text-sm text-muted" style="margin-bottom:12px;">Duração (dias) de cada etapa, contada para trás a partir do Início Planejado. Vale para toda tarefa sem prazo customizado.</p>
+              ${ETAPAS.map(e => `
+                <div class="form-grupo">
+                  <label>${e.label} (dias)</label>
+                  <input type="number" min="0" class="form-control" id="cfg-${e.cfgKey}" value="${cfg[e.cfgKey]}">
+                </div>`).join('')}
+            </div>
+            <div style="flex:1.4;min-width:280px;border-left:1px solid var(--cor-borda-light);padding-left:20px;overflow-y:auto;">
+              <h4 style="margin-bottom:10px;">Prazo por Tarefa</h4>
+              <p class="text-sm text-muted" style="margin-bottom:8px;">Filtre por nível e customize uma tarefa específica. Editar um pai aplica o mesmo prazo a todos os filhos dele.</p>
+              <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;">${botoesNivel}</div>
+              <div>${itensLista || '<p class="text-sm text-muted">Nenhuma tarefa neste nível.</p>'}</div>
+            </div>
           </div>
           <div class="modal-footer">
             <button class="btn btn-secundario" onclick="Suprimentos.fecharConfig()">Cancelar</button>
             <button class="btn btn-primario" onclick="Suprimentos.salvarConfig()">Salvar e Recalcular Pendentes</button>
           </div>
         </div>
+      </div>
+      ${_modalOverrideHTML()}`;
+  }
+
+  function _setNivelModal(n) {
+    nivelFixoModal = n;
+    _reabrirModalConfig();
+  }
+
+  // Reconstrói só o conteúdo dos modais de config (sem re-render da tabela
+  // toda atrás) — substitui cada um pelo id, sem depender de índice de nó.
+  function _reabrirModalConfig() {
+    const wrap = document.createElement('div');
+    wrap.innerHTML = _modalConfigHTML();
+    const novoConfig = wrap.querySelector('#modal-config-suprimentos');
+    const novoOverride = wrap.querySelector('#modal-override-tarefa');
+    const antigoConfig = document.getElementById('modal-config-suprimentos');
+    const antigoOverride = document.getElementById('modal-override-tarefa');
+    if (antigoConfig && novoConfig) antigoConfig.replaceWith(novoConfig);
+    if (antigoOverride && novoOverride) antigoOverride.replaceWith(novoOverride);
+    Utils.abrirModal('modal-config-suprimentos');
+  }
+
+  // ---- Modal secundário: editar prazo de UMA tarefa (e filhos, se houver) ----
+  let _overrideAlvoId = null;
+  function _modalOverrideHTML() {
+    return `
+      <div class="modal-overlay" id="modal-override-tarefa" style="z-index:2100;">
+        <div class="modal">
+          <div class="modal-header"><h3 id="override-titulo">Prazo da Tarefa</h3></div>
+          <div class="modal-body">
+            ${ETAPAS.map(e => `
+              <div class="form-grupo">
+                <label>${e.label} (dias)</label>
+                <input type="number" min="0" class="form-control" id="ov-${e.cfgKey}" value="0">
+              </div>`).join('')}
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secundario" onclick="Suprimentos._fecharModalOverride()">Cancelar</button>
+            <button class="btn btn-primario" onclick="Suprimentos._confirmarOverride()">Aplicar</button>
+          </div>
+        </div>
       </div>`;
+  }
+
+  function _editarOverride(tarefaId) {
+    _overrideAlvoId = tarefaId;
+    const t = tarefas.find(x => x.id === tarefaId);
+    const atual = overrides[tarefaId] || cfg;
+    const titulo = document.getElementById('override-titulo');
+    if (titulo) titulo.textContent = `Prazo — ${t ? t.nome : ''}`;
+    ETAPAS.forEach(e => {
+      const input = document.getElementById(`ov-${e.cfgKey}`);
+      if (input) input.value = atual[e.cfgKey];
+    });
+    Utils.abrirModal('modal-override-tarefa');
+  }
+
+  function _fecharModalOverride() {
+    Utils.fecharModal('modal-override-tarefa');
+  }
+
+  // Aplica o prazo editado à tarefa alvo E a todos os descendentes dela
+  // (se for um grupo/pai). Grava direto em `overrides` local; persiste
+  // no Firestore só quando "Salvar e Recalcular Pendentes" for clicado.
+  function _confirmarOverride() {
+    if (!_overrideAlvoId) return;
+    const novoPrazo = {};
+    ETAPAS.forEach(e => { novoPrazo[e.cfgKey] = parseInt(document.getElementById(`ov-${e.cfgKey}`)?.value) || 0; });
+    const sorted = [...tarefas].sort((a, b) => (a.ordem || 0) - (b.ordem || 0));
+    const idx = sorted.findIndex(t => t.id === _overrideAlvoId);
+    const alvo = sorted[idx];
+    const alvos = [alvo, ...(idx >= 0 ? _descendentes(alvo, sorted, idx) : [])];
+    alvos.forEach(t => { overrides[t.id] = { ...novoPrazo }; });
+    _fecharModalOverride();
+    _reabrirModalConfig();
+  }
+
+  function _removerOverride(tarefaId) {
+    const sorted = [...tarefas].sort((a, b) => (a.ordem || 0) - (b.ordem || 0));
+    const idx = sorted.findIndex(t => t.id === tarefaId);
+    const alvo = sorted[idx];
+    const alvos = [alvo, ...(idx >= 0 ? _descendentes(alvo, sorted, idx) : [])];
+    alvos.forEach(t => { delete overrides[t.id]; });
+    _reabrirModalConfig();
   }
 
   async function salvarConfig() {
@@ -365,7 +501,8 @@ const Suprimentos = (() => {
     ETAPAS.forEach(e => { novaCfg[e.cfgKey] = parseInt(document.getElementById(`cfg-${e.cfgKey}`)?.value) || 0; });
     try {
       Utils.mostrarLoading('Salvando prazos...');
-      await Database.criar(obraId, 'config', novaCfg, CFG_DOC).catch(() => Database.atualizar(obraId, 'config', CFG_DOC, novaCfg));
+      const payload = { ...novaCfg, overrides };
+      await Database.criar(obraId, 'config', payload, CFG_DOC).catch(() => Database.atualizar(obraId, 'config', CFG_DOC, payload));
       cfg = novaCfg;
       await _recalcularNaoEditados();
       Utils.toast('Prazos atualizados', 'sucesso');
@@ -381,13 +518,14 @@ const Suprimentos = (() => {
 
   // Recalcula a data planejada de cada etapa que NÃO foi editada manualmente
   // (etapa por etapa — se só o Pedido de Compra foi editado à mão, as outras
-  // 4 etapas daquela mesma tarefa continuam recalculando normal).
+  // 4 etapas daquela mesma tarefa continuam recalculando normal). Usa o
+  // prazo efetivo de cada tarefa (override próprio ou o padrão global).
   async function _recalcularNaoEditados() {
     const atualizacoes = [];
     Object.values(supPorTarefa).forEach(s => {
       const t = tarefas.find(x => x.id === s.tarefaId);
       if (!t || !t.inicioPlanejado) return;
-      const datas = _calcularDatas(t.inicioPlanejado, cfg);
+      const datas = _calcularDatas(t.inicioPlanejado, _cfgPara(t.id));
       let mudou = false;
       ETAPAS.forEach(e => {
         const et = s.etapas[e.id];
@@ -400,7 +538,11 @@ const Suprimentos = (() => {
     if (atualizacoes.length) await Promise.all(atualizacoes).catch(e => console.warn('Falha ao recalcular:', e.message));
   }
 
-  return { init, renderizar, abrirConfig, fecharConfig, salvarConfig, onDataInlineChange, onStatusInlineChange, _setNivelFixo, _toggleFiltroStatus, _aplicarFiltroStatus };
+  return {
+    init, renderizar, abrirConfig, fecharConfig, salvarConfig, onDataInlineChange, onStatusInlineChange,
+    _setNivelFixo, _toggleFiltroStatus, _aplicarFiltroStatus,
+    _setNivelModal, _editarOverride, _fecharModalOverride, _confirmarOverride, _removerOverride,
+  };
 })();
 
 function onObraChanged() { Suprimentos.init(); }
