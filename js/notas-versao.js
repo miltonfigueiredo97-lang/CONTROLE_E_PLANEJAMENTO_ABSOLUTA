@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.57.24',
+  versaoAtual: 'V2.57.25',
 
   versoes: [
     {
@@ -5038,12 +5038,19 @@ const NotasVersao = {
         'Clique/edição inline (data e status) não reconstrói mais a tabela inteira a cada mudança — atualiza só a célula editada, resolvendo a lentidão/travamento reportado.',
         'Cores dos selects de status com contorno e fundo mais destacados (mais fácil bater o olho e diferenciar).',
         'Filtro por status (▼) no cabeçalho de cada etapa, igual ao filtro de status do Planejamento — combina com o filtro de nível.']},
-    {versao:'V2.57.24',status:'aberta',data:'2026-07-28',tipo:'funcionalidade',
+    {versao:'V2.57.24',status:'fechada',data:'2026-07-28',tipo:'funcionalidade',
       titulo:'Suprimentos: prazo customizável por tarefa (além do padrão global)',
       itens:['Modal de Configurações agora tem 2ª coluna com a lista de tarefas (filtrável por nível), cada uma marcada "Padrão" ou "Customizado".',
         'Editar o prazo de uma tarefa que tem filhos aplica o mesmo prazo a todos os descendentes dela (cascata pai → filhos).',
         'Botão para remover a customização e voltar ao padrão global.',
-        'Cálculo de datas (geração de pendentes e recálculo) agora usa o prazo customizado da tarefa quando existir; senão usa o padrão global — sem mudar o comportamento de quem nunca customizou nada.']}
+        'Cálculo de datas (geração de pendentes e recálculo) agora usa o prazo customizado da tarefa quando existir; senão usa o padrão global — sem mudar o comportamento de quem nunca customizou nada.']},
+    {versao:'V2.57.25',status:'aberta',data:'2026-07-28',tipo:'melhoria',
+      titulo:'Suprimentos: seleção manual de quais tarefas entram no pipeline (troca o filtro por nível)',
+      itens:['Removido o filtro por nível hierárquico da tela principal — causava linhas de grupo vazias/"undefined" e escondia dados em níveis intermediários.',
+        'Novo botão "☑️ Configurar Suprimentos" abre a árvore inteira do Planejamento (todos os níveis) com checkbox por linha — o usuário escolhe exatamente quais tarefas precisam de suprimento (ex.: só "Alvenaria Estrutural", sem repetir por lado A/B).',
+        'Tela principal agora é uma lista plana só com as tarefas marcadas — sempre com dados completos, sem depender de folha/grupo.',
+        'Dados antigos gerados automaticamente (por tarefa-folha) foram zerados ao trocar de modelo — a seleção começa do zero, conforme combinado.',
+        'Salvar a seleção apaga o pipeline das tarefas desmarcadas e gera pendentes das que entraram, sem duplicar quem já tinha doc.']}
   ],
 
   render(containerId) {

@@ -16,14 +16,14 @@ const Suprimentos = (() => {
   let supPorTarefa = {}; // tarefaId -> doc suprimentos
   let cfg = _cfgDefault();
   let overrides = {}; // tarefaId -> {duracaoCadastro,...} (prazo customizado, sobrepõe cfg global)
-  let nivelFixo = parseInt(localStorage.getItem('sup_nivel_fixo'), 10);
-  if (!Number.isFinite(nivelFixo)) nivelFixo = 0;
-  let nivelFixoModal = 0; // nível do filtro dentro do modal de config (independente do da tabela)
+  let tarefasSelecionadas = new Set(); // tarefaId -> está marcada para aparecer no pipeline de Suprimentos
+  let nivelFixoModal = 0; // nível do filtro dentro do modal de config de prazos (independente da seleção)
   // etapaId -> Set de status marcados no filtro (vazio = mostra tudo)
   const statusFiltro = {};
 
   const COL = 'suprimentos';
   const CFG_DOC = 'suprimentosConfig';
+  const SELECAO_DOC = 'suprimentosSelecao';
   const LIMIAR_PROXIMO_DIAS = 15;
 
   const ETAPAS = [
@@ -56,13 +56,15 @@ const Suprimentos = (() => {
   async function carregar() {
     try {
       Utils.mostrarLoading('Carregando suprimentos...');
-      const [tf, cfgDoc, supList] = await Promise.all([
+      const [tf, cfgDoc, supList, selecaoDoc] = await Promise.all([
         Database.listar(obraId, 'tarefas', 'ordem').catch(() => []),
         Database.obter(obraId, 'config', CFG_DOC).catch(() => null),
         Database.listar(obraId, COL, 'createdAt').catch(() => []),
+        Database.obter(obraId, 'config', SELECAO_DOC).catch(() => null),
       ]);
       tarefas = tf;
       if (cfgDoc) { cfg = { ..._cfgDefault(), ...cfgDoc }; overrides = cfgDoc.overrides || {}; delete cfg.overrides; }
+      tarefasSelecionadas = new Set(selecaoDoc && Array.isArray(selecaoDoc.tarefaIds) ? selecaoDoc.tarefaIds : []);
       supPorTarefa = {};
       supList.forEach(s => { supPorTarefa[s.tarefaId] = s; });
 
@@ -82,14 +84,13 @@ const Suprimentos = (() => {
   }
 
   // Cria o doc de suprimentos (com datas planejadas congeladas) para toda
-  // tarefa-folha com Início Planejado que ainda não tem doc.
+  // tarefa SELECIONADA manualmente (config ⚙️) com Início Planejado que
+  // ainda não tem doc. Não depende mais de ser folha — a seleção manual é
+  // que decide o que entra no pipeline.
   async function _gerarPendentes() {
-    const sorted = [...tarefas].sort((a, b) => (a.ordem || 0) - (b.ordem || 0));
     const criacoes = [];
-    sorted.forEach((t, i) => {
-      const nxt = sorted[i + 1];
-      const isFolha = !nxt || (nxt.nivel || 0) <= (t.nivel || 0);
-      if (!isFolha || !t.inicioPlanejado || supPorTarefa[t.id]) return;
+    tarefas.forEach((t) => {
+      if (!tarefasSelecionadas.has(t.id) || !t.inicioPlanejado || supPorTarefa[t.id]) return;
       const datas = _calcularDatas(t.inicioPlanejado, _cfgPara(t.id));
       const etapasDoc = {};
       ETAPAS.forEach(e => { etapasDoc[e.id] = { planejada: datas[e.id], data: datas[e.id], status: 'nao_iniciado', manual: false }; });
@@ -113,58 +114,39 @@ const Suprimentos = (() => {
   }
 
   // ---- Render ----
-  function _isFolha(t, sorted, i) {
-    const nxt = sorted[i + 1];
-    return !nxt || (nxt.nivel || 0) <= (t.nivel || 0);
-  }
-
   function _nivelMaximo(sorted) {
     return sorted.reduce((max, t) => Math.max(max, t.nivel || 0), 0);
-  }
-
-  // Filtro por nível (igual ao painel Dashboard): fixa uma "linha de corte"
-  // — só tarefas nesse nível aparecem (folha com dados, ou grupo só com
-  // nome se tiver filhos). Fora desse nível, a linha fica oculta.
-  function _controleNivel(max) {
-    let botoes = '';
-    for (let n = 0; n <= max; n++) {
-      botoes += `<button class="btn btn-sm ${nivelFixo === n ? 'btn-primario' : 'btn-secundario'}" style="font-size:.72rem;padding:3px 10px;" onclick="Suprimentos._setNivelFixo(${n})">Nível ${n}</button>`;
-    }
-    return `<div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;">${botoes}</div>`;
-  }
-
-  function _setNivelFixo(n) {
-    nivelFixo = n;
-    localStorage.setItem('sup_nivel_fixo', String(n));
-    renderizar();
   }
 
   function renderizar() {
     const container = document.getElementById('modulo-content');
     if (!container) return;
     const headerActions = document.getElementById('header-actions');
-    if (headerActions) headerActions.innerHTML = `<button class="btn btn-secundario" onclick="Suprimentos.abrirConfig()">⚙️ Prazos das Etapas</button>`;
+    if (headerActions) headerActions.innerHTML = `
+      <button class="btn btn-secundario" onclick="Suprimentos.abrirSelecao()">☑️ Configurar Suprimentos</button>
+      <button class="btn btn-secundario" onclick="Suprimentos.abrirConfig()">⚙️ Prazos das Etapas</button>`;
 
     if (!tarefas.length) {
       container.innerHTML = '<div class="estado-vazio"><div class="icone">📦</div><p>Nenhuma tarefa no Planejamento ainda.</p></div>';
       return;
     }
 
-    const sorted = [...tarefas].sort((a, b) => (a.ordem || 0) - (b.ordem || 0));
-    const max = _nivelMaximo(sorted);
-    const nivelEfetivo = Math.min(nivelFixo, max);
+    if (!tarefasSelecionadas.size) {
+      container.innerHTML = `<div class="estado-vazio"><div class="icone">📦</div><p>Nenhuma tarefa selecionada para Suprimentos ainda.</p><p class="text-sm text-muted">Clique em "☑️ Configurar Suprimentos" e marque as tarefas do cronograma que precisam de suprimento.</p></div>
+        ${_modalSelecaoHTML()}
+        ${_modalConfigHTML()}`;
+      return;
+    }
 
+    const sorted = [...tarefas].sort((a, b) => (a.ordem || 0) - (b.ordem || 0));
     let linhas = '';
-    sorted.forEach((t, i) => {
-      const nivel = t.nivel || 0;
-      if (nivel !== nivelEfetivo) return; // só mostra a "linha de corte" fixada
-      const isFolha = _isFolha(t, sorted, i);
-      linhas += isFolha ? _linhaFolha(t) : _linhaGrupo(t);
+    sorted.forEach((t) => {
+      if (!tarefasSelecionadas.has(t.id)) return;
+      linhas += _linhaFolha(t);
     });
-    if (!linhas) linhas = `<tr><td colspan="${ETAPAS.length * 2 + 3}" class="text-sm text-muted" style="text-align:center;padding:20px;">Nenhuma tarefa neste nível (ou tudo foi ocultado pelo filtro de status).</td></tr>`;
+    if (!linhas) linhas = `<tr><td colspan="${ETAPAS.length * 2 + 3}" class="text-sm text-muted" style="text-align:center;padding:20px;">Nenhuma tarefa selecionada bate com o filtro de status.</td></tr>`;
 
     container.innerHTML = `
-      ${_controleNivel(max)}
       <div class="tabela-container">
         <table class="tabela tabela-compacta">
           <thead>
@@ -185,17 +167,9 @@ const Suprimentos = (() => {
           <tbody>${linhas}</tbody>
         </table>
       </div>
+      ${_modalSelecaoHTML()}
       ${_modalConfigHTML()}
     `;
-  }
-
-  function _linhaGrupo(t) {
-    const ind = 8 + (t.nivel || 0) * 16;
-    const icone = t.tipo === 'grupo' ? '📁 ' : '';
-    return `<tr class="linha-grupo-suprimentos">
-      <td style="padding-left:${ind}px;font-weight:700;color:#555;">${icone}${t.nome}</td>
-      <td colspan="${ETAPAS.length * 2 + 2}"></td>
-    </tr>`;
   }
 
   function _linhaFolha(t) {
@@ -224,6 +198,89 @@ const Suprimentos = (() => {
       <td class="col-num" style="text-align:center;${desvio!=null&&desvio>0?'color:var(--cor-perigo);font-weight:700;':'color:var(--cor-texto-muted);'}">${desvio==null?'—':(desvio>0?'+':'')+desvio}</td>
       <td class="col-num" style="text-align:center;font-family:var(--font-mono);">${inicioLabel}</td>
     </tr>`;
+  }
+
+  // ---- Modal de Seleção: escolher manualmente quais tarefas do Planejamento
+  // entram no pipeline de Suprimentos. Mostra a árvore inteira (todos os
+  // níveis), com checkbox por linha — evita ter que filtrar por nível ou
+  // lidar com grupos sem dados: o usuário decide exatamente o que aparece.
+  let _selecaoTemp = null; // Set local editado dentro do modal, só vira "oficial" ao Salvar
+
+  function abrirSelecao() {
+    _selecaoTemp = new Set(tarefasSelecionadas);
+    _reabrirModalSelecao();
+    Utils.abrirModal('modal-selecao-suprimentos');
+  }
+  function fecharSelecao() {
+    _selecaoTemp = null;
+    Utils.fecharModal('modal-selecao-suprimentos');
+  }
+
+  function _modalSelecaoHTML() {
+    const sorted = [...tarefas].sort((a, b) => (a.ordem || 0) - (b.ordem || 0));
+    const marcado = _selecaoTemp || tarefasSelecionadas;
+    const linhas = sorted.map(t => {
+      const ind = 8 + (t.nivel || 0) * 18;
+      const icone = t.tipo === 'grupo' ? '📁 ' : '';
+      return `<div style="display:flex;align-items:center;gap:8px;padding:5px 4px;padding-left:${ind}px;border-bottom:1px solid var(--cor-borda-light);">
+        <input type="checkbox" data-sel-tarefa="${t.id}" ${marcado.has(t.id) ? 'checked' : ''} style="width:15px;height:15px;flex-shrink:0;" onchange="Suprimentos._marcarSelecao('${t.id}',this.checked)">
+        <span style="font-size:.82rem;${t.tipo==='grupo'?'font-weight:700;color:#555;':''}">${icone}${t.nome}</span>
+      </div>`;
+    }).join('');
+    return `
+      <div class="modal-overlay" id="modal-selecao-suprimentos">
+        <div class="modal" style="max-width:700px;width:95%;">
+          <div class="modal-header"><h3>Configurar Suprimentos — selecionar tarefas</h3></div>
+          <div class="modal-body" style="max-height:65vh;overflow-y:auto;">
+            <p class="text-sm text-muted" style="margin-bottom:10px;">Marque as tarefas do cronograma que precisam de pipeline de Suprimentos. Só o que estiver marcado aparece na tela principal.</p>
+            <div>${linhas || '<p class="text-sm text-muted">Nenhuma tarefa no Planejamento.</p>'}</div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secundario" onclick="Suprimentos.fecharSelecao()">Cancelar</button>
+            <button class="btn btn-primario" onclick="Suprimentos.salvarSelecao()">Salvar Seleção</button>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  function _reabrirModalSelecao() {
+    const wrap = document.createElement('div');
+    wrap.innerHTML = _modalSelecaoHTML();
+    const novo = wrap.firstElementChild;
+    const antigo = document.getElementById('modal-selecao-suprimentos');
+    if (antigo) antigo.replaceWith(novo);
+  }
+
+  function _marcarSelecao(tarefaId, marcado) {
+    if (!_selecaoTemp) return;
+    if (marcado) _selecaoTemp.add(tarefaId); else _selecaoTemp.delete(tarefaId);
+  }
+
+  // Salva a seleção e sincroniza o pipeline: apaga docs de suprimentos de
+  // tarefas que saíram da lista, gera pendentes das que entraram.
+  async function salvarSelecao() {
+    if (!_selecaoTemp) return;
+    try {
+      Utils.mostrarLoading('Salvando seleção...');
+      const novaSelecao = _selecaoTemp;
+      const removidas = [...tarefasSelecionadas].filter(id => !novaSelecao.has(id) && supPorTarefa[id]);
+      await Promise.all(removidas.map(id => Database.deletar(obraId, COL, id).catch(e => console.warn('Falha ao remover suprimento:', e.message))));
+      removidas.forEach(id => { delete supPorTarefa[id]; });
+
+      tarefasSelecionadas = novaSelecao;
+      await Database.criar(obraId, 'config', { tarefaIds: [...tarefasSelecionadas] }, SELECAO_DOC)
+        .catch(() => Database.atualizar(obraId, 'config', SELECAO_DOC, { tarefaIds: [...tarefasSelecionadas] }));
+
+      await _gerarPendentes();
+      Utils.toast('Seleção de Suprimentos atualizada', 'sucesso');
+      fecharSelecao();
+      renderizar();
+    } catch (e) {
+      console.error(e);
+      Utils.toast('Erro ao salvar seleção: ' + e.message, 'erro');
+    } finally {
+      Utils.esconderLoading();
+    }
   }
 
   // ---- Filtro por status (por etapa, ▼ no cabeçalho) ----
@@ -540,7 +597,8 @@ const Suprimentos = (() => {
 
   return {
     init, renderizar, abrirConfig, fecharConfig, salvarConfig, onDataInlineChange, onStatusInlineChange,
-    _setNivelFixo, _toggleFiltroStatus, _aplicarFiltroStatus,
+    abrirSelecao, fecharSelecao, salvarSelecao, _marcarSelecao,
+    _toggleFiltroStatus, _aplicarFiltroStatus,
     _setNivelModal, _editarOverride, _fecharModalOverride, _confirmarOverride, _removerOverride,
   };
 })();
