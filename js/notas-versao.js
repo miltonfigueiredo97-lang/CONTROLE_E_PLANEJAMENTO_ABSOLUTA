@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.57.22',
+  versaoAtual: 'V2.57.23',
 
   versoes: [
     {
@@ -5026,11 +5026,18 @@ const NotasVersao = {
       titulo:'Dashboard: árvore de Atividades/Suprimentos esquecia o nível e o horizonte de tempo escolhidos a cada F5',
       itens:['Nível fixo e horizonte de tempo dos cards Em Execução/Próximas/Suprimentos agora persistem em localStorage (preferência de UI, não dado da obra) — a árvore volta a abrir onde o usuário deixou, em vez de sempre no Nível 0.',
         'Quais grupos estavam abertos/fechados continua reiniciando a cada carregamento (não faz sentido persistir isso entre trocas de obra).']},
-    {versao:'V2.57.22',status:'aberta',data:'2026-07-27',tipo:'melhoria',
+    {versao:'V2.57.22',status:'fechada',data:'2026-07-27',tipo:'melhoria',
       titulo:'Dashboard: nível/horizonte da árvore agora seguem o usuário entre PCs (não só localStorage)',
       itens:['Preferência salva em Firestore (users/{uid}.dashboardArvorePrefs), por ser pessoal do usuário — não da obra. Abrir em outro computador já traz o nível e o horizonte que o usuário deixou da última vez.',
         'localStorage continua sendo usado como cache local instantâneo (evita a árvore nascer no Nível 0 e só "pular" pro nível certo depois que o Firestore responder).',
-        'Gravação com pequeno atraso (debounce) pra não gerar uma escrita a cada clique isolado se o usuário mexer em vários controles em sequência.']}
+        'Gravação com pequeno atraso (debounce) pra não gerar uma escrita a cada clique isolado se o usuário mexer em vários controles em sequência.']},
+    {versao:'V2.57.23',status:'aberta',data:'2026-07-28',tipo:'melhoria',
+      titulo:'Suprimentos: filtro por nível, status "Em Andamento", edição inline mais rápida e filtro de status por etapa',
+      itens:['Filtro por nível hierárquico (botões Nível 0/1/2...) igual ao padrão do Dashboard — mostra só os pais do nível escolhido, preferência salva em localStorage.',
+        'Novo status "Em Andamento" nas 5 etapas, além de Não Iniciado/Concluído (cor azul, --cor-info).',
+        'Clique/edição inline (data e status) não reconstrói mais a tabela inteira a cada mudança — atualiza só a célula editada, resolvendo a lentidão/travamento reportado.',
+        'Cores dos selects de status com contorno e fundo mais destacados (mais fácil bater o olho e diferenciar).',
+        'Filtro por status (▼) no cabeçalho de cada etapa, igual ao filtro de status do Planejamento — combina com o filtro de nível.']}
   ],
 
   render(containerId) {
