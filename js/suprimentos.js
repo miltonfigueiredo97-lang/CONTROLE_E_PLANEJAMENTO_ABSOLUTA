@@ -372,10 +372,10 @@ const Suprimentos = (() => {
   };
 
   function _corPrazo(e, hoje) {
-    if (e.status === 'concluido') return { cor: 'var(--cor-sucesso)', bg: 'var(--cor-sucesso-bg)' };
-    if (e.data < hoje) return { cor: 'var(--cor-perigo)', bg: 'var(--cor-perigo-bg)' };
-    if ((new Date(e.data) - new Date(hoje)) / 864e5 <= LIMIAR_PROXIMO_DIAS) return { cor: 'var(--cor-alerta)', bg: 'var(--cor-alerta-bg)' };
-    return { cor: 'var(--cor-texto-muted)', bg: 'transparent' };
+    if (e.status === 'concluido') return { cor: '#1b5e20', bg: '#66bb6a' };
+    if (e.data < hoje) return { cor: '#fff', bg: '#ef5350' };
+    if ((new Date(e.data) - new Date(hoje)) / 864e5 <= LIMIAR_PROXIMO_DIAS) return { cor: '#5d4400', bg: '#ffca28' };
+    return { cor: '#1b5e20', bg: '#66bb6a' };
   }
 
   function _celulaEtapa(tarefaId, etapaId, e) {
@@ -384,14 +384,16 @@ const Suprimentos = (() => {
     const { cor, bg } = _corPrazo(e, hoje);
     const st = STATUS_INFO[e.status] || STATUS_INFO.nao_iniciado;
     const tooltip = e.manual ? `Editado manualmente (automático seria ${Utils.formatarData(e.planejada)})` : 'Automático — ainda não editado';
-    // Pill compacto: o <input type="date"> real fica por baixo (funcional,
-    // abre o calendário do navegador ao clicar), mas sem o ícone/borda
-    // nativos — só o texto formatado com fundo colorido, no padrão pedido.
-    const inputStyle = `width:100%;border:none;background:${bg};color:${cor};font-size:.74rem;font-weight:700;font-family:var(--font-mono);padding:5px 2px;border-radius:4px;box-sizing:border-box;text-align:center;cursor:pointer;-webkit-appearance:none;appearance:none;`;
+    const dataLabel = Utils.formatarData(e.data);
     const selStyle = `width:100%;border:1px solid var(--cor-borda);background:#fff;color:var(--cor-texto);font-size:.72rem;padding:5px 2px;border-radius:4px;box-sizing:border-box;cursor:pointer;`;
     return `
       <td class="sup-cel-data" data-tarefa="${tarefaId}" data-etapa="${etapaId}" style="padding:2px;" title="${tooltip}">
-        <input type="date" value="${e.data}" style="${inputStyle}" onchange="Suprimentos.onDataInlineChange('${tarefaId}','${etapaId}',this.value)">
+        <div style="position:relative;background:${bg};color:${cor};border-radius:4px;">
+          <div style="display:flex;align-items:center;justify-content:center;gap:4px;font-size:.74rem;font-weight:700;font-family:var(--font-mono);padding:5px 2px;pointer-events:none;">
+            <span>${dataLabel}</span><span style="font-size:.68rem;opacity:.75;">✎</span>
+          </div>
+          <input type="date" value="${e.data}" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;border:none;" onchange="Suprimentos.onDataInlineChange('${tarefaId}','${etapaId}',this.value)">
+        </div>
       </td>
       <td class="sup-cel-status" data-tarefa="${tarefaId}" data-etapa="${etapaId}" style="padding:2px;">
         <select style="${selStyle}" onchange="Suprimentos.onStatusInlineChange('${tarefaId}','${etapaId}',this.value)">
