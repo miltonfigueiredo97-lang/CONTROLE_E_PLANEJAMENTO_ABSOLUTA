@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.57.31',
+  versaoAtual: 'V2.57.32',
 
   versoes: [
     {
@@ -5077,12 +5077,17 @@ const NotasVersao = {
       itens:['Causa raiz: os min-width somados de todas as colunas ultrapassavam a largura da tela, empurrando as últimas colunas (Mobilização, Folga) pra fora — cada correção anterior só mexeu nos números sem resolver a causa.',
         'Removidos todos os min-width forçados de colunas e do select de status. A tabela agora usa table-layout:fixed, que distribui o espaço disponível entre as colunas em vez de deixá-las "vazar" pra fora.',
         'Nome da Tarefa quebra em 2 linhas quando necessário, em vez de empurrar as demais colunas.']},
-    {versao:'V2.57.31',status:'aberta',data:'2026-07-28',tipo:'correcao',
+    {versao:'V2.57.31',status:'fechada',data:'2026-07-28',tipo:'correcao',
       titulo:'Suprimentos: célula de data virou pill compacto sem ícone de calendário nativo — testado sem overflow em 1366px/1920px antes de publicar',
       itens:['O input date nativo do navegador reserva espaço fixo pro ícone de calendário, e isso — somado ao select de status — não deixava as 5 etapas caberem lado a lado em nenhuma largura de tela testada.',
         'Data agora aparece como texto colorido compacto (mesmo padrão do exemplo enviado), sem o ícone nativo — clicar em qualquer parte da célula ainda abre o calendário do navegador normalmente.',
         'Status voltou a ser um select simples com fundo branco (mais parecido com o exemplo de referência), sem seta customizada nem cores fortes no fundo.',
-        'Desta vez a correção foi validada com medição real de largura (Playwright/Chromium headless) em 1366px, 1550px e 1920px antes do commit — sem overflow em nenhuma delas.']}
+        'Desta vez a correção foi validada com medição real de largura (Playwright/Chromium headless) em 1366px, 1550px e 1920px antes do commit — sem overflow em nenhuma delas.']},
+    {versao:'V2.57.32',status:'aberta',data:'2026-07-28',tipo:'correcao',
+      titulo:'Suprimentos: corrige "undefined" ao editar célula, e marcar Concluído agora pede a data real de conclusão',
+      itens:['Causa raiz do "undefined": a edição inline reconstruía a célula usando um <tr> criado solto (fora de uma <table>) e definia innerHTML nele — isso não é um contexto válido de tabela, e o navegador descartava as tags <td>, deixando texto solto aparecer na tela. Corrigido usando uma <table> completa como contêiner temporário antes de mover as células — testado em navegador real antes de publicar.',
+        'Ao marcar uma etapa como "Concluído", agora abre um pequeno popup pedindo a data real em que foi concluída (padrão: hoje) — antes o sistema só trocava o status sem perguntar a data, então "Concluído" ficava com a data planejada em vez da data real.',
+        'Cancelar o popup de conclusão desfaz a troca de status (volta pro que estava salvo antes).']}
   ],
 
   render(containerId) {

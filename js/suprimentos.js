@@ -404,6 +404,18 @@ const Suprimentos = (() => {
   // Atualiza só a célula editada no DOM (sem reconstruir a tabela inteira) —
   // reconstruir tudo a cada clique era o que deixava a edição lenta/travada.
   // O save no Firestore roda em background (local-first).
+  //
+  // IMPORTANTE: um <tr> criado solto (fora de uma <table> real) não é um
+  // contexto válido de parsing HTML — definir innerHTML nele faz o
+  // navegador descartar as tags <td> e sobrar só texto solto (era a causa
+  // do "undefined" aparecendo após editar). Por isso usamos uma <table>
+  // completa como contêiner temporário antes de extrair as células.
+  function _parseCelulas(html) {
+    const tabela = document.createElement('table');
+    tabela.innerHTML = `<tbody><tr>${html}</tr></tbody>`;
+    return tabela.querySelector('tr').children;
+  }
+
   function _repintarCelulas(tarefaId, etapaId) {
     const s = supPorTarefa[tarefaId];
     const e = s && s.etapas[etapaId];
@@ -411,10 +423,12 @@ const Suprimentos = (() => {
     const tdData = document.querySelector(`.sup-cel-data[data-tarefa="${tarefaId}"][data-etapa="${etapaId}"]`);
     const tdStatus = document.querySelector(`.sup-cel-status[data-tarefa="${tarefaId}"][data-etapa="${etapaId}"]`);
     if (!tdData || !tdStatus) return;
-    const par = document.createElement('tr');
-    par.innerHTML = _celulaEtapa(tarefaId, etapaId, e);
-    tdData.replaceWith(par.children[0]);
-    tdStatus.replaceWith(par.children[1]);
+    // Captura os 2 <td> num array fixo ANTES de qualquer replaceWith —
+    // children é uma HTMLCollection ao vivo, então usar celulas[1] depois
+    // de já ter movido celulas[0] pegaria o índice errado.
+    const [novaData, novoStatus] = [...(_parseCelulas(_celulaEtapa(tarefaId, etapaId, e)))];
+    tdData.replaceWith(novaData);
+    tdStatus.replaceWith(novoStatus);
   }
 
   async function onDataInlineChange(tarefaId, etapaId, novaData) {
@@ -434,6 +448,12 @@ const Suprimentos = (() => {
   async function onStatusInlineChange(tarefaId, etapaId, novoStatus) {
     const s = supPorTarefa[tarefaId];
     if (!s) return;
+    // Ao marcar Concluído, pergunta a data real em que foi concluído —
+    // não assume que "concluído" = data que já estava na célula.
+    if (novoStatus === 'concluido') {
+      _pedirDataConclusao(tarefaId, etapaId);
+      return;
+    }
     s.etapas[etapaId].status = novoStatus;
     _repintarCelulas(tarefaId, etapaId);
     try {
@@ -441,6 +461,53 @@ const Suprimentos = (() => {
     } catch (e) {
       console.error(e);
       Utils.toast('Erro ao salvar status: ' + e.message, 'erro');
+    }
+  }
+
+  // Popup pequeno pedindo a data real de conclusão (padrão: hoje) antes de
+  // gravar status=concluido. Evita assumir que a data que já estava na
+  // célula é a data em que a etapa de fato terminou.
+  function _pedirDataConclusao(tarefaId, etapaId) {
+    const s = supPorTarefa[tarefaId];
+    const etapaAtual = s.etapas[etapaId];
+    const statusAnterior = etapaAtual.status;
+    document.getElementById('sup-pop-conclusao')?.remove();
+    const pop = document.createElement('div');
+    pop.id = 'sup-pop-conclusao';
+    pop.style.cssText = 'position:fixed;top:130px;left:50%;transform:translateX(-50%);background:#1a1a1a;border:1px solid #333;border-radius:8px;padding:14px;z-index:2000;min-width:220px;box-shadow:0 8px 32px rgba(0,0,0,.5);';
+    pop.innerHTML = `
+      <div style="font-weight:700;color:var(--cor-primaria);margin-bottom:8px;font-size:.8rem;">Data de conclusão</div>
+      <input type="date" id="sup-input-data-conclusao" value="${Utils.hoje()}" class="form-control" style="margin-bottom:10px;width:100%;box-sizing:border-box;">
+      <div style="display:flex;gap:6px;">
+        <button class="btn btn-secundario btn-sm" style="flex:1;" onclick="Suprimentos._cancelarConclusao('${tarefaId}','${etapaId}')">Cancelar</button>
+        <button class="btn btn-primario btn-sm" style="flex:1;" onclick="Suprimentos._confirmarConclusao('${tarefaId}','${etapaId}')">Confirmar</button>
+      </div>`;
+    document.body.appendChild(pop);
+    document.getElementById('sup-input-data-conclusao')?.focus();
+    // Guarda o status anterior pra restaurar visualmente se cancelar.
+    pop.dataset.statusAnterior = statusAnterior;
+  }
+
+  function _cancelarConclusao(tarefaId, etapaId) {
+    document.getElementById('sup-pop-conclusao')?.remove();
+    _repintarCelulas(tarefaId, etapaId); // volta pro status/data que já estava salvo
+  }
+
+  async function _confirmarConclusao(tarefaId, etapaId) {
+    const s = supPorTarefa[tarefaId];
+    if (!s) return;
+    const dataEscolhida = document.getElementById('sup-input-data-conclusao')?.value;
+    document.getElementById('sup-pop-conclusao')?.remove();
+    if (!dataEscolhida) { _repintarCelulas(tarefaId, etapaId); return; }
+    s.etapas[etapaId].status = 'concluido';
+    s.etapas[etapaId].data = dataEscolhida;
+    s.etapas[etapaId].manual = true;
+    _repintarCelulas(tarefaId, etapaId);
+    try {
+      await Database.atualizar(obraId, COL, tarefaId, { etapas: s.etapas });
+    } catch (e) {
+      console.error(e);
+      Utils.toast('Erro ao salvar conclusão: ' + e.message, 'erro');
     }
   }
 
@@ -649,6 +716,7 @@ const Suprimentos = (() => {
     abrirSelecao, fecharSelecao, salvarSelecao, _cicloSelecao,
     _toggleFiltroStatus, _aplicarFiltroStatus,
     _setNivelModal, _editarOverride, _fecharModalOverride, _confirmarOverride, _removerOverride,
+    _cancelarConclusao, _confirmarConclusao,
   };
 })();
 
