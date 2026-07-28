@@ -3388,13 +3388,13 @@ const Planejamento = (() => {
     e.dataTransfer.dropEffect='move';
     if(!_arvDragId||_arvDragId===targetId)return;
 
-    // Zona de drop: 10% topo = before, 80% meio = inside (filho), 10% base = after
+    // Zona de drop: 30% topo = before, 40% meio = inside (filho), 30% base = after
     const rect=e.currentTarget?.getBoundingClientRect();
     let pos='inside';
     if(rect){
       const relY=(e.clientY-rect.top)/rect.height;
-      if(relY<0.10)pos='before';
-      else if(relY>0.90)pos='after';
+      if(relY<0.30)pos='before';
+      else if(relY>0.70)pos='after';
     }
     if(_arvDropId===targetId&&_arvDropPos===pos)return;
 

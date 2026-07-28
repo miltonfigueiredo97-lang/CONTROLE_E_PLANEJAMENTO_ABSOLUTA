@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.57.35',
+  versaoAtual: 'V2.57.36',
 
   versoes: [
     {
@@ -5099,7 +5099,10 @@ const NotasVersao = {
       titulo:'Suprimentos: cor do fundo verde e altura da célula corrigidas — extraídas pixel a pixel do print de referência',
       itens:['A cor verde usada antes (#66bb6a) era mais escura/dessaturada que a do modelo — extraída a cor exata do print enviado (#54F777) e conferida pixel a pixel antes de publicar.',
         'Vermelho e amarelo recalculados com a mesma saturação/luminosidade do verde de referência, pra manter a família de cores consistente.',
-        'Altura da célula estava quase o dobro do modelo (o <input type="date"> escondido estava reservando espaço extra) — corrigida para bater com a proporção do print de referência.']}
+        'Altura da célula estava quase o dobro do modelo (o <input type="date"> escondido estava reservando espaço extra) — corrigida para bater com a proporção do print de referência.']},
+    {versao:'V2.57.36',status:'aberta',data:'2026-07-28',tipo:'correcao',
+      titulo:'Editor de Estrutura: soltar uma tarefa "depois" de outra quase sempre virava filho por engano',
+      itens:['Zona de drop para "depois" (irmã, não filha) era só 10% da altura da linha — quase impossível de acertar. Alargada para 30%.']}
   ],
 
   render(containerId) {
