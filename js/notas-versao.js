@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.57.29',
+  versaoAtual: 'V2.57.30',
 
   versoes: [
     {
@@ -5068,10 +5068,15 @@ const NotasVersao = {
       titulo:'Suprimentos: colunas da direita cortadas — coluna Nome da Tarefa agora fixa (sticky) ao rolar',
       itens:['Larguras mínimas das colunas reduzidas (estavam exageradas, empurrando a tabela pra fora da tela sem indicação clara de rolagem).',
         'Coluna "Nome da Tarefa" fixa (sticky) na lateral esquerda — ao rolar horizontalmente pra ver Mobilização/Folga/Desvio, o nome da tarefa não some mais.']},
-    {versao:'V2.57.29',status:'aberta',data:'2026-07-28',tipo:'correcao',
+    {versao:'V2.57.29',status:'fechada',data:'2026-07-28',tipo:'correcao',
       titulo:'Suprimentos: correção V2.57.28 (sticky) piorou o corte de colunas — revertida',
       itens:['O position:sticky na coluna Nome da Tarefa não funcionou bem junto com o scroll da tabela e piorou o corte à direita — removido.',
-        'Larguras mínimas de todas as colunas (Data, Status, Desvio, Início) reduzidas mais uma vez, para caber mais colunas na tela antes de precisar rolar.']}
+        'Larguras mínimas de todas as colunas (Data, Status, Desvio, Início) reduzidas mais uma vez, para caber mais colunas na tela antes de precisar rolar.']},
+    {versao:'V2.57.30',status:'aberta',data:'2026-07-28',tipo:'correcao',
+      titulo:'Suprimentos: tabela agora usa table-layout:fixed — todas as colunas cabem na tela sem scroll horizontal',
+      itens:['Causa raiz: os min-width somados de todas as colunas ultrapassavam a largura da tela, empurrando as últimas colunas (Mobilização, Folga) pra fora — cada correção anterior só mexeu nos números sem resolver a causa.',
+        'Removidos todos os min-width forçados de colunas e do select de status. A tabela agora usa table-layout:fixed, que distribui o espaço disponível entre as colunas em vez de deixá-las "vazar" pra fora.',
+        'Nome da Tarefa quebra em 2 linhas quando necessário, em vez de empurrar as demais colunas.']}
   ],
 
   render(containerId) {
