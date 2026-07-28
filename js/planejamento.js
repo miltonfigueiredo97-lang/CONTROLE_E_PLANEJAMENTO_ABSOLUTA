@@ -66,11 +66,11 @@ const Planejamento = (() => {
   }
 
   // Colunas: ordem editável, largura editável
-  let colOrdem=['sel','num','status','nivel','codigo','nome','inicio','termino','duracao','percEsp','percConc','predecessora','responsavel','local','grupo','quantidade','equipe','custoMaterial','custoMaoObra','acoes'];
+  let colOrdem=['sel','num','status','nivel','codigo','nome','inicio','termino','inicioReal','terminoReal','duracao','percEsp','percConc','predecessora','responsavel','local','grupo','quantidade','equipe','custoMaterial','custoMaoObra','acoes'];
   let colLarguras={sel:28,num:36,status:34,nivel:42,codigo:70,nome:250,inicio:88,termino:88,duracao:60,percEsp:72,percConc:78,predecessora:80,responsavel:100,local:80,grupo:80,quantidade:110,equipe:60,custoMaterial:100,custoMaoObra:100,acoes:64};
   let colsHidden=new Set();
 
-  const COL_LABELS={sel:'',num:'#',status:'',nivel:'Nível',codigo:'Código',nome:'Tarefa',inicio:'Início',termino:'Término',duracao:'Duração',percEsp:'% Esperado',percConc:'% Concluído',predecessora:'Predecessora',responsavel:'Responsável',local:'Local',grupo:'Grupo',quantidade:'Quantidade',equipe:'Equipe',custoMaterial:'Custo Material',custoMaoObra:'Custo M.Obra',acoes:''};
+  const COL_LABELS={sel:'',num:'#',status:'',nivel:'Nível',codigo:'Código',nome:'Tarefa',inicio:'Início',termino:'Término',inicioReal:'Início Real',terminoReal:'Término Real',duracao:'Duração',percEsp:'% Esperado',percConc:'% Concluído',predecessora:'Predecessora',responsavel:'Responsável',local:'Local',grupo:'Grupo',quantidade:'Quantidade',equipe:'Equipe',custoMaterial:'Custo Material',custoMaoObra:'Custo M.Obra',acoes:''};
   const COL_FIXED=new Set(['sel','num','status','nome','acoes']);
   const COL_EDITABLE=new Set(['codigo','nome','inicio','termino','duracao','percEsp','percConc','predecessora','responsavel','local','grupo','nivel','equipe']);
 
@@ -1345,6 +1345,10 @@ const Planejamento = (() => {
         } else if(cid==='termino'){
           const vv=t[VERSAO_CAMPOS[_versaoData].fim];
           cells+=`<div style="${base}color:${vv?'#666':'#3a3a3a'};font-size:.7rem;justify-content:center;cursor:pointer;" ${clickEdit}>${vv?_fd(vv):'—'}</div>`;
+        } else if(cid==='inicioReal'){
+          cells+=`<div style="${base}color:${t.inicioReal?'#888':'#3a3a3a'};font-size:.7rem;justify-content:center;" title="Preenchido via Diário de Obra, Medições ou Semanal">${t.inicioReal?_fd(t.inicioReal):'—'}</div>`;
+        } else if(cid==='terminoReal'){
+          cells+=`<div style="${base}color:${t.terminoReal?'#888':'#3a3a3a'};font-size:.7rem;justify-content:center;" title="Preenchido via Diário de Obra, Medições ou Semanal">${t.terminoReal?_fd(t.terminoReal):'—'}</div>`;
         } else if(cid==='duracao'){
           cells+=`<div style="${base}color:#666;font-size:.7rem;justify-content:center;cursor:pointer;" ${clickEdit}>${t.duracao||'—'}</div>`;
         } else if(cid==='percEsp'){
@@ -1558,6 +1562,9 @@ const Planejamento = (() => {
         await Database.atualizar(obraId,COL,t.id,updates);
         for(const u of famUps){
           await Database.atualizar(obraId,COL,u.id,{percentualConcluido:u.percentualConcluido});
+        }
+        if(_versaoData==='atual'&&(field==='inicioPlanejado'||field==='terminoPlanejado'||field==='inicioReal'||field==='terminoReal')){
+          await _recalcularDatasPais(true);
         }
       }
       catch(er){console.error(er);Utils.toast('Erro ao salvar.','erro');}
@@ -2042,6 +2049,7 @@ const Planejamento = (() => {
       '<label class="btn btn-secundario btn-sm" style="cursor:pointer;font-size:.75rem;display:block;text-align:left;">📥 Importar<input type="file" accept=".xlsx,.xls" style="display:none" onchange="Planejamento.importarExcel(event)"></label>'+
       '<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.exportar()">📤 Exportar</button>'+
       '<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.corrigirOrdensDuplicadas()" title="Corrige tarefas com número de ordem duplicado">🔧 Corrigir Ordens</button>'+
+      '<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento._recalcularDatasPais()" title="Recalcula início/término das tarefas-pai a partir dos filhos">📐 Recalcular Datas dos Pais</button>'+
       '<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.exportarPNG()">🖼 PNG</button>'+
       '<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.abrirVinculosView()">🔗 Vínculos com Levantamento</button>';
     document.body.appendChild(pop);
@@ -2227,6 +2235,7 @@ const Planejamento = (() => {
       }
       else await Database.criar(obraId,COL,data);
       Utils.fecharModal('modal-tarefa');Utils.toast('Salvo!','sucesso');editandoId=null;await carregar();
+      await _recalcularDatasPais(true);
     }catch(e){console.error(e);Utils.toast('Erro.','erro');}
   }
 
@@ -2314,6 +2323,7 @@ const Planejamento = (() => {
       const orfas=tarefas.filter(t=>t.codigo&&!codigosDaPlanilha.has(t.codigo));
 
       Utils.toast(falhas?`⚠ ${imp} ok, ${falhas} falharam — importe de novo pra completar (retoma de onde parou).`:`✅ ${imp} tarefas importadas/atualizadas!`,falhas?'alerta':'sucesso');await carregar();
+      await _recalcularDatasPais(true);
       if(orfas.length)_mostrarOrfasImport(orfas);
     }catch(e){console.error(e);Utils.toast('Erro: '+e.message,'erro');}finally{Utils.esconderLoading();}
   }
@@ -2366,6 +2376,60 @@ const Planejamento = (() => {
       await carregar();
     }catch(e){console.error(e);Utils.toast('Erro ao excluir.','erro');}
     finally{Utils.esconderLoading();}
+  }
+
+  // ===================== DATAS DE TAREFAS-PAI (agregação automática) =====================
+  // Tarefa-pai (tem filhos) não tem data própria de verdade — a dela É o intervalo
+  // dos filhos: início = o menor início entre os filhos diretos, término = o maior
+  // término. Roda de baixo pra cima (folha primeiro) pra pais aninhados herdarem
+  // certo dos avós. Sempre recalcula e GRAVA no Firestore pros pais (Suprimentos e
+  // outros módulos leem inicioPlanejado/terminoPlanejado direto do documento, não
+  // fazem essa conta sozinhos) — nunca mexe em tarefa-folha (essas são editáveis
+  // manualmente e são a fonte da verdade).
+  async function _recalcularDatasPais(silencioso){
+    const sorted=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
+    const n=sorted.length;
+    for(let i=n-1;i>=0;i--){
+      const t=sorted[i],niv=t.nivel||0;
+      const temFilhos=i+1<n&&(sorted[i+1].nivel||0)>niv;
+      if(temFilhos){
+        let j=i+1,iniP=null,fimP=null,iniR=null,fimR=null;
+        while(j<n&&(sorted[j].nivel||0)>niv){
+          if((sorted[j].nivel||0)===niv+1){
+            const c=sorted[j];
+            if(c._iniP&&(!iniP||c._iniP<iniP))iniP=c._iniP;
+            if(c._fimP&&(!fimP||c._fimP>fimP))fimP=c._fimP;
+            if(c._iniR&&(!iniR||c._iniR<iniR))iniR=c._iniR;
+            if(c._fimR&&(!fimR||c._fimR>fimR))fimR=c._fimR;
+          }
+          j++;
+        }
+        t._iniP=iniP;t._fimP=fimP;t._iniR=iniR;t._fimR=fimR;
+      } else {
+        t._iniP=t.inicioPlanejado||null;t._fimP=t.terminoPlanejado||null;
+        t._iniR=t.inicioReal||null;t._fimR=t.terminoReal||null;
+      }
+    }
+    const mudou=[];
+    for(let i=0;i<n;i++){
+      const t=sorted[i],niv=t.nivel||0;
+      if(!(i+1<n&&(sorted[i+1].nivel||0)>niv))continue; // só tarefas-pai
+      const upd={};
+      if((t._iniP||'')!==(t.inicioPlanejado||''))upd.inicioPlanejado=t._iniP||'';
+      if((t._fimP||'')!==(t.terminoPlanejado||''))upd.terminoPlanejado=t._fimP||'';
+      if((t._iniR||'')!==(t.inicioReal||''))upd.inicioReal=t._iniR||'';
+      if((t._fimR||'')!==(t.terminoReal||''))upd.terminoReal=t._fimR||'';
+      if(Object.keys(upd).length){Object.assign(t,upd);mudou.push({id:t.id,...upd});}
+    }
+    if(mudou.length){
+      const L=30;
+      for(let i=0;i<mudou.length;i+=L){
+        await Promise.all(mudou.slice(i,i+L).map(({id,...upd})=>Database.atualizar(obraId,COL,id,upd).catch(console.error)));
+      }
+      tarefas=sorted;_buildFiltradas();_render();
+    }
+    if(!silencioso)Utils.toast(mudou.length?`📐 ${mudou.length} tarefa(s)-pai com datas recalculadas.`:'Datas dos pais já estavam corretas.','sucesso');
+    return mudou.length;
   }
 
   // ===================== REPARO: ORDENS DUPLICADAS =====================
@@ -2541,6 +2605,8 @@ const Planejamento = (() => {
             }
             else if(cid==='inicio')cells+=`<div style="${base}color:#666;font-size:.7rem;justify-content:center;">${_fd(t.inicioPlanejado)}</div>`;
             else if(cid==='termino')cells+=`<div style="${base}color:#666;font-size:.7rem;justify-content:center;">${_fd(t.terminoPlanejado)}</div>`;
+            else if(cid==='inicioReal')cells+=`<div style="${base}color:#888;font-size:.7rem;justify-content:center;" title="Preenchido via Diário de Obra, Medições ou Semanal">${_fd(t.inicioReal)}</div>`;
+            else if(cid==='terminoReal')cells+=`<div style="${base}color:#888;font-size:.7rem;justify-content:center;" title="Preenchido via Diário de Obra, Medições ou Semanal">${_fd(t.terminoReal)}</div>`;
             else if(cid==='duracao')cells+=`<div style="${base}color:#666;font-size:.7rem;justify-content:center;">${t.duracao||'—'}</div>`;
             else if(cid==='percEsp')cells+=`<div style="${base}color:#555;font-size:.7rem;justify-content:center;">${t.percentualEsperado||0}%</div>`;
             else if(cid==='percConc')cells+=`<div style="${base}font-size:.7rem;justify-content:center;color:${perc>=100?'#16a34a':perc>0?'#2563eb':'#555'};">${perc}%</div>`;
@@ -3577,7 +3643,7 @@ const Planejamento = (() => {
     _rowDragStart,toggleSel,_limparSelecao,_moverSel,_bulkNivel,_bulkDuplicar,_bulkExcluir,
     toggleStatusFiltro,_aplicarStatusFiltro,undo,
     onBusca,limparBusca,_buscaKey,
-    importarExcel,exportar,exportarPNG,corrigirOrdensDuplicadas,_orfasMarcarTodas,_orfasExcluirMarcadas,_gerarPNG,_predPopup,_predPreview,_predSalvar,
+    importarExcel,exportar,exportarPNG,corrigirOrdensDuplicadas,_recalcularDatasPais,_orfasMarcarTodas,_orfasExcluirMarcadas,_gerarPNG,_predPopup,_predPreview,_predSalvar,
     abrirVinculosView,fecharVinculosView,abrirVincularTarefa,abrirVincularAqui,onVincTipoChange,
     onVincNavModulo,onVincNavModuloMetrica,onVincNavMetrica,onVincNavEntrar,onVincNavBreadcrumb,onVincNavVoltar,
     onBuscaEscolhaAlvoVinc,onEscolherAlvoVinc,onTrocarAlvoVinc,

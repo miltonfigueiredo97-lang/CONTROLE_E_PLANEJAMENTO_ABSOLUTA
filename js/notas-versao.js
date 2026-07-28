@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.57.26',
+  versaoAtual: 'V2.57.27',
 
   versoes: [
     {
@@ -5051,12 +5051,19 @@ const NotasVersao = {
         'Tela principal agora é uma lista plana só com as tarefas marcadas — sempre com dados completos, sem depender de folha/grupo.',
         'Dados antigos gerados automaticamente (por tarefa-folha) foram zerados ao trocar de modelo — a seleção começa do zero, conforme combinado.',
         'Salvar a seleção apaga o pipeline das tarefas desmarcadas e gera pendentes das que entraram, sem duplicar quem já tinha doc.']},
-    {versao:'V2.57.26',status:'aberta',data:'2026-07-28',tipo:'melhoria',
+    {versao:'V2.57.26',status:'fechada',data:'2026-07-28',tipo:'melhoria',
       titulo:'Suprimentos: marcador de 3 estados (dados/título/oculto) e formatação visual das células',
       itens:['Marcador de seleção agora tem 3 estados ao clicar: vazio → ✓ (linha com dados/pipeline completo) → ● (linha só como título, sem pipeline) → vazio de novo.',
         'Linha em modo "título" mostra só o nome da tarefa, útil pra organizar visualmente sem gerar suprimento pra ela (ex.: mostrar o pai acima de um grupo de filhos).',
         'Correção visual: selects de status com fonte maior e seta customizada (o texto "Não Iniciado" cortava dentro da caixa antes), inputs de data com contorno mais grosso e cores mais sólidas.',
-        'Colunas de Data/Status com largura mínima maior para não espremer o conteúdo.']}
+        'Colunas de Data/Status com largura mínima maior para não espremer o conteúdo.']},
+    {versao:'V2.57.27',status:'aberta',data:'2026-07-24',tipo:'funcionalidade',
+      titulo:'Planejamento: tarefas-pai (grupos) agora recebem início/término automaticamente — início = o menor dos filhos, término = o maior — inclusive gravado no Firestore (necessário pro Suprimentos e outros módulos que leem essa data direto)',
+      itens:['Antes, um pai só tinha data se ela tivesse sido digitada/importada manualmente ali — se não tivesse, ficava em branco mesmo com todos os filhos preenchidos, e módulos que leem inicioPlanejado direto do documento da tarefa ficavam sem essa informação.',
+        'Agora recalcula de baixo pra cima (filho antes do pai, pai antes do avô) e GRAVA o resultado no pai — não é só um efeito visual na tela.',
+        'Roda automaticamente depois de: importar Excel, salvar uma tarefa pelo formulário, editar Início/Término/Início Real/Término Real direto na célula.',
+        'Também disponível manualmente em ⚙ Ferramentas → "📐 Recalcular Datas dos Pais", pra rodar em obras que já tinham pais com data errada/em branco de antes desta versão.',
+        'Novas colunas Início Real e Término Real na tabela do Planejamento (visualização — preenchidas pelo Diário de Obra, Medições e Semanal, que já alimentavam esses campos mas não apareciam aqui).']}
   ],
 
   render(containerId) {
