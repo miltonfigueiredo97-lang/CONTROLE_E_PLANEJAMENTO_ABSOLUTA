@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.57.27',
+  versaoAtual: 'V2.57.28',
 
   versoes: [
     {
@@ -5057,13 +5057,17 @@ const NotasVersao = {
         'Linha em modo "título" mostra só o nome da tarefa, útil pra organizar visualmente sem gerar suprimento pra ela (ex.: mostrar o pai acima de um grupo de filhos).',
         'Correção visual: selects de status com fonte maior e seta customizada (o texto "Não Iniciado" cortava dentro da caixa antes), inputs de data com contorno mais grosso e cores mais sólidas.',
         'Colunas de Data/Status com largura mínima maior para não espremer o conteúdo.']},
-    {versao:'V2.57.27',status:'aberta',data:'2026-07-24',tipo:'funcionalidade',
+    {versao:'V2.57.27',status:'fechada',data:'2026-07-24',tipo:'funcionalidade',
       titulo:'Planejamento: tarefas-pai (grupos) agora recebem início/término automaticamente — início = o menor dos filhos, término = o maior — inclusive gravado no Firestore (necessário pro Suprimentos e outros módulos que leem essa data direto)',
       itens:['Antes, um pai só tinha data se ela tivesse sido digitada/importada manualmente ali — se não tivesse, ficava em branco mesmo com todos os filhos preenchidos, e módulos que leem inicioPlanejado direto do documento da tarefa ficavam sem essa informação.',
         'Agora recalcula de baixo pra cima (filho antes do pai, pai antes do avô) e GRAVA o resultado no pai — não é só um efeito visual na tela.',
         'Roda automaticamente depois de: importar Excel, salvar uma tarefa pelo formulário, editar Início/Término/Início Real/Término Real direto na célula.',
         'Também disponível manualmente em ⚙ Ferramentas → "📐 Recalcular Datas dos Pais", pra rodar em obras que já tinham pais com data errada/em branco de antes desta versão.',
-        'Novas colunas Início Real e Término Real na tabela do Planejamento (visualização — preenchidas pelo Diário de Obra, Medições e Semanal, que já alimentavam esses campos mas não apareciam aqui).']}
+        'Novas colunas Início Real e Término Real na tabela do Planejamento (visualização — preenchidas pelo Diário de Obra, Medições e Semanal, que já alimentavam esses campos mas não apareciam aqui).']},
+    {versao:'V2.57.28',status:'aberta',data:'2026-07-28',tipo:'correcao',
+      titulo:'Suprimentos: colunas da direita cortadas — coluna Nome da Tarefa agora fixa (sticky) ao rolar',
+      itens:['Larguras mínimas das colunas reduzidas (estavam exageradas, empurrando a tabela pra fora da tela sem indicação clara de rolagem).',
+        'Coluna "Nome da Tarefa" fixa (sticky) na lateral esquerda — ao rolar horizontalmente pra ver Mobilização/Folga/Desvio, o nome da tarefa não some mais.']}
   ],
 
   render(containerId) {

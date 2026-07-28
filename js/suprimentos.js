@@ -155,17 +155,17 @@ const Suprimentos = (() => {
     if (!linhas) linhas = `<tr><td colspan="${ETAPAS.length * 2 + 3}" class="text-sm text-muted" style="text-align:center;padding:20px;">Nenhuma tarefa selecionada bate com o filtro de status.</td></tr>`;
 
     container.innerHTML = `
-      <div class="tabela-container">
-        <table class="tabela tabela-compacta">
+      <div class="tabela-container" style="overflow-x:auto;">
+        <table class="tabela tabela-compacta" style="min-width:max-content;">
           <thead>
             <tr>
-              <th rowspan="2" style="min-width:260px;">Nome da Tarefa</th>
-              ${ETAPAS.map(e => `<th colspan="2" style="text-align:center;min-width:230px;">${e.label}</th>`).join('')}
-              <th rowspan="2">Desvio (Dias)</th>
-              <th rowspan="2">Início</th>
+              <th rowspan="2" style="min-width:220px;position:sticky;left:0;z-index:6;background:var(--cor-dark-800);">Nome da Tarefa</th>
+              ${ETAPAS.map(e => `<th colspan="2" style="text-align:center;min-width:190px;">${e.label}</th>`).join('')}
+              <th rowspan="2" style="min-width:90px;">Desvio (Dias)</th>
+              <th rowspan="2" style="min-width:100px;">Início</th>
             </tr>
             <tr>
-              ${ETAPAS.map(e => `<th style="font-weight:400;min-width:110px;">Data</th><th style="font-weight:400;position:relative;min-width:120px;">
+              ${ETAPAS.map(e => `<th style="font-weight:400;min-width:95px;">Data</th><th style="font-weight:400;position:relative;min-width:95px;">
                 <span style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;" onclick="event.stopPropagation();Suprimentos._toggleFiltroStatus('${e.id}')">
                   Status <span style="font-size:.7rem;color:${statusFiltro[e.id]&&statusFiltro[e.id].size?'var(--cor-primaria)':'#999'};">▼</span>
                 </span>
@@ -186,7 +186,7 @@ const Suprimentos = (() => {
   function _linhaTitulo(t) {
     const ind = 8 + (t.nivel || 0) * 16;
     return `<tr class="linha-grupo-suprimentos">
-      <td style="padding-left:${ind}px;font-weight:700;color:#555;">${t.nome}</td>
+      <td style="padding-left:${ind}px;font-weight:700;color:#555;position:sticky;left:0;z-index:2;background:#f7f7f7;">${t.nome}</td>
       <td colspan="${ETAPAS.length * 2 + 2}"></td>
     </tr>`;
   }
@@ -196,7 +196,7 @@ const Suprimentos = (() => {
     const s = supPorTarefa[t.id];
     if (!t.inicioPlanejado || !s) {
       return `<tr>
-        <td style="padding-left:${ind}px;">${t.nome}</td>
+        <td style="padding-left:${ind}px;position:sticky;left:0;z-index:2;background:#fff;">${t.nome}</td>
         <td colspan="${ETAPAS.length * 2}" class="text-sm text-muted" style="text-align:center;">Sem Início Planejado — defina no Planejamento</td>
         <td></td><td></td>
       </tr>`;
@@ -212,7 +212,7 @@ const Suprimentos = (() => {
     const desvio = _calcDesvio(t);
     const inicioLabel = Utils.formatarData(t.inicioReal || t.inicioPlanejado);
     return `<tr>
-      <td style="padding-left:${ind}px;">${t.nome}</td>
+      <td style="padding-left:${ind}px;position:sticky;left:0;z-index:2;background:#fff;">${t.nome}</td>
       ${celulas}
       <td class="col-num" style="text-align:center;${desvio!=null&&desvio>0?'color:var(--cor-perigo);font-weight:700;':'color:var(--cor-texto-muted);'}">${desvio==null?'—':(desvio>0?'+':'')+desvio}</td>
       <td class="col-num" style="text-align:center;font-family:var(--font-mono);">${inicioLabel}</td>
