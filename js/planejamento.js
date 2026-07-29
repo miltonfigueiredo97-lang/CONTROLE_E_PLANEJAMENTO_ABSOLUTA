@@ -2050,6 +2050,7 @@ const Planejamento = (() => {
       '<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.exportar()">📤 Exportar</button>'+
       '<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.corrigirOrdensDuplicadas()" title="Corrige tarefas com número de ordem duplicado">🔧 Corrigir Ordens</button>'+
       '<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento._recalcularDatasPais()" title="Recalcula início/término das tarefas-pai a partir dos filhos">📐 Recalcular Datas dos Pais</button>'+
+      '<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento._corrigirNiveisSoltos()" title="Corrige tarefas com nível soltos (invisíveis no Editor de Estrutura)">🌳 Corrigir Níveis Soltos</button>'+
       '<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.exportarPNG()">🖼 PNG</button>'+
       '<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.abrirVinculosView()">🔗 Vínculos com Levantamento</button>';
     document.body.appendChild(pop);
@@ -2323,6 +2324,7 @@ const Planejamento = (() => {
       const orfas=tarefas.filter(t=>t.codigo&&!codigosDaPlanilha.has(t.codigo));
 
       Utils.toast(falhas?`⚠ ${imp} ok, ${falhas} falharam — importe de novo pra completar (retoma de onde parou).`:`✅ ${imp} tarefas importadas/atualizadas!`,falhas?'alerta':'sucesso');await carregar();
+      await _corrigirNiveisSoltos(true);
       await _recalcularDatasPais(true);
       if(orfas.length)_mostrarOrfasImport(orfas);
     }catch(e){console.error(e);Utils.toast('Erro: '+e.message,'erro');}finally{Utils.esconderLoading();}
@@ -2376,6 +2378,38 @@ const Planejamento = (() => {
       await carregar();
     }catch(e){console.error(e);Utils.toast('Erro ao excluir.','erro');}
     finally{Utils.esconderLoading();}
+  }
+
+  // ===================== NÍVEIS "SOLTOS" DA ÁRVORE (gaps) =====================
+  // O Editor de Estrutura só reconhece uma tarefa como raiz se nivel===0, e só como
+  // filha de X se nivel===X.nivel+1 (ver _arvFilhos/raizes). Se uma tarefa tem nível
+  // 4 mas a anterior tem nível 2 (faltando o 3), ela não é filha de ninguém nem raiz
+  // — fica invisível na árvore, mesmo continuando a aparecer normalmente na tabela
+  // do Planejamento (que só usa nivel pra indentar, sem exigir essa cadeia). Isso é
+  // o que faz os dois "divergirem". Aqui garantimos que nenhuma tarefa pule mais de
+  // 1 nível de profundidade em relação à tarefa imediatamente anterior — mesma regra
+  // de qualquer outline (Word/PowerPoint/MS Project): não dá pra ir de nível 2 direto
+  // pro 4 sem passar pelo 3.
+  async function _corrigirNiveisSoltos(silencioso){
+    const sorted=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
+    let maxPermitido=0;
+    const mudou=[];
+    for(const t of sorted){
+      const niv=t.nivel||0;
+      const permitido=Math.min(niv,maxPermitido);
+      if(permitido!==niv){t.nivel=permitido;mudou.push({id:t.id,nivel:permitido});}
+      maxPermitido=(t.nivel||0)+1;
+    }
+    if(mudou.length){
+      const L=20,TIMEOUT_MS=15000;
+      const comTimeout=p=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),TIMEOUT_MS))]);
+      for(let i=0;i<mudou.length;i+=L){
+        await Promise.all(mudou.slice(i,i+L).map(({id,nivel})=>comTimeout(Database.atualizar(obraId,COL,id,{nivel})).catch(console.error)));
+      }
+      tarefas=sorted;_buildFiltradas();_render();
+    }
+    if(!silencioso)Utils.toast(mudou.length?`🌳 ${mudou.length} tarefa(s) tinham nível "solto" (invisíveis na árvore) e foram corrigidas.`:'Nenhum nível solto encontrado — árvore e tabela batem.','sucesso');
+    return mudou.length;
   }
 
   // ===================== DATAS DE TAREFAS-PAI (agregação automática) =====================
@@ -3664,7 +3698,7 @@ const Planejamento = (() => {
     _rowDragStart,toggleSel,_limparSelecao,_moverSel,_bulkNivel,_bulkDuplicar,_bulkExcluir,
     toggleStatusFiltro,_aplicarStatusFiltro,undo,
     onBusca,limparBusca,_buscaKey,
-    importarExcel,exportar,exportarPNG,corrigirOrdensDuplicadas,_recalcularDatasPais,_orfasMarcarTodas,_orfasExcluirMarcadas,_gerarPNG,_predPopup,_predPreview,_predSalvar,
+    importarExcel,exportar,exportarPNG,corrigirOrdensDuplicadas,_corrigirNiveisSoltos,_recalcularDatasPais,_orfasMarcarTodas,_orfasExcluirMarcadas,_gerarPNG,_predPopup,_predPreview,_predSalvar,
     abrirVinculosView,fecharVinculosView,abrirVincularTarefa,abrirVincularAqui,onVincTipoChange,
     onVincNavModulo,onVincNavModuloMetrica,onVincNavMetrica,onVincNavEntrar,onVincNavBreadcrumb,onVincNavVoltar,
     onBuscaEscolhaAlvoVinc,onEscolherAlvoVinc,onTrocarAlvoVinc,

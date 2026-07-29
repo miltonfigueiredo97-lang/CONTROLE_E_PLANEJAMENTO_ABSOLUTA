@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.57.38',
+  versaoAtual: 'V2.57.39',
 
   versoes: [
     {
@@ -5108,11 +5108,16 @@ const NotasVersao = {
       itens:['Causa raiz: soltar "depois" de uma tarefa X inseria logo após a LINHA de X (índice+1) — mas se X já tinha filhos próprios logo em seguida, a tarefa recém-movida entrava bem ali no meio, entre X e os filhos dele. Como "quem é filho de quem" é decidido só pela sequência (nível maior logo depois = filho), os filhos verdadeiros de X ficaram "órfãos" de X e a tarefa recém-inserida roubou esse vínculo — exatamente o sintoma relatado: a tarefa de cima perde a setinha de expandir (vira um pontinho, sem filhos) e o que estava dentro dela aparece dentro da de baixo.',
         'Corrigido: soltar "depois" agora pula o bloco INTEIRO da tarefa-alvo (ela + todos os filhos próprios dela) antes de inserir — a nova tarefa vira irmã de verdade, depois de tudo que já pertencia ao alvo.',
         'Também corrigido: soltar/mover na árvore não pula mais o scroll pro topo — mantém a posição de onde você estava mexendo.']},
-    {versao:'V2.57.38',status:'aberta',data:'2026-07-28',tipo:'correcao',
+    {versao:'V2.57.38',status:'fechada',data:'2026-07-28',tipo:'correcao',
       titulo:'Editor de Estrutura: mover/reordenar às vezes "voltava sozinho" depois de sair e voltar da página — falha ao salvar no Firestore era engolida silenciosamente',
       itens:['Causa: quando uma gravação de ordem/nível falhava (rede instável, sobrecarga de escritas simultâneas), o erro só ia pro console — a árvore continuava mostrando a mudança na tela (otimista), mas nada tinha sido salvo de verdade. Um reload trazia o estado antigo de volta, parecendo que o sistema "desfez sozinho".',
         'Reduzida a concorrência de escrita (50→20 simultâneas) e adicionado timeout de 15s por gravação, igual ao fix já aplicado no Importar Excel.',
-        'Agora, se alguma gravação falhar, aparece um aviso explícito na tela avisando pra tentar mover de novo — em vez de falhar em silêncio.']}
+        'Agora, se alguma gravação falhar, aparece um aviso explícito na tela avisando pra tentar mover de novo — em vez de falhar em silêncio.']},
+    {versao:'V2.57.39',status:'aberta',data:'2026-07-28',tipo:'correcao',
+      titulo:'Editor de Estrutura e Planejamento mostravam estruturas DIFERENTES — causa: nível "solto" (com salto) torna uma tarefa invisível na árvore mas ela continua aparecendo normalmente na tabela',
+      itens:['Causa raiz: o Editor de Estrutura só reconhece uma tarefa como raiz se nível===0, e só como filha de outra se nível===pai+1 (ver _arvFilhos). Se uma tarefa acaba com nível 4 mas a anterior tem nível 2 (faltando o 3 no meio — pode vir de import, edição manual do campo Nível, ou um bug já corrigido), ela não vira filha de ninguém nem raiz: some da árvore. A tabela do Planejamento não tem essa exigência (só usa nível pra indentar), então continua mostrando ela normalmente — daí a divergência entre as duas telas relatada pelo Milton (tarefa "Forro Escadaria" via na tabela, sumida na árvore).',
+        'Novo botão ⚙ Ferramentas → "🌳 Corrigir Níveis Soltos": percorre a obra inteira e garante que nenhuma tarefa pule mais de 1 nível de profundidade em relação à anterior (mesma regra de qualquer outline — Word/PowerPoint/MS Project). Roda automaticamente também depois de importar Excel.',
+        'Rode esse botão agora pra recuperar tarefas que sumiram da árvore por esse motivo.']}
   ],
 
   render(containerId) {
