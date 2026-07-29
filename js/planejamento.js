@@ -3558,7 +3558,6 @@ const Planejamento = (() => {
     const novaOrdem=ordemAnterior+(ref.ordem-ordemAnterior)/2;
     const nova={nome:'Nova Tarefa',nivel:nv,ordem:novaOrdem,tipo:'tarefa',
       duracao:'',percentualEsperado:0,percentualConcluido:0,codigo:'',predecessora:'',responsavel:'',local:'',grupo:''};
-    Utils.mostrarLoading('Criando...');
     try{
       const numAntes=_capturarNumAntes();
       const id=await Database.criar(obraId,COL,nova);
@@ -3568,10 +3567,9 @@ const Planejamento = (() => {
       // localmente sem persistir no Firestore (como era antes) deixava as
       // outras tarefas com 'ordem' desatualizada lá, causando desalinhamento
       // no reload seguinte. Use "🔧 Corrigir Ordens" se quiser números limpos.
-      _buildFiltradas();_arvEditId=id;_render();
+      _buildFiltradas();_arvEditId=id;_render(); // já mostra a linha nova na hora, sem tela de carregando
       await _remapAposMudancaPosicoes(numAntes);
     }catch(e){console.error(e);Utils.toast('Erro.','erro');}
-    finally{Utils.esconderLoading();}
   }
   // Insere irmão imediatamente ABAIXO da tarefa (depois do bloco de filhos)
   async function _arvInserirAbaixo(refId){
@@ -3588,7 +3586,6 @@ const Planejamento = (() => {
     const novaOrdem=ordemAnterior+(ordemProxima-ordemAnterior)/2;
     const nova={nome:'Nova Tarefa',nivel:nv,ordem:novaOrdem,tipo:'tarefa',
       duracao:'',percentualEsperado:0,percentualConcluido:0,codigo:'',predecessora:'',responsavel:'',local:'',grupo:''};
-    Utils.mostrarLoading('Criando...');
     try{
       const numAntes=_capturarNumAntes();
       const id=await Database.criar(obraId,COL,nova);
@@ -3597,7 +3594,6 @@ const Planejamento = (() => {
       _buildFiltradas();_arvEditId=id;_render();
       await _remapAposMudancaPosicoes(numAntes);
     }catch(e){console.error(e);Utils.toast('Erro.','erro');}
-    finally{Utils.esconderLoading();}
   }
 
   // Muda o nível de uma tarefa diretamente para o valor digitado
@@ -3649,7 +3645,6 @@ const Planejamento = (() => {
     const ordemAntes=fimBloco<sorted.length?sorted[fimBloco].ordem||fimBloco:ordemAnterior+2;
     const novaOrdem=ordemAnterior+(ordemAntes-ordemAnterior)/2;
     const novaTarefa={nome:'Nova Tarefa',nivel:(pai.nivel||0)+1,ordem:novaOrdem,duracao:'',percentualEsperado:0,percentualConcluido:0,codigo:'',predecessora:'',responsavel:'',local:'',grupo:'',tipo:'tarefa'};
-    Utils.mostrarLoading('Criando...');
     try{
       const numAntes=_capturarNumAntes();
       const id=await Database.criar(obraId,COL,novaTarefa);
@@ -3663,14 +3658,12 @@ const Planejamento = (() => {
       _arvEditId=id;_render();
       Utils.toast('Tarefa criada!','sucesso');
     }catch(e){console.error(e);Utils.toast('Erro ao criar.','erro');}
-    finally{Utils.esconderLoading();}
   }
 
   async function _arvCriarRaiz(){
     const sorted=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
     const ultimaOrdem=sorted.length?sorted[sorted.length-1].ordem||sorted.length:0;
     const novaTarefa={nome:'Novo Grupo',nivel:0,ordem:ultimaOrdem+1,duracao:'',percentualEsperado:0,percentualConcluido:0,codigo:'',predecessora:'',responsavel:'',local:'',grupo:'',tipo:'grupo'};
-    Utils.mostrarLoading('Criando...');
     try{
       const id=await Database.criar(obraId,COL,novaTarefa);
       novaTarefa.id=id;
@@ -3679,7 +3672,6 @@ const Planejamento = (() => {
       _arvEditId=id;_render();
       Utils.toast('Grupo raiz criado!','sucesso');
     }catch(e){console.error(e);Utils.toast('Erro ao criar.','erro');}
-    finally{Utils.esconderLoading();}
   }
 
   // ---- Backup/Restaurar estrutura (nome, nível, ordem, código, predecessora) ----
@@ -3812,13 +3804,16 @@ const Planejamento = (() => {
     e.dataTransfer.dropEffect='move';
     if(!_arvDragId||_arvDragId===targetId)return;
 
-    // Zona de drop: 30% topo = before, 40% meio = inside (filho), 30% base = after
+    // Zona de drop: 40% topo = before, 20% meio = inside (filho), 40% base = after
+    // Virar filho por engano era o problema mais reclamado — reduzida a zona de
+    // "inside" ao mínimo central; reordenar como irmã (antes/depois) domina a
+    // linha inteira. Pra aninhar de propósito, use "＋▸ Criar filho" ou "↗ Mover para".
     const rect=e.currentTarget?.getBoundingClientRect();
     let pos='inside';
     if(rect){
       const relY=(e.clientY-rect.top)/rect.height;
-      if(relY<0.30)pos='before';
-      else if(relY>0.70)pos='after';
+      if(relY<0.40)pos='before';
+      else if(relY>0.60)pos='after';
     }
     if(_arvDropId===targetId&&_arvDropPos===pos)return;
 

@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.57.47',
+  versaoAtual: 'V2.57.48',
 
   versoes: [
     {
@@ -5155,9 +5155,13 @@ const NotasVersao = {
       itens:['Causa: undo() gravava CADA tarefa da obra sequencialmente no Firestore, uma de cada vez, aguardando cada escrita terminar antes de ir pra próxima — se uma travasse (mesma causa de travamentos já vistos no Import), tudo depois dela na lista nunca era restaurado de verdade, mesmo a tela mostrando que sim.',
         'Sem trava alguma: apertar Ctrl+Z de novo antes do primeiro terminar disparava um SEGUNDO desfazer em paralelo, escrevendo por cima do primeiro — cada tarefa podia acabar com um valor de um snapshot, outra com valor de outro, misturando dois estados diferentes (exatamente o padrão relatado: uma tarefa some do lugar certo e os filhos de outra trocam de dono).',
         'Corrigido: desfazer agora ignora um segundo Ctrl+Z enquanto o anterior ainda está gravando, só grava as tarefas que realmente mudaram (mais rápido), em lotes com timeout de 15s, e avisa na tela se alguma não foi restaurada.']},
-    {versao:'V2.57.47',status:'aberta',data:'2026-07-28',tipo:'funcionalidade',
+    {versao:'V2.57.47',status:'fechada',data:'2026-07-28',tipo:'funcionalidade',
       titulo:'Editor de Estrutura: novo botão "💾 Salvar e Atualizar Planejamento" — força regravar ordem/nível de TODAS as tarefas e recarrega, sem depender do salvamento automático em segundo plano',
-      itens:['Regrava ordem e nível de todas as tarefas do jeito que está na tela agora, em lotes com timeout, e recarrega o Planejamento no final — um "tenho certeza que salvou" manual, pra quando o salvamento automático em segundo plano não é suficiente ou o Milton quer confirmação explícita de que o Planejamento está de fato igual à árvore.']}
+      itens:['Regrava ordem e nível de todas as tarefas do jeito que está na tela agora, em lotes com timeout, e recarrega o Planejamento no final — um "tenho certeza que salvou" manual, pra quando o salvamento automático em segundo plano não é suficiente ou o Milton quer confirmação explícita de que o Planejamento está de fato igual à árvore.']},
+    {versao:'V2.57.48',status:'aberta',data:'2026-07-28',tipo:'correcao',
+      titulo:'Editor de Estrutura: tela de "Carregando" removida de criar irmã/filha (ação instantânea não precisava bloquear a tela) — e reduzida ainda mais a zona de "virar filho" ao arrastar',
+      itens:['Criar tarefa acima/abaixo/filha/raiz é uma escrita só no Firestore, rápida — não precisava da tela de carregando bloqueando a interface a cada clique. Removida nas 4 ações de criar; a linha nova já aparece na hora.',
+        'Zona de drop "virar filho" ao arrastar reduzida de 40% para 20% da altura da linha (bem no centro) — reordenar como irmã (antes/depois) agora domina 80% da linha. Pra aninhar de propósito, use os botões "＋▸ Criar filho" ou "↗ Mover para" em vez de mirar num alvo pequeno arrastando.']}
   ],
 
   render(containerId) {
