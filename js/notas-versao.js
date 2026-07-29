@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.57.44',
+  versaoAtual: 'V2.57.45',
 
   versoes: [
     {
@@ -5141,10 +5141,15 @@ const NotasVersao = {
         '"Importar Correções": não cria nem apaga nenhuma tarefa, não toca em posição/nível/código — casa cada linha da planilha com a tarefa de MESMO NOME já existente na obra, e atualiza só os campos marcados numa lista de checkbox (Início Real, Término Real, % Concluído, Duração, Responsável, etc). Pensado pro caso do Milton: preencheu datas reais numa planilha à parte e quer trazer só isso, sem risco de bagunçar a árvore que ele organizou no Editor de Estrutura.',
         'Correções mostra um resumo ANTES de aplicar: quantas tarefas serão atualizadas, quantas não foram encontradas (nome não bate) e quantas são ambíguas (mais de uma tarefa com o mesmo nome — puladas por segurança, para nunca atualizar a tarefa errada).',
         'O "Importar" original (upsert por Código) continua existindo e é o padrão recomendado no dia a dia.']},
-    {versao:'V2.57.44',status:'aberta',data:'2026-07-28',tipo:'correcao',
+    {versao:'V2.57.44',status:'fechada',data:'2026-07-28',tipo:'correcao',
       titulo:'Removido do menu o botão "Corrigir Nível pelo Código" — era um reparo de uso único (dano histórico dos bugs já corrigidos) e perigoso como ferramenta recorrente',
       itens:['O Código de uma tarefa fica desatualizado assim que ela é reestruturada manualmente no Editor de Estrutura (aninhada num grupo novo, por exemplo) — só o Nível reflete a posição real depois disso. Deixar esse botão disponível no dia a dia significava correr o risco de, sem querer, reverter uma reestruturação manual de volta pro nível antigo (baseado no Código desatualizado), depois de já ter sido corrigida à mão.',
-        'Serviu seu propósito (reparar o estrago histórico) e foi removido do menu. A função continua existindo no código só para emergência, mas não aparece mais como botão clicável no dia a dia.']}
+        'Serviu seu propósito (reparar o estrago histórico) e foi removido do menu. A função continua existindo no código só para emergência, mas não aparece mais como botão clicável no dia a dia.']},
+    {versao:'V2.57.45',status:'aberta',data:'2026-07-28',tipo:'funcionalidade',
+      titulo:'Editor de Estrutura: botões "💾 Backup" e "📤 Restaurar" — salva um snapshot local da estrutura (nome/nível/ordem/código/predecessora) antes de mexer, pra restaurar se algo der errado',
+      itens:['💾 Backup baixa um arquivo .json no seu computador com o estado atual de todas as tarefas (nível, ordem, código, predecessora) — não fica salvo em nenhum lugar do sistema, só no seu computador.',
+        '📤 Restaurar lê esse arquivo depois e devolve nível/ordem/código/predecessora pro que estava salvo, tarefa por tarefa (casando pelo ID interno — funciona mesmo se você reorganizou tudo depois, mas não funciona se a tarefa foi excluída e recriada).',
+        'Recomendado: bata um backup antes de reestruturar bastante coisa de uma vez.']}
   ],
 
   render(containerId) {

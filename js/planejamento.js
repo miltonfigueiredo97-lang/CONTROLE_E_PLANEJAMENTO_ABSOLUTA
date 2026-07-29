@@ -3484,6 +3484,8 @@ const Planejamento = (() => {
           <button class="btn btn-secundario btn-sm" onclick="Planejamento._arvExpandirTudo(true)" style="font-size:.72rem;">▼ Expandir tudo</button>
           <button class="btn btn-secundario btn-sm" onclick="Planejamento._arvExpandirTudo(false)" style="font-size:.72rem;">▶ Recolher tudo</button>
           <button class="btn btn-secundario btn-sm" onclick="Planejamento._arvCriarRaiz()" style="font-size:.72rem;">＋ Nova raiz</button>
+          <button class="btn btn-secundario btn-sm" onclick="Planejamento._arvBackupEstrutura()" style="font-size:.72rem;" title="Salva um arquivo com nome/nível/ordem/código/predecessora de cada tarefa — pra restaurar se algo der errado">💾 Backup</button>
+          <label class="btn btn-secundario btn-sm" style="cursor:pointer;font-size:.72rem;" title="Restaura um backup salvo anteriormente">📤 Restaurar<input type="file" accept=".json" style="display:none" onchange="Planejamento._arvRestaurarEstrutura(event)"></label>
           <button class="btn btn-primario btn-sm" onclick="Planejamento.toggleArvoreEditor()" style="font-size:.72rem;">← Voltar ao Gantt</button>
         </div>
       </div>
@@ -3655,6 +3657,66 @@ const Planejamento = (() => {
       _arvEditId=id;_render();
       Utils.toast('Grupo raiz criado!','sucesso');
     }catch(e){console.error(e);Utils.toast('Erro ao criar.','erro');}
+    finally{Utils.esconderLoading();}
+  }
+
+  // ---- Backup/Restaurar estrutura (nome, nível, ordem, código, predecessora) ----
+  // Salva um snapshot LOCAL (arquivo .json baixado no computador, não fica em
+  // lugar nenhum do sistema) que pode ser restaurado depois se uma reorganização
+  // der errado. Casa por ID do Firestore — só funciona se as tarefas não forem
+  // excluídas/recriadas entre o backup e a restauração (mudar nível/ordem/nome
+  // não afeta, só excluir e recriar quebra o casamento por ID).
+  function _arvBackupEstrutura(){
+    const dados=tarefas.map(t=>({id:t.id,nome:t.nome,nivel:t.nivel||0,ordem:t.ordem||0,codigo:t.codigo||'',predecessora:t.predecessora||''}));
+    const payload={obraId,data:new Date().toISOString(),tarefas:dados};
+    const blob=new Blob([JSON.stringify(payload)],{type:'application/json'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;
+    a.download=`backup-estrutura-${(obra?.nome||'obra').replace(/[^a-z0-9]/gi,'_')}-${new Date().toISOString().slice(0,16).replace(/[:T]/g,'-')}.json`;
+    document.body.appendChild(a);a.click();a.remove();
+    URL.revokeObjectURL(url);
+    Utils.toast(`💾 Backup salvo (${dados.length} tarefas).`,'sucesso');
+  }
+
+  async function _arvRestaurarEstrutura(event){
+    const file=event.target.files[0];if(!file)return;event.target.value='';
+    try{
+      const texto=await file.text();
+      const payload=JSON.parse(texto);
+      if(!payload?.tarefas?.length){Utils.toast('Arquivo de backup inválido.','erro');return;}
+      if(payload.obraId&&payload.obraId!==obraId){
+        if(!confirm('Este backup foi salvo de OUTRA obra. Restaurar mesmo assim?'))return;
+      }
+      const porId=new Map(tarefas.map(t=>[t.id,t]));
+      const mudou=[];
+      let naoEncontradas=0;
+      for(const bkp of payload.tarefas){
+        const t=porId.get(bkp.id);
+        if(!t){naoEncontradas++;continue;}
+        const upd={};
+        if((t.nivel||0)!==(bkp.nivel||0))upd.nivel=bkp.nivel||0;
+        if((t.ordem||0)!==(bkp.ordem||0))upd.ordem=bkp.ordem||0;
+        if((t.codigo||'')!==(bkp.codigo||''))upd.codigo=bkp.codigo||'';
+        if((t.predecessora||'')!==(bkp.predecessora||''))upd.predecessora=bkp.predecessora||'';
+        if(Object.keys(upd).length){Object.assign(t,upd);mudou.push({id:t.id,...upd});}
+      }
+      if(!mudou.length){Utils.toast(naoEncontradas?`Nada pra restaurar. ${naoEncontradas} tarefa(s) do backup não existem mais (foram excluídas/recriadas).`:'Estrutura já bate com o backup.','sucesso');return;}
+      if(!confirm(`Restaurar vai alterar nível/ordem/código/predecessora de ${mudou.length} tarefa(s) pro estado salvo em ${payload.data?new Date(payload.data).toLocaleString('pt-BR'):'backup'}.${naoEncontradas?` (${naoEncontradas} tarefa(s) do backup não existem mais e serão ignoradas.)`:''} Confirmar?`))return;
+      Utils.mostrarLoading('Restaurando...');
+      const L=20,TIMEOUT_MS=15000;
+      const comTimeout=p=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),TIMEOUT_MS))]);
+      let falhas=0;
+      for(let i=0;i<mudou.length;i+=L){
+        Utils.mostrarLoading(`Restaurando... ${Math.min(i+L,mudou.length)}/${mudou.length}`);
+        await Promise.all(mudou.slice(i,i+L).map(({id,...upd})=>
+          comTimeout(Database.atualizar(obraId,COL,id,upd)).catch(e=>{falhas++;console.error('Erro restaurar:',id,e);})
+        ));
+      }
+      Utils.esconderLoading();
+      _buildFiltradas();_render();
+      Utils.toast(falhas?`⚠ ${mudou.length-falhas} restauradas, ${falhas} falharam.`:`✅ Estrutura restaurada (${mudou.length} tarefa(s)).`,falhas?'alerta':'sucesso');
+    }catch(e){console.error(e);Utils.toast('Erro ao ler o backup: '+e.message,'erro');}
     finally{Utils.esconderLoading();}
   }
 
@@ -3975,7 +4037,7 @@ const Planejamento = (() => {
     toggleGantt,hideCol,showColsMenu,_showCol,_showAll,_toggleMenuFerramentas,
     toggleArvoreEditor,_arvToggle,_arvExpandirTudo,_arvIniciarEdit,_arvCancelarEdit,_arvSalvarNome,
     _arvInserirAcima,_arvInserirAbaixo,_arvMudarNivel,
-    _arvCriarFilho,_arvCriarRaiz,_arvDragStart,_arvDragOver,_arvDragEnd,_arvDrop,
+    _arvCriarFilho,_arvCriarRaiz,_arvBackupEstrutura,_arvRestaurarEstrutura,_arvDragStart,_arvDragOver,_arvDragEnd,_arvDrop,
     _arvRowClick,_arvSelTem,_arvLimparSel,_arvMoverMultiplas,
     _arvAbrirMover,_arvFecharMover,_arvFiltrarMover,_arvConfirmarMover,
     _colResizeStart,moveColLeft,moveColRight,_hideCol,_divStart,_sync,_editCell,_esqDragStart,
