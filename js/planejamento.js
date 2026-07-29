@@ -2058,7 +2058,14 @@ const Planejamento = (() => {
       '<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.corrigirOrdensDuplicadas()" title="Corrige tarefas com número de ordem duplicado">🔧 Corrigir Ordens</button>'+
       '<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento._recalcularDatasPais()" title="Recalcula início/término das tarefas-pai a partir dos filhos">📐 Recalcular Datas dos Pais</button>'+
       '<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento._corrigirNiveisSoltos()" title="Corrige tarefas com nível soltos (invisíveis no Editor de Estrutura)">🌳 Corrigir Níveis Soltos</button>'+
-      '<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;background:#3a2a2a;" onclick="Planejamento._corrigirNivelPeloCodigo()" title="Recalcula Nível pela contagem de pontos do Código (fonte confiável) — corrige tarefas aninhadas no lugar errado">🩹 Corrigir Nível pelo Código</button>'+
+      // "Corrigir Nível pelo Código" foi removido do menu — era um reparo de uso
+      // único (histórico corrompido por bugs já corrigidos). Como ferramenta
+      // recorrente é perigoso: se você aninhar uma tarefa com Código dentro de um
+      // grupo novo manualmente, o Código dela fica desatualizado (não reflete a
+      // nova posição), e rodar esse botão de novo reverteria o nível pro valor
+      // antigo, desfazendo a reestruturação. A função continua existindo no
+      // código (Planejamento._corrigirNivelPeloCodigo()) só pra emergência, mas
+      // não deve ser clicada por engano no dia a dia.
       '<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.exportarPNG()">🖼 PNG</button>'+
       '<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.abrirVinculosView()">🔗 Vínculos com Levantamento</button>';
     document.body.appendChild(pop);

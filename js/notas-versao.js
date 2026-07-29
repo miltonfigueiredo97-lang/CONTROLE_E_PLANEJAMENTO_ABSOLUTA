@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.57.43',
+  versaoAtual: 'V2.57.44',
 
   versoes: [
     {
@@ -5135,12 +5135,16 @@ const NotasVersao = {
         'Importar Excel — tarefas mantidas que não vieram na planilha (órfãs) podiam ter a predecessora desatualizada se o import deslocou a posição delas. Corrigido.',
         'Mover linha ↑/↓ (botões "Acima"/"Abaixo" da tabela): salvava TODAS as ~2400 tarefas da obra no Firestore a cada clique, mesmo as que não mudaram de posição — desnecessário e um risco real de sobrecarga (mesma causa que já travou o Importar Excel outras vezes). Agora só salva quem realmente mudou, em lotes com timeout.',
         'Conferido também: arrastar na tabela normal (_reordenarTarefa) e Mover-para-outro-pai (Editor de Estrutura) já remapeavam corretamente — nenhuma mudança necessária ali.']},
-    {versao:'V2.57.43',status:'aberta',data:'2026-07-28',tipo:'funcionalidade',
+    {versao:'V2.57.43',status:'fechada',data:'2026-07-28',tipo:'funcionalidade',
       titulo:'Dois novos modos de importar Excel: "Importar Base Completa" (substitui tudo) e "Importar Correções" (atualiza só campos escolhidos, casando por Nome — não mexe em posição/nível/estrutura)',
       itens:['"Importar Base Completa": apaga TODAS as tarefas da obra e recria do zero a partir da planilha — pra quando o Milton quer mesmo substituir a base inteira (ex: reconciliar com um cronograma do CSO totalmente reestruturado). Pede confirmação em dobro por ser destrutivo.',
         '"Importar Correções": não cria nem apaga nenhuma tarefa, não toca em posição/nível/código — casa cada linha da planilha com a tarefa de MESMO NOME já existente na obra, e atualiza só os campos marcados numa lista de checkbox (Início Real, Término Real, % Concluído, Duração, Responsável, etc). Pensado pro caso do Milton: preencheu datas reais numa planilha à parte e quer trazer só isso, sem risco de bagunçar a árvore que ele organizou no Editor de Estrutura.',
         'Correções mostra um resumo ANTES de aplicar: quantas tarefas serão atualizadas, quantas não foram encontradas (nome não bate) e quantas são ambíguas (mais de uma tarefa com o mesmo nome — puladas por segurança, para nunca atualizar a tarefa errada).',
-        'O "Importar" original (upsert por Código) continua existindo e é o padrão recomendado no dia a dia.']}
+        'O "Importar" original (upsert por Código) continua existindo e é o padrão recomendado no dia a dia.']},
+    {versao:'V2.57.44',status:'aberta',data:'2026-07-28',tipo:'correcao',
+      titulo:'Removido do menu o botão "Corrigir Nível pelo Código" — era um reparo de uso único (dano histórico dos bugs já corrigidos) e perigoso como ferramenta recorrente',
+      itens:['O Código de uma tarefa fica desatualizado assim que ela é reestruturada manualmente no Editor de Estrutura (aninhada num grupo novo, por exemplo) — só o Nível reflete a posição real depois disso. Deixar esse botão disponível no dia a dia significava correr o risco de, sem querer, reverter uma reestruturação manual de volta pro nível antigo (baseado no Código desatualizado), depois de já ter sido corrigida à mão.',
+        'Serviu seu propósito (reparar o estrago histórico) e foi removido do menu. A função continua existindo no código só para emergência, mas não aparece mais como botão clicável no dia a dia.']}
   ],
 
   render(containerId) {
