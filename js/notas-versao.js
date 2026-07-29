@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.57.41',
+  versaoAtual: 'V2.57.42',
 
   versoes: [
     {
@@ -5123,10 +5123,18 @@ const NotasVersao = {
       itens:['O V2.57.39 corrigia só "saltos impossíveis" de nível — mas isso não pega um nível que está ERRADO só por estar errado (ex: devia ser 4 e ficou 6, sem pular etapa nenhuma). Analisando o Excel exportado, 63% das tarefas com Código têm o Nível salvo divergindo da contagem de pontos do próprio Código — resultado de bugs de drag&drop/import já corrigidos ao longo desta conversa, acumulados na obra.',
         'O Código nunca é escrito automaticamente pelo sistema (só vem de import ou digitação manual), então é a fonte confiável. Novo botão ⚙ Ferramentas → "🩹 Corrigir Nível pelo Código": para toda tarefa que tem Código, recalcula o Nível pela contagem de pontos dele (ex: "1.3.6.20.2" → nível 4) e grava no Firestore.',
         'Tarefas SEM Código (grupos criados manualmente na árvore, ex: "Gesso e Forro") não são tocadas por esse reparo — se alguma delas ainda ficar no nível errado depois, precisa de ajuste manual (← / →) uma a uma, mas são poucas comparado ao total.']},
-    {versao:'V2.57.41',status:'aberta',data:'2026-07-28',tipo:'correcao',
+    {versao:'V2.57.41',status:'fechada',data:'2026-07-28',tipo:'correcao',
       titulo:'Predecessoras: inserir OU excluir qualquer tarefa (Editor de Estrutura ou tabela normal) não atualizava as predecessoras de tudo que vinha depois — só arrastar na árvore fazia isso',
       itens:['Inserir/excluir uma tarefa desloca o número de linha (o "#" que as predecessoras referenciam, tipo "5TI") de tudo que vem depois dela. Até esta versão, só o arrastar-e-soltar no Editor de Estrutura corrigia essas referências (_remapearPredecessoras); os botões ↑＋/↓＋/＋▸ de inserir na árvore, o "+ Tarefa" da tabela normal, e excluir tarefa não faziam esse remapeamento — deixando predecessoras de tarefas mais abaixo silenciosamente apontando pra linha errada toda vez que algo era inserido ou excluído antes delas.',
-        'Agora TODA inserção e exclusão de tarefa (árvore ou tabela) remapeia as predecessoras de quem mudou de linha, do mesmo jeito que já acontecia ao arrastar.']}
+        'Agora TODA inserção e exclusão de tarefa (árvore ou tabela) remapeia as predecessoras de quem mudou de linha, do mesmo jeito que já acontecia ao arrastar.']},
+    {versao:'V2.57.42',status:'aberta',data:'2026-07-28',tipo:'correcao',
+      titulo:'Auditoria completa de todos os botões do Planejamento/Editor de Estrutura: mais 4 pontos sem remapeamento de predecessoras corrigidos, e um botão que salvava a obra INTEIRA a cada clique',
+      itens:['Duplicar tarefa(s) selecionada(s) pela tabela (botão em massa) — não remapeava. Corrigido.',
+        'Excluir tarefa(s) selecionada(s) em massa pela tabela — não remapeava. Corrigido.',
+        'Excluir tarefas órfãs no painel pós-import (V2.57.14) — não remapeava. Corrigido.',
+        'Importar Excel — tarefas mantidas que não vieram na planilha (órfãs) podiam ter a predecessora desatualizada se o import deslocou a posição delas. Corrigido.',
+        'Mover linha ↑/↓ (botões "Acima"/"Abaixo" da tabela): salvava TODAS as ~2400 tarefas da obra no Firestore a cada clique, mesmo as que não mudaram de posição — desnecessário e um risco real de sobrecarga (mesma causa que já travou o Importar Excel outras vezes). Agora só salva quem realmente mudou, em lotes com timeout.',
+        'Conferido também: arrastar na tabela normal (_reordenarTarefa) e Mover-para-outro-pai (Editor de Estrutura) já remapeavam corretamente — nenhuma mudança necessária ali.']}
   ],
 
   render(containerId) {

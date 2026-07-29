@@ -1755,6 +1755,7 @@ const Planejamento = (() => {
     if(!confirm(`Duplicar ${ids.length} tarefa(s) selecionada(s)?`))return;
     Utils.mostrarLoading('Duplicando...');
     try{
+      const numAntes=_capturarNumAntes();
       for(const id of ids){
         const t=tarefas.find(x=>x.id===id);
         if(!t)continue;
@@ -1767,6 +1768,7 @@ const Planejamento = (() => {
       selecionados.clear();
       Utils.toast('Tarefas duplicadas!','sucesso');
       await carregar();
+      await _remapAposMudancaPosicoes(numAntes);
     }catch(e){console.error(e);Utils.toast('Erro ao duplicar.','erro');}
     finally{Utils.esconderLoading();}
   }
@@ -1776,10 +1778,13 @@ const Planejamento = (() => {
     if(!confirm(`Excluir ${ids.length} tarefa(s) selecionada(s)? Esta ação não pode ser desfeita.`))return;
     Utils.mostrarLoading('Excluindo...');
     try{
+      const numAntes=_capturarNumAntes();
       await Promise.all(ids.map(id=>Database.deletar(obraId,COL,id).catch(console.error)));
       selecionados.clear();
       Utils.toast('Tarefas excluídas!','sucesso');
       await carregar();
+      ids.forEach(id=>numAntes.delete(id)); // excluídas não têm "depois"
+      await _remapAposMudancaPosicoes(numAntes);
     }catch(e){console.error(e);Utils.toast('Erro ao excluir.','erro');}
     finally{Utils.esconderLoading();}
   }
@@ -2258,6 +2263,7 @@ const Planejamento = (() => {
   async function importarExcel(event){
     const file=event.target.files[0];if(!file)return;event.target.value='';
     if(!confirm(`Importar vai criar tarefas novas e ATUALIZAR as que já existem com o mesmo Código (tarefas antigas que não estão mais na planilha NÃO são apagadas). Confirmar?`))return;
+    const numAntesImport=_capturarNumAntes();
     try{
       Utils.mostrarLoading('Lendo...');
       if(typeof XLSX==='undefined')await _ls('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');
@@ -2332,6 +2338,7 @@ const Planejamento = (() => {
       const orfas=tarefas.filter(t=>t.codigo&&!codigosDaPlanilha.has(t.codigo));
 
       Utils.toast(falhas?`⚠ ${imp} ok, ${falhas} falharam — importe de novo pra completar (retoma de onde parou).`:`✅ ${imp} tarefas importadas/atualizadas!`,falhas?'alerta':'sucesso');await carregar();
+      await _remapAposMudancaPosicoes(numAntesImport);
       await _corrigirNiveisSoltos(true);
       await _recalcularDatasPais(true);
       if(orfas.length)_mostrarOrfasImport(orfas);
@@ -2380,10 +2387,13 @@ const Planejamento = (() => {
     if(!confirm(`Excluir ${ids.length} tarefa(s)? Não pode ser desfeito.`))return;
     Utils.mostrarLoading('Excluindo...');
     try{
+      const numAntes=_capturarNumAntes();
       await Promise.all(ids.map(id=>Database.deletar(obraId,COL,id).catch(console.error)));
       const modal=document.getElementById('orfas-modal');if(modal)modal.remove();
       Utils.toast(`${ids.length} tarefa(s) excluída(s).`,'sucesso');
       await carregar();
+      ids.forEach(id=>numAntes.delete(id));
+      await _remapAposMudancaPosicoes(numAntes);
     }catch(e){console.error(e);Utils.toast('Erro ao excluir.','erro');}
     finally{Utils.esconderLoading();}
   }
@@ -2974,6 +2984,7 @@ const Planejamento = (() => {
   async function _moverSel(dir){
     if(!selecionados.size){Utils.toast('Selecione pelo menos 1 tarefa para mover.','alerta');return;}
     const sorted=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
+    const ordemAntesMover=new Map(sorted.map(t=>[t.id,t.ordem||0]));
     const ids=new Set(selecionados);
 
     // Índices selecionados na ordem atual
@@ -3022,14 +3033,22 @@ const Planejamento = (() => {
     }
     await _remapearPredecessoras(mudancasNum2);
 
-    // Salva só as que mudaram de ordem
-    const updates=sorted.filter(t=>{
-      const orig=tarefas.find(x=>x.id===t.id);
-      return orig&&orig.ordem!==t.ordem;
+    // Salva só as que mudaram de ordem (antes salvava TODAS as tarefas da obra
+    // a cada clique — desnecessário e arriscava a mesma sobrecarga de escrita
+    // já vista em import/árvore)
+    const mudaram=sorted.filter(t=>{
+      const ant=ordemAntesMover.get(t.id);
+      return ant===undefined||(t.ordem||0)!==ant;
     });
-    await Promise.all(sorted.map(t=>
-      Database.atualizar(obraId,COL,t.id,{ordem:t.ordem}).catch(console.error)
-    ));
+    const L=20,TIMEOUT_MS=15000;
+    const comTimeout=p=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),TIMEOUT_MS))]);
+    let falhasMover=0;
+    for(let i=0;i<mudaram.length;i+=L){
+      await Promise.all(mudaram.slice(i,i+L).map(t=>
+        comTimeout(Database.atualizar(obraId,COL,t.id,{ordem:t.ordem})).catch(e=>{falhasMover++;console.error('Erro mover:',t.id,e);})
+      ));
+    }
+    if(falhasMover)Utils.toast(`⚠ ${falhasMover} tarefa(s) não foram salvas — tente mover de novo.`,'alerta');
   }
 
   // ===================== BUSCA NO GANTT =====================
