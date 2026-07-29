@@ -2051,6 +2051,7 @@ const Planejamento = (() => {
       '<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.corrigirOrdensDuplicadas()" title="Corrige tarefas com número de ordem duplicado">🔧 Corrigir Ordens</button>'+
       '<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento._recalcularDatasPais()" title="Recalcula início/término das tarefas-pai a partir dos filhos">📐 Recalcular Datas dos Pais</button>'+
       '<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento._corrigirNiveisSoltos()" title="Corrige tarefas com nível soltos (invisíveis no Editor de Estrutura)">🌳 Corrigir Níveis Soltos</button>'+
+      '<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;background:#3a2a2a;" onclick="Planejamento._corrigirNivelPeloCodigo()" title="Recalcula Nível pela contagem de pontos do Código (fonte confiável) — corrige tarefas aninhadas no lugar errado">🩹 Corrigir Nível pelo Código</button>'+
       '<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.exportarPNG()">🖼 PNG</button>'+
       '<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.abrirVinculosView()">🔗 Vínculos com Levantamento</button>';
     document.body.appendChild(pop);
@@ -2378,6 +2379,44 @@ const Planejamento = (() => {
       await carregar();
     }catch(e){console.error(e);Utils.toast('Erro ao excluir.','erro');}
     finally{Utils.esconderLoading();}
+  }
+
+  // ===================== NÍVEL PELO CÓDIGO (reparo definitivo) =====================
+  // O campo Código (ex: "1.3.6.20.2") nunca é escrito automaticamente pelo sistema —
+  // só existe se veio de import ou foi digitado manualmente — então é a fonte mais
+  // confiável de hierarquia que existe. O campo Nível (numérico), por outro lado, já
+  // foi corrompido por vários bugs de drag&drop/import ao longo do tempo. Sempre que
+  // uma tarefa tem Código, o Nível dela DEVE ser exatamente a contagem de pontos do
+  // Código (1.3.6.20 → nível 3; 1.3.6.20.2 → nível 4). Esse reparo corrige qualquer
+  // tarefa com Código onde isso não bate — é o jeito de "consertar de vez" tarefas
+  // que aparecem aninhadas no lugar errado por causa de um Nível salvo errado.
+  // Tarefas SEM Código não são tocadas (não tem como derivar, ficam como estão).
+  async function _corrigirNivelPeloCodigo(silencioso){
+    const comCodigo=tarefas.filter(t=>t.codigo&&String(t.codigo).trim());
+    const mudou=[];
+    for(const t of comCodigo){
+      const esperado=(String(t.codigo).match(/\./g)||[]).length;
+      if((t.nivel||0)!==esperado){t.nivel=esperado;mudou.push({id:t.id,nivel:esperado});}
+    }
+    if(mudou.length){
+      if(!silencioso&&!confirm(`${mudou.length} tarefa(s) com Nível divergente do Código serão corrigidas (Código é a fonte confiável, nunca é mexido pelo sistema). Confirmar?`))return 0;
+      const L=20,TIMEOUT_MS=15000;
+      const comTimeout=p=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),TIMEOUT_MS))]);
+      let falhas=0;
+      Utils.mostrarLoading(`Corrigindo níveis... 0/${mudou.length}`);
+      for(let i=0;i<mudou.length;i+=L){
+        Utils.mostrarLoading(`Corrigindo níveis... ${Math.min(i+L,mudou.length)}/${mudou.length}`);
+        await Promise.all(mudou.slice(i,i+L).map(({id,nivel})=>
+          comTimeout(Database.atualizar(obraId,COL,id,{nivel})).catch(e=>{falhas++;console.error('Erro corrigir nivel:',id,e);})
+        ));
+      }
+      Utils.esconderLoading();
+      _buildFiltradas();_render();
+      if(!silencioso)Utils.toast(falhas?`⚠ ${mudou.length-falhas} corrigidas, ${falhas} falharam.`:`🌳 ${mudou.length} tarefa(s) com nível corrigido pelo Código.`,falhas?'alerta':'sucesso');
+    } else if(!silencioso){
+      Utils.toast('Nenhuma divergência entre Nível e Código encontrada.','sucesso');
+    }
+    return mudou.length;
   }
 
   // ===================== NÍVEIS "SOLTOS" DA ÁRVORE (gaps) =====================
@@ -3698,7 +3737,7 @@ const Planejamento = (() => {
     _rowDragStart,toggleSel,_limparSelecao,_moverSel,_bulkNivel,_bulkDuplicar,_bulkExcluir,
     toggleStatusFiltro,_aplicarStatusFiltro,undo,
     onBusca,limparBusca,_buscaKey,
-    importarExcel,exportar,exportarPNG,corrigirOrdensDuplicadas,_corrigirNiveisSoltos,_recalcularDatasPais,_orfasMarcarTodas,_orfasExcluirMarcadas,_gerarPNG,_predPopup,_predPreview,_predSalvar,
+    importarExcel,exportar,exportarPNG,corrigirOrdensDuplicadas,_corrigirNiveisSoltos,_corrigirNivelPeloCodigo,_recalcularDatasPais,_orfasMarcarTodas,_orfasExcluirMarcadas,_gerarPNG,_predPopup,_predPreview,_predSalvar,
     abrirVinculosView,fecharVinculosView,abrirVincularTarefa,abrirVincularAqui,onVincTipoChange,
     onVincNavModulo,onVincNavModuloMetrica,onVincNavMetrica,onVincNavEntrar,onVincNavBreadcrumb,onVincNavVoltar,
     onBuscaEscolhaAlvoVinc,onEscolherAlvoVinc,onTrocarAlvoVinc,
