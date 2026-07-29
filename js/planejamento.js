@@ -2051,7 +2051,9 @@ const Planejamento = (() => {
     pop=document.createElement('div');pop.id='ft-pop';
     pop.style.cssText='position:fixed;top:90px;right:20px;background:#1a1a1a;border:1px solid #333;border-radius:8px;padding:8px;z-index:1000;min-width:170px;box-shadow:0 8px 32px rgba(0,0,0,.5);display:flex;flex-direction:column;gap:4px;';
     pop.innerHTML=
-      '<label class="btn btn-secundario btn-sm" style="cursor:pointer;font-size:.75rem;display:block;text-align:left;">📥 Importar<input type="file" accept=".xlsx,.xls" style="display:none" onchange="Planejamento.importarExcel(event)"></label>'+
+      '<label class="btn btn-secundario btn-sm" style="cursor:pointer;font-size:.75rem;display:block;text-align:left;" title="Cria/atualiza por Código, nunca apaga (comportamento atual, mais seguro)">📥 Importar<input type="file" accept=".xlsx,.xls" style="display:none" onchange="Planejamento.importarExcel(event)"></label>'+
+      '<label class="btn btn-secundario btn-sm" style="cursor:pointer;font-size:.75rem;display:block;text-align:left;color:#f87171;" title="Apaga TUDO e recria do zero — só pra substituir a base inteira">📥 Importar Base Completa (apaga tudo)<input type="file" accept=".xlsx,.xls" style="display:none" onchange="Planejamento.importarBaseCompleta(event)"></label>'+
+      '<label class="btn btn-secundario btn-sm" style="cursor:pointer;font-size:.75rem;display:block;text-align:left;" title="Casa por Nome, atualiza só os campos escolhidos — não mexe em posição/estrutura">📥 Importar Correções (por campo)<input type="file" accept=".xlsx,.xls" style="display:none" onchange="Planejamento.importarCorrecoes(event)"></label>'+
       '<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.exportar()">📤 Exportar</button>'+
       '<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.corrigirOrdensDuplicadas()" title="Corrige tarefas com número de ordem duplicado">🔧 Corrigir Ordens</button>'+
       '<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento._recalcularDatasPais()" title="Recalcula início/término das tarefas-pai a partir dos filhos">📐 Recalcular Datas dos Pais</button>'+
@@ -2257,6 +2259,191 @@ const Planejamento = (() => {
       await _remapAposMudancaPosicoes(numAntes);
     }
     catch(e){Utils.toast('Erro.','erro');}
+  }
+
+  // Helper compartilhado: lê e mapeia colunas do Excel (mesmo parser do importarExcel)
+  async function _lerPlanilhaImport(file){
+    if(typeof XLSX==='undefined')await _ls('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');
+    const ab=await file.arrayBuffer();
+    const wb=XLSX.read(ab,{type:'array'});
+    const ws=wb.Sheets[wb.SheetNames[0]];
+    const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+    if(rows.length<2)throw new Error('Planilha vazia.');
+    const hdrs=rows[0].map(h=>String(h||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' '));
+    const ci=n=>{const a={id:['id'],codigo:['codigo','code'],nivel:['nivel','nível','level'],nome:['nome','name','tarefa'],duracao:['duracao','duration'],
+      inicio:['inicio','start','inicio planejado'],termino:['termino','finish','fim','termino planejado'],
+      percEsp:['esperado','% esperado'],percConc:['concluido','% concluido','% complete'],
+      pred:['predecessora','predecessor','prececessora'],pai:['tarefa pai','parent'],grupo:['grupo','group'],
+      local:['local','location'],custo:['custo','cost'],receita:['receita','revenue'],
+      resp:['responsavel','responsible','resource'],iniB:['inicio linha de base'],terB:['termino linha de base'],
+      iniD:['inicio desafio'],terD:['termino desafio'],iniReal:['inicio real'],terReal:['termino real']};
+      for(const al of(a[n]||[])){const i=hdrs.indexOf(al);if(i>=0)return i;}return-1;};
+    const iN=ci('nome');
+    if(iN<0)throw new Error('Coluna Nome não encontrada.');
+    return {rows,ci,iN};
+  }
+
+  // ===================== IMPORTAR BASE COMPLETA (substitui tudo) =====================
+  // Diferente do "Importar" normal (upsert por Código, nunca apaga) — este apaga
+  // TODAS as tarefas da obra e recria do zero a partir da planilha. Só pra quem
+  // realmente quer substituir a base inteira (ex: primeira carga de uma obra nova,
+  // ou reconciliar de vez com um cronograma totalmente reestruturado).
+  async function importarBaseCompleta(event){
+    const file=event.target.files[0];if(!file)return;event.target.value='';
+    const qtdAtual=tarefas.length;
+    if(!confirm(`⚠️ ATENÇÃO: isso vai APAGAR TODAS as ${qtdAtual} tarefas atuais desta obra e criar tudo do zero a partir da planilha. NÃO pode ser desfeito.\n\nSó use isso se quer substituir a base inteira. Pra atualizar campos específicos sem mexer na estrutura, use "Importar Correções".\n\nTem certeza?`))return;
+    if(!confirm(`Confirme de novo: apagar ${qtdAtual} tarefas e substituir por uma base nova a partir de "${file.name}"?`))return;
+    try{
+      Utils.mostrarLoading('Lendo...');
+      const {rows,ci,iN}=await _lerPlanilhaImport(file);
+      const L=20,TIMEOUT_MS=15000;
+      const comTimeout=p=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),TIMEOUT_MS))]);
+      const idsAntigos=tarefas.map(t=>t.id);
+      for(let i=0;i<idsAntigos.length;i+=L){
+        Utils.mostrarLoading(`Apagando tarefas atuais... ${Math.min(i+L,idsAntigos.length)}/${idsAntigos.length}`);
+        await Promise.all(idsAntigos.slice(i,i+L).map(id=>comTimeout(Database.deletar(obraId,COL,id)).catch(console.error)));
+      }
+      const regs=[];
+      for(let r=1;r<rows.length;r++){
+        const row=rows[r],nR=String(row[iN]||''),nm=nR.trim();if(!nm)continue;
+        const cd=String(row[ci('codigo')]||'').trim();
+        const iNiv=ci('nivel');
+        const nivColuna=iNiv>=0?parseInt(row[iNiv]):NaN;
+        const pts=(cd.match(/\./g)||[]).length;
+        const nivelBySpace=Math.floor((nR.length-nR.trimStart().length)/2);
+        const niv=!isNaN(nivColuna)?nivColuna:(cd?pts:nivelBySpace);
+        const tipo=niv<=1&&cd?'grupo':'tarefa';
+        regs.push({tipo,codigo:cd,nome:nm,nivel:niv,ordem:regs.length+1,
+          inicioPlanejado:_pd(row[ci('inicio')]),terminoPlanejado:_pd(row[ci('termino')]),
+          duracao:_pDur(row[ci('duracao')]),percentualEsperado:_pN(row[ci('percEsp')]),
+          percentualConcluido:_pN(row[ci('percConc')]),predecessora:String(row[ci('pred')]||'').trim(),
+          tarefaPai:String(row[ci('pai')]||'').trim(),grupo:String(row[ci('grupo')]||'').trim(),
+          local:String(row[ci('local')]||'').trim(),custo:_pN(row[ci('custo')]),receita:_pN(row[ci('receita')]),
+          responsavel:String(row[ci('resp')]||'').trim(),inicioPlanejadoBase:_pd(row[ci('iniB')]),
+          terminoPlanejadoBase:_pd(row[ci('terB')]),inicioDesafio:_pd(row[ci('iniD')]),
+          terminoDesafio:_pd(row[ci('terD')]),obraId});
+      }
+      let imp=0,falhas=0;
+      for(let i=0;i<regs.length;i+=L){
+        Utils.mostrarLoading(`Criando ${Math.min(i+L,regs.length)}/${regs.length}...`);
+        await Promise.all(regs.slice(i,i+L).map(d=>comTimeout(Database.criar(obraId,COL,d,null,true)).then(()=>imp++).catch(e=>{falhas++;console.error('Falha:',d.nome,e);})));
+      }
+      Utils.toast(falhas?`⚠ ${imp} criadas, ${falhas} falharam — importe de novo pra completar.`:`✅ Base substituída: ${imp} tarefas.`,falhas?'alerta':'sucesso');
+      await carregar();
+      await _corrigirNiveisSoltos(true);
+      await _recalcularDatasPais(true);
+    }catch(e){console.error(e);Utils.toast('Erro: '+e.message,'erro');}
+    finally{Utils.esconderLoading();}
+  }
+
+  // ===================== IMPORTAR CORREÇÕES (patch por campo, casa por Nome) =====================
+  // Não mexe em posição/nível/estrutura/código — só atualiza os campos escolhidos
+  // das tarefas cujo NOME bate exatamente com uma tarefa já existente na obra.
+  // Pensado pro caso: "só quero trazer as datas reais que preenchi numa planilha
+  // separada" sem arriscar bagunçar a árvore.
+  const CAMPOS_CORRECAO=[
+    {id:'inicioReal',label:'Início Real',col:'iniReal'},
+    {id:'terminoReal',label:'Término Real',col:'terReal'},
+    {id:'percentualConcluido',label:'% Concluído',col:'percConc'},
+    {id:'percentualEsperado',label:'% Esperado',col:'percEsp'},
+    {id:'inicioPlanejado',label:'Início Planejado',col:'inicio'},
+    {id:'terminoPlanejado',label:'Término Planejado',col:'termino'},
+    {id:'duracao',label:'Duração',col:'duracao'},
+    {id:'responsavel',label:'Responsável',col:'resp'},
+    {id:'predecessora',label:'Predecessora',col:'pred'},
+    {id:'custo',label:'Custo',col:'custo'},
+    {id:'receita',label:'Receita',col:'receita'},
+  ];
+  let _correcoesContexto=null;
+  async function importarCorrecoes(event){
+    const file=event.target.files[0];if(!file)return;event.target.value='';
+    try{
+      Utils.mostrarLoading('Lendo...');
+      const ctx=await _lerPlanilhaImport(file);
+      Utils.esconderLoading();
+      _correcoesContexto=ctx;
+      let modal=document.getElementById('correcoes-modal');if(modal)modal.remove();
+      modal=document.createElement('div');modal.id='correcoes-modal';
+      modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:2000;display:flex;align-items:center;justify-content:center;';
+      modal.innerHTML=`
+        <div style="background:#1a1a1a;border:1px solid #333;border-radius:10px;padding:20px;width:480px;max-width:95vw;max-height:85vh;overflow-y:auto;display:flex;flex-direction:column;gap:10px;">
+          <div style="font-weight:700;color:var(--cor-primaria);">📥 Importar Correções</div>
+          <div style="font-size:.78rem;color:#888;">Casa cada linha da planilha com a tarefa de MESMO NOME já existente na obra. Posição, nível, estrutura e código NÃO são tocados — só os campos marcados abaixo:</div>
+          <div id="correcoes-campos" style="display:flex;flex-direction:column;gap:4px;">
+            ${CAMPOS_CORRECAO.map(c=>`<label style="display:flex;align-items:center;gap:8px;font-size:.82rem;cursor:pointer;">
+              <input type="checkbox" value="${c.id}"> ${c.label}
+            </label>`).join('')}
+          </div>
+          <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:6px;">
+            <button class="btn btn-secundario btn-sm" onclick="document.getElementById('correcoes-modal').remove()">Cancelar</button>
+            <button class="btn btn-primario btn-sm" onclick="Planejamento._executarCorrecoes()">Continuar →</button>
+          </div>
+        </div>`;
+      document.body.appendChild(modal);
+    }catch(e){console.error(e);Utils.toast('Erro: '+e.message,'erro');Utils.esconderLoading();}
+  }
+  async function _executarCorrecoes(){
+    if(!_correcoesContexto)return;
+    const {rows,ci,iN}=_correcoesContexto;
+    const camposMarcados=[...document.querySelectorAll('#correcoes-campos input:checked')].map(cb=>cb.value);
+    if(!camposMarcados.length){Utils.toast('Marque ao menos 1 campo.','alerta');return;}
+    const modal=document.getElementById('correcoes-modal');if(modal)modal.remove();
+
+    // Nome -> lista de tarefas (pra detectar ambiguidade: mais de uma com mesmo nome)
+    const porNome=new Map();
+    for(const t of tarefas){
+      const chave=(t.nome||'').trim().toLowerCase();
+      if(!chave)continue;
+      if(!porNome.has(chave))porNome.set(chave,[]);
+      porNome.get(chave).push(t);
+    }
+    const COL_MAP={inicioReal:'iniReal',terminoReal:'terReal',percentualConcluido:'percConc',percentualEsperado:'percEsp',
+      inicioPlanejado:'inicio',terminoPlanejado:'termino',duracao:'duracao',responsavel:'resp',predecessora:'pred',
+      custo:'custo',receita:'receita'};
+    const DATE_FIELDS=new Set(['inicioReal','terminoReal','inicioPlanejado','terminoPlanejado']);
+    const NUM_FIELDS=new Set(['percentualConcluido','percentualEsperado','custo','receita','duracao']);
+
+    let naoEncontradas=0,ambiguas=0;
+    const updates=[];
+    for(let r=1;r<rows.length;r++){
+      const row=rows[r];
+      const nome=String(row[iN]||'').trim();
+      if(!nome)continue;
+      const candidatos=porNome.get(nome.toLowerCase());
+      if(!candidatos||!candidatos.length){naoEncontradas++;continue;}
+      if(candidatos.length>1){ambiguas++;continue;} // mais de 1 tarefa com esse nome — pula por segurança
+      const t=candidatos[0];
+      const upd={};
+      for(const campo of camposMarcados){
+        const idx=ci(COL_MAP[campo]);
+        if(idx<0)continue;
+        let valor=row[idx];
+        if(DATE_FIELDS.has(campo))valor=_pd(valor);
+        else if(campo==='duracao')valor=_pDur(valor);
+        else if(NUM_FIELDS.has(campo))valor=_pN(valor);
+        else valor=String(valor||'').trim();
+        upd[campo]=valor;
+      }
+      if(Object.keys(upd).length)updates.push({id:t.id,...upd});
+    }
+
+    if(!confirm(`${updates.length} tarefa(s) serão atualizadas (${camposMarcados.length} campo(s) cada).\n${naoEncontradas} não encontradas (nome não bate com nenhuma tarefa atual).\n${ambiguas} ambíguas (mais de uma tarefa com o mesmo nome — puladas por segurança).\n\nConfirmar?`)){_correcoesContexto=null;return;}
+
+    Utils.mostrarLoading('Aplicando correções...');
+    const L=20,TIMEOUT_MS=15000;
+    const comTimeout=p=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),TIMEOUT_MS))]);
+    let falhas=0;
+    for(let i=0;i<updates.length;i+=L){
+      Utils.mostrarLoading(`Aplicando... ${Math.min(i+L,updates.length)}/${updates.length}`);
+      await Promise.all(updates.slice(i,i+L).map(({id,...upd})=>
+        comTimeout(Database.atualizar(obraId,COL,id,upd)).catch(e=>{falhas++;console.error('Erro correcao:',id,e);})
+      ));
+    }
+    Utils.esconderLoading();
+    Utils.toast(falhas?`⚠ ${updates.length-falhas} corrigidas, ${falhas} falharam.`:`✅ ${updates.length} tarefa(s) corrigidas.`,falhas?'alerta':'sucesso');
+    await carregar();
+    await _recalcularDatasPais(true);
+    _correcoesContexto=null;
   }
 
   // ===================== IMPORTAR =====================
@@ -3788,7 +3975,7 @@ const Planejamento = (() => {
     _rowDragStart,toggleSel,_limparSelecao,_moverSel,_bulkNivel,_bulkDuplicar,_bulkExcluir,
     toggleStatusFiltro,_aplicarStatusFiltro,undo,
     onBusca,limparBusca,_buscaKey,
-    importarExcel,exportar,exportarPNG,corrigirOrdensDuplicadas,_corrigirNiveisSoltos,_corrigirNivelPeloCodigo,_recalcularDatasPais,_orfasMarcarTodas,_orfasExcluirMarcadas,_gerarPNG,_predPopup,_predPreview,_predSalvar,
+    importarExcel,importarBaseCompleta,importarCorrecoes,_executarCorrecoes,exportar,exportarPNG,corrigirOrdensDuplicadas,_corrigirNiveisSoltos,_corrigirNivelPeloCodigo,_recalcularDatasPais,_orfasMarcarTodas,_orfasExcluirMarcadas,_gerarPNG,_predPopup,_predPreview,_predSalvar,
     abrirVinculosView,fecharVinculosView,abrirVincularTarefa,abrirVincularAqui,onVincTipoChange,
     onVincNavModulo,onVincNavModuloMetrica,onVincNavMetrica,onVincNavEntrar,onVincNavBreadcrumb,onVincNavVoltar,
     onBuscaEscolhaAlvoVinc,onEscolherAlvoVinc,onTrocarAlvoVinc,

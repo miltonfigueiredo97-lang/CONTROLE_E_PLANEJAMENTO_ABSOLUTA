@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.57.42',
+  versaoAtual: 'V2.57.43',
 
   versoes: [
     {
@@ -5127,14 +5127,20 @@ const NotasVersao = {
       titulo:'Predecessoras: inserir OU excluir qualquer tarefa (Editor de Estrutura ou tabela normal) não atualizava as predecessoras de tudo que vinha depois — só arrastar na árvore fazia isso',
       itens:['Inserir/excluir uma tarefa desloca o número de linha (o "#" que as predecessoras referenciam, tipo "5TI") de tudo que vem depois dela. Até esta versão, só o arrastar-e-soltar no Editor de Estrutura corrigia essas referências (_remapearPredecessoras); os botões ↑＋/↓＋/＋▸ de inserir na árvore, o "+ Tarefa" da tabela normal, e excluir tarefa não faziam esse remapeamento — deixando predecessoras de tarefas mais abaixo silenciosamente apontando pra linha errada toda vez que algo era inserido ou excluído antes delas.',
         'Agora TODA inserção e exclusão de tarefa (árvore ou tabela) remapeia as predecessoras de quem mudou de linha, do mesmo jeito que já acontecia ao arrastar.']},
-    {versao:'V2.57.42',status:'aberta',data:'2026-07-28',tipo:'correcao',
+    {versao:'V2.57.42',status:'fechada',data:'2026-07-28',tipo:'correcao',
       titulo:'Auditoria completa de todos os botões do Planejamento/Editor de Estrutura: mais 4 pontos sem remapeamento de predecessoras corrigidos, e um botão que salvava a obra INTEIRA a cada clique',
       itens:['Duplicar tarefa(s) selecionada(s) pela tabela (botão em massa) — não remapeava. Corrigido.',
         'Excluir tarefa(s) selecionada(s) em massa pela tabela — não remapeava. Corrigido.',
         'Excluir tarefas órfãs no painel pós-import (V2.57.14) — não remapeava. Corrigido.',
         'Importar Excel — tarefas mantidas que não vieram na planilha (órfãs) podiam ter a predecessora desatualizada se o import deslocou a posição delas. Corrigido.',
         'Mover linha ↑/↓ (botões "Acima"/"Abaixo" da tabela): salvava TODAS as ~2400 tarefas da obra no Firestore a cada clique, mesmo as que não mudaram de posição — desnecessário e um risco real de sobrecarga (mesma causa que já travou o Importar Excel outras vezes). Agora só salva quem realmente mudou, em lotes com timeout.',
-        'Conferido também: arrastar na tabela normal (_reordenarTarefa) e Mover-para-outro-pai (Editor de Estrutura) já remapeavam corretamente — nenhuma mudança necessária ali.']}
+        'Conferido também: arrastar na tabela normal (_reordenarTarefa) e Mover-para-outro-pai (Editor de Estrutura) já remapeavam corretamente — nenhuma mudança necessária ali.']},
+    {versao:'V2.57.43',status:'aberta',data:'2026-07-28',tipo:'funcionalidade',
+      titulo:'Dois novos modos de importar Excel: "Importar Base Completa" (substitui tudo) e "Importar Correções" (atualiza só campos escolhidos, casando por Nome — não mexe em posição/nível/estrutura)',
+      itens:['"Importar Base Completa": apaga TODAS as tarefas da obra e recria do zero a partir da planilha — pra quando o Milton quer mesmo substituir a base inteira (ex: reconciliar com um cronograma do CSO totalmente reestruturado). Pede confirmação em dobro por ser destrutivo.',
+        '"Importar Correções": não cria nem apaga nenhuma tarefa, não toca em posição/nível/código — casa cada linha da planilha com a tarefa de MESMO NOME já existente na obra, e atualiza só os campos marcados numa lista de checkbox (Início Real, Término Real, % Concluído, Duração, Responsável, etc). Pensado pro caso do Milton: preencheu datas reais numa planilha à parte e quer trazer só isso, sem risco de bagunçar a árvore que ele organizou no Editor de Estrutura.',
+        'Correções mostra um resumo ANTES de aplicar: quantas tarefas serão atualizadas, quantas não foram encontradas (nome não bate) e quantas são ambíguas (mais de uma tarefa com o mesmo nome — puladas por segurança, para nunca atualizar a tarefa errada).',
+        'O "Importar" original (upsert por Código) continua existindo e é o padrão recomendado no dia a dia.']}
   ],
 
   render(containerId) {
