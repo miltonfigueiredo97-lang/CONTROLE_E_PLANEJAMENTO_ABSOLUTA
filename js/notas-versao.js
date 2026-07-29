@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.57.40',
+  versaoAtual: 'V2.57.41',
 
   versoes: [
     {
@@ -5118,11 +5118,15 @@ const NotasVersao = {
       itens:['Causa raiz: o Editor de Estrutura só reconhece uma tarefa como raiz se nível===0, e só como filha de outra se nível===pai+1 (ver _arvFilhos). Se uma tarefa acaba com nível 4 mas a anterior tem nível 2 (faltando o 3 no meio — pode vir de import, edição manual do campo Nível, ou um bug já corrigido), ela não vira filha de ninguém nem raiz: some da árvore. A tabela do Planejamento não tem essa exigência (só usa nível pra indentar), então continua mostrando ela normalmente — daí a divergência entre as duas telas relatada pelo Milton (tarefa "Forro Escadaria" via na tabela, sumida na árvore).',
         'Novo botão ⚙ Ferramentas → "🌳 Corrigir Níveis Soltos": percorre a obra inteira e garante que nenhuma tarefa pule mais de 1 nível de profundidade em relação à anterior (mesma regra de qualquer outline — Word/PowerPoint/MS Project). Roda automaticamente também depois de importar Excel.',
         'Rode esse botão agora pra recuperar tarefas que sumiram da árvore por esse motivo.']},
-    {versao:'V2.57.40',status:'aberta',data:'2026-07-28',tipo:'correcao',
+    {versao:'V2.57.40',status:'fechada',data:'2026-07-28',tipo:'correcao',
       titulo:'Achada a causa raiz de verdade da estrutura bagunçada: o campo Nível está corrompido em 1510 de 2398 tarefas desta obra (Código bate certinho, Nível não) — novo reparo "Corrigir Nível pelo Código"',
       itens:['O V2.57.39 corrigia só "saltos impossíveis" de nível — mas isso não pega um nível que está ERRADO só por estar errado (ex: devia ser 4 e ficou 6, sem pular etapa nenhuma). Analisando o Excel exportado, 63% das tarefas com Código têm o Nível salvo divergindo da contagem de pontos do próprio Código — resultado de bugs de drag&drop/import já corrigidos ao longo desta conversa, acumulados na obra.',
         'O Código nunca é escrito automaticamente pelo sistema (só vem de import ou digitação manual), então é a fonte confiável. Novo botão ⚙ Ferramentas → "🩹 Corrigir Nível pelo Código": para toda tarefa que tem Código, recalcula o Nível pela contagem de pontos dele (ex: "1.3.6.20.2" → nível 4) e grava no Firestore.',
-        'Tarefas SEM Código (grupos criados manualmente na árvore, ex: "Gesso e Forro") não são tocadas por esse reparo — se alguma delas ainda ficar no nível errado depois, precisa de ajuste manual (← / →) uma a uma, mas são poucas comparado ao total.']}
+        'Tarefas SEM Código (grupos criados manualmente na árvore, ex: "Gesso e Forro") não são tocadas por esse reparo — se alguma delas ainda ficar no nível errado depois, precisa de ajuste manual (← / →) uma a uma, mas são poucas comparado ao total.']},
+    {versao:'V2.57.41',status:'aberta',data:'2026-07-28',tipo:'correcao',
+      titulo:'Predecessoras: inserir OU excluir qualquer tarefa (Editor de Estrutura ou tabela normal) não atualizava as predecessoras de tudo que vinha depois — só arrastar na árvore fazia isso',
+      itens:['Inserir/excluir uma tarefa desloca o número de linha (o "#" que as predecessoras referenciam, tipo "5TI") de tudo que vem depois dela. Até esta versão, só o arrastar-e-soltar no Editor de Estrutura corrigia essas referências (_remapearPredecessoras); os botões ↑＋/↓＋/＋▸ de inserir na árvore, o "+ Tarefa" da tabela normal, e excluir tarefa não faziam esse remapeamento — deixando predecessoras de tarefas mais abaixo silenciosamente apontando pra linha errada toda vez que algo era inserido ou excluído antes delas.',
+        'Agora TODA inserção e exclusão de tarefa (árvore ou tabela) remapeia as predecessoras de quem mudou de linha, do mesmo jeito que já acontecia ao arrastar.']}
   ],
 
   render(containerId) {

@@ -2215,6 +2215,7 @@ const Planejamento = (() => {
       inicioPlanejadoBase:g('inicioPlanejadoBase')||'',terminoPlanejadoBase:g('terminoPlanejadoBase')||'',
       inicioDesafio:g('inicioDesafio')||'',terminoDesafio:g('terminoDesafio')||'',observacoes:g('observacoes')||'',obraId};
     try{
+      const numAntes=_capturarNumAntes();
       if(editandoId){
         await Database.atualizar(obraId,COL,editandoId,data);
         // ===== % EM FAMÍLIA (mesma regra da edição inline) =====
@@ -2237,13 +2238,19 @@ const Planejamento = (() => {
       }
       else await Database.criar(obraId,COL,data);
       Utils.fecharModal('modal-tarefa');Utils.toast('Salvo!','sucesso');editandoId=null;await carregar();
+      await _remapAposMudancaPosicoes(numAntes);
       await _recalcularDatasPais(true);
     }catch(e){console.error(e);Utils.toast('Erro.','erro');}
   }
 
   async function excluirTarefa(id){
     const t=tarefas.find(x=>x.id===id);if(!confirm(`Excluir "${t?.nome}"?`))return;
-    try{await Database.deletar(obraId,COL,id);Utils.toast('Excluído.','sucesso');selectedIdx=-1;await carregar();}
+    try{
+      const numAntes=_capturarNumAntes();
+      await Database.deletar(obraId,COL,id);Utils.toast('Excluído.','sucesso');selectedIdx=-1;await carregar();
+      numAntes.delete(id); // a excluída não tem "depois", não entra no remap
+      await _remapAposMudancaPosicoes(numAntes);
+    }
     catch(e){Utils.toast('Erro.','erro');}
   }
 
@@ -2911,6 +2918,25 @@ const Planejamento = (() => {
   // Remapeia referências numéricas de predecessoras após reordenação.
   // oldToNew: Map<id_tarefa, novo_numLinha> — gerado depois de _buildFiltradas().
   // Só toca tarefas cujo número de predecessora mudou; salva no Firestore em background.
+  // Helper reutilizável: qualquer inserção OU exclusão de tarefa desloca o número
+  // de linha (_numLinha) de tudo que vem depois dela — e é esse número que as
+  // predecessoras referenciam (ex: "5TI"). Antes só o arrastar na árvore chamava
+  // _remapearPredecessoras; inserir/excluir tarefa (árvore ou tabela normal) não
+  // remapeava nada, deixando as predecessoras de tudo que vem depois silenciosamente
+  // erradas. Chame isso ANTES da operação (captura numAntes) e de novo DEPOIS de
+  // _buildFiltradas() já refletir o novo estado.
+  function _capturarNumAntes(){return new Map(tarefas.map(t=>[t.id,t._numLinha||0]));}
+  async function _remapAposMudancaPosicoes(numAntes){
+    const mudancasNum=new Map();
+    for(const t of tarefas){
+      if(!numAntes.has(t.id))continue; // tarefa nova — não tinha número antes
+      const antes=numAntes.get(t.id);
+      const depois=t._numLinha||0;
+      if(antes!==depois)mudancasNum.set(t.id,{antes,depois});
+    }
+    if(mudancasNum.size)await _remapearPredecessoras(mudancasNum);
+  }
+
   async function _remapearPredecessoras(oldNumMap){
     // oldNumMap: Map<tarefaId, {antes:numLinha, depois:numLinha}>
     // Monta um lookup: numAntes → numDepois
@@ -3297,6 +3323,7 @@ const Planejamento = (() => {
       duracao:'',percentualEsperado:0,percentualConcluido:0,codigo:'',predecessora:'',responsavel:'',local:'',grupo:''};
     Utils.mostrarLoading('Criando...');
     try{
+      const numAntes=_capturarNumAntes();
       const id=await Database.criar(obraId,COL,nova);
       nova.id=id;tarefas.push(nova);
       // NÃO renormalizar ordem de todas as tarefas aqui — a ordem fracionária
@@ -3305,6 +3332,7 @@ const Planejamento = (() => {
       // outras tarefas com 'ordem' desatualizada lá, causando desalinhamento
       // no reload seguinte. Use "🔧 Corrigir Ordens" se quiser números limpos.
       _buildFiltradas();_arvEditId=id;_render();
+      await _remapAposMudancaPosicoes(numAntes);
     }catch(e){console.error(e);Utils.toast('Erro.','erro');}
     finally{Utils.esconderLoading();}
   }
@@ -3325,10 +3353,12 @@ const Planejamento = (() => {
       duracao:'',percentualEsperado:0,percentualConcluido:0,codigo:'',predecessora:'',responsavel:'',local:'',grupo:''};
     Utils.mostrarLoading('Criando...');
     try{
+      const numAntes=_capturarNumAntes();
       const id=await Database.criar(obraId,COL,nova);
       nova.id=id;tarefas.push(nova);
       // Idem _arvInserirAcima: sem renormalização local não-persistida.
       _buildFiltradas();_arvEditId=id;_render();
+      await _remapAposMudancaPosicoes(numAntes);
     }catch(e){console.error(e);Utils.toast('Erro.','erro');}
     finally{Utils.esconderLoading();}
   }
@@ -3384,12 +3414,14 @@ const Planejamento = (() => {
     const novaTarefa={nome:'Nova Tarefa',nivel:(pai.nivel||0)+1,ordem:novaOrdem,duracao:'',percentualEsperado:0,percentualConcluido:0,codigo:'',predecessora:'',responsavel:'',local:'',grupo:'',tipo:'tarefa'};
     Utils.mostrarLoading('Criando...');
     try{
+      const numAntes=_capturarNumAntes();
       const id=await Database.criar(obraId,COL,novaTarefa);
       novaTarefa.id=id;
       tarefas.push(novaTarefa);
       _arvAbertos.add(paiId); // expande o pai
       // Sem renormalização local não-persistida — ver nota em _arvInserirAcima.
       _buildFiltradas();_render();
+      await _remapAposMudancaPosicoes(numAntes);
       // Inicia edição do nome imediatamente
       _arvEditId=id;_render();
       Utils.toast('Tarefa criada!','sucesso');
