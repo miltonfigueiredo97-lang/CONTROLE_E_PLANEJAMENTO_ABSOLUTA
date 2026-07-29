@@ -48,21 +48,42 @@ const Planejamento = (() => {
     _undoStack.push(tarefas.map(t=>({...t})));
     if(_undoStack.length>30)_undoStack.shift();
   }
+  let _undoEmAndamento=false;
   async function undo(){
     if(!_undoStack.length){Utils.toast('Nada para desfazer.','alerta');return;}
-    const snap=_undoStack.pop();
-    tarefas=snap;
-    _buildFiltradas();_render();requestAnimationFrame(()=>_paintRows());
-    Utils.toast('Ação desfeita.','sucesso');
-    for(const t of snap){
-      await Database.atualizar(obraId,COL,t.id,{
-        nome:t.nome,codigo:t.codigo,nivel:t.nivel,ordem:t.ordem,
-        inicioPlanejado:t.inicioPlanejado,terminoPlanejado:t.terminoPlanejado,
-        duracao:t.duracao,percentualEsperado:t.percentualEsperado,
-        percentualConcluido:t.percentualConcluido,predecessora:t.predecessora,
-        responsavel:t.responsavel,local:t.local,grupo:t.grupo,
-      }).catch(()=>{});
-    }
+    // Trava contra Ctrl+Z repetido enquanto o anterior ainda está gravando —
+    // sem isso, dois undos rodando ao mesmo tempo escrevem por cima um do
+    // outro e misturam dois estados diferentes (bug real encontrado).
+    if(_undoEmAndamento){Utils.toast('Aguarde o desfazer anterior terminar...','alerta');return;}
+    _undoEmAndamento=true;
+    try{
+      const snap=_undoStack.pop();
+      const antes=new Map(tarefas.map(t=>[t.id,t]));
+      tarefas=snap;
+      _buildFiltradas();_render();requestAnimationFrame(()=>_paintRows());
+      Utils.toast('Ação desfeita.','sucesso');
+      // Só grava tarefas cujo estado realmente difere do snapshot restaurado —
+      // e em lote com timeout, não uma por uma sem fim (podia travar no meio
+      // e deixar o resto sem restaurar de verdade).
+      const CAMPOS=['nome','codigo','nivel','ordem','inicioPlanejado','terminoPlanejado','duracao',
+        'percentualEsperado','percentualConcluido','predecessora','responsavel','local','grupo'];
+      const mudou=[];
+      for(const t of snap){
+        const ant=antes.get(t.id);
+        const upd={};
+        for(const c of CAMPOS){if((ant?.[c]??'')!==(t[c]??''))upd[c]=t[c]??'';}
+        if(Object.keys(upd).length)mudou.push({id:t.id,...upd});
+      }
+      const L=20,TIMEOUT_MS=15000;
+      const comTimeout=p=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),TIMEOUT_MS))]);
+      let falhas=0;
+      for(let i=0;i<mudou.length;i+=L){
+        await Promise.all(mudou.slice(i,i+L).map(({id,...upd})=>
+          comTimeout(Database.atualizar(obraId,COL,id,upd)).catch(e=>{falhas++;console.error('Erro desfazer:',id,e);})
+        ));
+      }
+      if(falhas)Utils.toast(`⚠ ${mudou.length-falhas} de ${mudou.length} restauradas — ${falhas} falharam, tente Ctrl+Z de novo.`,'alerta');
+    } finally{_undoEmAndamento=false;}
   }
 
   // Colunas: ordem editável, largura editável

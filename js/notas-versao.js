@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.57.45',
+  versaoAtual: 'V2.57.46',
 
   versoes: [
     {
@@ -5145,11 +5145,16 @@ const NotasVersao = {
       titulo:'Removido do menu o botão "Corrigir Nível pelo Código" — era um reparo de uso único (dano histórico dos bugs já corrigidos) e perigoso como ferramenta recorrente',
       itens:['O Código de uma tarefa fica desatualizado assim que ela é reestruturada manualmente no Editor de Estrutura (aninhada num grupo novo, por exemplo) — só o Nível reflete a posição real depois disso. Deixar esse botão disponível no dia a dia significava correr o risco de, sem querer, reverter uma reestruturação manual de volta pro nível antigo (baseado no Código desatualizado), depois de já ter sido corrigida à mão.',
         'Serviu seu propósito (reparar o estrago histórico) e foi removido do menu. A função continua existindo no código só para emergência, mas não aparece mais como botão clicável no dia a dia.']},
-    {versao:'V2.57.45',status:'aberta',data:'2026-07-28',tipo:'funcionalidade',
+    {versao:'V2.57.45',status:'fechada',data:'2026-07-28',tipo:'funcionalidade',
       titulo:'Editor de Estrutura: botões "💾 Backup" e "📤 Restaurar" — salva um snapshot local da estrutura (nome/nível/ordem/código/predecessora) antes de mexer, pra restaurar se algo der errado',
       itens:['💾 Backup baixa um arquivo .json no seu computador com o estado atual de todas as tarefas (nível, ordem, código, predecessora) — não fica salvo em nenhum lugar do sistema, só no seu computador.',
         '📤 Restaurar lê esse arquivo depois e devolve nível/ordem/código/predecessora pro que estava salvo, tarefa por tarefa (casando pelo ID interno — funciona mesmo se você reorganizou tudo depois, mas não funciona se a tarefa foi excluída e recriada).',
-        'Recomendado: bata um backup antes de reestruturar bastante coisa de uma vez.']}
+        'Recomendado: bata um backup antes de reestruturar bastante coisa de uma vez.']},
+    {versao:'V2.57.46',status:'aberta',data:'2026-07-28',tipo:'correcao',
+      titulo:'Ctrl+Z (desfazer): escrevia todas as ~2400 tarefas uma por uma, sem timeout e sem trava contra clique duplo — podia travar no meio e restaurar só parte, ou misturar dois estados se apertado duas vezes',
+      itens:['Causa: undo() gravava CADA tarefa da obra sequencialmente no Firestore, uma de cada vez, aguardando cada escrita terminar antes de ir pra próxima — se uma travasse (mesma causa de travamentos já vistos no Import), tudo depois dela na lista nunca era restaurado de verdade, mesmo a tela mostrando que sim.',
+        'Sem trava alguma: apertar Ctrl+Z de novo antes do primeiro terminar disparava um SEGUNDO desfazer em paralelo, escrevendo por cima do primeiro — cada tarefa podia acabar com um valor de um snapshot, outra com valor de outro, misturando dois estados diferentes (exatamente o padrão relatado: uma tarefa some do lugar certo e os filhos de outra trocam de dono).',
+        'Corrigido: desfazer agora ignora um segundo Ctrl+Z enquanto o anterior ainda está gravando, só grava as tarefas que realmente mudaram (mais rápido), em lotes com timeout de 15s, e avisa na tela se alguma não foi restaurada.']}
   ],
 
   render(containerId) {
