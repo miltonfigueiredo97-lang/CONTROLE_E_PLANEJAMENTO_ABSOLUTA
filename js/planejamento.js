@@ -3189,8 +3189,12 @@ const Planejamento = (() => {
     }
     if(atualizacoes.length){
       Utils.toast(`Predecessoras atualizadas (${atualizacoes.length} tarefa${atualizacoes.length>1?'s':''}).`,'sucesso');
-      for(const u of atualizacoes){
-        await Database.atualizar(obraId,COL,u.id,{predecessora:u.predecessora}).catch(console.error);
+      const L=20,TIMEOUT_MS=15000;
+      const comTimeout=p=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),TIMEOUT_MS))]);
+      for(let i=0;i<atualizacoes.length;i+=L){
+        await Promise.all(atualizacoes.slice(i,i+L).map(u=>
+          comTimeout(Database.atualizar(obraId,COL,u.id,{predecessora:u.predecessora})).catch(console.error)
+        ));
       }
     }
   }
@@ -3568,7 +3572,7 @@ const Planejamento = (() => {
       // outras tarefas com 'ordem' desatualizada lá, causando desalinhamento
       // no reload seguinte. Use "🔧 Corrigir Ordens" se quiser números limpos.
       _buildFiltradas();_arvEditId=id;_render(); // já mostra a linha nova na hora, sem tela de carregando
-      await _remapAposMudancaPosicoes(numAntes);
+      _remapAposMudancaPosicoes(numAntes); // roda em segundo plano — não trava a tela pra 2000 tarefas
     }catch(e){console.error(e);Utils.toast('Erro.','erro');}
   }
   // Insere irmão imediatamente ABAIXO da tarefa (depois do bloco de filhos)
@@ -3592,7 +3596,7 @@ const Planejamento = (() => {
       nova.id=id;tarefas.push(nova);
       // Idem _arvInserirAcima: sem renormalização local não-persistida.
       _buildFiltradas();_arvEditId=id;_render();
-      await _remapAposMudancaPosicoes(numAntes);
+      _remapAposMudancaPosicoes(numAntes); // segundo plano
     }catch(e){console.error(e);Utils.toast('Erro.','erro');}
   }
 
@@ -3653,7 +3657,7 @@ const Planejamento = (() => {
       _arvAbertos.add(paiId); // expande o pai
       // Sem renormalização local não-persistida — ver nota em _arvInserirAcima.
       _buildFiltradas();_render();
-      await _remapAposMudancaPosicoes(numAntes);
+      _remapAposMudancaPosicoes(numAntes); // segundo plano
       // Inicia edição do nome imediatamente
       _arvEditId=id;_render();
       Utils.toast('Tarefa criada!','sucesso');

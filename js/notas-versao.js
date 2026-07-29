@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.57.48',
+  versaoAtual: 'V2.57.49',
 
   versoes: [
     {
@@ -5158,10 +5158,14 @@ const NotasVersao = {
     {versao:'V2.57.47',status:'fechada',data:'2026-07-28',tipo:'funcionalidade',
       titulo:'Editor de Estrutura: novo botão "💾 Salvar e Atualizar Planejamento" — força regravar ordem/nível de TODAS as tarefas e recarrega, sem depender do salvamento automático em segundo plano',
       itens:['Regrava ordem e nível de todas as tarefas do jeito que está na tela agora, em lotes com timeout, e recarrega o Planejamento no final — um "tenho certeza que salvou" manual, pra quando o salvamento automático em segundo plano não é suficiente ou o Milton quer confirmação explícita de que o Planejamento está de fato igual à árvore.']},
-    {versao:'V2.57.48',status:'aberta',data:'2026-07-28',tipo:'correcao',
+    {versao:'V2.57.48',status:'fechada',data:'2026-07-28',tipo:'correcao',
       titulo:'Editor de Estrutura: tela de "Carregando" removida de criar irmã/filha (ação instantânea não precisava bloquear a tela) — e reduzida ainda mais a zona de "virar filho" ao arrastar',
       itens:['Criar tarefa acima/abaixo/filha/raiz é uma escrita só no Firestore, rápida — não precisava da tela de carregando bloqueando a interface a cada clique. Removida nas 4 ações de criar; a linha nova já aparece na hora.',
-        'Zona de drop "virar filho" ao arrastar reduzida de 40% para 20% da altura da linha (bem no centro) — reordenar como irmã (antes/depois) agora domina 80% da linha. Pra aninhar de propósito, use os botões "＋▸ Criar filho" ou "↗ Mover para" em vez de mirar num alvo pequeno arrastando.']}
+        'Zona de drop "virar filho" ao arrastar reduzida de 40% para 20% da altura da linha (bem no centro) — reordenar como irmã (antes/depois) agora domina 80% da linha. Pra aninhar de propósito, use os botões "＋▸ Criar filho" ou "↗ Mover para" em vez de mirar num alvo pequeno arrastando.']},
+    {versao:'V2.57.49',status:'aberta',data:'2026-07-28',tipo:'correcao',
+      titulo:'Criar uma linha na árvore ficava lento quando afetava muitas predecessoras — a atualização delas gravava uma por uma (sequencial) e travava a tela esperando',
+      itens:['Inserir uma tarefa desloca o número de linha de tudo depois dela, e qualquer predecessora que aponte pra um desses números precisa ser atualizada — em cronogramas grandes isso pode afetar centenas de tarefas de uma vez. A gravação dessas atualizações era sequencial (uma de cada vez, esperando terminar antes de ir pra próxima) — corrigido pra lote com timeout, igual ao resto do sistema.',
+        'Além disso, criar tarefa na árvore não trava mais esperando essa atualização de predecessoras terminar — ela roda em segundo plano, e você já pode continuar mexendo.']}
   ],
 
   render(containerId) {
