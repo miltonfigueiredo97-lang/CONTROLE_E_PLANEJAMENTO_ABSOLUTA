@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.57.49',
+  versaoAtual: 'V2.57.50',
 
   versoes: [
     {
@@ -5162,10 +5162,14 @@ const NotasVersao = {
       titulo:'Editor de Estrutura: tela de "Carregando" removida de criar irmã/filha (ação instantânea não precisava bloquear a tela) — e reduzida ainda mais a zona de "virar filho" ao arrastar',
       itens:['Criar tarefa acima/abaixo/filha/raiz é uma escrita só no Firestore, rápida — não precisava da tela de carregando bloqueando a interface a cada clique. Removida nas 4 ações de criar; a linha nova já aparece na hora.',
         'Zona de drop "virar filho" ao arrastar reduzida de 40% para 20% da altura da linha (bem no centro) — reordenar como irmã (antes/depois) agora domina 80% da linha. Pra aninhar de propósito, use os botões "＋▸ Criar filho" ou "↗ Mover para" em vez de mirar num alvo pequeno arrastando.']},
-    {versao:'V2.57.49',status:'aberta',data:'2026-07-28',tipo:'correcao',
+    {versao:'V2.57.49',status:'fechada',data:'2026-07-28',tipo:'correcao',
       titulo:'Criar uma linha na árvore ficava lento quando afetava muitas predecessoras — a atualização delas gravava uma por uma (sequencial) e travava a tela esperando',
       itens:['Inserir uma tarefa desloca o número de linha de tudo depois dela, e qualquer predecessora que aponte pra um desses números precisa ser atualizada — em cronogramas grandes isso pode afetar centenas de tarefas de uma vez. A gravação dessas atualizações era sequencial (uma de cada vez, esperando terminar antes de ir pra próxima) — corrigido pra lote com timeout, igual ao resto do sistema.',
-        'Além disso, criar tarefa na árvore não trava mais esperando essa atualização de predecessoras terminar — ela roda em segundo plano, e você já pode continuar mexendo.']}
+        'Além disso, criar tarefa na árvore não trava mais esperando essa atualização de predecessoras terminar — ela roda em segundo plano, e você já pode continuar mexendo.']},
+    {versao:'V2.57.50',status:'aberta',data:'2026-07-28',tipo:'correcao',
+      titulo:'Busca do Planejamento não encontrava tarefas escondidas dentro de uma família recolhida — parecia que tinham sido excluídas',
+      itens:['Causa: a busca só olhava a lista "filtradas" (que já esconde os filhos de qualquer família recolhida) em vez de todas as tarefas da obra. Se o item buscado estava dentro de uma família fechada, a busca simplesmente não olhava pra ele — dava a impressão de ter sido apagado, quando só estava escondido.',
+        'Agora a busca olha TODAS as tarefas, e se o resultado estiver escondido, expande automaticamente todas as famílias recolhidas no caminho até ele antes de pular pra lá.']}
   ],
 
   render(containerId) {

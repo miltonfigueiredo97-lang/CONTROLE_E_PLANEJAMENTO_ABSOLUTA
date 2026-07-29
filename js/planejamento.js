@@ -3276,27 +3276,60 @@ const Planejamento = (() => {
     _buscaCursor=-1;
     if(!_buscaTexto){
       _buscaResultados=[];
-      // Atualiza apenas o destaque visual sem recriar o DOM do input
       requestAnimationFrame(()=>_paintRows());
-      // Atualiza o contador (acima do gantt) sem destruir o input
       _atualizarBuscaInfo();
       return;
     }
     const q=_buscaTexto.toLowerCase();
+    // Busca em TODAS as tarefas, não só nas visíveis (filtradas já esconde filhos
+    // de famílias recolhidas) — buscar algo escondido dentro de uma família
+    // recolhida e não encontrar nada era o bug reportado (parecia "sumido").
+    const sorted=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
+    const achados=sorted.filter(t=>
+      (t.nome||'').toLowerCase().includes(q)||
+      (t.codigo||'').toLowerCase().includes(q)||
+      (t.responsavel||'').toLowerCase().includes(q)||
+      (t.local||'').toLowerCase().includes(q)||
+      (t.grupo||'').toLowerCase().includes(q)||
+      String(t._numLinha||'').includes(q)
+    );
+    let precisaRerender=false;
+    if(achados.length){
+      // Expande automaticamente todos os ancestrais de cada resultado, garantindo
+      // que fiquem visíveis mesmo se estavam dentro de uma família recolhida.
+      for(const t of achados){
+        const idx=sorted.indexOf(t);
+        let niv=t.nivel||0;
+        for(let i=idx-1;i>=0&&niv>0;i--){
+          const anc=sorted[i];
+          if((anc.nivel||0)<niv){
+            if(colsRecolhidas.has(anc.id)){colsRecolhidas.delete(anc.id);precisaRerender=true;}
+            niv=anc.nivel||0;
+          }
+        }
+      }
+      if(precisaRerender)_buildFiltradas();
+    }
     _buscaResultados=filtradas
       .map((t,i)=>({t,i}))
-      .filter(({t})=>
-        (t.nome||'').toLowerCase().includes(q)||
-        (t.codigo||'').toLowerCase().includes(q)||
-        (t.responsavel||'').toLowerCase().includes(q)||
-        (t.local||'').toLowerCase().includes(q)||
-        (t.grupo||'').toLowerCase().includes(q)||
-        String(t._numLinha||'').includes(q)
-      );
+      .filter(({t})=>achados.includes(t));
     _atualizarBuscaInfo();
     if(_buscaResultados.length){
       _buscaCursor=0;
-      _pularParaResultado(0);
+      if(precisaRerender){
+        // Precisa recriar o DOM (famílias foram expandidas) — preserva o foco
+        // e a posição do cursor no campo de busca, senão perde o que já digitou.
+        const inp=document.getElementById('gantt-busca');
+        const cursorPos=inp?inp.selectionStart:null;
+        _render();
+        requestAnimationFrame(()=>{
+          const inp2=document.getElementById('gantt-busca');
+          if(inp2){inp2.focus();if(cursorPos!=null)inp2.setSelectionRange(cursorPos,cursorPos);}
+          _pularParaResultado(0);
+        });
+      } else {
+        _pularParaResultado(0);
+      }
     } else {
       requestAnimationFrame(()=>_paintRows());
     }
