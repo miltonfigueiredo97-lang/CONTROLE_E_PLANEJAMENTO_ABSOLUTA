@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.57.46',
+  versaoAtual: 'V2.57.47',
 
   versoes: [
     {
@@ -5150,11 +5150,14 @@ const NotasVersao = {
       itens:['💾 Backup baixa um arquivo .json no seu computador com o estado atual de todas as tarefas (nível, ordem, código, predecessora) — não fica salvo em nenhum lugar do sistema, só no seu computador.',
         '📤 Restaurar lê esse arquivo depois e devolve nível/ordem/código/predecessora pro que estava salvo, tarefa por tarefa (casando pelo ID interno — funciona mesmo se você reorganizou tudo depois, mas não funciona se a tarefa foi excluída e recriada).',
         'Recomendado: bata um backup antes de reestruturar bastante coisa de uma vez.']},
-    {versao:'V2.57.46',status:'aberta',data:'2026-07-28',tipo:'correcao',
+    {versao:'V2.57.46',status:'fechada',data:'2026-07-28',tipo:'correcao',
       titulo:'Ctrl+Z (desfazer): escrevia todas as ~2400 tarefas uma por uma, sem timeout e sem trava contra clique duplo — podia travar no meio e restaurar só parte, ou misturar dois estados se apertado duas vezes',
       itens:['Causa: undo() gravava CADA tarefa da obra sequencialmente no Firestore, uma de cada vez, aguardando cada escrita terminar antes de ir pra próxima — se uma travasse (mesma causa de travamentos já vistos no Import), tudo depois dela na lista nunca era restaurado de verdade, mesmo a tela mostrando que sim.',
         'Sem trava alguma: apertar Ctrl+Z de novo antes do primeiro terminar disparava um SEGUNDO desfazer em paralelo, escrevendo por cima do primeiro — cada tarefa podia acabar com um valor de um snapshot, outra com valor de outro, misturando dois estados diferentes (exatamente o padrão relatado: uma tarefa some do lugar certo e os filhos de outra trocam de dono).',
-        'Corrigido: desfazer agora ignora um segundo Ctrl+Z enquanto o anterior ainda está gravando, só grava as tarefas que realmente mudaram (mais rápido), em lotes com timeout de 15s, e avisa na tela se alguma não foi restaurada.']}
+        'Corrigido: desfazer agora ignora um segundo Ctrl+Z enquanto o anterior ainda está gravando, só grava as tarefas que realmente mudaram (mais rápido), em lotes com timeout de 15s, e avisa na tela se alguma não foi restaurada.']},
+    {versao:'V2.57.47',status:'aberta',data:'2026-07-28',tipo:'funcionalidade',
+      titulo:'Editor de Estrutura: novo botão "💾 Salvar e Atualizar Planejamento" — força regravar ordem/nível de TODAS as tarefas e recarrega, sem depender do salvamento automático em segundo plano',
+      itens:['Regrava ordem e nível de todas as tarefas do jeito que está na tela agora, em lotes com timeout, e recarrega o Planejamento no final — um "tenho certeza que salvou" manual, pra quando o salvamento automático em segundo plano não é suficiente ou o Milton quer confirmação explícita de que o Planejamento está de fato igual à árvore.']}
   ],
 
   render(containerId) {

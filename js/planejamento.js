@@ -3506,6 +3506,7 @@ const Planejamento = (() => {
           <button class="btn btn-secundario btn-sm" onclick="Planejamento._arvExpandirTudo(false)" style="font-size:.72rem;">▶ Recolher tudo</button>
           <button class="btn btn-secundario btn-sm" onclick="Planejamento._arvCriarRaiz()" style="font-size:.72rem;">＋ Nova raiz</button>
           <button class="btn btn-secundario btn-sm" onclick="Planejamento._arvBackupEstrutura()" style="font-size:.72rem;" title="Salva um arquivo com nome/nível/ordem/código/predecessora de cada tarefa — pra restaurar se algo der errado">💾 Backup</button>
+          <button class="btn btn-primario btn-sm" onclick="Planejamento._arvSalvarTudo()" style="font-size:.72rem;" title="Regrava a ordem/nível de TODAS as tarefas no Firestore, garantindo que o Planejamento fique igual ao que está aqui na tela">💾 Salvar e Atualizar Planejamento</button>
           <label class="btn btn-secundario btn-sm" style="cursor:pointer;font-size:.72rem;" title="Restaura um backup salvo anteriormente">📤 Restaurar<input type="file" accept=".json" style="display:none" onchange="Planejamento._arvRestaurarEstrutura(event)"></label>
           <button class="btn btn-primario btn-sm" onclick="Planejamento.toggleArvoreEditor()" style="font-size:.72rem;">← Voltar ao Gantt</button>
         </div>
@@ -3687,6 +3688,28 @@ const Planejamento = (() => {
   // der errado. Casa por ID do Firestore — só funciona se as tarefas não forem
   // excluídas/recriadas entre o backup e a restauração (mudar nível/ordem/nome
   // não afeta, só excluir e recriar quebra o casamento por ID).
+  // Força regravar ordem/nível de TODAS as tarefas no Firestore, do jeito que
+  // está na tela agora, e recarrega — um "tenho certeza que salvou" manual,
+  // sem depender do salvamento automático em segundo plano (que já falhou
+  // silenciosamente outras vezes nesta obra).
+  async function _arvSalvarTudo(){
+    if(!confirm(`Isso vai regravar ordem e nível de todas as ${tarefas.length} tarefas no Firestore, garantindo que o Planejamento fique exatamente igual ao que está aqui na árvore. Pode demorar um pouco. Confirmar?`))return;
+    const sorted=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
+    Utils.mostrarLoading('Salvando tudo...');
+    const L=20,TIMEOUT_MS=15000;
+    const comTimeout=p=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),TIMEOUT_MS))]);
+    let falhas=0,ok=0;
+    for(let i=0;i<sorted.length;i+=L){
+      Utils.mostrarLoading(`Salvando... ${Math.min(i+L,sorted.length)}/${sorted.length}`);
+      await Promise.all(sorted.slice(i,i+L).map(t=>
+        comTimeout(Database.atualizar(obraId,COL,t.id,{ordem:t.ordem||0,nivel:t.nivel||0})).then(()=>ok++).catch(e=>{falhas++;console.error('Erro salvar tudo:',t.id,e);})
+      ));
+    }
+    Utils.esconderLoading();
+    if(falhas){Utils.toast(`⚠ ${ok} salvas, ${falhas} falharam — clique de novo pra tentar as que faltaram.`,'alerta');}
+    else{Utils.toast(`✅ ${ok} tarefas salvas. Recarregando o Planejamento...`,'sucesso');await carregar();}
+  }
+
   function _arvBackupEstrutura(){
     const dados=tarefas.map(t=>({id:t.id,nome:t.nome,nivel:t.nivel||0,ordem:t.ordem||0,codigo:t.codigo||'',predecessora:t.predecessora||''}));
     const payload={obraId,data:new Date().toISOString(),tarefas:dados};
@@ -4058,7 +4081,7 @@ const Planejamento = (() => {
     toggleGantt,hideCol,showColsMenu,_showCol,_showAll,_toggleMenuFerramentas,
     toggleArvoreEditor,_arvToggle,_arvExpandirTudo,_arvIniciarEdit,_arvCancelarEdit,_arvSalvarNome,
     _arvInserirAcima,_arvInserirAbaixo,_arvMudarNivel,
-    _arvCriarFilho,_arvCriarRaiz,_arvBackupEstrutura,_arvRestaurarEstrutura,_arvDragStart,_arvDragOver,_arvDragEnd,_arvDrop,
+    _arvCriarFilho,_arvCriarRaiz,_arvBackupEstrutura,_arvRestaurarEstrutura,_arvSalvarTudo,_arvDragStart,_arvDragOver,_arvDragEnd,_arvDrop,
     _arvRowClick,_arvSelTem,_arvLimparSel,_arvMoverMultiplas,
     _arvAbrirMover,_arvFecharMover,_arvFiltrarMover,_arvConfirmarMover,
     _colResizeStart,moveColLeft,moveColRight,_hideCol,_divStart,_sync,_editCell,_esqDragStart,
