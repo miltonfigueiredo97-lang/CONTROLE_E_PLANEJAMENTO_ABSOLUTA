@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.57.37',
+  versaoAtual: 'V2.57.38',
 
   versoes: [
     {
@@ -5103,11 +5103,16 @@ const NotasVersao = {
     {versao:'V2.57.36',status:'fechada',data:'2026-07-28',tipo:'correcao',
       titulo:'Editor de Estrutura: soltar uma tarefa "depois" de outra quase sempre virava filho por engano',
       itens:['Zona de drop para "depois" (irmã, não filha) era só 10% da altura da linha — quase impossível de acertar. Alargada para 30%.']},
-    {versao:'V2.57.37',status:'aberta',data:'2026-07-28',tipo:'correcao',
+    {versao:'V2.57.37',status:'fechada',data:'2026-07-28',tipo:'correcao',
       titulo:'Editor de Estrutura: bug real por trás dos "filhos trocando de dono" — soltar "depois" de uma tarefa que já tem filhos próprios entrava NO MEIO dela e dos filhos dela',
       itens:['Causa raiz: soltar "depois" de uma tarefa X inseria logo após a LINHA de X (índice+1) — mas se X já tinha filhos próprios logo em seguida, a tarefa recém-movida entrava bem ali no meio, entre X e os filhos dele. Como "quem é filho de quem" é decidido só pela sequência (nível maior logo depois = filho), os filhos verdadeiros de X ficaram "órfãos" de X e a tarefa recém-inserida roubou esse vínculo — exatamente o sintoma relatado: a tarefa de cima perde a setinha de expandir (vira um pontinho, sem filhos) e o que estava dentro dela aparece dentro da de baixo.',
         'Corrigido: soltar "depois" agora pula o bloco INTEIRO da tarefa-alvo (ela + todos os filhos próprios dela) antes de inserir — a nova tarefa vira irmã de verdade, depois de tudo que já pertencia ao alvo.',
-        'Também corrigido: soltar/mover na árvore não pula mais o scroll pro topo — mantém a posição de onde você estava mexendo.']}
+        'Também corrigido: soltar/mover na árvore não pula mais o scroll pro topo — mantém a posição de onde você estava mexendo.']},
+    {versao:'V2.57.38',status:'aberta',data:'2026-07-28',tipo:'correcao',
+      titulo:'Editor de Estrutura: mover/reordenar às vezes "voltava sozinho" depois de sair e voltar da página — falha ao salvar no Firestore era engolida silenciosamente',
+      itens:['Causa: quando uma gravação de ordem/nível falhava (rede instável, sobrecarga de escritas simultâneas), o erro só ia pro console — a árvore continuava mostrando a mudança na tela (otimista), mas nada tinha sido salvo de verdade. Um reload trazia o estado antigo de volta, parecendo que o sistema "desfez sozinho".',
+        'Reduzida a concorrência de escrita (50→20 simultâneas) e adicionado timeout de 15s por gravação, igual ao fix já aplicado no Importar Excel.',
+        'Agora, se alguma gravação falhar, aparece um aviso explícito na tela avisando pra tentar mover de novo — em vez de falhar em silêncio.']}
   ],
 
   render(containerId) {

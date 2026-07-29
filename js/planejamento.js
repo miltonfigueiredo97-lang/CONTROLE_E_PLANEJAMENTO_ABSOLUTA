@@ -3561,13 +3561,19 @@ const Planejamento = (() => {
     _arvSaveQueue=_arvSaveQueue.then(async()=>{
       try{
         if(mudancasNum.size)await _remapearPredecessoras(mudancasNum);
-        const LOTE=50;
+        const LOTE=20,TIMEOUT_MS=15000;
+        const comTimeout=p=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),TIMEOUT_MS))]);
+        let falhas=0;
         for(let i=0;i<changed.length;i+=LOTE){
           await Promise.all(changed.slice(i,i+LOTE).map(t=>
-            Database.atualizar(obraId,COL,t.id,{ordem:t.ordem,nivel:t.nivel}).catch(console.error)
+            comTimeout(Database.atualizar(obraId,COL,t.id,{ordem:t.ordem,nivel:t.nivel})).catch(e=>{falhas++;console.error('Erro ao salvar tarefa na arvore:',t.id,t.nome,e);})
           ));
         }
-      }catch(e){console.error('Erro save arvore:',e);}
+        // Antes essa falha era só console.error — o usuário via a árvore "certa" na
+        // tela (mudança local otimista) mas nada ia pro Firestore, e um reload
+        // trazia de volta o estado antigo, parecendo que a ação "desfez sozinha".
+        if(falhas)Utils.toast(`⚠ ${falhas} tarefa(s) não foram salvas (erro de conexão) — a árvore pode voltar ao estado anterior se você recarregar a página. Tente mover de novo.`,'alerta');
+      }catch(e){console.error('Erro save arvore:',e);Utils.toast('⚠ Erro ao salvar a árvore — tente de novo.','alerta');}
     });
   }
 
