@@ -30,6 +30,8 @@ const LevantamentoSoloGrampeado = (() => {
   let modo = null; // null | 'adicionar' | 'calibrar'
   let calibPontos = [];
   let proxNumero = 1;   // próximo número sugerido no modo Adicionar (incrementa sozinho a cada clique)
+  let ultimoPontoSeq = null; // {x,y} do último chumbador criado na sequência (pra saber se o próximo clique continua a linha)
+  let _pontoPendenteNovaLinha = null; // {v,pos} aguardando confirmação do número inicial da nova linha
   let compPadrao = 6;   // comprimento (ml) usado ao adicionar rápido — ajustável na barra
   let tipoPadrao = 'Vertical';
   let chumbEditId = null;
@@ -180,7 +182,7 @@ const LevantamentoSoloGrampeado = (() => {
     const ligando = modo !== m;
     modo = (modo === m) ? null : m;
     calibPontos = [];
-    if (modo === 'adicionar' && ligando) proxNumero = _sugerirProximoNumero();
+    if (modo === 'adicionar' && ligando) { proxNumero = _sugerirProximoNumero(); ultimoPontoSeq = null; }
     _atualizarBotoesModo();
     _atualizarToolbarExtra();
     renderMapa();
@@ -192,7 +194,7 @@ const LevantamentoSoloGrampeado = (() => {
         <label class="text-sm" style="display:flex;gap:6px;align-items:center;">Próx. Nº<input type="text" id="sg-prox-numero" value="${esc(proxNumero)}" class="form-control" style="width:70px;padding:4px 6px;" onchange="SG_UI.setProxNumero(this.value)"></label>
         <label class="text-sm" style="display:flex;gap:6px;align-items:center;">Tipo<select id="sg-tipo-padrao" class="form-control" style="width:110px;padding:4px 6px;" onchange="SG_UI.setTipoPadrao(this.value)">${SG.TIPOS_CHUMBADOR.map(t => `<option value="${t}" ${t === tipoPadrao ? 'selected' : ''}>${t}</option>`).join('')}</select></label>
         <label class="text-sm" style="display:flex;gap:6px;align-items:center;">Comp. padrão (ml)<input type="number" step="0.1" id="sg-comp-padrao" value="${compPadrao}" class="form-control" style="width:70px;padding:4px 6px;" onchange="SG_UI.setCompPadrao(this.value)"></label>
-        <span class="text-sm text-muted">Clique no mapa: coloca a bolinha direto, sem popup. Clique numa bolinha já colocada pra editar.</span>
+        <span class="text-sm text-muted">Clique à direita do último: número continua sozinho. Clique fora da sequência: pergunta o número da nova linha.</span>
       </div>`;
   }
   function _atualizarToolbarExtra() {
@@ -345,10 +347,23 @@ const LevantamentoSoloGrampeado = (() => {
   }
 
   // Clique no mapa em modo Adicionar: cria a bolinha na hora, sem
-  // abrir popup — o número sugerido incrementa sozinho a cada clique.
+  // abrir popup — o número sugerido incrementa sozinho a cada clique
+  // ENQUANTO o clique for à direita do anterior (mesma linha). Se
+  // clicar num ponto que não é à direita, entende que começou uma
+  // nova linha e pergunta o número inicial dela antes de continuar.
   async function _criarChumbadorInstantaneo(v, pos) {
     if (!(compPadrao > 0)) { Utils.toast('Informe um "Comp. padrão (ml)" maior que zero antes de clicar.', 'alerta'); return; }
-    const numero = String(proxNumero || '').trim() || String(chumbadores.length + 1);
+    if (ultimoPontoSeq && pos.x <= ultimoPontoSeq.x) {
+      _pontoPendenteNovaLinha = { v, pos };
+      document.getElementById('sg-novalinha-numero').value = proxNumero;
+      Utils.abrirModal('modal-sg-novalinha');
+      return;
+    }
+    await _gravarChumbadorInstantaneo(v, pos, proxNumero);
+  }
+
+  async function _gravarChumbadorInstantaneo(v, pos, numeroBruto) {
+    const numero = String(numeroBruto || '').trim() || String(chumbadores.length + 1);
     try {
       await Database.criar(obraId, COL_CHUMBADORES, {
         vista: v.id, numero, tipo: tipoPadrao, comprimento: compPadrao, especId: '',
@@ -356,6 +371,7 @@ const LevantamentoSoloGrampeado = (() => {
       }, SG.genId('ch'));
       const n = parseInt(numero);
       proxNumero = !isNaN(n) ? String(n + 1) : numero;
+      ultimoPontoSeq = pos;
       _atualizarToolbarExtra();
       Utils.toast(`✓ Chumbador ${numero} adicionado`, 'sucesso');
       await _refetch();
@@ -364,6 +380,22 @@ const LevantamentoSoloGrampeado = (() => {
     } catch (e) {
       Utils.toast('Erro ao adicionar: ' + e.message, 'erro');
     }
+  }
+
+  // Confirmação do número inicial de uma nova linha (clique que não
+  // foi à direita do chumbador anterior)
+  async function confirmarNovaLinha() {
+    if (!_pontoPendenteNovaLinha) return;
+    const numero = document.getElementById('sg-novalinha-numero').value.trim();
+    if (!numero) { Utils.toast('Informe o número.', 'alerta'); return; }
+    const { v, pos } = _pontoPendenteNovaLinha;
+    _pontoPendenteNovaLinha = null;
+    Utils.fecharModal('modal-sg-novalinha');
+    await _gravarChumbadorInstantaneo(v, pos, numero);
+  }
+  function cancelarNovaLinha() {
+    _pontoPendenteNovaLinha = null;
+    Utils.fecharModal('modal-sg-novalinha');
   }
 
   // ── Tabela de chumbadores ──
@@ -832,6 +864,7 @@ const LevantamentoSoloGrampeado = (() => {
     abrirImagem, onImagemArquivo, removerImagem,
     salvarCalibracao, abrirEditarM2, salvarM2,
     abrirEditarChumbador, salvarChumbador, excluirChumbador,
+    confirmarNovaLinha, cancelarNovaLinha,
     abrirEspecificacoes, criarMaterialInline, editarEspecificacao, cancelarEdicaoEspec, salvarEspecificacao, excluirEspecificacao,
   };
 })();

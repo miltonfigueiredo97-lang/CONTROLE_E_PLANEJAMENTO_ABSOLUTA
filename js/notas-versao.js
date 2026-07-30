@@ -5243,7 +5243,8 @@ const NotasVersao = {
         'Adicionado pan (Ctrl+arrastar) e zoom (Ctrl+roda do mouse) direto sobre o mapa, tanto no Levantamento quanto no Controle.',
         'Calibrar Escala: o 1º clique não tinha nenhum feedback visual (só um texto pequeno mudava) e parecia não fazer nada. Agora desenha os pontos clicados e a linha entre eles em tempo real, mostra um toast a cada ponto marcado, e destaca o mapa com uma borda quando um modo (Adicionar/Calibrar) está ativo.',
         'Removido o campo "Profundidade" (era redundante com o Comprimento — o chumbador tem uma única medida real).',
-        'Adicionar Chumbador mudou de fluxo: antes abria um popup a cada clique (pedindo até Especificação, sem necessidade nesse momento) — agora clicar no mapa só coloca a bolinha na hora, sem popup nenhum. Barra amarela mostra Próx. Número (edita se não bater com o desenho, incrementa sozinho a cada clique), Tipo e Comprimento padrão. Clicar numa bolinha já colocada abre a edição (número, tipo, comprimento, especificação).']}
+        'Adicionar Chumbador mudou de fluxo: antes abria um popup a cada clique (pedindo até Especificação, sem necessidade nesse momento) — agora clicar no mapa só coloca a bolinha na hora, sem popup nenhum. Barra amarela mostra Próx. Número (edita se não bater com o desenho, incrementa sozinho a cada clique), Tipo e Comprimento padrão. Clicar numa bolinha já colocada abre a edição (número, tipo, comprimento, especificação).',
+        'Numeração em sequência: clicando à direita do último chumbador, o número continua incrementando sozinho (como os chumbadores reais são numerados em linha, esquerda→direita). Se o clique não for à direita do anterior (nova linha), para e pergunta o número inicial dela antes de continuar.']}
   ],
 
   render(containerId) {

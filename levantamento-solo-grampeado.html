@@ -127,6 +127,24 @@
   </div>
 </div>
 
+<!-- MODAL: Número inicial de nova linha -->
+<div class="modal-overlay" id="modal-sg-novalinha">
+  <div class="modal" style="max-width:380px;">
+    <div class="modal-header">
+      <h3>↩ Nova Linha de Chumbadores</h3>
+      <button class="modal-close" onclick="SG_UI.cancelarNovaLinha()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p class="text-sm text-muted mb-1">Esse clique não foi à direita do chumbador anterior — parece o início de uma nova linha. Qual o número dele?</p>
+      <div class="form-grupo"><label>Número</label><input type="text" id="sg-novalinha-numero" class="form-control" autofocus></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secundario" onclick="SG_UI.cancelarNovaLinha()">Cancelar</button>
+      <button class="btn btn-primario" onclick="SG_UI.confirmarNovaLinha()">Marcar e Continuar</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL: Editar m² Total -->
 <div class="modal-overlay" id="modal-sg-m2">
   <div class="modal" style="max-width:380px;">
