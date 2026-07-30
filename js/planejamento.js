@@ -2060,17 +2060,26 @@ const Planejamento = (() => {
     const targetIdxAtual=sorted.findIndex(x=>x.id===targetId);
     if(targetIdxAtual<0){_paintRows();return;}
 
+    // Ajusta o nível do bloco pro nível do vizinho onde ele vai cair — sem
+    // isso, arrastar um bloco de nível 3 pra perto de algo de nível 1
+    // deixava ele com nível 3 ali (salto impossível, invisível no Editor
+    // de Estrutura). Mesma lógica já usada e testada no arrastar da árvore.
+    const targetNivel=sorted[targetIdxAtual].nivel||0;
+    const dif=targetNivel-dragNivel;
+    if(dif!==0)bloco.forEach(t=>{t.nivel=Math.max(0,(t.nivel||0)+dif);});
+
     let insertAt=pos==='before'?targetIdxAtual:targetIdxAtual+1;
     sorted.splice(insertAt,0,...bloco);
 
-    // Recalcula ordem sequencial e detecta o que mudou
+    // Recalcula ordem sequencial e detecta o que mudou (ordem e/ou nível)
+    const idsBlocoComNivelAjustado=dif!==0?new Set(bloco.map(t=>t.id)):new Set();
     const updates=[];
     sorted.forEach((t,i)=>{
       const novaOrdem=i+1;
-      if((t.ordem||0)!==novaOrdem){
-        t.ordem=novaOrdem;
-        updates.push({id:t.id,ordem:novaOrdem});
-      }
+      const upd={};
+      if((t.ordem||0)!==novaOrdem){t.ordem=novaOrdem;upd.ordem=novaOrdem;}
+      if(idsBlocoComNivelAjustado.has(t.id))upd.nivel=t.nivel;
+      if(Object.keys(upd).length)updates.push({id:t.id,...upd});
     });
 
     // Salva estado para undo antes de reordenar
@@ -2093,8 +2102,8 @@ const Planejamento = (() => {
     // Salva em segundo plano, em lotes
     const LOTE=30;
     for(let i=0;i<updates.length;i+=LOTE){
-      await Promise.all(updates.slice(i,i+LOTE).map(u=>
-        Database.atualizar(obraId,COL,u.id,{ordem:u.ordem}).catch(e=>console.error('Erro reordenar:',u.id,e))
+      await Promise.all(updates.slice(i,i+LOTE).map(({id,...upd})=>
+        Database.atualizar(obraId,COL,id,upd).catch(e=>console.error('Erro reordenar:',id,e))
       ));
     }
   }
