@@ -2509,9 +2509,10 @@ const Planejamento = (() => {
         <div style="background:#1a1a1a;border:1px solid #333;border-radius:10px;padding:20px;width:480px;max-width:95vw;max-height:85vh;overflow-y:auto;display:flex;flex-direction:column;gap:10px;">
           <div style="font-weight:700;color:var(--cor-primaria);">📥 Importar Correções</div>
           <div style="font-size:.78rem;color:#888;">Casa cada linha da planilha com a tarefa de MESMO NOME já existente na obra. Posição, nível, estrutura e código NÃO são tocados — só os campos marcados abaixo:</div>
-          <div id="correcoes-campos" style="display:flex;flex-direction:column;gap:4px;">
-            ${CAMPOS_CORRECAO.map(c=>`<label style="display:flex;align-items:center;gap:8px;font-size:.82rem;cursor:pointer;">
-              <input type="checkbox" value="${c.id}"> ${c.label}
+          <div id="correcoes-campos" style="display:flex;flex-direction:column;gap:6px;">
+            ${CAMPOS_CORRECAO.map(c=>`<label style="display:flex;align-items:center;gap:8px;font-size:.82rem;cursor:pointer;color:#ddd;">
+              <input type="checkbox" value="${c.id}" style="width:16px;height:16px;flex-shrink:0;accent-color:var(--cor-primaria);">
+              <span style="color:#ddd;">${c.label}</span>
             </label>`).join('')}
           </div>
           <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:6px;">

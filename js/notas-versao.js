@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.57.56',
+  versaoAtual: 'V2.57.57',
 
   versoes: [
     {
@@ -5190,13 +5190,16 @@ const NotasVersao = {
     {versao:'V2.57.55',status:'fechada',data:'2026-07-29',tipo:'correcao',
       titulo:'Editor de Estrutura: criar tarefa (acima/abaixo/filha) e apertar Enter pra confirmar o nome pulava a tela pro topo',
       itens:['Salvar o nome digitado (Enter ou clicar fora) não preservava o scroll — mesma classe de bug já corrigida em outros lugares da árvore (seleção, drop). Agora a tela fica fixa onde você está trabalhando, tanto ao criar a tarefa quanto ao confirmar o nome dela.']},
-    {versao:'V2.57.56',status:'aberta',data:'2026-07-29',tipo:'funcionalidade',
+    {versao:'V2.57.56',status:'fechada',data:'2026-07-29',tipo:'funcionalidade',
       titulo:'MUDANÇA DE ARQUITETURA: Predecessora agora é vinculada por ID interno da tarefa, não mais por número de linha — reordenar NUNCA MAIS quebra o vínculo',
       itens:['Causa raiz de todos os bugs de predecessora desta obra: o vínculo era guardado como TEXTO com o número da linha (ex: "5TI"). Qualquer inserção, exclusão ou movimentação em QUALQUER lugar da obra desloca esses números, e por mais completo que fosse o "remapeamento" depois de cada operação, sempre sobrava algum caso não coberto — é uma abordagem fundamentalmente frágil.',
         'Agora o vínculo é guardado pelo ID interno da tarefa (o mesmo ID que o Firestore já dá a cada tarefa, criado uma vez e nunca muda) — não existe mais "remapear" porque não existe mais nada para remapear: reordenar, mover, inserir, excluir, nada disso afeta o vínculo, porque ele nunca dependeu de posição.',
         'O número de linha (5, 12, etc) continua aparecendo normalmente na tela e na exportação pra Excel — só que agora é calculado ao vivo a partir do ID, sempre correto, nunca precisa ser corrigido.',
         'Migração automática: ao abrir o Planejamento, qualquer predecessora ainda no formato antigo é convertida sozinha, em segundo plano, sem precisar fazer nada. Botão manual também disponível em ⚙ Ferramentas → "🔗 Corrigir Predecessoras (por ID)" se quiser confirmar.',
-        'Os 3 importadores (Importar, Importar Base Completa, Importar Correções) já gravam direto no novo formato — Importar Correções resolve por nome (a predecessora na planilha aponta pra outra linha da MESMA planilha, que agora é traduzida pro nome e depois pro ID da tarefa atual).']}
+        'Os 3 importadores (Importar, Importar Base Completa, Importar Correções) já gravam direto no novo formato — Importar Correções resolve por nome (a predecessora na planilha aponta pra outra linha da MESMA planilha, que agora é traduzida pro nome e depois pro ID da tarefa atual).']},
+    {versao:'V2.57.57',status:'aberta',data:'2026-07-29',tipo:'correcao',
+      titulo:'Importar Correções: os textos ao lado dos checkboxes de campo (Início Real, % Concluído, etc) não apareciam — só os quadradinhos em branco',
+      itens:['Reforçado o HTML dos checkboxes com cor explícita e o texto envolto num <span> — evita qualquer problema de herança de cor entre o texto e o fundo escuro do modal.']}
   ],
 
   render(containerId) {
