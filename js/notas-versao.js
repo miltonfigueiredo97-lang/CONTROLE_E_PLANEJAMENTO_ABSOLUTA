@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.57.69',
+  versaoAtual: 'V2.57.70',
 
   versoes: [
     {
@@ -5256,7 +5256,12 @@ const NotasVersao = {
       itens:['Botão "📐 Medir Área" (exige escala já calibrada): clique nos vértices do contorno real da vista (segue o desenho, inclusive terreno inclinado, reentrâncias etc.) — cada clique marca um vértice, com desfazer último ponto e um botão "Concluir Polígono" a partir de 3 pontos.',
         'Área calculada pela fórmula de Shoelace em cima da escala calibrada (não é mais só a área do retângulo da imagem inteira) — mostra o resultado num modal de confirmação, ainda editável antes de salvar.',
         'O contorno medido fica salvo e sempre visível no mapa (azul, tracejado, com o m² escrito no meio), pra conferir depois se ainda bate com a vista — mesmo princípio já usado na linha de calibração de escala.',
-        'O campo "m² total" com edição manual (✎) continua existindo, pra ajuste fino depois de medir.']}
+        'O campo "m² total" com edição manual (✎) continua existindo, pra ajuste fino depois de medir.']},
+    {versao:'V2.57.70',status:'aberta',data:'2026-07-30',tipo:'melhoria',
+      titulo:'Levantamento de Solo Grampeado: cor do chumbador por comprimento e formato por tipo (bolinha = horizontal, triângulo = vertical)',
+      itens:['Chumbadores Horizontais viram bolinhas; Verticais viram triângulos — dá pra diferenciar o tipo só olhando o mapa.',
+        'A cor de cada chumbador agora reflete o comprimento (ml) dele, de forma determinística: o mesmo valor sempre cai na mesma cor (ex: 6ml sempre azul), independente da ordem em que foram cadastrados. Se mudar o comprimento de um chumbador, a cor muda junto.',
+        'Legenda embaixo do mapa mostra a cor de cada comprimento usado na vista.']}
   ],
 
   render(containerId) {

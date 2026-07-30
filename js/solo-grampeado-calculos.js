@@ -94,6 +94,16 @@ const SoloGrampeadoCalculos = (() => {
     if (pct > 0) return '#f59e0b';
     return '#94a3b8';
   }
+
+  // Cor determinística por comprimento — o mesmo valor sempre cai na
+  // mesma cor (6ml sempre azul, 7ml sempre outra, etc), independente
+  // da ordem em que os chumbadores foram cadastrados.
+  const PALETA_COMPRIMENTO = ['#2563eb', '#dc2626', '#16a34a', '#f59e0b', '#7c3aed', '#0891b2', '#db2777', '#65a30d', '#ea580c', '#0d9488', '#9333ea', '#ca8a04'];
+  function corPorComprimento(comprimento) {
+    const v = Math.round(num(comprimento) * 10); // 1 casa decimal de precisão
+    const idx = ((v * 2654435761) >>> 0) % PALETA_COMPRIMENTO.length;
+    return PALETA_COMPRIMENTO[idx];
+  }
   // areasDaVista: array de marcações {etapa, m2}
   function calcPctVista(vista, chumbadoresDaVista, execMap, areasDaVista) {
     const qtd = chumbadoresDaVista.length;
@@ -135,10 +145,16 @@ const SoloGrampeadoCalculos = (() => {
     const raio = opts.mini ? 3 : 7;
     const marcadores = (pontos || []).map(p => {
       const pct = pctChumbador((execMap || {})[p.id]);
-      const cor = opts.readonlyCor ? '#3b82f6' : corChumbador(pct);
+      const cor = opts.corComprimento ? corPorComprimento(p.comprimento) : (opts.readonlyCor ? '#3b82f6' : corChumbador(pct));
       const cursor = (opts.interativo && !opts.mini) ? 'cursor:pointer;' : '';
-      const titulo = opts.mini ? '' : ` title="${esc(p.numero)} — ${esc(statusChumbador((execMap || {})[p.id]))}"`;
-      return `<div class="sg-marcador" data-id="${p.id}" style="position:absolute;left:${(p.x * 100).toFixed(3)}%;top:${(p.y * 100).toFixed(3)}%;width:${raio * 2}px;height:${raio * 2}px;margin:-${raio}px;border-radius:50%;background:${cor};border:1px solid #1e293b;${cursor}z-index:2;"${titulo}></div>`;
+      const titulo = opts.mini ? '' : (opts.corComprimento
+        ? ` title="${esc(p.numero)} — ${esc(p.tipo)} — ${fmt1(p.comprimento)} ml"`
+        : ` title="${esc(p.numero)} — ${esc(statusChumbador((execMap || {})[p.id]))}"`);
+      const lado = raio * 2.3;
+      const forma = p.tipo === 'Vertical'
+        ? `width:${lado}px;height:${lado}px;margin:-${(lado / 2).toFixed(1)}px;background:${cor};clip-path:polygon(50% 0%,0% 100%,100% 100%);border:1px solid #1e293b;`
+        : `width:${raio * 2}px;height:${raio * 2}px;margin:-${raio}px;border-radius:50%;background:${cor};border:1px solid #1e293b;`;
+      return `<div class="sg-marcador" data-id="${p.id}" style="position:absolute;left:${(p.x * 100).toFixed(3)}%;top:${(p.y * 100).toFixed(3)}%;${forma}${cursor}z-index:2;"${titulo}></div>`;
     }).join('');
     const areasHtml = (areas || []).map(a => {
       const fill = a.etapa === 'acabamento' ? 'rgba(22,163,74,.55)' : 'rgba(187,247,208,.65)';
@@ -202,7 +218,7 @@ const SoloGrampeadoCalculos = (() => {
     fmt2, fmt1, num, genId, esc,
     TIPOS_CHUMBADOR, ETAPAS_CHUMBADOR, ETAPAS_AREA, PESO_CHUMBADOR_TOTAL, PESO_AREA_TOTAL,
     calcEscalaCmPorPx, calcM2Imagem, calcM2Retangulo, calcM2Poligono,
-    pctChumbador, statusChumbador, corChumbador, calcPctVista,
+    pctChumbador, statusChumbador, corChumbador, corPorComprimento, calcPctVista,
     mapaHTML, posRelativa, distanciaPxEntrePontos,
     canvasParaDataURLLimitado,
   };

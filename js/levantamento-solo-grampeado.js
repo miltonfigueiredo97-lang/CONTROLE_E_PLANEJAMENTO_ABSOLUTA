@@ -266,16 +266,23 @@ const LevantamentoSoloGrampeado = (() => {
     const lista = chumbadoresDaVista(v.id);
     const scrollAnterior = document.querySelector('#sg-mapa-host .sg-map-scroll');
     const scrollPos = scrollAnterior ? { left: scrollAnterior.scrollLeft, top: scrollAnterior.scrollTop } : null;
-    const html = SG.mapaHTML(v, imagem, lista, {}, [], { interativo: true, readonlyCor: true, zoom, stageId: 'sg-stage', maxHeight: 600 });
+    const html = SG.mapaHTML(v, imagem, lista, {}, [], { interativo: true, corComprimento: true, zoom, stageId: 'sg-stage', maxHeight: 600 });
     const info = SG.num(v.escalaCmPorPx) > 0
       ? `Escala: 1px da imagem ≈ ${SG.fmt2(v.escalaCmPorPx)} cm`
       : 'Sem escala calibrada ainda';
+    const comprimentosUnicos = [...new Set(lista.map(c => SG.num(c.comprimento)))].filter(n => n > 0).sort((a, b) => a - b);
+    const legenda = comprimentosUnicos.length ? `
+      <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:8px;font-size:0.75rem;align-items:center;">
+        <span style="opacity:.7;">● horizontal · ▲ vertical — cor = comprimento:</span>
+        ${comprimentosUnicos.map(c => `<span style="display:flex;gap:4px;align-items:center;"><span style="width:11px;height:11px;border-radius:50%;background:${SG.corPorComprimento(c)};border:1px solid #1e293b;display:inline-block;"></span>${SG.fmt1(c)} ml</span>`).join('')}
+      </div>` : '';
     host.innerHTML = `
       ${html}
       <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-top:8px;font-size:0.78rem;color:var(--cor-texto-secundario);font-family:var(--font-mono);">
         <span>${esc(info)} · <span style="opacity:.8;">Ctrl+arrastar move, Ctrl+roda dá zoom</span></span>
         <span>m² total da vista: <b style="color:var(--cor-texto);">${SG.fmt1(v.m2Total)}</b> <button class="btn btn-secundario btn-sm" style="padding:2px 8px;" onclick="SG_UI.abrirEditarM2('${v.id}')">✎</button></span>
       </div>
+      ${legenda}
       ${modo === 'adicionar' ? `<div class="cc-empty" style="margin-top:8px;">Clique no mapa onde fica o chumbador.</div>` : ''}
       ${modo === 'calibrar' ? `<div class="cc-empty" style="margin-top:8px;">Clique dois pontos marcando uma distância conhecida (${calibPontos.length}/2).</div>` : ''}
     `;
