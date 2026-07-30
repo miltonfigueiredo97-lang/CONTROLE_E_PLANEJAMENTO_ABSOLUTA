@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.57.63',
+  versaoAtual: 'V2.57.64',
 
   versoes: [
     {
@@ -5220,10 +5220,14 @@ const NotasVersao = {
     {versao:'V2.57.62',status:'fechada',data:'2026-07-29',tipo:'melhoria',
       titulo:'Popup de Predecessora: coluna Tipo mostra o nome completo (ex: "Término-a-Início (TI)"), colorido — antes só a sigla',
       itens:['Cores seguem o padrão MS Project: TI azul, II neutro, TT vermelho, IT verde. Coluna e popup alargados pra caber o texto completo.']},
-    {versao:'V2.57.63',status:'aberta',data:'2026-07-29',tipo:'melhoria',
+    {versao:'V2.57.63',status:'fechada',data:'2026-07-29',tipo:'melhoria',
       titulo:'Importar Correções: agora mostra a LISTA exata de quais nomes não bateram ou eram ambíguos, em vez de só um número',
       itens:['Depois de aplicar, se sobrou algum "não encontrado" (nome da planilha não bate com nenhuma tarefa atual, ex: Cofield renomeou algo) ou "ambíguo" (mais de uma tarefa sua com o mesmo nome), abre um painel listando exatamente quais são — pra revisar/renomear manualmente se for o caso.',
-        'Confirmado: Importar Correções nunca cria tarefa nova nem move nada — só atualiza campo por campo em tarefas já existentes, casando por Nome. O que não bate fica de fora, sem efeito nenhum na estrutura.']}
+        'Confirmado: Importar Correções nunca cria tarefa nova nem move nada — só atualiza campo por campo em tarefas já existentes, casando por Nome. O que não bate fica de fora, sem efeito nenhum na estrutura.']},
+    {versao:'V2.57.64',status:'aberta',data:'2026-07-29',tipo:'correcao',
+      titulo:'Editor de Estrutura: "←"/"→" (subir/descer nível) só ajustava UM bloco por vez, mesmo com vários selecionados — se tinha 9 grupos irmãos soltos no nível errado, tinha que clicar um por um',
+      itens:['Clicar "←" numa tarefa selecionada em grupo (Ctrl+clique) só subia o nível DAQUELA tarefa e dos filhos dela — os outros itens selecionados ao lado (irmãos) ficavam intocados, mesmo estando marcados.',
+        'Corrigido: agora, se houver seleção múltipla, "←"/"→" ajusta o nível de TODOS os blocos selecionados de uma vez (cada um com seus próprios filhos) — resolve de vez o caso de vários grupos soltos no nível errado por conta de um código de planilha que não corresponde à posição real que a tarefa deveria ocupar.']}
   ],
 
   render(containerId) {

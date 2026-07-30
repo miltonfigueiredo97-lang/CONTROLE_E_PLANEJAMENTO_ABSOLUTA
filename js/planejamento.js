@@ -2289,28 +2289,42 @@ const Planejamento = (() => {
     });
   }
 
-  async function recuarNivel(id){await _moverNivel(id,-1);}
-  async function avancarNivel(id){await _moverNivel(id,1);}
-  async function _moverNivel(id,diff){
-    const t=tarefas.find(x=>x.id===id);
-    if(!t){console.error('Tarefa não encontrada:',id);return;}
-    if(diff<0&&(t.nivel||0)<=0){Utils.toast('Já está no nível mínimo.','alerta');return;}
-    
+  async function recuarNivel(id){
+    const ids=(_arvSel.has(id)&&_arvSel.size>1)?[..._arvSel]:[id];
+    await _moverNivelMultiplas(ids,-1);
+  }
+  async function avancarNivel(id){
+    const ids=(_arvSel.has(id)&&_arvSel.size>1)?[..._arvSel]:[id];
+    await _moverNivelMultiplas(ids,1);
+  }
+  // Sobe/desce o nível de 1+ tarefas de uma vez (cada uma com os próprios
+  // filhos). Se vários dos selecionados forem irmãos (ex: 9 grupos soltos no
+  // nível errado), sem isso seria preciso clicar "←" um por um — clicar numa
+  // linha só sobe/desce ELA e os filhos DELA, nunca os irmãos ao lado.
+  async function _moverNivelMultiplas(ids,diff){
+    const idsSet=new Set(ids);
     const sorted=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
-    const idx=sorted.findIndex(x=>x.id===id);
-    if(idx<0){console.error('Índice não encontrado');return;}
-    
-    // Coleta tarefa + filhos (tudo abaixo com nível maior)
-    const updates=[{id:t.id,nivel:Math.max(0,(t.nivel||0)+diff)}];
-    for(let i=idx+1;i<sorted.length;i++){
-      if((sorted[i].nivel||0)>(t.nivel||0)){
+    const idxOf=new Map(sorted.map((t,i)=>[t.id,i]));
+    const blocoRange=idx=>{
+      const niv=sorted[idx].nivel||0;
+      let fim=idx+1;
+      while(fim<sorted.length&&(sorted[fim].nivel||0)>niv)fim++;
+      return [idx,fim];
+    };
+    const selIdxs=[...idsSet].map(id=>idxOf.get(id)).filter(i=>i!=null);
+    if(!selIdxs.length)return;
+    const ranges=selIdxs.map(i=>[i,blocoRange(i)]);
+    // Só os de nível mais alto (não contidos no bloco de outro selecionado)
+    const topRanges=ranges.filter(([i])=>!ranges.some(([j,[s,e]])=>j!==i&&i>s&&i<e)).map(([,r])=>r);
+    if(diff<0&&topRanges.some(([s])=>(sorted[s].nivel||0)<=0)){Utils.toast('Já está no nível mínimo.','alerta');return;}
+
+    const updates=[];
+    for(const [s,e] of topRanges){
+      const nivBase=sorted[s].nivel||0;
+      for(let i=s;i<e;i++){
         updates.push({id:sorted[i].id,nivel:Math.max(0,(sorted[i].nivel||0)+diff)});
-      } else break;
+      }
     }
-    
-    console.log('Movendo nível:',diff,'para',updates.length,'tarefas');
-    
-    // Atualiza localmente PRIMEIRO (responsividade)
     updates.forEach(u=>{
       const tt=tarefas.find(x=>x.id===u.id);
       if(tt)tt.nivel=u.nivel;
@@ -2318,8 +2332,7 @@ const Planejamento = (() => {
     _buildFiltradas();
     _render();
     requestAnimationFrame(()=>_paintRows());
-    
-    // Salva no Firestore em background (lotes de 20)
+
     const LOTE=20;
     for(let i=0;i<updates.length;i+=LOTE){
       const batch=updates.slice(i,i+LOTE);
@@ -2327,6 +2340,7 @@ const Planejamento = (() => {
         Database.atualizar(obraId,COL,u.id,{nivel:u.nivel}).catch(e=>console.error('Erro update:',u.id,e))
       ));
     }
+    if(updates.length>1)Utils.toast(`Nível ajustado em ${topRanges.length} bloco(s) (${updates.length} tarefa(s) no total).`,'sucesso');
   }
 
   // ===================== CRUD =====================
