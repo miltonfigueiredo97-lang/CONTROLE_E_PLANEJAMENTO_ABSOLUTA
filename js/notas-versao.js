@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.57.51',
+  versaoAtual: 'V2.57.52',
 
   versoes: [
     {
@@ -5170,10 +5170,13 @@ const NotasVersao = {
       titulo:'Busca do Planejamento não encontrava tarefas escondidas dentro de uma família recolhida — parecia que tinham sido excluídas',
       itens:['Causa: a busca só olhava a lista "filtradas" (que já esconde os filhos de qualquer família recolhida) em vez de todas as tarefas da obra. Se o item buscado estava dentro de uma família fechada, a busca simplesmente não olhava pra ele — dava a impressão de ter sido apagado, quando só estava escondido.',
         'Agora a busca olha TODAS as tarefas, e se o resultado estiver escondido, expande automaticamente todas as famílias recolhidas no caminho até ele antes de pular pra lá.']},
-    {versao:'V2.57.51',status:'aberta',data:'2026-07-29',tipo:'funcionalidade',
+    {versao:'V2.57.51',status:'fechada',data:'2026-07-29',tipo:'funcionalidade',
       titulo:'Nova coluna "Sucessora" no Planejamento — o inverso da Predecessora, calculado automaticamente',
       itens:['Mostra quais tarefas têm ESTA tarefa como predecessora (quem depende dela) — não é um campo salvo, é recalculado toda vez a partir das predecessoras de todo mundo, então nunca fica desatualizado sozinho.',
-        'Somente leitura (não dá pra editar direto — a fonte da verdade continua sendo a Predecessora de cada tarefa).']}
+        'Somente leitura (não dá pra editar direto — a fonte da verdade continua sendo a Predecessora de cada tarefa).']},
+    {versao:'V2.57.52',status:'aberta',data:'2026-07-29',tipo:'melhoria',
+      titulo:'Predecessora e Sucessora: passar o mouse por cima mostra o número + nome de cada uma, sem precisar clicar',
+      itens:['Tooltip nativo do navegador — passa o mouse em cima da célula e mostra cada referência numérica com o nome da tarefa correspondente, uma por linha (ex: "5TI — Serviços Iniciais").']}
   ],
 
   render(containerId) {

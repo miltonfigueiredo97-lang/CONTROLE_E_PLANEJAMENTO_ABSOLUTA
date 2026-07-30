@@ -400,6 +400,27 @@ const Planejamento = (() => {
     if((e.ctrlKey||e.metaKey)&&(e.key==='z'||e.key==='Z')){e.preventDefault();undo();}
   }
 
+  let _numLinhaMap=new Map(); // numLinha -> tarefa, montado em _buildFiltradas(), usado pra tooltip
+
+  // Monta o texto do tooltip: "5: Nome da tarefa\n12TI+3d: Outro nome"
+  function _tooltipPred(predStr){
+    if(!predStr)return'';
+    return String(predStr).split(';').map(p=>{
+      p=p.trim();
+      const m=p.match(/^(\d+)/);
+      if(!m)return p;
+      const alvo=_numLinhaMap.get(parseInt(m[1]));
+      return alvo?`${p} — ${alvo.nome||'(sem nome)'}`:`${p} — (linha não encontrada)`;
+    }).join('\n');
+  }
+  function _tooltipSuc(numsArr){
+    if(!numsArr||!numsArr.length)return'';
+    return numsArr.map(n=>{
+      const alvo=_numLinhaMap.get(n);
+      return alvo?`${n} — ${alvo.nome||'(sem nome)'}`:`${n} — (linha não encontrada)`;
+    }).join('\n');
+  }
+
   function _buildFiltradas(){
     const sorted=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
     // numLinha é FIXO pela posição na ordem geral (não muda com filtro/recolhimento)
@@ -410,6 +431,7 @@ const Planejamento = (() => {
     // vez a partir das predecessoras de todo mundo (sempre reflete a realidade,
     // nunca fica desatualizado sozinho).
     const porNumLinha=new Map(sorted.map(t=>[t._numLinha,t]));
+    _numLinhaMap=porNumLinha; // acessível no render, pra montar tooltip de predecessora/sucessora
     sorted.forEach(t=>{t._sucessoras=[];});
     for(const t of sorted){
       if(!t.predecessora)continue;
@@ -1392,9 +1414,9 @@ const Planejamento = (() => {
         } else if(cid==='percConc'){
           cells+=`<div style="${base}font-size:.7rem;justify-content:center;color:${perc>=100?'#16a34a':perc>0?'#2563eb':'#555'};cursor:pointer;" ${clickEdit}>${perc}%</div>`;
         } else if(cid==='predecessora'){
-          cells+=`<div style="${base}color:#555;font-size:.7rem;justify-content:center;cursor:pointer;" ${clickEdit}>${t.predecessora||'—'}</div>`;
+          cells+=`<div style="${base}color:#555;font-size:.7rem;justify-content:center;cursor:pointer;" ${clickEdit} title="${_esc(_tooltipPred(t.predecessora))}">${t.predecessora||'—'}</div>`;
         } else if(cid==='sucessora'){
-          cells+=`<div style="${base}color:#666;font-size:.7rem;justify-content:center;" title="Calculado automaticamente — quem tem esta tarefa como predecessora">${(t._sucessoras&&t._sucessoras.length)?t._sucessoras.join(', '):'—'}</div>`;
+          cells+=`<div style="${base}color:#666;font-size:.7rem;justify-content:center;" title="${_esc(_tooltipSuc(t._sucessoras))||'Calculado automaticamente — quem tem esta tarefa como predecessora'}">${(t._sucessoras&&t._sucessoras.length)?t._sucessoras.join(', '):'—'}</div>`;
         } else if(cid==='responsavel'){
           cells+=`<div style="${base}color:#555;font-size:.7rem;cursor:pointer;" ${clickEdit}>${t.responsavel||'—'}</div>`;
         } else if(cid==='local'){
@@ -2932,8 +2954,8 @@ const Planejamento = (() => {
             else if(cid==='duracao')cells+=`<div style="${base}color:#666;font-size:.7rem;justify-content:center;">${t.duracao||'—'}</div>`;
             else if(cid==='percEsp')cells+=`<div style="${base}color:#555;font-size:.7rem;justify-content:center;">${t.percentualEsperado||0}%</div>`;
             else if(cid==='percConc')cells+=`<div style="${base}font-size:.7rem;justify-content:center;color:${perc>=100?'#16a34a':perc>0?'#2563eb':'#555'};">${perc}%</div>`;
-            else if(cid==='predecessora')cells+=`<div style="${base}color:#555;font-size:.7rem;justify-content:center;">${t.predecessora||'—'}</div>`;
-            else if(cid==='sucessora')cells+=`<div style="${base}color:#666;font-size:.7rem;justify-content:center;" title="Calculado automaticamente">${(t._sucessoras&&t._sucessoras.length)?t._sucessoras.join(', '):'—'}</div>`;
+            else if(cid==='predecessora')cells+=`<div style="${base}color:#555;font-size:.7rem;justify-content:center;" title="${_esc(_tooltipPred(t.predecessora))}">${t.predecessora||'—'}</div>`;
+            else if(cid==='sucessora')cells+=`<div style="${base}color:#666;font-size:.7rem;justify-content:center;" title="${_esc(_tooltipSuc(t._sucessoras))||'Calculado automaticamente'}">${(t._sucessoras&&t._sucessoras.length)?t._sucessoras.join(', '):'—'}</div>`;
             else if(cid==='responsavel')cells+=`<div style="${base}color:#555;font-size:.7rem;">${t.responsavel||'—'}</div>`;
             else if(cid==='local')cells+=`<div style="${base}color:#555;font-size:.7rem;">${t.local||'—'}</div>`;
             else if(cid==='grupo')cells+=`<div style="${base}color:#555;font-size:.7rem;">${t.grupo||'—'}</div>`;
