@@ -5240,7 +5240,8 @@ const NotasVersao = {
       titulo:'Solo Grampeado: botões de modo recriavam o painel inteiro e perdiam a posição do mapa — agora só atualizam o mapa; adicionado pan/zoom com Ctrl',
       itens:['Levantamento e Controle: os botões (Adicionar Chumbador, Calibrar Escala, Marcar Projeção/Acabamento) chamavam um redesenho completo do painel a cada clique, o que resetava o scroll do mapa e travava a interação em desenhos compridos.',
         'Corrigido: esses botões agora só atualizam o próprio texto/classe e re-renderizam o mapa, preservando zoom e posição de scroll.',
-        'Adicionado pan (Ctrl+arrastar) e zoom (Ctrl+roda do mouse) direto sobre o mapa, tanto no Levantamento quanto no Controle.']}
+        'Adicionado pan (Ctrl+arrastar) e zoom (Ctrl+roda do mouse) direto sobre o mapa, tanto no Levantamento quanto no Controle.',
+        'Calibrar Escala: o 1º clique não tinha nenhum feedback visual (só um texto pequeno mudava) e parecia não fazer nada. Agora desenha os pontos clicados e a linha entre eles em tempo real, mostra um toast a cada ponto marcado, e destaca o mapa com uma borda quando um modo (Adicionar/Calibrar) está ativo.']}
   ],
 
   render(containerId) {

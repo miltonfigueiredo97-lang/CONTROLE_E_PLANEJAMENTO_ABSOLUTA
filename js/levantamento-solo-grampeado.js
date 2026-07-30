@@ -238,7 +238,33 @@ const LevantamentoSoloGrampeado = (() => {
     `;
     const novoScroll = document.querySelector('#sg-mapa-host .sg-map-scroll');
     if (novoScroll && scrollPos) { novoScroll.scrollLeft = scrollPos.left; novoScroll.scrollTop = scrollPos.top; }
+    if (novoScroll) novoScroll.style.outline = modo ? '3px solid #f5c518' : 'none';
+    if (modo === 'calibrar') _desenharPontosCalibracao();
     _ligarEventosMapa(v);
+  }
+
+  // Feedback visual dos cliques de calibração (sem isso, o 1º clique
+  // parecia não fazer nada — só um texto pequeno mudava de número).
+  function _desenharPontosCalibracao() {
+    const stage = document.getElementById('sg-stage');
+    if (!stage) return;
+    calibPontos.forEach(p => {
+      const dot = document.createElement('div');
+      dot.style.cssText = `position:absolute;left:${(p.x * 100).toFixed(3)}%;top:${(p.y * 100).toFixed(3)}%;width:14px;height:14px;margin:-7px;border-radius:50%;background:#dc2626;border:2px solid #fff;box-shadow:0 0 0 1px #dc2626,0 1px 4px rgba(0,0,0,.4);z-index:10;pointer-events:none;`;
+      stage.appendChild(dot);
+    });
+    if (calibPontos.length === 2) {
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.setAttribute('viewBox', '0 0 100 100');
+      svg.setAttribute('preserveAspectRatio', 'none');
+      svg.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:9;';
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line.setAttribute('x1', calibPontos[0].x * 100); line.setAttribute('y1', calibPontos[0].y * 100);
+      line.setAttribute('x2', calibPontos[1].x * 100); line.setAttribute('y2', calibPontos[1].y * 100);
+      line.setAttribute('stroke', '#dc2626'); line.setAttribute('stroke-width', '0.3'); line.setAttribute('vector-effect', 'non-scaling-stroke');
+      svg.appendChild(line);
+      stage.appendChild(svg);
+    }
   }
 
   function _ligarEventosMapa(v) {
@@ -290,6 +316,7 @@ const LevantamentoSoloGrampeado = (() => {
           _atualizarBotoesModo();
           abrirConfirmarCalibracao(distPx);
         } else {
+          Utils.toast('Ponto 1 marcado — clique o segundo ponto.', 'info');
           renderMapa();
         }
       }
