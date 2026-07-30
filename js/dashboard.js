@@ -200,6 +200,7 @@ const Dashboard = (() => {
       _renderHero();
       _renderAtividades();
       _renderSuprimentosDash();
+      _renderSoloGrampeadoPanel();
       await _renderFundacaoEstrutura();
       _renderCurvaS();
       await _renderResumoApartamento();
@@ -255,6 +256,8 @@ const Dashboard = (() => {
           <div id="db-suprimentos-dash"></div>
         </div>
       </div>
+
+      <div id="db-solo-grampeado-wrap"></div>
 
       <div id="db-fundacao-estrutura-wrap"></div>
 
@@ -1300,10 +1303,25 @@ const Dashboard = (() => {
       <div class="db-legenda" style="margin-top:10px;">${legenda}</div>`;
   }
 
-  // ===================== CONTENÇÃO / FUNDAÇÃO / ESTRUTURA =====================
+  // ===================== CONTENÇÃO (SOLO GRAMPEADO) =====================
+  // Sempre visível — independente do toggle "Mostrar Contenção, Fundação e
+  // Estrutura" (esse toggle é só sobre o gráfico de Fundação/Estrutura).
+  function _renderSoloGrampeadoPanel() {
+    const host = document.getElementById('db-solo-grampeado-wrap');
+    if (!host) return;
+    host.innerHTML = `
+      <div class="card db-row">
+        <div class="card-body">
+          <div class="db-secao-header"><h3>Contenção (Solo Grampeado)</h3></div>
+          <div id="db-solo-grampeado">Carregando...</div>
+        </div>
+      </div>`;
+    _renderSoloGrampeadoMinimapas();
+  }
+
+  // ===================== FUNDAÇÃO / ESTRUTURA =====================
   // Ligado pelo toggle "Mostrar Contenção, Fundação e Estrutura" no topo da
   // página (preferência de UI, guardada em localStorage — não é dado da obra).
-  // Ordem pedida pelo Milton: Contenção primeiro, Fundação e Estrutura depois.
   // Fundação e Estrutura: Previsto x Executado (m³) POR ANDAR, somado a partir
   // de Controle de Concreto (concretoPecas + concretoLancamentos), na mesma
   // ordem de andar usada lá (CC.ordenarAndares, respeitando ordem customizada
@@ -1316,18 +1334,10 @@ const Dashboard = (() => {
     host.innerHTML = `
       <div class="card db-row">
         <div class="card-body">
-          <div class="db-secao-header"><h3>Contenção (Solo Grampeado)</h3></div>
-          <div id="db-solo-grampeado">Carregando...</div>
-        </div>
-      </div>
-      <div class="card db-row">
-        <div class="card-body">
           <div class="db-secao-header"><h3>Fundação e Estrutura</h3></div>
           <div id="db-fundacao-estrutura" class="db-tooltip-wrap">Carregando...</div>
         </div>
       </div>`;
-
-    _renderSoloGrampeadoMinimapas();
     const elFE = document.getElementById('db-fundacao-estrutura');
     try {
       const obraId = obraAtual.id;

@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.57.67',
+  versaoAtual: 'V2.57.68',
 
   versoes: [
     {
@@ -5236,7 +5236,7 @@ const NotasVersao = {
     {versao:'V2.57.66',status:'aberta',data:'2026-07-29',tipo:'correcao',
       titulo:'Planejamento: tela ficava toda preta ao clicar numa célula, aleatoriamente — agora um erro numa linha/célula mostra um aviso naquela linha só, em vez de travar a tabela inteira',
       itens:['Blindagem geral: se der erro ao montar uma linha específica da tabela (dado inesperado numa tarefa) ou ao abrir a edição de uma célula, o resto do Planejamento continua funcionando — aparece um aviso "⚠ Erro ao mostrar esta linha" só naquela linha, e o erro detalhado vai pro console (F12), em vez de a tela inteira ficar preta.']},
-    {versao:'V2.57.67',status:'aberta',data:'2026-07-30',tipo:'correcao',
+    {versao:'V2.57.67',status:'fechada',data:'2026-07-30',tipo:'correcao',
       titulo:'Solo Grampeado: botões de modo recriavam o painel inteiro e perdiam a posição do mapa — agora só atualizam o mapa; adicionado pan/zoom com Ctrl',
       itens:['Levantamento e Controle: os botões (Adicionar Chumbador, Calibrar Escala, Marcar Projeção/Acabamento) chamavam um redesenho completo do painel a cada clique, o que resetava o scroll do mapa e travava a interação em desenhos compridos.',
         'Corrigido: esses botões agora só atualizam o próprio texto/classe e re-renderizam o mapa, preservando zoom e posição de scroll.',
@@ -5246,7 +5246,11 @@ const NotasVersao = {
         'Adicionar Chumbador mudou de fluxo: antes abria um popup a cada clique (pedindo até Especificação, sem necessidade nesse momento) — agora clicar no mapa só coloca a bolinha na hora, sem popup nenhum. Barra amarela mostra Próx. Número (edita se não bater com o desenho, incrementa sozinho a cada clique), Tipo e Comprimento padrão. Clicar numa bolinha já colocada abre a edição (número, tipo, comprimento, especificação).',
         'Numeração em sequência: clicando à direita do último chumbador, o número continua incrementando sozinho (como os chumbadores reais são numerados em linha, esquerda→direita). Se o clique não for à direita do anterior (nova linha), para e pergunta o número inicial dela antes de continuar.',
         'Controle: novo painel "Medidor Diário" — meta por vista (chumbadores concluídos/dia e/ou m² executados/dia, cada uma opcional), comparando dia a dia o realizado contra a meta com % e cor (verde ≥100%, amarelo ≥60%, vermelho abaixo).',
-        'Calibrar Escala: corrigido caso em que "Salvar" não fazia nada (falha silenciosa) — agora valida cada etapa (pontos perdidos, imagem sem tamanho salvo, pontos iguais) com mensagem de erro específica em vez de simplesmente não salvar. A linha de calibração agora fica salva e sempre visível no mapa (verde, com o valor em cm), pra conferir depois se ainda está correta — antes ela desaparecia depois de confirmar.']}
+        'Calibrar Escala: corrigido caso em que "Salvar" não fazia nada (falha silenciosa) — agora valida cada etapa (pontos perdidos, imagem sem tamanho salvo, pontos iguais) com mensagem de erro específica em vez de simplesmente não salvar. A linha de calibração agora fica salva e sempre visível no mapa (verde, com o valor em cm), pra conferir depois se ainda está correta — antes ela desaparecia depois de confirmar.']},
+    {versao:'V2.57.68',status:'aberta',data:'2026-07-30',tipo:'correcao',
+      titulo:'Dashboard: painel "Contenção (Solo Grampeado)" nunca aparecia — estava preso dentro do toggle "Mostrar Contenção, Fundação e Estrutura" (checkbox desligado por padrão)',
+      itens:['O painel de minimapas do Solo Grampeado tinha sido colocado dentro do bloco condicionado ao checkbox "Mostrar Contenção, Fundação e Estrutura" — um toggle de preferência pessoal (guardado no localStorage do navegador) que vem desligado por padrão. Resultado: quem nunca marcou esse checkbox nunca via o painel, mesmo com vistas/execução cadastradas.',
+        'Corrigido: "Contenção (Solo Grampeado)" agora é uma seção própria do Dashboard, sempre visível, independente desse toggle (que continua controlando só o gráfico de Fundação e Estrutura).']}
   ],
 
   render(containerId) {
