@@ -87,11 +87,11 @@ const Planejamento = (() => {
   }
 
   // Colunas: ordem editável, largura editável
-  let colOrdem=['sel','num','status','nivel','codigo','nome','inicio','termino','inicioReal','terminoReal','duracao','percEsp','percConc','predecessora','responsavel','local','grupo','quantidade','equipe','custoMaterial','custoMaoObra','acoes'];
+  let colOrdem=['sel','num','status','nivel','codigo','nome','inicio','termino','inicioReal','terminoReal','duracao','percEsp','percConc','predecessora','sucessora','responsavel','local','grupo','quantidade','equipe','custoMaterial','custoMaoObra','acoes'];
   let colLarguras={sel:28,num:36,status:34,nivel:42,codigo:70,nome:250,inicio:88,termino:88,duracao:60,percEsp:72,percConc:78,predecessora:80,responsavel:100,local:80,grupo:80,quantidade:110,equipe:60,custoMaterial:100,custoMaoObra:100,acoes:64};
   let colsHidden=new Set();
 
-  const COL_LABELS={sel:'',num:'#',status:'',nivel:'Nível',codigo:'Código',nome:'Tarefa',inicio:'Início',termino:'Término',inicioReal:'Início Real',terminoReal:'Término Real',duracao:'Duração',percEsp:'% Esperado',percConc:'% Concluído',predecessora:'Predecessora',responsavel:'Responsável',local:'Local',grupo:'Grupo',quantidade:'Quantidade',equipe:'Equipe',custoMaterial:'Custo Material',custoMaoObra:'Custo M.Obra',acoes:''};
+  const COL_LABELS={sel:'',num:'#',status:'',nivel:'Nível',codigo:'Código',nome:'Tarefa',inicio:'Início',termino:'Término',inicioReal:'Início Real',terminoReal:'Término Real',duracao:'Duração',percEsp:'% Esperado',percConc:'% Concluído',predecessora:'Predecessora',sucessora:'Sucessora',responsavel:'Responsável',local:'Local',grupo:'Grupo',quantidade:'Quantidade',equipe:'Equipe',custoMaterial:'Custo Material',custoMaoObra:'Custo M.Obra',acoes:''};
   const COL_FIXED=new Set(['sel','num','status','nome','acoes']);
   const COL_EDITABLE=new Set(['codigo','nome','inicio','termino','duracao','percEsp','percConc','predecessora','responsavel','local','grupo','nivel','equipe']);
 
@@ -405,6 +405,21 @@ const Planejamento = (() => {
     // numLinha é FIXO pela posição na ordem geral (não muda com filtro/recolhimento)
     // É esse número que é exibido na coluna # e usado nas predecessoras
     sorted.forEach((t,i)=>{t._numLinha=i+1;});
+    // Sucessoras: campo calculado, o INVERSO da predecessora — quem tem essa
+    // tarefa como predecessora. Não é salvo no Firestore, é recalculado toda
+    // vez a partir das predecessoras de todo mundo (sempre reflete a realidade,
+    // nunca fica desatualizado sozinho).
+    const porNumLinha=new Map(sorted.map(t=>[t._numLinha,t]));
+    sorted.forEach(t=>{t._sucessoras=[];});
+    for(const t of sorted){
+      if(!t.predecessora)continue;
+      for(const parte of String(t.predecessora).split(';')){
+        const m=parte.trim().match(/^(\d+)/);
+        if(!m)continue;
+        const pred=porNumLinha.get(parseInt(m[1]));
+        if(pred)pred._sucessoras.push(t._numLinha);
+      }
+    }
     let result;
     if(!colsRecolhidas.size){result=sorted;}
     else{
@@ -1378,6 +1393,8 @@ const Planejamento = (() => {
           cells+=`<div style="${base}font-size:.7rem;justify-content:center;color:${perc>=100?'#16a34a':perc>0?'#2563eb':'#555'};cursor:pointer;" ${clickEdit}>${perc}%</div>`;
         } else if(cid==='predecessora'){
           cells+=`<div style="${base}color:#555;font-size:.7rem;justify-content:center;cursor:pointer;" ${clickEdit}>${t.predecessora||'—'}</div>`;
+        } else if(cid==='sucessora'){
+          cells+=`<div style="${base}color:#666;font-size:.7rem;justify-content:center;" title="Calculado automaticamente — quem tem esta tarefa como predecessora">${(t._sucessoras&&t._sucessoras.length)?t._sucessoras.join(', '):'—'}</div>`;
         } else if(cid==='responsavel'){
           cells+=`<div style="${base}color:#555;font-size:.7rem;cursor:pointer;" ${clickEdit}>${t.responsavel||'—'}</div>`;
         } else if(cid==='local'){
@@ -2916,6 +2933,7 @@ const Planejamento = (() => {
             else if(cid==='percEsp')cells+=`<div style="${base}color:#555;font-size:.7rem;justify-content:center;">${t.percentualEsperado||0}%</div>`;
             else if(cid==='percConc')cells+=`<div style="${base}font-size:.7rem;justify-content:center;color:${perc>=100?'#16a34a':perc>0?'#2563eb':'#555'};">${perc}%</div>`;
             else if(cid==='predecessora')cells+=`<div style="${base}color:#555;font-size:.7rem;justify-content:center;">${t.predecessora||'—'}</div>`;
+            else if(cid==='sucessora')cells+=`<div style="${base}color:#666;font-size:.7rem;justify-content:center;" title="Calculado automaticamente">${(t._sucessoras&&t._sucessoras.length)?t._sucessoras.join(', '):'—'}</div>`;
             else if(cid==='responsavel')cells+=`<div style="${base}color:#555;font-size:.7rem;">${t.responsavel||'—'}</div>`;
             else if(cid==='local')cells+=`<div style="${base}color:#555;font-size:.7rem;">${t.local||'—'}</div>`;
             else if(cid==='grupo')cells+=`<div style="${base}color:#555;font-size:.7rem;">${t.grupo||'—'}</div>`;

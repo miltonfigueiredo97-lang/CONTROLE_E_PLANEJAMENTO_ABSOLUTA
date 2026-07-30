@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.57.50',
+  versaoAtual: 'V2.57.51',
 
   versoes: [
     {
@@ -5166,10 +5166,14 @@ const NotasVersao = {
       titulo:'Criar uma linha na árvore ficava lento quando afetava muitas predecessoras — a atualização delas gravava uma por uma (sequencial) e travava a tela esperando',
       itens:['Inserir uma tarefa desloca o número de linha de tudo depois dela, e qualquer predecessora que aponte pra um desses números precisa ser atualizada — em cronogramas grandes isso pode afetar centenas de tarefas de uma vez. A gravação dessas atualizações era sequencial (uma de cada vez, esperando terminar antes de ir pra próxima) — corrigido pra lote com timeout, igual ao resto do sistema.',
         'Além disso, criar tarefa na árvore não trava mais esperando essa atualização de predecessoras terminar — ela roda em segundo plano, e você já pode continuar mexendo.']},
-    {versao:'V2.57.50',status:'aberta',data:'2026-07-28',tipo:'correcao',
+    {versao:'V2.57.50',status:'fechada',data:'2026-07-28',tipo:'correcao',
       titulo:'Busca do Planejamento não encontrava tarefas escondidas dentro de uma família recolhida — parecia que tinham sido excluídas',
       itens:['Causa: a busca só olhava a lista "filtradas" (que já esconde os filhos de qualquer família recolhida) em vez de todas as tarefas da obra. Se o item buscado estava dentro de uma família fechada, a busca simplesmente não olhava pra ele — dava a impressão de ter sido apagado, quando só estava escondido.',
-        'Agora a busca olha TODAS as tarefas, e se o resultado estiver escondido, expande automaticamente todas as famílias recolhidas no caminho até ele antes de pular pra lá.']}
+        'Agora a busca olha TODAS as tarefas, e se o resultado estiver escondido, expande automaticamente todas as famílias recolhidas no caminho até ele antes de pular pra lá.']},
+    {versao:'V2.57.51',status:'aberta',data:'2026-07-29',tipo:'funcionalidade',
+      titulo:'Nova coluna "Sucessora" no Planejamento — o inverso da Predecessora, calculado automaticamente',
+      itens:['Mostra quais tarefas têm ESTA tarefa como predecessora (quem depende dela) — não é um campo salvo, é recalculado toda vez a partir das predecessoras de todo mundo, então nunca fica desatualizado sozinho.',
+        'Somente leitura (não dá pra editar direto — a fonte da verdade continua sendo a Predecessora de cada tarefa).']}
   ],
 
   render(containerId) {
