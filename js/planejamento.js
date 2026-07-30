@@ -481,7 +481,7 @@ const Planejamento = (() => {
         </div>
         <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center;">
           <span style="display:inline-flex;flex-shrink:0;border:1.5px solid #333;border-radius:8px;overflow:hidden;font-size:.7rem;font-weight:700;" title="Qual versão de datas ver/editar nas colunas Início e Término">
-            ${['atual','base','desafio'].map(v=>`<button onclick="Planejamento.setVersaoData('${v}')" style="border:none;padding:4px 10px;cursor:pointer;${_versaoData===v?'background:var(--cor-primaria);color:#000;':'background:#111;color:#888;'}">${VERSAO_LABEL[v]}</button>`).join('')}
+            ${['base','desafio','atual'].map(v=>`<button onclick="Planejamento.setVersaoData('${v}')" style="border:none;padding:4px 10px;cursor:pointer;${_versaoData===v?'background:var(--cor-primaria);color:#000;':'background:#111;color:#888;'}">${VERSAO_LABEL[v]}</button>`).join('')}
           </span>
           ${_versaoData!=='atual'?`<button class="btn btn-secundario btn-sm" onclick="Planejamento.copiarDatasDeAtual()" style="font-size:.7rem;" title="Preenche as datas de ${VERSAO_LABEL[_versaoData]} copiando de Atual em todas as tarefas que ainda não têm valor">📋 Copiar datas de Atual → ${VERSAO_LABEL[_versaoData]}</button>`:''}
           <span style="color:#333;margin:0 4px;">|</span>
@@ -2730,38 +2730,46 @@ const Planejamento = (() => {
   // outros módulos leem inicioPlanejado/terminoPlanejado direto do documento, não
   // fazem essa conta sozinhos) — nunca mexe em tarefa-folha (essas são editáveis
   // manualmente e são a fonte da verdade).
+  // Pares de campos [início,término] agregados pra tarefas-pai. Cobre as 4
+  // "versões" de data do sistema — antes só Atual/Real eram cobertos, e
+  // Linha de Base/Desafio de grupos ficavam sempre em branco mesmo com os
+  // filhos preenchidos (bug relatado pelo Milton).
+  const _PARES_DATA=[['inicioPlanejado','terminoPlanejado'],['inicioReal','terminoReal'],
+    ['inicioPlanejadoBase','terminoPlanejadoBase'],['inicioDesafio','terminoDesafio']];
   async function _recalcularDatasPais(silencioso){
     const sorted=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
     const n=sorted.length;
     for(let i=n-1;i>=0;i--){
       const t=sorted[i],niv=t.nivel||0;
       const podeExpandir=i+1<n&&(sorted[i+1].nivel||0)>niv;
-      let iniP=null,fimP=null,iniR=null,fimR=null,achouFilhoDireto=false;
+      const agr={}; // agr['inicioPlanejado']=data agregada, etc
+      let achouFilhoDireto=false;
       if(podeExpandir){
         let j=i+1;
         while(j<n&&(sorted[j].nivel||0)>niv){
           if((sorted[j].nivel||0)===niv+1){
             achouFilhoDireto=true;
             const c=sorted[j];
-            if(c._iniP&&(!iniP||c._iniP<iniP))iniP=c._iniP;
-            if(c._fimP&&(!fimP||c._fimP>fimP))fimP=c._fimP;
-            if(c._iniR&&(!iniR||c._iniR<iniR))iniR=c._iniR;
-            if(c._fimR&&(!fimR||c._fimR>fimR))fimR=c._fimR;
+            for(const[fIni,fFim]of _PARES_DATA){
+              const ci=c['_agr_'+fIni],cf=c['_agr_'+fFim];
+              if(ci&&(!agr[fIni]||ci<agr[fIni]))agr[fIni]=ci;
+              if(cf&&(!agr[fFim]||cf>agr[fFim]))agr[fFim]=cf;
+            }
           }
           j++;
         }
       }
       t._temFilhoDireto=achouFilhoDireto;
-      if(achouFilhoDireto){
-        t._iniP=iniP;t._fimP=fimP;t._iniR=iniR;t._fimR=fimR;
-      } else {
-        // Folha de verdade — ou "pai" sem filho direto real (nível com gap,
-        // caso raro/transitório). Nunca zera a data própria nesse caso: é
-        // exatamente esse descuido que zerava início/término de tarefas-folha
-        // por engano (relatado pelo Milton) quando a árvore tinha algum
-        // desalinhamento momentâneo de nível ao redor.
-        t._iniP=t.inicioPlanejado||null;t._fimP=t.terminoPlanejado||null;
-        t._iniR=t.inicioReal||null;t._fimR=t.terminoReal||null;
+      for(const[fIni,fFim]of _PARES_DATA){
+        if(achouFilhoDireto){
+          t['_agr_'+fIni]=agr[fIni]||null;t['_agr_'+fFim]=agr[fFim]||null;
+        } else {
+          // Folha de verdade — ou "pai" sem filho direto real (nível com gap,
+          // caso raro/transitório). Nunca zera a data própria nesse caso: é
+          // exatamente esse descuido que zerava datas de tarefas-folha por
+          // engano quando a árvore tinha desalinhamento momentâneo de nível.
+          t['_agr_'+fIni]=t[fIni]||null;t['_agr_'+fFim]=t[fFim]||null;
+        }
       }
     }
     const mudou=[];
@@ -2769,10 +2777,10 @@ const Planejamento = (() => {
       const t=sorted[i];
       if(!t._temFilhoDireto)continue; // só sobrescreve quem TEM filho direto de verdade
       const upd={};
-      if((t._iniP||'')!==(t.inicioPlanejado||''))upd.inicioPlanejado=t._iniP||'';
-      if((t._fimP||'')!==(t.terminoPlanejado||''))upd.terminoPlanejado=t._fimP||'';
-      if((t._iniR||'')!==(t.inicioReal||''))upd.inicioReal=t._iniR||'';
-      if((t._fimR||'')!==(t.terminoReal||''))upd.terminoReal=t._fimR||'';
+      for(const[fIni,fFim]of _PARES_DATA){
+        if((t['_agr_'+fIni]||'')!==(t[fIni]||''))upd[fIni]=t['_agr_'+fIni]||'';
+        if((t['_agr_'+fFim]||'')!==(t[fFim]||''))upd[fFim]=t['_agr_'+fFim]||'';
+      }
       if(Object.keys(upd).length){Object.assign(t,upd);mudou.push({id:t.id,...upd});}
     }
     if(mudou.length){

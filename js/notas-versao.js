@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.57.53',
+  versaoAtual: 'V2.57.54',
 
   versoes: [
     {
@@ -5177,11 +5177,16 @@ const NotasVersao = {
     {versao:'V2.57.52',status:'fechada',data:'2026-07-29',tipo:'melhoria',
       titulo:'Predecessora e Sucessora: passar o mouse por cima mostra o número + nome de cada uma, sem precisar clicar',
       itens:['Tooltip nativo do navegador — passa o mouse em cima da célula e mostra cada referência numérica com o nome da tarefa correspondente, uma por linha (ex: "5TI — Serviços Iniciais").']},
-    {versao:'V2.57.53',status:'aberta',data:'2026-07-29',tipo:'correcao',
+    {versao:'V2.57.53',status:'fechada',data:'2026-07-29',tipo:'correcao',
       titulo:'Recalcular Datas dos Pais (V2.57.27) podia ZERAR o início/término de uma tarefa-folha se ela ficasse ao lado de um "gap" de nível — bug real de perda de dados relatado pelo Milton',
       itens:['Causa: a função considerava "tarefa-pai" qualquer linha em que a PRÓXIMA linha tivesse nível maior — mas isso não garante que exista um filho DIRETO (nível+1) de verdade. Se por qualquer desalinhamento momentâneo o "filho" aparente estivesse 2+ níveis mais profundo (um gap), a função não achava nenhum filho direto, calculava a data como vazia, e GRAVAVA essa data vazia por cima da data própria da tarefa — mesmo ela sendo uma folha comum com data certa.',
         'Corrigido: só trata como tarefa-pai (e sobrescreve a data) quem tem de fato pelo menos um filho direto (nível exatamente +1). Sem isso, a tarefa mantém a própria data intacta, nunca mais é zerada por engano.',
-        'Mesma correção vale pra Início Real/Término Real, que tinham o mesmo risco.']}
+        'Mesma correção vale pra Início Real/Término Real, que tinham o mesmo risco.']},
+    {versao:'V2.57.54',status:'aberta',data:'2026-07-29',tipo:'correcao',
+      titulo:'Recalcular Datas dos Pais nunca cobria Linha de Base e Desafio — grupos ficavam sempre em branco nessas duas versões mesmo com os filhos preenchidos. Reordenados os botões: Linha de Base, Desafio, Atual (Atual sempre por último/fixo)',
+      itens:['O agregador de datas dos pais (menor início/maior término dos filhos) só olhava Início/Término Planejado e Início/Término Real — Linha de Base e Desafio nunca eram calculados pros grupos, mesmo com todos os filhos tendo essas datas preenchidas na planilha importada.',
+        'Agora as 4 versões (Atual, Real, Linha de Base, Desafio) são agregadas igualmente pros pais.',
+        'Botões do topo reordenados pra Linha de Base | Desafio | Atual — Atual sempre por último, mais visível e é a versão padrão ao entrar no Planejamento.']}
   ],
 
   render(containerId) {
