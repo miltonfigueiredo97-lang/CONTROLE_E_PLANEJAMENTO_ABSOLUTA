@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.57.62',
+  versaoAtual: 'V2.57.63',
 
   versoes: [
     {
@@ -5217,9 +5217,13 @@ const NotasVersao = {
       titulo:'Popup de Predecessora agora é uma tabela de várias linhas (igual MS Project: Nº/Código, Nome da Tarefa, Tipo, Defasagem) — antes editava só uma predecessora por vez',
       itens:['Cada predecessora já vinculada aparece numa linha própria, com o nome da tarefa mostrado automaticamente ao lado (não precisa lembrar o nome, só o número/código). Botão "＋ Adicionar linha" pra incluir mais, "✕" em cada linha pra remover.',
         'Mantida a formatação escura do sistema — mesma ideia do MS Project, com nossa cara.']},
-    {versao:'V2.57.62',status:'aberta',data:'2026-07-29',tipo:'melhoria',
+    {versao:'V2.57.62',status:'fechada',data:'2026-07-29',tipo:'melhoria',
       titulo:'Popup de Predecessora: coluna Tipo mostra o nome completo (ex: "Término-a-Início (TI)"), colorido — antes só a sigla',
-      itens:['Cores seguem o padrão MS Project: TI azul, II neutro, TT vermelho, IT verde. Coluna e popup alargados pra caber o texto completo.']}
+      itens:['Cores seguem o padrão MS Project: TI azul, II neutro, TT vermelho, IT verde. Coluna e popup alargados pra caber o texto completo.']},
+    {versao:'V2.57.63',status:'aberta',data:'2026-07-29',tipo:'melhoria',
+      titulo:'Importar Correções: agora mostra a LISTA exata de quais nomes não bateram ou eram ambíguos, em vez de só um número',
+      itens:['Depois de aplicar, se sobrou algum "não encontrado" (nome da planilha não bate com nenhuma tarefa atual, ex: Cofield renomeou algo) ou "ambíguo" (mais de uma tarefa sua com o mesmo nome), abre um painel listando exatamente quais são — pra revisar/renomear manualmente se for o caso.',
+        'Confirmado: Importar Correções nunca cria tarefa nova nem move nada — só atualiza campo por campo em tarefas já existentes, casando por Nome. O que não bate fica de fora, sem efeito nenhum na estrutura.']}
   ],
 
   render(containerId) {

@@ -2621,15 +2621,16 @@ const Planejamento = (() => {
     const DATE_FIELDS=new Set(['inicioReal','terminoReal','inicioPlanejado','terminoPlanejado']);
     const NUM_FIELDS=new Set(['percentualConcluido','percentualEsperado','custo','receita','duracao']);
 
-    let naoEncontradas=0,ambiguas=0,predNaoResolvidas=0;
+    let predNaoResolvidas=0;
+    const naoEncontradasNomes=[],ambiguasNomes=[];
     const updates=[];
     for(let r=1;r<rows.length;r++){
       const row=rows[r];
       const nome=String(row[iN]||'').trim();
       if(!nome)continue;
       const candidatos=porNome.get(nome.toLowerCase());
-      if(!candidatos||!candidatos.length){naoEncontradas++;continue;}
-      if(candidatos.length>1){ambiguas++;continue;} // mais de 1 tarefa com esse nome — pula por segurança
+      if(!candidatos||!candidatos.length){naoEncontradasNomes.push(nome);continue;}
+      if(candidatos.length>1){ambiguasNomes.push(nome);continue;} // mais de 1 tarefa com esse nome — pula por segurança
       const t=candidatos[0];
       const upd={};
       for(const campo of camposMarcados){
@@ -2668,7 +2669,7 @@ const Planejamento = (() => {
       if(Object.keys(upd).length)updates.push({id:t.id,...upd});
     }
 
-    if(!confirm(`${updates.length} tarefa(s) serão atualizadas (${camposMarcados.length} campo(s) cada).\n${naoEncontradas} não encontradas (nome não bate com nenhuma tarefa atual).\n${ambiguas} ambíguas (mais de uma tarefa com o mesmo nome — puladas por segurança).${predNaoResolvidas?`\n${predNaoResolvidas} predecessora(s) não resolvida(s) (nome ambíguo ou não encontrado).`:''}\n\nConfirmar?`)){_correcoesContexto=null;return;}
+    if(!confirm(`${updates.length} tarefa(s) serão atualizadas (${camposMarcados.length} campo(s) cada).\n${naoEncontradasNomes.length} não encontradas (nome não bate com nenhuma tarefa atual).\n${ambiguasNomes.length} ambíguas (mais de uma tarefa com o mesmo nome — puladas por segurança).${predNaoResolvidas?`\n${predNaoResolvidas} predecessora(s) não resolvida(s) (nome ambíguo ou não encontrado).`:''}\n\nConfirmar?`)){_correcoesContexto=null;return;}
 
     Utils.mostrarLoading('Aplicando correções...');
     const L=20,TIMEOUT_MS=15000;
@@ -2685,6 +2686,32 @@ const Planejamento = (() => {
     await carregar();
     await _recalcularDatasPais(true);
     _correcoesContexto=null;
+    if(naoEncontradasNomes.length||ambiguasNomes.length)_mostrarRevisaoCorrecoes(naoEncontradasNomes,ambiguasNomes);
+  }
+
+  // Lista exatamente quais nomes da planilha não bateram (não encontrada) ou
+  // bateram em mais de uma tarefa (ambígua) — pra revisar e corrigir o nome
+  // manualmente se for o caso, em vez de só saber "23 falharam" sem saber quais.
+  function _mostrarRevisaoCorrecoes(naoEncontradas,ambiguas){
+    let modal=document.getElementById('revisao-correcoes-modal');if(modal)modal.remove();
+    modal=document.createElement('div');modal.id='revisao-correcoes-modal';
+    modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:2000;display:flex;align-items:center;justify-content:center;';
+    const secao=(titulo,cor,lista,explicacao)=>!lista.length?'':`
+      <div style="margin-bottom:14px;">
+        <div style="font-weight:700;color:${cor};margin-bottom:4px;">${titulo} (${lista.length})</div>
+        <div style="font-size:.72rem;color:#888;margin-bottom:6px;">${explicacao}</div>
+        <div style="max-height:180px;overflow-y:auto;border:1px solid #222;border-radius:7px;padding:6px;">
+          ${lista.map(n=>`<div style="padding:3px 4px;font-size:.78rem;color:#ccc;border-bottom:1px solid #1c1c1c;">${_esc(n)}</div>`).join('')}
+        </div>
+      </div>`;
+    modal.innerHTML=`
+      <div style="background:#1a1a1a;border:1px solid #333;border-radius:10px;padding:20px;width:520px;max-width:95vw;max-height:85vh;overflow-y:auto;display:flex;flex-direction:column;">
+        <div style="font-weight:700;color:var(--cor-primaria);margin-bottom:12px;">⚠ Itens não aplicados no Importar Correções</div>
+        ${secao('Não encontradas','#f59e0b',naoEncontradas,'O nome na planilha não bate com nenhuma tarefa atual — a Cofield deve ter renomeado, ou é uma tarefa que só existe lá. Nada foi alterado nem criado.')}
+        ${secao('Ambíguas','#dc2626',ambiguas,'Mais de uma tarefa sua tem esse mesmo nome — puladas por segurança, pra nunca atualizar a errada.')}
+        <button class="btn btn-secundario btn-sm" style="align-self:flex-end;margin-top:8px;" onclick="document.getElementById('revisao-correcoes-modal').remove()">Fechar</button>
+      </div>`;
+    document.body.appendChild(modal);
   }
 
   // ===================== IMPORTAR =====================
@@ -4409,7 +4436,7 @@ const Planejamento = (() => {
     _rowDragStart,toggleSel,_limparSelecao,_moverSel,_bulkNivel,_bulkDuplicar,_bulkExcluir,
     toggleStatusFiltro,_aplicarStatusFiltro,undo,
     onBusca,limparBusca,_buscaKey,
-    importarExcel,importarBaseCompleta,importarCorrecoes,_executarCorrecoes,exportar,exportarPNG,corrigirOrdensDuplicadas,_corrigirNiveisSoltos,_corrigirNivelPeloCodigo,_migrarPredecessorasParaId,_recalcularDatasPais,_orfasMarcarTodas,_orfasExcluirMarcadas,_gerarPNG,_predPopup,_predSalvar,_predCellClick,_predAddLinha,_predLinhaAtualizar,
+    importarExcel,importarBaseCompleta,importarCorrecoes,_executarCorrecoes,_mostrarRevisaoCorrecoes,exportar,exportarPNG,corrigirOrdensDuplicadas,_corrigirNiveisSoltos,_corrigirNivelPeloCodigo,_migrarPredecessorasParaId,_recalcularDatasPais,_orfasMarcarTodas,_orfasExcluirMarcadas,_gerarPNG,_predPopup,_predSalvar,_predCellClick,_predAddLinha,_predLinhaAtualizar,
     abrirVinculosView,fecharVinculosView,abrirVincularTarefa,abrirVincularAqui,onVincTipoChange,
     onVincNavModulo,onVincNavModuloMetrica,onVincNavMetrica,onVincNavEntrar,onVincNavBreadcrumb,onVincNavVoltar,
     onBuscaEscolhaAlvoVinc,onEscolherAlvoVinc,onTrocarAlvoVinc,
