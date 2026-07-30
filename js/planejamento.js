@@ -3658,6 +3658,8 @@ const Planejamento = (() => {
     const novaOrdem=ordemAnterior+(ref.ordem-ordemAnterior)/2;
     const nova={nome:'Nova Tarefa',nivel:nv,ordem:novaOrdem,tipo:'tarefa',
       duracao:'',percentualEsperado:0,percentualConcluido:0,codigo:'',predecessora:'',responsavel:'',local:'',grupo:''};
+    const corpoIns1=document.getElementById('arv-corpo');
+    const stIns1=corpoIns1?corpoIns1.scrollTop:0;
     try{
       const numAntes=_capturarNumAntes();
       const id=await Database.criar(obraId,COL,nova);
@@ -3668,6 +3670,7 @@ const Planejamento = (() => {
       // outras tarefas com 'ordem' desatualizada lá, causando desalinhamento
       // no reload seguinte. Use "🔧 Corrigir Ordens" se quiser números limpos.
       _buildFiltradas();_arvEditId=id;_render(); // já mostra a linha nova na hora, sem tela de carregando
+      requestAnimationFrame(()=>{const c=document.getElementById('arv-corpo');if(c)c.scrollTop=stIns1;});
       _remapAposMudancaPosicoes(numAntes); // roda em segundo plano — não trava a tela pra 2000 tarefas
     }catch(e){console.error(e);Utils.toast('Erro.','erro');}
   }
@@ -3686,12 +3689,15 @@ const Planejamento = (() => {
     const novaOrdem=ordemAnterior+(ordemProxima-ordemAnterior)/2;
     const nova={nome:'Nova Tarefa',nivel:nv,ordem:novaOrdem,tipo:'tarefa',
       duracao:'',percentualEsperado:0,percentualConcluido:0,codigo:'',predecessora:'',responsavel:'',local:'',grupo:''};
+    const corpoIns2=document.getElementById('arv-corpo');
+    const stIns2=corpoIns2?corpoIns2.scrollTop:0;
     try{
       const numAntes=_capturarNumAntes();
       const id=await Database.criar(obraId,COL,nova);
       nova.id=id;tarefas.push(nova);
       // Idem _arvInserirAcima: sem renormalização local não-persistida.
       _buildFiltradas();_arvEditId=id;_render();
+      requestAnimationFrame(()=>{const c=document.getElementById('arv-corpo');if(c)c.scrollTop=stIns2;});
       _remapAposMudancaPosicoes(numAntes); // segundo plano
     }catch(e){console.error(e);Utils.toast('Erro.','erro');}
   }
@@ -3727,10 +3733,13 @@ const Planejamento = (() => {
   async function _arvSalvarNome(id,nome){
     _arvEditId=null;
     const t=tarefas.find(x=>x.id===id);
-    if(!t||nome.trim()===t.nome){_render();return;}
+    const corpo=document.getElementById('arv-corpo');
+    const st=corpo?corpo.scrollTop:0;
+    if(!t||nome.trim()===t.nome){_render();requestAnimationFrame(()=>{const c=document.getElementById('arv-corpo');if(c)c.scrollTop=st;});return;}
     _undoPush();
     t.nome=nome.trim();
     _buildFiltradas();_render();
+    requestAnimationFrame(()=>{const c=document.getElementById('arv-corpo');if(c)c.scrollTop=st;});
     await Database.atualizar(obraId,COL,id,{nome:t.nome}).catch(console.error);
   }
 
@@ -3745,6 +3754,8 @@ const Planejamento = (() => {
     const ordemAntes=fimBloco<sorted.length?sorted[fimBloco].ordem||fimBloco:ordemAnterior+2;
     const novaOrdem=ordemAnterior+(ordemAntes-ordemAnterior)/2;
     const novaTarefa={nome:'Nova Tarefa',nivel:(pai.nivel||0)+1,ordem:novaOrdem,duracao:'',percentualEsperado:0,percentualConcluido:0,codigo:'',predecessora:'',responsavel:'',local:'',grupo:'',tipo:'tarefa'};
+    const corpoCF=document.getElementById('arv-corpo');
+    const stCF=corpoCF?corpoCF.scrollTop:0;
     try{
       const numAntes=_capturarNumAntes();
       const id=await Database.criar(obraId,COL,novaTarefa);
@@ -3756,6 +3767,7 @@ const Planejamento = (() => {
       _remapAposMudancaPosicoes(numAntes); // segundo plano
       // Inicia edição do nome imediatamente
       _arvEditId=id;_render();
+      requestAnimationFrame(()=>{const c=document.getElementById('arv-corpo');if(c)c.scrollTop=stCF;});
       Utils.toast('Tarefa criada!','sucesso');
     }catch(e){console.error(e);Utils.toast('Erro ao criar.','erro');}
   }
