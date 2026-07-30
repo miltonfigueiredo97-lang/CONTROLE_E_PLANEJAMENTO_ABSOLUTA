@@ -631,9 +631,9 @@ const LevantamentoSoloGrampeado = (() => {
 
   async function excluirChumbador(id) {
     const c = chumbadores.find(x => x.id === id);
-    if (!c) return;
+    if (!c) return false;
     const ok = await Utils.confirmar(`Excluir o chumbador ${c.numero}? Isso também remove o histórico de execução dele em Controle.`);
-    if (!ok) return;
+    if (!ok) return false;
     Utils.mostrarLoading();
     try {
       const ops = [{ type: 'delete', ref: Database.ref(obraId, COL_CHUMBADORES).doc(id) }];
@@ -644,11 +644,19 @@ const LevantamentoSoloGrampeado = (() => {
       await _refetch();
       renderMapa();
       renderTabelaChumbadores();
+      return true;
     } catch (e) {
       Utils.toast('Erro ao excluir: ' + e.message, 'erro');
+      return false;
     } finally {
       Utils.esconderLoading();
     }
+  }
+
+  async function excluirChumbadorDoModal() {
+    if (!chumbEditId) return;
+    const excluido = await excluirChumbador(chumbEditId);
+    if (excluido) Utils.fecharModal('modal-sg-chumbador');
   }
 
   // ══════════════════════════════════════════
@@ -1032,7 +1040,7 @@ const LevantamentoSoloGrampeado = (() => {
     abrirImagem, onImagemArquivo, removerImagem,
     salvarCalibracao, abrirEditarM2, salvarM2,
     desfazerPontoMedicao, concluirMedicaoArea, salvarMedicaoArea, cancelarMedicaoArea,
-    abrirEditarChumbador, salvarChumbador, excluirChumbador,
+    abrirEditarChumbador, salvarChumbador, excluirChumbador, excluirChumbadorDoModal,
     confirmarNovaLinha, cancelarNovaLinha,
     abrirEspecificacoes, criarMaterialInline, editarEspecificacao, cancelarEdicaoEspec, salvarEspecificacao, excluirEspecificacao,
   };

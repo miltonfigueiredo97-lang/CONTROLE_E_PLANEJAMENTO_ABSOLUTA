@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.57.70',
+  versaoAtual: 'V2.57.71',
 
   versoes: [
     {
@@ -5261,7 +5261,10 @@ const NotasVersao = {
       titulo:'Levantamento de Solo Grampeado: cor do chumbador por comprimento e formato por tipo (bolinha = horizontal, triângulo = vertical)',
       itens:['Chumbadores Horizontais viram bolinhas; Verticais viram triângulos — dá pra diferenciar o tipo só olhando o mapa.',
         'A cor de cada chumbador agora reflete o comprimento (ml) dele, de forma determinística: o mesmo valor sempre cai na mesma cor (ex: 6ml sempre azul), independente da ordem em que foram cadastrados. Se mudar o comprimento de um chumbador, a cor muda junto.',
-        'Legenda embaixo do mapa mostra a cor de cada comprimento usado na vista.']}
+        'Legenda embaixo do mapa mostra a cor de cada comprimento usado na vista.']},
+    {versao:'V2.57.71',status:'aberta',data:'2026-07-30',tipo:'melhoria',
+      titulo:'Levantamento de Solo Grampeado: botão Excluir direto no popup de editar chumbador',
+      itens:['Antes só dava pra excluir um chumbador pela tabela embaixo — agora tem um botão "🗑 Excluir" direto no popup que abre ao clicar na bolinha/triângulo, sem precisar descer até a tabela.']}
   ],
 
   render(containerId) {
