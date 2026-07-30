@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.57.52',
+  versaoAtual: 'V2.57.53',
 
   versoes: [
     {
@@ -5174,9 +5174,14 @@ const NotasVersao = {
       titulo:'Nova coluna "Sucessora" no Planejamento — o inverso da Predecessora, calculado automaticamente',
       itens:['Mostra quais tarefas têm ESTA tarefa como predecessora (quem depende dela) — não é um campo salvo, é recalculado toda vez a partir das predecessoras de todo mundo, então nunca fica desatualizado sozinho.',
         'Somente leitura (não dá pra editar direto — a fonte da verdade continua sendo a Predecessora de cada tarefa).']},
-    {versao:'V2.57.52',status:'aberta',data:'2026-07-29',tipo:'melhoria',
+    {versao:'V2.57.52',status:'fechada',data:'2026-07-29',tipo:'melhoria',
       titulo:'Predecessora e Sucessora: passar o mouse por cima mostra o número + nome de cada uma, sem precisar clicar',
-      itens:['Tooltip nativo do navegador — passa o mouse em cima da célula e mostra cada referência numérica com o nome da tarefa correspondente, uma por linha (ex: "5TI — Serviços Iniciais").']}
+      itens:['Tooltip nativo do navegador — passa o mouse em cima da célula e mostra cada referência numérica com o nome da tarefa correspondente, uma por linha (ex: "5TI — Serviços Iniciais").']},
+    {versao:'V2.57.53',status:'aberta',data:'2026-07-29',tipo:'correcao',
+      titulo:'Recalcular Datas dos Pais (V2.57.27) podia ZERAR o início/término de uma tarefa-folha se ela ficasse ao lado de um "gap" de nível — bug real de perda de dados relatado pelo Milton',
+      itens:['Causa: a função considerava "tarefa-pai" qualquer linha em que a PRÓXIMA linha tivesse nível maior — mas isso não garante que exista um filho DIRETO (nível+1) de verdade. Se por qualquer desalinhamento momentâneo o "filho" aparente estivesse 2+ níveis mais profundo (um gap), a função não achava nenhum filho direto, calculava a data como vazia, e GRAVAVA essa data vazia por cima da data própria da tarefa — mesmo ela sendo uma folha comum com data certa.',
+        'Corrigido: só trata como tarefa-pai (e sobrescreve a data) quem tem de fato pelo menos um filho direto (nível exatamente +1). Sem isso, a tarefa mantém a própria data intacta, nunca mais é zerada por engano.',
+        'Mesma correção vale pra Início Real/Término Real, que tinham o mesmo risco.']}
   ],
 
   render(containerId) {

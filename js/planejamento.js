@@ -2735,11 +2735,13 @@ const Planejamento = (() => {
     const n=sorted.length;
     for(let i=n-1;i>=0;i--){
       const t=sorted[i],niv=t.nivel||0;
-      const temFilhos=i+1<n&&(sorted[i+1].nivel||0)>niv;
-      if(temFilhos){
-        let j=i+1,iniP=null,fimP=null,iniR=null,fimR=null;
+      const podeExpandir=i+1<n&&(sorted[i+1].nivel||0)>niv;
+      let iniP=null,fimP=null,iniR=null,fimR=null,achouFilhoDireto=false;
+      if(podeExpandir){
+        let j=i+1;
         while(j<n&&(sorted[j].nivel||0)>niv){
           if((sorted[j].nivel||0)===niv+1){
+            achouFilhoDireto=true;
             const c=sorted[j];
             if(c._iniP&&(!iniP||c._iniP<iniP))iniP=c._iniP;
             if(c._fimP&&(!fimP||c._fimP>fimP))fimP=c._fimP;
@@ -2748,16 +2750,24 @@ const Planejamento = (() => {
           }
           j++;
         }
+      }
+      t._temFilhoDireto=achouFilhoDireto;
+      if(achouFilhoDireto){
         t._iniP=iniP;t._fimP=fimP;t._iniR=iniR;t._fimR=fimR;
       } else {
+        // Folha de verdade — ou "pai" sem filho direto real (nível com gap,
+        // caso raro/transitório). Nunca zera a data própria nesse caso: é
+        // exatamente esse descuido que zerava início/término de tarefas-folha
+        // por engano (relatado pelo Milton) quando a árvore tinha algum
+        // desalinhamento momentâneo de nível ao redor.
         t._iniP=t.inicioPlanejado||null;t._fimP=t.terminoPlanejado||null;
         t._iniR=t.inicioReal||null;t._fimR=t.terminoReal||null;
       }
     }
     const mudou=[];
     for(let i=0;i<n;i++){
-      const t=sorted[i],niv=t.nivel||0;
-      if(!(i+1<n&&(sorted[i+1].nivel||0)>niv))continue; // só tarefas-pai
+      const t=sorted[i];
+      if(!t._temFilhoDireto)continue; // só sobrescreve quem TEM filho direto de verdade
       const upd={};
       if((t._iniP||'')!==(t.inicioPlanejado||''))upd.inicioPlanejado=t._iniP||'';
       if((t._fimP||'')!==(t.terminoPlanejado||''))upd.terminoPlanejado=t._fimP||'';
@@ -2766,11 +2776,16 @@ const Planejamento = (() => {
       if(Object.keys(upd).length){Object.assign(t,upd);mudou.push({id:t.id,...upd});}
     }
     if(mudou.length){
-      const L=30;
+      const L=20,TIMEOUT_MS=15000;
+      const comTimeout=p=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),TIMEOUT_MS))]);
+      let falhas=0;
       for(let i=0;i<mudou.length;i+=L){
-        await Promise.all(mudou.slice(i,i+L).map(({id,...upd})=>Database.atualizar(obraId,COL,id,upd).catch(console.error)));
+        await Promise.all(mudou.slice(i,i+L).map(({id,...upd})=>
+          comTimeout(Database.atualizar(obraId,COL,id,upd)).catch(e=>{falhas++;console.error('Erro recalc datas:',id,e);})
+        ));
       }
       tarefas=sorted;_buildFiltradas();_render();
+      if(falhas&&!silencioso)Utils.toast(`⚠ ${falhas} falharam ao salvar.`,'alerta');
     }
     if(!silencioso)Utils.toast(mudou.length?`📐 ${mudou.length} tarefa(s)-pai com datas recalculadas.`:'Datas dos pais já estavam corretas.','sucesso');
     return mudou.length;
