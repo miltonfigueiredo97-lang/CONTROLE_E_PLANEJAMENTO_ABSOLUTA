@@ -29,7 +29,9 @@ const LevantamentoSoloGrampeado = (() => {
   let zoom = 1;
   let modo = null; // null | 'adicionar' | 'calibrar'
   let calibPontos = [];
-  let novoPontoTemp = null; // {x,y} aguardando confirmação no modal
+  let proxNumero = 1;   // próximo número sugerido no modo Adicionar (incrementa sozinho a cada clique)
+  let compPadrao = 6;   // comprimento (ml) usado ao adicionar rápido — ajustável na barra
+  let tipoPadrao = 'Vertical';
   let chumbEditId = null;
   let especEditId = null;
   let pdfjsCarregado = false;
@@ -155,6 +157,7 @@ const LevantamentoSoloGrampeado = (() => {
           </span>
           ` : ''}
         </div>
+        <div id="sg-toolbar-extra">${_htmlToolbarExtra()}</div>
         <div id="sg-mapa-host"></div>
       </div>
 
@@ -174,11 +177,31 @@ const LevantamentoSoloGrampeado = (() => {
     renderizar();
   }
   function toggleModo(m) {
+    const ligando = modo !== m;
     modo = (modo === m) ? null : m;
     calibPontos = [];
+    if (modo === 'adicionar' && ligando) proxNumero = _sugerirProximoNumero();
     _atualizarBotoesModo();
+    _atualizarToolbarExtra();
     renderMapa();
   }
+  function _htmlToolbarExtra() {
+    if (modo !== 'adicionar' || !vistaAtiva()) return '';
+    return `
+      <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:12px;background:#fffbeb;border:1px solid #f5c518;border-radius:8px;padding:8px 12px;">
+        <label class="text-sm" style="display:flex;gap:6px;align-items:center;">Próx. Nº<input type="text" id="sg-prox-numero" value="${esc(proxNumero)}" class="form-control" style="width:70px;padding:4px 6px;" onchange="SG_UI.setProxNumero(this.value)"></label>
+        <label class="text-sm" style="display:flex;gap:6px;align-items:center;">Tipo<select id="sg-tipo-padrao" class="form-control" style="width:110px;padding:4px 6px;" onchange="SG_UI.setTipoPadrao(this.value)">${SG.TIPOS_CHUMBADOR.map(t => `<option value="${t}" ${t === tipoPadrao ? 'selected' : ''}>${t}</option>`).join('')}</select></label>
+        <label class="text-sm" style="display:flex;gap:6px;align-items:center;">Comp. padrão (ml)<input type="number" step="0.1" id="sg-comp-padrao" value="${compPadrao}" class="form-control" style="width:70px;padding:4px 6px;" onchange="SG_UI.setCompPadrao(this.value)"></label>
+        <span class="text-sm text-muted">Clique no mapa: coloca a bolinha direto, sem popup. Clique numa bolinha já colocada pra editar.</span>
+      </div>`;
+  }
+  function _atualizarToolbarExtra() {
+    const el = document.getElementById('sg-toolbar-extra');
+    if (el) el.innerHTML = _htmlToolbarExtra();
+  }
+  function setProxNumero(v) { proxNumero = v.trim(); }
+  function setTipoPadrao(v) { tipoPadrao = v; }
+  function setCompPadrao(v) { compPadrao = SG.num(v) || 0; }
   function _atualizarBotoesModo() {
     const badd = document.getElementById('sg-btn-add');
     const bcal = document.getElementById('sg-btn-calib');
@@ -300,14 +323,12 @@ const LevantamentoSoloGrampeado = (() => {
       if (ev.ctrlKey) return; // Ctrl+clique é só pan — não adiciona/edita
       const marcador = ev.target.closest('.sg-marcador');
       if (marcador) {
-        if (modo) return; // em modo adicionar/calibrar, clique é sobre o mapa, não editar
-        abrirEditarChumbador(marcador.dataset.id);
+        abrirEditarChumbador(marcador.dataset.id); // clicar numa bolinha sempre edita, em qualquer modo
         return;
       }
       const pos = SG.posRelativa(ev, stage);
       if (modo === 'adicionar') {
-        novoPontoTemp = pos;
-        abrirNovoChumbador();
+        _criarChumbadorInstantaneo(v, pos);
       } else if (modo === 'calibrar') {
         calibPontos.push(pos);
         if (calibPontos.length === 2) {
@@ -321,6 +342,28 @@ const LevantamentoSoloGrampeado = (() => {
         }
       }
     });
+  }
+
+  // Clique no mapa em modo Adicionar: cria a bolinha na hora, sem
+  // abrir popup — o número sugerido incrementa sozinho a cada clique.
+  async function _criarChumbadorInstantaneo(v, pos) {
+    if (!(compPadrao > 0)) { Utils.toast('Informe um "Comp. padrão (ml)" maior que zero antes de clicar.', 'alerta'); return; }
+    const numero = String(proxNumero || '').trim() || String(chumbadores.length + 1);
+    try {
+      await Database.criar(obraId, COL_CHUMBADORES, {
+        vista: v.id, numero, tipo: tipoPadrao, comprimento: compPadrao, especId: '',
+        x: pos.x, y: pos.y, obraId,
+      }, SG.genId('ch'));
+      const n = parseInt(numero);
+      proxNumero = !isNaN(n) ? String(n + 1) : numero;
+      _atualizarToolbarExtra();
+      Utils.toast(`✓ Chumbador ${numero} adicionado`, 'sucesso');
+      await _refetch();
+      renderMapa();
+      renderTabelaChumbadores();
+    } catch (e) {
+      Utils.toast('Erro ao adicionar: ' + e.message, 'erro');
+    }
   }
 
   // ── Tabela de chumbadores ──
@@ -338,7 +381,7 @@ const LevantamentoSoloGrampeado = (() => {
     el.innerHTML = `
       <div class="cc-tableWrap" style="max-height:360px;overflow-y:auto;">
       <table class="cc-table">
-        <thead><tr><th>Nº</th><th>Tipo</th><th class="col-num">Comp. (ml)</th><th class="col-num">Prof. (cm)</th><th>Especificação</th><th class="col-acoes"></th></tr></thead>
+        <thead><tr><th>Nº</th><th>Tipo</th><th class="col-num">Comp. (ml)</th><th>Especificação</th><th class="col-acoes"></th></tr></thead>
         <tbody>
           ${lista.map(c => {
             const e = especificacoes.find(x => x.id === c.especId);
@@ -346,7 +389,6 @@ const LevantamentoSoloGrampeado = (() => {
               <td style="font-weight:600;">${esc(c.numero)}</td>
               <td>${esc(c.tipo)}</td>
               <td class="col-num cc-tdMono">${SG.fmt1(c.comprimento)}</td>
-              <td class="col-num cc-tdMono">${c.profundidade ? SG.fmt1(c.profundidade) : '—'}</td>
               <td>${esc(especLabel(e))}</td>
               <td class="col-acoes">
                 <button class="btn btn-secundario btn-sm" onclick="SG_UI.abrirEditarChumbador('${c.id}')">✎</button>
@@ -355,32 +397,19 @@ const LevantamentoSoloGrampeado = (() => {
             </tr>`;
           }).join('')}
         </tbody>
-        <tfoot><tr><td style="font-weight:700;">${lista.length} chumb.</td><td></td><td class="col-num cc-tdMono" style="font-weight:700;">${SG.fmt1(mlTotal)}</td><td colspan="3"></td></tr></tfoot>
+        <tfoot><tr><td style="font-weight:700;">${lista.length} chumb.</td><td></td><td class="col-num cc-tdMono" style="font-weight:700;">${SG.fmt1(mlTotal)}</td><td colspan="2"></td></tr></tfoot>
       </table>
       </div>`;
   }
 
   // ══════════════════════════════════════════
-  // NOVO / EDITAR CHUMBADOR
+  // EDITAR CHUMBADOR (a criação é instantânea no clique — ver
+  // _criarChumbadorInstantaneo — este modal só edita)
   // ══════════════════════════════════════════
-  function abrirNovoChumbador() {
-    chumbEditId = null;
-    document.getElementById('sg-modal-chumb-titulo').textContent = '⛏️ Novo Chumbador';
-    const f = document.getElementById('form-sg-chumbador');
-    f.querySelector('[name=numero]').value = _sugerirProximoNumero();
-    f.querySelector('[name=tipo]').innerHTML = SG.TIPOS_CHUMBADOR.map(t => `<option value="${t}">${t}</option>`).join('');
-    f.querySelector('[name=especId]').innerHTML = `<option value="">— sem especificação —</option>` +
-      especificacoes.map(e => `<option value="${e.id}">${esc(e.nome)}</option>`).join('');
-    f.querySelector('[name=comprimento]').value = '';
-    f.querySelector('[name=profundidade]').value = '';
-    Utils.abrirModal('modal-sg-chumbador');
-  }
-
   function abrirEditarChumbador(id) {
     const c = chumbadores.find(x => x.id === id);
     if (!c) return;
     chumbEditId = id;
-    novoPontoTemp = null;
     document.getElementById('sg-modal-chumb-titulo').textContent = `✎ Chumbador ${c.numero}`;
     const f = document.getElementById('form-sg-chumbador');
     f.querySelector('[name=numero]').value = c.numero ?? '';
@@ -388,34 +417,22 @@ const LevantamentoSoloGrampeado = (() => {
     f.querySelector('[name=especId]').innerHTML = `<option value="">— sem especificação —</option>` +
       especificacoes.map(e => `<option value="${e.id}" ${e.id === c.especId ? 'selected' : ''}>${esc(e.nome)}</option>`).join('');
     f.querySelector('[name=comprimento]').value = c.comprimento ?? '';
-    f.querySelector('[name=profundidade]').value = c.profundidade ?? '';
     Utils.abrirModal('modal-sg-chumbador');
   }
 
   async function salvarChumbador() {
-    const v = vistaAtiva();
+    if (!chumbEditId) return;
     const f = document.getElementById('form-sg-chumbador');
     const numero = f.querySelector('[name=numero]').value.trim();
     const tipo = f.querySelector('[name=tipo]').value;
     const comprimento = SG.num(f.querySelector('[name=comprimento]').value);
-    const profundidade = SG.num(f.querySelector('[name=profundidade]').value);
     const especId = f.querySelector('[name=especId]').value;
     if (!numero) { Utils.toast('Informe o número do chumbador.', 'alerta'); return; }
     if (!(comprimento > 0)) { Utils.toast('Informe o comprimento (maior que zero).', 'alerta'); return; }
     Utils.mostrarLoading();
     try {
-      if (chumbEditId) {
-        await Database.atualizar(obraId, COL_CHUMBADORES, chumbEditId, { numero, tipo, comprimento, profundidade, especId });
-        Utils.toast('✓ Chumbador atualizado!', 'sucesso');
-      } else {
-        if (!novoPontoTemp || !v) { Utils.toast('Erro: posição do chumbador perdida. Clique no mapa novamente.', 'erro'); return; }
-        await Database.criar(obraId, COL_CHUMBADORES, {
-          vista: v.id, numero, tipo, comprimento, profundidade, especId,
-          x: novoPontoTemp.x, y: novoPontoTemp.y, obraId,
-        }, SG.genId('ch'));
-        Utils.toast('✓ Chumbador adicionado!', 'sucesso');
-      }
-      novoPontoTemp = null; modo = null;
+      await Database.atualizar(obraId, COL_CHUMBADORES, chumbEditId, { numero, tipo, comprimento, especId });
+      Utils.toast('✓ Chumbador atualizado!', 'sucesso');
       Utils.fecharModal('modal-sg-chumbador');
       await _refetch();
       renderMapa();
@@ -810,10 +827,11 @@ const LevantamentoSoloGrampeado = (() => {
 
   return {
     init, recarregar, renderizar, onTrocarVistaAtiva, toggleModo, zoomAjustar,
+    setProxNumero, setTipoPadrao, setCompPadrao,
     abrirVistas, salvarVista, excluirVista,
     abrirImagem, onImagemArquivo, removerImagem,
     salvarCalibracao, abrirEditarM2, salvarM2,
-    abrirNovoChumbador, abrirEditarChumbador, salvarChumbador, excluirChumbador,
+    abrirEditarChumbador, salvarChumbador, excluirChumbador,
     abrirEspecificacoes, criarMaterialInline, editarEspecificacao, cancelarEdicaoEspec, salvarEspecificacao, excluirEspecificacao,
   };
 })();

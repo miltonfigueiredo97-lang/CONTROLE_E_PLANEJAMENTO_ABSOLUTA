@@ -5241,7 +5241,9 @@ const NotasVersao = {
       itens:['Levantamento e Controle: os botões (Adicionar Chumbador, Calibrar Escala, Marcar Projeção/Acabamento) chamavam um redesenho completo do painel a cada clique, o que resetava o scroll do mapa e travava a interação em desenhos compridos.',
         'Corrigido: esses botões agora só atualizam o próprio texto/classe e re-renderizam o mapa, preservando zoom e posição de scroll.',
         'Adicionado pan (Ctrl+arrastar) e zoom (Ctrl+roda do mouse) direto sobre o mapa, tanto no Levantamento quanto no Controle.',
-        'Calibrar Escala: o 1º clique não tinha nenhum feedback visual (só um texto pequeno mudava) e parecia não fazer nada. Agora desenha os pontos clicados e a linha entre eles em tempo real, mostra um toast a cada ponto marcado, e destaca o mapa com uma borda quando um modo (Adicionar/Calibrar) está ativo.']}
+        'Calibrar Escala: o 1º clique não tinha nenhum feedback visual (só um texto pequeno mudava) e parecia não fazer nada. Agora desenha os pontos clicados e a linha entre eles em tempo real, mostra um toast a cada ponto marcado, e destaca o mapa com uma borda quando um modo (Adicionar/Calibrar) está ativo.',
+        'Removido o campo "Profundidade" (era redundante com o Comprimento — o chumbador tem uma única medida real).',
+        'Adicionar Chumbador mudou de fluxo: antes abria um popup a cada clique (pedindo até Especificação, sem necessidade nesse momento) — agora clicar no mapa só coloca a bolinha na hora, sem popup nenhum. Barra amarela mostra Próx. Número (edita se não bater com o desenho, incrementa sozinho a cada clique), Tipo e Comprimento padrão. Clicar numa bolinha já colocada abre a edição (número, tipo, comprimento, especificação).']}
   ],
 
   render(containerId) {
