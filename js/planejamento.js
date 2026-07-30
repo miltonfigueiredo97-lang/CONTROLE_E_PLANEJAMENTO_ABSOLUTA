@@ -3351,12 +3351,12 @@ const Planejamento = (() => {
           style="width:100%;background:#111;border:1px solid #333;border-radius:4px;color:#fff;padding:4px 6px;font-size:.8rem;">
       </td>
       <td style="padding:4px;border-bottom:1px solid #292929;color:#aaa;font-size:.78rem;" data-pred-nome>${nomeAlvo}</td>
-      <td style="padding:4px;border-bottom:1px solid #292929;width:70px;">
+      <td style="padding:4px;border-bottom:1px solid #292929;width:170px;">
         <select style="width:100%;background:#111;border:1px solid #333;border-radius:4px;color:#fff;padding:4px 2px;font-size:.78rem;">
-          <option value="TI" ${tipo==='TI'?'selected':''}>TI</option>
-          <option value="II" ${tipo==='II'?'selected':''}>II</option>
-          <option value="TT" ${tipo==='TT'?'selected':''}>TT</option>
-          <option value="IT" ${tipo==='IT'?'selected':''}>IT</option>
+          <option value="TI" style="color:#3b82f6;" ${tipo==='TI'?'selected':''}>Término-a-Início (TI)</option>
+          <option value="II" style="color:#ddd;" ${tipo==='II'?'selected':''}>Início-a-Início (II)</option>
+          <option value="TT" style="color:#ef4444;" ${tipo==='TT'?'selected':''}>Término-a-Término (TT)</option>
+          <option value="IT" style="color:#22c55e;" ${tipo==='IT'?'selected':''}>Início-a-Término (IT)</option>
         </select>
       </td>
       <td style="padding:4px;border-bottom:1px solid #292929;width:60px;">
@@ -3386,7 +3386,7 @@ const Planejamento = (() => {
     const t=filtradas[idx];if(!t)return;
     let pop=document.getElementById('pred-pop');if(pop)pop.remove();
     pop=document.createElement('div');pop.id='pred-pop';
-    pop.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#1a1a1a;border:2px solid var(--cor-primaria);border-radius:10px;padding:20px;z-index:2000;min-width:480px;max-width:95vw;max-height:85vh;overflow-y:auto;box-shadow:0 12px 40px rgba(0,0,0,.6);';
+    pop.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#1a1a1a;border:2px solid var(--cor-primaria);border-radius:10px;padding:20px;z-index:2000;min-width:640px;max-width:95vw;max-height:85vh;overflow-y:auto;box-shadow:0 12px 40px rgba(0,0,0,.6);';
 
     // Uma linha por predecessora já existente + 1 linha vazia extra pra
     // adicionar — igual ao MS Project (tabela de Predecessoras), com nossa

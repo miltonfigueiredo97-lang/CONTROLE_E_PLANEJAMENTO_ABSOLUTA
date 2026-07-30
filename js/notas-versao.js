@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.57.61',
+  versaoAtual: 'V2.57.62',
 
   versoes: [
     {
@@ -5213,10 +5213,13 @@ const NotasVersao = {
     {versao:'V2.57.60',status:'fechada',data:'2026-07-29',tipo:'melhoria',
       titulo:'Predecessora: triplo-clique na célula abre o popup guiado (Código/Tipo/Defasagem), já preenchido com o que estiver lá',
       itens:['1 ou 2 cliques continua abrindo o editor de texto direto na célula (aceita várias predecessoras separadas por ";"). Triplo-clique abre a telinha guiada — igual ao MS Project — já com o vínculo atual pré-carregado nos campos.']},
-    {versao:'V2.57.61',status:'aberta',data:'2026-07-29',tipo:'melhoria',
+    {versao:'V2.57.61',status:'fechada',data:'2026-07-29',tipo:'melhoria',
       titulo:'Popup de Predecessora agora é uma tabela de várias linhas (igual MS Project: Nº/Código, Nome da Tarefa, Tipo, Defasagem) — antes editava só uma predecessora por vez',
       itens:['Cada predecessora já vinculada aparece numa linha própria, com o nome da tarefa mostrado automaticamente ao lado (não precisa lembrar o nome, só o número/código). Botão "＋ Adicionar linha" pra incluir mais, "✕" em cada linha pra remover.',
-        'Mantida a formatação escura do sistema — mesma ideia do MS Project, com nossa cara.']}
+        'Mantida a formatação escura do sistema — mesma ideia do MS Project, com nossa cara.']},
+    {versao:'V2.57.62',status:'aberta',data:'2026-07-29',tipo:'melhoria',
+      titulo:'Popup de Predecessora: coluna Tipo mostra o nome completo (ex: "Término-a-Início (TI)"), colorido — antes só a sigla',
+      itens:['Cores seguem o padrão MS Project: TI azul, II neutro, TT vermelho, IT verde. Coluna e popup alargados pra caber o texto completo.']}
   ],
 
   render(containerId) {
