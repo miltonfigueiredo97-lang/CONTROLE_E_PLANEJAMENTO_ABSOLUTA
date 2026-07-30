@@ -1461,7 +1461,7 @@ const Planejamento = (() => {
         } else if(cid==='percConc'){
           cells+=`<div style="${base}font-size:.7rem;justify-content:center;color:${perc>=100?'#16a34a':perc>0?'#2563eb':'#555'};cursor:pointer;" ${clickEdit}>${perc}%</div>`;
         } else if(cid==='predecessora'){
-          cells+=`<div style="${base}color:#555;font-size:.7rem;justify-content:center;cursor:pointer;" ${clickEdit} title="${_esc(_tooltipPred(t))}">${t._predDisplay||'—'}</div>`;
+          cells+=`<div style="${base}color:#555;font-size:.7rem;justify-content:center;cursor:pointer;" onclick="Planejamento._predCellClick(event,${i})" title="${_esc(_tooltipPred(t))}">${t._predDisplay||'—'}</div>`;
         } else if(cid==='sucessora'){
           cells+=`<div style="${base}color:#666;font-size:.7rem;justify-content:center;" title="${_esc(_tooltipSuc(t._sucessoras))||'Calculado automaticamente — quem tem esta tarefa como predecessora'}">${(t._sucessoras&&t._sucessoras.length)?t._sucessoras.join(', '):'—'}</div>`;
         } else if(cid==='responsavel'){
@@ -1556,6 +1556,34 @@ const Planejamento = (() => {
       }
     }
     const ev=document.getElementById('g-dir-v');if(ev)ev.innerHTML=bH;
+  }
+
+  // Triplo-clique na célula Predecessora abre o popup guiado (já preenchido
+  // com o que tiver lá); 1 ou 2 cliques abre o editor de texto normal (aceita
+  // várias predecessoras separadas por ";"). Precisa capturar o elemento AGORA
+  // (currentTarget vira null fora do handler síncrono do evento) pra poder
+  // reusar depois de um pequeno delay.
+  let _predClickState={idx:null,count:0,timer:null};
+  function _predCellClick(e, idx){
+    e.stopPropagation();
+    const cell=e.currentTarget;
+    if(_predClickState.idx!==idx){
+      if(_predClickState.timer)clearTimeout(_predClickState.timer);
+      _predClickState={idx,count:0,timer:null};
+    }
+    _predClickState.count++;
+    if(_predClickState.timer)clearTimeout(_predClickState.timer);
+    if(_predClickState.count>=3){
+      _predClickState={idx:null,count:0,timer:null};
+      _predPopup(idx);
+      return;
+    }
+    _predClickState.timer=setTimeout(()=>{
+      if(_predClickState.count>0&&_predClickState.count<3&&_predClickState.idx===idx){
+        _editCell({stopPropagation:()=>{},currentTarget:cell},idx,'predecessora');
+      }
+      _predClickState={idx:null,count:0,timer:null};
+    },400);
   }
 
   function _editCell(e, idx, colId){
@@ -4357,7 +4385,7 @@ const Planejamento = (() => {
     _rowDragStart,toggleSel,_limparSelecao,_moverSel,_bulkNivel,_bulkDuplicar,_bulkExcluir,
     toggleStatusFiltro,_aplicarStatusFiltro,undo,
     onBusca,limparBusca,_buscaKey,
-    importarExcel,importarBaseCompleta,importarCorrecoes,_executarCorrecoes,exportar,exportarPNG,corrigirOrdensDuplicadas,_corrigirNiveisSoltos,_corrigirNivelPeloCodigo,_migrarPredecessorasParaId,_recalcularDatasPais,_orfasMarcarTodas,_orfasExcluirMarcadas,_gerarPNG,_predPopup,_predPreview,_predSalvar,
+    importarExcel,importarBaseCompleta,importarCorrecoes,_executarCorrecoes,exportar,exportarPNG,corrigirOrdensDuplicadas,_corrigirNiveisSoltos,_corrigirNivelPeloCodigo,_migrarPredecessorasParaId,_recalcularDatasPais,_orfasMarcarTodas,_orfasExcluirMarcadas,_gerarPNG,_predPopup,_predPreview,_predSalvar,_predCellClick,
     abrirVinculosView,fecharVinculosView,abrirVincularTarefa,abrirVincularAqui,onVincTipoChange,
     onVincNavModulo,onVincNavModuloMetrica,onVincNavMetrica,onVincNavEntrar,onVincNavBreadcrumb,onVincNavVoltar,
     onBuscaEscolhaAlvoVinc,onEscolherAlvoVinc,onTrocarAlvoVinc,

@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.57.59',
+  versaoAtual: 'V2.57.60',
 
   versoes: [
     {
@@ -5206,10 +5206,13 @@ const NotasVersao = {
         'Causa raiz #2 (a mais importante): quando você edita o início/término de uma tarefa, a data das tarefas que a têm como predecessora NUNCA era recalculada automaticamente — só era calculada uma vez, no momento em que você define a predecessora, e nunca mais. Se "Laje" atrasa, "Alvenaria Estrutural" (que depende dela) ficava com a data velha, achando que a predecessora era só um número decorativo.',
         'Agora, editar início/término de qualquer tarefa (tabela, modal ou popup de predecessora) propaga automaticamente a nova data pra todas as sucessoras, em cadeia (se a sucessora também tiver sucessoras, propaga mais adiante, e assim por diante) — exatamente como MS Project. Corte de dependência circular incluído, pra nunca entrar em loop infinito.',
         'Corrigido também: o campo Predecessora do formulário grande de editar tarefa não convertia o texto digitado pro formato novo por ID — ficava salvando/mostrando o formato interno bruto (ilegível). Agora mostra e converte certo, igual à célula da tabela.']},
-    {versao:'V2.57.59',status:'aberta',data:'2026-07-29',tipo:'correcao',
+    {versao:'V2.57.59',status:'fechada',data:'2026-07-29',tipo:'correcao',
       titulo:'Cascata de datas (V2.57.58) não propagava quando a mudança vinha de um FILHO cuja data recalcula o PAI — exatamente o caso relatado: editar "Serviços Iniciais" (filho) não afetava "Estacas/Fundação", que tem o grupo "Serviços Iniciais" (pai) como predecessora',
       itens:['A cascata da V2.57.58 só propagava a partir da tarefa que você editou DIRETAMENTE. Mas editar um filho recalcula a data do PAI (agregação automática da V2.57.27/54) — e essa mudança no pai não disparava cascata pra quem tem o PAI como predecessora.',
-        'Corrigido: agora, sempre que a agregação de datas dos pais muda alguma coisa, a cascata também propaga a partir de CADA pai alterado, não só da tarefa editada originalmente.']}
+        'Corrigido: agora, sempre que a agregação de datas dos pais muda alguma coisa, a cascata também propaga a partir de CADA pai alterado, não só da tarefa editada originalmente.']},
+    {versao:'V2.57.60',status:'aberta',data:'2026-07-29',tipo:'melhoria',
+      titulo:'Predecessora: triplo-clique na célula abre o popup guiado (Código/Tipo/Defasagem), já preenchido com o que estiver lá',
+      itens:['1 ou 2 cliques continua abrindo o editor de texto direto na célula (aceita várias predecessoras separadas por ";"). Triplo-clique abre a telinha guiada — igual ao MS Project — já com o vínculo atual pré-carregado nos campos.']}
   ],
 
   render(containerId) {
