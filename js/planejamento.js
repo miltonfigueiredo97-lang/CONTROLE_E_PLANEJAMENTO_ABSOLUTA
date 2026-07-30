@@ -290,6 +290,7 @@ const Planejamento = (() => {
       _calcularCustos(materiaisBib,materiaisVinc,maoDeObraVinc);
       _buildFiltradas();
       _render();
+      _migrarPredecessorasParaId(true); // segundo plano — auto-cura predecessoras antigas, se houver
     }catch(e){console.error(e);Utils.toast('Erro.','erro');}
     finally{Utils.esconderLoading();}
   }
@@ -401,16 +402,61 @@ const Planejamento = (() => {
   }
 
   let _numLinhaMap=new Map(); // numLinha -> tarefa, montado em _buildFiltradas(), usado pra tooltip
+  let _idParaNumLinha=new Map(); // id -> numLinha, pra exibir predecessora canônica como número
+  let _porId=new Map(); // id -> tarefa, lookup rápido
+
+  // ===================== PREDECESSORA POR ID (imune a reordenação) =====================
+  // Antes a predecessora era guardada como TEXTO com número de linha (ex: "5TI+3").
+  // Qualquer inserção/exclusão/movimentação em QUALQUER lugar da obra desloca esses
+  // números, e por mais que a gente remapeasse depois de cada operação, sempre
+  // sobrava algum caso não coberto (ordens de execução diferentes, imports, etc) —
+  // é fundamentalmente frágil.
+  // Agora a predecessora é guardada CANONICAMENTE por ID da tarefa (nunca muda,
+  // seja lá o que aconteça com a posição): "idDaTarefa|TIPO|defasagem;outroId|TIPO|defasagem".
+  // O número de linha só existe na hora de EXIBIR (convertido ao vivo, sempre
+  // correto) e na hora de DIGITAR (convertido pro ID no momento de salvar).
+  // Reordenar nunca quebra mais nada — não precisa remapear coisa alguma.
+  function _predParse(canon){
+    if(!canon)return[];
+    return String(canon).split(';').map(p=>p.trim()).filter(Boolean).map(p=>{
+      const partes=p.split('|');
+      return {id:partes[0]||'',tipo:partes[1]||'TI',lag:partes[2]||''};
+    }).filter(x=>x.id);
+  }
+  function _predFormat(arr){
+    return arr.map(x=>`${x.id}|${x.tipo||'TI'}|${x.lag||''}`).join(';');
+  }
+  // Texto digitado pelo usuário (número de linha, ex: "5TI+3; 12II") -> canônico (ID)
+  function _predTextoParaCanon(texto){
+    if(!texto)return'';
+    const out=[];
+    for(const parteRaw of String(texto).split(';')){
+      const p=parteRaw.trim();if(!p)continue;
+      const m=p.match(/^(\d+)\s*(TI|II|TT|IT)?\s*([+-]?\d+)?\s*d{0,2}$/i);
+      if(!m)continue;
+      const alvo=_numLinhaMap.get(parseInt(m[1]));
+      if(alvo)out.push({id:alvo.id,tipo:(m[2]||'TI').toUpperCase(),lag:m[3]||''});
+    }
+    return _predFormat(out);
+  }
+  // Canônico (ID) -> texto de exibição (número de linha atual, sempre correto)
+  function _predCanonParaTexto(canon){
+    return _predParse(canon).map(x=>{
+      const num=_idParaNumLinha.get(x.id);
+      if(!num)return null; // tarefa referenciada foi excluída
+      return `${num}${x.tipo}${x.lag}`;
+    }).filter(Boolean).join('; ');
+  }
 
   // Monta o texto do tooltip: "5: Nome da tarefa\n12TI+3d: Outro nome"
-  function _tooltipPred(predStr){
-    if(!predStr)return'';
-    return String(predStr).split(';').map(p=>{
-      p=p.trim();
-      const m=p.match(/^(\d+)/);
-      if(!m)return p;
-      const alvo=_numLinhaMap.get(parseInt(m[1]));
-      return alvo?`${p} — ${alvo.nome||'(sem nome)'}`:`${p} — (linha não encontrada)`;
+  function _tooltipPred(t){
+    const arr=_predParse(t?.predecessora);
+    if(!arr.length)return'';
+    return arr.map(x=>{
+      const alvo=_porId.get(x.id);
+      const num=_idParaNumLinha.get(x.id);
+      if(!alvo)return `(tarefa excluída)`;
+      return `${num||'?'}${x.tipo}${x.lag} — ${alvo.nome||'(sem nome)'}`;
     }).join('\n');
   }
   function _tooltipSuc(numsArr){
@@ -424,21 +470,21 @@ const Planejamento = (() => {
   function _buildFiltradas(){
     const sorted=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
     // numLinha é FIXO pela posição na ordem geral (não muda com filtro/recolhimento)
-    // É esse número que é exibido na coluna # e usado nas predecessoras
+    // É esse número que é exibido na coluna # e usado só na EXIBIÇÃO da predecessora
     sorted.forEach((t,i)=>{t._numLinha=i+1;});
+    const porNumLinha=new Map(sorted.map(t=>[t._numLinha,t]));
+    _numLinhaMap=porNumLinha; // acessível no render, pra montar tooltip e converter texto digitado
+    _idParaNumLinha=new Map(sorted.map(t=>[t.id,t._numLinha]));
+    _porId=new Map(sorted.map(t=>[t.id,t]));
     // Sucessoras: campo calculado, o INVERSO da predecessora — quem tem essa
     // tarefa como predecessora. Não é salvo no Firestore, é recalculado toda
     // vez a partir das predecessoras de todo mundo (sempre reflete a realidade,
-    // nunca fica desatualizado sozinho).
-    const porNumLinha=new Map(sorted.map(t=>[t._numLinha,t]));
-    _numLinhaMap=porNumLinha; // acessível no render, pra montar tooltip de predecessora/sucessora
-    sorted.forEach(t=>{t._sucessoras=[];});
+    // nunca fica desatualizado sozinho). Resolve direto por ID — não depende
+    // de número de linha, então nunca quebra com reordenação.
+    sorted.forEach(t=>{t._sucessoras=[];t._predDisplay=_predCanonParaTexto(t.predecessora);});
     for(const t of sorted){
-      if(!t.predecessora)continue;
-      for(const parte of String(t.predecessora).split(';')){
-        const m=parte.trim().match(/^(\d+)/);
-        if(!m)continue;
-        const pred=porNumLinha.get(parseInt(m[1]));
+      for(const {id} of _predParse(t.predecessora)){
+        const pred=_porId.get(id);
         if(pred)pred._sucessoras.push(t._numLinha);
       }
     }
@@ -447,6 +493,7 @@ const Planejamento = (() => {
     else{
       result=[];
       let skipLevel=-1; // se >= 0, pula tudo com nível > skipLevel
+
       for(const t of sorted){
         const niv=t.nivel||0;
         // Se estamos pulando e este item tem nível > o grupo recolhido, pula
@@ -1414,7 +1461,7 @@ const Planejamento = (() => {
         } else if(cid==='percConc'){
           cells+=`<div style="${base}font-size:.7rem;justify-content:center;color:${perc>=100?'#16a34a':perc>0?'#2563eb':'#555'};cursor:pointer;" ${clickEdit}>${perc}%</div>`;
         } else if(cid==='predecessora'){
-          cells+=`<div style="${base}color:#555;font-size:.7rem;justify-content:center;cursor:pointer;" ${clickEdit} title="${_esc(_tooltipPred(t.predecessora))}">${t.predecessora||'—'}</div>`;
+          cells+=`<div style="${base}color:#555;font-size:.7rem;justify-content:center;cursor:pointer;" ${clickEdit} title="${_esc(_tooltipPred(t))}">${t._predDisplay||'—'}</div>`;
         } else if(cid==='sucessora'){
           cells+=`<div style="${base}color:#666;font-size:.7rem;justify-content:center;" title="${_esc(_tooltipSuc(t._sucessoras))||'Calculado automaticamente — quem tem esta tarefa como predecessora'}">${(t._sucessoras&&t._sucessoras.length)?t._sucessoras.join(', '):'—'}</div>`;
         } else if(cid==='responsavel'){
@@ -1523,7 +1570,7 @@ const Planejamento = (() => {
       predecessora:'predecessora',responsavel:'responsavel',local:'local',grupo:'grupo',nivel:'nivel',
       equipe:'equipeAlocada'};
     const field=map[colId]; if(!field)return;
-    const val=t[field]||'';
+    const val=field==='predecessora'?(t._predDisplay||''):(t[field]||'');
     const isDate=colId==='inicio'||colId==='termino';
     const isNum=colId==='duracao'||colId==='percEsp'||colId==='percConc'||colId==='nivel'||colId==='equipe';
 
@@ -1550,6 +1597,12 @@ const Planejamento = (() => {
       // versão em edição é a Atual (o campo duracao é único, não
       // versionado; editar Base/Desafio não deve mexer nele).
       const updates={[field]:v};
+      if(field==='predecessora'){
+        // Usuário digita por número de linha (ex: "5TI+3") — converte pro
+        // formato canônico por ID antes de gravar, pra nunca mais quebrar
+        // com reordenação (o ID nunca muda, o número de linha muda sempre).
+        updates.predecessora=_predTextoParaCanon(v);
+      }
       if(_versaoData==='atual'&&field==='inicioPlanejado'&&v&&t.terminoPlanejado){
         // Início + Fim → calcula Duração
         updates.duracao=Math.max(0,Math.ceil((new Date(t.terminoPlanejado)-new Date(v))/864e5));
@@ -1560,9 +1613,9 @@ const Planejamento = (() => {
         // Duração + Início → calcula Fim
         const fim=new Date(t.inicioPlanejado);fim.setDate(fim.getDate()+v);
         updates.terminoPlanejado=fim.toISOString().split('T')[0];
-      } else if(field==='predecessora'&&v){
-        // Predecessora: "3TI" = após tarefa com código 3 (TI = término-início)
-        _calcPredecessora(t, v, updates);
+      } else if(field==='predecessora'&&updates.predecessora){
+        // Predecessora: calcula datas a partir do vínculo canônico (por ID)
+        _calcPredecessora(t, updates.predecessora, updates);
       }
       
       // Se mudou nível, move filhos também
@@ -1596,6 +1649,7 @@ const Planejamento = (() => {
       const _valAntes=t[field];
       // Atualiza local
       Object.assign(t, updates);
+      if(field==='predecessora')t._predDisplay=_predCanonParaTexto(t.predecessora);
       Audit.campo(obraId,'Planejamento',t.id,t.nome,field,_valAntes,v).catch(()=>{});
 
       // ===== % EM FAMÍLIA (mão dupla) =====
@@ -1645,8 +1699,13 @@ const Planejamento = (() => {
   // Aceita uma ou várias predecessoras separadas por ";" (ex: "7TI; 98II+10d") —
   // nesse caso usa a mais restritiva (a que resulta na data mais tardia),
   // que é a regra padrão de CPM/MS Project para múltiplas dependências.
-  function _calcPredecessora(t, predStr, updates){
-    const partes=String(predStr||'').split(';').map(s=>s.trim()).filter(Boolean);
+  // Aceita uma ou várias predecessoras separadas por ";" (ex: "id1|TI|;id2|II|+10") —
+  // nesse caso usa a mais restritiva (a que resulta na data mais tardia),
+  // que é a regra padrão de CPM/MS Project para múltiplas dependências.
+  // predCanon: formato CANÔNICO por ID (não mais texto por número de linha) —
+  // ver _predParse/_predTextoParaCanon.
+  function _calcPredecessora(t, predCanon, updates){
+    const partes=_predParse(predCanon);
     if(!partes.length)return;
     let melhorIni=null, melhorFim=null;
     for(const parte of partes){
@@ -1659,22 +1718,13 @@ const Planejamento = (() => {
     if(melhorFim)updates.terminoPlanejado=melhorFim;
   }
 
-  // Formato de cada predecessora individual: "3TI" ou "1.2TI" ou "5" (default TI)
+  // parte: {id,tipo,lag} — resolve DIRETO por ID, nunca por posição/número de linha.
   // TI = Término-Início (mais comum) · II = Início-Início · TT = Término-Término · IT = Início-Término
-  function _calcUmaPredecessora(t, predStr){
-    const match=predStr.match(/^([\d.]+)\s*(TI|II|TT|IT)?\s*([+-]?\d+)?\s*d{0,2}$/i);
-    if(!match)return null;
-    const codPred=match[1];
-    const tipo=(match[2]||'TI').toUpperCase();
-    const defasagem=parseInt(match[3])||0;
-    
-    // Busca pelo número de linha (coluna #) — igual ao MS Project
-    // _numLinha é atribuído em _buildFiltradas() pela ordem real
-    const numBusca=parseInt(codPred);
-    const pred=isNaN(numBusca)
-      ? tarefas.find(x=>x.codigo===codPred)    // fallback: busca por código
-      : tarefas.find(x=>x._numLinha===numBusca);
+  function _calcUmaPredecessora(t, parte){
+    const pred=_porId.get(parte.id)||tarefas.find(x=>x.id===parte.id);
     if(!pred)return null;
+    const tipo=(parte.tipo||'TI').toUpperCase();
+    const defasagem=parseInt(parte.lag)||0;
     
     let dataRef;
     if(tipo==='TI') dataRef=pred.terminoPlanejado; // Após término da pred
@@ -2118,6 +2168,7 @@ const Planejamento = (() => {
       '<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.corrigirOrdensDuplicadas()" title="Corrige tarefas com número de ordem duplicado">🔧 Corrigir Ordens</button>'+
       '<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento._recalcularDatasPais()" title="Recalcula início/término das tarefas-pai a partir dos filhos">📐 Recalcular Datas dos Pais</button>'+
       '<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento._corrigirNiveisSoltos()" title="Corrige tarefas com nível soltos (invisíveis no Editor de Estrutura)">🌳 Corrigir Níveis Soltos</button>'+
+      '<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento._migrarPredecessorasParaId()" title="Converte predecessoras antigas (por número de linha) pro formato por ID — imune a reordenação. Roda sozinho ao carregar, use aqui só se quiser confirmar manualmente.">🔗 Corrigir Predecessoras (por ID)</button>'+
       // "Corrigir Nível pelo Código" foi removido do menu — era um reparo de uso
       // único (histórico corrompido por bugs já corrigidos). Como ferramenta
       // recorrente é perigoso: se você aninhar uma tarefa com Código dentro de um
@@ -2380,10 +2431,10 @@ const Planejamento = (() => {
         const nivelBySpace=Math.floor((nR.length-nR.trimStart().length)/2);
         const niv=!isNaN(nivColuna)?nivColuna:(cd?pts:nivelBySpace);
         const tipo=niv<=1&&cd?'grupo':'tarefa';
-        regs.push({tipo,codigo:cd,nome:nm,nivel:niv,ordem:regs.length+1,
+        regs.push({_predRaw:String(row[ci('pred')]||'').trim(),tipo,codigo:cd,nome:nm,nivel:niv,ordem:regs.length+1,
           inicioPlanejado:_pd(row[ci('inicio')]),terminoPlanejado:_pd(row[ci('termino')]),
           duracao:_pDur(row[ci('duracao')]),percentualEsperado:_pN(row[ci('percEsp')]),
-          percentualConcluido:_pN(row[ci('percConc')]),predecessora:String(row[ci('pred')]||'').trim(),
+          percentualConcluido:_pN(row[ci('percConc')]),
           tarefaPai:String(row[ci('pai')]||'').trim(),grupo:String(row[ci('grupo')]||'').trim(),
           local:String(row[ci('local')]||'').trim(),custo:_pN(row[ci('custo')]),receita:_pN(row[ci('receita')]),
           responsavel:String(row[ci('resp')]||'').trim(),inicioPlanejadoBase:_pd(row[ci('iniB')]),
@@ -2393,7 +2444,29 @@ const Planejamento = (() => {
       let imp=0,falhas=0;
       for(let i=0;i<regs.length;i+=L){
         Utils.mostrarLoading(`Criando ${Math.min(i+L,regs.length)}/${regs.length}...`);
-        await Promise.all(regs.slice(i,i+L).map(d=>comTimeout(Database.criar(obraId,COL,d,null,true)).then(()=>imp++).catch(e=>{falhas++;console.error('Falha:',d.nome,e);})));
+        await Promise.all(regs.slice(i,i+L).map(d=>{
+          const {_predRaw,...dados}=d;
+          return comTimeout(Database.criar(obraId,COL,dados,null,true)).then(id=>{d._idFinal=id;imp++;}).catch(e=>{falhas++;console.error('Falha:',d.nome,e);});
+        }));
+      }
+      // 2ª passada: resolve predecessora (número da linha na planilha) pro ID
+      // real da tarefa criada — grava direto no formato canônico por ID.
+      const predUpdates=[];
+      for(const d of regs){
+        if(!d._predRaw||!d._idFinal)continue;
+        const partes=[];
+        for(const parteRaw of d._predRaw.split(';')){
+          const p=parteRaw.trim();if(!p)continue;
+          const m=p.match(/^(\d+)\s*(TI|II|TT|IT)?\s*([+-]?\d+)?\s*d{0,2}$/i);
+          if(!m)continue;
+          const alvo=regs[parseInt(m[1])-1];
+          if(alvo&&alvo._idFinal)partes.push({id:alvo._idFinal,tipo:(m[2]||'TI').toUpperCase(),lag:m[3]||''});
+        }
+        if(partes.length)predUpdates.push({id:d._idFinal,predecessora:_predFormat(partes)});
+      }
+      for(let i=0;i<predUpdates.length;i+=L){
+        Utils.mostrarLoading(`Vinculando predecessoras... ${Math.min(i+L,predUpdates.length)}/${predUpdates.length}`);
+        await Promise.all(predUpdates.slice(i,i+L).map(({id,...upd})=>comTimeout(Database.atualizar(obraId,COL,id,upd)).catch(console.error)));
       }
       Utils.toast(falhas?`⚠ ${imp} criadas, ${falhas} falharam — importe de novo pra completar.`:`✅ Base substituída: ${imp} tarefas.`,falhas?'alerta':'sucesso');
       await carregar();
@@ -2470,7 +2543,7 @@ const Planejamento = (() => {
     const DATE_FIELDS=new Set(['inicioReal','terminoReal','inicioPlanejado','terminoPlanejado']);
     const NUM_FIELDS=new Set(['percentualConcluido','percentualEsperado','custo','receita','duracao']);
 
-    let naoEncontradas=0,ambiguas=0;
+    let naoEncontradas=0,ambiguas=0,predNaoResolvidas=0;
     const updates=[];
     for(let r=1;r<rows.length;r++){
       const row=rows[r];
@@ -2482,6 +2555,29 @@ const Planejamento = (() => {
       const t=candidatos[0];
       const upd={};
       for(const campo of camposMarcados){
+        if(campo==='predecessora'){
+          // A predecessora na planilha referencia NÚMERO DA LINHA DA PLANILHA
+          // (não da obra atual). Resolve: número → nome nessa MESMA planilha
+          // → tarefa atual com esse nome → ID. Grava já no formato canônico
+          // por ID, nunca mais quebra reordenando.
+          const idxPred=ci('pred');
+          const raw=idxPred>=0?String(row[idxPred]||'').trim():'';
+          if(!raw)continue;
+          const partes=[];
+          for(const parteRaw of raw.split(';')){
+            const p=parteRaw.trim();if(!p)continue;
+            const m=p.match(/^(\d+)\s*(TI|II|TT|IT)?\s*([+-]?\d+)?\s*d{0,2}$/i);
+            if(!m)continue;
+            const linhaAlvo=rows[parseInt(m[1])]; // rows[0]=cabeçalho, rows[N] = linha de ID/nº N
+            const nomeAlvo=linhaAlvo?String(linhaAlvo[iN]||'').trim():'';
+            const candAlvo=nomeAlvo?porNome.get(nomeAlvo.toLowerCase()):null;
+            if(candAlvo&&candAlvo.length===1){
+              partes.push({id:candAlvo[0].id,tipo:(m[2]||'TI').toUpperCase(),lag:m[3]||''});
+            } else predNaoResolvidas++;
+          }
+          upd.predecessora=_predFormat(partes);
+          continue;
+        }
         const idx=ci(COL_MAP[campo]);
         if(idx<0)continue;
         let valor=row[idx];
@@ -2494,7 +2590,7 @@ const Planejamento = (() => {
       if(Object.keys(upd).length)updates.push({id:t.id,...upd});
     }
 
-    if(!confirm(`${updates.length} tarefa(s) serão atualizadas (${camposMarcados.length} campo(s) cada).\n${naoEncontradas} não encontradas (nome não bate com nenhuma tarefa atual).\n${ambiguas} ambíguas (mais de uma tarefa com o mesmo nome — puladas por segurança).\n\nConfirmar?`)){_correcoesContexto=null;return;}
+    if(!confirm(`${updates.length} tarefa(s) serão atualizadas (${camposMarcados.length} campo(s) cada).\n${naoEncontradas} não encontradas (nome não bate com nenhuma tarefa atual).\n${ambiguas} ambíguas (mais de uma tarefa com o mesmo nome — puladas por segurança).${predNaoResolvidas?`\n${predNaoResolvidas} predecessora(s) não resolvida(s) (nome ambíguo ou não encontrado).`:''}\n\nConfirmar?`)){_correcoesContexto=null;return;}
 
     Utils.mostrarLoading('Aplicando correções...');
     const L=20,TIMEOUT_MS=15000;
@@ -2517,7 +2613,6 @@ const Planejamento = (() => {
   async function importarExcel(event){
     const file=event.target.files[0];if(!file)return;event.target.value='';
     if(!confirm(`Importar vai criar tarefas novas e ATUALIZAR as que já existem com o mesmo Código (tarefas antigas que não estão mais na planilha NÃO são apagadas). Confirmar?`))return;
-    const numAntesImport=_capturarNumAntes();
     try{
       Utils.mostrarLoading('Lendo...');
       if(typeof XLSX==='undefined')await _ls('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');
@@ -2557,10 +2652,10 @@ const Planejamento = (() => {
         const niv=!isNaN(nivColuna)?nivColuna:(cd?nivelByCod:nivelBySpace);
         const tipo=niv<=1&&cd?'grupo':'tarefa';
         const existente=cd?existentesPorCod.get(cd):null;
-        regs.push({_idExistente:existente?.id||null,tipo,codigo:cd,nome:nm,nivel:niv,ordem:regs.length+1,
+        regs.push({_idExistente:existente?.id||null,_predRaw:String(row[ci('pred')]||'').trim(),tipo,codigo:cd,nome:nm,nivel:niv,ordem:regs.length+1,
           inicioPlanejado:_pd(row[ci('inicio')]),terminoPlanejado:_pd(row[ci('termino')]),
           duracao:_pDur(row[ci('duracao')]),percentualEsperado:_pN(row[ci('percEsp')]),
-          percentualConcluido:_pN(row[ci('percConc')]),predecessora:String(row[ci('pred')]||'').trim(),
+          percentualConcluido:_pN(row[ci('percConc')]),
           tarefaPai:String(row[ci('pai')]||'').trim(),grupo:String(row[ci('grupo')]||'').trim(),
           local:String(row[ci('local')]||'').trim(),custo:_pN(row[ci('custo')]),receita:_pN(row[ci('receita')]),
           responsavel:String(row[ci('resp')]||'').trim(),inicioPlanejadoBase:_pd(row[ci('iniB')]),
@@ -2578,12 +2673,33 @@ const Planejamento = (() => {
       for(let i=0;i<regs.length;i+=L){
         Utils.mostrarLoading(`Importando ${Math.min(i+L,regs.length)}/${regs.length}...`);
         await Promise.all(regs.slice(i,i+L).map(d=>{
-          const {_idExistente,...dados}=d;
+          const {_idExistente,_predRaw,...dados}=d;
           const op=_idExistente
-            ?comTimeout(Database.atualizar(obraId,COL,_idExistente,dados))
-            :comTimeout(Database.criar(obraId,COL,dados,null,true));
+            ?comTimeout(Database.atualizar(obraId,COL,_idExistente,dados)).then(()=>{d._idFinal=_idExistente;})
+            :comTimeout(Database.criar(obraId,COL,dados,null,true)).then(id=>{d._idFinal=id;});
           return op.then(()=>imp++).catch(e=>{falhas++;console.error('Falha ao importar:',d.nome,e);});
         }));
+      }
+      // 2ª passada: resolve cada predecessora (número da LINHA NA PLANILHA) pro ID
+      // real da tarefa correspondente, já criada/atualizada acima — grava direto
+      // no formato canônico por ID. Nunca mais quebra reordenando depois, porque
+      // não depende de posição, só do vínculo direto entre as tarefas.
+      const predUpdates=[];
+      for(const d of regs){
+        if(!d._predRaw||!d._idFinal)continue;
+        const partes=[];
+        for(const parteRaw of d._predRaw.split(';')){
+          const p=parteRaw.trim();if(!p)continue;
+          const m=p.match(/^(\d+)\s*(TI|II|TT|IT)?\s*([+-]?\d+)?\s*d{0,2}$/i);
+          if(!m)continue;
+          const alvo=regs[parseInt(m[1])-1];
+          if(alvo&&alvo._idFinal)partes.push({id:alvo._idFinal,tipo:(m[2]||'TI').toUpperCase(),lag:m[3]||''});
+        }
+        if(partes.length)predUpdates.push({id:d._idFinal,predecessora:_predFormat(partes)});
+      }
+      for(let i=0;i<predUpdates.length;i+=L){
+        Utils.mostrarLoading(`Vinculando predecessoras... ${Math.min(i+L,predUpdates.length)}/${predUpdates.length}`);
+        await Promise.all(predUpdates.slice(i,i+L).map(({id,...upd})=>comTimeout(Database.atualizar(obraId,COL,id,upd)).catch(console.error)));
       }
       // Órfãs: tarefas que JÁ EXISTIAM (com Código) e não vieram nesta planilha —
       // não apaga sozinho (pode ser intencional manter, ou pode ter sido removida
@@ -2592,7 +2708,6 @@ const Planejamento = (() => {
       const orfas=tarefas.filter(t=>t.codigo&&!codigosDaPlanilha.has(t.codigo));
 
       Utils.toast(falhas?`⚠ ${imp} ok, ${falhas} falharam — importe de novo pra completar (retoma de onde parou).`:`✅ ${imp} tarefas importadas/atualizadas!`,falhas?'alerta':'sucesso');await carregar();
-      await _remapAposMudancaPosicoes(numAntesImport);
       await _corrigirNiveisSoltos(true);
       await _recalcularDatasPais(true);
       if(orfas.length)_mostrarOrfasImport(orfas);
@@ -2650,6 +2765,38 @@ const Planejamento = (() => {
       await _remapAposMudancaPosicoes(numAntes);
     }catch(e){console.error(e);Utils.toast('Erro ao excluir.','erro');}
     finally{Utils.esconderLoading();}
+  }
+
+  // ===================== MIGRAÇÃO: PREDECESSORA POR ID =====================
+  // Reparo de UMA VEZ: converte predecessoras já salvas no formato antigo
+  // (texto por número de linha, ex: "5TI+3") pro novo formato canônico por ID
+  // (ver bloco no topo do arquivo). Depois de rodar isso, reordenar tarefas
+  // nunca mais quebra o vínculo — não precisa rodar de novo, a não ser que
+  // ainda existam tarefas no formato antigo (o formato novo sempre tem "|").
+  async function _migrarPredecessorasParaId(silencioso){
+    const pendentes=tarefas.filter(t=>t.predecessora&&!String(t.predecessora).includes('|'));
+    if(!pendentes.length){if(!silencioso)Utils.toast('Nenhuma predecessora no formato antigo — já está tudo por ID.','sucesso');return 0;}
+    if(!silencioso&&!confirm(`${pendentes.length} predecessora(s) ainda estão no formato antigo (número de linha, que quebra ao reordenar). Converter agora pro formato por ID (permanente, não quebra mais nunca)?`))return 0;
+    Utils.mostrarLoading('Convertendo predecessoras...');
+    const mudou=[];
+    for(const t of pendentes){
+      const canon=_predTextoParaCanon(t.predecessora);
+      t.predecessora=canon;
+      mudou.push({id:t.id,predecessora:canon});
+    }
+    const L=20,TIMEOUT_MS=15000;
+    const comTimeout=p=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),TIMEOUT_MS))]);
+    let falhas=0;
+    for(let i=0;i<mudou.length;i+=L){
+      Utils.mostrarLoading(`Convertendo... ${Math.min(i+L,mudou.length)}/${mudou.length}`);
+      await Promise.all(mudou.slice(i,i+L).map(({id,...upd})=>
+        comTimeout(Database.atualizar(obraId,COL,id,upd)).catch(e=>{falhas++;console.error('Erro migrar pred:',id,e);})
+      ));
+    }
+    Utils.esconderLoading();
+    _buildFiltradas();_render();
+    Utils.toast(falhas?`⚠ ${mudou.length-falhas} convertidas, ${falhas} falharam — rode de novo.`:`🔗 ${mudou.length} predecessora(s) convertida(s) pro formato por ID.`,falhas?'alerta':'sucesso');
+    return mudou.length;
   }
 
   // ===================== NÍVEL PELO CÓDIGO (reparo definitivo) =====================
@@ -2843,7 +2990,7 @@ const Planejamento = (() => {
       const sorted=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
       const rows=sorted.map((t,i)=>[i+1,t.codigo||'',t.nivel||0,'  '.repeat(t.nivel||0)+(t.nome||''),
         t.duracao?t.duracao+'d':'',_fBR(t.inicioPlanejado),_fBR(t.terminoPlanejado),
-        t.percentualEsperado||0,t.percentualConcluido||0,t.predecessora||'',t.tarefaPai||'',
+        t.percentualEsperado||0,t.percentualConcluido||0,t._predDisplay||'',t.tarefaPai||'',
         t.grupo||'',t.local||'',t.custo||0,t.receita||0,t.responsavel||'',
         _fBR(t.inicioPlanejadoBase),_fBR(t.terminoPlanejadoBase),_fBR(t.inicioDesafio),_fBR(t.terminoDesafio)]);
       const ws=XLSX.utils.aoa_to_sheet([H,...rows]);
@@ -2977,7 +3124,7 @@ const Planejamento = (() => {
             else if(cid==='duracao')cells+=`<div style="${base}color:#666;font-size:.7rem;justify-content:center;">${t.duracao||'—'}</div>`;
             else if(cid==='percEsp')cells+=`<div style="${base}color:#555;font-size:.7rem;justify-content:center;">${t.percentualEsperado||0}%</div>`;
             else if(cid==='percConc')cells+=`<div style="${base}font-size:.7rem;justify-content:center;color:${perc>=100?'#16a34a':perc>0?'#2563eb':'#555'};">${perc}%</div>`;
-            else if(cid==='predecessora')cells+=`<div style="${base}color:#555;font-size:.7rem;justify-content:center;" title="${_esc(_tooltipPred(t.predecessora))}">${t.predecessora||'—'}</div>`;
+            else if(cid==='predecessora')cells+=`<div style="${base}color:#555;font-size:.7rem;justify-content:center;" title="${_esc(_tooltipPred(t))}">${t._predDisplay||'—'}</div>`;
             else if(cid==='sucessora')cells+=`<div style="${base}color:#666;font-size:.7rem;justify-content:center;" title="${_esc(_tooltipSuc(t._sucessoras))||'Calculado automaticamente'}">${(t._sucessoras&&t._sucessoras.length)?t._sucessoras.join(', '):'—'}</div>`;
             else if(cid==='responsavel')cells+=`<div style="${base}color:#555;font-size:.7rem;">${t.responsavel||'—'}</div>`;
             else if(cid==='local')cells+=`<div style="${base}color:#555;font-size:.7rem;">${t.local||'—'}</div>`;
@@ -3115,24 +3262,26 @@ const Planejamento = (() => {
 
   // Popup de predecessora
   function _predPopup(idx){
-    console.log('_predPopup chamado, idx=',idx);
     const t=filtradas[idx];if(!t)return;
     let pop=document.getElementById('pred-pop');if(pop)pop.remove();
     pop=document.createElement('div');pop.id='pred-pop';
     pop.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#1a1a1a;border:2px solid var(--cor-primaria);border-radius:10px;padding:20px;z-index:2000;min-width:360px;box-shadow:0 12px 40px rgba(0,0,0,.6);';
-    
-    const predAtual=t.predecessora||'';
-    const match=predAtual.match(/^([\d.]+)\s*(TI|II|TT|IT)?\s*([+-]?\d+)?$/i);
-    const codAtual=match?match[1]:'';
-    const tipoAtual=match?(match[2]||'TI').toUpperCase():'TI';
-    const defAtual=match?parseInt(match[3])||0:0;
-    
+
+    // Editor de UMA predecessora só (se a tarefa já tem várias, mostra a
+    // primeira aqui — pra editar todas de uma vez use a célula da tabela,
+    // que aceita "5TI; 12II+3" com ponto e vírgula).
+    const arr=_predParse(t.predecessora);
+    const primeira=arr[0];
+    const codAtual=primeira?String(_idParaNumLinha.get(primeira.id)||''):'';
+    const tipoAtual=primeira?(primeira.tipo||'TI'):'TI';
+    const defAtual=primeira?(parseInt(primeira.lag)||0):0;
+
     pop.innerHTML=`
       <div style="font-weight:700;color:var(--cor-primaria);margin-bottom:14px;font-size:.9rem;">Predecessora de: ${t.nome}</div>
       <div style="display:flex;gap:8px;margin-bottom:12px;">
         <div style="flex:1;">
-          <label style="font-size:.7rem;color:#888;display:block;margin-bottom:4px;">Código da tarefa</label>
-          <input id="pred-cod" type="text" value="${codAtual}" class="form-control" placeholder="Ex: 1.2" oninput="Planejamento._predPreview()" style="font-size:.9rem;">
+          <label style="font-size:.7rem;color:#888;display:block;margin-bottom:4px;">Nº da linha ou código da tarefa</label>
+          <input id="pred-cod" type="text" value="${codAtual}" class="form-control" placeholder="Ex: 5 ou 1.2" oninput="Planejamento._predPreview()" style="font-size:.9rem;">
         </div>
         <div style="width:80px;">
           <label style="font-size:.7rem;color:#888;display:block;margin-bottom:4px;">Tipo</label>
@@ -3165,35 +3314,38 @@ const Planejamento = (() => {
     const onKey=e=>{if(e.key==='Escape'){pop.remove();document.removeEventListener('keydown',onKey);}};
     document.addEventListener('keydown',onKey);
   }
-  
+
   function _predPreview(){
     const cod=document.getElementById('pred-cod')?.value?.trim();
     const tipo=document.getElementById('pred-tipo')?.value||'TI';
     const def=parseInt(document.getElementById('pred-def')?.value)||0;
     const info=document.getElementById('pred-info');
     if(!info)return;
-    if(!cod){info.innerHTML='<span style="color:#555;">Digite o código da tarefa predecessora</span>';return;}
-    const numBusca2=parseInt(cod);const pred=isNaN(numBusca2)?tarefas.find(x=>x.codigo===cod):tarefas.find(x=>x._numLinha===numBusca2);
-    if(!pred){info.innerHTML='<span style="color:#dc2626;">Tarefa com código "'+cod+'" não encontrada</span>';return;}
+    if(!cod){info.innerHTML='<span style="color:#555;">Digite o número da linha ou código da tarefa predecessora</span>';return;}
+    const numBusca2=parseInt(cod);const pred=isNaN(numBusca2)?tarefas.find(x=>x.codigo===cod):_numLinhaMap.get(numBusca2);
+    if(!pred){info.innerHTML='<span style="color:#dc2626;">Tarefa "'+cod+'" não encontrada</span>';return;}
     const descTipo={TI:'Inicia após término de',II:'Inicia junto com',TT:'Termina junto com',IT:'Termina junto com início de'}[tipo];
-    info.innerHTML=`<div style="color:var(--cor-primaria);font-weight:700;margin-bottom:4px;">${pred.codigo} — ${pred.nome}</div>
+    info.innerHTML=`<div style="color:var(--cor-primaria);font-weight:700;margin-bottom:4px;">${pred.codigo||pred._numLinha} — ${pred.nome}</div>
       <div style="color:#aaa;font-size:.78rem;">${descTipo}: <strong>${pred.nome}</strong>${def?` (${def>0?'+':''}${def} dias)`:''}</div>
       ${pred.inicioPlanejado?`<div style="color:#666;font-size:.72rem;margin-top:4px;">Início: ${_fd(pred.inicioPlanejado)} · Fim: ${_fd(pred.terminoPlanejado)}</div>`:''}`;
   }
-  
+
   async function _predSalvar(idx, forceVal){
     const t=filtradas[idx];if(!t)return;
-    let valor;
-    if(forceVal!==undefined){valor=forceVal;}
+    let canon;
+    if(forceVal!==undefined){canon=forceVal;}
     else{
       const cod=document.getElementById('pred-cod')?.value?.trim()||'';
       const tipo=document.getElementById('pred-tipo')?.value||'TI';
       const def=parseInt(document.getElementById('pred-def')?.value)||0;
-      valor=cod?(cod+tipo+(def?((def>0?'+':'')+def):'')):'' ;
+      const numBusca=parseInt(cod);
+      const pred=cod?(isNaN(numBusca)?tarefas.find(x=>x.codigo===cod):_numLinhaMap.get(numBusca)):null;
+      canon=pred?_predFormat([{id:pred.id,tipo,lag:def?((def>0?'+':'')+def):''}]):'';
     }
-    const updates={predecessora:valor};
-    if(valor)_calcPredecessora(t,valor,updates);
+    const updates={predecessora:canon};
+    if(canon)_calcPredecessora(t,canon,updates);
     Object.assign(t,updates);
+    t._predDisplay=_predCanonParaTexto(t.predecessora);
     _paintRows();
     const pop=document.getElementById('pred-pop');if(pop)pop.remove();
     try{await Database.atualizar(obraId,COL,t.id,updates);}
@@ -3203,64 +3355,17 @@ const Planejamento = (() => {
   function _hideCol(id){colsHidden.add(id);_render();requestAnimationFrame(()=>_paintRows());}
 
 
-  // Remapeia referências numéricas de predecessoras após reordenação.
-  // oldToNew: Map<id_tarefa, novo_numLinha> — gerado depois de _buildFiltradas().
-  // Só toca tarefas cujo número de predecessora mudou; salva no Firestore em background.
-  // Helper reutilizável: qualquer inserção OU exclusão de tarefa desloca o número
-  // de linha (_numLinha) de tudo que vem depois dela — e é esse número que as
-  // predecessoras referenciam (ex: "5TI"). Antes só o arrastar na árvore chamava
-  // _remapearPredecessoras; inserir/excluir tarefa (árvore ou tabela normal) não
-  // remapeava nada, deixando as predecessoras de tudo que vem depois silenciosamente
-  // erradas. Chame isso ANTES da operação (captura numAntes) e de novo DEPOIS de
-  // _buildFiltradas() já refletir o novo estado.
-  function _capturarNumAntes(){return new Map(tarefas.map(t=>[t.id,t._numLinha||0]));}
-  async function _remapAposMudancaPosicoes(numAntes){
-    const mudancasNum=new Map();
-    for(const t of tarefas){
-      if(!numAntes.has(t.id))continue; // tarefa nova — não tinha número antes
-      const antes=numAntes.get(t.id);
-      const depois=t._numLinha||0;
-      if(antes!==depois)mudancasNum.set(t.id,{antes,depois});
-    }
-    if(mudancasNum.size)await _remapearPredecessoras(mudancasNum);
-  }
-
-  async function _remapearPredecessoras(oldNumMap){
-    // oldNumMap: Map<tarefaId, {antes:numLinha, depois:numLinha}>
-    // Monta um lookup: numAntes → numDepois
-    const lookup=new Map();
-    for(const [,v] of oldNumMap){
-      if(v.antes!==v.depois) lookup.set(v.antes, v.depois);
-    }
-    if(!lookup.size)return; // nada mudou de número
-
-    const atualizacoes=[];
-    for(const t of tarefas){
-      if(!t.predecessora)continue;
-      // Formato: "3TI+2" ou "3" ou "3TI" — pode ter várias, separadas por ";" (ex: "7TI; 98II+10d")
-      const partes=t.predecessora.split(';').map(p=>{
-        return p.replace(/^\s*(\d+)/,(match,num)=>{
-          const n=parseInt(num);
-          return lookup.has(n)?match.replace(String(n),String(lookup.get(n))):match;
-        });
-      });
-      const novo=partes.join(';');
-      if(novo!==t.predecessora){
-        t.predecessora=novo;
-        atualizacoes.push({id:t.id,predecessora:novo});
-      }
-    }
-    if(atualizacoes.length){
-      Utils.toast(`Predecessoras atualizadas (${atualizacoes.length} tarefa${atualizacoes.length>1?'s':''}).`,'sucesso');
-      const L=20,TIMEOUT_MS=15000;
-      const comTimeout=p=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),TIMEOUT_MS))]);
-      for(let i=0;i<atualizacoes.length;i+=L){
-        await Promise.all(atualizacoes.slice(i,i+L).map(u=>
-          comTimeout(Database.atualizar(obraId,COL,u.id,{predecessora:u.predecessora})).catch(console.error)
-        ));
-      }
-    }
-  }
+  // ===== SISTEMA ANTIGO DE REMAP (obsoleto) =====
+  // Antes a predecessora era guardada por número de linha, e qualquer
+  // inserção/exclusão/movimentação precisava "remapear" quem mudou de posição.
+  // Isso sempre sobrava algum caso não coberto (daí o histórico de bugs).
+  // Agora a predecessora é guardada por ID da tarefa (ver _predParse/_predFormat/
+  // _predTextoParaCanon/_predCanonParaTexto acima) — o vínculo nunca quebra com
+  // reordenação, então remapear não é mais necessário. Mantidas como no-ops
+  // seguros só pra não precisar tocar em todo call-site espalhado pelo arquivo.
+  function _capturarNumAntes(){return new Map();}
+  async function _remapAposMudancaPosicoes(){/* obsoleto — predecessora agora é por ID */}
+  async function _remapearPredecessoras(){/* obsoleto — predecessora agora é por ID */}
 
   // Move a tarefa selecionada (se houver exatamente 1) uma posição acima ou abaixo
   async function _moverSel(dir){
@@ -4195,7 +4300,7 @@ const Planejamento = (() => {
     _rowDragStart,toggleSel,_limparSelecao,_moverSel,_bulkNivel,_bulkDuplicar,_bulkExcluir,
     toggleStatusFiltro,_aplicarStatusFiltro,undo,
     onBusca,limparBusca,_buscaKey,
-    importarExcel,importarBaseCompleta,importarCorrecoes,_executarCorrecoes,exportar,exportarPNG,corrigirOrdensDuplicadas,_corrigirNiveisSoltos,_corrigirNivelPeloCodigo,_recalcularDatasPais,_orfasMarcarTodas,_orfasExcluirMarcadas,_gerarPNG,_predPopup,_predPreview,_predSalvar,
+    importarExcel,importarBaseCompleta,importarCorrecoes,_executarCorrecoes,exportar,exportarPNG,corrigirOrdensDuplicadas,_corrigirNiveisSoltos,_corrigirNivelPeloCodigo,_migrarPredecessorasParaId,_recalcularDatasPais,_orfasMarcarTodas,_orfasExcluirMarcadas,_gerarPNG,_predPopup,_predPreview,_predSalvar,
     abrirVinculosView,fecharVinculosView,abrirVincularTarefa,abrirVincularAqui,onVincTipoChange,
     onVincNavModulo,onVincNavModuloMetrica,onVincNavMetrica,onVincNavEntrar,onVincNavBreadcrumb,onVincNavVoltar,
     onBuscaEscolhaAlvoVinc,onEscolherAlvoVinc,onTrocarAlvoVinc,
