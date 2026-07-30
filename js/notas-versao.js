@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.57.68',
+  versaoAtual: 'V2.57.69',
 
   versoes: [
     {
@@ -5247,10 +5247,16 @@ const NotasVersao = {
         'Numeração em sequência: clicando à direita do último chumbador, o número continua incrementando sozinho (como os chumbadores reais são numerados em linha, esquerda→direita). Se o clique não for à direita do anterior (nova linha), para e pergunta o número inicial dela antes de continuar.',
         'Controle: novo painel "Medidor Diário" — meta por vista (chumbadores concluídos/dia e/ou m² executados/dia, cada uma opcional), comparando dia a dia o realizado contra a meta com % e cor (verde ≥100%, amarelo ≥60%, vermelho abaixo).',
         'Calibrar Escala: corrigido caso em que "Salvar" não fazia nada (falha silenciosa) — agora valida cada etapa (pontos perdidos, imagem sem tamanho salvo, pontos iguais) com mensagem de erro específica em vez de simplesmente não salvar. A linha de calibração agora fica salva e sempre visível no mapa (verde, com o valor em cm), pra conferir depois se ainda está correta — antes ela desaparecia depois de confirmar.']},
-    {versao:'V2.57.68',status:'aberta',data:'2026-07-30',tipo:'correcao',
+    {versao:'V2.57.68',status:'fechada',data:'2026-07-30',tipo:'correcao',
       titulo:'Dashboard: painel "Contenção (Solo Grampeado)" nunca aparecia — estava preso dentro do toggle "Mostrar Contenção, Fundação e Estrutura" (checkbox desligado por padrão)',
       itens:['O painel de minimapas do Solo Grampeado tinha sido colocado dentro do bloco condicionado ao checkbox "Mostrar Contenção, Fundação e Estrutura" — um toggle de preferência pessoal (guardado no localStorage do navegador) que vem desligado por padrão. Resultado: quem nunca marcou esse checkbox nunca via o painel, mesmo com vistas/execução cadastradas.',
-        'Corrigido: "Contenção (Solo Grampeado)" agora é uma seção própria do Dashboard, sempre visível, independente desse toggle (que continua controlando só o gráfico de Fundação e Estrutura).']}
+        'Corrigido: "Contenção (Solo Grampeado)" agora é uma seção própria do Dashboard, sempre visível, independente desse toggle (que continua controlando só o gráfico de Fundação e Estrutura).']},
+    {versao:'V2.57.69',status:'aberta',data:'2026-07-30',tipo:'funcionalidade',
+      titulo:'Levantamento de Solo Grampeado: ferramenta "Medir Área" — desenha o contorno real da vista e calcula o m² pela escala, em vez de só digitar o valor',
+      itens:['Botão "📐 Medir Área" (exige escala já calibrada): clique nos vértices do contorno real da vista (segue o desenho, inclusive terreno inclinado, reentrâncias etc.) — cada clique marca um vértice, com desfazer último ponto e um botão "Concluir Polígono" a partir de 3 pontos.',
+        'Área calculada pela fórmula de Shoelace em cima da escala calibrada (não é mais só a área do retângulo da imagem inteira) — mostra o resultado num modal de confirmação, ainda editável antes de salvar.',
+        'O contorno medido fica salvo e sempre visível no mapa (azul, tracejado, com o m² escrito no meio), pra conferir depois se ainda bate com a vista — mesmo princípio já usado na linha de calibração de escala.',
+        'O campo "m² total" com edição manual (✎) continua existindo, pra ajuste fino depois de medir.']}
   ],
 
   render(containerId) {

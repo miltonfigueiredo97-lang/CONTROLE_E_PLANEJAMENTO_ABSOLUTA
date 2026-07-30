@@ -55,6 +55,24 @@ const SoloGrampeadoCalculos = (() => {
     return ((wPx * escala) / 100) * ((hPx * escala) / 100);
   }
 
+  // Área real (m²) de um polígono desenhado sobre a vista (pontos
+  // relativos 0..1) — fórmula shoelace em px da imagem, convertida
+  // pra cm² pela escala calibrada e depois pra m².
+  function calcM2Poligono(pontos, vista) {
+    const escala = num(vista.escalaCmPorPx);
+    if (!(escala > 0) || !pontos || pontos.length < 3) return 0;
+    const W = num(vista.imgWidthPx), H = num(vista.imgHeightPx);
+    const px = pontos.map(p => ({ x: p.x * W, y: p.y * H }));
+    let soma = 0;
+    for (let i = 0; i < px.length; i++) {
+      const a = px[i], b = px[(i + 1) % px.length];
+      soma += (a.x * b.y) - (b.x * a.y);
+    }
+    const areaPx2 = Math.abs(soma) / 2;
+    const areaCm2 = areaPx2 * (escala * escala);
+    return areaCm2 / 10000;
+  }
+
   // ══════════════════════════════════════════
   // % DE EXECUÇÃO DA VISTA
   // ══════════════════════════════════════════
@@ -183,7 +201,7 @@ const SoloGrampeadoCalculos = (() => {
   return {
     fmt2, fmt1, num, genId, esc,
     TIPOS_CHUMBADOR, ETAPAS_CHUMBADOR, ETAPAS_AREA, PESO_CHUMBADOR_TOTAL, PESO_AREA_TOTAL,
-    calcEscalaCmPorPx, calcM2Imagem, calcM2Retangulo,
+    calcEscalaCmPorPx, calcM2Imagem, calcM2Retangulo, calcM2Poligono,
     pctChumbador, statusChumbador, corChumbador, calcPctVista,
     mapaHTML, posRelativa, distanciaPxEntrePontos,
     canvasParaDataURLLimitado,

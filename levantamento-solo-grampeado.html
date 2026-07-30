@@ -47,7 +47,7 @@
       <a href="admin-permissoes.html"><span class="nav-icon">🔑</span> Permissões</a>
       <div class="sidebar-section-title">Sistema</div>
       <a href="backup-planejamento.html"><span class="nav-icon">🗂️</span> Backup de Planejamentos</a>
-      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V2.57.68</span></a>
+      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V2.57.69</span></a>
     </nav>
     <div class="sidebar-user">
       <div class="user-avatar">U</div>
@@ -163,7 +163,27 @@
   </div>
 </div>
 
-<!-- MODAL: Novo/Editar Chumbador -->
+<!-- MODAL: Confirmar Área Medida -->
+<div class="modal-overlay" id="modal-sg-medir-confirmar">
+  <div class="modal" style="max-width:400px;">
+    <div class="modal-header">
+      <h3>📐 Área Medida</h3>
+      <button class="modal-close" onclick="SG_UI.cancelarMedicaoArea()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="sg-medir-vistaid">
+      <input type="hidden" id="sg-medir-pontos">
+      <p class="text-sm text-muted mb-1">Área calculada a partir da escala e do contorno desenhado: <strong id="sg-medir-resultado" style="color:var(--cor-texto);"></strong> m²</p>
+      <div class="form-grupo"><label>m² total da vista (pode ajustar)</label><input type="number" step="0.01" id="sg-medir-valor" class="form-control"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secundario" onclick="SG_UI.cancelarMedicaoArea()">Cancelar</button>
+      <button class="btn btn-primario" onclick="SG_UI.salvarMedicaoArea()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Editar Chumbador -->
 <div class="modal-overlay" id="modal-sg-chumbador">
   <div class="modal" style="max-width:480px;">
     <div class="modal-header">

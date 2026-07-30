@@ -27,8 +27,9 @@ const LevantamentoSoloGrampeado = (() => {
   let vistaAtivaId = null;
   let imagemCacheVistaId = null, imagemCacheBase64 = null;
   let zoom = 1;
-  let modo = null; // null | 'adicionar' | 'calibrar'
+  let modo = null; // null | 'adicionar' | 'calibrar' | 'medirarea'
   let calibPontos = [];
+  let medirPontos = []; // vértices do polígono sendo desenhado no modo Medir Área
   let proxNumero = 1;   // próximo número sugerido no modo Adicionar (incrementa sozinho a cada clique)
   let ultimoPontoSeq = null; // {x,y} do último chumbador criado na sequência (pra saber se o próximo clique continua a linha)
   let _pontoPendenteNovaLinha = null; // {v,pos} aguardando confirmação do número inicial da nova linha
@@ -152,6 +153,7 @@ const LevantamentoSoloGrampeado = (() => {
           <button class="btn btn-secundario btn-sm" onclick="SG_UI.abrirImagem('${v.id}')">🖼 PDF/Imagem da Vista</button>
           <button id="sg-btn-add" class="btn ${modo === 'adicionar' ? 'btn-primario' : 'btn-secundario'} btn-sm" onclick="SG_UI.toggleModo('adicionar')">⛏️ ${modo === 'adicionar' ? 'Clique no mapa...' : 'Adicionar Chumbador'}</button>
           <button id="sg-btn-calib" class="btn ${modo === 'calibrar' ? 'btn-primario' : 'btn-secundario'} btn-sm" onclick="SG_UI.toggleModo('calibrar')">📏 ${modo === 'calibrar' ? 'Clique 2 pontos...' : 'Calibrar Escala'}</button>
+          <button id="sg-btn-medir" class="btn ${modo === 'medirarea' ? 'btn-primario' : 'btn-secundario'} btn-sm" onclick="SG_UI.toggleModo('medirarea')">📐 ${modo === 'medirarea' ? `Marcando (${medirPontos.length} pts)...` : 'Medir Área'}</button>
           <span style="display:flex;gap:2px;align-items:center;margin-left:auto;">
             <button class="btn btn-secundario btn-sm" onclick="SG_UI.zoomAjustar(-0.25)">−</button>
             <span class="text-sm text-muted" id="sg-zoom-label" style="width:48px;text-align:center;">${Math.round(zoom * 100)}%</span>
@@ -182,20 +184,31 @@ const LevantamentoSoloGrampeado = (() => {
     const ligando = modo !== m;
     modo = (modo === m) ? null : m;
     calibPontos = [];
+    medirPontos = [];
+    if (modo === 'medirarea' && !(SG.num(vistaAtiva()?.escalaCmPorPx) > 0)) {
+      Utils.toast('Calibre a escala desta vista antes de medir a área.', 'alerta');
+      modo = null;
+    }
     if (modo === 'adicionar' && ligando) { proxNumero = _sugerirProximoNumero(); ultimoPontoSeq = null; }
     _atualizarBotoesModo();
     _atualizarToolbarExtra();
     renderMapa();
   }
   function _htmlToolbarExtra() {
-    if (modo !== 'adicionar' || !vistaAtiva()) return '';
-    return `
+    if (modo === 'adicionar' && vistaAtiva()) return `
       <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:12px;background:#fffbeb;border:1px solid #f5c518;border-radius:8px;padding:8px 12px;">
         <label class="text-sm" style="display:flex;gap:6px;align-items:center;">Próx. Nº<input type="text" id="sg-prox-numero" value="${esc(proxNumero)}" class="form-control" style="width:70px;padding:4px 6px;" onchange="SG_UI.setProxNumero(this.value)"></label>
         <label class="text-sm" style="display:flex;gap:6px;align-items:center;">Tipo<select id="sg-tipo-padrao" class="form-control" style="width:110px;padding:4px 6px;" onchange="SG_UI.setTipoPadrao(this.value)">${SG.TIPOS_CHUMBADOR.map(t => `<option value="${t}" ${t === tipoPadrao ? 'selected' : ''}>${t}</option>`).join('')}</select></label>
         <label class="text-sm" style="display:flex;gap:6px;align-items:center;">Comp. padrão (ml)<input type="number" step="0.1" id="sg-comp-padrao" value="${compPadrao}" class="form-control" style="width:70px;padding:4px 6px;" onchange="SG_UI.setCompPadrao(this.value)"></label>
         <span class="text-sm text-muted">Clique à direita do último: número continua sozinho. Clique fora da sequência: pergunta o número da nova linha.</span>
       </div>`;
+    if (modo === 'medirarea' && vistaAtiva()) return `
+      <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:12px;background:#eff6ff;border:1px solid #3b82f6;border-radius:8px;padding:8px 12px;">
+        <span class="text-sm">Clique nos vértices do contorno real da vista (siga a borda). ${medirPontos.length} ponto${medirPontos.length !== 1 ? 's' : ''} marcado${medirPontos.length !== 1 ? 's' : ''}.</span>
+        <button class="btn btn-secundario btn-sm" onclick="SG_UI.desfazerPontoMedicao()" ${!medirPontos.length ? 'disabled' : ''}>↩ Desfazer último</button>
+        <button class="btn btn-primario btn-sm" onclick="SG_UI.concluirMedicaoArea()" ${medirPontos.length < 3 ? 'disabled' : ''}>✓ Concluir Polígono</button>
+      </div>`;
+    return '';
   }
   function _atualizarToolbarExtra() {
     const el = document.getElementById('sg-toolbar-extra');
@@ -214,6 +227,11 @@ const LevantamentoSoloGrampeado = (() => {
     if (bcal) {
       bcal.className = `btn ${modo === 'calibrar' ? 'btn-primario' : 'btn-secundario'} btn-sm`;
       bcal.textContent = `📏 ${modo === 'calibrar' ? 'Clique 2 pontos...' : 'Calibrar Escala'}`;
+    }
+    const bmed = document.getElementById('sg-btn-medir');
+    if (bmed) {
+      bmed.className = `btn ${modo === 'medirarea' ? 'btn-primario' : 'btn-secundario'} btn-sm`;
+      bmed.textContent = `📐 ${modo === 'medirarea' ? `Marcando (${medirPontos.length} pts)...` : 'Medir Área'}`;
     }
   }
   function zoomAjustar(delta) {
@@ -265,7 +283,9 @@ const LevantamentoSoloGrampeado = (() => {
     if (novoScroll && scrollPos) { novoScroll.scrollLeft = scrollPos.left; novoScroll.scrollTop = scrollPos.top; }
     if (novoScroll) novoScroll.style.outline = modo ? '3px solid #f5c518' : 'none';
     _desenharLinhaEscalaSalva(v);
+    _desenharPoligonoAreaSalva(v);
     if (modo === 'calibrar') _desenharPontosCalibracao();
+    if (modo === 'medirarea') _desenharPontosMedicao();
     _ligarEventosMapa(v);
   }
 
@@ -297,6 +317,96 @@ const LevantamentoSoloGrampeado = (() => {
     label.style.cssText = `position:absolute;left:${(midX * 100).toFixed(3)}%;top:${(midY * 100).toFixed(3)}%;transform:translate(-50%,-50%);background:#16a34a;color:#fff;font-size:10px;padding:1px 5px;border-radius:4px;white-space:nowrap;z-index:8;pointer-events:none;font-family:var(--font-mono);`;
     label.textContent = `📏 ${SG.fmt1(SG.num(v.escalaCm))} cm`;
     stage.appendChild(label);
+  }
+
+  // Polígono de área JÁ SALVO — fica sempre visível (azul, tracejado)
+  // pra conferir depois se a medição ainda representa a vista.
+  function _desenharPoligonoAreaSalva(v) {
+    const stage = document.getElementById('sg-stage');
+    if (!stage || !v.poligonoArea || v.poligonoArea.length < 3) return;
+    const pontos = v.poligonoArea;
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('viewBox', '0 0 100 100');
+    svg.setAttribute('preserveAspectRatio', 'none');
+    svg.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:7;';
+    const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+    poly.setAttribute('points', pontos.map(p => `${p.x * 100},${p.y * 100}`).join(' '));
+    poly.setAttribute('fill', 'rgba(59,130,246,0.12)');
+    poly.setAttribute('stroke', '#2563eb'); poly.setAttribute('stroke-width', '0.3'); poly.setAttribute('stroke-dasharray', '1.2,0.8'); poly.setAttribute('vector-effect', 'non-scaling-stroke');
+    svg.appendChild(poly);
+    stage.appendChild(svg);
+    const cx = pontos.reduce((s, p) => s + p.x, 0) / pontos.length;
+    const cy = pontos.reduce((s, p) => s + p.y, 0) / pontos.length;
+    const label = document.createElement('div');
+    label.style.cssText = `position:absolute;left:${(cx * 100).toFixed(3)}%;top:${(cy * 100).toFixed(3)}%;transform:translate(-50%,-50%);background:#2563eb;color:#fff;font-size:10px;padding:1px 5px;border-radius:4px;white-space:nowrap;z-index:7;pointer-events:none;font-family:var(--font-mono);`;
+    label.textContent = `📐 ${SG.fmt1(v.m2Total)} m²`;
+    stage.appendChild(label);
+  }
+
+  // Feedback visual do polígono sendo desenhado no modo Medir Área
+  function _desenharPontosMedicao() {
+    const stage = document.getElementById('sg-stage');
+    if (!stage) return;
+    medirPontos.forEach((p, i) => {
+      const dot = document.createElement('div');
+      dot.style.cssText = `position:absolute;left:${(p.x * 100).toFixed(3)}%;top:${(p.y * 100).toFixed(3)}%;width:12px;height:12px;margin:-6px;border-radius:50%;background:#2563eb;border:2px solid #fff;box-shadow:0 0 0 1px #2563eb,0 1px 4px rgba(0,0,0,.4);z-index:10;pointer-events:none;font-size:8px;color:#fff;display:flex;align-items:center;justify-content:center;`;
+      stage.appendChild(dot);
+    });
+    if (medirPontos.length >= 2) {
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.setAttribute('viewBox', '0 0 100 100');
+      svg.setAttribute('preserveAspectRatio', 'none');
+      svg.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:9;';
+      const poly = document.createElementNS('http://www.w3.org/2000/svg', medirPontos.length >= 3 ? 'polygon' : 'polyline');
+      poly.setAttribute('points', medirPontos.map(p => `${p.x * 100},${p.y * 100}`).join(' '));
+      poly.setAttribute('fill', medirPontos.length >= 3 ? 'rgba(59,130,246,0.15)' : 'none');
+      poly.setAttribute('stroke', '#2563eb'); poly.setAttribute('stroke-width', '0.3'); poly.setAttribute('vector-effect', 'non-scaling-stroke');
+      svg.appendChild(poly);
+      stage.appendChild(svg);
+    }
+  }
+
+  function desfazerPontoMedicao() {
+    medirPontos.pop();
+    _atualizarBotoesModo();
+    _atualizarToolbarExtra();
+    renderMapa();
+  }
+
+  function concluirMedicaoArea() {
+    const v = vistaAtiva();
+    if (!v || medirPontos.length < 3) return;
+    const m2 = SG.calcM2Poligono(medirPontos, v);
+    document.getElementById('sg-medir-vistaid').value = v.id;
+    document.getElementById('sg-medir-pontos').value = JSON.stringify(medirPontos);
+    document.getElementById('sg-medir-resultado').textContent = SG.fmt1(m2);
+    document.getElementById('sg-medir-valor').value = m2.toFixed(2);
+    Utils.abrirModal('modal-sg-medir-confirmar');
+  }
+
+  async function salvarMedicaoArea() {
+    const vistaId = document.getElementById('sg-medir-vistaid').value;
+    const pontos = JSON.parse(document.getElementById('sg-medir-pontos').value || '[]');
+    const m2 = SG.num(document.getElementById('sg-medir-valor').value);
+    if (!(m2 > 0)) { Utils.toast('Valor de área inválido.', 'alerta'); return; }
+    Utils.mostrarLoading();
+    try {
+      await Database.atualizar(obraId, COL_VISTAS, vistaId, { m2Total: m2, poligonoArea: pontos });
+      Utils.toast(`✓ Área medida: ${SG.fmt1(m2)} m²`, 'sucesso');
+      Utils.fecharModal('modal-sg-medir-confirmar');
+      medirPontos = []; modo = null;
+      _atualizarBotoesModo();
+      _atualizarToolbarExtra();
+      await _refetch();
+      renderMapa();
+    } catch (e) {
+      Utils.toast('Erro ao salvar: ' + e.message, 'erro');
+    } finally {
+      Utils.esconderLoading();
+    }
+  }
+  function cancelarMedicaoArea() {
+    Utils.fecharModal('modal-sg-medir-confirmar');
   }
 
   // Feedback visual dos cliques de calibração (sem isso, o 1º clique
@@ -373,6 +483,11 @@ const LevantamentoSoloGrampeado = (() => {
           Utils.toast('Ponto 1 marcado — clique o segundo ponto.', 'info');
           renderMapa();
         }
+      } else if (modo === 'medirarea') {
+        medirPontos.push(pos);
+        _atualizarBotoesModo();
+        _atualizarToolbarExtra();
+        renderMapa();
       }
     });
   }
@@ -909,6 +1024,7 @@ const LevantamentoSoloGrampeado = (() => {
     abrirVistas, salvarVista, excluirVista,
     abrirImagem, onImagemArquivo, removerImagem,
     salvarCalibracao, abrirEditarM2, salvarM2,
+    desfazerPontoMedicao, concluirMedicaoArea, salvarMedicaoArea, cancelarMedicaoArea,
     abrirEditarChumbador, salvarChumbador, excluirChumbador,
     confirmarNovaLinha, cancelarNovaLinha,
     abrirEspecificacoes, criarMaterialInline, editarEspecificacao, cancelarEdicaoEspec, salvarEspecificacao, excluirEspecificacao,
