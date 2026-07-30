@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.57.57',
+  versaoAtual: 'V2.57.58',
 
   versoes: [
     {
@@ -5197,9 +5197,15 @@ const NotasVersao = {
         'O número de linha (5, 12, etc) continua aparecendo normalmente na tela e na exportação pra Excel — só que agora é calculado ao vivo a partir do ID, sempre correto, nunca precisa ser corrigido.',
         'Migração automática: ao abrir o Planejamento, qualquer predecessora ainda no formato antigo é convertida sozinha, em segundo plano, sem precisar fazer nada. Botão manual também disponível em ⚙ Ferramentas → "🔗 Corrigir Predecessoras (por ID)" se quiser confirmar.',
         'Os 3 importadores (Importar, Importar Base Completa, Importar Correções) já gravam direto no novo formato — Importar Correções resolve por nome (a predecessora na planilha aponta pra outra linha da MESMA planilha, que agora é traduzida pro nome e depois pro ID da tarefa atual).']},
-    {versao:'V2.57.57',status:'aberta',data:'2026-07-29',tipo:'correcao',
+    {versao:'V2.57.57',status:'fechada',data:'2026-07-29',tipo:'correcao',
       titulo:'Importar Correções: os textos ao lado dos checkboxes de campo (Início Real, % Concluído, etc) não apareciam — só os quadradinhos em branco',
-      itens:['Reforçado o HTML dos checkboxes com cor explícita e o texto envolto num <span> — evita qualquer problema de herança de cor entre o texto e o fundo escuro do modal.']}
+      itens:['Reforçado o HTML dos checkboxes com cor explícita e o texto envolto num <span> — evita qualquer problema de herança de cor entre o texto e o fundo escuro do modal.']},
+    {versao:'V2.57.58',status:'aberta',data:'2026-07-29',tipo:'correcao',
+      titulo:'Predecessora agora funciona matematicamente de verdade: editar a data de uma tarefa propaga automaticamente pra quem depende dela (sucessoras), em cadeia — e a Sucessora aparece na hora, sem precisar recarregar',
+      itens:['Causa raiz #1: Sucessora é calculada a partir das predecessoras de TODO MUNDO — mas editar a predecessora de uma tarefa (inline, popup ou modal) só atualizava aquela tarefa na tela, sem recalcular quem virou sucessora de quem. Corrigido: editar a predecessora agora recalcula as sucessoras de toda a obra na hora.',
+        'Causa raiz #2 (a mais importante): quando você edita o início/término de uma tarefa, a data das tarefas que a têm como predecessora NUNCA era recalculada automaticamente — só era calculada uma vez, no momento em que você define a predecessora, e nunca mais. Se "Laje" atrasa, "Alvenaria Estrutural" (que depende dela) ficava com a data velha, achando que a predecessora era só um número decorativo.',
+        'Agora, editar início/término de qualquer tarefa (tabela, modal ou popup de predecessora) propaga automaticamente a nova data pra todas as sucessoras, em cadeia (se a sucessora também tiver sucessoras, propaga mais adiante, e assim por diante) — exatamente como MS Project. Corte de dependência circular incluído, pra nunca entrar em loop infinito.',
+        'Corrigido também: o campo Predecessora do formulário grande de editar tarefa não convertia o texto digitado pro formato novo por ID — ficava salvando/mostrando o formato interno bruto (ilegível). Agora mostra e converte certo, igual à célula da tabela.']}
   ],
 
   render(containerId) {

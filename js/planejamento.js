@@ -1649,7 +1649,13 @@ const Planejamento = (() => {
       const _valAntes=t[field];
       // Atualiza local
       Object.assign(t, updates);
-      if(field==='predecessora')t._predDisplay=_predCanonParaTexto(t.predecessora);
+      if(field==='predecessora'){
+        // _sucessoras é calculado em _buildFiltradas() a partir da predecessora
+        // de TODO MUNDO — precisa recalcular geral, senão a tarefa que passou
+        // a ser predecessora não aparece com a sucessora nova até o próximo
+        // reload (bug relatado pelo Milton).
+        _buildFiltradas();
+      }
       Audit.campo(obraId,'Planejamento',t.id,t.nome,field,_valAntes,v).catch(()=>{});
 
       // ===== % EM FAMÍLIA (mão dupla) =====
@@ -1669,7 +1675,7 @@ const Planejamento = (() => {
           famUps=Utils.recalcularPercAncestrais(tarefas,t.id);
         }
       }
-      _paintRows();
+      if(field==='predecessora')_render(); else _paintRows();
 
       // Save in background
       try{
@@ -1679,6 +1685,13 @@ const Planejamento = (() => {
         }
         if(_versaoData==='atual'&&(field==='inicioPlanejado'||field==='terminoPlanejado'||field==='inicioReal'||field==='terminoReal')){
           await _recalcularDatasPais(true);
+        }
+        if(_versaoData==='atual'&&(field==='inicioPlanejado'||field==='terminoPlanejado')){
+          // A predecessora só funciona de verdade se, quando a data de uma
+          // tarefa muda, a data de quem depende dela (sucessora) também
+          // muda automaticamente — senão é só um número decorativo salvo,
+          // sem efeito matemático real no cronograma.
+          await _propagarDataEmCascata(t.id);
         }
       }
       catch(er){console.error(er);Utils.toast('Erro ao salvar.','erro');}
@@ -1720,6 +1733,32 @@ const Planejamento = (() => {
 
   // parte: {id,tipo,lag} — resolve DIRETO por ID, nunca por posição/número de linha.
   // TI = Término-Início (mais comum) · II = Início-Início · TT = Término-Término · IT = Início-Término
+  // Propaga a mudança de data em cadeia: quando a tarefa X muda de data,
+  // TODAS as tarefas que têm X como predecessora precisam recalcular a
+  // própria data também — e se a data delas mudar, propaga pras sucessoras
+  // DELAS, e assim por diante. É isso que faz a predecessora funcionar de
+  // verdade (matematicamente), não só ficar um número salvo sem efeito.
+  async function _propagarDataEmCascata(tarefaId, visitados){
+    visitados=visitados||new Set();
+    if(visitados.has(tarefaId))return; // corta dependência circular
+    visitados.add(tarefaId);
+    const t=_porId.get(tarefaId);
+    if(!t||!t._sucessoras||!t._sucessoras.length)return;
+    for(const numLinha of t._sucessoras){
+      const suc=_numLinhaMap.get(numLinha);
+      if(!suc||!suc.predecessora)continue;
+      const upd={};
+      _calcPredecessora(suc,suc.predecessora,upd);
+      const mudouIni=upd.inicioPlanejado&&upd.inicioPlanejado!==suc.inicioPlanejado;
+      const mudouFim=upd.terminoPlanejado&&upd.terminoPlanejado!==suc.terminoPlanejado;
+      if(mudouIni||mudouFim){
+        Object.assign(suc,upd);
+        await Database.atualizar(obraId,COL,suc.id,upd).catch(console.error);
+        await _propagarDataEmCascata(suc.id,visitados); // propaga mais adiante na cadeia
+      }
+    }
+  }
+
   function _calcUmaPredecessora(t, parte){
     const pred=_porId.get(parte.id)||tarefas.find(x=>x.id===parte.id);
     if(!pred)return null;
@@ -2299,11 +2338,15 @@ const Planejamento = (() => {
     document.getElementById('modal-tarefa-titulo').textContent='Editar Tarefa';
     const f=document.getElementById('form-tarefa');f.reset();
     ['codigo','nome','tipo','nivel','ordem','inicioPlanejado','terminoPlanejado','duracao',
-      'percentualEsperado','percentualConcluido','predecessora','tarefaPai','grupo','local',
+      'percentualEsperado','percentualConcluido','tarefaPai','grupo','local',
       'custo','receita','responsavel','inicioPlanejadoBase','terminoPlanejadoBase',
       'inicioDesafio','terminoDesafio','observacoes','quantidade','unidade'].forEach(k=>{
       const el=f.querySelector(`[name="${k}"]`);if(el&&t[k]!=null)el.value=t[k];
     });
+    // Predecessora é guardada por ID internamente — mostra no formato legível
+    // (número de linha) no formulário; a conversão de volta acontece ao salvar.
+    const elPred=f.querySelector('[name="predecessora"]');
+    if(elPred)elPred.value=t._predDisplay||'';
     const aviso=document.getElementById('tarefa-vinculo-aviso');
     if(aviso){
       const mod=LEVANTAMENTO_MODULOS[t.levantamentoModulo];
@@ -2334,13 +2377,14 @@ const Planejamento = (() => {
     const data={tipo:g('tipo')||'tarefa',codigo:g('codigo')||'',nome,nivel:parseInt(g('nivel'))||0,
       ordem:ordemCandidata,inicioPlanejado:ini||'',terminoPlanejado:ter||'',duracao:dur,
       percentualEsperado:parseFloat(g('percentualEsperado'))||0,percentualConcluido:parseFloat(g('percentualConcluido'))||0,
-      predecessora:g('predecessora')||'',tarefaPai:g('tarefaPai')||'',grupo:g('grupo')||'',local:g('local')||'',
+      predecessora:_predTextoParaCanon(g('predecessora')||''),tarefaPai:g('tarefaPai')||'',grupo:g('grupo')||'',local:g('local')||'',
       custo:parseFloat(g('custo'))||0,receita:parseFloat(g('receita'))||0,responsavel:g('responsavel')||'',
       quantidade:parseFloat(g('quantidade'))||0,unidade:g('unidade')||'',
       inicioPlanejadoBase:g('inicioPlanejadoBase')||'',terminoPlanejadoBase:g('terminoPlanejadoBase')||'',
       inicioDesafio:g('inicioDesafio')||'',terminoDesafio:g('terminoDesafio')||'',observacoes:g('observacoes')||'',obraId};
     try{
       const numAntes=_capturarNumAntes();
+      const editandoIdAntes=editandoId;
       if(editandoId){
         await Database.atualizar(obraId,COL,editandoId,data);
         // ===== % EM FAMÍLIA (mesma regra da edição inline) =====
@@ -2363,8 +2407,10 @@ const Planejamento = (() => {
       }
       else await Database.criar(obraId,COL,data);
       Utils.fecharModal('modal-tarefa');Utils.toast('Salvo!','sucesso');editandoId=null;await carregar();
-      await _remapAposMudancaPosicoes(numAntes);
       await _recalcularDatasPais(true);
+      // Predecessora funciona de verdade: se início/término mudou, propaga
+      // automaticamente pras tarefas que dependem desta (sucessoras em cadeia).
+      if(editandoIdAntes)await _propagarDataEmCascata(editandoIdAntes);
     }catch(e){console.error(e);Utils.toast('Erro.','erro');}
   }
 
@@ -3346,10 +3392,13 @@ const Planejamento = (() => {
     const updates={predecessora:canon};
     if(canon)_calcPredecessora(t,canon,updates);
     Object.assign(t,updates);
-    t._predDisplay=_predCanonParaTexto(t.predecessora);
-    _paintRows();
+    _buildFiltradas(); // recalcula _sucessoras de quem passou a ser/deixou de ser predecessora
+    _render();
     const pop=document.getElementById('pred-pop');if(pop)pop.remove();
-    try{await Database.atualizar(obraId,COL,t.id,updates);}
+    try{
+      await Database.atualizar(obraId,COL,t.id,updates);
+      if(updates.inicioPlanejado||updates.terminoPlanejado)await _propagarDataEmCascata(t.id);
+    }
     catch(e){console.error(e);Utils.toast('Erro.','erro');}
   }
 
