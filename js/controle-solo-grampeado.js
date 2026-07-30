@@ -124,6 +124,7 @@ const ControleSoloGrampeado = (() => {
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <a class="btn btn-secundario btn-sm" href="levantamento-solo-grampeado.html">⛏️ Levantamento Solo Grampeado</a>
+          <button class="btn btn-secundario btn-sm" onclick="SGC_UI.abrirMetaDiaria()">🎯 Meta Diária</button>
           <button class="btn btn-secundario btn-sm" onclick="SGC_UI.abrirRelatorioDiario()">📅 Relatório Diário</button>
         </div>
       </div>
@@ -133,6 +134,11 @@ const ControleSoloGrampeado = (() => {
         <div class="cc-kpi cc-kpiPurple"><div class="cc-kpiIcon">📐</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Área Executada</div><div class="cc-kpiValue">${SG.fmt1(m2ExecObra)}<span class="cc-kpiUnit">m²</span></div><div class="cc-kpiSub">de ${SG.fmt1(m2TotalObra)} m²</div></div></div>
         <div class="cc-kpi cc-kpiBlue"><div class="cc-kpiIcon">⛏️</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Chumbadores Concluídos</div><div class="cc-kpiValue">${chumbFeitos}<span class="cc-kpiUnit">/ ${chumbTotal}</span></div></div></div>
         <div class="cc-kpi cc-kpiOrange"><div class="cc-kpiIcon">📅</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Lançamentos no diário</div><div class="cc-kpiValue">${producao.length}</div></div></div>
+      </div>
+
+      <div class="cc-panel">
+        <div class="cc-panelTitle">📊 Medidor Diário — ${esc(vistaLabel(vistaAtiva()))}</div>
+        <div id="sgc-medidor-diario"></div>
       </div>
 
       <div class="cc-panel">
@@ -160,6 +166,7 @@ const ControleSoloGrampeado = (() => {
     `;
     renderMapa();
     renderTabelaVistas(resumos);
+    renderMedidorDiario();
   }
 
   function onTrocarVistaAtiva() {
@@ -423,6 +430,87 @@ const ControleSoloGrampeado = (() => {
   }
 
   // ══════════════════════════════════════════
+  // MEDIDOR DIÁRIO — meta de chumbadores/m² por dia, por vista
+  // ══════════════════════════════════════════
+  function renderMedidorDiario() {
+    const el = document.getElementById('sgc-medidor-diario');
+    if (!el) return;
+    const v = vistaAtiva();
+    if (!v) { el.innerHTML = '<div class="cc-empty">Nenhuma vista selecionada.</div>'; return; }
+    const metaChumb = SG.num(v.metaDiariaChumbadores);
+    const metaM2 = SG.num(v.metaDiariaM2);
+    if (!metaChumb && !metaM2) {
+      el.innerHTML = `<div class="cc-empty">Nenhuma meta diária definida pra esta vista. <button class="btn btn-secundario btn-sm" onclick="SGC_UI.abrirMetaDiaria()">🎯 Definir Meta Diária</button></div>`;
+      return;
+    }
+    const idsDaVista = new Set(chumbadoresDaVista(v.id).map(c => c.id));
+    // Concluídos por dia: data em que a 2ª injeção (última etapa do chumbador) foi marcada
+    const concluidosPorDia = {};
+    execucoes.forEach(e => {
+      if (idsDaVista.has(e.chumbadorId) && e.injecao2 && e.injecao2.feito && e.injecao2.data) {
+        concluidosPorDia[e.injecao2.data] = (concluidosPorDia[e.injecao2.data] || 0) + 1;
+      }
+    });
+    // m² executado por dia (soma das marcações de área daquele dia, qualquer etapa)
+    const m2PorDia = {};
+    areasDaVista(v.id).forEach(a => { m2PorDia[a.data] = (m2PorDia[a.data] || 0) + SG.num(a.m2); });
+
+    const datas = [...new Set([...Object.keys(concluidosPorDia), ...Object.keys(m2PorDia)])].sort((a, b) => b.localeCompare(a));
+    if (!datas.length) {
+      el.innerHTML = `<div class="cc-empty">Meta definida (${metaChumb ? metaChumb + ' chumb./dia' : ''}${metaChumb && metaM2 ? ' · ' : ''}${metaM2 ? SG.fmt1(metaM2) + ' m²/dia' : ''}) — ainda sem lançamentos.</div>`;
+      return;
+    }
+    const linha = (label, feito, meta, unidade) => {
+      if (!meta) return '';
+      const pct = meta > 0 ? (feito / meta) * 100 : 0;
+      const cor = pct >= 100 ? '#16a34a' : pct >= 60 ? '#f59e0b' : '#dc2626';
+      return `<td class="col-num cc-tdMono">${unidade === 'm²' ? SG.fmt1(feito) : feito}<span class="text-muted"> / ${unidade === 'm²' ? SG.fmt1(meta) : meta}</span></td><td class="col-num" style="font-weight:700;color:${cor};">${SG.fmt1(pct)}%</td>`;
+    };
+    el.innerHTML = `
+      <div class="cc-tableWrap" style="max-height:280px;overflow-y:auto;">
+        <table class="cc-table">
+          <thead><tr><th>Data</th>${metaChumb ? '<th class="col-num">Chumbadores</th><th class="col-num">% Meta</th>' : ''}${metaM2 ? '<th class="col-num">m² Executado</th><th class="col-num">% Meta</th>' : ''}</tr></thead>
+          <tbody>
+            ${datas.map(d => `<tr>
+              <td class="cc-tdMono">${esc(d)}</td>
+              ${metaChumb ? linha('chumb', concluidosPorDia[d] || 0, metaChumb, 'un') : ''}
+              ${metaM2 ? linha('m2', m2PorDia[d] || 0, metaM2, 'm²') : ''}
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+      <div class="text-sm text-muted" style="margin-top:6px;">Meta: ${metaChumb ? `${metaChumb} chumbadores/dia` : ''}${metaChumb && metaM2 ? ' · ' : ''}${metaM2 ? `${SG.fmt1(metaM2)} m²/dia` : ''} <button class="btn btn-secundario btn-sm" style="padding:2px 8px;margin-left:6px;" onclick="SGC_UI.abrirMetaDiaria()">✎ editar</button></div>
+    `;
+  }
+
+  function abrirMetaDiaria() {
+    const v = vistaAtiva();
+    if (!v) { Utils.toast('Selecione uma vista primeiro.', 'alerta'); return; }
+    document.getElementById('sgc-meta-vistaid').value = v.id;
+    document.getElementById('sgc-meta-titulo').textContent = `🎯 Meta Diária — ${vistaLabel(v)}`;
+    document.getElementById('sgc-meta-chumb').value = v.metaDiariaChumbadores ?? '';
+    document.getElementById('sgc-meta-m2').value = v.metaDiariaM2 ?? '';
+    Utils.abrirModal('modal-sgc-meta');
+  }
+
+  async function salvarMetaDiaria() {
+    const vistaId = document.getElementById('sgc-meta-vistaid').value;
+    const metaDiariaChumbadores = SG.num(document.getElementById('sgc-meta-chumb').value);
+    const metaDiariaM2 = SG.num(document.getElementById('sgc-meta-m2').value);
+    Utils.mostrarLoading();
+    try {
+      await Database.atualizar(obraId, COL_VISTAS, vistaId, { metaDiariaChumbadores, metaDiariaM2 });
+      Utils.toast('✓ Meta diária salva!', 'sucesso');
+      Utils.fecharModal('modal-sgc-meta');
+      await carregar();
+    } catch (e) {
+      Utils.toast('Erro ao salvar: ' + e.message, 'erro');
+    } finally {
+      Utils.esconderLoading();
+    }
+  }
+
+  // ══════════════════════════════════════════
   // RELATÓRIO DIÁRIO
   // ══════════════════════════════════════════
   function abrirRelatorioDiario() {
@@ -460,6 +548,7 @@ const ControleSoloGrampeado = (() => {
 
   return {
     init, recarregar, renderizar, onTrocarVistaAtiva, toggleModoArea, zoomAjustar, excluirArea,
+    abrirMetaDiaria, salvarMetaDiaria,
     salvarEtapasChumbador,
     abrirRelatorioDiario,
   };

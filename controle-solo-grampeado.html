@@ -70,6 +70,26 @@
   <main class="content" id="sgc-content"></main>
 </div>
 
+<!-- MODAL: Meta Diária -->
+<div class="modal-overlay" id="modal-sgc-meta">
+  <div class="modal" style="max-width:380px;">
+    <div class="modal-header">
+      <h3 id="sgc-meta-titulo">🎯 Meta Diária</h3>
+      <button class="modal-close" onclick="Utils.fecharModal('modal-sgc-meta')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="sgc-meta-vistaid">
+      <div class="form-grupo"><label>Chumbadores concluídos por dia</label><input type="number" step="1" min="0" id="sgc-meta-chumb" class="form-control" placeholder="ex: 15"></div>
+      <div class="form-grupo"><label>m² executados por dia</label><input type="number" step="0.1" min="0" id="sgc-meta-m2" class="form-control" placeholder="ex: 20"></div>
+      <p class="text-sm text-muted mb-1">Deixe em branco o que não quiser cobrar. O medidor diário compara o realizado com a meta, dia a dia.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-sgc-meta')">Cancelar</button>
+      <button class="btn btn-primario" onclick="SGC_UI.salvarMetaDiaria()">Salvar</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL: Marcar Etapas do Chumbador -->
 <div class="modal-overlay" id="modal-sgc-execucao">
   <div class="modal" style="max-width:460px;">
