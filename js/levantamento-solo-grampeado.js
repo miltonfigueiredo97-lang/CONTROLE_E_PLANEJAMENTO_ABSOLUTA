@@ -80,6 +80,18 @@ const LevantamentoSoloGrampeado = (() => {
     await carregar();
   }
 
+  // Atualiza os dados sem recriar o painel (preserva zoom/scroll/modo)
+  async function _refetch() {
+    const [vs, cs, mats, cfg] = await Promise.all([
+      Database.listar(obraId, COL_VISTAS, null),
+      Database.listar(obraId, COL_CHUMBADORES, null),
+      Database.listar(obraId, 'materiais', 'nome').catch(() => []),
+      Database.obter(obraId, 'config', 'sgEspecificacoes').catch(() => null),
+    ]);
+    vistas = vs; chumbadores = cs; biblioteca = mats;
+    especificacoes = (cfg && cfg.especificacoes) || [];
+  }
+
   function vistaLabel(v) { return v ? (v.nome ? `${v.numero} — ${v.nome}` : `Vista ${v.numero}`) : '—'; }
   function vistasOrdenadas() { return [...vistas].sort((a, b) => (a.numero || 0) - (b.numero || 0)); }
   function vistaAtiva() { return vistas.find(v => v.id === vistaAtivaId) || null; }
@@ -134,11 +146,11 @@ const LevantamentoSoloGrampeado = (() => {
           </select>
           ${v ? `
           <button class="btn btn-secundario btn-sm" onclick="SG_UI.abrirImagem('${v.id}')">🖼 PDF/Imagem da Vista</button>
-          <button class="btn ${modo === 'adicionar' ? 'btn-primario' : 'btn-secundario'} btn-sm" onclick="SG_UI.toggleModo('adicionar')">⛏️ ${modo === 'adicionar' ? 'Clique no mapa...' : 'Adicionar Chumbador'}</button>
-          <button class="btn ${modo === 'calibrar' ? 'btn-primario' : 'btn-secundario'} btn-sm" onclick="SG_UI.toggleModo('calibrar')">📏 ${modo === 'calibrar' ? 'Clique 2 pontos...' : 'Calibrar Escala'}</button>
+          <button id="sg-btn-add" class="btn ${modo === 'adicionar' ? 'btn-primario' : 'btn-secundario'} btn-sm" onclick="SG_UI.toggleModo('adicionar')">⛏️ ${modo === 'adicionar' ? 'Clique no mapa...' : 'Adicionar Chumbador'}</button>
+          <button id="sg-btn-calib" class="btn ${modo === 'calibrar' ? 'btn-primario' : 'btn-secundario'} btn-sm" onclick="SG_UI.toggleModo('calibrar')">📏 ${modo === 'calibrar' ? 'Clique 2 pontos...' : 'Calibrar Escala'}</button>
           <span style="display:flex;gap:2px;align-items:center;margin-left:auto;">
             <button class="btn btn-secundario btn-sm" onclick="SG_UI.zoomAjustar(-0.25)">−</button>
-            <span class="text-sm text-muted" style="width:48px;text-align:center;">${Math.round(zoom * 100)}%</span>
+            <span class="text-sm text-muted" id="sg-zoom-label" style="width:48px;text-align:center;">${Math.round(zoom * 100)}%</span>
             <button class="btn btn-secundario btn-sm" onclick="SG_UI.zoomAjustar(0.25)">+</button>
           </span>
           ` : ''}
@@ -164,12 +176,26 @@ const LevantamentoSoloGrampeado = (() => {
   function toggleModo(m) {
     modo = (modo === m) ? null : m;
     calibPontos = [];
-    renderizar();
+    _atualizarBotoesModo();
+    renderMapa();
+  }
+  function _atualizarBotoesModo() {
+    const badd = document.getElementById('sg-btn-add');
+    const bcal = document.getElementById('sg-btn-calib');
+    if (badd) {
+      badd.className = `btn ${modo === 'adicionar' ? 'btn-primario' : 'btn-secundario'} btn-sm`;
+      badd.textContent = `⛏️ ${modo === 'adicionar' ? 'Clique no mapa...' : 'Adicionar Chumbador'}`;
+    }
+    if (bcal) {
+      bcal.className = `btn ${modo === 'calibrar' ? 'btn-primario' : 'btn-secundario'} btn-sm`;
+      bcal.textContent = `📏 ${modo === 'calibrar' ? 'Clique 2 pontos...' : 'Calibrar Escala'}`;
+    }
   }
   function zoomAjustar(delta) {
     zoom = Math.min(4, Math.max(0.25, +(zoom + delta).toFixed(2)));
+    const lbl = document.getElementById('sg-zoom-label');
+    if (lbl) lbl.textContent = Math.round(zoom * 100) + '%';
     renderMapa();
-    const el = document.querySelector('#sg-mapa-host + *');
   }
 
   // ══════════════════════════════════════════
@@ -195,6 +221,8 @@ const LevantamentoSoloGrampeado = (() => {
       return;
     }
     const lista = chumbadoresDaVista(v.id);
+    const scrollAnterior = document.querySelector('#sg-mapa-host .sg-map-scroll');
+    const scrollPos = scrollAnterior ? { left: scrollAnterior.scrollLeft, top: scrollAnterior.scrollTop } : null;
     const html = SG.mapaHTML(v, imagem, lista, {}, [], { interativo: true, readonlyCor: true, zoom, stageId: 'sg-stage', maxHeight: 600 });
     const info = SG.num(v.escalaCmPorPx) > 0
       ? `Escala: 1px da imagem ≈ ${SG.fmt2(v.escalaCmPorPx)} cm`
@@ -202,19 +230,48 @@ const LevantamentoSoloGrampeado = (() => {
     host.innerHTML = `
       ${html}
       <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-top:8px;font-size:0.78rem;color:var(--cor-texto-secundario);font-family:var(--font-mono);">
-        <span>${esc(info)}</span>
+        <span>${esc(info)} · <span style="opacity:.8;">Ctrl+arrastar move, Ctrl+roda dá zoom</span></span>
         <span>m² total da vista: <b style="color:var(--cor-texto);">${SG.fmt1(v.m2Total)}</b> <button class="btn btn-secundario btn-sm" style="padding:2px 8px;" onclick="SG_UI.abrirEditarM2('${v.id}')">✎</button></span>
       </div>
       ${modo === 'adicionar' ? `<div class="cc-empty" style="margin-top:8px;">Clique no mapa onde fica o chumbador.</div>` : ''}
       ${modo === 'calibrar' ? `<div class="cc-empty" style="margin-top:8px;">Clique dois pontos marcando uma distância conhecida (${calibPontos.length}/2).</div>` : ''}
     `;
+    const novoScroll = document.querySelector('#sg-mapa-host .sg-map-scroll');
+    if (novoScroll && scrollPos) { novoScroll.scrollLeft = scrollPos.left; novoScroll.scrollTop = scrollPos.top; }
     _ligarEventosMapa(v);
   }
 
   function _ligarEventosMapa(v) {
     const stage = document.getElementById('sg-stage');
     if (!stage) return;
+    const scrollEl = stage.parentElement;
+
+    // Zoom com Ctrl + roda do mouse
+    scrollEl.addEventListener('wheel', ev => {
+      if (!ev.ctrlKey) return;
+      ev.preventDefault();
+      zoomAjustar(ev.deltaY < 0 ? 0.15 : -0.15);
+    }, { passive: false });
+
+    // Pan com Ctrl + arrastar
+    stage.addEventListener('mousedown', ev => {
+      if (!ev.ctrlKey) return;
+      ev.preventDefault();
+      const ini = { x: ev.clientX, y: ev.clientY, sl: scrollEl.scrollLeft, st: scrollEl.scrollTop };
+      const mover = mv => {
+        scrollEl.scrollLeft = ini.sl - (mv.clientX - ini.x);
+        scrollEl.scrollTop = ini.st - (mv.clientY - ini.y);
+      };
+      const soltar = () => {
+        document.removeEventListener('mousemove', mover);
+        document.removeEventListener('mouseup', soltar);
+      };
+      document.addEventListener('mousemove', mover);
+      document.addEventListener('mouseup', soltar);
+    });
+
     stage.addEventListener('click', ev => {
+      if (ev.ctrlKey) return; // Ctrl+clique é só pan — não adiciona/edita
       const marcador = ev.target.closest('.sg-marcador');
       if (marcador) {
         if (modo) return; // em modo adicionar/calibrar, clique é sobre o mapa, não editar
@@ -230,6 +287,7 @@ const LevantamentoSoloGrampeado = (() => {
         if (calibPontos.length === 2) {
           const distPx = SG.distanciaPxEntrePontos(calibPontos[0], calibPontos[1], v);
           calibPontos = []; modo = null;
+          _atualizarBotoesModo();
           abrirConfirmarCalibracao(distPx);
         } else {
           renderMapa();
@@ -332,7 +390,9 @@ const LevantamentoSoloGrampeado = (() => {
       }
       novoPontoTemp = null; modo = null;
       Utils.fecharModal('modal-sg-chumbador');
-      await carregar();
+      await _refetch();
+      renderMapa();
+      renderTabelaChumbadores();
     } catch (e) {
       Utils.toast('Erro ao salvar: ' + e.message, 'erro');
     } finally {
@@ -352,7 +412,9 @@ const LevantamentoSoloGrampeado = (() => {
       execSnap.forEach(doc => ops.push({ type: 'delete', ref: doc.ref }));
       await Database.batchWrite(ops);
       Utils.toast('Chumbador excluído.', 'sucesso');
-      await carregar();
+      await _refetch();
+      renderMapa();
+      renderTabelaChumbadores();
     } catch (e) {
       Utils.toast('Erro ao excluir: ' + e.message, 'erro');
     } finally {
@@ -382,7 +444,9 @@ const LevantamentoSoloGrampeado = (() => {
       await Database.atualizar(obraId, COL_VISTAS, v.id, { escalaCmPorPx: escala, m2Total: m2Sugerido });
       Utils.toast(`✓ Escala calibrada! m² sugerido: ${SG.fmt1(m2Sugerido)}`, 'sucesso');
       Utils.fecharModal('modal-sg-calibracao');
-      await carregar();
+      await _refetch();
+      renderMapa();
+      renderTabelaChumbadores();
     } catch (e) {
       Utils.toast('Erro ao salvar: ' + e.message, 'erro');
     } finally {
@@ -405,7 +469,9 @@ const LevantamentoSoloGrampeado = (() => {
       await Database.atualizar(obraId, COL_VISTAS, vistaId, { m2Total: m2 });
       Utils.toast('✓ m² total atualizado!', 'sucesso');
       Utils.fecharModal('modal-sg-m2');
-      await carregar();
+      await _refetch();
+      renderMapa();
+      renderTabelaChumbadores();
     } catch (e) {
       Utils.toast('Erro: ' + e.message, 'erro');
     } finally {
@@ -476,7 +542,9 @@ const LevantamentoSoloGrampeado = (() => {
       statusEl.textContent = '✓ Imagem carregada!';
       Utils.toast('✓ Imagem da vista salva!', 'sucesso');
       Utils.fecharModal('modal-sg-imagem');
-      await carregar();
+      await _refetch();
+      renderMapa();
+      renderTabelaChumbadores();
     } catch (e) {
       console.error(e);
       statusEl.textContent = 'Erro: ' + e.message;

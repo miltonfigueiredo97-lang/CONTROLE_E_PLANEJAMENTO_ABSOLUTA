@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.57.66',
+  versaoAtual: 'V2.57.67',
 
   versoes: [
     {
@@ -5235,7 +5235,12 @@ const NotasVersao = {
         'Também corrigido: o nível ajustado agora é de fato salvo no Firestore (antes só a ordem era gravada).']},
     {versao:'V2.57.66',status:'aberta',data:'2026-07-29',tipo:'correcao',
       titulo:'Planejamento: tela ficava toda preta ao clicar numa célula, aleatoriamente — agora um erro numa linha/célula mostra um aviso naquela linha só, em vez de travar a tabela inteira',
-      itens:['Blindagem geral: se der erro ao montar uma linha específica da tabela (dado inesperado numa tarefa) ou ao abrir a edição de uma célula, o resto do Planejamento continua funcionando — aparece um aviso "⚠ Erro ao mostrar esta linha" só naquela linha, e o erro detalhado vai pro console (F12), em vez de a tela inteira ficar preta.']}
+      itens:['Blindagem geral: se der erro ao montar uma linha específica da tabela (dado inesperado numa tarefa) ou ao abrir a edição de uma célula, o resto do Planejamento continua funcionando — aparece um aviso "⚠ Erro ao mostrar esta linha" só naquela linha, e o erro detalhado vai pro console (F12), em vez de a tela inteira ficar preta.']},
+    {versao:'V2.57.67',status:'aberta',data:'2026-07-30',tipo:'correcao',
+      titulo:'Solo Grampeado: botões de modo recriavam o painel inteiro e perdiam a posição do mapa — agora só atualizam o mapa; adicionado pan/zoom com Ctrl',
+      itens:['Levantamento e Controle: os botões (Adicionar Chumbador, Calibrar Escala, Marcar Projeção/Acabamento) chamavam um redesenho completo do painel a cada clique, o que resetava o scroll do mapa e travava a interação em desenhos compridos.',
+        'Corrigido: esses botões agora só atualizam o próprio texto/classe e re-renderizam o mapa, preservando zoom e posição de scroll.',
+        'Adicionado pan (Ctrl+arrastar) e zoom (Ctrl+roda do mouse) direto sobre o mapa, tanto no Levantamento quanto no Controle.']}
   ],
 
   render(containerId) {

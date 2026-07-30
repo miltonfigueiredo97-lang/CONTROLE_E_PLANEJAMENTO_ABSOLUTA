@@ -30,6 +30,7 @@ const ControleSoloGrampeado = (() => {
   let chumbAtivoId = null;
   let imagemCacheVistaId = null, imagemCacheBase64 = null;
   let arrastoInicio = null; // {x,y} durante drag de área
+  let zoomC = 1;
 
   const esc = SG.esc;
 
@@ -140,8 +141,13 @@ const ControleSoloGrampeado = (() => {
           <select class="form-control" id="sgc-vista-ativa" style="max-width:240px;" onchange="SGC_UI.onTrocarVistaAtiva()">
             ${vistasOrdenadas().map(vv => `<option value="${vv.id}" ${vv.id === vistaAtivaId ? 'selected' : ''}>${esc(vistaLabel(vv))}</option>`).join('')}
           </select>
-          <button class="btn ${modoArea === 'projecao' ? 'btn-primario' : 'btn-secundario'} btn-sm" onclick="SGC_UI.toggleModoArea('projecao')">▦ Marcar Projeção (30%)</button>
-          <button class="btn ${modoArea === 'acabamento' ? 'btn-primario' : 'btn-secundario'} btn-sm" onclick="SGC_UI.toggleModoArea('acabamento')">▦ Marcar Acabamento (20%)</button>
+          <button id="sgc-btn-proj" class="btn ${modoArea === 'projecao' ? 'btn-primario' : 'btn-secundario'} btn-sm" onclick="SGC_UI.toggleModoArea('projecao')">▦ Marcar Projeção (30%)</button>
+          <button id="sgc-btn-acab" class="btn ${modoArea === 'acabamento' ? 'btn-primario' : 'btn-secundario'} btn-sm" onclick="SGC_UI.toggleModoArea('acabamento')">▦ Marcar Acabamento (20%)</button>
+          <span style="display:flex;gap:2px;align-items:center;margin-left:auto;">
+            <button class="btn btn-secundario btn-sm" onclick="SGC_UI.zoomAjustar(-0.25)">−</button>
+            <span class="text-sm text-muted" id="sgc-zoom-label" style="width:48px;text-align:center;">${Math.round(zoomC * 100)}%</span>
+            <button class="btn btn-secundario btn-sm" onclick="SGC_UI.zoomAjustar(0.25)">+</button>
+          </span>
         </div>
         <div id="sgc-mapa-host"></div>
       </div>
@@ -163,7 +169,20 @@ const ControleSoloGrampeado = (() => {
   }
   function toggleModoArea(m) {
     modoArea = (modoArea === m) ? null : m;
-    renderizar();
+    _atualizarBotoesModoArea();
+    renderMapa();
+  }
+  function _atualizarBotoesModoArea() {
+    const bp = document.getElementById('sgc-btn-proj');
+    const ba = document.getElementById('sgc-btn-acab');
+    if (bp) bp.className = `btn ${modoArea === 'projecao' ? 'btn-primario' : 'btn-secundario'} btn-sm`;
+    if (ba) ba.className = `btn ${modoArea === 'acabamento' ? 'btn-primario' : 'btn-secundario'} btn-sm`;
+  }
+  function zoomAjustar(delta) {
+    zoomC = Math.min(4, Math.max(0.25, +(zoomC + delta).toFixed(2)));
+    const lbl = document.getElementById('sgc-zoom-label');
+    if (lbl) lbl.textContent = Math.round(zoomC * 100) + '%';
+    renderMapa();
   }
 
   // ══════════════════════════════════════════
@@ -191,21 +210,24 @@ const ControleSoloGrampeado = (() => {
     const execMap = execMapDaVista(v.id);
     const areas = areasDaVista(v.id);
     const resumo = SG.calcPctVista(v, lista, execMap, areas);
+    const scrollAnterior = document.querySelector('#sgc-mapa-host .sg-map-scroll');
+    const scrollPos = scrollAnterior ? { left: scrollAnterior.scrollLeft, top: scrollAnterior.scrollTop } : null;
     const html = SG.mapaHTML(v, imagem, lista, execMap, areas, {
-      interativo: true, zoom: 1, stageId: 'sgc-stage', maxHeight: 600,
+      interativo: true, zoom: zoomC, stageId: 'sgc-stage', maxHeight: 600,
     });
     host.innerHTML = `
       ${html}
-      <div id="sgc-arrasto-preview" style="position:relative;"></div>
       <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:8px;font-size:0.8rem;font-family:var(--font-mono);">
-        <span>🟢 concluído · 🟠 parcial · ⚪ pendente</span>
+        <span>🟢 concluído · 🟠 parcial · ⚪ pendente · <span style="opacity:.8;">Ctrl+arrastar move, Ctrl+roda dá zoom</span></span>
         <span>Projeção: <b>${SG.fmt1(resumo.m2Projetado)} m²</b></span>
         <span>Acabamento: <b>${SG.fmt1(resumo.m2Acabado)} m²</b></span>
         <span style="font-weight:700;color:var(--cor-primaria-dark,#b8960a);">% da vista: ${SG.fmt1(resumo.pct)}%</span>
       </div>
-      ${modoArea ? `<div class="cc-empty" style="margin-top:8px;">Modo ativo: <b>${modoArea === 'projecao' ? 'Projeção da Área' : 'Acabamento da Área'}</b>. Arraste um retângulo sobre o trecho executado.</div>` : ''}
+      ${modoArea ? `<div class="cc-empty" style="margin-top:8px;">Modo ativo: <b>${modoArea === 'projecao' ? 'Projeção da Área' : 'Acabamento da Área'}</b>. Arraste um retângulo sobre o trecho executado (sem Ctrl).</div>` : ''}
       ${!modoArea && areas.length ? _htmlListaAreas(areas) : ''}
     `;
+    const novoScroll = document.querySelector('#sgc-mapa-host .sg-map-scroll');
+    if (novoScroll && scrollPos) { novoScroll.scrollLeft = scrollPos.left; novoScroll.scrollTop = scrollPos.top; }
     _ligarEventosMapa(v);
   }
 
@@ -228,10 +250,34 @@ const ControleSoloGrampeado = (() => {
   function _ligarEventosMapa(v) {
     const stage = document.getElementById('sgc-stage');
     if (!stage) return;
+    const scrollEl = stage.parentElement;
+
+    scrollEl.addEventListener('wheel', ev => {
+      if (!ev.ctrlKey) return;
+      ev.preventDefault();
+      zoomAjustar(ev.deltaY < 0 ? 0.15 : -0.15);
+    }, { passive: false });
+
+    stage.addEventListener('mousedown', ev => {
+      if (!ev.ctrlKey) return;
+      ev.preventDefault();
+      const ini = { x: ev.clientX, y: ev.clientY, sl: scrollEl.scrollLeft, st: scrollEl.scrollTop };
+      const mover = mv => {
+        scrollEl.scrollLeft = ini.sl - (mv.clientX - ini.x);
+        scrollEl.scrollTop = ini.st - (mv.clientY - ini.y);
+      };
+      const soltar = () => {
+        document.removeEventListener('mousemove', mover);
+        document.removeEventListener('mouseup', soltar);
+      };
+      document.addEventListener('mousemove', mover);
+      document.addEventListener('mouseup', soltar);
+    });
 
     if (modoArea) {
       stage.style.cursor = 'crosshair';
       stage.addEventListener('mousedown', ev => {
+        if (ev.ctrlKey) return; // Ctrl+arrastar é só pan, não marca área
         ev.preventDefault();
         arrastoInicio = SG.posRelativa(ev, stage);
         const preview = document.createElement('div');
@@ -262,6 +308,7 @@ const ControleSoloGrampeado = (() => {
     }
 
     stage.addEventListener('click', ev => {
+      if (ev.ctrlKey) return;
       const marcador = ev.target.closest('.sg-marcador');
       if (marcador) abrirMarcarEtapas(marcador.dataset.id);
     });
@@ -412,7 +459,7 @@ const ControleSoloGrampeado = (() => {
   }
 
   return {
-    init, recarregar, renderizar, onTrocarVistaAtiva, toggleModoArea, excluirArea,
+    init, recarregar, renderizar, onTrocarVistaAtiva, toggleModoArea, zoomAjustar, excluirArea,
     salvarEtapasChumbador,
     abrirRelatorioDiario,
   };
