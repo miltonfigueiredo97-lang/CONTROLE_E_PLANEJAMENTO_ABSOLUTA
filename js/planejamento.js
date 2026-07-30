@@ -1684,7 +1684,8 @@ const Planejamento = (() => {
           await Database.atualizar(obraId,COL,u.id,{percentualConcluido:u.percentualConcluido});
         }
         if(_versaoData==='atual'&&(field==='inicioPlanejado'||field==='terminoPlanejado'||field==='inicioReal'||field==='terminoReal')){
-          await _recalcularDatasPais(true);
+          const paisAlterados=await _recalcularDatasPais(true);
+          for(const p of paisAlterados)await _propagarDataEmCascata(p.id);
         }
         if(_versaoData==='atual'&&(field==='inicioPlanejado'||field==='terminoPlanejado')){
           // A predecessora só funciona de verdade se, quando a data de uma
@@ -2407,10 +2408,12 @@ const Planejamento = (() => {
       }
       else await Database.criar(obraId,COL,data);
       Utils.fecharModal('modal-tarefa');Utils.toast('Salvo!','sucesso');editandoId=null;await carregar();
-      await _recalcularDatasPais(true);
+      const paisAlterados=await _recalcularDatasPais(true);
       // Predecessora funciona de verdade: se início/término mudou, propaga
-      // automaticamente pras tarefas que dependem desta (sucessoras em cadeia).
+      // automaticamente pras tarefas que dependem desta (sucessoras em cadeia)
+      // — e também pros pais cuja data agregada mudou por causa disso.
       if(editandoIdAntes)await _propagarDataEmCascata(editandoIdAntes);
+      for(const p of paisAlterados)await _propagarDataEmCascata(p.id);
     }catch(e){console.error(e);Utils.toast('Erro.','erro');}
   }
 
@@ -2990,7 +2993,7 @@ const Planejamento = (() => {
       if(falhas&&!silencioso)Utils.toast(`⚠ ${falhas} falharam ao salvar.`,'alerta');
     }
     if(!silencioso)Utils.toast(mudou.length?`📐 ${mudou.length} tarefa(s)-pai com datas recalculadas.`:'Datas dos pais já estavam corretas.','sucesso');
-    return mudou.length;
+    return mudou; // array de {id,...campos alterados} — quem usa isso propaga cascata pros pais também
   }
 
   // ===================== REPARO: ORDENS DUPLICADAS =====================
@@ -3397,7 +3400,11 @@ const Planejamento = (() => {
     const pop=document.getElementById('pred-pop');if(pop)pop.remove();
     try{
       await Database.atualizar(obraId,COL,t.id,updates);
-      if(updates.inicioPlanejado||updates.terminoPlanejado)await _propagarDataEmCascata(t.id);
+      if(updates.inicioPlanejado||updates.terminoPlanejado){
+        await _propagarDataEmCascata(t.id);
+        const paisAlterados=await _recalcularDatasPais(true);
+        for(const p of paisAlterados)await _propagarDataEmCascata(p.id);
+      }
     }
     catch(e){console.error(e);Utils.toast('Erro.','erro');}
   }
