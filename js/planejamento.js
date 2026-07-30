@@ -3339,73 +3339,91 @@ const Planejamento = (() => {
   function setZoom(z){zoomGantt=z;_render();}
 
   // Popup de predecessora
+  // Monta o HTML de UMA linha da tabela de predecessoras (estilo MS Project,
+  // com nossa formatação escura). num/tipo/lag pré-carregados se houver.
+  function _predLinhaHtml(num,tipo,lag){
+    num=num||'';tipo=tipo||'TI';lag=lag||'';
+    const pred=num?(isNaN(parseInt(num))?tarefas.find(x=>x.codigo===num):_numLinhaMap.get(parseInt(num))):null;
+    const nomeAlvo=num?(pred?pred.nome:'<span style="color:#dc2626;">não encontrada</span>'):'';
+    return `<tr data-pred-linha>
+      <td style="padding:4px;border-bottom:1px solid #292929;width:90px;">
+        <input type="text" value="${_esc(num)}" placeholder="Nº/código" oninput="Planejamento._predLinhaAtualizar(this)"
+          style="width:100%;background:#111;border:1px solid #333;border-radius:4px;color:#fff;padding:4px 6px;font-size:.8rem;">
+      </td>
+      <td style="padding:4px;border-bottom:1px solid #292929;color:#aaa;font-size:.78rem;" data-pred-nome>${nomeAlvo}</td>
+      <td style="padding:4px;border-bottom:1px solid #292929;width:70px;">
+        <select style="width:100%;background:#111;border:1px solid #333;border-radius:4px;color:#fff;padding:4px 2px;font-size:.78rem;">
+          <option value="TI" ${tipo==='TI'?'selected':''}>TI</option>
+          <option value="II" ${tipo==='II'?'selected':''}>II</option>
+          <option value="TT" ${tipo==='TT'?'selected':''}>TT</option>
+          <option value="IT" ${tipo==='IT'?'selected':''}>IT</option>
+        </select>
+      </td>
+      <td style="padding:4px;border-bottom:1px solid #292929;width:60px;">
+        <input type="number" value="${lag}" placeholder="0"
+          style="width:100%;background:#111;border:1px solid #333;border-radius:4px;color:#fff;padding:4px 6px;font-size:.8rem;">
+      </td>
+      <td style="padding:4px;border-bottom:1px solid #292929;width:26px;text-align:center;">
+        <span style="cursor:pointer;color:#666;font-size:.85rem;" onclick="this.closest('tr').remove()" title="Remover linha">✕</span>
+      </td>
+    </tr>`;
+  }
+  function _predLinhaAtualizar(input){
+    const num=input.value.trim();
+    const td=input.closest('tr').querySelector('[data-pred-nome]');
+    if(!td)return;
+    if(!num){td.innerHTML='';return;}
+    const pred=isNaN(parseInt(num))?tarefas.find(x=>x.codigo===num):_numLinhaMap.get(parseInt(num));
+    td.innerHTML=pred?_esc(pred.nome):'<span style="color:#dc2626;">não encontrada</span>';
+  }
+  function _predAddLinha(){
+    const tbody=document.getElementById('pred-tabela-body');
+    if(!tbody)return;
+    tbody.insertAdjacentHTML('beforeend',_predLinhaHtml('','TI',''));
+  }
+
   function _predPopup(idx){
     const t=filtradas[idx];if(!t)return;
     let pop=document.getElementById('pred-pop');if(pop)pop.remove();
     pop=document.createElement('div');pop.id='pred-pop';
-    pop.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#1a1a1a;border:2px solid var(--cor-primaria);border-radius:10px;padding:20px;z-index:2000;min-width:360px;box-shadow:0 12px 40px rgba(0,0,0,.6);';
+    pop.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#1a1a1a;border:2px solid var(--cor-primaria);border-radius:10px;padding:20px;z-index:2000;min-width:480px;max-width:95vw;max-height:85vh;overflow-y:auto;box-shadow:0 12px 40px rgba(0,0,0,.6);';
 
-    // Editor de UMA predecessora só (se a tarefa já tem várias, mostra a
-    // primeira aqui — pra editar todas de uma vez use a célula da tabela,
-    // que aceita "5TI; 12II+3" com ponto e vírgula).
+    // Uma linha por predecessora já existente + 1 linha vazia extra pra
+    // adicionar — igual ao MS Project (tabela de Predecessoras), com nossa
+    // formatação escura.
     const arr=_predParse(t.predecessora);
-    const primeira=arr[0];
-    const codAtual=primeira?String(_idParaNumLinha.get(primeira.id)||''):'';
-    const tipoAtual=primeira?(primeira.tipo||'TI'):'TI';
-    const defAtual=primeira?(parseInt(primeira.lag)||0):0;
+    const linhasExistentes=arr.map(p=>_predLinhaHtml(_idParaNumLinha.get(p.id)||'',p.tipo,p.lag)).join('');
 
     pop.innerHTML=`
-      <div style="font-weight:700;color:var(--cor-primaria);margin-bottom:14px;font-size:.9rem;">Predecessora de: ${t.nome}</div>
-      <div style="display:flex;gap:8px;margin-bottom:12px;">
-        <div style="flex:1;">
-          <label style="font-size:.7rem;color:#888;display:block;margin-bottom:4px;">Nº da linha ou código da tarefa</label>
-          <input id="pred-cod" type="text" value="${codAtual}" class="form-control" placeholder="Ex: 5 ou 1.2" oninput="Planejamento._predPreview()" style="font-size:.9rem;">
-        </div>
-        <div style="width:80px;">
-          <label style="font-size:.7rem;color:#888;display:block;margin-bottom:4px;">Tipo</label>
-          <select id="pred-tipo" class="form-control" onchange="Planejamento._predPreview()">
-            <option value="TI" ${tipoAtual==='TI'?'selected':''}>TI</option>
-            <option value="II" ${tipoAtual==='II'?'selected':''}>II</option>
-            <option value="TT" ${tipoAtual==='TT'?'selected':''}>TT</option>
-            <option value="IT" ${tipoAtual==='IT'?'selected':''}>IT</option>
-          </select>
-        </div>
-        <div style="width:70px;">
-          <label style="font-size:.7rem;color:#888;display:block;margin-bottom:4px;">Defasagem</label>
-          <input id="pred-def" type="number" value="${defAtual}" class="form-control" oninput="Planejamento._predPreview()">
-        </div>
+      <div style="font-weight:700;color:var(--cor-primaria);margin-bottom:4px;font-size:.95rem;">Predecessora de: ${_esc(t.nome)}</div>
+      <div style="font-size:.68rem;color:#555;margin-bottom:14px;">
+        TI = Término→Início (após terminar) · II = Início→Início (começa junto) · TT = Término→Término (termina junto) · IT = Início→Término
       </div>
-      <div id="pred-info" style="background:#111;border-radius:6px;padding:10px;margin-bottom:14px;min-height:40px;font-size:.82rem;color:#aaa;"></div>
-      <div style="font-size:.68rem;color:#555;margin-bottom:12px;">
-        TI = Término→Início (após terminar) · II = Início→Início (começa junto)<br>
-        TT = Término→Término (termina junto) · IT = Início→Término
+      <table style="width:100%;border-collapse:collapse;margin-bottom:8px;">
+        <thead>
+          <tr style="text-align:left;font-size:.68rem;color:#888;text-transform:uppercase;letter-spacing:.3px;">
+            <th style="padding:4px 4px 8px;">Nº/Código</th>
+            <th style="padding:4px 4px 8px;">Nome da Tarefa</th>
+            <th style="padding:4px 4px 8px;">Tipo</th>
+            <th style="padding:4px 4px 8px;">Defasagem</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="pred-tabela-body">${linhasExistentes}${_predLinhaHtml('','TI','')}</tbody>
+      </table>
+      <div style="margin-bottom:16px;">
+        <span style="cursor:pointer;color:var(--cor-primaria);font-size:.78rem;font-weight:600;" onclick="Planejamento._predAddLinha()">＋ Adicionar linha</span>
       </div>
       <div style="display:flex;gap:8px;justify-content:flex-end;">
         <button class="btn btn-secundario btn-sm" onclick="document.getElementById('pred-pop').remove()">Cancelar</button>
-        <button class="btn btn-perigo btn-sm" onclick="Planejamento._predSalvar(${idx},'')">Limpar</button>
+        <button class="btn btn-perigo btn-sm" onclick="Planejamento._predSalvar(${idx},'')">Limpar tudo</button>
         <button class="btn btn-primario btn-sm" onclick="Planejamento._predSalvar(${idx})">Salvar</button>
       </div>`;
     document.body.appendChild(pop);
-    document.getElementById('pred-cod').focus();
-    _predPreview();
+    pop.querySelector('input')?.focus();
     // Close on escape
     const onKey=e=>{if(e.key==='Escape'){pop.remove();document.removeEventListener('keydown',onKey);}};
     document.addEventListener('keydown',onKey);
-  }
-
-  function _predPreview(){
-    const cod=document.getElementById('pred-cod')?.value?.trim();
-    const tipo=document.getElementById('pred-tipo')?.value||'TI';
-    const def=parseInt(document.getElementById('pred-def')?.value)||0;
-    const info=document.getElementById('pred-info');
-    if(!info)return;
-    if(!cod){info.innerHTML='<span style="color:#555;">Digite o número da linha ou código da tarefa predecessora</span>';return;}
-    const numBusca2=parseInt(cod);const pred=isNaN(numBusca2)?tarefas.find(x=>x.codigo===cod):_numLinhaMap.get(numBusca2);
-    if(!pred){info.innerHTML='<span style="color:#dc2626;">Tarefa "'+cod+'" não encontrada</span>';return;}
-    const descTipo={TI:'Inicia após término de',II:'Inicia junto com',TT:'Termina junto com',IT:'Termina junto com início de'}[tipo];
-    info.innerHTML=`<div style="color:var(--cor-primaria);font-weight:700;margin-bottom:4px;">${pred.codigo||pred._numLinha} — ${pred.nome}</div>
-      <div style="color:#aaa;font-size:.78rem;">${descTipo}: <strong>${pred.nome}</strong>${def?` (${def>0?'+':''}${def} dias)`:''}</div>
-      ${pred.inicioPlanejado?`<div style="color:#666;font-size:.72rem;margin-top:4px;">Início: ${_fd(pred.inicioPlanejado)} · Fim: ${_fd(pred.terminoPlanejado)}</div>`:''}`;
   }
 
   async function _predSalvar(idx, forceVal){
@@ -3413,12 +3431,18 @@ const Planejamento = (() => {
     let canon;
     if(forceVal!==undefined){canon=forceVal;}
     else{
-      const cod=document.getElementById('pred-cod')?.value?.trim()||'';
-      const tipo=document.getElementById('pred-tipo')?.value||'TI';
-      const def=parseInt(document.getElementById('pred-def')?.value)||0;
-      const numBusca=parseInt(cod);
-      const pred=cod?(isNaN(numBusca)?tarefas.find(x=>x.codigo===cod):_numLinhaMap.get(numBusca)):null;
-      canon=pred?_predFormat([{id:pred.id,tipo,lag:def?((def>0?'+':'')+def):''}]):'';
+      const partes=[];
+      document.querySelectorAll('#pred-tabela-body [data-pred-linha]').forEach(tr=>{
+        const num=tr.querySelector('input[type="text"]')?.value?.trim();
+        if(!num)return;
+        const tipo=tr.querySelector('select')?.value||'TI';
+        const lagRaw=tr.querySelector('input[type="number"]')?.value;
+        const lag=lagRaw?((parseInt(lagRaw)>0?'+':'')+parseInt(lagRaw)):'';
+        const numBusca=parseInt(num);
+        const pred=isNaN(numBusca)?tarefas.find(x=>x.codigo===num):_numLinhaMap.get(numBusca);
+        if(pred)partes.push({id:pred.id,tipo,lag});
+      });
+      canon=_predFormat(partes);
     }
     const updates={predecessora:canon};
     if(canon)_calcPredecessora(t,canon,updates);
@@ -4385,7 +4409,7 @@ const Planejamento = (() => {
     _rowDragStart,toggleSel,_limparSelecao,_moverSel,_bulkNivel,_bulkDuplicar,_bulkExcluir,
     toggleStatusFiltro,_aplicarStatusFiltro,undo,
     onBusca,limparBusca,_buscaKey,
-    importarExcel,importarBaseCompleta,importarCorrecoes,_executarCorrecoes,exportar,exportarPNG,corrigirOrdensDuplicadas,_corrigirNiveisSoltos,_corrigirNivelPeloCodigo,_migrarPredecessorasParaId,_recalcularDatasPais,_orfasMarcarTodas,_orfasExcluirMarcadas,_gerarPNG,_predPopup,_predPreview,_predSalvar,_predCellClick,
+    importarExcel,importarBaseCompleta,importarCorrecoes,_executarCorrecoes,exportar,exportarPNG,corrigirOrdensDuplicadas,_corrigirNiveisSoltos,_corrigirNivelPeloCodigo,_migrarPredecessorasParaId,_recalcularDatasPais,_orfasMarcarTodas,_orfasExcluirMarcadas,_gerarPNG,_predPopup,_predSalvar,_predCellClick,_predAddLinha,_predLinhaAtualizar,
     abrirVinculosView,fecharVinculosView,abrirVincularTarefa,abrirVincularAqui,onVincTipoChange,
     onVincNavModulo,onVincNavModuloMetrica,onVincNavMetrica,onVincNavEntrar,onVincNavBreadcrumb,onVincNavVoltar,
     onBuscaEscolhaAlvoVinc,onEscolherAlvoVinc,onTrocarAlvoVinc,
