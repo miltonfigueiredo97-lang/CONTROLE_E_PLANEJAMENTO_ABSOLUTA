@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.57.65',
+  versaoAtual: 'V2.57.66',
 
   versoes: [
     {
@@ -5228,11 +5228,14 @@ const NotasVersao = {
       titulo:'Editor de Estrutura: "←"/"→" (subir/descer nível) só ajustava UM bloco por vez, mesmo com vários selecionados — se tinha 9 grupos irmãos soltos no nível errado, tinha que clicar um por um',
       itens:['Clicar "←" numa tarefa selecionada em grupo (Ctrl+clique) só subia o nível DAQUELA tarefa e dos filhos dela — os outros itens selecionados ao lado (irmãos) ficavam intocados, mesmo estando marcados.',
         'Corrigido: agora, se houver seleção múltipla, "←"/"→" ajusta o nível de TODOS os blocos selecionados de uma vez (cada um com seus próprios filhos) — resolve de vez o caso de vários grupos soltos no nível errado por conta de um código de planilha que não corresponde à posição real que a tarefa deveria ocupar.']},
-    {versao:'V2.57.65',status:'aberta',data:'2026-07-29',tipo:'correcao',
+    {versao:'V2.57.65',status:'fechada',data:'2026-07-29',tipo:'correcao',
       titulo:'Achada a causa raiz do "nível impossível": arrastar uma tarefa na TABELA NORMAL do Planejamento (Ctrl+botão direito, fora do Editor de Estrutura) nunca ajustava o nível — só a posição',
       itens:['Diferente do arrastar no Editor de Estrutura (que já ajusta o nível pro contexto de onde solta), o arrastar-com-Ctrl+botão-direito na tabela normal do Planejamento só movia a ORDEM da tarefa — o nível ficava exatamente como estava antes, não importa onde ela caía. Se você arrastasse um bloco de nível 3 pra encostar num item de nível 1, ele ficava com nível 3 ali mesmo — um salto impossível (teria que existir um nível 2 no meio), que é exatamente o que ficava invisível no Editor de Estrutura.',
         'Corrigido: agora esse arrastar também ajusta o nível do bloco pro nível de quem está do lado, igual já acontece no Editor de Estrutura — usando a mesma lógica já testada.',
-        'Também corrigido: o nível ajustado agora é de fato salvo no Firestore (antes só a ordem era gravada).']}
+        'Também corrigido: o nível ajustado agora é de fato salvo no Firestore (antes só a ordem era gravada).']},
+    {versao:'V2.57.66',status:'aberta',data:'2026-07-29',tipo:'correcao',
+      titulo:'Planejamento: tela ficava toda preta ao clicar numa célula, aleatoriamente — agora um erro numa linha/célula mostra um aviso naquela linha só, em vez de travar a tabela inteira',
+      itens:['Blindagem geral: se der erro ao montar uma linha específica da tabela (dado inesperado numa tarefa) ou ao abrir a edição de uma célula, o resto do Planejamento continua funcionando — aparece um aviso "⚠ Erro ao mostrar esta linha" só naquela linha, e o erro detalhado vai pro console (F12), em vez de a tela inteira ficar preta.']}
   ],
 
   render(containerId) {

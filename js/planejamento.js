@@ -1408,6 +1408,7 @@ const Planejamento = (() => {
     let rH='', bH='';
     for(let i=s;i<e;i++){
       const t=filtradas[i], y=i*ROW_H;
+      try{
       const sel=i===selectedIdx, isG=t.tipo==='grupo';
       const st2=_status(t), perc=_perc(t);
       const isDragged=t.id===_dragTaskId;
@@ -1516,6 +1517,10 @@ const Planejamento = (() => {
         }
       }
       bH+=`<div style="position:absolute;left:0;top:${y}px;width:100%;height:${ROW_H}px;border-bottom:1px solid #1a1a1a;background:${sel?'rgba(245,200,0,.06)':''};pointer-events:none;"></div>`;
+      }catch(errLinha){
+        console.error('Erro ao renderizar linha',i,t?.id,t?.nome,errLinha);
+        rH+=`<div style="position:absolute;top:${y}px;left:0;right:0;height:${ROW_H}px;display:flex;align-items:center;padding:0 8px;background:#2a1414;color:#f87171;font-size:.72rem;border-bottom:1px solid #1a1a1a;">⚠ Erro ao mostrar esta linha (${_esc(t?.nome||t?.id||'?')}) — veja o console (F12)</div>`;
+      }
     }
 
     const ev=document.getElementById('g-esq-v');if(ev)ev.innerHTML=rH;
@@ -1543,6 +1548,7 @@ const Planejamento = (() => {
     let bH='';
     for(let i=s;i<e;i++){
       const t=filtradas[i], y=i*ROW_H;
+      try{
       const perc=_perc(t), isG=t.tipo==='grupo', st2=_status(t);
       bH+=`<div style="position:absolute;left:0;top:${y}px;width:100%;height:${ROW_H}px;border-bottom:1px solid #1a1a1a;"></div>`;
       if(ganttVisible&&t.inicioPlanejado&&t.terminoPlanejado){
@@ -1554,6 +1560,7 @@ const Planejamento = (() => {
         if(isG){bH+=`<div style="position:absolute;left:${bx}px;top:${by+8}px;width:${bw}px;height:5px;background:var(--cor-primaria);border-radius:1px;"></div>`;}
         else{bH+=`<div style="position:absolute;left:${bx}px;top:${by}px;width:${bw}px;height:${bh}px;background:${cor};border-radius:3px;overflow:hidden;"><div style="height:100%;width:${perc}%;background:rgba(255,255,255,.25);"></div></div>`;}
       }
+      }catch(errLinha){console.error('Erro ao renderizar barra Gantt',i,t?.id,errLinha);}
     }
     const ev=document.getElementById('g-dir-v');if(ev)ev.innerHTML=bH;
   }
@@ -1592,6 +1599,8 @@ const Planejamento = (() => {
     const t=filtradas[idx]; if(!t)return;
     selectedIdx=idx;
     const cell=e.currentTarget;
+    if(!cell)return; // célula pode ter saído do DOM (re-render no meio do clique) — não quebra a tela
+    try{
     const map={codigo:'codigo',nome:'nome',
       inicio:VERSAO_CAMPOS[_versaoData].ini,termino:VERSAO_CAMPOS[_versaoData].fim,
       duracao:'duracao',percEsp:'percentualEsperado',percConc:'percentualConcluido',
@@ -1734,6 +1743,11 @@ const Planejamento = (() => {
     // Para spinners de number: salva ao mudar valor
     if(isNum){
       input.addEventListener('change',()=>{input.blur();});
+    }
+    }catch(errCel){
+      console.error('Erro ao abrir edição da célula:',colId,errCel);
+      Utils.toast('Erro ao editar essa célula — veja o console (F12).','erro');
+      _editandoCelula=false;
     }
   }
   
