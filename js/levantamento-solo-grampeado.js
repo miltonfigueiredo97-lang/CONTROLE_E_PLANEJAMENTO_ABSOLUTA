@@ -264,8 +264,39 @@ const LevantamentoSoloGrampeado = (() => {
     const novoScroll = document.querySelector('#sg-mapa-host .sg-map-scroll');
     if (novoScroll && scrollPos) { novoScroll.scrollLeft = scrollPos.left; novoScroll.scrollTop = scrollPos.top; }
     if (novoScroll) novoScroll.style.outline = modo ? '3px solid #f5c518' : 'none';
+    _desenharLinhaEscalaSalva(v);
     if (modo === 'calibrar') _desenharPontosCalibracao();
     _ligarEventosMapa(v);
+  }
+
+  // Linha de escala JÁ SALVA — fica sempre visível (verde, sólida) pra
+  // poder conferir depois se a calibração ainda está correta. Some
+  // problema relatado: "a escala desaparece" — agora fica marcada.
+  function _desenharLinhaEscalaSalva(v) {
+    const stage = document.getElementById('sg-stage');
+    if (!stage || !v.linhaCalibracao) return;
+    const l = v.linhaCalibracao;
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('viewBox', '0 0 100 100');
+    svg.setAttribute('preserveAspectRatio', 'none');
+    svg.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:8;';
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('x1', l.x1 * 100); line.setAttribute('y1', l.y1 * 100);
+    line.setAttribute('x2', l.x2 * 100); line.setAttribute('y2', l.y2 * 100);
+    line.setAttribute('stroke', '#16a34a'); line.setAttribute('stroke-width', '0.35'); line.setAttribute('vector-effect', 'non-scaling-stroke');
+    svg.appendChild(line);
+    [{ x: l.x1, y: l.y1 }, { x: l.x2, y: l.y2 }].forEach(p => {
+      const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      c.setAttribute('cx', p.x * 100); c.setAttribute('cy', p.y * 100); c.setAttribute('r', '0.6');
+      c.setAttribute('fill', '#16a34a'); c.setAttribute('vector-effect', 'non-scaling-stroke');
+      svg.appendChild(c);
+    });
+    stage.appendChild(svg);
+    const midX = (l.x1 + l.x2) / 2, midY = (l.y1 + l.y2) / 2;
+    const label = document.createElement('div');
+    label.style.cssText = `position:absolute;left:${(midX * 100).toFixed(3)}%;top:${(midY * 100).toFixed(3)}%;transform:translate(-50%,-50%);background:#16a34a;color:#fff;font-size:10px;padding:1px 5px;border-radius:4px;white-space:nowrap;z-index:8;pointer-events:none;font-family:var(--font-mono);`;
+    label.textContent = `📏 ${SG.fmt1(SG.num(v.escalaCm))} cm`;
+    stage.appendChild(label);
   }
 
   // Feedback visual dos cliques de calibração (sem isso, o 1º clique
@@ -334,10 +365,10 @@ const LevantamentoSoloGrampeado = (() => {
       } else if (modo === 'calibrar') {
         calibPontos.push(pos);
         if (calibPontos.length === 2) {
-          const distPx = SG.distanciaPxEntrePontos(calibPontos[0], calibPontos[1], v);
+          const p1 = calibPontos[0], p2 = calibPontos[1];
           calibPontos = []; modo = null;
           _atualizarBotoesModo();
-          abrirConfirmarCalibracao(distPx);
+          abrirConfirmarCalibracao(v, p1, p2);
         } else {
           Utils.toast('Ponto 1 marcado — clique o segundo ponto.', 'info');
           renderMapa();
@@ -501,29 +532,44 @@ const LevantamentoSoloGrampeado = (() => {
   // ══════════════════════════════════════════
   // CALIBRAÇÃO DE ESCALA e m² TOTAL
   // ══════════════════════════════════════════
-  function abrirConfirmarCalibracao(distPx) {
+  function abrirConfirmarCalibracao(v, p1, p2) {
     document.getElementById('sg-calib-cm').value = '';
-    document.getElementById('form-sg-calib').dataset.distpx = distPx;
+    document.getElementById('form-sg-calib').dataset.pontos = JSON.stringify({ p1, p2 });
+    document.getElementById('form-sg-calib').dataset.vistaId = v.id;
     Utils.abrirModal('modal-sg-calibracao');
   }
 
   async function salvarCalibracao() {
-    const v = vistaAtiva();
-    if (!v) return;
-    const distPx = SG.num(document.getElementById('form-sg-calib').dataset.distpx);
+    const form = document.getElementById('form-sg-calib');
+    const vistaId = form.dataset.vistaId;
+    const v = vistas.find(x => x.id === vistaId);
+    if (!v) { Utils.toast('Erro: vista não encontrada — feche e tente calibrar de novo.', 'erro'); return; }
+    let pontos;
+    try { pontos = JSON.parse(form.dataset.pontos || 'null'); } catch (e) { pontos = null; }
+    if (!pontos) { Utils.toast('Erro: pontos da calibração perdidos — clique os 2 pontos de novo.', 'erro'); return; }
+    if (!(SG.num(v.imgWidthPx) > 0) || !(SG.num(v.imgHeightPx) > 0)) {
+      Utils.toast('Erro: esta vista não tem o tamanho da imagem salvo. Recarregue o PDF/Imagem da Vista e tente de novo.', 'erro');
+      return;
+    }
     const cm = SG.num(document.getElementById('sg-calib-cm').value);
-    if (!(distPx > 0) || !(cm > 0)) { Utils.toast('Informe o comprimento real (cm) da linha.', 'alerta'); return; }
+    if (!(cm > 0)) { Utils.toast('Informe o comprimento real (cm) da linha.', 'alerta'); return; }
+    const distPx = SG.distanciaPxEntrePontos(pontos.p1, pontos.p2, v);
+    if (!(distPx > 0)) { Utils.toast('Erro: os 2 pontos clicados estão no mesmo lugar — clique 2 pontos diferentes.', 'erro'); return; }
     const escala = SG.calcEscalaCmPorPx(distPx, cm);
     const m2Sugerido = SG.calcM2Imagem(v.imgWidthPx, v.imgHeightPx, escala);
     Utils.mostrarLoading();
     try {
-      await Database.atualizar(obraId, COL_VISTAS, v.id, { escalaCmPorPx: escala, m2Total: m2Sugerido });
+      await Database.atualizar(obraId, COL_VISTAS, v.id, {
+        escalaCmPorPx: escala, escalaCm: cm, m2Total: m2Sugerido,
+        linhaCalibracao: { x1: pontos.p1.x, y1: pontos.p1.y, x2: pontos.p2.x, y2: pontos.p2.y },
+      });
       Utils.toast(`✓ Escala calibrada! m² sugerido: ${SG.fmt1(m2Sugerido)}`, 'sucesso');
       Utils.fecharModal('modal-sg-calibracao');
       await _refetch();
       renderMapa();
       renderTabelaChumbadores();
     } catch (e) {
+      console.error(e);
       Utils.toast('Erro ao salvar: ' + e.message, 'erro');
     } finally {
       Utils.esconderLoading();

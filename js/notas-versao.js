@@ -5245,7 +5245,8 @@ const NotasVersao = {
         'Removido o campo "Profundidade" (era redundante com o Comprimento — o chumbador tem uma única medida real).',
         'Adicionar Chumbador mudou de fluxo: antes abria um popup a cada clique (pedindo até Especificação, sem necessidade nesse momento) — agora clicar no mapa só coloca a bolinha na hora, sem popup nenhum. Barra amarela mostra Próx. Número (edita se não bater com o desenho, incrementa sozinho a cada clique), Tipo e Comprimento padrão. Clicar numa bolinha já colocada abre a edição (número, tipo, comprimento, especificação).',
         'Numeração em sequência: clicando à direita do último chumbador, o número continua incrementando sozinho (como os chumbadores reais são numerados em linha, esquerda→direita). Se o clique não for à direita do anterior (nova linha), para e pergunta o número inicial dela antes de continuar.',
-        'Controle: novo painel "Medidor Diário" — meta por vista (chumbadores concluídos/dia e/ou m² executados/dia, cada uma opcional), comparando dia a dia o realizado contra a meta com % e cor (verde ≥100%, amarelo ≥60%, vermelho abaixo).']}
+        'Controle: novo painel "Medidor Diário" — meta por vista (chumbadores concluídos/dia e/ou m² executados/dia, cada uma opcional), comparando dia a dia o realizado contra a meta com % e cor (verde ≥100%, amarelo ≥60%, vermelho abaixo).',
+        'Calibrar Escala: corrigido caso em que "Salvar" não fazia nada (falha silenciosa) — agora valida cada etapa (pontos perdidos, imagem sem tamanho salvo, pontos iguais) com mensagem de erro específica em vez de simplesmente não salvar. A linha de calibração agora fica salva e sempre visível no mapa (verde, com o valor em cm), pra conferir depois se ainda está correta — antes ela desaparecia depois de confirmar.']}
   ],
 
   render(containerId) {
