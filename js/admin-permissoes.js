@@ -112,7 +112,7 @@ const AdminPermissoes = (() => {
     // se misturar com o fim da anterior.
     cont.innerHTML = `<div style="display:grid;grid-template-columns:repeat(${NUM_COLUNAS},1fr);gap:18px 24px;">
       ${Object.entries(categorias).map(([categoria, mods]) => `
-        <div class="sidebar-section-title" style="grid-column:1/-1;padding:${categoria === Object.keys(categorias)[0] ? '0' : '10px'} 0 2px;">${categoria}</div>
+        <div style="grid-column:1/-1;padding:${categoria === Object.keys(categorias)[0] ? '0' : '14px'} 0 2px;font-size:.98rem;font-weight:800;color:var(--cor-texto);text-transform:uppercase;letter-spacing:.5px;">${categoria}</div>
         ${mods.map(_htmlModulo).join('')}
       `).join('')}
     </div>`;

@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.58.12',
+  versaoAtual: 'V2.58.13',
 
   versoes: [
     {
@@ -5328,9 +5328,12 @@ const NotasVersao = {
       itens:['Trocada a lógica de novo: em vez de jogar categorias inteiras em 3 colunas (o que sempre deixava alguma desbalanceada), agora cada MÓDULO é uma célula de um grid CSS de 4 colunas — dentro de "Produção" os módulos preenchem a linha em ordem (Planejamento, Fachada, Piso, Teto, ...), voltando pra próxima linha quando enche, exatamente como pedido.',
         'O título de cada categoria ocupa a linha inteira (grid-column:1/-1) — como isso nunca cabe numa linha que já tem módulo de outra categoria, o próprio CSS Grid empurra ele pra uma linha nova, garantindo que "Custos" nunca comece misturado com o fim de "Produção".',
         'Modal mais largo (1280px) pra acomodar as 4 colunas de módulo.']},
-    {versao:'V2.58.12',status:'aberta',data:'2026-07-31',tipo:'melhoria',
+    {versao:'V2.58.12',status:'fechada',data:'2026-07-31',tipo:'melhoria',
       titulo:'Permissões: linhas claras separando cada módulo no checklist',
-      itens:['Cada módulo agora tem uma borda sutil ao redor (tipo card), separando visualmente um do outro na grade — antes ficavam soltos, só o espaçamento entre eles.']}
+      itens:['Cada módulo agora tem uma borda sutil ao redor (tipo card), separando visualmente um do outro na grade — antes ficavam soltos, só o espaçamento entre eles.']},
+    {versao:'V2.58.13',status:'aberta',data:'2026-07-31',tipo:'melhoria',
+      titulo:'Permissões: título das categorias (Produção, Custos, etc.) maior e em negrito',
+      itens:['Estava usando a classe de título da sidebar (pensada pra menu estreito, 0.57rem) — ficava minúsculo dentro do modal. Aumentado pra .98rem, negrito, pra separar melhor visualmente do nome dos módulos.']}
   ],
 
   render(containerId) {
