@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.58.5',
+  versaoAtual: 'V2.58.6',
 
   versoes: [
     {
@@ -5295,10 +5295,14 @@ const NotasVersao = {
       itens:['O grid de 2 módulos por linha desalinhava tudo sempre que um módulo tinha mais ações que o vizinho (ex: Planejamento com 6 ações ao lado de um módulo com 5) — a linha de baixo quebrava e ficava torta.',
         'Trocado para lista de uma coluna, um módulo por linha, com o nome à esquerda e as ações à direita — cada linha quebra sozinha, sem empurrar a vizinha.',
         'Modal de convite/edição ficou mais largo (860px) pra acomodar melhor as linhas com mais ações.']},
-    {versao:'V2.58.5',status:'aberta',data:'2026-07-31',tipo:'correcao',
+    {versao:'V2.58.5',status:'fechada',data:'2026-07-31',tipo:'correcao',
       titulo:'Permissões: erro "No document to update" ao editar permissões de usuário antigo',
       itens:['Usuários criados antes do V2.58 (ex: as contas admin/chefe originais) não têm o documento em permissions/{uid} — só é criado agora, no momento do convite. Editar as permissões desses usuários chamava .update() nesse doc inexistente e falhava.',
-        'Corrigido: agora usa set com merge (upsert) — cria o documento se não existir, atualiza se já existir.']}
+        'Corrigido: agora usa set com merge (upsert) — cria o documento se não existir, atualiza se já existir.']},
+    {versao:'V2.58.6',status:'aberta',data:'2026-07-31',tipo:'correcao',
+      titulo:'Permissões: checklist de módulos reformulado pra bater com o padrão de referência (uma ação por linha)',
+      itens:['A tentativa anterior colocava várias ações numa linha só por módulo, o que ainda desalinhava quando o texto quebrava. Agora cada ação é sua própria linha (checkbox + rótulo curto), num grid de 2 colunas por módulo — mesmo padrão do exemplo que o Milton mandou (Estoque/Pedidos/Ferramentas): cada item é auto-contido, então sempre alinha.',
+        'Módulos continuam agrupados por categoria, com o nome do módulo como sub-título acima do grid de ações dele.']}
   ],
 
   render(containerId) {
