@@ -169,13 +169,48 @@ const Permissions = (() => {
     return true;
   }
 
+  // Links de menu que são "hub" de vários módulos (o próprio hub não é um
+  // módulo com permissão própria — ele deve aparecer se o usuário tiver
+  // "ver" em QUALQUER um dos módulos que ele agrupa).
+  const HUBS = {
+    levantamento: ['levantamentoFachada','levantamentoPiso','levantamentoTeto','levantamentoParedes',
+                   'levantamentoConcreto','levantamentoAr','levantamentoPintura','levantamentoSolo','levantamentoTerra'],
+    controle: ['controleConcreto','controleSolo','controleTerra'],
+  };
+
+  function podeHub(hub) {
+    return (HUBS[hub] || []).some(m => pode(m, 'ver'));
+  }
+
   // Esconde qualquer elemento marcado com data-perm="modulo:acao" se o
-  // usuário não tiver a permissão. Chamar depois de renderizar botões
+  // usuário não tiver a permissão, e data-perm-hub="levantamento|controle"
+  // se ele não tiver "ver" em nenhum módulo daquele grupo. Depois, esconde
+  // os títulos de categoria da sidebar (Gestão, Custos...) que ficaram sem
+  // nenhum link visível embaixo. Chamar depois de renderizar botões
   // dinâmicos de cada módulo.
   function aplicarNaTela(root = document) {
     root.querySelectorAll('[data-perm]').forEach(el => {
       const [modulo, acao] = el.dataset.perm.split(':');
       if (!pode(modulo, acao || 'ver')) el.classList.add('hidden');
+    });
+    root.querySelectorAll('[data-perm-hub]').forEach(el => {
+      if (!podeHub(el.dataset.permHub)) el.classList.add('hidden');
+    });
+    _ocultarCategoriasVaziasSidebar(root);
+  }
+
+  function _ocultarCategoriasVaziasSidebar(root) {
+    const nav = (root.querySelector ? root : document).querySelector('.sidebar-nav');
+    if (!nav) return;
+    const filhos = Array.from(nav.children);
+    filhos.forEach((el, i) => {
+      if (!el.classList.contains('sidebar-section-title')) return;
+      let temVisivel = false;
+      for (let j = i + 1; j < filhos.length; j++) {
+        if (filhos[j].classList.contains('sidebar-section-title')) break;
+        if (filhos[j].tagName === 'A' && !filhos[j].classList.contains('hidden')) { temVisivel = true; break; }
+      }
+      el.classList.toggle('hidden', !temVisivel);
     });
   }
 
@@ -198,7 +233,7 @@ const Permissions = (() => {
 
   return {
     MODULOS, ACAO_LABEL,
-    carregar, pode, podeAcessarObra, isAtivo, isAdminAtual, getAcessoObras,
+    carregar, pode, podeHub, podeAcessarObra, isAtivo, isAdminAtual, getAcessoObras,
     bloquearPaginaSemAcesso, aplicarNaTela, templateVazio, salvarPermissoesUsuario,
   };
 })();
