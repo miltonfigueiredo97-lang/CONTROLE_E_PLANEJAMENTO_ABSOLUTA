@@ -89,49 +89,32 @@ const AdminPermissoes = (() => {
       (categorias[mod.categoria] = categorias[mod.categoria] || []).push({ key, ...mod });
     });
 
-    const NUM_COLUNAS = 3;
+    const NUM_COLUNAS = 4;
 
-    // "Peso" aproximado de cada categoria (linhas de conteúdo) — usado pra
-    // distribuir as categorias entre colunas de forma equilibrada, em vez
-    // de depender do balanceamento automático do CSS (que fica ruim quando
-    // as categorias têm tamanhos muito diferentes: uma pequena sobra sozinha
-    // numa coluna vazia enquanto uma grande toma a coluna inteira).
-    function _pesoModulo(m) { return 1 + Math.ceil(m.acoes.length / 2); }
-    function _pesoCategoria(mods) { return 1 + mods.reduce((s, m) => s + _pesoModulo(m), 0); }
-
-    const listaCategorias = Object.entries(categorias)
-      .map(([categoria, mods]) => ({ categoria, mods, peso: _pesoCategoria(mods) }))
-      .sort((a, b) => b.peso - a.peso); // maiores primeiro = empacota melhor
-
-    const colunas = Array.from({ length: NUM_COLUNAS }, () => ({ itens: [], peso: 0 }));
-    listaCategorias.forEach(cat => {
-      const menor = colunas.reduce((m, c) => c.peso < m.peso ? c : m, colunas[0]);
-      menor.itens.push(cat);
-      menor.peso += cat.peso;
-    });
-
-    const _htmlCategoria = ({ categoria, mods }) => `
-      <div style="margin-bottom:16px;">
-        <div class="sidebar-section-title" style="padding:0 0 8px;">${categoria}</div>
-        ${mods.map(m => `
-          <div style="margin-bottom:14px;">
-            <div style="font-weight:700;font-size:.82rem;margin-bottom:6px;color:var(--cor-texto);">${m.label}</div>
-            <div style="display:grid;grid-template-columns:max-content max-content;gap:7px 32px;justify-content:start;">
-              ${m.acoes.map(a => `
-                <label class="form-check" style="font-size:.82rem;white-space:nowrap;">
-                  <input type="checkbox" data-modulo="${m.key}" data-acao="${a}"
-                    ${modulosSelecionados?.[m.key]?.[a] ? 'checked' : ''}>
-                  ${Permissions.ACAO_LABEL[a] || a}
-                </label>`).join('')}
-            </div>
-          </div>`).join('')}
+    const _htmlModulo = (m) => `
+      <div>
+        <div style="font-weight:700;font-size:.82rem;margin-bottom:6px;color:var(--cor-texto);">${m.label}</div>
+        <div style="display:grid;grid-template-columns:max-content max-content;gap:7px 20px;justify-content:start;">
+          ${m.acoes.map(a => `
+            <label class="form-check" style="font-size:.8rem;white-space:nowrap;">
+              <input type="checkbox" data-modulo="${m.key}" data-acao="${a}"
+                ${modulosSelecionados?.[m.key]?.[a] ? 'checked' : ''}>
+              ${Permissions.ACAO_LABEL[a] || a}
+            </label>`).join('')}
+        </div>
       </div>`;
 
-    cont.innerHTML = `<div style="display:flex;gap:22px;align-items:flex-start;">
-      ${colunas.map(col => `
-        <div style="flex:1;min-width:0;">
-          ${col.itens.map(_htmlCategoria).join('')}
-        </div>`).join('')}
+    // Um grid único pra tudo: cada módulo é uma célula normal (flui em ordem,
+    // esquerda->direita, quebrando linha automaticamente). O título de cada
+    // categoria ocupa a linha inteira (grid-column:1/-1) — como isso nunca
+    // cabe numa linha já ocupada por células de módulo, o grid empurra ele
+    // sozinho pra uma linha nova, o que força a categoria seguinte a nunca
+    // se misturar com o fim da anterior.
+    cont.innerHTML = `<div style="display:grid;grid-template-columns:repeat(${NUM_COLUNAS},1fr);gap:18px 24px;">
+      ${Object.entries(categorias).map(([categoria, mods]) => `
+        <div class="sidebar-section-title" style="grid-column:1/-1;padding:${categoria === Object.keys(categorias)[0] ? '0' : '10px'} 0 2px;">${categoria}</div>
+        ${mods.map(_htmlModulo).join('')}
+      `).join('')}
     </div>`;
   }
 
