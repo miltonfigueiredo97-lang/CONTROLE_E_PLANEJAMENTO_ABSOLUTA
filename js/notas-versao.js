@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.58.8',
+  versaoAtual: 'V2.58.9',
 
   versoes: [
     {
@@ -5307,11 +5307,17 @@ const NotasVersao = {
       titulo:'Permissões: 2ª coluna de checkboxes ficava muito distante da 1ª',
       itens:['grid-template-columns:1fr 1fr fazia cada coluna ocupar 50% da largura do modal — com o texto do checkbox sendo curto, a 2ª coluna acabava lá na borda direita, bem separada da 1ª.',
         'Corrigido: colunas do tamanho do próprio conteúdo (max-content), coladas uma na outra como no exemplo — modal também ficou mais estreito (620px), já que não precisa mais de tanto espaço.']},
-    {versao:'V2.58.8',status:'aberta',data:'2026-07-31',tipo:'melhoria',
+    {versao:'V2.58.8',status:'fechada',data:'2026-07-31',tipo:'melhoria',
       titulo:'Permissões: lista de módulos em 2 colunas (CSS multi-column) — corta o scroll pela metade',
       itens:['A lista inteira de categorias/módulos era uma coluna só, obrigando a rolar bastante pra ver os módulos de baixo enquanto sobrava bastante espaço em branco do lado.',
         'Agora o conteúdo flui em 2 colunas (column-count), cada módulo inteiro protegido (break-inside:avoid-column) pra nunca cortar um módulo no meio — e o título da categoria fica colado ao primeiro módulo dela, nunca isolado no fim de uma coluna.',
-        'Modal ficou mais largo (980px) pra caber as 2 colunas confortavelmente.']}
+        'Modal ficou mais largo (980px) pra caber as 2 colunas confortavelmente.']},
+    {versao:'V2.58.9',status:'aberta',data:'2026-07-31',tipo:'correcao',
+      titulo:'Permissões: categoria "Produção" estava sendo cortada e espalhada entre as duas colunas',
+      itens:['A proteção break-inside:avoid-column da vez anterior estava só em cada módulo isolado — a categoria em si (Produção, com 14 módulos) não tinha proteção, então o navegador cortava ela no meio e mandava a segunda metade pra coluna seguinte, embaralhando com outra categoria.',
+        'Corrigido: agora a categoria inteira (título + todos os módulos dela) é um bloco atômico só — nunca mais é cortada, sempre fica junta na mesma coluna, do início ao fim.',
+        'Aumentado pra 3 colunas e reduzido o espaçamento entre elas (36px → 22px) — menos espaço em branco, mais aproveitamento da largura.',
+        'Modal mais largo (1180px) pra caber as 3 colunas.']}
   ],
 
   render(containerId) {
