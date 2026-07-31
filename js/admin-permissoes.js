@@ -89,13 +89,15 @@ const AdminPermissoes = (() => {
       (categorias[mod.categoria] = categorias[mod.categoria] || []).push({ key, ...mod });
     });
 
-    cont.innerHTML = Object.entries(categorias).map(([categoria, mods]) => `
-      <div style="margin-bottom:18px;">
-        <div class="sidebar-section-title" style="padding:0 0 8px;">${categoria}</div>
+    cont.innerHTML = `<div style="column-count:2;column-gap:36px;">
+      ${Object.entries(categorias).map(([categoria, mods]) => `
+        <div style="break-inside:avoid-column;margin-bottom:2px;">
+          <div class="sidebar-section-title" style="padding:0 0 8px;break-after:avoid-column;">${categoria}</div>
+        </div>
         ${mods.map(m => `
-          <div style="margin-bottom:12px;">
+          <div style="break-inside:avoid-column;margin-bottom:14px;">
             <div style="font-weight:700;font-size:.82rem;margin-bottom:6px;color:var(--cor-texto);">${m.label}</div>
-            <div style="display:grid;grid-template-columns:max-content max-content;gap:7px 48px;justify-content:start;">
+            <div style="display:grid;grid-template-columns:max-content max-content;gap:7px 32px;justify-content:start;">
               ${m.acoes.map(a => `
                 <label class="form-check" style="font-size:.82rem;white-space:nowrap;">
                   <input type="checkbox" data-modulo="${m.key}" data-acao="${a}"
@@ -104,7 +106,8 @@ const AdminPermissoes = (() => {
                 </label>`).join('')}
             </div>
           </div>`).join('')}
-      </div>`).join('');
+      `).join('')}
+    </div>`;
   }
 
   function _renderObrasRestrito(selecionadas) {
