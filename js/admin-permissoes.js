@@ -92,7 +92,7 @@ const AdminPermissoes = (() => {
     const NUM_COLUNAS = 4;
 
     const _htmlModulo = (m) => `
-      <div>
+      <div style="border:1px solid var(--cor-borda-light);border-radius:6px;padding:9px 12px;">
         <div style="font-weight:700;font-size:.82rem;margin-bottom:6px;color:var(--cor-texto);">${m.label}</div>
         <div style="display:grid;grid-template-columns:max-content max-content;gap:7px 20px;justify-content:start;">
           ${m.acoes.map(a => `

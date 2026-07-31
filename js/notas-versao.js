@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.58.11',
+  versaoAtual: 'V2.58.12',
 
   versoes: [
     {
@@ -5323,11 +5323,14 @@ const NotasVersao = {
       itens:['Mesmo sem cortar nenhuma categoria no meio, o algoritmo de balanço do navegador (column-count) decidia sozinho onde cortar entre colunas — e como Produção tem 14 módulos contra 2 da Principal, o resultado era uma coluna quase vazia ao lado de outra lotada.',
         'Trocado o balanceamento automático do CSS por uma distribuição manual: calculo o "peso" de cada categoria (baseado em quantas linhas de checkbox ela tem) e distribuo com um algoritmo guloso — cada categoria inteira sempre vai pra coluna que está mais vazia no momento. Nenhuma categoria nunca é dividida entre colunas.',
         'Produção continua sendo, de longe, a categoria maior do sistema — nenhuma distribuição vai deixar as 3 colunas com altura idêntica sem quebrar uma categoria no meio, o que foi decidido não fazer.']},
-    {versao:'V2.58.11',status:'aberta',data:'2026-07-31',tipo:'melhoria',
+    {versao:'V2.58.11',status:'fechada',data:'2026-07-31',tipo:'melhoria',
       titulo:'Permissões: checklist reformulado — módulo é a célula do grid, não a categoria',
       itens:['Trocada a lógica de novo: em vez de jogar categorias inteiras em 3 colunas (o que sempre deixava alguma desbalanceada), agora cada MÓDULO é uma célula de um grid CSS de 4 colunas — dentro de "Produção" os módulos preenchem a linha em ordem (Planejamento, Fachada, Piso, Teto, ...), voltando pra próxima linha quando enche, exatamente como pedido.',
         'O título de cada categoria ocupa a linha inteira (grid-column:1/-1) — como isso nunca cabe numa linha que já tem módulo de outra categoria, o próprio CSS Grid empurra ele pra uma linha nova, garantindo que "Custos" nunca comece misturado com o fim de "Produção".',
-        'Modal mais largo (1280px) pra acomodar as 4 colunas de módulo.']}
+        'Modal mais largo (1280px) pra acomodar as 4 colunas de módulo.']},
+    {versao:'V2.58.12',status:'aberta',data:'2026-07-31',tipo:'melhoria',
+      titulo:'Permissões: linhas claras separando cada módulo no checklist',
+      itens:['Cada módulo agora tem uma borda sutil ao redor (tipo card), separando visualmente um do outro na grade — antes ficavam soltos, só o espaçamento entre eles.']}
   ],
 
   render(containerId) {
