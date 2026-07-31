@@ -89,24 +89,49 @@ const AdminPermissoes = (() => {
       (categorias[mod.categoria] = categorias[mod.categoria] || []).push({ key, ...mod });
     });
 
-    cont.innerHTML = `<div style="column-count:3;column-gap:22px;">
-      ${Object.entries(categorias).map(([categoria, mods]) => `
-        <div style="break-inside:avoid-column;margin-bottom:16px;">
-          <div class="sidebar-section-title" style="padding:0 0 8px;">${categoria}</div>
-          ${mods.map(m => `
-            <div style="margin-bottom:14px;">
-              <div style="font-weight:700;font-size:.82rem;margin-bottom:6px;color:var(--cor-texto);">${m.label}</div>
-              <div style="display:grid;grid-template-columns:max-content max-content;gap:7px 32px;justify-content:start;">
-                ${m.acoes.map(a => `
-                  <label class="form-check" style="font-size:.82rem;white-space:nowrap;">
-                    <input type="checkbox" data-modulo="${m.key}" data-acao="${a}"
-                      ${modulosSelecionados?.[m.key]?.[a] ? 'checked' : ''}>
-                    ${Permissions.ACAO_LABEL[a] || a}
-                  </label>`).join('')}
-              </div>
-            </div>`).join('')}
-        </div>
-      `).join('')}
+    const NUM_COLUNAS = 3;
+
+    // "Peso" aproximado de cada categoria (linhas de conteúdo) — usado pra
+    // distribuir as categorias entre colunas de forma equilibrada, em vez
+    // de depender do balanceamento automático do CSS (que fica ruim quando
+    // as categorias têm tamanhos muito diferentes: uma pequena sobra sozinha
+    // numa coluna vazia enquanto uma grande toma a coluna inteira).
+    function _pesoModulo(m) { return 1 + Math.ceil(m.acoes.length / 2); }
+    function _pesoCategoria(mods) { return 1 + mods.reduce((s, m) => s + _pesoModulo(m), 0); }
+
+    const listaCategorias = Object.entries(categorias)
+      .map(([categoria, mods]) => ({ categoria, mods, peso: _pesoCategoria(mods) }))
+      .sort((a, b) => b.peso - a.peso); // maiores primeiro = empacota melhor
+
+    const colunas = Array.from({ length: NUM_COLUNAS }, () => ({ itens: [], peso: 0 }));
+    listaCategorias.forEach(cat => {
+      const menor = colunas.reduce((m, c) => c.peso < m.peso ? c : m, colunas[0]);
+      menor.itens.push(cat);
+      menor.peso += cat.peso;
+    });
+
+    const _htmlCategoria = ({ categoria, mods }) => `
+      <div style="margin-bottom:16px;">
+        <div class="sidebar-section-title" style="padding:0 0 8px;">${categoria}</div>
+        ${mods.map(m => `
+          <div style="margin-bottom:14px;">
+            <div style="font-weight:700;font-size:.82rem;margin-bottom:6px;color:var(--cor-texto);">${m.label}</div>
+            <div style="display:grid;grid-template-columns:max-content max-content;gap:7px 32px;justify-content:start;">
+              ${m.acoes.map(a => `
+                <label class="form-check" style="font-size:.82rem;white-space:nowrap;">
+                  <input type="checkbox" data-modulo="${m.key}" data-acao="${a}"
+                    ${modulosSelecionados?.[m.key]?.[a] ? 'checked' : ''}>
+                  ${Permissions.ACAO_LABEL[a] || a}
+                </label>`).join('')}
+            </div>
+          </div>`).join('')}
+      </div>`;
+
+    cont.innerHTML = `<div style="display:flex;gap:22px;align-items:flex-start;">
+      ${colunas.map(col => `
+        <div style="flex:1;min-width:0;">
+          ${col.itens.map(_htmlCategoria).join('')}
+        </div>`).join('')}
     </div>`;
   }
 

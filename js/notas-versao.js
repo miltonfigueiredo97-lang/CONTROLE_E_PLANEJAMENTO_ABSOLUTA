@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.58.9',
+  versaoAtual: 'V2.58.10',
 
   versoes: [
     {
@@ -5312,12 +5312,17 @@ const NotasVersao = {
       itens:['A lista inteira de categorias/módulos era uma coluna só, obrigando a rolar bastante pra ver os módulos de baixo enquanto sobrava bastante espaço em branco do lado.',
         'Agora o conteúdo flui em 2 colunas (column-count), cada módulo inteiro protegido (break-inside:avoid-column) pra nunca cortar um módulo no meio — e o título da categoria fica colado ao primeiro módulo dela, nunca isolado no fim de uma coluna.',
         'Modal ficou mais largo (980px) pra caber as 2 colunas confortavelmente.']},
-    {versao:'V2.58.9',status:'aberta',data:'2026-07-31',tipo:'correcao',
+    {versao:'V2.58.9',status:'fechada',data:'2026-07-31',tipo:'correcao',
       titulo:'Permissões: categoria "Produção" estava sendo cortada e espalhada entre as duas colunas',
       itens:['A proteção break-inside:avoid-column da vez anterior estava só em cada módulo isolado — a categoria em si (Produção, com 14 módulos) não tinha proteção, então o navegador cortava ela no meio e mandava a segunda metade pra coluna seguinte, embaralhando com outra categoria.',
         'Corrigido: agora a categoria inteira (título + todos os módulos dela) é um bloco atômico só — nunca mais é cortada, sempre fica junta na mesma coluna, do início ao fim.',
         'Aumentado pra 3 colunas e reduzido o espaçamento entre elas (36px → 22px) — menos espaço em branco, mais aproveitamento da largura.',
-        'Modal mais largo (1180px) pra caber as 3 colunas.']}
+        'Modal mais largo (1180px) pra caber as 3 colunas.']},
+    {versao:'V2.58.10',status:'aberta',data:'2026-07-31',tipo:'correcao',
+      titulo:'Permissões: balanceamento automático do CSS deixava as colunas com alturas muito desiguais',
+      itens:['Mesmo sem cortar nenhuma categoria no meio, o algoritmo de balanço do navegador (column-count) decidia sozinho onde cortar entre colunas — e como Produção tem 14 módulos contra 2 da Principal, o resultado era uma coluna quase vazia ao lado de outra lotada.',
+        'Trocado o balanceamento automático do CSS por uma distribuição manual: calculo o "peso" de cada categoria (baseado em quantas linhas de checkbox ela tem) e distribuo com um algoritmo guloso — cada categoria inteira sempre vai pra coluna que está mais vazia no momento. Nenhuma categoria nunca é dividida entre colunas.',
+        'Produção continua sendo, de longe, a categoria maior do sistema — nenhuma distribuição vai deixar as 3 colunas com altura idêntica sem quebrar uma categoria no meio, o que foi decidido não fazer.']}
   ],
 
   render(containerId) {
