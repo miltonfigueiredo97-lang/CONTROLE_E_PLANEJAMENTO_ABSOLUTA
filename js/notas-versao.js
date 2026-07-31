@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.58.14',
+  versaoAtual: 'V2.58.15',
 
   versoes: [
     {
@@ -5334,10 +5334,14 @@ const NotasVersao = {
     {versao:'V2.58.13',status:'fechada',data:'2026-07-31',tipo:'melhoria',
       titulo:'Permissões: título das categorias (Produção, Custos, etc.) maior e em negrito',
       itens:['Estava usando a classe de título da sidebar (pensada pra menu estreito, 0.57rem) — ficava minúsculo dentro do modal. Aumentado pra .98rem, negrito, pra separar melhor visualmente do nome dos módulos.']},
-    {versao:'V2.58.14',status:'aberta',data:'2026-07-31',tipo:'correcao',
+    {versao:'V2.58.14',status:'fechada',data:'2026-07-31',tipo:'correcao',
       titulo:'Permissões: convite falhava com "Domain not allowlisted" se o domínio não estiver nos Authorized domains do Firebase',
       itens:['O link de "definir senha" usa uma continue-URL customizada (nossa própria página, em vez da padrão do Firebase) — isso exige que o domínio esteja em Firebase Console > Authentication > Settings > Authorized domains. Sem isso configurado, o envio falhava por completo.',
-        'Adicionado fallback: se o domínio não estiver autorizado, tenta de novo sem a URL customizada — o e-mail sai mesmo assim (só cai na página padrão do Firebase em vez da nossa própria), com um aviso claro na tela pra configurar o domínio.']}
+        'Adicionado fallback: se o domínio não estiver autorizado, tenta de novo sem a URL customizada — o e-mail sai mesmo assim (só cai na página padrão do Firebase em vez da nossa própria), com um aviso claro na tela pra configurar o domínio.']},
+    {versao:'V2.58.15',status:'aberta',data:'2026-07-31',tipo:'correcao',
+      titulo:'definir-senha.html ficava travado pra sempre em "Verificando convite..."',
+      itens:['Faltava carregar o SDK do Firebase Storage nessa página — initFirebase() sempre tenta iniciar firebase.storage(), isso lançava um erro silencioso, e a função de verificação do convite parava no meio sem nunca trocar de tela.',
+        'Corrigido: adicionado o script que faltava, e a função agora sempre mostra a tela de "link inválido" em caso de qualquer falha ao iniciar o Firebase, em vez de travar sem feedback nenhum.']}
   ],
 
   render(containerId) {
