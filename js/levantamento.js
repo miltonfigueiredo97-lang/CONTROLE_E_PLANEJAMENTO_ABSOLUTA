@@ -30,21 +30,21 @@ const Levantamento = (() => {
 
       <h3 class="mb-2" style="font-size:1rem;">Calculadoras</h3>
       <div class="cards-grid mb-3">
-        <div class="card obra-card" onclick="Router.navegar('levantamento-solo-grampeado.html')">
+        <div class="card obra-card" data-perm="levantamentoSolo:ver" onclick="Router.navegar('levantamento-solo-grampeado.html')">
           <div class="card-body">
             <div class="obra-nome">⛏️ Solo Grampeado</div>
             <div class="obra-info text-sm">Vistas e chumbadores (grampos/ancoragens) — cadastro e importação em lote.</div>
             <div class="mt-1"><span class="badge badge-sucesso">Disponível</span></div>
           </div>
         </div>
-        <div class="card obra-card" onclick="Router.navegar('levantamento-terraplanagem.html')">
+        <div class="card obra-card" data-perm="levantamentoTerra:ver" onclick="Router.navegar('levantamento-terraplanagem.html')">
           <div class="card-body">
             <div class="obra-nome">🚚 Terraplanagem</div>
             <div class="obra-info text-sm">Volume de corte de terra por seções transversais, caminhões e empolamento.</div>
             <div class="mt-1"><span class="badge badge-sucesso">Disponível</span></div>
           </div>
         </div>
-        <div class="card obra-card" onclick="Router.navegar('levantamento-concreto.html')">
+        <div class="card obra-card" data-perm="levantamentoConcreto:ver" onclick="Router.navegar('levantamento-concreto.html')">
           <div class="card-body">
             <div class="obra-nome">🪨 Concreto</div>
             <div class="obra-info text-sm">Volume de concreto por elemento e pavimento, com montagem de concretagens.</div>
@@ -58,35 +58,35 @@ const Levantamento = (() => {
             <div class="mt-1"><span class="badge badge-neutro">Em breve</span></div>
           </div>
         </div>
-        <div class="card obra-card" onclick="Router.navegar('levantamento-paredes.html')">
+        <div class="card obra-card" data-perm="levantamentoParedes:ver" onclick="Router.navegar('levantamento-paredes.html')">
           <div class="card-body">
             <div class="obra-nome">🧱 Paredes</div>
             <div class="obra-info text-sm">Duas abas: Alvenaria (a parede física) e Acabamento (cada face, com gesso/reboco/revestimento/pintura por %).</div>
             <div class="mt-1"><span class="badge badge-sucesso">Disponível</span></div>
           </div>
         </div>
-        <div class="card obra-card" onclick="Router.navegar('levantamento-piso.html')">
+        <div class="card obra-card" data-perm="levantamentoPiso:ver" onclick="Router.navegar('levantamento-piso.html')">
           <div class="card-body">
             <div class="obra-nome">🧩 Piso</div>
             <div class="obra-info text-sm">Envie a planta em PDF, calibre a escala e meça os m² de piso, contrapiso e impermeabilização direto no desenho.</div>
             <div class="mt-1"><span class="badge badge-sucesso">Disponível</span></div>
           </div>
         </div>
-        <div class="card obra-card" onclick="Router.navegar('levantamento-teto.html')">
+        <div class="card obra-card" data-perm="levantamentoTeto:ver" onclick="Router.navegar('levantamento-teto.html')">
           <div class="card-body">
             <div class="obra-nome">🔲 Teto</div>
             <div class="obra-info text-sm">Envie a planta em PDF, calibre a escala e meça os m² de teto: Dry Wall, Placa de Gesso e Pintura, direto no desenho.</div>
             <div class="mt-1"><span class="badge badge-sucesso">Disponível</span></div>
           </div>
         </div>
-        <div class="card obra-card" onclick="Router.navegar('levantamento-pintura.html')">
+        <div class="card obra-card" data-perm="levantamentoPintura:ver" onclick="Router.navegar('levantamento-pintura.html')">
           <div class="card-body">
             <div class="obra-nome">🎨 Pintura</div>
             <div class="obra-info text-sm">Vincula os locais de Paredes e Teto e monta o dash de pintura por cor e por local — sem lançar nada novo, só consolida.</div>
             <div class="mt-1"><span class="badge badge-sucesso">Disponível</span></div>
           </div>
         </div>
-        <div class="card obra-card" onclick="Router.navegar('levantamento-fachada.html')">
+        <div class="card obra-card" data-perm="levantamentoFachada:ver" onclick="Router.navegar('levantamento-fachada.html')">
           <div class="card-body">
             <div class="obra-nome">🏢 Fachada</div>
             <div class="obra-info text-sm">Levantamento por balancim, vista interna/externa, cálculo de m² e ML.</div>
@@ -97,7 +97,7 @@ const Levantamento = (() => {
 
       <h3 class="mb-2" style="font-size:1rem;">Bases de Quantitativos / Composições</h3>
       <div class="cards-grid">
-        <div class="card obra-card" onclick="Router.navegar('levantamento-ar-condicionado.html')">
+        <div class="card obra-card" data-perm="levantamentoAr:ver" onclick="Router.navegar('levantamento-ar-condicionado.html')">
           <div class="card-body">
             <div class="obra-nome">❄️ Ar Condicionado</div>
             <div class="obra-info text-sm">Levantamento de materiais de ar condicionado e hidráulica por área da obra.</div>
@@ -106,6 +106,7 @@ const Levantamento = (() => {
         </div>
       </div>
     `;
+    Permissions.aplicarNaTela();
   }
 
   return { init, renderizar };

@@ -574,7 +574,7 @@ const LP = (() => {
       ${plantas.length === 0 ? `<div class="estado-vazio" style="padding:16px;"><p class="text-sm">Nenhuma planta enviada ainda.</p></div>` : plantas.map(pl => `
         <div class="lp-planta-lib-item">
           <span>${esc(pl.nome)} <span style="color:var(--cor-texto-muted);">· ${pl.numPaginas || 1} página(s)</span></span>
-          <button class="btn btn-secundario btn-sm" onclick="LP.excluirPlanta('${pl.id}')" title="Excluir planta">✕</button>
+          <button class="btn btn-secundario btn-sm" data-perm="levantamentoPiso:excluir" onclick="LP.excluirPlanta('${pl.id}')" title="Excluir planta">✕</button>
         </div>
       `).join('')}
     `;

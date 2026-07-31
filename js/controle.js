@@ -29,21 +29,21 @@ const Controle = (() => {
       </div>
 
       <div class="cards-grid">
-        <div class="card obra-card" onclick="Router.navegar('controle-solo-grampeado.html')">
+        <div class="card obra-card" data-perm="controleSolo:ver" onclick="Router.navegar('controle-solo-grampeado.html')">
           <div class="card-body">
             <div class="obra-nome">⛏️ Controle Solo Grampeado</div>
             <div class="obra-info text-sm">Execução dos chumbadores, produção diária, área executada e curva de progresso.</div>
             <div class="mt-1"><span class="badge badge-sucesso">Disponível</span></div>
           </div>
         </div>
-        <div class="card obra-card" onclick="Router.navegar('controle-terraplanagem.html')">
+        <div class="card obra-card" data-perm="controleTerra:ver" onclick="Router.navegar('controle-terraplanagem.html')">
           <div class="card-body">
             <div class="obra-nome">🚚 Controle Terraplanagem</div>
             <div class="obra-info text-sm">Viagens/remoções de caminhão e progresso do volume removido.</div>
             <div class="mt-1"><span class="badge badge-sucesso">Disponível</span></div>
           </div>
         </div>
-        <div class="card obra-card" onclick="Router.navegar('controle-concreto.html')">
+        <div class="card obra-card" data-perm="controleConcreto:ver" onclick="Router.navegar('controle-concreto.html')">
           <div class="card-body">
             <div class="obra-nome">🪨 Controle Concreto</div>
             <div class="obra-info text-sm">Lançamento de BTs, previsto × realizado, índices de perda e relatórios.</div>
@@ -52,6 +52,7 @@ const Controle = (() => {
         </div>
       </div>
     `;
+    Permissions.aplicarNaTela();
   }
 
   return { init, renderizar };

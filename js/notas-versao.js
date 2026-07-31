@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.58.1',
+  versaoAtual: 'V2.58.2',
 
   versoes: [
     {
@@ -5275,13 +5275,17 @@ const NotasVersao = {
         'Mecanismo data-perm="modulo:acao" nos botões (aplicado por enquanto em Obras, como padrão de referência) — próximas sessões devem estender aos demais módulos.',
         'Correção de segurança: usuário novo sem perfil carregado deixou de virar admin por padrão — agora o padrão é sem nenhum acesso até o admin configurar.',
         'Backend novo: api/usuarios.js (Firebase Admin SDK) cria/exclui usuários no Firebase Auth — exige a env var FIREBASE_SERVICE_ACCOUNT_KEY na Vercel.']},
-    {versao:'V2.58.1',status:'aberta',data:'2026-07-31',tipo:'correcao',
+    {versao:'V2.58.1',status:'fechada',data:'2026-07-31',tipo:'correcao',
       titulo:'Permissões: guards de acesso estendidos a todos os módulos (não só Obras)',
       itens:['Todo módulo com CRUD real agora checa a permissão do usuário antes de criar/editar/excluir/importar/exportar: Planejamento (com edição inline de célula e Editor de Estrutura), Materiais, Mão de Obra, Diário de Obra (lançamentos, avulsas, pauta rápida), Semanal, Medições, Relatórios, os 9 módulos de Levantamento, os 3 de Controle, Produção, Configuração de Obra e Backup de Planejamentos.',
         'Semanal: reaproveitado o mecanismo de somente-leitura que já existia pra semana fechada — agora também vale pra usuário sem permissão de editar, sem precisar duplicar lógica.',
         'Vários Levantamentos (Piso, Teto, Paredes, Pintura) guardam a árvore de locais num único ponto de gravação — o guard foi colocado ali, cobrindo automaticamente todas as ações do Editor de Estrutura de uma vez.',
         'Restrições, Orçamentos, Suprimentos e Histograma continuam stub — nada para travar além do gate de página que já existia.',
-        'Cobertura visual (esconder o botão, não só bloquear a ação) aplicada nos módulos de CRUD simples (Materiais, Mão de Obra, Diário, Medições, Relatórios, Planejamento); os módulos de canvas/mapa (Levantamentos e Controles) por ora têm o bloqueio funcional mas o botão ainda aparece na tela — ficar de olho, é o próximo refinamento.']}
+        'Cobertura visual (esconder o botão, não só bloquear a ação) aplicada nos módulos de CRUD simples (Materiais, Mão de Obra, Diário, Medições, Relatórios, Planejamento); os módulos de canvas/mapa (Levantamentos e Controles) por ora têm o bloqueio funcional mas o botão ainda aparece na tela — ficar de olho, é o próximo refinamento.']},
+    {versao:'V2.58.2',status:'aberta',data:'2026-07-31',tipo:'melhoria',
+      titulo:'Permissões: hubs de Levantamento e Controle já filtram os cards por permissão',
+      itens:['Os cards de calculadora em Levantamentos (hub) e Controle (hub) agora somem se o usuário não tiver "Ver" no módulo correspondente — antes só bloqueava ao entrar na página de destino, agora nem aparece o card.',
+        'Levantamento de Fachada: primeiro módulo de canvas/mapa a ganhar cobertura visual completa (+ Nova Fachada, + Balancim, excluir/duplicar em cada nível) — modelo de referência para estender aos demais Levantamentos e Controles.']}
   ],
 
   render(containerId) {

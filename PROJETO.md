@@ -255,8 +255,8 @@ permissions/{uid} → { modulos: { <moduloKey>: {ver,criar,editar,excluir,export
 - `Database.getObras()` continua retornando todas — o filtro por `acessoObras` é feito na camada de chamada (`Router.popularSeletorObras`, `Obras.carregar`), não dentro do Database.
 
 ### Pendente
-- Cobertura visual (`data-perm` nos botões) dos módulos de Levantamento/Controle — hoje só o bloqueio funcional existe ali.
-- Esconder/desabilitar os cards dos hubs (`levantamento.html`, `controle.html`) conforme permissão do sub-módulo (hoje eles navegam e só bloqueiam na página de destino).
+- Cobertura visual (`data-perm` nos botões) dos módulos de Levantamento/Controle — **Fachada já feito** (referência); Piso/Teto/Paredes/Concreto/Ar/Pintura/Solo/Terraplanagem e os 3 Controles ainda só têm o bloqueio funcional (ação recusada, botão ainda visível).
+- Os hubs (`levantamento.html`, `controle.html`) já filtram os cards por `data-perm="modulo:ver"` — feito.
 - Regras de segurança do Firestore ainda são as de desenvolvimento (`allow read, write: if request.auth != null` — ver README). Com dados de permissão agora no Firestore, vale endurecer isso; não foi feito nesta rodada.
 
 

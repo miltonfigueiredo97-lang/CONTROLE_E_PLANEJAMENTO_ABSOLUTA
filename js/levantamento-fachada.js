@@ -194,7 +194,7 @@ const LevantamentoFachada = (() => {
   function renderArvore(){
     const c=document.getElementById('fachada-tree-body');if(!c)return;
     if(!fachadas.length){
-      c.innerHTML='<div style="padding:24px 16px;text-align:center;"><p style="color:#94a3b8;font-size:0.85rem;margin-bottom:12px;">Crie sua primeira fachada.</p><button class="btn btn-primario btn-sm" onclick="LF.criarFachada()">+ Nova Fachada</button></div>';
+      c.innerHTML='<div style="padding:24px 16px;text-align:center;"><p style="color:#94a3b8;font-size:0.85rem;margin-bottom:12px;">Crie sua primeira fachada.</p><button class="btn btn-primario btn-sm" data-perm="levantamentoFachada:criar" onclick="LF.criarFachada()">+ Nova Fachada</button></div>';
       return;
     }
     let h='';
@@ -226,8 +226,8 @@ const LevantamentoFachada = (() => {
       }
     });
     c.innerHTML=h;
+    Permissions.aplicarNaTela();
   }
-
   function _ti(id,tipo,icon,label,badge,ativo,hasT,showDel){
     const delBtn=showDel?'<button class="tree-del-btn" onclick="event.stopPropagation();LF.excluir(\''+tipo+'\',\''+id+'\')" title="Excluir">✕</button>':'';
     const editBtn='<button class="tree-edit-btn" onclick="event.stopPropagation();LF.editarNomeInline(\"'+tipo+'\",\"'+id+'\")" title="Renomear">✎</button>';
@@ -294,6 +294,10 @@ const LevantamentoFachada = (() => {
 
   // ===================== PAINEL: Toggle + Roteamento =====================
   function renderPainel(){
+    _renderPainelConteudo();
+    Permissions.aplicarNaTela();
+  }
+  function _renderPainelConteudo(){
     const p=document.getElementById('fachada-painel');if(!p)return;
     const tree=document.getElementById('fachada-tree');
     const layout=document.getElementById('fachada-layout');
@@ -367,11 +371,11 @@ const LevantamentoFachada = (() => {
         '<td class="col-num">'+_f(t.m2comML_equiv)+'</td>'+
         '<td class="col-num">'+_f(t.ml)+'</td>'+
         '<td class="col-num">'+_f(t.vao)+'</td>'+
-        '<td class="col-acoes"><button class="btn btn-secundario btn-sm" onclick="LF.editar(\'fachada\',\''+f.id+'\')">✎</button> <button class="btn btn-perigo btn-sm btn-icon" onclick="LF.excluir(\'fachada\',\''+f.id+'\')">✕</button></td></tr>';
+        '<td class="col-acoes"><button class="btn btn-secundario btn-sm" onclick="LF.editar(\'fachada\',\''+f.id+'\')">✎</button> <button class="btn btn-perigo btn-sm btn-icon" data-perm="levantamentoFachada:excluir" onclick="LF.excluir(\'fachada\',\''+f.id+'\')">✕</button></td></tr>';
     }).join('');
     p.innerHTML=toggle+
       '<div class="page-header"><div><h2>Resumo Geral</h2><span class="subtitulo">'+fachadas.length+' fachada(s) · '+pecas.length+' peça(s)</span></div>'+
-      '<div class="btn-grupo"><button class="btn btn-secundario btn-sm" onclick="LF.exportarCSV()">📥 CSV</button><button class="btn btn-primario" onclick="LF.criarFachada()">+ Nova Fachada</button></div></div>'+
+      '<div class="btn-grupo"><button class="btn btn-secundario btn-sm" onclick="LF.exportarCSV()">📥 CSV</button><button class="btn btn-primario" data-perm="levantamentoFachada:criar" onclick="LF.criarFachada()">+ Nova Fachada</button></div></div>'+
       _cards(tot)+
       '<div class="tabela-container mt-2"><table class="tabela"><thead><tr>'+
       '<th>Fachada</th><th class="col-centro">Status</th><th class="col-num">Bal.</th><th class="col-num">Peças</th>'+
@@ -393,11 +397,11 @@ const LevantamentoFachada = (() => {
         '<td class="col-num" style="font-weight:600;color:var(--cor-primaria);">'+_f(t.m2semML)+'</td>'+
         '<td class="col-num">'+_f(t.m2comML_puro)+'m²<br><span style="font-size:0.75rem;color:var(--cor-texto-muted);">+'+_f(t.ml)+'ML = '+_f(t.m2comML_equiv)+'m²</span></td>'+
         '<td class="col-num">'+_f(t.vao)+'</td>'+
-        '<td class="col-acoes"><button class="btn btn-secundario btn-sm" onclick="LF.editar(\'balancim\',\''+bl.id+'\')">✎</button> <button class="btn btn-sm btn-icon" onclick="LF.duplicarBal(\''+bl.id+'\')" title="Duplicar">⧉</button> <button class="btn btn-perigo btn-sm btn-icon" onclick="LF.excluir(\'balancim\',\''+bl.id+'\')">✕</button></td></tr>';
+        '<td class="col-acoes"><button class="btn btn-secundario btn-sm" onclick="LF.editar(\'balancim\',\''+bl.id+'\')">✎</button> <button class="btn btn-sm btn-icon" data-perm="levantamentoFachada:criar" onclick="LF.duplicarBal(\''+bl.id+'\')" title="Duplicar">⧉</button> <button class="btn btn-perigo btn-sm btn-icon" data-perm="levantamentoFachada:excluir" onclick="LF.excluir(\'balancim\',\''+bl.id+'\')">✕</button></td></tr>';
     }).join('');
     p.innerHTML=toggle+
       '<div class="page-header"><div><h2>🏢 '+f.nome+'</h2><span class="subtitulo">'+fBals.length+' balancim(ns) · '+fp.length+' peça(s) · '+_badge(f.status)+'</span></div>'+
-      '<div class="btn-grupo"><button class="btn btn-secundario btn-sm" onclick="LF.editar(\'fachada\',\''+f.id+'\')">✎</button><button class="btn btn-primario btn-sm" onclick="LF.criarBalancim(\''+f.id+'\')">+ Balancim</button></div></div>'+
+      '<div class="btn-grupo"><button class="btn btn-secundario btn-sm" onclick="LF.editar(\'fachada\',\''+f.id+'\')">✎</button><button class="btn btn-primario btn-sm" data-perm="levantamentoFachada:criar" onclick="LF.criarBalancim(\''+f.id+'\')">+ Balancim</button></div></div>'+
       _cards(tot)+
       '<div class="tabela-container mt-2"><table class="tabela"><thead><tr>'+
       '<th>Balancim</th><th class="col-num">Peças</th>'+
@@ -592,7 +596,7 @@ const LevantamentoFachada = (() => {
         '<button class="btn btn-sm btn-icon" onclick="LF.abrirMoverPecaBal(\''+pc.id+'\')" title="Mover para outro balancim">↗</button> '+
         '<button class="btn btn-sm btn-icon" onclick="LF.duplicarPeca(\''+pc.id+'\')" title="Duplicar">⧉</button> '+
         '<button class="btn btn-sm btn-icon" onclick="LF.conferirPeca(\''+pc.id+'\')" title="'+(pc.conferido?'Desmarcar conferência':'Marcar peça como conferida')+'">'+(pc.conferido?'↩':'✓')+'</button> '+
-        '<button class="btn btn-perigo btn-sm btn-icon" onclick="LF.excluirPeca(\''+pc.id+'\')">✕</button></td></tr>';
+        '<button class="btn btn-perigo btn-sm btn-icon" data-perm="levantamentoFachada:excluir" onclick="LF.excluirPeca(\''+pc.id+'\')">✕</button></td></tr>';
     });
     const path=(f?.nome||'')+' › '+(bl?.nome||'')+' › '+lbl;
     const viOposta=vistas.find(v=>v.balancimId===vi.balancimId&&v.tipoVista!==vi.tipoVista);
