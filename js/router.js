@@ -63,7 +63,10 @@ const Router = (() => {
     if (!select) return;
 
     try {
-      const obras = await Database.getObras();
+      let obras = await Database.getObras();
+      if (typeof Permissions !== 'undefined') {
+        obras = obras.filter(o => Permissions.podeAcessarObra(o.id));
+      }
       select.innerHTML = '<option value="">Selecione a obra...</option>';
       obras.forEach(obra => {
         const opt = document.createElement('option');

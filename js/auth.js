@@ -22,7 +22,7 @@ const Auth = (() => {
   }
 
   function _fallback(user) {
-    return { uid: user.uid, email: user.email, nome: user.email.split('@')[0], perfil: 'admin', ativo: true };
+    return { uid: user.uid, email: user.email, nome: user.email.split('@')[0], perfil: 'usuario', ativo: false };
   }
 
   async function _loadProfile(user) {
@@ -65,7 +65,7 @@ const Auth = (() => {
     getUser:    () => currentUser,
     getProfile: () => userProfile,
     getUid:     () => currentUser?.uid || null,
-    isAdmin:    () => !userProfile || userProfile.perfil === 'admin',
+    isAdmin:    () => userProfile?.perfil === 'admin',
     isLoggedIn: () => !!currentUser,
   };
 })();

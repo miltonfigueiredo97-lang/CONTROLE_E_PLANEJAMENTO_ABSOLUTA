@@ -133,7 +133,7 @@ js/permissions.js   → controle de acesso por perfil
 | Orçamentos | orcamentos.html | 🏗 Stub | — |
 | Suprimentos | suprimentos.html | 🏗 Stub | — |
 | Histograma | histograma.html | 🏗 Stub | — |
-| Admin Permissões | admin-permissoes.html | ✅ Completo | `tarefasSistema` |
+| Admin Permissões | admin-permissoes.js | ✅ Completo | `users`, `permissions` |
 
 ---
 
@@ -224,6 +224,38 @@ obras/{obraId}/
     concretoLevantamento → lista de peças do levantamento de concreto
     mapaVisao       → imagem do mapa da visão geral da fachada
 ```
+
+---
+
+## 6.1 MÓDULO DE USUÁRIOS E PERMISSÕES (desde V2.58.0)
+
+### Dados
+```
+users/{uid}       → { nome, email, perfil:'admin'|'usuario', ativo:bool,
+                       status:'convidado'|'ativo'|'desativado',
+                       acessoObras:'todas'|[obraId,...] }
+permissions/{uid} → { modulos: { <moduloKey>: {ver,criar,editar,excluir,exportar,importar} } }
+```
+- `perfil:'admin'` = acesso total, ignora `permissions`.
+- Catálogo de módulos e ações fica em `js/permissions.js` → `Permissions.MODULOS` (fonte única — a tela de admin gera os checkboxes a partir daqui).
+- `Permissions.PAGINA_MODULO` mapeia nome do arquivo HTML → chave do módulo, usado no gate de página. `obras.html`, `login.html`, hubs (`levantamento.html`, `controle.html`) e `notas-versao.html` são propositalmente omitidos (sempre acessíveis a qualquer usuário ativo).
+
+### Convite de usuário (sem provedor de e-mail externo)
+1. Admin preenche formulário em `admin-permissoes.html` → `js/admin-permissoes.js` chama `POST /api/usuarios` `{action:'convidar', ...}`.
+2. `api/usuarios.js` (Firebase Admin SDK) cria o usuário no Firebase Auth com senha temporária aleatória, `ativo:false`, `status:'convidado'`, e grava `permissions/{uid}`.
+3. Front-end chama `auth.sendPasswordResetEmail(email, {url:.../definir-senha.html})` — o e-mail é disparado **pelo próprio Firebase**, sem SendGrid/Resend.
+4. Usuário abre `definir-senha.html`, define a senha (`confirmPasswordReset` + login automático), o próprio front marca `ativo:true`.
+- **Exige env var `FIREBASE_SERVICE_ACCOUNT_KEY` na Vercel** (JSON da service account do Firebase) — sem ela, `/api/usuarios` falha. Ação manual do Milton — não repetir automaticamente em outra sessão sem confirmar se já foi configurada.
+
+### Enforcement
+- `Utils.initPagina()` chama `Permissions.carregar(uid)` → `Permissions.bloquearPaginaSemAcesso()` antes de renderizar qualquer coisa.
+- Botões usam `data-perm="modulo:acao"`; `Permissions.aplicarNaTela()` esconde os que o usuário não pode usar. **Aplicado até agora só em Obras** (padrão de referência) — estender aos demais módulos é trabalho pendente, módulo por módulo, por prioridade do Milton.
+- `Database.getObras()` continua retornando todas — o filtro por `acessoObras` é feito na camada de chamada (`Router.popularSeletorObras`, `Obras.carregar`), não dentro do Database.
+
+### Pendente
+- Aplicar `data-perm` nos botões dos demais ~25 módulos.
+- Esconder/desabilitar os cards dos hubs (`levantamento.html`, `controle.html`) conforme permissão do sub-módulo (hoje eles navegam e só bloqueiam na página de destino).
+- Regras de segurança do Firestore ainda são as de desenvolvimento (`allow read, write: if request.auth != null` — ver README). Com dados de permissão agora no Firestore, vale endurecer isso; não foi feito nesta rodada.
 
 ---
 

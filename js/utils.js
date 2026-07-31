@@ -131,7 +131,26 @@ const Utils = (() => {
       return false;
     }
 
-    // 3. Seletor de obras (erro aqui NÃO bloqueia a página)
+    // 3. Permissões — precisa estar carregado antes do gate e do seletor
+    //    de obras (que filtra por acessoObras).
+    try {
+      await Permissions.carregar(user.uid);
+    } catch (e) {
+      console.warn('Permissões falharam ao carregar:', e.message);
+    }
+
+    // 3.1 Conta desativada/convite ainda não aceito → volta pro login
+    if (!Permissions.isAtivo()) {
+      Auth.logout();
+      return false;
+    }
+
+    // 3.2 Módulo desta página exige permissão que o usuário não tem
+    if (!Permissions.bloquearPaginaSemAcesso()) {
+      return false;
+    }
+
+    // 4. Seletor de obras (erro aqui NÃO bloqueia a página)
     try {
       Router.init();
       await Router.popularSeletorObras();
@@ -139,8 +158,11 @@ const Utils = (() => {
       console.warn('Seletor de obras falhou:', e.message);
     }
 
-    // 4. Info do usuário na sidebar
+    // 5. Info do usuário na sidebar
     _renderUser();
+
+    // 6. Esconder botões/ações sem permissão (data-perm="modulo:acao")
+    Permissions.aplicarNaTela();
 
     return true;
   }

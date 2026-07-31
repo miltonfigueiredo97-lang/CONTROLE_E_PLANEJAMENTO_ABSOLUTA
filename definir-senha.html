@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Definir senha — Controle e Planejamento de Obras</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/layout.css">
+</head>
+<body>
+<div class="login-page">
+  <div class="login-left">
+    <div class="login-brand">
+      <img src="assets/images/logo-absoluta.png" alt="Absoluta" onerror="this.style.display='none';document.getElementById('logo-fallback').style.display='block'">
+      <div id="logo-fallback" style="display:none;margin-bottom:24px;">
+        <div style="width:64px;height:64px;background:var(--cor-primaria);border-radius:8px;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;">
+          <span style="font-size:2rem;font-weight:900;color:#000;">A</span>
+        </div>
+      </div>
+      <div class="accent-bar"></div>
+      <h2>Bem-vindo à Absoluta</h2>
+      <p>Defina sua senha para acessar o sistema</p>
+    </div>
+  </div>
+
+  <div class="login-right">
+    <div class="login-box">
+      <div id="bloco-carregando">
+        <p class="text-muted text-sm text-center">Verificando convite...</p>
+      </div>
+
+      <div id="bloco-form" class="hidden">
+        <div class="login-logo">
+          <div class="accent"></div>
+          <h1>Definir senha</h1>
+          <p id="texto-email" class="text-sm"></p>
+        </div>
+        <div id="erro" class="hidden" style="background:#fee2e2;color:#dc2626;padding:10px 14px;border-radius:6px;font-size:0.85rem;margin-bottom:16px;border-left:3px solid #dc2626;"></div>
+        <form id="form-senha" onsubmit="handleDefinirSenha(event)" novalidate>
+          <div class="form-grupo">
+            <label>Nova senha</label>
+            <input type="password" id="senha1" class="form-control" placeholder="Mínimo 6 caracteres" autocomplete="new-password">
+          </div>
+          <div class="form-grupo" style="margin-bottom:20px;">
+            <label>Confirmar senha</label>
+            <input type="password" id="senha2" class="form-control" placeholder="Repita a senha" autocomplete="new-password">
+          </div>
+          <button type="submit" class="btn btn-primario" id="btn-definir">Entrar no sistema</button>
+        </form>
+      </div>
+
+      <div id="bloco-invalido" class="hidden">
+        <div class="login-logo">
+          <h1>Link inválido ou expirado</h1>
+          <p class="text-sm">Peça ao administrador para reenviar seu convite.</p>
+        </div>
+        <a class="btn btn-secundario" href="login.html">Voltar ao login</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="js/firebase-config.js"></script>
+<script>
+  let oobCode = null;
+  let emailDoConvite = null;
+
+  async function iniciar() {
+    if (!initFirebase()) return;
+    const params = new URLSearchParams(window.location.search);
+    oobCode = params.get('oobCode');
+
+    if (!oobCode) {
+      _mostrar('bloco-invalido');
+      return;
+    }
+
+    try {
+      emailDoConvite = await auth.verifyPasswordResetCode(oobCode);
+      document.getElementById('texto-email').textContent = emailDoConvite;
+      _mostrar('bloco-form');
+    } catch (e) {
+      _mostrar('bloco-invalido');
+    }
+  }
+
+  function _mostrar(id) {
+    ['bloco-carregando', 'bloco-form', 'bloco-invalido'].forEach(b => {
+      document.getElementById(b).classList.toggle('hidden', b !== id);
+    });
+  }
+
+  async function handleDefinirSenha(e) {
+    e.preventDefault();
+    const senha1 = document.getElementById('senha1').value;
+    const senha2 = document.getElementById('senha2').value;
+    const erro = document.getElementById('erro');
+    const btn = document.getElementById('btn-definir');
+    erro.classList.add('hidden');
+
+    if (senha1.length < 6) {
+      erro.textContent = 'A senha precisa ter no mínimo 6 caracteres.';
+      erro.classList.remove('hidden');
+      return;
+    }
+    if (senha1 !== senha2) {
+      erro.textContent = 'As senhas não coincidem.';
+      erro.classList.remove('hidden');
+      return;
+    }
+
+    btn.disabled = true; btn.textContent = 'Entrando...';
+    try {
+      await auth.confirmPasswordReset(oobCode, senha1);
+      const r = await auth.signInWithEmailAndPassword(emailDoConvite, senha1);
+      // Primeira ativação: marca o convite como aceito.
+      await db.collection('users').doc(r.user.uid).update({ ativo: true, status: 'ativo' }).catch(() => {});
+      window.location.href = 'obras.html';
+    } catch (e) {
+      erro.textContent = 'Não foi possível definir a senha. ' + (e.message || '');
+      erro.classList.remove('hidden');
+      btn.disabled = false; btn.textContent = 'Entrar no sistema';
+    }
+  }
+
+  iniciar();
+</script>
+</body>
+</html>

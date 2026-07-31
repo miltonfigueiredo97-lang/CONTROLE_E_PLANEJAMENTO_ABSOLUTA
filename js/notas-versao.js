@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.57.71',
+  versaoAtual: 'V2.58.0',
 
   versoes: [
     {
@@ -5262,9 +5262,19 @@ const NotasVersao = {
       itens:['Chumbadores Horizontais viram bolinhas; Verticais viram triângulos — dá pra diferenciar o tipo só olhando o mapa.',
         'A cor de cada chumbador agora reflete o comprimento (ml) dele, de forma determinística: o mesmo valor sempre cai na mesma cor (ex: 6ml sempre azul), independente da ordem em que foram cadastrados. Se mudar o comprimento de um chumbador, a cor muda junto.',
         'Legenda embaixo do mapa mostra a cor de cada comprimento usado na vista.']},
-    {versao:'V2.57.71',status:'aberta',data:'2026-07-30',tipo:'melhoria',
+    {versao:'V2.57.71',status:'fechada',data:'2026-07-30',tipo:'melhoria',
       titulo:'Levantamento de Solo Grampeado: botão Excluir direto no popup de editar chumbador',
-      itens:['Antes só dava pra excluir um chumbador pela tabela embaixo — agora tem um botão "🗑 Excluir" direto no popup que abre ao clicar na bolinha/triângulo, sem precisar descer até a tabela.']}
+      itens:['Antes só dava pra excluir um chumbador pela tabela embaixo — agora tem um botão "🗑 Excluir" direto no popup que abre ao clicar na bolinha/triângulo, sem precisar descer até a tabela.']},
+    {versao:'V2.58.0',status:'aberta',data:'2026-07-31',tipo:'funcionalidade',
+      titulo:'Módulo de Usuários e Permissões — convite por e-mail + controle de acesso granular por módulo e por obra',
+      itens:['Nova tela "Permissões": lista de usuários com convidar, editar permissões, reenviar acesso, ativar/desativar e excluir.',
+        'Convite por e-mail: admin cadastra o usuário (nome, e-mail, permissões, acesso por obra) e o sistema envia um e-mail (via Firebase, sem provedor externo) para o usuário definir a própria senha em definir-senha.html — a conta só fica ativa depois disso.',
+        'Permissões granulares por módulo: cada um dos módulos do sistema (Planejamento, cada Levantamento, cada Controle, Materiais, Mão de Obra, etc.) tem checks próprios (Ver/Criar/Editar/Excluir/Exportar/Importar conforme o módulo) — sem nenhuma marcada, o usuário não acessa a página.',
+        'Acesso por obra: "Todas as obras" ou "Restrito" a uma lista específica — filtra tanto o seletor de obras da sidebar quanto a lista em Obras.',
+        'Gate de página: toda página do sistema, ao carregar, verifica se o usuário tem permissão "Ver" do módulo correspondente — sem isso, é redirecionado antes de qualquer dado carregar.',
+        'Mecanismo data-perm="modulo:acao" nos botões (aplicado por enquanto em Obras, como padrão de referência) — próximas sessões devem estender aos demais módulos.',
+        'Correção de segurança: usuário novo sem perfil carregado deixou de virar admin por padrão — agora o padrão é sem nenhum acesso até o admin configurar.',
+        'Backend novo: api/usuarios.js (Firebase Admin SDK) cria/exclui usuários no Firebase Auth — exige a env var FIREBASE_SERVICE_ACCOUNT_KEY na Vercel.']}
   ],
 
   render(containerId) {

@@ -1,107 +1,198 @@
 // ============================================
 // Módulo de Permissões
-// Controle de acesso por módulo, obra e ação
+// Controle de acesso por módulo/ação + acesso por obra
+// V2.58.0
 // ============================================
 
 const Permissions = (() => {
-  let permissoes = {};
 
-  async function carregar(uid, obraId) {
-    if (!uid || !obraId) return;
+  // Catálogo central de módulos do sistema.
+  // acoes disponíveis: ver, criar, editar, excluir, exportar, importar, convidar
+  const MODULOS = {
+    obras:               { label: 'Obras (criar/editar)',            categoria: 'Principal', acoes: ['criar','editar'] },
+    dashboard:           { label: 'Dashboard',                      categoria: 'Principal', acoes: ['ver'] },
 
-    // Admin tem acesso total
-    if (Auth.isAdmin()) {
-      permissoes = _fullAccess();
-      return;
-    }
+    planejamento:        { label: 'Planejamento',                   categoria: 'Produção', acoes: ['ver','criar','editar','excluir','importar','exportar'] },
+    levantamentoFachada: { label: 'Levantamento — Fachada',         categoria: 'Produção', acoes: ['ver','criar','editar','excluir','exportar'] },
+    levantamentoPiso:    { label: 'Levantamento — Piso',            categoria: 'Produção', acoes: ['ver','criar','editar','excluir'] },
+    levantamentoTeto:    { label: 'Levantamento — Teto',            categoria: 'Produção', acoes: ['ver','criar','editar','excluir'] },
+    levantamentoParedes: { label: 'Levantamento — Paredes',         categoria: 'Produção', acoes: ['ver','criar','editar','excluir'] },
+    levantamentoConcreto:{ label: 'Levantamento — Concreto',        categoria: 'Produção', acoes: ['ver','criar','editar','excluir'] },
+    levantamentoAr:      { label: 'Levantamento — Ar Condicionado', categoria: 'Produção', acoes: ['ver','criar','editar','excluir','exportar'] },
+    levantamentoPintura: { label: 'Levantamento — Pintura',         categoria: 'Produção', acoes: ['ver','criar','editar','excluir'] },
+    levantamentoSolo:    { label: 'Levantamento — Solo Grampeado',  categoria: 'Produção', acoes: ['ver','criar','editar','excluir'] },
+    levantamentoTerra:   { label: 'Levantamento — Terraplanagem',   categoria: 'Produção', acoes: ['ver','criar','editar','excluir'] },
+    controleConcreto:    { label: 'Controle — Concreto',            categoria: 'Produção', acoes: ['ver','criar','editar','excluir'] },
+    controleSolo:        { label: 'Controle — Solo Grampeado',      categoria: 'Produção', acoes: ['ver','criar','editar','excluir'] },
+    controleTerra:       { label: 'Controle — Terraplanagem',       categoria: 'Produção', acoes: ['ver','criar','editar','excluir'] },
+    producao:            { label: 'Produção',                       categoria: 'Produção', acoes: ['ver','criar','editar','excluir'] },
+
+    restricoes:          { label: 'Restrições',                     categoria: 'Gestão', acoes: ['ver','criar','editar','excluir'] },
+    semanal:             { label: 'Semanal',                        categoria: 'Gestão', acoes: ['ver','editar'] },
+    diario:              { label: 'Diário de Obra',                 categoria: 'Gestão', acoes: ['ver','criar','editar','excluir'] },
+    medicoes:            { label: 'Medições',                       categoria: 'Gestão', acoes: ['ver','criar','editar','excluir'] },
+
+    orcamentos:          { label: 'Orçamentos',                     categoria: 'Custos', acoes: ['ver','criar','editar','excluir'] },
+    maoDeObra:           { label: 'Mão de Obra',                    categoria: 'Custos', acoes: ['ver','criar','editar','excluir','exportar'] },
+    suprimentos:         { label: 'Suprimentos',                    categoria: 'Custos', acoes: ['ver','criar','editar','excluir'] },
+    materiais:           { label: 'Materiais',                      categoria: 'Custos', acoes: ['ver','criar','editar','excluir'] },
+
+    relatorios:          { label: 'Relatórios',                     categoria: 'Análise', acoes: ['ver','criar','excluir','exportar'] },
+    histograma:          { label: 'Histograma',                     categoria: 'Análise', acoes: ['ver'] },
+
+    configuracaoObra:    { label: 'Configuração de Obra',           categoria: 'Sistema', acoes: ['ver','editar'] },
+    backupPlanejamento:  { label: 'Backup de Planejamentos',        categoria: 'Sistema', acoes: ['ver','excluir'] },
+    admin:               { label: 'Administração / Permissões',     categoria: 'Sistema', acoes: ['ver','convidar','editar','excluir'] },
+  };
+
+  const ACAO_LABEL = {
+    ver: 'Ver', criar: 'Criar', editar: 'Editar', excluir: 'Excluir',
+    exportar: 'Exportar', importar: 'Importar', convidar: 'Convidar usuário'
+  };
+
+  // Nome do arquivo (sem .html) -> chave do módulo, para o gate de página.
+  // Páginas ausentes daqui (hubs, login, notas-versao etc.) não são bloqueadas.
+  const PAGINA_MODULO = {
+    'dashboard': 'dashboard',
+    'planejamento': 'planejamento',
+    'levantamento-fachada': 'levantamentoFachada',
+    'levantamento-piso': 'levantamentoPiso',
+    'levantamento-teto': 'levantamentoTeto',
+    'levantamento-paredes': 'levantamentoParedes',
+    'levantamento-concreto': 'levantamentoConcreto',
+    'levantamento-ar-condicionado': 'levantamentoAr',
+    'levantamento-ar-config': 'levantamentoAr',
+    'levantamento-pintura': 'levantamentoPintura',
+    'levantamento-solo-grampeado': 'levantamentoSolo',
+    'levantamento-terraplanagem': 'levantamentoTerra',
+    'controle-concreto': 'controleConcreto',
+    'controle-solo-grampeado': 'controleSolo',
+    'controle-terraplanagem': 'controleTerra',
+    'producao': 'producao',
+    'restricoes': 'restricoes',
+    'semanal': 'semanal',
+    'diario': 'diario',
+    'medicoes': 'medicoes',
+    'orcamentos': 'orcamentos',
+    'mao-de-obra': 'maoDeObra',
+    'suprimentos': 'suprimentos',
+    'materiais': 'materiais',
+    'relatorios': 'relatorios',
+    'histograma': 'histograma',
+    'configuracao-obra': 'configuracaoObra',
+    'backup-planejamento': 'backupPlanejamento',
+    'admin-permissoes': 'admin',
+  };
+
+  let permissoes = {};   // modulos do usuário atual
+  let perfil = null;     // 'admin' | 'usuario'
+  let ativo = true;
+  let acessoObras = 'todas'; // 'todas' | [obraId,...]
+  let carregado = false;
+
+  async function carregar(uid) {
+    carregado = false;
+    if (!uid) { _resetVazio(); carregado = true; return; }
 
     try {
-      // Buscar permissões específicas do usuário para esta obra
-      const snap = await db.collection('permissions')
-        .where('uid', '==', uid)
-        .where('obraId', '==', obraId)
-        .limit(1)
-        .get();
+      const userDoc = await Database.getUser(uid);
+      perfil = userDoc?.perfil || 'usuario';
+      ativo = userDoc?.ativo !== false;
+      acessoObras = userDoc?.acessoObras || 'todas';
 
-      if (!snap.empty) {
-        permissoes = snap.docs[0].data().modulos || {};
+      if (perfil === 'admin') {
+        permissoes = _fullAccess();
       } else {
-        // Permissões padrão para user sem configuração
-        permissoes = _defaultUserAccess();
+        const permDoc = await Database.obterRaiz('permissions', uid);
+        permissoes = permDoc?.modulos || {};
       }
     } catch (e) {
       console.error('Erro ao carregar permissões:', e);
-      permissoes = _defaultUserAccess();
+      _resetVazio();
     }
+    carregado = true;
   }
 
-  // Verificar permissão
-  function pode(modulo, acao = 'ver') {
-    if (Auth.isAdmin()) return true;
-    if (!permissoes[modulo]) return false;
-    return permissoes[modulo][acao] === true;
+  function _resetVazio() {
+    perfil = 'usuario'; ativo = false; acessoObras = 'todas'; permissoes = {};
   }
 
-  // Permissões completas (admin)
   function _fullAccess() {
-    const modulos = [
-      'planejamento', 'levantamento', 'controle', 'relatorios',
-      'restricoes', 'semanal', 'medicoes', 'orcamentos', 'maoDeObra',
-      'suprimentos', 'materiais', 'histograma', 'dashboard',
-      'configuracao', 'permissoes'
-    ];
     const access = {};
-    modulos.forEach(m => {
-      access[m] = { ver: true, editar: true, excluir: true, exportar: true, importar: true, aprovar: true };
+    Object.entries(MODULOS).forEach(([key, mod]) => {
+      access[key] = {};
+      mod.acoes.forEach(a => access[key][a] = true);
     });
     return access;
   }
 
-  // Permissões padrão (user sem config)
-  function _defaultUserAccess() {
-    return {
-      planejamento: { ver: true, editar: false },
-      levantamento: { ver: true, editar: true },
-      controle: { ver: true, editar: true },
-      relatorios: { ver: true, editar: false },
-      restricoes: { ver: true, editar: true },
-      semanal: { ver: true, editar: true },
-      medicoes: { ver: true, editar: false },
-      orcamentos: { ver: false, editar: false },
-      maoDeObra: { ver: false, editar: false },
-      suprimentos: { ver: true, editar: false },
-      materiais: { ver: true, editar: false },
-      histograma: { ver: true, editar: false },
-      dashboard: { ver: true, editar: false },
-      configuracao: { ver: false, editar: false },
-      permissoes: { ver: false, editar: false }
-    };
+  // Template para usuário novo: nada liberado além do Dashboard.
+  function templateVazio() {
+    const modulos = {};
+    Object.entries(MODULOS).forEach(([key, mod]) => {
+      modulos[key] = {};
+      mod.acoes.forEach(a => modulos[key][a] = (key === 'dashboard' && a === 'ver'));
+    });
+    return modulos;
   }
 
-  // Salvar permissões de um usuário
-  async function salvar(uid, obraId, modulos) {
-    const data = {
-      uid,
-      obraId,
-      modulos,
-      updatedBy: Auth.getUid(),
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-    };
+  function pode(modulo, acao = 'ver') {
+    if (perfil === 'admin') return true;
+    if (!ativo) return false;
+    return !!(permissoes[modulo] && permissoes[modulo][acao] === true);
+  }
 
-    const snap = await db.collection('permissions')
-      .where('uid', '==', uid)
-      .where('obraId', '==', obraId)
-      .limit(1)
-      .get();
+  function podeAcessarObra(obraId) {
+    if (perfil === 'admin') return true;
+    if (!ativo) return false;
+    if (acessoObras === 'todas') return true;
+    return Array.isArray(acessoObras) && acessoObras.includes(obraId);
+  }
 
-    if (!snap.empty) {
-      await db.collection('permissions').doc(snap.docs[0].id).update(data);
-    } else {
-      data.createdBy = Auth.getUid();
-      data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
-      await db.collection('permissions').add(data);
+  function isAtivo() { return ativo; }
+  function isAdminAtual() { return perfil === 'admin'; }
+  function getAcessoObras() { return acessoObras; }
+
+  // Gate de página: chamado pelo Utils.initPagina(). Retorna false e já
+  // redireciona se a página atual exigir um módulo que o usuário não tem.
+  function bloquearPaginaSemAcesso() {
+    if (!ativo) {
+      Auth.logout();
+      return false;
     }
+    const arquivo = window.location.pathname.split('/').pop().replace('.html', '') || 'index';
+    const modulo = PAGINA_MODULO[arquivo];
+    if (modulo && !pode(modulo, 'ver')) {
+      window.location.href = 'obras.html';
+      return false;
+    }
+    return true;
   }
 
-  return { carregar, pode, salvar };
+  // Esconde qualquer elemento marcado com data-perm="modulo:acao" se o
+  // usuário não tiver a permissão. Chamar depois de renderizar botões
+  // dinâmicos de cada módulo.
+  function aplicarNaTela(root = document) {
+    root.querySelectorAll('[data-perm]').forEach(el => {
+      const [modulo, acao] = el.dataset.perm.split(':');
+      if (!pode(modulo, acao || 'ver')) el.classList.add('hidden');
+    });
+  }
+
+  async function salvarPermissoesUsuario(uid, modulos, acessoObrasNovo) {
+    await Database.atualizarRaiz('permissions', uid, {
+      modulos,
+      atualizadoPor: Auth.getUid()
+    });
+    await Database.atualizarRaiz('users', uid, {
+      acessoObras: acessoObrasNovo
+    });
+    if (uid === Auth.getUid()) { permissoes = modulos; acessoObras = acessoObrasNovo; }
+  }
+
+  return {
+    MODULOS, ACAO_LABEL,
+    carregar, pode, podeAcessarObra, isAtivo, isAdminAtual, getAcessoObras,
+    bloquearPaginaSemAcesso, aplicarNaTela, templateVazio, salvarPermissoesUsuario,
+  };
 })();

@@ -14,6 +14,7 @@ const Obras = (() => {
     try {
       Utils.mostrarLoading('Carregando obras...');
       obras = await Database.getObras();
+      obras = obras.filter(o => Permissions.podeAcessarObra(o.id));
       renderizar();
       await _carregarProgressoObras();
     } catch (e) {
@@ -104,7 +105,7 @@ const Obras = (() => {
     if (!obras.length) {
       container.innerHTML = `<div class="estado-vazio">
         <div class="icone">🏗️</div><p>Nenhuma obra cadastrada.</p>
-        <button class="btn btn-primario" onclick="Obras.abrirFormNova()">+ Nova Obra</button>
+        <button class="btn btn-primario" data-perm="obras:criar" onclick="Obras.abrirFormNova()">+ Nova Obra</button>
       </div>`;
       return;
     }
@@ -117,8 +118,8 @@ const Obras = (() => {
       card.className = 'card obra-card';
 
       const acoes = `
-        <button class="btn btn-secundario btn-sm btn-icon" title="Configurar Obra" onclick="event.stopPropagation();Obras.abrirConfiguracao('${obra.id}')">⚙️</button>
-        <button class="btn btn-secundario btn-sm" onclick="event.stopPropagation();Obras.abrirFormEditar('${obra.id}')">✎ Editar</button>`;
+        <button class="btn btn-secundario btn-sm btn-icon" data-perm="obras:editar" title="Configurar Obra" onclick="event.stopPropagation();Obras.abrirConfiguracao('${obra.id}')">⚙️</button>
+        <button class="btn btn-secundario btn-sm" data-perm="obras:editar" onclick="event.stopPropagation();Obras.abrirFormEditar('${obra.id}')">✎ Editar</button>`;
       const progresso = `<div id="obra-progresso-${obra.id}" style="margin-top:10px;"><div class="text-sm text-muted">Carregando progresso...</div></div>`;
 
       if (obra.imagemUrl) {
