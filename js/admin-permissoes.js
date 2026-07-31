@@ -90,15 +90,16 @@ const AdminPermissoes = (() => {
     });
 
     cont.innerHTML = Object.entries(categorias).map(([categoria, mods]) => `
-      <div style="margin-bottom:14px;">
-        <div class="sidebar-section-title" style="padding:0 0 6px;">${categoria}</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 20px;">
-          ${mods.map(m => `
-            <div>
-              <div style="font-weight:600;font-size:.85rem;margin-bottom:4px;">${m.label}</div>
-              <div style="display:flex;flex-wrap:wrap;gap:10px;">
+      <div style="margin-bottom:18px;">
+        <div class="sidebar-section-title" style="padding:0 0 8px;">${categoria}</div>
+        <div style="border:1.5px solid var(--cor-borda-light);border-radius:8px;overflow:hidden;">
+          ${mods.map((m, i) => `
+            <div style="display:flex;align-items:baseline;gap:14px;padding:9px 12px;flex-wrap:wrap;
+                        ${i > 0 ? 'border-top:1px solid var(--cor-borda-light);' : ''}">
+              <div style="font-weight:600;font-size:.83rem;min-width:220px;flex-shrink:0;">${m.label}</div>
+              <div style="display:flex;flex-wrap:wrap;gap:4px 16px;flex:1;">
                 ${m.acoes.map(a => `
-                  <label class="form-check" style="font-size:.8rem;">
+                  <label class="form-check" style="font-size:.8rem;white-space:nowrap;">
                     <input type="checkbox" data-modulo="${m.key}" data-acao="${a}"
                       ${modulosSelecionados?.[m.key]?.[a] ? 'checked' : ''}>
                     ${Permissions.ACAO_LABEL[a] || a}

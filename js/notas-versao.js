@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.58.3',
+  versaoAtual: 'V2.58.4',
 
   versoes: [
     {
@@ -5286,10 +5286,15 @@ const NotasVersao = {
       titulo:'Permissões: hubs de Levantamento e Controle já filtram os cards por permissão',
       itens:['Os cards de calculadora em Levantamentos (hub) e Controle (hub) agora somem se o usuário não tiver "Ver" no módulo correspondente — antes só bloqueava ao entrar na página de destino, agora nem aparece o card.',
         'Levantamento de Fachada: primeiro módulo de canvas/mapa a ganhar cobertura visual completa (+ Nova Fachada, + Balancim, excluir/duplicar em cada nível) — modelo de referência para estender aos demais Levantamentos e Controles.']},
-    {versao:'V2.58.3',status:'aberta',data:'2026-07-31',tipo:'melhoria',
+    {versao:'V2.58.3',status:'fechada',data:'2026-07-31',tipo:'melhoria',
       titulo:'Permissões: cobertura visual completa em todos os Levantamentos e Controles',
       itens:['Botões de criar/excluir/importar agora somem (não só bloqueiam) quando o usuário não tem permissão, nos módulos que faltavam: Piso, Teto, Paredes, Concreto, Ar Condicionado, Pintura, Solo Grampeado e Terraplanagem (Levantamento), e Controle Concreto, Controle Solo Grampeado e Controle Terraplanagem.',
-        'Com isso, todo o sistema de permissões — página, ação e visual — está com cobertura completa nos 26 módulos reais. Restrições/Orçamentos/Suprimentos/Histograma continuam stub, sem nada pra travar ainda.']}
+        'Com isso, todo o sistema de permissões — página, ação e visual — está com cobertura completa nos 26 módulos reais. Restrições/Orçamentos/Suprimentos/Histograma continuam stub, sem nada pra travar ainda.']},
+    {versao:'V2.58.4',status:'aberta',data:'2026-07-31',tipo:'correcao',
+      titulo:'Permissões: layout da lista de módulos no convite/edição de usuário estava desalinhado',
+      itens:['O grid de 2 módulos por linha desalinhava tudo sempre que um módulo tinha mais ações que o vizinho (ex: Planejamento com 6 ações ao lado de um módulo com 5) — a linha de baixo quebrava e ficava torta.',
+        'Trocado para lista de uma coluna, um módulo por linha, com o nome à esquerda e as ações à direita — cada linha quebra sozinha, sem empurrar a vizinha.',
+        'Modal de convite/edição ficou mais largo (860px) pra acomodar melhor as linhas com mais ações.']}
   ],
 
   render(containerId) {
