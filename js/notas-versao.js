@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.58.13',
+  versaoAtual: 'V2.58.14',
 
   versoes: [
     {
@@ -5331,9 +5331,13 @@ const NotasVersao = {
     {versao:'V2.58.12',status:'fechada',data:'2026-07-31',tipo:'melhoria',
       titulo:'Permissões: linhas claras separando cada módulo no checklist',
       itens:['Cada módulo agora tem uma borda sutil ao redor (tipo card), separando visualmente um do outro na grade — antes ficavam soltos, só o espaçamento entre eles.']},
-    {versao:'V2.58.13',status:'aberta',data:'2026-07-31',tipo:'melhoria',
+    {versao:'V2.58.13',status:'fechada',data:'2026-07-31',tipo:'melhoria',
       titulo:'Permissões: título das categorias (Produção, Custos, etc.) maior e em negrito',
-      itens:['Estava usando a classe de título da sidebar (pensada pra menu estreito, 0.57rem) — ficava minúsculo dentro do modal. Aumentado pra .98rem, negrito, pra separar melhor visualmente do nome dos módulos.']}
+      itens:['Estava usando a classe de título da sidebar (pensada pra menu estreito, 0.57rem) — ficava minúsculo dentro do modal. Aumentado pra .98rem, negrito, pra separar melhor visualmente do nome dos módulos.']},
+    {versao:'V2.58.14',status:'aberta',data:'2026-07-31',tipo:'correcao',
+      titulo:'Permissões: convite falhava com "Domain not allowlisted" se o domínio não estiver nos Authorized domains do Firebase',
+      itens:['O link de "definir senha" usa uma continue-URL customizada (nossa própria página, em vez da padrão do Firebase) — isso exige que o domínio esteja em Firebase Console > Authentication > Settings > Authorized domains. Sem isso configurado, o envio falhava por completo.',
+        'Adicionado fallback: se o domínio não estiver autorizado, tenta de novo sem a URL customizada — o e-mail sai mesmo assim (só cai na página padrão do Firebase em vez da nossa própria), com um aviso claro na tela pra configurar o domínio.']}
   ],
 
   render(containerId) {

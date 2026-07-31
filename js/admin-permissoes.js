@@ -238,6 +238,31 @@ const AdminPermissoes = (() => {
     }
   }
 
+  // Dispara o e-mail de "definir senha" (enviado pelo próprio Firebase, sem
+  // precisar de provedor externo). Se o domínio da continue-URL não estiver
+  // na lista de "Authorized domains" do Firebase Auth (Console > Authentication
+  // > Settings), cai pro link padrão do Firebase — o e-mail ainda sai, só não
+  // leva pra nossa tela própria (o usuário define a senha na página padrão
+  // do Firebase e depois loga normalmente pelo login.html).
+  async function _dispararEmailSenha(email) {
+    const url = window.location.origin + '/definir-senha.html';
+    try {
+      await auth.sendPasswordResetEmail(email, { url });
+    } catch (e) {
+      if (e.code === 'auth/unauthorized-continue-uri') {
+        await auth.sendPasswordResetEmail(email); // sem actionCodeSettings = link padrão do Firebase
+        Utils.toast(
+          `E-mail enviado, mas o domínio "${window.location.hostname}" ainda não está autorizado no Firebase ` +
+          `(Console > Authentication > Settings > Authorized domains) — o link caiu na página padrão do Firebase, ` +
+          `não na nossa. Avise o Milton pra configurar isso.`,
+          'alerta', 8000
+        );
+        return;
+      }
+      throw e;
+    }
+  }
+
   async function _enviarConvite({ nome, email, perfil, acessoObras, modulos }) {
     const idToken = await Auth.getUser().getIdToken();
     const resp = await fetch('/api/usuarios', {
@@ -248,20 +273,13 @@ const AdminPermissoes = (() => {
     const data = await resp.json();
     if (!resp.ok) throw new Error(data.error || 'Erro ao criar usuário.');
 
-    // Dispara o e-mail de "definir senha" (enviado pelo próprio Firebase,
-    // sem precisar de provedor de e-mail externo), com o link apontando
-    // para a nossa própria tela em vez da página padrão do Firebase.
-    await auth.sendPasswordResetEmail(email, {
-      url: window.location.origin + '/definir-senha.html'
-    });
+    await _dispararEmailSenha(email);
     return data;
   }
 
   async function reenviarAcesso(email) {
     try {
-      await auth.sendPasswordResetEmail(email, {
-        url: window.location.origin + '/definir-senha.html'
-      });
+      await _dispararEmailSenha(email);
       Utils.toast('E-mail de acesso reenviado.', 'sucesso');
     } catch (e) {
       Utils.toast('Erro ao reenviar: ' + (e.message || ''), 'erro');
