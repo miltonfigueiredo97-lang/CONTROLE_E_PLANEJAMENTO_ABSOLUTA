@@ -314,13 +314,14 @@ const LevantamentoPintura = (() => {
           <div class="ar-tree-header">
             <h3>Locais</h3>
             <div style="display:flex;gap:6px;">
-              <button class="btn btn-secundario btn-sm" onclick="LPT.novoNode(null)">+ Local</button>
+              <button class="btn btn-secundario btn-sm" data-perm="levantamentoPintura:criar" onclick="LPT.novoNode(null)">+ Local</button>
             </div>
           </div>
           <div class="ar-tree-body">${_renderArvore()}</div>
         </div>
         <div class="ar-painel">${_renderPainel()}</div>
       </div>`;
+    Permissions.aplicarNaTela();
   }
 
   function _renderArvoreNivel(nodes) {
@@ -337,7 +338,7 @@ const LevantamentoPintura = (() => {
         <span class="tree-icon">${temLink ? '🔗' : (semVinculo ? '⚠️' : '📍')}</span>
         <span class="tree-label">${esc(n.nome)}</span>
         <button class="tree-edit-btn" onclick="event.stopPropagation();LPT.renomearNode('${n.id}')" title="Renomear">✎</button>
-        <button class="tree-del-btn" onclick="event.stopPropagation();LPT.excluirNode('${n.id}')" title="Excluir">✕</button>
+        <button class="tree-del-btn" data-perm="levantamentoPintura:excluir" onclick="event.stopPropagation();LPT.excluirNode('${n.id}')" title="Excluir">✕</button>
       </div>`;
       if (aberto) {
         h += `<div class="tree-children">`;

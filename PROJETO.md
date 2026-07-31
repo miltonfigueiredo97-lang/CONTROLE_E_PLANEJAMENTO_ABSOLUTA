@@ -250,13 +250,13 @@ permissions/{uid} → { modulos: { <moduloKey>: {ver,criar,editar,excluir,export
 ### Enforcement
 - `Utils.initPagina()` chama `Permissions.carregar(uid)` → `Permissions.bloquearPaginaSemAcesso()` antes de renderizar qualquer coisa.
 - Toda função de mutação (criar/editar/excluir/importar/exportar) de todos os módulos com CRUD real checa `Permissions.pode(modulo,acao)` antes de gravar no Firestore — Planejamento, Materiais, Mão de Obra, Diário, Semanal, Medições, Relatórios, os 9 Levantamentos, os 3 Controles, Produção, Configuração de Obra, Backup de Planejamentos. Restrições/Orçamentos/Suprimentos/Histograma são stub, sem nada a proteger ainda.
-- Botões usam `data-perm="modulo:acao"` + `Permissions.aplicarNaTela()` para esconder visualmente — aplicado nos módulos de CRUD simples (Obras, Materiais, Mão de Obra, Diário, Medições, Relatórios, Planejamento). Nos módulos de canvas/mapa (Levantamentos, Controles) o bloqueio funcional já existe mas o botão ainda pode aparecer na tela — refinamento visual pendente, não é falha de segurança (a ação é recusada mesmo se clicada).
+- Botões usam `data-perm="modulo:acao"` + `Permissions.aplicarNaTela()` para esconder visualmente — **cobertura completa em todos os 26 módulos reais** (não só os de CRUD simples; os de canvas/mapa como Fachada, Solo Grampeado, etc. também já escondem os botões principais de criar/excluir).
 - Vários Levantamentos (Piso, Teto, Paredes, Pintura) salvam a árvore de locais num único ponto (`_salvarArvore()`); o guard foi colocado ali, cobrindo todas as ações do Editor de Estrutura de uma vez, em vez de em cada handler de drag&drop separadamente.
+- Os hubs (`levantamento.html`, `controle.html`) filtram os cards por `data-perm="modulo:ver"`.
 - `Database.getObras()` continua retornando todas — o filtro por `acessoObras` é feito na camada de chamada (`Router.popularSeletorObras`, `Obras.carregar`), não dentro do Database.
 
 ### Pendente
-- Cobertura visual (`data-perm` nos botões) dos módulos de Levantamento/Controle — **Fachada já feito** (referência); Piso/Teto/Paredes/Concreto/Ar/Pintura/Solo/Terraplanagem e os 3 Controles ainda só têm o bloqueio funcional (ação recusada, botão ainda visível).
-- Os hubs (`levantamento.html`, `controle.html`) já filtram os cards por `data-perm="modulo:ver"` — feito.
+- Alguns botões secundários dentro de popups de canvas (ex: editar posição de um ponto já colocado no mapa) ainda não têm `data-perm` individual — a ação em si já é recusada via guard funcional, só o botão pode aparecer nesses casos específicos e mais internos.
 - Regras de segurança do Firestore ainda são as de desenvolvimento (`allow read, write: if request.auth != null` — ver README). Com dados de permissão agora no Firestore, vale endurecer isso; não foi feito nesta rodada.
 
 

@@ -399,13 +399,14 @@ const LevantamentoParedes = (() => {
             <h3>Locais</h3>
             <div style="display:flex;gap:6px;">
               <button class="btn btn-secundario btn-sm" onclick="LP.abrirConfig()" title="Configurações de cálculo (vãos e Metro Linear)">⚙️</button>
-              <button class="btn btn-secundario btn-sm" onclick="LP.novoNode(null)">+ Local</button>
+              <button class="btn btn-secundario btn-sm" data-perm="levantamentoParedes:criar" onclick="LP.novoNode(null)">+ Local</button>
             </div>
           </div>
           <div class="ar-tree-body">${_renderArvore()}</div>
         </div>
         <div class="ar-painel">${_renderPainel()}</div>
       </div>`;
+    Permissions.aplicarNaTela();
   }
 
   function setAba(novaAba) { aba = novaAba; renderizar(); }
@@ -428,7 +429,7 @@ const LevantamentoParedes = (() => {
         <button class="tree-edit-btn" onclick="event.stopPropagation();LP.renomearNode('${n.id}')" title="Renomear">✎</button>
         <button class="tree-clone-btn" onclick="event.stopPropagation();LP.abrirClonarNode('${n.id}')" title="Clonar peças de outro local para este">⧉</button>
         <button class="tree-clone-btn" onclick="event.stopPropagation();LP.duplicarNode('${n.id}')" title="Duplicar este local (cria uma cópia nova)">📋</button>
-        <button class="tree-del-btn" onclick="event.stopPropagation();LP.excluirNode('${n.id}')" title="Excluir">✕</button>
+        <button class="tree-del-btn" data-perm="levantamentoParedes:excluir" onclick="event.stopPropagation();LP.excluirNode('${n.id}')" title="Excluir">✕</button>
       </div>`;
       if (aberto) {
         h += `<div class="tree-children">`;
@@ -551,7 +552,7 @@ const LevantamentoParedes = (() => {
           <span class="subtitulo">${listaSubtree.length} parede(s) no total${temFilhos ? ` (${listaDireta.length} direta[s] neste local)` : ''} · ${fmt2(tSub.areaLiquida)} m²</span></div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <button class="btn btn-secundario btn-sm" onclick="LP.abrirClonarNode('${selNodeId}')" title="Clonar peças de outro local para este">⧉ Clonar de Outro Local</button>
-          <button class="btn btn-secundario btn-sm" onclick="LP.duplicarNode('${selNodeId}')" title="Duplicar este local (cria uma cópia nova)">📋 Duplicar Local</button>
+          <button class="btn btn-secundario btn-sm" data-perm="levantamentoParedes:criar" onclick="LP.duplicarNode('${selNodeId}')" title="Duplicar este local (cria uma cópia nova)">📋 Duplicar Local</button>
           <button class="btn btn-primario btn-sm" onclick="LP.novaAlvenaria()">+ Nova Parede</button>
         </div>
       </div>
@@ -612,7 +613,7 @@ const LevantamentoParedes = (() => {
           <span class="subtitulo">${listaSubtree.length} face(s) no total${temFilhos ? ` (${listaDireta.length} direta[s] neste local)` : ''} · ${fmt2(tSub.areaLiquida)} m²</span></div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <button class="btn btn-secundario btn-sm" onclick="LP.abrirClonarNode('${selNodeId}')" title="Clonar peças de outro local para este">⧉ Clonar de Outro Local</button>
-          <button class="btn btn-secundario btn-sm" onclick="LP.duplicarNode('${selNodeId}')" title="Duplicar este local (cria uma cópia nova)">📋 Duplicar Local</button>
+          <button class="btn btn-secundario btn-sm" data-perm="levantamentoParedes:criar" onclick="LP.duplicarNode('${selNodeId}')" title="Duplicar este local (cria uma cópia nova)">📋 Duplicar Local</button>
           <button class="btn btn-primario btn-sm" onclick="LP.novaAcabamento()">+ Nova Face</button>
         </div>
       </div>
@@ -672,9 +673,9 @@ const LevantamentoParedes = (() => {
       <td style="white-space:nowrap;">
         <button class="btn btn-secundario btn-sm" onclick="LP.editarAlvenaria('${p.id}')" title="Editar">✎</button>
         <button class="btn btn-sm btn-icon" onclick="LP.abrirMoverPeca('${p.id}')" title="Mover para outro local">⇄</button>
-        <button class="btn btn-sm btn-icon" onclick="LP.duplicarPeca('${p.id}')" title="Duplicar">⧉</button>
+        <button class="btn btn-sm btn-icon" data-perm="levantamentoParedes:criar" onclick="LP.duplicarPeca('${p.id}')" title="Duplicar">⧉</button>
         <button class="btn btn-sm btn-icon" onclick="LP.conferirPeca('${p.id}')" title="${p.conferido ? 'Desmarcar conferência' : 'Marcar como conferida'}">${p.conferido ? '↩' : '✓'}</button>
-        <button class="btn btn-perigo btn-sm btn-icon" onclick="LP.excluirPeca('${p.id}')" title="Excluir">✕</button>
+        <button class="btn btn-perigo btn-sm btn-icon" data-perm="levantamentoParedes:excluir" onclick="LP.excluirPeca('${p.id}')" title="Excluir">✕</button>
       </td>
     </tr>`;
   }
@@ -698,9 +699,9 @@ const LevantamentoParedes = (() => {
       <td style="white-space:nowrap;">
         <button class="btn btn-secundario btn-sm" onclick="LP.editarAcabamento('${p.id}')" title="Editar">✎</button>
         <button class="btn btn-sm btn-icon" onclick="LP.abrirMoverPeca('${p.id}')" title="Mover para outro local">⇄</button>
-        <button class="btn btn-sm btn-icon" onclick="LP.duplicarPeca('${p.id}')" title="Duplicar">⧉</button>
+        <button class="btn btn-sm btn-icon" data-perm="levantamentoParedes:criar" onclick="LP.duplicarPeca('${p.id}')" title="Duplicar">⧉</button>
         <button class="btn btn-sm btn-icon" onclick="LP.conferirPeca('${p.id}')" title="${p.conferido ? 'Desmarcar conferência' : 'Marcar como conferida'}">${p.conferido ? '↩' : '✓'}</button>
-        <button class="btn btn-perigo btn-sm btn-icon" onclick="LP.excluirPeca('${p.id}')" title="Excluir">✕</button>
+        <button class="btn btn-perigo btn-sm btn-icon" data-perm="levantamentoParedes:excluir" onclick="LP.excluirPeca('${p.id}')" title="Excluir">✕</button>
       </td>
     </tr>`;
   }

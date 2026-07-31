@@ -173,6 +173,7 @@ const LevantamentoSoloGrampeado = (() => {
     `;
     renderMapa();
     renderTabelaChumbadores();
+    Permissions.aplicarNaTela();
   }
 
   function onTrocarVistaAtiva() {
@@ -579,7 +580,7 @@ const LevantamentoSoloGrampeado = (() => {
               <td>${esc(especLabel(e))}</td>
               <td class="col-acoes">
                 <button class="btn btn-secundario btn-sm" onclick="SG_UI.abrirEditarChumbador('${c.id}')">✎</button>
-                <button class="btn btn-secundario btn-sm" style="color:var(--cv-red);" onclick="SG_UI.excluirChumbador('${c.id}')">🗑</button>
+                <button class="btn btn-secundario btn-sm" data-perm="levantamentoSolo:excluir" style="color:var(--cv-red);" onclick="SG_UI.excluirChumbador('${c.id}')">🗑</button>
               </td>
             </tr>`;
           }).join('')}
@@ -587,6 +588,7 @@ const LevantamentoSoloGrampeado = (() => {
         <tfoot><tr><td style="font-weight:700;">${lista.length} chumb.</td><td></td><td class="col-num cc-tdMono" style="font-weight:700;">${SG.fmt1(mlTotal)}</td><td colspan="2"></td></tr></tfoot>
       </table>
       </div>`;
+    Permissions.aplicarNaTela();
   }
 
   // ══════════════════════════════════════════
@@ -844,7 +846,7 @@ const LevantamentoSoloGrampeado = (() => {
     el.innerHTML = `
       <div style="display:flex;gap:8px;margin-bottom:12px;">
         <input type="text" class="form-control" id="sg-nova-vista-nome" placeholder="Nome da vista (ex: Elevação 1)">
-        <button class="btn btn-primario btn-sm" onclick="SG_UI.salvarVista()">+ Adicionar</button>
+        <button class="btn btn-primario btn-sm" data-perm="levantamentoSolo:criar" onclick="SG_UI.salvarVista()">+ Adicionar</button>
       </div>
       ${!vistas.length ? '<div class="cc-empty">Nenhuma vista cadastrada.</div>' : `
       <div class="cc-tableWrap" style="max-height:320px;overflow-y:auto;">
@@ -856,11 +858,12 @@ const LevantamentoSoloGrampeado = (() => {
                 <td>${esc(v.numero)}</td>
                 <td>${esc(v.nome || '—')}</td>
                 <td class="col-num cc-tdMono">${chumbadoresDaVista(v.id).length}</td>
-                <td class="col-acoes"><button class="btn btn-secundario btn-sm" style="color:var(--cv-red);" onclick="SG_UI.excluirVista('${v.id}')">🗑</button></td>
+                <td class="col-acoes"><button class="btn btn-secundario btn-sm" data-perm="levantamentoSolo:excluir" style="color:var(--cv-red);" onclick="SG_UI.excluirVista('${v.id}')">🗑</button></td>
               </tr>`).join('')}
           </tbody>
         </table>
       </div>`}`;
+    Permissions.aplicarNaTela();
   }
 
   async function salvarVista() {
@@ -920,7 +923,7 @@ const LevantamentoSoloGrampeado = (() => {
       </select>
       <div style="display:flex;gap:4px;">
         <input type="text" class="form-control" placeholder="Novo material..." id="sg-novo-${campo}" style="font-size:0.78rem;">
-        <button type="button" class="btn btn-secundario btn-sm" onclick="SG_UI.criarMaterialInline('${campo}')">+ Criar</button>
+        <button type="button" class="btn btn-secundario btn-sm" data-perm="levantamentoSolo:criar" onclick="SG_UI.criarMaterialInline('${campo}')">+ Criar</button>
       </div>`;
   }
 
@@ -964,7 +967,7 @@ const LevantamentoSoloGrampeado = (() => {
         </div>
         <div class="form-grupo"><label>Volume de calda injetada (m³ por ml de chumbador)</label><input type="number" step="0.001" class="form-control" id="sg-espec-volume" value="${editando?.volumeConcretoPorMl ?? ''}" placeholder="0"></div>
         <div style="display:flex;gap:8px;">
-          <button class="btn btn-primario btn-sm" onclick="SG_UI.salvarEspecificacao()">${editando ? 'Salvar alterações' : '+ Adicionar especificação'}</button>
+          <button class="btn btn-primario btn-sm" data-perm="levantamentoSolo:criar" onclick="SG_UI.salvarEspecificacao()">${editando ? 'Salvar alterações' : '+ Adicionar especificação'}</button>
           ${editando ? `<button class="btn btn-secundario btn-sm" onclick="SG_UI.cancelarEdicaoEspec()">Cancelar</button>` : ''}
         </div>
       </div>
@@ -982,12 +985,13 @@ const LevantamentoSoloGrampeado = (() => {
                 <td>${esc(biblioteca.find(m => m.id === e.materialCimentoId)?.nome || '—')}</td>
                 <td class="col-acoes">
                   <button class="btn btn-secundario btn-sm" onclick="SG_UI.editarEspecificacao('${e.id}')">✎</button>
-                  <button class="btn btn-secundario btn-sm" style="color:var(--cv-red);" onclick="SG_UI.excluirEspecificacao('${e.id}')">🗑</button>
+                  <button class="btn btn-secundario btn-sm" data-perm="levantamentoSolo:excluir" style="color:var(--cv-red);" onclick="SG_UI.excluirEspecificacao('${e.id}')">🗑</button>
                 </td>
               </tr>`).join('')}
           </tbody>
         </table>
       </div>`}`;
+    Permissions.aplicarNaTela();
   }
 
   function editarEspecificacao(id) { especEditId = id; renderEspecificacoes(); }

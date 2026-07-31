@@ -759,11 +759,12 @@ const ControleConcreto = (() => {
           <div class="form-grupo" style="margin-bottom:0;"><label>Hora</label><input type="time" class="form-control" value="${esc(bt.hora)}" oninput="CCON.btUpd('hora', this.value)"></div>
         </div>
         <div style="display:flex;justify-content:flex-end;margin-top:14px;">
-          <button class="btn btn-primario" onclick="CCON.btSalvar()">${bt.modo === 'editar' ? '✓ Salvar Alterações' : '✓ Lançar BT'}</button>
+          <button class="btn btn-primario" data-perm="controleConcreto:criar" onclick="CCON.btSalvar()">${bt.modo === 'editar' ? '✓ Salvar Alterações' : '✓ Lançar BT'}</button>
         </div>`;
     }
 
     el.innerHTML = html;
+    Permissions.aplicarNaTela();
   }
 
   function btUpd(campo, valor) { bt[campo] = valor; }

@@ -236,6 +236,7 @@ const ControleSoloGrampeado = (() => {
     const novoScroll = document.querySelector('#sgc-mapa-host .sg-map-scroll');
     if (novoScroll && scrollPos) { novoScroll.scrollLeft = scrollPos.left; novoScroll.scrollTop = scrollPos.top; }
     _ligarEventosMapa(v);
+    Permissions.aplicarNaTela();
   }
 
   function _htmlListaAreas(areas) {
@@ -247,7 +248,7 @@ const ControleSoloGrampeado = (() => {
             <td>${a.etapa === 'acabamento' ? 'Acabamento' : 'Projeção'}</td>
             <td class="col-num cc-tdMono">${SG.fmt1(a.m2)}</td>
             <td class="cc-tdMono">${esc(a.data)}</td>
-            <td class="col-acoes"><button class="btn btn-secundario btn-sm" style="color:var(--cv-red);" onclick="SGC_UI.excluirArea('${a.id}')">🗑</button></td>
+            <td class="col-acoes"><button class="btn btn-secundario btn-sm" data-perm="controleSolo:excluir" style="color:var(--cv-red);" onclick="SGC_UI.excluirArea('${a.id}')">🗑</button></td>
           </tr>`).join('')}
         </tbody>
       </table>

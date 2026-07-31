@@ -160,9 +160,9 @@ const LevantamentoConcreto = (() => {
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <button class="btn btn-secundario btn-sm" onclick="LC.abrirCalculadora()">📐 Calculadora</button>
           <button class="btn btn-secundario btn-sm" onclick="LC.abrirLevantamento()">📋 Levantamento${levantamento.length ? ` <span class="cc-badge cc-badgePartial" style="margin-left:4px;">${levantamento.length}</span>` : ''}</button>
-          <button class="btn btn-secundario btn-sm" onclick="LC.abrirImportar()">⊞ Importar Lote</button>
+          <button class="btn btn-secundario btn-sm" data-perm="levantamentoConcreto:criar" onclick="LC.abrirImportar()">⊞ Importar Lote</button>
           <button class="btn btn-dark btn-sm" onclick="LC.abrirConcretagens()">◈ Concretagens</button>
-          <button class="btn btn-primario btn-sm" onclick="LC.abrirNovaPeca()">+ Nova Peça</button>
+          <button class="btn btn-primario btn-sm" data-perm="levantamentoConcreto:criar" onclick="LC.abrirNovaPeca()">+ Nova Peça</button>
           <button class="btn btn-secundario btn-sm" style="color:var(--cv-red,#ef4444);" onclick="LC.limparBasePecas()">🗑 Limpar Base</button>
         </div>
       </div>
@@ -206,6 +206,7 @@ const LevantamentoConcreto = (() => {
     `;
     renderTabelaPecas();
     renderTabelaConcs();
+    Permissions.aplicarNaTela();
   }
 
   function onFiltro() {
@@ -253,7 +254,7 @@ const LevantamentoConcreto = (() => {
               <td class="col-centro"><span class="cc-badge ${badge}">${CC.fmt1(pct)}%</span></td>
               <td class="col-acoes">
                 <button class="btn btn-secundario btn-sm" onclick="LC.abrirEditarPeca('${p.id}')">✎</button>
-                <button class="btn btn-secundario btn-sm" style="color:var(--cv-red);" onclick="LC.excluirPeca('${p.id}')">🗑</button>
+                <button class="btn btn-secundario btn-sm" data-perm="levantamentoConcreto:excluir" style="color:var(--cv-red);" onclick="LC.excluirPeca('${p.id}')">🗑</button>
               </td>
             </tr>`;
           }).join('')}
@@ -295,7 +296,7 @@ const LevantamentoConcreto = (() => {
               <td class="col-num cc-tdMono">${CC.fmt4(volBts)}</td>
               <td class="col-acoes">
                 <button class="btn btn-secundario btn-sm" onclick="LC.editarConcretagem('${c.id}')">✎</button>
-                <button class="btn btn-secundario btn-sm" style="color:var(--cv-red);" onclick="LC.excluirConcretagem('${c.id}')">🗑</button>
+                <button class="btn btn-secundario btn-sm" data-perm="levantamentoConcreto:excluir" style="color:var(--cv-red);" onclick="LC.excluirConcretagem('${c.id}')">🗑</button>
               </td>
             </tr>`;
           }).join('')}
@@ -1374,7 +1375,7 @@ const LevantamentoConcreto = (() => {
       </div>` : ''}
       <div style="display:flex;justify-content:space-between;margin-top:14px;">
         <button class="btn btn-secundario" onclick="LC.cwSetStep(3)">← Voltar</button>
-        <button class="btn btn-primario" onclick="LC.cwSalvar()">✓ Salvar Concretagem</button>
+        <button class="btn btn-primario" data-perm="levantamentoConcreto:criar" onclick="LC.cwSalvar()">✓ Salvar Concretagem</button>
       </div>`;
   }
 

@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.58.2',
+  versaoAtual: 'V2.58.3',
 
   versoes: [
     {
@@ -5282,10 +5282,14 @@ const NotasVersao = {
         'Vários Levantamentos (Piso, Teto, Paredes, Pintura) guardam a árvore de locais num único ponto de gravação — o guard foi colocado ali, cobrindo automaticamente todas as ações do Editor de Estrutura de uma vez.',
         'Restrições, Orçamentos, Suprimentos e Histograma continuam stub — nada para travar além do gate de página que já existia.',
         'Cobertura visual (esconder o botão, não só bloquear a ação) aplicada nos módulos de CRUD simples (Materiais, Mão de Obra, Diário, Medições, Relatórios, Planejamento); os módulos de canvas/mapa (Levantamentos e Controles) por ora têm o bloqueio funcional mas o botão ainda aparece na tela — ficar de olho, é o próximo refinamento.']},
-    {versao:'V2.58.2',status:'aberta',data:'2026-07-31',tipo:'melhoria',
+    {versao:'V2.58.2',status:'fechada',data:'2026-07-31',tipo:'melhoria',
       titulo:'Permissões: hubs de Levantamento e Controle já filtram os cards por permissão',
       itens:['Os cards de calculadora em Levantamentos (hub) e Controle (hub) agora somem se o usuário não tiver "Ver" no módulo correspondente — antes só bloqueava ao entrar na página de destino, agora nem aparece o card.',
-        'Levantamento de Fachada: primeiro módulo de canvas/mapa a ganhar cobertura visual completa (+ Nova Fachada, + Balancim, excluir/duplicar em cada nível) — modelo de referência para estender aos demais Levantamentos e Controles.']}
+        'Levantamento de Fachada: primeiro módulo de canvas/mapa a ganhar cobertura visual completa (+ Nova Fachada, + Balancim, excluir/duplicar em cada nível) — modelo de referência para estender aos demais Levantamentos e Controles.']},
+    {versao:'V2.58.3',status:'aberta',data:'2026-07-31',tipo:'melhoria',
+      titulo:'Permissões: cobertura visual completa em todos os Levantamentos e Controles',
+      itens:['Botões de criar/excluir/importar agora somem (não só bloqueiam) quando o usuário não tem permissão, nos módulos que faltavam: Piso, Teto, Paredes, Concreto, Ar Condicionado, Pintura, Solo Grampeado e Terraplanagem (Levantamento), e Controle Concreto, Controle Solo Grampeado e Controle Terraplanagem.',
+        'Com isso, todo o sistema de permissões — página, ação e visual — está com cobertura completa nos 26 módulos reais. Restrições/Orçamentos/Suprimentos/Histograma continuam stub, sem nada pra travar ainda.']}
   ],
 
   render(containerId) {

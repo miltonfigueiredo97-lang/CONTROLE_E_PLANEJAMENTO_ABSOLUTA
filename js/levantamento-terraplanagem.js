@@ -309,7 +309,7 @@ const LevantamentoTerraplanagem = (() => {
       </div>
       <div class="form-row" style="align-items:end;">
         <div class="form-grupo"><label>Empresa</label><input type="text" id="tp-cam-empresa" class="form-control" placeholder="Locaterh"></div>
-        <button class="btn btn-primario btn-sm" style="height:38px;" onclick="TP_UI.salvarCaminhao()">+ Adicionar</button>
+        <button class="btn btn-primario btn-sm" data-perm="levantamentoTerra:criar" style="height:38px;" onclick="TP_UI.salvarCaminhao()">+ Adicionar</button>
       </div>
       <div class="cc-divider"></div>
       ${!caminhoes.length ? `<div class="cc-empty">Nenhum caminhão cadastrado.</div>` : `
@@ -322,11 +322,12 @@ const LevantamentoTerraplanagem = (() => {
                 <td class="cc-tdMono" style="font-weight:700;">${esc(c.placa)}</td>
                 <td>${esc(c.tamanho)}</td>
                 <td>${esc(c.empresa || '—')}</td>
-                <td class="col-acoes"><button class="btn btn-secundario btn-sm" style="color:var(--cv-red);" onclick="TP_UI.excluirCaminhao('${c.id}')">🗑</button></td>
+                <td class="col-acoes"><button class="btn btn-secundario btn-sm" data-perm="levantamentoTerra:excluir" style="color:var(--cv-red);" onclick="TP_UI.excluirCaminhao('${c.id}')">🗑</button></td>
               </tr>`).join('')}
           </tbody>
         </table>
       </div>`}`;
+    Permissions.aplicarNaTela();
   }
   async function salvarCaminhao() {
     if(!Permissions.pode('levantamentoTerra','criar')&&!Permissions.pode('levantamentoTerra','editar')){Utils.toast('Sem permissão.','erro');return;}

@@ -136,6 +136,7 @@ const ControleTerraplanagem = (() => {
     `;
     renderCurva(k.volEmpolado);
     renderTabela();
+    Permissions.aplicarNaTela();
   }
 
   function onFiltro() {
@@ -212,7 +213,7 @@ const ControleTerraplanagem = (() => {
         <div class="form-grupo"><label>Fornecedor</label><input type="text" id="tpc-ent-fornecedor" class="form-control" placeholder="opcional"></div>
         <div class="form-grupo"><label>Volume (m³)</label><input type="text" inputmode="decimal" id="tpc-ent-volume" class="form-control" placeholder="15.6"></div>
       </div>
-      <button class="btn btn-primario" onclick="TPC_UI.salvarEntrega()">+ Registrar Viagem</button>
+      <button class="btn btn-primario" data-perm="controleTerra:criar" onclick="TPC_UI.salvarEntrega()">+ Registrar Viagem</button>
     `;
   }
   function autoVolumePorPlaca() {
@@ -292,7 +293,7 @@ const ControleTerraplanagem = (() => {
               <td class="col-num cc-tdMono">${TC.fmt1(e.volume)}</td>
               <td class="col-num cc-tdMono">${TC.fmt1(acum)}</td>
               <td class="col-num cc-tdAccent" style="font-weight:700;">${TC.fmt1(pctAcum)}%</td>
-              <td class="col-acoes"><button class="btn btn-secundario btn-sm" style="color:var(--cv-red);" onclick="TPC_UI.excluirEntrega('${e.id}')">🗑</button></td>
+              <td class="col-acoes"><button class="btn btn-secundario btn-sm" data-perm="controleTerra:excluir" style="color:var(--cv-red);" onclick="TPC_UI.excluirEntrega('${e.id}')">🗑</button></td>
             </tr>`;
           }).join('')}
         </tbody>

@@ -264,7 +264,7 @@ const LT = (() => {
             <div style="display:flex;gap:6px;">
               <button class="btn btn-secundario btn-sm" onclick="LT.marcarTodasAreas(true)" title="Selecionar todas as áreas visíveis (pra mover/copiar em lote)">☑</button>
               <button class="btn btn-secundario btn-sm" onclick="LT.toggleArvore()" title="Recolher árvore">⏴</button>
-              <button class="btn btn-primario btn-sm" onclick="LT.novoNode(null)">+ Local</button>
+              <button class="btn btn-primario btn-sm" data-perm="levantamentoTeto:criar" onclick="LT.novoNode(null)">+ Local</button>
             </div>
           </div>
           <div id="lt-bulk-areas-bar" style="display:none;flex-direction:column;gap:6px;background:rgba(37,99,235,0.18);border-bottom:1px solid rgba(191,219,254,0.25);padding:8px 10px;">
@@ -297,6 +297,7 @@ const LT = (() => {
       scrollEl.scrollTop = scrollTopAntes;
       requestAnimationFrame(() => { scrollEl.scrollTop = scrollTopAntes; });
     }
+    Permissions.aplicarNaTela();
   }
 
   function toggleArvore() { treeColapsada = !treeColapsada; renderizar(); }
@@ -355,7 +356,7 @@ const LT = (() => {
         ${nAreas ? `<span class="tree-badge">${nAreas}</span>` : ''}
         ${n.plantaId ? `<button class="tree-clone-btn" onclick="event.stopPropagation();LT.abrirClonarPavimento('${n.id}')" title="Clonar/Multiplicar as áreas deste local para outros">⧉</button>` : ''}
         <button class="tree-edit-btn" onclick="event.stopPropagation();LT.renomearNode('${n.id}')" title="Renomear">✎</button>
-        <button class="tree-del-btn" onclick="event.stopPropagation();LT.excluirNode('${n.id}')" title="Excluir">✕</button>
+        <button class="tree-del-btn" data-perm="levantamentoTeto:excluir" onclick="event.stopPropagation();LT.excluirNode('${n.id}')" title="Excluir">✕</button>
       </div>`;
       if (aberto) {
         // Áreas medidas diretamente neste local — atrás do mesmo collapse do nó
