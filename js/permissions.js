@@ -180,13 +180,19 @@ const Permissions = (() => {
   }
 
   async function salvarPermissoesUsuario(uid, modulos, acessoObrasNovo) {
-    await Database.atualizarRaiz('permissions', uid, {
+    // set(merge:true) em vez de atualizarRaiz (.update()): usuários criados antes
+    // do V2.58 (ex: admin/chefe originais) ainda não têm doc em permissions/{uid} —
+    // .update() falharia com "No document to update". set+merge cria se não existir.
+    await db.collection('permissions').doc(uid).set({
       modulos,
-      atualizadoPor: Auth.getUid()
-    });
-    await Database.atualizarRaiz('users', uid, {
-      acessoObras: acessoObrasNovo
-    });
+      atualizadoPor: Auth.getUid(),
+      atualizadoEm: firebase.firestore.FieldValue.serverTimestamp(),
+    }, { merge: true });
+    await db.collection('users').doc(uid).set({
+      acessoObras: acessoObrasNovo,
+      updatedBy: Auth.getUid(),
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    }, { merge: true });
     if (uid === Auth.getUid()) { permissoes = modulos; acessoObras = acessoObrasNovo; }
   }
 
