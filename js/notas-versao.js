@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.58.6',
+  versaoAtual: 'V2.58.7',
 
   versoes: [
     {
@@ -5299,10 +5299,14 @@ const NotasVersao = {
       titulo:'Permissões: erro "No document to update" ao editar permissões de usuário antigo',
       itens:['Usuários criados antes do V2.58 (ex: as contas admin/chefe originais) não têm o documento em permissions/{uid} — só é criado agora, no momento do convite. Editar as permissões desses usuários chamava .update() nesse doc inexistente e falhava.',
         'Corrigido: agora usa set com merge (upsert) — cria o documento se não existir, atualiza se já existir.']},
-    {versao:'V2.58.6',status:'aberta',data:'2026-07-31',tipo:'correcao',
+    {versao:'V2.58.6',status:'fechada',data:'2026-07-31',tipo:'correcao',
       titulo:'Permissões: checklist de módulos reformulado pra bater com o padrão de referência (uma ação por linha)',
       itens:['A tentativa anterior colocava várias ações numa linha só por módulo, o que ainda desalinhava quando o texto quebrava. Agora cada ação é sua própria linha (checkbox + rótulo curto), num grid de 2 colunas por módulo — mesmo padrão do exemplo que o Milton mandou (Estoque/Pedidos/Ferramentas): cada item é auto-contido, então sempre alinha.',
-        'Módulos continuam agrupados por categoria, com o nome do módulo como sub-título acima do grid de ações dele.']}
+        'Módulos continuam agrupados por categoria, com o nome do módulo como sub-título acima do grid de ações dele.']},
+    {versao:'V2.58.7',status:'aberta',data:'2026-07-31',tipo:'correcao',
+      titulo:'Permissões: 2ª coluna de checkboxes ficava muito distante da 1ª',
+      itens:['grid-template-columns:1fr 1fr fazia cada coluna ocupar 50% da largura do modal — com o texto do checkbox sendo curto, a 2ª coluna acabava lá na borda direita, bem separada da 1ª.',
+        'Corrigido: colunas do tamanho do próprio conteúdo (max-content), coladas uma na outra como no exemplo — modal também ficou mais estreito (620px), já que não precisa mais de tanto espaço.']}
   ],
 
   render(containerId) {

@@ -95,9 +95,9 @@ const AdminPermissoes = (() => {
         ${mods.map(m => `
           <div style="margin-bottom:12px;">
             <div style="font-weight:700;font-size:.82rem;margin-bottom:6px;color:var(--cor-texto);">${m.label}</div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px 24px;">
+            <div style="display:grid;grid-template-columns:max-content max-content;gap:7px 48px;justify-content:start;">
               ${m.acoes.map(a => `
-                <label class="form-check" style="font-size:.82rem;">
+                <label class="form-check" style="font-size:.82rem;white-space:nowrap;">
                   <input type="checkbox" data-modulo="${m.key}" data-acao="${a}"
                     ${modulosSelecionados?.[m.key]?.[a] ? 'checked' : ''}>
                   ${Permissions.ACAO_LABEL[a] || a}
