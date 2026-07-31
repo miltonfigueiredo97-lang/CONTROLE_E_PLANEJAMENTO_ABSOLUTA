@@ -119,11 +119,18 @@
     try {
       await auth.confirmPasswordReset(oobCode, senha1);
       const r = await auth.signInWithEmailAndPassword(emailDoConvite, senha1);
-      // Primeira ativação: marca o convite como aceito.
-      await db.collection('users').doc(r.user.uid).update({ ativo: true, status: 'ativo' }).catch(() => {});
+      // Primeira ativação: marca o convite como aceito. set+merge (não update)
+      // por robustez — e sem engolir erro: se isso falhar, a conta fica com
+      // ativo:false pra sempre e o usuário é sempre expulso no próximo
+      // carregamento (gate de permissões rejeita ativo:false), então é melhor
+      // avisar aqui na hora do que deixar o problema estourar depois, mudo.
+      await db.collection('users').doc(r.user.uid).set({ ativo: true, status: 'ativo' }, { merge: true });
       window.location.href = 'obras.html';
     } catch (e) {
-      erro.textContent = 'Não foi possível definir a senha. ' + (e.message || '');
+      console.error('Erro ao definir senha / ativar conta:', e);
+      erro.textContent = e.code === 'permission-denied'
+        ? 'Sua senha foi definida, mas houve um problema ao ativar a conta (permissão negada no banco de dados). Avise o administrador — ele pode te ativar manualmente em Permissões.'
+        : 'Não foi possível definir a senha. ' + (e.message || '');
       erro.classList.remove('hidden');
       btn.disabled = false; btn.textContent = 'Entrar no sistema';
     }

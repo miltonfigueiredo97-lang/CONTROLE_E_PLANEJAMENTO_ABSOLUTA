@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.58.15',
+  versaoAtual: 'V2.58.16',
 
   versoes: [
     {
@@ -5338,10 +5338,15 @@ const NotasVersao = {
       titulo:'Permissões: convite falhava com "Domain not allowlisted" se o domínio não estiver nos Authorized domains do Firebase',
       itens:['O link de "definir senha" usa uma continue-URL customizada (nossa própria página, em vez da padrão do Firebase) — isso exige que o domínio esteja em Firebase Console > Authentication > Settings > Authorized domains. Sem isso configurado, o envio falhava por completo.',
         'Adicionado fallback: se o domínio não estiver autorizado, tenta de novo sem a URL customizada — o e-mail sai mesmo assim (só cai na página padrão do Firebase em vez da nossa própria), com um aviso claro na tela pra configurar o domínio.']},
-    {versao:'V2.58.15',status:'aberta',data:'2026-07-31',tipo:'correcao',
+    {versao:'V2.58.15',status:'fechada',data:'2026-07-31',tipo:'correcao',
       titulo:'definir-senha.html ficava travado pra sempre em "Verificando convite..."',
       itens:['Faltava carregar o SDK do Firebase Storage nessa página — initFirebase() sempre tenta iniciar firebase.storage(), isso lançava um erro silencioso, e a função de verificação do convite parava no meio sem nunca trocar de tela.',
-        'Corrigido: adicionado o script que faltava, e a função agora sempre mostra a tela de "link inválido" em caso de qualquer falha ao iniciar o Firebase, em vez de travar sem feedback nenhum.']}
+        'Corrigido: adicionado o script que faltava, e a função agora sempre mostra a tela de "link inválido" em caso de qualquer falha ao iniciar o Firebase, em vez de travar sem feedback nenhum.']},
+    {versao:'V2.58.16',status:'aberta',data:'2026-07-31',tipo:'correcao',
+      titulo:'Conta convidada carregava e era expulsa em seguida (definir-senha.html engolia erro de ativação)',
+      itens:['Depois de definir a senha, o código marcava a conta como ativa no banco (ativo:true) mas engolia qualquer erro nessa gravação e navegava pra frente mesmo assim — se a gravação falhasse, a conta ficava salva como ativo:false pra sempre, e o gate de permissões (que rejeita contas inativas) expulsava o usuário assim que a próxima página carregasse.',
+        'Corrigido: troquei de .update() pra .set com merge (mais robusto) e parei de engolir o erro — se falhar, agora mostra uma mensagem clara na tela em vez de navegar e deixar o problema estourar em silêncio mais tarde.',
+        'Se alguma conta já ficou travada nesse estado antes dessa correção: em Permissões, ache o usuário e clique no botão ▶️ (Ativar) na lista — resolve na hora, sem precisar reenviar convite.']}
   ],
 
   render(containerId) {
