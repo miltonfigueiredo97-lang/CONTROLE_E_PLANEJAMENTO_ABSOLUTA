@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.58.18',
+  versaoAtual: 'V2.58.19',
 
   versoes: [
     {
@@ -5357,7 +5357,12 @@ const NotasVersao = {
       itens:['O render dos cards de obra acontece depois do carregamento assíncrono das obras — ou seja, depois do gate inicial da página já ter rodado uma vez. Como renderizar() nunca chamava Permissions.aplicarNaTela() de novo, os botões dinâmicos (Editar, Configurar) nunca ficavam escondidos, mesmo sem a permissão marcada.',
         'Corrigido: renderizar() agora reaplica as permissões depois de montar os cards. Também adicionado guard direto nas funções (abrirFormEditar, abrirConfiguracao, abrirFormNova, salvar) — mesmo que o botão apareça por algum motivo, a ação real é recusada.',
         'Corrigido de brinde: o botão "⚙️ Configurar Obra" estava checando a permissão errada (obras:editar) — ele na verdade abre a página configuracao-obra.html, então agora checa o módulo certo (configuracaoObra).',
-        'Auditei todos os outros módulos por esse mesmo tipo de bug (data-perm sem nenhuma chamada a aplicarNaTela) — nenhum outro caso encontrado.']}
+        'Auditei todos os outros módulos por esse mesmo tipo de bug (data-perm sem nenhuma chamada a aplicarNaTela) — nenhum outro caso encontrado.']},
+    {versao:'V2.58.19',status:'aberta',data:'2026-07-31',tipo:'melhoria',
+      titulo:'Solo Grampeado — Levantamento: rótulo de m² do polígono medido vira arrastável; vértices do polígono em desenho também ficam arrastáveis',
+      itens:['O rótulo "📐 X m²" do polígono já salvo ficava sempre fixo no centroide, muitas vezes cobrindo os números dos chumbadores no desenho — agora pode ser arrastado pra qualquer posição do mapa, e a posição fica salva por vista.',
+        'Ao desenhar um novo polígono (Medir Área), os vértices já marcados agora podem ser arrastados pra corrigir a posição, sem precisar desfazer e clicar de novo.',
+        'O m² calculado também aparece fora da imagem, na barra de ferramentas, atualizando ao vivo enquanto os vértices são adicionados/ajustados.']}
   ],
 
   render(containerId) {

@@ -205,7 +205,8 @@ const LevantamentoSoloGrampeado = (() => {
       </div>`;
     if (modo === 'medirarea' && vistaAtiva()) return `
       <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:12px;background:#eff6ff;border:1px solid #3b82f6;border-radius:8px;padding:8px 12px;">
-        <span class="text-sm">Clique nos vértices do contorno real da vista (siga a borda). ${medirPontos.length} ponto${medirPontos.length !== 1 ? 's' : ''} marcado${medirPontos.length !== 1 ? 's' : ''}.</span>
+        <span class="text-sm">Clique nos vértices do contorno real da vista (siga a borda). Arraste um vértice pra ajustar. ${medirPontos.length} ponto${medirPontos.length !== 1 ? 's' : ''} marcado${medirPontos.length !== 1 ? 's' : ''}.</span>
+        ${medirPontos.length >= 3 ? `<span class="text-sm" style="font-weight:700;color:#2563eb;">≈ ${SG.fmt1(SG.calcM2Poligono(medirPontos, vistaAtiva()))} m²</span>` : ''}
         <button class="btn btn-secundario btn-sm" onclick="SG_UI.desfazerPontoMedicao()" ${!medirPontos.length ? 'disabled' : ''}>↩ Desfazer último</button>
         <button class="btn btn-primario btn-sm" onclick="SG_UI.concluirMedicaoArea()" ${medirPontos.length < 3 ? 'disabled' : ''}>✓ Concluir Polígono</button>
       </div>`;
@@ -246,6 +247,23 @@ const LevantamentoSoloGrampeado = (() => {
   // MAPA (imagem + pontos) — construção via SG.mapaHTML e
   // interatividade ligada manualmente após inserir no DOM.
   // ══════════════════════════════════════════
+  // Container de overlay reaproveitável — permite limpar e redesenhar
+  // (necessário pro drag ao vivo de vértices/rótulos, sem duplicar).
+  function _overlayContainer(id) {
+    const stage = document.getElementById('sg-stage');
+    if (!stage) return null;
+    let el = document.getElementById(id);
+    if (!el) {
+      el = document.createElement('div');
+      el.id = id;
+      el.style.cssText = 'position:absolute;inset:0;';
+      stage.appendChild(el);
+    } else {
+      el.innerHTML = '';
+    }
+    return el;
+  }
+
   async function renderMapa() {
     const host = document.getElementById('sg-mapa-host');
     if (!host) return;
@@ -328,10 +346,11 @@ const LevantamentoSoloGrampeado = (() => {
   }
 
   // Polígono de área JÁ SALVO — fica sempre visível (azul, tracejado)
-  // pra conferir depois se a medição ainda representa a vista.
+  // pra conferir depois se a medição ainda representa a vista. O
+  // rótulo do m² pode ser arrastado pra fora do desenho.
   function _desenharPoligonoAreaSalva(v) {
-    const stage = document.getElementById('sg-stage');
-    if (!stage || !v.poligonoArea || v.poligonoArea.length < 3) return;
+    const cont = _overlayContainer('sg-poligono-salvo-overlay');
+    if (!cont || !v.poligonoArea || v.poligonoArea.length < 3) return;
     const pontos = v.poligonoArea;
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     svg.setAttribute('viewBox', '0 0 100 100');
@@ -342,23 +361,61 @@ const LevantamentoSoloGrampeado = (() => {
     poly.setAttribute('fill', 'rgba(59,130,246,0.12)');
     poly.setAttribute('stroke', '#2563eb'); poly.setAttribute('stroke-width', '0.3'); poly.setAttribute('stroke-dasharray', '1.2,0.8'); poly.setAttribute('vector-effect', 'non-scaling-stroke');
     svg.appendChild(poly);
-    stage.appendChild(svg);
+    cont.appendChild(svg);
+
     const cx = pontos.reduce((s, p) => s + p.x, 0) / pontos.length;
     const cy = pontos.reduce((s, p) => s + p.y, 0) / pontos.length;
+    const posLabel = v.poligonoLabelPos || { x: cx, y: cy };
     const label = document.createElement('div');
-    label.style.cssText = `position:absolute;left:${(cx * 100).toFixed(3)}%;top:${(cy * 100).toFixed(3)}%;transform:translate(-50%,-50%);background:#2563eb;color:#fff;font-size:10px;padding:1px 5px;border-radius:4px;white-space:nowrap;z-index:7;pointer-events:none;font-family:var(--font-mono);`;
+    label.style.cssText = `position:absolute;left:${(posLabel.x * 100).toFixed(3)}%;top:${(posLabel.y * 100).toFixed(3)}%;transform:translate(-50%,-50%);background:#2563eb;color:#fff;font-size:11px;padding:2px 7px;border-radius:4px;white-space:nowrap;z-index:7;pointer-events:auto;cursor:move;font-family:var(--font-mono);user-select:none;`;
+    label.title = 'Arraste pra mover este rótulo';
     label.textContent = `📐 ${SG.fmt1(v.m2Total)} m²`;
-    stage.appendChild(label);
+    cont.appendChild(label);
+
+    label.addEventListener('mousedown', ev => {
+      ev.preventDefault(); ev.stopPropagation();
+      const stage = document.getElementById('sg-stage');
+      const mover = mv => {
+        const pos = SG.posRelativa(mv, stage);
+        v.poligonoLabelPos = pos;
+        label.style.left = (pos.x * 100).toFixed(3) + '%';
+        label.style.top = (pos.y * 100).toFixed(3) + '%';
+      };
+      const soltar = async () => {
+        document.removeEventListener('mousemove', mover);
+        document.removeEventListener('mouseup', soltar);
+        try { await Database.atualizar(obraId, COL_VISTAS, v.id, { poligonoLabelPos: v.poligonoLabelPos }); } catch (e) {}
+      };
+      document.addEventListener('mousemove', mover);
+      document.addEventListener('mouseup', soltar);
+    });
   }
 
-  // Feedback visual do polígono sendo desenhado no modo Medir Área
+  // Feedback visual do polígono sendo desenhado no modo Medir Área —
+  // vértices arrastáveis, pra corrigir um ponto sem precisar desfazer tudo.
   function _desenharPontosMedicao() {
+    const cont = _overlayContainer('sg-medicao-overlay');
+    if (!cont) return;
     const stage = document.getElementById('sg-stage');
-    if (!stage) return;
     medirPontos.forEach((p, i) => {
       const dot = document.createElement('div');
-      dot.style.cssText = `position:absolute;left:${(p.x * 100).toFixed(3)}%;top:${(p.y * 100).toFixed(3)}%;width:12px;height:12px;margin:-6px;border-radius:50%;background:#2563eb;border:2px solid #fff;box-shadow:0 0 0 1px #2563eb,0 1px 4px rgba(0,0,0,.4);z-index:10;pointer-events:none;font-size:8px;color:#fff;display:flex;align-items:center;justify-content:center;`;
-      stage.appendChild(dot);
+      dot.style.cssText = `position:absolute;left:${(p.x * 100).toFixed(3)}%;top:${(p.y * 100).toFixed(3)}%;width:14px;height:14px;margin:-7px;border-radius:50%;background:#2563eb;border:2px solid #fff;box-shadow:0 0 0 1px #2563eb,0 1px 4px rgba(0,0,0,.4);z-index:10;cursor:move;pointer-events:auto;`;
+      dot.title = 'Arraste pra ajustar este vértice';
+      dot.addEventListener('mousedown', ev => {
+        ev.preventDefault(); ev.stopPropagation();
+        const mover = mv => {
+          medirPontos[i] = SG.posRelativa(mv, stage);
+          _desenharPontosMedicao();
+          _atualizarToolbarExtra();
+        };
+        const soltar = () => {
+          document.removeEventListener('mousemove', mover);
+          document.removeEventListener('mouseup', soltar);
+        };
+        document.addEventListener('mousemove', mover);
+        document.addEventListener('mouseup', soltar);
+      });
+      cont.appendChild(dot);
     });
     if (medirPontos.length >= 2) {
       const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -370,7 +427,7 @@ const LevantamentoSoloGrampeado = (() => {
       poly.setAttribute('fill', medirPontos.length >= 3 ? 'rgba(59,130,246,0.15)' : 'none');
       poly.setAttribute('stroke', '#2563eb'); poly.setAttribute('stroke-width', '0.3'); poly.setAttribute('vector-effect', 'non-scaling-stroke');
       svg.appendChild(poly);
-      stage.appendChild(svg);
+      cont.appendChild(svg);
     }
   }
 
