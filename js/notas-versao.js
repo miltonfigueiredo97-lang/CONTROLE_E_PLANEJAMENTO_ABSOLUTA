@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.58.19',
+  versaoAtual: 'V2.58.21',
 
   versoes: [
     {
@@ -5233,7 +5233,7 @@ const NotasVersao = {
       itens:['Diferente do arrastar no Editor de Estrutura (que já ajusta o nível pro contexto de onde solta), o arrastar-com-Ctrl+botão-direito na tabela normal do Planejamento só movia a ORDEM da tarefa — o nível ficava exatamente como estava antes, não importa onde ela caía. Se você arrastasse um bloco de nível 3 pra encostar num item de nível 1, ele ficava com nível 3 ali mesmo — um salto impossível (teria que existir um nível 2 no meio), que é exatamente o que ficava invisível no Editor de Estrutura.',
         'Corrigido: agora esse arrastar também ajusta o nível do bloco pro nível de quem está do lado, igual já acontece no Editor de Estrutura — usando a mesma lógica já testada.',
         'Também corrigido: o nível ajustado agora é de fato salvo no Firestore (antes só a ordem era gravada).']},
-    {versao:'V2.57.66',status:'aberta',data:'2026-07-29',tipo:'correcao',
+    {versao:'V2.57.66',status:'fechada',data:'2026-07-29',tipo:'correcao',
       titulo:'Planejamento: tela ficava toda preta ao clicar numa célula, aleatoriamente — agora um erro numa linha/célula mostra um aviso naquela linha só, em vez de travar a tabela inteira',
       itens:['Blindagem geral: se der erro ao montar uma linha específica da tabela (dado inesperado numa tarefa) ou ao abrir a edição de uma célula, o resto do Planejamento continua funcionando — aparece um aviso "⚠ Erro ao mostrar esta linha" só naquela linha, e o erro detalhado vai pro console (F12), em vez de a tela inteira ficar preta.']},
     {versao:'V2.57.67',status:'fechada',data:'2026-07-30',tipo:'correcao',
@@ -5358,11 +5358,17 @@ const NotasVersao = {
         'Corrigido: renderizar() agora reaplica as permissões depois de montar os cards. Também adicionado guard direto nas funções (abrirFormEditar, abrirConfiguracao, abrirFormNova, salvar) — mesmo que o botão apareça por algum motivo, a ação real é recusada.',
         'Corrigido de brinde: o botão "⚙️ Configurar Obra" estava checando a permissão errada (obras:editar) — ele na verdade abre a página configuracao-obra.html, então agora checa o módulo certo (configuracaoObra).',
         'Auditei todos os outros módulos por esse mesmo tipo de bug (data-perm sem nenhuma chamada a aplicarNaTela) — nenhum outro caso encontrado.']},
-    {versao:'V2.58.19',status:'aberta',data:'2026-07-31',tipo:'melhoria',
+    {versao:'V2.58.19',status:'fechada',data:'2026-07-31',tipo:'melhoria',
       titulo:'Solo Grampeado — Levantamento: rótulo de m² do polígono medido vira arrastável; vértices do polígono em desenho também ficam arrastáveis',
       itens:['O rótulo "📐 X m²" do polígono já salvo ficava sempre fixo no centroide, muitas vezes cobrindo os números dos chumbadores no desenho — agora pode ser arrastado pra qualquer posição do mapa, e a posição fica salva por vista.',
         'Ao desenhar um novo polígono (Medir Área), os vértices já marcados agora podem ser arrastados pra corrigir a posição, sem precisar desfazer e clicar de novo.',
-        'O m² calculado também aparece fora da imagem, na barra de ferramentas, atualizando ao vivo enquanto os vértices são adicionados/ajustados.']}
+        'O m² calculado também aparece fora da imagem, na barra de ferramentas, atualizando ao vivo enquanto os vértices são adicionados/ajustados.']},
+    {versao:'V2.58.21',status:'aberta',data:'2026-07-31',tipo:'correcao',
+      titulo:'Planejamento mostrava % concluído da obra diferente do Dashboard (27% vs 12,68% na mesma obra) — dois métodos de cálculo diferentes coexistindo',
+      itens:['O % de uma tarefa-pai no Planejamento (e Diário/Semanal/Produção, que usam a mesma função Utils.percFamilia) era calculado de forma RECURSIVA: média dos filhos diretos ponderada pela duração de CADA FILHO — e essa duração de um filho-grupo normalmente é o intervalo de calendário dele, não a soma do trabalho real dentro dele.',
+        'O Dashboard (e a listagem de Obras) usa outra fórmula, mais simples e correta: pondera TODAS as folhas (tarefas sem filhos) pela duração de CADA FOLHA, direto — sem passar por médias intermediárias de grupo.',
+        'Essas duas contas divergem MUITO quando a obra tem grupos desbalanceados (ex: um grupo com pouco andamento escondendo, lá dentro, uma tarefa gigante ainda em 0% — o método recursivo "amortece" isso, o método direto não deixa passar).',
+        'Corrigido: Utils.percFamilia agora usa a MESMA fórmula do Dashboard/Obras em todo lugar (Planejamento, Diário de Obra, Semanal, Produção) — o % da obra agora bate igual em qualquer tela.']}
   ],
 
   render(containerId) {

@@ -227,13 +227,23 @@ const Utils = (() => {
     }
     // Peso = duração da tarefa (nunca quantidade) — mesma regra de
     // obras.js:_calcularProgresso, pra não divergir do Dashboard/KPIs.
+    // IMPORTANTE: pondera por TODAS AS FOLHAS descendentes (não pelos filhos
+    // diretos, recursivamente) — usar o "peso" recursivo (duração de cada
+    // filho direto, que muitas vezes é o intervalo de calendário do grupo,
+    // não a soma do trabalho real dos filhos) gerava um número BEM diferente
+    // do Dashboard/obras.js pra obras com estrutura desbalanceada (uma
+    // divergência real encontrada: 27% no Planejamento vs 12,68% no
+    // Dashboard, mesma obra). Agora os dois usam exatamente a mesma conta.
     function percCalculado(t){
-      const f=filhosDiretos(t);
-      if(!f.length)return Math.min(100,Math.max(0,parseFloat(t.percentualConcluido)||0));
+      const fs=filhosDiretos(t);
+      if(!fs.length)return Math.min(100,Math.max(0,parseFloat(t.percentualConcluido)||0));
+      const folhas=descendentes(t).filter(d=>filhosDiretos(d).length===0);
+      if(!folhas.length)return 0;
       let sp=0,sw=0;
-      for(const x of f){
-        const w=Math.max(1,parseFloat(x.duracao)||1);
-        sp+=percCalculado(x)*w;sw+=w;
+      for(const folha of folhas){
+        const w=Math.max(1,parseFloat(folha.duracao)||1);
+        sp+=Math.min(100,Math.max(0,parseFloat(folha.percentualConcluido)||0))*w;
+        sw+=w;
       }
       return sw?sp/sw:0;
     }
