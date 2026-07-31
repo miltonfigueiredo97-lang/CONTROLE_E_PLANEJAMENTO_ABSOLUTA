@@ -110,7 +110,7 @@ const Medicoes = (() => {
       .med-tbl td{padding:8px 10px;border-bottom:1px solid #f1f5f9;}
     </style>
     <div class="med-top">
-      <button class="btn btn-primario" onclick="Medicoes.novaMedicao()">＋ Nova Medição</button>
+      <button class="btn btn-primario" data-perm="medicoes:criar" onclick="Medicoes.novaMedicao()">＋ Nova Medição</button>
     </div>
     <div id="med-lista"><p style="color:#94a3b8;font-size:.85rem;">Carregando medições...</p></div>`;
     try{
@@ -124,12 +124,14 @@ const Medicoes = (() => {
           <td>${(d.itens||[]).length}</td>
           <td>${(d.pctMedicao||0).toFixed(2)}%</td>
           <td><button class="btn btn-sm btn-outline" onclick="Medicoes.verMedicao('${d.id}')">📄 Ver</button>
-              <button class="btn btn-sm btn-outline" style="color:#dc2626;" onclick="Medicoes.excluirMedicao('${d.id}')">🗑️</button></td>
+              <button class="btn btn-sm btn-outline" style="color:#dc2626;" data-perm="medicoes:excluir" onclick="Medicoes.excluirMedicao('${d.id}')">🗑️</button></td>
         </tr>`).join('')}</tbody></table>`;
+      Permissions.aplicarNaTela();
     }catch(e){console.error(e);}
   }
 
   function novaMedicao(){
+    if(!Permissions.pode('medicoes','criar')){Utils.toast('Sem permissão para criar medição.','erro');return;}
     if(!sorted.length){Utils.toast('Nenhuma tarefa no planejamento.','alerta');return;}
     pend={};busca='';colapsados=new Set();view='nova';_render();
   }
@@ -287,6 +289,7 @@ const Medicoes = (() => {
 
   // ==================== SALVAR MEDIÇÃO ====================
   async function salvarMedicao(){
+    if(!Permissions.pode('medicoes','criar')){Utils.toast('Sem permissão.','erro');return;}
     const ids=Object.keys(pend);
     if(!ids.length){Utils.toast('Nenhum lançamento nesta medição.','alerta');return;}
     if(!Utils.confirmar(`Salvar medição com ${ids.length} item(ns)? Os percentuais serão gravados no planejamento.`))return;
@@ -352,6 +355,7 @@ const Medicoes = (() => {
     Utils.abrirModal('modal-med-ver');
   }
   async function excluirMedicao(id){
+    if(!Permissions.pode('medicoes','excluir')){Utils.toast('Sem permissão para excluir.','erro');return;}
     if(!Utils.confirmar('Excluir esta medição? (Não altera os % já gravados no planejamento.)'))return;
     try{await Database.deletar(obraId,COLM,id);Utils.toast('Medição excluída.','sucesso');_render();}
     catch(e){console.error(e);Utils.toast('Erro.','erro');}

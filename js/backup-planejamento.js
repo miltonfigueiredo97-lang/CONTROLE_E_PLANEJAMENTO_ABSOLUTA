@@ -81,11 +81,13 @@ const BackupPlanejamento = (() => {
     finally{Utils.esconderLoading();}
   }
   async function excluir(id){
+    if(!Permissions.pode('backupPlanejamento','excluir')){Utils.toast('Sem permissão para excluir.','erro');return;}
     if(!confirm('Excluir esta entrada do histórico? (não desfaz o dado, só limpa o registro)'))return;
     try{await Database.deletar(obraId,'auditoria',id);itens=itens.filter(x=>x.id!==id);_render();}
     catch(e){console.error(e);Utils.toast('Erro ao excluir.','erro');}
   }
   async function excluirTodasFiltradas(){
+    if(!Permissions.pode('backupPlanejamento','excluir')){Utils.toast('Sem permissão para excluir.','erro');return;}
     const f=_filtrados();
     if(!f.length)return;
     if(!confirm(`Excluir ${f.length} entrada(s) do histórico (filtro atual)? Não desfaz os dados, só limpa o registro.`))return;

@@ -392,6 +392,7 @@ const LevantamentoSoloGrampeado = (() => {
   }
 
   async function salvarMedicaoArea() {
+    if(!Permissions.pode('levantamentoSolo','criar')&&!Permissions.pode('levantamentoSolo','editar')){Utils.toast('Sem permissão.','erro');return;}
     const vistaId = document.getElementById('sg-medir-vistaid').value;
     const pontos = JSON.parse(document.getElementById('sg-medir-pontos').value || '[]');
     const m2 = SG.num(document.getElementById('sg-medir-valor').value);
@@ -505,6 +506,7 @@ const LevantamentoSoloGrampeado = (() => {
   // clicar num ponto que não é à direita, entende que começou uma
   // nova linha e pergunta o número inicial dela antes de continuar.
   async function _criarChumbadorInstantaneo(v, pos) {
+    if(!Permissions.pode('levantamentoSolo','criar')){Utils.toast('Sem permissão para criar.','erro');return;}
     if (!(compPadrao > 0)) { Utils.toast('Informe um "Comp. padrão (ml)" maior que zero antes de clicar.', 'alerta'); return; }
     if (ultimoPontoSeq && pos.x <= ultimoPontoSeq.x) {
       _pontoPendenteNovaLinha = { v, pos };
@@ -606,6 +608,7 @@ const LevantamentoSoloGrampeado = (() => {
   }
 
   async function salvarChumbador() {
+    if(!Permissions.pode('levantamentoSolo','criar')&&!Permissions.pode('levantamentoSolo','editar')){Utils.toast('Sem permissão.','erro');return;}
     if (!chumbEditId) return;
     const f = document.getElementById('form-sg-chumbador');
     const numero = f.querySelector('[name=numero]').value.trim();
@@ -630,6 +633,7 @@ const LevantamentoSoloGrampeado = (() => {
   }
 
   async function excluirChumbador(id) {
+    if(!Permissions.pode('levantamentoSolo','excluir')){Utils.toast('Sem permissão para excluir.','erro');return;}
     const c = chumbadores.find(x => x.id === id);
     if (!c) return false;
     const ok = await Utils.confirmar(`Excluir o chumbador ${c.numero}? Isso também remove o histórico de execução dele em Controle.`);
@@ -654,6 +658,7 @@ const LevantamentoSoloGrampeado = (() => {
   }
 
   async function excluirChumbadorDoModal() {
+    if(!Permissions.pode('levantamentoSolo','excluir')){Utils.toast('Sem permissão para excluir.','erro');return;}
     if (!chumbEditId) return;
     const excluido = await excluirChumbador(chumbEditId);
     if (excluido) Utils.fecharModal('modal-sg-chumbador');
@@ -670,6 +675,7 @@ const LevantamentoSoloGrampeado = (() => {
   }
 
   async function salvarCalibracao() {
+    if(!Permissions.pode('levantamentoSolo','editar')){Utils.toast('Sem permissão para editar.','erro');return;}
     const form = document.getElementById('form-sg-calib');
     const vistaId = form.dataset.vistaId;
     const v = vistas.find(x => x.id === vistaId);
@@ -714,6 +720,7 @@ const LevantamentoSoloGrampeado = (() => {
     Utils.abrirModal('modal-sg-m2');
   }
   async function salvarM2() {
+    if(!Permissions.pode('levantamentoSolo','editar')){Utils.toast('Sem permissão para editar.','erro');return;}
     const vistaId = document.getElementById('sg-m2-vistaid').value;
     const m2 = SG.num(document.getElementById('sg-m2-valor').value);
     Utils.mostrarLoading();
@@ -857,6 +864,7 @@ const LevantamentoSoloGrampeado = (() => {
   }
 
   async function salvarVista() {
+    if(!Permissions.pode('levantamentoSolo','criar')&&!Permissions.pode('levantamentoSolo','editar')){Utils.toast('Sem permissão.','erro');return;}
     const nome = document.getElementById('sg-nova-vista-nome').value.trim();
     const proxNumero = vistas.length ? Math.max(...vistas.map(v => v.numero || 0)) + 1 : 1;
     Utils.mostrarLoading();
@@ -874,6 +882,7 @@ const LevantamentoSoloGrampeado = (() => {
   }
 
   async function excluirVista(id) {
+    if(!Permissions.pode('levantamentoSolo','excluir')){Utils.toast('Sem permissão para excluir.','erro');return;}
     const qtd = chumbadoresDaVista(id).length;
     const ok = await Utils.confirmar(`Excluir esta vista? ${qtd ? `Isso também remove os ${qtd} chumbadores cadastrados nela.` : ''}`);
     if (!ok) return;
@@ -916,6 +925,7 @@ const LevantamentoSoloGrampeado = (() => {
   }
 
   async function criarMaterialInline(campo) {
+    if(!Permissions.pode('levantamentoSolo','criar')){Utils.toast('Sem permissão para criar.','erro');return;}
     const input = document.getElementById(`sg-novo-${campo}`);
     const nome = input.value.trim();
     if (!nome) { Utils.toast('Digite o nome do material.', 'alerta'); return; }
@@ -984,6 +994,7 @@ const LevantamentoSoloGrampeado = (() => {
   function cancelarEdicaoEspec() { especEditId = null; renderEspecificacoes(); }
 
   async function salvarEspecificacao() {
+    if(!Permissions.pode('levantamentoSolo','criar')&&!Permissions.pode('levantamentoSolo','editar')){Utils.toast('Sem permissão.','erro');return;}
     const nome = document.getElementById('sg-espec-nome').value.trim();
     if (!nome) { Utils.toast('Informe o nome da especificação.', 'alerta'); return; }
     const getSel = campo => document.querySelector(`select.sg-mat-select[data-campo="${campo}"]`)?.value || '';
@@ -1016,6 +1027,7 @@ const LevantamentoSoloGrampeado = (() => {
   }
 
   async function excluirEspecificacao(id) {
+    if(!Permissions.pode('levantamentoSolo','excluir')){Utils.toast('Sem permissão para excluir.','erro');return;}
     const emUso = chumbadores.filter(c => c.especId === id).length;
     const ok = await Utils.confirmar(`Excluir esta especificação?${emUso ? ` ${emUso} chumbador(es) usam ela — ficarão sem especificação.` : ''}`);
     if (!ok) return;

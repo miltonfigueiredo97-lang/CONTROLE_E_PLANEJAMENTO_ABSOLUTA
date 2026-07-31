@@ -290,6 +290,7 @@ const Diario = (() => {
     out.textContent=partes.join(' · ');
   }
   async function pautaSalvarAvanco(tid){
+    if(!Permissions.pode('diario','criar')){Utils.toast('Sem permissão.','erro');return;}
     const t=tarefas.find(x=>x.id===tid);if(!t)return;
     const inp=document.getElementById('pt-perc-'+tid);
     const v=parseFloat(inp?.value);
@@ -319,6 +320,7 @@ const Diario = (() => {
     finally{Utils.esconderLoading();}
   }
   async function pautaSalvarParado(tid){
+    if(!Permissions.pode('diario','criar')){Utils.toast('Sem permissão.','erro');return;}
     const t=tarefas.find(x=>x.id===tid);if(!t)return;
     const motivo=document.getElementById('pt-mot-'+tid)?.value||'';
     const detalhe=(document.getElementById('pt-det-'+tid)?.value||'').trim();
@@ -351,6 +353,7 @@ const Diario = (() => {
   // Aplica o mesmo % a todas as folhas pendentes do subgrupo:
   // 1 lançamento por tarefa (percAntes correto) + gravação no Planejamento.
   async function pautaSalvarSub(sk,sfx){
+    if(!Permissions.pode('diario','criar')){Utils.toast('Sem permissão.','erro');return;}
     const ids=_subReg[sk]||[];
     if(!ids.length){Utils.toast('Nenhuma tarefa pendente neste bloco.','alerta');return;}
     const v=parseFloat(document.getElementById('sb-perc-'+sfx)?.value);
@@ -429,6 +432,7 @@ const Diario = (() => {
 
   // --- avulsas (rolam entre dias até concluir) ---
   async function avulsaAdd(){
+    if(!Permissions.pode('diario','criar')){Utils.toast('Sem permissão.','erro');return;}
     const inp=document.getElementById('dia-avulsa-txt');
     const txt=(inp?.value||'').trim();
     if(!txt){Utils.toast('Descreva a tarefa avulsa.','alerta');return;}
@@ -449,6 +453,7 @@ const Diario = (() => {
     }catch(e){console.error(e);Utils.toast('Erro.','erro');}
   }
   async function avulsaExcluir(id){
+    if(!Permissions.pode('diario','excluir')){Utils.toast('Sem permissão.','erro');return;}
     if(!confirm('Excluir esta tarefa avulsa?'))return;
     try{await Database.deletar(obraId,COLD,id);await _loadDia();_render();}
     catch(e){console.error(e);Utils.toast('Erro.','erro');}
@@ -601,13 +606,13 @@ const Diario = (() => {
       </div>
       <div class="pt-card" style="display:flex;gap:8px;">
         <input type="text" id="dia-avulsa-txt" placeholder="Ex: conversar com projetista sobre detalhe da fachada" style="flex:1;padding:6px 9px;border:1px solid #cbd5e1;border-radius:7px;font-size:.8rem;" onkeydown="if(event.key==='Enter')Diario.avulsaAdd()">
-        <button class="btn btn-sm btn-primario" title="Adicionar tarefa avulsa (fora do planejamento) — rola para os próximos dias até concluir" onclick="Diario.avulsaAdd()">＋ Adicionar</button>
+        <button class="btn btn-sm btn-primario" title="Adicionar tarefa avulsa (fora do planejamento) — rola para os próximos dias até concluir" data-perm="diario:criar" onclick="Diario.avulsaAdd()">＋ Adicionar</button>
       </div>
       ${avPend.map(a=>`<div class="pt-card"><div class="pt-l1">
         <input type="checkbox" title="Marcar como concluída" onchange="Diario.avulsaConcluir('${a.id}')" style="cursor:pointer;">
         <span class="nm">${_esc(a.atividade||'')}</span>
         <span class="inf">desde ${_fmt(a.data)}</span>
-        <button class="btn-icone" title="Excluir" onclick="Diario.avulsaExcluir('${a.id}')">🗑️</button>
+        <button class="btn-icone" title="Excluir" data-perm="diario:excluir" onclick="Diario.avulsaExcluir('${a.id}')">🗑️</button>
       </div></div>`).join('')}
       ${avDia.map(a=>`<div class="pt-card" style="opacity:.6;"><div class="pt-l1">
         <input type="checkbox" checked onchange="Diario.avulsaConcluir('${a.id}')" style="cursor:pointer;">
@@ -619,6 +624,10 @@ const Diario = (() => {
   }
 
   function _render(){
+    _renderConteudo();
+    Permissions.aplicarNaTela();
+  }
+  function _renderConteudo(){
     const iso=_iso(diaRef);
     const hojeIso=_iso(_hoje());
     const precisaMotivo=_status!=='executado';
@@ -722,7 +731,7 @@ const Diario = (() => {
         <div style="font-size:.72rem;color:#94a3b8;">O % informado é gravado direto no Planejamento (com início/término real automáticos).</div>
         <div style="display:flex;gap:8px;">
           ${_editId?`<button class="btn btn-sm btn-outline" onclick="Diario.cancelarEdicao()">Cancelar edição</button>`:''}
-          <button class="btn btn-sm btn-primario" onclick="Diario.salvar()">${_editId?'💾 Salvar alteração':'＋ Lançar'}</button>
+          <button class="btn btn-sm btn-primario" data-perm="diario:criar" onclick="Diario.salvar()">${_editId?'💾 Salvar alteração':'＋ Lançar'}</button>
         </div>
       </div>
     </div>`:''}
@@ -740,8 +749,8 @@ const Diario = (() => {
               ${l.percDepois!=null&&l.percDepois!==''?`<div style="font-size:.75rem;color:#2563eb;margin-top:2px;">Avanço: ${l.percAntes??'?'}% → <b>${l.percDepois}%</b></div>`:''}
               ${l.motivo?`<div style="font-size:.75rem;color:#dc2626;margin-top:2px;">Motivo: ${_esc(l.motivo)}${l.detalhe?' — '+_esc(l.detalhe):''}</div>`:''}
             </div>
-            <button class="btn-icone" title="Editar" onclick="Diario.editar('${l.id}')">✏️</button>
-            <button class="btn-icone" title="Excluir" onclick="Diario.excluir('${l.id}')">🗑️</button>
+            <button class="btn-icone" data-perm="diario:editar" title="Editar" onclick="Diario.editar('${l.id}')">✏️</button>
+            <button class="btn-icone" data-perm="diario:excluir" title="Excluir" onclick="Diario.excluir('${l.id}')">🗑️</button>
           </div>`).join('');
       }).join('')}`;
   }
@@ -778,6 +787,7 @@ const Diario = (() => {
   function setStatus(s){_preservarCampos();_status=s;_render();_restaurarCampos();}
 
   async function salvar(){
+    if(!Permissions.pode('diario',_editId?'editar':'criar')){Utils.toast('Sem permissão.','erro');return;}
     if(!_tarSel){Utils.toast('Selecione a tarefa vinculada.','alerta');return;}
     const atividade=(document.getElementById('dia-atividade')?.value||'').trim();
     if(!atividade){Utils.toast('Descreva o que está sendo feito.','alerta');return;}
@@ -819,6 +829,7 @@ const Diario = (() => {
   }
 
   function editar(id){
+    if(!Permissions.pode('diario','editar')){Utils.toast('Sem permissão para editar.','erro');return;}
     const l=lancamentosDia.find(x=>x.id===id);if(!l)return;
     _editId=id;_tarSel=l.tarefaId;_busca=l.tarefaLabel||'';_status=l.status||'executado';
     _atividadeTmp='';_percTmp='';
@@ -833,6 +844,7 @@ const Diario = (() => {
   function cancelarEdicao(){_editId=null;_busca='';_tarSel='';_status='executado';_atividadeTmp='';_percTmp='';_render();}
 
   async function excluir(id){
+    if(!Permissions.pode('diario','excluir')){Utils.toast('Sem permissão para excluir.','erro');return;}
     if(!confirm('Excluir este lançamento?'))return;
     try{await Database.deletar(obraId,COLD,id);await _loadDia();_render();Utils.toast('Excluído.','sucesso');}
     catch(e){console.error(e);Utils.toast('Erro ao excluir.','erro');}

@@ -69,9 +69,11 @@ const LevantamentoTerraplanagem = (() => {
     } catch (e) { /* mantém default */ }
   }
   async function salvarConfig() {
+    if(!Permissions.pode('levantamentoTerra','editar'))return;
     await db.collection('obras').doc(obraId).collection('config').doc(DOC_CONFIG).set(config, { merge: true });
   }
   async function salvarSecoes() {
+    if(!Permissions.pode('levantamentoTerra','criar')&&!Permissions.pode('levantamentoTerra','editar'))return;
     await db.collection('obras').doc(obraId).collection('config').doc(DOC_SECOES).set(secoes, { merge: false });
   }
 
@@ -327,6 +329,7 @@ const LevantamentoTerraplanagem = (() => {
       </div>`}`;
   }
   async function salvarCaminhao() {
+    if(!Permissions.pode('levantamentoTerra','criar')&&!Permissions.pode('levantamentoTerra','editar')){Utils.toast('Sem permissão.','erro');return;}
     const placa = document.getElementById('tp-cam-placa').value.trim().toUpperCase();
     const tamanho = document.getElementById('tp-cam-tamanho').value;
     const empresa = document.getElementById('tp-cam-empresa').value.trim();
@@ -344,6 +347,7 @@ const LevantamentoTerraplanagem = (() => {
     }
   }
   async function excluirCaminhao(id) {
+    if(!Permissions.pode('levantamentoTerra','excluir')){Utils.toast('Sem permissão para excluir.','erro');return;}
     const ok = await Utils.confirmar('Excluir este caminhão?');
     if (!ok) return;
     Utils.mostrarLoading();

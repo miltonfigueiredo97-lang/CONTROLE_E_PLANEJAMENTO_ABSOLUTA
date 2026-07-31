@@ -91,6 +91,7 @@ const LevantamentoAr = (() => {
   function _uid() { return 'a' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
 
   async function _salvarAreas() {
+    if(!Permissions.pode('levantamentoAr','criar')&&!Permissions.pode('levantamentoAr','editar'))return;
     await db.collection('obras').doc(obraId).collection('config').doc(CONFIG_AREAS_DOC).set({ areas }, { merge: true });
   }
 
@@ -441,6 +442,7 @@ const LevantamentoAr = (() => {
     try { await _salvarAreas(); renderizar(); } catch (e) { Utils.toast('Erro ao salvar.', 'erro'); }
   }
   async function excluirNo(id) {
+    if(!Permissions.pode('levantamentoAr','excluir')){Utils.toast('Sem permissão para excluir.','erro');return;}
     const idsAfetados = new Set(_descendentesIds(id));
     const nItens = itens.filter(it => idsAfetados.has(_localDoItem(it))).length;
     const nMaq = maquinasLanc.filter(m => idsAfetados.has(m.localId)).length;
@@ -463,6 +465,7 @@ const LevantamentoAr = (() => {
     return { id: _uid(), nome: n.nome, filhos: (n.filhos || []).map(_clonarNo) };
   }
   async function duplicarNo(id) {
+    if(!Permissions.pode('levantamentoAr','criar')){Utils.toast('Sem permissão para criar.','erro');return;}
     const listaPai = _encontrarPaiLista(id) || areas;
     const idx = listaPai.findIndex(n => n.id === id);
     if (idx < 0) return;
@@ -609,6 +612,7 @@ const LevantamentoAr = (() => {
       <div class="form-grupo"><label>Observações</label><textarea id="ar-obs" class="form-control" rows="2">${it?.observacoes || ''}</textarea></div>`;
   }
   async function salvarItem() {
+    if(!Permissions.pode('levantamentoAr','criar')&&!Permissions.pode('levantamentoAr','editar')){Utils.toast('Sem permissão.','erro');return;}
     if (!sel.localId) { Utils.toast('Selecione um local.', 'alerta'); return; }
     const quantidade = parseFloat(document.getElementById('ar-qtd')?.value) || 0;
     if (!quantidade) { Utils.toast('Informe a quantidade.', 'alerta'); return; }
@@ -639,6 +643,7 @@ const LevantamentoAr = (() => {
     } catch (e) { console.error(e); Utils.toast('Erro ao salvar item.', 'erro'); }
   }
   async function excluirItem(id) {
+    if(!Permissions.pode('levantamentoAr','excluir')){Utils.toast('Sem permissão para excluir.','erro');return;}
     if (!Utils.confirmar('Remover este item do levantamento?')) return;
     try { await Database.deletar(obraId, COL_ITENS, id); Utils.toast('Removido.', 'sucesso'); await carregar(); }
     catch (e) { Utils.toast('Erro.', 'erro'); }
@@ -674,6 +679,7 @@ const LevantamentoAr = (() => {
     Utils.abrirModal('modal-armaq-lancamento');
   }
   async function excluirMaquinaLancamento(id) {
+    if(!Permissions.pode('levantamentoAr','excluir')){Utils.toast('Sem permissão para excluir.','erro');return;}
     if (!Utils.confirmar('Remover esta máquina do levantamento?')) return;
     try { await Database.deletar(obraId, COL_MAQUINAS, id); Utils.toast('Removida.', 'sucesso'); await carregar(); }
     catch (e) { Utils.toast('Erro.', 'erro'); }
@@ -783,6 +789,7 @@ const LevantamentoAr = (() => {
     if (p) p.innerHTML = _renderPreviewMaquina(_obterMaquinaConfig(maqDraft.modeloTipo, maqDraft.maquinaConfigId));
   }
   async function salvarMaquinaLancamento() {
+    if(!Permissions.pode('levantamentoAr','criar')&&!Permissions.pode('levantamentoAr','editar')){Utils.toast('Sem permissão.','erro');return;}
     if (!sel.localId) { Utils.toast('Selecione um local.', 'alerta'); return; }
     if (!maqDraft.maquinaConfigId) { Utils.toast('Selecione uma máquina configurada.', 'alerta'); return; }
     const mlBase = parseFloat(maqDraft.mlBase) || 0;

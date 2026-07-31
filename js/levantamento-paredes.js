@@ -98,6 +98,7 @@ const LevantamentoParedes = (() => {
   }
 
   async function _salvarArvore() {
+    if(!Permissions.pode('levantamentoParedes','criar')&&!Permissions.pode('levantamentoParedes','editar'))return;
     await db.collection('obras').doc(obraId).collection('config').doc(CONFIG_DOC).set({ arvore }, { merge: true });
   }
 
@@ -734,6 +735,7 @@ const LevantamentoParedes = (() => {
   }
 
   async function salvarNode() {
+    if(!Permissions.pode('levantamentoParedes','criar')&&!Permissions.pode('levantamentoParedes','editar')){Utils.toast('Sem permissão.','erro');return;}
     const nome = document.getElementById('lp-node-nome').value.trim();
     if (!nome) { Utils.toast('Informe um nome.', 'alerta'); return; }
     if (nodeModo === 'renomear') {
@@ -760,6 +762,7 @@ const LevantamentoParedes = (() => {
   }
 
   async function excluirNode(id) {
+    if(!Permissions.pode('levantamentoParedes','excluir')){Utils.toast('Sem permissão para excluir.','erro');return;}
     const r = _acharNode(id); if (!r) return;
     const ids = _idsComDescendentes(r.node);
     const nAlv = pecasAlvenaria.filter(p => ids.includes(p.nodeId)).length;
@@ -803,6 +806,7 @@ const LevantamentoParedes = (() => {
   }
 
   async function duplicarNode(nodeId) {
+    if(!Permissions.pode('levantamentoParedes','criar')){Utils.toast('Sem permissão para criar.','erro');return;}
     const r = _acharNode(nodeId); if (!r) return;
     const ok = await Utils.confirmar(`Duplicar "${r.node.nome}" com todos os sublocais, alvenaria e acabamento, como "${r.node.nome} (cópia)"?`);
     if (!ok) return;
@@ -900,6 +904,7 @@ const LevantamentoParedes = (() => {
   // Operam sobre a coleção da aba ativa no momento do clique.
   // ══════════════════════════════════════════
   async function duplicarPeca(id) {
+    if(!Permissions.pode('levantamentoParedes','criar')){Utils.toast('Sem permissão para criar.','erro');return;}
     const arr = _pecasAtual();
     const p = arr.find(x => x.id === id); if (!p) return;
     Utils.mostrarLoading();
@@ -958,6 +963,7 @@ const LevantamentoParedes = (() => {
   }
 
   async function excluirPeca(id) {
+    if(!Permissions.pode('levantamentoParedes','excluir')){Utils.toast('Sem permissão para excluir.','erro');return;}
     const ok = await Utils.confirmar('Excluir este lançamento?');
     if (!ok) return;
     Utils.mostrarLoading();
@@ -1097,6 +1103,7 @@ const LevantamentoParedes = (() => {
   }
 
   async function salvarAlvenaria(continuar) {
+    if(!Permissions.pode('levantamentoParedes','criar')&&!Permissions.pode('levantamentoParedes','editar')){Utils.toast('Sem permissão.','erro');return;}
     if (!num(pecaForm.comprimento) || !num(pecaForm.altura)) {
       Utils.toast('Informe comprimento e altura da parede.', 'alerta'); return;
     }
@@ -1351,6 +1358,7 @@ const LevantamentoParedes = (() => {
   }
 
   async function salvarAcabamento(continuar) {
+    if(!Permissions.pode('levantamentoParedes','criar')&&!Permissions.pode('levantamentoParedes','editar')){Utils.toast('Sem permissão.','erro');return;}
     if (!num(pecaForm.comprimento) || !num(pecaForm.altura)) {
       Utils.toast('Informe comprimento e altura da face.', 'alerta'); return;
     }
@@ -1426,6 +1434,7 @@ const LevantamentoParedes = (() => {
   }
   function onChangeCfgVao(sel) { _toggleCfgVao(sel.value); }
   async function salvarConfig() {
+    if(!Permissions.pode('levantamentoParedes','editar')){Utils.toast('Sem permissão para editar.','erro');return;}
     const cfg = {
       vao_modo: document.getElementById('lp-cfg-vao-modo').value || 'desconto_total',
       vao_limite_x: num(document.getElementById('lp-cfg-vao-limite').value) || 1.5,

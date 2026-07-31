@@ -146,6 +146,7 @@ const LT = (() => {
   }
 
   async function _salvarArvore() {
+    if(!Permissions.pode('levantamentoTeto','criar')&&!Permissions.pode('levantamentoTeto','editar'))return;
     await db.collection('obras').doc(obraId).collection('config').doc(CONFIG_DOC).set({ arvore }, { merge: true });
   }
 
@@ -450,6 +451,7 @@ const LT = (() => {
   }
 
   async function excluirNode(id) {
+    if(!Permissions.pode('levantamentoTeto','excluir')){Utils.toast('Sem permissão para excluir.','erro');return;}
     const r = _acharNode(id); if (!r) return;
     const ids = _idsComDescendentes(r.node);
     const areasParaExcluir = areas.filter(a => ids.includes(a.nodeId));
@@ -698,6 +700,7 @@ const LT = (() => {
   }
 
   async function excluirPlanta(id) {
+    if(!Permissions.pode('levantamentoTeto','excluir')){Utils.toast('Sem permissão para excluir.','erro');return;}
     const pl = plantas.find(p => p.id === id); if (!pl) return;
     const nodesLigados = _contarNodesUsandoPlanta(arvore, id);
     if (nodesLigados > 0) {
@@ -1455,6 +1458,7 @@ const LT = (() => {
   // as áreas pra ele — resolve o caso de querer "duplicar" um local inteiro
   // como um novo local irmão, em vez de só copiar pra um local já existente.
   async function criarNovoLocalEClonar() {
+    if(!Permissions.pode('levantamentoTeto','criar')){Utils.toast('Sem permissão para criar.','erro');return;}
     const nomeInput = document.getElementById('lt-clonar-novo-nome');
     const nome = nomeInput.value.trim();
     if (!nome) { Utils.toast('Digite o nome do novo local.', 'alerta'); return; }
@@ -1618,6 +1622,7 @@ const LT = (() => {
   }
 
   async function salvarArea() {
+    if(!Permissions.pode('levantamentoTeto','criar')&&!Permissions.pode('levantamentoTeto','editar')){Utils.toast('Sem permissão.','erro');return;}
     const data = Utils.getFormData('form-lt-area');
     if (!data.nome) { Utils.toast('Informe o nome da área.', 'alerta'); return; }
 
@@ -1664,6 +1669,7 @@ const LT = (() => {
   }
 
   async function excluirAreaEmEdicao() {
+    if(!Permissions.pode('levantamentoTeto','excluir')){Utils.toast('Sem permissão para excluir.','erro');return;}
     if (!areaEditId) return;
     if (!Utils.confirmar('Excluir esta área?')) return;
     Utils.mostrarLoading('Excluindo...');

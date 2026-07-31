@@ -223,6 +223,7 @@ const ControleTerraplanagem = (() => {
     if (cam) volEl.value = cam.tamanho === 'Grande' ? config.capacidadeGrande : config.capacidadePequena;
   }
   async function salvarEntrega() {
+    if(!Permissions.pode('controleTerra','criar')&&!Permissions.pode('controleTerra','editar')){Utils.toast('Sem permissão.','erro');return;}
     const data = document.getElementById('tpc-ent-data').value;
     const placaSel = document.getElementById('tpc-ent-placa').value;
     const material = document.getElementById('tpc-ent-material').value.trim();
@@ -243,6 +244,7 @@ const ControleTerraplanagem = (() => {
     }
   }
   async function excluirEntrega(id) {
+    if(!Permissions.pode('controleTerra','excluir')){Utils.toast('Sem permissão para excluir.','erro');return;}
     const ok = await Utils.confirmar('Excluir este registro de viagem?');
     if (!ok) return;
     Utils.mostrarLoading();

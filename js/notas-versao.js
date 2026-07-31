@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.58.0',
+  versaoAtual: 'V2.58.1',
 
   versoes: [
     {
@@ -5265,7 +5265,7 @@ const NotasVersao = {
     {versao:'V2.57.71',status:'fechada',data:'2026-07-30',tipo:'melhoria',
       titulo:'Levantamento de Solo Grampeado: botão Excluir direto no popup de editar chumbador',
       itens:['Antes só dava pra excluir um chumbador pela tabela embaixo — agora tem um botão "🗑 Excluir" direto no popup que abre ao clicar na bolinha/triângulo, sem precisar descer até a tabela.']},
-    {versao:'V2.58.0',status:'aberta',data:'2026-07-31',tipo:'funcionalidade',
+    {versao:'V2.58.0',status:'fechada',data:'2026-07-31',tipo:'funcionalidade',
       titulo:'Módulo de Usuários e Permissões — convite por e-mail + controle de acesso granular por módulo e por obra',
       itens:['Nova tela "Permissões": lista de usuários com convidar, editar permissões, reenviar acesso, ativar/desativar e excluir.',
         'Convite por e-mail: admin cadastra o usuário (nome, e-mail, permissões, acesso por obra) e o sistema envia um e-mail (via Firebase, sem provedor externo) para o usuário definir a própria senha em definir-senha.html — a conta só fica ativa depois disso.',
@@ -5274,7 +5274,14 @@ const NotasVersao = {
         'Gate de página: toda página do sistema, ao carregar, verifica se o usuário tem permissão "Ver" do módulo correspondente — sem isso, é redirecionado antes de qualquer dado carregar.',
         'Mecanismo data-perm="modulo:acao" nos botões (aplicado por enquanto em Obras, como padrão de referência) — próximas sessões devem estender aos demais módulos.',
         'Correção de segurança: usuário novo sem perfil carregado deixou de virar admin por padrão — agora o padrão é sem nenhum acesso até o admin configurar.',
-        'Backend novo: api/usuarios.js (Firebase Admin SDK) cria/exclui usuários no Firebase Auth — exige a env var FIREBASE_SERVICE_ACCOUNT_KEY na Vercel.']}
+        'Backend novo: api/usuarios.js (Firebase Admin SDK) cria/exclui usuários no Firebase Auth — exige a env var FIREBASE_SERVICE_ACCOUNT_KEY na Vercel.']},
+    {versao:'V2.58.1',status:'aberta',data:'2026-07-31',tipo:'correcao',
+      titulo:'Permissões: guards de acesso estendidos a todos os módulos (não só Obras)',
+      itens:['Todo módulo com CRUD real agora checa a permissão do usuário antes de criar/editar/excluir/importar/exportar: Planejamento (com edição inline de célula e Editor de Estrutura), Materiais, Mão de Obra, Diário de Obra (lançamentos, avulsas, pauta rápida), Semanal, Medições, Relatórios, os 9 módulos de Levantamento, os 3 de Controle, Produção, Configuração de Obra e Backup de Planejamentos.',
+        'Semanal: reaproveitado o mecanismo de somente-leitura que já existia pra semana fechada — agora também vale pra usuário sem permissão de editar, sem precisar duplicar lógica.',
+        'Vários Levantamentos (Piso, Teto, Paredes, Pintura) guardam a árvore de locais num único ponto de gravação — o guard foi colocado ali, cobrindo automaticamente todas as ações do Editor de Estrutura de uma vez.',
+        'Restrições, Orçamentos, Suprimentos e Histograma continuam stub — nada para travar além do gate de página que já existia.',
+        'Cobertura visual (esconder o botão, não só bloquear a ação) aplicada nos módulos de CRUD simples (Materiais, Mão de Obra, Diário, Medições, Relatórios, Planejamento); os módulos de canvas/mapa (Levantamentos e Controles) por ora têm o bloqueio funcional mas o botão ainda aparece na tela — ficar de olho, é o próximo refinamento.']}
   ],
 
   render(containerId) {

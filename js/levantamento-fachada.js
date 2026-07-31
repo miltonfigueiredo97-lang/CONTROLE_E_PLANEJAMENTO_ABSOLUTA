@@ -257,6 +257,7 @@ const LevantamentoFachada = (() => {
 
   // ===================== CRIAÇÃO =====================
   async function criarFachada(){
+    if(!Permissions.pode('levantamentoFachada','criar')){Utils.toast('Sem permissão para criar.','erro');return;}
     const nome=prompt('Nome da fachada (ex: Fachada Norte):');
     if(!nome||!nome.trim())return;
     try{
@@ -276,6 +277,7 @@ const LevantamentoFachada = (() => {
   }
 
   async function criarBalancim(fachadaId){
+    if(!Permissions.pode('levantamentoFachada','criar')){Utils.toast('Sem permissão para criar.','erro');return;}
     const bNome=_proximoBAL(fachadaId);
     const nome=prompt('Nome do balancim:',bNome);
     if(!nome||!nome.trim())return;
@@ -497,6 +499,7 @@ const LevantamentoFachada = (() => {
   }
 
   async function salvarVaoVista(){
+    if(!Permissions.pode('levantamentoFachada','editar')){Utils.toast('Sem permissão para editar.','erro');return;}
     const vistaId=document.getElementById('vao-vista-id').value;
     const vaos=_getVaosDoModal().filter(v=>v.comp>0&&v.alt>0);
     try{
@@ -536,6 +539,7 @@ const LevantamentoFachada = (() => {
   function onChangeCfgJanela(sel){_toggleCfgJanela(sel.value);}
 
   async function salvarConfig(){
+    if(!Permissions.pode('levantamentoFachada','editar')){Utils.toast('Sem permissão para editar.','erro');return;}
     const cfg={
       janela_modo:document.getElementById('cfg-janela-modo').value||'desconto_total',
       janela_limite_x:_pn(document.getElementById('cfg-janela-limite').value)||1.5,
@@ -921,6 +925,7 @@ const LevantamentoFachada = (() => {
   }
 
   async function salvarPeca(fechar){
+    if(!Permissions.pode('levantamentoFachada','criar')&&!Permissions.pode('levantamentoFachada','editar')){Utils.toast('Sem permissão.','erro');return;}
     const data=Utils.getFormData('form-peca');
     if(!data.nome){Utils.toast('Informe o nome.','alerta');return;}
     data.tipo='peca';data.fachadaId=sel.fachadaId;data.balancimId=sel.balancimId;data.vistaId=sel.vistaId;
@@ -945,7 +950,7 @@ const LevantamentoFachada = (() => {
     }catch(e){console.error(e);Utils.toast('Erro.','erro');}
   }
 
-  async function excluirPeca(id){if(!Utils.confirmar('Excluir peça?'))return;try{await Database.deletar(obraId,COL,id);Utils.toast('Excluída.','sucesso');await carregar();}catch(e){Utils.toast('Erro.','erro');}}
+  async function excluirPeca(id){if(!Permissions.pode('levantamentoFachada','excluir')){Utils.toast('Sem permissão para excluir.','erro');return;}if(!Utils.confirmar('Excluir peça?'))return;try{await Database.deletar(obraId,COL,id);Utils.toast('Excluída.','sucesso');await carregar();}catch(e){Utils.toast('Erro.','erro');}}
   async function moverPeca(id){
     const pc=pecas.find(x=>x.id===id);if(!pc)return;
     const viAtual=vistas.find(v=>v.id===pc.vistaId);if(!viAtual)return;
@@ -999,7 +1004,7 @@ const LevantamentoFachada = (() => {
       await carregar();
     }catch(e){Utils.toast('Erro ao mover.','erro');}
   }
-  async function duplicarPeca(id){const pc=pecas.find(x=>x.id===id);if(!pc)return;const cl={...pc};delete cl.id;delete cl.createdAt;delete cl.updatedAt;delete cl.createdBy;delete cl.updatedBy;cl.nome=pc.nome+' (cópia)';cl.conferido=false;try{await Database.criar(obraId,COL,cl);Utils.toast('Duplicada!','sucesso');await carregar();}catch(e){Utils.toast('Erro.','erro');}}
+  async function duplicarPeca(id){if(!Permissions.pode('levantamentoFachada','criar')){Utils.toast('Sem permissão para criar.','erro');return;}const pc=pecas.find(x=>x.id===id);if(!pc)return;const cl={...pc};delete cl.id;delete cl.createdAt;delete cl.updatedAt;delete cl.createdBy;delete cl.updatedBy;cl.nome=pc.nome+' (cópia)';cl.conferido=false;try{await Database.criar(obraId,COL,cl);Utils.toast('Duplicada!','sucesso');await carregar();}catch(e){Utils.toast('Erro.','erro');}}
 
   // Copia TODAS as peças da vista oposta (mesmo balancim) para a vista atual — útil quando Externa/Interna são iguais
   async function copiarDeOutraVista(){
@@ -1063,6 +1068,7 @@ const LevantamentoFachada = (() => {
   }
 
   async function salvarEntidade(){
+    if(!Permissions.pode('levantamentoFachada','criar')&&!Permissions.pode('levantamentoFachada','editar')){Utils.toast('Sem permissão.','erro');return;}
     const id=document.getElementById('form-ent-id').value;
     const tipo=document.getElementById('form-ent-tipo').value;
     const nome=document.querySelector('#form-entidade [name="nome"]').value.trim();
@@ -1073,6 +1079,7 @@ const LevantamentoFachada = (() => {
   }
 
   async function excluir(tipo,id){
+    if(!Permissions.pode('levantamentoFachada','excluir')){Utils.toast('Sem permissão para excluir.','erro');return;}
     const map={fachada:fachadas,balancim:balancins,vista:vistas};
     const item=map[tipo]?.find(x=>x.id===id);
     if(!Utils.confirmar('Excluir "'+item?.nome+'" e tudo vinculado?'))return;
@@ -1116,6 +1123,7 @@ const LevantamentoFachada = (() => {
   }
 
   async function duplicarBal(blId){
+    if(!Permissions.pode('levantamentoFachada','criar')){Utils.toast('Sem permissão para criar.','erro');return;}
     const bl=balancins.find(x=>x.id===blId);if(!bl||!Utils.confirmar('Duplicar "'+bl.nome+'" com peças?'))return;
     try{Utils.mostrarLoading('Duplicando...');
       const blC={...bl};delete blC.id;delete blC.createdAt;delete blC.updatedAt;
@@ -1332,6 +1340,7 @@ const LevantamentoFachada = (() => {
   }
 
   function importarMapa(e){
+    if(!Permissions.pode('levantamentoFachada','editar')){Utils.toast('Sem permissão para editar.','erro');return;}
     const file=e.target.files[0];if(!file)return;
     Utils.mostrarLoading('Processando imagem...');
     const reader=new FileReader();
@@ -1400,6 +1409,7 @@ const LevantamentoFachada = (() => {
   }
 
   async function salvarCxEdit(){
+    if(!Permissions.pode('levantamentoFachada','editar')){Utils.toast('Sem permissão para editar.','erro');return;}
     const i=parseInt(document.getElementById('cx-edit-idx').value);
     const data=_getMapData();
     if(!data.caixas[i])return;

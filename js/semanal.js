@@ -116,7 +116,7 @@ const Semanal = (() => {
     return out;
   }
   function _ativas(){return _baseUniverso(semDoc);}
-  function _ro(){return semDoc?.status==='fechada';}
+  function _ro(){return semDoc?.status==='fechada'||!Permissions.pode('semanal','editar');}
 
   function _totaisObra(){
     let sw=0,sr=0,se=0;const hoje=_hoje();
@@ -307,6 +307,7 @@ const Semanal = (() => {
       <button onclick="Semanal.abrirOmitirSel()">🚫 Omitir</button>
     </div>`:''}`;
     _el().innerHTML=html;
+    Permissions.aplicarNaTela();
     if(aba==='dashboard')carregarHistorico();
   }
 

@@ -248,6 +248,7 @@ const Producao = (() => {
 
   // ---- Edição inline: quantidade manual (tarefa sem vínculo) ----
   function editarQtd(id) {
+    if(!Permissions.pode('producao','editar')){Utils.toast('Sem permissão para editar.','erro');return;}
     const t = tarefas.find(x => x.id === id); if (!t) return;
     const tr = document.querySelector(`tr[data-id="${id}"] td[data-cel="total"]`); if (!tr) return;
     _editandoCelula = true;
@@ -272,6 +273,7 @@ const Producao = (() => {
 
   // ---- Edição inline: equipe alocada (mesmo campo do Planejamento) ----
   function editarEquipe(id) {
+    if(!Permissions.pode('producao','editar')){Utils.toast('Sem permissão para editar.','erro');return;}
     const t = tarefas.find(x => x.id === id); if (!t) return;
     const td = document.querySelector(`tr[data-id="${id}"] td[data-cel="equipe"]`); if (!td) return;
     _editandoCelula = true;

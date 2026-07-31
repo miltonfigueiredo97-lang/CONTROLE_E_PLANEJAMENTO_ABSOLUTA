@@ -108,6 +108,7 @@ const LevantamentoConcreto = (() => {
   }
 
   async function salvarLevantamentoLocal() {
+    if(!Permissions.pode('levantamentoConcreto','criar')&&!Permissions.pode('levantamentoConcreto','editar'))return;
     try {
       await db.collection('obras').doc(obraId).collection('config').doc(_LEV_DOC).set({ itens: levantamento }, { merge: false });
     } catch(e) { console.error('Erro ao salvar levantamento concreto:', e); }
@@ -934,6 +935,7 @@ const LevantamentoConcreto = (() => {
   }
 
   async function salvarPeca(continuar) {
+    if(!Permissions.pode('levantamentoConcreto','criar')&&!Permissions.pode('levantamentoConcreto','editar')){Utils.toast('Sem permissão.','erro');return;}
     const f = document.getElementById('form-lc-peca');
     const nome = f.querySelector('[name=nome]').value.trim();
     const tipo = f.querySelector('[name=tipo]').value;
@@ -969,6 +971,7 @@ const LevantamentoConcreto = (() => {
   }
 
   async function excluirPeca(id) {
+    if(!Permissions.pode('levantamentoConcreto','excluir')){Utils.toast('Sem permissão para excluir.','erro');return;}
     const p = pecas.find(x => x.id === id);
     if (!p) return;
     const ok = await Utils.confirmar(`Excluir "${p.nome}"? Os vínculos com concretagens também serão removidos.`);
@@ -1016,6 +1019,7 @@ const LevantamentoConcreto = (() => {
 
   // Grava peças em lote (batches de 400)
   async function salvarPecasLote(itens) {
+    if(!Permissions.pode('levantamentoConcreto','criar')){Utils.toast('Sem permissão para criar.','erro');return;}
     for (let i = 0; i < itens.length; i += 400) {
       const chunk = itens.slice(i, i + 400);
       const ops = chunk.map(item => {
@@ -1033,6 +1037,7 @@ const LevantamentoConcreto = (() => {
   // IMPORTAÇÃO EM LOTE
   // ══════════════════════════════════════════
   function abrirImportar() {
+    if(!Permissions.pode('levantamentoConcreto','criar')){Utils.toast('Sem permissão para importar.','erro');return;}
     previewImport = [];
     document.getElementById('lc-import-texto').value = '';
     document.getElementById('lc-import-preview').innerHTML = '';
@@ -1117,6 +1122,7 @@ const LevantamentoConcreto = (() => {
 
   let importando = false;
   async function salvarImport() {
+    if(!Permissions.pode('levantamentoConcreto','criar')){Utils.toast('Sem permissão para criar.','erro');return;}
     if (!previewImport.length || importando) return;
     importando = true;
     const btn = document.getElementById('lc-import-btn');
@@ -1185,6 +1191,7 @@ const LevantamentoConcreto = (() => {
   function cwSetConcSel(v) { cw.concSel = v; }
 
   async function excluirConcretagem(id) {
+    if(!Permissions.pode('levantamentoConcreto','excluir')){Utils.toast('Sem permissão para excluir.','erro');return;}
     const c = concretagens.find(x => x.id === id);
     if (!c) return;
     const ok = await Utils.confirmar(`Excluir Concretagem Nº${c.numero}? Isso removerá peças vinculadas, BTs configuradas e lançamentos desta concretagem.`);
@@ -1212,6 +1219,7 @@ const LevantamentoConcreto = (() => {
   }
 
   async function cwExcluirSelecionada() {
+    if(!Permissions.pode('levantamentoConcreto','excluir')){Utils.toast('Sem permissão para excluir.','erro');return;}
     if (!cw.concSel) { Utils.toast('Selecione uma concretagem para excluir.', 'alerta'); return; }
     await excluirConcretagem(cw.concSel);
   }
@@ -1508,6 +1516,7 @@ const LevantamentoConcreto = (() => {
   }
 
   async function cwSalvar() {
+    if(!Permissions.pode('levantamentoConcreto','criar')&&!Permissions.pode('levantamentoConcreto','editar')){Utils.toast('Sem permissão.','erro');return;}
     if (!cw.numero || !cw.data) { Utils.toast('Preencha número e data.', 'alerta'); return; }
     if (!cw.vinculos.length) { Utils.toast('Vincule ao menos 1 peça.', 'alerta'); return; }
     Utils.mostrarLoading();
@@ -1644,6 +1653,7 @@ const LevantamentoConcreto = (() => {
   function cfgDragEnd() { cfgDragIdx = null; renderConfig(); }
 
   async function cfgSalvar() {
+    if(!Permissions.pode('levantamentoConcreto','editar')){Utils.toast('Sem permissão para editar.','erro');return;}
     const daBase = [...new Set(pecas.map(p => p.andar))];
     const andaresCustm = cfgOrdem.filter(a => !daBase.includes(a));
     Utils.mostrarLoading();

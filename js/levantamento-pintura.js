@@ -112,6 +112,7 @@ const LevantamentoPintura = (() => {
   }
 
   async function _salvarArvore() {
+    if(!Permissions.pode('levantamentoPintura','criar')&&!Permissions.pode('levantamentoPintura','editar'))return;
     await db.collection('obras').doc(obraId).collection('config').doc(CONFIG_DOC).set({ arvore }, { merge: true });
   }
 
@@ -386,6 +387,7 @@ const LevantamentoPintura = (() => {
     setTimeout(() => document.getElementById('lpt-node-nome')?.focus(), 60);
   }
   async function salvarNode() {
+    if(!Permissions.pode('levantamentoPintura','criar')&&!Permissions.pode('levantamentoPintura','editar')){Utils.toast('Sem permissão.','erro');return;}
     const nome = document.getElementById('lpt-node-nome').value.trim();
     if (!nome) { Utils.toast('Informe um nome.', 'alerta'); return; }
     if (nodeModo === 'renomear') {
@@ -405,6 +407,7 @@ const LevantamentoPintura = (() => {
     } catch (e) { Utils.toast('Erro ao salvar: ' + e.message, 'erro'); }
   }
   async function excluirNode(id) {
+    if(!Permissions.pode('levantamentoPintura','excluir')){Utils.toast('Sem permissão para excluir.','erro');return;}
     const r = _acharNode(id); if (!r) return;
     const temFilhos = r.node.filhos && r.node.filhos.length;
     const ok = Utils.confirmar(`Excluir o local "${r.node.nome}"${temFilhos ? ' e seus sublocais' : ''}? (Isso só remove o agrupamento da Pintura — não apaga nada em Paredes ou Teto.)`);
@@ -465,6 +468,7 @@ const LevantamentoPintura = (() => {
   function selVincParedes(id) { vincParedesSel = id || null; _renderVinculoModal(); }
   function selVincTeto(id) { vincTetoSel = id || null; _renderVinculoModal(); }
   async function salvarVinculo() {
+    if(!Permissions.pode('levantamentoPintura','criar')&&!Permissions.pode('levantamentoPintura','editar')){Utils.toast('Sem permissão.','erro');return;}
     const r = _acharNode(vincNodeId); if (!r) return;
     r.node.paredesNodeId = vincParedesSel || null;
     r.node.tetoNodeId = vincTetoSel || null;
@@ -729,6 +733,7 @@ const LevantamentoPintura = (() => {
     }
   }
   async function salvarEdicaoPintura() {
+    if(!Permissions.pode('levantamentoPintura','editar')){Utils.toast('Sem permissão para editar.','erro');return;}
     if (editTemPintura) {
       const soma = _somaPct(editForm);
       if (Math.abs(soma - 100) > 0.01) { Utils.toast(`A soma dos % deve ser 100% (está em ${fmt2(soma)}%).`, 'alerta'); return; }

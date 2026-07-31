@@ -514,6 +514,10 @@ const Planejamento = (() => {
 
   // ===================== RENDER =====================
   function _render(){
+    _renderConteudo();
+    Permissions.aplicarNaTela();
+  }
+  function _renderConteudo(){
     if(modoView==='vinculos'){_renderVinculosView();return;}
     if(modoView==='arvore'){_renderArvoreEditor();return;}
     const c=_el();
@@ -538,8 +542,8 @@ const Planejamento = (() => {
           <button class="btn btn-secundario btn-sm" onclick="Planejamento.toggleGantt()" id="btn-tg" style="font-size:.72rem;">${ganttVisible?'◀ Esconder Gantt':'▶ Mostrar Gantt'}</button>
           ${colsHidden.size?`<button class="btn btn-secundario btn-sm" onclick="Planejamento.showColsMenu()" style="font-size:.72rem;">＋ Colunas (${colsHidden.size})</button>`:''}
           <span style="color:#333;margin:0 4px;">|</span>
-          <button class="btn ${modoView==='arvore'?'btn-primario':'btn-secundario'} btn-sm" onclick="Planejamento.toggleArvoreEditor()" style="font-size:.72rem;">🌳 Editor de Estrutura</button>
-          <button class="btn btn-primario btn-sm" onclick="Planejamento.inserirTarefa()" style="font-size:.72rem;">＋ Tarefa</button>
+          <button class="btn ${modoView==='arvore'?'btn-primario':'btn-secundario'} btn-sm" data-perm="planejamento:editar" onclick="Planejamento.toggleArvoreEditor()" style="font-size:.72rem;">🌳 Editor de Estrutura</button>
+          <button class="btn btn-primario btn-sm" data-perm="planejamento:criar" onclick="Planejamento.inserirTarefa()" style="font-size:.72rem;">＋ Tarefa</button>
         </div>
       </div>
       <div style="font-size:.68rem;color:#444;margin-bottom:4px;">Ctrl++ inserir · Ctrl+- excluir · clique na célula para editar · clique direito no header para esconder coluna · Ctrl+botão direito+arrastar para reordenar</div>
@@ -1595,6 +1599,7 @@ const Planejamento = (() => {
 
   function _editCell(e, idx, colId){
     e.stopPropagation();
+    if(!Permissions.pode('planejamento','editar'))return;
     if(_esqDragMoved)return;
     const t=filtradas[idx]; if(!t)return;
     selectedIdx=idx;
@@ -1914,7 +1919,7 @@ const Planejamento = (() => {
       <button class="btn btn-secundario btn-sm" onclick="Planejamento._bulkNivel(-1)" title="Recuar nível">← Recuar</button>
       <button class="btn btn-secundario btn-sm" onclick="Planejamento._bulkNivel(1)" title="Avançar nível">→ Avançar</button>
       <button class="btn btn-secundario btn-sm" onclick="Planejamento._bulkDuplicar()" title="Duplicar selecionadas">⧉ Duplicar</button>
-      <button class="btn btn-perigo btn-sm" onclick="Planejamento._bulkExcluir()" title="Excluir selecionadas">✕ Excluir</button>
+      <button class="btn btn-perigo btn-sm" data-perm="planejamento:excluir" onclick="Planejamento._bulkExcluir()" title="Excluir selecionadas">✕ Excluir</button>
     </div>`;
   }
   function _atualizarBarraSelecao(){
@@ -1966,6 +1971,7 @@ const Planejamento = (() => {
   }
 
   async function _bulkExcluir(){
+    if(!Permissions.pode('planejamento','excluir')){Utils.toast('Sem permissão para excluir tarefas.','erro');return;}
     const ids=[...selecionados];
     if(!confirm(`Excluir ${ids.length} tarefa(s) selecionada(s)? Esta ação não pode ser desfeita.`))return;
     Utils.mostrarLoading('Excluindo...');
@@ -2255,7 +2261,7 @@ const Planejamento = (() => {
       '<label class="btn btn-secundario btn-sm" style="cursor:pointer;font-size:.75rem;display:block;text-align:left;" title="Cria/atualiza por Código, nunca apaga (comportamento atual, mais seguro)">📥 Importar<input type="file" accept=".xlsx,.xls" style="display:none" onchange="Planejamento.importarExcel(event)"></label>'+
       '<label class="btn btn-secundario btn-sm" style="cursor:pointer;font-size:.75rem;display:block;text-align:left;color:#f87171;" title="Apaga TUDO e recria do zero — só pra substituir a base inteira">📥 Importar Base Completa (apaga tudo)<input type="file" accept=".xlsx,.xls" style="display:none" onchange="Planejamento.importarBaseCompleta(event)"></label>'+
       '<label class="btn btn-secundario btn-sm" style="cursor:pointer;font-size:.75rem;display:block;text-align:left;" title="Casa por Nome, atualiza só os campos escolhidos — não mexe em posição/estrutura">📥 Importar Correções (por campo)<input type="file" accept=".xlsx,.xls" style="display:none" onchange="Planejamento.importarCorrecoes(event)"></label>'+
-      '<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.exportar()">📤 Exportar</button>'+
+      '<button class="btn btn-secundario btn-sm" data-perm="planejamento:exportar" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.exportar()">📤 Exportar</button>'+
       '<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.corrigirOrdensDuplicadas()" title="Corrige tarefas com número de ordem duplicado">🔧 Corrigir Ordens</button>'+
       '<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento._recalcularDatasPais()" title="Recalcula início/término das tarefas-pai a partir dos filhos">📐 Recalcular Datas dos Pais</button>'+
       '<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento._corrigirNiveisSoltos()" title="Corrige tarefas com nível soltos (invisíveis no Editor de Estrutura)">🌳 Corrigir Níveis Soltos</button>'+
@@ -2268,7 +2274,7 @@ const Planejamento = (() => {
       // antigo, desfazendo a reestruturação. A função continua existindo no
       // código (Planejamento._corrigirNivelPeloCodigo()) só pra emergência, mas
       // não deve ser clicada por engano no dia a dia.
-      '<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.exportarPNG()">🖼 PNG</button>'+
+      '<button class="btn btn-secundario btn-sm" data-perm="planejamento:exportar" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.exportarPNG()">🖼 PNG</button>'+
       '<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.abrirVinculosView()">🔗 Vínculos com Levantamento</button>';
     document.body.appendChild(pop);
     setTimeout(()=>document.addEventListener('click',function h(e){if(!pop.contains(e.target)&&!e.target.closest('[onclick*="_toggleMenuFerramentas"]')){pop.remove();document.removeEventListener('click',h);}},false),50);
@@ -2370,6 +2376,7 @@ const Planejamento = (() => {
   function selectIdx(i){if(_esqDragMoved)return;selectedIdx=i;_paintRows();}
 
   function inserirTarefa(){
+    if(!Permissions.pode('planejamento','criar')){Utils.toast('Sem permissão para criar tarefas.','erro');return;}
     editandoId=null;
     document.getElementById('modal-tarefa-titulo').textContent='Nova Tarefa';
     document.getElementById('form-tarefa').reset();
@@ -2399,6 +2406,7 @@ const Planejamento = (() => {
   }
 
   function editarTarefa(id){
+    if(!Permissions.pode('planejamento','editar')){Utils.toast('Sem permissão para editar tarefas.','erro');return;}
     const t=tarefas.find(x=>x.id===id);if(!t)return;
     editandoId=id;
     document.getElementById('modal-tarefa-titulo').textContent='Editar Tarefa';
@@ -2424,6 +2432,7 @@ const Planejamento = (() => {
   }
 
   async function salvarTarefa(){
+    if(!Permissions.pode('planejamento',editandoId?'editar':'criar')){Utils.toast('Sem permissão.','erro');return;}
     const f=document.getElementById('form-tarefa');
     const g=n=>f.querySelector(`[name="${n}"]`)?.value;
     const nome=g('nome')?.trim();if(!nome){Utils.toast('Nome obrigatório.','alerta');return;}
@@ -2483,6 +2492,7 @@ const Planejamento = (() => {
   }
 
   async function excluirTarefa(id){
+    if(!Permissions.pode('planejamento','excluir')){Utils.toast('Sem permissão para excluir tarefas.','erro');return;}
     const t=tarefas.find(x=>x.id===id);if(!confirm(`Excluir "${t?.nome}"?`))return;
     try{
       const numAntes=_capturarNumAntes();
@@ -2522,6 +2532,7 @@ const Planejamento = (() => {
   // ou reconciliar de vez com um cronograma totalmente reestruturado).
   async function importarBaseCompleta(event){
     const file=event.target.files[0];if(!file)return;event.target.value='';
+    if(!Permissions.pode('planejamento','importar')){Utils.toast('Sem permissão para importar.','erro');return;}
     const qtdAtual=tarefas.length;
     if(!confirm(`⚠️ ATENÇÃO: isso vai APAGAR TODAS as ${qtdAtual} tarefas atuais desta obra e criar tudo do zero a partir da planilha. NÃO pode ser desfeito.\n\nSó use isso se quer substituir a base inteira. Pra atualizar campos específicos sem mexer na estrutura, use "Importar Correções".\n\nTem certeza?`))return;
     if(!confirm(`Confirme de novo: apagar ${qtdAtual} tarefas e substituir por uma base nova a partir de "${file.name}"?`))return;
@@ -2611,6 +2622,7 @@ const Planejamento = (() => {
   let _correcoesContexto=null;
   async function importarCorrecoes(event){
     const file=event.target.files[0];if(!file)return;event.target.value='';
+    if(!Permissions.pode('planejamento','importar')){Utils.toast('Sem permissão para importar.','erro');return;}
     try{
       Utils.mostrarLoading('Lendo...');
       const ctx=await _lerPlanilhaImport(file);
@@ -2754,6 +2766,7 @@ const Planejamento = (() => {
   // ===================== IMPORTAR =====================
   async function importarExcel(event){
     const file=event.target.files[0];if(!file)return;event.target.value='';
+    if(!Permissions.pode('planejamento','importar')){Utils.toast('Sem permissão para importar.','erro');return;}
     if(!confirm(`Importar vai criar tarefas novas e ATUALIZAR as que já existem com o mesmo Código (tarefas antigas que não estão mais na planilha NÃO são apagadas). Confirmar?`))return;
     try{
       Utils.mostrarLoading('Lendo...');
@@ -2893,6 +2906,7 @@ const Planejamento = (() => {
     document.querySelectorAll('#orfas-lista input[data-orfa-id]').forEach(cb=>cb.checked=v);
   }
   async function _orfasExcluirMarcadas(){
+    if(!Permissions.pode('planejamento','excluir')){Utils.toast('Sem permissão para excluir tarefas.','erro');return;}
     const ids=[...document.querySelectorAll('#orfas-lista input[data-orfa-id]:checked')].map(cb=>cb.dataset.orfaId);
     if(!ids.length){Utils.toast('Nada marcado.','alerta');return;}
     if(!confirm(`Excluir ${ids.length} tarefa(s)? Não pode ser desfeito.`))return;
@@ -3124,6 +3138,7 @@ const Planejamento = (() => {
 
   // ===================== EXPORTAR =====================
   async function exportar(){
+    if(!Permissions.pode('planejamento','exportar')){Utils.toast('Sem permissão para exportar.','erro');return;}
     try{Utils.mostrarLoading('Gerando...');
       if(typeof XLSX==='undefined')await _ls('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');
       const H=['ID','Código','Nível','Nome','Duração','Início','Término','% Esperado','% Concluído',
@@ -3147,6 +3162,7 @@ const Planejamento = (() => {
 
   // ===================== EXPORTAR PNG =====================
   function exportarPNG(){
+    if(!Permissions.pode('planejamento','exportar')){Utils.toast('Sem permissão para exportar.','erro');return;}
     // Popup para selecionar intervalo
     let pop=document.getElementById('png-pop');if(pop){pop.remove();return;}
     // Datas do projeto
@@ -3756,6 +3772,7 @@ const Planejamento = (() => {
   let _arvSelAnchor=null;       // âncora do Shift+clique
 
   function toggleArvoreEditor(){
+    if(modoView!=='arvore'&&!Permissions.pode('planejamento','editar')){Utils.toast('Sem permissão para editar a estrutura.','erro');return;}
     modoView=modoView==='arvore'?'gantt':'arvore';
     if(modoView==='arvore'){
       // Expandir raiz por padrão
@@ -4241,6 +4258,7 @@ const Planejamento = (() => {
   async function _arvDrop(e,targetId){
     e.preventDefault();
     e.stopPropagation();
+    if(!Permissions.pode('planejamento','editar'))return;
     const dragId=_arvDragId, dragSel=_arvDragSel, dropId=_arvDropId, dropPos=_arvDropPos;
     _arvDragId=null;_arvDragSel=null;_arvDropId=null;_arvDropPos='inside';
     if(!dragId||dragId===dropId){_render();return;}

@@ -87,6 +87,7 @@ const Relatorios = (() => {
 
     if (visualizando) {
       c.innerHTML = _renderVisualizacao(visualizando);
+      Permissions.aplicarNaTela();
       return;
     }
 
@@ -95,7 +96,7 @@ const Relatorios = (() => {
         <div><h2>Relatórios de Vista</h2>
           <span class="subtitulo">Notas de campo organizadas por IA</span></div>
         <div class="btn-grupo">
-          ${abaAtiva === 'obra' ? '<button class="btn btn-primario btn-sm" onclick="Relatorios.abrirModalNovo()">+ Novo Relatório</button>' : ''}
+          ${abaAtiva === 'obra' ? '<button class="btn btn-primario btn-sm" data-perm="relatorios:criar" onclick="Relatorios.abrirModalNovo()">+ Novo Relatório</button>' : ''}
         </div>
       </div>
       <div class="rel-tabs">
@@ -103,6 +104,7 @@ const Relatorios = (() => {
         <button class="rel-tab ${abaAtiva === 'pendentes' ? 'ativa' : ''}" onclick="Relatorios.trocarAba('pendentes')">📥 Pendentes${listaPendentes.length ? ` (${listaPendentes.length})` : ''}</button>
       </div>
       <div id="rel-lista">${abaAtiva === 'obra' ? _renderListaObra() : _renderListaPendentes()}</div>`;
+    Permissions.aplicarNaTela();
   }
 
   function _renderListaObra() {
@@ -111,7 +113,7 @@ const Relatorios = (() => {
         <div class="icone">📈</div>
         <p>Nenhum relatório desta obra ainda.</p>
         <p class="text-sm text-muted">Importe o PDF de uma nota (Samsung Notes) e a IA organiza tudo pra você.</p>
-        <button class="btn btn-primario" onclick="Relatorios.abrirModalNovo()">+ Novo Relatório</button>
+        <button class="btn btn-primario" data-perm="relatorios:criar" onclick="Relatorios.abrirModalNovo()">+ Novo Relatório</button>
       </div>`;
     }
     return `<div class="cards-grid">${listaObra.map(_cardRelatorio).join('')}</div>`;
@@ -164,8 +166,8 @@ const Relatorios = (() => {
           <button class="btn btn-primario btn-sm" onclick="Relatorios.atribuirObra('${r.id}')">Mover</button>
         </div>
         <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">
-          <button class="btn btn-secundario btn-sm" onclick="Relatorios.baixarPDF('${r.id}')">⬇ Baixar</button>
-          <button class="btn btn-perigo btn-sm btn-icon" onclick="Relatorios.excluir('${r.id}')">✕</button>
+          <button class="btn btn-secundario btn-sm" data-perm="relatorios:exportar" onclick="Relatorios.baixarPDF('${r.id}')">⬇ Baixar</button>
+          <button class="btn btn-perigo btn-sm btn-icon" data-perm="relatorios:excluir" onclick="Relatorios.excluir('${r.id}')">✕</button>
         </div>
       </div>
     </div>`;
@@ -211,7 +213,7 @@ const Relatorios = (() => {
       <div class="page-header">
         <div><button class="btn btn-secundario btn-sm" onclick="Relatorios.fecharVisualizacao()">← Voltar</button></div>
         <div class="btn-grupo">
-          <button class="btn btn-secundario btn-sm" onclick="Relatorios.baixarPDF('${r.id}')">⬇ Baixar PDF</button>
+          <button class="btn btn-secundario btn-sm" data-perm="relatorios:exportar" onclick="Relatorios.baixarPDF('${r.id}')">⬇ Baixar PDF</button>
           ${r.obraId ? `<button class="btn btn-secundario btn-sm" onclick="Relatorios.compartilharWhatsapp('${r.id}')">📲 Compartilhar</button>` : ''}
         </div>
       </div>
@@ -239,6 +241,7 @@ const Relatorios = (() => {
 
   // ====== MODAL: NOVO RELATÓRIO ======
   function abrirModalNovo() {
+    if(!Permissions.pode('relatorios','criar')){Utils.toast('Sem permissão para criar relatório.','erro');return;}
     arquivoSelecionado = null;
     Utils.limparForm('form-rel-novo');
     const preview = document.getElementById('rel-arquivo-nome');
@@ -379,6 +382,7 @@ const Relatorios = (() => {
 
   // ====== BAIXAR PDF ======
   async function baixarPDF(id) {
+    if(!Permissions.pode('relatorios','exportar')){Utils.toast('Sem permissão para exportar.','erro');return;}
     const r = _encontrarRelatorio(id);
     if (!r) return;
     try {
@@ -544,6 +548,7 @@ const Relatorios = (() => {
 
   // ====== EXCLUIR ======
   async function excluir(id) {
+    if(!Permissions.pode('relatorios','excluir')){Utils.toast('Sem permissão para excluir.','erro');return;}
     if (!Utils.confirmar('Excluir este relatório? Essa ação não pode ser desfeita.')) return;
     const r = _encontrarRelatorio(id);
     try {

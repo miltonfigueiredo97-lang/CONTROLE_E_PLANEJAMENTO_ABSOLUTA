@@ -103,6 +103,7 @@ const ConfiguracaoObra = (() => {
   }
 
   function abrirForm(tipo, item = null) {
+    if(!Permissions.pode('configuracaoObra','editar')){Utils.toast('Sem permissão.','erro');return;}
     const label = { etapas: 'Etapa', pacotes: 'Pacote', locais: 'Local', equipes: 'Equipe' }[tipo];
     document.getElementById('modal-config-titulo').textContent = item ? `Editar ${label}` : `Nova ${label}`;
     document.getElementById('form-config-tipo').value = tipo;
@@ -125,12 +126,14 @@ const ConfiguracaoObra = (() => {
   }
 
   async function editarItem(tipo, id) {
+    if(!Permissions.pode('configuracaoObra','editar')){Utils.toast('Sem permissão para editar.','erro');return;}
     const listas = { etapas, pacotes, locais, equipes };
     const item = listas[tipo]?.find(i => i.id === id);
     if (item) abrirForm(tipo, item);
   }
 
   async function salvarItem() {
+    if(!Permissions.pode('configuracaoObra','editar')){Utils.toast('Sem permissão para editar.','erro');return;}
     const tipo = document.getElementById('form-config-tipo').value;
     const id = document.getElementById('form-config-id').value;
     const data = Utils.getFormData('form-config');
@@ -157,6 +160,7 @@ const ConfiguracaoObra = (() => {
   }
 
   async function excluirItem(tipo, id, nome) {
+    if(!Permissions.pode('configuracaoObra','editar')){Utils.toast('Sem permissão para editar.','erro');return;}
     if (!Utils.confirmar(`Excluir "${nome}"?`)) return;
     try {
       await Database.deletar(obraId, tipo, id);

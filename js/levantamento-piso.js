@@ -134,6 +134,7 @@ const LP = (() => {
   }
 
   async function _salvarArvore() {
+    if(!Permissions.pode('levantamentoPiso','criar')&&!Permissions.pode('levantamentoPiso','editar'))return;
     await db.collection('obras').doc(obraId).collection('config').doc(CONFIG_DOC).set({ arvore }, { merge: true });
   }
 
@@ -428,6 +429,7 @@ const LP = (() => {
   }
 
   async function excluirNode(id) {
+    if(!Permissions.pode('levantamentoPiso','excluir')){Utils.toast('Sem permissão para excluir.','erro');return;}
     const r = _acharNode(id); if (!r) return;
     const ids = _idsComDescendentes(r.node);
     const areasParaExcluir = areas.filter(a => ids.includes(a.nodeId));
@@ -664,6 +666,7 @@ const LP = (() => {
   }
 
   async function excluirPlanta(id) {
+    if(!Permissions.pode('levantamentoPiso','excluir')){Utils.toast('Sem permissão para excluir.','erro');return;}
     const pl = plantas.find(p => p.id === id); if (!pl) return;
     const nodesLigados = _contarNodesUsandoPlanta(arvore, id);
     if (nodesLigados > 0) {
@@ -1391,6 +1394,7 @@ const LP = (() => {
   // as áreas pra ele — resolve o caso de querer "duplicar" um local inteiro
   // como um novo local irmão, em vez de só copiar pra um local já existente.
   async function criarNovoLocalEClonar() {
+    if(!Permissions.pode('levantamentoPiso','criar')){Utils.toast('Sem permissão para criar.','erro');return;}
     const nomeInput = document.getElementById('lp-clonar-novo-nome');
     const nome = nomeInput.value.trim();
     if (!nome) { Utils.toast('Digite o nome do novo local.', 'alerta'); return; }
@@ -1506,6 +1510,7 @@ const LP = (() => {
   }
 
   async function salvarArea() {
+    if(!Permissions.pode('levantamentoPiso','criar')&&!Permissions.pode('levantamentoPiso','editar')){Utils.toast('Sem permissão.','erro');return;}
     const data = Utils.getFormData('form-lp-area');
     if (!data.nome) { Utils.toast('Informe o nome da área.', 'alerta'); return; }
     if (!data.impermeabilizacao) data.tipoImpermeabilizacao = '';
@@ -1541,6 +1546,7 @@ const LP = (() => {
   }
 
   async function excluirAreaEmEdicao() {
+    if(!Permissions.pode('levantamentoPiso','excluir')){Utils.toast('Sem permissão para excluir.','erro');return;}
     if (!areaEditId) return;
     if (!Utils.confirmar('Excluir esta área?')) return;
     Utils.mostrarLoading('Excluindo...');

@@ -249,13 +249,16 @@ permissions/{uid} → { modulos: { <moduloKey>: {ver,criar,editar,excluir,export
 
 ### Enforcement
 - `Utils.initPagina()` chama `Permissions.carregar(uid)` → `Permissions.bloquearPaginaSemAcesso()` antes de renderizar qualquer coisa.
-- Botões usam `data-perm="modulo:acao"`; `Permissions.aplicarNaTela()` esconde os que o usuário não pode usar. **Aplicado até agora só em Obras** (padrão de referência) — estender aos demais módulos é trabalho pendente, módulo por módulo, por prioridade do Milton.
+- Toda função de mutação (criar/editar/excluir/importar/exportar) de todos os módulos com CRUD real checa `Permissions.pode(modulo,acao)` antes de gravar no Firestore — Planejamento, Materiais, Mão de Obra, Diário, Semanal, Medições, Relatórios, os 9 Levantamentos, os 3 Controles, Produção, Configuração de Obra, Backup de Planejamentos. Restrições/Orçamentos/Suprimentos/Histograma são stub, sem nada a proteger ainda.
+- Botões usam `data-perm="modulo:acao"` + `Permissions.aplicarNaTela()` para esconder visualmente — aplicado nos módulos de CRUD simples (Obras, Materiais, Mão de Obra, Diário, Medições, Relatórios, Planejamento). Nos módulos de canvas/mapa (Levantamentos, Controles) o bloqueio funcional já existe mas o botão ainda pode aparecer na tela — refinamento visual pendente, não é falha de segurança (a ação é recusada mesmo se clicada).
+- Vários Levantamentos (Piso, Teto, Paredes, Pintura) salvam a árvore de locais num único ponto (`_salvarArvore()`); o guard foi colocado ali, cobrindo todas as ações do Editor de Estrutura de uma vez, em vez de em cada handler de drag&drop separadamente.
 - `Database.getObras()` continua retornando todas — o filtro por `acessoObras` é feito na camada de chamada (`Router.popularSeletorObras`, `Obras.carregar`), não dentro do Database.
 
 ### Pendente
-- Aplicar `data-perm` nos botões dos demais ~25 módulos.
+- Cobertura visual (`data-perm` nos botões) dos módulos de Levantamento/Controle — hoje só o bloqueio funcional existe ali.
 - Esconder/desabilitar os cards dos hubs (`levantamento.html`, `controle.html`) conforme permissão do sub-módulo (hoje eles navegam e só bloqueiam na página de destino).
 - Regras de segurança do Firestore ainda são as de desenvolvimento (`allow read, write: if request.auth != null` — ver README). Com dados de permissão agora no Firestore, vale endurecer isso; não foi feito nesta rodada.
+
 
 ---
 

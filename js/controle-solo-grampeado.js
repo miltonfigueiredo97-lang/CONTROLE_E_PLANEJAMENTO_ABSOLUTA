@@ -322,6 +322,7 @@ const ControleSoloGrampeado = (() => {
   }
 
   async function _salvarAreaMarcada(v, rect) {
+    if(!Permissions.pode('controleSolo','criar')&&!Permissions.pode('controleSolo','editar'))return;
     const m2 = SG.calcM2Retangulo(rect, v);
     Utils.mostrarLoading();
     try {
@@ -337,6 +338,7 @@ const ControleSoloGrampeado = (() => {
   }
 
   async function excluirArea(id) {
+    if(!Permissions.pode('controleSolo','excluir')){Utils.toast('Sem permissão para excluir.','erro');return;}
     const ok = await Utils.confirmar('Excluir esta marcação de área?');
     if (!ok) return;
     Utils.mostrarLoading();
@@ -366,6 +368,7 @@ const ControleSoloGrampeado = (() => {
   }
 
   async function salvarEtapasChumbador() {
+    if(!Permissions.pode('controleSolo','editar')){Utils.toast('Sem permissão para editar.','erro');return;}
     if (!chumbAtivoId) return;
     const chb = chumbadores.find(x => x.id === chumbAtivoId);
     const existente = execDoChumbador(chumbAtivoId);
@@ -494,6 +497,7 @@ const ControleSoloGrampeado = (() => {
   }
 
   async function salvarMetaDiaria() {
+    if(!Permissions.pode('controleSolo','editar')){Utils.toast('Sem permissão para editar.','erro');return;}
     const vistaId = document.getElementById('sgc-meta-vistaid').value;
     const metaDiariaChumbadores = SG.num(document.getElementById('sgc-meta-chumb').value);
     const metaDiariaM2 = SG.num(document.getElementById('sgc-meta-m2').value);

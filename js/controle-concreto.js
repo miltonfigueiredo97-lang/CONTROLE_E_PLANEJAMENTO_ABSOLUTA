@@ -814,6 +814,7 @@ const ControleConcreto = (() => {
   }
 
   async function btSalvar() {
+    if(!Permissions.pode('controleConcreto','criar')&&!Permissions.pode('controleConcreto','editar')){Utils.toast('Sem permissão.','erro');return;}
     if (!bt.concId || !bt.btId) { Utils.toast('Selecione concretagem e BT.', 'alerta'); return; }
     const linhasVal = bt.linhas.filter(l => l.pecaId && parseFloat(l.pct) > 0);
     if (!linhasVal.length) { Utils.toast('Adicione ao menos uma peça com % maior que zero.', 'alerta'); return; }
