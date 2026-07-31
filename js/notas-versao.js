@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.58.17',
+  versaoAtual: 'V2.58.18',
 
   versoes: [
     {
@@ -5347,11 +5347,17 @@ const NotasVersao = {
       itens:['Depois de definir a senha, o código marcava a conta como ativa no banco (ativo:true) mas engolia qualquer erro nessa gravação e navegava pra frente mesmo assim — se a gravação falhasse, a conta ficava salva como ativo:false pra sempre, e o gate de permissões (que rejeita contas inativas) expulsava o usuário assim que a próxima página carregasse.',
         'Corrigido: troquei de .update() pra .set com merge (mais robusto) e parei de engolir o erro — se falhar, agora mostra uma mensagem clara na tela em vez de navegar e deixar o problema estourar em silêncio mais tarde.',
         'Se alguma conta já ficou travada nesse estado antes dessa correção: em Permissões, ache o usuário e clique no botão ▶️ (Ativar) na lista — resolve na hora, sem precisar reenviar convite.']},
-    {versao:'V2.58.17',status:'aberta',data:'2026-07-31',tipo:'correcao',
+    {versao:'V2.58.17',status:'fechada',data:'2026-07-31',tipo:'correcao',
       titulo:'Menu lateral mostrava "Levantamentos", "Controle" e categorias vazias mesmo sem permissão nenhuma',
       itens:['"Levantamentos" e "Controle" são hubs (agrupam vários módulos) e nunca tinham checagem própria — apareciam pra todo mundo, mesmo quem não tinha acesso a nenhum levantamento/controle. Corrigido: agora só aparecem se o usuário tiver "Ver" em pelo menos um dos módulos daquele grupo.',
         'Categorias do menu (Gestão, Custos, Análise...) ficavam com o título visível mesmo sem nenhum link embaixo, por serem apenas texto sem checagem. Agora o título da categoria some automaticamente quando nenhum item dela está visível.',
-        'Um usuário com acesso só ao Dashboard agora vê exatamente isso: Obras e Dashboard — nada mais no menu.']}
+        'Um usuário com acesso só ao Dashboard agora vê exatamente isso: Obras e Dashboard — nada mais no menu.']},
+    {versao:'V2.58.18',status:'aberta',data:'2026-07-31',tipo:'correcao',
+      titulo:'Obras: botões de Editar/Configurar ficavam clicáveis mesmo sem permissão',
+      itens:['O render dos cards de obra acontece depois do carregamento assíncrono das obras — ou seja, depois do gate inicial da página já ter rodado uma vez. Como renderizar() nunca chamava Permissions.aplicarNaTela() de novo, os botões dinâmicos (Editar, Configurar) nunca ficavam escondidos, mesmo sem a permissão marcada.',
+        'Corrigido: renderizar() agora reaplica as permissões depois de montar os cards. Também adicionado guard direto nas funções (abrirFormEditar, abrirConfiguracao, abrirFormNova, salvar) — mesmo que o botão apareça por algum motivo, a ação real é recusada.',
+        'Corrigido de brinde: o botão "⚙️ Configurar Obra" estava checando a permissão errada (obras:editar) — ele na verdade abre a página configuracao-obra.html, então agora checa o módulo certo (configuracaoObra).',
+        'Auditei todos os outros módulos por esse mesmo tipo de bug (data-perm sem nenhuma chamada a aplicarNaTela) — nenhum outro caso encontrado.']}
   ],
 
   render(containerId) {

@@ -107,6 +107,7 @@ const Obras = (() => {
         <div class="icone">🏗️</div><p>Nenhuma obra cadastrada.</p>
         <button class="btn btn-primario" data-perm="obras:criar" onclick="Obras.abrirFormNova()">+ Nova Obra</button>
       </div>`;
+      Permissions.aplicarNaTela();
       return;
     }
 
@@ -118,7 +119,7 @@ const Obras = (() => {
       card.className = 'card obra-card';
 
       const acoes = `
-        <button class="btn btn-secundario btn-sm btn-icon" data-perm="obras:editar" title="Configurar Obra" onclick="event.stopPropagation();Obras.abrirConfiguracao('${obra.id}')">⚙️</button>
+        <button class="btn btn-secundario btn-sm btn-icon" data-perm="configuracaoObra:ver" title="Configurar Obra" onclick="event.stopPropagation();Obras.abrirConfiguracao('${obra.id}')">⚙️</button>
         <button class="btn btn-secundario btn-sm" data-perm="obras:editar" onclick="event.stopPropagation();Obras.abrirFormEditar('${obra.id}')">✎ Editar</button>`;
       const progresso = `<div id="obra-progresso-${obra.id}" style="margin-top:10px;"><div class="text-sm text-muted">Carregando progresso...</div></div>`;
 
@@ -162,6 +163,7 @@ const Obras = (() => {
 
     container.innerHTML = '';
     container.appendChild(grid);
+    Permissions.aplicarNaTela();
   }
 
   function selecionarObra(obra) {
@@ -170,6 +172,7 @@ const Obras = (() => {
   }
 
   function abrirConfiguracao(obraId) {
+    if (!Permissions.pode('configuracaoObra', 'ver')) { Utils.toast('Sem permissão para configurar obras.', 'erro'); return; }
     const obra = obras.find(o => o.id === obraId);
     if (!obra) return;
     Router.setObra(obra);
@@ -177,6 +180,7 @@ const Obras = (() => {
   }
 
   function abrirFormNova() {
+    if (!Permissions.pode('obras', 'criar')) { Utils.toast('Sem permissão para criar obras.', 'erro'); return; }
     document.getElementById('form-obra-id').value = '';
     document.getElementById('modal-obra-titulo').textContent = 'Nova Obra';
     document.getElementById('preview-imagem-obra').style.display = 'none';
@@ -186,6 +190,7 @@ const Obras = (() => {
   }
 
   function abrirFormEditar(obraId) {
+    if (!Permissions.pode('obras', 'editar')) { Utils.toast('Sem permissão para editar obras.', 'erro'); return; }
     const obra = obras.find(o => o.id === obraId);
     if (!obra) return;
     document.getElementById('form-obra-id').value = obraId;
@@ -218,6 +223,7 @@ const Obras = (() => {
 
   async function salvar() {
     const id = document.getElementById('form-obra-id').value;
+    if (!Permissions.pode('obras', id ? 'editar' : 'criar')) { Utils.toast('Sem permissão.', 'erro'); return; }
     const data = Utils.getFormData('form-obra');
     if (!data.nome) { Utils.toast('Informe o nome da obra.', 'alerta'); return; }
 
