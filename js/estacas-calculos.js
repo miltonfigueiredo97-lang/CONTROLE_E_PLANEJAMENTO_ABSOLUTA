@@ -134,11 +134,67 @@ const EstacasCalculos = (() => {
     return { url, width: canvas.width, height: canvas.height, ok: url.length <= limiteBytes };
   }
 
+  // ══════════════════════════════════════════
+  // SINCRONIZAÇÃO COM O PLANEJAMENTO (Gantt)
+  // Uma tarefa do Planejamento pode se vincular ao % de execução de
+  // UMA PEÇA específica (t.estacasVinculoTipo='peca', t.estacasVinculoId=
+  // concretoPecas.id) ou de uma CONCRETAGEM inteira de Fundação/Estacas
+  // (t.estacasVinculoTipo='concretagem', t.estacasVinculoId=
+  // concretoConcretagens.id — % = média ponderada por volume das peças
+  // tipo Fundação daquela concretagem). Isso SUBSTITUI o % manual da
+  // tarefa (que vira read-only no Planejamento quando há vínculo).
+  // Chamada tanto pelo Planejamento (ao carregar a obra) quanto pelo
+  // Controle de Estacas (logo após marcar um real no Acompanhamento) —
+  // é sempre esta MESMA função, pra nunca existir dois cálculos que
+  // divergem (já rolou antes com %, ver notas de versão V2.58.21).
+  // ══════════════════════════════════════════
+  async function sincronizarVinculosPlanejamento(obraId) {
+    const [tarefas, pecas, pecaConc, lancamentos] = await Promise.all([
+      Database.listar(obraId, 'tarefas', null),
+      Database.listar(obraId, 'concretoPecas', null),
+      Database.listar(obraId, 'concretoPecaConc', null),
+      Database.listar(obraId, 'concretoLancamentos', null),
+    ]);
+    const comVinculo = tarefas.filter(t => t.estacasVinculoTipo && t.estacasVinculoId);
+    if (!comVinculo.length) return;
+
+    function pctDaPeca(pecaId) {
+      const p = pecas.find(x => x.id === pecaId);
+      return p ? ConcretoCalculos.pctConcretado(p, lancamentos) : null;
+    }
+    function pctDaConcretagem(concretagemId) {
+      const ids = pecaConc.filter(pc => pc.concretagemId === concretagemId).map(pc => pc.pecaId);
+      const pcs = pecas.filter(p => ids.includes(p.id) && p.tipo === 'Fundação');
+      if (!pcs.length) return null;
+      let sp = 0, sw = 0;
+      pcs.forEach(p => { const w = Math.max(0.001, p.volume || 0); sp += ConcretoCalculos.pctConcretado(p, lancamentos) * w; sw += w; });
+      return sw ? sp / sw : 0;
+    }
+
+    const updsMap = new Map(); // id -> novo percentualConcluido
+    comVinculo.forEach(t => {
+      const pct = t.estacasVinculoTipo === 'peca' ? pctDaPeca(t.estacasVinculoId) : pctDaConcretagem(t.estacasVinculoId);
+      if (pct === null) return;
+      const arred = Math.round(pct * 10) / 10;
+      if (Math.abs(arred - (parseFloat(t.percentualConcluido) || 0)) > 0.05) {
+        t.percentualConcluido = arred; // muta em memória — cascata de ancestrais precisa do valor fresco
+        updsMap.set(t.id, arred);
+        Utils.recalcularPercAncestrais(tarefas, t.id).forEach(u => updsMap.set(u.id, u.percentualConcluido));
+      }
+    });
+    if (!updsMap.size) return;
+    const ops = [...updsMap.entries()].map(([id, percentualConcluido]) => ({
+      type: 'update', ref: Database.ref(obraId, 'tarefas').doc(id), data: { percentualConcluido },
+    }));
+    for (let i = 0; i < ops.length; i += 400) await Database.batchWrite(ops.slice(i, i + 400));
+  }
+
   return {
     fmt1, num, genId, esc,
     corStatus, statusLabel,
     posRelativa, raioFracao,
     stageHTML,
     canvasParaDataURLLimitado,
+    sincronizarVinculosPlanejamento,
   };
 })();

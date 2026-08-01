@@ -280,6 +280,12 @@ const Planejamento = (() => {
   async function carregar(){
     try{
       Utils.mostrarLoading('Carregando...');
+      // Tarefas vinculadas a uma peça/concretagem de Estacas e Fundações têm
+      // seu % recalculado a partir da execução real ANTES de carregar —
+      // mesma função usada pelo Controle de Estacas ao marcar um real.
+      if(typeof EstacasCalculos!=='undefined'){
+        await EstacasCalculos.sincronizarVinculosPlanejamento(obraId).catch(e=>console.error('Sync vínculos Estacas:',e));
+      }
       const [tf,materiaisBib,materiaisVinc,maoDeObraVinc]=await Promise.all([
         Database.listar(obraId,COL,'ordem').catch(()=>[]),
         Database.listar(obraId,'materiais','nome').catch(()=>[]),
@@ -615,6 +621,113 @@ const Planejamento = (() => {
       await Promise.all(Object.keys(LEVANTAMENTO_MODULOS).map(m=>_carregarLevSeNecessario(m)));
     }
     if(_levCache['fachada'])levFachadas=_levCache['fachada'].dados;
+  }
+
+  // ===================== VÍNCULO DE % A ESTACAS/FUNDAÇÕES =====================
+  // Uma tarefa (folha) pode se vincular a UMA PEÇA específica (estaca/fundação)
+  // ou a UMA CONCRETAGEM inteira — o % dela deixa de ser editável manualmente e
+  // passa a vir direto da execução real (Controle de Concreto/Controle de
+  // Estacas). O cálculo mora em EstacasCalculos.sincronizarVinculosPlanejamento
+  // (mesma função chamada pelo Controle de Estacas ao marcar um real), pra
+  // nunca existir dois caminhos de cálculo que divergem.
+  let _estVincCache=null; // {pecas, concretagens}
+  let _estVincTarefaId=null;
+
+  async function _carregarEstVincCacheSeNecessario(){
+    if(_estVincCache)return;
+    try{
+      const [pecas,concretagens]=await Promise.all([
+        Database.listar(obraId,'concretoPecas',null).catch(()=>[]),
+        Database.listar(obraId,'concretoConcretagens',null).catch(()=>[]),
+      ]);
+      _estVincCache={pecas:pecas.filter(p=>p.tipo==='Fundação'),concretagens};
+    }catch(e){console.error(e);}
+  }
+
+  async function abrirVinculoEstacas(tarefaId){
+    _estVincTarefaId=tarefaId;
+    await _carregarEstVincCacheSeNecessario();
+    _renderVinculoEstacasBody();
+    Utils.abrirModal('modal-planej-vinculo-estacas');
+  }
+
+  function _renderVinculoEstacasBody(){
+    const el=document.getElementById('planej-vinculo-estacas-body');if(!el)return;
+    const t=tarefas.find(x=>x.id===_estVincTarefaId);if(!t){el.innerHTML='';return;}
+    const tipo=t._estVincTipoTemp||t.estacasVinculoTipo||'peca';
+    el.innerHTML=`
+      <div class="form-grupo">
+        <label>Vincular a</label>
+        <div class="aba-toggle">
+          <button class="aba-btn ${tipo==='peca'?'ativo':''}" onclick="Planejamento._estVincSetTipo('peca')">Uma peça (estaca/fundação)</button>
+          <button class="aba-btn ${tipo==='concretagem'?'ativo':''}" onclick="Planejamento._estVincSetTipo('concretagem')">Uma concretagem inteira</button>
+        </div>
+      </div>
+      <div class="form-grupo" id="planej-vinculo-estacas-select"></div>
+      ${t.estacasVinculoTipo?`<button class="btn btn-secundario btn-sm" style="color:var(--cv-red,#ef4444);" onclick="Planejamento.removerVinculoEstacas()">🗑 Remover vínculo</button>`:''}
+    `;
+    _renderEstVincSelect();
+  }
+
+  function _estVincSetTipo(tipo){
+    const t=tarefas.find(x=>x.id===_estVincTarefaId);if(!t)return;
+    t._estVincTipoTemp=tipo;
+    _renderVinculoEstacasBody();
+  }
+
+  function _renderEstVincSelect(){
+    const el=document.getElementById('planej-vinculo-estacas-select');if(!el)return;
+    const t=tarefas.find(x=>x.id===_estVincTarefaId);if(!t)return;
+    const cache=_estVincCache||{pecas:[],concretagens:[]};
+    const tipo=t._estVincTipoTemp||t.estacasVinculoTipo||'peca';
+    if(tipo==='peca'){
+      el.innerHTML=`
+        <label>Peça</label>
+        <select class="form-control" id="planej-vinculo-estacas-id">
+          <option value="">— Selecione —</option>
+          ${cache.pecas.map(p=>`<option value="${p.id}" ${p.id===t.estacasVinculoId?'selected':''}>${_esc(p.nome)} · ${_esc(p.andar)}${p.subTipo?' · '+_esc(p.subTipo):''}${p.diametro?' · ⌀'+p.diametro+'cm':''}</option>`).join('')}
+        </select>`;
+    }else{
+      el.innerHTML=`
+        <label>Concretagem</label>
+        <select class="form-control" id="planej-vinculo-estacas-id">
+          <option value="">— Selecione —</option>
+          ${[...cache.concretagens].sort((a,b)=>(a.numero||0)-(b.numero||0)).map(c=>`<option value="${c.id}" ${c.id===t.estacasVinculoId?'selected':''}>Nº ${c.numero} — ${c.data||''}${c.descricao?' | '+_esc(c.descricao):''}</option>`).join('')}
+        </select>`;
+    }
+  }
+
+  async function salvarVinculoEstacas(){
+    const t=tarefas.find(x=>x.id===_estVincTarefaId);if(!t)return;
+    const tipo=t._estVincTipoTemp||t.estacasVinculoTipo||'peca';
+    const id=document.getElementById('planej-vinculo-estacas-id')?.value||'';
+    if(!id){Utils.toast('Selecione uma opção.','alerta');return;}
+    const cache=_estVincCache||{pecas:[],concretagens:[]};
+    const label=tipo==='peca'
+      ?(cache.pecas.find(p=>p.id===id)?.nome||'')
+      :(()=>{const c=cache.concretagens.find(x=>x.id===id);return c?`Concretagem Nº ${c.numero}`:'';})();
+    Utils.mostrarLoading();
+    try{
+      await Database.atualizar(obraId,COL,t.id,{estacasVinculoTipo:tipo,estacasVinculoId:id,estacasVinculoLabel:label});
+      delete t._estVincTipoTemp;
+      Utils.fecharModal('modal-planej-vinculo-estacas');
+      await EstacasCalculos.sincronizarVinculosPlanejamento(obraId).catch(()=>{});
+      await carregar();
+      Utils.toast('✓ Vínculo salvo!','sucesso');
+    }catch(e){Utils.toast('Erro ao salvar: '+e.message,'erro');}
+    finally{Utils.esconderLoading();}
+  }
+
+  async function removerVinculoEstacas(){
+    const t=tarefas.find(x=>x.id===_estVincTarefaId);if(!t)return;
+    Utils.mostrarLoading();
+    try{
+      await Database.atualizar(obraId,COL,t.id,{estacasVinculoTipo:'',estacasVinculoId:'',estacasVinculoLabel:''});
+      Utils.fecharModal('modal-planej-vinculo-estacas');
+      await carregar();
+      Utils.toast('Vínculo removido.','sucesso');
+    }catch(e){Utils.toast('Erro ao remover: '+e.message,'erro');}
+    finally{Utils.esconderLoading();}
   }
 
   // Único ponto de cálculo do valor-base de um vínculo (obra inteira ou filtrado
@@ -1464,7 +1577,9 @@ const Planejamento = (() => {
         } else if(cid==='percEsp'){
           cells+=`<div style="${base}color:#555;font-size:.7rem;justify-content:center;cursor:pointer;" ${clickEdit}>${t.percentualEsperado||0}%</div>`;
         } else if(cid==='percConc'){
-          cells+=`<div style="${base}font-size:.7rem;justify-content:center;color:${perc>=100?'#16a34a':perc>0?'#2563eb':'#555'};cursor:pointer;" ${clickEdit}>${perc}%</div>`;
+          const vincEst=t.estacasVinculoTipo&&t.estacasVinculoId;
+          cells+=`<div style="${base}font-size:.7rem;justify-content:center;gap:3px;color:${vincEst?'var(--cor-primaria)':(perc>=100?'#16a34a':perc>0?'#2563eb':'#555')};${vincEst?'':'cursor:pointer;'}" ${vincEst?'':clickEdit} title="${vincEst?'Vinculado a Estacas/Fundações — '+_esc(t.estacasVinculoLabel||''):'Clique pra editar, ou no 🔗 pra vincular a Estacas/Fundações'}">
+            ${vincEst?'🔵 ':''}${perc}%<span style="cursor:pointer;opacity:.5;font-size:.62rem;" onclick="event.stopPropagation();Planejamento.abrirVinculoEstacas('${t.id}')">${vincEst?'✎':'🔗'}</span></div>`;
         } else if(cid==='predecessora'){
           cells+=`<div style="${base}color:#555;font-size:.7rem;justify-content:center;cursor:pointer;" onclick="Planejamento._predCellClick(event,${i})" title="${_esc(_tooltipPred(t))}">${t._predDisplay||'—'}</div>`;
         } else if(cid==='sucessora'){
@@ -4496,6 +4611,7 @@ const Planejamento = (() => {
     onVincNavModulo,onVincNavModuloMetrica,onVincNavMetrica,onVincNavEntrar,onVincNavBreadcrumb,onVincNavVoltar,
     onBuscaEscolhaAlvoVinc,onEscolherAlvoVinc,onTrocarAlvoVinc,
     onToggleIncluirVinc,onFatorVincChange,marcarTodosVinc,dividirIrmaosVinc,
-    salvarVinculoLevantamento,removerVinculoLevantamento,recalcularVinculosLevantamento};
+    salvarVinculoLevantamento,removerVinculoLevantamento,recalcularVinculosLevantamento,
+    abrirVinculoEstacas,_estVincSetTipo,salvarVinculoEstacas,removerVinculoEstacas};
 })();
 function onObraChanged(){Planejamento.init();}
