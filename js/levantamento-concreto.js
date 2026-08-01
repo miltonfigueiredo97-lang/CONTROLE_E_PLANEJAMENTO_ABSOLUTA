@@ -144,6 +144,7 @@ const LevantamentoConcreto = (() => {
   function renderizar() {
     const c = document.getElementById('lc-content');
     if (!c) return;
+    const scrollAnterior = c.scrollTop;
     const volTotal = pecas.reduce((s, p) => s + (p.volume || 0), 0);
     const volBTs = btsConfig.reduce((s, b) => s + (b.volumePrevisto || 0), 0);
     const lajesComDados = pecas.filter(p => p.tipo === 'Laje' && (p.metragemTrelica || p.areaIsopor));
@@ -207,6 +208,7 @@ const LevantamentoConcreto = (() => {
     renderTabelaPecas();
     renderTabelaConcs();
     Permissions.aplicarNaTela();
+    c.scrollTop = scrollAnterior;
   }
 
   function onFiltro() {

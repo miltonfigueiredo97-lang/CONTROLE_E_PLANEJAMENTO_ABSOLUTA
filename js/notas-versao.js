@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.59.8',
+  versaoAtual: 'V2.59.9',
 
   versoes: [
     {
@@ -5419,10 +5419,14 @@ const NotasVersao = {
         'Tabela de Peças (Base): nova coluna "Ø / Comp." (ex: Ø40cm × 6m) para peças de Estacas.',
         'Levantamento (staging): o card do conjunto do pilar agora mostra o diâmetro/comprimento (ou "N diâmetros diferentes" se o pilar tiver mais de um tipo de estaca).',
         'Editar Peça (Base): formulário ganhou campos de Diâmetro e Comprimento — dá pra ver e corrigir mesmo depois de já ter ido pra base.']},
-    {versao:'V2.59.8',status:'aberta',data:'2026-08-01',tipo:'melhoria',
+    {versao:'V2.59.8',status:'fechada',data:'2026-08-01',tipo:'melhoria',
       titulo:'Controle de Estacas: combobox de busca pra vincular peça, e cor por diâmetro/comprimento no desenho',
       itens:['Vincular marcador: o antigo <select> (tinha que rolar a lista inteira) virou um campo de busca — digita parte do nome, andar ou diâmetro e a lista filtra na hora; clica pra selecionar.',
-        'Cada combinação de diâmetro+comprimento de estaca agora ganha um anel colorido próprio ao redor do círculo no desenho, além da cor de status (verde/laranja/cinza) que já existia — dá pra ver de longe quais estacas são de qual "tipo" sem precisar clicar uma por uma. Legenda das cores aparece embaixo do seletor Estacas/Fundações, nas três abas (Marcadores, Planejamento, Acompanhamento) e também no minimapa do Dashboard.']}
+        'Cada combinação de diâmetro+comprimento de estaca agora ganha um anel colorido próprio ao redor do círculo no desenho, além da cor de status (verde/laranja/cinza) que já existia — dá pra ver de longe quais estacas são de qual "tipo" sem precisar clicar uma por uma. Legenda das cores aparece embaixo do seletor Estacas/Fundações, nas três abas (Marcadores, Planejamento, Acompanhamento) e também no minimapa do Dashboard.']},
+    {versao:'V2.59.9',status:'aberta',data:'2026-08-01',tipo:'correcao',
+      titulo:'Levantamento de Concreto — tela de Peças não pula mais pro topo ao salvar uma edição',
+      itens:['Editar uma peça (✎) e clicar Salvar recarregava a tela inteira e voltava o scroll pro topo da lista de Peças — muito ruim numa obra com centenas de peças.',
+        'Corrigido: a posição do scroll da tela principal agora é preservada ao salvar/atualizar qualquer peça.']}
   ],
 
   render(containerId) {
