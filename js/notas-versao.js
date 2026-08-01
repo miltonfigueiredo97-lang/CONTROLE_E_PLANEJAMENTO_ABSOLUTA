@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.59.4',
+  versaoAtual: 'V2.59.5',
 
   versoes: [
     {
@@ -5395,12 +5395,16 @@ const NotasVersao = {
         'Peças de Estacas mostram diâmetro e comprimento editáveis + botão ↻ que recalcula o volume automaticamente a partir deles.',
         'Confirmado: cada estaca gerada (P110-a, P110-b...) já grava o volume individual dela, não o total do pilar — o número "Volume calculado" da calculadora é só a prévia da soma de tudo que vai ser criado.',
         'Corrigido: diâmetro/comprimento das estacas estavam se perdendo ao mandar do Levantamento pra Base (não eram repassados) — agora vão junto.']},
-    {versao:'V2.59.4',status:'aberta',data:'2026-08-01',tipo:'correcao',
+    {versao:'V2.59.4',status:'fechada',data:'2026-08-01',tipo:'correcao',
       titulo:'Levantamento de Concreto — Estacas: editar o conjunto inteiro do pilar, não só uma letra',
       itens:['Problema: editar uma peça isolada (ex: só a "f") não resolvia quando a quantidade errada — não dava pra criar uma "g" nova.',
         'Agora as estacas de um mesmo pilar aparecem AGRUPADAS no Levantamento ("P110 · 6 estacas"), com um único ✎ que abre o conjunto inteiro (mesma tela de grupos diâmetro/comprimento/quantidade da calculadora).',
         'Muda a quantidade (6→7), adiciona um novo grupo de diâmetro, ou remove um grupo — ao salvar, todas as estacas do pilar são apagadas e recriadas com as letras certas (a até a nova quantidade total).',
-        'Selecionar/remover também passou a ser por conjunto inteiro (marca ou apaga o pilar todo de uma vez).']}
+        'Selecionar/remover também passou a ser por conjunto inteiro (marca ou apaga o pilar todo de uma vez).']},
+    {versao:'V2.59.5',status:'aberta',data:'2026-08-01',tipo:'correcao',
+      titulo:'Levantamento de Concreto — lista não pula mais pro topo ao editar',
+      itens:['Ao clicar ✎ numa peça/conjunto lá embaixo na lista do Levantamento, a tela voltava pro topo — dava a impressão de estar editando o item errado.',
+        'Corrigido: a posição do scroll agora é preservada ao abrir/fechar edição.']}
   ],
 
   render(containerId) {

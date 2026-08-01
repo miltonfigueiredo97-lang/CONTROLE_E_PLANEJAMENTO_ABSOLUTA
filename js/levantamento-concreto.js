@@ -985,6 +985,7 @@ const LevantamentoConcreto = (() => {
   function renderLevantamento() {
     const el = document.getElementById('lc-lev-body');
     if (!el) return;
+    const scrollAnterior = document.getElementById('lc-lev-scroll')?.scrollTop || 0;
     if (!levantamento.length) {
       el.innerHTML = `<div class="cc-empty">📋<br>Levantamento vazio. Use a calculadora para adicionar peças.</div>`;
       return;
@@ -1037,7 +1038,7 @@ const LevantamentoConcreto = (() => {
 
     el.innerHTML = `
       <p class="text-sm text-muted mb-2">Peças calculadas aguardando envio para a base. Selecione, edite se precisar, e envie.</p>
-      <div style="max-height:340px;overflow-y:auto;border:1px solid var(--cor-borda-light);border-radius:8px;margin-bottom:12px;">
+      <div id="lc-lev-scroll" style="max-height:340px;overflow-y:auto;border:1px solid var(--cor-borda-light);border-radius:8px;margin-bottom:12px;">
         ${levantamento.map(item => {
           if (item.subTipo === 'Estacas') {
             const key = levEstacaBase(item) + '||' + item.andar;
@@ -1082,6 +1083,8 @@ const LevantamentoConcreto = (() => {
         <span style="font-family:var(--font-mono);font-size:0.85rem;color:var(--cor-texto-secundario);">${selecionados.length} selecionada${selecionados.length !== 1 ? 's' : ''} · ${CC.fmt4(volSel)} m³</span>
         <button class="btn btn-primario" ${selecionados.length ? '' : 'disabled'} onclick="LC.levEnviarBase()">✓ Enviar ${selecionados.length} para a Base</button>
       </div>`;
+    const scrollEl = document.getElementById('lc-lev-scroll');
+    if (scrollEl) scrollEl.scrollTop = scrollAnterior;
   }
 
   function levToggle(id) {
