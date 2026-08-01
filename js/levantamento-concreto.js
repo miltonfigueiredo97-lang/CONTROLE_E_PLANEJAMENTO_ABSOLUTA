@@ -24,7 +24,8 @@ const LevantamentoConcreto = (() => {
   let levantamento = [];
 
   // Filtros da tabela de peças
-  let fBusca = '', fAndar = 'todos', fTipo = 'todos', fStatus = 'todos';
+  let fBusca = '', fAndar = 'todos', fTipo = 'todos', fStatus = 'todos', fDiamComp = '', fVolume = '';
+  let pecasSortCol = null, pecasSortDir = 1;
 
   // Estado da calculadora
   let calc = null;
@@ -117,7 +118,8 @@ const LevantamentoConcreto = (() => {
   async function recarregar() {
     obraId = Router.getObraId();
     if (!obraId) return;
-    fBusca = ''; fAndar = 'todos'; fTipo = 'todos'; fStatus = 'todos';
+    fBusca = ''; fAndar = 'todos'; fTipo = 'todos'; fStatus = 'todos'; fDiamComp = ''; fVolume = '';
+    pecasSortCol = null; pecasSortDir = 1;
     await carregar();
   }
 
@@ -186,22 +188,6 @@ const LevantamentoConcreto = (() => {
 
       <div class="cc-panel">
         <div class="cc-panelTitle">⬡ Peças</div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
-          <input type="text" class="form-control" id="lc-busca" placeholder="🔍 Buscar por nome, tipo, andar, Ø, comprimento ou volume..." style="flex:1;min-width:220px;" value="${esc(fBusca)}" oninput="LC.onFiltro()">
-          <select class="form-control" id="lc-f-andar" style="max-width:200px;" onchange="LC.onFiltro()">
-            <option value="todos">Todos os andares</option>${optAndares(fAndar)}
-          </select>
-          <select class="form-control" id="lc-f-tipo" style="max-width:180px;" onchange="LC.onFiltro()">
-            <option value="todos">Todos os tipos</option>
-            ${[...new Set(pecas.map(p => p.tipo))].sort().map(t => `<option value="${esc(t)}" ${t === fTipo ? 'selected' : ''}>${esc(t)}</option>`).join('')}
-          </select>
-          <select class="form-control" id="lc-f-status" style="max-width:160px;" onchange="LC.onFiltro()">
-            <option value="todos" ${fStatus === 'todos' ? 'selected' : ''}>Todo status</option>
-            <option value="pendente" ${fStatus === 'pendente' ? 'selected' : ''}>⚪ Pendente</option>
-            <option value="parcial" ${fStatus === 'parcial' ? 'selected' : ''}>🟠 Parcial</option>
-            <option value="completo" ${fStatus === 'completo' ? 'selected' : ''}>🟢 Completo</option>
-          </select>
-        </div>
         <div id="lc-tabela-pecas"></div>
       </div>
 
@@ -218,10 +204,23 @@ const LevantamentoConcreto = (() => {
   }
 
   function onFiltro() {
-    fBusca = document.getElementById('lc-busca').value;
-    fAndar = document.getElementById('lc-f-andar').value;
-    fTipo = document.getElementById('lc-f-tipo').value;
-    fStatus = document.getElementById('lc-f-status').value;
+    fBusca = document.getElementById('lc-f-nome')?.value || '';
+    fAndar = document.getElementById('lc-f-andar')?.value || 'todos';
+    fTipo = document.getElementById('lc-f-tipo')?.value || 'todos';
+    fStatus = document.getElementById('lc-f-status')?.value || 'todos';
+    fDiamComp = document.getElementById('lc-f-diamcomp')?.value || '';
+    fVolume = document.getElementById('lc-f-volume')?.value || '';
+    renderTabelaPecas();
+  }
+
+  function limparFiltrosPecas() {
+    fBusca = ''; fAndar = 'todos'; fTipo = 'todos'; fStatus = 'todos'; fDiamComp = ''; fVolume = '';
+    renderTabelaPecas();
+  }
+
+  function ordenarPecas(col) {
+    if (pecasSortCol === col) pecasSortDir *= -1;
+    else { pecasSortCol = col; pecasSortDir = 1; }
     renderTabelaPecas();
   }
 
@@ -229,6 +228,8 @@ const LevantamentoConcreto = (() => {
     const el = document.getElementById('lc-tabela-pecas');
     if (!el) return;
     const busca = fBusca.toLowerCase();
+    const diamCompAlvo = fDiamComp.toLowerCase();
+    const volAlvo = fVolume.toLowerCase();
     const ordem = todosAndares();
     const lista = pecas.filter(p => {
       if (fAndar !== 'todos' && p.andar !== fAndar) return false;
@@ -238,34 +239,64 @@ const LevantamentoConcreto = (() => {
         const status = pct >= 100 ? 'completo' : pct > 0 ? 'parcial' : 'pendente';
         if (status !== fStatus) return false;
       }
-      if (busca) {
-        const campos = [
-          p.nome, p.andar, p.tipo,
-          p.diametro ? `${CC.fmt1(p.diametro)} ${p.diametro}` : '',
-          p.comprimento ? `${CC.fmt1(p.comprimento)} ${p.comprimento}` : '',
-          p.volume != null ? `${CC.fmt4(p.volume)} ${p.volume}` : '',
-        ].join(' ').toLowerCase();
-        if (!campos.includes(busca)) return false;
+      if (busca && !(p.nome || '').toLowerCase().includes(busca)) return false;
+      if (diamCompAlvo) {
+        const texto = `${p.diametro ? CC.fmt1(p.diametro) : ''} ${p.comprimento ? CC.fmt1(p.comprimento) : ''}`.toLowerCase();
+        if (!texto.includes(diamCompAlvo)) return false;
       }
+      if (volAlvo && !`${CC.fmt4(p.volume)} ${p.volume}`.toLowerCase().includes(volAlvo)) return false;
       return true;
     }).sort((a, b) => {
+      if (pecasSortCol) {
+        let va, vb;
+        if (pecasSortCol === 'diametro') { va = a.diametro || 0; vb = b.diametro || 0; }
+        else if (pecasSortCol === 'volume') { va = a.volume || 0; vb = b.volume || 0; }
+        else if (pecasSortCol === 'status') { va = CC.pctConcretado(a, lancamentos); vb = CC.pctConcretado(b, lancamentos); }
+        else { va = (a[pecasSortCol] || '').toString().toLowerCase(); vb = (b[pecasSortCol] || '').toString().toLowerCase(); }
+        if (va < vb) return -1 * pecasSortDir;
+        if (va > vb) return 1 * pecasSortDir;
+        return 0;
+      }
       const ia = ordem.indexOf(a.andar), ib = ordem.indexOf(b.andar);
       if (ia !== ib) return ia - ib;
       if (a.tipo !== b.tipo) return (a.tipo || '').localeCompare(b.tipo || '');
       return (a.nome || '').localeCompare(b.nome || '');
     });
 
-    if (!lista.length) {
-      el.innerHTML = `<div class="cc-empty">⬡<br>Nenhuma peça encontrada. Use a calculadora ou importe em lote.</div>`;
-      return;
-    }
     const volFiltro = lista.reduce((s, p) => s + (p.volume || 0), 0);
+    const seta = col => pecasSortCol === col ? (pecasSortDir === 1 ? ' ▲' : ' ▼') : '';
+    const th = (label, col) => `<th style="cursor:pointer;user-select:none;" onclick="LC.ordenarPecas('${col}')" title="Ordenar por ${label}">${label}${seta(col)}</th>`;
     el.innerHTML = `
       <div class="cc-tableWrap" style="max-height:480px;overflow-y:auto;">
       <table class="cc-table">
-        <thead><tr><th>Nome</th><th>Tipo</th><th>Andar</th><th>Ø / Comp.</th><th class="col-num">Volume (m³)</th><th class="col-centro">Concretado</th><th class="col-acoes"></th></tr></thead>
+        <thead>
+          <tr>
+            ${th('Nome', 'nome')}${th('Tipo', 'tipo')}${th('Andar', 'andar')}${th('Ø / Comp.', 'diametro')}
+            <th class="col-num" style="cursor:pointer;user-select:none;" onclick="LC.ordenarPecas('volume')" title="Ordenar por Volume">Volume (m³)${seta('volume')}</th>
+            <th class="col-centro" style="cursor:pointer;user-select:none;" onclick="LC.ordenarPecas('status')" title="Ordenar por Concretado">Concretado${seta('status')}</th>
+            <th class="col-acoes"></th>
+          </tr>
+          <tr class="cc-filterRow" style="text-transform:none;">
+            <th style="padding:4px 6px;"><input type="text" class="form-control" id="lc-f-nome" placeholder="filtrar..." style="font-size:0.78rem;padding:4px 6px;text-transform:none;" value="${esc(fBusca)}" oninput="LC.onFiltro()"></th>
+            <th style="padding:4px 6px;"><select class="form-control" id="lc-f-tipo" style="font-size:0.78rem;padding:4px 6px;text-transform:none;" onchange="LC.onFiltro()">
+              <option value="todos">Todos</option>${[...new Set(pecas.map(p => p.tipo))].sort().map(t => `<option value="${esc(t)}" ${t === fTipo ? 'selected' : ''}>${esc(t)}</option>`).join('')}
+            </select></th>
+            <th style="padding:4px 6px;"><select class="form-control" id="lc-f-andar" style="font-size:0.78rem;padding:4px 6px;text-transform:none;" onchange="LC.onFiltro()">
+              <option value="todos">Todos</option>${optAndares(fAndar)}
+            </select></th>
+            <th style="padding:4px 6px;"><input type="text" class="form-control" id="lc-f-diamcomp" placeholder="ex: 40" style="font-size:0.78rem;padding:4px 6px;text-transform:none;" value="${esc(fDiamComp)}" oninput="LC.onFiltro()"></th>
+            <th style="padding:4px 6px;"><input type="text" class="form-control" id="lc-f-volume" placeholder="ex: 0.75" style="font-size:0.78rem;padding:4px 6px;text-transform:none;" value="${esc(fVolume)}" oninput="LC.onFiltro()"></th>
+            <th style="padding:4px 6px;"><select class="form-control" id="lc-f-status" style="font-size:0.78rem;padding:4px 6px;text-transform:none;" onchange="LC.onFiltro()">
+              <option value="todos" ${fStatus === 'todos' ? 'selected' : ''}>Todos</option>
+              <option value="pendente" ${fStatus === 'pendente' ? 'selected' : ''}>⚪</option>
+              <option value="parcial" ${fStatus === 'parcial' ? 'selected' : ''}>🟠</option>
+              <option value="completo" ${fStatus === 'completo' ? 'selected' : ''}>🟢</option>
+            </select></th>
+            <th class="col-acoes" style="padding:4px 6px;"><button class="btn btn-secundario btn-sm" onclick="LC.limparFiltrosPecas()" title="Limpar filtros">✕</button></th>
+          </tr>
+        </thead>
         <tbody>
-          ${lista.map(p => {
+          ${!lista.length ? `<tr><td colspan="7"><div class="cc-empty">⬡<br>Nenhuma peça encontrada com esses filtros.</div></td></tr>` : lista.map(p => {
             const pct = CC.pctConcretado(p, lancamentos);
             const badge = pct >= 100 ? 'cc-badgeComplete' : pct > 0 ? 'cc-badgePartial' : 'cc-badgePending';
             const diamComp = p.diametro ? `Ø${CC.fmt1(p.diametro)}cm × ${CC.fmt1(p.comprimento)}m` : '—';
@@ -1999,7 +2030,7 @@ const LevantamentoConcreto = (() => {
 
   return {
     init, recarregar, renderizar,
-    onFiltro,
+    onFiltro, limparFiltrosPecas, ordenarPecas,
     abrirCalculadora, calcTipoPeca, calcTipoPilar, calcTipoFundacao, calcTogglePreMoldada, calcVoltar, calcAbaEscada,
     updCalc, updCalcSilent, calcAdicionar, calcSelAndar,
     estacaAddGrupo, estacaRemGrupo, estacaUpdGrupo,

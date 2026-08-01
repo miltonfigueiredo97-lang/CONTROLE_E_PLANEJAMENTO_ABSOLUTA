@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.59.10',
+  versaoAtual: 'V2.59.11',
 
   versoes: [
     {
@@ -5427,10 +5427,15 @@ const NotasVersao = {
       titulo:'Levantamento de Concreto — tela de Peças não pula mais pro topo ao salvar uma edição',
       itens:['Editar uma peça (✎) e clicar Salvar recarregava a tela inteira e voltava o scroll pro topo da lista de Peças — muito ruim numa obra com centenas de peças.',
         'Corrigido: a posição do scroll da tela principal agora é preservada ao salvar/atualizar qualquer peça.']},
-    {versao:'V2.59.10',status:'aberta',data:'2026-08-01',tipo:'melhoria',
+    {versao:'V2.59.10',status:'fechada',data:'2026-08-01',tipo:'melhoria',
       titulo:'Levantamento de Concreto — filtro de Peças cobre qualquer coluna + filtro por status',
       itens:['A busca de texto agora casa com QUALQUER coluna da tabela: nome, tipo, andar, diâmetro, comprimento e volume — antes só buscava nome/tipo/andar.',
-        'Novo select "Status" (Pendente/Parcial/Completo) — filtra pelo mesmo % de concretado que aparece na coluna.']}
+        'Novo select "Status" (Pendente/Parcial/Completo) — filtra pelo mesmo % de concretado que aparece na coluna.']},
+    {versao:'V2.59.11',status:'aberta',data:'2026-08-01',tipo:'correcao',
+      titulo:'Levantamento de Concreto — filtro por coluna de verdade (não mais uma busca única)',
+      itens:['Trocada a busca única por um filtro embaixo de CADA coluna da tabela de Peças: Nome, Tipo, Andar, Ø/Comp., Volume e Status — cada um filtra independente, do jeito que a pessoa quiser combinar.',
+        'Clicar no título de qualquer coluna ordena a lista por ela (▲/▼); clica de novo inverte.',
+        'Botão ✕ na linha de filtros limpa tudo de uma vez.']}
   ],
 
   render(containerId) {
