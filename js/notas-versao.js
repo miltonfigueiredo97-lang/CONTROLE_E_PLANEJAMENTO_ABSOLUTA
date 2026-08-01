@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.59.2',
+  versaoAtual: 'V2.59.3',
 
   versoes: [
     {
@@ -5385,10 +5385,16 @@ const NotasVersao = {
         'Cada estaca vira uma peça individual no levantamento, rotulada por letra: Pilar10-a, Pilar10-b... seguindo a ordem dos grupos, até o total de estacas.',
         'Ao trocar de pilar (nome), a letra reinicia em "a".',
         'subTipo continua "Estacas" — mantém o vínculo com o módulo Controle de Estacas e Fundações.']},
-    {versao:'V2.59.2',status:'aberta',data:'2026-08-01',tipo:'correcao',
+    {versao:'V2.59.2',status:'fechada',data:'2026-08-01',tipo:'correcao',
       titulo:'Levantamento de Concreto — criar andar direto na calculadora',
       itens:['Antes: a calculadora só listava andares já existentes (de peças salvas ou da tela ⚙️ Config) — obra nova sem nenhum andar cadastrado deixava o campo "Andar" vazio e travava o botão de salvar.',
-        'Agora: o seletor de Andar tem a opção "+ Criar novo andar...", que abre um campo pra digitar o nome e já salva na configuração da obra, sem precisar fechar a calculadora.']}
+        'Agora: o seletor de Andar tem a opção "+ Criar novo andar...", que abre um campo pra digitar o nome e já salva na configuração da obra, sem precisar fechar a calculadora.']},
+    {versao:'V2.59.3',status:'aberta',data:'2026-08-01',tipo:'correcao',
+      titulo:'Levantamento de Concreto — editar peças no Levantamento (antes de enviar pra Base) + repasse de diâmetro/comprimento',
+      itens:['Botão ✎ em cada item do Levantamento (staging) — edita nome, andar e volume ali mesmo, sem precisar mandar pra Base primeiro.',
+        'Peças de Estacas mostram diâmetro e comprimento editáveis + botão ↻ que recalcula o volume automaticamente a partir deles.',
+        'Confirmado: cada estaca gerada (P110-a, P110-b...) já grava o volume individual dela, não o total do pilar — o número "Volume calculado" da calculadora é só a prévia da soma de tudo que vai ser criado.',
+        'Corrigido: diâmetro/comprimento das estacas estavam se perdendo ao mandar do Levantamento pra Base (não eram repassados) — agora vão junto.']}
   ],
 
   render(containerId) {

@@ -944,9 +944,11 @@ const LevantamentoConcreto = (() => {
   // LEVANTAMENTO LOCAL (lista intermediária)
   // ══════════════════════════════════════════
   let levSel = new Set();
+  let levEditId = null;
 
   function abrirLevantamento() {
     levSel = new Set(levantamento.map(i => i.id));
+    levEditId = null;
     renderLevantamento();
     Utils.abrirModal('modal-lc-lev');
   }
@@ -961,17 +963,51 @@ const LevantamentoConcreto = (() => {
     const selecionados = levantamento.filter(i => levSel.has(i.id));
     const volSel = selecionados.reduce((s, i) => s + i.volume, 0);
     el.innerHTML = `
-      <p class="text-sm text-muted mb-2">Peças calculadas aguardando envio para a base. Selecione e envie.</p>
+      <p class="text-sm text-muted mb-2">Peças calculadas aguardando envio para a base. Selecione, edite se precisar, e envie.</p>
       <div style="max-height:340px;overflow-y:auto;border:1px solid var(--cor-borda-light);border-radius:8px;margin-bottom:12px;">
-        ${levantamento.map(item => `
+        ${levantamento.map(item => {
+          if (item.id === levEditId) {
+            const temDiamComp = item.subTipo === 'Estacas';
+            return `
+              <div style="padding:10px 14px;border-bottom:1px solid var(--cor-borda-light);background:var(--cor-primaria-light,#fef9e7);">
+                <div class="form-row" style="margin-bottom:6px;">
+                  <div class="form-grupo" style="margin-bottom:0;"><label style="font-size:0.68rem;">Nome</label>
+                    <input type="text" class="form-control" id="lev-nome-${item.id}" value="${esc(item.nome)}">
+                  </div>
+                  <div class="form-grupo" style="margin-bottom:0;"><label style="font-size:0.68rem;">Andar</label>
+                    <select class="form-control" id="lev-andar-${item.id}">${optAndares(item.andar)}</select>
+                  </div>
+                </div>
+                ${temDiamComp ? `
+                <div class="form-row" style="margin-bottom:6px;">
+                  <div class="form-grupo" style="margin-bottom:0;"><label style="font-size:0.68rem;">Diâmetro [cm]</label>
+                    <input type="text" inputmode="decimal" class="form-control" id="lev-diam-${item.id}" value="${esc(item.diametro)}">
+                  </div>
+                  <div class="form-grupo" style="margin-bottom:0;"><label style="font-size:0.68rem;">Comprimento [m]</label>
+                    <input type="text" inputmode="decimal" class="form-control" id="lev-comp-${item.id}" value="${esc(item.comprimento)}">
+                  </div>
+                </div>` : ''}
+                <div class="form-row" style="align-items:end;gap:8px;">
+                  <div class="form-grupo" style="margin-bottom:0;flex:1;"><label style="font-size:0.68rem;">Volume (m³)</label>
+                    <input type="text" inputmode="decimal" class="form-control" id="lev-vol-${item.id}" value="${item.volume}">
+                  </div>
+                  ${temDiamComp ? `<button class="btn btn-secundario btn-sm" onclick="LC.levRecalcVolume('${item.id}')" title="Recalcular volume a partir de diâmetro/comprimento">↻</button>` : ''}
+                  <button class="btn btn-primario btn-sm" onclick="LC.levSalvarEdicao('${item.id}')">💾 Salvar</button>
+                  <button class="btn btn-secundario btn-sm" onclick="LC.levCancelarEdicao()">✕</button>
+                </div>
+              </div>`;
+          }
+          return `
           <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--cor-borda-light);">
             <input type="checkbox" ${levSel.has(item.id) ? 'checked' : ''} onchange="LC.levToggle('${item.id}')">
             <div style="flex:1;">
               <div style="font-weight:600;font-size:0.9rem;">${esc(item.nome)}</div>
               <div style="font-family:var(--font-mono);font-size:0.75rem;color:var(--cor-texto-muted);">${esc(item.tipo)} · ${esc(item.andar)} · ${CC.fmt4(item.volume)} m³</div>
             </div>
+            <button class="btn btn-secundario btn-sm" onclick="LC.levIniciarEdicao('${item.id}')">✎</button>
             <button class="btn btn-secundario btn-sm" style="color:#ef4444;" onclick="LC.levRemover('${item.id}')">✕</button>
-          </div>`).join('')}
+          </div>`;
+        }).join('')}
       </div>
       <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
         <span style="font-family:var(--font-mono);font-size:0.85rem;color:var(--cor-texto-secundario);">${selecionados.length} selecionada${selecionados.length !== 1 ? 's' : ''} · ${CC.fmt4(volSel)} m³</span>
@@ -982,6 +1018,36 @@ const LevantamentoConcreto = (() => {
   function levToggle(id) {
     if (levSel.has(id)) levSel.delete(id); else levSel.add(id);
     renderLevantamento();
+  }
+
+  function levIniciarEdicao(id) { levEditId = id; renderLevantamento(); }
+  function levCancelarEdicao() { levEditId = null; renderLevantamento(); }
+
+  function levRecalcVolume(id) {
+    const diamEl = document.getElementById(`lev-diam-${id}`);
+    const compEl = document.getElementById(`lev-comp-${id}`);
+    const volEl = document.getElementById(`lev-vol-${id}`);
+    if (!diamEl || !compEl || !volEl) return;
+    const D = CC.num(diamEl.value), C = CC.num(compEl.value);
+    if (D > 0 && C > 0) volEl.value = CC.calcVolFundacao('Estacas', { A: C, B: D }).toFixed(4);
+  }
+
+  async function levSalvarEdicao(id) {
+    const item = levantamento.find(i => i.id === id);
+    if (!item) return;
+    const nome = (document.getElementById(`lev-nome-${id}`)?.value || '').trim();
+    const andar = document.getElementById(`lev-andar-${id}`)?.value || '';
+    const volume = CC.num(document.getElementById(`lev-vol-${id}`)?.value);
+    if (!nome || !andar || !(volume > 0)) { Utils.toast('Preencha nome, andar e volume maior que zero.', 'alerta'); return; }
+    const diamEl = document.getElementById(`lev-diam-${id}`);
+    const compEl = document.getElementById(`lev-comp-${id}`);
+    if (diamEl && compEl) { item.diametro = CC.num(diamEl.value); item.comprimento = CC.num(compEl.value); }
+    item.nome = nome; item.andar = andar; item.volume = volume;
+    await salvarLevantamentoLocal();
+    levEditId = null;
+    Utils.toast('✓ Item atualizado', 'sucesso');
+    renderLevantamento();
+    renderizar();
   }
 
   async function levRemover(id) {
@@ -1000,6 +1066,7 @@ const LevantamentoConcreto = (() => {
       await salvarPecasLote(itens.map(i => ({
         nome: i.nome, tipo: i.tipo, andar: i.andar, volume: i.volume,
         subTipo: i.subTipo, areaIsopor: i.areaIsopor, metragemTrelica: i.metragemTrelica,
+        diametro: i.diametro, comprimento: i.comprimento,
       })));
       levantamento = levantamento.filter(i => !levSel.has(i.id));
       levSel.clear();
@@ -1794,6 +1861,7 @@ const LevantamentoConcreto = (() => {
     escAddPat, escRemPat, escUpdPat,
     escAddDeg, escRemDeg, escUpdDeg,
     abrirLevantamento, levToggle, levRemover, levEnviarBase,
+    levIniciarEdicao, levCancelarEdicao, levRecalcVolume, levSalvarEdicao,
     abrirNovaPeca, abrirEditarPeca, salvarPeca, excluirPeca, limparBasePecas,
     abrirImportar, baixarModeloTSV, onImportTexto, onImportArquivo, salvarImport,
     abrirConcretagens, iniciarNovaConc, editarConcretagem, excluirConcretagem,
