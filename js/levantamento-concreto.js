@@ -322,6 +322,8 @@ const LevantamentoConcreto = (() => {
       vLado: '', vAltura: '', vComprimento: '',
       // Fundação (9 tipos)
       tipoFund: 'Bloco Retângular', fA: '', fB: '', fC: '', fD: '', fE: '', fF: '',
+      // Estacas: grupos de diâmetro/comprimento/quantidade (gera 1 peça por estaca, rotulada a/b/c...)
+      estacaGrupos: [{ diametro: '', comprimento: '', quantidade: '' }],
       // Laje
       ljX: '', ljY: '', ljDesconto: '', ljHlaje: '', ljHpainel: '', ljPreMoldada: false,
       ljQtdPaineis: '', ljCompPainel: '', ljLargIsopor: '', ljHisopor: '', ljMaxLinhas: '',
@@ -336,12 +338,39 @@ const LevantamentoConcreto = (() => {
     if (calc.tipoPeca === 'rampa') return CC.calcVolRampa(calc.comprimento, calc.largura, calc.altLaje);
     if (calc.tipoPeca === 'escada') return CC.calcVolLajesInclinadas(calc.lajeInc) + CC.calcVolPatamares(calc.patamares) + CC.calcVolDegraus(calc.degraus);
     if (calc.tipoPeca === 'viga') return CC.calcVolViga(calc.vLado, calc.vAltura, calc.vComprimento);
-    if (calc.tipoPeca === 'fundacao') return CC.calcVolFundacao(calc.tipoFund, { A: calc.fA, B: calc.fB, C: calc.fC, D: calc.fD, E: calc.fE, F: calc.fF });
+    if (calc.tipoPeca === 'fundacao') {
+      if (calc.tipoFund === 'Estacas') return estacaVolTotal();
+      return CC.calcVolFundacao(calc.tipoFund, { A: calc.fA, B: calc.fB, C: calc.fC, D: calc.fD, E: calc.fE, F: calc.fF });
+    }
     if (calc.tipoPeca === 'laje') return CC.calcVolLaje({
       x: calc.ljX, y: calc.ljY, desconto: calc.ljDesconto, hLaje: calc.ljHlaje, hPainel: calc.ljPreMoldada ? calc.ljHpainel : 0,
       qtdPaineis: calc.ljQtdPaineis, compPainel: calc.ljCompPainel, largIsopor: calc.ljLargIsopor, hIsopor: calc.ljHisopor,
     });
     return 0;
+  }
+
+  // Estacas: um "grupo" = { diametro[cm], comprimento[m], quantidade } → N peças individuais
+  function estacaVolTotal() {
+    return (calc.estacaGrupos || []).reduce((s, g) => {
+      const D = CC.num(g.diametro), C = CC.num(g.comprimento), Q = parseInt(g.quantidade) || 0;
+      if (D <= 0 || C <= 0 || Q <= 0) return s;
+      return s + CC.calcVolFundacao('Estacas', { A: C, B: D }) * Q;
+    }, 0);
+  }
+
+  function estacaQtdTotal() {
+    return (calc.estacaGrupos || []).reduce((s, g) => s + (parseInt(g.quantidade) || 0), 0);
+  }
+
+  // 0→a, 1→b ... 25→z, 26→aa, 27→ab ... (estilo colunas de planilha)
+  function letraSequencial(i) {
+    let n = i + 1, s = '';
+    while (n > 0) {
+      n--;
+      s = String.fromCharCode(97 + (n % 26)) + s;
+      n = Math.floor(n / 26);
+    }
+    return s;
   }
 
   function esquemaPilar(tipoP) {
@@ -388,6 +417,20 @@ const LevantamentoConcreto = (() => {
       <input type="text" inputmode="decimal" class="form-control" value="${esc(valor)}" placeholder="${placeholder || ''}"
         oninput="LC.updCalc('${campo}', this.value)">
     </div>`;
+  }
+
+  // Lista dinâmica de segmentos (grupos com N campos + add/remover) — usada por Escada e Estacas
+  function linhaSeg(lista, campos, addFn, remFn, updFn) {
+    return lista.map((item, i) => `
+      <div style="display:grid;grid-template-columns:repeat(${campos.length}, 1fr) auto;gap:6px;margin-bottom:6px;align-items:end;">
+        ${campos.map(c => `
+          <div class="form-grupo" style="margin-bottom:0;">
+            <label style="font-size:0.68rem;">${c.label}</label>
+            <input type="text" inputmode="decimal" class="form-control" value="${esc(item[c.campo])}" placeholder="${c.ph || ''}"
+              oninput="LC.${updFn}(${i}, '${c.campo}', this.value)">
+          </div>`).join('')}
+        <button class="btn btn-secundario btn-sm" style="color:#ef4444;" onclick="LC.${remFn}(${i})" ${lista.length <= 1 ? 'disabled' : ''}>✕</button>
+      </div>`).join('') + `<button class="btn btn-secundario btn-sm" onclick="LC.${addFn}()">+ Adicionar</button>`;
   }
 
   function esquemaViga() {
@@ -567,9 +610,15 @@ const LevantamentoConcreto = (() => {
           </div>
           ${campoNum('C — Altura [cm]', 'fC', calc.fC, '#ef4444', '100')}`;
       } else if (g === 'estaca') {
+        const qtdTotal = estacaQtdTotal();
         campos = `
-          ${campoNum('A — Comprimento / Profundidade [m]', 'fA', calc.fA, '#3b82f6', '6')}
-          ${campoNum('B — Diâmetro [cm]', 'fB', calc.fB, '#16a34a', '40')}`;
+          <p class="text-sm text-muted mb-1">Um grupo por diâmetro diferente. Cada estaca vira uma peça: ${esc(calc.nome || 'Nome')}-a, ${esc(calc.nome || 'Nome')}-b... até a quantidade total.</p>
+          ${linhaSeg(calc.estacaGrupos, [
+            { label: 'Diâmetro [cm]', campo: 'diametro', ph: '40' },
+            { label: 'Comprimento [m]', campo: 'comprimento', ph: '6' },
+            { label: 'Quantidade', campo: 'quantidade', ph: '10' },
+          ], 'estacaAddGrupo', 'estacaRemGrupo', 'estacaUpdGrupo')}
+          <div id="lc-estaca-total" style="font-family:var(--font-mono);font-size:0.78rem;color:var(--cor-texto-secundario);margin-top:6px;">${qtdTotal > 0 ? `Total: ${qtdTotal} estaca${qtdTotal !== 1 ? 's' : ''}` : ''}</div>`;
       } else if (g === 'triangular') {
         campos = `
           <div class="form-row">
@@ -683,17 +732,6 @@ const LevantamentoConcreto = (() => {
         <span id="${volIds[aba]}" style="font-family:var(--font-mono);font-size:0.8rem;color:${vol > 0 ? 'var(--cor-primaria-dark,#b8960a)' : 'var(--cor-texto-muted)'};">${vol > 0 ? vol.toFixed(4) + ' m³' : '—'}</span>
       </button>`;
 
-    const linhaSeg = (lista, campos, addFn, remFn, updFn) => lista.map((item, i) => `
-      <div style="display:grid;grid-template-columns:repeat(${campos.length}, 1fr) auto;gap:6px;margin-bottom:6px;align-items:end;">
-        ${campos.map(c => `
-          <div class="form-grupo" style="margin-bottom:0;">
-            <label style="font-size:0.68rem;">${c.label}</label>
-            <input type="text" inputmode="decimal" class="form-control" value="${esc(item[c.campo])}" placeholder="${c.ph || ''}"
-              oninput="LC.${updFn}(${i}, '${c.campo}', this.value)">
-          </div>`).join('')}
-        <button class="btn btn-secundario btn-sm" style="color:#ef4444;" onclick="LC.${remFn}(${i})" ${lista.length <= 1 ? 'disabled' : ''}>✕</button>
-      </div>`).join('') + `<button class="btn btn-secundario btn-sm" onclick="LC.${addFn}()">+ Adicionar</button>`;
-
     el.innerHTML = `
       ${camposNomeAndar}
       ${acordeao('Laje Inclinada', 'laje', volLaje)}
@@ -768,6 +806,14 @@ const LevantamentoConcreto = (() => {
       upd('lc-vol-pat', CC.calcVolPatamares(calc.patamares));
       upd('lc-vol-deg', CC.calcVolDegraus(calc.degraus));
     }
+    // Estacas: contador de total de peças
+    if (calc.tipoPeca === 'fundacao' && calc.tipoFund === 'Estacas') {
+      const totalEl = document.getElementById('lc-estaca-total');
+      if (totalEl) {
+        const qtdTotal = estacaQtdTotal();
+        totalEl.textContent = qtdTotal > 0 ? `Total: ${qtdTotal} estaca${qtdTotal !== 1 ? 's' : ''}` : '';
+      }
+    }
     // Laje: área de isopor e metragem de treliça (informativos, não fazem parte do volume)
     if (calc.tipoPeca === 'laje') {
       const isoporEl = document.getElementById('lc-lj-isopor');
@@ -783,6 +829,11 @@ const LevantamentoConcreto = (() => {
     }
   }
 
+  // Estacas: grupos dinâmicos (diâmetro/comprimento/quantidade)
+  function estacaAddGrupo() { calc.estacaGrupos.push({ diametro: '', comprimento: '', quantidade: '' }); renderCalc(); }
+  function estacaRemGrupo(i) { calc.estacaGrupos.splice(i, 1); renderCalc(); }
+  function estacaUpdGrupo(i, c, v) { calc.estacaGrupos[i][c] = v; atualizarVolumeCalc(); }
+
   // Escada: segmentos dinâmicos
   function escAddLaje() { calc.lajeInc.push({ compIncl: '', larg: '', esp: '' }); renderCalc(); }
   function escRemLaje(i) { calc.lajeInc.splice(i, 1); renderCalc(); }
@@ -797,6 +848,34 @@ const LevantamentoConcreto = (() => {
   async function calcAdicionar() {
     const volume = calcVolumeAtual();
     if (!calc.nome || !calc.andar || volume <= 0) return;
+
+    // Estacas: 1 grupo (diâmetro+comprimento+quantidade) → N peças, rotuladas nome-a, nome-b...
+    if (calc.tipoPeca === 'fundacao' && calc.tipoFund === 'Estacas') {
+      const itens = [];
+      let idx = 0;
+      calc.estacaGrupos.forEach(g => {
+        const D = CC.num(g.diametro), C = CC.num(g.comprimento), Q = parseInt(g.quantidade) || 0;
+        if (D <= 0 || C <= 0 || Q <= 0) return;
+        const volUnit = CC.calcVolFundacao('Estacas', { A: C, B: D });
+        for (let i = 0; i < Q; i++) {
+          itens.push({
+            id: CC.genId('lev'), nome: `${calc.nome}-${letraSequencial(idx)}`, andar: calc.andar,
+            tipo: 'Fundação', subTipo: 'Estacas', volume: volUnit, diametro: D, comprimento: C,
+          });
+          idx++;
+        }
+      });
+      if (!itens.length) return;
+      levantamento.push(...itens);
+      await salvarLevantamentoLocal();
+      Utils.toast(`✓ ${itens.length} estaca${itens.length !== 1 ? 's' : ''} de "${calc.nome}" adicionada${itens.length !== 1 ? 's' : ''} ao levantamento`, 'sucesso');
+      calc.nome = '';
+      calc.estacaGrupos = [{ diametro: '', comprimento: '', quantidade: '' }];
+      renderCalc();
+      renderizar();
+      return;
+    }
+
     const tipoLabel = {
       pilar: 'Pilar', escada: 'Escada', rampa: 'Rampa',
       viga: 'Viga', laje: 'Laje', fundacao: 'Fundação',
@@ -823,6 +902,7 @@ const LevantamentoConcreto = (() => {
     calc.degraus = [{ pisada: '', espelho: '', larg: '', qtd: '' }];
     calc.vLado = ''; calc.vAltura = ''; calc.vComprimento = '';
     calc.fA = ''; calc.fB = ''; calc.fC = ''; calc.fD = ''; calc.fE = ''; calc.fF = '';
+    calc.estacaGrupos = [{ diametro: '', comprimento: '', quantidade: '' }];
     calc.ljX = ''; calc.ljY = ''; calc.ljDesconto = ''; calc.ljHlaje = ''; calc.ljHpainel = ''; calc.ljPreMoldada = false;
     calc.ljQtdPaineis = ''; calc.ljCompPainel = ''; calc.ljLargIsopor = ''; calc.ljHisopor = ''; calc.ljMaxLinhas = '';
     renderCalc();
@@ -1028,6 +1108,8 @@ const LevantamentoConcreto = (() => {
         if (item.subTipo) data.subTipo = item.subTipo;
         if (item.areaIsopor) data.areaIsopor = item.areaIsopor;
         if (item.metragemTrelica) data.metragemTrelica = item.metragemTrelica;
+        if (item.diametro) data.diametro = item.diametro;
+        if (item.comprimento) data.comprimento = item.comprimento;
         return { type: 'set', ref: Database.ref(obraId, COL_PECAS).doc(CC.genId('p')), data };
       });
       await Database.batchWrite(ops);
@@ -1676,6 +1758,7 @@ const LevantamentoConcreto = (() => {
     onFiltro,
     abrirCalculadora, calcTipoPeca, calcTipoPilar, calcTipoFundacao, calcTogglePreMoldada, calcVoltar, calcAbaEscada,
     updCalc, updCalcSilent, calcAdicionar,
+    estacaAddGrupo, estacaRemGrupo, estacaUpdGrupo,
     escAddLaje, escRemLaje, escUpdLaje,
     escAddPat, escRemPat, escUpdPat,
     escAddDeg, escRemDeg, escUpdDeg,
