@@ -241,15 +241,17 @@ const LevantamentoConcreto = (() => {
     el.innerHTML = `
       <div class="cc-tableWrap" style="max-height:480px;overflow-y:auto;">
       <table class="cc-table">
-        <thead><tr><th>Nome</th><th>Tipo</th><th>Andar</th><th class="col-num">Volume (m³)</th><th class="col-centro">Concretado</th><th class="col-acoes"></th></tr></thead>
+        <thead><tr><th>Nome</th><th>Tipo</th><th>Andar</th><th>Ø / Comp.</th><th class="col-num">Volume (m³)</th><th class="col-centro">Concretado</th><th class="col-acoes"></th></tr></thead>
         <tbody>
           ${lista.map(p => {
             const pct = CC.pctConcretado(p, lancamentos);
             const badge = pct >= 100 ? 'cc-badgeComplete' : pct > 0 ? 'cc-badgePartial' : 'cc-badgePending';
+            const diamComp = p.diametro ? `Ø${CC.fmt1(p.diametro)}cm × ${CC.fmt1(p.comprimento)}m` : '—';
             return `<tr>
               <td style="font-weight:600;">${esc(p.nome)}</td>
               <td>${esc(p.tipo)}</td>
               <td>${esc(p.andar)}</td>
+              <td class="cc-tdMono" style="font-size:0.78rem;">${diamComp}</td>
               <td class="col-num cc-tdMono">${CC.fmt4(p.volume)}</td>
               <td class="col-centro"><span class="cc-badge ${badge}">${CC.fmt1(pct)}%</span></td>
               <td class="col-acoes">
@@ -259,7 +261,7 @@ const LevantamentoConcreto = (() => {
             </tr>`;
           }).join('')}
         </tbody>
-        <tfoot><tr><td colspan="3" style="font-weight:700;">${lista.length} peça${lista.length !== 1 ? 's' : ''}</td><td class="col-num cc-tdMono" style="font-weight:700;">${CC.fmt4(volFiltro)}</td><td colspan="2"></td></tr></tfoot>
+        <tfoot><tr><td colspan="4" style="font-weight:700;">${lista.length} peça${lista.length !== 1 ? 's' : ''}</td><td class="col-num cc-tdMono" style="font-weight:700;">${CC.fmt4(volFiltro)}</td><td colspan="2"></td></tr></tfoot>
       </table>
       </div>
     `;
@@ -1024,12 +1026,14 @@ const LevantamentoConcreto = (() => {
       const todosSel = grupo.itens.every(i => levSel.has(i.id));
       const nomeSeguro = esc(grupo.baseNome).replace(/'/g, "\\'");
       const andarSeguro = esc(grupo.andar).replace(/'/g, "\\'");
+      const diamsUnicos = [...new Set(grupo.itens.map(i => `Ø${CC.fmt1(i.diametro)}cm × ${CC.fmt1(i.comprimento)}m`))];
+      const resumoDiam = diamsUnicos.length === 1 ? diamsUnicos[0] : `${diamsUnicos.length} diâmetros diferentes`;
       return `
         <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--cor-borda-light);">
           <input type="checkbox" ${todosSel ? 'checked' : ''} onchange="LC.levToggleGrupo('${nomeSeguro}','${andarSeguro}')">
           <div style="flex:1;">
             <div style="font-weight:600;font-size:0.9rem;">${esc(grupo.baseNome)} <span style="font-weight:400;color:var(--cor-texto-muted);">(${grupo.itens.length} estaca${grupo.itens.length !== 1 ? 's' : ''})</span></div>
-            <div style="font-family:var(--font-mono);font-size:0.75rem;color:var(--cor-texto-muted);">Fundação · Estacas · ${esc(grupo.andar)} · ${CC.fmt4(volGrupo)} m³</div>
+            <div style="font-family:var(--font-mono);font-size:0.75rem;color:var(--cor-texto-muted);">${esc(grupo.andar)} · ${resumoDiam} · ${CC.fmt4(volGrupo)} m³</div>
           </div>
           <button class="btn btn-secundario btn-sm" onclick="LC.levIniciarEdicaoGrupo('${nomeSeguro}','${andarSeguro}')">✎</button>
           <button class="btn btn-secundario btn-sm" style="color:#ef4444;" onclick="LC.levRemoverGrupo('${nomeSeguro}','${andarSeguro}')">✕</button>
@@ -1217,6 +1221,8 @@ const LevantamentoConcreto = (() => {
     f.querySelector('[name=nome]').value = p.nome || '';
     f.querySelector('[name=andar]').value = p.andar || '';
     f.querySelector('[name=volume]').value = p.volume ?? '';
+    f.querySelector('[name=diametro]').value = p.diametro ?? '';
+    f.querySelector('[name=comprimento]').value = p.comprimento ?? '';
     montarDatalistAndares();
     Utils.abrirModal('modal-lc-peca');
   }
@@ -1233,17 +1239,22 @@ const LevantamentoConcreto = (() => {
     const tipo = f.querySelector('[name=tipo]').value;
     const andar = f.querySelector('[name=andar]').value.trim();
     const volume = CC.num(f.querySelector('[name=volume]').value);
+    const diametro = CC.num(f.querySelector('[name=diametro]').value);
+    const comprimento = CC.num(f.querySelector('[name=comprimento]').value);
     if (!nome || !andar || !(volume > 0)) {
       Utils.toast('Preencha nome, andar e volume maior que zero.', 'alerta');
       return;
     }
     Utils.mostrarLoading();
     try {
+      const dados = { nome, tipo, andar, volume };
+      if (diametro > 0) dados.diametro = diametro;
+      if (comprimento > 0) dados.comprimento = comprimento;
       if (pecaEditId) {
-        await Database.atualizar(obraId, COL_PECAS, pecaEditId, { nome, tipo, andar, volume });
+        await Database.atualizar(obraId, COL_PECAS, pecaEditId, dados);
         Utils.toast(`✓ "${nome}" atualizada!`, 'sucesso');
       } else {
-        await Database.criar(obraId, COL_PECAS, { nome, tipo, andar, volume }, CC.genId('p'));
+        await Database.criar(obraId, COL_PECAS, dados, CC.genId('p'));
         Utils.toast(`✓ "${nome}" adicionada!`, 'sucesso');
       }
       await carregar();

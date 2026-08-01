@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.59.6',
+  versaoAtual: 'V2.59.7',
 
   versoes: [
     {
@@ -5405,14 +5405,20 @@ const NotasVersao = {
       titulo:'Levantamento de Concreto — lista não pula mais pro topo ao editar',
       itens:['Ao clicar ✎ numa peça/conjunto lá embaixo na lista do Levantamento, a tela voltava pro topo — dava a impressão de estar editando o item errado.',
         'Corrigido: a posição do scroll agora é preservada ao abrir/fechar edição.']},
-    {versao:'V2.59.6',status:'aberta',data:'2026-08-01',tipo:'funcionalidade',
+    {versao:'V2.59.6',status:'fechada',data:'2026-08-01',tipo:'funcionalidade',
       titulo:'Controle de Estacas e Fundações ganha Planejamento e Acompanhamento, e importar prancha vira um passo só',
       itens:['Importar prancha simplificado: nome + PDF/imagem agora ficam no mesmo formulário — antes era preciso criar a prancha primeiro e só depois um segundo popup pedia o arquivo.',
         'Nova aba Planejamento: escolhe ou cria uma Concretagem (a mesma coleção do Levantamento/Controle de Concreto — nº compartilhado em todo o sistema) e marca, clicando na prancha, quais estacas/fundações (já vinculadas a uma peça) entram nela. Uma BT única é auto-gerenciada por concretagem, com volume previsto = soma do volume das peças planejadas.',
         'Nova aba Acompanhamento: escolhe uma concretagem planejada e clica na peça que foi REALMENTE concretada — isso grava um lançamento de verdade (concretoLancamentos), que também aparece no Controle de Concreto/relatórios de BT.',
         'Estacas/Fundações: seletor de estaca vs. fundação disponível também dentro do Planejamento e do Acompanhamento, não só na aba Marcadores.',
         'Planejamento (Gantt): uma tarefa pode se vincular ao % de execução de UMA peça específica ou de UMA concretagem inteira (a pessoa escolhe qual, na hora) — o % da tarefa deixa de ser digitado à mão e passa a vir automaticamente da execução real, se atualizando sempre que um real é lançado no Acompanhamento ou quando o Planejamento é reaberto. Cálculo centralizado em EstacasCalculos.sincronizarVinculosPlanejamento, pra nunca haver dois números divergentes.',
-        'Controle de Estacas: modal de vincular marcador mostra um resumo da quantidade de estacas por diâmetro no levantamento (usa o campo diâmetro já salvo por peça, do Levantamento de Concreto), pra ajudar a escolher qual peça corresponde à estaca do projeto.']}
+        'Controle de Estacas: modal de vincular marcador mostra um resumo da quantidade de estacas por diâmetro no levantamento (usa o campo diâmetro já salvo por peça, do Levantamento de Concreto), pra ajudar a escolher qual peça corresponde à estaca do projeto.']},
+    {versao:'V2.59.7',status:'aberta',data:'2026-08-01',tipo:'correcao',
+      titulo:'Levantamento de Concreto — diâmetro/comprimento das estacas agora aparecem em todo lugar',
+      itens:['Diâmetro/comprimento já eram gravados no banco, mas ficavam invisíveis — não apareciam em lugar nenhum da tela.',
+        'Tabela de Peças (Base): nova coluna "Ø / Comp." (ex: Ø40cm × 6m) para peças de Estacas.',
+        'Levantamento (staging): o card do conjunto do pilar agora mostra o diâmetro/comprimento (ou "N diâmetros diferentes" se o pilar tiver mais de um tipo de estaca).',
+        'Editar Peça (Base): formulário ganhou campos de Diâmetro e Comprimento — dá pra ver e corrigir mesmo depois de já ter ido pra base.']}
   ],
 
   render(containerId) {
