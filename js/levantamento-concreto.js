@@ -210,7 +210,7 @@ const LevantamentoConcreto = (() => {
     fStatus = document.getElementById('lc-f-status')?.value || 'todos';
     fDiamComp = document.getElementById('lc-f-diamcomp')?.value || '';
     fVolume = document.getElementById('lc-f-volume')?.value || '';
-    renderTabelaPecas();
+    atualizarListaPecas();
   }
 
   function limparFiltrosPecas() {
@@ -224,14 +224,12 @@ const LevantamentoConcreto = (() => {
     renderTabelaPecas();
   }
 
-  function renderTabelaPecas() {
-    const el = document.getElementById('lc-tabela-pecas');
-    if (!el) return;
+  function calcularListaPecas() {
     const busca = fBusca.toLowerCase();
     const diamCompAlvo = fDiamComp.toLowerCase();
     const volAlvo = fVolume.toLowerCase();
     const ordem = todosAndares();
-    const lista = pecas.filter(p => {
+    return pecas.filter(p => {
       if (fAndar !== 'todos' && p.andar !== fAndar) return false;
       if (fTipo !== 'todos' && p.tipo !== fTipo) return false;
       if (fStatus !== 'todos') {
@@ -262,8 +260,14 @@ const LevantamentoConcreto = (() => {
       if (a.tipo !== b.tipo) return (a.tipo || '').localeCompare(b.tipo || '');
       return (a.nome || '').localeCompare(b.nome || '');
     });
+  }
 
-    const volFiltro = lista.reduce((s, p) => s + (p.volume || 0), 0);
+  // Monta a tabela inteira (cabeçalho + linha de filtros) — só quando os INPUTS de filtro
+  // precisam ser recriados (carregar obra, ordenar, limpar). NUNCA chamar isso a cada tecla
+  // digitada: destruiria o próprio <input> onde a pessoa está digitando e perderia o foco.
+  function renderTabelaPecas() {
+    const el = document.getElementById('lc-tabela-pecas');
+    if (!el) return;
     const seta = col => pecasSortCol === col ? (pecasSortDir === 1 ? ' ▲' : ' ▼') : '';
     const th = (label, col) => `<th style="cursor:pointer;user-select:none;" onclick="LC.ordenarPecas('${col}')" title="Ordenar por ${label}">${label}${seta(col)}</th>`;
     el.innerHTML = `
@@ -295,12 +299,28 @@ const LevantamentoConcreto = (() => {
             <th class="col-acoes" style="padding:4px 6px;"><button class="btn btn-secundario btn-sm" onclick="LC.limparFiltrosPecas()" title="Limpar filtros">✕</button></th>
           </tr>
         </thead>
-        <tbody>
-          ${!lista.length ? `<tr><td colspan="7"><div class="cc-empty">⬡<br>Nenhuma peça encontrada com esses filtros.</div></td></tr>` : lista.map(p => {
-            const pct = CC.pctConcretado(p, lancamentos);
-            const badge = pct >= 100 ? 'cc-badgeComplete' : pct > 0 ? 'cc-badgePartial' : 'cc-badgePending';
-            const diamComp = p.diametro ? `Ø${CC.fmt1(p.diametro)}cm × ${CC.fmt1(p.comprimento)}m` : '—';
-            return `<tr>
+        <tbody id="lc-pecas-tbody"></tbody>
+        <tfoot id="lc-pecas-tfoot"></tfoot>
+      </table>
+      </div>
+    `;
+    atualizarListaPecas();
+  }
+
+  // Atualização "leve": só reconstrói as LINHAS (tbody/tfoot), nunca a linha de filtros —
+  // é isso que é chamado a cada tecla digitada, então o <input> onde a pessoa digita nunca
+  // é destruído e o foco/cursor não pula.
+  function atualizarListaPecas() {
+    const tbody = document.getElementById('lc-pecas-tbody');
+    const tfoot = document.getElementById('lc-pecas-tfoot');
+    if (!tbody || !tfoot) return;
+    const lista = calcularListaPecas();
+    const volFiltro = lista.reduce((s, p) => s + (p.volume || 0), 0);
+    tbody.innerHTML = !lista.length ? `<tr><td colspan="7"><div class="cc-empty">⬡<br>Nenhuma peça encontrada com esses filtros.</div></td></tr>` : lista.map(p => {
+      const pct = CC.pctConcretado(p, lancamentos);
+      const badge = pct >= 100 ? 'cc-badgeComplete' : pct > 0 ? 'cc-badgePartial' : 'cc-badgePending';
+      const diamComp = p.diametro ? `Ø${CC.fmt1(p.diametro)}cm × ${CC.fmt1(p.comprimento)}m` : '—';
+      return `<tr>
               <td style="font-weight:600;">${esc(p.nome)}</td>
               <td>${esc(p.tipo)}</td>
               <td>${esc(p.andar)}</td>
@@ -312,12 +332,9 @@ const LevantamentoConcreto = (() => {
                 <button class="btn btn-secundario btn-sm" data-perm="levantamentoConcreto:excluir" style="color:var(--cv-red);" onclick="LC.excluirPeca('${p.id}')">🗑</button>
               </td>
             </tr>`;
-          }).join('')}
-        </tbody>
-        <tfoot><tr><td colspan="4" style="font-weight:700;">${lista.length} peça${lista.length !== 1 ? 's' : ''}</td><td class="col-num cc-tdMono" style="font-weight:700;">${CC.fmt4(volFiltro)}</td><td colspan="2"></td></tr></tfoot>
-      </table>
-      </div>
-    `;
+    }).join('');
+    tfoot.innerHTML = `<tr><td colspan="4" style="font-weight:700;">${lista.length} peça${lista.length !== 1 ? 's' : ''}</td><td class="col-num cc-tdMono" style="font-weight:700;">${CC.fmt4(volFiltro)}</td><td colspan="2"></td></tr>`;
+    Permissions.aplicarNaTela();
   }
 
   function renderTabelaConcs() {

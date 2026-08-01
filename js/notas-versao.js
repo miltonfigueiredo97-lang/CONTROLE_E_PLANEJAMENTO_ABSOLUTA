@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.59.11',
+  versaoAtual: 'V2.59.12',
 
   versoes: [
     {
@@ -5431,11 +5431,15 @@ const NotasVersao = {
       titulo:'Levantamento de Concreto — filtro de Peças cobre qualquer coluna + filtro por status',
       itens:['A busca de texto agora casa com QUALQUER coluna da tabela: nome, tipo, andar, diâmetro, comprimento e volume — antes só buscava nome/tipo/andar.',
         'Novo select "Status" (Pendente/Parcial/Completo) — filtra pelo mesmo % de concretado que aparece na coluna.']},
-    {versao:'V2.59.11',status:'aberta',data:'2026-08-01',tipo:'correcao',
+    {versao:'V2.59.11',status:'fechada',data:'2026-08-01',tipo:'correcao',
       titulo:'Levantamento de Concreto — filtro por coluna de verdade (não mais uma busca única)',
       itens:['Trocada a busca única por um filtro embaixo de CADA coluna da tabela de Peças: Nome, Tipo, Andar, Ø/Comp., Volume e Status — cada um filtra independente, do jeito que a pessoa quiser combinar.',
         'Clicar no título de qualquer coluna ordena a lista por ela (▲/▼); clica de novo inverte.',
-        'Botão ✕ na linha de filtros limpa tudo de uma vez.']}
+        'Botão ✕ na linha de filtros limpa tudo de uma vez.']},
+    {versao:'V2.59.12',status:'aberta',data:'2026-08-01',tipo:'correcao',
+      titulo:'Levantamento de Concreto — bug real: filtro perdia o foco a cada letra digitada',
+      itens:['Causa: cada tecla digitada num campo de filtro (Nome, Ø/Comp., Volume) reconstruía a tabela INTEIRA — inclusive o próprio campo onde a pessoa estava digitando — então o cursor saía do campo a cada letra. Dava a impressão de "não funcionar".',
+        'Corrigido: digitar agora só atualiza as linhas da tabela, sem tocar na linha de filtros — o campo mantém o foco, dá pra digitar a palavra inteira normalmente.']}
   ],
 
   render(containerId) {
