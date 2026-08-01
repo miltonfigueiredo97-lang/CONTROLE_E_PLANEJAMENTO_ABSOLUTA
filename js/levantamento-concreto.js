@@ -876,26 +876,39 @@ const LevantamentoConcreto = (() => {
   function escRemDeg(i) { calc.degraus.splice(i, 1); renderCalc(); }
   function escUpdDeg(i, c, v) { calc.degraus[i][c] = v; atualizarVolumeCalc(); }
 
+  // Gera N peças individuais (rotuladas nome-a, nome-b...) a partir de grupos diâmetro/comprimento/quantidade
+  function gerarItensEstacas(nome, andar, grupos) {
+    const itens = [];
+    let idx = 0;
+    (grupos || []).forEach(g => {
+      const D = CC.num(g.diametro), C = CC.num(g.comprimento), Q = parseInt(g.quantidade) || 0;
+      if (D <= 0 || C <= 0 || Q <= 0) return;
+      const volUnit = CC.calcVolFundacao('Estacas', { A: C, B: D });
+      for (let i = 0; i < Q; i++) {
+        itens.push({
+          id: CC.genId('lev'), nome: `${nome}-${letraSequencial(idx)}`, andar,
+          tipo: 'Fundação', subTipo: 'Estacas', volume: volUnit, diametro: D, comprimento: C,
+        });
+        idx++;
+      }
+    });
+    return itens;
+  }
+
+  // Nome-base do pilar a partir de uma peça individual de estaca (remove o "-a"/"-b"... final)
+  function levEstacaBase(item) {
+    if (!item || item.subTipo !== 'Estacas') return null;
+    const m = /^(.*)-([a-z]+)$/.exec(item.nome || '');
+    return m ? m[1] : (item.nome || '');
+  }
+
   async function calcAdicionar() {
     const volume = calcVolumeAtual();
     if (!calc.nome || !calc.andar || volume <= 0) return;
 
-    // Estacas: 1 grupo (diâmetro+comprimento+quantidade) → N peças, rotuladas nome-a, nome-b...
+    // Estacas: 1+ grupos (diâmetro+comprimento+quantidade) → N peças, rotuladas nome-a, nome-b...
     if (calc.tipoPeca === 'fundacao' && calc.tipoFund === 'Estacas') {
-      const itens = [];
-      let idx = 0;
-      calc.estacaGrupos.forEach(g => {
-        const D = CC.num(g.diametro), C = CC.num(g.comprimento), Q = parseInt(g.quantidade) || 0;
-        if (D <= 0 || C <= 0 || Q <= 0) return;
-        const volUnit = CC.calcVolFundacao('Estacas', { A: C, B: D });
-        for (let i = 0; i < Q; i++) {
-          itens.push({
-            id: CC.genId('lev'), nome: `${calc.nome}-${letraSequencial(idx)}`, andar: calc.andar,
-            tipo: 'Fundação', subTipo: 'Estacas', volume: volUnit, diametro: D, comprimento: C,
-          });
-          idx++;
-        }
-      });
+      const itens = gerarItensEstacas(calc.nome, calc.andar, calc.estacaGrupos);
       if (!itens.length) return;
       levantamento.push(...itens);
       await salvarLevantamentoLocal();
@@ -945,12 +958,28 @@ const LevantamentoConcreto = (() => {
   // ══════════════════════════════════════════
   let levSel = new Set();
   let levEditId = null;
+  let levGrupoEdit = null; // { baseNome, andar, grupos:[{diametro,comprimento,quantidade}] }
 
   function abrirLevantamento() {
     levSel = new Set(levantamento.map(i => i.id));
     levEditId = null;
+    levGrupoEdit = null;
     renderLevantamento();
     Utils.abrirModal('modal-lc-lev');
+  }
+
+  // Agrupa peças de Estacas pelo nome-base do pilar (P110-a, P110-b... → grupo "P110")
+  function levAgruparEstacas() {
+    const grupos = [];
+    const idx = new Map();
+    levantamento.forEach(item => {
+      if (item.subTipo !== 'Estacas') return;
+      const base = levEstacaBase(item);
+      const key = base + '||' + item.andar;
+      if (!idx.has(key)) { idx.set(key, grupos.length); grupos.push({ baseNome: base, andar: item.andar, itens: [] }); }
+      grupos[idx.get(key)].itens.push(item);
+    });
+    return grupos;
   }
 
   function renderLevantamento() {
@@ -962,12 +991,62 @@ const LevantamentoConcreto = (() => {
     }
     const selecionados = levantamento.filter(i => levSel.has(i.id));
     const volSel = selecionados.reduce((s, i) => s + i.volume, 0);
+    const gruposEstacas = levAgruparEstacas();
+    const jaRenderizado = new Set();
+
+    const linhaGrupo = (grupo) => {
+      const emEdicao = levGrupoEdit && levGrupoEdit.baseNome === grupo.baseNome && levGrupoEdit.andar === grupo.andar;
+      const volGrupo = grupo.itens.reduce((s, i) => s + i.volume, 0);
+      if (emEdicao) {
+        return `
+          <div style="padding:10px 14px;border-bottom:1px solid var(--cor-borda-light);background:var(--cor-primaria-light,#fef9e7);">
+            <p class="text-sm text-muted mb-1">Editando o conjunto inteiro — muda quantidade, diâmetro, adiciona ou remove grupos. Ao salvar, as estacas são re-rotuladas de "a" até o total.</p>
+            <div class="form-row" style="margin-bottom:6px;">
+              <div class="form-grupo" style="margin-bottom:0;"><label style="font-size:0.68rem;">Nome do pilar</label>
+                <input type="text" class="form-control" id="levg-nome" value="${esc(levGrupoEdit.baseNome)}">
+              </div>
+              <div class="form-grupo" style="margin-bottom:0;"><label style="font-size:0.68rem;">Andar</label>
+                <select class="form-control" id="levg-andar">${optAndares(levGrupoEdit.andar)}</select>
+              </div>
+            </div>
+            ${linhaSeg(levGrupoEdit.grupos, [
+              { label: 'Diâmetro [cm]', campo: 'diametro', ph: '40' },
+              { label: 'Comprimento [m]', campo: 'comprimento', ph: '6' },
+              { label: 'Quantidade', campo: 'quantidade', ph: '10' },
+            ], 'levgAddGrupo', 'levgRemGrupo', 'levgUpdGrupo')}
+            <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px;">
+              <button class="btn btn-primario btn-sm" onclick="LC.levgSalvar()">💾 Salvar conjunto</button>
+              <button class="btn btn-secundario btn-sm" onclick="LC.levgCancelar()">✕ Cancelar</button>
+            </div>
+          </div>`;
+      }
+      const todosSel = grupo.itens.every(i => levSel.has(i.id));
+      const nomeSeguro = esc(grupo.baseNome).replace(/'/g, "\\'");
+      const andarSeguro = esc(grupo.andar).replace(/'/g, "\\'");
+      return `
+        <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--cor-borda-light);">
+          <input type="checkbox" ${todosSel ? 'checked' : ''} onchange="LC.levToggleGrupo('${nomeSeguro}','${andarSeguro}')">
+          <div style="flex:1;">
+            <div style="font-weight:600;font-size:0.9rem;">${esc(grupo.baseNome)} <span style="font-weight:400;color:var(--cor-texto-muted);">(${grupo.itens.length} estaca${grupo.itens.length !== 1 ? 's' : ''})</span></div>
+            <div style="font-family:var(--font-mono);font-size:0.75rem;color:var(--cor-texto-muted);">Fundação · Estacas · ${esc(grupo.andar)} · ${CC.fmt4(volGrupo)} m³</div>
+          </div>
+          <button class="btn btn-secundario btn-sm" onclick="LC.levIniciarEdicaoGrupo('${nomeSeguro}','${andarSeguro}')">✎</button>
+          <button class="btn btn-secundario btn-sm" style="color:#ef4444;" onclick="LC.levRemoverGrupo('${nomeSeguro}','${andarSeguro}')">✕</button>
+        </div>`;
+    };
+
     el.innerHTML = `
       <p class="text-sm text-muted mb-2">Peças calculadas aguardando envio para a base. Selecione, edite se precisar, e envie.</p>
       <div style="max-height:340px;overflow-y:auto;border:1px solid var(--cor-borda-light);border-radius:8px;margin-bottom:12px;">
         ${levantamento.map(item => {
+          if (item.subTipo === 'Estacas') {
+            const key = levEstacaBase(item) + '||' + item.andar;
+            if (jaRenderizado.has(key)) return '';
+            jaRenderizado.add(key);
+            const grupo = gruposEstacas.find(g => (g.baseNome + '||' + g.andar) === key);
+            return linhaGrupo(grupo);
+          }
           if (item.id === levEditId) {
-            const temDiamComp = item.subTipo === 'Estacas';
             return `
               <div style="padding:10px 14px;border-bottom:1px solid var(--cor-borda-light);background:var(--cor-primaria-light,#fef9e7);">
                 <div class="form-row" style="margin-bottom:6px;">
@@ -978,20 +1057,10 @@ const LevantamentoConcreto = (() => {
                     <select class="form-control" id="lev-andar-${item.id}">${optAndares(item.andar)}</select>
                   </div>
                 </div>
-                ${temDiamComp ? `
-                <div class="form-row" style="margin-bottom:6px;">
-                  <div class="form-grupo" style="margin-bottom:0;"><label style="font-size:0.68rem;">Diâmetro [cm]</label>
-                    <input type="text" inputmode="decimal" class="form-control" id="lev-diam-${item.id}" value="${esc(item.diametro)}">
-                  </div>
-                  <div class="form-grupo" style="margin-bottom:0;"><label style="font-size:0.68rem;">Comprimento [m]</label>
-                    <input type="text" inputmode="decimal" class="form-control" id="lev-comp-${item.id}" value="${esc(item.comprimento)}">
-                  </div>
-                </div>` : ''}
                 <div class="form-row" style="align-items:end;gap:8px;">
                   <div class="form-grupo" style="margin-bottom:0;flex:1;"><label style="font-size:0.68rem;">Volume (m³)</label>
                     <input type="text" inputmode="decimal" class="form-control" id="lev-vol-${item.id}" value="${item.volume}">
                   </div>
-                  ${temDiamComp ? `<button class="btn btn-secundario btn-sm" onclick="LC.levRecalcVolume('${item.id}')" title="Recalcular volume a partir de diâmetro/comprimento">↻</button>` : ''}
                   <button class="btn btn-primario btn-sm" onclick="LC.levSalvarEdicao('${item.id}')">💾 Salvar</button>
                   <button class="btn btn-secundario btn-sm" onclick="LC.levCancelarEdicao()">✕</button>
                 </div>
@@ -1020,17 +1089,15 @@ const LevantamentoConcreto = (() => {
     renderLevantamento();
   }
 
+  function levToggleGrupo(baseNome, andar) {
+    const itensGrupo = levantamento.filter(i => i.subTipo === 'Estacas' && levEstacaBase(i) === baseNome && i.andar === andar);
+    const todosSel = itensGrupo.every(i => levSel.has(i.id));
+    itensGrupo.forEach(i => { if (todosSel) levSel.delete(i.id); else levSel.add(i.id); });
+    renderLevantamento();
+  }
+
   function levIniciarEdicao(id) { levEditId = id; renderLevantamento(); }
   function levCancelarEdicao() { levEditId = null; renderLevantamento(); }
-
-  function levRecalcVolume(id) {
-    const diamEl = document.getElementById(`lev-diam-${id}`);
-    const compEl = document.getElementById(`lev-comp-${id}`);
-    const volEl = document.getElementById(`lev-vol-${id}`);
-    if (!diamEl || !compEl || !volEl) return;
-    const D = CC.num(diamEl.value), C = CC.num(compEl.value);
-    if (D > 0 && C > 0) volEl.value = CC.calcVolFundacao('Estacas', { A: C, B: D }).toFixed(4);
-  }
 
   async function levSalvarEdicao(id) {
     const item = levantamento.find(i => i.id === id);
@@ -1039,13 +1106,56 @@ const LevantamentoConcreto = (() => {
     const andar = document.getElementById(`lev-andar-${id}`)?.value || '';
     const volume = CC.num(document.getElementById(`lev-vol-${id}`)?.value);
     if (!nome || !andar || !(volume > 0)) { Utils.toast('Preencha nome, andar e volume maior que zero.', 'alerta'); return; }
-    const diamEl = document.getElementById(`lev-diam-${id}`);
-    const compEl = document.getElementById(`lev-comp-${id}`);
-    if (diamEl && compEl) { item.diametro = CC.num(diamEl.value); item.comprimento = CC.num(compEl.value); }
     item.nome = nome; item.andar = andar; item.volume = volume;
     await salvarLevantamentoLocal();
     levEditId = null;
     Utils.toast('✓ Item atualizado', 'sucesso');
+    renderLevantamento();
+    renderizar();
+  }
+
+  // Editar o CONJUNTO inteiro de estacas de um pilar (add/remover grupo, mudar quantidade) — resolve o caso "coloquei 6, era 7"
+  function levIniciarEdicaoGrupo(baseNome, andar) {
+    const itensGrupo = levantamento.filter(i => i.subTipo === 'Estacas' && levEstacaBase(i) === baseNome && i.andar === andar);
+    const buckets = [];
+    const idx = new Map();
+    itensGrupo.forEach(i => {
+      const key = i.diametro + '|' + i.comprimento;
+      if (!idx.has(key)) { idx.set(key, buckets.length); buckets.push({ diametro: i.diametro, comprimento: i.comprimento, quantidade: 0 }); }
+      buckets[idx.get(key)].quantidade++;
+    });
+    levGrupoEdit = { baseNome, andar, grupos: buckets.length ? buckets : [{ diametro: '', comprimento: '', quantidade: '' }] };
+    renderLevantamento();
+  }
+
+  function levgCancelar() { levGrupoEdit = null; renderLevantamento(); }
+  function levgAddGrupo() { levGrupoEdit.grupos.push({ diametro: '', comprimento: '', quantidade: '' }); renderLevantamento(); }
+  function levgRemGrupo(i) { levGrupoEdit.grupos.splice(i, 1); renderLevantamento(); }
+  function levgUpdGrupo(i, c, v) { levGrupoEdit.grupos[i][c] = v; }
+
+  async function levgSalvar() {
+    if (!levGrupoEdit) return;
+    const nome = (document.getElementById('levg-nome')?.value || '').trim();
+    const andar = document.getElementById('levg-andar')?.value || '';
+    if (!nome || !andar) { Utils.toast('Preencha nome do pilar e andar.', 'alerta'); return; }
+    const gruposValidos = levGrupoEdit.grupos.filter(g => CC.num(g.diametro) > 0 && CC.num(g.comprimento) > 0 && (parseInt(g.quantidade) || 0) > 0);
+    if (!gruposValidos.length) { Utils.toast('Preencha ao menos um grupo com diâmetro, comprimento e quantidade.', 'alerta'); return; }
+    const novosItens = gerarItensEstacas(nome, andar, gruposValidos);
+    const { baseNome, andar: andarAntigo } = levGrupoEdit;
+    levantamento = levantamento.filter(i => !(i.subTipo === 'Estacas' && levEstacaBase(i) === baseNome && i.andar === andarAntigo));
+    levantamento.push(...novosItens);
+    await salvarLevantamentoLocal();
+    levGrupoEdit = null;
+    Utils.toast(`✓ Conjunto "${nome}" atualizado (${novosItens.length} estaca${novosItens.length !== 1 ? 's' : ''})`, 'sucesso');
+    renderLevantamento();
+    renderizar();
+  }
+
+  async function levRemoverGrupo(baseNome, andar) {
+    const ok = await Utils.confirmar(`Remover todas as estacas de "${baseNome}" (${andar})?`);
+    if (!ok) return;
+    levantamento = levantamento.filter(i => !(i.subTipo === 'Estacas' && levEstacaBase(i) === baseNome && i.andar === andar));
+    await salvarLevantamentoLocal();
     renderLevantamento();
     renderizar();
   }
@@ -1860,8 +1970,9 @@ const LevantamentoConcreto = (() => {
     escAddLaje, escRemLaje, escUpdLaje,
     escAddPat, escRemPat, escUpdPat,
     escAddDeg, escRemDeg, escUpdDeg,
-    abrirLevantamento, levToggle, levRemover, levEnviarBase,
-    levIniciarEdicao, levCancelarEdicao, levRecalcVolume, levSalvarEdicao,
+    abrirLevantamento, levToggle, levToggleGrupo, levRemover, levRemoverGrupo, levEnviarBase,
+    levIniciarEdicao, levCancelarEdicao, levSalvarEdicao,
+    levIniciarEdicaoGrupo, levgCancelar, levgAddGrupo, levgRemGrupo, levgUpdGrupo, levgSalvar,
     abrirNovaPeca, abrirEditarPeca, salvarPeca, excluirPeca, limparBasePecas,
     abrirImportar, baixarModeloTSV, onImportTexto, onImportArquivo, salvarImport,
     abrirConcretagens, iniciarNovaConc, editarConcretagem, excluirConcretagem,

@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.59.3',
+  versaoAtual: 'V2.59.4',
 
   versoes: [
     {
@@ -5389,12 +5389,18 @@ const NotasVersao = {
       titulo:'Levantamento de Concreto — criar andar direto na calculadora',
       itens:['Antes: a calculadora só listava andares já existentes (de peças salvas ou da tela ⚙️ Config) — obra nova sem nenhum andar cadastrado deixava o campo "Andar" vazio e travava o botão de salvar.',
         'Agora: o seletor de Andar tem a opção "+ Criar novo andar...", que abre um campo pra digitar o nome e já salva na configuração da obra, sem precisar fechar a calculadora.']},
-    {versao:'V2.59.3',status:'aberta',data:'2026-08-01',tipo:'correcao',
+    {versao:'V2.59.3',status:'fechada',data:'2026-08-01',tipo:'correcao',
       titulo:'Levantamento de Concreto — editar peças no Levantamento (antes de enviar pra Base) + repasse de diâmetro/comprimento',
       itens:['Botão ✎ em cada item do Levantamento (staging) — edita nome, andar e volume ali mesmo, sem precisar mandar pra Base primeiro.',
         'Peças de Estacas mostram diâmetro e comprimento editáveis + botão ↻ que recalcula o volume automaticamente a partir deles.',
         'Confirmado: cada estaca gerada (P110-a, P110-b...) já grava o volume individual dela, não o total do pilar — o número "Volume calculado" da calculadora é só a prévia da soma de tudo que vai ser criado.',
-        'Corrigido: diâmetro/comprimento das estacas estavam se perdendo ao mandar do Levantamento pra Base (não eram repassados) — agora vão junto.']}
+        'Corrigido: diâmetro/comprimento das estacas estavam se perdendo ao mandar do Levantamento pra Base (não eram repassados) — agora vão junto.']},
+    {versao:'V2.59.4',status:'aberta',data:'2026-08-01',tipo:'correcao',
+      titulo:'Levantamento de Concreto — Estacas: editar o conjunto inteiro do pilar, não só uma letra',
+      itens:['Problema: editar uma peça isolada (ex: só a "f") não resolvia quando a quantidade errada — não dava pra criar uma "g" nova.',
+        'Agora as estacas de um mesmo pilar aparecem AGRUPADAS no Levantamento ("P110 · 6 estacas"), com um único ✎ que abre o conjunto inteiro (mesma tela de grupos diâmetro/comprimento/quantidade da calculadora).',
+        'Muda a quantidade (6→7), adiciona um novo grupo de diâmetro, ou remove um grupo — ao salvar, todas as estacas do pilar são apagadas e recriadas com as letras certas (a até a nova quantidade total).',
+        'Selecionar/remover também passou a ser por conjunto inteiro (marca ou apaga o pilar todo de uma vez).']}
   ],
 
   render(containerId) {
