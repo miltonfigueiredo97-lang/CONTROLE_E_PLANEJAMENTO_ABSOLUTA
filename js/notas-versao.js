@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.59.7',
+  versaoAtual: 'V2.59.8',
 
   versoes: [
     {
@@ -5413,12 +5413,16 @@ const NotasVersao = {
         'Estacas/Fundações: seletor de estaca vs. fundação disponível também dentro do Planejamento e do Acompanhamento, não só na aba Marcadores.',
         'Planejamento (Gantt): uma tarefa pode se vincular ao % de execução de UMA peça específica ou de UMA concretagem inteira (a pessoa escolhe qual, na hora) — o % da tarefa deixa de ser digitado à mão e passa a vir automaticamente da execução real, se atualizando sempre que um real é lançado no Acompanhamento ou quando o Planejamento é reaberto. Cálculo centralizado em EstacasCalculos.sincronizarVinculosPlanejamento, pra nunca haver dois números divergentes.',
         'Controle de Estacas: modal de vincular marcador mostra um resumo da quantidade de estacas por diâmetro no levantamento (usa o campo diâmetro já salvo por peça, do Levantamento de Concreto), pra ajudar a escolher qual peça corresponde à estaca do projeto.']},
-    {versao:'V2.59.7',status:'aberta',data:'2026-08-01',tipo:'correcao',
+    {versao:'V2.59.7',status:'fechada',data:'2026-08-01',tipo:'correcao',
       titulo:'Levantamento de Concreto — diâmetro/comprimento das estacas agora aparecem em todo lugar',
       itens:['Diâmetro/comprimento já eram gravados no banco, mas ficavam invisíveis — não apareciam em lugar nenhum da tela.',
         'Tabela de Peças (Base): nova coluna "Ø / Comp." (ex: Ø40cm × 6m) para peças de Estacas.',
         'Levantamento (staging): o card do conjunto do pilar agora mostra o diâmetro/comprimento (ou "N diâmetros diferentes" se o pilar tiver mais de um tipo de estaca).',
-        'Editar Peça (Base): formulário ganhou campos de Diâmetro e Comprimento — dá pra ver e corrigir mesmo depois de já ter ido pra base.']}
+        'Editar Peça (Base): formulário ganhou campos de Diâmetro e Comprimento — dá pra ver e corrigir mesmo depois de já ter ido pra base.']},
+    {versao:'V2.59.8',status:'aberta',data:'2026-08-01',tipo:'melhoria',
+      titulo:'Controle de Estacas: combobox de busca pra vincular peça, e cor por diâmetro/comprimento no desenho',
+      itens:['Vincular marcador: o antigo <select> (tinha que rolar a lista inteira) virou um campo de busca — digita parte do nome, andar ou diâmetro e a lista filtra na hora; clica pra selecionar.',
+        'Cada combinação de diâmetro+comprimento de estaca agora ganha um anel colorido próprio ao redor do círculo no desenho, além da cor de status (verde/laranja/cinza) que já existia — dá pra ver de longe quais estacas são de qual "tipo" sem precisar clicar uma por uma. Legenda das cores aparece embaixo do seletor Estacas/Fundações, nas três abas (Marcadores, Planejamento, Acompanhamento) e também no minimapa do Dashboard.']}
   ],
 
   render(containerId) {

@@ -83,8 +83,11 @@ const EstacasCalculos = (() => {
       const cor = corStatus(st.pct);
       const diam = Math.max(6, num(m.raio) * 2 * w);
       const tracejado = (st.pct === null || st.pct === undefined) ? 'border-style:dashed;' : 'border-style:solid;';
-      const titulo = opts.mini ? '' : ` title="${esc(st.label || '')}"`;
-      return `<div class="est-marcador est-circulo" data-id="${m.id}" style="position:absolute;left:${(m.cx * 100).toFixed(3)}%;top:${(m.cy * 100).toFixed(3)}%;width:${diam.toFixed(1)}px;height:${diam.toFixed(1)}px;transform:translate(-50%,-50%);border-radius:50%;background:${cor}99;border:2px ${cor};${tracejado}${cursor}z-index:2;box-sizing:border-box;"${titulo}></div>`;
+      const titulo = opts.mini ? '' : ` title="${esc(st.label || '')}${st.grupoLabel ? ' — ' + esc(st.grupoLabel) : ''}"`;
+      // Anel externo colorido por grupo (diâmetro+comprimento) — some ao redor do
+      // status, não substitui: o preenchimento/borda continuam mostrando o %.
+      const anel = st.corGrupo ? `box-shadow:0 0 0 3px ${st.corGrupo};` : '';
+      return `<div class="est-marcador est-circulo" data-id="${m.id}" style="position:absolute;left:${(m.cx * 100).toFixed(3)}%;top:${(m.cy * 100).toFixed(3)}%;width:${diam.toFixed(1)}px;height:${diam.toFixed(1)}px;transform:translate(-50%,-50%);border-radius:50%;background:${cor}99;border:2px ${cor};${tracejado}${anel}${cursor}z-index:2;box-sizing:border-box;"${titulo}></div>`;
     }).join('');
 
     const poligonos = (marcadores || []).filter(m => m.tipo === 'poligono' && m.pontos && m.pontos.length >= 3).map(m => {
@@ -107,6 +110,29 @@ const EstacasCalculos = (() => {
         ${bg}${poligonos}${circulos}
       </div>
     </div>`;
+  }
+
+  // ══════════════════════════════════════════
+  // CORES POR GRUPO (diâmetro+comprimento das estacas)
+  // Anel adicional no desenho, só pra diferenciar visualmente "qual tipo"
+  // de estaca é qual — não é status (isso continua sendo corStatus).
+  // Mapa é construído com TODAS as peças de uma vez (ordenado por diâmetro
+  // depois comprimento) pra cor ficar estável e nunca colidir entre grupos —
+  // usado tanto pelo Controle de Estacas quanto pelo Dashboard.
+  // ══════════════════════════════════════════
+  const PALETA_GRUPOS_ESTACA = ['#8b5cf6', '#ec4899', '#06b6d4', '#84cc16', '#f97316', '#0ea5e9', '#d946ef', '#14b8a6', '#f43f5e', '#a3e635', '#6366f1', '#facc15'];
+  function chaveGrupoEstaca(diametro, comprimento) { return `${num(diametro)}_${num(comprimento)}`; }
+  function mapaCoresGrupoEstaca(pecas) {
+    const chaves = [...new Set(
+      (pecas || []).filter(p => p.tipo === 'Fundação' && p.subTipo === 'Estacas' && (p.diametro || p.comprimento))
+        .map(p => chaveGrupoEstaca(p.diametro, p.comprimento))
+    )].sort((a, b) => {
+      const [da, ca] = a.split('_').map(Number), [db, cb] = b.split('_').map(Number);
+      return da - db || ca - cb;
+    });
+    const mapa = new Map();
+    chaves.forEach((k, i) => mapa.set(k, PALETA_GRUPOS_ESTACA[i % PALETA_GRUPOS_ESTACA.length]));
+    return mapa;
   }
 
   // ══════════════════════════════════════════
@@ -196,5 +222,6 @@ const EstacasCalculos = (() => {
     stageHTML,
     canvasParaDataURLLimitado,
     sincronizarVinculosPlanejamento,
+    chaveGrupoEstaca, mapaCoresGrupoEstaca,
   };
 })();

@@ -1471,11 +1471,16 @@ const Dashboard = (() => {
       if (!pranchasComImagem.length) { host.innerHTML = ''; return; }
 
       const CC = window.ConcretoCalculos;
+      const mapaCoresGrupo = EC.mapaCoresGrupoEstaca(pecas);
       const statusFn = (m) => {
         const p = m.pecaId ? pecas.find(x => x.id === m.pecaId) : null;
         if (!p) return { pct: null, label: 'Sem peça vinculada' };
         const pct = CC ? CC.pctConcretado(p, lancamentos) : 0;
-        return { pct, label: `${p.nome} — ${EC.statusLabel(pct)}` };
+        let corGrupo = null;
+        if (p.subTipo === 'Estacas' && (p.diametro || p.comprimento)) {
+          corGrupo = mapaCoresGrupo.get(EC.chaveGrupoEstaca(p.diametro, p.comprimento)) || null;
+        }
+        return { pct, label: `${p.nome} — ${EC.statusLabel(pct)}`, corGrupo };
       };
       const total = marcadores.length;
       const vinculados = marcadores.filter(m => m.pecaId).length;

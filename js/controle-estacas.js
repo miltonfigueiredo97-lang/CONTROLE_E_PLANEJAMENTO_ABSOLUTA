@@ -41,6 +41,7 @@ const ControleEstacas = (() => {
   let concretagens = [];  // concretoConcretagens — idem
   let btsConfig = [];     // concretoBTs — idem
   let pecaConc = [];      // concretoPecaConc — idem (peça x concretagem)
+  let mapaCoresGrupo = new Map(); // diâmetro+comprimento -> cor (anel no desenho)
 
   let abaPrincipal = 'marcadores'; // 'marcadores' | 'planejamento' | 'acompanhamento'
   let pranchaAtivaId = null;
@@ -89,6 +90,7 @@ const ControleEstacas = (() => {
       ]);
       pranchas = prs; marcadores = ms; pecas = ps; lancamentos = lans;
       concretagens = concs; btsConfig = bts; pecaConc = pcs;
+      mapaCoresGrupo = EC.mapaCoresGrupoEstaca(pecas);
       if (!pranchaAtivaId && pranchas.length) pranchaAtivaId = pranchasOrdenadas()[0].id;
       if (pranchaAtivaId && !pranchas.some(p => p.id === pranchaAtivaId)) pranchaAtivaId = pranchas[0]?.id || null;
       renderizar();
@@ -122,7 +124,12 @@ const ControleEstacas = (() => {
     const p = pecaDoMarcador(m);
     if (!p) return { pct: null, vinculada: false, label: 'Sem peça vinculada' };
     const pct = ConcretoCalculos.pctConcretado(p, lancamentos);
-    return { pct, vinculada: true, label: `${p.nome} — ${EC.statusLabel(pct)}` };
+    let corGrupo = null, grupoLabel = null;
+    if (p.subTipo === 'Estacas' && (p.diametro || p.comprimento)) {
+      corGrupo = mapaCoresGrupo.get(EC.chaveGrupoEstaca(p.diametro, p.comprimento)) || null;
+      grupoLabel = `⌀${EC.num(p.diametro) || '?'}cm${p.comprimento ? ' × ' + EC.num(p.comprimento) + 'm' : ''}`;
+    }
+    return { pct, vinculada: true, label: `${p.nome} — ${EC.statusLabel(pct)}`, corGrupo, grupoLabel };
   }
   // Peças elegíveis pra vincular na view atual: tipo Fundação; subTipo
   // 'Estacas' pra view Estacas, os outros 8 subtipos pra view Fundações.
@@ -131,6 +138,16 @@ const ControleEstacas = (() => {
   }
   function marcadorDaPeca(pecaId, excetoId) {
     return marcadores.find(m => m.pecaId === pecaId && m.id !== excetoId) || null;
+  }
+  // Legenda das cores por grupo (diâmetro+comprimento) — só faz sentido na
+  // view de Estacas, e só se houver ao menos um grupo com dado suficiente.
+  function _legendaGrupos() {
+    if (view !== 'estacas' || !mapaCoresGrupo.size) return '';
+    const itens = [...mapaCoresGrupo.entries()].map(([chave, cor]) => {
+      const [d, c] = chave.split('_').map(Number);
+      return `<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:50%;border:2px solid ${cor};display:inline-block;"></span>⌀${d}cm${c ? ' × ' + c + 'm' : ''}</span>`;
+    }).join('');
+    return `<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin:6px 0 2px;font-size:.78rem;color:var(--cv-text3,#94a3b8);">${itens}</div>`;
   }
 
   // ══════════════════════════════════════════
@@ -213,6 +230,7 @@ const ControleEstacas = (() => {
           </div>
           <span class="text-sm text-muted">🟢 concretado · 🟠 parcial · ⚪ pendente · ▢ sem vínculo</span>
         </div>
+        ${_legendaGrupos()}
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0;align-items:center;">
           <select class="form-control" id="ce-prancha-ativa" style="max-width:240px;" onchange="CE.onTrocarPranchaAtiva()">
             ${pranchasOrdenadas().map(p => `<option value="${p.id}" ${p.id === pranchaAtivaId ? 'selected' : ''}>${esc(p.nome || 'Prancha')}</option>`).join('')}
@@ -356,6 +374,7 @@ const ControleEstacas = (() => {
             </div>
             <span class="text-sm text-muted">🟡 nesta concretagem · sem anel = não planejada</span>
           </div>
+          ${_legendaGrupos()}
           <div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0;align-items:center;">
             <select class="form-control" style="max-width:240px;" onchange="CE.onTrocarPranchaAtivaGenerico(this.value)">
               ${pranchasOrdenadas().map(p => `<option value="${p.id}" ${p.id === pranchaAtivaId ? 'selected' : ''}>${esc(p.nome || 'Prancha')}</option>`).join('')}
@@ -453,6 +472,7 @@ const ControleEstacas = (() => {
             </div>
             <span class="text-sm text-muted">🟢 concretado · 🟠 parcial · 🟡 anel = planejada nesta concretagem, ainda pendente</span>
           </div>
+          ${_legendaGrupos()}
           <div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0;align-items:center;">
             <select class="form-control" style="max-width:240px;" onchange="CE.onTrocarPranchaAtivaGenerico(this.value)">
               ${pranchasOrdenadas().map(p => `<option value="${p.id}" ${p.id === pranchaAtivaId ? 'selected' : ''}>${esc(p.nome || 'Prancha')}</option>`).join('')}
@@ -926,6 +946,9 @@ const ControleEstacas = (() => {
     const st = statusMarcador(m);
     document.getElementById('ce-vincular-titulo').textContent = m.tipo === 'circulo' ? '⚫ Estaca — Vincular' : '⬛ Fundação — Vincular';
     const resumoDiam = view === 'estacas' ? _resumoPorDiametro(elegiveis) : [];
+    const pecaAtual = m.pecaId ? pecas.find(p => p.id === m.pecaId) : null;
+    vincularBusca = '';
+    vincularListaAberta = false;
     el.innerHTML = `
       ${resumoDiam.length ? `
         <div class="form-grupo">
@@ -936,15 +959,13 @@ const ControleEstacas = (() => {
         </div>` : ''}
       <div class="form-grupo">
         <label>Peça do Levantamento de Concreto</label>
-        <select class="form-control" id="ce-vincular-peca">
-          <option value="">— Nenhuma —</option>
-          ${elegiveis.map(p => {
-            const outro = marcadorDaPeca(p.id, m.id);
-            const pct = ConcretoCalculos.pctConcretado(p, lancamentos);
-            const diamTxt = p.diametro ? ` · ⌀${EC.num(p.diametro)}cm` : '';
-            return `<option value="${p.id}" ${p.id === m.pecaId ? 'selected' : ''}>${esc(p.nome)} · ${esc(p.andar)}${diamTxt} · ${EC.fmt1(pct)}%${outro ? ' — já vinculada a outro marcador' : ''}</option>`;
-          }).join('')}
-        </select>
+        <div style="position:relative;">
+          <input type="text" class="form-control" id="ce-vincular-peca-busca" placeholder="Digite pra buscar por nome, andar ou diâmetro..."
+            value="${esc(pecaAtual ? pecaAtual.nome : '')}" oninput="CE.onBuscaPeca(this.value)" onfocus="CE.onFocoBuscaPeca()"
+            onblur="setTimeout(()=>CE.fecharListaPecaBusca(),150)" autocomplete="off">
+          <input type="hidden" id="ce-vincular-peca" value="${m.pecaId || ''}">
+          <div id="ce-vincular-peca-lista" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:30;background:#fff;border:1px solid var(--cv-border,#e2e8f0);border-radius:8px;max-height:220px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,.15);margin-top:4px;"></div>
+        </div>
         ${!elegiveis.length ? `<p class="text-sm text-muted" style="margin-top:6px;">Nenhuma peça do tipo "${view === 'estacas' ? 'Fundação → Estacas' : 'Fundação (outros tipos)'}" cadastrada ainda no <a href="levantamento-concreto.html" style="color:var(--cor-primaria-dark);font-weight:600;">Levantamento de Concreto</a>.</p>` : ''}
       </div>
       <div class="cc-empty" style="margin-top:4px;">Status atual: <b>${esc(st.label)}</b></div>
@@ -954,6 +975,56 @@ const ControleEstacas = (() => {
       </div>
     `;
     Permissions.aplicarNaTela(document.getElementById('modal-ce-vincular'));
+  }
+
+  // ── Combobox pesquisável de peça (digita e filtra, clica e seleciona) ──
+  let vincularBusca = '';
+  let vincularListaAberta = false;
+
+  function onFocoBuscaPeca() { vincularListaAberta = true; _renderListaPecaBusca(); }
+  function fecharListaPecaBusca() { vincularListaAberta = false; _renderListaPecaBusca(); }
+  function onBuscaPeca(v) {
+    vincularBusca = v;
+    vincularListaAberta = true;
+    const hid = document.getElementById('ce-vincular-peca');
+    if (hid) hid.value = ''; // só confirma o vínculo quando a pessoa CLICA numa opção da lista
+    _renderListaPecaBusca();
+  }
+  function _pecasFiltradasBusca() {
+    const elegiveis = pecasElegiveis();
+    const termo = (vincularBusca || '').trim().toLowerCase();
+    if (!termo) return elegiveis;
+    return elegiveis.filter(p => `${p.nome} ${p.andar} ${p.subTipo || ''} ${p.diametro || ''}`.toLowerCase().includes(termo));
+  }
+  function _renderListaPecaBusca() {
+    const el = document.getElementById('ce-vincular-peca-lista');
+    if (!el) return;
+    if (!vincularListaAberta) { el.style.display = 'none'; return; }
+    const m = marcadores.find(x => x.id === marcadorVincularId);
+    const lista = _pecasFiltradasBusca();
+    el.style.display = 'block';
+    el.innerHTML = `
+      <div style="padding:8px 12px;cursor:pointer;color:var(--cv-text3,#94a3b8);font-size:.85rem;" onmousedown="CE.selecionarPecaBusca('')">— Nenhuma —</div>
+      ${lista.length ? lista.map(p => {
+        const outro = marcadorDaPeca(p.id, m ? m.id : null);
+        const pct = ConcretoCalculos.pctConcretado(p, lancamentos);
+        const diamTxt = p.diametro ? ` · ⌀${EC.num(p.diametro)}cm` : '';
+        return `<div style="padding:8px 12px;cursor:pointer;border-top:1px solid var(--cv-border,#f1f5f9);" onmousedown="CE.selecionarPecaBusca('${p.id}')">
+          <div style="font-weight:600;font-size:.85rem;">${esc(p.nome)}${outro ? ' <span style="color:var(--cv-red,#ef4444);font-weight:400;font-size:.75rem;">— já vinculada</span>' : ''}</div>
+          <div class="text-sm text-muted">${esc(p.andar)}${diamTxt} · ${EC.fmt1(pct)}%</div>
+        </div>`;
+      }).join('') : '<div style="padding:10px 12px;color:var(--cv-text3,#94a3b8);font-size:.82rem;">Nenhuma peça encontrada.</div>'}
+    `;
+  }
+  function selecionarPecaBusca(pecaId) {
+    const hid = document.getElementById('ce-vincular-peca');
+    if (hid) hid.value = pecaId;
+    const p = pecaId ? pecas.find(x => x.id === pecaId) : null;
+    const inputBusca = document.getElementById('ce-vincular-peca-busca');
+    if (inputBusca) inputBusca.value = p ? p.nome : '';
+    vincularBusca = '';
+    vincularListaAberta = false;
+    _renderListaPecaBusca();
   }
 
   async function salvarVinculo() {
@@ -1224,6 +1295,7 @@ const ControleEstacas = (() => {
     iniciarAdicionarCirculo, iniciarAdicionarPoligono, cancelarModo, desfazerPontoPoligono, concluirPoligono,
     iniciarAjusteForma, concluirAjusteForma, cancelarAjusteForma,
     abrirVincular, salvarVinculo, excluirMarcador,
+    onFocoBuscaPeca, fecharListaPecaBusca, onBuscaPeca, selecionarPecaBusca,
     abrirPranchas, novaPrancha, renomearPrancha, excluirPrancha, abrirUploadImagem, onImagemArquivo,
     toggleNovaConc, criarConcretagem, onTrocarPlanConcretagem, onTrocarAcompConcretagem,
   };
