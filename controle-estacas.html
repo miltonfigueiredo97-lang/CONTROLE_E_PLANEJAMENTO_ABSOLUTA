@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Produção — Controle e Planejamento de Obras</title>
+  <title>Controle de Estacas e Fundações — Controle e Planejamento de Obras</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/base.css">
@@ -58,13 +58,70 @@
       <button class="btn-logout" onclick="Auth.logout()" title="Sair">⏻</button>
     </div>
   </aside>
-  <header class="header"><div class="header-title"><h1>Produção</h1></div><div class="header-actions" id="header-actions"></div></header>
-  <main class="content">
-    <div id="modulo-content">
-      <div class="estado-vazio"><div class="icone">⚙️</div><p>Carregando...</p></div>
+
+  <header class="header">
+    <div class="header-title">
+      <h1>Controle de Estacas e Fundações</h1>
+      <div class="header-breadcrumb"><a href="controle.html">Controle</a><span class="sep">›</span><span>Estacas e Fundações</span></div>
     </div>
-  </main>
+    <div class="header-actions"></div>
+  </header>
+
+  <main class="content" id="ce-content"></main>
 </div>
+
+<!-- MODAL: Vincular marcador a peça -->
+<div class="modal-overlay" id="modal-ce-vincular">
+  <div class="modal" style="max-width:460px;">
+    <div class="modal-header">
+      <h3 id="ce-vincular-titulo">Vincular</h3>
+      <button class="modal-close" onclick="Utils.fecharModal('modal-ce-vincular')">&times;</button>
+    </div>
+    <div class="modal-body" id="ce-vincular-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-ce-vincular')">Cancelar</button>
+      <button class="btn btn-primario" onclick="CE.salvarVinculo()">Salvar Vínculo</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Gestão de Pranchas -->
+<div class="modal-overlay" id="modal-ce-pranchas">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <h3>📄 Pranchas do Projeto</h3>
+      <button class="modal-close" onclick="Utils.fecharModal('modal-ce-pranchas')">&times;</button>
+    </div>
+    <div class="modal-body" id="ce-pranchas-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-ce-pranchas')">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Upload de PDF/Imagem da prancha -->
+<div class="modal-overlay" id="modal-ce-imagem">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-header">
+      <h3>⊞ Importar PDF/Imagem</h3>
+      <button class="modal-close" onclick="Utils.fecharModal('modal-ce-imagem')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="ce-img-pranchaid">
+      <div class="form-grupo">
+        <label>Arquivo (PDF ou imagem)</label>
+        <input type="file" id="ce-img-arquivo" accept=".pdf,image/*" class="form-control" onchange="CE.onImagemArquivo(this)">
+      </div>
+      <p class="text-sm text-muted" id="ce-img-status"></p>
+      <p class="text-sm text-muted">PDF: usa a 1ª página. Arquivos grandes são comprimidos automaticamente.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-ce-imagem')">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Firebase SDKs -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -76,7 +133,9 @@
 <script src="js/permissions.js"></script>
 <script src="js/audit.js"></script>
 <script src="js/utils.js"></script>
-<script src="js/producao.js"></script>
-<script>document.addEventListener('DOMContentLoaded', () => { Producao.init(); });</script>
+<script src="js/concreto-calculos.js"></script>
+<script src="js/estacas-calculos.js"></script>
+<script src="js/controle-estacas.js"></script>
+<script>document.addEventListener('DOMContentLoaded', () => { ControleEstacas.init(); });</script>
 </body>
 </html>

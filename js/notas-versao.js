@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.58.21',
+  versaoAtual: 'V2.59.0',
 
   versoes: [
     {
@@ -5363,12 +5363,21 @@ const NotasVersao = {
       itens:['O rótulo "📐 X m²" do polígono já salvo ficava sempre fixo no centroide, muitas vezes cobrindo os números dos chumbadores no desenho — agora pode ser arrastado pra qualquer posição do mapa, e a posição fica salva por vista.',
         'Ao desenhar um novo polígono (Medir Área), os vértices já marcados agora podem ser arrastados pra corrigir a posição, sem precisar desfazer e clicar de novo.',
         'O m² calculado também aparece fora da imagem, na barra de ferramentas, atualizando ao vivo enquanto os vértices são adicionados/ajustados.']},
-    {versao:'V2.58.21',status:'aberta',data:'2026-07-31',tipo:'correcao',
+    {versao:'V2.58.21',status:'fechada',data:'2026-07-31',tipo:'correcao',
       titulo:'Planejamento mostrava % concluído da obra diferente do Dashboard (27% vs 12,68% na mesma obra) — dois métodos de cálculo diferentes coexistindo',
       itens:['O % de uma tarefa-pai no Planejamento (e Diário/Semanal/Produção, que usam a mesma função Utils.percFamilia) era calculado de forma RECURSIVA: média dos filhos diretos ponderada pela duração de CADA FILHO — e essa duração de um filho-grupo normalmente é o intervalo de calendário dele, não a soma do trabalho real dentro dele.',
         'O Dashboard (e a listagem de Obras) usa outra fórmula, mais simples e correta: pondera TODAS as folhas (tarefas sem filhos) pela duração de CADA FOLHA, direto — sem passar por médias intermediárias de grupo.',
         'Essas duas contas divergem MUITO quando a obra tem grupos desbalanceados (ex: um grupo com pouco andamento escondendo, lá dentro, uma tarefa gigante ainda em 0% — o método recursivo "amortece" isso, o método direto não deixa passar).',
-        'Corrigido: Utils.percFamilia agora usa a MESMA fórmula do Dashboard/Obras em todo lugar (Planejamento, Diário de Obra, Semanal, Produção) — o % da obra agora bate igual em qualquer tela.']}
+        'Corrigido: Utils.percFamilia agora usa a MESMA fórmula do Dashboard/Obras em todo lugar (Planejamento, Diário de Obra, Semanal, Produção) — o % da obra agora bate igual em qualquer tela.']},
+    {versao:'V2.59.0',status:'aberta',data:'2026-08-01',tipo:'funcionalidade',
+      titulo:'Novo módulo: Controle de Estacas e Fundações',
+      itens:['Importa o PDF (ou imagem) da prancha do projeto — cada obra pode ter várias pranchas.',
+        'Estacas: marcador circular — clique no centro e arraste pra definir o raio, do tamanho da estaca no desenho.',
+        'Fundações (blocos/sapatas/tubulões): marcador poligonal — clique ponto a ponto pra contornar a forma real da peça.',
+        'Cada marcador se vincula a uma peça do Levantamento de Concreto (tipo Fundação) — Estacas só vinculam a subTipo "Estacas", Fundações aos outros 8 subtipos.',
+        'O status pintado (🟢 concretado · 🟠 parcial · ⚪ pendente · ▢ sem vínculo) vem direto do % concretado da peça no Controle de Concreto (BTs/lançamentos) — este módulo não lança volume, só posiciona e exibe.',
+        'Formas ajustáveis depois de criadas: mover/redimensionar o círculo, arrastar vértices do polígono.',
+        'Dashboard: painel novo com minimapa de cada prancha (somente leitura) mostrando o mesmo status pintado.']}
   ],
 
   render(containerId) {

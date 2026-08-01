@@ -202,6 +202,7 @@ const Dashboard = (() => {
       _renderSuprimentosDash();
       _renderSoloGrampeadoPanel();
       await _renderFundacaoEstrutura();
+      await _renderEstacasPanel();
       _renderCurvaS();
       await _renderResumoApartamento();
     } catch (e) {
@@ -260,6 +261,8 @@ const Dashboard = (() => {
       <div id="db-solo-grampeado-wrap"></div>
 
       <div id="db-fundacao-estrutura-wrap"></div>
+
+      <div id="db-estacas-wrap"></div>
 
       <div class="card db-row">
         <div class="card-body">
@@ -1443,6 +1446,71 @@ const Dashboard = (() => {
     } catch (e) {
       console.error(e);
       host.innerHTML = '<div class="estado-vazio"><p class="text-sm">Erro ao carregar dados de Solo Grampeado.</p></div>';
+    }
+  }
+
+  // ===================== ESTACAS E FUNDAÇÕES =====================
+  // Minimapas do Controle de Estacas e Fundações — um mapa por prancha
+  // (PDF do projeto), só leitura, com o status de cada marcador vindo
+  // do % concretado da peça vinculada (Controle de Concreto).
+  async function _renderEstacasPanel() {
+    const host = document.getElementById('db-estacas-wrap');
+    if (!host) return;
+    const EC = window.EstacasCalculos;
+    if (!EC) { host.innerHTML = ''; return; }
+    try {
+      const obraId = obraAtual.id;
+      const [pranchas, marcadores, pecas, lancamentos] = await Promise.all([
+        Database.listar(obraId, 'estacasPranchas', null).catch(() => []),
+        Database.listar(obraId, 'estacasMarcadores', null).catch(() => []),
+        Database.listar(obraId, 'concretoPecas', null).catch(() => []),
+        Database.listar(obraId, 'concretoLancamentos', null).catch(() => []),
+      ]);
+      const pranchasComImagem = pranchas.filter(p => Number(p.imgWidthPx) > 0 && Number(p.imgHeightPx) > 0)
+        .sort((a, b) => (a.ordem || 0) - (b.ordem || 0));
+      if (!pranchasComImagem.length) { host.innerHTML = ''; return; }
+
+      const CC = window.ConcretoCalculos;
+      const statusFn = (m) => {
+        const p = m.pecaId ? pecas.find(x => x.id === m.pecaId) : null;
+        if (!p) return { pct: null, label: 'Sem peça vinculada' };
+        const pct = CC ? CC.pctConcretado(p, lancamentos) : 0;
+        return { pct, label: `${p.nome} — ${EC.statusLabel(pct)}` };
+      };
+      const total = marcadores.length;
+      const vinculados = marcadores.filter(m => m.pecaId).length;
+      const concluidos = marcadores.filter(m => { const s = statusFn(m); return s.pct !== null && s.pct >= 100; }).length;
+      const pctMedio = total ? marcadores.reduce((s, m) => s + (statusFn(m).pct || 0), 0) / total : 0;
+
+      host.innerHTML = `
+        <div class="card db-row">
+          <div class="card-body">
+            <div class="db-secao-header"><h3>Estacas e Fundações</h3></div>
+            <div class="text-sm text-muted" style="margin-bottom:10px;">${vinculados}/${total} marcadores vinculados · ${concluidos}/${total} concretados · ${EC.fmt1(pctMedio)}% médio · <a href="controle-estacas.html" style="color:var(--cor-primaria-dark);font-weight:600;">abrir controle</a></div>
+            <div id="db-estacas-minimapas"></div>
+          </div>
+        </div>`;
+
+      const LARGURA_CARD = 340;
+      const cardsHtml = await Promise.all(pranchasComImagem.map(async p => {
+        let imagem = null;
+        try {
+          const doc = await db.collection('obras').doc(obraId).collection('config').doc('estacasImagem_' + p.id).get();
+          imagem = doc.exists ? (doc.data().img || null) : null;
+        } catch (e) {}
+        const lista = marcadores.filter(m => m.pranchaId === p.id);
+        const zoom = LARGURA_CARD / Number(p.imgWidthPx);
+        const alturaCard = Math.round(Number(p.imgHeightPx) * zoom);
+        const svg = EC.stageHTML(p, imagem, lista, statusFn, { interativo: false, mini: true, zoom, maxHeight: Math.min(280, Math.max(60, alturaCard)) });
+        return `<div style="width:${LARGURA_CARD}px;">
+          <div style="font-weight:700;font-size:0.85rem;margin-bottom:4px;">${(p.nome || 'Prancha').replace(/</g, '&lt;')}</div>
+          ${svg}
+        </div>`;
+      }));
+      document.getElementById('db-estacas-minimapas').innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:16px;">${cardsHtml.join('')}</div>`;
+    } catch (e) {
+      console.error(e);
+      host.innerHTML = '<div class="estado-vazio"><p class="text-sm">Erro ao carregar dados de Estacas e Fundações.</p></div>';
     }
   }
 

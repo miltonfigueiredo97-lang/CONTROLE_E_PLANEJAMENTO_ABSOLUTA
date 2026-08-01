@@ -50,6 +50,13 @@ const Controle = (() => {
             <div class="mt-1"><span class="badge badge-sucesso">Disponível</span></div>
           </div>
         </div>
+        <div class="card obra-card" data-perm="controleEstacas:ver" onclick="Router.navegar('controle-estacas.html')">
+          <div class="card-body">
+            <div class="obra-nome">🔵 Controle Estacas e Fundações</div>
+            <div class="obra-info text-sm">Marca estacas e fundações sobre o projeto (PDF) e pinta o status de concretagem de cada uma.</div>
+            <div class="mt-1"><span class="badge badge-sucesso">Disponível</span></div>
+          </div>
+        </div>
       </div>
     `;
     Permissions.aplicarNaTela();
