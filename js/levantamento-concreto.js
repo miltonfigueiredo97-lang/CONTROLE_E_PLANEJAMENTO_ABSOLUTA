@@ -492,8 +492,9 @@ const LevantamentoConcreto = (() => {
     const camposNomeAndar = `
       <div class="form-row">
         <div class="form-grupo" style="margin-bottom:8px;"><label>Andar</label>
-          <select class="form-control" onchange="LC.updCalc('andar', this.value)">
+          <select class="form-control" onchange="LC.calcSelAndar(this)">
             <option value="">— selecione o andar —</option>${optAndares(calc.andar)}
+            <option value="__novo__">+ Criar novo andar...</option>
           </select>
         </div>
         <div class="form-grupo" style="margin-bottom:8px;"><label>Nome</label>
@@ -770,6 +771,36 @@ const LevantamentoConcreto = (() => {
   function calcTogglePreMoldada(v) { calc.ljPreMoldada = v; renderCalc(); }
   function calcVoltar() { calc.tipoPeca = null; renderCalc(); }
   function calcAbaEscada(aba) { calc.abaEscada = calc.abaEscada === aba ? null : aba; renderCalc(); }
+
+  function calcSelAndar(sel) {
+    if (sel.value === '__novo__') {
+      sel.value = calc.andar || '';
+      const nome = (window.prompt('Nome do novo andar (ex: 2º Subsolo, Térreo, Cobertura):') || '').trim();
+      if (!nome) return;
+      calcCriarAndar(nome);
+      return;
+    }
+    updCalc('andar', sel.value);
+  }
+
+  async function calcCriarAndar(nome) {
+    if (todosAndares().includes(nome)) { calc.andar = nome; renderCalc(); return; }
+    Utils.mostrarLoading();
+    try {
+      const daBase = [...new Set(pecas.map(p => p.andar))];
+      const novaOrdem = CC.ordenarAndares([...todosAndares(), nome], config.ordemAndares);
+      const andaresCustm = novaOrdem.filter(a => !daBase.includes(a));
+      config = { ...config, ordemAndares: novaOrdem, andaresCustm };
+      await db.collection('obras').doc(obraId).collection('config').doc('concreto').set(config, { merge: true });
+      calc.andar = nome;
+      Utils.toast(`✓ Andar "${nome}" criado`, 'sucesso');
+    } catch (e) {
+      Utils.toast('Erro ao criar andar: ' + e.message, 'erro');
+    } finally {
+      Utils.esconderLoading();
+      renderCalc();
+    }
+  }
 
   function updCalc(campo, valor) {
     calc[campo] = valor;
@@ -1757,7 +1788,7 @@ const LevantamentoConcreto = (() => {
     init, recarregar, renderizar,
     onFiltro,
     abrirCalculadora, calcTipoPeca, calcTipoPilar, calcTipoFundacao, calcTogglePreMoldada, calcVoltar, calcAbaEscada,
-    updCalc, updCalcSilent, calcAdicionar,
+    updCalc, updCalcSilent, calcAdicionar, calcSelAndar,
     estacaAddGrupo, estacaRemGrupo, estacaUpdGrupo,
     escAddLaje, escRemLaje, escUpdLaje,
     escAddPat, escRemPat, escUpdPat,

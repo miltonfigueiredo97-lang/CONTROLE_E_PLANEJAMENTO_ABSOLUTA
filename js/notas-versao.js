@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.59.1',
+  versaoAtual: 'V2.59.2',
 
   versoes: [
     {
@@ -5378,13 +5378,17 @@ const NotasVersao = {
         'O status pintado (🟢 concretado · 🟠 parcial · ⚪ pendente · ▢ sem vínculo) vem direto do % concretado da peça no Controle de Concreto (BTs/lançamentos) — este módulo não lança volume, só posiciona e exibe.',
         'Formas ajustáveis depois de criadas: mover/redimensionar o círculo, arrastar vértices do polígono.',
         'Dashboard: painel novo com minimapa de cada prancha (somente leitura) mostrando o mesmo status pintado.']},
-    {versao:'V2.59.1',status:'aberta',data:'2026-08-01',tipo:'correcao',
+    {versao:'V2.59.1',status:'fechada',data:'2026-08-01',tipo:'correcao',
       titulo:'Levantamento de Concreto — Estacas: cadastro por grupos (diâmetro + comprimento + quantidade)',
       itens:['Antes: 1 peça "Estacas" = 1 diâmetro + 1 comprimento, salva com o nome do pilar.',
         'Agora: informa o nome do pilar 1x, e adiciona quantos grupos de diâmetro/comprimento/quantidade precisar (ex: 10 estacas de Ø40 + 2 de Ø50 no mesmo pilar).',
         'Cada estaca vira uma peça individual no levantamento, rotulada por letra: Pilar10-a, Pilar10-b... seguindo a ordem dos grupos, até o total de estacas.',
         'Ao trocar de pilar (nome), a letra reinicia em "a".',
-        'subTipo continua "Estacas" — mantém o vínculo com o módulo Controle de Estacas e Fundações.']}
+        'subTipo continua "Estacas" — mantém o vínculo com o módulo Controle de Estacas e Fundações.']},
+    {versao:'V2.59.2',status:'aberta',data:'2026-08-01',tipo:'correcao',
+      titulo:'Levantamento de Concreto — criar andar direto na calculadora',
+      itens:['Antes: a calculadora só listava andares já existentes (de peças salvas ou da tela ⚙️ Config) — obra nova sem nenhum andar cadastrado deixava o campo "Andar" vazio e travava o botão de salvar.',
+        'Agora: o seletor de Andar tem a opção "+ Criar novo andar...", que abre um campo pra digitar o nome e já salva na configuração da obra, sem precisar fechar a calculadora.']}
   ],
 
   render(containerId) {
