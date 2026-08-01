@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.59.9',
+  versaoAtual: 'V2.59.10',
 
   versoes: [
     {
@@ -5423,10 +5423,14 @@ const NotasVersao = {
       titulo:'Controle de Estacas: combobox de busca pra vincular peça, e cor por diâmetro/comprimento no desenho',
       itens:['Vincular marcador: o antigo <select> (tinha que rolar a lista inteira) virou um campo de busca — digita parte do nome, andar ou diâmetro e a lista filtra na hora; clica pra selecionar.',
         'Cada combinação de diâmetro+comprimento de estaca agora ganha um anel colorido próprio ao redor do círculo no desenho, além da cor de status (verde/laranja/cinza) que já existia — dá pra ver de longe quais estacas são de qual "tipo" sem precisar clicar uma por uma. Legenda das cores aparece embaixo do seletor Estacas/Fundações, nas três abas (Marcadores, Planejamento, Acompanhamento) e também no minimapa do Dashboard.']},
-    {versao:'V2.59.9',status:'aberta',data:'2026-08-01',tipo:'correcao',
+    {versao:'V2.59.9',status:'fechada',data:'2026-08-01',tipo:'correcao',
       titulo:'Levantamento de Concreto — tela de Peças não pula mais pro topo ao salvar uma edição',
       itens:['Editar uma peça (✎) e clicar Salvar recarregava a tela inteira e voltava o scroll pro topo da lista de Peças — muito ruim numa obra com centenas de peças.',
-        'Corrigido: a posição do scroll da tela principal agora é preservada ao salvar/atualizar qualquer peça.']}
+        'Corrigido: a posição do scroll da tela principal agora é preservada ao salvar/atualizar qualquer peça.']},
+    {versao:'V2.59.10',status:'aberta',data:'2026-08-01',tipo:'melhoria',
+      titulo:'Levantamento de Concreto — filtro de Peças cobre qualquer coluna + filtro por status',
+      itens:['A busca de texto agora casa com QUALQUER coluna da tabela: nome, tipo, andar, diâmetro, comprimento e volume — antes só buscava nome/tipo/andar.',
+        'Novo select "Status" (Pendente/Parcial/Completo) — filtra pelo mesmo % de concretado que aparece na coluna.']}
   ],
 
   render(containerId) {

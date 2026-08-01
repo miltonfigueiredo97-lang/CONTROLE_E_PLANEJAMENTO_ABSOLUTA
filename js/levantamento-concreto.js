@@ -24,7 +24,7 @@ const LevantamentoConcreto = (() => {
   let levantamento = [];
 
   // Filtros da tabela de peças
-  let fBusca = '', fAndar = 'todos', fTipo = 'todos';
+  let fBusca = '', fAndar = 'todos', fTipo = 'todos', fStatus = 'todos';
 
   // Estado da calculadora
   let calc = null;
@@ -117,7 +117,7 @@ const LevantamentoConcreto = (() => {
   async function recarregar() {
     obraId = Router.getObraId();
     if (!obraId) return;
-    fBusca = ''; fAndar = 'todos'; fTipo = 'todos';
+    fBusca = ''; fAndar = 'todos'; fTipo = 'todos'; fStatus = 'todos';
     await carregar();
   }
 
@@ -187,13 +187,19 @@ const LevantamentoConcreto = (() => {
       <div class="cc-panel">
         <div class="cc-panelTitle">⬡ Peças</div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
-          <input type="text" class="form-control" id="lc-busca" placeholder="🔍 Buscar peça..." style="flex:1;min-width:160px;" value="${esc(fBusca)}" oninput="LC.onFiltro()">
+          <input type="text" class="form-control" id="lc-busca" placeholder="🔍 Buscar por nome, tipo, andar, Ø, comprimento ou volume..." style="flex:1;min-width:220px;" value="${esc(fBusca)}" oninput="LC.onFiltro()">
           <select class="form-control" id="lc-f-andar" style="max-width:200px;" onchange="LC.onFiltro()">
             <option value="todos">Todos os andares</option>${optAndares(fAndar)}
           </select>
           <select class="form-control" id="lc-f-tipo" style="max-width:180px;" onchange="LC.onFiltro()">
             <option value="todos">Todos os tipos</option>
             ${[...new Set(pecas.map(p => p.tipo))].sort().map(t => `<option value="${esc(t)}" ${t === fTipo ? 'selected' : ''}>${esc(t)}</option>`).join('')}
+          </select>
+          <select class="form-control" id="lc-f-status" style="max-width:160px;" onchange="LC.onFiltro()">
+            <option value="todos" ${fStatus === 'todos' ? 'selected' : ''}>Todo status</option>
+            <option value="pendente" ${fStatus === 'pendente' ? 'selected' : ''}>⚪ Pendente</option>
+            <option value="parcial" ${fStatus === 'parcial' ? 'selected' : ''}>🟠 Parcial</option>
+            <option value="completo" ${fStatus === 'completo' ? 'selected' : ''}>🟢 Completo</option>
           </select>
         </div>
         <div id="lc-tabela-pecas"></div>
@@ -215,6 +221,7 @@ const LevantamentoConcreto = (() => {
     fBusca = document.getElementById('lc-busca').value;
     fAndar = document.getElementById('lc-f-andar').value;
     fTipo = document.getElementById('lc-f-tipo').value;
+    fStatus = document.getElementById('lc-f-status').value;
     renderTabelaPecas();
   }
 
@@ -226,7 +233,20 @@ const LevantamentoConcreto = (() => {
     const lista = pecas.filter(p => {
       if (fAndar !== 'todos' && p.andar !== fAndar) return false;
       if (fTipo !== 'todos' && p.tipo !== fTipo) return false;
-      if (busca && !(p.nome.toLowerCase().includes(busca) || (p.andar || '').toLowerCase().includes(busca) || (p.tipo || '').toLowerCase().includes(busca))) return false;
+      if (fStatus !== 'todos') {
+        const pct = CC.pctConcretado(p, lancamentos);
+        const status = pct >= 100 ? 'completo' : pct > 0 ? 'parcial' : 'pendente';
+        if (status !== fStatus) return false;
+      }
+      if (busca) {
+        const campos = [
+          p.nome, p.andar, p.tipo,
+          p.diametro ? `${CC.fmt1(p.diametro)} ${p.diametro}` : '',
+          p.comprimento ? `${CC.fmt1(p.comprimento)} ${p.comprimento}` : '',
+          p.volume != null ? `${CC.fmt4(p.volume)} ${p.volume}` : '',
+        ].join(' ').toLowerCase();
+        if (!campos.includes(busca)) return false;
+      }
       return true;
     }).sort((a, b) => {
       const ia = ordem.indexOf(a.andar), ib = ordem.indexOf(b.andar);
