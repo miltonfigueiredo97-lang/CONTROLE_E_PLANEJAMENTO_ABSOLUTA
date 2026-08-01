@@ -47,7 +47,7 @@
       <a href="admin-permissoes.html" data-perm="admin:ver"><span class="nav-icon">🔑</span> Permissões</a>
       <div class="sidebar-section-title">Sistema</div>
       <a href="backup-planejamento.html" data-perm="backupPlanejamento:ver"><span class="nav-icon">🗂️</span> Backup de Planejamentos</a>
-      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V2.59.12</span></a>
+      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V2.59.13</span></a>
     </nav>
     <div class="sidebar-user">
       <div class="user-avatar">U</div>
@@ -81,6 +81,20 @@
     <div class="modal-footer">
       <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-ce-vincular')">Cancelar</button>
       <button class="btn btn-primario" onclick="CE.salvarVinculo()">Salvar Vínculo</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Atribuir Concretagem (aba Planejamento) -->
+<div class="modal-overlay" id="modal-ce-atribuir-conc">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-header">
+      <h3>🗓 Atribuir à Concretagem</h3>
+      <button class="modal-close" onclick="Utils.fecharModal('modal-ce-atribuir-conc')">&times;</button>
+    </div>
+    <div class="modal-body" id="ce-atribuir-conc-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-ce-atribuir-conc')">Fechar</button>
     </div>
   </div>
 </div>

@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.59.12',
+  versaoAtual: 'V2.59.13',
 
   versoes: [
     {
@@ -5436,10 +5436,17 @@ const NotasVersao = {
       itens:['Trocada a busca única por um filtro embaixo de CADA coluna da tabela de Peças: Nome, Tipo, Andar, Ø/Comp., Volume e Status — cada um filtra independente, do jeito que a pessoa quiser combinar.',
         'Clicar no título de qualquer coluna ordena a lista por ela (▲/▼); clica de novo inverte.',
         'Botão ✕ na linha de filtros limpa tudo de uma vez.']},
-    {versao:'V2.59.12',status:'aberta',data:'2026-08-01',tipo:'correcao',
+    {versao:'V2.59.12',status:'fechada',data:'2026-08-01',tipo:'correcao',
       titulo:'Levantamento de Concreto — bug real: filtro perdia o foco a cada letra digitada',
       itens:['Causa: cada tecla digitada num campo de filtro (Nome, Ø/Comp., Volume) reconstruía a tabela INTEIRA — inclusive o próprio campo onde a pessoa estava digitando — então o cursor saía do campo a cada letra. Dava a impressão de "não funcionar".',
-        'Corrigido: digitar agora só atualiza as linhas da tabela, sem tocar na linha de filtros — o campo mantém o foco, dá pra digitar a palavra inteira normalmente.']}
+        'Corrigido: digitar agora só atualiza as linhas da tabela, sem tocar na linha de filtros — o campo mantém o foco, dá pra digitar a palavra inteira normalmente.']},
+    {versao:'V2.59.13',status:'aberta',data:'2026-08-01',tipo:'funcionalidade',
+      titulo:'Controle de Estacas: girar o projeto, e Planejamento/Acompanhamento repensados (atribuição direta por clique)',
+      itens:['Girar 90°: gira a prancha (imagem + todos os marcadores já feitos) de vez — não é um toggle de visualização, fica fixa no sentido escolhido. Disponível nas abas Marcadores e Planejamento.',
+        'Planejamento: não pede mais pra criar uma Concretagem antes (nº, data, descrição) — agora é só clicar na peça já vinculada na prancha (a mesma prancha da aba Marcadores, sem seletor próprio) e dizer o número da concretagem (existente ou novo); o registro é criado na hora, sem formulário.',
+        'Cada peça já atribuída mostra o número da concretagem em cima do marcador, direto na prancha.',
+        'Embaixo do mapa, um card por concretagem mostra quantidade de peças, volume total e o detalhamento por diâmetro — a separação "por dia de concretagem" com os volumes de cada uma.',
+        'Acompanhamento: escolhe a concretagem e vai marcando peça por peça (feito/pendente) — cada clique grava um lançamento de verdade (aparece no Controle de Concreto também) e atualiza o % do Planejamento (Gantt) na hora. Resumo mostra volume e quantidade por diâmetro, executado × faltando.']}
   ],
 
   render(containerId) {

@@ -53,9 +53,7 @@ const ControleEstacas = (() => {
   let imagemCachePranchaId = null, imagemCacheBase64 = null;
   let zoomE = 1;
   let pdfjsCarregado = false;
-  let planConcretagemId = null;   // concretagem ativa na aba Planejamento
   let acompConcretagemId = null;  // concretagem ativa na aba Acompanhamento
-  let novaConcAberta = false;     // form de "+ Nova concretagem" aberto
 
   const esc = EC.esc;
 
@@ -237,6 +235,7 @@ const ControleEstacas = (() => {
           </select>
           <button id="ce-btn-circulo" class="btn ${modo === 'circulo' ? 'btn-primario' : 'btn-secundario'} btn-sm" data-perm="controleEstacas:criar" style="${view !== 'estacas' ? 'display:none;' : ''}" onclick="CE.iniciarAdicionarCirculo()">◯ Adicionar Estaca</button>
           <button id="ce-btn-poligono" class="btn ${modo === 'poligono' ? 'btn-primario' : 'btn-secundario'} btn-sm" data-perm="controleEstacas:criar" style="${view !== 'fundacoes' ? 'display:none;' : ''}" onclick="CE.iniciarAdicionarPoligono()">▱ Adicionar Fundação</button>
+          <button class="btn btn-secundario btn-sm" data-perm="controleEstacas:editar" onclick="CE.girarPrancha()">⟳ Girar 90°</button>
           <span style="display:flex;gap:2px;align-items:center;margin-left:auto;">
             <button class="btn btn-secundario btn-sm" onclick="CE.zoomAjustar(-0.25)">−</button>
             <span class="text-sm text-muted" id="ce-zoom-label" style="width:48px;text-align:center;">${Math.round(zoomE * 100)}%</span>
@@ -277,13 +276,15 @@ const ControleEstacas = (() => {
   }
 
   // ══════════════════════════════════════════
-  // ABA: PLANEJAMENTO — escolhe/cria uma Concretagem e marca, clicando na
-  // prancha, quais estacas/fundações (já vinculadas a uma peça) entram nela.
-  // Grava concretoPecaConc (mesma coleção do Assistente de Concretagem do
-  // Levantamento de Concreto) + mantém uma BT única auto-gerenciada por
-  // concretagem, com volumePrevisto = soma do volume das peças planejadas.
+  // ABA: PLANEJAMENTO — usa a MESMA prancha da aba Marcadores (sem seletor
+  // próprio, puxa automático). Clica numa peça já vinculada e diz em qual
+  // Concretagem (nº) ela entra — a concretagem (mesma coleção do
+  // Levantamento/Controle de Concreto) é criada na hora se o número ainda
+  // não existir, sem formulário de data/descrição. Embaixo, um card por
+  // concretagem mostra quantidade/volume total e por diâmetro — a
+  // "separação por dias" que depois alimenta o Acompanhamento.
   // ══════════════════════════════════════════
-  function _concLabel(c) { return `Nº ${c.numero} — ${c.data || ''}${c.descricao ? ` | ${c.descricao}` : ''}`; }
+  function _concLabel(c) { return `Concretagem Nº ${c.numero}${c.data ? ' — ' + c.data : ''}`; }
   function _proximoNumeroConc() { return concretagens.length ? Math.max(...concretagens.map(c => c.numero || 0)) + 1 : 1; }
   function _pecaConcDaConcretagem(concretagemId) { return pecaConc.filter(pc => pc.concretagemId === concretagemId); }
   function _pecasPlanejadas(concretagemId) {
@@ -292,6 +293,7 @@ const ControleEstacas = (() => {
   }
   function _volumePlanejado(concretagemId) { return _pecasPlanejadas(concretagemId).reduce((s, p) => s + (p.volume || 0), 0); }
   function _btUnicaDaConcretagem(concretagemId) { return btsConfig.find(b => b.concretagemId === concretagemId) || null; }
+  function _concretagemDaPeca(pecaId) { const pc = pecaConc.find(x => x.pecaId === pecaId); return pc ? (concretagens.find(c => c.id === pc.concretagemId) || null) : null; }
 
   // Garante que exista 1 BT pra concretagem (criando se preciso) com
   // volumePrevisto sempre igual à soma do volume planejado atual.
@@ -308,41 +310,25 @@ const ControleEstacas = (() => {
     return bt.id;
   }
 
-  function toggleNovaConc() {
-    novaConcAberta = !novaConcAberta;
-    _renderAbaPlanejamento();
+  // Resumo por diâmetro+comprimento de um conjunto de peças — usado nos
+  // cards do Planejamento (tudo) e do Acompanhamento (executado x faltando).
+  function _resumoDiamDeLista(listaPecas) {
+    const grupos = {};
+    listaPecas.forEach(p => {
+      const chave = p.diametro ? `⌀${EC.num(p.diametro)}cm${p.comprimento ? ' × ' + EC.num(p.comprimento) + 'm' : ''}` : 'sem diâmetro';
+      if (!grupos[chave]) grupos[chave] = { qtd: 0, volume: 0 };
+      grupos[chave].qtd++;
+      grupos[chave].volume += p.volume || 0;
+    });
+    return Object.entries(grupos).sort((a, b) => a[0].localeCompare(b[0], 'pt-BR', { numeric: true }));
   }
-
-  async function criarConcretagem() {
-    if (!Permissions.pode('controleEstacas', 'criar')) { Utils.toast('Sem permissão para criar.', 'erro'); return; }
-    const numero = parseInt(document.getElementById('ce-nova-conc-num').value) || 1;
-    const data = document.getElementById('ce-nova-conc-data').value || '';
-    const descricao = (document.getElementById('ce-nova-conc-desc').value || '').trim();
-    Utils.mostrarLoading();
-    try {
-      const id = await Database.criar(obraId, COL_CONCS, { numero, data, descricao, obraId }, EC.genId('conc'));
-      novaConcAberta = false;
-      await carregar();
-      planConcretagemId = id;
-      _renderAbaPlanejamento();
-      Utils.toast('✓ Concretagem criada! Agora clique nas peças na prancha pra planejar.', 'sucesso');
-    } catch (e) {
-      Utils.toast('Erro ao criar concretagem: ' + e.message, 'erro');
-    } finally {
-      Utils.esconderLoading();
-    }
+  function _resumoDiamHTML(resumo) {
+    if (!resumo.length) return '<div class="cc-empty" style="padding:10px 0;">—</div>';
+    return `<div style="display:flex;gap:6px;flex-wrap:wrap;">${resumo.map(([d, g]) => `<span class="badge" style="background:var(--cv-surface2,#f1f5f9);border:1px solid var(--cv-border,#e2e8f0);font-weight:600;">${esc(d)}: ${g.qtd} <span style="font-weight:400;color:var(--cv-text3,#94a3b8);">(${EC.fmt1(g.volume)}m³)</span></span>`).join('')}</div>`;
   }
-
-  function onTrocarPlanConcretagem() {
-    planConcretagemId = document.getElementById('ce-plan-conc').value || null;
-    _renderAbaPlanejamento();
-  }
-
-  function onTrocarPranchaAtivaGenerico(v) {
-    pranchaAtivaId = v || null;
-    modo = null; poligonoPontos = []; editandoFormaId = null;
-    if (abaPrincipal === 'planejamento') _renderAbaPlanejamento();
-    else if (abaPrincipal === 'acompanhamento') _renderAbaAcompanhamento();
+  function _centroide(pontos) {
+    if (!pontos || !pontos.length) return null;
+    return { x: pontos.reduce((s, p) => s + p.x, 0) / pontos.length, y: pontos.reduce((s, p) => s + p.y, 0) / pontos.length };
   }
 
   function _renderAbaPlanejamento() {
@@ -352,85 +338,158 @@ const ControleEstacas = (() => {
     el.innerHTML = `
       <div class="cc-panel">
         <div class="cc-panelTitle">🗓 Planejamento de Concretagem</div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px;">
-          <select class="form-control" id="ce-plan-conc" style="max-width:280px;" onchange="CE.onTrocarPlanConcretagem()">
-            <option value="">— Selecione uma concretagem —</option>
-            ${concsOrd.map(c => `<option value="${c.id}" ${c.id === planConcretagemId ? 'selected' : ''}>${esc(_concLabel(c))}</option>`).join('')}
-          </select>
-          <button class="btn btn-secundario btn-sm" onclick="CE.toggleNovaConc()">${novaConcAberta ? '✕ Cancelar' : '+ Nova concretagem'}</button>
+        <div class="text-sm text-muted" style="margin-bottom:10px;">Mesmo projeto da aba Marcadores. Clique numa peça já vinculada e diga em qual concretagem ela entra.</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:4px;">
+          <div class="aba-toggle">
+            <button class="aba-btn ${view === 'estacas' ? 'ativo' : ''}" onclick="CE.onTrocarView('estacas')">⚫ Estacas</button>
+            <button class="aba-btn ${view === 'fundacoes' ? 'ativo' : ''}" onclick="CE.onTrocarView('fundacoes')">⬛ Fundações</button>
+          </div>
+          <span class="text-sm text-muted">nº no marcador = concretagem já atribuída · sem número = ainda não planejada</span>
         </div>
-        ${novaConcAberta ? `
-          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;padding:10px;border:1px dashed var(--cv-border,#e2e8f0);border-radius:8px;margin-bottom:12px;">
-            <div><label class="text-sm text-muted" style="display:block;">Nº</label><input type="number" id="ce-nova-conc-num" class="form-control" style="width:80px;" value="${_proximoNumeroConc()}"></div>
-            <div><label class="text-sm text-muted" style="display:block;">Data</label><input type="date" id="ce-nova-conc-data" class="form-control" value="${new Date().toISOString().slice(0, 10)}"></div>
-            <div style="flex:1;min-width:160px;"><label class="text-sm text-muted" style="display:block;">Descrição (opcional)</label><input type="text" id="ce-nova-conc-desc" class="form-control"></div>
-            <button class="btn btn-primario btn-sm" onclick="CE.criarConcretagem()">Criar</button>
-          </div>` : ''}
-        ${planConcretagemId ? `
-          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:4px;">
-            <div class="aba-toggle">
-              <button class="aba-btn ${view === 'estacas' ? 'ativo' : ''}" onclick="CE.onTrocarView('estacas')">⚫ Estacas</button>
-              <button class="aba-btn ${view === 'fundacoes' ? 'ativo' : ''}" onclick="CE.onTrocarView('fundacoes')">⬛ Fundações</button>
-            </div>
-            <span class="text-sm text-muted">🟡 nesta concretagem · sem anel = não planejada</span>
-          </div>
-          ${_legendaGrupos()}
-          <div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0;align-items:center;">
-            <select class="form-control" style="max-width:240px;" onchange="CE.onTrocarPranchaAtivaGenerico(this.value)">
-              ${pranchasOrdenadas().map(p => `<option value="${p.id}" ${p.id === pranchaAtivaId ? 'selected' : ''}>${esc(p.nome || 'Prancha')}</option>`).join('')}
-            </select>
-            <span class="text-sm text-muted">Clique numa peça já vinculada pra incluir/remover desta concretagem.</span>
-            <span style="display:flex;gap:2px;align-items:center;margin-left:auto;">
-              <button class="btn btn-secundario btn-sm" onclick="CE.zoomAjustar(-0.25)">−</button>
-              <span class="text-sm text-muted" style="width:48px;text-align:center;">${Math.round(zoomE * 100)}%</span>
-              <button class="btn btn-secundario btn-sm" onclick="CE.zoomAjustar(0.25)">+</button>
-            </span>
-          </div>
-          <div id="ce-plan-mapa-host"></div>
-          <div class="cc-empty" style="margin-top:8px;"><b>${_pecasPlanejadas(planConcretagemId).length}</b> peça(s) planejada(s) nesta concretagem · volume previsto <b>${EC.fmt1(_volumePlanejado(planConcretagemId))} m³</b></div>
-        ` : `<div class="cc-empty">Selecione ou crie uma concretagem pra começar a planejar quais estacas/fundações entram nela.</div>`}
+        ${_legendaGrupos()}
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0;align-items:center;">
+          <button class="btn btn-secundario btn-sm" onclick="CE.girarPrancha()">⟳ Girar 90°</button>
+          <span style="display:flex;gap:2px;align-items:center;margin-left:auto;">
+            <button class="btn btn-secundario btn-sm" onclick="CE.zoomAjustar(-0.25)">−</button>
+            <span class="text-sm text-muted" style="width:48px;text-align:center;">${Math.round(zoomE * 100)}%</span>
+            <button class="btn btn-secundario btn-sm" onclick="CE.zoomAjustar(0.25)">+</button>
+          </span>
+        </div>
+        <div id="ce-plan-mapa-host"></div>
+      </div>
+      <div class="cc-panel">
+        <div class="cc-panelTitle">📅 Concretagens planejadas</div>
+        ${!concsOrd.length ? '<div class="cc-empty">Nenhuma concretagem ainda — clique numa peça na prancha acima pra criar a primeira.</div>' : `
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            ${concsOrd.map(c => {
+              const listaPecas = _pecasPlanejadas(c.id);
+              const resumo = _resumoDiamDeLista(listaPecas);
+              return `
+                <div style="border:1px solid var(--cv-border,#e2e8f0);border-radius:8px;padding:10px 14px;">
+                  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+                    <div style="font-weight:700;">Concretagem Nº ${c.numero}${c.data ? ` <span style="font-weight:400;color:var(--cv-text3,#94a3b8);font-size:.8rem;">${esc(c.data)}</span>` : ''}</div>
+                    <div class="text-sm text-muted">${listaPecas.length} peça${listaPecas.length !== 1 ? 's' : ''} · ${EC.fmt1(_volumePlanejado(c.id))} m³</div>
+                  </div>
+                  ${resumo.length ? `<div style="margin-top:8px;">${_resumoDiamHTML(resumo)}</div>` : ''}
+                </div>`;
+            }).join('')}
+          </div>`}
       </div>
     `;
     Permissions.aplicarNaTela();
-    if (planConcretagemId) renderMapaPlanejamento();
+    renderMapaPlanejamento();
   }
 
   async function renderMapaPlanejamento() {
     const host = document.getElementById('ce-plan-mapa-host');
     if (!host) return;
     const pr = pranchaAtiva();
-    if (!pr) { host.innerHTML = `<div class="cc-empty">Nenhuma prancha selecionada.</div>`; return; }
+    if (!pr) { host.innerHTML = `<div class="cc-empty">Nenhuma prancha ainda — vá na aba Marcadores e importe o projeto.</div>`; return; }
     const imagem = await _obterImagemPrancha(pr.id);
-    if (!imagem) { host.innerHTML = `<div class="cc-empty">Esta prancha ainda não tem PDF/imagem.</div>`; return; }
+    if (!imagem) { host.innerHTML = `<div class="cc-empty">Esta prancha ainda não tem PDF/imagem — importe na aba Marcadores.</div>`; return; }
     const lista = marcadoresDaPranchaView(pr.id).filter(m => m.pecaId); // só marcadores já vinculados podem ser planejados
     host.innerHTML = EC.stageHTML(pr, imagem, lista, statusMarcador, { interativo: true, zoom: zoomE, stageId: 'ce-plan-stage', maxHeight: 600 });
-    _desenharDestaques('ce-plan-stage', lista, m => _pecaConcDaConcretagem(planConcretagemId).some(pc => pc.pecaId === m.pecaId));
-    _ligarEventosToggle('ce-plan-stage', lista, _toggleNaConcretagem);
+    _desenharNumerosConcretagem('ce-plan-stage', lista);
+    _ligarEventosToggle('ce-plan-stage', lista, abrirAtribuirConcretagem);
   }
 
-  async function _toggleNaConcretagem(m) {
+  // Escreve o número da concretagem (se já atribuída) em cima de cada marcador
+  function _desenharNumerosConcretagem(stageId, lista) {
+    const stage = document.getElementById(stageId);
+    if (!stage) return;
+    const cont = document.createElement('div');
+    cont.style.cssText = 'position:absolute;inset:0;pointer-events:none;z-index:6;';
+    lista.forEach(m => {
+      const c = _concretagemDaPeca(m.pecaId);
+      if (!c) return;
+      const centro = m.tipo === 'circulo' ? { x: m.cx, y: m.cy } : _centroide(m.pontos);
+      if (!centro) return;
+      const bolha = document.createElement('div');
+      bolha.style.cssText = `position:absolute;left:${(centro.x * 100).toFixed(3)}%;top:${(centro.y * 100).toFixed(3)}%;transform:translate(-50%,-50%);background:#1e293b;color:#fff;font-size:10px;font-weight:700;padding:1px 5px;border-radius:100px;white-space:nowrap;box-shadow:0 1px 3px rgba(0,0,0,.4);`;
+      bolha.textContent = c.numero;
+      cont.appendChild(bolha);
+    });
+    stage.appendChild(cont);
+  }
+
+  // ── Popup de atribuir concretagem (clique numa peça na aba Planejamento) ──
+  let atribuirMarcadorId = null;
+  function abrirAtribuirConcretagem(m) {
+    atribuirMarcadorId = m.id;
+    _renderAtribuirConcBody();
+    Utils.abrirModal('modal-ce-atribuir-conc');
+  }
+  function _renderAtribuirConcBody() {
+    const el = document.getElementById('ce-atribuir-conc-body');
+    if (!el) return;
+    const m = marcadores.find(x => x.id === atribuirMarcadorId);
+    if (!m) { el.innerHTML = ''; return; }
+    const p = pecaDoMarcador(m);
+    const atual = _concretagemDaPeca(m.pecaId);
+    const concsOrd = [...concretagens].sort((a, b) => (a.numero || 0) - (b.numero || 0));
+    el.innerHTML = `
+      <div class="cc-empty" style="margin-bottom:10px;"><b>${esc(p ? p.nome : '')}</b>${atual ? ` — hoje na Concretagem Nº ${atual.numero}` : ' — ainda não planejada'}</div>
+      <div class="form-grupo">
+        <label>Concretagens existentes</label>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          ${concsOrd.length ? concsOrd.map(c => `<button class="btn ${atual && atual.id === c.id ? 'btn-primario' : 'btn-secundario'} btn-sm" onclick="CE.atribuirConcretagemNumero(${c.numero})">Nº ${c.numero}</button>`).join('') : '<span class="text-sm text-muted">Nenhuma ainda.</span>'}
+        </div>
+      </div>
+      <div class="form-grupo">
+        <label>Ou criar/atribuir um número novo</label>
+        <div style="display:flex;gap:8px;">
+          <input type="number" id="ce-atribuir-numero" class="form-control" style="width:100px;" value="${_proximoNumeroConc()}">
+          <button class="btn btn-primario btn-sm" onclick="CE.atribuirConcretagemNumeroInput()">Atribuir</button>
+        </div>
+      </div>
+      ${atual ? `<button class="btn btn-secundario btn-sm" style="color:var(--cv-red,#ef4444);margin-top:6px;" onclick="CE.removerDaConcretagem()">🗑 Remover desta concretagem</button>` : ''}
+    `;
+  }
+  function atribuirConcretagemNumeroInput() {
+    const numero = parseInt(document.getElementById('ce-atribuir-numero').value) || null;
+    if (!numero) { Utils.toast('Digite um número válido.', 'alerta'); return; }
+    atribuirConcretagemNumero(numero);
+  }
+  async function atribuirConcretagemNumero(numero) {
     if (!Permissions.pode('controleEstacas', 'editar') && !Permissions.pode('controleEstacas', 'criar')) { Utils.toast('Sem permissão.', 'erro'); return; }
-    const existente = pecaConc.find(pc => pc.pecaId === m.pecaId && pc.concretagemId === planConcretagemId);
-    let concretagemAntigaId = null;
+    const m = marcadores.find(x => x.id === atribuirMarcadorId);
+    if (!m) return;
     Utils.mostrarLoading();
     try {
-      if (existente) {
-        await Database.deletar(obraId, COL_PC, existente.id);
-      } else {
-        const outraConc = pecaConc.find(pc => pc.pecaId === m.pecaId);
-        if (outraConc) {
-          const ok = await Utils.confirmar('Esta peça já está planejada em outra concretagem. Mover pra esta?');
-          if (!ok) { Utils.esconderLoading(); return; }
-          concretagemAntigaId = outraConc.concretagemId;
-          await Database.deletar(obraId, COL_PC, outraConc.id);
-        }
-        await Database.criar(obraId, COL_PC, { pecaId: m.pecaId, concretagemId: planConcretagemId, pctConcretagem: 100, obraId }, EC.genId('pc'));
-      }
+      const concExistente = concretagens.find(c => c.numero === numero);
+      const concId = concExistente ? concExistente.id : await Database.criar(obraId, COL_CONCS, { numero, data: new Date().toISOString().slice(0, 10), descricao: '', obraId }, EC.genId('conc'));
+      const existente = pecaConc.find(pc => pc.pecaId === m.pecaId);
+      const concretagemAntigaId = existente ? existente.concretagemId : null;
+      if (existente) await Database.deletar(obraId, COL_PC, existente.id);
+      await Database.criar(obraId, COL_PC, { pecaId: m.pecaId, concretagemId: concId, pctConcretagem: 100, obraId }, EC.genId('pc'));
       await carregar();
-      await _garantirBTUnica(planConcretagemId);
-      if (concretagemAntigaId) await _garantirBTUnica(concretagemAntigaId);
+      await _garantirBTUnica(concId);
+      if (concretagemAntigaId && concretagemAntigaId !== concId) await _garantirBTUnica(concretagemAntigaId);
       await carregar();
+      Utils.fecharModal('modal-ce-atribuir-conc');
       _renderAbaPlanejamento();
+      Utils.toast(`✓ Atribuída à Concretagem Nº ${numero}!`, 'sucesso');
+    } catch (e) {
+      Utils.toast('Erro: ' + e.message, 'erro');
+    } finally {
+      Utils.esconderLoading();
+    }
+  }
+  async function removerDaConcretagem() {
+    const m = marcadores.find(x => x.id === atribuirMarcadorId);
+    if (!m) return;
+    const existente = pecaConc.find(pc => pc.pecaId === m.pecaId);
+    if (!existente) return;
+    Utils.mostrarLoading();
+    try {
+      const concretagemAntigaId = existente.concretagemId;
+      await Database.deletar(obraId, COL_PC, existente.id);
+      await carregar();
+      await _garantirBTUnica(concretagemAntigaId);
+      await carregar();
+      Utils.fecharModal('modal-ce-atribuir-conc');
+      _renderAbaPlanejamento();
+      Utils.toast('Removida da concretagem.', 'sucesso');
     } catch (e) {
       Utils.toast('Erro: ' + e.message, 'erro');
     } finally {
@@ -439,21 +498,27 @@ const ControleEstacas = (() => {
   }
 
   // ══════════════════════════════════════════
-  // ABA: ACOMPANHAMENTO — pra uma concretagem já planejada, clica na peça
-  // que foi REALMENTE concretada. Isso grava um concretoLancamentos de
-  // verdade (aparece no Controle de Concreto/relatórios de BT também) e
-  // sincroniza o % com o Planejamento (Gantt).
+  // ABA: ACOMPANHAMENTO — usa a MESMA prancha (sem seletor próprio). Escolhe
+  // uma concretagem já planejada e vai clicando peça a peça pra marcar
+  // feito/pendente — cada clique grava um concretoLancamentos de verdade
+  // (aparece no Controle de Concreto/relatórios de BT) e sincroniza o %
+  // do Planejamento (Gantt). Resumo mostra volume e quantidade por
+  // diâmetro, executado x faltando.
   // ══════════════════════════════════════════
   function onTrocarAcompConcretagem() {
     acompConcretagemId = document.getElementById('ce-acomp-conc').value || null;
     _renderAbaAcompanhamento();
   }
+  function _pecaExecutada(p) { return ConcretoCalculos.pctConcretado(p, lancamentos) >= 100; }
 
   function _renderAbaAcompanhamento() {
     const el = document.getElementById('ce-aba-body');
     if (!el) return;
     // Só concretagens com ao menos 1 peça planejada fazem sentido aqui
     const concsComPlano = [...concretagens].filter(c => _pecaConcDaConcretagem(c.id).length > 0).sort((a, b) => (a.numero || 0) - (b.numero || 0));
+    const listaPecas = acompConcretagemId ? _pecasPlanejadas(acompConcretagemId) : [];
+    const executadas = listaPecas.filter(_pecaExecutada);
+    const pendentes = listaPecas.filter(p => !_pecaExecutada(p));
     el.innerHTML = `
       <div class="cc-panel">
         <div class="cc-panelTitle">✅ Acompanhamento — lançar o real</div>
@@ -470,13 +535,10 @@ const ControleEstacas = (() => {
               <button class="aba-btn ${view === 'estacas' ? 'ativo' : ''}" onclick="CE.onTrocarView('estacas')">⚫ Estacas</button>
               <button class="aba-btn ${view === 'fundacoes' ? 'ativo' : ''}" onclick="CE.onTrocarView('fundacoes')">⬛ Fundações</button>
             </div>
-            <span class="text-sm text-muted">🟢 concretado · 🟠 parcial · 🟡 anel = planejada nesta concretagem, ainda pendente</span>
+            <span class="text-sm text-muted">🟢 concretado · 🟠 parcial · 🟡 anel = planejada nesta concretagem</span>
           </div>
           ${_legendaGrupos()}
           <div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0;align-items:center;">
-            <select class="form-control" style="max-width:240px;" onchange="CE.onTrocarPranchaAtivaGenerico(this.value)">
-              ${pranchasOrdenadas().map(p => `<option value="${p.id}" ${p.id === pranchaAtivaId ? 'selected' : ''}>${esc(p.nome || 'Prancha')}</option>`).join('')}
-            </select>
             <span class="text-sm text-muted">Clique numa peça com anel amarelo pra marcar/desmarcar como concretada de verdade.</span>
             <span style="display:flex;gap:2px;align-items:center;margin-left:auto;">
               <button class="btn btn-secundario btn-sm" onclick="CE.zoomAjustar(-0.25)">−</button>
@@ -485,6 +547,20 @@ const ControleEstacas = (() => {
             </span>
           </div>
           <div id="ce-acomp-mapa-host"></div>
+          <div class="cc-kpiGrid" style="grid-template-columns:repeat(2,1fr);margin-top:14px;">
+            <div class="cc-kpi cc-kpiGreen"><div class="cc-kpiIcon">✅</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Executado</div><div class="cc-kpiValue">${executadas.length}<span class="cc-kpiUnit">/ ${listaPecas.length}</span></div></div></div>
+            <div class="cc-kpi cc-kpiOrange"><div class="cc-kpiIcon">⏳</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Faltando</div><div class="cc-kpiValue">${pendentes.length}<span class="cc-kpiUnit">/ ${listaPecas.length}</span></div></div></div>
+          </div>
+          <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;">
+            <div style="flex:1;min-width:220px;">
+              <div class="text-sm" style="font-weight:700;margin-bottom:6px;">✅ Executado por diâmetro</div>
+              ${_resumoDiamHTML(_resumoDiamDeLista(executadas))}
+            </div>
+            <div style="flex:1;min-width:220px;">
+              <div class="text-sm" style="font-weight:700;margin-bottom:6px;">⏳ Faltando por diâmetro</div>
+              ${_resumoDiamHTML(_resumoDiamDeLista(pendentes))}
+            </div>
+          </div>
         ` : `<div class="cc-empty">Selecione uma concretagem planejada pra lançar o real.</div>`}
       </div>
     `;
@@ -591,6 +667,57 @@ const ControleEstacas = (() => {
       imagemCachePranchaId = pranchaId; imagemCacheBase64 = imagem;
       return imagem;
     } catch (e) { return null; }
+  }
+
+  // Gira a prancha 90° no sentido horário — de vez, não é só visual: a
+  // imagem em si é re-renderizada rotacionada (dimensões trocadas) e TODOS
+  // os marcadores existentes dessa prancha são recalculados pra continuar
+  // na posição certa. Assim fica "fixo no sentido escolhido" (não é um
+  // toggle de exibição, é uma correção permanente da prancha).
+  async function girarPrancha() {
+    if (!Permissions.pode('controleEstacas', 'editar')) { Utils.toast('Sem permissão para editar.', 'erro'); return; }
+    const pr = pranchaAtiva();
+    if (!pr) { Utils.toast('Nenhuma prancha selecionada.', 'erro'); return; }
+    const imagem = await _obterImagemPrancha(pr.id);
+    if (!imagem) { Utils.toast('Esta prancha ainda não tem PDF/imagem.', 'erro'); return; }
+    Utils.mostrarLoading();
+    try {
+      const img = await new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = imagem; });
+      const Wold = pr.imgWidthPx || img.naturalWidth, Hold = pr.imgHeightPx || img.naturalHeight;
+      const canvas = document.createElement('canvas');
+      canvas.width = Hold; canvas.height = Wold; // 90° troca largura/altura
+      const ctx = canvas.getContext('2d');
+      ctx.translate(canvas.width, 0);
+      ctx.rotate(Math.PI / 2);
+      ctx.drawImage(img, 0, 0, Wold, Hold);
+      const { url, width, height, ok } = EC.canvasParaDataURLLimitado(canvas);
+      if (!ok) { Utils.toast('Erro ao girar (arquivo grande demais após rotação).', 'erro'); return; }
+
+      // Recalcula a posição de todos os marcadores desta prancha pro novo sentido
+      const marcadoresDaPrancha = marcadores.filter(m => m.pranchaId === pr.id);
+      const ops = [];
+      marcadoresDaPrancha.forEach(m => {
+        if (m.tipo === 'circulo') {
+          const novo = EC.rotacionarPontoCW({ x: m.cx, y: m.cy });
+          const novoRaio = m.raio * (Wold / Hold);
+          ops.push({ type: 'update', ref: Database.ref(obraId, COL_MARCADORES).doc(m.id), data: { cx: novo.x, cy: novo.y, raio: novoRaio } });
+        } else if (m.pontos && m.pontos.length) {
+          ops.push({ type: 'update', ref: Database.ref(obraId, COL_MARCADORES).doc(m.id), data: { pontos: m.pontos.map(EC.rotacionarPontoCW) } });
+        }
+      });
+      for (let i = 0; i < ops.length; i += 400) await Database.batchWrite(ops.slice(i, i + 400));
+
+      await db.collection('obras').doc(obraId).collection('config').doc('estacasImagem_' + pr.id).set({ img: url });
+      await Database.atualizar(obraId, COL_PRANCHAS, pr.id, { imgWidthPx: width, imgHeightPx: height });
+      imagemCachePranchaId = null;
+      await carregar();
+      Utils.toast('✓ Projeto girado!', 'sucesso');
+    } catch (e) {
+      console.error(e);
+      Utils.toast('Erro ao girar: ' + e.message, 'erro');
+    } finally {
+      Utils.esconderLoading();
+    }
   }
 
   async function renderMapa() {
@@ -1291,13 +1418,13 @@ const ControleEstacas = (() => {
 
   return {
     init, recarregar, renderizar, setAbaPrincipal,
-    onTrocarView, onTrocarPranchaAtiva, onTrocarPranchaAtivaGenerico, zoomAjustar,
+    onTrocarView, onTrocarPranchaAtiva, zoomAjustar, girarPrancha,
     iniciarAdicionarCirculo, iniciarAdicionarPoligono, cancelarModo, desfazerPontoPoligono, concluirPoligono,
     iniciarAjusteForma, concluirAjusteForma, cancelarAjusteForma,
     abrirVincular, salvarVinculo, excluirMarcador,
     onFocoBuscaPeca, fecharListaPecaBusca, onBuscaPeca, selecionarPecaBusca,
     abrirPranchas, novaPrancha, renomearPrancha, excluirPrancha, abrirUploadImagem, onImagemArquivo,
-    toggleNovaConc, criarConcretagem, onTrocarPlanConcretagem, onTrocarAcompConcretagem,
+    atribuirConcretagemNumero, atribuirConcretagemNumeroInput, removerDaConcretagem, onTrocarAcompConcretagem,
   };
 })();
 

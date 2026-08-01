@@ -136,6 +136,16 @@ const EstacasCalculos = (() => {
   }
 
   // ══════════════════════════════════════════
+  // ROTAÇÃO DA PRANCHA (90° sentido horário, fixo — não é toggle de exibição)
+  // Transforma um ponto fracionário (x,y em 0..1, relativo à largura/altura
+  // da imagem ANTIGA) pra onde ele deve ficar na imagem NOVA (já rotacionada,
+  // com largura/altura trocadas). Usado tanto pra círculos (cx,cy) quanto
+  // pra vértices de polígono — o raio do círculo precisa de ajuste à parte
+  // (é fração da LARGURA, que muda de valor quando W e H trocam de lugar).
+  // ══════════════════════════════════════════
+  function rotacionarPontoCW(p) { return { x: 1 - p.y, y: p.x }; }
+
+  // ══════════════════════════════════════════
   // Compactar imagem (canvas) — usado ao processar PDF/foto no upload,
   // pra não estourar o limite de ~950KB do doc Firestore.
   // ══════════════════════════════════════════
@@ -223,5 +233,6 @@ const EstacasCalculos = (() => {
     canvasParaDataURLLimitado,
     sincronizarVinculosPlanejamento,
     chaveGrupoEstaca, mapaCoresGrupoEstaca,
+    rotacionarPontoCW,
   };
 })();
