@@ -54,6 +54,8 @@ const ControleEstacas = (() => {
   let zoomE = 1;
   let pdfjsCarregado = false;
   let acompConcretagemId = null;  // concretagem ativa na aba Acompanhamento
+  let telaCheiaAtiva = false;
+  let telaCheiaGuardado = null;   // {parent, next} — pra devolver #ce-aba-body ao saír da tela cheia
 
   const esc = EC.esc;
 
@@ -154,6 +156,10 @@ const ControleEstacas = (() => {
   function renderizar() {
     const c = document.getElementById('ce-content');
     if (!c) return;
+    // Se a tela cheia está ativa, #ce-aba-body foi realocado pra fora de
+    // #ce-content (pra dentro do overlay) — não recriamos o shell aqui
+    // (duplicaria o id), só atualizamos o conteúdo da aba em si.
+    if (telaCheiaAtiva) { _renderAbaAtual(); return; }
 
     if (!pranchas.length) {
       c.innerHTML = `
@@ -176,6 +182,7 @@ const ControleEstacas = (() => {
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <button class="btn btn-secundario btn-sm" onclick="CE.abrirPranchas()">📄 Pranchas</button>
+          <button class="btn btn-secundario btn-sm" onclick="CE.alternarTelaCheia()">⛶ Tela cheia</button>
         </div>
       </div>
       <div class="aba-toggle" style="margin-bottom:14px;">
@@ -187,9 +194,71 @@ const ControleEstacas = (() => {
       </div>
     `;
     Permissions.aplicarNaTela();
+    _renderAbaAtual();
+  }
+
+  function _renderAbaAtual() {
     if (abaPrincipal === 'planejamento') _renderAbaPlanejamento();
     else if (abaPrincipal === 'acompanhamento') _renderAbaAcompanhamento();
     else _renderAbaMarcadores();
+  }
+
+  // ══════════════════════════════════════════
+  // TELA CHEIA — realoca o #ce-aba-body (com TODAS as suas features: toggle
+  // estaca/fundação, seletor de prancha, adicionar, girar, zoom, legenda,
+  // mapa) pra um overlay ocupando a tela inteira. É o MESMO elemento (não
+  // um clone), então nada se perde — os mesmos onclick/listeners continuam
+  // funcionando. Sair da tela cheia devolve o elemento pro lugar original.
+  // ══════════════════════════════════════════
+  function alternarTelaCheia() {
+    if (telaCheiaAtiva) _saindoDaTelaCheia();
+    else _entrandoNaTelaCheia();
+  }
+
+  function _entrandoNaTelaCheia() {
+    const corpo = document.getElementById('ce-aba-body');
+    if (!corpo) return;
+    telaCheiaGuardado = { parent: corpo.parentNode, next: corpo.nextSibling };
+    const overlay = document.createElement('div');
+    overlay.id = 'ce-tela-cheia-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:500;background:var(--cor-fundo,#f1f5f9);overflow:auto;padding:16px;';
+    overlay.innerHTML = '<div style="display:flex;justify-content:flex-end;margin-bottom:10px;"><button class="btn btn-secundario btn-sm" onclick="CE.alternarTelaCheia()">✕ Fechar tela cheia (Esc)</button></div>';
+    document.body.appendChild(overlay);
+    overlay.appendChild(corpo);
+    document.body.style.overflow = 'hidden';
+    document.addEventListener('keydown', _teclaEscTelaCheia);
+    telaCheiaAtiva = true;
+    _rerenderMapaAtivo();
+  }
+
+  function _saindoDaTelaCheia() {
+    const corpo = document.getElementById('ce-aba-body');
+    const overlay = document.getElementById('ce-tela-cheia-overlay');
+    if (corpo && telaCheiaGuardado) {
+      if (telaCheiaGuardado.next) telaCheiaGuardado.parent.insertBefore(corpo, telaCheiaGuardado.next);
+      else telaCheiaGuardado.parent.appendChild(corpo);
+    }
+    if (overlay) overlay.remove();
+    document.body.style.overflow = '';
+    document.removeEventListener('keydown', _teclaEscTelaCheia);
+    telaCheiaAtiva = false;
+    telaCheiaGuardado = null;
+    _rerenderMapaAtivo();
+  }
+
+  function _teclaEscTelaCheia(e) {
+    if (e.key === 'Escape') _saindoDaTelaCheia();
+  }
+
+  function _rerenderMapaAtivo() {
+    if (abaPrincipal === 'planejamento') renderMapaPlanejamento();
+    else if (abaPrincipal === 'acompanhamento') renderMapaAcompanhamento();
+    else renderMapa();
+  }
+
+  // Altura do mapa: bem maior quando em tela cheia, pra aproveitar o espaço.
+  function _alturaMapa() {
+    return telaCheiaAtiva ? Math.max(420, window.innerHeight - 230) : 600;
   }
 
   function setAbaPrincipal(a) {
@@ -388,7 +457,7 @@ const ControleEstacas = (() => {
     const imagem = await _obterImagemPrancha(pr.id);
     if (!imagem) { host.innerHTML = `<div class="cc-empty">Esta prancha ainda não tem PDF/imagem — importe na aba Marcadores.</div>`; return; }
     const lista = marcadoresDaPranchaView(pr.id).filter(m => m.pecaId); // só marcadores já vinculados podem ser planejados
-    host.innerHTML = EC.stageHTML(pr, imagem, lista, statusMarcador, { interativo: true, zoom: zoomE, stageId: 'ce-plan-stage', maxHeight: 600 });
+    host.innerHTML = EC.stageHTML(pr, imagem, lista, statusMarcador, { interativo: true, zoom: zoomE, stageId: 'ce-plan-stage', maxHeight: _alturaMapa() });
     _desenharNumerosConcretagem('ce-plan-stage', lista);
     _ligarEventosToggle('ce-plan-stage', lista, abrirAtribuirConcretagem);
   }
@@ -577,7 +646,7 @@ const ControleEstacas = (() => {
     if (!imagem) { host.innerHTML = `<div class="cc-empty">Esta prancha ainda não tem PDF/imagem.</div>`; return; }
     const idsPlanejados = new Set(_pecaConcDaConcretagem(acompConcretagemId).map(pc => pc.pecaId));
     const lista = marcadoresDaPranchaView(pr.id).filter(m => m.pecaId);
-    host.innerHTML = EC.stageHTML(pr, imagem, lista, statusMarcador, { interativo: true, zoom: zoomE, stageId: 'ce-acomp-stage', maxHeight: 600 });
+    host.innerHTML = EC.stageHTML(pr, imagem, lista, statusMarcador, { interativo: true, zoom: zoomE, stageId: 'ce-acomp-stage', maxHeight: _alturaMapa() });
     _desenharDestaques('ce-acomp-stage', lista.filter(m => idsPlanejados.has(m.pecaId)), () => true);
     _ligarEventosToggle('ce-acomp-stage', lista.filter(m => idsPlanejados.has(m.pecaId)), _toggleReal);
   }
@@ -733,7 +802,7 @@ const ControleEstacas = (() => {
     const lista = marcadoresDaPranchaView(pr.id);
     const scrollAnterior = document.querySelector('#ce-mapa-host .est-map-scroll');
     const scrollPos = scrollAnterior ? { left: scrollAnterior.scrollLeft, top: scrollAnterior.scrollTop } : null;
-    const html = EC.stageHTML(pr, imagem, lista, statusMarcador, { interativo: true, zoom: zoomE, stageId: 'ce-stage', maxHeight: 600 });
+    const html = EC.stageHTML(pr, imagem, lista, statusMarcador, { interativo: true, zoom: zoomE, stageId: 'ce-stage', maxHeight: _alturaMapa() });
     host.innerHTML = `
       ${html}
       ${modo === 'circulo' ? `<div class="cc-empty" style="margin-top:8px;">Clique no centro da estaca e arraste até o tamanho desejado. <button class="btn btn-secundario btn-sm" onclick="CE.cancelarModo()">Cancelar</button></div>` : ''}
@@ -1417,7 +1486,7 @@ const ControleEstacas = (() => {
   }
 
   return {
-    init, recarregar, renderizar, setAbaPrincipal,
+    init, recarregar, renderizar, setAbaPrincipal, alternarTelaCheia,
     onTrocarView, onTrocarPranchaAtiva, zoomAjustar, girarPrancha,
     iniciarAdicionarCirculo, iniciarAdicionarPoligono, cancelarModo, desfazerPontoPoligono, concluirPoligono,
     iniciarAjusteForma, concluirAjusteForma, cancelarAjusteForma,
