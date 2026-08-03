@@ -282,12 +282,13 @@ const ControleEstacas = (() => {
     const pctMedio = total ? marcadoresView.reduce((s, m) => s + (statusMarcador(m).pct || 0), 0) / total : 0;
 
     el.innerHTML = `
+      ${telaCheiaAtiva ? '' : `
       <div class="cc-kpiGrid" style="grid-template-columns:repeat(4,1fr);">
         <div class="cc-kpi"><div class="cc-kpiIcon">${view === 'estacas' ? '⚫' : '⬛'}</div><div class="cc-kpiBody"><div class="cc-kpiLabel">${view === 'estacas' ? 'Estacas' : 'Fundações'} marcadas</div><div class="cc-kpiValue">${total}</div></div></div>
         <div class="cc-kpi cc-kpiBlue"><div class="cc-kpiIcon">🔗</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Vinculadas ao levantamento</div><div class="cc-kpiValue">${vinculados}<span class="cc-kpiUnit">/ ${total}</span></div></div></div>
         <div class="cc-kpi cc-kpiGreen"><div class="cc-kpiIcon">✅</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Concretadas</div><div class="cc-kpiValue">${concluidos}<span class="cc-kpiUnit">/ ${total}</span></div></div></div>
         <div class="cc-kpi cc-kpiOrange"><div class="cc-kpiIcon">📊</div><div class="cc-kpiBody"><div class="cc-kpiLabel">% Médio Concretado</div><div class="cc-kpiValue">${EC.fmt1(pctMedio)}<span class="cc-kpiUnit">%</span></div></div></div>
-      </div>
+      </div>`}
 
       <div class="cc-panel">
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:4px;">
@@ -314,13 +315,14 @@ const ControleEstacas = (() => {
         <div id="ce-mapa-host"></div>
       </div>
 
+      ${telaCheiaAtiva ? '' : `
       <div class="cc-panel">
         <div class="cc-panelTitle">◈ ${view === 'estacas' ? 'Estacas' : 'Fundações'} desta prancha</div>
         <div id="ce-tabela"></div>
-      </div>
+      </div>`}
     `;
     renderMapa();
-    renderTabela();
+    if (!telaCheiaAtiva) renderTabela();
     Permissions.aplicarNaTela();
   }
 
@@ -426,6 +428,7 @@ const ControleEstacas = (() => {
         </div>
         <div id="ce-plan-mapa-host"></div>
       </div>
+      ${telaCheiaAtiva ? '' : `
       <div class="cc-panel">
         <div class="cc-panelTitle">📅 Concretagens planejadas</div>
         ${!concsOrd.length ? '<div class="cc-empty">Nenhuma concretagem ainda — clique numa peça na prancha acima pra criar a primeira.</div>' : `
@@ -443,7 +446,7 @@ const ControleEstacas = (() => {
                 </div>`;
             }).join('')}
           </div>`}
-      </div>
+      </div>`}
     `;
     Permissions.aplicarNaTela();
     renderMapaPlanejamento();

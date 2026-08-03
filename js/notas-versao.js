@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.59.14',
+  versaoAtual: 'V2.59.15',
 
   versoes: [
     {
@@ -5447,11 +5447,15 @@ const NotasVersao = {
         'Cada peça já atribuída mostra o número da concretagem em cima do marcador, direto na prancha.',
         'Embaixo do mapa, um card por concretagem mostra quantidade de peças, volume total e o detalhamento por diâmetro — a separação "por dia de concretagem" com os volumes de cada uma.',
         'Acompanhamento: escolhe a concretagem e vai marcando peça por peça (feito/pendente) — cada clique grava um lançamento de verdade (aparece no Controle de Concreto também) e atualiza o % do Planejamento (Gantt) na hora. Resumo mostra volume e quantidade por diâmetro, executado × faltando.']},
-    {versao:'V2.59.14',status:'aberta',data:'2026-08-01',tipo:'funcionalidade',
+    {versao:'V2.59.14',status:'fechada',data:'2026-08-01',tipo:'funcionalidade',
       titulo:'Controle de Estacas: tela cheia (Marcadores, Planejamento e Acompanhamento)',
       itens:['Botão "⛶ Tela cheia" no topo do módulo — expande a aba atual (a mesma área, com TODAS as funções: toggle estaca/fundação, seletor de prancha, adicionar, girar, zoom, legenda, clicar pra vincular/atribuir/marcar real) pra ocupar a tela inteira, sem a barra lateral no caminho.',
         'O mapa também fica bem maior dentro da tela cheia, usando quase toda a altura disponível.',
-        'Sai com o botão "✕ Fechar tela cheia" ou apertando Esc.']}
+        'Sai com o botão "✕ Fechar tela cheia" ou apertando Esc.']},
+    {versao:'V2.59.15',status:'aberta',data:'2026-08-01',tipo:'correcao',
+      titulo:'Controle de Estacas: tela cheia mostra só o quadro do mapa, sem a faixa de cima',
+      itens:['Na aba Marcadores, a tela cheia estava trazendo também os 4 cartões de resumo (estacas marcadas, vinculadas, concretadas, % médio) acima do mapa — agora só o quadro com o mapa em si aparece.',
+        'Na aba Planejamento, o card "Concretagens planejadas" (embaixo do mapa) também some na tela cheia, pelo mesmo motivo.']}
   ],
 
   render(containerId) {
