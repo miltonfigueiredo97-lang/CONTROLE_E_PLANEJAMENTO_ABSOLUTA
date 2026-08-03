@@ -48,6 +48,7 @@ const ControleEstacas = (() => {
   let view = 'estacas'; // 'estacas' | 'fundacoes'
   let modo = null;      // null | 'circulo' | 'poligono' (modo de adicionar)
   let poligonoPontos = [];
+  let _arrastouMarcadorAgora = false; // true logo depois de arrastar uma estaca — suprime o 'click' que abriria o vínculo
   let editandoFormaId = null; // marcador em ajuste de forma (mover/redimensionar)
   let marcadorVincularId = null;
   let imagemCachePranchaId = null, imagemCacheBase64 = null;
@@ -934,9 +935,48 @@ const ControleEstacas = (() => {
       return;
     }
 
+    // Modo normal: segurar e arrastar uma estaca já move ela direto (sem
+    // precisar abrir o popup e clicar em "Ajustar forma" antes) — clique
+    // rápido, sem arrastar, continua abrindo o vínculo como sempre.
+    stage.addEventListener('mousedown', ev => {
+      if (ev.ctrlKey) return;
+      const marcador = ev.target.closest('.est-marcador');
+      if (!marcador) return; // arraste direto só pra círculo (estaca) por ora
+      const m = marcadores.find(x => x.id === marcador.dataset.id);
+      if (!m || m.tipo !== 'circulo') return;
+      const inicioX = ev.clientX, inicioY = ev.clientY;
+      const orig = { cx: m.cx, cy: m.cy };
+      let arrastou = false;
+      const mover = mv => {
+        if (!arrastou && Math.hypot(mv.clientX - inicioX, mv.clientY - inicioY) < 4) return;
+        arrastou = true;
+        const p = EC.posRelativa(mv, stage);
+        m.cx = p.x; m.cy = p.y;
+        marcador.style.left = (p.x * 100).toFixed(3) + '%';
+        marcador.style.top = (p.y * 100).toFixed(3) + '%';
+      };
+      const soltar = async () => {
+        document.removeEventListener('mousemove', mover);
+        document.removeEventListener('mouseup', soltar);
+        if (!arrastou) return; // foi um clique normal — deixa o listener de 'click' abaixo abrir o vínculo
+        _arrastouMarcadorAgora = true;
+        try {
+          await Database.atualizar(obraId, COL_MARCADORES, m.id, { cx: m.cx, cy: m.cy });
+        } catch (e) {
+          m.cx = orig.cx; m.cy = orig.cy;
+          marcador.style.left = (orig.cx * 100).toFixed(3) + '%';
+          marcador.style.top = (orig.cy * 100).toFixed(3) + '%';
+          Utils.toast('Erro ao salvar posição: ' + e.message, 'erro');
+        }
+      };
+      document.addEventListener('mousemove', mover);
+      document.addEventListener('mouseup', soltar);
+    });
+
     // Modo normal: clicar num marcador abre o vínculo
     stage.addEventListener('click', ev => {
       if (ev.ctrlKey) return;
+      if (_arrastouMarcadorAgora) { _arrastouMarcadorAgora = false; return; } // acabou de arrastar — não abre popup
       const marcador = ev.target.closest('.est-marcador, .est-poligono-hit');
       if (marcador) abrirVincular(marcador.dataset.id);
     });
@@ -1263,7 +1303,7 @@ const ControleEstacas = (() => {
     _renderListaPecaBusca();
   }
 
-  async function salvarVinculo() {
+  async function salvarVinculo(continuar) {
     if (!Permissions.pode('controleEstacas', 'editar') && !Permissions.pode('controleEstacas', 'criar')) { Utils.toast('Sem permissão.', 'erro'); return; }
     const m = marcadores.find(x => x.id === marcadorVincularId);
     if (!m) return;
@@ -1278,9 +1318,15 @@ const ControleEstacas = (() => {
     Utils.mostrarLoading();
     try {
       await Database.atualizar(obraId, COL_MARCADORES, m.id, { pecaId });
-      Utils.toast('✓ Vínculo salvo!', 'sucesso');
       Utils.fecharModal('modal-ce-vincular');
       await carregar();
+      if (continuar) {
+        if (m.tipo === 'poligono') await iniciarAdicionarPoligono();
+        else await iniciarAdicionarCirculo();
+        Utils.toast('✓ Salvo! Já pode marcar a próxima.', 'sucesso');
+      } else {
+        Utils.toast('✓ Vínculo salvo!', 'sucesso');
+      }
     } catch (e) {
       Utils.toast('Erro ao salvar vínculo: ' + e.message, 'erro');
     } finally {

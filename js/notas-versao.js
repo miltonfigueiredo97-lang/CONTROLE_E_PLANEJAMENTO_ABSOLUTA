@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.59.22',
+  versaoAtual: 'V2.59.23',
 
   versoes: [
     {
@@ -5485,11 +5485,15 @@ const NotasVersao = {
         'Novidade: botões de seleção rápida por tipo — em vez do botão genérico "Adicionar Estaca" (que exige arrastar pra definir o tamanho toda vez), agora aparece um botão pra cada diâmetro×comprimento já cadastrado no Levantamento (ex: "⌀90cm × 23m"). Clica no tipo, depois só clica em cada estaca daquele tipo no desenho — sai automaticamente no tamanho certo pro zoom atual, sem arrastar.',
         'O tamanho de referência é calculado pela escala já usada pelas estacas existentes no desenho (mesmo que sejam de outro diâmetro) — então funciona até no primeiro clique de um tipo novo, sem precisar cadastrar manualmente nenhuma escala.',
         'Clique rápido no modo por tipo não abre popup a cada estaca (fica sem vincular por enquanto) — assim dá pra marcar todas as de um tipo em sequência rapidamente; a vinculação com a peça é feita depois, uma a uma, na aba Marcadores normal.']},
-    {versao:'V2.59.22',status:'aberta',data:'2026-08-01',tipo:'correcao',
+    {versao:'V2.59.22',status:'fechada',data:'2026-08-01',tipo:'correcao',
       titulo:'Controle de Estacas: removidos os botões por tipo (não ficaram bons) + corrigido salto de tela ao excluir marcador',
       itens:['Removida a seleção rápida por tipo de estaca (V2.59.21) — voltou pro botão único "Adicionar Estaca" (arrastar pra definir o tamanho). O fix real do bug do zoom (limiar em pixels de tela, não fração da imagem) continua valendo.',
         'Excluir marcador (e outras ações que recarregam a prancha) fazia a tela "saltar" pro topo — mesma causa das vezes anteriores: o painel inteiro era reconstruído do zero antes do mapa novo aparecer, perdendo a posição do scroll.',
-        'Corrigido de forma mais ampla: a posição do scroll agora é guardada ANTES de qualquer reconstrução do painel de Marcadores e devolvida DEPOIS que o mapa novo termina de carregar — cobre excluir, vincular e qualquer outra ação que recarregue a prancha, não só zoom/girar.']}
+        'Corrigido de forma mais ampla: a posição do scroll agora é guardada ANTES de qualquer reconstrução do painel de Marcadores e devolvida DEPOIS que o mapa novo termina de carregar — cobre excluir, vincular e qualquer outra ação que recarregue a prancha, não só zoom/girar.']},
+    {versao:'V2.59.23',status:'aberta',data:'2026-08-01',tipo:'melhoria',
+      titulo:'Controle de Estacas: arrastar estaca já existente pra reposicionar, e "Salvar e Próximo" no vincular',
+      itens:['Segurar e arrastar uma estaca (círculo) já marcada agora move ela direto, sem precisar abrir o popup e clicar em "Ajustar forma" antes — clique rápido sem arrastar continua abrindo o vínculo, normal.',
+        'Modal de vincular ganhou o botão "💾 Salvar e Próximo" — salva o vínculo, fecha o popup e já reentra no modo de adicionar (círculo ou polígono, igual ao marcador que acabou de salvar), sem precisar clicar de novo em "Adicionar Estaca"/"Adicionar Fundação".']}
   ],
 
   render(containerId) {

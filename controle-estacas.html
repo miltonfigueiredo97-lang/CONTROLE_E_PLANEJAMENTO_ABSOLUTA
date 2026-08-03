@@ -47,7 +47,7 @@
       <a href="admin-permissoes.html" data-perm="admin:ver"><span class="nav-icon">🔑</span> Permissões</a>
       <div class="sidebar-section-title">Sistema</div>
       <a href="backup-planejamento.html" data-perm="backupPlanejamento:ver"><span class="nav-icon">🗂️</span> Backup de Planejamentos</a>
-      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V2.59.22</span></a>
+      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V2.59.23</span></a>
     </nav>
     <div class="sidebar-user">
       <div class="user-avatar">U</div>
@@ -80,7 +80,8 @@
     <div class="modal-body" id="ce-vincular-body"></div>
     <div class="modal-footer">
       <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-ce-vincular')">Cancelar</button>
-      <button class="btn btn-primario" onclick="CE.salvarVinculo()">Salvar Vínculo</button>
+      <button class="btn btn-secundario" onclick="CE.salvarVinculo(true)">💾 Salvar e Próximo</button>
+      <button class="btn btn-primario" onclick="CE.salvarVinculo(false)">Salvar Vínculo</button>
     </div>
   </div>
 </div>
