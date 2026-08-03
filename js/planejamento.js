@@ -228,9 +228,23 @@ const Planejamento = (() => {
       ],
     },
     concreto:{
-      label:'Concreto', colecao:'concretoPecas',
+      label:'Concreto', colecao:'concretoPecas', colecaoExtra:'concretoConcretagens',
+      // Sem árvore configDoc real — a "árvore" é montada em memória a partir dos
+      // próprios dados (andar/tipo de cada peça + concretagens cadastradas). Ver
+      // _buildArvoreConcreto. arvoreVirtual avisa o resto do código pra tratar
+      // igual a um módulo com configDoc (mesma navegação em pastas / filtro por nó).
+      arvoreVirtual:true,
       metricas:[
         {id:'volume',         label:'Volume total (m³)', unidade:'m³'},
+      ],
+    },
+    terraplanagem:{
+      label:'Terraplanagem', colecao:null,
+      // Sem coleção de peças e sem local — é 1 volume calculado pra obra inteira
+      // (método das seções transversais). Carregado à parte em _carregarLevSeNecessario.
+      metricas:[
+        {id:'volumeBanco',    label:'Volume de Corte (banco)',       unidade:'m³'},
+        {id:'volumeEmpolado', label:'Volume Solto (empolado/transportado)', unidade:'m³'},
       ],
     },
     soloGrampeado:{
@@ -588,23 +602,70 @@ const Planejamento = (() => {
     if(_levCache[modulo])return;
     const mod=LEVANTAMENTO_MODULOS[modulo];if(!mod)return;
     try{
+      // Terraplanagem não tem coleção de peças — é 1 volume calculado a partir
+      // de obras/{id}/config/terraplanagemSecoes (+ terraplanagem p/ empolamento).
+      if(modulo==='terraplanagem'){
+        const [dSec,dCfg]=await Promise.all([
+          db.collection('obras').doc(obraId).collection('config').doc('terraplanagemSecoes').get().catch(()=>null),
+          db.collection('obras').doc(obraId).collection('config').doc('terraplanagem').get().catch(()=>null),
+        ]);
+        const secoesTerra=(dSec&&dSec.exists)?{horizontal:dSec.data().horizontal||[],vertical:dSec.data().vertical||[]}:{horizontal:[],vertical:[]};
+        const cfgTerra=(dCfg&&dCfg.exists)?dCfg.data():{taxaEmpolamento:0.3};
+        _levCache[modulo]={dados:[],extra:[],arvore:[],secoesTerra,cfgTerra};
+        return;
+      }
       const [dados,extra,cfg]=await Promise.all([
         Database.listar(obraId,mod.colecao,null).catch(()=>[]),
         mod.colecaoExtra?Database.listar(obraId,mod.colecaoExtra,null).catch(()=>[]):Promise.resolve([]),
         mod.configDoc?Database.obter(obraId,'config',mod.configDoc).catch(()=>null):Promise.resolve(null),
       ]);
       // arvore: array plano de nós com filhos recursivos, ou [] se não existir
-      const arvore=cfg?.arvore||[];
+      let arvore=cfg?.arvore||[];
       // Para fachada: também carrega a cfg do Firestore (evita usar localStorage)
       let cfgDoc=null;
       if(modulo==='fachada'){
         try{const cs=await db.collection('obras').doc(obraId).collection('config').doc('fachadaCfg').get();cfgDoc=cs.exists?cs.data():null;}catch(e){}
       }
-      _levCache[modulo]={dados,extra,arvore,cfg:cfgDoc};
+      // Concreto: árvore virtual montada em memória (Andar › Tipo + Concretagens
+      // como pastas soltas na raiz) — ver _buildArvoreConcreto. Precisa também de
+      // concretoPecaConc (peça↔concretagem, com % de cada peça em cada concretagem).
+      let pecaConc=[];
+      if(modulo==='concreto'){
+        try{pecaConc=await Database.listar(obraId,'concretoPecaConc',null);}catch(e){pecaConc=[];}
+        arvore=_buildArvoreConcreto(dados,extra);
+      }
+      _levCache[modulo]={dados,extra,arvore,cfg:cfgDoc,pecaConc};
     }catch(e){
       console.error('Erro ao carregar levantamento',modulo,e);
       Utils.toast(`Erro ao carregar dados de ${LEVANTAMENTO_MODULOS[modulo]?.label||modulo}. Verifique sua conexão.`,'erro');
     }
+  }
+
+  // Monta a árvore virtual do Concreto a partir dos dados brutos (não vem de
+  // configDoc porque não existe árvore cadastrada — as peças só têm andar/tipo
+  // como campos soltos). Raiz mistura duas coisas, lado a lado:
+  //  - um nó por Andar (id 'andar:X'), com um filho por Tipo presente naquele
+  //    andar (id 'andar:X|tipo:Y') — pra vincular por local físico.
+  //  - um nó por Concretagem cadastrada (id 'conc:ID'), sem filhos — pra
+  //    vincular pela concretagem/etapa de execução, que pode misturar peças de
+  //    vários andares/tipos numa porcentagem cada (ver concretoPecaConc).
+  function _buildArvoreConcreto(pecas,concretagens){
+    const andares=[...new Set((pecas||[]).map(p=>p.andar||'(sem andar)'))];
+    let ordemAndares=andares;
+    try{if(typeof ConcretoCalculos!=='undefined')ordemAndares=ConcretoCalculos.ordenarAndares(andares,[]);}catch(e){}
+    const nodesAndar=ordemAndares.map(andar=>{
+      const tipos=[...new Set(pecas.filter(p=>(p.andar||'(sem andar)')===andar).map(p=>p.tipo||'(sem tipo)'))];
+      let ordemTipos=tipos;
+      try{
+        const ordemRef=typeof ConcretoCalculos!=='undefined'?ConcretoCalculos.TIPO_ORDEM:null;
+        if(ordemRef)ordemTipos=[...tipos].sort((a,b)=>{const ia=ordemRef.indexOf(a),ib=ordemRef.indexOf(b);return (ia<0?999:ia)-(ib<0?999:ib);});
+      }catch(e){}
+      return {id:'andar:'+andar,nome:andar,filhos:ordemTipos.map(tipo=>({id:'andar:'+andar+'|tipo:'+tipo,nome:tipo,filhos:[]}))};
+    });
+    const nodesConc=[...(concretagens||[])]
+      .sort((a,b)=>(Number(b.numero)||0)-(Number(a.numero)||0))
+      .map(c=>({id:'conc:'+c.id,nome:'◈ Concretagem Nº'+(c.numero||'?')+(c.desc?' — '+c.desc:'')+(c.data?' ('+c.data+')':''),filhos:[]}));
+    return [...nodesAndar,...nodesConc];
   }
 
   // Força reler do Firestore (BUG histórico: o cache nunca era invalidado,
@@ -740,7 +801,7 @@ const Planejamento = (() => {
     if(modulo==='fachada'){
       return _calcularMetrica(modulo,metrica,ctx.fachadaId||null,ctx.balancimId||null,ctx.vistaId||null,null);
     }
-    if(mod.configDoc){
+    if(mod.configDoc||mod.arvoreVirtual){
       const cache=_levCache[modulo]||{arvore:[]};
       const nodeIds=ctx.nodeId?_idsDescendentes(cache.arvore,ctx.nodeId):null;
       return _calcularMetricaComNodeIds(modulo,metrica,nodeIds);
@@ -818,6 +879,19 @@ const Planejamento = (() => {
 
     if(modulo==='concreto'){
       if(metrica==='volume') return dados.reduce((s,p)=>s+(p.volume||0),0);
+      return 0;
+    }
+
+    if(modulo==='terraplanagem'){
+      if(typeof TerraplanagemCalculos==='undefined')return 0;
+      const TCcalc=TerraplanagemCalculos;
+      const secoes=cache.secoesTerra||{horizontal:[],vertical:[]};
+      const cfgTerra=cache.cfgTerra||{taxaEmpolamento:0.3};
+      const volH=TCcalc.calcVolumeTotalSecoes(secoes.horizontal||[]);
+      const volV=TCcalc.calcVolumeTotalSecoes(secoes.vertical||[]);
+      const volMedio=TCcalc.calcVolumeMedio(volH,volV);
+      if(metrica==='volumeBanco')    return volMedio;
+      if(metrica==='volumeEmpolado') return TCcalc.calcVolumeComEmpolamento(volMedio,cfgTerra.taxaEmpolamento);
       return 0;
     }
 
@@ -903,7 +977,7 @@ const Planejamento = (() => {
       if(path.length===2)return cache.dados.filter(x=>x.tipo==='vista'&&x.balancimId===path[1].id).sort((a,b)=>a.tipoVista==='externa'?-1:1).map(v=>({id:v.id,nome:v.tipoVista==='externa'?'Vista Externa':'Vista Interna',temFilhos:false}));
       return [];
     }
-    if(mod?.configDoc){
+    if(mod?.configDoc||mod?.arvoreVirtual){
       let nivel=cache.arvore;
       for(const p of path){
         const n=(nivel||[]).find(x=>x.id===p.id);
@@ -1024,7 +1098,7 @@ const Planejamento = (() => {
             <span class="vinc-pasta-icone">📁</span>
             <span class="vinc-pasta-nome" style="flex:1;">${f.nome}</span>
             ${f.temFilhos?'<span class="vinc-pasta-seta">›</span>':''}
-          </div>`).join(''):(mod.configDoc?'<div class="vinc-linha vinc-vazio">Nenhum local mais específico aqui — este é o nível final.</div>':'')}
+          </div>`).join(''):((mod.configDoc||mod.arvoreVirtual)?'<div class="vinc-linha vinc-vazio">Nenhum local mais específico aqui — este é o nível final.</div>':'')}
         </div>
       `;
     }
@@ -1293,6 +1367,30 @@ const Planejamento = (() => {
       if(metrica==='reboco')       return calcsAcab.reduce((s,c)=>s+c.reboco,0);
       if(metrica==='revestimento') return calcsAcab.reduce((s,c)=>s+c.revestimento,0);
       if(metrica==='pinturaParede')return calcsAcab.reduce((s,c)=>s+c.pinturaM2,0);
+      return 0;
+    }
+
+    if(modulo==='concreto'){
+      if(!nodeIds){
+        if(metrica==='volume') return dados.reduce((s,p)=>s+(p.volume||0),0);
+        return 0;
+      }
+      const idsSet=new Set(nodeIds);
+      const concIds=nodeIds.filter(id=>id.startsWith('conc:')).map(id=>id.slice(5));
+      let vol;
+      if(concIds.length){
+        // Concretagem: soma peça a peça o % dela alocado nesta(s) concretagem(ns)
+        // — uma peça pode estar dividida entre várias concretagens.
+        const pecaConc=cache.pecaConc||[];
+        vol=pecaConc.filter(pc=>concIds.includes(pc.concretagemId)).reduce((s,pc)=>{
+          const p=dados.find(x=>x.id===pc.pecaId);
+          return s+(p?((parseFloat(pc.pctConcretagem)||0)/100)*(p.volume||0):0);
+        },0);
+      } else {
+        // Andar (todos os tipos) ou Andar+Tipo específico
+        vol=dados.filter(p=>idsSet.has('andar:'+(p.andar||''))||idsSet.has('andar:'+(p.andar||'')+'|tipo:'+(p.tipo||''))).reduce((s,p)=>s+(p.volume||0),0);
+      }
+      if(metrica==='volume') return vol;
       return 0;
     }
 

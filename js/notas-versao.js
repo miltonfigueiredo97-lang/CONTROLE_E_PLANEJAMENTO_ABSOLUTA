@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.59.24',
+  versaoAtual: 'V2.59.25',
 
   versoes: [
     {
@@ -5494,12 +5494,17 @@ const NotasVersao = {
       titulo:'Controle de Estacas: arrastar estaca já existente pra reposicionar, e "Salvar e Próximo" no vincular',
       itens:['Segurar e arrastar uma estaca (círculo) já marcada agora move ela direto, sem precisar abrir o popup e clicar em "Ajustar forma" antes — clique rápido sem arrastar continua abrindo o vínculo, normal.',
         'Modal de vincular ganhou o botão "💾 Salvar e Próximo" — salva o vínculo, fecha o popup e já reentra no modo de adicionar (círculo ou polígono, igual ao marcador que acabou de salvar), sem precisar clicar de novo em "Adicionar Estaca"/"Adicionar Fundação".']},
-    {versao:'V2.59.24',status:'aberta',data:'2026-08-01',tipo:'melhoria',
+    {versao:'V2.59.24',status:'fechada',data:'2026-08-01',tipo:'melhoria',
       titulo:'Controle de Estacas: Planejamento e Acompanhamento ganham zoom/pan igual Marcadores, e atribuição rápida de concretagem',
       itens:['Ctrl+roda (zoom) e Ctrl+arrastar (mover o mapa) agora funcionam em Planejamento e Acompanhamento também — antes só existiam na aba Marcadores.',
         'Planejamento: agora dá pra criar a concretagem direto ali em cima (nº, data, descrição), sem precisar passar pelo popup de uma peça.',
         'Clique num card de concretagem pra selecionar (fica marcado 📌) — com uma selecionada, clicar nas peças no desenho já atribui direto, sem abrir popup a cada uma; clique de novo numa peça já atribuída à mesma concretagem remove. Clique numa peça sem nenhuma concretagem selecionada continua abrindo o popup de escolha, como antes.',
-        'Confirmado: uma concretagem criada em Controle de Estacas usa exatamente os mesmos campos do Assistente de Concretagem do Levantamento de Concreto — aparece e funciona normalmente dentro do Controle de Concreto, sem nenhum ajuste extra.']}
+        'Confirmado: uma concretagem criada em Controle de Estacas usa exatamente os mesmos campos do Assistente de Concretagem do Levantamento de Concreto — aparece e funciona normalmente dentro do Controle de Concreto, sem nenhum ajuste extra.']},
+    {versao:'V2.59.25',status:'aberta',data:'2026-08-03',tipo:'funcionalidade',
+      titulo:'Vínculos com Levantamento: Terraplanagem entra no módulo + Concreto navega por Andar/Tipo/Concretagem',
+      itens:['Terraplanagem estava de fora dos Vínculos desde que foi lançada — agora aparece com 2 métricas: Volume de Corte (banco) e Volume Solto (empolado), calculadas igual ao Levantamento (sem separação por local, é 1 volume só da obra).',
+        'Concreto: antes só existia 1 número (volume total da obra). Agora dá pra navegar em pastas por Andar → Tipo (Pilar, Viga, Laje...) e vincular a quantidade exata de cada combinação a uma tarefa.',
+        'Concreto também ganhou pastas por Concretagem (ex: "Concretagem Nº5 — Pilares Térreo") — soma o volume das peças vinculadas àquela concretagem (respeitando o % de cada peça), útil pra vincular pela etapa de execução em vez do local físico.']}
   ],
 
   render(containerId) {
