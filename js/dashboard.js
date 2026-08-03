@@ -1431,18 +1431,20 @@ const Dashboard = (() => {
   }
 
   // Roteia o clique por categoria:
-  // - Estaca/Fundação → vêm do Controle de Estacas e Fundações (prancha/PDF
-  //   já cadastrado lá, vinculado via marcador → peça).
+  // - Estaca/Fundação → vêm do Controle de Estacas e Fundações (imagem da
+  //   prancha já cadastrada lá, vinculada via marcador → peça).
   // - Estrutura → vem do Controle de Concreto (PDF anexado na concretagem,
   //   vínculo peça → concretoPecaConc → concretagem).
+  // Ambas abrem no MESMO popup em tela cheia — sem navegar pra outra
+  // página — com seta pra trocar de item se o andar tiver mais de um.
   function _abrirPdfDoAndar(andar, categoriaChave) {
-    if (categoriaChave === 'estrutura') _abrirPdfConcretagem(andar, categoriaChave);
-    else _abrirPrancaEstacas(andar, categoriaChave);
+    if (categoriaChave === 'estrutura') _abrirPopupConcretagens(andar, categoriaChave);
+    else _abrirPopupPranchas(andar, categoriaChave);
   }
 
   // Estaca/Fundação: acha as pranchas do Controle de Estacas que têm
   // marcador vinculado a uma peça daquele andar+categoria.
-  function _abrirPrancaEstacas(andar, categoriaChave) {
+  function _abrirPopupPranchas(andar, categoriaChave) {
     const ctx = _feContexto;
     if (!ctx) return;
     const cat = CATEGORIAS_CONCRETO.find(c => c.chave === categoriaChave);
@@ -1457,31 +1459,14 @@ const Dashboard = (() => {
     const idsPranchas = new Set(marcadoresDoAndar.map(m => m.pranchaId));
     const pranchas = ctx.pranchas.filter(p => idsPranchas.has(p.id)).sort((a, b) => (a.ordem || 0) - (b.ordem || 0));
     if (!pranchas.length) return;
-    if (pranchas.length === 1) { window.location.href = 'controle-estacas.html?prancha=' + encodeURIComponent(pranchas[0].id); return; }
-    _mostrarMenuPranchas(pranchas, andar);
-  }
-
-  function _mostrarMenuPranchas(pranchas, andar) {
-    let overlay = document.getElementById('db-pdfmenu-overlay');
-    if (overlay) overlay.remove();
-    overlay = document.createElement('div');
-    overlay.id = 'db-pdfmenu-overlay';
-    overlay.style.cssText = 'position:fixed;inset:0;z-index:600;background:rgba(15,23,42,.6);display:flex;align-items:center;justify-content:center;padding:24px;';
-    overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
-    overlay.innerHTML = `
-      <div style="background:#fff;border-radius:10px;max-width:340px;width:100%;padding:16px;">
-        <div style="font-weight:700;margin-bottom:10px;">Pranchas — ${andar}</div>
-        ${pranchas.map(p => `<a href="controle-estacas.html?prancha=${encodeURIComponent(p.id)}" class="btn btn-secundario btn-sm" style="display:block;margin-bottom:6px;text-align:left;">📎 ${p.nome || 'Prancha'}</a>`).join('')}
-        <button class="btn btn-secundario btn-sm" style="width:100%;margin-top:6px;" onclick="document.getElementById('db-pdfmenu-overlay').remove()">Fechar</button>
-      </div>`;
-    document.body.appendChild(overlay);
+    const itens = pranchas.map(p => ({ tipo: 'imagem', titulo: p.nome || 'Prancha', pranchaId: p.id }));
+    _abrirPopupProjeto(andar, itens);
   }
 
   // Estrutura: acha a(s) concretagem(ns) do andar via peça → concretoPecaConc
   // → concretagem (é onde o PDF é anexado, no Controle de Concreto →
-  // Lançar BT → 📎 Inserir PDF desta concretagem). Um andar pode ter várias
-  // concretagens — se houver mais de uma com PDF, mostra menu pra escolher.
-  function _abrirPdfConcretagem(andar, categoriaChave) {
+  // Lançar BT → 📎 Inserir PDF desta concretagem).
+  function _abrirPopupConcretagens(andar, categoriaChave) {
     const ctx = _feContexto;
     if (!ctx) return;
     const cat = CATEGORIAS_CONCRETO.find(c => c.chave === categoriaChave);
@@ -1497,26 +1482,69 @@ const Dashboard = (() => {
         : 'Nenhuma concretagem cadastrada ainda para este andar.', 'alerta');
       return;
     }
-    if (comPdf.length === 1) { window.open(comPdf[0].pdfUrl, '_blank'); return; }
-    _mostrarMenuPdfs(comPdf, andar);
+    const itens = comPdf.map(c => ({ tipo: 'pdf', titulo: `Concretagem Nº${c.numero}${c.descricao ? ' — ' + c.descricao : ''}`, url: c.pdfUrl }));
+    _abrirPopupProjeto(andar, itens);
   }
 
-  // Mais de uma concretagem/PDF pro mesmo andar: menu simples pra escolher,
-  // em vez de abrir várias abas de uma vez.
-  function _mostrarMenuPdfs(concs, andar) {
-    let overlay = document.getElementById('db-pdfmenu-overlay');
+  // Popup único em tela cheia — mostra o item atual (imagem de prancha ou
+  // PDF de concretagem) e navega entre os itens com as setas, se houver
+  // mais de um pro mesmo andar. Não navega pra outra página em nenhum caso.
+  let _popupItens = [];
+  let _popupIdx = 0;
+  function _abrirPopupProjeto(andar, itens) {
+    _popupItens = itens;
+    _popupIdx = 0;
+    _renderPopupProjeto(andar);
+  }
+  function _popupNavegar(delta, andar) {
+    _popupIdx = (_popupIdx + delta + _popupItens.length) % _popupItens.length;
+    _renderPopupProjeto(andar);
+  }
+  function _fecharPopupProjeto() {
+    const overlay = document.getElementById('db-projeto-overlay');
     if (overlay) overlay.remove();
-    overlay = document.createElement('div');
-    overlay.id = 'db-pdfmenu-overlay';
-    overlay.style.cssText = 'position:fixed;inset:0;z-index:600;background:rgba(15,23,42,.6);display:flex;align-items:center;justify-content:center;padding:24px;';
-    overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+    document.removeEventListener('keydown', _popupTeclaEsc);
+  }
+  function _popupTeclaEsc(e) { if (e.key === 'Escape') _fecharPopupProjeto(); }
+  async function _renderPopupProjeto(andar) {
+    let overlay = document.getElementById('db-projeto-overlay');
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.id = 'db-projeto-overlay';
+      overlay.style.cssText = 'position:fixed;inset:0;z-index:600;background:rgba(15,23,42,.92);display:flex;flex-direction:column;padding:16px;';
+      document.body.appendChild(overlay);
+      document.addEventListener('keydown', _popupTeclaEsc);
+    }
+    const item = _popupItens[_popupIdx];
+    const temVarios = _popupItens.length > 1;
     overlay.innerHTML = `
-      <div style="background:#fff;border-radius:10px;max-width:340px;width:100%;padding:16px;">
-        <div style="font-weight:700;margin-bottom:10px;">PDFs — ${andar}</div>
-        ${concs.map(c => `<a href="${c.pdfUrl}" target="_blank" class="btn btn-secundario btn-sm" style="display:block;margin-bottom:6px;text-align:left;">📎 Concretagem Nº${c.numero}${c.descricao ? ' · ' + c.descricao : ''}${c.data ? ' · ' + Utils.formatarData(c.data) : ''}</a>`).join('')}
-        <button class="btn btn-secundario btn-sm" style="width:100%;margin-top:6px;" onclick="document.getElementById('db-pdfmenu-overlay').remove()">Fechar</button>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:4px 8px 12px;color:#fff;gap:10px;">
+        <div style="font-weight:700;">${andar} — ${item.titulo}${temVarios ? ` <span style="opacity:.7;font-weight:400;">(${_popupIdx + 1}/${_popupItens.length})</span>` : ''}</div>
+        <button class="btn btn-secundario btn-sm" onclick="Dashboard._fecharPopupProjeto()">✕ Fechar</button>
+      </div>
+      <div style="position:relative;flex:1;overflow:auto;display:flex;align-items:center;justify-content:center;background:#fff;border-radius:8px;">
+        ${temVarios ? `<button class="btn btn-secundario" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);z-index:2;" onclick="Dashboard._popupNavegar(-1,'${andar.replace(/'/g, "\\'")}')">‹</button>` : ''}
+        <div id="db-projeto-conteudo" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;">Carregando...</div>
+        ${temVarios ? `<button class="btn btn-secundario" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);z-index:2;" onclick="Dashboard._popupNavegar(1,'${andar.replace(/'/g, "\\'")}')">›</button>` : ''}
       </div>`;
-    document.body.appendChild(overlay);
+    const elConteudo = document.getElementById('db-projeto-conteudo');
+    if (item.tipo === 'pdf') {
+      elConteudo.innerHTML = `<iframe src="${item.url}" style="width:100%;height:100%;border:none;"></iframe>`;
+      return;
+    }
+    // Imagem da prancha — mesmo doc usado pelo Controle de Estacas
+    // (config/estacasImagem_{pranchaId}), em resolução original (sem
+    // recomprimir de novo aqui — já foi comprimida uma vez no upload lá).
+    try {
+      const doc = await db.collection('obras').doc(_feContexto.obraId).collection('config').doc('estacasImagem_' + item.pranchaId).get();
+      const img = doc.exists ? (doc.data().img || null) : null;
+      elConteudo.innerHTML = img
+        ? `<img src="${img}" style="max-width:100%;max-height:100%;object-fit:contain;">`
+        : '<div class="estado-vazio"><p class="text-sm">Imagem da prancha não encontrada.</p></div>';
+    } catch (e) {
+      console.error(e);
+      elConteudo.innerHTML = '<div class="estado-vazio"><p class="text-sm">Erro ao carregar a imagem.</p></div>';
+    }
   }
 
   // Minimapas de Solo Grampeado (Contenção) — um mapa por vista, na
@@ -2049,5 +2077,5 @@ const Dashboard = (() => {
       </div>`;
   }
 
-  return { init, onObraChanged, setResumoView, setPacotesView, setCurvaGranularidade, toggleMostrarConcreto, _arvToggle, _arvNivelFixo, _arvHorizonte };
+  return { init, onObraChanged, setResumoView, setPacotesView, setCurvaGranularidade, toggleMostrarConcreto, _arvToggle, _arvNivelFixo, _arvHorizonte, _fecharPopupProjeto, _popupNavegar };
 })();
