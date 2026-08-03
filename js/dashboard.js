@@ -1325,23 +1325,30 @@ const Dashboard = (() => {
   // ===================== FUNDAÇÃO / ESTRUTURA =====================
   // Ligado pelo toggle "Mostrar Contenção, Fundação e Estrutura" no topo da
   // página (preferência de UI, guardada em localStorage — não é dado da obra).
-  // Fundação e Estrutura: Previsto x Executado (m³) POR ANDAR, somado a partir
+  // Fundação/Estrutura: Previsto x Executado (m³) POR ANDAR, somado a partir
   // de Controle de Concreto (concretoPecas + concretoLancamentos), na mesma
   // ordem de andar usada lá (CC.ordenarAndares, respeitando ordem customizada
-  // se existir). "Fundação" = peças com tipo==='Fundação'; "Estrutura" = todas
-  // as outras (Pilar/Viga/Laje/Cortina/Escada/Rampa/Caixa D'água/Outro).
+  // se existir). Três categorias, mesmo critério usado no Controle de
+  // Estacas (js/estacas-calculos.js): "Fundação Profunda (Estacas)" = peça
+  // tipo==='Fundação' E subTipo==='Estacas'; "Fundação" = tipo==='Fundação'
+  // sem esse subTipo (rasa/superficial); "Estrutura" = todo o resto
+  // (Pilar/Viga/Laje/Cortina/Escada/Rampa/Caixa D'água/Outro).
+  const CATEGORIAS_CONCRETO = [
+    { chave: 'estaca', titulo: 'Fundação Profunda (Estacas)', filtro: p => p.tipo === 'Fundação' && p.subTipo === 'Estacas' },
+    { chave: 'fundacao', titulo: 'Fundação', filtro: p => p.tipo === 'Fundação' && p.subTipo !== 'Estacas' },
+    { chave: 'estrutura', titulo: 'Estrutura', filtro: p => p.tipo !== 'Fundação' },
+  ];
   async function _renderFundacaoEstrutura() {
     const host = document.getElementById('db-fundacao-estrutura-wrap');
     if (!host) return;
     if (!_mostrarConcreto) { host.innerHTML = ''; return; }
-    host.innerHTML = `
+    host.innerHTML = CATEGORIAS_CONCRETO.map(cat => `
       <div class="card db-row">
         <div class="card-body">
-          <div class="db-secao-header"><h3>Fundação e Estrutura</h3></div>
-          <div id="db-fundacao-estrutura" class="db-tooltip-wrap">Carregando...</div>
+          <div class="db-secao-header"><h3>${cat.titulo}</h3></div>
+          <div id="db-fe-${cat.chave}" class="db-tooltip-wrap">Carregando...</div>
         </div>
-      </div>`;
-    const elFE = document.getElementById('db-fundacao-estrutura');
+      </div>`).join('');
     try {
       const obraId = obraAtual.id;
       const [pecas, lancamentos, cfgDoc] = await Promise.all([
@@ -1350,49 +1357,56 @@ const Dashboard = (() => {
         Database.obter(obraId, 'config', 'concreto').catch(() => null),
       ]);
       if (!pecas.length) {
-        elFE.innerHTML = '<div class="estado-vazio"><p class="text-sm">Nenhuma peça cadastrada no Controle de Concreto ainda.</p></div>';
+        CATEGORIAS_CONCRETO.forEach(cat => {
+          document.getElementById(`db-fe-${cat.chave}`).innerHTML = '<div class="estado-vazio"><p class="text-sm">Nenhuma peça cadastrada no Controle de Concreto ainda.</p></div>';
+        });
         return;
       }
       const CC = window.ConcretoCalculos;
-      const isFundacao = (p) => p && p.tipo === 'Fundação';
       const ordemAndares = cfgDoc?.ordemAndares || [];
       const andaresBrutos = [...new Set(pecas.map(p => p.andar || 'Sem andar'))];
       const andares = CC ? CC.ordenarAndares(andaresBrutos, ordemAndares) : andaresBrutos.sort();
 
-      const pecaPorId = new Map(pecas.map(p => [p.id, p]));
       const lancsPorPeca = new Map();
       lancamentos.forEach(l => {
         if (!lancsPorPeca.has(l.pecaId)) lancsPorPeca.set(l.pecaId, []);
         lancsPorPeca.get(l.pecaId).push(l);
       });
 
-      const dadosPorAndar = andares.map(andar => {
-        const pecasDoAndar = pecas.filter(p => (p.andar || 'Sem andar') === andar);
-        const previsto = pecasDoAndar.reduce((s, p) => s + (Number(p.volume) || 0), 0);
-        let executado = 0, ultimaData = null;
-        pecasDoAndar.forEach(p => {
-          (lancsPorPeca.get(p.id) || []).forEach(l => {
-            executado += Number(l.volume) || 0;
-            if (l.data && (!ultimaData || l.data > ultimaData)) ultimaData = l.data;
+      CATEGORIAS_CONCRETO.forEach(cat => {
+        const elCat = document.getElementById(`db-fe-${cat.chave}`);
+        const pecasCategoria = pecas.filter(cat.filtro);
+        const dadosPorAndar = andares.map(andar => {
+          const pecasDoAndar = pecasCategoria.filter(p => (p.andar || 'Sem andar') === andar);
+          const previsto = pecasDoAndar.reduce((s, p) => s + (Number(p.volume) || 0), 0);
+          let executado = 0, ultimaData = null;
+          pecasDoAndar.forEach(p => {
+            (lancsPorPeca.get(p.id) || []).forEach(l => {
+              executado += Number(l.volume) || 0;
+              if (l.data && (!ultimaData || l.data > ultimaData)) ultimaData = l.data;
+            });
           });
-        });
-        return { andar, previsto, executado, ultimaData, temFundacao: pecasDoAndar.some(isFundacao) };
-      }).filter(d => d.previsto > 0 || d.executado > 0);
+          return { andar, previsto, executado, ultimaData };
+        }).filter(d => d.previsto > 0 || d.executado > 0);
 
-      if (!dadosPorAndar.length) {
-        elFE.innerHTML = '<div class="estado-vazio"><p class="text-sm">Nenhum volume previsto ou executado lançado ainda.</p></div>';
-        return;
-      }
-      elFE.innerHTML = _svgFundacaoEstruturaPorAndar(dadosPorAndar);
-      _attachHover(elFE, dadosPorAndar, (d) => `
-        <div class="db-tt-titulo">${d.andar}</div>
-        <div class="db-tt-linha"><i style="background:#999;"></i>Previsto: <b>${Utils.formatarNumero(d.previsto)} m³</b></div>
-        <div class="db-tt-linha"><i style="background:var(--cor-primaria);"></i>Executado: <b>${Utils.formatarNumero(d.executado)} m³</b></div>
-        <div class="text-sm text-muted" style="margin-top:4px;">${d.ultimaData ? 'Último lançamento: ' + Utils.formatarData(d.ultimaData) : 'Nenhum lançamento ainda'}</div>
-      `);
+        if (!dadosPorAndar.length) {
+          elCat.innerHTML = '<div class="estado-vazio"><p class="text-sm">Nenhum volume previsto ou executado lançado ainda nesta categoria.</p></div>';
+          return;
+        }
+        elCat.innerHTML = _svgFundacaoEstruturaPorAndar(dadosPorAndar);
+        _attachHover(elCat, dadosPorAndar, (d) => `
+          <div class="db-tt-titulo">${d.andar}</div>
+          <div class="db-tt-linha"><i style="background:#999;"></i>Previsto: <b>${Utils.formatarNumero(d.previsto)} m³</b></div>
+          <div class="db-tt-linha"><i style="background:var(--cor-primaria);"></i>Executado: <b>${Utils.formatarNumero(d.executado)} m³</b></div>
+          <div class="text-sm text-muted" style="margin-top:4px;">${d.ultimaData ? 'Último lançamento: ' + Utils.formatarData(d.ultimaData) : 'Nenhum lançamento ainda'}</div>
+        `);
+      });
     } catch (e) {
       console.error(e);
-      elFE.innerHTML = '<div class="estado-vazio"><p class="text-sm">Erro ao carregar dados do Controle de Concreto.</p></div>';
+      CATEGORIAS_CONCRETO.forEach(cat => {
+        const el = document.getElementById(`db-fe-${cat.chave}`);
+        if (el) el.innerHTML = '<div class="estado-vazio"><p class="text-sm">Erro ao carregar dados do Controle de Concreto.</p></div>';
+      });
     }
   }
 

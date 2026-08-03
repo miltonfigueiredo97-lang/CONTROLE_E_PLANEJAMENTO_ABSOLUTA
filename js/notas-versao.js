@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.59.25',
+  versaoAtual: 'V2.59.26',
 
   versoes: [
     {
@@ -5500,11 +5500,14 @@ const NotasVersao = {
         'Planejamento: agora dá pra criar a concretagem direto ali em cima (nº, data, descrição), sem precisar passar pelo popup de uma peça.',
         'Clique num card de concretagem pra selecionar (fica marcado 📌) — com uma selecionada, clicar nas peças no desenho já atribui direto, sem abrir popup a cada uma; clique de novo numa peça já atribuída à mesma concretagem remove. Clique numa peça sem nenhuma concretagem selecionada continua abrindo o popup de escolha, como antes.',
         'Confirmado: uma concretagem criada em Controle de Estacas usa exatamente os mesmos campos do Assistente de Concretagem do Levantamento de Concreto — aparece e funciona normalmente dentro do Controle de Concreto, sem nenhum ajuste extra.']},
-    {versao:'V2.59.25',status:'aberta',data:'2026-08-03',tipo:'funcionalidade',
+    {versao:'V2.59.25',status:'fechada',data:'2026-08-03',tipo:'funcionalidade',
       titulo:'Vínculos com Levantamento: Terraplanagem entra no módulo + Concreto navega por Andar/Tipo/Concretagem',
       itens:['Terraplanagem estava de fora dos Vínculos desde que foi lançada — agora aparece com 2 métricas: Volume de Corte (banco) e Volume Solto (empolado), calculadas igual ao Levantamento (sem separação por local, é 1 volume só da obra).',
         'Concreto: antes só existia 1 número (volume total da obra). Agora dá pra navegar em pastas por Andar → Tipo (Pilar, Viga, Laje...) e vincular a quantidade exata de cada combinação a uma tarefa.',
-        'Concreto também ganhou pastas por Concretagem (ex: "Concretagem Nº5 — Pilares Térreo") — soma o volume das peças vinculadas àquela concretagem (respeitando o % de cada peça), útil pra vincular pela etapa de execução em vez do local físico.']}
+        'Concreto também ganhou pastas por Concretagem (ex: "Concretagem Nº5 — Pilares Térreo") — soma o volume das peças vinculadas àquela concretagem (respeitando o % de cada peça), útil pra vincular pela etapa de execução em vez do local físico.']},
+    {versao:'V2.59.26',status:'aberta',data:'2026-08-03',tipo:'melhoria',
+      titulo:'Dashboard: gráfico "Fundação e Estrutura" separado em 3 (Fundação Profunda/Estacas, Fundação, Estrutura)',
+      itens:['Antes era 1 gráfico só somando Fundação+Estrutura. Agora são 3 gráficos por andar, mesmo critério do Controle de Estacas: Fundação Profunda (Estacas) = peça Fundação com subtipo Estacas; Fundação = peça Fundação sem esse subtipo (rasa/superficial); Estrutura = todo o resto (Pilar/Viga/Laje/Cortina/Escada/Rampa/Caixa D\'água/Outro).']}
   ],
 
   render(containerId) {
