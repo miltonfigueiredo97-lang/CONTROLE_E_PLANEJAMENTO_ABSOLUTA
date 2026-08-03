@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.59.21',
+  versaoAtual: 'V2.59.22',
 
   versoes: [
     {
@@ -5479,12 +5479,17 @@ const NotasVersao = {
         'Se a pessoa clicasse pra criar a estaca durante essa janela, o clique caía no listener errado (modo normal, que só reage a marcador já existente) — nada acontecia, nem erro nem popup.',
         'Isso explica por que parecia "só funcionar" às vezes: quanto mais devagar a conexão ou quanto mais cedo depois de girar a prancha, maior a chance de cair nessa janela.',
         'Corrigido: agora, se a imagem precisa ser buscada, a tela trava com um loading até o mapa novo (já no modo certo) estar pronto — sem essa janela de clique “no vazio”.']},
-    {versao:'V2.59.21',status:'aberta',data:'2026-08-01',tipo:'funcionalidade',
+    {versao:'V2.59.21',status:'fechada',data:'2026-08-01',tipo:'funcionalidade',
       titulo:'Controle de Estacas: achado o bug do zoom + botões de seleção rápida por tipo de estaca',
       itens:['Bug real encontrado: o tamanho mínimo do arrasto pra criar uma estaca era medido como fração da LARGURA DA IMAGEM, não em pixels de tela. Com zoom alto, um arrasto de tamanho normal na tela virava uma fração pequena da imagem (que agora é enorme) e caía por baixo do mínimo — descartado em silêncio, sem popup, sem erro. Corrigido: o mínimo agora é medido em pixels de tela (constante, não muda com o zoom).',
         'Novidade: botões de seleção rápida por tipo — em vez do botão genérico "Adicionar Estaca" (que exige arrastar pra definir o tamanho toda vez), agora aparece um botão pra cada diâmetro×comprimento já cadastrado no Levantamento (ex: "⌀90cm × 23m"). Clica no tipo, depois só clica em cada estaca daquele tipo no desenho — sai automaticamente no tamanho certo pro zoom atual, sem arrastar.',
         'O tamanho de referência é calculado pela escala já usada pelas estacas existentes no desenho (mesmo que sejam de outro diâmetro) — então funciona até no primeiro clique de um tipo novo, sem precisar cadastrar manualmente nenhuma escala.',
-        'Clique rápido no modo por tipo não abre popup a cada estaca (fica sem vincular por enquanto) — assim dá pra marcar todas as de um tipo em sequência rapidamente; a vinculação com a peça é feita depois, uma a uma, na aba Marcadores normal.']}
+        'Clique rápido no modo por tipo não abre popup a cada estaca (fica sem vincular por enquanto) — assim dá pra marcar todas as de um tipo em sequência rapidamente; a vinculação com a peça é feita depois, uma a uma, na aba Marcadores normal.']},
+    {versao:'V2.59.22',status:'aberta',data:'2026-08-01',tipo:'correcao',
+      titulo:'Controle de Estacas: removidos os botões por tipo (não ficaram bons) + corrigido salto de tela ao excluir marcador',
+      itens:['Removida a seleção rápida por tipo de estaca (V2.59.21) — voltou pro botão único "Adicionar Estaca" (arrastar pra definir o tamanho). O fix real do bug do zoom (limiar em pixels de tela, não fração da imagem) continua valendo.',
+        'Excluir marcador (e outras ações que recarregam a prancha) fazia a tela "saltar" pro topo — mesma causa das vezes anteriores: o painel inteiro era reconstruído do zero antes do mapa novo aparecer, perdendo a posição do scroll.',
+        'Corrigido de forma mais ampla: a posição do scroll agora é guardada ANTES de qualquer reconstrução do painel de Marcadores e devolvida DEPOIS que o mapa novo termina de carregar — cobre excluir, vincular e qualquer outra ação que recarregue a prancha, não só zoom/girar.']}
   ],
 
   render(containerId) {

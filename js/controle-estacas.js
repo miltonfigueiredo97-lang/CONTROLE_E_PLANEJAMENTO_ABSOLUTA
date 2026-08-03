@@ -48,7 +48,6 @@ const ControleEstacas = (() => {
   let view = 'estacas'; // 'estacas' | 'fundacoes'
   let modo = null;      // null | 'circulo' | 'poligono' (modo de adicionar)
   let poligonoPontos = [];
-  let tipoRapidoAtivo = null; // {diametro, comprimento} — modo "clicar e já sai do tamanho certo"
   let editandoFormaId = null; // marcador em ajuste de forma (mover/redimensionar)
   let marcadorVincularId = null;
   let imagemCachePranchaId = null, imagemCacheBase64 = null;
@@ -149,20 +148,6 @@ const ControleEstacas = (() => {
       return `<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:50%;border:2px solid ${cor};display:inline-block;"></span>⌀${d}cm${c ? ' × ' + c + 'm' : ''}</span>`;
     }).join('');
     return `<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin:6px 0 2px;font-size:.78rem;color:var(--cv-text3,#94a3b8);">${itens}</div>`;
-  }
-
-  // Botões de seleção rápida por tipo (diâmetro+comprimento): clica no tipo,
-  // depois clica em cada estaca daquele tipo no desenho — já sai do tamanho
-  // certo, sem precisar arrastar pra definir o raio toda vez.
-  function _botoesTipoEstaca() {
-    const grupos = _gruposEstacaBotoes();
-    if (!grupos.length) return _legendaGrupos();
-    const botoes = grupos.map(g => {
-      const cor = mapaCoresGrupo.get(EC.chaveGrupoEstaca(g.diametro, g.comprimento)) || '#64748b';
-      const ativo = tipoRapidoAtivo && tipoRapidoAtivo.diametro === g.diametro && tipoRapidoAtivo.comprimento === g.comprimento;
-      return `<button class="btn ${ativo ? 'btn-primario' : 'btn-secundario'} btn-sm ce-btn-tipo" data-diametro="${g.diametro}" data-comprimento="${g.comprimento}" style="border-left:3px solid ${cor};" onclick="CE.toggleTipoRapido(${g.diametro},${g.comprimento})" title="Clique pra ativar — depois só clique em cada estaca de ⌀${g.diametro}cm × ${g.comprimento}m no desenho">⌀${g.diametro}cm × ${g.comprimento}m <span class="text-sm" style="opacity:.75;">(${g.comMarcador}/${g.total})</span></button>`;
-    }).join('');
-    return `<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:6px 0 2px;">${botoes}${tipoRapidoAtivo ? `<span class="text-sm text-muted">Clique nas estacas de ⌀${tipoRapidoAtivo.diametro}cm no desenho — sai já no tamanho certo.</span>` : ''}</div>`;
   }
 
   // ══════════════════════════════════════════
@@ -295,9 +280,17 @@ const ControleEstacas = (() => {
   // ══════════════════════════════════════════
   // ABA: MARCADORES (comportamento original — cria/vincula/ajusta)
   // ══════════════════════════════════════════
-  function _renderAbaMarcadores() {
+  async function _renderAbaMarcadores() {
     const el = document.getElementById('ce-aba-body');
     if (!el) return;
+    // Captura a posição do scroll do mapa ANTES de reconstruir o painel —
+    // el.innerHTML abaixo recria #ce-mapa-host do zero (vazio), então a
+    // preservação de scroll que já existe DENTRO de renderMapa() não
+    // adianta nesse caminho (não acha nada pra preservar). Isso cobre
+    // qualquer ação que recarregue tudo (excluir marcador, vincular, etc.)
+    // — não só zoom/girar, que já chamavam renderMapa() direto.
+    const scrollAntigo = document.querySelector('#ce-mapa-host .est-map-scroll');
+    const scrollPos = scrollAntigo ? { left: scrollAntigo.scrollLeft, top: scrollAntigo.scrollTop } : null;
     const marcadoresView = marcadores.filter(m => m.tipo === tipoMarcadorDaView());
     const total = marcadoresView.length;
     const vinculados = marcadoresView.filter(m => m.pecaId).length;
@@ -324,12 +317,12 @@ const ControleEstacas = (() => {
           </div>
           <span class="text-sm text-muted">🟢 concretado · 🟠 parcial · ⚪ pendente · ▢ sem vínculo</span>
         </div>
-        ${view === 'estacas' ? _botoesTipoEstaca() : _legendaGrupos()}
+        ${_legendaGrupos()}
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0;align-items:center;">
           <select class="form-control" id="ce-prancha-ativa" style="max-width:240px;" onchange="CE.onTrocarPranchaAtiva()">
             ${pranchasOrdenadas().map(p => `<option value="${p.id}" ${p.id === pranchaAtivaId ? 'selected' : ''}>${esc(p.nome || 'Prancha')}</option>`).join('')}
           </select>
-          <button id="ce-btn-circulo" class="btn ${modo === 'circulo' && !tipoRapidoAtivo ? 'btn-primario' : 'btn-secundario'} btn-sm" data-perm="controleEstacas:criar" style="${view !== 'estacas' ? 'display:none;' : ''}" onclick="CE.iniciarAdicionarCirculo()">◯ Adicionar Estaca</button>
+          <button id="ce-btn-circulo" class="btn ${modo === 'circulo' ? 'btn-primario' : 'btn-secundario'} btn-sm" data-perm="controleEstacas:criar" style="${view !== 'estacas' ? 'display:none;' : ''}" onclick="CE.iniciarAdicionarCirculo()">◯ Adicionar Estaca</button>
           <button id="ce-btn-poligono" class="btn ${modo === 'poligono' ? 'btn-primario' : 'btn-secundario'} btn-sm" data-perm="controleEstacas:criar" style="${view !== 'fundacoes' ? 'display:none;' : ''}" onclick="CE.iniciarAdicionarPoligono()">▱ Adicionar Fundação</button>
           <button class="btn btn-secundario btn-sm" data-perm="controleEstacas:editar" onclick="CE.girarPrancha()">⟳ Girar 90°</button>
           <span style="display:flex;gap:2px;align-items:center;margin-left:auto;">
@@ -346,7 +339,9 @@ const ControleEstacas = (() => {
         <div id="ce-tabela"></div>
       </div>
     `;
-    renderMapa();
+    await renderMapa();
+    const scrollNovo = document.querySelector('#ce-mapa-host .est-map-scroll');
+    if (scrollNovo && scrollPos) { scrollNovo.scrollLeft = scrollPos.left; scrollNovo.scrollTop = scrollPos.top; }
     renderTabela();
     Permissions.aplicarNaTela();
   }
@@ -900,15 +895,10 @@ const ControleEstacas = (() => {
         const centro = EC.posRelativa(ev, stage);
         const cont = _overlayContainer('ce-preview-overlay');
         cont.innerHTML = '';
-        const w0 = stage.offsetWidth || 1;
-        const raioRef = tipoRapidoAtivo ? _raioReferencia(tipoRapidoAtivo) : 0;
-        const diamRef = raioRef ? raioRef * 2 * w0 : 0;
         const preview = document.createElement('div');
-        preview.style.cssText = `position:absolute;left:${(centro.x * 100).toFixed(3)}%;top:${(centro.y * 100).toFixed(3)}%;width:${diamRef.toFixed(1)}px;height:${diamRef.toFixed(1)}px;transform:translate(-50%,-50%);border-radius:50%;border:2px dashed #1e293b;background:rgba(59,130,246,.25);z-index:6;`;
+        preview.style.cssText = `position:absolute;left:${(centro.x * 100).toFixed(3)}%;top:${(centro.y * 100).toFixed(3)}%;width:0;height:0;transform:translate(-50%,-50%);border-radius:50%;border:2px dashed #1e293b;background:rgba(59,130,246,.25);z-index:6;`;
         cont.appendChild(preview);
-        let arrastou = false;
         const mover = mv => {
-          arrastou = true;
           const raio = EC.raioFracao(centro, EC.posRelativa(mv, stage), stage);
           const diam = raio * 2 * (stage.offsetWidth || 1);
           preview.style.width = diam.toFixed(1) + 'px';
@@ -918,21 +908,14 @@ const ControleEstacas = (() => {
           document.removeEventListener('mousemove', mover);
           document.removeEventListener('mouseup', soltar);
           cont.innerHTML = '';
-          let raioFinal = null;
-          if (arrastou) {
-            const raio = EC.raioFracao(centro, EC.posRelativa(up, stage), stage);
-            const raioPx = raio * (stage.offsetWidth || 1);
-            // Limiar em PIXELS DE TELA (não fração da imagem) — com zoom alto,
-            // a mesma fração vira um círculo enorme; com zoom baixo, um arrasto
-            // que parece normal na tela virava uma fração ínfima e era
-            // descartado em silêncio (raio<0.004 fixo não escalava com o zoom).
-            raioFinal = raioPx >= 3 ? raio : (raioRef || null);
-          } else if (raioRef) {
-            raioFinal = raioRef; // clique único no modo rápido: já sai do tamanho de referência
-          }
-          if (!raioFinal) return; // clique acidental sem arrasto e sem tipo ativo — ignora
-          if (tipoRapidoAtivo) await _criarMarcadorRapido(centro.x, centro.y, raioFinal);
-          else await _criarMarcadorCirculo(centro.x, centro.y, raioFinal);
+          const raio = EC.raioFracao(centro, EC.posRelativa(up, stage), stage);
+          const raioPx = raio * (stage.offsetWidth || 1);
+          // Limiar em PIXELS DE TELA (não fração da imagem) — com zoom alto,
+          // um arrasto normal na tela virava uma fração ínfima da imagem
+          // (que ficou enorme) e era descartado em silêncio (o antigo
+          // raio<0.004 fixo não escalava com o zoom).
+          if (raioPx < 3) return; // arrasto minúsculo, ignora (evita clique acidental)
+          await _criarMarcadorCirculo(centro.x, centro.y, raio);
         };
         document.addEventListener('mousemove', mover);
         document.addEventListener('mouseup', soltar);
@@ -1006,25 +989,21 @@ const ControleEstacas = (() => {
 
   async function iniciarAdicionarCirculo() {
     if (!Permissions.pode('controleEstacas', 'criar')) { Utils.toast('Sem permissão para criar.', 'erro'); return; }
-    modo = 'circulo'; editandoFormaId = null; tipoRapidoAtivo = null;
+    modo = 'circulo'; editandoFormaId = null;
     await renderMapa();
     _atualizarBotoesModo();
   }
   async function iniciarAdicionarPoligono() {
     if (!Permissions.pode('controleEstacas', 'criar')) { Utils.toast('Sem permissão para criar.', 'erro'); return; }
-    modo = 'poligono'; poligonoPontos = []; editandoFormaId = null; tipoRapidoAtivo = null;
+    modo = 'poligono'; poligonoPontos = []; editandoFormaId = null;
     await renderMapa();
     _atualizarBotoesModo();
   }
-  function cancelarModo() { modo = null; poligonoPontos = []; tipoRapidoAtivo = null; renderMapa(); _atualizarBotoesModo(); }
+  function cancelarModo() { modo = null; poligonoPontos = []; renderMapa(); _atualizarBotoesModo(); }
   function _atualizarBotoesModo() {
     const bc = document.getElementById('ce-btn-circulo'), bp = document.getElementById('ce-btn-poligono');
-    if (bc) bc.className = `btn ${modo === 'circulo' && !tipoRapidoAtivo ? 'btn-primario' : 'btn-secundario'} btn-sm`;
+    if (bc) bc.className = `btn ${modo === 'circulo' ? 'btn-primario' : 'btn-secundario'} btn-sm`;
     if (bp) bp.className = `btn ${modo === 'poligono' ? 'btn-primario' : 'btn-secundario'} btn-sm`;
-    document.querySelectorAll('.ce-btn-tipo').forEach(b => {
-      const ativo = tipoRapidoAtivo && b.dataset.diametro == tipoRapidoAtivo.diametro && b.dataset.comprimento == tipoRapidoAtivo.comprimento;
-      b.className = `btn ${ativo ? 'btn-primario' : 'btn-secundario'} btn-sm ce-btn-tipo`;
-    });
   }
   function desfazerPontoPoligono() {
     poligonoPontos.pop();
@@ -1044,65 +1023,6 @@ const ControleEstacas = (() => {
     } finally {
       Utils.esconderLoading();
     }
-  }
-
-  // ── Modo rápido por tipo: clica no botão do diâmetro, depois só clica em
-  // cada estaca daquele tipo — sai do tamanho certo sem arrastar, sem abrir
-  // popup a cada clique (fica sem vincular; vincula depois, na Marcadores
-  // normal). Criação OTIMISTA local (sem recarregar tudo) pra não perder o
-  // scroll/zoom a cada clique — só o mapa é redesenhado.
-  async function _criarMarcadorRapido(cx, cy, raio) {
-    if (!Permissions.pode('controleEstacas', 'criar')) { Utils.toast('Sem permissão para criar.', 'erro'); return; }
-    try {
-      const dados = { pranchaId: pranchaAtivaId, tipo: 'circulo', cx, cy, raio, pecaId: '' };
-      const id = await Database.criar(obraId, COL_MARCADORES, dados, EC.genId('em'));
-      marcadores.push({ id, ...dados });
-      await renderMapa();
-    } catch (e) {
-      Utils.toast('Erro ao criar marcador: ' + e.message, 'erro');
-    }
-  }
-
-  // Escala média (fração de raio por cm de diâmetro) tirada das estacas já
-  // vinculadas no desenho — deixa inferir o tamanho certo até de um diâmetro
-  // que ainda não tem nenhuma referência própria, pela mesma escala do resto.
-  function _escalaMediaDiametro() {
-    const razoes = [];
-    marcadores.forEach(m => {
-      if (m.tipo !== 'circulo' || !m.pecaId) return;
-      const p = pecas.find(x => x.id === m.pecaId);
-      if (!p || !p.diametro) return;
-      razoes.push(m.raio / EC.num(p.diametro));
-    });
-    if (!razoes.length) return null;
-    return razoes.reduce((a, b) => a + b, 0) / razoes.length;
-  }
-  function _raioReferencia(tipo) {
-    const escala = _escalaMediaDiametro();
-    return escala ? escala * tipo.diametro : 0;
-  }
-
-  // Grupos de diâmetro+comprimento das Estacas do levantamento, com
-  // progresso (quantas já têm marcador) — vira botão de seleção rápida.
-  function _gruposEstacaBotoes() {
-    const grupos = new Map();
-    pecas.filter(p => p.tipo === 'Fundação' && p.subTipo === 'Estacas' && p.diametro).forEach(p => {
-      const chave = EC.chaveGrupoEstaca(p.diametro, p.comprimento);
-      if (!grupos.has(chave)) grupos.set(chave, { diametro: EC.num(p.diametro), comprimento: EC.num(p.comprimento), total: 0, comMarcador: 0 });
-      const g = grupos.get(chave);
-      g.total++;
-      if (marcadorDaPeca(p.id)) g.comMarcador++;
-    });
-    return [...grupos.values()].sort((a, b) => a.diametro - b.diametro || a.comprimento - b.comprimento);
-  }
-
-  async function toggleTipoRapido(diametro, comprimento) {
-    if (!Permissions.pode('controleEstacas', 'criar')) { Utils.toast('Sem permissão para criar.', 'erro'); return; }
-    const igual = tipoRapidoAtivo && tipoRapidoAtivo.diametro === diametro && tipoRapidoAtivo.comprimento === comprimento;
-    tipoRapidoAtivo = igual ? null : { diametro, comprimento };
-    modo = 'circulo'; editandoFormaId = null;
-    await renderMapa();
-    _atualizarBotoesModo();
   }
 
   async function concluirPoligono() {
@@ -1609,7 +1529,6 @@ const ControleEstacas = (() => {
     init, recarregar, renderizar, setAbaPrincipal, alternarTelaCheia,
     onTrocarView, onTrocarPranchaAtiva, zoomAjustar, girarPrancha,
     iniciarAdicionarCirculo, iniciarAdicionarPoligono, cancelarModo, desfazerPontoPoligono, concluirPoligono,
-    toggleTipoRapido,
     iniciarAjusteForma, concluirAjusteForma, cancelarAjusteForma,
     abrirVincular, salvarVinculo, excluirMarcador,
     onFocoBuscaPeca, fecharListaPecaBusca, onBuscaPeca, selecionarPecaBusca,
