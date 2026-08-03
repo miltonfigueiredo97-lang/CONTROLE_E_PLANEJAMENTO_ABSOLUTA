@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.59.27',
+  versaoAtual: 'V2.59.28',
 
   versoes: [
     {
@@ -5508,10 +5508,14 @@ const NotasVersao = {
     {versao:'V2.59.26',status:'fechada',data:'2026-08-03',tipo:'melhoria',
       titulo:'Dashboard: gráfico "Fundação e Estrutura" separado em 3 (Fundação Profunda/Estacas, Fundação, Estrutura)',
       itens:['Antes era 1 gráfico só somando Fundação+Estrutura. Agora são 3 gráficos por andar, mesmo critério do Controle de Estacas: Fundação Profunda (Estacas) = peça Fundação com subtipo Estacas; Fundação = peça Fundação sem esse subtipo (rasa/superficial); Estrutura = todo o resto (Pilar/Viga/Laje/Cortina/Escada/Rampa/Caixa D\'água/Outro).']},
-    {versao:'V2.59.27',status:'aberta',data:'2026-08-03',tipo:'melhoria',
+    {versao:'V2.59.27',status:'fechada',data:'2026-08-03',tipo:'melhoria',
       titulo:'Dashboard: clique na barra de Fundação Profunda/Fundação/Estrutura abre o projeto correspondente',
       itens:['Fundação Profunda (Estacas) e Fundação: clique na barra do andar abre a prancha (PDF/imagem) já cadastrada no Controle de Estacas e Fundações, com as peças daquele andar marcadas. Se houver mais de uma prancha, abre a da primeira concretagem e navega pelas demais com as setas.',
-        'Estrutura: clique na barra leva direto pro Controle de Concreto, já na aba Relatórios com aquele andar aberto.']}
+        'Estrutura: clique na barra leva direto pro Controle de Concreto, já na aba Relatórios com aquele andar aberto.']},
+    {versao:'V2.59.28',status:'aberta',data:'2026-08-03',tipo:'correcao',
+      titulo:'Dashboard: peça de estaca antiga sem subTipo caía em "Fundação" + ordem de andares travava em andar novo criado após reordenar manualmente',
+      itens:['Peças de Fundação criadas antes do campo subTipo existir não tinham esse campo gravado — caíam sempre em "Fundação" mesmo sendo estaca de verdade. Agora, sem subTipo mas com diâmetro E comprimento preenchidos (só faz sentido em estaca), o Dashboard classifica como Fundação Profunda (Estacas).',
+        'Ordenação de andares (Controle de Concreto, Dashboard, e onde mais usa CC.ordenarAndares): depois que a ordem era reorganizada manualmente uma vez, todo andar criado depois caía sempre no FINAL da lista por ordem de criação — nunca mais era posicionado pelo número (causa do "10º, 11º, 12º... 1º, 1º Subsolo, 2º..." fora de ordem). Corrigido: a ordem manual entre os andares já reorganizados continua 100% preservada; andares novos agora são inseridos automaticamente na posição numérica correta dentro dela.']}
   ],
 
   render(containerId) {

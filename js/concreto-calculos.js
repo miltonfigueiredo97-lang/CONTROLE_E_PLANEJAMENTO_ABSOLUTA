@@ -41,31 +41,48 @@ const ConcretoCalculos = (() => {
   }
 
   // ── Ordenação de andares ────────────────────
+  // Score "inteligente" por nome (subsolo/fundação primeiro, depois pelo
+  // número extraído do nome) — usado tanto quando NÃO há ordem customizada
+  // quanto para posicionar corretamente andares que ainda não estão em uma
+  // ordem customizada existente (ver ordenarAndares abaixo).
+  const _PRIORIDADE_ANDAR = ['subsolo', 'sub-solo', 'subsolos', 'fundação', 'fundacao', 'fundações', 'fundacoes',
+    'infraestrutura', 'infra', 'pilotis', 'térreo', 'terreo', 'piso 0', 'pavimento 0', 'mezanino', 'mez'];
+  function _scoreAndar(a) {
+    const low = a.toLowerCase();
+    for (let i = 0; i < _PRIORIDADE_ANDAR.length; i++) {
+      if (low.includes(_PRIORIDADE_ANDAR[i])) return -1000 + i;
+    }
+    const m = a.match(/(\d+)/);
+    return m ? parseInt(m[1]) : 9999;
+  }
   function ordenarAndares(andares, ordemCustom) {
-    if (ordemCustom && ordemCustom.length) {
+    if (!ordemCustom || !ordemCustom.length) {
       return [...andares].sort((a, b) => {
-        const ia = ordemCustom.indexOf(a), ib = ordemCustom.indexOf(b);
-        if (ia === -1 && ib === -1) return a.localeCompare(b);
-        if (ia === -1) return 1;
-        if (ib === -1) return -1;
-        return ia - ib;
+        const sa = _scoreAndar(a), sb = _scoreAndar(b);
+        if (sa !== sb) return sa - sb;
+        return a.localeCompare(b);
       });
     }
-    const prioridade = ['subsolo', 'sub-solo', 'subsolos', 'fundação', 'fundacao', 'fundações', 'fundacoes',
-      'infraestrutura', 'infra', 'pilotis', 'térreo', 'terreo', 'piso 0', 'pavimento 0', 'mezanino', 'mez'];
-    const score = a => {
-      const low = a.toLowerCase();
-      for (let i = 0; i < prioridade.length; i++) {
-        if (low.includes(prioridade[i])) return -1000 + i;
+    // Itens JÁ na ordem customizada mantêm 100% a ordem relativa entre si —
+    // é exatamente o que o usuário arrastou manualmente, nunca é sobrescrito.
+    // Itens NOVOS (andar criado depois da última vez que a ordem foi salva/
+    // arrastada) são inseridos na posição certa dentro dessa sequência,
+    // comparando o score numérico do novo com o dos itens customizados
+    // adjacentes — evita que todo andar novo caia sempre no final por ordem
+    // de criação (bug antigo), sem nunca alterar a ordem já customizada.
+    const custom = ordemCustom.filter(nome => andares.includes(nome));
+    const novos = andares.filter(a => !custom.includes(a))
+      .sort((a, b) => { const sa = _scoreAndar(a), sb = _scoreAndar(b); return sa !== sb ? sa - sb : a.localeCompare(b); });
+    const resultado = [...custom];
+    novos.forEach(novo => {
+      const scoreNovo = _scoreAndar(novo);
+      let posInsercao = resultado.length; // padrão: vai pro final, se nenhum score maior for achado
+      for (let i = 0; i < resultado.length; i++) {
+        if (_scoreAndar(resultado[i]) > scoreNovo) { posInsercao = i; break; }
       }
-      const m = a.match(/(\d+)/);
-      return m ? parseInt(m[1]) : 9999;
-    };
-    return [...andares].sort((a, b) => {
-      const sa = score(a), sb = score(b);
-      if (sa !== sb) return sa - sb;
-      return a.localeCompare(b);
+      resultado.splice(posInsercao, 0, novo);
     });
+    return resultado;
   }
 
   // ── Volume lançado de uma peça ──────────────

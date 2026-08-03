@@ -1334,9 +1334,15 @@ const Dashboard = (() => {
   // tipo==='Fundação' E subTipo==='Estacas'; "Fundação" = tipo==='Fundação'
   // sem esse subTipo (rasa/superficial); "Estrutura" = todo o resto
   // (Pilar/Viga/Laje/Cortina/Escada/Rampa/Caixa D'água/Outro).
+  // FALLBACK: peças antigas de Fundação, criadas antes do campo subTipo
+  // existir, não têm esse campo gravado — sem isso, caem sempre em "Fundação"
+  // mesmo sendo estaca de verdade. Como diâmetro+comprimento juntos só fazem
+  // sentido em estaca dentro do universo de peças de Fundação (a peça de
+  // fundação rasa não tem os dois), usamos isso como sinal de reserva.
+  const _isEstaca = p => p.subTipo === 'Estacas' || (!p.subTipo && Number(p.diametro) > 0 && Number(p.comprimento) > 0);
   const CATEGORIAS_CONCRETO = [
-    { chave: 'estaca', titulo: 'Fundação Profunda (Estacas)', filtro: p => p.tipo === 'Fundação' && p.subTipo === 'Estacas' },
-    { chave: 'fundacao', titulo: 'Fundação', filtro: p => p.tipo === 'Fundação' && p.subTipo !== 'Estacas' },
+    { chave: 'estaca', titulo: 'Fundação Profunda (Estacas)', filtro: p => p.tipo === 'Fundação' && _isEstaca(p) },
+    { chave: 'fundacao', titulo: 'Fundação', filtro: p => p.tipo === 'Fundação' && !_isEstaca(p) },
     { chave: 'estrutura', titulo: 'Estrutura', filtro: p => p.tipo !== 'Fundação' },
   ];
   async function _renderFundacaoEstrutura() {
