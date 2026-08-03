@@ -806,7 +806,16 @@ const ControleEstacas = (() => {
     if (!host) return;
     const pr = pranchaAtiva();
     if (!pr) { host.innerHTML = `<div class="cc-empty">Nenhuma prancha selecionada.</div>`; return; }
+    // Se a imagem não está em cache (ex: logo depois de girar a prancha),
+    // buscar no Firestore leva um instante — nesse meio tempo o stage AINDA
+    // é o antigo (com os listeners do modo anterior). Se a pessoa clicar
+    // pra criar uma estaca durante essa janela, o clique cai no listener
+    // errado (modo normal, que só reage a marcador existente) e não
+    // acontece nada — nem erro, nem popup. Loading trava isso.
+    const precisaBuscarImagem = imagemCachePranchaId !== pr.id;
+    if (precisaBuscarImagem) Utils.mostrarLoading();
     const imagem = await _obterImagemPrancha(pr.id);
+    if (precisaBuscarImagem) Utils.esconderLoading();
     if (!imagem) {
       host.innerHTML = `<div class="cc-empty">Esta prancha ainda não tem PDF/imagem. <button class="btn btn-secundario btn-sm" onclick="CE.abrirPranchas()">📄 Gerenciar Pranchas</button></div>`;
       return;
@@ -832,7 +841,7 @@ const ControleEstacas = (() => {
     const stage = document.getElementById('ce-stage');
     if (!stage) return null;
     let cont = document.getElementById(id);
-    if (!cont) { cont = document.createElement('div'); cont.id = id; cont.style.cssText = 'position:absolute;inset:0;'; stage.appendChild(cont); }
+    if (!cont) { cont = document.createElement('div'); cont.id = id; cont.style.cssText = 'position:absolute;inset:0;pointer-events:none;'; stage.appendChild(cont); }
     return cont;
   }
 
@@ -963,13 +972,17 @@ const ControleEstacas = (() => {
     });
   }
 
-  function iniciarAdicionarCirculo() {
+  async function iniciarAdicionarCirculo() {
     if (!Permissions.pode('controleEstacas', 'criar')) { Utils.toast('Sem permissão para criar.', 'erro'); return; }
-    modo = 'circulo'; editandoFormaId = null; renderMapa(); _atualizarBotoesModo();
+    modo = 'circulo'; editandoFormaId = null;
+    await renderMapa();
+    _atualizarBotoesModo();
   }
-  function iniciarAdicionarPoligono() {
+  async function iniciarAdicionarPoligono() {
     if (!Permissions.pode('controleEstacas', 'criar')) { Utils.toast('Sem permissão para criar.', 'erro'); return; }
-    modo = 'poligono'; poligonoPontos = []; editandoFormaId = null; renderMapa(); _atualizarBotoesModo();
+    modo = 'poligono'; poligonoPontos = []; editandoFormaId = null;
+    await renderMapa();
+    _atualizarBotoesModo();
   }
   function cancelarModo() { modo = null; poligonoPontos = []; renderMapa(); _atualizarBotoesModo(); }
   function _atualizarBotoesModo() {

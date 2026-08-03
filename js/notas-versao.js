@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.59.19',
+  versaoAtual: 'V2.59.20',
 
   versoes: [
     {
@@ -5468,11 +5468,17 @@ const NotasVersao = {
       titulo:'Controle de Estacas: painéis de baixo (tabela / concretagens) voltam a aparecer na tela cheia',
       itens:['Só o card de resumo (4 cartões no topo) deveria sumir na tela cheia — mas por engano a tabela "Estacas/Fundações desta prancha" (Marcadores) e o card "Concretagens planejadas" (Planejamento) também estavam sumindo.',
         'Corrigido: agora só a faixa de cartões do topo fica de fora; os painéis de baixo continuam disponíveis na tela cheia.']},
-    {versao:'V2.59.19',status:'aberta',data:'2026-08-01',tipo:'correcao',
+    {versao:'V2.59.19',status:'fechada',data:'2026-08-01',tipo:'correcao',
       titulo:'Controle de Estacas: clicar em "Adicionar Estaca"/"Adicionar Fundação" não deve mais fazer a prancha "saltar" pro topo',
       itens:['Clicar em Adicionar Estaca/Fundação chamava um re-render da PÁGINA INTEIRA (KPI, tabela, tudo) só pra ligar o modo de criação — isso recriava o mapa do zero e perdia a posição do scroll, dando a impressão de que a prancha "andava"/pulava.',
         'Isso também podia fazer o clique de criação (arrastar pra definir o raio) não terminar de registrar corretamente, dependendo do timing — daí o popup de vincular às vezes não abria.',
-        'Corrigido: ligar/desligar o modo de criação agora só atualiza o mapa e o botão em si (mesmo caminho leve que "Cancelar" já usava) — sem recriar a página, sem perder o scroll.']}
+        'Corrigido: ligar/desligar o modo de criação agora só atualiza o mapa e o botão em si (mesmo caminho leve que "Cancelar" já usava) — sem recriar a página, sem perder o scroll.']},
+    {versao:'V2.59.20',status:'aberta',data:'2026-08-01',tipo:'correcao',
+      titulo:'Controle de Estacas: achada a corrida real do popup que não abria ao Adicionar Estaca',
+      itens:['Quando a imagem da prancha não estava em cache (ex: logo depois de girar 90°), buscar ela no Firestore levava um instante — e nesse meio tempo o mapa em tela ainda era o ANTIGO, com os listeners do modo anterior (não do modo "criar estaca").',
+        'Se a pessoa clicasse pra criar a estaca durante essa janela, o clique caía no listener errado (modo normal, que só reage a marcador já existente) — nada acontecia, nem erro nem popup.',
+        'Isso explica por que parecia "só funcionar" às vezes: quanto mais devagar a conexão ou quanto mais cedo depois de girar a prancha, maior a chance de cair nessa janela.',
+        'Corrigido: agora, se a imagem precisa ser buscada, a tela trava com um loading até o mapa novo (já no modo certo) estar pronto — sem essa janela de clique “no vazio”.']}
   ],
 
   render(containerId) {
