@@ -228,7 +228,7 @@ const ControleEstacas = (() => {
     document.body.style.overflow = 'hidden';
     document.addEventListener('keydown', _teclaEscTelaCheia);
     telaCheiaAtiva = true;
-    _rerenderMapaAtivo();
+    _renderAbaAtual();
   }
 
   function _saindoDaTelaCheia() {
@@ -243,17 +243,11 @@ const ControleEstacas = (() => {
     document.removeEventListener('keydown', _teclaEscTelaCheia);
     telaCheiaAtiva = false;
     telaCheiaGuardado = null;
-    _rerenderMapaAtivo();
+    _renderAbaAtual();
   }
 
   function _teclaEscTelaCheia(e) {
     if (e.key === 'Escape') _saindoDaTelaCheia();
-  }
-
-  function _rerenderMapaAtivo() {
-    if (abaPrincipal === 'planejamento') renderMapaPlanejamento();
-    else if (abaPrincipal === 'acompanhamento') renderMapaAcompanhamento();
-    else renderMapa();
   }
 
   // Altura do mapa: bem maior quando em tela cheia, pra aproveitar o espaço.

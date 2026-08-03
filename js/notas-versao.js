@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.59.15',
+  versaoAtual: 'V2.59.16',
 
   versoes: [
     {
@@ -5452,10 +5452,14 @@ const NotasVersao = {
       itens:['Botão "⛶ Tela cheia" no topo do módulo — expande a aba atual (a mesma área, com TODAS as funções: toggle estaca/fundação, seletor de prancha, adicionar, girar, zoom, legenda, clicar pra vincular/atribuir/marcar real) pra ocupar a tela inteira, sem a barra lateral no caminho.',
         'O mapa também fica bem maior dentro da tela cheia, usando quase toda a altura disponível.',
         'Sai com o botão "✕ Fechar tela cheia" ou apertando Esc.']},
-    {versao:'V2.59.15',status:'aberta',data:'2026-08-01',tipo:'correcao',
+    {versao:'V2.59.15',status:'fechada',data:'2026-08-01',tipo:'correcao',
       titulo:'Controle de Estacas: tela cheia mostra só o quadro do mapa, sem a faixa de cima',
       itens:['Na aba Marcadores, a tela cheia estava trazendo também os 4 cartões de resumo (estacas marcadas, vinculadas, concretadas, % médio) acima do mapa — agora só o quadro com o mapa em si aparece.',
-        'Na aba Planejamento, o card "Concretagens planejadas" (embaixo do mapa) também some na tela cheia, pelo mesmo motivo.']}
+        'Na aba Planejamento, o card "Concretagens planejadas" (embaixo do mapa) também some na tela cheia, pelo mesmo motivo.']},
+    {versao:'V2.59.16',status:'aberta',data:'2026-08-01',tipo:'correcao',
+      titulo:'Controle de Estacas: correção de verdade da V2.59.15 — os cartões continuavam aparecendo na tela cheia',
+      itens:['A V2.59.15 escondia os cartões só na PRÓXIMA renderização — mas entrar/saír da tela cheia só atualizava o mapa, não o painel inteiro, então o HTML antigo (com os cartões) continuava ali, só realocado pra tela cheia sem re-render.',
+        'Corrigido: entrar/saír da tela cheia agora reconstrói o painel da aba inteiro (não só o mapa), então o esconde/mostra dos cartões passa a valer de fato.']}
   ],
 
   render(containerId) {
