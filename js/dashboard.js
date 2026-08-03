@@ -1326,61 +1326,58 @@ const Dashboard = (() => {
   // ===================== FUNDAÇÃO / ESTRUTURA =====================
   // Ligado pelo toggle "Mostrar Contenção, Fundação e Estrutura" no topo da
   // página (preferência de UI, guardada em localStorage — não é dado da obra).
-  // Fundação/Estrutura: Previsto x Executado (m³) POR ANDAR, somado a partir
-  // de Controle de Concreto (concretoPecas + concretoLancamentos), na mesma
-  // ordem de andar usada lá (CC.ordenarAndares, respeitando ordem customizada
-  // se existir). Três categorias, mesmo critério usado no Controle de
-  // Estacas (js/estacas-calculos.js): "Fundação Profunda (Estacas)" = peça
-  // tipo==='Fundação' E subTipo==='Estacas'; "Fundação" = tipo==='Fundação'
-  // sem esse subTipo (rasa/superficial); "Estrutura" = todo o resto
-  // (Pilar/Viga/Laje/Cortina/Escada/Rampa/Caixa D'água/Outro).
-  // FALLBACK: peças antigas de Fundação, criadas antes do campo subTipo
-  // existir, não têm esse campo gravado — sem isso, caem sempre em "Fundação"
-  // mesmo sendo estaca de verdade. Como diâmetro+comprimento juntos só fazem
-  // sentido em estaca dentro do universo de peças de Fundação (a peça de
-  // fundação rasa não tem os dois), usamos isso como sinal de reserva.
+  // UM gráfico só, por andar, com 3 séries coloridas (Fundação Profunda/
+  // Estacas, Fundação, Estrutura) — mesmo critério do Controle de Estacas:
+  // "Estaca" = peça tipo==='Fundação' com subTipo==='Estacas' (ou, em peça
+  // antiga sem subTipo gravado, diâmetro+comprimento preenchidos — só faz
+  // sentido em estaca); "Fundação" = tipo==='Fundação' sem isso (rasa);
+  // "Estrutura" = todo o resto (Pilar/Viga/Laje/Cortina/Escada/Rampa/
+  // Caixa D'água/Outro).
+  // ORDEM DOS ANDARES: usa cfgDoc.ordemAndares EXATAMENTE como está
+  // configurada no Controle de Concreto (tela de arrastar) — sem recalcular
+  // nem reordenar por número; é a mesma lista, na mesma ordem, ponto.
   const _isEstaca = p => p.subTipo === 'Estacas' || (!p.subTipo && Number(p.diametro) > 0 && Number(p.comprimento) > 0);
   const CATEGORIAS_CONCRETO = [
-    { chave: 'estaca', titulo: 'Fundação Profunda (Estacas)', filtro: p => p.tipo === 'Fundação' && _isEstaca(p) },
-    { chave: 'fundacao', titulo: 'Fundação', filtro: p => p.tipo === 'Fundação' && !_isEstaca(p) },
-    { chave: 'estrutura', titulo: 'Estrutura', filtro: p => p.tipo !== 'Fundação' },
+    { chave: 'estaca', titulo: 'Fundação Profunda (Estacas)', cor: '#8b5cf6', filtro: p => p.tipo === 'Fundação' && _isEstaca(p) },
+    { chave: 'fundacao', titulo: 'Fundação', cor: '#f59e0b', filtro: p => p.tipo === 'Fundação' && !_isEstaca(p) },
+    { chave: 'estrutura', titulo: 'Estrutura', cor: 'var(--cor-primaria)', filtro: p => p.tipo !== 'Fundação' },
   ];
   async function _renderFundacaoEstrutura() {
     const host = document.getElementById('db-fundacao-estrutura-wrap');
     if (!host) return;
     if (!_mostrarConcreto) { host.innerHTML = ''; return; }
-    host.innerHTML = CATEGORIAS_CONCRETO.map(cat => `
+    host.innerHTML = `
       <div class="card db-row">
         <div class="card-body">
-          <div class="db-secao-header"><h3>${cat.titulo}</h3></div>
-          <div id="db-fe-${cat.chave}" class="db-tooltip-wrap">Carregando...</div>
+          <div class="db-secao-header"><h3>Fundação e Estrutura</h3></div>
+          <div id="db-fe" class="db-tooltip-wrap">Carregando...</div>
         </div>
-      </div>`).join('');
+      </div>`;
+    const elFE = document.getElementById('db-fe');
     try {
       const obraId = obraAtual.id;
-      const [pecas, lancamentos, cfgDoc, marcadores, pranchas, pecaConc, concretagens] = await Promise.all([
+      const [pecas, lancamentos, cfgDoc, btsConfig] = await Promise.all([
         Database.listar(obraId, 'concretoPecas', null).catch(() => []),
         Database.listar(obraId, 'concretoLancamentos', null).catch(() => []),
         Database.obter(obraId, 'config', 'concreto').catch(() => null),
-        Database.listar(obraId, 'estacasMarcadores', null).catch(() => []),
-        Database.listar(obraId, 'estacasPranchas', null).catch(() => []),
-        Database.listar(obraId, 'concretoPecaConc', null).catch(() => []),
-        Database.listar(obraId, 'concretoConcretagens', null).catch(() => []),
+        Database.listar(obraId, 'concretoBTs', null).catch(() => []),
       ]);
-      // Guardado pra _abrirPrancaDoAndar (popup de PDF ao clicar na barra de
-      // Fundação Profunda/Fundação) montar a lista de pranchas do andar sem
-      // precisar buscar tudo de novo no clique.
-      _feContexto = { obraId, pecas, marcadores, pranchas, pecaConc, concretagens, lancamentos };
+      // Guardado pra _abrirPdfDoAndar (clique numa barra) achar a BT/PDF
+      // certa sem precisar buscar tudo de novo.
+      _feContexto = { obraId, pecas, lancamentos, btsConfig };
       if (!pecas.length) {
-        CATEGORIAS_CONCRETO.forEach(cat => {
-          document.getElementById(`db-fe-${cat.chave}`).innerHTML = '<div class="estado-vazio"><p class="text-sm">Nenhuma peça cadastrada no Controle de Concreto ainda.</p></div>';
-        });
+        elFE.innerHTML = '<div class="estado-vazio"><p class="text-sm">Nenhuma peça cadastrada no Controle de Concreto ainda.</p></div>';
         return;
       }
-      const CC = window.ConcretoCalculos;
-      const ordemAndares = cfgDoc?.ordemAndares || [];
-      const andaresBrutos = [...new Set(pecas.map(p => p.andar || 'Sem andar'))];
-      const andares = CC ? CC.ordenarAndares(andaresBrutos, ordemAndares) : andaresBrutos.sort();
+      // Ordem EXATA do Controle de Concreto — só filtra pra quem realmente
+      // tem peça na obra, sem reordenar por número/score. Andar que existe
+      // em pecas mas não está na lista customizada (caso raríssimo, dado
+      // novo criado por outro caminho) entra no final, na ordem que apareceu.
+      const ordemSalva = cfgDoc?.ordemAndares || [];
+      const andaresComPeca = new Set(pecas.map(p => p.andar || 'Sem andar'));
+      const andares = ordemSalva.length
+        ? [...ordemSalva.filter(a => andaresComPeca.has(a)), ...[...andaresComPeca].filter(a => !ordemSalva.includes(a))]
+        : [...andaresComPeca];
 
       const lancsPorPeca = new Map();
       lancamentos.forEach(l => {
@@ -1388,178 +1385,89 @@ const Dashboard = (() => {
         lancsPorPeca.get(l.pecaId).push(l);
       });
 
-      CATEGORIAS_CONCRETO.forEach(cat => {
-        const elCat = document.getElementById(`db-fe-${cat.chave}`);
-        const pecasCategoria = pecas.filter(cat.filtro);
-        const dadosPorAndar = andares.map(andar => {
-          const pecasDoAndar = pecasCategoria.filter(p => (p.andar || 'Sem andar') === andar);
-          const previsto = pecasDoAndar.reduce((s, p) => s + (Number(p.volume) || 0), 0);
-          let executado = 0, ultimaData = null;
-          pecasDoAndar.forEach(p => {
-            (lancsPorPeca.get(p.id) || []).forEach(l => {
-              executado += Number(l.volume) || 0;
-              if (l.data && (!ultimaData || l.data > ultimaData)) ultimaData = l.data;
-            });
+      const dadosPorAndar = andares.map(andar => {
+        const porCategoria = CATEGORIAS_CONCRETO.map(cat => {
+          const pecasDaCategoria = pecas.filter(p => (p.andar || 'Sem andar') === andar && cat.filtro(p));
+          const previsto = pecasDaCategoria.reduce((s, p) => s + (Number(p.volume) || 0), 0);
+          let executado = 0;
+          pecasDaCategoria.forEach(p => {
+            (lancsPorPeca.get(p.id) || []).forEach(l => { executado += Number(l.volume) || 0; });
           });
-          return { andar, previsto, executado, ultimaData, categoria: cat.chave };
-        }).filter(d => d.previsto > 0 || d.executado > 0);
+          return { chave: cat.chave, previsto, executado };
+        });
+        return { andar, porCategoria };
+      }).filter(d => d.porCategoria.some(c => c.previsto > 0 || c.executado > 0));
 
-        if (!dadosPorAndar.length) {
-          elCat.innerHTML = '<div class="estado-vazio"><p class="text-sm">Nenhum volume previsto ou executado lançado ainda nesta categoria.</p></div>';
-          return;
+      if (!dadosPorAndar.length) {
+        elFE.innerHTML = '<div class="estado-vazio"><p class="text-sm">Nenhum volume previsto ou executado lançado ainda.</p></div>';
+        return;
+      }
+      elFE.innerHTML = _svgFundacaoEstruturaPorAndar(dadosPorAndar);
+      // Delegação de clique no card (elemento pai fixo, nunca recriado) —
+      // sobe manualmente até achar .db-hit em vez de usar closest() (suporte
+      // de closest() em nó SVG varia entre navegadores).
+      elFE.onclick = (e) => {
+        let el = e.target, hit = null;
+        for (let i = 0; i < 6 && el; i++) {
+          if (el.classList && el.classList.contains('db-hit')) { hit = el; break; }
+          el = el.parentNode;
         }
-        elCat.innerHTML = _svgFundacaoEstruturaPorAndar(dadosPorAndar);
-        _attachHover(elCat, dadosPorAndar, (d) => `
-          <div class="db-tt-titulo">${d.andar}</div>
-          <div class="db-tt-linha"><i style="background:#999;"></i>Previsto: <b>${Utils.formatarNumero(d.previsto)} m³</b></div>
-          <div class="db-tt-linha"><i style="background:var(--cor-primaria);"></i>Executado: <b>${Utils.formatarNumero(d.executado)} m³</b></div>
-          <div class="text-sm text-muted" style="margin-top:4px;">${d.ultimaData ? 'Último lançamento: ' + Utils.formatarData(d.ultimaData) : 'Nenhum lançamento ainda'}</div>
-          <div class="text-sm" style="margin-top:6px;color:var(--cor-primaria-dark,#B89400);font-weight:600;">Clique para abrir ${cat.chave === 'estrutura' ? 'no Controle de Concreto' : 'a prancha do projeto'} ›</div>
-        `);
-        // Delegação de clique no elemento PAI (elCat), que nunca é recriado —
-        // evita depender de addEventListener em nós SVG filhos dinâmicos
-        // (.db-hit é reconstruído a cada render; um listener direto nele
-        // pode se perder dependendo de timing/reflow). Sobe manualmente até
-        // achar a classe .db-hit em vez de usar closest() — suporte de
-        // closest() em elementos SVG varia entre navegadores/versões.
-        elCat.onclick = (e) => {
-          let el = e.target, hit = null;
-          for (let i = 0; i < 6 && el; i++) {
-            if (el.classList && el.classList.contains('db-hit')) { hit = el; break; }
-            el = el.parentNode;
-          }
-          if (!hit) return;
-          const d = dadosPorAndar[Number(hit.dataset.idx)];
-          if (!d) return;
-          if (cat.chave === 'estrutura') {
-            window.location.href = 'controle-concreto.html?andar=' + encodeURIComponent(d.andar);
-          } else {
-            _abrirPrancaDoAndar(d.andar, cat.chave);
-          }
-        };
-        elCat.querySelectorAll('.db-hit').forEach(hit => { hit.style.cursor = 'pointer'; });
-      });
+        if (!hit) return;
+        const d = dadosPorAndar[Number(hit.dataset.idx)];
+        const catChave = hit.dataset.cat;
+        if (!d || !catChave) return;
+        _abrirPdfDoAndar(d.andar, catChave);
+      };
+      elFE.querySelectorAll('.db-hit').forEach(hit => { hit.style.cursor = 'pointer'; });
     } catch (e) {
       console.error(e);
-      CATEGORIAS_CONCRETO.forEach(cat => {
-        const el = document.getElementById(`db-fe-${cat.chave}`);
-        if (el) el.innerHTML = '<div class="estado-vazio"><p class="text-sm">Erro ao carregar dados do Controle de Concreto.</p></div>';
-      });
+      elFE.innerHTML = '<div class="estado-vazio"><p class="text-sm">Erro ao carregar dados do Controle de Concreto.</p></div>';
     }
   }
 
-  // Popup com a prancha (PDF/imagem) do Controle de Estacas — aberto ao
-  // clicar numa barra dos gráficos Fundação Profunda (Estacas) / Fundação.
-  // Acha as pranchas que têm marcador vinculado a peça daquele andar+
-  // categoria, ordenadas pela concretagem (concretoPecaConc→concretoConcretagens.numero,
-  // peças sem concretagem vinculada ficam por último, pela ordem da prancha)
-  // — abre na primeira, com seta pra navegar pelas demais.
-  let _pdPranchasAtuais = []; // pranchas do andar+categoria clicados, na ordem de navegação
-  let _pdIdx = 0;
-  function _abrirPrancaDoAndar(andar, categoriaChave) {
+  // Acha a BT (concretagem) certa pro andar+categoria clicados e abre o PDF
+  // dela em nova aba. Se houver mais de uma BT com peça daquele andar+
+  // categoria, abre a de menor número (primeira concretagem) — sem popup de
+  // navegação: é só um link direto, então cada clique subsequente abriria
+  // outra aba; por isso aqui mostramos um pequeno menu se houver mais de uma.
+  function _abrirPdfDoAndar(andar, categoriaChave) {
     const ctx = _feContexto;
     if (!ctx) return;
     const cat = CATEGORIAS_CONCRETO.find(c => c.chave === categoriaChave);
     const pecasDoAndar = ctx.pecas.filter(p => (p.andar || 'Sem andar') === andar && cat.filtro(p));
+    if (!pecasDoAndar.length) return;
     const idsPecas = new Set(pecasDoAndar.map(p => p.id));
-    const marcadoresDoAndar = ctx.marcadores.filter(m => m.pecaId && idsPecas.has(m.pecaId));
-    if (!marcadoresDoAndar.length) {
-      Utils.toast('Nenhuma peça deste andar está vinculada a uma prancha do Controle de Estacas ainda.', 'alerta');
+    // BT vinculada à peça via lançamento (concretoLancamentos.pecaId + .btConfigId)
+    // — é o caminho real de peça → BT já usado no lançamento operacional.
+    const btIds = new Set(ctx.lancamentos.filter(l => idsPecas.has(l.pecaId) && l.btConfigId).map(l => l.btConfigId));
+    const btsDoAndar = ctx.btsConfig.filter(b => btIds.has(b.id)).sort((a, b) => a.numero - b.numero);
+    const comPdf = btsDoAndar.filter(b => b.pdfUrl);
+    if (!comPdf.length) {
+      Utils.toast(btsDoAndar.length
+        ? 'Nenhuma BT deste andar tem PDF anexado ainda. Insira no Controle de Concreto → Lançar BT → 📎 Inserir PDF.'
+        : 'Nenhuma BT lançada ainda para este andar/categoria.', 'alerta');
       return;
     }
-    // Concretagem de cada peça (pra ordenar): concretoPecaConc → concretoConcretagens.numero.
-    const concPorPeca = new Map();
-    ctx.pecaConc.forEach(pc => {
-      const conc = ctx.concretagens.find(c => c.id === pc.concretagemId);
-      if (conc) concPorPeca.set(pc.pecaId, conc);
-    });
-    const idsPranchas = new Set(marcadoresDoAndar.map(m => m.pranchaId));
-    const pranchasComImagem = ctx.pranchas.filter(p => idsPranchas.has(p.id) && Number(p.imgWidthPx) > 0 && Number(p.imgHeightPx) > 0);
-    if (!pranchasComImagem.length) {
-      Utils.toast('A(s) prancha(s) vinculada(s) a este andar ainda não têm PDF/imagem importado.', 'alerta');
-      return;
-    }
-    // Menor número de concretagem entre os marcadores de cada prancha define
-    // a posição dela na fila; sem concretagem vinculada = vai pro final.
-    const numConcMinPorPrancha = new Map();
-    pranchasComImagem.forEach(pr => {
-      const nums = marcadoresDoAndar.filter(m => m.pranchaId === pr.id)
-        .map(m => concPorPeca.get(m.pecaId)?.numero).filter(n => n != null);
-      numConcMinPorPrancha.set(pr.id, nums.length ? Math.min(...nums) : Infinity);
-    });
-    _pdPranchasAtuais = [...pranchasComImagem].sort((a, b) => {
-      const diff = numConcMinPorPrancha.get(a.id) - numConcMinPorPrancha.get(b.id);
-      return diff !== 0 ? diff : (a.ordem || 0) - (b.ordem || 0);
-    });
-    _pdIdx = 0;
-    _pdMarcadoresAndar = marcadoresDoAndar;
-    _renderPopupPrancha();
+    if (comPdf.length === 1) { window.open(comPdf[0].pdfUrl, '_blank'); return; }
+    _mostrarMenuPdfs(comPdf, andar);
   }
-  let _pdMarcadoresAndar = [];
-  function _pdNavegar(delta) {
-    _pdIdx = (_pdIdx + delta + _pdPranchasAtuais.length) % _pdPranchasAtuais.length;
-    _renderPopupPrancha();
-  }
-  function _fecharPopupPrancha() {
-    const overlay = document.getElementById('db-pd-overlay');
+
+  // Mais de uma BT/PDF pro mesmo andar+categoria: menu simples pra escolher,
+  // em vez de abrir várias abas de uma vez.
+  function _mostrarMenuPdfs(bts, andar) {
+    let overlay = document.getElementById('db-pdfmenu-overlay');
     if (overlay) overlay.remove();
-    document.removeEventListener('keydown', _pdTeclaEsc);
-  }
-  function _pdTeclaEsc(e) { if (e.key === 'Escape') _fecharPopupPrancha(); }
-  async function _renderPopupPrancha() {
-    const EC = window.EstacasCalculos;
-    const CC = window.ConcretoCalculos;
-    if (!EC) return;
-    let overlay = document.getElementById('db-pd-overlay');
-    if (!overlay) {
-      overlay = document.createElement('div');
-      overlay.id = 'db-pd-overlay';
-      overlay.style.cssText = 'position:fixed;inset:0;z-index:600;background:rgba(15,23,42,.85);display:flex;align-items:center;justify-content:center;padding:24px;';
-      document.body.appendChild(overlay);
-      document.addEventListener('keydown', _pdTeclaEsc);
-    }
-    const prancha = _pdPranchasAtuais[_pdIdx];
-    const temVarias = _pdPranchasAtuais.length > 1;
+    overlay = document.createElement('div');
+    overlay.id = 'db-pdfmenu-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:600;background:rgba(15,23,42,.6);display:flex;align-items:center;justify-content:center;padding:24px;';
+    overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
     overlay.innerHTML = `
-      <div style="background:#fff;border-radius:10px;max-width:min(92vw,1100px);max-height:92vh;width:100%;display:flex;flex-direction:column;overflow:hidden;">
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid #e2e8f0;gap:10px;">
-          <div style="font-weight:700;">${prancha.nome || 'Prancha'}${temVarias ? ` <span class="text-sm text-muted" style="font-weight:400;">(${_pdIdx + 1}/${_pdPranchasAtuais.length})</span>` : ''}</div>
-          <div style="display:flex;gap:6px;">
-            <a href="controle-estacas.html" class="btn btn-secundario btn-sm">Abrir no Controle de Estacas</a>
-            <button class="btn btn-secundario btn-sm" onclick="Dashboard._fecharPopupPrancha()">✕ Fechar</button>
-          </div>
-        </div>
-        <div style="position:relative;flex:1;overflow:auto;padding:16px;display:flex;align-items:center;justify-content:center;">
-          ${temVarias ? `<button class="btn btn-secundario" style="position:absolute;left:8px;top:50%;transform:translateY(-50%);z-index:2;" onclick="Dashboard._pdNavegar(-1)">‹</button>` : ''}
-          <div id="db-pd-mapa" style="max-width:100%;">Carregando prancha...</div>
-          ${temVarias ? `<button class="btn btn-secundario" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);z-index:2;" onclick="Dashboard._pdNavegar(1)">›</button>` : ''}
-        </div>
+      <div style="background:#fff;border-radius:10px;max-width:340px;width:100%;padding:16px;">
+        <div style="font-weight:700;margin-bottom:10px;">PDFs — ${andar}</div>
+        ${bts.map(b => `<a href="${b.pdfUrl}" target="_blank" class="btn btn-secundario btn-sm" style="display:block;margin-bottom:6px;text-align:left;">📎 BT-${b.numero}${b.notaFiscal ? ' · NF:' + b.notaFiscal : ''}</a>`).join('')}
+        <button class="btn btn-secundario btn-sm" style="width:100%;margin-top:6px;" onclick="document.getElementById('db-pdfmenu-overlay').remove()">Fechar</button>
       </div>`;
-    const elMapa = document.getElementById('db-pd-mapa');
-    try {
-      const ctx = _feContexto;
-      let imagem = null;
-      const doc = await db.collection('obras').doc(ctx.obraId).collection('config').doc('estacasImagem_' + prancha.id).get();
-      imagem = doc.exists ? (doc.data().img || null) : null;
-      const marcadoresDaPrancha = ctx.marcadores.filter(m => m.pranchaId === prancha.id);
-      const mapaCoresGrupo = EC.mapaCoresGrupoEstaca(ctx.pecas);
-      const statusFn = (m) => {
-        const p = m.pecaId ? ctx.pecas.find(x => x.id === m.pecaId) : null;
-        if (!p) return { pct: null, label: 'Sem peça vinculada' };
-        const pct = CC ? CC.pctConcretado(p, ctx.lancamentos) : 0;
-        let corGrupo = null;
-        if (p.subTipo === 'Estacas' && (p.diametro || p.comprimento)) {
-          corGrupo = mapaCoresGrupo.get(EC.chaveGrupoEstaca(p.diametro, p.comprimento)) || null;
-        }
-        return { pct, label: `${p.nome} — ${EC.statusLabel(pct)}`, corGrupo };
-      };
-      const larguraDisp = Math.min(1000, window.innerWidth - 120);
-      const zoom = Math.min(1, larguraDisp / Number(prancha.imgWidthPx));
-      elMapa.innerHTML = EC.stageHTML(prancha, imagem, marcadoresDaPrancha, statusFn, { zoom, maxHeight: window.innerHeight - 200 });
-    } catch (e) {
-      console.error(e);
-      elMapa.innerHTML = '<div class="estado-vazio"><p class="text-sm">Erro ao carregar a prancha.</p></div>';
-    }
+    document.body.appendChild(overlay);
   }
 
   // Minimapas de Solo Grampeado (Contenção) — um mapa por vista, na
@@ -1685,26 +1593,36 @@ const Dashboard = (() => {
     }
   }
 
+  // Um gráfico com 3 séries por andar (uma por categoria — Estaca/Fundação/
+  // Estrutura), cada série com barra clara (previsto) + barra da cor da
+  // categoria (executado). `dados` = [{ andar, porCategoria: [{chave,previsto,executado}, ...] }].
   function _svgFundacaoEstruturaPorAndar(dados) {
     const n = dados.length;
-    const larguraGrupo = 70;
-    const W = Math.max(700, n * larguraGrupo + 100), H = 320;
-    const padL = 50, padR = 20, padT = 20, padB = 90;
+    const nCat = CATEGORIAS_CONCRETO.length;
+    const larguraGrupo = 26 * nCat + 30;
+    const W = Math.max(700, n * larguraGrupo + 100), H = 340;
+    const padL = 50, padR = 20, padT = 20, padB = 100;
     const plotW = W - padL - padR, plotH = H - padT - padB;
-    const maxV = Math.max(1, ...dados.map(d => Math.max(d.previsto, d.executado)));
-    const barW = Math.min(20, (plotW / n) * 0.32);
+    const maxV = Math.max(1, ...dados.flatMap(d => d.porCategoria.map(c => Math.max(c.previsto, c.executado))));
+    const larguraSlot = (plotW / n) / nCat;
+    const barW = Math.min(16, larguraSlot * 0.62);
 
     let bars = '', labels = '', hits = '';
     dados.forEach((d, i) => {
-      const cx = padL + (i + 0.5) * (plotW / n);
-      const hPrev = (d.previsto / maxV) * plotH, hExec = (d.executado / maxV) * plotH;
-      bars += `<rect x="${(cx - barW - 1).toFixed(1)}" y="${(padT + plotH - hPrev).toFixed(1)}" width="${barW}" height="${hPrev.toFixed(1)}" fill="#999"/>`;
-      bars += `<text x="${(cx - barW / 2 - 1).toFixed(1)}" y="${(padT + plotH - hPrev - 4).toFixed(1)}" font-size="9" fill="#666" text-anchor="middle">${Utils.formatarNumero(d.previsto, 1)}</text>`;
-      bars += `<rect x="${(cx + 1).toFixed(1)}" y="${(padT + plotH - hExec).toFixed(1)}" width="${barW}" height="${hExec.toFixed(1)}" fill="var(--cor-primaria)"/>`;
-      bars += `<text x="${(cx + barW / 2 + 1).toFixed(1)}" y="${(padT + plotH - hExec - 4).toFixed(1)}" font-size="9" fill="var(--cor-primaria-dark,#B89400)" text-anchor="middle">${Utils.formatarNumero(d.executado, 1)}</text>`;
+      const grupoX = padL + i * (plotW / n);
+      d.porCategoria.forEach((c, ci) => {
+        if (c.previsto <= 0 && c.executado <= 0) return;
+        const cat = CATEGORIAS_CONCRETO[ci];
+        const cx = grupoX + (ci + 0.5) * larguraSlot;
+        const hPrev = (c.previsto / maxV) * plotH, hExec = (c.executado / maxV) * plotH;
+        bars += `<rect x="${(cx - barW / 2).toFixed(1)}" y="${(padT + plotH - hPrev).toFixed(1)}" width="${barW}" height="${hPrev.toFixed(1)}" fill="${cat.cor}" opacity="0.28"/>`;
+        bars += `<rect x="${(cx - barW / 2).toFixed(1)}" y="${(padT + plotH - hExec).toFixed(1)}" width="${barW}" height="${hExec.toFixed(1)}" fill="${cat.cor}"/>`;
+        if (c.previsto > 0) bars += `<text x="${cx.toFixed(1)}" y="${(padT + plotH - hPrev - 4).toFixed(1)}" font-size="8" fill="#666" text-anchor="middle">${Utils.formatarNumero(c.previsto, 1)}</text>`;
+        hits += `<rect class="db-hit" data-idx="${i}" data-cat="${cat.chave}" x="${(grupoX + ci * larguraSlot).toFixed(1)}" y="${padT}" width="${larguraSlot.toFixed(1)}" height="${plotH}" fill="transparent" style="cursor:pointer;"/>`;
+      });
+      const cxLabel = grupoX + (plotW / n) / 2;
       const nomeCurto = d.andar.length > 16 ? d.andar.slice(0, 15) + '…' : d.andar;
-      labels += `<text x="${cx.toFixed(1)}" y="${(padT + plotH + 14).toFixed(1)}" font-size="9.5" fill="#333" text-anchor="end" transform="rotate(-40 ${cx.toFixed(1)} ${(padT + plotH + 14).toFixed(1)})"><title>${d.andar}</title>${nomeCurto}</text>`;
-      hits += `<rect class="db-hit" data-idx="${i}" x="${(cx - (plotW / n) / 2).toFixed(1)}" y="${padT}" width="${(plotW / n).toFixed(1)}" height="${plotH}" fill="transparent" style="cursor:pointer;"/>`;
+      labels += `<text x="${cxLabel.toFixed(1)}" y="${(padT + plotH + 14).toFixed(1)}" font-size="9.5" fill="#333" text-anchor="end" transform="rotate(-40 ${cxLabel.toFixed(1)} ${(padT + plotH + 14).toFixed(1)})"><title>${d.andar}</title>${nomeCurto}</text>`;
     });
 
     const gridY = [0, 0.25, 0.5, 0.75, 1].map(f => {
@@ -1723,10 +1641,9 @@ const Dashboard = (() => {
       </div>
       <div class="db-tooltip"></div>
       <div class="db-legenda">
-        <span><i style="background:#999;"></i> Volume Previsto (m³)</span>
-        <span><i style="background:var(--cor-primaria);"></i> Volume Executado (m³)</span>
+        ${CATEGORIAS_CONCRETO.map(cat => `<span><i style="background:${cat.cor};"></i> ${cat.titulo}</span>`).join('')}
       </div>
-      <div class="text-sm text-muted" style="margin-top:6px;">Somado do Controle de Concreto por andar. Passe o mouse pra ver a data do último lançamento daquele andar.</div>`;
+      <div class="text-sm text-muted" style="margin-top:6px;">Somado do Controle de Concreto por andar (ordem igual à configurada lá). Clique numa barra pra abrir o PDF da concretagem daquele andar/categoria.</div>`;
   }
 
   // ===================== RESUMO POR APARTAMENTO =====================
@@ -2083,5 +2000,5 @@ const Dashboard = (() => {
       </div>`;
   }
 
-  return { init, onObraChanged, setResumoView, setPacotesView, setCurvaGranularidade, toggleMostrarConcreto, _arvToggle, _arvNivelFixo, _arvHorizonte, _fecharPopupPrancha, _pdNavegar };
+  return { init, onObraChanged, setResumoView, setPacotesView, setCurvaGranularidade, toggleMostrarConcreto, _arvToggle, _arvNivelFixo, _arvHorizonte };
 })();

@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.59.29',
+  versaoAtual: 'V2.59.30',
 
   versoes: [
     {
@@ -5516,9 +5516,15 @@ const NotasVersao = {
       titulo:'Dashboard: peça de estaca antiga sem subTipo caía em "Fundação" + ordem de andares travava em andar novo criado após reordenar manualmente',
       itens:['Peças de Fundação criadas antes do campo subTipo existir não tinham esse campo gravado — caíam sempre em "Fundação" mesmo sendo estaca de verdade. Agora, sem subTipo mas com diâmetro E comprimento preenchidos (só faz sentido em estaca), o Dashboard classifica como Fundação Profunda (Estacas).',
         'Ordenação de andares (Controle de Concreto, Dashboard, e onde mais usa CC.ordenarAndares): depois que a ordem era reorganizada manualmente uma vez, todo andar criado depois caía sempre no FINAL da lista por ordem de criação — nunca mais era posicionado pelo número (causa do "10º, 11º, 12º... 1º, 1º Subsolo, 2º..." fora de ordem). Corrigido: a ordem manual entre os andares já reorganizados continua 100% preservada; andares novos agora são inseridos automaticamente na posição numérica correta dentro dela.']},
-    {versao:'V2.59.29',status:'aberta',data:'2026-08-03',tipo:'correcao',
+    {versao:'V2.59.29',status:'fechada',data:'2026-08-03',tipo:'correcao',
       titulo:'Dashboard: clique nas barras de Fundação/Estrutura não disparava (V2.59.27 não funcionava na prática)',
-      itens:['O clique era ligado direto no retângulo invisível de cada coluna (addEventListener por elemento) — trocado por delegação de evento no card inteiro (elemento pai fixo, nunca recriado), que é mais robusto contra qualquer problema de timing/anexação em nós SVG gerados dinamicamente.']}
+      itens:['O clique era ligado direto no retângulo invisível de cada coluna (addEventListener por elemento) — trocado por delegação de evento no card inteiro (elemento pai fixo, nunca recriado), que é mais robusto contra qualquer problema de timing/anexação em nós SVG gerados dinamicamente.']},
+    {versao:'V2.59.30',status:'aberta',data:'2026-08-03',tipo:'funcionalidade',
+      titulo:'Dashboard: volta a ser 1 gráfico só (Fundação Profunda/Fundação/Estrutura em cores, não mais 3 gráficos) + ordem exata do Controle de Concreto + clique abre o PDF da concretagem',
+      itens:['Voltou a ser um único gráfico "Fundação e Estrutura" — as 3 categorias (Fundação Profunda/Estacas roxo, Fundação laranja, Estrutura amarelo) aparecem como barras coloridas lado a lado dentro do mesmo andar, em vez de 3 gráficos separados.',
+        'Ordem dos andares agora usa EXATAMENTE a lista configurada no Controle de Concreto (tela de arrastar) — sem recalcular ou reordenar por número; é a mesma lista, na mesma ordem.',
+        'Controle de Concreto: cada BT (concretagem) ganhou um botão "📎 Inserir PDF" — guarda o PDF de verdade no Firebase Storage (não rasteriza, mantém todas as páginas e o zoom nativo do PDF).',
+        'Clique numa barra do gráfico do Dashboard abre o PDF da concretagem daquele andar/categoria direto em nova aba (via peça → lançamento → BT). Se houver mais de uma BT com PDF pro mesmo andar/categoria, mostra um menu simples pra escolher; sem BT/PDF ainda, avisa onde inserir.']}
   ],
 
   render(containerId) {
