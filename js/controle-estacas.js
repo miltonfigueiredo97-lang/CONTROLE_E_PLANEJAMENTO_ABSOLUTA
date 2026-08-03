@@ -965,11 +965,11 @@ const ControleEstacas = (() => {
 
   function iniciarAdicionarCirculo() {
     if (!Permissions.pode('controleEstacas', 'criar')) { Utils.toast('Sem permissão para criar.', 'erro'); return; }
-    modo = 'circulo'; editandoFormaId = null; renderizar();
+    modo = 'circulo'; editandoFormaId = null; renderMapa(); _atualizarBotoesModo();
   }
   function iniciarAdicionarPoligono() {
     if (!Permissions.pode('controleEstacas', 'criar')) { Utils.toast('Sem permissão para criar.', 'erro'); return; }
-    modo = 'poligono'; poligonoPontos = []; editandoFormaId = null; renderizar();
+    modo = 'poligono'; poligonoPontos = []; editandoFormaId = null; renderMapa(); _atualizarBotoesModo();
   }
   function cancelarModo() { modo = null; poligonoPontos = []; renderMapa(); _atualizarBotoesModo(); }
   function _atualizarBotoesModo() {

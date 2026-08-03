@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.59.18',
+  versaoAtual: 'V2.59.19',
 
   versoes: [
     {
@@ -5464,10 +5464,15 @@ const NotasVersao = {
       titulo:'Controle de Estacas: botões Marcadores/Planejamento/Acompanhamento disponíveis dentro da tela cheia',
       itens:['A tela cheia não trazia o seletor de abas — pra trocar entre Marcadores/Planejamento/Acompanhamento era preciso saír da tela cheia primeiro.',
         'Agora o seletor de abas vai junto pra dentro da tela cheia — dá pra trocar de aba sem sair.']},
-    {versao:'V2.59.18',status:'aberta',data:'2026-08-01',tipo:'correcao',
+    {versao:'V2.59.18',status:'fechada',data:'2026-08-01',tipo:'correcao',
       titulo:'Controle de Estacas: painéis de baixo (tabela / concretagens) voltam a aparecer na tela cheia',
       itens:['Só o card de resumo (4 cartões no topo) deveria sumir na tela cheia — mas por engano a tabela "Estacas/Fundações desta prancha" (Marcadores) e o card "Concretagens planejadas" (Planejamento) também estavam sumindo.',
-        'Corrigido: agora só a faixa de cartões do topo fica de fora; os painéis de baixo continuam disponíveis na tela cheia.']}
+        'Corrigido: agora só a faixa de cartões do topo fica de fora; os painéis de baixo continuam disponíveis na tela cheia.']},
+    {versao:'V2.59.19',status:'aberta',data:'2026-08-01',tipo:'correcao',
+      titulo:'Controle de Estacas: clicar em "Adicionar Estaca"/"Adicionar Fundação" não deve mais fazer a prancha "saltar" pro topo',
+      itens:['Clicar em Adicionar Estaca/Fundação chamava um re-render da PÁGINA INTEIRA (KPI, tabela, tudo) só pra ligar o modo de criação — isso recriava o mapa do zero e perdia a posição do scroll, dando a impressão de que a prancha "andava"/pulava.',
+        'Isso também podia fazer o clique de criação (arrastar pra definir o raio) não terminar de registrar corretamente, dependendo do timing — daí o popup de vincular às vezes não abria.',
+        'Corrigido: ligar/desligar o modo de criação agora só atualiza o mapa e o botão em si (mesmo caminho leve que "Cancelar" já usava) — sem recriar a página, sem perder o scroll.']}
   ],
 
   render(containerId) {
