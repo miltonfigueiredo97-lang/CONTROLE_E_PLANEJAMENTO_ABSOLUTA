@@ -1356,16 +1356,20 @@ const Dashboard = (() => {
     const elFE = document.getElementById('db-fe');
     try {
       const obraId = obraAtual.id;
-      const [pecas, lancamentos, cfgDoc, pecaConc, concretagens] = await Promise.all([
+      const [pecas, lancamentos, cfgDoc, pecaConc, concretagens, marcadores, pranchas] = await Promise.all([
         Database.listar(obraId, 'concretoPecas', null).catch(() => []),
         Database.listar(obraId, 'concretoLancamentos', null).catch(() => []),
         Database.obter(obraId, 'config', 'concreto').catch(() => null),
         Database.listar(obraId, 'concretoPecaConc', null).catch(() => []),
         Database.listar(obraId, 'concretoConcretagens', null).catch(() => []),
+        Database.listar(obraId, 'estacasMarcadores', null).catch(() => []),
+        Database.listar(obraId, 'estacasPranchas', null).catch(() => []),
       ]);
-      // Guardado pra _abrirPdfDoAndar (clique numa barra) achar a
-      // concretagem/PDF certa sem precisar buscar tudo de novo.
-      _feContexto = { obraId, pecas, lancamentos, pecaConc, concretagens };
+      // Guardado pra _abrirPdfDoAndar (clique numa barra) achar o PDF certo
+      // sem buscar tudo de novo — Estaca/Fundação vêm do Controle de Estacas
+      // e Fundações (pranchas); Estrutura vem da concretagem no Controle de
+      // Concreto (pdfUrl anexado lá).
+      _feContexto = { obraId, pecas, lancamentos, pecaConc, concretagens, marcadores, pranchas };
       if (!pecas.length) {
         elFE.innerHTML = '<div class="estado-vazio"><p class="text-sm">Nenhuma peça cadastrada no Controle de Concreto ainda.</p></div>';
         return;
@@ -1426,13 +1430,58 @@ const Dashboard = (() => {
     }
   }
 
-  // Acha a(s) concretagem(ns) do andar+categoria clicados e abre o PDF dela.
-  // Vínculo real: peça → concretoPecaConc (pecaId+concretagemId) → concretagem
-  // (é onde o PDF é anexado, no Levantamento de Concreto → Concretagens →
-  // Inserir PDF — não na BT, que é só o lançamento individual). Um andar pode
-  // ter várias concretagens (ex: 4 concretagens no mesmo andar) — se houver
-  // mais de uma com PDF, mostra menu pra escolher; senão abre direto.
+  // Roteia o clique por categoria:
+  // - Estaca/Fundação → vêm do Controle de Estacas e Fundações (prancha/PDF
+  //   já cadastrado lá, vinculado via marcador → peça).
+  // - Estrutura → vem do Controle de Concreto (PDF anexado na concretagem,
+  //   vínculo peça → concretoPecaConc → concretagem).
   function _abrirPdfDoAndar(andar, categoriaChave) {
+    if (categoriaChave === 'estrutura') _abrirPdfConcretagem(andar, categoriaChave);
+    else _abrirPrancaEstacas(andar, categoriaChave);
+  }
+
+  // Estaca/Fundação: acha as pranchas do Controle de Estacas que têm
+  // marcador vinculado a uma peça daquele andar+categoria.
+  function _abrirPrancaEstacas(andar, categoriaChave) {
+    const ctx = _feContexto;
+    if (!ctx) return;
+    const cat = CATEGORIAS_CONCRETO.find(c => c.chave === categoriaChave);
+    const pecasDoAndar = ctx.pecas.filter(p => (p.andar || 'Sem andar') === andar && cat.filtro(p));
+    if (!pecasDoAndar.length) return;
+    const idsPecas = new Set(pecasDoAndar.map(p => p.id));
+    const marcadoresDoAndar = ctx.marcadores.filter(m => m.pecaId && idsPecas.has(m.pecaId));
+    if (!marcadoresDoAndar.length) {
+      Utils.toast('Nenhuma peça deste andar está vinculada a uma prancha do Controle de Estacas e Fundações ainda.', 'alerta');
+      return;
+    }
+    const idsPranchas = new Set(marcadoresDoAndar.map(m => m.pranchaId));
+    const pranchas = ctx.pranchas.filter(p => idsPranchas.has(p.id)).sort((a, b) => (a.ordem || 0) - (b.ordem || 0));
+    if (!pranchas.length) return;
+    if (pranchas.length === 1) { window.location.href = 'controle-estacas.html?prancha=' + encodeURIComponent(pranchas[0].id); return; }
+    _mostrarMenuPranchas(pranchas, andar);
+  }
+
+  function _mostrarMenuPranchas(pranchas, andar) {
+    let overlay = document.getElementById('db-pdfmenu-overlay');
+    if (overlay) overlay.remove();
+    overlay = document.createElement('div');
+    overlay.id = 'db-pdfmenu-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:600;background:rgba(15,23,42,.6);display:flex;align-items:center;justify-content:center;padding:24px;';
+    overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+    overlay.innerHTML = `
+      <div style="background:#fff;border-radius:10px;max-width:340px;width:100%;padding:16px;">
+        <div style="font-weight:700;margin-bottom:10px;">Pranchas — ${andar}</div>
+        ${pranchas.map(p => `<a href="controle-estacas.html?prancha=${encodeURIComponent(p.id)}" class="btn btn-secundario btn-sm" style="display:block;margin-bottom:6px;text-align:left;">📎 ${p.nome || 'Prancha'}</a>`).join('')}
+        <button class="btn btn-secundario btn-sm" style="width:100%;margin-top:6px;" onclick="document.getElementById('db-pdfmenu-overlay').remove()">Fechar</button>
+      </div>`;
+    document.body.appendChild(overlay);
+  }
+
+  // Estrutura: acha a(s) concretagem(ns) do andar via peça → concretoPecaConc
+  // → concretagem (é onde o PDF é anexado, no Controle de Concreto →
+  // Lançar BT → 📎 Inserir PDF desta concretagem). Um andar pode ter várias
+  // concretagens — se houver mais de uma com PDF, mostra menu pra escolher.
+  function _abrirPdfConcretagem(andar, categoriaChave) {
     const ctx = _feContexto;
     if (!ctx) return;
     const cat = CATEGORIAS_CONCRETO.find(c => c.chave === categoriaChave);
@@ -1444,16 +1493,16 @@ const Dashboard = (() => {
     const comPdf = concsDoAndar.filter(c => c.pdfUrl);
     if (!comPdf.length) {
       Utils.toast(concsDoAndar.length
-        ? 'Nenhuma concretagem deste andar tem PDF anexado ainda. Insira no Levantamento de Concreto → Concretagens → 📎 Inserir PDF.'
-        : 'Nenhuma concretagem cadastrada ainda para este andar/categoria.', 'alerta');
+        ? 'Nenhuma concretagem deste andar tem PDF anexado ainda. Insira no Controle de Concreto → Lançar BT → 📎 Inserir PDF desta concretagem.'
+        : 'Nenhuma concretagem cadastrada ainda para este andar.', 'alerta');
       return;
     }
     if (comPdf.length === 1) { window.open(comPdf[0].pdfUrl, '_blank'); return; }
     _mostrarMenuPdfs(comPdf, andar);
   }
 
-  // Mais de uma concretagem/PDF pro mesmo andar+categoria: menu simples pra
-  // escolher, em vez de abrir várias abas de uma vez.
+  // Mais de uma concretagem/PDF pro mesmo andar: menu simples pra escolher,
+  // em vez de abrir várias abas de uma vez.
   function _mostrarMenuPdfs(concs, andar) {
     let overlay = document.getElementById('db-pdfmenu-overlay');
     if (overlay) overlay.remove();

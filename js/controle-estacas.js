@@ -75,6 +75,11 @@ const ControleEstacas = (() => {
       return;
     }
     document.addEventListener('keydown', e => { if (e.key === 'Escape') { cancelarModo(); cancelarAjusteForma(); Utils.fecharTodosModais(); } });
+    // Deep-link vindo do Dashboard (gráfico Fundação/Estrutura, clique na
+    // barra de Estaca/Fundação de um andar): ?prancha=ID já abre direto
+    // naquela prancha, em vez de cair na primeira por padrão.
+    const pranchaUrl = new URLSearchParams(window.location.search).get('prancha');
+    if (pranchaUrl) pranchaAtivaId = pranchaUrl;
     await carregar();
 
   }

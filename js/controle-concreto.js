@@ -578,6 +578,54 @@ const ControleConcreto = (() => {
     if (b) { bt.nf = b.notaFiscal || ''; bt.cod = b.codigoBT || ''; }
   }
 
+  // ══════════════════════════════════════════
+  // PDF POR CONCRETAGEM — guardado no Firebase Storage (PDF de verdade,
+  // multi-página, aberto em nova aba). É por CONCRETAGEM (não por BT
+  // individual): uma concretagem pode ter várias BTs, mas o PDF/projeto é
+  // um só, do documento da concretagem inteira.
+  // ══════════════════════════════════════════
+  function abrirUploadPdfConc(concId) {
+    document.getElementById('cc-pdfconc-id').value = concId;
+    document.getElementById('cc-pdfconc-status').textContent = '';
+    const c = concretagens.find(x => x.id === concId);
+    const atual = document.getElementById('cc-pdfconc-atual');
+    atual.innerHTML = c?.pdfUrl
+      ? `<a href="${c.pdfUrl}" target="_blank" class="btn btn-secundario btn-sm">📎 Abrir PDF atual (Nº${c.numero})</a>`
+      : `<p class="text-sm text-muted">Nenhum PDF anexado ainda a esta concretagem.</p>`;
+    Utils.abrirModal('modal-cc-pdfconc');
+  }
+
+  async function onPdfConcArquivo(input) {
+    const file = input.files[0];
+    if (!file) return;
+    const concId = document.getElementById('cc-pdfconc-id').value;
+    const statusEl = document.getElementById('cc-pdfconc-status');
+    if (!/\.pdf$/i.test(file.name) && file.type !== 'application/pdf') {
+      statusEl.textContent = 'Selecione um arquivo PDF.';
+      return;
+    }
+    statusEl.textContent = 'Enviando...';
+    try {
+      const b64 = await new Promise((res, rej) => {
+        const r = new FileReader();
+        r.onload = () => res(r.result);
+        r.onerror = rej;
+        r.readAsDataURL(file);
+      });
+      const path = `obras/${obraId}/concreto-concretagens/${concId}.pdf`;
+      const url = await uploadImagem(path, b64);
+      await Database.atualizar(obraId, COL_CONCS, concId, { pdfUrl: url });
+      const c = concretagens.find(x => x.id === concId);
+      if (c) c.pdfUrl = url;
+      statusEl.textContent = '✓ PDF anexado!';
+      Utils.toast('✓ PDF anexado à concretagem', 'sucesso');
+      renderLancarBT();
+    } catch (e) {
+      statusEl.textContent = 'Erro ao enviar: ' + e.message;
+      Utils.toast('Erro ao enviar PDF.', 'erro');
+    }
+  }
+
   function btSetConc(v) { bt.concId = v; bt.btId = ''; bt.modo = 'menu'; renderLancarBT(); }
   function btSetBT(id) {
     bt.btId = id;
@@ -671,6 +719,10 @@ const ControleConcreto = (() => {
       </div>`;
 
     if (bt.concId) {
+      const concSel = concretagens.find(c => c.id === bt.concId);
+      html += `<div style="margin-bottom:14px;">
+        <button class="btn btn-secundario btn-sm" onclick="CCON.abrirUploadPdfConc('${bt.concId}')">${concSel?.pdfUrl ? '📎 Ver/Trocar PDF desta concretagem' : '📎 Inserir PDF desta concretagem'}</button>
+      </div>`;
       if (!btsConc.length) {
         html += `<div class="cc-empty">Nenhuma BT configurada. Configure no Levantamento de Concreto → Concretagens.</div>`;
       } else {
@@ -1219,6 +1271,7 @@ const ControleConcreto = (() => {
     abrirLancarBT, btSetConc, btSetBT, btIniciarEdicao,
     btUpd, btBusca, btEsconder100, btAddLinha, btRemLinha, btUpdLinha, btSalvar,
     rfbToggle, rfbFechar, rfbSelConc, rfbSelAndar, setAndarFiltroTipo, toggleAndarAberto,
+    abrirUploadPdfConc, onPdfConcArquivo,
   };
 })();
 

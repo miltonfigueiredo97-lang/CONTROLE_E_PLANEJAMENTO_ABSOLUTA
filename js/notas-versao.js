@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.59.31',
+  versaoAtual: 'V2.59.32',
 
   versoes: [
     {
@@ -5523,10 +5523,14 @@ const NotasVersao = {
       titulo:'Dashboard: volta a ser 1 gráfico só (Fundação Profunda/Fundação/Estrutura em cores, não mais 3 gráficos) + ordem exata do Controle de Concreto',
       itens:['Voltou a ser um único gráfico "Fundação e Estrutura" — as 3 categorias (Fundação Profunda/Estacas roxo, Fundação laranja, Estrutura amarelo) aparecem como barras coloridas lado a lado dentro do mesmo andar, em vez de 3 gráficos separados.',
         'Ordem dos andares agora usa EXATAMENTE a lista configurada no Controle de Concreto (tela de arrastar) — sem recalcular ou reordenar por número; é a mesma lista, na mesma ordem.']},
-    {versao:'V2.59.31',status:'aberta',data:'2026-08-03',tipo:'funcionalidade',
-      titulo:'Levantamento de Concreto: Inserir PDF por concretagem + Dashboard abre o PDF certo ao clicar no gráfico',
-      itens:['Levantamento de Concreto → Concretagens → Editar/Excluir ganhou "📎 Inserir PDF desta concretagem" — guarda o PDF de verdade no Firebase Storage (não rasteriza, mantém todas as páginas e o zoom nativo do PDF). Uma obra pode ter dezenas de concretagens, cada uma com seu próprio PDF.',
-        'Clique numa barra do gráfico "Fundação e Estrutura" do Dashboard abre o PDF da concretagem daquele andar/categoria (via peça → concretoPecaConc → concretagem — o vínculo real do sistema). Se o andar teve várias concretagens com PDF, mostra um menu pra escolher entre elas; sem PDF ainda, avisa onde inserir.']}
+    {versao:'V2.59.31',status:'fechada',data:'2026-08-03',tipo:'funcionalidade',
+      titulo:'Levantamento de Concreto: Inserir PDF por concretagem (movido pro Controle de Concreto na V2.59.32)',
+      itens:['Levantamento de Concreto → Concretagens → Editar/Excluir ganhou "📎 Inserir PDF desta concretagem" — guarda o PDF de verdade no Firebase Storage (não rasteriza, mantém todas as páginas e o zoom nativo do PDF).']},
+    {versao:'V2.59.32',status:'aberta',data:'2026-08-03',tipo:'correcao',
+      titulo:'Dashboard: cada categoria do gráfico Fundação e Estrutura busca o PDF do lugar certo — Estaca/Fundação do Controle de Estacas, Estrutura do Controle de Concreto',
+      itens:['Fundação Profunda (Estacas) e Fundação: clique na barra abre a prancha (PDF/imagem) do Controle de Estacas e Fundações vinculada às peças daquele andar — é de lá que vem o projeto dessas duas categorias.',
+        'Estrutura: clique na barra abre o PDF anexado na concretagem (Controle de Concreto → Lançar BT → 📎 Inserir PDF desta concretagem, botão movido do Levantamento de Concreto pra cá, no nível certo). Um andar com várias concretagens mostra menu pra escolher.',
+        'O "Inserir PDF" que estava no Levantamento de Concreto (V2.59.31) foi removido de lá — o lugar certo, confirmado, é dentro do Controle de Concreto/Lançar BT, selecionando a concretagem.']}
   ],
 
   render(containerId) {
