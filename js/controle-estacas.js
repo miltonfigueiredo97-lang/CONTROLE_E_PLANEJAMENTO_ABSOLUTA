@@ -326,14 +326,13 @@ const ControleEstacas = (() => {
         <div id="ce-mapa-host"></div>
       </div>
 
-      ${telaCheiaAtiva ? '' : `
       <div class="cc-panel">
         <div class="cc-panelTitle">◈ ${view === 'estacas' ? 'Estacas' : 'Fundações'} desta prancha</div>
         <div id="ce-tabela"></div>
-      </div>`}
+      </div>
     `;
     renderMapa();
-    if (!telaCheiaAtiva) renderTabela();
+    renderTabela();
     Permissions.aplicarNaTela();
   }
 
@@ -439,7 +438,6 @@ const ControleEstacas = (() => {
         </div>
         <div id="ce-plan-mapa-host"></div>
       </div>
-      ${telaCheiaAtiva ? '' : `
       <div class="cc-panel">
         <div class="cc-panelTitle">📅 Concretagens planejadas</div>
         ${!concsOrd.length ? '<div class="cc-empty">Nenhuma concretagem ainda — clique numa peça na prancha acima pra criar a primeira.</div>' : `
@@ -457,7 +455,7 @@ const ControleEstacas = (() => {
                 </div>`;
             }).join('')}
           </div>`}
-      </div>`}
+      </div>
     `;
     Permissions.aplicarNaTela();
     renderMapaPlanejamento();
