@@ -156,10 +156,15 @@ const ControleEstacas = (() => {
   function renderizar() {
     const c = document.getElementById('ce-content');
     if (!c) return;
-    // Se a tela cheia está ativa, #ce-aba-body foi realocado pra fora de
-    // #ce-content (pra dentro do overlay) — não recriamos o shell aqui
-    // (duplicaria o id), só atualizamos o conteúdo da aba em si.
-    if (telaCheiaAtiva) { _renderAbaAtual(); return; }
+    // Se a tela cheia está ativa, #ce-tela-cheia-wrap foi realocado pra fora
+    // de #ce-content (pra dentro do overlay) — não recriamos o shell aqui
+    // (duplicaria o id), só atualizamos o toggle de abas + o conteúdo da aba.
+    if (telaCheiaAtiva) {
+      const tg = document.getElementById('ce-aba-toggle-wrap');
+      if (tg) tg.innerHTML = _abaToggleHTML();
+      _renderAbaAtual();
+      return;
+    }
 
     if (!pranchas.length) {
       c.innerHTML = `
@@ -185,16 +190,27 @@ const ControleEstacas = (() => {
           <button class="btn btn-secundario btn-sm" onclick="CE.alternarTelaCheia()">⛶ Tela cheia</button>
         </div>
       </div>
-      <div class="aba-toggle" style="margin-bottom:14px;">
-        <button class="aba-btn ${abaPrincipal === 'marcadores' ? 'ativo' : ''}" onclick="CE.setAbaPrincipal('marcadores')">📍 Marcadores</button>
-        <button class="aba-btn ${abaPrincipal === 'planejamento' ? 'ativo' : ''}" onclick="CE.setAbaPrincipal('planejamento')">🗓 Planejamento</button>
-        <button class="aba-btn ${abaPrincipal === 'acompanhamento' ? 'ativo' : ''}" onclick="CE.setAbaPrincipal('acompanhamento')">✅ Acompanhamento</button>
+      <div id="ce-tela-cheia-wrap">
+        <div id="ce-aba-toggle-wrap" style="margin-bottom:14px;">${_abaToggleHTML()}</div>
+        <div id="ce-aba-body"></div>
       </div>
-      <div id="ce-aba-body"></div>
       </div>
     `;
     Permissions.aplicarNaTela();
     _renderAbaAtual();
+  }
+
+  // HTML dos 3 botões Marcadores/Planejamento/Acompanhamento — função à
+  // parte porque também precisa ser reconstruído sozinho (só o toggle,
+  // sem recriar todo o shell) quando a pessoa troca de aba DENTRO da tela
+  // cheia, já que ali o resto do shell não existe mais nesse container.
+  function _abaToggleHTML() {
+    return `
+      <div class="aba-toggle">
+        <button class="aba-btn ${abaPrincipal === 'marcadores' ? 'ativo' : ''}" onclick="CE.setAbaPrincipal('marcadores')">📍 Marcadores</button>
+        <button class="aba-btn ${abaPrincipal === 'planejamento' ? 'ativo' : ''}" onclick="CE.setAbaPrincipal('planejamento')">🗓 Planejamento</button>
+        <button class="aba-btn ${abaPrincipal === 'acompanhamento' ? 'ativo' : ''}" onclick="CE.setAbaPrincipal('acompanhamento')">✅ Acompanhamento</button>
+      </div>`;
   }
 
   function _renderAbaAtual() {
@@ -204,11 +220,12 @@ const ControleEstacas = (() => {
   }
 
   // ══════════════════════════════════════════
-  // TELA CHEIA — realoca o #ce-aba-body (com TODAS as suas features: toggle
-  // estaca/fundação, seletor de prancha, adicionar, girar, zoom, legenda,
-  // mapa) pra um overlay ocupando a tela inteira. É o MESMO elemento (não
-  // um clone), então nada se perde — os mesmos onclick/listeners continuam
-  // funcionando. Sair da tela cheia devolve o elemento pro lugar original.
+  // TELA CHEIA — realoca o #ce-tela-cheia-wrap (toggle de abas + #ce-aba-body,
+  // com TODAS as features: toggle estaca/fundação, seletor de prancha,
+  // adicionar, girar, zoom, legenda, mapa) pra um overlay ocupando a tela
+  // inteira. É o MESMO elemento (não um clone), então nada se perde — os
+  // mesmos onclick/listeners continuam funcionando. Sair da tela cheia
+  // devolve o elemento pro lugar original.
   // ══════════════════════════════════════════
   function alternarTelaCheia() {
     if (telaCheiaAtiva) _saindoDaTelaCheia();
@@ -216,7 +233,7 @@ const ControleEstacas = (() => {
   }
 
   function _entrandoNaTelaCheia() {
-    const corpo = document.getElementById('ce-aba-body');
+    const corpo = document.getElementById('ce-tela-cheia-wrap');
     if (!corpo) return;
     telaCheiaGuardado = { parent: corpo.parentNode, next: corpo.nextSibling };
     const overlay = document.createElement('div');
@@ -232,7 +249,7 @@ const ControleEstacas = (() => {
   }
 
   function _saindoDaTelaCheia() {
-    const corpo = document.getElementById('ce-aba-body');
+    const corpo = document.getElementById('ce-tela-cheia-wrap');
     const overlay = document.getElementById('ce-tela-cheia-overlay');
     if (corpo && telaCheiaGuardado) {
       if (telaCheiaGuardado.next) telaCheiaGuardado.parent.insertBefore(corpo, telaCheiaGuardado.next);
