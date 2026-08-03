@@ -1356,15 +1356,16 @@ const Dashboard = (() => {
     const elFE = document.getElementById('db-fe');
     try {
       const obraId = obraAtual.id;
-      const [pecas, lancamentos, cfgDoc, btsConfig] = await Promise.all([
+      const [pecas, lancamentos, cfgDoc, pecaConc, concretagens] = await Promise.all([
         Database.listar(obraId, 'concretoPecas', null).catch(() => []),
         Database.listar(obraId, 'concretoLancamentos', null).catch(() => []),
         Database.obter(obraId, 'config', 'concreto').catch(() => null),
-        Database.listar(obraId, 'concretoBTs', null).catch(() => []),
+        Database.listar(obraId, 'concretoPecaConc', null).catch(() => []),
+        Database.listar(obraId, 'concretoConcretagens', null).catch(() => []),
       ]);
-      // Guardado pra _abrirPdfDoAndar (clique numa barra) achar a BT/PDF
-      // certa sem precisar buscar tudo de novo.
-      _feContexto = { obraId, pecas, lancamentos, btsConfig };
+      // Guardado pra _abrirPdfDoAndar (clique numa barra) achar a
+      // concretagem/PDF certa sem precisar buscar tudo de novo.
+      _feContexto = { obraId, pecas, lancamentos, pecaConc, concretagens };
       if (!pecas.length) {
         elFE.innerHTML = '<div class="estado-vazio"><p class="text-sm">Nenhuma peça cadastrada no Controle de Concreto ainda.</p></div>';
         return;
@@ -1425,11 +1426,12 @@ const Dashboard = (() => {
     }
   }
 
-  // Acha a BT (concretagem) certa pro andar+categoria clicados e abre o PDF
-  // dela em nova aba. Se houver mais de uma BT com peça daquele andar+
-  // categoria, abre a de menor número (primeira concretagem) — sem popup de
-  // navegação: é só um link direto, então cada clique subsequente abriria
-  // outra aba; por isso aqui mostramos um pequeno menu se houver mais de uma.
+  // Acha a(s) concretagem(ns) do andar+categoria clicados e abre o PDF dela.
+  // Vínculo real: peça → concretoPecaConc (pecaId+concretagemId) → concretagem
+  // (é onde o PDF é anexado, no Levantamento de Concreto → Concretagens →
+  // Inserir PDF — não na BT, que é só o lançamento individual). Um andar pode
+  // ter várias concretagens (ex: 4 concretagens no mesmo andar) — se houver
+  // mais de uma com PDF, mostra menu pra escolher; senão abre direto.
   function _abrirPdfDoAndar(andar, categoriaChave) {
     const ctx = _feContexto;
     if (!ctx) return;
@@ -1437,24 +1439,22 @@ const Dashboard = (() => {
     const pecasDoAndar = ctx.pecas.filter(p => (p.andar || 'Sem andar') === andar && cat.filtro(p));
     if (!pecasDoAndar.length) return;
     const idsPecas = new Set(pecasDoAndar.map(p => p.id));
-    // BT vinculada à peça via lançamento (concretoLancamentos.pecaId + .btConfigId)
-    // — é o caminho real de peça → BT já usado no lançamento operacional.
-    const btIds = new Set(ctx.lancamentos.filter(l => idsPecas.has(l.pecaId) && l.btConfigId).map(l => l.btConfigId));
-    const btsDoAndar = ctx.btsConfig.filter(b => btIds.has(b.id)).sort((a, b) => a.numero - b.numero);
-    const comPdf = btsDoAndar.filter(b => b.pdfUrl);
+    const concIds = new Set(ctx.pecaConc.filter(pc => idsPecas.has(pc.pecaId)).map(pc => pc.concretagemId));
+    const concsDoAndar = ctx.concretagens.filter(c => concIds.has(c.id)).sort((a, b) => a.numero - b.numero);
+    const comPdf = concsDoAndar.filter(c => c.pdfUrl);
     if (!comPdf.length) {
-      Utils.toast(btsDoAndar.length
-        ? 'Nenhuma BT deste andar tem PDF anexado ainda. Insira no Controle de Concreto → Lançar BT → 📎 Inserir PDF.'
-        : 'Nenhuma BT lançada ainda para este andar/categoria.', 'alerta');
+      Utils.toast(concsDoAndar.length
+        ? 'Nenhuma concretagem deste andar tem PDF anexado ainda. Insira no Levantamento de Concreto → Concretagens → 📎 Inserir PDF.'
+        : 'Nenhuma concretagem cadastrada ainda para este andar/categoria.', 'alerta');
       return;
     }
     if (comPdf.length === 1) { window.open(comPdf[0].pdfUrl, '_blank'); return; }
     _mostrarMenuPdfs(comPdf, andar);
   }
 
-  // Mais de uma BT/PDF pro mesmo andar+categoria: menu simples pra escolher,
-  // em vez de abrir várias abas de uma vez.
-  function _mostrarMenuPdfs(bts, andar) {
+  // Mais de uma concretagem/PDF pro mesmo andar+categoria: menu simples pra
+  // escolher, em vez de abrir várias abas de uma vez.
+  function _mostrarMenuPdfs(concs, andar) {
     let overlay = document.getElementById('db-pdfmenu-overlay');
     if (overlay) overlay.remove();
     overlay = document.createElement('div');
@@ -1464,7 +1464,7 @@ const Dashboard = (() => {
     overlay.innerHTML = `
       <div style="background:#fff;border-radius:10px;max-width:340px;width:100%;padding:16px;">
         <div style="font-weight:700;margin-bottom:10px;">PDFs — ${andar}</div>
-        ${bts.map(b => `<a href="${b.pdfUrl}" target="_blank" class="btn btn-secundario btn-sm" style="display:block;margin-bottom:6px;text-align:left;">📎 BT-${b.numero}${b.notaFiscal ? ' · NF:' + b.notaFiscal : ''}</a>`).join('')}
+        ${concs.map(c => `<a href="${c.pdfUrl}" target="_blank" class="btn btn-secundario btn-sm" style="display:block;margin-bottom:6px;text-align:left;">📎 Concretagem Nº${c.numero}${c.descricao ? ' · ' + c.descricao : ''}${c.data ? ' · ' + Utils.formatarData(c.data) : ''}</a>`).join('')}
         <button class="btn btn-secundario btn-sm" style="width:100%;margin-top:6px;" onclick="document.getElementById('db-pdfmenu-overlay').remove()">Fechar</button>
       </div>`;
     document.body.appendChild(overlay);

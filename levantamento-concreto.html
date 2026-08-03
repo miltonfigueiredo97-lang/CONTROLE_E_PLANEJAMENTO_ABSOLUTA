@@ -47,7 +47,7 @@
       <a href="admin-permissoes.html" data-perm="admin:ver"><span class="nav-icon">🔑</span> Permissões</a>
       <div class="sidebar-section-title">Sistema</div>
       <a href="backup-planejamento.html" data-perm="backupPlanejamento:ver"><span class="nav-icon">🗂️</span> Backup de Planejamentos</a>
-      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V2.59.30</span></a>
+      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V2.59.31</span></a>
     </nav>
     <div class="sidebar-user">
       <div class="user-avatar">U</div>
@@ -184,6 +184,28 @@
     <div class="modal-footer">
       <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-lc-config')">Cancelar</button>
       <button class="btn btn-primario" onclick="LC.cfgSalvar()">✓ Salvar Configuração</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: PDF da Concretagem -->
+<div class="modal-overlay" id="modal-lc-pdfconc">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-header">
+      <h3>📎 PDF da Concretagem</h3>
+      <button class="modal-close" onclick="Utils.fecharModal('modal-lc-pdfconc')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="lc-pdfconc-id">
+      <div id="lc-pdfconc-atual" style="margin-bottom:12px;"></div>
+      <div class="form-grupo">
+        <label>Arquivo PDF</label>
+        <input type="file" id="lc-pdfconc-arquivo" accept=".pdf" class="form-control" onchange="LC.onPdfConcArquivo(this)">
+      </div>
+      <p class="text-sm text-muted" id="lc-pdfconc-status"></p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-lc-pdfconc')">Fechar</button>
     </div>
   </div>
 </div>

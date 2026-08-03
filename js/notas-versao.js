@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.59.30',
+  versaoAtual: 'V2.59.31',
 
   versoes: [
     {
@@ -5519,12 +5519,14 @@ const NotasVersao = {
     {versao:'V2.59.29',status:'fechada',data:'2026-08-03',tipo:'correcao',
       titulo:'Dashboard: clique nas barras de Fundação/Estrutura não disparava (V2.59.27 não funcionava na prática)',
       itens:['O clique era ligado direto no retângulo invisível de cada coluna (addEventListener por elemento) — trocado por delegação de evento no card inteiro (elemento pai fixo, nunca recriado), que é mais robusto contra qualquer problema de timing/anexação em nós SVG gerados dinamicamente.']},
-    {versao:'V2.59.30',status:'aberta',data:'2026-08-03',tipo:'funcionalidade',
-      titulo:'Dashboard: volta a ser 1 gráfico só (Fundação Profunda/Fundação/Estrutura em cores, não mais 3 gráficos) + ordem exata do Controle de Concreto + clique abre o PDF da concretagem',
+    {versao:'V2.59.30',status:'fechada',data:'2026-08-03',tipo:'funcionalidade',
+      titulo:'Dashboard: volta a ser 1 gráfico só (Fundação Profunda/Fundação/Estrutura em cores, não mais 3 gráficos) + ordem exata do Controle de Concreto',
       itens:['Voltou a ser um único gráfico "Fundação e Estrutura" — as 3 categorias (Fundação Profunda/Estacas roxo, Fundação laranja, Estrutura amarelo) aparecem como barras coloridas lado a lado dentro do mesmo andar, em vez de 3 gráficos separados.',
-        'Ordem dos andares agora usa EXATAMENTE a lista configurada no Controle de Concreto (tela de arrastar) — sem recalcular ou reordenar por número; é a mesma lista, na mesma ordem.',
-        'Controle de Concreto: cada BT (concretagem) ganhou um botão "📎 Inserir PDF" — guarda o PDF de verdade no Firebase Storage (não rasteriza, mantém todas as páginas e o zoom nativo do PDF).',
-        'Clique numa barra do gráfico do Dashboard abre o PDF da concretagem daquele andar/categoria direto em nova aba (via peça → lançamento → BT). Se houver mais de uma BT com PDF pro mesmo andar/categoria, mostra um menu simples pra escolher; sem BT/PDF ainda, avisa onde inserir.']}
+        'Ordem dos andares agora usa EXATAMENTE a lista configurada no Controle de Concreto (tela de arrastar) — sem recalcular ou reordenar por número; é a mesma lista, na mesma ordem.']},
+    {versao:'V2.59.31',status:'aberta',data:'2026-08-03',tipo:'funcionalidade',
+      titulo:'Levantamento de Concreto: Inserir PDF por concretagem + Dashboard abre o PDF certo ao clicar no gráfico',
+      itens:['Levantamento de Concreto → Concretagens → Editar/Excluir ganhou "📎 Inserir PDF desta concretagem" — guarda o PDF de verdade no Firebase Storage (não rasteriza, mantém todas as páginas e o zoom nativo do PDF). Uma obra pode ter dezenas de concretagens, cada uma com seu próprio PDF.',
+        'Clique numa barra do gráfico "Fundação e Estrutura" do Dashboard abre o PDF da concretagem daquele andar/categoria (via peça → concretoPecaConc → concretagem — o vínculo real do sistema). Se o andar teve várias concretagens com PDF, mostra um menu pra escolher entre elas; sem PDF ainda, avisa onde inserir.']}
   ],
 
   render(containerId) {

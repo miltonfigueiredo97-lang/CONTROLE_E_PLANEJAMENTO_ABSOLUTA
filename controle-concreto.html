@@ -47,7 +47,7 @@
       <a href="admin-permissoes.html" data-perm="admin:ver"><span class="nav-icon">🔑</span> Permissões</a>
       <div class="sidebar-section-title">Sistema</div>
       <a href="backup-planejamento.html" data-perm="backupPlanejamento:ver"><span class="nav-icon">🗂️</span> Backup de Planejamentos</a>
-      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V2.59.30</span></a>
+      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V2.59.31</span></a>
     </nav>
     <div class="sidebar-user">
       <div class="user-avatar">U</div>
@@ -94,28 +94,6 @@
     <div class="modal-body" id="cc-bt-body"></div>
     <div class="modal-footer">
       <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-cc-bt')">Fechar</button>
-    </div>
-  </div>
-</div>
-
-<!-- MODAL: PDF da BT (concretagem) -->
-<div class="modal-overlay" id="modal-cc-pdf">
-  <div class="modal" style="max-width:420px;">
-    <div class="modal-header">
-      <h3>📎 PDF da Concretagem</h3>
-      <button class="modal-close" onclick="Utils.fecharModal('modal-cc-pdf')">&times;</button>
-    </div>
-    <div class="modal-body">
-      <input type="hidden" id="cc-pdf-btid">
-      <div id="cc-pdf-atual" style="margin-bottom:12px;"></div>
-      <div class="form-grupo">
-        <label>Arquivo PDF</label>
-        <input type="file" id="cc-pdf-arquivo" accept=".pdf" class="form-control" onchange="CCON.onPdfArquivo(this)">
-      </div>
-      <p class="text-sm text-muted" id="cc-pdf-status"></p>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-cc-pdf')">Fechar</button>
     </div>
   </div>
 </div>

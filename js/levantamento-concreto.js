@@ -1565,6 +1565,55 @@ const LevantamentoConcreto = (() => {
 
   function cwSetConcSel(v) { cw.concSel = v; }
 
+  // ══════════════════════════════════════════
+  // PDF POR CONCRETAGEM — guardado no Firebase Storage (PDF de verdade,
+  // multi-página, aberto em nova aba). Uma concretagem pode ter várias BTs,
+  // mas o PDF é do documento da concretagem inteira (é como a obra trabalha:
+  // 1 prancha/relatório por concretagem, não por BT individual).
+  // ══════════════════════════════════════════
+  function abrirUploadPdfConc() {
+    if (!cw.concSel) { Utils.toast('Selecione uma concretagem primeiro.', 'alerta'); return; }
+    document.getElementById('lc-pdfconc-id').value = cw.concSel;
+    document.getElementById('lc-pdfconc-status').textContent = '';
+    const c = concretagens.find(x => x.id === cw.concSel);
+    const atual = document.getElementById('lc-pdfconc-atual');
+    atual.innerHTML = c?.pdfUrl
+      ? `<a href="${c.pdfUrl}" target="_blank" class="btn btn-secundario btn-sm">📎 Abrir PDF atual (Nº${c.numero})</a>`
+      : `<p class="text-sm text-muted">Nenhum PDF anexado ainda a esta concretagem.</p>`;
+    Utils.abrirModal('modal-lc-pdfconc');
+  }
+
+  async function onPdfConcArquivo(input) {
+    const file = input.files[0];
+    if (!file) return;
+    const concId = document.getElementById('lc-pdfconc-id').value;
+    const statusEl = document.getElementById('lc-pdfconc-status');
+    if (!/\.pdf$/i.test(file.name) && file.type !== 'application/pdf') {
+      statusEl.textContent = 'Selecione um arquivo PDF.';
+      return;
+    }
+    statusEl.textContent = 'Enviando...';
+    try {
+      const b64 = await new Promise((res, rej) => {
+        const r = new FileReader();
+        r.onload = () => res(r.result);
+        r.onerror = rej;
+        r.readAsDataURL(file);
+      });
+      const path = `obras/${obraId}/concreto-concretagens/${concId}.pdf`;
+      const url = await uploadImagem(path, b64);
+      await Database.atualizar(obraId, COL_CONCS, concId, { pdfUrl: url });
+      const c = concretagens.find(x => x.id === concId);
+      if (c) c.pdfUrl = url;
+      statusEl.textContent = '✓ PDF anexado!';
+      Utils.toast('✓ PDF anexado à concretagem', 'sucesso');
+      abrirUploadPdfConc();
+    } catch (e) {
+      statusEl.textContent = 'Erro ao enviar: ' + e.message;
+      Utils.toast('Erro ao enviar PDF.', 'erro');
+    }
+  }
+
   async function excluirConcretagem(id) {
     if(!Permissions.pode('levantamentoConcreto','excluir')){Utils.toast('Sem permissão para excluir.','erro');return;}
     const c = concretagens.find(x => x.id === id);
@@ -1629,6 +1678,7 @@ const LevantamentoConcreto = (() => {
               <button class="btn btn-primario btn-sm" style="flex:1;" onclick="LC.cwIniciarEditar()">Editar →</button>
               <button class="btn btn-secundario btn-sm" style="color:var(--cv-red);" onclick="LC.cwExcluirSelecionada()">🗑</button>
             </div>
+            <button class="btn btn-secundario btn-sm" style="width:100%;margin-top:6px;" onclick="LC.abrirUploadPdfConc()">📎 Inserir PDF desta concretagem</button>
           </div>
         </div>`;
       return;
@@ -2061,6 +2111,7 @@ const LevantamentoConcreto = (() => {
     abrirImportar, baixarModeloTSV, onImportTexto, onImportArquivo, salvarImport,
     abrirConcretagens, iniciarNovaConc, editarConcretagem, excluirConcretagem,
     cwSetConcSel, cwIniciarEditar, cwExcluirSelecionada,
+    abrirUploadPdfConc, onPdfConcArquivo,
     cwUpd, cwUpdFiltro, cwBusca, cwSetStep, cwVoltarMenu, cwStep1Next, cwStep2Next,
     cwTogglePeca, cwToggleAndar, cwSetPct, cwBlurPct,
     cwAddBT, cwRemBT, cwUpdBT, cwSalvar,

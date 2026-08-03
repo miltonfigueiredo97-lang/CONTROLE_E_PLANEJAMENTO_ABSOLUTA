@@ -578,52 +578,6 @@ const ControleConcreto = (() => {
     if (b) { bt.nf = b.notaFiscal || ''; bt.cod = b.codigoBT || ''; }
   }
 
-  // ══════════════════════════════════════════
-  // PDF POR BT (concretagem individual) — guardado no Firebase Storage
-  // (não rasteriza: PDF de verdade, multi-página, aberto em nova aba).
-  // ══════════════════════════════════════════
-  function abrirUploadPdf(btId) {
-    document.getElementById('cc-pdf-btid').value = btId;
-    document.getElementById('cc-pdf-status').textContent = '';
-    const b = btsConfig.find(x => x.id === btId);
-    const atual = document.getElementById('cc-pdf-atual');
-    atual.innerHTML = b?.pdfUrl
-      ? `<a href="${b.pdfUrl}" target="_blank" class="btn btn-secundario btn-sm">📎 Abrir PDF atual (BT-${b.numero})</a>`
-      : `<p class="text-sm text-muted">Nenhum PDF anexado ainda a esta BT.</p>`;
-    Utils.abrirModal('modal-cc-pdf');
-  }
-
-  async function onPdfArquivo(input) {
-    const file = input.files[0];
-    if (!file) return;
-    const btId = document.getElementById('cc-pdf-btid').value;
-    const statusEl = document.getElementById('cc-pdf-status');
-    if (!/\.pdf$/i.test(file.name) && file.type !== 'application/pdf') {
-      statusEl.textContent = 'Selecione um arquivo PDF.';
-      return;
-    }
-    statusEl.textContent = 'Enviando...';
-    try {
-      const b64 = await new Promise((res, rej) => {
-        const r = new FileReader();
-        r.onload = () => res(r.result);
-        r.onerror = rej;
-        r.readAsDataURL(file);
-      });
-      const path = `obras/${obraId}/concreto-bts/${btId}.pdf`;
-      const url = await uploadImagem(path, b64);
-      await Database.atualizar(obraId, COL_BTS, btId, { pdfUrl: url });
-      const b = btsConfig.find(x => x.id === btId);
-      if (b) b.pdfUrl = url;
-      statusEl.textContent = '✓ PDF anexado!';
-      Utils.toast('✓ PDF anexado à BT', 'sucesso');
-      renderLancarBT();
-    } catch (e) {
-      statusEl.textContent = 'Erro ao enviar: ' + e.message;
-      Utils.toast('Erro ao enviar PDF.', 'erro');
-    }
-  }
-
   function btSetConc(v) { bt.concId = v; bt.btId = ''; bt.modo = 'menu'; renderLancarBT(); }
   function btSetBT(id) {
     bt.btId = id;
@@ -734,7 +688,6 @@ const ControleConcreto = (() => {
                     ${b.notaFiscal ? `<div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--cor-texto-muted);">NF:${esc(b.notaFiscal)}</div>` : ''}
                     ${jafoi ? `<div style="font-family:var(--font-mono);font-size:0.7rem;color:#16a34a;margin-top:3px;">✓ Lançada</div>` : ''}
                   </div>
-                  <button onclick="event.stopPropagation();CCON.abrirUploadPdf('${b.id}')" style="background:${b.pdfUrl ? '#eef7ee' : '#fff'};border:1px solid var(--cor-borda-light);border-top:none;color:${b.pdfUrl ? '#16a34a' : 'var(--cor-texto-muted)'};font-size:0.68rem;padding:5px;cursor:pointer;">${b.pdfUrl ? '📎 Ver PDF' : '📎 Inserir PDF'}</button>
                   ${jafoi && sel ? `<button onclick="CCON.btIniciarEdicao()" style="background:#fff;border:2px solid var(--cor-primaria);border-top:none;border-radius:0 0 8px 8px;color:var(--cor-primaria-dark,#b8960a);font-weight:700;font-size:0.72rem;letter-spacing:0.5px;padding:7px;cursor:pointer;text-transform:uppercase;font-family:var(--font-principal);">✎ Editar BT</button>` : ''}
                 </div>`;
             }).join('')}
@@ -1266,7 +1219,6 @@ const ControleConcreto = (() => {
     abrirLancarBT, btSetConc, btSetBT, btIniciarEdicao,
     btUpd, btBusca, btEsconder100, btAddLinha, btRemLinha, btUpdLinha, btSalvar,
     rfbToggle, rfbFechar, rfbSelConc, rfbSelAndar, setAndarFiltroTipo, toggleAndarAberto,
-    abrirUploadPdf, onPdfArquivo,
   };
 })();
 
