@@ -1416,17 +1416,28 @@ const Dashboard = (() => {
           <div class="text-sm text-muted" style="margin-top:4px;">${d.ultimaData ? 'Último lançamento: ' + Utils.formatarData(d.ultimaData) : 'Nenhum lançamento ainda'}</div>
           <div class="text-sm" style="margin-top:6px;color:var(--cor-primaria-dark,#B89400);font-weight:600;">Clique para abrir ${cat.chave === 'estrutura' ? 'no Controle de Concreto' : 'a prancha do projeto'} ›</div>
         `);
-        elCat.querySelectorAll('.db-hit').forEach(hit => {
-          hit.style.cursor = 'pointer';
-          hit.addEventListener('click', () => {
-            const d = dadosPorAndar[Number(hit.dataset.idx)];
-            if (cat.chave === 'estrutura') {
-              window.location.href = 'controle-concreto.html?andar=' + encodeURIComponent(d.andar);
-            } else {
-              _abrirPrancaDoAndar(d.andar, cat.chave);
-            }
-          });
-        });
+        // Delegação de clique no elemento PAI (elCat), que nunca é recriado —
+        // evita depender de addEventListener em nós SVG filhos dinâmicos
+        // (.db-hit é reconstruído a cada render; um listener direto nele
+        // pode se perder dependendo de timing/reflow). Sobe manualmente até
+        // achar a classe .db-hit em vez de usar closest() — suporte de
+        // closest() em elementos SVG varia entre navegadores/versões.
+        elCat.onclick = (e) => {
+          let el = e.target, hit = null;
+          for (let i = 0; i < 6 && el; i++) {
+            if (el.classList && el.classList.contains('db-hit')) { hit = el; break; }
+            el = el.parentNode;
+          }
+          if (!hit) return;
+          const d = dadosPorAndar[Number(hit.dataset.idx)];
+          if (!d) return;
+          if (cat.chave === 'estrutura') {
+            window.location.href = 'controle-concreto.html?andar=' + encodeURIComponent(d.andar);
+          } else {
+            _abrirPrancaDoAndar(d.andar, cat.chave);
+          }
+        };
+        elCat.querySelectorAll('.db-hit').forEach(hit => { hit.style.cursor = 'pointer'; });
       });
     } catch (e) {
       console.error(e);
