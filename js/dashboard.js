@@ -1443,23 +1443,39 @@ const Dashboard = (() => {
   }
 
   // Estaca/Fundação: acha as pranchas do Controle de Estacas que têm
-  // marcador vinculado a uma peça daquele andar+categoria.
+  // marcador vinculado a uma peça daquele andar+categoria — só os marcadores
+  // JÁ EM EXECUÇÃO (% concretado > 0), pra ficar limpo no popup, não a
+  // prancha inteira com todas as bolinhas de todo andar/categoria.
   function _abrirPopupPranchas(andar, categoriaChave) {
     const ctx = _feContexto;
     if (!ctx) return;
+    const CC = window.ConcretoCalculos;
     const cat = CATEGORIAS_CONCRETO.find(c => c.chave === categoriaChave);
     const pecasDoAndar = ctx.pecas.filter(p => (p.andar || 'Sem andar') === andar && cat.filtro(p));
     if (!pecasDoAndar.length) return;
-    const idsPecas = new Set(pecasDoAndar.map(p => p.id));
-    const marcadoresDoAndar = ctx.marcadores.filter(m => m.pecaId && idsPecas.has(m.pecaId));
+    const pecaPorId = new Map(pecasDoAndar.map(p => [p.id, p]));
+    const emExecucao = pecasDoAndar.filter(p => CC ? CC.pctConcretado(p, ctx.lancamentos) > 0 : false);
+    if (!emExecucao.length) {
+      Utils.toast('Nenhuma peça deste andar está em execução ainda (0% concretado).', 'alerta');
+      return;
+    }
+    const idsEmExecucao = new Set(emExecucao.map(p => p.id));
+    const marcadoresDoAndar = ctx.marcadores.filter(m => m.pecaId && idsEmExecucao.has(m.pecaId));
     if (!marcadoresDoAndar.length) {
-      Utils.toast('Nenhuma peça deste andar está vinculada a uma prancha do Controle de Estacas e Fundações ainda.', 'alerta');
+      Utils.toast('As peças em execução deste andar ainda não têm marcador na prancha do Controle de Estacas.', 'alerta');
       return;
     }
     const idsPranchas = new Set(marcadoresDoAndar.map(m => m.pranchaId));
     const pranchas = ctx.pranchas.filter(p => idsPranchas.has(p.id)).sort((a, b) => (a.ordem || 0) - (b.ordem || 0));
     if (!pranchas.length) return;
-    const itens = pranchas.map(p => ({ tipo: 'imagem', titulo: p.nome || 'Prancha', pranchaId: p.id }));
+    const itens = pranchas.map(p => ({
+      tipo: 'imagem',
+      titulo: p.nome || 'Prancha',
+      pranchaId: p.id,
+      prancha: p,
+      marcadores: marcadoresDoAndar.filter(m => m.pranchaId === p.id),
+      pecaPorId,
+    }));
     _abrirPopupProjeto(andar, itens);
   }
 
@@ -1486,19 +1502,28 @@ const Dashboard = (() => {
     _abrirPopupProjeto(andar, itens);
   }
 
-  // Popup único em tela cheia — mostra o item atual (imagem de prancha ou
-  // PDF de concretagem) e navega entre os itens com as setas, se houver
-  // mais de um pro mesmo andar. Não navega pra outra página em nenhum caso.
+  // Popup único em tela cheia — mostra o item atual (imagem de prancha COM
+  // os marcadores desenhados por cima, ou PDF de concretagem) e navega entre
+  // os itens com as setas, se houver mais de um pro mesmo andar. Não navega
+  // pra outra página em nenhum caso. Zoom com botões +/- e roda do mouse
+  // (sem precisar de Ctrl — tela dedicada, sem conflito de scroll da página).
   let _popupItens = [];
   let _popupIdx = 0;
+  let _popupZoom = 1;
   function _abrirPopupProjeto(andar, itens) {
     _popupItens = itens;
     _popupIdx = 0;
+    _popupZoom = 1;
     _renderPopupProjeto(andar);
   }
   function _popupNavegar(delta, andar) {
     _popupIdx = (_popupIdx + delta + _popupItens.length) % _popupItens.length;
+    _popupZoom = 1;
     _renderPopupProjeto(andar);
+  }
+  function _popupZoomAjustar(delta, andar) {
+    _popupZoom = Math.max(0.3, Math.min(4, _popupZoom + delta));
+    _renderPopupProjeto(andar, true);
   }
   function _fecharPopupProjeto() {
     const overlay = document.getElementById('db-projeto-overlay');
@@ -1506,7 +1531,9 @@ const Dashboard = (() => {
     document.removeEventListener('keydown', _popupTeclaEsc);
   }
   function _popupTeclaEsc(e) { if (e.key === 'Escape') _fecharPopupProjeto(); }
-  async function _renderPopupProjeto(andar) {
+  // `soZoom` = true: só reaplica o zoom no conteúdo já carregado (evita
+  // recarregar a imagem do Firestore a cada scroll da roda).
+  async function _renderPopupProjeto(andar, soZoom) {
     let overlay = document.getElementById('db-projeto-overlay');
     if (!overlay) {
       overlay = document.createElement('div');
@@ -1517,30 +1544,72 @@ const Dashboard = (() => {
     }
     const item = _popupItens[_popupIdx];
     const temVarios = _popupItens.length > 1;
+    const andarEsc = andar.replace(/'/g, "\\'");
+
+    if (soZoom) {
+      // Só ajusta a escala do conteúdo já renderizado, sem recarregar nada.
+      const zoomEl = document.getElementById('db-projeto-zoomable');
+      if (zoomEl) zoomEl.style.transform = `scale(${_popupZoom})`;
+      const label = document.getElementById('db-projeto-zoomlabel');
+      if (label) label.textContent = Math.round(_popupZoom * 100) + '%';
+      return;
+    }
+
     overlay.innerHTML = `
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:4px 8px 12px;color:#fff;gap:10px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:4px 8px 12px;color:#fff;gap:10px;flex-wrap:wrap;">
         <div style="font-weight:700;">${andar} — ${item.titulo}${temVarios ? ` <span style="opacity:.7;font-weight:400;">(${_popupIdx + 1}/${_popupItens.length})</span>` : ''}</div>
-        <button class="btn btn-secundario btn-sm" onclick="Dashboard._fecharPopupProjeto()">✕ Fechar</button>
+        <div style="display:flex;align-items:center;gap:6px;">
+          ${item.tipo === 'imagem' ? `
+            <button class="btn btn-secundario btn-sm" onclick="Dashboard._popupZoomAjustar(-0.2,'${andarEsc}')">−</button>
+            <span id="db-projeto-zoomlabel" style="color:#fff;font-size:0.78rem;min-width:42px;text-align:center;">${Math.round(_popupZoom * 100)}%</span>
+            <button class="btn btn-secundario btn-sm" onclick="Dashboard._popupZoomAjustar(0.2,'${andarEsc}')">+</button>
+          ` : ''}
+          <button class="btn btn-secundario btn-sm" onclick="Dashboard._fecharPopupProjeto()">✕ Fechar</button>
+        </div>
       </div>
-      <div style="position:relative;flex:1;overflow:auto;display:flex;align-items:center;justify-content:center;background:#fff;border-radius:8px;">
-        ${temVarios ? `<button class="btn btn-secundario" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);z-index:2;" onclick="Dashboard._popupNavegar(-1,'${andar.replace(/'/g, "\\'")}')">‹</button>` : ''}
+      <div id="db-projeto-scroll" style="position:relative;flex:1;overflow:auto;display:flex;align-items:flex-start;justify-content:center;background:#fff;border-radius:8px;">
+        ${temVarios ? `<button class="btn btn-secundario" style="position:fixed;left:24px;top:50%;transform:translateY(-50%);z-index:2;" onclick="Dashboard._popupNavegar(-1,'${andarEsc}')">‹</button>` : ''}
         <div id="db-projeto-conteudo" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;">Carregando...</div>
-        ${temVarios ? `<button class="btn btn-secundario" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);z-index:2;" onclick="Dashboard._popupNavegar(1,'${andar.replace(/'/g, "\\'")}')">›</button>` : ''}
+        ${temVarios ? `<button class="btn btn-secundario" style="position:fixed;right:24px;top:50%;transform:translateY(-50%);z-index:2;" onclick="Dashboard._popupNavegar(1,'${andarEsc}')">›</button>` : ''}
       </div>`;
     const elConteudo = document.getElementById('db-projeto-conteudo');
     if (item.tipo === 'pdf') {
       elConteudo.innerHTML = `<iframe src="${item.url}" style="width:100%;height:100%;border:none;"></iframe>`;
       return;
     }
-    // Imagem da prancha — mesmo doc usado pelo Controle de Estacas
-    // (config/estacasImagem_{pranchaId}), em resolução original (sem
-    // recomprimir de novo aqui — já foi comprimida uma vez no upload lá).
+    // Imagem da prancha COM os marcadores desenhados por cima (stageHTML —
+    // mesma função/estilo usado no Controle de Estacas), só os marcadores
+    // já filtrados pra "em execução" (feito em _abrirPopupPranchas).
+    const EC = window.EstacasCalculos;
+    const CC = window.ConcretoCalculos;
+    if (!EC) { elConteudo.innerHTML = '<div class="estado-vazio"><p class="text-sm">Motor de cálculo de Estacas não carregado.</p></div>'; return; }
     try {
       const doc = await db.collection('obras').doc(_feContexto.obraId).collection('config').doc('estacasImagem_' + item.pranchaId).get();
       const img = doc.exists ? (doc.data().img || null) : null;
-      elConteudo.innerHTML = img
-        ? `<img src="${img}" style="max-width:100%;max-height:100%;object-fit:contain;">`
-        : '<div class="estado-vazio"><p class="text-sm">Imagem da prancha não encontrada.</p></div>';
+      const mapaCoresGrupo = EC.mapaCoresGrupoEstaca(_feContexto.pecas);
+      const statusFn = (m) => {
+        const p = m.pecaId ? item.pecaPorId.get(m.pecaId) : null;
+        if (!p) return { pct: null, label: 'Sem peça vinculada' };
+        const pct = CC ? CC.pctConcretado(p, _feContexto.lancamentos) : 0;
+        let corGrupo = null;
+        if (p.subTipo === 'Estacas' && (p.diametro || p.comprimento)) {
+          corGrupo = mapaCoresGrupo.get(EC.chaveGrupoEstaca(p.diametro, p.comprimento)) || null;
+        }
+        return { pct, label: `${p.nome} — ${EC.statusLabel(pct)}`, corGrupo };
+      };
+      const stage = EC.stageHTML(item.prancha, img, item.marcadores, statusFn, { zoom: 1, maxHeight: 999999, stageId: 'db-projeto-stage' });
+      // Envolve o stage num wrapper com transform:scale — permite zoom sem
+      // reconstruir o HTML a cada clique no +/−.
+      elConteudo.innerHTML = `<div id="db-projeto-zoomable" style="transform:scale(${_popupZoom});transform-origin:top center;transition:transform .1s;">${stage}</div>`;
+      // Roda do mouse dá zoom direto (sem precisar de Ctrl) — tela dedicada,
+      // não tem outro scroll concorrendo pela roda.
+      const scrollEl = document.getElementById('db-projeto-scroll');
+      if (scrollEl) {
+        scrollEl.onwheel = (ev) => {
+          ev.preventDefault();
+          _popupZoomAjustar(ev.deltaY < 0 ? 0.15 : -0.15, andar);
+        };
+      }
     } catch (e) {
       console.error(e);
       elConteudo.innerHTML = '<div class="estado-vazio"><p class="text-sm">Erro ao carregar a imagem.</p></div>';
@@ -2077,5 +2146,5 @@ const Dashboard = (() => {
       </div>`;
   }
 
-  return { init, onObraChanged, setResumoView, setPacotesView, setCurvaGranularidade, toggleMostrarConcreto, _arvToggle, _arvNivelFixo, _arvHorizonte, _fecharPopupProjeto, _popupNavegar };
+  return { init, onObraChanged, setResumoView, setPacotesView, setCurvaGranularidade, toggleMostrarConcreto, _arvToggle, _arvNivelFixo, _arvHorizonte, _fecharPopupProjeto, _popupNavegar, _popupZoomAjustar };
 })();

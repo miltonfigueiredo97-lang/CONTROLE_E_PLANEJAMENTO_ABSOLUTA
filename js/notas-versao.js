@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.59.33',
+  versaoAtual: 'V2.59.34',
 
   versoes: [
     {
@@ -5531,10 +5531,14 @@ const NotasVersao = {
       itens:['Fundação Profunda (Estacas) e Fundação: clique na barra abre a prancha (PDF/imagem) do Controle de Estacas e Fundações vinculada às peças daquele andar — é de lá que vem o projeto dessas duas categorias.',
         'Estrutura: clique na barra abre o PDF anexado na concretagem (Controle de Concreto → Lançar BT → 📎 Inserir PDF desta concretagem, botão movido do Levantamento de Concreto pra cá, no nível certo). Um andar com várias concretagens mostra menu pra escolher.',
         'O "Inserir PDF" que estava no Levantamento de Concreto (V2.59.31) foi removido de lá — o lugar certo, confirmado, é dentro do Controle de Concreto/Lançar BT, selecionando a concretagem.']},
-    {versao:'V2.59.33',status:'aberta',data:'2026-08-03',tipo:'melhoria',
+    {versao:'V2.59.33',status:'fechada',data:'2026-08-03',tipo:'melhoria',
       titulo:'Dashboard: clique no gráfico Fundação e Estrutura abre o projeto num popup em tela cheia, sem navegar para outra tela',
       itens:['Antes o clique navegava pro Controle de Estacas ou abria o PDF em nova aba. Agora abre direto num popup em tela cheia sobre o próprio Dashboard — Estrutura mostra o PDF de verdade (com todas as páginas e zoom nativo); Estaca/Fundação mostra a imagem da prancha na mesma qualidade que aparece no Controle de Estacas.',
-        'Andar com mais de um item (várias concretagens, ou peças espalhadas em mais de uma prancha) navega entre eles com as setas dentro do próprio popup — não abre várias telas.']}
+        'Andar com mais de um item (várias concretagens, ou peças espalhadas em mais de uma prancha) navega entre eles com as setas dentro do próprio popup — não abre várias telas.']},
+    {versao:'V2.59.34',status:'aberta',data:'2026-08-03',tipo:'correcao',
+      titulo:'Dashboard: popup de Estaca/Fundação mostrava a imagem crua (sem bolinhas) e sem zoom',
+      itens:['Agora desenha os marcadores (bolinhas coloridas por status) por cima da imagem da prancha, igual ao Controle de Estacas — só as peças daquele andar que já estão EM EXECUÇÃO (% concretado > 0), pra ficar limpo em vez de mostrar a prancha inteira.',
+        'Zoom de verdade: botões +/− visíveis e roda do mouse (sem precisar de Ctrl, já que é uma tela dedicada) — de 30% a 400%.']}
   ],
 
   render(containerId) {
