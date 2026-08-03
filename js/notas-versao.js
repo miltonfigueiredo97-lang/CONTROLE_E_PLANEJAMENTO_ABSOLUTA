@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.59.20',
+  versaoAtual: 'V2.59.21',
 
   versoes: [
     {
@@ -5473,12 +5473,18 @@ const NotasVersao = {
       itens:['Clicar em Adicionar Estaca/Fundação chamava um re-render da PÁGINA INTEIRA (KPI, tabela, tudo) só pra ligar o modo de criação — isso recriava o mapa do zero e perdia a posição do scroll, dando a impressão de que a prancha "andava"/pulava.',
         'Isso também podia fazer o clique de criação (arrastar pra definir o raio) não terminar de registrar corretamente, dependendo do timing — daí o popup de vincular às vezes não abria.',
         'Corrigido: ligar/desligar o modo de criação agora só atualiza o mapa e o botão em si (mesmo caminho leve que "Cancelar" já usava) — sem recriar a página, sem perder o scroll.']},
-    {versao:'V2.59.20',status:'aberta',data:'2026-08-01',tipo:'correcao',
+    {versao:'V2.59.20',status:'fechada',data:'2026-08-01',tipo:'correcao',
       titulo:'Controle de Estacas: achada a corrida real do popup que não abria ao Adicionar Estaca',
       itens:['Quando a imagem da prancha não estava em cache (ex: logo depois de girar 90°), buscar ela no Firestore levava um instante — e nesse meio tempo o mapa em tela ainda era o ANTIGO, com os listeners do modo anterior (não do modo "criar estaca").',
         'Se a pessoa clicasse pra criar a estaca durante essa janela, o clique caía no listener errado (modo normal, que só reage a marcador já existente) — nada acontecia, nem erro nem popup.',
         'Isso explica por que parecia "só funcionar" às vezes: quanto mais devagar a conexão ou quanto mais cedo depois de girar a prancha, maior a chance de cair nessa janela.',
-        'Corrigido: agora, se a imagem precisa ser buscada, a tela trava com um loading até o mapa novo (já no modo certo) estar pronto — sem essa janela de clique “no vazio”.']}
+        'Corrigido: agora, se a imagem precisa ser buscada, a tela trava com um loading até o mapa novo (já no modo certo) estar pronto — sem essa janela de clique “no vazio”.']},
+    {versao:'V2.59.21',status:'aberta',data:'2026-08-01',tipo:'funcionalidade',
+      titulo:'Controle de Estacas: achado o bug do zoom + botões de seleção rápida por tipo de estaca',
+      itens:['Bug real encontrado: o tamanho mínimo do arrasto pra criar uma estaca era medido como fração da LARGURA DA IMAGEM, não em pixels de tela. Com zoom alto, um arrasto de tamanho normal na tela virava uma fração pequena da imagem (que agora é enorme) e caía por baixo do mínimo — descartado em silêncio, sem popup, sem erro. Corrigido: o mínimo agora é medido em pixels de tela (constante, não muda com o zoom).',
+        'Novidade: botões de seleção rápida por tipo — em vez do botão genérico "Adicionar Estaca" (que exige arrastar pra definir o tamanho toda vez), agora aparece um botão pra cada diâmetro×comprimento já cadastrado no Levantamento (ex: "⌀90cm × 23m"). Clica no tipo, depois só clica em cada estaca daquele tipo no desenho — sai automaticamente no tamanho certo pro zoom atual, sem arrastar.',
+        'O tamanho de referência é calculado pela escala já usada pelas estacas existentes no desenho (mesmo que sejam de outro diâmetro) — então funciona até no primeiro clique de um tipo novo, sem precisar cadastrar manualmente nenhuma escala.',
+        'Clique rápido no modo por tipo não abre popup a cada estaca (fica sem vincular por enquanto) — assim dá pra marcar todas as de um tipo em sequência rapidamente; a vinculação com a peça é feita depois, uma a uma, na aba Marcadores normal.']}
   ],
 
   render(containerId) {
