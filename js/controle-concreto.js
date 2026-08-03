@@ -52,6 +52,11 @@ const ControleConcreto = (() => {
       return;
     }
     document.addEventListener('keydown', e => { if (e.key === 'Escape') Utils.fecharTodosModais(); });
+    // Deep-link vindo do Dashboard (gráfico Fundação/Estrutura, clique na
+    // barra de um andar): ?andar=NomeDoAndar já abre na aba Relatórios com
+    // aquele andar expandido, em vez de cair na tela padrão da Operacional.
+    const andarUrl = new URLSearchParams(window.location.search).get('andar');
+    if (andarUrl) { aba = 'relatorios'; andarAberto = andarUrl; }
     await carregar();
   }
 

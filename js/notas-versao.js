@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.59.26',
+  versaoAtual: 'V2.59.27',
 
   versoes: [
     {
@@ -5505,9 +5505,13 @@ const NotasVersao = {
       itens:['Terraplanagem estava de fora dos Vínculos desde que foi lançada — agora aparece com 2 métricas: Volume de Corte (banco) e Volume Solto (empolado), calculadas igual ao Levantamento (sem separação por local, é 1 volume só da obra).',
         'Concreto: antes só existia 1 número (volume total da obra). Agora dá pra navegar em pastas por Andar → Tipo (Pilar, Viga, Laje...) e vincular a quantidade exata de cada combinação a uma tarefa.',
         'Concreto também ganhou pastas por Concretagem (ex: "Concretagem Nº5 — Pilares Térreo") — soma o volume das peças vinculadas àquela concretagem (respeitando o % de cada peça), útil pra vincular pela etapa de execução em vez do local físico.']},
-    {versao:'V2.59.26',status:'aberta',data:'2026-08-03',tipo:'melhoria',
+    {versao:'V2.59.26',status:'fechada',data:'2026-08-03',tipo:'melhoria',
       titulo:'Dashboard: gráfico "Fundação e Estrutura" separado em 3 (Fundação Profunda/Estacas, Fundação, Estrutura)',
-      itens:['Antes era 1 gráfico só somando Fundação+Estrutura. Agora são 3 gráficos por andar, mesmo critério do Controle de Estacas: Fundação Profunda (Estacas) = peça Fundação com subtipo Estacas; Fundação = peça Fundação sem esse subtipo (rasa/superficial); Estrutura = todo o resto (Pilar/Viga/Laje/Cortina/Escada/Rampa/Caixa D\'água/Outro).']}
+      itens:['Antes era 1 gráfico só somando Fundação+Estrutura. Agora são 3 gráficos por andar, mesmo critério do Controle de Estacas: Fundação Profunda (Estacas) = peça Fundação com subtipo Estacas; Fundação = peça Fundação sem esse subtipo (rasa/superficial); Estrutura = todo o resto (Pilar/Viga/Laje/Cortina/Escada/Rampa/Caixa D\'água/Outro).']},
+    {versao:'V2.59.27',status:'aberta',data:'2026-08-03',tipo:'melhoria',
+      titulo:'Dashboard: clique na barra de Fundação Profunda/Fundação/Estrutura abre o projeto correspondente',
+      itens:['Fundação Profunda (Estacas) e Fundação: clique na barra do andar abre a prancha (PDF/imagem) já cadastrada no Controle de Estacas e Fundações, com as peças daquele andar marcadas. Se houver mais de uma prancha, abre a da primeira concretagem e navega pelas demais com as setas.',
+        'Estrutura: clique na barra leva direto pro Controle de Concreto, já na aba Relatórios com aquele andar aberto.']}
   ],
 
   render(containerId) {

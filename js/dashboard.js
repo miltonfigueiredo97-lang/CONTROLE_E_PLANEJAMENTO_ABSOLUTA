@@ -15,6 +15,7 @@ const Dashboard = (() => {
   let _curvaCache = null; // último cálculo da Curva S (usado pelo tooltip)
   let _curvaGranularidade = 'mensal'; // 'mensal' | 'semanal'
   let _mostrarConcreto = localStorage.getItem('db_mostrar_fundacao_estrutura') === 'true';
+  let _feContexto = null; // { obraId, pecas, marcadores, pranchas } — usado pelo popup de prancha (clique no gráfico Fundação/Estaca)
 
   const MOTIVOS_COR = {
     'Frente/Predecessora Não Liberada': '#f59e0b',
@@ -1351,11 +1352,19 @@ const Dashboard = (() => {
       </div>`).join('');
     try {
       const obraId = obraAtual.id;
-      const [pecas, lancamentos, cfgDoc] = await Promise.all([
+      const [pecas, lancamentos, cfgDoc, marcadores, pranchas, pecaConc, concretagens] = await Promise.all([
         Database.listar(obraId, 'concretoPecas', null).catch(() => []),
         Database.listar(obraId, 'concretoLancamentos', null).catch(() => []),
         Database.obter(obraId, 'config', 'concreto').catch(() => null),
+        Database.listar(obraId, 'estacasMarcadores', null).catch(() => []),
+        Database.listar(obraId, 'estacasPranchas', null).catch(() => []),
+        Database.listar(obraId, 'concretoPecaConc', null).catch(() => []),
+        Database.listar(obraId, 'concretoConcretagens', null).catch(() => []),
       ]);
+      // Guardado pra _abrirPrancaDoAndar (popup de PDF ao clicar na barra de
+      // Fundação Profunda/Fundação) montar a lista de pranchas do andar sem
+      // precisar buscar tudo de novo no clique.
+      _feContexto = { obraId, pecas, marcadores, pranchas, pecaConc, concretagens, lancamentos };
       if (!pecas.length) {
         CATEGORIAS_CONCRETO.forEach(cat => {
           document.getElementById(`db-fe-${cat.chave}`).innerHTML = '<div class="estado-vazio"><p class="text-sm">Nenhuma peça cadastrada no Controle de Concreto ainda.</p></div>';
@@ -1386,7 +1395,7 @@ const Dashboard = (() => {
               if (l.data && (!ultimaData || l.data > ultimaData)) ultimaData = l.data;
             });
           });
-          return { andar, previsto, executado, ultimaData };
+          return { andar, previsto, executado, ultimaData, categoria: cat.chave };
         }).filter(d => d.previsto > 0 || d.executado > 0);
 
         if (!dadosPorAndar.length) {
@@ -1399,7 +1408,19 @@ const Dashboard = (() => {
           <div class="db-tt-linha"><i style="background:#999;"></i>Previsto: <b>${Utils.formatarNumero(d.previsto)} m³</b></div>
           <div class="db-tt-linha"><i style="background:var(--cor-primaria);"></i>Executado: <b>${Utils.formatarNumero(d.executado)} m³</b></div>
           <div class="text-sm text-muted" style="margin-top:4px;">${d.ultimaData ? 'Último lançamento: ' + Utils.formatarData(d.ultimaData) : 'Nenhum lançamento ainda'}</div>
+          <div class="text-sm" style="margin-top:6px;color:var(--cor-primaria-dark,#B89400);font-weight:600;">Clique para abrir ${cat.chave === 'estrutura' ? 'no Controle de Concreto' : 'a prancha do projeto'} ›</div>
         `);
+        elCat.querySelectorAll('.db-hit').forEach(hit => {
+          hit.style.cursor = 'pointer';
+          hit.addEventListener('click', () => {
+            const d = dadosPorAndar[Number(hit.dataset.idx)];
+            if (cat.chave === 'estrutura') {
+              window.location.href = 'controle-concreto.html?andar=' + encodeURIComponent(d.andar);
+            } else {
+              _abrirPrancaDoAndar(d.andar, cat.chave);
+            }
+          });
+        });
       });
     } catch (e) {
       console.error(e);
@@ -1407,6 +1428,120 @@ const Dashboard = (() => {
         const el = document.getElementById(`db-fe-${cat.chave}`);
         if (el) el.innerHTML = '<div class="estado-vazio"><p class="text-sm">Erro ao carregar dados do Controle de Concreto.</p></div>';
       });
+    }
+  }
+
+  // Popup com a prancha (PDF/imagem) do Controle de Estacas — aberto ao
+  // clicar numa barra dos gráficos Fundação Profunda (Estacas) / Fundação.
+  // Acha as pranchas que têm marcador vinculado a peça daquele andar+
+  // categoria, ordenadas pela concretagem (concretoPecaConc→concretoConcretagens.numero,
+  // peças sem concretagem vinculada ficam por último, pela ordem da prancha)
+  // — abre na primeira, com seta pra navegar pelas demais.
+  let _pdPranchasAtuais = []; // pranchas do andar+categoria clicados, na ordem de navegação
+  let _pdIdx = 0;
+  function _abrirPrancaDoAndar(andar, categoriaChave) {
+    const ctx = _feContexto;
+    if (!ctx) return;
+    const cat = CATEGORIAS_CONCRETO.find(c => c.chave === categoriaChave);
+    const pecasDoAndar = ctx.pecas.filter(p => (p.andar || 'Sem andar') === andar && cat.filtro(p));
+    const idsPecas = new Set(pecasDoAndar.map(p => p.id));
+    const marcadoresDoAndar = ctx.marcadores.filter(m => m.pecaId && idsPecas.has(m.pecaId));
+    if (!marcadoresDoAndar.length) {
+      Utils.toast('Nenhuma peça deste andar está vinculada a uma prancha do Controle de Estacas ainda.', 'alerta');
+      return;
+    }
+    // Concretagem de cada peça (pra ordenar): concretoPecaConc → concretoConcretagens.numero.
+    const concPorPeca = new Map();
+    ctx.pecaConc.forEach(pc => {
+      const conc = ctx.concretagens.find(c => c.id === pc.concretagemId);
+      if (conc) concPorPeca.set(pc.pecaId, conc);
+    });
+    const idsPranchas = new Set(marcadoresDoAndar.map(m => m.pranchaId));
+    const pranchasComImagem = ctx.pranchas.filter(p => idsPranchas.has(p.id) && Number(p.imgWidthPx) > 0 && Number(p.imgHeightPx) > 0);
+    if (!pranchasComImagem.length) {
+      Utils.toast('A(s) prancha(s) vinculada(s) a este andar ainda não têm PDF/imagem importado.', 'alerta');
+      return;
+    }
+    // Menor número de concretagem entre os marcadores de cada prancha define
+    // a posição dela na fila; sem concretagem vinculada = vai pro final.
+    const numConcMinPorPrancha = new Map();
+    pranchasComImagem.forEach(pr => {
+      const nums = marcadoresDoAndar.filter(m => m.pranchaId === pr.id)
+        .map(m => concPorPeca.get(m.pecaId)?.numero).filter(n => n != null);
+      numConcMinPorPrancha.set(pr.id, nums.length ? Math.min(...nums) : Infinity);
+    });
+    _pdPranchasAtuais = [...pranchasComImagem].sort((a, b) => {
+      const diff = numConcMinPorPrancha.get(a.id) - numConcMinPorPrancha.get(b.id);
+      return diff !== 0 ? diff : (a.ordem || 0) - (b.ordem || 0);
+    });
+    _pdIdx = 0;
+    _pdMarcadoresAndar = marcadoresDoAndar;
+    _renderPopupPrancha();
+  }
+  let _pdMarcadoresAndar = [];
+  function _pdNavegar(delta) {
+    _pdIdx = (_pdIdx + delta + _pdPranchasAtuais.length) % _pdPranchasAtuais.length;
+    _renderPopupPrancha();
+  }
+  function _fecharPopupPrancha() {
+    const overlay = document.getElementById('db-pd-overlay');
+    if (overlay) overlay.remove();
+    document.removeEventListener('keydown', _pdTeclaEsc);
+  }
+  function _pdTeclaEsc(e) { if (e.key === 'Escape') _fecharPopupPrancha(); }
+  async function _renderPopupPrancha() {
+    const EC = window.EstacasCalculos;
+    const CC = window.ConcretoCalculos;
+    if (!EC) return;
+    let overlay = document.getElementById('db-pd-overlay');
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.id = 'db-pd-overlay';
+      overlay.style.cssText = 'position:fixed;inset:0;z-index:600;background:rgba(15,23,42,.85);display:flex;align-items:center;justify-content:center;padding:24px;';
+      document.body.appendChild(overlay);
+      document.addEventListener('keydown', _pdTeclaEsc);
+    }
+    const prancha = _pdPranchasAtuais[_pdIdx];
+    const temVarias = _pdPranchasAtuais.length > 1;
+    overlay.innerHTML = `
+      <div style="background:#fff;border-radius:10px;max-width:min(92vw,1100px);max-height:92vh;width:100%;display:flex;flex-direction:column;overflow:hidden;">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid #e2e8f0;gap:10px;">
+          <div style="font-weight:700;">${prancha.nome || 'Prancha'}${temVarias ? ` <span class="text-sm text-muted" style="font-weight:400;">(${_pdIdx + 1}/${_pdPranchasAtuais.length})</span>` : ''}</div>
+          <div style="display:flex;gap:6px;">
+            <a href="controle-estacas.html" class="btn btn-secundario btn-sm">Abrir no Controle de Estacas</a>
+            <button class="btn btn-secundario btn-sm" onclick="Dashboard._fecharPopupPrancha()">✕ Fechar</button>
+          </div>
+        </div>
+        <div style="position:relative;flex:1;overflow:auto;padding:16px;display:flex;align-items:center;justify-content:center;">
+          ${temVarias ? `<button class="btn btn-secundario" style="position:absolute;left:8px;top:50%;transform:translateY(-50%);z-index:2;" onclick="Dashboard._pdNavegar(-1)">‹</button>` : ''}
+          <div id="db-pd-mapa" style="max-width:100%;">Carregando prancha...</div>
+          ${temVarias ? `<button class="btn btn-secundario" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);z-index:2;" onclick="Dashboard._pdNavegar(1)">›</button>` : ''}
+        </div>
+      </div>`;
+    const elMapa = document.getElementById('db-pd-mapa');
+    try {
+      const ctx = _feContexto;
+      let imagem = null;
+      const doc = await db.collection('obras').doc(ctx.obraId).collection('config').doc('estacasImagem_' + prancha.id).get();
+      imagem = doc.exists ? (doc.data().img || null) : null;
+      const marcadoresDaPrancha = ctx.marcadores.filter(m => m.pranchaId === prancha.id);
+      const mapaCoresGrupo = EC.mapaCoresGrupoEstaca(ctx.pecas);
+      const statusFn = (m) => {
+        const p = m.pecaId ? ctx.pecas.find(x => x.id === m.pecaId) : null;
+        if (!p) return { pct: null, label: 'Sem peça vinculada' };
+        const pct = CC ? CC.pctConcretado(p, ctx.lancamentos) : 0;
+        let corGrupo = null;
+        if (p.subTipo === 'Estacas' && (p.diametro || p.comprimento)) {
+          corGrupo = mapaCoresGrupo.get(EC.chaveGrupoEstaca(p.diametro, p.comprimento)) || null;
+        }
+        return { pct, label: `${p.nome} — ${EC.statusLabel(pct)}`, corGrupo };
+      };
+      const larguraDisp = Math.min(1000, window.innerWidth - 120);
+      const zoom = Math.min(1, larguraDisp / Number(prancha.imgWidthPx));
+      elMapa.innerHTML = EC.stageHTML(prancha, imagem, marcadoresDaPrancha, statusFn, { zoom, maxHeight: window.innerHeight - 200 });
+    } catch (e) {
+      console.error(e);
+      elMapa.innerHTML = '<div class="estado-vazio"><p class="text-sm">Erro ao carregar a prancha.</p></div>';
     }
   }
 
@@ -1931,5 +2066,5 @@ const Dashboard = (() => {
       </div>`;
   }
 
-  return { init, onObraChanged, setResumoView, setPacotesView, setCurvaGranularidade, toggleMostrarConcreto, _arvToggle, _arvNivelFixo, _arvHorizonte };
+  return { init, onObraChanged, setResumoView, setPacotesView, setCurvaGranularidade, toggleMostrarConcreto, _arvToggle, _arvNivelFixo, _arvHorizonte, _fecharPopupPrancha, _pdNavegar };
 })();
