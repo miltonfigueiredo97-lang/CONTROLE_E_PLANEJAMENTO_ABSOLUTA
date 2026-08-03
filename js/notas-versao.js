@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.59.34',
+  versaoAtual: 'V2.59.35',
 
   versoes: [
     {
@@ -5535,10 +5535,15 @@ const NotasVersao = {
       titulo:'Dashboard: clique no gráfico Fundação e Estrutura abre o projeto num popup em tela cheia, sem navegar para outra tela',
       itens:['Antes o clique navegava pro Controle de Estacas ou abria o PDF em nova aba. Agora abre direto num popup em tela cheia sobre o próprio Dashboard — Estrutura mostra o PDF de verdade (com todas as páginas e zoom nativo); Estaca/Fundação mostra a imagem da prancha na mesma qualidade que aparece no Controle de Estacas.',
         'Andar com mais de um item (várias concretagens, ou peças espalhadas em mais de uma prancha) navega entre eles com as setas dentro do próprio popup — não abre várias telas.']},
-    {versao:'V2.59.34',status:'aberta',data:'2026-08-03',tipo:'correcao',
+    {versao:'V2.59.34',status:'fechada',data:'2026-08-03',tipo:'correcao',
       titulo:'Dashboard: popup de Estaca/Fundação mostrava a imagem crua (sem bolinhas) e sem zoom',
       itens:['Agora desenha os marcadores (bolinhas coloridas por status) por cima da imagem da prancha, igual ao Controle de Estacas — só as peças daquele andar que já estão EM EXECUÇÃO (% concretado > 0), pra ficar limpo em vez de mostrar a prancha inteira.',
-        'Zoom de verdade: botões +/− visíveis e roda do mouse (sem precisar de Ctrl, já que é uma tela dedicada) — de 30% a 400%.']}
+        'Zoom de verdade: botões +/− visíveis e roda do mouse (sem precisar de Ctrl, já que é uma tela dedicada) — de 30% a 400%.']},
+    {versao:'V2.59.35',status:'aberta',data:'2026-08-03',tipo:'correcao',
+      titulo:'Dashboard: gráfico Fundação e Estrutura saía de ordem mesmo com a lista certa configurada + visual melhorado',
+      itens:['Causa real da ordem errada: pequenas diferenças de grafia entre o nome do andar salvo na peça e o nome salvo na lista configurada (ex: acento, maiúscula, espaço) faziam o andar "não bater" e cair fora de ordem, no final. Comparação agora usa o mesmo normalizador de nome de andar (CC.normalizarAndar) já usado no resto do sistema — tolerante a essas diferenças.',
+        'Cores fortes e vivas (roxo/laranja/azul) em vez de opacidade baixa — Previsto agora é contorno colorido com fundo branco (não mais "lavado"), Executado é preenchimento sólido.',
+        'Linha separadora vertical + faixa de fundo alternada (zebra) entre cada andar, pra ficar claro onde um grupo de barras termina e o outro começa.']}
   ],
 
   render(containerId) {

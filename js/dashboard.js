@@ -1338,9 +1338,9 @@ const Dashboard = (() => {
   // nem reordenar por número; é a mesma lista, na mesma ordem, ponto.
   const _isEstaca = p => p.subTipo === 'Estacas' || (!p.subTipo && Number(p.diametro) > 0 && Number(p.comprimento) > 0);
   const CATEGORIAS_CONCRETO = [
-    { chave: 'estaca', titulo: 'Fundação Profunda (Estacas)', cor: '#8b5cf6', filtro: p => p.tipo === 'Fundação' && _isEstaca(p) },
-    { chave: 'fundacao', titulo: 'Fundação', cor: '#f59e0b', filtro: p => p.tipo === 'Fundação' && !_isEstaca(p) },
-    { chave: 'estrutura', titulo: 'Estrutura', cor: 'var(--cor-primaria)', filtro: p => p.tipo !== 'Fundação' },
+    { chave: 'estaca', titulo: 'Fundação Profunda (Estacas)', cor: '#7c3aed', filtro: p => p.tipo === 'Fundação' && _isEstaca(p) },
+    { chave: 'fundacao', titulo: 'Fundação', cor: '#ea580c', filtro: p => p.tipo === 'Fundação' && !_isEstaca(p) },
+    { chave: 'estrutura', titulo: 'Estrutura', cor: '#2563eb', filtro: p => p.tipo !== 'Fundação' },
   ];
   async function _renderFundacaoEstrutura() {
     const host = document.getElementById('db-fundacao-estrutura-wrap');
@@ -1375,14 +1375,31 @@ const Dashboard = (() => {
         return;
       }
       // Ordem EXATA do Controle de Concreto — só filtra pra quem realmente
-      // tem peça na obra, sem reordenar por número/score. Andar que existe
-      // em pecas mas não está na lista customizada (caso raríssimo, dado
-      // novo criado por outro caminho) entra no final, na ordem que apareceu.
+      // tem peça na obra, sem reordenar por número/score. Comparação por
+      // nome NORMALIZADO (CC.normalizarAndar — mesma função usada na
+      // criação de peça): pequenas diferenças de acento/maiúscula/espaço
+      // entre o nome salvo em ordemAndares e o nome salvo na peça faziam o
+      // andar "não bater" e cair fora de ordem, no final, na ordem crua do
+      // Set (causa real do gráfico saindo fora de ordem mesmo com a lista
+      // configurada certa). Andar que realmente não está na lista
+      // customizada (raríssimo) entra no final, na ordem que apareceu.
+      const norm = a => (CC ? CC.normalizarAndar(a) : String(a || '').trim());
       const ordemSalva = cfgDoc?.ordemAndares || [];
-      const andaresComPeca = new Set(pecas.map(p => p.andar || 'Sem andar'));
+      const ordemSalvaNorm = ordemSalva.map(norm);
+      const andaresComPecaBrutos = [...new Set(pecas.map(p => p.andar || 'Sem andar'))];
+      // Ordena pelos nomes REAIS das peças (não os da lista customizada —
+      // grafias podem diferir), usando a posição na lista customizada
+      // (por nome normalizado) como critério de ordenação.
       const andares = ordemSalva.length
-        ? [...ordemSalva.filter(a => andaresComPeca.has(a)), ...[...andaresComPeca].filter(a => !ordemSalva.includes(a))]
-        : [...andaresComPeca];
+        ? [...andaresComPecaBrutos].sort((a, b) => {
+            const ia = ordemSalvaNorm.indexOf(norm(a));
+            const ib = ordemSalvaNorm.indexOf(norm(b));
+            if (ia === -1 && ib === -1) return 0; // nenhum na lista — mantém ordem original entre eles
+            if (ia === -1) return 1; // não achado vai pro final
+            if (ib === -1) return -1;
+            return ia - ib;
+          })
+        : andaresComPecaBrutos;
 
       const lancsPorPeca = new Map();
       lancamentos.forEach(l => {
@@ -1745,7 +1762,7 @@ const Dashboard = (() => {
   function _svgFundacaoEstruturaPorAndar(dados) {
     const n = dados.length;
     const nCat = CATEGORIAS_CONCRETO.length;
-    const larguraGrupo = 26 * nCat + 30;
+    const larguraGrupo = 26 * nCat + 34;
     const W = Math.max(700, n * larguraGrupo + 100), H = 340;
     const padL = 50, padR = 20, padT = 20, padB = 100;
     const plotW = W - padL - padR, plotH = H - padT - padB;
@@ -1753,22 +1770,31 @@ const Dashboard = (() => {
     const larguraSlot = (plotW / n) / nCat;
     const barW = Math.min(16, larguraSlot * 0.62);
 
-    let bars = '', labels = '', hits = '';
+    let bars = '', labels = '', hits = '', separadores = '', faixas = '';
     dados.forEach((d, i) => {
       const grupoX = padL + i * (plotW / n);
+      const larguraGrupoPx = plotW / n;
+      // Faixa de fundo alternada (zebra) por andar — ajuda a ver onde um
+      // grupo termina e outro começa, além da linha separadora.
+      if (i % 2 === 1) faixas += `<rect x="${grupoX.toFixed(1)}" y="${padT}" width="${larguraGrupoPx.toFixed(1)}" height="${plotH}" fill="#f8f8f8"/>`;
       d.porCategoria.forEach((c, ci) => {
         if (c.previsto <= 0 && c.executado <= 0) return;
         const cat = CATEGORIAS_CONCRETO[ci];
         const cx = grupoX + (ci + 0.5) * larguraSlot;
         const hPrev = (c.previsto / maxV) * plotH, hExec = (c.executado / maxV) * plotH;
-        bars += `<rect x="${(cx - barW / 2).toFixed(1)}" y="${(padT + plotH - hPrev).toFixed(1)}" width="${barW}" height="${hPrev.toFixed(1)}" fill="${cat.cor}" opacity="0.28"/>`;
+        // Previsto: contorno forte da cor da categoria, preenchimento branco
+        // (em vez de opacidade baixa) — cor sempre viva, sem parecer "lavada".
+        bars += `<rect x="${(cx - barW / 2).toFixed(1)}" y="${(padT + plotH - hPrev).toFixed(1)}" width="${barW}" height="${hPrev.toFixed(1)}" fill="#fff" stroke="${cat.cor}" stroke-width="2"/>`;
+        // Executado: preenchimento sólido, cor forte.
         bars += `<rect x="${(cx - barW / 2).toFixed(1)}" y="${(padT + plotH - hExec).toFixed(1)}" width="${barW}" height="${hExec.toFixed(1)}" fill="${cat.cor}"/>`;
-        if (c.previsto > 0) bars += `<text x="${cx.toFixed(1)}" y="${(padT + plotH - hPrev - 4).toFixed(1)}" font-size="8" fill="#666" text-anchor="middle">${Utils.formatarNumero(c.previsto, 1)}</text>`;
+        if (c.previsto > 0) bars += `<text x="${cx.toFixed(1)}" y="${(padT + plotH - hPrev - 4).toFixed(1)}" font-size="8" fill="#555" font-weight="600" text-anchor="middle">${Utils.formatarNumero(c.previsto, 1)}</text>`;
         hits += `<rect class="db-hit" data-idx="${i}" data-cat="${cat.chave}" x="${(grupoX + ci * larguraSlot).toFixed(1)}" y="${padT}" width="${larguraSlot.toFixed(1)}" height="${plotH}" fill="transparent" style="cursor:pointer;"/>`;
       });
-      const cxLabel = grupoX + (plotW / n) / 2;
+      const cxLabel = grupoX + larguraGrupoPx / 2;
       const nomeCurto = d.andar.length > 16 ? d.andar.slice(0, 15) + '…' : d.andar;
-      labels += `<text x="${cxLabel.toFixed(1)}" y="${(padT + plotH + 14).toFixed(1)}" font-size="9.5" fill="#333" text-anchor="end" transform="rotate(-40 ${cxLabel.toFixed(1)} ${(padT + plotH + 14).toFixed(1)})"><title>${d.andar}</title>${nomeCurto}</text>`;
+      labels += `<text x="${cxLabel.toFixed(1)}" y="${(padT + plotH + 14).toFixed(1)}" font-size="9.5" fill="#222" font-weight="600" text-anchor="end" transform="rotate(-40 ${cxLabel.toFixed(1)} ${(padT + plotH + 14).toFixed(1)})"><title>${d.andar}</title>${nomeCurto}</text>`;
+      // Linha vertical separando este grupo (andar) do próximo.
+      if (i < n - 1) separadores += `<line x1="${(grupoX + larguraGrupoPx).toFixed(1)}" x2="${(grupoX + larguraGrupoPx).toFixed(1)}" y1="${padT}" y2="${padT + plotH}" stroke="#ddd" stroke-width="1"/>`;
     });
 
     const gridY = [0, 0.25, 0.5, 0.75, 1].map(f => {
@@ -1779,7 +1805,9 @@ const Dashboard = (() => {
     return `
       <div style="overflow-x:auto;">
         <svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block;min-width:${W}px;">
+          ${faixas}
           ${gridY}
+          ${separadores}
           ${bars}
           ${labels}
           ${hits}
@@ -1788,6 +1816,7 @@ const Dashboard = (() => {
       <div class="db-tooltip"></div>
       <div class="db-legenda">
         ${CATEGORIAS_CONCRETO.map(cat => `<span><i style="background:${cat.cor};"></i> ${cat.titulo}</span>`).join('')}
+        <span><i style="background:#fff;border:2px solid #999;box-sizing:border-box;"></i> Previsto (contorno)</span>
       </div>
       <div class="text-sm text-muted" style="margin-top:6px;">Somado do Controle de Concreto por andar (ordem igual à configurada lá). Clique numa barra pra abrir o PDF da concretagem daquele andar/categoria.</div>`;
   }
