@@ -55,6 +55,8 @@ const ControleEstacas = (() => {
   let zoomE = 1;
   let pdfjsCarregado = false;
   let acompConcretagemId = null;  // concretagem ativa na aba Acompanhamento
+  let planFocoConcretagemId = null; // concretagem selecionada no Planejamento — clique na peça já atribui direto
+  let novaConcPlanAberta = false;   // form de "+ Nova concretagem" aberto no Planejamento
   let telaCheiaAtiva = false;
   let telaCheiaGuardado = null;   // {parent, next} — pra devolver #ce-aba-body ao saír da tela cheia
 
@@ -423,14 +425,15 @@ const ControleEstacas = (() => {
     return { x: pontos.reduce((s, p) => s + p.x, 0) / pontos.length, y: pontos.reduce((s, p) => s + p.y, 0) / pontos.length };
   }
 
-  function _renderAbaPlanejamento() {
+  async function _renderAbaPlanejamento() {
     const el = document.getElementById('ce-aba-body');
     if (!el) return;
-    const concsOrd = [...concretagens].sort((a, b) => (a.numero || 0) - (b.numero || 0));
+    const scrollAntigo = document.querySelector('#ce-plan-mapa-host .est-map-scroll');
+    const scrollPos = scrollAntigo ? { left: scrollAntigo.scrollLeft, top: scrollAntigo.scrollTop } : null;
     el.innerHTML = `
       <div class="cc-panel">
         <div class="cc-panelTitle">🗓 Planejamento de Concretagem</div>
-        <div class="text-sm text-muted" style="margin-bottom:10px;">Mesmo projeto da aba Marcadores. Clique numa peça já vinculada e diga em qual concretagem ela entra.</div>
+        <div class="text-sm text-muted" style="margin-bottom:10px;">Mesmo projeto da aba Marcadores.${planFocoConcretagemId ? ' Concretagem selecionada abaixo — clique nas peças no desenho pra atribuir direto.' : ' Selecione uma concretagem abaixo (ou crie uma nova) pra atribuir direto no clique, ou clique numa peça sem selecionar nada pra escolher pelo popup.'}</div>
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:4px;">
           <div class="aba-toggle">
             <button class="aba-btn ${view === 'estacas' ? 'ativo' : ''}" onclick="CE.onTrocarView('estacas')">⚫ Estacas</button>
@@ -450,26 +453,112 @@ const ControleEstacas = (() => {
         <div id="ce-plan-mapa-host"></div>
       </div>
       <div class="cc-panel">
-        <div class="cc-panelTitle">📅 Concretagens planejadas</div>
-        ${!concsOrd.length ? '<div class="cc-empty">Nenhuma concretagem ainda — clique numa peça na prancha acima pra criar a primeira.</div>' : `
-          <div style="display:flex;flex-direction:column;gap:10px;">
-            ${concsOrd.map(c => {
-              const listaPecas = _pecasPlanejadas(c.id);
-              const resumo = _resumoDiamDeLista(listaPecas);
-              return `
-                <div style="border:1px solid var(--cv-border,#e2e8f0);border-radius:8px;padding:10px 14px;">
-                  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
-                    <div style="font-weight:700;">Concretagem Nº ${c.numero}${c.data ? ` <span style="font-weight:400;color:var(--cv-text3,#94a3b8);font-size:.8rem;">${esc(c.data)}</span>` : ''}</div>
-                    <div class="text-sm text-muted">${listaPecas.length} peça${listaPecas.length !== 1 ? 's' : ''} · ${EC.fmt1(_volumePlanejado(c.id))} m³</div>
-                  </div>
-                  ${resumo.length ? `<div style="margin-top:8px;">${_resumoDiamHTML(resumo)}</div>` : ''}
-                </div>`;
-            }).join('')}
-          </div>`}
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
+          <div class="cc-panelTitle" style="margin:0;">📅 Concretagens planejadas</div>
+          <button class="btn btn-secundario btn-sm" onclick="CE.toggleNovaConcPlan()">${novaConcPlanAberta ? '✕ Cancelar' : '+ Nova concretagem'}</button>
+        </div>
+        <div id="ce-plan-cards-body"></div>
       </div>
     `;
+    _renderCardsConcretagem();
     Permissions.aplicarNaTela();
-    renderMapaPlanejamento();
+    await renderMapaPlanejamento();
+    const scrollNovo = document.querySelector('#ce-plan-mapa-host .est-map-scroll');
+    if (scrollNovo && scrollPos) { scrollNovo.scrollLeft = scrollPos.left; scrollNovo.scrollTop = scrollPos.top; }
+  }
+
+  function _renderCardsConcretagem() {
+    const el = document.getElementById('ce-plan-cards-body');
+    if (!el) return;
+    const concsOrd = [...concretagens].sort((a, b) => (a.numero || 0) - (b.numero || 0));
+    el.innerHTML = `
+      ${novaConcPlanAberta ? `
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;padding:10px;border:1px dashed var(--cv-border,#e2e8f0);border-radius:8px;margin-bottom:12px;">
+          <div><label class="text-sm text-muted" style="display:block;">Nº</label><input type="number" id="ce-nova-conc-plan-num" class="form-control" style="width:80px;" value="${_proximoNumeroConc()}"></div>
+          <div><label class="text-sm text-muted" style="display:block;">Data</label><input type="date" id="ce-nova-conc-plan-data" class="form-control" value="${new Date().toISOString().slice(0, 10)}"></div>
+          <div style="flex:1;min-width:160px;"><label class="text-sm text-muted" style="display:block;">Descrição (opcional)</label><input type="text" id="ce-nova-conc-plan-desc" class="form-control"></div>
+          <button class="btn btn-primario btn-sm" onclick="CE.criarConcretagemPlan()">Criar e selecionar</button>
+        </div>` : ''}
+      ${!concsOrd.length ? '<div class="cc-empty">Nenhuma concretagem ainda — crie uma acima, ou clique numa peça na prancha pra criar pelo popup.</div>' : `
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          ${concsOrd.map(c => {
+            const listaPecas = _pecasPlanejadas(c.id);
+            const resumo = _resumoDiamDeLista(listaPecas);
+            const focado = planFocoConcretagemId === c.id;
+            return `
+              <div id="ce-card-conc-${c.id}" style="border:1.5px solid ${focado ? 'var(--cor-primaria)' : 'var(--cv-border,#e2e8f0)'};background:${focado ? 'var(--cv-surface2,#eff6ff)' : 'transparent'};border-radius:8px;padding:10px 14px;cursor:pointer;" onclick="CE.focarConcretagemPlan('${c.id}')" title="Clique pra selecionar/desmarcar — com uma selecionada, clique nas peças no desenho já atribui direto">
+                <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+                  <div style="font-weight:700;">${focado ? '📌 ' : ''}Concretagem Nº ${c.numero}${c.data ? ` <span style="font-weight:400;color:var(--cv-text3,#94a3b8);font-size:.8rem;">${esc(c.data)}</span>` : ''}</div>
+                  <div class="text-sm text-muted">${listaPecas.length} peça${listaPecas.length !== 1 ? 's' : ''} · ${EC.fmt1(_volumePlanejado(c.id))} m³</div>
+                </div>
+                ${resumo.length ? `<div style="margin-top:8px;">${_resumoDiamHTML(resumo)}</div>` : ''}
+              </div>`;
+          }).join('')}
+        </div>`}
+    `;
+  }
+
+  function toggleNovaConcPlan() {
+    novaConcPlanAberta = !novaConcPlanAberta;
+    _renderCardsConcretagem();
+  }
+
+  async function criarConcretagemPlan() {
+    if (!Permissions.pode('controleEstacas', 'criar')) { Utils.toast('Sem permissão para criar.', 'erro'); return; }
+    const numero = parseInt(document.getElementById('ce-nova-conc-plan-num').value) || _proximoNumeroConc();
+    const data = document.getElementById('ce-nova-conc-plan-data').value || new Date().toISOString().slice(0, 10);
+    const descricao = (document.getElementById('ce-nova-conc-plan-desc').value || '').trim();
+    Utils.mostrarLoading();
+    try {
+      const id = await Database.criar(obraId, COL_CONCS, { numero, data, descricao, obraId }, EC.genId('conc'));
+      concretagens.push({ id, numero, data, descricao, obraId });
+      novaConcPlanAberta = false;
+      planFocoConcretagemId = id; // já foca a recém-criada
+      _renderCardsConcretagem();
+      Utils.toast('✓ Concretagem criada e selecionada — clique nas peças no desenho.', 'sucesso');
+    } catch (e) {
+      Utils.toast('Erro ao criar concretagem: ' + e.message, 'erro');
+    } finally {
+      Utils.esconderLoading();
+    }
+  }
+
+  function focarConcretagemPlan(id) {
+    planFocoConcretagemId = planFocoConcretagemId === id ? null : id;
+    _renderCardsComFoco();
+  }
+
+  // Atualiza só o destaque de "selecionada" dos cards, sem re-renderizar
+  // números (evita perder o scroll do mapa por engano se chamado à toa).
+  function _renderCardsComFoco() { _renderCardsConcretagem(); }
+
+  // Atribuição rápida: com uma concretagem selecionada, clicar numa peça já
+  // vinculada no desenho atribui/desatribui direto, sem abrir popup — feito
+  // com atualização local (sem recarregar tudo) pra não perder scroll/zoom
+  // no meio de uma sequência de cliques.
+  async function _atribuirRapidoFoco(m) {
+    if (!Permissions.pode('controleEstacas', 'editar') && !Permissions.pode('controleEstacas', 'criar')) { Utils.toast('Sem permissão.', 'erro'); return; }
+    const concId = planFocoConcretagemId;
+    const existente = pecaConc.find(pc => pc.pecaId === m.pecaId);
+    try {
+      if (existente && existente.concretagemId === concId) {
+        await Database.deletar(obraId, COL_PC, existente.id);
+        pecaConc = pecaConc.filter(pc => pc.id !== existente.id);
+      } else {
+        const concretagemAntigaId = existente ? existente.concretagemId : null;
+        if (existente) { await Database.deletar(obraId, COL_PC, existente.id); pecaConc = pecaConc.filter(pc => pc.id !== existente.id); }
+        const novoId = EC.genId('pc');
+        const dados = { pecaId: m.pecaId, concretagemId: concId, pctConcretagem: 100, obraId };
+        await Database.criar(obraId, COL_PC, dados, novoId);
+        pecaConc.push({ id: novoId, ...dados });
+        if (concretagemAntigaId) await _garantirBTUnica(concretagemAntigaId);
+      }
+      await _garantirBTUnica(concId);
+      await renderMapaPlanejamento(); // só o mapa — preserva scroll/zoom pro próximo clique
+      _renderCardsConcretagem(); // números dos cards (qtd/volume/diâmetro) atualizados
+    } catch (e) {
+      Utils.toast('Erro: ' + e.message, 'erro');
+    }
   }
 
   async function renderMapaPlanejamento() {
@@ -480,9 +569,13 @@ const ControleEstacas = (() => {
     const imagem = await _obterImagemPrancha(pr.id);
     if (!imagem) { host.innerHTML = `<div class="cc-empty">Esta prancha ainda não tem PDF/imagem — importe na aba Marcadores.</div>`; return; }
     const lista = marcadoresDaPranchaView(pr.id).filter(m => m.pecaId); // só marcadores já vinculados podem ser planejados
+    const scrollAntigo = document.querySelector('#ce-plan-mapa-host .est-map-scroll');
+    const scrollPos = scrollAntigo ? { left: scrollAntigo.scrollLeft, top: scrollAntigo.scrollTop } : null;
     host.innerHTML = EC.stageHTML(pr, imagem, lista, statusMarcador, { interativo: true, zoom: zoomE, stageId: 'ce-plan-stage', maxHeight: _alturaMapa() });
+    const scrollNovo = document.querySelector('#ce-plan-mapa-host .est-map-scroll');
+    if (scrollNovo && scrollPos) { scrollNovo.scrollLeft = scrollPos.left; scrollNovo.scrollTop = scrollPos.top; }
     _desenharNumerosConcretagem('ce-plan-stage', lista);
-    _ligarEventosToggle('ce-plan-stage', lista, abrirAtribuirConcretagem);
+    _ligarEventosToggle('ce-plan-stage', lista, m => planFocoConcretagemId ? _atribuirRapidoFoco(m) : abrirAtribuirConcretagem(m));
   }
 
   // Escreve o número da concretagem (se já atribuída) em cima de cada marcador
@@ -603,9 +696,11 @@ const ControleEstacas = (() => {
   }
   function _pecaExecutada(p) { return ConcretoCalculos.pctConcretado(p, lancamentos) >= 100; }
 
-  function _renderAbaAcompanhamento() {
+  async function _renderAbaAcompanhamento() {
     const el = document.getElementById('ce-aba-body');
     if (!el) return;
+    const scrollAntigo = document.querySelector('#ce-acomp-mapa-host .est-map-scroll');
+    const scrollPos = scrollAntigo ? { left: scrollAntigo.scrollLeft, top: scrollAntigo.scrollTop } : null;
     // Só concretagens com ao menos 1 peça planejada fazem sentido aqui
     const concsComPlano = [...concretagens].filter(c => _pecaConcDaConcretagem(c.id).length > 0).sort((a, b) => (a.numero || 0) - (b.numero || 0));
     const listaPecas = acompConcretagemId ? _pecasPlanejadas(acompConcretagemId) : [];
@@ -657,7 +752,9 @@ const ControleEstacas = (() => {
       </div>
     `;
     Permissions.aplicarNaTela();
-    if (acompConcretagemId) renderMapaAcompanhamento();
+    if (acompConcretagemId) await renderMapaAcompanhamento();
+    const scrollNovo = document.querySelector('#ce-acomp-mapa-host .est-map-scroll');
+    if (scrollNovo && scrollPos) { scrollNovo.scrollLeft = scrollPos.left; scrollNovo.scrollTop = scrollPos.top; }
   }
 
   async function renderMapaAcompanhamento() {
@@ -669,7 +766,11 @@ const ControleEstacas = (() => {
     if (!imagem) { host.innerHTML = `<div class="cc-empty">Esta prancha ainda não tem PDF/imagem.</div>`; return; }
     const idsPlanejados = new Set(_pecaConcDaConcretagem(acompConcretagemId).map(pc => pc.pecaId));
     const lista = marcadoresDaPranchaView(pr.id).filter(m => m.pecaId);
+    const scrollAntigo = document.querySelector('#ce-acomp-mapa-host .est-map-scroll');
+    const scrollPos = scrollAntigo ? { left: scrollAntigo.scrollLeft, top: scrollAntigo.scrollTop } : null;
     host.innerHTML = EC.stageHTML(pr, imagem, lista, statusMarcador, { interativo: true, zoom: zoomE, stageId: 'ce-acomp-stage', maxHeight: _alturaMapa() });
+    const scrollNovo = document.querySelector('#ce-acomp-mapa-host .est-map-scroll');
+    if (scrollNovo && scrollPos) { scrollNovo.scrollLeft = scrollPos.left; scrollNovo.scrollTop = scrollPos.top; }
     _desenharDestaques('ce-acomp-stage', lista.filter(m => idsPlanejados.has(m.pecaId)), () => true);
     _ligarEventosToggle('ce-acomp-stage', lista.filter(m => idsPlanejados.has(m.pecaId)), _toggleReal);
   }
@@ -736,11 +837,41 @@ const ControleEstacas = (() => {
 
   // Clique num marcador dispara toggleFn(marcador) — usado no Planejamento
   // (incluir/remover da concretagem) e no Acompanhamento (marcar/desmarcar real).
+  // Ctrl+roda: zoom · Ctrl+arrastar: pan — igual em Marcadores, Planejamento
+  // e Acompanhamento (mesmo stage, "stageId" muda só o id do elemento).
+  function _ligarPanZoom(stageId) {
+    const stage = document.getElementById(stageId);
+    if (!stage) return;
+    const scrollEl = stage.parentElement;
+    scrollEl.addEventListener('wheel', ev => {
+      if (!ev.ctrlKey) return;
+      ev.preventDefault();
+      zoomAjustar(ev.deltaY < 0 ? 0.15 : -0.15);
+    }, { passive: false });
+    stage.addEventListener('mousedown', ev => {
+      if (!ev.ctrlKey) return;
+      ev.preventDefault();
+      const ini = { x: ev.clientX, y: ev.clientY, sl: scrollEl.scrollLeft, st: scrollEl.scrollTop };
+      const mover = mv => {
+        scrollEl.scrollLeft = ini.sl - (mv.clientX - ini.x);
+        scrollEl.scrollTop = ini.st - (mv.clientY - ini.y);
+      };
+      const soltar = () => {
+        document.removeEventListener('mousemove', mover);
+        document.removeEventListener('mouseup', soltar);
+      };
+      document.addEventListener('mousemove', mover);
+      document.addEventListener('mouseup', soltar);
+    });
+  }
+
   function _ligarEventosToggle(stageId, lista, toggleFn) {
     const stage = document.getElementById(stageId);
     if (!stage) return;
+    _ligarPanZoom(stageId);
     stage.style.cursor = 'pointer';
     stage.addEventListener('click', ev => {
+      if (ev.ctrlKey) return;
       const alvo = ev.target.closest('.est-marcador, .est-poligono-hit');
       if (!alvo) return;
       const m = lista.find(x => x.id === alvo.dataset.id);
@@ -859,30 +990,7 @@ const ControleEstacas = (() => {
   function _ligarEventosMapa() {
     const stage = document.getElementById('ce-stage');
     if (!stage) return;
-    const scrollEl = stage.parentElement;
-
-    // Ctrl+roda: zoom · Ctrl+arrastar: pan (sempre disponível)
-    scrollEl.addEventListener('wheel', ev => {
-      if (!ev.ctrlKey) return;
-      ev.preventDefault();
-      zoomAjustar(ev.deltaY < 0 ? 0.15 : -0.15);
-    }, { passive: false });
-
-    stage.addEventListener('mousedown', ev => {
-      if (!ev.ctrlKey) return;
-      ev.preventDefault();
-      const ini = { x: ev.clientX, y: ev.clientY, sl: scrollEl.scrollLeft, st: scrollEl.scrollTop };
-      const mover = mv => {
-        scrollEl.scrollLeft = ini.sl - (mv.clientX - ini.x);
-        scrollEl.scrollTop = ini.st - (mv.clientY - ini.y);
-      };
-      const soltar = () => {
-        document.removeEventListener('mousemove', mover);
-        document.removeEventListener('mouseup', soltar);
-      };
-      document.addEventListener('mousemove', mover);
-      document.addEventListener('mouseup', soltar);
-    });
+    _ligarPanZoom('ce-stage');
 
     if (editandoFormaId) return; // handles de edição já têm seus próprios listeners
 
@@ -1580,6 +1688,7 @@ const ControleEstacas = (() => {
     onFocoBuscaPeca, fecharListaPecaBusca, onBuscaPeca, selecionarPecaBusca,
     abrirPranchas, novaPrancha, renomearPrancha, excluirPrancha, abrirUploadImagem, onImagemArquivo,
     atribuirConcretagemNumero, atribuirConcretagemNumeroInput, removerDaConcretagem, onTrocarAcompConcretagem,
+    toggleNovaConcPlan, criarConcretagemPlan, focarConcretagemPlan,
   };
 })();
 

@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.59.23',
+  versaoAtual: 'V2.59.24',
 
   versoes: [
     {
@@ -5490,10 +5490,16 @@ const NotasVersao = {
       itens:['Removida a seleção rápida por tipo de estaca (V2.59.21) — voltou pro botão único "Adicionar Estaca" (arrastar pra definir o tamanho). O fix real do bug do zoom (limiar em pixels de tela, não fração da imagem) continua valendo.',
         'Excluir marcador (e outras ações que recarregam a prancha) fazia a tela "saltar" pro topo — mesma causa das vezes anteriores: o painel inteiro era reconstruído do zero antes do mapa novo aparecer, perdendo a posição do scroll.',
         'Corrigido de forma mais ampla: a posição do scroll agora é guardada ANTES de qualquer reconstrução do painel de Marcadores e devolvida DEPOIS que o mapa novo termina de carregar — cobre excluir, vincular e qualquer outra ação que recarregue a prancha, não só zoom/girar.']},
-    {versao:'V2.59.23',status:'aberta',data:'2026-08-01',tipo:'melhoria',
+    {versao:'V2.59.23',status:'fechada',data:'2026-08-01',tipo:'melhoria',
       titulo:'Controle de Estacas: arrastar estaca já existente pra reposicionar, e "Salvar e Próximo" no vincular',
       itens:['Segurar e arrastar uma estaca (círculo) já marcada agora move ela direto, sem precisar abrir o popup e clicar em "Ajustar forma" antes — clique rápido sem arrastar continua abrindo o vínculo, normal.',
-        'Modal de vincular ganhou o botão "💾 Salvar e Próximo" — salva o vínculo, fecha o popup e já reentra no modo de adicionar (círculo ou polígono, igual ao marcador que acabou de salvar), sem precisar clicar de novo em "Adicionar Estaca"/"Adicionar Fundação".']}
+        'Modal de vincular ganhou o botão "💾 Salvar e Próximo" — salva o vínculo, fecha o popup e já reentra no modo de adicionar (círculo ou polígono, igual ao marcador que acabou de salvar), sem precisar clicar de novo em "Adicionar Estaca"/"Adicionar Fundação".']},
+    {versao:'V2.59.24',status:'aberta',data:'2026-08-01',tipo:'melhoria',
+      titulo:'Controle de Estacas: Planejamento e Acompanhamento ganham zoom/pan igual Marcadores, e atribuição rápida de concretagem',
+      itens:['Ctrl+roda (zoom) e Ctrl+arrastar (mover o mapa) agora funcionam em Planejamento e Acompanhamento também — antes só existiam na aba Marcadores.',
+        'Planejamento: agora dá pra criar a concretagem direto ali em cima (nº, data, descrição), sem precisar passar pelo popup de uma peça.',
+        'Clique num card de concretagem pra selecionar (fica marcado 📌) — com uma selecionada, clicar nas peças no desenho já atribui direto, sem abrir popup a cada uma; clique de novo numa peça já atribuída à mesma concretagem remove. Clique numa peça sem nenhuma concretagem selecionada continua abrindo o popup de escolha, como antes.',
+        'Confirmado: uma concretagem criada em Controle de Estacas usa exatamente os mesmos campos do Assistente de Concretagem do Levantamento de Concreto — aparece e funciona normalmente dentro do Controle de Concreto, sem nenhum ajuste extra.']}
   ],
 
   render(containerId) {
