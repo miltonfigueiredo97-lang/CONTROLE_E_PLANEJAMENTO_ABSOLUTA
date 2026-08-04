@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.59.38',
+  versaoAtual: 'V2.59.39',
 
   versoes: [
     {
@@ -5554,9 +5554,13 @@ const NotasVersao = {
       titulo:'Dashboard: gráfico Fundação e Estrutura volta a usar só tons de amarelo (identidade única) em vez de roxo/laranja/azul',
       itens:['Estrutura = amarelo oficial da empresa (#F5C800); Fundação e Estacas = tons de amarelo mais escuros — as 3 categorias ficam na mesma família de cor, sem parecer "gráfico colorido".',
         'Executado agora é sempre preto/cinza escuro nas 3 categorias — a cor (tom de amarelo) identifica a CATEGORIA, o preto identifica que aquele volume já foi executado. Previsto continua como contorno no tom da categoria, com fundo branco.']},
-    {versao:'V2.59.38',status:'aberta',data:'2026-08-03',tipo:'correcao',
+    {versao:'V2.59.38',status:'fechada',data:'2026-08-03',tipo:'correcao',
       titulo:'Dashboard: gráfico Fundação e Estrutura parou de carregar ("Erro ao carregar dados do Controle de Concreto")',
-      itens:['Bug introduzido numa limpeza de código anterior: a variável CC (ConcretoCalculos) usada pra ordenar os andares por nome normalizado tinha sido removida sem querer, causando erro em toda tentativa de carregar o gráfico. Restaurada.']}
+      itens:['Bug introduzido numa limpeza de código anterior: a variável CC (ConcretoCalculos) usada pra ordenar os andares por nome normalizado tinha sido removida sem querer, causando erro em toda tentativa de carregar o gráfico. Restaurada.']},
+    {versao:'V2.59.39',status:'aberta',data:'2026-08-03',tipo:'correcao',
+      titulo:'Dashboard: andar com peça de Fundação de verdade (volume > 0 confirmado no Levantamento) não aparecia no gráfico',
+      itens:['O cálculo do gráfico usava Number(p.volume) puro, que retorna NaN se o volume estiver salvo em formato de vírgula decimal ("150,5") — e NaN||0 some silenciosamente como zero, fazendo o andar inteiro desaparecer do gráfico mesmo com peça e volume reais. Trocado por CC.num(), a mesma função (tolerante a vírgula) já usada em todo o resto do sistema.',
+        'Sem acesso ao dado real da obra pra confirmar 100% que essa era a causa exata — é a explicação técnica mais sólida encontrada; se o problema persistir, precisa de acesso ao Firestore ou ao DevTools do navegador pra investigar a fundo.']}
   ],
 
   render(containerId) {

@@ -1411,10 +1411,15 @@ const Dashboard = (() => {
       const dadosPorAndar = andares.map(andar => {
         const porCategoria = CATEGORIAS_CONCRETO.map(cat => {
           const pecasDaCategoria = pecas.filter(p => (p.andar || 'Sem andar') === andar && cat.filtro(p));
-          const previsto = pecasDaCategoria.reduce((s, p) => s + (Number(p.volume) || 0), 0);
+          // CC.num() (não Number() puro) — trata vírgula decimal ("150,5")
+          // igual ao resto do sistema. Peça com volume salvo em formato de
+          // vírgula (import antigo, digitação manual) virava NaN com
+          // Number() puro, e NaN||0 some silenciosamente como 0 — causa real
+          // de andar com peça de verdade não aparecer no gráfico.
+          const previsto = pecasDaCategoria.reduce((s, p) => s + CC.num(p.volume), 0);
           let executado = 0;
           pecasDaCategoria.forEach(p => {
-            (lancsPorPeca.get(p.id) || []).forEach(l => { executado += Number(l.volume) || 0; });
+            (lancsPorPeca.get(p.id) || []).forEach(l => { executado += CC.num(l.volume); });
           });
           return { chave: cat.chave, previsto, executado };
         });
