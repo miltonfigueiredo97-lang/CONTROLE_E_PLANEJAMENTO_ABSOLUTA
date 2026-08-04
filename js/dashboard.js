@@ -1354,7 +1354,12 @@ const Dashboard = (() => {
         </div>
       </div>`;
     const elFE = document.getElementById('db-fe');
+    // CC pode falhar a carregar por cache de CDN desalinhado entre deploys
+    // (script antigo servido junto com HTML novo) — _num() local garante que
+    // o gráfico NUNCA quebra por isso, mesmo que window.ConcretoCalculos
+    // esteja ausente/desatualizado no momento exato do carregamento.
     const CC = window.ConcretoCalculos;
+    const _num = v => (CC && CC.num) ? CC.num(v) : (parseFloat(String(v ?? '').replace(',', '.')) || 0);
     try {
       const obraId = obraAtual.id;
       const [pecas, lancamentos, cfgDoc, pecaConc, concretagens, marcadores, pranchas] = await Promise.all([
@@ -1411,15 +1416,16 @@ const Dashboard = (() => {
       const dadosPorAndar = andares.map(andar => {
         const porCategoria = CATEGORIAS_CONCRETO.map(cat => {
           const pecasDaCategoria = pecas.filter(p => (p.andar || 'Sem andar') === andar && cat.filtro(p));
-          // CC.num() (não Number() puro) — trata vírgula decimal ("150,5")
-          // igual ao resto do sistema. Peça com volume salvo em formato de
+          // _num() (definida no topo da função) — trata vírgula decimal
+          // ("150,5") igual ao resto do sistema, e não quebra mesmo se CC
+          // estiver indisponível. Peça com volume salvo em formato de
           // vírgula (import antigo, digitação manual) virava NaN com
           // Number() puro, e NaN||0 some silenciosamente como 0 — causa real
           // de andar com peça de verdade não aparecer no gráfico.
-          const previsto = pecasDaCategoria.reduce((s, p) => s + CC.num(p.volume), 0);
+          const previsto = pecasDaCategoria.reduce((s, p) => s + _num(p.volume), 0);
           let executado = 0;
           pecasDaCategoria.forEach(p => {
-            (lancsPorPeca.get(p.id) || []).forEach(l => { executado += CC.num(l.volume); });
+            (lancsPorPeca.get(p.id) || []).forEach(l => { executado += _num(l.volume); });
           });
           return { chave: cat.chave, previsto, executado };
         });
