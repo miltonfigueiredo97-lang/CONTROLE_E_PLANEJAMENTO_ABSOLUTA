@@ -1449,7 +1449,8 @@ const Dashboard = (() => {
       elFE.querySelectorAll('.db-hit').forEach(hit => { hit.style.cursor = 'pointer'; });
     } catch (e) {
       console.error(e);
-      elFE.innerHTML = '<div class="estado-vazio"><p class="text-sm">Erro ao carregar dados do Controle de Concreto.</p></div>';
+      const msgErro = (e && e.message ? e.message : String(e)).replace(/</g, '&lt;');
+      elFE.innerHTML = `<div class="estado-vazio"><p class="text-sm">Erro ao carregar dados do Controle de Concreto.</p><p class="text-sm text-muted" style="margin-top:6px;font-family:monospace;">${msgErro}</p></div>`;
     }
   }
 

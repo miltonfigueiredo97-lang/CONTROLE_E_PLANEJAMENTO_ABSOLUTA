@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.59.39',
+  versaoAtual: 'V2.59.40',
 
   versoes: [
     {
@@ -5557,10 +5557,13 @@ const NotasVersao = {
     {versao:'V2.59.38',status:'fechada',data:'2026-08-03',tipo:'correcao',
       titulo:'Dashboard: gráfico Fundação e Estrutura parou de carregar ("Erro ao carregar dados do Controle de Concreto")',
       itens:['Bug introduzido numa limpeza de código anterior: a variável CC (ConcretoCalculos) usada pra ordenar os andares por nome normalizado tinha sido removida sem querer, causando erro em toda tentativa de carregar o gráfico. Restaurada.']},
-    {versao:'V2.59.39',status:'aberta',data:'2026-08-03',tipo:'correcao',
+    {versao:'V2.59.39',status:'fechada',data:'2026-08-03',tipo:'correcao',
       titulo:'Dashboard: andar com peça de Fundação de verdade (volume > 0 confirmado no Levantamento) não aparecia no gráfico',
       itens:['O cálculo do gráfico usava Number(p.volume) puro, que retorna NaN se o volume estiver salvo em formato de vírgula decimal ("150,5") — e NaN||0 some silenciosamente como zero, fazendo o andar inteiro desaparecer do gráfico mesmo com peça e volume reais. Trocado por CC.num(), a mesma função (tolerante a vírgula) já usada em todo o resto do sistema.',
-        'Sem acesso ao dado real da obra pra confirmar 100% que essa era a causa exata — é a explicação técnica mais sólida encontrada; se o problema persistir, precisa de acesso ao Firestore ou ao DevTools do navegador pra investigar a fundo.']}
+        'Sem acesso ao dado real da obra pra confirmar 100% que essa era a causa exata — é a explicação técnica mais sólida encontrada; se o problema persistir, precisa de acesso ao Firestore ou ao DevTools do navegador pra investigar a fundo.']},
+    {versao:'V2.59.40',status:'aberta',data:'2026-08-03',tipo:'correcao',
+      titulo:'Dashboard: erro no gráfico Fundação e Estrutura continuava mesmo depois do fix da V2.59.39 — mensagem de erro real agora aparece na tela',
+      itens:['Não foi possível confirmar/reproduzir a causa exata sem acesso ao Firestore ou ao console do navegador. A tela de erro agora mostra o texto técnico exato da exceção (não só "Erro ao carregar..."), pra dar o próximo passo real do diagnóstico direto pela tela, sem precisar abrir o DevTools.']}
   ],
 
   render(containerId) {
