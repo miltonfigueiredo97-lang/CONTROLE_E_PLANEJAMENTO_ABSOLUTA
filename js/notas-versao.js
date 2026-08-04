@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.59.37',
+  versaoAtual: 'V2.59.38',
 
   versoes: [
     {
@@ -5550,10 +5550,13 @@ const NotasVersao = {
         'Cada andar mostra só as categorias que de fato têm peça ali (a maioria só tem Estrutura — 2 barrinhas; só Fundação/Térreo costuma ter Estaca+Fundação juntas — até 3 categorias/6 barrinhas).',
         'Linha guia vertical entre o eixo e o rótulo do andar — resolve a ambiguidade de "essa barra é de qual andar" quando o texto inclinado ficava entre dois nomes.',
         'Quando o andar tem mais de uma categoria (ex: Fundação com Estaca+Fundação), cada par de barras ganha um texto vertical "Estacas"/"Fundação"/"Estrutura" escrito dentro da própria barra, com contorno da cor da categoria — não precisa mais adivinhar pela cor sozinha.']},
-    {versao:'V2.59.37',status:'aberta',data:'2026-08-03',tipo:'melhoria',
+    {versao:'V2.59.37',status:'fechada',data:'2026-08-03',tipo:'melhoria',
       titulo:'Dashboard: gráfico Fundação e Estrutura volta a usar só tons de amarelo (identidade única) em vez de roxo/laranja/azul',
       itens:['Estrutura = amarelo oficial da empresa (#F5C800); Fundação e Estacas = tons de amarelo mais escuros — as 3 categorias ficam na mesma família de cor, sem parecer "gráfico colorido".',
-        'Executado agora é sempre preto/cinza escuro nas 3 categorias — a cor (tom de amarelo) identifica a CATEGORIA, o preto identifica que aquele volume já foi executado. Previsto continua como contorno no tom da categoria, com fundo branco.']}
+        'Executado agora é sempre preto/cinza escuro nas 3 categorias — a cor (tom de amarelo) identifica a CATEGORIA, o preto identifica que aquele volume já foi executado. Previsto continua como contorno no tom da categoria, com fundo branco.']},
+    {versao:'V2.59.38',status:'aberta',data:'2026-08-03',tipo:'correcao',
+      titulo:'Dashboard: gráfico Fundação e Estrutura parou de carregar ("Erro ao carregar dados do Controle de Concreto")',
+      itens:['Bug introduzido numa limpeza de código anterior: a variável CC (ConcretoCalculos) usada pra ordenar os andares por nome normalizado tinha sido removida sem querer, causando erro em toda tentativa de carregar o gráfico. Restaurada.']}
   ],
 
   render(containerId) {

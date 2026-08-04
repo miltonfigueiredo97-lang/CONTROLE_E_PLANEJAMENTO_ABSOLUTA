@@ -1354,6 +1354,7 @@ const Dashboard = (() => {
         </div>
       </div>`;
     const elFE = document.getElementById('db-fe');
+    const CC = window.ConcretoCalculos;
     try {
       const obraId = obraAtual.id;
       const [pecas, lancamentos, cfgDoc, pecaConc, concretagens, marcadores, pranchas] = await Promise.all([
