@@ -1761,39 +1761,60 @@ const Dashboard = (() => {
   // categoria (executado). `dados` = [{ andar, porCategoria: [{chave,previsto,executado}, ...] }].
   function _svgFundacaoEstruturaPorAndar(dados) {
     const n = dados.length;
-    const nCat = CATEGORIAS_CONCRETO.length;
-    const larguraGrupo = 26 * nCat + 34;
-    const W = Math.max(700, n * larguraGrupo + 100), H = 340;
-    const padL = 50, padR = 20, padT = 20, padB = 100;
+    // Larguras compactas — cabe tudo sem scroll horizontal: 2 barrinhas
+    // (Previsto+Executado) por categoria presente naquele andar, cada
+    // categoria com seu par bem junto, e espaço mínimo entre andares.
+    const W = 1180, H = 360;
+    const padL = 46, padR = 12, padT = 22, padB = 92;
     const plotW = W - padL - padR, plotH = H - padT - padB;
     const maxV = Math.max(1, ...dados.flatMap(d => d.porCategoria.map(c => Math.max(c.previsto, c.executado))));
-    const larguraSlot = (plotW / n) / nCat;
-    const barW = Math.min(16, larguraSlot * 0.62);
+    const larguraGrupoPx = plotW / n;
+    const nCat = CATEGORIAS_CONCRETO.length;
+    // Barra fininha: cabem as 3 categorias (2 barras cada = 6 barras) até no
+    // andar de Fundação, que é o único com mais de 1 categoria ativa.
+    const barW = Math.max(2.5, Math.min(7, (larguraGrupoPx * 0.82) / (nCat * 2)));
+    const gapBarras = 1; // entre Previsto/Executado da mesma categoria
+    const gapCategoria = 3; // entre categorias diferentes do mesmo andar
 
-    let bars = '', labels = '', hits = '', separadores = '', faixas = '';
+    let bars = '', labels = '', hits = '', separadores = '', faixas = '', guias = '';
     dados.forEach((d, i) => {
-      const grupoX = padL + i * (plotW / n);
-      const larguraGrupoPx = plotW / n;
-      // Faixa de fundo alternada (zebra) por andar — ajuda a ver onde um
-      // grupo termina e outro começa, além da linha separadora.
+      const grupoX = padL + i * larguraGrupoPx;
       if (i % 2 === 1) faixas += `<rect x="${grupoX.toFixed(1)}" y="${padT}" width="${larguraGrupoPx.toFixed(1)}" height="${plotH}" fill="#f8f8f8"/>`;
-      d.porCategoria.forEach((c, ci) => {
-        if (c.previsto <= 0 && c.executado <= 0) return;
-        const cat = CATEGORIAS_CONCRETO[ci];
-        const cx = grupoX + (ci + 0.5) * larguraSlot;
+
+      const catsAtivas = d.porCategoria.filter(c => c.previsto > 0 || c.executado > 0);
+      const larguraTotalCats = catsAtivas.length * (barW * 2 + gapBarras) + Math.max(0, catsAtivas.length - 1) * gapCategoria;
+      let cursorX = grupoX + (larguraGrupoPx - larguraTotalCats) / 2;
+
+      catsAtivas.forEach(c => {
+        const cat = CATEGORIAS_CONCRETO.find(cc => cc.chave === c.chave);
         const hPrev = (c.previsto / maxV) * plotH, hExec = (c.executado / maxV) * plotH;
-        // Previsto: contorno forte da cor da categoria, preenchimento branco
-        // (em vez de opacidade baixa) — cor sempre viva, sem parecer "lavada".
-        bars += `<rect x="${(cx - barW / 2).toFixed(1)}" y="${(padT + plotH - hPrev).toFixed(1)}" width="${barW}" height="${hPrev.toFixed(1)}" fill="#fff" stroke="${cat.cor}" stroke-width="2"/>`;
-        // Executado: preenchimento sólido, cor forte.
-        bars += `<rect x="${(cx - barW / 2).toFixed(1)}" y="${(padT + plotH - hExec).toFixed(1)}" width="${barW}" height="${hExec.toFixed(1)}" fill="${cat.cor}"/>`;
-        if (c.previsto > 0) bars += `<text x="${cx.toFixed(1)}" y="${(padT + plotH - hPrev - 4).toFixed(1)}" font-size="8" fill="#555" font-weight="600" text-anchor="middle">${Utils.formatarNumero(c.previsto, 1)}</text>`;
-        hits += `<rect class="db-hit" data-idx="${i}" data-cat="${cat.chave}" x="${(grupoX + ci * larguraSlot).toFixed(1)}" y="${padT}" width="${larguraSlot.toFixed(1)}" height="${plotH}" fill="transparent" style="cursor:pointer;"/>`;
+        const xPrev = cursorX, xExec = cursorX + barW + gapBarras;
+        // Previsto: contorno forte, fundo branco (cor sempre viva, sem "lavar").
+        bars += `<rect x="${xPrev.toFixed(1)}" y="${(padT + plotH - hPrev).toFixed(1)}" width="${barW.toFixed(1)}" height="${hPrev.toFixed(1)}" fill="#fff" stroke="${cat.cor}" stroke-width="1.6"/>`;
+        // Executado: preenchimento sólido.
+        bars += `<rect x="${xExec.toFixed(1)}" y="${(padT + plotH - hExec).toFixed(1)}" width="${barW.toFixed(1)}" height="${hExec.toFixed(1)}" fill="${cat.cor}"/>`;
+        if (c.previsto > 0 && barW > 4) bars += `<text x="${(xPrev + barW / 2).toFixed(1)}" y="${(padT + plotH - hPrev - 3).toFixed(1)}" font-size="7" fill="#555" font-weight="600" text-anchor="middle">${Utils.formatarNumero(c.previsto, 0)}</text>`;
+        // Rótulo do NOME da categoria, inclinado, escrito dentro/sobre a
+        // própria barra de Previsto — só quando o andar tem mais de 1
+        // categoria ativa (ex: Fundação com Estaca+Fundação juntas), pra
+        // não repetir óbvio nos andares que só têm Estrutura.
+        if (catsAtivas.length > 1) {
+          const catLabel = cat.chave === 'estaca' ? 'Estacas' : cat.chave === 'fundacao' ? 'Fundação' : 'Estrutura';
+          const yBase = padT + plotH - Math.max(hPrev, hExec) / 2;
+          bars += `<text x="${(xPrev + barW).toFixed(1)}" y="${yBase.toFixed(1)}" font-size="7.5" fill="#fff" font-weight="700" text-anchor="middle" transform="rotate(-90 ${(xPrev + barW).toFixed(1)} ${yBase.toFixed(1)})" style="paint-order:stroke;stroke:${cat.cor};stroke-width:3px;">${catLabel}</text>`;
+        }
+        hits += `<rect class="db-hit" data-idx="${i}" data-cat="${cat.chave}" x="${cursorX.toFixed(1)}" y="${padT}" width="${(barW * 2 + gapBarras).toFixed(1)}" height="${plotH}" fill="transparent" style="cursor:pointer;"/>`;
+        cursorX += barW * 2 + gapBarras + gapCategoria;
       });
+
+      // Rótulo do andar com LINHA GUIA vertical até a base do grupo — resolve
+      // a ambiguidade de "essa barra é de qual andar" quando o texto
+      // inclinado fica entre dois rótulos.
       const cxLabel = grupoX + larguraGrupoPx / 2;
-      const nomeCurto = d.andar.length > 16 ? d.andar.slice(0, 15) + '…' : d.andar;
-      labels += `<text x="${cxLabel.toFixed(1)}" y="${(padT + plotH + 14).toFixed(1)}" font-size="9.5" fill="#222" font-weight="600" text-anchor="end" transform="rotate(-40 ${cxLabel.toFixed(1)} ${(padT + plotH + 14).toFixed(1)})"><title>${d.andar}</title>${nomeCurto}</text>`;
-      // Linha vertical separando este grupo (andar) do próximo.
+      const yBase = padT + plotH;
+      guias += `<line x1="${cxLabel.toFixed(1)}" x2="${cxLabel.toFixed(1)}" y1="${yBase.toFixed(1)}" y2="${(yBase + 5).toFixed(1)}" stroke="#999" stroke-width="1"/>`;
+      const nomeCurto = d.andar.length > 14 ? d.andar.slice(0, 13) + '…' : d.andar;
+      labels += `<text x="${cxLabel.toFixed(1)}" y="${(yBase + 16).toFixed(1)}" font-size="9" fill="#222" font-weight="600" text-anchor="end" transform="rotate(-55 ${cxLabel.toFixed(1)} ${(yBase + 16).toFixed(1)})"><title>${d.andar}</title>${nomeCurto}</text>`;
       if (i < n - 1) separadores += `<line x1="${(grupoX + larguraGrupoPx).toFixed(1)}" x2="${(grupoX + larguraGrupoPx).toFixed(1)}" y1="${padT}" y2="${padT + plotH}" stroke="#ddd" stroke-width="1"/>`;
     });
 
@@ -1803,16 +1824,15 @@ const Dashboard = (() => {
     }).join('');
 
     return `
-      <div style="overflow-x:auto;">
-        <svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block;min-width:${W}px;">
-          ${faixas}
-          ${gridY}
-          ${separadores}
-          ${bars}
-          ${labels}
-          ${hits}
-        </svg>
-      </div>
+      <svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block;">
+        ${faixas}
+        ${gridY}
+        ${separadores}
+        ${bars}
+        ${guias}
+        ${labels}
+        ${hits}
+      </svg>
       <div class="db-tooltip"></div>
       <div class="db-legenda">
         ${CATEGORIAS_CONCRETO.map(cat => `<span><i style="background:${cat.cor};"></i> ${cat.titulo}</span>`).join('')}
