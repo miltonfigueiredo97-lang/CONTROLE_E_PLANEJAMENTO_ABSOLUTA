@@ -1338,9 +1338,9 @@ const Dashboard = (() => {
   // nem reordenar por número; é a mesma lista, na mesma ordem, ponto.
   const _isEstaca = p => p.subTipo === 'Estacas' || (!p.subTipo && Number(p.diametro) > 0 && Number(p.comprimento) > 0);
   const CATEGORIAS_CONCRETO = [
-    { chave: 'estaca', titulo: 'Fundação Profunda (Estacas)', cor: '#7c3aed', filtro: p => p.tipo === 'Fundação' && _isEstaca(p) },
-    { chave: 'fundacao', titulo: 'Fundação', cor: '#ea580c', filtro: p => p.tipo === 'Fundação' && !_isEstaca(p) },
-    { chave: 'estrutura', titulo: 'Estrutura', cor: '#2563eb', filtro: p => p.tipo !== 'Fundação' },
+    { chave: 'estaca', titulo: 'Fundação Profunda (Estacas)', cor: '#7a5c00', filtro: p => p.tipo === 'Fundação' && _isEstaca(p) },
+    { chave: 'fundacao', titulo: 'Fundação', cor: '#a67c00', filtro: p => p.tipo === 'Fundação' && !_isEstaca(p) },
+    { chave: 'estrutura', titulo: 'Estrutura', cor: '#F5C800', filtro: p => p.tipo !== 'Fundação' },
   ];
   async function _renderFundacaoEstrutura() {
     const host = document.getElementById('db-fundacao-estrutura-wrap');
@@ -1789,10 +1789,13 @@ const Dashboard = (() => {
         const cat = CATEGORIAS_CONCRETO.find(cc => cc.chave === c.chave);
         const hPrev = (c.previsto / maxV) * plotH, hExec = (c.executado / maxV) * plotH;
         const xPrev = cursorX, xExec = cursorX + barW + gapBarras;
-        // Previsto: contorno forte, fundo branco (cor sempre viva, sem "lavar").
+        // Previsto: contorno no tom de amarelo da categoria, fundo branco.
         bars += `<rect x="${xPrev.toFixed(1)}" y="${(padT + plotH - hPrev).toFixed(1)}" width="${barW.toFixed(1)}" height="${hPrev.toFixed(1)}" fill="#fff" stroke="${cat.cor}" stroke-width="1.6"/>`;
-        // Executado: preenchimento sólido.
-        bars += `<rect x="${xExec.toFixed(1)}" y="${(padT + plotH - hExec).toFixed(1)}" width="${barW.toFixed(1)}" height="${hExec.toFixed(1)}" fill="${cat.cor}"/>`;
+        // Executado: preenchimento sempre em preto/cinza escuro — cor
+        // identifica a CATEGORIA (tom de amarelo), preto identifica o
+        // STATUS (já executado), pra não virar "colorido" nem confundir com
+        // as 3 categorias tendo tonalidades próprias no executado também.
+        bars += `<rect x="${xExec.toFixed(1)}" y="${(padT + plotH - hExec).toFixed(1)}" width="${barW.toFixed(1)}" height="${hExec.toFixed(1)}" fill="#2b2b2b"/>`;
         if (c.previsto > 0 && barW > 4) bars += `<text x="${(xPrev + barW / 2).toFixed(1)}" y="${(padT + plotH - hPrev - 3).toFixed(1)}" font-size="7" fill="#555" font-weight="600" text-anchor="middle">${Utils.formatarNumero(c.previsto, 0)}</text>`;
         // Rótulo do NOME da categoria, inclinado, escrito dentro/sobre a
         // própria barra de Previsto — só quando o andar tem mais de 1
@@ -1835,8 +1838,8 @@ const Dashboard = (() => {
       </svg>
       <div class="db-tooltip"></div>
       <div class="db-legenda">
-        ${CATEGORIAS_CONCRETO.map(cat => `<span><i style="background:${cat.cor};"></i> ${cat.titulo}</span>`).join('')}
-        <span><i style="background:#fff;border:2px solid #999;box-sizing:border-box;"></i> Previsto (contorno)</span>
+        ${CATEGORIAS_CONCRETO.map(cat => `<span><i style="border:2px solid ${cat.cor};background:#fff;box-sizing:border-box;"></i> ${cat.titulo} (Previsto)</span>`).join('')}
+        <span><i style="background:#2b2b2b;"></i> Executado (qualquer categoria)</span>
       </div>
       <div class="text-sm text-muted" style="margin-top:6px;">Somado do Controle de Concreto por andar (ordem igual à configurada lá). Clique numa barra pra abrir o PDF da concretagem daquele andar/categoria.</div>`;
   }
