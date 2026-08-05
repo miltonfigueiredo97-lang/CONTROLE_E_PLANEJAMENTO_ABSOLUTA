@@ -3400,6 +3400,16 @@ const Planejamento = (() => {
           t['_agr_'+fIni]=t[fIni]||null;t['_agr_'+fFim]=t[fFim]||null;
         }
       }
+      // Duração do pai = dias corridos entre início e término agregados
+      // (Atual) — igual MS Project. Sem isso, um grupo criado manualmente
+      // ficava com Duração vazia/0, o que também distorcia o peso dele nas
+      // médias de % (ver V2.60.8) — agora nunca fica em branco.
+      if(achouFilhoDireto&&t._agr_inicioPlanejado&&t._agr_terminoPlanejado){
+        const dias=Math.round((new Date(t._agr_terminoPlanejado)-new Date(t._agr_inicioPlanejado))/864e5);
+        t._agr_duracao=Math.max(1,dias);
+      } else {
+        t._agr_duracao=t.duracao||null;
+      }
     }
     const mudou=[];
     for(let i=0;i<n;i++){
@@ -3410,6 +3420,7 @@ const Planejamento = (() => {
         if((t['_agr_'+fIni]||'')!==(t[fIni]||''))upd[fIni]=t['_agr_'+fIni]||'';
         if((t['_agr_'+fFim]||'')!==(t[fFim]||''))upd[fFim]=t['_agr_'+fFim]||'';
       }
+      if(t._agr_duracao&&Number(t._agr_duracao)!==Number(t.duracao||0))upd.duracao=t._agr_duracao;
       if(Object.keys(upd).length){Object.assign(t,upd);mudou.push({id:t.id,...upd});}
     }
     if(mudou.length){
