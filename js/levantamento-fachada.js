@@ -13,6 +13,8 @@ const LevantamentoFachada = (() => {
   let abaAtiva='visao';
   let clonarAlvoId=null;
   let _mapaDoc={img:null,caixas:[]};  // carregado do Firestore
+  let _mapaFiltro={externa:true,interna:true}; // filtro de vista aplicado às caixas/total da Visão Geral
+  let _mapaZoom=1,_mapaPanX=0,_mapaPanY=0,_mapaPanAtivo=false,_mapaPanInicio={x:0,y:0,panX:0,panY:0};
   const COL='levantamentosFachada';
 
   // ===================== CONFIGURAÇÕES DE CÁLCULO =====================
@@ -188,6 +190,22 @@ const LevantamentoFachada = (() => {
   }
   function _somarGeral(){
     return _somar(pecas, vistas);
+  }
+
+  // ---- Somas respeitando o filtro Externa/Interna da Visão Geral (mapa) ----
+  function _vistasFiltroMapa(lista){
+    return lista.filter(v=>v.tipoVista==='externa'?_mapaFiltro.externa:(v.tipoVista==='interna'?_mapaFiltro.interna:true));
+  }
+  function _somarFachadaMapa(fId){
+    const bIds=_balIdsFachada(fId);
+    const fVis=_vistasFiltroMapa(vistas.filter(v=>bIds.includes(v.balancimId)));
+    const vIds=new Set(fVis.map(v=>v.id));
+    return _somar(pecas.filter(x=>vIds.has(x.vistaId)), fVis);
+  }
+  function _somarGeralMapa(){
+    const fVis=_vistasFiltroMapa(vistas);
+    const vIds=new Set(fVis.map(v=>v.id));
+    return _somar(pecas.filter(x=>vIds.has(x.vistaId)), fVis);
   }
 
   // ===================== ÁRVORE =====================
@@ -626,7 +644,7 @@ const LevantamentoFachada = (() => {
   function _setImgState(s){ _mapaDoc.imgState = Object.assign(_imgState(), s); }
 
   function renderVisaoGeral(p, toggle){
-    const md=_getMapData(), tot=_somarGeral(), is=_imgState(), ed=_imgEditando;
+    const md=_getMapData(), tot=_somarGeralMapa(), is=_imgState(), ed=_imgEditando;
 
     const totalCard='<div class="mapa-total-card">'+
       '<span class="mapa-total-title">📊 Total Geral</span>'+
@@ -660,8 +678,21 @@ const LevantamentoFachada = (() => {
         '<label class="btn btn-primario btn-sm" style="cursor:pointer;">📎 Importar'+
           '<input type="file" accept="image/*" style="display:none" onchange="LF.importarMapa(event)"></label></div>';
 
-    const topbar='<div class="visao-geral-topbar">'+toggle+
-      '<div class="btn-grupo">'+
+    const filtroHtml='<div class="btn-grupo" style="align-items:center;">'+
+      '<span style="font-size:0.66rem;color:var(--cor-texto-muted);text-transform:uppercase;letter-spacing:0.3px;margin-right:2px;">Vista</span>'+
+      '<button class="btn btn-sm '+(_mapaFiltro.externa?'btn-primario':'btn-secundario')+'" onclick="LF.toggleFiltroMapaVista(\'externa\')" title="Mostrar/ocultar dados da Vista Externa nas caixas">Externa</button>'+
+      '<button class="btn btn-sm '+(_mapaFiltro.interna?'btn-primario':'btn-secundario')+'" onclick="LF.toggleFiltroMapaVista(\'interna\')" title="Mostrar/ocultar dados da Vista Interna nas caixas">Interna</button>'+
+    '</div>';
+
+    const zoomHtml='<div class="btn-grupo" style="align-items:center;">'+
+      '<button class="btn btn-secundario btn-sm btn-icon" onclick="LF.zoomMapaOut()" title="Diminuir zoom">➖</button>'+
+      '<button class="btn btn-secundario btn-sm" onclick="LF.zoomMapaReset()" title="Redefinir zoom (100%)"><span id="lf-zoom-pct">'+Math.round(_mapaZoom*100)+'%</span></button>'+
+      '<button class="btn btn-secundario btn-sm btn-icon" onclick="LF.zoomMapaIn()" title="Aumentar zoom">➕</button>'+
+    '</div>';
+
+    const topbar='<div class="visao-geral-topbar">'+
+      '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">'+toggle+filtroHtml+'</div>'+
+      '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">'+zoomHtml+
         (md.img&&!ed?'<button class="btn btn-secundario btn-sm" onclick="LF.entrarEditImg()">✎ Editar Imagem</button>':'')+
         (md.img&&ed?'<button class="btn btn-primario btn-sm" onclick="LF.sairEditImg()">✓ Confirmar</button>':'')+
         '<label class="btn btn-secundario btn-sm" style="cursor:pointer;">📎 Importar Mapa'+
@@ -670,15 +701,18 @@ const LevantamentoFachada = (() => {
         (md.img?'<button class="btn btn-perigo btn-sm" onclick="LF.limparMapa()">🗑 Limpar</button>':'')+
       '</div></div>';
 
-    // Canvas para imagem (overflow:hidden ok)
-    // Overlay FORA do canvas — overflow:visible — caixas nunca cortadas
+    // Canvas = janela fixa (overflow:hidden). Viewport = conteúdo que recebe o transform de zoom/pan.
+    // Overlay FORA do canvas — overflow:visible — caixas nunca cortadas — recebe o MESMO transform do viewport.
     p.innerHTML=
       '<div class="visao-geral-layout">'+topbar+totalCard+
         '<div style="position:relative;flex:1;min-height:0;">'+
-          '<div id="mapa-canvas" style="width:100%;height:100%;background:#fff;border-radius:8px;border:1px solid #e0e0e0;overflow:hidden;position:relative;">'+
-            imgArea+
+          '<div id="mapa-canvas" onpointerdown="LF.mapaPanDown(event)" onwheel="LF.mapaWheel(event)" style="width:100%;height:100%;background:#fff;border-radius:8px;border:1px solid #e0e0e0;overflow:hidden;position:relative;cursor:grab;">'+
+            '<div id="mapa-viewport" style="position:absolute;inset:0;transform-origin:0 0;">'+
+              imgArea+
+            '</div>'+
           '</div>'+
-          '<div id="mapa-overlay" style="position:absolute;inset:0;pointer-events:none;overflow:visible;z-index:100;"></div>'+
+          '<div id="mapa-overlay" style="position:absolute;inset:0;pointer-events:none;overflow:visible;z-index:100;transform-origin:0 0;"></div>'+
+          '<div style="position:absolute;bottom:8px;right:12px;font-size:0.66rem;color:#94a3b8;background:rgba(255,255,255,0.88);padding:3px 8px;border-radius:5px;pointer-events:none;">🖱️ roda = zoom · arrastar = mover</div>'+
         '</div>'+
       '</div>';
 
@@ -698,6 +732,7 @@ const LevantamentoFachada = (() => {
       }
     }
     _renderCaixas(md);
+    _aplicarZoomMapa();
   }
 
   function _cxRow(l,v){
@@ -721,11 +756,11 @@ const LevantamentoFachada = (() => {
     if(!md)md=_getMapData();
     overlay.innerHTML=md.caixas.map((cx,i)=>{
       const f=fachadas.find(x=>x.id===cx.fachadaId);
-      const t=cx.fachadaId?_somarFachada(cx.fachadaId):{m2semML:0,m2comML_puro:0,ml:0,m2comML_equiv:0,vao:0,mlFrisoArq:0,mlFrisoEst:0};
+      const t=cx.fachadaId?_somarFachadaMapa(cx.fachadaId):{m2semML:0,m2comML_puro:0,ml:0,m2comML_equiv:0,vao:0,mlFrisoArq:0,mlFrisoEst:0};
       const nome=f?f.nome:(cx.nome||'Caixa '+(i+1));
       const w=cx.w||220, h=cx.h?'height:'+cx.h+'px;':'';
       const livre=!cx.travada;
-      return '<div id="cx-'+i+'" '+
+      return '<div id="cx-'+i+'" class="mapa-caixa" '+
           'style="position:absolute;left:'+cx.x+'px;top:'+cx.y+'px;width:'+w+'px;'+h+
           'pointer-events:all;background:#fff;border:2px solid var(--cor-primaria);border-radius:8px;'+
           'box-shadow:0 4px 20px rgba(0,0,0,0.2);user-select:none;">'+
@@ -873,6 +908,70 @@ const LevantamentoFachada = (() => {
   function imgMouseDown(e){imgMD(e);}
   function imgResize(e,d){imgRZ(e,d);}
   function toggleEditImg(){} function fecharEditImg(){} function onImgResize(){} function setZoomMapa(){}
+
+  // ===================== ZOOM / PAN DO MAPA (Visão Geral) =====================
+  function _aplicarZoomMapa(){
+    const vp=document.getElementById('mapa-viewport');
+    const ov=document.getElementById('mapa-overlay');
+    const t='translate('+_mapaPanX+'px,'+_mapaPanY+'px) scale('+_mapaZoom+')';
+    if(vp)vp.style.transform=t;
+    if(ov)ov.style.transform=t;
+    const pct=document.getElementById('lf-zoom-pct');
+    if(pct)pct.textContent=Math.round(_mapaZoom*100)+'%';
+  }
+  function zoomMapaIn(){_mapaZoom=Math.min(4,_mapaZoom*1.25);_aplicarZoomMapa();}
+  function zoomMapaOut(){_mapaZoom=Math.max(0.2,_mapaZoom/1.25);_aplicarZoomMapa();}
+  function zoomMapaReset(){_mapaZoom=1;_mapaPanX=0;_mapaPanY=0;_aplicarZoomMapa();}
+
+  function mapaWheel(e){
+    e.preventDefault();
+    const canvas=document.getElementById('mapa-canvas');if(!canvas)return;
+    const rect=canvas.getBoundingClientRect();
+    const mx=e.clientX-rect.left, my=e.clientY-rect.top;
+    const old=_mapaZoom;
+    const fator=e.deltaY<0?1.12:1/1.12;
+    const novo=Math.min(4,Math.max(0.2,old*fator));
+    // mantém o ponto sob o cursor fixo na tela ao zoomar
+    const cx=(mx-_mapaPanX)/old, cy=(my-_mapaPanY)/old;
+    _mapaPanX=mx-cx*novo; _mapaPanY=my-cy*novo;
+    _mapaZoom=novo;
+    _aplicarZoomMapa();
+  }
+
+  function mapaPanDown(e){
+    if(e.button!==0)return;
+    if(e.target.closest('.mapa-caixa'))return; // não iniciar pan clicando numa caixa
+    e.preventDefault();
+    const canvas=e.currentTarget;
+    _mapaPanAtivo=true;
+    _mapaPanInicio={x:e.clientX,y:e.clientY,panX:_mapaPanX,panY:_mapaPanY};
+    canvas.style.cursor='grabbing';
+    try{canvas.setPointerCapture(e.pointerId);}catch(err){}
+    const move=ev=>{
+      if(!_mapaPanAtivo)return;
+      _mapaPanX=_mapaPanInicio.panX+(ev.clientX-_mapaPanInicio.x);
+      _mapaPanY=_mapaPanInicio.panY+(ev.clientY-_mapaPanInicio.y);
+      _aplicarZoomMapa();
+    };
+    const up=()=>{
+      _mapaPanAtivo=false;
+      canvas.style.cursor='grab';
+      canvas.removeEventListener('pointermove',move);
+      canvas.removeEventListener('pointerup',up);
+      canvas.removeEventListener('pointercancel',up);
+      try{canvas.releasePointerCapture(e.pointerId);}catch(err){}
+    };
+    canvas.addEventListener('pointermove',move);
+    canvas.addEventListener('pointerup',up);
+    canvas.addEventListener('pointercancel',up);
+  }
+
+  // ===================== FILTRO EXTERNA/INTERNA (Visão Geral) =====================
+  function toggleFiltroMapaVista(tipo){
+    _mapaFiltro[tipo]=!_mapaFiltro[tipo];
+    if(!_mapaFiltro.externa&&!_mapaFiltro.interna)_mapaFiltro[tipo]=true; // nunca deixa os dois desligados
+    renderPainel();
+  }
 
   // Salvar imgState no Firestore junto com caixas e img
   function _getMapData(){ return _mapaDoc; }
@@ -1437,7 +1536,7 @@ const LevantamentoFachada = (() => {
   function imgRZEv(e, el){ imgRZ(e, el.dataset.d); }
   function cxResizeEv(e){ cxResize(e, parseInt(e.currentTarget.dataset.i), e.currentTarget.dataset.d); }
 
-  return {init,carregar,sel:selecionar,setAba,criarFachada,criarBalancim,editar,salvarEntidade,excluir,novaPeca,editarPeca,salvarPeca,excluirPeca,duplicarPeca,moverPeca,abrirMoverPecaBal,confirmarMoverPecaBal,copiarDeOutraVista,duplicarBal,editarNomeInline,abrirClonarBal,confirmarClonarBal,corrigirVinculos,conferirPeca,togglePecaML,onClickCheckML,onCompAltInput,calcExprEnter,onToggleFriso,adicionarFrisoRow,removerFrisoRow,adicionarJanelaRow,removerJanelaRow,exportarCSV,exportarVista,onToggleJanela,importarMapa,cxAdicionar,cxRemover,cxTravar,cxEditar,salvarCxEdit,cxMouseDown,cxDrop,cxResize,imgMouseDown,imgResize,entrarEditImg,sairEditImg,imgMD,imgRZEv,cxResizeEv,toggleEditImg,fecharEditImg,onImgResize,limparMapa,abrirVaoVista,salvarVaoVista,_atualizarPreviewVao,adicionarVaoRow,removerVaoRow,abrirConfig,salvarConfig,onChangeCfgJanela};
+  return {init,carregar,sel:selecionar,setAba,criarFachada,criarBalancim,editar,salvarEntidade,excluir,novaPeca,editarPeca,salvarPeca,excluirPeca,duplicarPeca,moverPeca,abrirMoverPecaBal,confirmarMoverPecaBal,copiarDeOutraVista,duplicarBal,editarNomeInline,abrirClonarBal,confirmarClonarBal,corrigirVinculos,conferirPeca,togglePecaML,onClickCheckML,onCompAltInput,calcExprEnter,onToggleFriso,adicionarFrisoRow,removerFrisoRow,adicionarJanelaRow,removerJanelaRow,exportarCSV,exportarVista,onToggleJanela,importarMapa,cxAdicionar,cxRemover,cxTravar,cxEditar,salvarCxEdit,cxMouseDown,cxDrop,cxResize,imgMouseDown,imgResize,entrarEditImg,sairEditImg,imgMD,imgRZEv,cxResizeEv,toggleEditImg,fecharEditImg,onImgResize,limparMapa,abrirVaoVista,salvarVaoVista,_atualizarPreviewVao,adicionarVaoRow,removerVaoRow,abrirConfig,salvarConfig,onChangeCfgJanela,mapaWheel,mapaPanDown,zoomMapaIn,zoomMapaOut,zoomMapaReset,toggleFiltroMapaVista};
 })();
 const LF=LevantamentoFachada;
 function onObraChanged(){LF.init();}
