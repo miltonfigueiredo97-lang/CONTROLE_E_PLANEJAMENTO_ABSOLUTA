@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.60.7',
+  versaoAtual: 'V2.60.8',
 
   versoes: [
     {
@@ -5593,10 +5593,16 @@ const NotasVersao = {
         'A V2.58.21 tinha trocado isso por um cálculo "achatado" (ponderar direto por todas as folhas, ignorando os níveis intermediários) achando que estava corrigindo uma divergência com o Dashboard — só que essa mudança estava errada. Revertido pro método recursivo, confirmado batendo exatamente com o exemplo do Milton (níveis 3→2→1→0: 100%+50%→75%; 75%+100%→87,5%; 87,5%+100%→93,75%).',
         'O mais importante: agora, TODA vez que a estrutura muda no Editor de Estrutura (mover, inserir, excluir tarefa, subir/descer nível, importar) o % de TODOS os pais afetados é recalculado automaticamente e salvo — antes, mover uma tarefa entre níveis não atualizava o % de ninguém, ficava desatualizado até alguém editar manualmente.',
         'Novo botão ⚙ Ferramentas → "📊 Recalcular % dos Pais" pra rodar manualmente em qualquer obra que ainda esteja com % desatualizado por esses bugs.']},
-    {versao:'V2.60.7',status:'aberta',data:'2026-08-06',tipo:'melhoria',
+    {versao:'V2.60.7',status:'fechada',data:'2026-08-06',tipo:'melhoria',
       titulo:'Importar Correções: quando o Nome é ambíguo (duplicado), tenta desambiguar automaticamente pelo Código antes de desistir',
       itens:['Antes, qualquer nome duplicado na obra (ex: mesma tarefa repetida em dois ramos, tipo "Hall" com códigos 1.3.6.x e 1.3.4.x) caía direto em "ambígua" e ficava fora do import — mesmo quando o Código bastava pra saber exatamente qual era qual.',
-        'Agora, se o nome bate em mais de uma tarefa, verifica se o Código da linha da planilha bate com o Código de exatamente uma delas — só cai em "ambígua" de verdade se nem o código resolver (ex: grupos criados manualmente sem código). Testado numa obra real: resolveu 61 de 70 casos que antes ficavam de fora.']}
+        'Agora, se o nome bate em mais de uma tarefa, verifica se o Código da linha da planilha bate com o Código de exatamente uma delas — só cai em "ambígua" de verdade se nem o código resolver (ex: grupos criados manualmente sem código). Testado numa obra real: resolveu 61 de 70 casos que antes ficavam de fora.']},
+    {versao:'V2.60.8',status:'aberta',data:'2026-08-06',tipo:'correcao',
+      titulo:'CORREÇÃO IMPORTANTE: % geral da obra vinha inflado — o peso de um grupo na média do pai usava a duração PRÓPRIA dele, que fica vazia/0 em grupos criados manualmente no Editor de Estrutura',
+      itens:['Achado com um caso real: o Milton criou grupos organizacionais (ex: "Concretagens", "Hall", "Gesso e Forro", "Pintura") pra agrupar tarefas já existentes, sem mudar nenhum trabalho real. Só que o % da obra subiu de ~16% (base oficial da Cofield) pra 39% na nossa — mesma obra, mesmo trabalho, só a estrutura organizada diferente.',
+        'Causa: um grupo criado assim fica com "Duração" própria vazia (0) — e a fórmula de % usava exatamente essa duração como peso do grupo na média do PAI dele. Um grupo com 500+ dias de trabalho real lá dentro contava como peso 1 (quase zero) — o efeito prático é que trabalho ainda não iniciado, quando "escondido" dentro de um grupo assim, quase não pesava na conta, inflando o % geral pra cima.',
+        'Corrigido: o peso de qualquer tarefa na média agora é sempre a SOMA REAL da duração de tudo que tem dentro dela (calculado recursivamente, folha por folha) — nunca mais a duração própria de um grupo, que pode estar errada/vazia sem afetar o resultado. Testado com os dados reais da obra: o % da raiz caiu de 39,3% pra 14,64%, muito mais alinhado com os 16% da Cofield.',
+        'Rode ⚙ Ferramentas → "📊 Recalcular % dos Pais" pra aplicar a correção na obra atual.']}
   ],
 
   render(containerId) {

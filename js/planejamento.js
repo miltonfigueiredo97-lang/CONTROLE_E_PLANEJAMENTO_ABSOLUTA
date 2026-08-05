@@ -3313,12 +3313,16 @@ const Planejamento = (() => {
         if((sorted[j].nivel||0)===niv+1){
           achouFilho=true;
           const f=sorted[j];
-          const w=Math.max(1,parseFloat(f.duracao)||1);
-          sp+=(f._percCalc||0)*w;sw+=w;
+          // Peso REAL = _pesoCalc do filho (soma de tudo dentro dele,
+          // calculado na iteração dele mais abaixo) — nunca a duração
+          // PRÓPRIA do filho, que fica vazia em grupos criados manualmente
+          // e distorcia a média (ver nota em Utils.percFamilia.pesoReal).
+          sp+=(f._percCalc||0)*(f._pesoCalc||1);sw+=(f._pesoCalc||1);
         }
         j++;
       }
       t._temFilhoPerc=achouFilho;
+      t._pesoCalc=achouFilho?(sw||1):Math.max(1,parseFloat(t.duracao)||1);
       t._percCalc=achouFilho?(sw?sp/sw:0):Math.min(100,Math.max(0,parseFloat(t.percentualConcluido)||0));
     }
     const mudou=[];

@@ -242,17 +242,29 @@ const Utils = (() => {
     // é recursivo: cada chamada só olha pro nível imediatamente abaixo.
     // Confirmado com exemplo real (nível 3: 100%+50%→nível 2: 75%; nível 2:
     // 75%+100%→nível 1: 87,5%; nível 1: 87,5%+100%→nível 0: 93,75%).
+    // Peso REAL de uma tarefa: se é folha, a própria duração; se é pai, a SOMA
+    // do peso de todos os filhos diretos (recursivo). Nunca usa a duração
+    // PRÓPRIA de um pai como peso — grupos criados manualmente no Editor de
+    // Estrutura (ex: "Concretagens", "Hall", "Gesso e Forro") costumam ficar
+    // com duração própria vazia/0, e usar isso como peso fazia um grupo com
+    // 500+ dias de trabalho real dentro contar como peso 1 (quase zero) na
+    // média do pai dele, inflando o % geral da obra artificialmente.
+    function pesoReal(t){
+      const fs=filhosDiretos(t);
+      if(!fs.length)return Math.max(1,parseFloat(t.duracao)||1);
+      return fs.reduce((acc,f)=>acc+pesoReal(f),0);
+    }
     function percCalculado(t){
       const fs=filhosDiretos(t);
       if(!fs.length)return Math.min(100,Math.max(0,parseFloat(t.percentualConcluido)||0));
       let sp=0,sw=0;
       for(const f of fs){
-        const w=Math.max(1,parseFloat(f.duracao)||1);
+        const w=pesoReal(f);
         sp+=percCalculado(f)*w;sw+=w;
       }
       return sw?sp/sw:0;
     }
-    return {sorted, filhosDiretos, ancestrais, descendentes, percCalculado};
+    return {sorted, filhosDiretos, ancestrais, descendentes, percCalculado, pesoReal};
   }
 
   // Recalcula o % dos ancestrais de uma tarefa (após editar o % dela).
