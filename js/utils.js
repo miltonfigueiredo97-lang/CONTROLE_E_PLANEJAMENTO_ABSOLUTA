@@ -234,16 +234,21 @@ const Utils = (() => {
     // do Dashboard/obras.js pra obras com estrutura desbalanceada (uma
     // divergência real encontrada: 27% no Planejamento vs 12,68% no
     // Dashboard, mesma obra). Agora os dois usam exatamente a mesma conta.
+    // Recursivo, nível por nível (padrão profissional/MS Project): o % de
+    // cada tarefa-pai é a média dos FILHOS DIRETOS ponderada pela duração de
+    // cada um, e o % de cada filho é calculado da mesma forma recursivamente
+    // — nunca "pula" níveis pra pesar direto pelas folhas mais profundas.
+    // Funciona pra qualquer profundidade de árvore (3, 4, 5, 6+ níveis) porque
+    // é recursivo: cada chamada só olha pro nível imediatamente abaixo.
+    // Confirmado com exemplo real (nível 3: 100%+50%→nível 2: 75%; nível 2:
+    // 75%+100%→nível 1: 87,5%; nível 1: 87,5%+100%→nível 0: 93,75%).
     function percCalculado(t){
       const fs=filhosDiretos(t);
       if(!fs.length)return Math.min(100,Math.max(0,parseFloat(t.percentualConcluido)||0));
-      const folhas=descendentes(t).filter(d=>filhosDiretos(d).length===0);
-      if(!folhas.length)return 0;
       let sp=0,sw=0;
-      for(const folha of folhas){
-        const w=Math.max(1,parseFloat(folha.duracao)||1);
-        sp+=Math.min(100,Math.max(0,parseFloat(folha.percentualConcluido)||0))*w;
-        sw+=w;
+      for(const f of fs){
+        const w=Math.max(1,parseFloat(f.duracao)||1);
+        sp+=percCalculado(f)*w;sw+=w;
       }
       return sw?sp/sw:0;
     }

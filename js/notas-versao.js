@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.60.5',
+  versaoAtual: 'V2.60.6',
 
   versoes: [
     {
@@ -5582,11 +5582,17 @@ const NotasVersao = {
     {versao:'V2.60.4',status:'fechada',data:'2026-08-05',tipo:'melhoria',
       titulo:'Planejamento: botão "Liberar Edição de Real" movido pra dentro do menu ⚙ Ferramentas — estava solto na barra principal',
       itens:['Menos um botão poluindo a barra de cima; mesma função, agora dentro do menu Ferramentas.']},
-    {versao:'V2.60.5',status:'aberta',data:'2026-08-05',tipo:'correcao',
+    {versao:'V2.60.5',status:'fechada',data:'2026-08-05',tipo:'correcao',
       titulo:'BUG CRÍTICO: salvar o % de um grupo com valor desatualizado sobrescrevia o % de TODOS os descendentes em silêncio — provável causa de "todas as tarefas com 27%"',
       itens:['Editar o % Concluído de uma tarefa-pai (via célula ou modal) distribui esse valor pra todos os descendentes — funcionalidade existente, correta quando intencional. O problema: isso rodava sem nenhum aviso, e se o valor no formulário/célula estivesse desatualizado (ex: formulário aberto antes de um recálculo de %), salvar sobrescrevia silenciosamente o % de centenas de tarefas de uma vez, apagando progresso real de todo mundo.',
         'Corrigido: agora, se a tarefa tiver mais de 3 descendentes, pede confirmação explícita ANTES de aplicar qualquer coisa — mostra quantas tarefas serão afetadas e o valor que vai ser aplicado. Cancelar não salva nada, nem localmente.',
-        'Vale tanto pra edição na célula da tabela quanto pelo formulário grande de editar tarefa.']}
+        'Vale tanto pra edição na célula da tabela quanto pelo formulário grande de editar tarefa.']},
+    {versao:'V2.60.6',status:'aberta',data:'2026-08-05',tipo:'correcao',
+      titulo:'CORREÇÃO DE RUMO: % das tarefas-pai voltou a ser RECURSIVO nível por nível (média dos filhos DIRETOS), igual MS Project — a V2.58.21/V2.60.2 tinha trocado pro método errado',
+      itens:['O Milton mostrou o comportamento correto do MS Project com um exemplo real: cada pai é a média ponderada (por duração) só dos filhos DIRETOS dele — e cada filho, recursivamente, é a média dos PRÓPRIOS filhos diretos, nível por nível. Isso é o padrão profissional de gestão de projetos.',
+        'A V2.58.21 tinha trocado isso por um cálculo "achatado" (ponderar direto por todas as folhas, ignorando os níveis intermediários) achando que estava corrigindo uma divergência com o Dashboard — só que essa mudança estava errada. Revertido pro método recursivo, confirmado batendo exatamente com o exemplo do Milton (níveis 3→2→1→0: 100%+50%→75%; 75%+100%→87,5%; 87,5%+100%→93,75%).',
+        'O mais importante: agora, TODA vez que a estrutura muda no Editor de Estrutura (mover, inserir, excluir tarefa, subir/descer nível, importar) o % de TODOS os pais afetados é recalculado automaticamente e salvo — antes, mover uma tarefa entre níveis não atualizava o % de ninguém, ficava desatualizado até alguém editar manualmente.',
+        'Novo botão ⚙ Ferramentas → "📊 Recalcular % dos Pais" pra rodar manualmente em qualquer obra que ainda esteja com % desatualizado por esses bugs.']}
   ],
 
   render(containerId) {

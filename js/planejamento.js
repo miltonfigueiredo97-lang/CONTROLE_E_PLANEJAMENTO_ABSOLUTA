@@ -1952,6 +1952,7 @@ const Planejamento = (() => {
         }
         if(_versaoData==='atual'&&(field==='inicioPlanejado'||field==='terminoPlanejado'||field==='inicioReal'||field==='terminoReal')){
           const paisAlterados=await _recalcularDatasPais(true);
+      await _recalcularPercTodosPais(true);
           for(const p of paisAlterados)await _propagarDataEmCascata(p.id);
         }
         if(_versaoData==='atual'&&(field==='inicioPlanejado'||field==='terminoPlanejado')){
@@ -2351,6 +2352,7 @@ const Planejamento = (() => {
         Database.atualizar(obraId,COL,id,upd).catch(e=>console.error('Erro reordenar:',id,e))
       ));
     }
+    await _recalcularPercTodosPais(true); // pode ter mudado nível/quem é filho de quem
   }
 
   // ===================== TOGGLE GANTT =====================
@@ -2495,6 +2497,7 @@ const Planejamento = (() => {
       '<button class="btn btn-secundario btn-sm" data-perm="planejamento:exportar" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.exportar()">📤 Exportar</button>'+
       '<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.corrigirOrdensDuplicadas()" title="Corrige tarefas com número de ordem duplicado">🔧 Corrigir Ordens</button>'+
       '<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento._recalcularDatasPais()" title="Recalcula início/término das tarefas-pai a partir dos filhos">📐 Recalcular Datas dos Pais</button>'+
+      '<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento._recalcularPercTodosPais()" title="Recalcula o % de toda tarefa-pai a partir dos filhos diretos (nível por nível, igual MS Project)">📊 Recalcular % dos Pais</button>'+
       '<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento._corrigirNiveisSoltos()" title="Corrige tarefas com nível soltos (invisíveis no Editor de Estrutura)">🌳 Corrigir Níveis Soltos</button>'+
       '<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento._migrarPredecessorasParaId()" title="Converte predecessoras antigas (por número de linha) pro formato por ID — imune a reordenação. Roda sozinho ao carregar, use aqui só se quiser confirmar manualmente.">🔗 Corrigir Predecessoras (por ID)</button>'+
       // "Corrigir Nível pelo Código" foi removido do menu — era um reparo de uso
@@ -2601,6 +2604,7 @@ const Planejamento = (() => {
         Database.atualizar(obraId,COL,u.id,{nivel:u.nivel}).catch(e=>console.error('Erro update:',u.id,e))
       ));
     }
+    await _recalcularPercTodosPais(true); // mudou nível = mudou quem é filho de quem
     if(updates.length>1)Utils.toast(`Nível ajustado em ${topRanges.length} bloco(s) (${updates.length} tarefa(s) no total).`,'sucesso');
   }
 
@@ -2732,6 +2736,7 @@ const Planejamento = (() => {
       else await Database.criar(obraId,COL,data);
       Utils.fecharModal('modal-tarefa');Utils.toast('Salvo!','sucesso');editandoId=null;await carregar();
       const paisAlterados=await _recalcularDatasPais(true);
+      await _recalcularPercTodosPais(true);
       // Predecessora funciona de verdade: se início/término mudou, propaga
       // automaticamente pras tarefas que dependem desta (sucessoras em cadeia)
       // — e também pros pais cuja data agregada mudou por causa disso.
@@ -2846,6 +2851,7 @@ const Planejamento = (() => {
       await carregar();
       await _corrigirNiveisSoltos(true);
       await _recalcularDatasPais(true);
+      await _recalcularPercTodosPais(true);
     }catch(e){console.error(e);Utils.toast('Erro: '+e.message,'erro');}
     finally{Utils.esconderLoading();}
   }
@@ -2983,6 +2989,7 @@ const Planejamento = (() => {
     Utils.toast(falhas?`⚠ ${updates.length-falhas} corrigidas, ${falhas} falharam.`:`✅ ${updates.length} tarefa(s) corrigidas.`,falhas?'alerta':'sucesso');
     await carregar();
     await _recalcularDatasPais(true);
+      await _recalcularPercTodosPais(true);
     _correcoesContexto=null;
     if(naoEncontradasNomes.length||ambiguasNomes.length)_mostrarRevisaoCorrecoes(naoEncontradasNomes,ambiguasNomes);
   }
@@ -3114,6 +3121,7 @@ const Planejamento = (() => {
       Utils.toast(falhas?`⚠ ${imp} ok, ${falhas} falharam — importe de novo pra completar (retoma de onde parou).`:`✅ ${imp} tarefas importadas/atualizadas!`,falhas?'alerta':'sucesso');await carregar();
       await _corrigirNiveisSoltos(true);
       await _recalcularDatasPais(true);
+      await _recalcularPercTodosPais(true);
       if(orfas.length)_mostrarOrfasImport(orfas);
     }catch(e){console.error(e);Utils.toast('Erro: '+e.message,'erro');}finally{Utils.esconderLoading();}
   }
@@ -3272,6 +3280,58 @@ const Planejamento = (() => {
     }
     if(!silencioso)Utils.toast(mudou.length?`🌳 ${mudou.length} tarefa(s) tinham nível "solto" (invisíveis na árvore) e foram corrigidas.`:'Nenhum nível solto encontrado — árvore e tabela batem.','sucesso');
     return mudou.length;
+  }
+
+  // ===================== % DE TAREFAS-PAI (agregação recursiva nível por nível) =====================
+  // O % de um pai é a MÉDIA PONDERADA (por duração) dos filhos DIRETOS —
+  // recursivo, nível por nível, igual MS Project (confirmado com exemplo real
+  // do Milton). Roda de baixo pra cima (bottom-up, uma passada só) e persiste
+  // no Firestore o % recalculado de toda tarefa que tem filho direto.
+  // Precisa rodar sempre que a estrutura muda (mover/inserir/excluir tarefa,
+  // qualquer coisa que muda quem é filho de quem ou quantos filhos alguém
+  // tem) — senão o % de um pai fica desatualizado depois de reorganizar.
+  async function _recalcularPercTodosPais(silencioso){
+    const sorted=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
+    const n=sorted.length;
+    for(let i=n-1;i>=0;i--){
+      const t=sorted[i],niv=t.nivel||0;
+      let j=i+1,sp=0,sw=0,achouFilho=false;
+      while(j<n&&(sorted[j].nivel||0)>niv){
+        if((sorted[j].nivel||0)===niv+1){
+          achouFilho=true;
+          const f=sorted[j];
+          const w=Math.max(1,parseFloat(f.duracao)||1);
+          sp+=(f._percCalc||0)*w;sw+=w;
+        }
+        j++;
+      }
+      t._temFilhoPerc=achouFilho;
+      t._percCalc=achouFilho?(sw?sp/sw:0):Math.min(100,Math.max(0,parseFloat(t.percentualConcluido)||0));
+    }
+    const mudou=[];
+    for(const t of sorted){
+      if(!t._temFilhoPerc)continue; // só sobrescreve quem TEM filho direto de verdade
+      const novo=Math.round(t._percCalc*10)/10;
+      const atual=Math.round((parseFloat(t.percentualConcluido)||0)*10)/10;
+      if(Math.abs(novo-atual)>0.05){
+        t.percentualConcluido=novo;
+        mudou.push({id:t.id,percentualConcluido:novo});
+      }
+    }
+    if(mudou.length){
+      const L=20,TIMEOUT_MS=15000;
+      const comTimeout=p=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),TIMEOUT_MS))]);
+      let falhas=0;
+      for(let i=0;i<mudou.length;i+=L){
+        await Promise.all(mudou.slice(i,i+L).map(({id,...upd})=>
+          comTimeout(Database.atualizar(obraId,COL,id,upd)).catch(e=>{falhas++;console.error('Erro recalc %:',id,e);})
+        ));
+      }
+      _buildFiltradas();_render();
+      if(falhas&&!silencioso)Utils.toast(`⚠ ${falhas} falharam ao salvar.`,'alerta');
+    }
+    if(!silencioso)Utils.toast(mudou.length?`📊 ${mudou.length} tarefa(s)-pai com % recalculado.`:'% dos pais já estava correto.','sucesso');
+    return mudou;
   }
 
   // ===================== DATAS DE TAREFAS-PAI (agregação automática) =====================
@@ -3784,6 +3844,7 @@ const Planejamento = (() => {
       if(updates.inicioPlanejado||updates.terminoPlanejado){
         await _propagarDataEmCascata(t.id);
         const paisAlterados=await _recalcularDatasPais(true);
+      await _recalcularPercTodosPais(true);
         for(const p of paisAlterados)await _propagarDataEmCascata(p.id);
       }
     }
@@ -4649,6 +4710,10 @@ const Planejamento = (() => {
         // tela (mudança local otimista) mas nada ia pro Firestore, e um reload
         // trazia de volta o estado antigo, parecendo que a ação "desfez sozinha".
         if(falhas)Utils.toast(`⚠ ${falhas} tarefa(s) não foram salvas (erro de conexão) — a árvore pode voltar ao estado anterior se você recarregar a página. Tente mover de novo.`,'alerta');
+        // Mover tarefa entre níveis muda quem é filho de quem — o % dos pais
+        // (média ponderada dos filhos diretos) precisa ser recalculado, senão
+        // fica desatualizado depois de qualquer reorganização na árvore.
+        await _recalcularPercTodosPais(true);
       }catch(e){console.error('Erro save arvore:',e);Utils.toast('⚠ Erro ao salvar a árvore — tente de novo.','alerta');}
     });
   }
@@ -4740,7 +4805,7 @@ const Planejamento = (() => {
     _rowDragStart,toggleSel,_limparSelecao,_moverSel,_bulkNivel,_bulkDuplicar,_bulkExcluir,
     toggleStatusFiltro,_aplicarStatusFiltro,undo,
     onBusca,limparBusca,_buscaKey,
-    importarExcel,importarBaseCompleta,importarCorrecoes,_executarCorrecoes,_mostrarRevisaoCorrecoes,exportar,exportarPNG,corrigirOrdensDuplicadas,_corrigirNiveisSoltos,_corrigirNivelPeloCodigo,_migrarPredecessorasParaId,_recalcularDatasPais,_orfasMarcarTodas,_orfasExcluirMarcadas,_gerarPNG,_predPopup,_predSalvar,_predCellClick,_predAddLinha,_predLinhaAtualizar,
+    importarExcel,importarBaseCompleta,importarCorrecoes,_executarCorrecoes,_mostrarRevisaoCorrecoes,exportar,exportarPNG,corrigirOrdensDuplicadas,_corrigirNiveisSoltos,_corrigirNivelPeloCodigo,_migrarPredecessorasParaId,_recalcularDatasPais,_recalcularPercTodosPais,_orfasMarcarTodas,_orfasExcluirMarcadas,_gerarPNG,_predPopup,_predSalvar,_predCellClick,_predAddLinha,_predLinhaAtualizar,
     abrirVinculosView,fecharVinculosView,abrirVincularTarefa,abrirVincularAqui,onVincTipoChange,
     onVincNavModulo,onVincNavModuloMetrica,onVincNavMetrica,onVincNavEntrar,onVincNavBreadcrumb,onVincNavVoltar,
     onBuscaEscolhaAlvoVinc,onEscolherAlvoVinc,onTrocarAlvoVinc,
