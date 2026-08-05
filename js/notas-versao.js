@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.60.0',
+  versaoAtual: 'V2.60.1',
 
   versoes: [
     {
@@ -5568,10 +5568,13 @@ const NotasVersao = {
       titulo:'Dashboard: erro real identificado — "Cannot read properties of undefined (reading \'num\')" — CC (ConcretoCalculos) indisponível no momento do cálculo',
       itens:['O gráfico dependia de window.ConcretoCalculos estar carregado no exato momento do cálculo — se por qualquer motivo (cache de CDN desalinhado entre deploys, timing) isso não estivesse disponível, a leitura de CC.num() quebrava o gráfico inteiro.',
         'Criada uma função de conversão numérica local, com o mesmo comportamento (tolera vírgula decimal), que NUNCA depende de CC estar disponível — o gráfico não quebra mais por esse motivo, independente da causa raiz de CC ter ficado indisponível.']},
-    {versao:'V2.60.0',status:'aberta',data:'2026-08-05',tipo:'funcionalidade',
+    {versao:'V2.60.0',status:'fechada',data:'2026-08-05',tipo:'funcionalidade',
       titulo:'Levantamento de Fachada — Visão Geral: zoom/pan no mapa e filtro Externa/Interna nas caixas',
       itens:['Zoom e movimentação (pan) no mapa da Visão Geral — igual aos outros módulos: roda do mouse para zoom (centrado no cursor), arrastar para mover, botões ➖/100%/➕.',
-        'Novo seletor "Vista: Externa / Interna" — cada botão liga/desliga independente. Os dois ativos = total combinado (comportamento de antes). Só um ativo = caixas e Total Geral mostram só aquela vista.']}
+        'Novo seletor "Vista: Externa / Interna" — cada botão liga/desliga independente. Os dois ativos = total combinado (comportamento de antes). Só um ativo = caixas e Total Geral mostram só aquela vista.']},
+    {versao:'V2.60.1',status:'aberta',data:'2026-08-05',tipo:'melhoria',
+      titulo:'Levantamento de Fachada — Visão Geral: botão para travar o zoom/movimentação do mapa',
+      itens:['🔓 Travar Zoom / 🔒 Travado na barra do mapa: enquanto travado, roda do mouse e arrastar não alteram mais o zoom/posição — evita mexer sem querer depois de ajustar do jeito que quer.']}
   ],
 
   render(containerId) {

@@ -15,6 +15,7 @@ const LevantamentoFachada = (() => {
   let _mapaDoc={img:null,caixas:[]};  // carregado do Firestore
   let _mapaFiltro={externa:true,interna:true}; // filtro de vista aplicado às caixas/total da Visão Geral
   let _mapaZoom=1,_mapaPanX=0,_mapaPanY=0,_mapaPanAtivo=false,_mapaPanInicio={x:0,y:0,panX:0,panY:0};
+  let _mapaZoomTravado=false;
   const COL='levantamentosFachada';
 
   // ===================== CONFIGURAÇÕES DE CÁLCULO =====================
@@ -685,9 +686,10 @@ const LevantamentoFachada = (() => {
     '</div>';
 
     const zoomHtml='<div class="btn-grupo" style="align-items:center;">'+
-      '<button class="btn btn-secundario btn-sm btn-icon" onclick="LF.zoomMapaOut()" title="Diminuir zoom">➖</button>'+
-      '<button class="btn btn-secundario btn-sm" onclick="LF.zoomMapaReset()" title="Redefinir zoom (100%)"><span id="lf-zoom-pct">'+Math.round(_mapaZoom*100)+'%</span></button>'+
-      '<button class="btn btn-secundario btn-sm btn-icon" onclick="LF.zoomMapaIn()" title="Aumentar zoom">➕</button>'+
+      '<button class="btn btn-secundario btn-sm btn-icon" '+(_mapaZoomTravado?'disabled ':'')+'onclick="LF.zoomMapaOut()" title="Diminuir zoom">➖</button>'+
+      '<button class="btn btn-secundario btn-sm" '+(_mapaZoomTravado?'disabled ':'')+'onclick="LF.zoomMapaReset()" title="Redefinir zoom (100%)"><span id="lf-zoom-pct">'+Math.round(_mapaZoom*100)+'%</span></button>'+
+      '<button class="btn btn-secundario btn-sm btn-icon" '+(_mapaZoomTravado?'disabled ':'')+'onclick="LF.zoomMapaIn()" title="Aumentar zoom">➕</button>'+
+      '<button class="btn btn-sm '+(_mapaZoomTravado?'btn-primario':'btn-secundario')+'" onclick="LF.toggleTravarZoomMapa()" title="Travar/destravar zoom e movimentação do mapa">'+(_mapaZoomTravado?'🔒 Travado':'🔓 Travar Zoom')+'</button>'+
     '</div>';
 
     const topbar='<div class="visao-geral-topbar">'+
@@ -706,13 +708,13 @@ const LevantamentoFachada = (() => {
     p.innerHTML=
       '<div class="visao-geral-layout">'+topbar+totalCard+
         '<div style="position:relative;flex:1;min-height:0;">'+
-          '<div id="mapa-canvas" onpointerdown="LF.mapaPanDown(event)" onwheel="LF.mapaWheel(event)" style="width:100%;height:100%;background:#fff;border-radius:8px;border:1px solid #e0e0e0;overflow:hidden;position:relative;cursor:grab;">'+
+          '<div id="mapa-canvas" onpointerdown="LF.mapaPanDown(event)" onwheel="LF.mapaWheel(event)" style="width:100%;height:100%;background:#fff;border-radius:8px;border:1px solid #e0e0e0;overflow:hidden;position:relative;cursor:'+(_mapaZoomTravado?'default':'grab')+';">'+
             '<div id="mapa-viewport" style="position:absolute;inset:0;transform-origin:0 0;">'+
               imgArea+
             '</div>'+
           '</div>'+
           '<div id="mapa-overlay" style="position:absolute;inset:0;pointer-events:none;overflow:visible;z-index:100;transform-origin:0 0;"></div>'+
-          '<div style="position:absolute;bottom:8px;right:12px;font-size:0.66rem;color:#94a3b8;background:rgba(255,255,255,0.88);padding:3px 8px;border-radius:5px;pointer-events:none;">🖱️ roda = zoom · arrastar = mover</div>'+
+          '<div style="position:absolute;bottom:8px;right:12px;font-size:0.66rem;color:#94a3b8;background:rgba(255,255,255,0.88);padding:3px 8px;border-radius:5px;pointer-events:none;">'+(_mapaZoomTravado?'🔒 zoom travado':'🖱️ roda = zoom · arrastar = mover')+'</div>'+
         '</div>'+
       '</div>';
 
@@ -919,11 +921,12 @@ const LevantamentoFachada = (() => {
     const pct=document.getElementById('lf-zoom-pct');
     if(pct)pct.textContent=Math.round(_mapaZoom*100)+'%';
   }
-  function zoomMapaIn(){_mapaZoom=Math.min(4,_mapaZoom*1.25);_aplicarZoomMapa();}
-  function zoomMapaOut(){_mapaZoom=Math.max(0.2,_mapaZoom/1.25);_aplicarZoomMapa();}
-  function zoomMapaReset(){_mapaZoom=1;_mapaPanX=0;_mapaPanY=0;_aplicarZoomMapa();}
+  function zoomMapaIn(){if(_mapaZoomTravado)return;_mapaZoom=Math.min(4,_mapaZoom*1.25);_aplicarZoomMapa();}
+  function zoomMapaOut(){if(_mapaZoomTravado)return;_mapaZoom=Math.max(0.2,_mapaZoom/1.25);_aplicarZoomMapa();}
+  function zoomMapaReset(){if(_mapaZoomTravado)return;_mapaZoom=1;_mapaPanX=0;_mapaPanY=0;_aplicarZoomMapa();}
 
   function mapaWheel(e){
+    if(_mapaZoomTravado)return;
     e.preventDefault();
     const canvas=document.getElementById('mapa-canvas');if(!canvas)return;
     const rect=canvas.getBoundingClientRect();
@@ -939,6 +942,7 @@ const LevantamentoFachada = (() => {
   }
 
   function mapaPanDown(e){
+    if(_mapaZoomTravado)return;
     if(e.button!==0)return;
     if(e.target.closest('.mapa-caixa'))return; // não iniciar pan clicando numa caixa
     e.preventDefault();
@@ -964,6 +968,11 @@ const LevantamentoFachada = (() => {
     canvas.addEventListener('pointermove',move);
     canvas.addEventListener('pointerup',up);
     canvas.addEventListener('pointercancel',up);
+  }
+
+  function toggleTravarZoomMapa(){
+    _mapaZoomTravado=!_mapaZoomTravado;
+    renderPainel();
   }
 
   // ===================== FILTRO EXTERNA/INTERNA (Visão Geral) =====================
@@ -1536,7 +1545,7 @@ const LevantamentoFachada = (() => {
   function imgRZEv(e, el){ imgRZ(e, el.dataset.d); }
   function cxResizeEv(e){ cxResize(e, parseInt(e.currentTarget.dataset.i), e.currentTarget.dataset.d); }
 
-  return {init,carregar,sel:selecionar,setAba,criarFachada,criarBalancim,editar,salvarEntidade,excluir,novaPeca,editarPeca,salvarPeca,excluirPeca,duplicarPeca,moverPeca,abrirMoverPecaBal,confirmarMoverPecaBal,copiarDeOutraVista,duplicarBal,editarNomeInline,abrirClonarBal,confirmarClonarBal,corrigirVinculos,conferirPeca,togglePecaML,onClickCheckML,onCompAltInput,calcExprEnter,onToggleFriso,adicionarFrisoRow,removerFrisoRow,adicionarJanelaRow,removerJanelaRow,exportarCSV,exportarVista,onToggleJanela,importarMapa,cxAdicionar,cxRemover,cxTravar,cxEditar,salvarCxEdit,cxMouseDown,cxDrop,cxResize,imgMouseDown,imgResize,entrarEditImg,sairEditImg,imgMD,imgRZEv,cxResizeEv,toggleEditImg,fecharEditImg,onImgResize,limparMapa,abrirVaoVista,salvarVaoVista,_atualizarPreviewVao,adicionarVaoRow,removerVaoRow,abrirConfig,salvarConfig,onChangeCfgJanela,mapaWheel,mapaPanDown,zoomMapaIn,zoomMapaOut,zoomMapaReset,toggleFiltroMapaVista};
+  return {init,carregar,sel:selecionar,setAba,criarFachada,criarBalancim,editar,salvarEntidade,excluir,novaPeca,editarPeca,salvarPeca,excluirPeca,duplicarPeca,moverPeca,abrirMoverPecaBal,confirmarMoverPecaBal,copiarDeOutraVista,duplicarBal,editarNomeInline,abrirClonarBal,confirmarClonarBal,corrigirVinculos,conferirPeca,togglePecaML,onClickCheckML,onCompAltInput,calcExprEnter,onToggleFriso,adicionarFrisoRow,removerFrisoRow,adicionarJanelaRow,removerJanelaRow,exportarCSV,exportarVista,onToggleJanela,importarMapa,cxAdicionar,cxRemover,cxTravar,cxEditar,salvarCxEdit,cxMouseDown,cxDrop,cxResize,imgMouseDown,imgResize,entrarEditImg,sairEditImg,imgMD,imgRZEv,cxResizeEv,toggleEditImg,fecharEditImg,onImgResize,limparMapa,abrirVaoVista,salvarVaoVista,_atualizarPreviewVao,adicionarVaoRow,removerVaoRow,abrirConfig,salvarConfig,onChangeCfgJanela,mapaWheel,mapaPanDown,zoomMapaIn,zoomMapaOut,zoomMapaReset,toggleTravarZoomMapa,toggleFiltroMapaVista};
 })();
 const LF=LevantamentoFachada;
 function onObraChanged(){LF.init();}
