@@ -1680,9 +1680,7 @@ const Planejamento = (() => {
         } else if(cid==='percEsp'){
           cells+=`<div style="${base}color:#555;font-size:.7rem;justify-content:center;cursor:pointer;" ${clickEdit}>${t.percentualEsperado||0}%</div>`;
         } else if(cid==='percConc'){
-          const vincEst=t.estacasVinculoTipo&&t.estacasVinculoId;
-          cells+=`<div style="${base}font-size:.7rem;justify-content:center;gap:3px;color:${vincEst?'var(--cor-primaria)':(perc>=100?'#16a34a':perc>0?'#2563eb':'#555')};${vincEst?'':'cursor:pointer;'}" ${vincEst?'':clickEdit} title="${vincEst?'Vinculado a Estacas/Fundações — '+_esc(t.estacasVinculoLabel||''):'Clique pra editar, ou no 🔗 pra vincular a Estacas/Fundações'}">
-            ${vincEst?'🔵 ':''}${perc}%<span style="cursor:pointer;opacity:.5;font-size:.62rem;" onclick="event.stopPropagation();Planejamento.abrirVinculoEstacas('${t.id}')">${vincEst?'✎':'🔗'}</span></div>`;
+          cells+=`<div style="${base}font-size:.7rem;justify-content:center;color:${perc>=100?'#16a34a':perc>0?'#2563eb':'#555'};cursor:pointer;" ${clickEdit}>${perc}%</div>`;
         } else if(cid==='predecessora'){
           cells+=`<div style="${base}color:#555;font-size:.7rem;justify-content:center;cursor:pointer;" onclick="Planejamento._predCellClick(event,${i})" title="${_esc(_tooltipPred(t))}">${t._predDisplay||'—'}</div>`;
         } else if(cid==='sucessora'){

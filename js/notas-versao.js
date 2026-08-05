@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.60.9',
+  versaoAtual: 'V2.60.10',
 
   versoes: [
     {
@@ -5603,10 +5603,13 @@ const NotasVersao = {
         'Causa: um grupo criado assim fica com "Duração" própria vazia (0) — e a fórmula de % usava exatamente essa duração como peso do grupo na média do PAI dele. Um grupo com 500+ dias de trabalho real lá dentro contava como peso 1 (quase zero) — o efeito prático é que trabalho ainda não iniciado, quando "escondido" dentro de um grupo assim, quase não pesava na conta, inflando o % geral pra cima.',
         'Corrigido: o peso de qualquer tarefa na média agora é sempre a SOMA REAL da duração de tudo que tem dentro dela (calculado recursivamente, folha por folha) — nunca mais a duração própria de um grupo, que pode estar errada/vazia sem afetar o resultado. Testado com os dados reais da obra: o % da raiz caiu de 39,3% pra 14,64%, muito mais alinhado com os 16% da Cofield.',
         'Rode ⚙ Ferramentas → "📊 Recalcular % dos Pais" pra aplicar a correção na obra atual.']},
-    {versao:'V2.60.9',status:'aberta',data:'2026-08-06',tipo:'melhoria',
+    {versao:'V2.60.9',status:'fechada',data:'2026-08-06',tipo:'melhoria',
       titulo:'Duração das tarefas-pai também passou a ser calculada automaticamente — não fica mais vazia/0',
       itens:['Igual início/término, a Duração de uma tarefa-pai agora é calculada automaticamente (dias corridos entre o início e o término agregados dos filhos) sempre que a estrutura muda — mesmo gatilho do "📐 Recalcular Datas dos Pais".',
-        'Grupos criados manualmente no Editor de Estrutura (que antes ficavam com Duração vazia pra sempre) passam a ter um valor real, condizente com o que tem dentro deles.']}
+        'Grupos criados manualmente no Editor de Estrutura (que antes ficavam com Duração vazia pra sempre) passam a ter um valor real, condizente com o que tem dentro deles.']},
+    {versao:'V2.60.10',status:'aberta',data:'2026-08-06',tipo:'correcao',
+      titulo:'Removido da coluna % Concluído o ícone de vincular a Estacas/Fundações — não deveria estar ali (pedido do Milton)',
+      itens:['Aparecia em TODA tarefa, mesmo sem nenhuma relação com fundação/estaca (ex: "Prumadas Esgoto") — voltou a ser uma célula de % simples, editável normalmente. O vínculo de tarefas já existentes com Estacas/Fundações continua salvo no banco, só não aparece mais aqui.']}
   ],
 
   render(containerId) {
