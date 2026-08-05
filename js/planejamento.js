@@ -2924,6 +2924,7 @@ const Planejamento = (() => {
       custo:'custo',receita:'receita'};
     const DATE_FIELDS=new Set(['inicioReal','terminoReal','inicioPlanejado','terminoPlanejado']);
     const NUM_FIELDS=new Set(['percentualConcluido','percentualEsperado','custo','receita','duracao']);
+    const idxCodigo=ci('codigo');
 
     let predNaoResolvidas=0;
     const naoEncontradasNomes=[],ambiguasNomes=[];
@@ -2934,8 +2935,20 @@ const Planejamento = (() => {
       if(!nome)continue;
       const candidatos=porNome.get(nome.toLowerCase());
       if(!candidatos||!candidatos.length){naoEncontradasNomes.push(nome);continue;}
-      if(candidatos.length>1){ambiguasNomes.push(nome);continue;} // mais de 1 tarefa com esse nome — pula por segurança
-      const t=candidatos[0];
+      let t;
+      if(candidatos.length===1){
+        t=candidatos[0];
+      } else {
+        // Nome ambíguo (mais de uma tarefa com o mesmo nome) — tenta
+        // desambiguar pelo Código, que geralmente é único mesmo quando o
+        // nome se repete (ex: mesma tarefa duplicada em dois ramos da obra
+        // com códigos diferentes). Só cai em "ambígua" se o código também
+        // não resolver (ex: grupos manuais sem código).
+        const codigoLinha=idxCodigo>=0?String(row[idxCodigo]||'').trim():'';
+        const porCodigo=codigoLinha?candidatos.filter(c=>(c.codigo||'').trim()===codigoLinha):[];
+        if(porCodigo.length===1){t=porCodigo[0];}
+        else{ambiguasNomes.push(nome);continue;}
+      }
       const upd={};
       for(const campo of camposMarcados){
         if(campo==='predecessora'){

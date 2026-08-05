@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.60.6',
+  versaoAtual: 'V2.60.7',
 
   versoes: [
     {
@@ -5587,12 +5587,16 @@ const NotasVersao = {
       itens:['Editar o % Concluído de uma tarefa-pai (via célula ou modal) distribui esse valor pra todos os descendentes — funcionalidade existente, correta quando intencional. O problema: isso rodava sem nenhum aviso, e se o valor no formulário/célula estivesse desatualizado (ex: formulário aberto antes de um recálculo de %), salvar sobrescrevia silenciosamente o % de centenas de tarefas de uma vez, apagando progresso real de todo mundo.',
         'Corrigido: agora, se a tarefa tiver mais de 3 descendentes, pede confirmação explícita ANTES de aplicar qualquer coisa — mostra quantas tarefas serão afetadas e o valor que vai ser aplicado. Cancelar não salva nada, nem localmente.',
         'Vale tanto pra edição na célula da tabela quanto pelo formulário grande de editar tarefa.']},
-    {versao:'V2.60.6',status:'aberta',data:'2026-08-05',tipo:'correcao',
+    {versao:'V2.60.6',status:'fechada',data:'2026-08-05',tipo:'correcao',
       titulo:'CORREÇÃO DE RUMO: % das tarefas-pai voltou a ser RECURSIVO nível por nível (média dos filhos DIRETOS), igual MS Project — a V2.58.21/V2.60.2 tinha trocado pro método errado',
       itens:['O Milton mostrou o comportamento correto do MS Project com um exemplo real: cada pai é a média ponderada (por duração) só dos filhos DIRETOS dele — e cada filho, recursivamente, é a média dos PRÓPRIOS filhos diretos, nível por nível. Isso é o padrão profissional de gestão de projetos.',
         'A V2.58.21 tinha trocado isso por um cálculo "achatado" (ponderar direto por todas as folhas, ignorando os níveis intermediários) achando que estava corrigindo uma divergência com o Dashboard — só que essa mudança estava errada. Revertido pro método recursivo, confirmado batendo exatamente com o exemplo do Milton (níveis 3→2→1→0: 100%+50%→75%; 75%+100%→87,5%; 87,5%+100%→93,75%).',
         'O mais importante: agora, TODA vez que a estrutura muda no Editor de Estrutura (mover, inserir, excluir tarefa, subir/descer nível, importar) o % de TODOS os pais afetados é recalculado automaticamente e salvo — antes, mover uma tarefa entre níveis não atualizava o % de ninguém, ficava desatualizado até alguém editar manualmente.',
-        'Novo botão ⚙ Ferramentas → "📊 Recalcular % dos Pais" pra rodar manualmente em qualquer obra que ainda esteja com % desatualizado por esses bugs.']}
+        'Novo botão ⚙ Ferramentas → "📊 Recalcular % dos Pais" pra rodar manualmente em qualquer obra que ainda esteja com % desatualizado por esses bugs.']},
+    {versao:'V2.60.7',status:'aberta',data:'2026-08-06',tipo:'melhoria',
+      titulo:'Importar Correções: quando o Nome é ambíguo (duplicado), tenta desambiguar automaticamente pelo Código antes de desistir',
+      itens:['Antes, qualquer nome duplicado na obra (ex: mesma tarefa repetida em dois ramos, tipo "Hall" com códigos 1.3.6.x e 1.3.4.x) caía direto em "ambígua" e ficava fora do import — mesmo quando o Código bastava pra saber exatamente qual era qual.',
+        'Agora, se o nome bate em mais de uma tarefa, verifica se o Código da linha da planilha bate com o Código de exatamente uma delas — só cai em "ambígua" de verdade se nem o código resolver (ex: grupos criados manualmente sem código). Testado numa obra real: resolveu 61 de 70 casos que antes ficavam de fora.']}
   ],
 
   render(containerId) {
