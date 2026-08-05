@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.60.1',
+  versaoAtual: 'V2.60.3',
 
   versoes: [
     {
@@ -5572,9 +5572,13 @@ const NotasVersao = {
       titulo:'Levantamento de Fachada — Visão Geral: zoom/pan no mapa e filtro Externa/Interna nas caixas',
       itens:['Zoom e movimentação (pan) no mapa da Visão Geral — igual aos outros módulos: roda do mouse para zoom (centrado no cursor), arrastar para mover, botões ➖/100%/➕.',
         'Novo seletor "Vista: Externa / Interna" — cada botão liga/desliga independente. Os dois ativos = total combinado (comportamento de antes). Só um ativo = caixas e Total Geral mostram só aquela vista.']},
-    {versao:'V2.60.1',status:'aberta',data:'2026-08-05',tipo:'melhoria',
+    {versao:'V2.60.1',status:'fechada',data:'2026-08-05',tipo:'melhoria',
       titulo:'Levantamento de Fachada — Visão Geral: botão para travar o zoom/movimentação do mapa',
-      itens:['🔓 Travar Zoom / 🔒 Travado na barra do mapa: enquanto travado, roda do mouse e arrastar não alteram mais o zoom/posição — evita mexer sem querer depois de ajustar do jeito que quer.']}
+      itens:['🔓 Travar Zoom / 🔒 Travado na barra do mapa: enquanto travado, roda do mouse e arrastar não alteram mais o zoom/posição — evita mexer sem querer depois de ajustar do jeito que quer.']},
+    {versao:'V2.60.3',status:'aberta',data:'2026-08-05',tipo:'funcionalidade',
+      titulo:'Planejamento: novo botão "🔒 Liberar Edição de Real" — permite editar Início Real e Término Real direto na tabela, quando liberado',
+      itens:['Início Real/Término Real são normalmente só leitura no Planejamento (a fonte de verdade é Diário de Obra, Medições ou Semanal) — travado assim de propósito, pra não editar por engano.',
+        'Pra correções em massa pontuais (ex: atualizar a base sem gerar relatório/lançamento), clique em "🔒 Liberar Edição de Real" — as duas colunas ficam editáveis direto na célula, igual Início/Término Planejado. Clique de novo pra travar.']}
   ],
 
   render(containerId) {

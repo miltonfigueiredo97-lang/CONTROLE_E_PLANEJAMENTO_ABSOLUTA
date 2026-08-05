@@ -23,6 +23,11 @@ const Planejamento = (() => {
     base:{ini:'inicioPlanejadoBase',fim:'terminoPlanejadoBase'},
     desafio:{ini:'inicioDesafio',fim:'terminoDesafio'}};
   const VERSAO_LABEL={atual:'Atual',base:'Linha de Base',desafio:'Desafio'};
+  // Início Real / Término Real são preenchidos normalmente por Diário de
+  // Obra/Medições/Semanal — travados aqui por padrão pra não editar por
+  // engano. Liberar aqui é só pra correção em massa pontual (ex: atualizar
+  // a base sem gerar lançamento/relatório).
+  let _liberarEdicaoReal=false;
   function setVersaoData(v){
     if(!VERSAO_CAMPOS[v])return;
     _versaoData=v;
@@ -93,7 +98,7 @@ const Planejamento = (() => {
 
   const COL_LABELS={sel:'',num:'#',status:'',nivel:'Nível',codigo:'Código',nome:'Tarefa',inicio:'Início',termino:'Término',inicioReal:'Início Real',terminoReal:'Término Real',duracao:'Duração',percEsp:'% Esperado',percConc:'% Concluído',predecessora:'Predecessora',sucessora:'Sucessora',responsavel:'Responsável',local:'Local',grupo:'Grupo',quantidade:'Quantidade',equipe:'Equipe',custoMaterial:'Custo Material',custoMaoObra:'Custo M.Obra',acoes:''};
   const COL_FIXED=new Set(['sel','num','status','nome','acoes']);
-  const COL_EDITABLE=new Set(['codigo','nome','inicio','termino','duracao','percEsp','percConc','predecessora','responsavel','local','grupo','nivel','equipe']);
+  const COL_EDITABLE=new Set(['codigo','nome','inicio','termino','duracao','percEsp','percConc','predecessora','responsavel','local','grupo','nivel','equipe','inicioReal','terminoReal']);
 
   // ===================== VÍNCULOS COM LEVANTAMENTO =====================
   // Tela separada (não é a visão de Gantt) onde cada tarefa do Planejamento
@@ -560,6 +565,7 @@ const Planejamento = (() => {
           <span style="color:#333;margin:0 4px;">|</span>
           <button class="btn btn-secundario btn-sm" onclick="Planejamento._toggleMenuFerramentas()" style="font-size:.72rem;">⚙ Ferramentas</button>
           <button class="btn btn-secundario btn-sm" onclick="Planejamento.toggleGantt()" id="btn-tg" style="font-size:.72rem;">${ganttVisible?'◀ Esconder Gantt':'▶ Mostrar Gantt'}</button>
+          <button class="btn btn-sm" onclick="Planejamento.toggleLiberarEdicaoReal()" style="font-size:.72rem;${_liberarEdicaoReal?'background:#dc2626;color:#fff;border-color:#dc2626;':''}" title="Início/Término Real normalmente só são preenchidos via Diário/Medições/Semanal. Libere aqui só pra correção manual pontual.">${_liberarEdicaoReal?'🔓 Edição de Real Liberada':'🔒 Liberar Edição de Real'}</button>
           ${colsHidden.size?`<button class="btn btn-secundario btn-sm" onclick="Planejamento.showColsMenu()" style="font-size:.72rem;">＋ Colunas (${colsHidden.size})</button>`:''}
           <span style="color:#333;margin:0 4px;">|</span>
           <button class="btn ${modoView==='arvore'?'btn-primario':'btn-secundario'} btn-sm" data-perm="planejamento:editar" onclick="Planejamento.toggleArvoreEditor()" style="font-size:.72rem;">🌳 Editor de Estrutura</button>
@@ -1667,9 +1673,9 @@ const Planejamento = (() => {
           const vv=t[VERSAO_CAMPOS[_versaoData].fim];
           cells+=`<div style="${base}color:${vv?'#666':'#3a3a3a'};font-size:.7rem;justify-content:center;cursor:pointer;" ${clickEdit}>${vv?_fd(vv):'—'}</div>`;
         } else if(cid==='inicioReal'){
-          cells+=`<div style="${base}color:${t.inicioReal?'#888':'#3a3a3a'};font-size:.7rem;justify-content:center;" title="Preenchido via Diário de Obra, Medições ou Semanal">${t.inicioReal?_fd(t.inicioReal):'—'}</div>`;
+          cells+=`<div style="${base}color:${t.inicioReal?'#888':'#3a3a3a'};font-size:.7rem;justify-content:center;${_liberarEdicaoReal?'cursor:pointer;':''}" ${_liberarEdicaoReal?clickEdit:''} title="${_liberarEdicaoReal?'Edição liberada manualmente':'Preenchido via Diário de Obra, Medições ou Semanal — clique em 🔒 Liberar Edição de Real pra editar aqui'}">${t.inicioReal?_fd(t.inicioReal):'—'}</div>`;
         } else if(cid==='terminoReal'){
-          cells+=`<div style="${base}color:${t.terminoReal?'#888':'#3a3a3a'};font-size:.7rem;justify-content:center;" title="Preenchido via Diário de Obra, Medições ou Semanal">${t.terminoReal?_fd(t.terminoReal):'—'}</div>`;
+          cells+=`<div style="${base}color:${t.terminoReal?'#888':'#3a3a3a'};font-size:.7rem;justify-content:center;${_liberarEdicaoReal?'cursor:pointer;':''}" ${_liberarEdicaoReal?clickEdit:''} title="${_liberarEdicaoReal?'Edição liberada manualmente':'Preenchido via Diário de Obra, Medições ou Semanal — clique em 🔒 Liberar Edição de Real pra editar aqui'}">${t.terminoReal?_fd(t.terminoReal):'—'}</div>`;
         } else if(cid==='duracao'){
           cells+=`<div style="${base}color:#666;font-size:.7rem;justify-content:center;cursor:pointer;" ${clickEdit}>${t.duracao||'—'}</div>`;
         } else if(cid==='percEsp'){
@@ -1819,14 +1825,15 @@ const Planejamento = (() => {
     const cell=e.currentTarget;
     if(!cell)return; // célula pode ter saído do DOM (re-render no meio do clique) — não quebra a tela
     try{
+    if((colId==='inicioReal'||colId==='terminoReal')&&!_liberarEdicaoReal)return; // trava de segurança extra
     const map={codigo:'codigo',nome:'nome',
       inicio:VERSAO_CAMPOS[_versaoData].ini,termino:VERSAO_CAMPOS[_versaoData].fim,
       duracao:'duracao',percEsp:'percentualEsperado',percConc:'percentualConcluido',
       predecessora:'predecessora',responsavel:'responsavel',local:'local',grupo:'grupo',nivel:'nivel',
-      equipe:'equipeAlocada'};
+      equipe:'equipeAlocada',inicioReal:'inicioReal',terminoReal:'terminoReal'};
     const field=map[colId]; if(!field)return;
     const val=field==='predecessora'?(t._predDisplay||''):(t[field]||'');
-    const isDate=colId==='inicio'||colId==='termino';
+    const isDate=colId==='inicio'||colId==='termino'||colId==='inicioReal'||colId==='terminoReal';
     const isNum=colId==='duracao'||colId==='percEsp'||colId==='percConc'||colId==='nivel'||colId==='equipe';
 
     const input=document.createElement('input');
@@ -2345,6 +2352,12 @@ const Planejamento = (() => {
   function toggleGantt(){
     ganttVisible=!ganttVisible;
     _render(); // re-render completely since DOM structure changes
+  }
+
+  function toggleLiberarEdicaoReal(){
+    _liberarEdicaoReal=!_liberarEdicaoReal;
+    if(_liberarEdicaoReal)Utils.toast('🔓 Início/Término Real liberados pra edição direta na tabela.','alerta');
+    _render();
   }
 
   // ===================== DATE HEADERS =====================
@@ -4694,7 +4707,7 @@ const Planejamento = (() => {
 
   return{init,carregar,setZoom,setVersaoData,copiarDatasDeAtual,inserirTarefa,editarTarefa,salvarTarefa,excluirTarefa,
     selectIdx,toggleRecolher,recuarNivel,avancarNivel,
-    toggleGantt,hideCol,showColsMenu,_showCol,_showAll,_toggleMenuFerramentas,
+    toggleGantt,toggleLiberarEdicaoReal,hideCol,showColsMenu,_showCol,_showAll,_toggleMenuFerramentas,
     toggleArvoreEditor,_arvToggle,_arvExpandirTudo,_arvIniciarEdit,_arvCancelarEdit,_arvSalvarNome,
     _arvInserirAcima,_arvInserirAbaixo,_arvMudarNivel,
     _arvCriarFilho,_arvCriarRaiz,_arvBackupEstrutura,_arvRestaurarEstrutura,_arvSalvarTudo,_arvDragStart,_arvDragOver,_arvDragEnd,_arvDrop,
