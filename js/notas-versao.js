@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.60.4',
+  versaoAtual: 'V2.60.5',
 
   versoes: [
     {
@@ -5579,9 +5579,14 @@ const NotasVersao = {
       titulo:'Planejamento: novo botão "🔒 Liberar Edição de Real" — permite editar Início Real e Término Real direto na tabela, quando liberado',
       itens:['Início Real/Término Real são normalmente só leitura no Planejamento (a fonte de verdade é Diário de Obra, Medições ou Semanal) — travado assim de propósito, pra não editar por engano.',
         'Pra correções em massa pontuais (ex: atualizar a base sem gerar relatório/lançamento), clique em "🔒 Liberar Edição de Real" — as duas colunas ficam editáveis direto na célula, igual Início/Término Planejado. Clique de novo pra travar.']},
-    {versao:'V2.60.4',status:'aberta',data:'2026-08-05',tipo:'melhoria',
+    {versao:'V2.60.4',status:'fechada',data:'2026-08-05',tipo:'melhoria',
       titulo:'Planejamento: botão "Liberar Edição de Real" movido pra dentro do menu ⚙ Ferramentas — estava solto na barra principal',
-      itens:['Menos um botão poluindo a barra de cima; mesma função, agora dentro do menu Ferramentas.']}
+      itens:['Menos um botão poluindo a barra de cima; mesma função, agora dentro do menu Ferramentas.']},
+    {versao:'V2.60.5',status:'aberta',data:'2026-08-05',tipo:'correcao',
+      titulo:'BUG CRÍTICO: salvar o % de um grupo com valor desatualizado sobrescrevia o % de TODOS os descendentes em silêncio — provável causa de "todas as tarefas com 27%"',
+      itens:['Editar o % Concluído de uma tarefa-pai (via célula ou modal) distribui esse valor pra todos os descendentes — funcionalidade existente, correta quando intencional. O problema: isso rodava sem nenhum aviso, e se o valor no formulário/célula estivesse desatualizado (ex: formulário aberto antes de um recálculo de %), salvar sobrescrevia silenciosamente o % de centenas de tarefas de uma vez, apagando progresso real de todo mundo.',
+        'Corrigido: agora, se a tarefa tiver mais de 3 descendentes, pede confirmação explícita ANTES de aplicar qualquer coisa — mostra quantas tarefas serão afetadas e o valor que vai ser aplicado. Cancelar não salva nada, nem localmente.',
+        'Vale tanto pra edição na célula da tabela quanto pelo formulário grande de editar tarefa.']}
   ],
 
   render(containerId) {

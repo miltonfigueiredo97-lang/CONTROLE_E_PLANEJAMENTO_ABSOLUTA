@@ -1928,6 +1928,12 @@ const Planejamento = (() => {
         const fam=Utils.percFamilia(tarefas);
         const ehPai=fam.filhosDiretos(t).length>0;
         if(ehPai){
+          const descCheck=fam.descendentes(t);
+          if(descCheck.length>3&&!confirm(`"${t.nome}" tem ${descCheck.length} tarefas descendentes. Salvar ${v}% vai SOBRESCREVER o % de todas elas. Confirmar?`)){
+            t[field]=_valAntes; // desfaz a mudança local — nada foi salvo ainda
+            _paintRows();
+            return;
+          }
           famUps=Utils.distribuirPercDescendentes(tarefas,t.id,v);
           // Depois de nivelar os descendentes, ancestrais do pai também mudam
           famUps=famUps.concat(Utils.recalcularPercAncestrais(tarefas,t.id));
@@ -2687,6 +2693,23 @@ const Planejamento = (() => {
       const numAntes=_capturarNumAntes();
       const editandoIdAntes=editandoId;
       if(editandoId){
+        // Checagem ANTES de salvar qualquer coisa: se essa tarefa tem muitos
+        // descendentes, salvar um % diferente do atual sobrescreve o % de
+        // TODOS eles de uma vez — sem essa confirmação, um valor desatualizado
+        // no formulário (ex: aberto antes de um recálculo) podia sobrescrever
+        // o % de centenas de tarefas silenciosamente (bug real já visto).
+        const tAntes=tarefas.find(x=>x.id===editandoId);
+        const percAntesCheck=tAntes?(parseFloat(tAntes.percentualConcluido)||0):0;
+        const novoPercCheck=data.percentualConcluido;
+        if(tAntes&&Math.abs(novoPercCheck-percAntesCheck)>0.05){
+          const famCheck=Utils.percFamilia(tarefas);
+          const descCheck=famCheck.descendentes(tAntes);
+          if(descCheck.length>3){
+            if(!confirm(`"${tAntes.nome}" tem ${descCheck.length} tarefas descendentes. Salvar o % como ${novoPercCheck}% vai SOBRESCREVER o % de todas elas (era ${percAntesCheck}%). Confirmar?`)){
+              return;
+            }
+          }
+        }
         await Database.atualizar(obraId,COL,editandoId,data);
         // ===== % EM FAMÍLIA (mesma regra da edição inline) =====
         const tLocal=tarefas.find(x=>x.id===editandoId);
