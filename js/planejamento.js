@@ -565,7 +565,6 @@ const Planejamento = (() => {
           <span style="color:#333;margin:0 4px;">|</span>
           <button class="btn btn-secundario btn-sm" onclick="Planejamento._toggleMenuFerramentas()" style="font-size:.72rem;">⚙ Ferramentas</button>
           <button class="btn btn-secundario btn-sm" onclick="Planejamento.toggleGantt()" id="btn-tg" style="font-size:.72rem;">${ganttVisible?'◀ Esconder Gantt':'▶ Mostrar Gantt'}</button>
-          <button class="btn btn-sm" onclick="Planejamento.toggleLiberarEdicaoReal()" style="font-size:.72rem;${_liberarEdicaoReal?'background:#dc2626;color:#fff;border-color:#dc2626;':''}" title="Início/Término Real normalmente só são preenchidos via Diário/Medições/Semanal. Libere aqui só pra correção manual pontual.">${_liberarEdicaoReal?'🔓 Edição de Real Liberada':'🔒 Liberar Edição de Real'}</button>
           ${colsHidden.size?`<button class="btn btn-secundario btn-sm" onclick="Planejamento.showColsMenu()" style="font-size:.72rem;">＋ Colunas (${colsHidden.size})</button>`:''}
           <span style="color:#333;margin:0 4px;">|</span>
           <button class="btn ${modoView==='arvore'?'btn-primario':'btn-secundario'} btn-sm" data-perm="planejamento:editar" onclick="Planejamento.toggleArvoreEditor()" style="font-size:.72rem;">🌳 Editor de Estrutura</button>
@@ -2500,6 +2499,7 @@ const Planejamento = (() => {
       // antigo, desfazendo a reestruturação. A função continua existindo no
       // código (Planejamento._corrigirNivelPeloCodigo()) só pra emergência, mas
       // não deve ser clicada por engano no dia a dia.
+      '<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;${_liberarEdicaoReal?"background:#dc2626;color:#fff;":""}" onclick="Planejamento.toggleLiberarEdicaoReal()" title="Início/Término Real normalmente só são preenchidos via Diário/Medições/Semanal. Libere aqui só pra correção manual pontual.">'+(_liberarEdicaoReal?'🔓 Edição de Real Liberada':'🔒 Liberar Edição de Real')+'</button>'+
       '<button class="btn btn-secundario btn-sm" data-perm="planejamento:exportar" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.exportarPNG()">🖼 PNG</button>'+
       '<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.abrirVinculosView()">🔗 Vínculos com Levantamento</button>';
     document.body.appendChild(pop);

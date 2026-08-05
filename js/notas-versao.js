@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.60.3',
+  versaoAtual: 'V2.60.4',
 
   versoes: [
     {
@@ -5575,10 +5575,13 @@ const NotasVersao = {
     {versao:'V2.60.1',status:'fechada',data:'2026-08-05',tipo:'melhoria',
       titulo:'Levantamento de Fachada — Visão Geral: botão para travar o zoom/movimentação do mapa',
       itens:['🔓 Travar Zoom / 🔒 Travado na barra do mapa: enquanto travado, roda do mouse e arrastar não alteram mais o zoom/posição — evita mexer sem querer depois de ajustar do jeito que quer.']},
-    {versao:'V2.60.3',status:'aberta',data:'2026-08-05',tipo:'funcionalidade',
+    {versao:'V2.60.3',status:'fechada',data:'2026-08-05',tipo:'funcionalidade',
       titulo:'Planejamento: novo botão "🔒 Liberar Edição de Real" — permite editar Início Real e Término Real direto na tabela, quando liberado',
       itens:['Início Real/Término Real são normalmente só leitura no Planejamento (a fonte de verdade é Diário de Obra, Medições ou Semanal) — travado assim de propósito, pra não editar por engano.',
-        'Pra correções em massa pontuais (ex: atualizar a base sem gerar relatório/lançamento), clique em "🔒 Liberar Edição de Real" — as duas colunas ficam editáveis direto na célula, igual Início/Término Planejado. Clique de novo pra travar.']}
+        'Pra correções em massa pontuais (ex: atualizar a base sem gerar relatório/lançamento), clique em "🔒 Liberar Edição de Real" — as duas colunas ficam editáveis direto na célula, igual Início/Término Planejado. Clique de novo pra travar.']},
+    {versao:'V2.60.4',status:'aberta',data:'2026-08-05',tipo:'melhoria',
+      titulo:'Planejamento: botão "Liberar Edição de Real" movido pra dentro do menu ⚙ Ferramentas — estava solto na barra principal',
+      itens:['Menos um botão poluindo a barra de cima; mesma função, agora dentro do menu Ferramentas.']}
   ],
 
   render(containerId) {
