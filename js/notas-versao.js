@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.60.13',
+  versaoAtual: 'V2.60.15',
 
   versoes: [
     {
@@ -5621,13 +5621,20 @@ const NotasVersao = {
       itens:['Peças com "2° Subsolo" (símbolo de grau) e "2º Subsolo" (ordinal correto) eram tratadas como DOIS andares diferentes em qualquer soma — cada grafia virava uma barra própria, com só parte do volume real. CC.normalizarAndar (usado em todo o sistema) agora unifica esse caso.',
         'Gráfico Fundação e Estrutura: soma por andar agora agrupa por nome NORMALIZADO, deduplicando grafias equivalentes antes de montar as barras — não só na ordenação (como já era desde a V2.59.35), também no cálculo do valor.',
         'Visual: Previsto virou preenchimento sólido no tom claro da categoria (não mais contorno vazio) — pedido explícito de "quero colorido forte, não branco com borda".']},
-    {versao:'V2.60.13',status:'aberta',data:'2026-08-06',tipo:'funcionalidade',
+    {versao:'V2.60.13',status:'fechada',data:'2026-08-06',tipo:'funcionalidade',
       titulo:'Novo: Painel de Andamento no Dashboard (tarefas-mãe × Pavimento/Apartamento)',
       itens:['Nova tabela no Dashboard: cada linha é uma tarefa-mãe (grupo) escolhida pelo usuário em "⚙️ Configurar", cada coluna é um Pavimento ou Apartamento (toggle no topo) — usa a Estrutura da Obra (Torre/Pavimento/Apto) e o vínculo por tarefa já publicados no Planejamento.',
         'Célula mostra % agregado (peso por duração, mesma regra do resto do sistema) com cor de fundo por faixa de progresso (vermelho até 30%, amarelo até 70%, verde daí — ajustável no código) e borda por status (azul em andamento, verde sólida finalizada, cinza tracejada pausada).',
         'Pavimento vinculado "inteiro" (sem apto específico) conta em TODAS as colunas de apartamento daquele pavimento no modo Por Apartamento, além de na própria coluna do pavimento no modo Por Pavimento.',
         'Clique na célula abre o detalhamento: quais tarefas específicas compõem aquele número, com % individual e duração (peso) de cada uma.',
-        'Configuração (quais tarefas-mãe aparecem) salva em config/dashboardPainel — lista qualquer grupo de qualquer nível do Planejamento, não só o nível mais alto.']}
+        'Configuração (quais tarefas-mãe aparecem) salva em config/dashboardPainel — lista qualquer grupo de qualquer nível do Planejamento, não só o nível mais alto.']},
+    {versao:'V2.60.15',status:'aberta',data:'2026-08-06',tipo:'funcionalidade',
+      titulo:'Novo: Atualização Rápida de Predecessora/% com log obrigatório de motivo — histórico de alterações consultável',
+      itens:['Ícone "🔗" na coluna de ações de cada tarefa: abre modal pra trocar predecessora e/ou % concluído sem editar direto na grid, exigindo o MOTIVO da mudança (info que hoje só existe verbalmente, na conversa com o encarregado).',
+        'Predecessora nova é validada com o mesmo parser já usado na célula — formato inválido não deixa salvar.',
+        'Salvar dispara o MESMO recálculo automático de datas/sucessoras/% dos pais que já existe hoje (nada de novo ali) — só acrescenta o registro do motivo.',
+        'Novo botão ⚙ Ferramentas → "📋 Histórico de Alterações": lista todos os registros da obra (mais recente primeiro), com filtro por tarefa e por usuário. Somente leitura.',
+        'Guardado em obras/{obra}/logAlteracoes — coleção nova, isolada.']}
   ],
 
   render(containerId) {

@@ -1717,6 +1717,7 @@ const Planejamento = (() => {
           cells+=`<div style="${base}display:flex;gap:1px;justify-content:center;">
             <button style="background:#222;color:#888;border:1px solid #333;border-radius:3px;cursor:pointer;font-size:.58rem;padding:0 3px;line-height:1.4;" onclick="event.stopPropagation();Planejamento.recuarNivel('${t.id}')" title="Recuar nível">←</button>
             <button style="background:#222;color:#888;border:1px solid #333;border-radius:3px;cursor:pointer;font-size:.58rem;padding:0 3px;line-height:1.4;" onclick="event.stopPropagation();Planejamento.avancarNivel('${t.id}')" title="Avançar nível">→</button>
+            <button style="background:#222;color:var(--cor-primaria);border:1px solid #333;border-radius:3px;cursor:pointer;font-size:.58rem;padding:0 3px;line-height:1.4;" onclick="event.stopPropagation();Planejamento._abrirAtualizarPredecessora(${i})" title="Atualizar Predecessora (com motivo)">🔗</button>
             <button style="background:#222;color:#dc2626;border:1px solid #333;border-radius:3px;cursor:pointer;font-size:.58rem;padding:0 3px;line-height:1.4;" onclick="event.stopPropagation();Planejamento.excluirTarefa('${t.id}')" title="Excluir">✕</button>
           </div>`;
         }
@@ -2507,6 +2508,7 @@ const Planejamento = (() => {
       '<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento._recalcularPercTodosPais()" title="Recalcula o % de toda tarefa-pai a partir dos filhos diretos (nível por nível, igual MS Project)">📊 Recalcular % dos Pais</button>'+
       '<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento._corrigirNiveisSoltos()" title="Corrige tarefas com nível soltos (invisíveis no Editor de Estrutura)">🌳 Corrigir Níveis Soltos</button>'+
       '<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento._migrarPredecessorasParaId()" title="Converte predecessoras antigas (por número de linha) pro formato por ID — imune a reordenação. Roda sozinho ao carregar, use aqui só se quiser confirmar manualmente.">🔗 Corrigir Predecessoras (por ID)</button>'+
+      '<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento._abrirHistoricoAlteracoes()" title="Lista todas as trocas de predecessora/% feitas com motivo registrado">📋 Histórico de Alterações</button>'+
       // "Corrigir Nível pelo Código" foi removido do menu — era um reparo de uso
       // único (histórico corrompido por bugs já corrigidos). Como ferramenta
       // recorrente é perigoso: se você aninhar uma tarefa com Código dentro de um
@@ -3411,6 +3413,153 @@ const Planejamento = (() => {
     _paintRows();
     try{await Database.atualizar(obraId,COL,t.id,{vinculoEstrutura:vinculos});Utils.toast('Local salvo.','sucesso');}
     catch(e){console.error(e);Utils.toast('Erro ao salvar.','erro');}
+  }
+
+  // ===================== M3: ATUALIZAÇÃO RÁPIDA DE PREDECESSORA + LOG =====================
+  // Deixa trocar predecessora/% sem editar direto na grid, guardando o MOTIVO
+  // da mudança (info que hoje só existe verbalmente, na conversa com o
+  // encarregado). Não muda a lógica de recálculo automático já existente —
+  // só chama as mesmas funções (_calcPredecessora/_propagarDataEmCascata/
+  // _recalcularDatasPais/_recalcularPercTodosPais) depois de salvar.
+  function _abrirAtualizarPredecessora(idx){
+    const t=filtradas[idx];if(!t)return;
+    let pop=document.getElementById('predlog-modal');if(pop)pop.remove();
+    pop=document.createElement('div');pop.id='predlog-modal';
+    pop.dataset.tarefaId=t.id;pop.dataset.idx=idx;
+    pop.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:2000;display:flex;align-items:center;justify-content:center;';
+    pop.innerHTML=`
+      <div style="background:#1a1a1a;border:1px solid #333;border-radius:10px;padding:20px;width:440px;max-width:95vw;max-height:85vh;overflow-y:auto;display:flex;flex-direction:column;gap:10px;">
+        <div style="font-weight:700;color:var(--cor-primaria);">🔗 Atualizar Predecessora: ${_esc(t.nome)}</div>
+        <div style="font-size:.72rem;color:#888;">Predecessora atual: <strong style="color:#ccc;">${t._predDisplay||'—'}</strong> · % atual: <strong style="color:#ccc;">${t.percentualConcluido||0}%</strong></div>
+        <div>
+          <label style="font-size:.72rem;color:#888;display:block;margin-bottom:4px;">Nova predecessora (deixe em branco pra não mudar)</label>
+          <input id="predlog-pred" type="text" placeholder="ex: 5TI+3" class="form-control" oninput="Planejamento._predlogAtualizarBotao()">
+        </div>
+        <div>
+          <label style="font-size:.72rem;color:#888;display:block;margin-bottom:4px;">Novo % concluído (deixe em branco pra não mudar)</label>
+          <input id="predlog-perc" type="number" min="0" max="100" placeholder="ex: 90" class="form-control" oninput="Planejamento._predlogAtualizarBotao()">
+        </div>
+        <div>
+          <label style="font-size:.72rem;color:#888;display:block;margin-bottom:4px;">Motivo da alteração <span style="color:#dc2626;">*obrigatório</span></label>
+          <textarea id="predlog-motivo" rows="3" class="form-control" placeholder="Ex: Predecessora atrasou por conta de entrega de material" oninput="Planejamento._predlogAtualizarBotao()"></textarea>
+        </div>
+        <div id="predlog-erro" style="color:#dc2626;font-size:.72rem;display:none;"></div>
+        <div style="display:flex;gap:8px;justify-content:flex-end;">
+          <button class="btn btn-secundario btn-sm" onclick="document.getElementById('predlog-modal').remove()">Cancelar</button>
+          <button id="predlog-btn-salvar" class="btn btn-primario btn-sm" disabled onclick="Planejamento._salvarAtualizacaoPredecessora(${idx})">Salvar</button>
+        </div>
+      </div>`;
+    document.body.appendChild(pop);
+    document.getElementById('predlog-pred').focus();
+  }
+  // Habilita "Salvar" só se: motivo preenchido E (predecessora OU % preenchidos)
+  function _predlogAtualizarBotao(){
+    const pred=document.getElementById('predlog-pred')?.value?.trim();
+    const perc=document.getElementById('predlog-perc')?.value?.trim();
+    const motivo=document.getElementById('predlog-motivo')?.value?.trim();
+    const btn=document.getElementById('predlog-btn-salvar');
+    if(!btn)return;
+    btn.disabled=!(motivo&&(pred||perc));
+  }
+  async function _salvarAtualizacaoPredecessora(idx){
+    const t=filtradas[idx];if(!t)return;
+    const predRaw=document.getElementById('predlog-pred')?.value?.trim();
+    const percRaw=document.getElementById('predlog-perc')?.value?.trim();
+    const motivo=document.getElementById('predlog-motivo')?.value?.trim();
+    const erroEl=document.getElementById('predlog-erro');
+    if(!motivo||(!predRaw&&!percRaw)){if(erroEl){erroEl.textContent='Preencha o motivo e pelo menos um campo (predecessora ou %).';erroEl.style.display='block';}return;}
+
+    const alteracoes=[];
+    const updates={};
+    if(predRaw){
+      // Reaproveita o mesmo parser/validador de predecessora já usado na célula.
+      const canon=_predTextoParaCanon(predRaw);
+      if(!canon){if(erroEl){erroEl.textContent=`Predecessora "${predRaw}" não reconhecida — verifique o número da linha e o formato (ex: 5TI+3).`;erroEl.style.display='block';}return;}
+      alteracoes.push({campo:'predecessora',valorAntigo:t._predDisplay||'',valorNovo:predRaw});
+      updates.predecessora=canon;
+      _calcPredecessora(t,canon,updates); // mesmo recálculo automático já existente
+    }
+    if(percRaw){
+      const novoPerc=Math.min(100,Math.max(0,parseFloat(percRaw)||0));
+      alteracoes.push({campo:'percentual',valorAntigo:parseFloat(t.percentualConcluido)||0,valorNovo:novoPerc});
+      updates.percentualConcluido=novoPerc;
+    }
+    if(!alteracoes.length)return;
+
+    Object.assign(t,updates);
+    if(updates.predecessora!==undefined)t._predDisplay=_predCanonParaTexto(t.predecessora);
+    _buildFiltradas();_render();
+    const pop=document.getElementById('predlog-modal');if(pop)pop.remove();
+
+    try{
+      await Database.atualizar(obraId,COL,t.id,updates);
+      await _registrarLog(t.id,t.nome,alteracoes,motivo);
+      // Mesma cadeia de recálculo que já existe pra qualquer edição de data/predecessora
+      if(updates.inicioPlanejado||updates.terminoPlanejado)await _propagarDataEmCascata(t.id);
+      const paisAlterados=await _recalcularDatasPais(true);
+      for(const p of paisAlterados)await _propagarDataEmCascata(p.id);
+      await _recalcularPercTodosPais(true);
+      Utils.toast('Atualizado e registrado no histórico.','sucesso');
+    }catch(e){console.error(e);Utils.toast('Erro ao salvar.','erro');}
+  }
+  async function _registrarLog(tarefaId,tarefaNome,alteracoes,motivo){
+    try{
+      await db.collection('obras').doc(obraId).collection('logAlteracoes').add({
+        tarefaId,tarefaNome,
+        usuario:Auth.getUser()?.email||'',
+        timestamp:firebase.firestore.FieldValue.serverTimestamp(),
+        motivo,alteracoes,
+      });
+    }catch(e){console.error('Erro ao registrar log:',e);}
+  }
+
+  // ---- Histórico de Alterações (visão) ----
+  let _historicoCache=[];
+  async function _abrirHistoricoAlteracoes(){
+    let pop=document.getElementById('historico-modal');if(pop)pop.remove();
+    pop=document.createElement('div');pop.id='historico-modal';
+    pop.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:2000;display:flex;align-items:center;justify-content:center;';
+    pop.innerHTML=`
+      <div style="background:#1a1a1a;border:1px solid #333;border-radius:10px;padding:20px;width:720px;max-width:95vw;max-height:85vh;overflow-y:auto;display:flex;flex-direction:column;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+          <div style="font-weight:700;color:var(--cor-primaria);">📋 Histórico de Alterações</div>
+          <span style="cursor:pointer;color:#888;font-size:1.1rem;" onclick="document.getElementById('historico-modal').remove()">✕</span>
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:10px;">
+          <input id="hist-filtro-tarefa" placeholder="Filtrar por tarefa..." class="form-control" style="flex:1;font-size:.78rem;" oninput="Planejamento._filtrarHistorico()">
+          <input id="hist-filtro-usuario" placeholder="Filtrar por usuário..." class="form-control" style="flex:1;font-size:.78rem;" oninput="Planejamento._filtrarHistorico()">
+        </div>
+        <div id="historico-lista" style="font-size:.78rem;"></div>
+      </div>`;
+    document.body.appendChild(pop);
+    document.getElementById('historico-lista').innerHTML='<div style="color:#666;padding:10px 0;">Carregando...</div>';
+    try{
+      const snap=await db.collection('obras').doc(obraId).collection('logAlteracoes').orderBy('timestamp','desc').limit(300).get();
+      _historicoCache=snap.docs.map(d=>({id:d.id,...d.data()}));
+    }catch(e){console.error('Erro ao carregar histórico:',e);_historicoCache=[];}
+    _filtrarHistorico();
+  }
+  function _filtrarHistorico(){
+    const el=document.getElementById('historico-lista');if(!el)return;
+    const fTarefa=(document.getElementById('hist-filtro-tarefa')?.value||'').trim().toLowerCase();
+    const fUsuario=(document.getElementById('hist-filtro-usuario')?.value||'').trim().toLowerCase();
+    const filtrados=_historicoCache.filter(l=>
+      (!fTarefa||(l.tarefaNome||'').toLowerCase().includes(fTarefa))&&
+      (!fUsuario||(l.usuario||'').toLowerCase().includes(fUsuario))
+    );
+    if(!filtrados.length){el.innerHTML='<div style="color:#666;padding:10px 0;">Nenhum registro encontrado.</div>';return;}
+    el.innerHTML=filtrados.map(l=>{
+      const data=l.timestamp?.toDate?l.timestamp.toDate().toLocaleString('pt-BR'):'—';
+      const camposHtml=(l.alteracoes||[]).map(a=>`<div style="color:#aaa;">${_esc(a.campo)}: <span style="color:#f87171;">${_esc(String(a.valorAntigo??''))}</span> → <span style="color:#4ade80;">${_esc(String(a.valorNovo??''))}</span></div>`).join('');
+      return `<div style="border-bottom:1px solid #222;padding:8px 0;">
+        <div style="display:flex;justify-content:space-between;color:#888;font-size:.7rem;margin-bottom:3px;">
+          <span>${_esc(data)} · ${_esc(l.usuario||'?')}</span>
+        </div>
+        <div style="color:#fff;font-weight:600;margin-bottom:3px;">${_esc(l.tarefaNome||'(tarefa)')}</div>
+        ${camposHtml}
+        <div style="color:#888;font-size:.72rem;margin-top:3px;font-style:italic;">"${_esc(l.motivo||'')}"</div>
+      </div>`;
+    }).join('');
   }
 
   // ===================== MIGRAÇÃO: PREDECESSORA POR ID =====================
@@ -5047,6 +5196,7 @@ const Planejamento = (() => {
     toggleGantt,toggleLiberarEdicaoReal,hideCol,showColsMenu,_showCol,_showAll,_toggleMenuFerramentas,
     _abrirEstruturaObra,_addTorre,_addPavimento,_addApartamento,_editarNomeEst,_removerNoEst,
     _abrirVinculoPavimento,_salvarVinculoPavimento,_vinclocTogglePav,_vinclocToggleApto,
+    _abrirAtualizarPredecessora,_predlogAtualizarBotao,_salvarAtualizacaoPredecessora,_abrirHistoricoAlteracoes,_filtrarHistorico,
     toggleArvoreEditor,_arvToggle,_arvExpandirTudo,_arvIniciarEdit,_arvCancelarEdit,_arvSalvarNome,
     _arvInserirAcima,_arvInserirAbaixo,_arvMudarNivel,
     _arvCriarFilho,_arvCriarRaiz,_arvBackupEstrutura,_arvRestaurarEstrutura,_arvSalvarTudo,_arvDragStart,_arvDragOver,_arvDragEnd,_arvDrop,
