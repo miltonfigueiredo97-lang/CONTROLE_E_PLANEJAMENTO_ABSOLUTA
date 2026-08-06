@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.60.12',
+  versaoAtual: 'V2.60.13',
 
   versoes: [
     {
@@ -5616,11 +5616,18 @@ const NotasVersao = {
         'Nova coluna "Local (Pav/Apto)" na tabela — clicável, abre um picker pra marcar um pavimento inteiro (vale pra todos os aptos dele) ou apto(s) específico(s). Mostra resumo curto na célula (ex: "1º Pav (todos)" ou "1º Pav: 101, 102").',
         'Guardado em obras/{obra}/config/estruturaObra (nova, isolada) e no campo vinculoEstrutura de cada tarefa — não migra nem toca em pisoArvore/tetoArvore/paredesArvore, que continuam servindo só os módulos de Levantamento.',
         'Vínculo "órfão" (referenciando um pavimento/apto que foi excluído depois) aparece com aviso visual em vermelho na célula, em vez de quebrar silenciosamente.']},
-    {versao:'V2.60.12',status:'aberta',data:'2026-08-06',tipo:'correcao',
+    {versao:'V2.60.12',status:'fechada',data:'2026-08-06',tipo:'correcao',
       titulo:'Dashboard: volume de Fundação aparecia menor do que o real em obras com grafia inconsistente do nome do andar (° em vez de º)',
       itens:['Peças com "2° Subsolo" (símbolo de grau) e "2º Subsolo" (ordinal correto) eram tratadas como DOIS andares diferentes em qualquer soma — cada grafia virava uma barra própria, com só parte do volume real. CC.normalizarAndar (usado em todo o sistema) agora unifica esse caso.',
         'Gráfico Fundação e Estrutura: soma por andar agora agrupa por nome NORMALIZADO, deduplicando grafias equivalentes antes de montar as barras — não só na ordenação (como já era desde a V2.59.35), também no cálculo do valor.',
-        'Visual: Previsto virou preenchimento sólido no tom claro da categoria (não mais contorno vazio) — pedido explícito de "quero colorido forte, não branco com borda".']}
+        'Visual: Previsto virou preenchimento sólido no tom claro da categoria (não mais contorno vazio) — pedido explícito de "quero colorido forte, não branco com borda".']},
+    {versao:'V2.60.13',status:'aberta',data:'2026-08-06',tipo:'funcionalidade',
+      titulo:'Novo: Painel de Andamento no Dashboard (tarefas-mãe × Pavimento/Apartamento)',
+      itens:['Nova tabela no Dashboard: cada linha é uma tarefa-mãe (grupo) escolhida pelo usuário em "⚙️ Configurar", cada coluna é um Pavimento ou Apartamento (toggle no topo) — usa a Estrutura da Obra (Torre/Pavimento/Apto) e o vínculo por tarefa já publicados no Planejamento.',
+        'Célula mostra % agregado (peso por duração, mesma regra do resto do sistema) com cor de fundo por faixa de progresso (vermelho até 30%, amarelo até 70%, verde daí — ajustável no código) e borda por status (azul em andamento, verde sólida finalizada, cinza tracejada pausada).',
+        'Pavimento vinculado "inteiro" (sem apto específico) conta em TODAS as colunas de apartamento daquele pavimento no modo Por Apartamento, além de na própria coluna do pavimento no modo Por Pavimento.',
+        'Clique na célula abre o detalhamento: quais tarefas específicas compõem aquele número, com % individual e duração (peso) de cada uma.',
+        'Configuração (quais tarefas-mãe aparecem) salva em config/dashboardPainel — lista qualquer grupo de qualquer nível do Planejamento, não só o nível mais alto.']}
   ],
 
   render(containerId) {

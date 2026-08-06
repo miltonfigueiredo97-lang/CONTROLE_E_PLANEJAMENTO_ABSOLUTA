@@ -201,6 +201,7 @@ const Dashboard = (() => {
       _renderHero();
       _renderAtividades();
       _renderSuprimentosDash();
+      await _renderPainelAndamento();
       _renderSoloGrampeadoPanel();
       await _renderFundacaoEstrutura();
       await _renderEstacasPanel();
@@ -264,6 +265,22 @@ const Dashboard = (() => {
       <div id="db-fundacao-estrutura-wrap"></div>
 
       <div id="db-estacas-wrap"></div>
+
+      <div class="card db-row">
+        <div class="card-body">
+          <div class="db-secao-header">
+            <h3>Painel de Andamento</h3>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div class="aba-toggle" id="db-painel-toggle">
+                <button class="aba-btn ativo" data-v="pavimento" onclick="Dashboard._painelSetModo('pavimento')">Por Pavimento</button>
+                <button class="aba-btn" data-v="apartamento" onclick="Dashboard._painelSetModo('apartamento')">Por Apartamento</button>
+              </div>
+              <button class="btn btn-secundario btn-sm" onclick="Dashboard._abrirConfigPainel()">⚙️ Configurar</button>
+            </div>
+          </div>
+          <div id="db-painel-andamento"></div>
+        </div>
+      </div>
 
       <div class="card db-row">
         <div class="card-body">
@@ -408,6 +425,235 @@ const Dashboard = (() => {
     let out = [];
     filhos.forEach(f => { out = out.concat(_folhasDescendentes(f, sorted)); });
     return out;
+  }
+
+  // ===================== PAINEL DE ANDAMENTO (por Pavimento/Apto) =====================
+  // Pré-requisito: módulo "Planejamento — Estrutura da Obra + Vínculo" já em
+  // uso (obras/{id}/config/estruturaObra e campo vinculoEstrutura em cada
+  // tarefa). Só leitura — não grava nada nas tarefas.
+  //
+  // Tabela: linha = tarefa-mãe escolhida pelo usuário (config/dashboardPainel);
+  // coluna = pavimento OU apartamento (toggle). Célula = % agregado (peso por
+  // duração, igual ao resto do Dashboard) + status (borda) das tarefas que
+  // batem naquele cruzamento tarefa-mãe × local.
+  const PAINEL_FAIXAS = { vermelho: 30, amarelo: 70 }; // 0-30 vermelho, 31-70 amarelo, 71-100 verde — ajustável aqui
+  let _painelModo = localStorage.getItem('db_painel_modo') || 'pavimento'; // 'pavimento' | 'apartamento'
+  let _painelMaesConfig = []; // ids de tarefa-mãe escolhidos, de config/dashboardPainel
+  let _painelEstrutura = null; // { torres: [...] } de config/estruturaObra
+  let _painelDados = null; // cache do último cálculo, usado pelo popover de detalhe
+
+  function _painelCorProgresso(pct) {
+    if (pct <= PAINEL_FAIXAS.vermelho) return '#dc2626';
+    if (pct <= PAINEL_FAIXAS.amarelo) return '#eab308';
+    return '#16a34a';
+  }
+  // Status da célula a partir do conjunto de tarefas que a compõem: todas
+  // finalizadas → finalizada; todas pausadas → pausada; qualquer mistura
+  // (inclusive uma finalizada + uma em andamento) → em andamento.
+  function _painelStatusCelula(tarefasDaCelula) {
+    if (tarefasDaCelula.every(t => t.status === 'finalizada')) return 'finalizada';
+    if (tarefasDaCelula.every(t => t.status === 'pausada')) return 'pausada';
+    return 'andamento';
+  }
+  function _painelBordaStatus(status) {
+    if (status === 'finalizada') return '2px solid #16a34a';
+    if (status === 'pausada') return '2px dashed #888';
+    return '2px solid #2563eb';
+  }
+
+  async function _renderPainelAndamento() {
+    const host = document.getElementById('db-painel-andamento');
+    if (!host) return;
+    try {
+      const obraId = obraAtual.id;
+      const [cfgPainel, estrutura] = await Promise.all([
+        Database.obter(obraId, 'config', 'dashboardPainel').catch(() => null),
+        Database.obter(obraId, 'config', 'estruturaObra').catch(() => null),
+      ]);
+      _painelMaesConfig = cfgPainel?.maesIds || [];
+      _painelEstrutura = estrutura || { torres: [] };
+      const toggle = document.getElementById('db-painel-toggle');
+      if (toggle) toggle.querySelectorAll('.aba-btn').forEach(b => b.classList.toggle('ativo', b.dataset.v === _painelModo));
+
+      if (!_painelEstrutura.torres || !_painelEstrutura.torres.length) {
+        host.innerHTML = '<div class="estado-vazio"><p class="text-sm">Nenhuma Estrutura da Obra cadastrada ainda — configure em Planejamento → 🏢 Estrutura da Obra.</p></div>';
+        return;
+      }
+      if (!_painelMaesConfig.length) {
+        host.innerHTML = '<div class="estado-vazio"><p class="text-sm">Nenhuma tarefa-mãe escolhida ainda pra este painel — clique em "⚙️ Configurar" acima.</p></div>';
+        return;
+      }
+      const sorted = [...tarefas].sort((a, b) => (a.ordem || 0) - (b.ordem || 0));
+      const maes = _painelMaesConfig.map(id => sorted.find(t => t.id === id)).filter(Boolean);
+      if (!maes.length) {
+        host.innerHTML = '<div class="estado-vazio"><p class="text-sm">As tarefas-mãe configuradas não existem mais no Planejamento — reconfigure em "⚙️ Configurar".</p></div>';
+        return;
+      }
+
+      // Colunas: pavimentos, ou pavimento+apto se modo='apartamento'.
+      const colunas = [];
+      [...(_painelEstrutura.torres || [])].sort((a, b) => (a.ordem || 0) - (b.ordem || 0)).forEach(torre => {
+        [...(torre.pavimentos || [])].sort((a, b) => (a.ordem || 0) - (b.ordem || 0)).forEach(pav => {
+          if (_painelModo === 'pavimento' || !(pav.apartamentos || []).length) {
+            colunas.push({ label: pav.nome, torreId: torre.id, pavimentoId: pav.id, apartamentoId: null });
+          } else {
+            [...pav.apartamentos].sort((a, b) => (a.ordem || 0) - (b.ordem || 0)).forEach(apto => {
+              colunas.push({ label: `${pav.nome}: ${apto.nome}`, torreId: torre.id, pavimentoId: pav.id, apartamentoId: apto.id });
+            });
+          }
+        });
+      });
+
+      // Pra cada mãe × coluna, acha as tarefas-folha da mãe cujo
+      // vinculoEstrutura bate com a coluna (pavimento inteiro conta pra
+      // TODAS as colunas de apto daquele pavimento também, conforme spec).
+      const dados = maes.map(mae => {
+        const folhasDaMae = _folhasDescendentes(mae, sorted);
+        const celulas = colunas.map(col => {
+          const tarefasDaCelula = folhasDaMae.filter(t => (t.vinculoEstrutura || []).some(v => {
+            if (v.pavimentoId !== col.pavimentoId) return false;
+            if (!col.apartamentoId) return true; // coluna é pavimento inteiro — qualquer vínculo daquele pavimento entra
+            return !v.apartamentoId || v.apartamentoId === col.apartamentoId; // vínculo no pavimento inteiro OU no apto certo
+          }));
+          if (!tarefasDaCelula.length) return null; // célula vazia — sem tarefa vinculada
+          let somaPeso = 0, somaConc = 0;
+          tarefasDaCelula.forEach(t => {
+            const peso = Math.max(1, Number(t.duracao) || 1); // peso por duração — nunca por quantidade (regra 5.1 do projeto)
+            somaPeso += peso;
+            somaConc += Math.min(100, Number(t.percentualConcluido) || 0) * peso;
+          });
+          return {
+            percentual: somaPeso ? somaConc / somaPeso : 0,
+            status: _painelStatusCelula(tarefasDaCelula),
+            tarefas: tarefasDaCelula,
+          };
+        });
+        return { mae, celulas };
+      });
+      _painelDados = { dados, colunas };
+      host.innerHTML = _htmlPainelAndamento(dados, colunas);
+    } catch (e) {
+      console.error(e);
+      host.innerHTML = '<div class="estado-vazio"><p class="text-sm">Erro ao carregar o Painel de Andamento.</p></div>';
+    }
+  }
+
+  function _htmlPainelAndamento(dados, colunas) {
+    const corHeader = '#f8f8f8';
+    return `
+      <div style="overflow-x:auto;">
+        <table style="border-collapse:collapse;width:100%;font-size:.78rem;">
+          <thead>
+            <tr>
+              <th style="position:sticky;left:0;background:${corHeader};padding:6px 10px;text-align:left;border:1px solid #e5e5e5;min-width:140px;z-index:1;">Tarefa</th>
+              ${colunas.map(c => `<th style="background:${corHeader};padding:6px 8px;border:1px solid #e5e5e5;min-width:64px;font-weight:600;white-space:nowrap;">${c.label}</th>`).join('')}
+            </tr>
+          </thead>
+          <tbody>
+            ${dados.map((linha, li) => `
+              <tr>
+                <td style="position:sticky;left:0;background:#fff;padding:6px 10px;border:1px solid #e5e5e5;font-weight:600;white-space:nowrap;z-index:1;">${linha.mae.nome || 'Sem nome'}</td>
+                ${linha.celulas.map((cel, ci) => {
+                  if (!cel) return `<td style="background:#f4f4f4;border:1px solid #e5e5e5;"></td>`;
+                  const cor = _painelCorProgresso(cel.percentual);
+                  const borda = _painelBordaStatus(cel.status);
+                  return `<td style="border:${borda};padding:0;cursor:pointer;text-align:center;" onclick="Dashboard._painelAbrirDetalhe(${li},${ci})">
+                    <div style="padding:5px 4px;background:${cor}22;">
+                      <div style="font-weight:700;color:${cor};">${Math.round(cel.percentual)}%</div>
+                    </div>
+                  </td>`;
+                }).join('')}
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+      <div class="db-legenda" style="margin-top:8px;">
+        <span><i style="background:#dc2626;"></i> 0–${PAINEL_FAIXAS.vermelho}%</span>
+        <span><i style="background:#eab308;"></i> ${PAINEL_FAIXAS.vermelho + 1}–${PAINEL_FAIXAS.amarelo}%</span>
+        <span><i style="background:#16a34a;"></i> ${PAINEL_FAIXAS.amarelo + 1}–100%</span>
+        <span style="margin-left:10px;">Borda: <b style="border-bottom:2px solid #2563eb;">azul</b> em andamento · <b style="border-bottom:2px solid #16a34a;">verde</b> finalizada · <b style="border-bottom:2px dashed #888;">tracejada</b> pausada</span>
+      </div>
+      <div class="text-sm text-muted" style="margin-top:6px;">Clique numa célula pra ver as tarefas que compõem aquele número.</div>`;
+  }
+
+  function _painelSetModo(modo) {
+    _painelModo = modo;
+    localStorage.setItem('db_painel_modo', modo);
+    _renderPainelAndamento();
+  }
+
+  function _painelAbrirDetalhe(li, ci) {
+    if (!_painelDados) return;
+    const linha = _painelDados.dados[li];
+    const cel = linha?.celulas[ci];
+    if (!cel) return;
+    const col = _painelDados.colunas[ci];
+    let overlay = document.getElementById('db-painel-detalhe-overlay');
+    if (overlay) overlay.remove();
+    overlay = document.createElement('div');
+    overlay.id = 'db-painel-detalhe-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:600;background:rgba(15,23,42,.5);display:flex;align-items:center;justify-content:center;padding:24px;';
+    overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+    overlay.innerHTML = `
+      <div style="background:#fff;border-radius:10px;max-width:480px;width:100%;max-height:80vh;overflow-y:auto;padding:16px;">
+        <div style="font-weight:700;margin-bottom:2px;">${linha.mae.nome}</div>
+        <div class="text-sm text-muted" style="margin-bottom:10px;">${col.label} — ${Math.round(cel.percentual)}% (peso por duração)</div>
+        ${cel.tarefas.map(t => `
+          <div style="display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid #eee;">
+            <div>
+              <div style="font-weight:600;font-size:.82rem;">${t.nome || 'Sem nome'}</div>
+              <div class="text-sm text-muted">Duração: ${t.duracao || 1}d (peso) · Status: ${t.status || 'em andamento'}</div>
+            </div>
+            <div style="font-weight:700;color:${_painelCorProgresso(Number(t.percentualConcluido) || 0)};white-space:nowrap;">${Math.round(Number(t.percentualConcluido) || 0)}%</div>
+          </div>`).join('')}
+        <button class="btn btn-secundario btn-sm" style="width:100%;margin-top:10px;" onclick="document.getElementById('db-painel-detalhe-overlay').remove()">Fechar</button>
+      </div>`;
+    document.body.appendChild(overlay);
+  }
+
+  // Configuração: escolher quais tarefas-mãe (grupos de qualquer nível, não
+  // só nível 0) entram nas linhas da tabela. Lista candidata = todos os nós
+  // COM filhos (grupos) — folhas puras não fazem sentido como "mãe".
+  async function _abrirConfigPainel() {
+    const sorted = [...tarefas].sort((a, b) => (a.ordem || 0) - (b.ordem || 0));
+    const candidatas = sorted.filter(t => _temFilhos(t, sorted));
+    let overlay = document.getElementById('db-painelcfg-overlay');
+    if (overlay) overlay.remove();
+    overlay = document.createElement('div');
+    overlay.id = 'db-painelcfg-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:600;background:rgba(15,23,42,.5);display:flex;align-items:center;justify-content:center;padding:24px;';
+    overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+    overlay.innerHTML = `
+      <div style="background:#fff;border-radius:10px;max-width:420px;width:100%;max-height:80vh;overflow-y:auto;padding:16px;">
+        <div style="font-weight:700;margin-bottom:4px;">⚙️ Configurar Painel de Andamento</div>
+        <div class="text-sm text-muted" style="margin-bottom:10px;">Escolha quais tarefas (grupos) do Planejamento aparecem como linha na tabela.</div>
+        <div id="db-painelcfg-lista" style="display:flex;flex-direction:column;gap:4px;">
+          ${candidatas.length ? candidatas.map(t => `
+            <label style="display:flex;align-items:center;gap:8px;font-size:.82rem;padding:3px 0;cursor:pointer;">
+              <input type="checkbox" value="${t.id}" ${_painelMaesConfig.includes(t.id) ? 'checked' : ''}>
+              <span style="padding-left:${(t.nivel || 0) * 12}px;">${t.nome || 'Sem nome'}</span>
+            </label>`).join('') : '<div class="text-sm text-muted">Nenhum grupo de tarefas encontrado no Planejamento.</div>'}
+        </div>
+        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px;">
+          <button class="btn btn-secundario btn-sm" onclick="document.getElementById('db-painelcfg-overlay').remove()">Cancelar</button>
+          <button class="btn btn-primario btn-sm" onclick="Dashboard._salvarConfigPainel()">Salvar</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+  }
+
+  async function _salvarConfigPainel() {
+    const overlay = document.getElementById('db-painelcfg-overlay');
+    const ids = [...overlay.querySelectorAll('input[type="checkbox"]:checked')].map(cb => cb.value);
+    try {
+      await db.collection('obras').doc(obraAtual.id).collection('config').doc('dashboardPainel').set({ maesIds: ids }, { merge: true });
+      overlay.remove();
+      Utils.toast('Configuração salva.', 'sucesso');
+      await _renderPainelAndamento();
+    } catch (e) {
+      console.error(e);
+      Utils.toast('Erro ao salvar configuração.', 'erro');
+    }
   }
 
   // Estado da árvore navegável: cada card tem SUAS DUAS colunas com estado
@@ -2237,5 +2483,5 @@ const Dashboard = (() => {
       </div>`;
   }
 
-  return { init, onObraChanged, setResumoView, setPacotesView, setCurvaGranularidade, toggleMostrarConcreto, _arvToggle, _arvNivelFixo, _arvHorizonte, _fecharPopupProjeto, _popupNavegar, _popupZoomAjustar };
+  return { init, onObraChanged, setResumoView, setPacotesView, setCurvaGranularidade, toggleMostrarConcreto, _arvToggle, _arvNivelFixo, _arvHorizonte, _fecharPopupProjeto, _popupNavegar, _popupZoomAjustar, _painelSetModo, _abrirConfigPainel, _salvarConfigPainel, _painelAbrirDetalhe };
 })();
