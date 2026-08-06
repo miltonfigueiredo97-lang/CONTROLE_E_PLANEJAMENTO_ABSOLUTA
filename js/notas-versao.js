@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.60.16',
+  versaoAtual: 'V2.60.17',
 
   versoes: [
     {
@@ -5635,11 +5635,14 @@ const NotasVersao = {
         'Salvar dispara o MESMO recálculo automático de datas/sucessoras/% dos pais que já existe hoje (nada de novo ali) — só acrescenta o registro do motivo.',
         'Novo botão ⚙ Ferramentas → "📋 Histórico de Alterações": lista todos os registros da obra (mais recente primeiro), com filtro por tarefa e por usuário. Somente leitura.',
         'Guardado em obras/{obra}/logAlteracoes — coleção nova, isolada.']},
-    {versao:'V2.60.16',status:'aberta',data:'2026-08-06',tipo:'funcionalidade',
+    {versao:'V2.60.16',status:'fechada',data:'2026-08-06',tipo:'funcionalidade',
       titulo:'Novo: filtro "👷 Ver por Responsável" no Planejamento',
       itens:['Botão na toolbar abre lista de responsáveis distintos já usados na obra (sem duplicados/vazios) — selecionar um filtra a grid instantaneamente, "Todos" limpa o filtro.',
         'Combina com os filtros já existentes (status, busca) — é mais uma condição, não substitui nenhum.',
-        'Preferência fica só no navegador (localStorage, cache de sessão) — não grava nada novo no Firestore, nem usa campo novo (lê o "Responsável" que já existe em cada tarefa).']}
+        'Preferência fica só no navegador (localStorage, cache de sessão) — não grava nada novo no Firestore, nem usa campo novo (lê o "Responsável" que já existe em cada tarefa).']},
+    {versao:'V2.60.17',status:'aberta',data:'2026-08-06',tipo:'melhoria',
+      titulo:'Estrutura da Obra: botão "📋 duplicar" em cada pavimento — copia o pavimento inteiro com os apartamentos dele',
+      itens:['Útil pra torres com andares repetidos (mesmo layout de apto do 1º ao 15º, por exemplo): duplica o pavimento e todos os apartamentos dele de uma vez, com IDs novos (nunca reaproveita ID de outro nó — evitaria vínculo ambíguo entre original e cópia). Só precisa editar o nome depois.']}
   ],
 
   render(containerId) {

@@ -3307,6 +3307,7 @@ const Planejamento = (() => {
               <div style="display:flex;align-items:center;gap:6px;">
                 <input value="${_esc(p.nome||'')}" onchange="Planejamento._editarNomeEst('pavimento','${p.id}',this.value)" style="flex:1;background:#111;border:1px solid #333;border-radius:4px;color:#ddd;padding:3px 6px;font-size:.78rem;">
                 <span style="cursor:pointer;color:var(--cor-primaria);font-size:.72rem;" onclick="Planejamento._addApartamento('${p.id}')" title="Adicionar apto">＋apto</span>
+                <span style="cursor:pointer;color:var(--cor-primaria);font-size:.72rem;" onclick="Planejamento._duplicarPavimento('${p.id}')" title="Duplicar este pavimento (com os aptos dele)">📋 duplicar</span>
                 <span style="cursor:pointer;color:#dc2626;font-size:.8rem;" onclick="Planejamento._removerNoEst('pavimento','${p.id}')" title="Excluir pavimento">✕</span>
               </div>
               ${aptos.length?`<div style="display:flex;flex-wrap:wrap;gap:4px;margin:4px 0 0 10px;">
@@ -3354,6 +3355,30 @@ const Planejamento = (() => {
     p.apartamentos.push({id:_novoIdEst(),nome:String(p.apartamentos.length+1),ordem:p.apartamentos.length+1});
     await _salvarEstruturaObra(_estruturaObraCache);
     _renderEstruturaObraBody();
+  }
+  // Duplica um pavimento inteiro (com os apartamentos dele) — útil pra torres
+  // com vários andares repetidos (ex: 1º ao 15º Pavimento com o mesmo layout
+  // de apto). IDs sempre novos (nunca reaproveita id de outro nó, senão os
+  // vínculos das tarefas ficariam ambíguos entre original e cópia).
+  async function _duplicarPavimento(pavimentoId){
+    const est=_estruturaObraCache;if(!est)return;
+    let torreDono=null,pOriginal=null,idx=-1;
+    for(const t of est.torres){
+      const i=(t.pavimentos||[]).findIndex(p=>p.id===pavimentoId);
+      if(i>=0){torreDono=t;pOriginal=t.pavimentos[i];idx=i;break;}
+    }
+    if(!torreDono||!pOriginal)return;
+    const copia={
+      id:_novoIdEst(),
+      nome:pOriginal.nome+' (cópia)',
+      ordem:0, // recalculado abaixo
+      apartamentos:(pOriginal.apartamentos||[]).map(a=>({id:_novoIdEst(),nome:a.nome,ordem:a.ordem}))
+    };
+    torreDono.pavimentos.splice(idx+1,0,copia);
+    torreDono.pavimentos.forEach((p,i)=>{p.ordem=i+1;});
+    await _salvarEstruturaObra(est);
+    _renderEstruturaObraBody();
+    Utils.toast(`Pavimento duplicado (${copia.apartamentos.length} apto(s) copiado(s)) — edite o nome.`,'sucesso');
   }
   // Verifica se algum id (torre/pavimento/apto) ainda está referenciado por
   // alguma tarefa antes de excluir — não apaga silenciosamente vínculo.
@@ -5242,7 +5267,7 @@ const Planejamento = (() => {
   return{init,carregar,setZoom,setVersaoData,copiarDatasDeAtual,inserirTarefa,editarTarefa,salvarTarefa,excluirTarefa,
     selectIdx,toggleRecolher,recuarNivel,avancarNivel,
     toggleGantt,toggleLiberarEdicaoReal,hideCol,showColsMenu,_showCol,_showAll,_toggleMenuFerramentas,
-    _abrirEstruturaObra,_addTorre,_addPavimento,_addApartamento,_editarNomeEst,_removerNoEst,
+    _abrirEstruturaObra,_addTorre,_addPavimento,_addApartamento,_duplicarPavimento,_editarNomeEst,_removerNoEst,
     _abrirVinculoPavimento,_salvarVinculoPavimento,_vinclocTogglePav,_vinclocToggleApto,
     _abrirAtualizarPredecessora,_predlogAtualizarBotao,_salvarAtualizacaoPredecessora,_abrirHistoricoAlteracoes,_filtrarHistorico,
     toggleArvoreEditor,_arvToggle,_arvExpandirTudo,_arvIniciarEdit,_arvCancelarEdit,_arvSalvarNome,
