@@ -2548,6 +2548,7 @@ const Planejamento = (() => {
     // ordenar alfabeticamente) e o HTML final. Adicionar item novo: só
     // colocar no array, a ordem alfabética é automática.
     const itens=[
+      {rotulo:'Auto-vincular por Nome',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento._abrirAutoVincular()" title="Detecta o pavimento/apto pelo NOME da tarefa e vincula tudo de uma vez, com prévia pra revisar antes de aplicar">🔗 Auto-vincular por Nome</button>'},
       {rotulo:'Corrigir Níveis Soltos',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento._corrigirNiveisSoltos()" title="Corrige tarefas com nível soltos (invisíveis no Editor de Estrutura)">🌳 Corrigir Níveis Soltos</button>'},
       {rotulo:'Corrigir Ordens',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.corrigirOrdensDuplicadas()" title="Corrige tarefas com número de ordem duplicado">🔧 Corrigir Ordens</button>'},
       {rotulo:'Corrigir Predecessoras (por ID)',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento._migrarPredecessorasParaId()" title="Converte predecessoras antigas (por número de linha) pro formato por ID — imune a reordenação. Roda sozinho ao carregar, use aqui só se quiser confirmar manualmente.">🔗 Corrigir Predecessoras (por ID)</button>'},
@@ -3273,6 +3274,101 @@ const Planejamento = (() => {
     _estruturaObraCache=estrutura;
     try{await db.collection('obras').doc(obraId).collection('config').doc(_EST_OBRA_DOC).set(estrutura,{merge:false});}
     catch(e){console.error('Erro ao salvar estrutura da obra:',e);Utils.toast('Erro ao salvar.','erro');}
+  }
+
+  // ══════════════════════════════════════════
+  // AUTO-VINCULAR POR NOME — detecta o pavimento/apto de cada tarefa-folha
+  // comparando o NOME DELA com os nomes já cadastrados na Estrutura da Obra
+  // (M1), em vez de exigir clique manual tarefa por tarefa. Usa os próprios
+  // dados da obra como "dicionário" de busca — não depende de regex de
+  // formato de texto fixo, então funciona com qualquer padrão de nomenclatura
+  // que a obra já usa, desde que o nome do pavimento/apto apareça dentro do
+  // nome da tarefa (ex: "Contrapiso: 1º Pavimento - Final 02" casa com o
+  // pavimento "1º Pavimento" e — se existir um apto "Final 02" dentro dele —
+  // com esse apto também). SEMPRE mostra prévia pra revisão antes de gravar
+  // — nunca aplica direto, pra não sobrescrever vínculo errado em massa.
+  // ══════════════════════════════════════════
+  function _normTexto(s){return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[°]/g,'o').trim();}
+
+  function _detectarVinculoPorNome(nomeTarefa,estrutura){
+    const nome=_normTexto(nomeTarefa);
+    let melhor=null,melhorLen=0; // prioriza o match MAIS LONGO (mais específico) entre todos os candidatos
+    (estrutura.torres||[]).forEach(torre=>{
+      (torre.pavimentos||[]).forEach(pav=>{
+        const nPav=_normTexto(pav.nome);
+        if(nPav.length>=3&&nome.includes(nPav)&&nPav.length>melhorLen){melhor={torreId:torre.id,pavimentoId:pav.id,apartamentoId:null,pavNome:pav.nome,aptoNome:null};melhorLen=nPav.length;}
+        (pav.apartamentos||[]).forEach(apto=>{
+          const nApto=_normTexto(apto.nome);
+          if(nApto.length>=1&&nome.includes(nApto)&&nome.includes(nPav)&&(nPav.length+nApto.length)>melhorLen){
+            melhor={torreId:torre.id,pavimentoId:pav.id,apartamentoId:apto.id,pavNome:pav.nome,aptoNome:apto.nome};
+            melhorLen=nPav.length+nApto.length;
+          }
+        });
+      });
+    });
+    return melhor;
+  }
+
+  async function _abrirAutoVincular(){
+    await _carregarEstruturaObra();
+    const est=_estruturaObraCache;
+    if(!est.torres||!est.torres.length){
+      Utils.toast('Cadastre a Estrutura da Obra (Torre/Pavimento/Apto) primeiro.','alerta');
+      return;
+    }
+    const sorted=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
+    const folhas=sorted.filter(t=>!_arvFilhos(t,sorted).length);
+    const propostas=folhas.map(t=>({tarefa:t,match:_detectarVinculoPorNome(t.nome,est)})).filter(p=>p.match);
+    if(!propostas.length){
+      Utils.toast('Nenhuma tarefa teve o nome do pavimento/apto reconhecido. Confira se os nomes cadastrados em Estrutura da Obra aparecem dentro do nome das tarefas.','alerta');
+      return;
+    }
+    let pop=document.getElementById('autovinc-modal');if(pop)pop.remove();
+    pop=document.createElement('div');pop.id='autovinc-modal';
+    pop.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:2000;display:flex;align-items:center;justify-content:center;';
+    pop.innerHTML=`
+      <div style="background:#1a1a1a;border:1px solid #333;border-radius:10px;padding:20px;width:640px;max-width:95vw;max-height:85vh;overflow-y:auto;display:flex;flex-direction:column;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+          <div style="font-weight:700;color:var(--cor-primaria);">🔗 Auto-vincular por Nome — Prévia</div>
+          <span style="cursor:pointer;color:#888;font-size:1.1rem;" onclick="document.getElementById('autovinc-modal').remove()">✕</span>
+        </div>
+        <div style="font-size:.72rem;color:#888;margin-bottom:10px;">${propostas.length} de ${folhas.length} tarefas tiveram o local reconhecido pelo nome. Desmarque as que estiverem erradas antes de aplicar — tarefa que já tinha vínculo manual será SOBRESCRITA se ficar marcada.</div>
+        <div id="autovinc-lista" style="display:flex;flex-direction:column;gap:2px;max-height:50vh;overflow-y:auto;border:1px solid #292929;border-radius:6px;padding:6px;">
+          ${propostas.map((p,i)=>`
+            <label style="display:flex;align-items:center;gap:8px;font-size:.76rem;padding:4px 4px;border-bottom:1px solid #232323;cursor:pointer;">
+              <input type="checkbox" data-idx="${i}" checked>
+              <span style="flex:1;color:#ddd;">${_esc(p.tarefa.nome)}</span>
+              <span style="color:var(--cor-primaria);white-space:nowrap;">${_esc(p.match.pavNome)}${p.match.aptoNome?': '+_esc(p.match.aptoNome):' (todos)'}</span>
+              ${(p.tarefa.vinculoEstrutura||[]).length?'<span style="color:#eab308;font-size:.68rem;" title="Já tinha vínculo manual — será sobrescrito">⚠já tinha</span>':''}
+            </label>`).join('')}
+        </div>
+        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px;">
+          <button class="btn btn-secundario btn-sm" onclick="document.getElementById('autovinc-modal').remove()">Cancelar</button>
+          <button class="btn btn-primario btn-sm" onclick="Planejamento._aplicarAutoVincular()">Aplicar Selecionados</button>
+        </div>
+      </div>`;
+    document.body.appendChild(pop);
+    pop.dataset.propostas=JSON.stringify(propostas.map(p=>({tarefaId:p.tarefa.id,match:p.match})));
+  }
+
+  async function _aplicarAutoVincular(){
+    const pop=document.getElementById('autovinc-modal');if(!pop)return;
+    const propostas=JSON.parse(pop.dataset.propostas||'[]');
+    const marcados=[...pop.querySelectorAll('input[type="checkbox"]:checked')].map(cb=>parseInt(cb.dataset.idx));
+    const selecionadas=propostas.filter((_,i)=>marcados.includes(i));
+    if(!selecionadas.length){pop.remove();return;}
+    Utils.mostrarLoading(`Vinculando ${selecionadas.length} tarefa(s)...`);
+    try{
+      for(const p of selecionadas){
+        const vinculo=[{torreId:p.match.torreId,pavimentoId:p.match.pavimentoId,apartamentoId:p.match.apartamentoId}];
+        await Database.atualizar(obraId,COL,p.tarefaId,{vinculoEstrutura:vinculo});
+        const t=tarefas.find(x=>x.id===p.tarefaId);if(t)t.vinculoEstrutura=vinculo;
+      }
+      pop.remove();
+      Utils.toast(`${selecionadas.length} tarefa(s) vinculada(s) automaticamente.`,'sucesso');
+      _paintRows();
+    }catch(e){console.error(e);Utils.toast('Erro ao aplicar vínculos.','erro');}
+    finally{Utils.esconderLoading();}
   }
 
   async function _abrirEstruturaObra(){
@@ -5274,6 +5370,7 @@ const Planejamento = (() => {
     selectIdx,toggleRecolher,recuarNivel,avancarNivel,
     toggleGantt,toggleLiberarEdicaoReal,hideCol,showColsMenu,_showCol,_showAll,_toggleMenuFerramentas,
     _abrirEstruturaObra,_addTorre,_addPavimento,_addApartamento,_duplicarPavimento,_editarNomeEst,_removerNoEst,
+    _abrirAutoVincular,_aplicarAutoVincular,
     _abrirVinculoPavimento,_salvarVinculoPavimento,_vinclocTogglePav,_vinclocToggleApto,
     _abrirAtualizarPredecessora,_predlogAtualizarBotao,_salvarAtualizacaoPredecessora,_abrirHistoricoAlteracoes,_filtrarHistorico,
     toggleArvoreEditor,_arvToggle,_arvExpandirTudo,_arvIniciarEdit,_arvCancelarEdit,_arvSalvarNome,

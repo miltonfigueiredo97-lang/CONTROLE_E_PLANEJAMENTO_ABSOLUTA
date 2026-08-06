@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.60.18',
+  versaoAtual: 'V2.60.19',
 
   versoes: [
     {
@@ -5643,10 +5643,15 @@ const NotasVersao = {
     {versao:'V2.60.17',status:'fechada',data:'2026-08-06',tipo:'melhoria',
       titulo:'Estrutura da Obra: botão "📋 duplicar" em cada pavimento — copia o pavimento inteiro com os apartamentos dele',
       itens:['Útil pra torres com andares repetidos (mesmo layout de apto do 1º ao 15º, por exemplo): duplica o pavimento e todos os apartamentos dele de uma vez, com IDs novos (nunca reaproveita ID de outro nó — evitaria vínculo ambíguo entre original e cópia). Só precisa editar o nome depois.']},
-    {versao:'V2.60.18',status:'aberta',data:'2026-08-06',tipo:'melhoria',
+    {versao:'V2.60.18',status:'fechada',data:'2026-08-06',tipo:'melhoria',
       titulo:'Toolbar do Planejamento organizada: "Estrutura da Obra" e "Ver por Responsável" movidos pra dentro de ⚙ Ferramentas — e o menu inteiro agora fica em ordem alfabética',
       itens:['Toolbar principal menos poluída — só ficam os botões mais usados no dia a dia. As duas funções continuam idênticas, só mudaram de lugar.',
-        'Menu Ferramentas reorganizado pra ordem alfabética (Corrigir Níveis Soltos → Corrigir Ordens → Corrigir Predecessoras → Estrutura da Obra → Exportar → Histórico → Importar → Importar Base Completa → Importar Correções → Liberar Edição de Real → PNG → Recalcular % → Recalcular Datas → Ver por Responsável → Vínculos com Levantamento) — adicionar item novo no futuro entra na ordem certa automaticamente.']}
+        'Menu Ferramentas reorganizado pra ordem alfabética (Corrigir Níveis Soltos → Corrigir Ordens → Corrigir Predecessoras → Estrutura da Obra → Exportar → Histórico → Importar → Importar Base Completa → Importar Correções → Liberar Edição de Real → PNG → Recalcular % → Recalcular Datas → Ver por Responsável → Vínculos com Levantamento) — adicionar item novo no futuro entra na ordem certa automaticamente.']},
+    {versao:'V2.60.19',status:'aberta',data:'2026-08-06',tipo:'funcionalidade',
+      titulo:'Novo: Auto-vincular por Nome — detecta o pavimento/apto de cada tarefa automaticamente, sem clicar tarefa por tarefa',
+      itens:['Menu ⚙ Ferramentas → "🔗 Auto-vincular por Nome": compara o NOME de cada tarefa-folha com os nomes já cadastrados em Estrutura da Obra (ex: tarefa "Contrapiso: 1º Pavimento - Final 02" casa com o pavimento "1º Pavimento" e o apto "Final 02", se ambos estiverem cadastrados lá) e propõe o vínculo automaticamente — sem precisar abrir a coluna Local tarefa por tarefa.',
+        'Sempre mostra uma PRÉVIA antes de aplicar: lista cada tarefa com o local detectado, com checkbox pra desmarcar as que estiverem erradas, e aviso visual em quem já tinha vínculo manual (será sobrescrito se ficar marcado). Nada é gravado sem confirmar.',
+        'Funciona com qualquer padrão de nome que a obra já usa — não é regex de formato fixo, é busca pelo nome real do pavimento/apto (já cadastrado) dentro do nome da tarefa. Pavimento sem apto correspondente no nome vincula "o pavimento inteiro".']}
   ],
 
   render(containerId) {
