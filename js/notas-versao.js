@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.60.15',
+  versaoAtual: 'V2.60.16',
 
   versoes: [
     {
@@ -5628,13 +5628,18 @@ const NotasVersao = {
         'Pavimento vinculado "inteiro" (sem apto específico) conta em TODAS as colunas de apartamento daquele pavimento no modo Por Apartamento, além de na própria coluna do pavimento no modo Por Pavimento.',
         'Clique na célula abre o detalhamento: quais tarefas específicas compõem aquele número, com % individual e duração (peso) de cada uma.',
         'Configuração (quais tarefas-mãe aparecem) salva em config/dashboardPainel — lista qualquer grupo de qualquer nível do Planejamento, não só o nível mais alto.']},
-    {versao:'V2.60.15',status:'aberta',data:'2026-08-06',tipo:'funcionalidade',
+    {versao:'V2.60.15',status:'fechada',data:'2026-08-06',tipo:'funcionalidade',
       titulo:'Novo: Atualização Rápida de Predecessora/% com log obrigatório de motivo — histórico de alterações consultável',
       itens:['Ícone "🔗" na coluna de ações de cada tarefa: abre modal pra trocar predecessora e/ou % concluído sem editar direto na grid, exigindo o MOTIVO da mudança (info que hoje só existe verbalmente, na conversa com o encarregado).',
         'Predecessora nova é validada com o mesmo parser já usado na célula — formato inválido não deixa salvar.',
         'Salvar dispara o MESMO recálculo automático de datas/sucessoras/% dos pais que já existe hoje (nada de novo ali) — só acrescenta o registro do motivo.',
         'Novo botão ⚙ Ferramentas → "📋 Histórico de Alterações": lista todos os registros da obra (mais recente primeiro), com filtro por tarefa e por usuário. Somente leitura.',
-        'Guardado em obras/{obra}/logAlteracoes — coleção nova, isolada.']}
+        'Guardado em obras/{obra}/logAlteracoes — coleção nova, isolada.']},
+    {versao:'V2.60.16',status:'aberta',data:'2026-08-06',tipo:'funcionalidade',
+      titulo:'Novo: filtro "👷 Ver por Responsável" no Planejamento',
+      itens:['Botão na toolbar abre lista de responsáveis distintos já usados na obra (sem duplicados/vazios) — selecionar um filtra a grid instantaneamente, "Todos" limpa o filtro.',
+        'Combina com os filtros já existentes (status, busca) — é mais uma condição, não substitui nenhum.',
+        'Preferência fica só no navegador (localStorage, cache de sessão) — não grava nada novo no Firestore, nem usa campo novo (lê o "Responsável" que já existe em cada tarefa).']}
   ],
 
   render(containerId) {

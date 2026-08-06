@@ -49,6 +49,9 @@ const Planejamento = (() => {
   // Seleção múltipla (checkbox) e filtro por status
   let selecionados=new Set();
   let statusFiltro=new Set(); // vazio = mostra tudo
+  // M4: filtro por responsável — cache de sessão (localStorage), não é dado
+  // de negócio, não vai pro Firestore. Combina com os demais filtros (AND).
+  let _filtroResponsavel=(()=>{try{return localStorage.getItem('planej_filtroResponsavel')||'';}catch(e){return'';}})();
   // Busca de tarefa no Gantt
   let _buscaTexto='', _buscaResultados=[], _buscaCursor=-1;
   // Undo stack: últimas 30 snapshots do array tarefas (cópia plana antes de cada ação)
@@ -539,6 +542,9 @@ const Planejamento = (() => {
     if(statusFiltro.size){
       result=result.filter(t=>statusFiltro.has(_status(t)));
     }
+    if(_filtroResponsavel){
+      result=result.filter(t=>(t.responsavel||'').trim()===_filtroResponsavel);
+    }
     filtradas=result;
   }
 
@@ -574,6 +580,7 @@ const Planejamento = (() => {
           <span style="color:#333;margin:0 4px;">|</span>
           <button class="btn ${modoView==='arvore'?'btn-primario':'btn-secundario'} btn-sm" data-perm="planejamento:editar" onclick="Planejamento.toggleArvoreEditor()" style="font-size:.72rem;">🌳 Editor de Estrutura</button>
           <button class="btn btn-secundario btn-sm" onclick="Planejamento._abrirEstruturaObra()" style="font-size:.72rem;" title="Cadastra Torre → Pavimento → Apto, pra vincular tarefas a um local">🏢 Estrutura da Obra</button>
+          <button class="btn btn-secundario btn-sm" onclick="event.stopPropagation();Planejamento._abrirFiltroResponsavel()" style="font-size:.72rem;${_filtroResponsavel?'background:var(--cor-primaria);color:#000;':''}" title="Filtra a grid por responsável/especialidade">👷 ${_filtroResponsavel?_esc(_filtroResponsavel):'Ver por Responsável'}</button>
           <button class="btn btn-primario btn-sm" data-perm="planejamento:criar" onclick="Planejamento.inserirTarefa()" style="font-size:.72rem;">＋ Tarefa</button>
         </div>
       </div>
@@ -2246,6 +2253,47 @@ const Planejamento = (() => {
     pop.remove();
     _buildFiltradas();_render();requestAnimationFrame(()=>_paintRows());
   }
+
+  // ===================== M4: VER POR RESPONSÁVEL =====================
+  // Filtro simples de UI (não é dado de negócio) — não usa campo novo no
+  // Firestore, só lê `responsavel` das tarefas já carregadas. Combina (AND)
+  // com o filtro de status já existente. Preferência fica em localStorage,
+  // mesma categoria de `obra_selecionada` (cache de sessão).
+  function _listarResponsaveisDistintos(){
+    const vistos=new Set();
+    for(const t of tarefas){
+      const r=(t.responsavel||'').trim();
+      if(r)vistos.add(r);
+    }
+    return [...vistos].sort((a,b)=>a.localeCompare(b,'pt-BR'));
+  }
+  function _abrirFiltroResponsavel(){
+    let pop=document.getElementById('resp-filtro-pop');
+    if(pop){pop.remove();return;}
+    const lista=_listarResponsaveisDistintos();
+    pop=document.createElement('div');
+    pop.id='resp-filtro-pop';
+    pop.style.cssText='position:fixed;top:120px;left:50%;transform:translateX(-50%);background:#1a1a1a;border:1px solid #333;border-radius:8px;padding:12px;z-index:2000;min-width:220px;max-height:60vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.5);';
+    pop.innerHTML=`<div style="font-weight:700;color:var(--cor-primaria);margin-bottom:8px;font-size:.8rem;">👷 Ver por Responsável</div>
+      <label style="display:flex;align-items:center;gap:8px;padding:5px 2px;cursor:pointer;">
+        <input type="radio" name="resp-filtro" ${!_filtroResponsavel?'checked':''} onclick="Planejamento._aplicarFiltroResponsavel(this.dataset.resp)" data-resp="">
+        <span style="font-size:.8rem;color:#ddd;">Todos</span>
+      </label>
+      ${lista.length?lista.map(r=>`
+      <label style="display:flex;align-items:center;gap:8px;padding:5px 2px;cursor:pointer;">
+        <input type="radio" name="resp-filtro" ${_filtroResponsavel===r?'checked':''} onclick="Planejamento._aplicarFiltroResponsavel(this.dataset.resp)" data-resp="${_esc(r)}">
+        <span style="font-size:.8rem;color:#ddd;">${_esc(r)}</span>
+      </label>`).join(''):'<div style="color:#555;font-size:.78rem;padding:4px 2px;">Nenhum responsável cadastrado ainda.</div>'}`;
+    document.body.appendChild(pop);
+    setTimeout(()=>document.addEventListener('click',function h(e){if(!pop.contains(e.target)&&!e.target.closest('[onclick*="_abrirFiltroResponsavel"]')){pop.remove();document.removeEventListener('click',h);}},false),50);
+  }
+  function _aplicarFiltroResponsavel(valor){
+    _filtroResponsavel=valor||'';
+    try{localStorage.setItem('planej_filtroResponsavel',_filtroResponsavel);}catch(e){}
+    const pop=document.getElementById('resp-filtro-pop');if(pop)pop.remove();
+    _buildFiltradas();_render();requestAnimationFrame(()=>_paintRows());
+  }
+  function _limparFiltroResponsavel(){_aplicarFiltroResponsavel('');}
 
   // ===================== ARRASTAR LINHA (REORDENAR) =====================
   // Ctrl + botão direito + arrastar move a tarefa (e seus filhos diretos,
@@ -5204,7 +5252,7 @@ const Planejamento = (() => {
     _arvAbrirMover,_arvFecharMover,_arvFiltrarMover,_arvConfirmarMover,
     _colResizeStart,moveColLeft,moveColRight,_hideCol,_divStart,_sync,_editCell,_esqDragStart,
     _rowDragStart,toggleSel,_limparSelecao,_moverSel,_bulkNivel,_bulkDuplicar,_bulkExcluir,
-    toggleStatusFiltro,_aplicarStatusFiltro,undo,
+    toggleStatusFiltro,_aplicarStatusFiltro,_abrirFiltroResponsavel,_aplicarFiltroResponsavel,_limparFiltroResponsavel,undo,
     onBusca,limparBusca,_buscaKey,
     importarExcel,importarBaseCompleta,importarCorrecoes,_executarCorrecoes,_mostrarRevisaoCorrecoes,exportar,exportarPNG,corrigirOrdensDuplicadas,_corrigirNiveisSoltos,_corrigirNivelPeloCodigo,_migrarPredecessorasParaId,_recalcularDatasPais,_recalcularPercTodosPais,_orfasMarcarTodas,_orfasExcluirMarcadas,_gerarPNG,_predPopup,_predSalvar,_predCellClick,_predAddLinha,_predLinhaAtualizar,
     abrirVinculosView,fecharVinculosView,abrirVincularTarefa,abrirVincularAqui,onVincTipoChange,
