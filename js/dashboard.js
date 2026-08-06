@@ -1336,11 +1336,12 @@ const Dashboard = (() => {
   // ORDEM DOS ANDARES: usa cfgDoc.ordemAndares EXATAMENTE como está
   // configurada no Controle de Concreto (tela de arrastar) — sem recalcular
   // nem reordenar por número; é a mesma lista, na mesma ordem, ponto.
-  const _isEstaca = p => p.subTipo === 'Estacas' || (!p.subTipo && Number(p.diametro) > 0 && Number(p.comprimento) > 0);
+  const _isEstaca = p => p.subTipo === 'Estacas' || (!p.subTipo && _numGlobal(p.diametro) > 0 && _numGlobal(p.comprimento) > 0);
+  function _numGlobal(v) { return parseFloat(String(v ?? '').replace(',', '.')) || 0; }
   const CATEGORIAS_CONCRETO = [
-    { chave: 'estaca', titulo: 'Fundação Profunda (Estacas)', cor: '#7a5c00', filtro: p => p.tipo === 'Fundação' && _isEstaca(p) },
-    { chave: 'fundacao', titulo: 'Fundação', cor: '#a67c00', filtro: p => p.tipo === 'Fundação' && !_isEstaca(p) },
-    { chave: 'estrutura', titulo: 'Estrutura', cor: '#F5C800', filtro: p => p.tipo !== 'Fundação' },
+    { chave: 'estaca', titulo: 'Fundação Profunda (Estacas)', cor: '#7a5c00', corClara: '#d4b04d', filtro: p => p.tipo === 'Fundação' && _isEstaca(p) },
+    { chave: 'fundacao', titulo: 'Fundação', cor: '#a67c00', corClara: '#e0c05a', filtro: p => p.tipo === 'Fundação' && !_isEstaca(p) },
+    { chave: 'estrutura', titulo: 'Estrutura', cor: '#F5C800', corClara: '#fbe480', filtro: p => p.tipo !== 'Fundação' },
   ];
   async function _renderFundacaoEstrutura() {
     const host = document.getElementById('db-fundacao-estrutura-wrap');
@@ -1392,7 +1393,27 @@ const Dashboard = (() => {
       const norm = a => (CC ? CC.normalizarAndar(a) : String(a || '').trim());
       const ordemSalva = cfgDoc?.ordemAndares || [];
       const ordemSalvaNorm = ordemSalva.map(norm);
-      const andaresComPecaBrutos = [...new Set(pecas.map(p => p.andar || 'Sem andar'))];
+      // Deduplica por nome NORMALIZADO — evita que 2 grafias do mesmo andar
+      // (ex: "2º Subsolo" vs "2° Subsolo") apareçam como 2 barras diferentes,
+      // cada uma com só parte do volume real. Prefere o nome exatamente como
+      // está em ordemAndares (se existir) pra exibir; senão, o nome bruto
+      // mais frequente entre as peças daquele grupo.
+      const nomesBrutos = [...new Set(pecas.map(p => p.andar || 'Sem andar'))];
+      const gruposPorNorm = new Map(); // norm(andar) -> [nomes brutos equivalentes]
+      nomesBrutos.forEach(nome => {
+        const key = norm(nome);
+        if (!gruposPorNorm.has(key)) gruposPorNorm.set(key, []);
+        gruposPorNorm.get(key).push(nome);
+      });
+      const andaresComPecaBrutos = [...gruposPorNorm.entries()].map(([key, nomes]) => {
+        const nomeNaOrdemCustom = ordemSalva.find(o => norm(o) === key);
+        if (nomeNaOrdemCustom) return nomeNaOrdemCustom;
+        // Sem entrada na lista customizada: usa o nome bruto mais frequente
+        // (mais peças com essa grafia) como representante do grupo.
+        const contagem = new Map();
+        nomes.forEach(n => contagem.set(n, (pecas.filter(p => (p.andar || 'Sem andar') === n).length)));
+        return [...contagem.entries()].sort((a, b) => b[1] - a[1])[0][0];
+      });
       // Ordena pelos nomes REAIS das peças (não os da lista customizada —
       // grafias podem diferir), usando a posição na lista customizada
       // (por nome normalizado) como critério de ordenação.
@@ -1415,7 +1436,14 @@ const Dashboard = (() => {
 
       const dadosPorAndar = andares.map(andar => {
         const porCategoria = CATEGORIAS_CONCRETO.map(cat => {
-          const pecasDaCategoria = pecas.filter(p => (p.andar || 'Sem andar') === andar && cat.filtro(p));
+          // Agrupa por nome NORMALIZADO (não nome bruto) — evita que duas
+          // grafias do mesmo andar (ex: "2º Subsolo" vs "2° Subsolo", símbolo
+          // de grau em vez de ordinal — erro comum de digitação/import) sejam
+          // tratadas como andares DIFERENTES, cada uma somando só parte do
+          // volume real. Essa era a causa real do volume de Fundação
+          // aparecer menor do que deveria em obras antigas com essa
+          // inconsistência histórica nos dados.
+          const pecasDaCategoria = pecas.filter(p => norm(p.andar || 'Sem andar') === norm(andar) && cat.filtro(p));
           // _num() (definida no topo da função) — trata vírgula decimal
           // ("150,5") igual ao resto do sistema, e não quebra mesmo se CC
           // estiver indisponível. Peça com volume salvo em formato de
@@ -1802,13 +1830,11 @@ const Dashboard = (() => {
         const cat = CATEGORIAS_CONCRETO.find(cc => cc.chave === c.chave);
         const hPrev = (c.previsto / maxV) * plotH, hExec = (c.executado / maxV) * plotH;
         const xPrev = cursorX, xExec = cursorX + barW + gapBarras;
-        // Previsto: contorno no tom de amarelo da categoria, fundo branco.
-        bars += `<rect x="${xPrev.toFixed(1)}" y="${(padT + plotH - hPrev).toFixed(1)}" width="${barW.toFixed(1)}" height="${hPrev.toFixed(1)}" fill="#fff" stroke="${cat.cor}" stroke-width="1.6"/>`;
-        // Executado: preenchimento sempre em preto/cinza escuro — cor
-        // identifica a CATEGORIA (tom de amarelo), preto identifica o
-        // STATUS (já executado), pra não virar "colorido" nem confundir com
-        // as 3 categorias tendo tonalidades próprias no executado também.
-        bars += `<rect x="${xExec.toFixed(1)}" y="${(padT + plotH - hExec).toFixed(1)}" width="${barW.toFixed(1)}" height="${hExec.toFixed(1)}" fill="#2b2b2b"/>`;
+        // Previsto: preenchimento SÓLIDO no tom claro da categoria (não
+        // contorno vazio) — cor sempre forte e visível, do jeito pedido.
+        bars += `<rect x="${xPrev.toFixed(1)}" y="${(padT + plotH - hPrev).toFixed(1)}" width="${barW.toFixed(1)}" height="${hPrev.toFixed(1)}" fill="${cat.corClara}"/>`;
+        // Executado: preenchimento SÓLIDO no tom forte da categoria.
+        bars += `<rect x="${xExec.toFixed(1)}" y="${(padT + plotH - hExec).toFixed(1)}" width="${barW.toFixed(1)}" height="${hExec.toFixed(1)}" fill="${cat.cor}"/>`;
         if (c.previsto > 0 && barW > 4) bars += `<text x="${(xPrev + barW / 2).toFixed(1)}" y="${(padT + plotH - hPrev - 3).toFixed(1)}" font-size="7" fill="#555" font-weight="600" text-anchor="middle">${Utils.formatarNumero(c.previsto, 0)}</text>`;
         // Rótulo do NOME da categoria, inclinado, escrito dentro/sobre a
         // própria barra de Previsto — só quando o andar tem mais de 1
@@ -1851,8 +1877,8 @@ const Dashboard = (() => {
       </svg>
       <div class="db-tooltip"></div>
       <div class="db-legenda">
-        ${CATEGORIAS_CONCRETO.map(cat => `<span><i style="border:2px solid ${cat.cor};background:#fff;box-sizing:border-box;"></i> ${cat.titulo} (Previsto)</span>`).join('')}
-        <span><i style="background:#2b2b2b;"></i> Executado (qualquer categoria)</span>
+        ${CATEGORIAS_CONCRETO.map(cat => `<span><i style="background:${cat.corClara};"></i> ${cat.titulo} — Previsto</span>`).join('')}
+        ${CATEGORIAS_CONCRETO.map(cat => `<span><i style="background:${cat.cor};"></i> ${cat.titulo} — Executado</span>`).join('')}
       </div>
       <div class="text-sm text-muted" style="margin-top:6px;">Somado do Controle de Concreto por andar (ordem igual à configurada lá). Clique numa barra pra abrir o PDF da concretagem daquele andar/categoria.</div>`;
   }

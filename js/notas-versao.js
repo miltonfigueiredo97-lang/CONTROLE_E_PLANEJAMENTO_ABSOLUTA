@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.60.11',
+  versaoAtual: 'V2.60.12',
 
   versoes: [
     {
@@ -5610,12 +5610,17 @@ const NotasVersao = {
     {versao:'V2.60.10',status:'fechada',data:'2026-08-06',tipo:'correcao',
       titulo:'Removido da coluna % Concluído o ícone de vincular a Estacas/Fundações — não deveria estar ali (pedido do Milton)',
       itens:['Aparecia em TODA tarefa, mesmo sem nenhuma relação com fundação/estaca (ex: "Prumadas Esgoto") — voltou a ser uma célula de % simples, editável normalmente. O vínculo de tarefas já existentes com Estacas/Fundações continua salvo no banco, só não aparece mais aqui.']},
-    {versao:'V2.60.11',status:'aberta',data:'2026-08-06',tipo:'funcionalidade',
+    {versao:'V2.60.11',status:'fechada',data:'2026-08-06',tipo:'funcionalidade',
       titulo:'Novo: Estrutura da Obra (Torre → Pavimento → Apto) + vínculo por tarefa — independente dos módulos de Levantamento',
       itens:['Botão "🏢 Estrutura da Obra" na toolbar do Planejamento: cadastra Torres, Pavimentos e Apartamentos/Unidades (nome + ordem, editável, com exclusão avisando se alguma tarefa já está vinculada).',
         'Nova coluna "Local (Pav/Apto)" na tabela — clicável, abre um picker pra marcar um pavimento inteiro (vale pra todos os aptos dele) ou apto(s) específico(s). Mostra resumo curto na célula (ex: "1º Pav (todos)" ou "1º Pav: 101, 102").',
         'Guardado em obras/{obra}/config/estruturaObra (nova, isolada) e no campo vinculoEstrutura de cada tarefa — não migra nem toca em pisoArvore/tetoArvore/paredesArvore, que continuam servindo só os módulos de Levantamento.',
-        'Vínculo "órfão" (referenciando um pavimento/apto que foi excluído depois) aparece com aviso visual em vermelho na célula, em vez de quebrar silenciosamente.']}
+        'Vínculo "órfão" (referenciando um pavimento/apto que foi excluído depois) aparece com aviso visual em vermelho na célula, em vez de quebrar silenciosamente.']},
+    {versao:'V2.60.12',status:'aberta',data:'2026-08-06',tipo:'correcao',
+      titulo:'Dashboard: volume de Fundação aparecia menor do que o real em obras com grafia inconsistente do nome do andar (° em vez de º)',
+      itens:['Peças com "2° Subsolo" (símbolo de grau) e "2º Subsolo" (ordinal correto) eram tratadas como DOIS andares diferentes em qualquer soma — cada grafia virava uma barra própria, com só parte do volume real. CC.normalizarAndar (usado em todo o sistema) agora unifica esse caso.',
+        'Gráfico Fundação e Estrutura: soma por andar agora agrupa por nome NORMALIZADO, deduplicando grafias equivalentes antes de montar as barras — não só na ordenação (como já era desde a V2.59.35), também no cálculo do valor.',
+        'Visual: Previsto virou preenchimento sólido no tom claro da categoria (não mais contorno vazio) — pedido explícito de "quero colorido forte, não branco com borda".']}
   ],
 
   render(containerId) {

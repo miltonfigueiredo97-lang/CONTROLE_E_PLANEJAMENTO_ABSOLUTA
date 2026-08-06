@@ -34,7 +34,13 @@ const ConcretoCalculos = (() => {
       .replace(/([0-9]+)\s*o\b/gi, '$1º')
       .replace(/([0-9]+)\s*a\b/gi, '$1ª')
       .replace(/\uFFFD/g, 'º')
-      .replace(/\?/g, 'º');
+      .replace(/\?/g, 'º')
+      // Símbolo de grau (°, U+00B0) digitado/importado no lugar do ordinal
+      // masculino (º, U+00BA) — visualmente quase idênticos, erro comum de
+      // teclado/import que fazia o mesmo andar (ex: "2º Subsolo" vs
+      // "2° Subsolo") ser tratado como DOIS andares diferentes em qualquer
+      // agrupamento por nome (gráficos, relatórios, filtros).
+      .replace(/°/g, 'º');
     s = s.toLowerCase().replace(/(^\w|\s\w)/g, c => c.toUpperCase());
     s = s.replace(/\bTerreo\b/i, 'Térreo');
     return s.trim();
