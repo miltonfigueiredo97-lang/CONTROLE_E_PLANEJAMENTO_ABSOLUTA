@@ -614,9 +614,12 @@ const Dashboard = (() => {
   // Configuração: escolher quais tarefas-mãe (grupos de qualquer nível, não
   // só nível 0) entram nas linhas da tabela. Lista candidata = todos os nós
   // COM filhos (grupos) — folhas puras não fazem sentido como "mãe".
+  // Estado da árvore de seleção (config do Painel): quais grupos estão
+  // expandidos — só visual, não é salvo (reabre sempre fechado, pra não
+  // sobrecarregar em obras com árvore grande).
+  let _painelCfgAbertos = new Set();
   async function _abrirConfigPainel() {
-    const sorted = [...tarefas].sort((a, b) => (a.ordem || 0) - (b.ordem || 0));
-    const candidatas = sorted.filter(t => _temFilhos(t, sorted));
+    _painelCfgAbertos = new Set();
     let overlay = document.getElementById('db-painelcfg-overlay');
     if (overlay) overlay.remove();
     overlay = document.createElement('div');
@@ -624,29 +627,99 @@ const Dashboard = (() => {
     overlay.style.cssText = 'position:fixed;inset:0;z-index:600;background:rgba(15,23,42,.5);display:flex;align-items:center;justify-content:center;padding:24px;';
     overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
     overlay.innerHTML = `
-      <div style="background:#fff;border-radius:10px;max-width:420px;width:100%;max-height:80vh;overflow-y:auto;padding:16px;">
+      <div style="background:#fff;border-radius:10px;max-width:460px;width:100%;max-height:82vh;overflow-y:auto;padding:16px;display:flex;flex-direction:column;">
         <div style="font-weight:700;margin-bottom:4px;">⚙️ Configurar Painel de Andamento</div>
-        <div class="text-sm text-muted" style="margin-bottom:10px;">Escolha quais tarefas (grupos) do Planejamento aparecem como linha na tabela.</div>
-        <div id="db-painelcfg-lista" style="display:flex;flex-direction:column;gap:4px;">
-          ${candidatas.length ? candidatas.map(t => `
-            <label style="display:flex;align-items:center;gap:8px;font-size:.82rem;padding:3px 0;cursor:pointer;">
-              <input type="checkbox" value="${t.id}" ${_painelMaesConfig.includes(t.id) ? 'checked' : ''}>
-              <span style="padding-left:${(t.nivel || 0) * 12}px;">${t.nome || 'Sem nome'}</span>
-            </label>`).join('') : '<div class="text-sm text-muted">Nenhum grupo de tarefas encontrado no Planejamento.</div>'}
-        </div>
+        <div class="text-sm text-muted" style="margin-bottom:8px;">Marque as tarefas (de qualquer nível) que devem virar linha na tabela. Clique no nome pra abrir/fechar o grupo.</div>
+        <input type="text" id="db-painelcfg-busca" class="input" placeholder="Buscar tarefa..." style="margin-bottom:10px;" oninput="Dashboard._painelCfgFiltrar(this.value)">
+        <div id="db-painelcfg-lista" style="display:flex;flex-direction:column;gap:1px;overflow-y:auto;flex:1;"></div>
         <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px;">
           <button class="btn btn-secundario btn-sm" onclick="document.getElementById('db-painelcfg-overlay').remove()">Cancelar</button>
           <button class="btn btn-primario btn-sm" onclick="Dashboard._salvarConfigPainel()">Salvar</button>
         </div>
       </div>`;
     document.body.appendChild(overlay);
+    _renderPainelCfgArvore();
+  }
+
+  // Renderiza a árvore de seleção. Cada grupo (nó com filhos) mostra ▶/▼ +
+  // checkbox pra marcar ELE MESMO como tarefa-mãe (o Painel usa as FOLHAS
+  // dele pra agregar); folhas puras aparecem só quando o grupo pai está
+  // aberto, sem checkbox (folha isolada não faz sentido como linha própria
+  // do Painel — spec pede "tarefa-mãe", que sempre tem filhos).
+  function _renderPainelCfgArvore(filtroTexto) {
+    const el = document.getElementById('db-painelcfg-lista');
+    if (!el) return;
+    const sorted = [...tarefas].sort((a, b) => (a.ordem || 0) - (b.ordem || 0));
+    const filtro = (filtroTexto || '').toLowerCase().trim();
+
+    // Com filtro de busca ativo: mostra lista achatada só dos GRUPOS cujo
+    // nome bate a busca (a árvore normal volta quando o campo é limpo).
+    if (filtro) {
+      const candidatas = sorted.filter(t => _temFilhos(t, sorted) && (t.nome || '').toLowerCase().includes(filtro));
+      el.innerHTML = candidatas.length
+        ? candidatas.map(t => _painelCfgLinhaCheckbox(t, 0)).join('')
+        : '<div class="text-sm text-muted" style="padding:10px 0;">Nenhum grupo encontrado.</div>';
+      return;
+    }
+
+    const raizes = sorted.filter(t => (t.nivel || 0) === 0);
+    el.innerHTML = _painelCfgRenderNivel(raizes, sorted, 0) || '<div class="text-sm text-muted">Nenhuma tarefa encontrada no Planejamento.</div>';
+  }
+  function _painelCfgLinhaCheckbox(t, indent) {
+    return `<label style="display:flex;align-items:center;gap:8px;font-size:.82rem;padding:4px 2px;cursor:pointer;border-radius:4px;" onmouseover="this.style.background='#f7f7f7'" onmouseout="this.style.background='transparent'">
+      <input type="checkbox" value="${t.id}" ${_painelMaesConfig.includes(t.id) ? 'checked' : ''}>
+      <span style="padding-left:${indent}px;">${t.nome || 'Sem nome'}</span>
+    </label>`;
+  }
+  function _painelCfgRenderNivel(nos, sorted, indent) {
+    let html = '';
+    nos.forEach(t => {
+      const filhos = _filhosDiretos(t, sorted);
+      if (!filhos.length) {
+        // Folha pura: só aparece como texto informativo dentro de um grupo
+        // já aberto, sem checkbox (não pode ser "tarefa-mãe" sozinha).
+        html += `<div style="padding:4px 2px;padding-left:${indent + 22}px;font-size:.78rem;color:#999;">${t.nome || 'Sem nome'}</div>`;
+        return;
+      }
+      const aberto = _painelCfgAbertos.has(t.id);
+      html += `<div style="display:flex;align-items:center;gap:4px;padding:4px 2px;border-radius:4px;" onmouseover="this.style.background='#f7f7f7'" onmouseout="this.style.background='transparent'">
+        <span onclick="Dashboard._painelCfgToggleAberto('${t.id}')" style="width:16px;text-align:center;cursor:pointer;color:#888;font-size:.7rem;flex-shrink:0;">${aberto ? '▼' : '▶'}</span>
+        <label style="display:flex;align-items:center;gap:8px;font-size:.82rem;flex:1;cursor:pointer;padding-left:${indent}px;">
+          <input type="checkbox" value="${t.id}" ${_painelMaesConfig.includes(t.id) ? 'checked' : ''}>
+          <span style="font-weight:600;">${t.nome || 'Sem nome'}</span>
+        </label>
+      </div>`;
+      if (aberto) html += _painelCfgRenderNivel(filhos, sorted, indent + 18);
+    });
+    return html;
+  }
+  function _painelCfgToggleAberto(id) {
+    if (_painelCfgAbertos.has(id)) _painelCfgAbertos.delete(id); else _painelCfgAbertos.add(id);
+    // Preserva o que já estava marcado antes de re-renderizar.
+    _painelCfgSincronizarMarcados();
+    _renderPainelCfgArvore();
+  }
+  function _painelCfgFiltrar(texto) {
+    _painelCfgSincronizarMarcados();
+    _renderPainelCfgArvore(texto);
+  }
+  // Antes de qualquer re-render da árvore (expandir/buscar), lê os
+  // checkboxes marcados na tela ATUAL e atualiza _painelMaesConfig — senão
+  // marcar um item, depois expandir outro grupo, perderia a marcação.
+  function _painelCfgSincronizarMarcados() {
+    const el = document.getElementById('db-painelcfg-lista');
+    if (!el) return;
+    const marcados = [...el.querySelectorAll('input[type="checkbox"]:checked')].map(cb => cb.value);
+    const desmarcados = [...el.querySelectorAll('input[type="checkbox"]:not(:checked)')].map(cb => cb.value);
+    _painelMaesConfig = _painelMaesConfig.filter(id => !desmarcados.includes(id));
+    marcados.forEach(id => { if (!_painelMaesConfig.includes(id)) _painelMaesConfig.push(id); });
   }
 
   async function _salvarConfigPainel() {
+    _painelCfgSincronizarMarcados(); // captura o que está marcado na tela ATUAL antes de salvar
     const overlay = document.getElementById('db-painelcfg-overlay');
-    const ids = [...overlay.querySelectorAll('input[type="checkbox"]:checked')].map(cb => cb.value);
     try {
-      await db.collection('obras').doc(obraAtual.id).collection('config').doc('dashboardPainel').set({ maesIds: ids }, { merge: true });
+      await db.collection('obras').doc(obraAtual.id).collection('config').doc('dashboardPainel').set({ maesIds: _painelMaesConfig }, { merge: true });
       overlay.remove();
       Utils.toast('Configuração salva.', 'sucesso');
       await _renderPainelAndamento();
@@ -2483,5 +2556,5 @@ const Dashboard = (() => {
       </div>`;
   }
 
-  return { init, onObraChanged, setResumoView, setPacotesView, setCurvaGranularidade, toggleMostrarConcreto, _arvToggle, _arvNivelFixo, _arvHorizonte, _fecharPopupProjeto, _popupNavegar, _popupZoomAjustar, _painelSetModo, _abrirConfigPainel, _salvarConfigPainel, _painelAbrirDetalhe };
+  return { init, onObraChanged, setResumoView, setPacotesView, setCurvaGranularidade, toggleMostrarConcreto, _arvToggle, _arvNivelFixo, _arvHorizonte, _fecharPopupProjeto, _popupNavegar, _popupZoomAjustar, _painelSetModo, _abrirConfigPainel, _salvarConfigPainel, _painelAbrirDetalhe, _painelCfgToggleAberto, _painelCfgFiltrar };
 })();
