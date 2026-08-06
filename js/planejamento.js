@@ -579,8 +579,6 @@ const Planejamento = (() => {
           ${colsHidden.size?`<button class="btn btn-secundario btn-sm" onclick="Planejamento.showColsMenu()" style="font-size:.72rem;">＋ Colunas (${colsHidden.size})</button>`:''}
           <span style="color:#333;margin:0 4px;">|</span>
           <button class="btn ${modoView==='arvore'?'btn-primario':'btn-secundario'} btn-sm" data-perm="planejamento:editar" onclick="Planejamento.toggleArvoreEditor()" style="font-size:.72rem;">🌳 Editor de Estrutura</button>
-          <button class="btn btn-secundario btn-sm" onclick="Planejamento._abrirEstruturaObra()" style="font-size:.72rem;" title="Cadastra Torre → Pavimento → Apto, pra vincular tarefas a um local">🏢 Estrutura da Obra</button>
-          <button class="btn btn-secundario btn-sm" onclick="event.stopPropagation();Planejamento._abrirFiltroResponsavel()" style="font-size:.72rem;${_filtroResponsavel?'background:var(--cor-primaria);color:#000;':''}" title="Filtra a grid por responsável/especialidade">👷 ${_filtroResponsavel?_esc(_filtroResponsavel):'Ver por Responsável'}</button>
           <button class="btn btn-primario btn-sm" data-perm="planejamento:criar" onclick="Planejamento.inserirTarefa()" style="font-size:.72rem;">＋ Tarefa</button>
         </div>
       </div>
@@ -2545,18 +2543,20 @@ const Planejamento = (() => {
   function _toggleMenuFerramentas(){
     let pop=document.getElementById('ft-pop');if(pop){pop.remove();return;}
     pop=document.createElement('div');pop.id='ft-pop';
-    pop.style.cssText='position:fixed;top:90px;right:20px;background:#1a1a1a;border:1px solid #333;border-radius:8px;padding:8px;z-index:1000;min-width:170px;box-shadow:0 8px 32px rgba(0,0,0,.5);display:flex;flex-direction:column;gap:4px;';
-    pop.innerHTML=
-      '<label class="btn btn-secundario btn-sm" style="cursor:pointer;font-size:.75rem;display:block;text-align:left;" title="Cria/atualiza por Código, nunca apaga (comportamento atual, mais seguro)">📥 Importar<input type="file" accept=".xlsx,.xls" style="display:none" onchange="Planejamento.importarExcel(event)"></label>'+
-      '<label class="btn btn-secundario btn-sm" style="cursor:pointer;font-size:.75rem;display:block;text-align:left;color:#f87171;" title="Apaga TUDO e recria do zero — só pra substituir a base inteira">📥 Importar Base Completa (apaga tudo)<input type="file" accept=".xlsx,.xls" style="display:none" onchange="Planejamento.importarBaseCompleta(event)"></label>'+
-      '<label class="btn btn-secundario btn-sm" style="cursor:pointer;font-size:.75rem;display:block;text-align:left;" title="Casa por Nome, atualiza só os campos escolhidos — não mexe em posição/estrutura">📥 Importar Correções (por campo)<input type="file" accept=".xlsx,.xls" style="display:none" onchange="Planejamento.importarCorrecoes(event)"></label>'+
-      '<button class="btn btn-secundario btn-sm" data-perm="planejamento:exportar" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.exportar()">📤 Exportar</button>'+
-      '<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.corrigirOrdensDuplicadas()" title="Corrige tarefas com número de ordem duplicado">🔧 Corrigir Ordens</button>'+
-      '<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento._recalcularDatasPais()" title="Recalcula início/término das tarefas-pai a partir dos filhos">📐 Recalcular Datas dos Pais</button>'+
-      '<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento._recalcularPercTodosPais()" title="Recalcula o % de toda tarefa-pai a partir dos filhos diretos (nível por nível, igual MS Project)">📊 Recalcular % dos Pais</button>'+
-      '<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento._corrigirNiveisSoltos()" title="Corrige tarefas com nível soltos (invisíveis no Editor de Estrutura)">🌳 Corrigir Níveis Soltos</button>'+
-      '<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento._migrarPredecessorasParaId()" title="Converte predecessoras antigas (por número de linha) pro formato por ID — imune a reordenação. Roda sozinho ao carregar, use aqui só se quiser confirmar manualmente.">🔗 Corrigir Predecessoras (por ID)</button>'+
-      '<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento._abrirHistoricoAlteracoes()" title="Lista todas as trocas de predecessora/% feitas com motivo registrado">📋 Histórico de Alterações</button>'+
+    pop.style.cssText='position:fixed;top:90px;right:20px;background:#1a1a1a;border:1px solid #333;border-radius:8px;padding:8px;z-index:1000;min-width:220px;max-height:80vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.5);display:flex;flex-direction:column;gap:4px;';
+    // Itens do menu — cada um com um "rótulo" (sem emoji, usado só pra
+    // ordenar alfabeticamente) e o HTML final. Adicionar item novo: só
+    // colocar no array, a ordem alfabética é automática.
+    const itens=[
+      {rotulo:'Corrigir Níveis Soltos',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento._corrigirNiveisSoltos()" title="Corrige tarefas com nível soltos (invisíveis no Editor de Estrutura)">🌳 Corrigir Níveis Soltos</button>'},
+      {rotulo:'Corrigir Ordens',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.corrigirOrdensDuplicadas()" title="Corrige tarefas com número de ordem duplicado">🔧 Corrigir Ordens</button>'},
+      {rotulo:'Corrigir Predecessoras (por ID)',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento._migrarPredecessorasParaId()" title="Converte predecessoras antigas (por número de linha) pro formato por ID — imune a reordenação. Roda sozinho ao carregar, use aqui só se quiser confirmar manualmente.">🔗 Corrigir Predecessoras (por ID)</button>'},
+      {rotulo:'Estrutura da Obra',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento._abrirEstruturaObra()" title="Cadastra Torre → Pavimento → Apto, pra vincular tarefas a um local">🏢 Estrutura da Obra</button>'},
+      {rotulo:'Exportar',html:'<button class="btn btn-secundario btn-sm" data-perm="planejamento:exportar" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.exportar()">📤 Exportar</button>'},
+      {rotulo:'Histórico de Alterações',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento._abrirHistoricoAlteracoes()" title="Lista todas as trocas de predecessora/% feitas com motivo registrado">📋 Histórico de Alterações</button>'},
+      {rotulo:'Importar',html:'<label class="btn btn-secundario btn-sm" style="cursor:pointer;font-size:.75rem;display:block;text-align:left;" title="Cria/atualiza por Código, nunca apaga (comportamento atual, mais seguro)">📥 Importar<input type="file" accept=".xlsx,.xls" style="display:none" onchange="Planejamento.importarExcel(event)"></label>'},
+      {rotulo:'Importar Base Completa',html:'<label class="btn btn-secundario btn-sm" style="cursor:pointer;font-size:.75rem;display:block;text-align:left;color:#f87171;" title="Apaga TUDO e recria do zero — só pra substituir a base inteira">📥 Importar Base Completa (apaga tudo)<input type="file" accept=".xlsx,.xls" style="display:none" onchange="Planejamento.importarBaseCompleta(event)"></label>'},
+      {rotulo:'Importar Correções',html:'<label class="btn btn-secundario btn-sm" style="cursor:pointer;font-size:.75rem;display:block;text-align:left;" title="Casa por Nome, atualiza só os campos escolhidos — não mexe em posição/estrutura">📥 Importar Correções (por campo)<input type="file" accept=".xlsx,.xls" style="display:none" onchange="Planejamento.importarCorrecoes(event)"></label>'},
       // "Corrigir Nível pelo Código" foi removido do menu — era um reparo de uso
       // único (histórico corrompido por bugs já corrigidos). Como ferramenta
       // recorrente é perigoso: se você aninhar uma tarefa com Código dentro de um
@@ -2565,9 +2565,15 @@ const Planejamento = (() => {
       // antigo, desfazendo a reestruturação. A função continua existindo no
       // código (Planejamento._corrigirNivelPeloCodigo()) só pra emergência, mas
       // não deve ser clicada por engano no dia a dia.
-      '<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;${_liberarEdicaoReal?"background:#dc2626;color:#fff;":""}" onclick="Planejamento.toggleLiberarEdicaoReal()" title="Início/Término Real normalmente só são preenchidos via Diário/Medições/Semanal. Libere aqui só pra correção manual pontual.">'+(_liberarEdicaoReal?'🔓 Edição de Real Liberada':'🔒 Liberar Edição de Real')+'</button>'+
-      '<button class="btn btn-secundario btn-sm" data-perm="planejamento:exportar" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.exportarPNG()">🖼 PNG</button>'+
-      '<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.abrirVinculosView()">🔗 Vínculos com Levantamento</button>';
+      {rotulo:_liberarEdicaoReal?'Edição de Real Liberada':'Liberar Edição de Real',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;'+(_liberarEdicaoReal?'background:#dc2626;color:#fff;':'')+'" onclick="Planejamento.toggleLiberarEdicaoReal()" title="Início/Término Real normalmente só são preenchidos via Diário/Medições/Semanal. Libere aqui só pra correção manual pontual.">'+(_liberarEdicaoReal?'🔓 Edição de Real Liberada':'🔒 Liberar Edição de Real')+'</button>'},
+      {rotulo:'PNG',html:'<button class="btn btn-secundario btn-sm" data-perm="planejamento:exportar" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.exportarPNG()">🖼 PNG</button>'},
+      {rotulo:'Recalcular % dos Pais',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento._recalcularPercTodosPais()" title="Recalcula o % de toda tarefa-pai a partir dos filhos diretos (nível por nível, igual MS Project)">📊 Recalcular % dos Pais</button>'},
+      {rotulo:'Recalcular Datas dos Pais',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento._recalcularDatasPais()" title="Recalcula início/término das tarefas-pai a partir dos filhos">📐 Recalcular Datas dos Pais</button>'},
+      {rotulo:'Ver por Responsável',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;'+(_filtroResponsavel?'background:var(--cor-primaria);color:#000;':'')+'" onclick="Planejamento._abrirFiltroResponsavel()" title="Filtra a grid por responsável/especialidade">👷 '+(_filtroResponsavel?_esc(_filtroResponsavel):'Ver por Responsável')+'</button>'},
+      {rotulo:'Vínculos com Levantamento',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.abrirVinculosView()">🔗 Vínculos com Levantamento</button>'},
+    ];
+    itens.sort((a,b)=>a.rotulo.localeCompare(b.rotulo,'pt-BR'));
+    pop.innerHTML=itens.map(i=>i.html).join('');
     document.body.appendChild(pop);
     setTimeout(()=>document.addEventListener('click',function h(e){if(!pop.contains(e.target)&&!e.target.closest('[onclick*="_toggleMenuFerramentas"]')){pop.remove();document.removeEventListener('click',h);}},false),50);
   }

@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.60.17',
+  versaoAtual: 'V2.60.18',
 
   versoes: [
     {
@@ -5640,9 +5640,13 @@ const NotasVersao = {
       itens:['Botão na toolbar abre lista de responsáveis distintos já usados na obra (sem duplicados/vazios) — selecionar um filtra a grid instantaneamente, "Todos" limpa o filtro.',
         'Combina com os filtros já existentes (status, busca) — é mais uma condição, não substitui nenhum.',
         'Preferência fica só no navegador (localStorage, cache de sessão) — não grava nada novo no Firestore, nem usa campo novo (lê o "Responsável" que já existe em cada tarefa).']},
-    {versao:'V2.60.17',status:'aberta',data:'2026-08-06',tipo:'melhoria',
+    {versao:'V2.60.17',status:'fechada',data:'2026-08-06',tipo:'melhoria',
       titulo:'Estrutura da Obra: botão "📋 duplicar" em cada pavimento — copia o pavimento inteiro com os apartamentos dele',
-      itens:['Útil pra torres com andares repetidos (mesmo layout de apto do 1º ao 15º, por exemplo): duplica o pavimento e todos os apartamentos dele de uma vez, com IDs novos (nunca reaproveita ID de outro nó — evitaria vínculo ambíguo entre original e cópia). Só precisa editar o nome depois.']}
+      itens:['Útil pra torres com andares repetidos (mesmo layout de apto do 1º ao 15º, por exemplo): duplica o pavimento e todos os apartamentos dele de uma vez, com IDs novos (nunca reaproveita ID de outro nó — evitaria vínculo ambíguo entre original e cópia). Só precisa editar o nome depois.']},
+    {versao:'V2.60.18',status:'aberta',data:'2026-08-06',tipo:'melhoria',
+      titulo:'Toolbar do Planejamento organizada: "Estrutura da Obra" e "Ver por Responsável" movidos pra dentro de ⚙ Ferramentas — e o menu inteiro agora fica em ordem alfabética',
+      itens:['Toolbar principal menos poluída — só ficam os botões mais usados no dia a dia. As duas funções continuam idênticas, só mudaram de lugar.',
+        'Menu Ferramentas reorganizado pra ordem alfabética (Corrigir Níveis Soltos → Corrigir Ordens → Corrigir Predecessoras → Estrutura da Obra → Exportar → Histórico → Importar → Importar Base Completa → Importar Correções → Liberar Edição de Real → PNG → Recalcular % → Recalcular Datas → Ver por Responsável → Vínculos com Levantamento) — adicionar item novo no futuro entra na ordem certa automaticamente.']}
   ],
 
   render(containerId) {
