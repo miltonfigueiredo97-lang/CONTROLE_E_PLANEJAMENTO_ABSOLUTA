@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.60.10',
+  versaoAtual: 'V2.60.11',
 
   versoes: [
     {
@@ -5607,9 +5607,15 @@ const NotasVersao = {
       titulo:'Duração das tarefas-pai também passou a ser calculada automaticamente — não fica mais vazia/0',
       itens:['Igual início/término, a Duração de uma tarefa-pai agora é calculada automaticamente (dias corridos entre o início e o término agregados dos filhos) sempre que a estrutura muda — mesmo gatilho do "📐 Recalcular Datas dos Pais".',
         'Grupos criados manualmente no Editor de Estrutura (que antes ficavam com Duração vazia pra sempre) passam a ter um valor real, condizente com o que tem dentro deles.']},
-    {versao:'V2.60.10',status:'aberta',data:'2026-08-06',tipo:'correcao',
+    {versao:'V2.60.10',status:'fechada',data:'2026-08-06',tipo:'correcao',
       titulo:'Removido da coluna % Concluído o ícone de vincular a Estacas/Fundações — não deveria estar ali (pedido do Milton)',
-      itens:['Aparecia em TODA tarefa, mesmo sem nenhuma relação com fundação/estaca (ex: "Prumadas Esgoto") — voltou a ser uma célula de % simples, editável normalmente. O vínculo de tarefas já existentes com Estacas/Fundações continua salvo no banco, só não aparece mais aqui.']}
+      itens:['Aparecia em TODA tarefa, mesmo sem nenhuma relação com fundação/estaca (ex: "Prumadas Esgoto") — voltou a ser uma célula de % simples, editável normalmente. O vínculo de tarefas já existentes com Estacas/Fundações continua salvo no banco, só não aparece mais aqui.']},
+    {versao:'V2.60.11',status:'aberta',data:'2026-08-06',tipo:'funcionalidade',
+      titulo:'Novo: Estrutura da Obra (Torre → Pavimento → Apto) + vínculo por tarefa — independente dos módulos de Levantamento',
+      itens:['Botão "🏢 Estrutura da Obra" na toolbar do Planejamento: cadastra Torres, Pavimentos e Apartamentos/Unidades (nome + ordem, editável, com exclusão avisando se alguma tarefa já está vinculada).',
+        'Nova coluna "Local (Pav/Apto)" na tabela — clicável, abre um picker pra marcar um pavimento inteiro (vale pra todos os aptos dele) ou apto(s) específico(s). Mostra resumo curto na célula (ex: "1º Pav (todos)" ou "1º Pav: 101, 102").',
+        'Guardado em obras/{obra}/config/estruturaObra (nova, isolada) e no campo vinculoEstrutura de cada tarefa — não migra nem toca em pisoArvore/tetoArvore/paredesArvore, que continuam servindo só os módulos de Levantamento.',
+        'Vínculo "órfão" (referenciando um pavimento/apto que foi excluído depois) aparece com aviso visual em vermelho na célula, em vez de quebrar silenciosamente.']}
   ],
 
   render(containerId) {

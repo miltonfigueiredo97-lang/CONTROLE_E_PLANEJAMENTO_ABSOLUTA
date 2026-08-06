@@ -28,6 +28,10 @@ const Planejamento = (() => {
   // engano. Liberar aqui é só pra correção em massa pontual (ex: atualizar
   // a base sem gerar lançamento/relatório).
   let _liberarEdicaoReal=false;
+  // ===== M1: Estrutura da Obra (Torre>Pavimento>Apto) + Vínculo por tarefa =====
+  // Independente de pisoArvore/tetoArvore/paredesArvore (que servem só os
+  // módulos de levantamento correspondentes) — não migra nem toca lá.
+  let _estruturaObraCache=null;
   function setVersaoData(v){
     if(!VERSAO_CAMPOS[v])return;
     _versaoData=v;
@@ -92,11 +96,11 @@ const Planejamento = (() => {
   }
 
   // Colunas: ordem editável, largura editável
-  let colOrdem=['sel','num','status','nivel','codigo','nome','inicio','termino','inicioReal','terminoReal','duracao','percEsp','percConc','predecessora','sucessora','responsavel','local','grupo','quantidade','equipe','custoMaterial','custoMaoObra','acoes'];
+  let colOrdem=['sel','num','status','nivel','codigo','nome','inicio','termino','inicioReal','terminoReal','duracao','percEsp','percConc','predecessora','sucessora','responsavel','local','vinculoEstrutura','grupo','quantidade','equipe','custoMaterial','custoMaoObra','acoes'];
   let colLarguras={sel:28,num:36,status:34,nivel:42,codigo:70,nome:250,inicio:88,termino:88,duracao:60,percEsp:72,percConc:78,predecessora:80,responsavel:100,local:80,grupo:80,quantidade:110,equipe:60,custoMaterial:100,custoMaoObra:100,acoes:64};
   let colsHidden=new Set();
 
-  const COL_LABELS={sel:'',num:'#',status:'',nivel:'Nível',codigo:'Código',nome:'Tarefa',inicio:'Início',termino:'Término',inicioReal:'Início Real',terminoReal:'Término Real',duracao:'Duração',percEsp:'% Esperado',percConc:'% Concluído',predecessora:'Predecessora',sucessora:'Sucessora',responsavel:'Responsável',local:'Local',grupo:'Grupo',quantidade:'Quantidade',equipe:'Equipe',custoMaterial:'Custo Material',custoMaoObra:'Custo M.Obra',acoes:''};
+  const COL_LABELS={sel:'',num:'#',status:'',nivel:'Nível',codigo:'Código',nome:'Tarefa',inicio:'Início',termino:'Término',inicioReal:'Início Real',terminoReal:'Término Real',duracao:'Duração',percEsp:'% Esperado',percConc:'% Concluído',predecessora:'Predecessora',sucessora:'Sucessora',responsavel:'Responsável',local:'Local',vinculoEstrutura:'Local (Pav/Apto)',grupo:'Grupo',quantidade:'Quantidade',equipe:'Equipe',custoMaterial:'Custo Material',custoMaoObra:'Custo M.Obra',acoes:''};
   const COL_FIXED=new Set(['sel','num','status','nome','acoes']);
   const COL_EDITABLE=new Set(['codigo','nome','inicio','termino','duracao','percEsp','percConc','predecessora','responsavel','local','grupo','nivel','equipe','inicioReal','terminoReal']);
 
@@ -292,6 +296,7 @@ const Planejamento = (() => {
     obraId=Router.getObraId();
     if(!obraId){_el().innerHTML='<div class="estado-vazio"><div class="icone">📅</div><p>Selecione uma obra.</p></div>';return;}
     document.addEventListener('keydown',_onKey);
+    _carregarEstruturaObra().then(()=>_paintRows()); // segundo plano — atualiza resumos quando chegar
     await carregar();
   }
   function _el(){return document.getElementById('planejamento-content')||document.body;}
@@ -568,6 +573,7 @@ const Planejamento = (() => {
           ${colsHidden.size?`<button class="btn btn-secundario btn-sm" onclick="Planejamento.showColsMenu()" style="font-size:.72rem;">＋ Colunas (${colsHidden.size})</button>`:''}
           <span style="color:#333;margin:0 4px;">|</span>
           <button class="btn ${modoView==='arvore'?'btn-primario':'btn-secundario'} btn-sm" data-perm="planejamento:editar" onclick="Planejamento.toggleArvoreEditor()" style="font-size:.72rem;">🌳 Editor de Estrutura</button>
+          <button class="btn btn-secundario btn-sm" onclick="Planejamento._abrirEstruturaObra()" style="font-size:.72rem;" title="Cadastra Torre → Pavimento → Apto, pra vincular tarefas a um local">🏢 Estrutura da Obra</button>
           <button class="btn btn-primario btn-sm" data-perm="planejamento:criar" onclick="Planejamento.inserirTarefa()" style="font-size:.72rem;">＋ Tarefa</button>
         </div>
       </div>
@@ -1689,6 +1695,9 @@ const Planejamento = (() => {
           cells+=`<div style="${base}color:#555;font-size:.7rem;cursor:pointer;" ${clickEdit}>${t.responsavel||'—'}</div>`;
         } else if(cid==='local'){
           cells+=`<div style="${base}color:#555;font-size:.7rem;cursor:pointer;" ${clickEdit}>${t.local||'—'}</div>`;
+        } else if(cid==='vinculoEstrutura'){
+          const resumo=_resumoVinculo(t.vinculoEstrutura);
+          cells+=`<div style="${base}color:${resumo?'#888':'#3a3a3a'};font-size:.7rem;cursor:pointer;${resumo&&resumo.includes('⚠')?'color:#dc2626;':''}" onclick="Planejamento._abrirVinculoPavimento(${i})" title="Clique pra vincular a um pavimento/apto">${resumo||'—'}</div>`;
         } else if(cid==='grupo'){
           cells+=`<div style="${base}color:#555;font-size:.7rem;cursor:pointer;" ${clickEdit}>${t.grupo||'—'}</div>`;
         } else if(cid==='quantidade'){
@@ -3191,6 +3200,219 @@ const Planejamento = (() => {
     finally{Utils.esconderLoading();}
   }
 
+  // ===================== M1-A: ESTRUTURA DA OBRA (Torre>Pavimento>Apto) =====================
+  const _EST_OBRA_DOC='estruturaObra';
+  function _novoIdEst(){return 'e'+Date.now().toString(36)+Math.random().toString(36).slice(2,8);}
+
+  async function _carregarEstruturaObra(forcar){
+    if(_estruturaObraCache&&!forcar)return _estruturaObraCache;
+    try{
+      const snap=await db.collection('obras').doc(obraId).collection('config').doc(_EST_OBRA_DOC).get();
+      _estruturaObraCache=snap.exists?(snap.data()||{torres:[]}):{torres:[]};
+    }catch(e){console.error('Erro ao carregar estrutura da obra:',e);_estruturaObraCache={torres:[]};}
+    if(!_estruturaObraCache.torres)_estruturaObraCache.torres=[];
+    return _estruturaObraCache;
+  }
+  async function _salvarEstruturaObra(estrutura){
+    _estruturaObraCache=estrutura;
+    try{await db.collection('obras').doc(obraId).collection('config').doc(_EST_OBRA_DOC).set(estrutura,{merge:false});}
+    catch(e){console.error('Erro ao salvar estrutura da obra:',e);Utils.toast('Erro ao salvar.','erro');}
+  }
+
+  async function _abrirEstruturaObra(){
+    await _carregarEstruturaObra();
+    let pop=document.getElementById('estobra-modal');if(pop)pop.remove();
+    pop=document.createElement('div');pop.id='estobra-modal';
+    pop.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:2000;display:flex;align-items:center;justify-content:center;';
+    pop.innerHTML=`
+      <div style="background:#1a1a1a;border:1px solid #333;border-radius:10px;padding:20px;width:560px;max-width:95vw;max-height:85vh;overflow-y:auto;display:flex;flex-direction:column;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+          <div style="font-weight:700;color:var(--cor-primaria);">🏢 Estrutura da Obra</div>
+          <span style="cursor:pointer;color:#888;font-size:1.1rem;" onclick="document.getElementById('estobra-modal').remove()">✕</span>
+        </div>
+        <div style="font-size:.72rem;color:#888;margin-bottom:12px;">Torre → Pavimento → Apartamento/Unidade. Usado só pra vincular tarefas a um local (coluna "Local (Pav/Apto)" da tabela) — não afeta os módulos de Levantamento.</div>
+        <div id="estobra-body"></div>
+        <button class="btn btn-primario btn-sm" style="align-self:flex-start;margin-top:10px;" onclick="Planejamento._addTorre()">＋ Nova Torre</button>
+      </div>`;
+    document.body.appendChild(pop);
+    _renderEstruturaObraBody();
+  }
+
+  function _renderEstruturaObraBody(){
+    const el=document.getElementById('estobra-body');if(!el)return;
+    const est=_estruturaObraCache||{torres:[]};
+    const torres=[...est.torres].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
+    if(!torres.length){el.innerHTML='<div style="color:#555;font-size:.8rem;padding:10px 0;">Nenhuma torre cadastrada ainda.</div>';return;}
+    el.innerHTML=torres.map(t=>{
+      const pavs=[...(t.pavimentos||[])].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
+      return `<div style="border:1px solid #292929;border-radius:7px;padding:8px;margin-bottom:8px;">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+          <input value="${_esc(t.nome||'')}" onchange="Planejamento._editarNomeEst('torre','${t.id}',this.value)" style="flex:1;background:#111;border:1px solid #333;border-radius:4px;color:#fff;padding:4px 6px;font-size:.82rem;font-weight:600;">
+          <span style="cursor:pointer;color:#dc2626;font-size:.85rem;" onclick="Planejamento._removerNoEst('torre','${t.id}')" title="Excluir torre">✕</span>
+        </div>
+        <div style="margin-left:14px;">
+          ${pavs.map(p=>{
+            const aptos=[...(p.apartamentos||[])].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
+            return `<div style="border-left:2px solid #333;padding:4px 0 4px 10px;margin-bottom:4px;">
+              <div style="display:flex;align-items:center;gap:6px;">
+                <input value="${_esc(p.nome||'')}" onchange="Planejamento._editarNomeEst('pavimento','${p.id}',this.value)" style="flex:1;background:#111;border:1px solid #333;border-radius:4px;color:#ddd;padding:3px 6px;font-size:.78rem;">
+                <span style="cursor:pointer;color:var(--cor-primaria);font-size:.72rem;" onclick="Planejamento._addApartamento('${p.id}')" title="Adicionar apto">＋apto</span>
+                <span style="cursor:pointer;color:#dc2626;font-size:.8rem;" onclick="Planejamento._removerNoEst('pavimento','${p.id}')" title="Excluir pavimento">✕</span>
+              </div>
+              ${aptos.length?`<div style="display:flex;flex-wrap:wrap;gap:4px;margin:4px 0 0 10px;">
+                ${aptos.map(a=>`<span style="display:inline-flex;align-items:center;gap:3px;background:#111;border:1px solid #333;border-radius:100px;padding:2px 4px 2px 8px;font-size:.7rem;color:#ccc;">
+                  <input value="${_esc(a.nome||'')}" onchange="Planejamento._editarNomeEst('apartamento','${a.id}',this.value)" style="width:50px;background:transparent;border:none;color:#ccc;font-size:.7rem;padding:0;">
+                  <span style="cursor:pointer;color:#dc2626;" onclick="Planejamento._removerNoEst('apartamento','${a.id}')">✕</span>
+                </span>`).join('')}
+              </div>`:''}
+            </div>`;
+          }).join('')}
+          <span style="cursor:pointer;color:var(--cor-primaria);font-size:.75rem;display:inline-block;margin-top:2px;" onclick="Planejamento._addPavimento('${t.id}')">＋ pavimento</span>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  function _acharNoEst(tipo,id){
+    const est=_estruturaObraCache;if(!est)return null;
+    if(tipo==='torre')return est.torres.find(t=>t.id===id);
+    if(tipo==='pavimento'){for(const t of est.torres){const p=(t.pavimentos||[]).find(x=>x.id===id);if(p)return p;}return null;}
+    if(tipo==='apartamento'){for(const t of est.torres)for(const p of(t.pavimentos||[])){const a=(p.apartamentos||[]).find(x=>x.id===id);if(a)return a;}return null;}
+    return null;
+  }
+  async function _editarNomeEst(tipo,id,valor){
+    const no=_acharNoEst(tipo,id);if(!no)return;
+    no.nome=valor.trim();
+    await _salvarEstruturaObra(_estruturaObraCache);
+  }
+  async function _addTorre(){
+    const est=_estruturaObraCache||{torres:[]};
+    est.torres.push({id:_novoIdEst(),nome:'Nova Torre',ordem:est.torres.length+1,pavimentos:[]});
+    await _salvarEstruturaObra(est);
+    _renderEstruturaObraBody();
+  }
+  async function _addPavimento(torreId){
+    const t=_acharNoEst('torre',torreId);if(!t)return;
+    if(!t.pavimentos)t.pavimentos=[];
+    t.pavimentos.push({id:_novoIdEst(),nome:'Novo Pavimento',ordem:t.pavimentos.length+1,apartamentos:[]});
+    await _salvarEstruturaObra(_estruturaObraCache);
+    _renderEstruturaObraBody();
+  }
+  async function _addApartamento(pavimentoId){
+    const p=_acharNoEst('pavimento',pavimentoId);if(!p)return;
+    if(!p.apartamentos)p.apartamentos=[];
+    p.apartamentos.push({id:_novoIdEst(),nome:String(p.apartamentos.length+1),ordem:p.apartamentos.length+1});
+    await _salvarEstruturaObra(_estruturaObraCache);
+    _renderEstruturaObraBody();
+  }
+  // Verifica se algum id (torre/pavimento/apto) ainda está referenciado por
+  // alguma tarefa antes de excluir — não apaga silenciosamente vínculo.
+  function _contarTarefasVinculadas(tipo,id){
+    let n=0;
+    for(const t of tarefas){
+      for(const v of(t.vinculoEstrutura||[])){
+        if((tipo==='torre'&&v.torreId===id)||(tipo==='pavimento'&&v.pavimentoId===id)||(tipo==='apartamento'&&v.apartamentoId===id))n++;
+      }
+    }
+    return n;
+  }
+  async function _removerNoEst(tipo,id){
+    const qtd=_contarTarefasVinculadas(tipo,id);
+    const rotulo={torre:'torre',pavimento:'pavimento',apartamento:'apartamento/unidade'}[tipo];
+    if(!confirm(qtd?`${qtd} tarefa(s) estão vinculadas a esse ${rotulo}. Excluir mesmo assim? O vínculo delas fica "órfão" (não quebra, mas mostra aviso).`:`Excluir esse ${rotulo}?`))return;
+    const est=_estruturaObraCache;
+    if(tipo==='torre'){est.torres=est.torres.filter(t=>t.id!==id);}
+    else if(tipo==='pavimento'){for(const t of est.torres){t.pavimentos=(t.pavimentos||[]).filter(p=>p.id!==id);}}
+    else if(tipo==='apartamento'){for(const t of est.torres)for(const p of(t.pavimentos||[])){p.apartamentos=(p.apartamentos||[]).filter(a=>a.id!==id);}}
+    await _salvarEstruturaObra(est);
+    _renderEstruturaObraBody();
+  }
+
+  // ===================== M1-B: VÍNCULO DA TAREFA COM PAVIMENTO/APTO =====================
+  function _resumoVinculo(vinculos){
+    if(!vinculos||!vinculos.length)return'';
+    const est=_estruturaObraCache;
+    if(!est)return `${vinculos.length} vínculo(s)`;
+    const partes=vinculos.map(v=>{
+      const p=_acharNoEst('pavimento',v.pavimentoId);
+      if(!p)return '⚠ órfão';
+      if(!v.apartamentoId)return `${p.nome} (todos)`;
+      const a=_acharNoEst('apartamento',v.apartamentoId);
+      return a?`${p.nome}: ${a.nome}`:'⚠ órfão';
+    });
+    if(partes.length===1)return partes[0];
+    if(partes.every(p=>!p.includes(':')&&!p.includes('⚠')))return `${partes.length} pavimentos`;
+    return partes.join(', ');
+  }
+
+  async function _abrirVinculoPavimento(idx){
+    const t=filtradas[idx];if(!t)return;
+    await _carregarEstruturaObra();
+    const est=_estruturaObraCache;
+    let pop=document.getElementById('vincloc-modal');if(pop)pop.remove();
+    pop=document.createElement('div');pop.id='vincloc-modal';
+    pop.dataset.tarefaId=t.id;
+    pop.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:2000;display:flex;align-items:center;justify-content:center;';
+    const vAtual=t.vinculoEstrutura||[];
+    const marcado=(pavId,aptoId)=>vAtual.some(v=>v.pavimentoId===pavId&&(aptoId?v.apartamentoId===aptoId:!v.apartamentoId));
+    const torres=[...(est.torres||[])].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
+    pop.innerHTML=`
+      <div style="background:#1a1a1a;border:1px solid #333;border-radius:10px;padding:20px;width:460px;max-width:95vw;max-height:85vh;overflow-y:auto;display:flex;flex-direction:column;">
+        <div style="font-weight:700;color:var(--cor-primaria);margin-bottom:4px;">📍 Local de: ${_esc(t.nome)}</div>
+        <div style="font-size:.7rem;color:#888;margin-bottom:12px;">Marque o pavimento inteiro, ou expanda pra marcar apto(s) específico(s).</div>
+        ${!torres.length?`<div style="color:#888;font-size:.82rem;">Nenhuma estrutura cadastrada ainda. <span style="color:var(--cor-primaria);cursor:pointer;text-decoration:underline;" onclick="document.getElementById('vincloc-modal').remove();Planejamento._abrirEstruturaObra()">Cadastrar Torre/Pavimento/Apto</span></div>`:''}
+        <div id="vincloc-body" style="display:flex;flex-direction:column;gap:8px;">
+        ${torres.map(tr=>`<div>
+          <div style="font-weight:600;color:#ccc;font-size:.82rem;margin-bottom:4px;">${_esc(tr.nome)}</div>
+          ${[...(tr.pavimentos||[])].sort((a,b)=>(a.ordem||0)-(b.ordem||0)).map(p=>`
+            <div style="margin-left:10px;margin-bottom:2px;">
+              <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.78rem;color:#ddd;">
+                <input type="checkbox" data-pav="${p.id}" ${marcado(p.id,null)?'checked':''} onchange="Planejamento._vinclocTogglePav(this)"> ${_esc(p.nome)} (todos)
+                ${(p.apartamentos||[]).length?`<span style="cursor:pointer;color:#666;margin-left:auto;" onclick="event.preventDefault();this.closest('label').nextElementSibling.style.display=this.closest('label').nextElementSibling.style.display==='none'?'flex':'none';">▾ aptos</span>`:''}
+              </label>
+              ${(p.apartamentos||[]).length?`<div style="display:none;flex-wrap:wrap;gap:6px;margin:4px 0 4px 22px;">
+                ${[...p.apartamentos].sort((a,b)=>(a.ordem||0)-(b.ordem||0)).map(a=>`<label style="display:flex;align-items:center;gap:3px;font-size:.72rem;color:#aaa;cursor:pointer;">
+                  <input type="checkbox" data-pav="${p.id}" data-apto="${a.id}" ${marcado(p.id,a.id)?'checked':''} onchange="Planejamento._vinclocToggleApto(this)"> ${_esc(a.nome)}
+                </label>`).join('')}
+              </div>`:''}
+            </div>`).join('')}
+        </div>`).join('')}
+        </div>
+        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px;">
+          <button class="btn btn-secundario btn-sm" onclick="document.getElementById('vincloc-modal').remove()">Cancelar</button>
+          <button class="btn btn-primario btn-sm" onclick="Planejamento._salvarVinculoPavimento(${idx})">Salvar</button>
+        </div>
+      </div>`;
+    document.body.appendChild(pop);
+  }
+  // Marcar pavimento inteiro desmarca os aptos individuais dele (redundante); marcar
+  // um apto específico desmarca o "pavimento inteiro" (senão os dois convivem sem sentido).
+  function _vinclocTogglePav(cb){
+    const pavId=cb.dataset.pav;
+    const body=document.getElementById('vincloc-body');
+    body.querySelectorAll(`input[data-apto][data-pav="${pavId}"]`).forEach(a=>{if(cb.checked)a.checked=false;});
+  }
+  function _vinclocToggleApto(cb){
+    if(!cb.checked)return;
+    const pavId=cb.dataset.pav;
+    const body=document.getElementById('vincloc-body');
+    const pavCb=body.querySelector(`input[data-pav="${pavId}"]:not([data-apto])`);
+    if(pavCb)pavCb.checked=false;
+  }
+  async function _salvarVinculoPavimento(idx){
+    const t=filtradas[idx];if(!t)return;
+    const body=document.getElementById('vincloc-body');
+    const vinculos=[];
+    body.querySelectorAll('input[type="checkbox"]:checked').forEach(cb=>{
+      vinculos.push({torreId:null,pavimentoId:cb.dataset.pav,apartamentoId:cb.dataset.apto||null});
+    });
+    t.vinculoEstrutura=vinculos;
+    const pop=document.getElementById('vincloc-modal');if(pop)pop.remove();
+    _paintRows();
+    try{await Database.atualizar(obraId,COL,t.id,{vinculoEstrutura:vinculos});Utils.toast('Local salvo.','sucesso');}
+    catch(e){console.error(e);Utils.toast('Erro ao salvar.','erro');}
+  }
+
   // ===================== MIGRAÇÃO: PREDECESSORA POR ID =====================
   // Reparo de UMA VEZ: converte predecessoras já salvas no formato antigo
   // (texto por número de linha, ex: "5TI+3") pro novo formato canônico por ID
@@ -3621,6 +3843,7 @@ const Planejamento = (() => {
             else if(cid==='sucessora')cells+=`<div style="${base}color:#666;font-size:.7rem;justify-content:center;" title="${_esc(_tooltipSuc(t._sucessoras))||'Calculado automaticamente'}">${(t._sucessoras&&t._sucessoras.length)?t._sucessoras.join(', '):'—'}</div>`;
             else if(cid==='responsavel')cells+=`<div style="${base}color:#555;font-size:.7rem;">${t.responsavel||'—'}</div>`;
             else if(cid==='local')cells+=`<div style="${base}color:#555;font-size:.7rem;">${t.local||'—'}</div>`;
+            else if(cid==='vinculoEstrutura')cells+=`<div style="${base}color:#888;font-size:.7rem;">${_resumoVinculo(t.vinculoEstrutura)||'—'}</div>`;
             else if(cid==='grupo')cells+=`<div style="${base}color:#555;font-size:.7rem;">${t.grupo||'—'}</div>`;
             else if(cid==='quantidade'){const vinc=t.fonteQuantidade==='levantamento';cells+=`<div style="${base}color:${vinc?'var(--cor-primaria)':'#555'};font-size:.7rem;justify-content:flex-end;">${vinc?'🔗 ':''}${t.quantidade?_fQtd(t.quantidade)+' '+(t.unidade||''):'—'}</div>`;}
             else if(cid==='custoMaterial'){const cm=custoMaterialPorTarefa.get(t.id)||0;cells+=`<div style="${base}color:#8a8;font-size:.68rem;justify-content:flex-end;">${cm?'R$ '+_fMoeda(cm):'—'}</div>`;}
@@ -4822,6 +5045,8 @@ const Planejamento = (() => {
   return{init,carregar,setZoom,setVersaoData,copiarDatasDeAtual,inserirTarefa,editarTarefa,salvarTarefa,excluirTarefa,
     selectIdx,toggleRecolher,recuarNivel,avancarNivel,
     toggleGantt,toggleLiberarEdicaoReal,hideCol,showColsMenu,_showCol,_showAll,_toggleMenuFerramentas,
+    _abrirEstruturaObra,_addTorre,_addPavimento,_addApartamento,_editarNomeEst,_removerNoEst,
+    _abrirVinculoPavimento,_salvarVinculoPavimento,_vinclocTogglePav,_vinclocToggleApto,
     toggleArvoreEditor,_arvToggle,_arvExpandirTudo,_arvIniciarEdit,_arvCancelarEdit,_arvSalvarNome,
     _arvInserirAcima,_arvInserirAbaixo,_arvMudarNivel,
     _arvCriarFilho,_arvCriarRaiz,_arvBackupEstrutura,_arvRestaurarEstrutura,_arvSalvarTudo,_arvDragStart,_arvDragOver,_arvDragEnd,_arvDrop,
