@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.60.21',
+  versaoAtual: 'V2.60.22',
 
   versoes: [
     {
@@ -5657,13 +5657,18 @@ const NotasVersao = {
       itens:['A lista antiga mostrava TODOS os grupos, de TODOS os níveis, achatados numa lista só — difícil de escanear e entender qual tarefa era filha de qual em obras com muita hierarquia.',
         'Agora é uma árvore igual ao Editor de Estrutura do Planejamento: começa fechada nas raízes, clica pra abrir/fechar cada grupo, e marca a tarefa-mãe em QUALQUER nível — nível 0, 1, 2, o que precisar em cada obra.',
         'Campo de busca por nome: com texto digitado, mostra direto os grupos que batem (sem precisar abrir a árvore manualmente até achar); campo vazio volta pra árvore normal.']},
-    {versao:'V2.60.21',status:'aberta',data:'2026-08-06',tipo:'funcionalidade',
+    {versao:'V2.60.21',status:'fechada',data:'2026-08-06',tipo:'funcionalidade',
       titulo:'Controle de Estacas: Acompanhamento agora lança BT de verdade (igual Controle de Concreto), toque em tablet, e visual/resumo melhorados',
       itens:['Removido o sistema de "BT única auto-gerenciada" por concretagem — não fazia sentido (uma concretagem real pode ter várias BTs/caminhões, cada um com seu próprio volume).',
         'Novo: dentro do Acompanhamento, "🚚 BTs desta concretagem" — cria uma BT (número + volume previsto), e lança o % de CADA estaca/fundação da programação que aquela BT concretou (com NF, código, hora, sobra, perda, cocho — os mesmos campos do Controle de Concreto). Grava concretoLancamentos de verdade, aparece sincronizado no Controle de Concreto também.',
         'Visual: estaca 100% concretada agora fica com preenchimento sólido/opaco (antes era sempre translúcido, mesmo pronta, parecia "fraca"). O anel amarelo de "planejada, pendente" some assim que chega em 100%.',
         'Novo painel "Estacas da obra — visão geral" no Acompanhamento: total de estacas cadastradas, volume executado da obra inteira, % geral, e tabela por diâmetro (qtd. feita/total, volume feito/total, % de cada tipo).',
-        'Zoom/pan por toque (tablet/celular): pinça com 2 dedos dá zoom, 1 dedo arrasta o mapa — antes só funcionava com mouse (Ctrl+roda/Ctrl+arrastar).']}
+        'Zoom/pan por toque (tablet/celular): pinça com 2 dedos dá zoom, 1 dedo arrasta o mapa — antes só funcionava com mouse (Ctrl+roda/Ctrl+arrastar).']},
+    {versao:'V2.60.22',status:'aberta',data:'2026-08-13',tipo:'correcao',
+      titulo:'Planejamento: editar Início na tabela não recalculava o Término (deixava a Duração em branco) — a regra estava na ordem errada em relação ao MS Project',
+      itens:['Causa: editar Início tentava calcular a DURAÇÃO (mantendo o Término fixo) — mas se o Término ainda estivesse vazio (comum em tarefa nova ou recém-importada), a condição falhava e nada era recalculado, deixando a Duração em "—".',
+        'Corrigido pra bater com a convenção do MS Project: editar Início MANTÉM a Duração e recalcula o Término; editar Término MANTÉM o Início e recalcula a Duração; editar Duração MANTÉM o Início e recalcula o Término. Exatamente como pedido.',
+        'Fallback mantido só pra quando a tarefa ainda não tem Duração salva (aí sim calcula a Duração a partir do Término existente, uma única vez, pra não deixar tudo em branco na primeira vez).']}
   ],
 
   render(containerId) {

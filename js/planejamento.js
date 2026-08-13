@@ -1877,14 +1877,24 @@ const Planejamento = (() => {
         // com reordenação (o ID nunca muda, o número de linha muda sempre).
         updates.predecessora=_predTextoParaCanon(v);
       }
-      if(_versaoData==='atual'&&field==='inicioPlanejado'&&v&&t.terminoPlanejado){
-        // Início + Fim → calcula Duração
-        updates.duracao=Math.max(0,Math.ceil((new Date(t.terminoPlanejado)-new Date(v))/864e5));
+      if(_versaoData==='atual'&&field==='inicioPlanejado'&&v){
+        // Início editado → MANTÉM a duração e recalcula o Término (igual MS
+        // Project: mudar o início não deveria mudar quanto tempo a tarefa
+        // dura, só joga ela pra frente/trás no tempo).
+        if(t.duracao>0){
+          const fim=new Date(v);fim.setDate(fim.getDate()+Number(t.duracao));
+          updates.terminoPlanejado=fim.toISOString().split('T')[0];
+        } else if(t.terminoPlanejado){
+          // Sem duração salva ainda (ex: tarefa nova) — só nesse caso cai pro
+          // fallback de calcular a duração a partir do término existente,
+          // pra não deixar tudo em branco na primeira vez.
+          updates.duracao=Math.max(0,Math.ceil((new Date(t.terminoPlanejado)-new Date(v))/864e5));
+        }
       } else if(_versaoData==='atual'&&field==='terminoPlanejado'&&v&&t.inicioPlanejado){
-        // Fim + Início → calcula Duração
+        // Término editado → MANTÉM o início e recalcula a Duração.
         updates.duracao=Math.max(0,Math.ceil((new Date(v)-new Date(t.inicioPlanejado))/864e5));
       } else if(field==='duracao'&&v>0&&t.inicioPlanejado){
-        // Duração + Início → calcula Fim
+        // Duração editada → MANTÉM o início e recalcula o Término.
         const fim=new Date(t.inicioPlanejado);fim.setDate(fim.getDate()+v);
         updates.terminoPlanejado=fim.toISOString().split('T')[0];
       } else if(field==='predecessora'&&updates.predecessora){
