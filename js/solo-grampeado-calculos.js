@@ -223,3 +223,9 @@ const SoloGrampeadoCalculos = (() => {
     canvasParaDataURLLimitado,
   };
 })();
+
+// Expõe no window: 'const' no topo de um script NÃO vira propriedade de
+// window automaticamente (só 'var' faz isso). Sem esta linha, qualquer
+// código que cheque window.SoloGrampeadoCalculos recebe undefined mesmo com o arquivo
+// carregado — foi a causa do "motor de cálculo não carregado" no Dashboard.
+window.SoloGrampeadoCalculos = SoloGrampeadoCalculos;

@@ -124,8 +124,28 @@ const Diagnostico = (() => {
       html += `<div class="diag-bloco">
         <div class="diag-titulo">3. Concreto / Estacas</div>
         <div class="diag-linha">Peças totais: <b>${pc.length}</b> — Estacas: <b>${pecasEstaca.length}</b> · Fundação: <b>${pecasFundacao.length}</b> · Estrutura: <b>${pecasEstrutura.length}</b></div>
-        <div class="diag-linha">Lançamentos (concretoLancamentos): <b>${lans.length}</b> · BTs: <b>${arr(btsConfig).length}</b> · Concretagens: <b>${arr(concretagens).length}</b> · Vínculos peça-concretagem: <b>${arr(pecaConc).length}</b></div>
-        <div class="diag-linha">Estacas COM lançamento vinculado: ${comLancamento.length ? badge(comLancamento.length, OK) : badge('0 — por isso o clique diz "nada lançado"', ERRO)}</div>
+        <div style="margin-top:8px;"><b style="font-size:.8rem;">Valores REAIS do campo "tipo" nas peças (a categorização depende disso):</b>
+          <table class="diag-tabela" style="margin-top:4px;">
+            <tr><th>tipo (exato)</th><th>nº peças</th><th>subTipo(s) encontrados</th></tr>
+            ${[...new Set(pc.map(p => p.tipo ?? '(sem campo tipo)'))].map(t => {
+              const doTipo = pc.filter(p => (p.tipo ?? '(sem campo tipo)') === t);
+              const subs = [...new Set(doTipo.map(p => p.subTipo ?? '(vazio)'))];
+              return `<tr><td>"${esc(t)}"</td><td>${doTipo.length}</td><td>${subs.map(s => '"' + esc(s) + '"').join(', ')}</td></tr>`;
+            }).join('')}
+          </table></div>
+        <div style="margin-top:8px;"><b style="font-size:.8rem;">Peças do andar "Fundação" (amostra de 5) — pra ver que tipo elas têm de verdade:</b>
+          <table class="diag-tabela" style="margin-top:4px;">
+            <tr><th>Nome</th><th>tipo</th><th>subTipo</th><th>volume</th><th>diâmetro</th><th>comprimento</th></tr>
+            ${pc.filter(p => norm(p.andar || '') === norm('Fundação')).slice(0, 5).map(p => `<tr>
+              <td>${esc((p.nome || '').slice(0, 26))}</td>
+              <td>"${esc(p.tipo ?? '(sem)')}"</td>
+              <td>"${esc(p.subTipo ?? '(vazio)')}"</td>
+              <td>${esc(p.volume ?? '—')}</td>
+              <td>${esc(p.diametro ?? '—')}</td>
+              <td>${esc(p.comprimento ?? '—')}</td></tr>`).join('') || '<tr><td colspan="6">nenhuma</td></tr>'}
+          </table></div>
+        <div class="diag-linha" style="margin-top:8px;">Lançamentos (concretoLancamentos): <b>${lans.length}</b> · BTs: <b>${arr(btsConfig).length}</b> · Concretagens: <b>${arr(concretagens).length}</b> · Vínculos peça-concretagem: <b>${arr(pecaConc).length}</b></div>
+        <div class="diag-linha">Estacas COM lançamento vinculado: ${comLancamento.length ? badge(comLancamento.length, OK) : badge('0', ERRO)}</div>
         <div class="diag-linha">Estacas com % > 0 (em execução): ${emExecucao.length ? badge(emExecucao.length, OK) : badge('0', ERRO)}</div>
         <div class="diag-linha">Marcadores no mapa: <b>${arr(marcadores).length}</b> · com peça vinculada: <b>${arr(marcadores).filter(m => m.pecaId).length}</b> · Pranchas: <b>${arr(pranchas).length}</b></div>
         ${pecasEstaca.length ? `<div style="margin-top:8px;"><b style="font-size:.8rem;">Amostra (5 estacas):</b>
@@ -141,7 +161,7 @@ const Diagnostico = (() => {
               <td>${pct.toFixed(1)}%</td>
               <td>${lans.filter(l => l.pecaId === p.id).length}</td></tr>`).join('')}
           </table></div>` : ''}
-        ${lans.length ? `<div style="margin-top:8px;"><b style="font-size:.8rem;">Amostra (3 lançamentos — confira se pecaId aponta pra uma peça existente):</b>
+        ${lans.length ? `<div style="margin-top:8px;"><b style="font-size:.8rem;">Amostra (3 lançamentos):</b>
           <table class="diag-tabela" style="margin-top:4px;">
             <tr><th>pecaId</th><th>peça existe?</th><th>volume</th><th>concretagemId</th><th>btConfigId</th></tr>
             ${lans.slice(0, 3).map(l => `<tr>
@@ -212,7 +232,48 @@ const Diagnostico = (() => {
     }
   }
 
-  return { init, onObraChanged, rodar };
+  // Copia o diagnóstico como TEXTO PURO (sem HTML/formatação) pro clipboard —
+  // colar em qualquer lugar fica legível, sem quebrar a formatação.
+  function copiar() {
+    const el = document.getElementById('modulo-content');
+    if (!el) return;
+    // innerText já respeita quebras de linha visuais e ignora tags.
+    let txt = el.innerText || el.textContent || '';
+    txt = txt.split('\n').map(l => l.trim()).filter(l => l).join('\n');
+    const cabecalho = `DIAGNÓSTICO — ${obraAtual?.nome || ''} — ${new Date().toLocaleString('pt-BR')}\n${'='.repeat(60)}\n`;
+    const final = cabecalho + txt;
+    navigator.clipboard.writeText(final).then(() => {
+      Utils.toast('Diagnóstico copiado! Cole aqui no chat.', 'sucesso');
+    }).catch(() => {
+      // Fallback pra navegador que bloqueia clipboard: mostra num textarea
+      // selecionável, pra copiar manualmente com Ctrl+C.
+      const ta = document.createElement('textarea');
+      ta.value = final;
+      ta.style.cssText = 'position:fixed;inset:5%;width:90%;height:80%;z-index:900;font-family:monospace;font-size:12px;padding:10px;';
+      document.body.appendChild(ta);
+      ta.select();
+      Utils.toast('Selecionado — aperte Ctrl+C e depois Esc.', 'info');
+      const fechar = (e) => { if (e.key === 'Escape') { ta.remove(); document.removeEventListener('keydown', fechar); } };
+      document.addEventListener('keydown', fechar);
+    });
+  }
+
+  // Baixa o diagnóstico como arquivo .txt — alternativa ao copiar, útil
+  // quando o texto é grande demais pra colar confortavelmente.
+  function baixar() {
+    const el = document.getElementById('modulo-content');
+    if (!el) return;
+    let txt = (el.innerText || el.textContent || '').split('\n').map(l => l.trim()).filter(l => l).join('\n');
+    const cabecalho = `DIAGNÓSTICO — ${obraAtual?.nome || ''} — ${new Date().toLocaleString('pt-BR')}\n${'='.repeat(60)}\n`;
+    const blob = new Blob([cabecalho + txt], { type: 'text/plain;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `diagnostico-${(obraAtual?.nome || 'obra').replace(/[^\w]+/g, '-')}-${new Date().toISOString().slice(0, 10)}.txt`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  return { init, onObraChanged, rodar, copiar, baixar };
 })();
 
 function onObraChanged() {

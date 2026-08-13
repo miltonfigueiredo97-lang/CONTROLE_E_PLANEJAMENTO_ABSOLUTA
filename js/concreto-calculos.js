@@ -343,3 +343,9 @@ const ConcretoCalculos = (() => {
     calcAreaIsopor, calcMetragemTrelica, calcTotalTrelica, calcVolLaje,
   };
 })();
+
+// Expõe no window: 'const' no topo de um script NÃO vira propriedade de
+// window automaticamente (só 'var' faz isso). Sem esta linha, qualquer
+// código que cheque window.ConcretoCalculos recebe undefined mesmo com o arquivo
+// carregado — foi a causa do "motor de cálculo não carregado" no Dashboard.
+window.ConcretoCalculos = ConcretoCalculos;

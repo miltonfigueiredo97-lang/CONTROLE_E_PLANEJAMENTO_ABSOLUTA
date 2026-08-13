@@ -481,3 +481,7 @@ const Utils = (() => {
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',_setup);
   else _setup();
 })();
+
+// Expõe no window (ver nota nos módulos de cálculo): 'const' no topo de
+// um script não cria window.Utils sozinho.
+window.Utils = Utils;

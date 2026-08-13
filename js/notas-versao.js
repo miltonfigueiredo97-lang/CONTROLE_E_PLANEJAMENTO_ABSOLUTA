@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.60.38',
+  versaoAtual: 'V2.60.39',
 
   versoes: [
     {
@@ -5742,10 +5742,15 @@ const NotasVersao = {
       titulo:'Dashboard: gráfico Fundação e Estrutura virava um bloco gigante em obra com poucos andares',
       itens:['A correção da V2.60.36 tinha uma largura mínima artificial de 700px — numa obra com 1 andar só (ex: Zenith Residence, só 2º Subsolo), a barra ficava esticada ocupando a tela inteira.',
         'Agora a largura total é proporcional ao conteúdo real (1 andar = gráfico estreito de ~190px; 22 andares = ~2.500px com scroll lateral) e a altura acompanha (300px com até 2 andares, 460px acima disso) — sem mínimo forçado nem bloco desproporcional.']},
-    {versao:'V2.60.38',status:'aberta',data:'2026-08-13',tipo:'funcionalidade',
+    {versao:'V2.60.38',status:'fechada',data:'2026-08-13',tipo:'funcionalidade',
       titulo:'Nova página de Diagnóstico — mostra na tela os dados que hoje só dava pra ver abrindo o console (F12)',
       itens:['Menu lateral → 🔍 Diagnóstico. Somente leitura, não grava nada. Mostra de uma vez: quais motores de cálculo carregaram (Solo Grampeado, Concreto, Estacas); quantas tarefas-folha têm data e qual o período real (causa da Curva S curta); quantas estacas têm lançamento vinculado e o % calculado de cada uma (causa do "nada lançado" ao clicar); os nomes EXATOS dos andares gravados nas peças, apontando quando o mesmo andar tem duas grafias diferentes (que dividia o volume em duas barras); e se a Estrutura da Obra e os vínculos de local estão preenchidos (causa do Painel de Andamento vazio).',
-        'Feita pra resolver o problema de suporte: em vez de pedir print do console ou exportação do banco, basta abrir essa página e mandar um print — todos os dados de investigação aparecem juntos.']}
+        'Feita pra resolver o problema de suporte: em vez de pedir print do console ou exportação do banco, basta abrir essa página e mandar um print — todos os dados de investigação aparecem juntos.']},
+    {versao:'V2.60.39',status:'aberta',data:'2026-08-13',tipo:'correcao',
+      titulo:'CAUSA RAIZ encontrada: os motores de cálculo nunca ficavam disponíveis como window.X — origem de vários bugs do Dashboard de uma vez',
+      itens:['O diagnóstico revelou que TODOS os motores apareciam como "não carregado" — inclusive Utils e Database, que obviamente estavam funcionando (a própria página leu 2.439 tarefas). O motivo: declarar "const X = (...)()" no topo de um script NÃO cria window.X automaticamente (só "var" faz isso). Como o Dashboard checava window.ConcretoCalculos / window.SoloGrampeadoCalculos / window.EstacasCalculos, ele sempre recebia undefined.',
+        'Isso explica de uma só vez: o "Motor de cálculo de Solo Grampeado não carregado", o erro "Cannot read properties of undefined (reading \'num\')" e vários cálculos do Dashboard silenciosamente zerados. Corrigido na origem: cada módulo agora se expõe explicitamente em window ao final do arquivo.',
+        'Diagnóstico ganhou os botões "📋 Copiar como texto" e "⬇️ Baixar .txt" (texto puro, sem perder formatação ao colar), e passou a mostrar a distribuição real dos valores do campo "tipo" das peças — investigando por que Estacas e Fundação aparecem como 0 mesmo havendo 108 peças no andar "Fundação".']}
   ],
 
   render(containerId) {

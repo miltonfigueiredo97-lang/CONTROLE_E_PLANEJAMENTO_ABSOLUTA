@@ -305,3 +305,7 @@ async function uploadImagem(path, base64DataUrl) {
 async function deletarImagem(path) {
   try { await storage.ref(path).delete(); } catch(e) {}
 }
+
+// Expõe no window (ver nota nos módulos de cálculo): 'const' no topo de
+// um script não cria window.Database sozinho.
+window.Database = Database;
