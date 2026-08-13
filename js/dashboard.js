@@ -1237,12 +1237,19 @@ const Dashboard = (() => {
       if (perc > 0) {
         const pesoReal = peso * (perc / 100);
         if (perc >= 100 && t.terminoReal) {
+          // Concluída com data real: joga tudo no mês da conclusão.
           const dConcl = new Date(t.terminoReal);
           const mAlvo = meses.find(m => dConcl >= m.inicio && dConcl < m.fim) || meses[meses.length - 1];
           mAlvo.realMensalEstimado += pesoReal;
         } else {
-          const iniR = new Date(t.inicioReal || t.inicioPlanejado || iniP);
-          const fimR = hoje > iniR ? hoje : new Date(iniR.getTime() + 864e5);
+          // Sem data real de conclusão: distribui o progresso ao longo do
+          // período PLANEJADO da tarefa (limitado a hoje — o que já passou).
+          // A versão anterior distribuía de inicioReal até HOJE, o que
+          // empurrava artificialmente o progresso das tarefas antigas pro
+          // presente e achatava a curva executada nos meses anteriores.
+          const iniR = new Date(t.inicioReal || t.inicioPlanejadoBase || t.inicioPlanejado || iniP);
+          const fimPlanejado = fimPValido < hoje ? fimPValido : hoje;
+          const fimR = fimPlanejado > iniR ? fimPlanejado : new Date(iniR.getTime() + 864e5);
           meses.forEach(m => { m.realMensalEstimado += pesoReal * overlapFrac(iniR, fimR, m.inicio, m.fim); });
         }
       }
@@ -1256,15 +1263,35 @@ const Dashboard = (() => {
     // qualquer tarefa nunca tocada durante o período rastreado mantém
     // corretamente o valor de hoje (nada mudou nela), e qualquer tarefa que
     // mudou tem seu valor de cada dia reconstruído com precisão.
+    // ---- Executado REAL, reconstruído a partir do histórico salvo em
+    // obras/{id}/historicoExecucao.
+    //
+    // IMPORTANTE (bug corrigido): a versão anterior semeava o estado de TODAS
+    // as tarefas com o percentualConcluido de HOJE e depois reaplicava os
+    // poucos snapshots existentes. Numa obra com histórico recente (ex: 8
+    // registros, todos de um mês só), isso jogava o progresso atual da obra
+    // inteira retroativamente no primeiro mês do histórico — produzindo um
+    // salto vertical absurdo (ex: 5% -> 100% num mês só).
+    //
+    // Agora: o estado começa ZERADO e só recebe o que os snapshots realmente
+    // registraram. O acumulado real de cada mês reflete apenas o que o
+    // histórico de fato sabe até aquele mês. O último ponto (hoje) é
+    // ancorado no percentual atual de verdade das tarefas, que é o único
+    // valor que sabemos ser correto — assim a curva termina no lugar certo
+    // sem inventar o caminho até lá.
     const historicoOrdenado = (historico || []).filter(h => h && h.data).sort((a, b) => String(a.data).localeCompare(String(b.data)));
     let idxInicioHistorico = -1;
+    // Percentual real de HOJE (âncora confiável, independente de histórico).
+    let somaHoje = 0;
+    leaves.forEach(t => { somaHoje += Math.min(100, Number(t.percentualConcluido) || 0) * _peso(t); });
+    const pctRealHoje = totalPeso ? somaHoje / totalPeso * 100 : 0;
+
     if (historicoOrdenado.length) {
       const dataInicio = new Date(historicoOrdenado[0].data + 'T00:00:00');
       idxInicioHistorico = meses.findIndex(m => m.fim > dataInicio);
       if (idxInicioHistorico === -1) idxInicioHistorico = meses.length - 1;
 
-      const estado = new Map();
-      leaves.forEach(t => estado.set(t.id, Math.min(100, Number(t.percentualConcluido) || 0)));
+      const estado = new Map(); // começa vazio: só o que o histórico registrou
       let hIdx = 0;
       meses.forEach((m, i) => {
         const limite = m.fim < hoje ? m.fim : hoje;
@@ -1282,17 +1309,37 @@ const Dashboard = (() => {
           m.realAcumReal = soma / totalPeso * 100;
         }
       });
+      // Garante que o acumulado nunca diminui de um mês pro outro (é
+      // acumulado; se um snapshot faltou, mantém o patamar anterior).
+      let maiorAte = 0;
+      meses.forEach((m, i) => {
+        if (i < idxInicioHistorico) return;
+        maiorAte = Math.max(maiorAte, m.realAcumReal || 0);
+        m.realAcumReal = maiorAte;
+      });
     }
 
     let acumP = 0, acumREstimado = 0, hojeIdx = 0;
     let acumRealAnterior = 0;
+    // Patamar da estimativa no mês imediatamente anterior ao início do
+    // histórico — o histórico real continua A PARTIR dele, em vez de
+    // recomeçar do zero e criar um degrau vertical artificial no gráfico.
+    let baseAntesDoHistorico = 0;
+    if (idxInicioHistorico > 0) {
+      let acumTmp = 0;
+      for (let i = 0; i < idxInicioHistorico; i++) acumTmp += meses[i].realMensalEstimado;
+      baseAntesDoHistorico = Math.min(100, acumTmp / totalPeso * 100);
+    }
     meses.forEach((m, i) => {
       acumP += m.planMensal; acumREstimado += m.realMensalEstimado;
       m.planAcum = Math.min(100, acumP / totalPeso * 100);
       m.planMensalPct = m.planMensal / totalPeso * 100;
 
       if (idxInicioHistorico !== -1 && i >= idxInicioHistorico) {
-        m.realAcum = Math.min(100, m.realAcumReal);
+        // Histórico real somado ao patamar que a estimativa já tinha atingido
+        // antes da gravação começar (o histórico só conhece o que mudou
+        // depois desse ponto, então sozinho ele subestima o acumulado).
+        m.realAcum = Math.min(100, baseAntesDoHistorico + (m.realAcumReal || 0));
         m.realMensalPct = Math.max(0, m.realAcum - acumRealAnterior);
         m.origemReal = 'historico';
       } else {
@@ -1303,6 +1350,29 @@ const Dashboard = (() => {
       acumRealAnterior = m.realAcum;
       if (m.inicio <= hoje) hojeIdx = i;
     });
+
+    // Correção final de escala: o ponto de HOJE tem que bater com o
+    // percentual real da obra (soma ponderada do percentualConcluido atual —
+    // o único número que sabemos ser verdade). Se a reconstrução divergir,
+    // ajusta proporcionalmente os pontos reais até hoje, mantendo o formato
+    // da curva mas terminando no valor certo. Sem isso, a curva podia
+    // terminar em 100% com a obra em 12%, ou vice-versa.
+    if (hojeIdx >= 0 && meses[hojeIdx]) {
+      const acumCalculadoHoje = meses[hojeIdx].realAcum || 0;
+      if (acumCalculadoHoje > 0.01 && Math.abs(acumCalculadoHoje - pctRealHoje) > 0.5) {
+        const fator = pctRealHoje / acumCalculadoHoje;
+        let anterior = 0;
+        meses.forEach((m, i) => {
+          if (i > hojeIdx) { m.realAcum = null; m.realMensalPct = 0; return; } // futuro não tem executado
+          m.realAcum = Math.min(100, (m.realAcum || 0) * fator);
+          m.realMensalPct = Math.max(0, m.realAcum - anterior);
+          anterior = m.realAcum;
+        });
+      } else {
+        // Mesmo sem precisar corrigir escala, o futuro não tem executado.
+        meses.forEach((m, i) => { if (i > hojeIdx) { m.realAcum = null; m.realMensalPct = 0; } });
+      }
+    }
     return { meses, hojeIdx, idxInicioHistorico, _diag: { leavesCount: leaves.length, dMin, dMax } };
   }
 
@@ -1342,7 +1412,7 @@ const Dashboard = (() => {
       <div class="db-tt-linha"><i style="background:#999;"></i>Esperado ${rotuloPeriodo}: <b>${m.planMensalPct.toFixed(2)}%</b></div>
       <div class="db-tt-linha"><i style="background:var(--cor-primaria);"></i>Executado ${rotuloPeriodo}: <b>${m.realMensalPct.toFixed(2)}%</b></div>
       <div class="db-tt-linha"><i style="background:#999;border-radius:50%;"></i>Esperado Acumulado: <b>${m.planAcum.toFixed(2)}%</b></div>
-      <div class="db-tt-linha"><i style="background:var(--cor-primaria-dark);border-radius:50%;"></i>Executado Acumulado: <b>${m.realAcum.toFixed(2)}%</b></div>
+      <div class="db-tt-linha"><i style="background:var(--cor-primaria-dark);border-radius:50%;"></i>Executado Acumulado: <b>${m.realAcum == null ? '—' : m.realAcum.toFixed(2) + '%'}</b></div>
     `);
   }
 
@@ -1369,7 +1439,11 @@ const Dashboard = (() => {
     }
 
     const pathPlan = meses.map((m, i) => `${i === 0 ? 'M' : 'L'}${x(i).toFixed(1)},${yAcum(m.planAcum).toFixed(1)}`).join(' ');
-    const pathReal = meses.map((m, i) => `${i === 0 ? 'M' : 'L'}${x(i).toFixed(1)},${yAcum(m.realAcum).toFixed(1)}`).join(' ');
+    // Linha do Executado só vai até onde há dado real (meses futuros têm
+    // realAcum = null) — antes ela seguia reta até o fim do gráfico, dando
+    // a impressão errada de que a obra já estava executada lá na frente.
+    const pontosReais = meses.map((m, i) => ({ m, i })).filter(({ m }) => m.realAcum != null);
+    const pathReal = pontosReais.map(({ m, i }, k) => `${k === 0 ? 'M' : 'L'}${x(i).toFixed(1)},${yAcum(m.realAcum).toFixed(1)}`).join(' ');
 
     const hojeX = x(hojeIdx);
     let marcadorHistorico = '';
@@ -1451,7 +1525,7 @@ const Dashboard = (() => {
     }
     const meses = _curvaCache.meses.map(m => ({
       label: m.label,
-      idp: m.planAcum > 0.01 ? (m.realAcum / m.planAcum) : null,
+      idp: (m.planAcum > 0.01 && m.realAcum != null) ? (m.realAcum / m.planAcum) : null,
       origemReal: m.origemReal,
     }));
     host.innerHTML = _svgIDP(meses, _curvaCache.hojeIdx);

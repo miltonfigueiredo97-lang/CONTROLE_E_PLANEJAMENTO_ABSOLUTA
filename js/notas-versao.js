@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.60.39',
+  versaoAtual: 'V2.60.40',
 
   versoes: [
     {
@@ -5750,7 +5750,14 @@ const NotasVersao = {
       titulo:'CAUSA RAIZ encontrada: os motores de cálculo nunca ficavam disponíveis como window.X — origem de vários bugs do Dashboard de uma vez',
       itens:['O diagnóstico revelou que TODOS os motores apareciam como "não carregado" — inclusive Utils e Database, que obviamente estavam funcionando (a própria página leu 2.439 tarefas). O motivo: declarar "const X = (...)()" no topo de um script NÃO cria window.X automaticamente (só "var" faz isso). Como o Dashboard checava window.ConcretoCalculos / window.SoloGrampeadoCalculos / window.EstacasCalculos, ele sempre recebia undefined.',
         'Isso explica de uma só vez: o "Motor de cálculo de Solo Grampeado não carregado", o erro "Cannot read properties of undefined (reading \'num\')" e vários cálculos do Dashboard silenciosamente zerados. Corrigido na origem: cada módulo agora se expõe explicitamente em window ao final do arquivo.',
-        'Diagnóstico ganhou os botões "📋 Copiar como texto" e "⬇️ Baixar .txt" (texto puro, sem perder formatação ao colar), e passou a mostrar a distribuição real dos valores do campo "tipo" das peças — investigando por que Estacas e Fundação aparecem como 0 mesmo havendo 108 peças no andar "Fundação".']}
+        'Diagnóstico ganhou os botões "📋 Copiar como texto" e "⬇️ Baixar .txt" (texto puro, sem perder formatação ao colar), e passou a mostrar a distribuição real dos valores do campo "tipo" das peças — investigando por que Estacas e Fundação aparecem como 0 mesmo havendo 108 peças no andar "Fundação".']},
+    {versao:'V2.60.40',status:'aberta',data:'2026-08-13',tipo:'correcao',
+      titulo:'Curva S: executado saltava para 100% num único mês e não batia com o % real da obra',
+      itens:['Bug principal: a reconstrução pelo histórico semeava TODAS as tarefas com o percentual de HOJE e depois reaplicava os poucos snapshots existentes. Numa obra com histórico recente (8 registros, todos de julho/26), isso jogava o progresso atual da obra inteira retroativamente naquele mês — daí o salto vertical de ~5% para 100% e o "94,43% executado no mês". Agora o estado começa zerado e só considera o que o histórico de fato registrou.',
+        'A estimativa dos meses anteriores ao histórico distribuía o progresso de cada tarefa do início dela até HOJE, empurrando tudo pro presente e achatando a curva no passado. Agora distribui pelo período planejado real da tarefa (limitado a hoje).',
+        'A transição estimativa → histórico criava um degrau vertical: o histórico recomeçava do zero em vez de continuar do patamar já atingido. Corrigido — o histórico soma a partir de onde a estimativa parou.',
+        'Ancoragem final: a curva executada agora é ajustada pra terminar exatamente no percentual real da obra (a mesma soma ponderada por duração que aparece no Hero). Antes podia terminar em 100% com a obra em 12%.',
+        'A linha do Executado para no mês atual — antes seguia reta até o fim do gráfico, dando a impressão de que a obra já estava executada nos meses futuros.']}
   ],
 
   render(containerId) {
