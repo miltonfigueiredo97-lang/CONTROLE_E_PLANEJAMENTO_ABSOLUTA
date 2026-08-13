@@ -1,6 +1,6 @@
 // ============================================
 // Dashboard Principal
-// Visão geral da obra: hero com seletor, Curva S, Índice de Desempenho
+// Visão geral da obra: hero com seletor, atividades, suprimentos e painéis
 // de Prazo, atividades, avanço por pacotes, PPC semanal/motivos de
 // atraso e resumo por apartamento (quantidade/custo).
 // ============================================
@@ -12,8 +12,6 @@ const Dashboard = (() => {
   let suprimentos = []; // coleção 'suprimentos' (pipeline de compra por tarefa)
   let _resumoView = 'unidade';
   let _resumoDados = null;
-  let _curvaCache = null; // último cálculo da Curva S (usado pelo tooltip)
-  let _curvaGranularidade = 'mensal'; // 'mensal' | 'semanal'
   let _mostrarConcreto = localStorage.getItem('db_mostrar_fundacao_estrutura') === 'true';
   let _feContexto = null; // { obraId, pecas, marcadores, pranchas } — usado pelo popup de prancha (clique no gráfico Fundação/Estaca)
 
@@ -201,7 +199,7 @@ const Dashboard = (() => {
       // Cada seção isolada com seu próprio try/catch — uma exceção numa
       // seção (ex: dado inesperado que quebra um cálculo) não pode mais
       // impedir as seções seguintes de renderizar. Antes, um erro em
-      // qualquer uma delas (ex: Painel de Andamento) fazia a Curva S e o
+      // qualquer uma delas (ex: Painel de Andamento) fazia as seções
       // Solo Grampeado ficarem em branco sem nenhum aviso, porque o catch
       // era um só pra tudo e parava a execução no meio da sequência.
       const secoes = [
@@ -212,7 +210,6 @@ const Dashboard = (() => {
         ['Solo Grampeado', () => _renderSoloGrampeadoPanel()],
         ['Fundação e Estrutura', () => _renderFundacaoEstrutura()],
         ['Estacas', () => _renderEstacasPanel()],
-        ['Curva S', () => _renderCurvaS()],
         ['Resumo por Apartamento', () => _renderResumoApartamento()],
       ];
       for (const [nomeSecao, fn] of secoes) {
@@ -299,19 +296,6 @@ const Dashboard = (() => {
             </div>
           </div>
           <div id="db-painel-andamento"></div>
-        </div>
-      </div>
-
-      <div class="card db-row">
-        <div class="card-body">
-          <div class="db-secao-header">
-            <h3>Curva S — Planejamento</h3>
-            <div class="aba-toggle" id="db-curva-toggle">
-              <button class="aba-btn ativo" data-v="mensal" onclick="Dashboard.setCurvaGranularidade('mensal')">Mensal</button>
-              <button class="aba-btn" data-v="semanal" onclick="Dashboard.setCurvaGranularidade('semanal')">Semanal</button>
-            </div>
-          </div>
-          <div id="db-curva-s" class="db-tooltip-wrap"></div>
         </div>
       </div>
 
@@ -946,7 +930,7 @@ const Dashboard = (() => {
   function _emExecucaoFiltro(t) { return (Number(t.percentualConcluido) || 0) > 0 && (Number(t.percentualConcluido) || 0) < 100; }
   function _proximasFiltro(t) { return !(Number(t.percentualConcluido) > 0); }
 
-  // Peso de cada tarefa nos cálculos agregados (Curva S, KPIs do Hero).
+  // Peso de cada tarefa nos cálculos agregados (KPIs do Hero, painéis).
   // HISTÓRICO: já foi trocado pra ponderar por QUANTIDADE (convenção de
   // Utils.percFamilia), mas isso distorceu o % geral pra perto de 0 nesta
   // obra — algumas tarefas com quantidade gigante e 0% de progresso afogam
@@ -1158,342 +1142,9 @@ const Dashboard = (() => {
       ${corpo}`;
   }
 
-  // ===================== CURVA S =====================
-  function _mesLabel(d) { return d.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' }).replace('.', ''); }
-  // Mesmo cálculo de semana ISO usado em js/semanal.js (rótulo "S<semana> A<ano>") —
-  // mantém a mesma convenção de numeração de semana em todo o sistema.
-  function _isoWeek(d) {
-    const t = new Date(d); t.setHours(0, 0, 0, 0); t.setDate(t.getDate() + 3 - ((t.getDay() + 6) % 7));
-    const w1 = new Date(t.getFullYear(), 0, 4);
-    return { w: 1 + Math.round(((t - w1) / 864e5 - 3 + ((w1.getDay() + 6) % 7)) / 7), y: t.getFullYear() };
-  }
-
-  function _gerarBuckets(dMin, dMax, granularidade) {
-    const buckets = [];
-    if (granularidade === 'semanal') {
-      // Semana de domingo a sábado, igual à convenção do módulo Semanal.
-      let cursor = new Date(dMin); cursor.setDate(cursor.getDate() - cursor.getDay());
-      const fimCursor = new Date(dMax);
-      while (cursor <= fimCursor) {
-        const inicioSemana = new Date(cursor);
-        const fimSemana = new Date(cursor); fimSemana.setDate(fimSemana.getDate() + 7);
-        const { w, y } = _isoWeek(new Date(inicioSemana.getTime() + 864e5));
-        buckets.push({ label: `S${w} ${String(y).slice(2)}`, inicio: inicioSemana, fim: fimSemana, planMensal: 0, realMensalEstimado: 0 });
-        cursor = fimSemana;
-      }
-    } else {
-      let cursor = new Date(dMin.getFullYear(), dMin.getMonth(), 1);
-      const fimCursor = new Date(dMax.getFullYear(), dMax.getMonth(), 1);
-      while (cursor <= fimCursor) {
-        const inicioMes = new Date(cursor.getFullYear(), cursor.getMonth(), 1);
-        const fimMes = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1);
-        buckets.push({ label: _mesLabel(cursor), inicio: inicioMes, fim: fimMes, planMensal: 0, realMensalEstimado: 0 });
-        cursor = fimMes;
-      }
-    }
-    return buckets;
-  }
-
-  function _calcCurvaS(tf, historico, granularidade) {
-    const leaves = _folhas(tf).filter(t => t.inicioPlanejado || t.inicioPlanejadoBase);
-    if (!leaves.length) return null;
-    const hoje = new Date();
-
-    let dMin = null, dMax = null;
-    leaves.forEach(t => {
-      const ini = new Date(t.inicioPlanejadoBase || t.inicioPlanejado);
-      const fim = new Date(t.terminoPlanejadoBase || t.terminoPlanejado || t.inicioPlanejado);
-      if (!dMin || ini < dMin) dMin = ini;
-      if (!dMax || fim > dMax) dMax = fim;
-    });
-    if (!dMin || !dMax) return null;
-    if (hoje > dMax) dMax = hoje;
-
-    const meses = _gerarBuckets(dMin, dMax, granularidade);
-
-    function overlapFrac(iniA, fimA, iniB, fimB) {
-      const iniOverlap = Math.max(iniA.getTime(), iniB.getTime());
-      const fimOverlap = Math.min(fimA.getTime(), fimB.getTime());
-      const overlap = Math.max(0, fimOverlap - iniOverlap);
-      const total = Math.max(1, fimA.getTime() - iniA.getTime());
-      return overlap / total;
-    }
-
-    let totalPeso = 0;
-    leaves.forEach(t => { totalPeso += _peso(t); });
-    if (!totalPeso) totalPeso = 1;
-
-    // ---- Esperado (sempre pelas datas — não depende de histórico) e uma
-    // ESTIMATIVA do Executado (usada só como fallback pros meses anteriores
-    // ao início do histórico real, ver abaixo). ----
-    leaves.forEach(t => {
-      const peso = _peso(t);
-      const iniP = new Date(t.inicioPlanejadoBase || t.inicioPlanejado);
-      const fimP = new Date(t.terminoPlanejadoBase || t.terminoPlanejado || t.inicioPlanejado);
-      const fimPValido = fimP > iniP ? fimP : new Date(iniP.getTime() + 864e5);
-      meses.forEach(m => { m.planMensal += peso * overlapFrac(iniP, fimPValido, m.inicio, m.fim); });
-
-      const perc = Math.min(100, Number(t.percentualConcluido) || 0);
-      if (perc > 0) {
-        const pesoReal = peso * (perc / 100);
-        if (perc >= 100 && t.terminoReal) {
-          // Concluída com data real: joga tudo no mês da conclusão.
-          const dConcl = new Date(t.terminoReal);
-          const mAlvo = meses.find(m => dConcl >= m.inicio && dConcl < m.fim) || meses[meses.length - 1];
-          mAlvo.realMensalEstimado += pesoReal;
-        } else {
-          // Sem data real de conclusão: distribui o progresso ao longo do
-          // período PLANEJADO da tarefa (limitado a hoje — o que já passou).
-          // A versão anterior distribuía de inicioReal até HOJE, o que
-          // empurrava artificialmente o progresso das tarefas antigas pro
-          // presente e achatava a curva executada nos meses anteriores.
-          const iniR = new Date(t.inicioReal || t.inicioPlanejadoBase || t.inicioPlanejado || iniP);
-          const fimPlanejado = fimPValido < hoje ? fimPValido : hoje;
-          const fimR = fimPlanejado > iniR ? fimPlanejado : new Date(iniR.getTime() + 864e5);
-          meses.forEach(m => { m.realMensalEstimado += pesoReal * overlapFrac(iniR, fimR, m.inicio, m.fim); });
-        }
-      }
-    });
-
-    // ---- Executado REAL, reconstruído a partir do histórico salvo em
-    // obras/{id}/historicoExecucao (ver Database.js: toda vez que uma tarefa
-    // é criada/atualizada com percentualConcluido, o dia fica registrado).
-    // Semeia o "estado" de cada tarefa com o valor ATUAL (percentualConcluido
-    // de hoje) e depois REAPLICA os snapshots em ordem cronológica — assim,
-    // qualquer tarefa nunca tocada durante o período rastreado mantém
-    // corretamente o valor de hoje (nada mudou nela), e qualquer tarefa que
-    // mudou tem seu valor de cada dia reconstruído com precisão.
-    // ---- Executado REAL, reconstruído a partir do histórico salvo em
-    // obras/{id}/historicoExecucao.
-    //
-    // IMPORTANTE (bug corrigido): a versão anterior semeava o estado de TODAS
-    // as tarefas com o percentualConcluido de HOJE e depois reaplicava os
-    // poucos snapshots existentes. Numa obra com histórico recente (ex: 8
-    // registros, todos de um mês só), isso jogava o progresso atual da obra
-    // inteira retroativamente no primeiro mês do histórico — produzindo um
-    // salto vertical absurdo (ex: 5% -> 100% num mês só).
-    //
-    // Agora: o estado começa ZERADO e só recebe o que os snapshots realmente
-    // registraram. O acumulado real de cada mês reflete apenas o que o
-    // histórico de fato sabe até aquele mês. O último ponto (hoje) é
-    // ancorado no percentual atual de verdade das tarefas, que é o único
-    // valor que sabemos ser correto — assim a curva termina no lugar certo
-    // sem inventar o caminho até lá.
-    const historicoOrdenado = (historico || []).filter(h => h && h.data).sort((a, b) => String(a.data).localeCompare(String(b.data)));
-    let idxInicioHistorico = -1;
-    // Percentual real de HOJE (âncora confiável, independente de histórico).
-    let somaHoje = 0;
-    leaves.forEach(t => { somaHoje += Math.min(100, Number(t.percentualConcluido) || 0) * _peso(t); });
-    const pctRealHoje = totalPeso ? somaHoje / totalPeso * 100 : 0;
-
-    if (historicoOrdenado.length) {
-      const dataInicio = new Date(historicoOrdenado[0].data + 'T00:00:00');
-      idxInicioHistorico = meses.findIndex(m => m.fim > dataInicio);
-      if (idxInicioHistorico === -1) idxInicioHistorico = meses.length - 1;
-
-      const estado = new Map(); // começa vazio: só o que o histórico registrou
-      let hIdx = 0;
-      meses.forEach((m, i) => {
-        const limite = m.fim < hoje ? m.fim : hoje;
-        while (hIdx < historicoOrdenado.length && new Date(historicoOrdenado[hIdx].data + 'T00:00:00') < limite) {
-          const diaObj = historicoOrdenado[hIdx].tarefas || {};
-          Object.keys(diaObj).forEach(tarefaId => {
-            const v = diaObj[tarefaId];
-            if (v && v.percentualConcluido != null) estado.set(tarefaId, Math.min(100, Number(v.percentualConcluido) || 0));
-          });
-          hIdx++;
-        }
-        if (i >= idxInicioHistorico) {
-          let soma = 0;
-          leaves.forEach(t => { soma += (estado.get(t.id) || 0) * _peso(t); });
-          m.realAcumReal = soma / totalPeso * 100;
-        }
-      });
-      // Garante que o acumulado nunca diminui de um mês pro outro (é
-      // acumulado; se um snapshot faltou, mantém o patamar anterior).
-      let maiorAte = 0;
-      meses.forEach((m, i) => {
-        if (i < idxInicioHistorico) return;
-        maiorAte = Math.max(maiorAte, m.realAcumReal || 0);
-        m.realAcumReal = maiorAte;
-      });
-    }
-
-    let acumP = 0, acumREstimado = 0, hojeIdx = 0;
-    let acumRealAnterior = 0;
-    // Patamar da estimativa no mês imediatamente anterior ao início do
-    // histórico — o histórico real continua A PARTIR dele, em vez de
-    // recomeçar do zero e criar um degrau vertical artificial no gráfico.
-    let baseAntesDoHistorico = 0;
-    if (idxInicioHistorico > 0) {
-      let acumTmp = 0;
-      for (let i = 0; i < idxInicioHistorico; i++) acumTmp += meses[i].realMensalEstimado;
-      baseAntesDoHistorico = Math.min(100, acumTmp / totalPeso * 100);
-    }
-    meses.forEach((m, i) => {
-      acumP += m.planMensal; acumREstimado += m.realMensalEstimado;
-      m.planAcum = Math.min(100, acumP / totalPeso * 100);
-      m.planMensalPct = m.planMensal / totalPeso * 100;
-
-      if (idxInicioHistorico !== -1 && i >= idxInicioHistorico) {
-        // Histórico real somado ao patamar que a estimativa já tinha atingido
-        // antes da gravação começar (o histórico só conhece o que mudou
-        // depois desse ponto, então sozinho ele subestima o acumulado).
-        m.realAcum = Math.min(100, baseAntesDoHistorico + (m.realAcumReal || 0));
-        m.realMensalPct = Math.max(0, m.realAcum - acumRealAnterior);
-        m.origemReal = 'historico';
-      } else {
-        m.realAcum = Math.min(100, acumREstimado / totalPeso * 100);
-        m.realMensalPct = m.realMensalEstimado / totalPeso * 100;
-        m.origemReal = 'estimado';
-      }
-      acumRealAnterior = m.realAcum;
-      if (m.inicio <= hoje) hojeIdx = i;
-    });
-
-    // Correção final de escala: o ponto de HOJE tem que bater com o
-    // percentual real da obra (soma ponderada do percentualConcluido atual —
-    // o único número que sabemos ser verdade). Se a reconstrução divergir,
-    // ajusta proporcionalmente os pontos reais até hoje, mantendo o formato
-    // da curva mas terminando no valor certo. Sem isso, a curva podia
-    // terminar em 100% com a obra em 12%, ou vice-versa.
-    if (hojeIdx >= 0 && meses[hojeIdx]) {
-      const acumCalculadoHoje = meses[hojeIdx].realAcum || 0;
-      if (acumCalculadoHoje > 0.01 && Math.abs(acumCalculadoHoje - pctRealHoje) > 0.5) {
-        const fator = pctRealHoje / acumCalculadoHoje;
-        let anterior = 0;
-        meses.forEach((m, i) => {
-          if (i > hojeIdx) { m.realAcum = null; m.realMensalPct = 0; return; } // futuro não tem executado
-          m.realAcum = Math.min(100, (m.realAcum || 0) * fator);
-          m.realMensalPct = Math.max(0, m.realAcum - anterior);
-          anterior = m.realAcum;
-        });
-      } else {
-        // Mesmo sem precisar corrigir escala, o futuro não tem executado.
-        meses.forEach((m, i) => { if (i > hojeIdx) { m.realAcum = null; m.realMensalPct = 0; } });
-      }
-    }
-    return { meses, hojeIdx, idxInicioHistorico, _diag: { leavesCount: leaves.length, dMin, dMax } };
-  }
-
-  function setCurvaGranularidade(g) {
-    _curvaGranularidade = g;
-    document.querySelectorAll('#db-curva-toggle .aba-btn').forEach(b => b.classList.toggle('ativo', b.dataset.v === g));
-    _renderCurvaS();
-  }
-
-  function _renderCurvaS() {
-    const host = document.getElementById('db-curva-s');
-    if (!host) return;
-    const curva = _calcCurvaS(tarefas, historicoExecucao, _curvaGranularidade);
-    _curvaCache = curva;
-    if (!curva || !curva.meses.length) {
-      host.innerHTML = '<div class="estado-vazio"><p class="text-sm">Sem dados de planejamento suficientes para montar a Curva S.</p></div>';
-      return;
-    }
-    const rotuloPeriodo = _curvaGranularidade === 'semanal' ? 'Semanal' : 'Mensal';
-    // Diagnóstico visível quando a curva tem poucos meses/semanas — pode ser
-    // dado real limitado (obra pequena/curta) ou sinal de que algo no
-    // Planejamento não está preenchendo datas como esperado. Mostra quantas
-    // tarefas-folha entraram e o range de datas encontrado, pra dar pista
-    // sem precisar abrir o console.
-    const diagHtml = curva.meses.length <= 2
-      ? `<div class="text-sm text-muted" style="margin-bottom:6px;">Diagnóstico: ${curva._diag.leavesCount} tarefa(s)-folha com data encontrada · período ${Utils.formatarData(curva._diag.dMin)} a ${Utils.formatarData(curva._diag.dMax)}. Se o Planejamento tem tarefas em outros meses, confira se elas têm Início/Término Planejado preenchidos (não só as tarefas-mãe/grupos).</div>`
-      : '';
-    host.innerHTML = diagHtml + _svgCurva(curva.meses, curva.hojeIdx, {
-      idTooltip: 'db-curva-tooltip',
-      idHits: 'db-curva-hit-',
-      alturaGrafico: 420,
-      comBarras: true,
-      idxInicioHistorico: curva.idxInicioHistorico,
-    });
-    _attachHover(host, curva.meses, (m) => `
-      <div class="db-tt-titulo">${m.label} ${m.origemReal === 'historico' ? '<span class="badge badge-sucesso" style="font-size:.6rem;">real</span>' : '<span class="badge badge-neutro" style="font-size:.6rem;">estimado</span>'}</div>
-      <div class="db-tt-linha"><i style="background:#999;"></i>Esperado ${rotuloPeriodo}: <b>${m.planMensalPct.toFixed(2)}%</b></div>
-      <div class="db-tt-linha"><i style="background:var(--cor-primaria);"></i>Executado ${rotuloPeriodo}: <b>${m.realMensalPct.toFixed(2)}%</b></div>
-      <div class="db-tt-linha"><i style="background:#999;border-radius:50%;"></i>Esperado Acumulado: <b>${m.planAcum.toFixed(2)}%</b></div>
-      <div class="db-tt-linha"><i style="background:var(--cor-primaria-dark);border-radius:50%;"></i>Executado Acumulado: <b>${m.realAcum == null ? '—' : m.realAcum.toFixed(2) + '%'}</b></div>
-    `);
-  }
-
-  // SVG genérico usado pela Curva S (linhas acumuladas + barras mensais).
-  function _svgCurva(meses, hojeIdx, opts) {
-    const n = meses.length;
-    const W = Math.max(900, n * 46), H = opts.alturaGrafico || 380;
-    const padL = 40, padR = 40, padT = 16, padB = 34;
-    const plotW = W - padL - padR, plotH = H - padT - padB;
-    const x = i => padL + (n === 1 ? 0 : (i / (n - 1)) * plotW);
-    const yAcum = v => padT + plotH - (Math.max(0, Math.min(100, v)) / 100) * plotH;
-
-    let bars = '';
-    if (opts.comBarras) {
-      const maxMensal = Math.max(1, ...meses.map(m => Math.max(m.planMensalPct, m.realMensalPct)));
-      const barH = v => (v / maxMensal) * (plotH * 0.34);
-      const barW = Math.max(3, (plotW / n) * 0.32);
-      meses.forEach((m, i) => {
-        const cx = x(i);
-        const hP = barH(m.planMensalPct), hR = barH(m.realMensalPct);
-        bars += `<rect x="${cx - barW - 1}" y="${padT + plotH - hP}" width="${barW}" height="${hP}" fill="#c9c9c9" opacity="0.85"/>`;
-        bars += `<rect x="${cx + 1}" y="${padT + plotH - hR}" width="${barW}" height="${hR}" fill="var(--cor-primaria)" opacity="0.95"/>`;
-      });
-    }
-
-    const pathPlan = meses.map((m, i) => `${i === 0 ? 'M' : 'L'}${x(i).toFixed(1)},${yAcum(m.planAcum).toFixed(1)}`).join(' ');
-    // Linha do Executado só vai até onde há dado real (meses futuros têm
-    // realAcum = null) — antes ela seguia reta até o fim do gráfico, dando
-    // a impressão errada de que a obra já estava executada lá na frente.
-    const pontosReais = meses.map((m, i) => ({ m, i })).filter(({ m }) => m.realAcum != null);
-    const pathReal = pontosReais.map(({ m, i }, k) => `${k === 0 ? 'M' : 'L'}${x(i).toFixed(1)},${yAcum(m.realAcum).toFixed(1)}`).join(' ');
-
-    const hojeX = x(hojeIdx);
-    let marcadorHistorico = '';
-    if (opts.idxInicioHistorico != null && opts.idxInicioHistorico > 0 && opts.idxInicioHistorico < n) {
-      const hx = x(opts.idxInicioHistorico);
-      marcadorHistorico = `<line x1="${hx.toFixed(1)}" x2="${hx.toFixed(1)}" y1="${padT}" y2="${padT + plotH}" stroke="#16a34a" stroke-width="1" stroke-dasharray="2,3"/>
-        <text x="${hx.toFixed(1)}" y="${H - 22}" font-size="9" fill="#16a34a" text-anchor="middle">início do histórico real ▸</text>`;
-    }
-    const labelStep = Math.max(1, Math.ceil(n / 18));
-    let labels = '';
-    meses.forEach((m, i) => {
-      if (i % labelStep !== 0 && i !== n - 1) return;
-      labels += `<text x="${x(i).toFixed(1)}" y="${H - 10}" font-size="10" fill="#888" text-anchor="middle">${m.label}</text>`;
-    });
-
-    const gridY = [0, 25, 50, 75, 100].map(v => `<line x1="${padL}" x2="${W - padR}" y1="${yAcum(v).toFixed(1)}" y2="${yAcum(v).toFixed(1)}" stroke="#eee" stroke-width="1"/><text x="4" y="${(yAcum(v) + 3).toFixed(1)}" font-size="9" fill="#999">${v}%</text>`).join('');
-
-    let hits = '';
-    meses.forEach((m, i) => {
-      const cx = x(i);
-      const larguraHit = plotW / n;
-      hits += `<rect class="db-hit" data-idx="${i}" x="${(cx - larguraHit / 2).toFixed(1)}" y="${padT}" width="${larguraHit.toFixed(1)}" height="${plotH}" fill="transparent" style="cursor:pointer;"/>`;
-    });
-
-    return `
-      <div style="overflow-x:auto;">
-        <svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block;min-width:${W}px;">
-          ${gridY}
-          <line x1="${hojeX.toFixed(1)}" x2="${hojeX.toFixed(1)}" y1="${padT}" y2="${padT + plotH}" stroke="#ef4444" stroke-width="1" stroke-dasharray="4,3"/>
-          <text x="${hojeX.toFixed(1)}" y="${padT - 4}" font-size="9" fill="#ef4444" text-anchor="middle">hoje</text>
-          ${marcadorHistorico}
-          ${bars}
-          <path d="${pathPlan}" fill="none" stroke="#999" stroke-width="2" stroke-dasharray="5,3"/>
-          <path d="${pathReal}" fill="none" stroke="var(--cor-primaria-dark, #B89400)" stroke-width="2.5"/>
-          ${labels}
-          ${hits}
-        </svg>
-      </div>
-      <div class="db-tooltip" id="${opts.idTooltip}"></div>
-      ${opts.comBarras ? `<div class="db-legenda">
-        <span><i style="background:#999;"></i> Esperado (acumulado)</span>
-        <span><i style="background:var(--cor-primaria-dark,#B89400);"></i> Executado (acumulado)</span>
-        <span><i style="background:#c9c9c9;"></i> Esperado mensal</span>
-        <span><i style="background:var(--cor-primaria);"></i> Executado mensal</span>
-      </div>
-      <div class="text-sm text-muted" style="margin-top:6px;">Esperado: distribuído pelas datas de início/término (linha de base) de cada tarefa, ponderado por duração. Executado: ${opts.idxInicioHistorico > 0 ? 'a partir da linha verde é reconstruído com o histórico real salvo diariamente (obras/{obra}/historicoExecucao); antes dela é uma estimativa retroativa, porque o sistema só passou a guardar o % de cada dia a partir daquele ponto' : (opts.idxInicioHistorico === 0 ? 'já 100% reconstruído a partir do histórico real salvo diariamente' : 'ainda não há histórico salvo nesta obra — os valores mostrados são uma estimativa a partir do % concluído atual; a partir de agora, toda atualização de tarefa vai gerar um registro real e a curva passa a ficar precisa')}.</div>` : ''}`;
-  }
-
   // Liga hover nos retângulos invisíveis (.db-hit) de um gráfico já renderizado,
   // mostrando uma tooltip flutuante com o conteúdo retornado por conteudoFn(item).
+  // (Vive aqui desde a remoção da Curva S — é usada por vários outros gráficos.)
   function _attachHover(wrap, itens, conteudoFn) {
     const tooltip = wrap.querySelector('.db-tooltip');
     if (!tooltip) return;
@@ -1515,76 +1166,6 @@ const Dashboard = (() => {
     });
   }
 
-  // ===================== ÍNDICE DE DESEMPENHO DE PRAZO (IDP) =====================
-  function _renderIDP() {
-    const host = document.getElementById('db-idp');
-    if (!host) return;
-    if (!_curvaCache || !_curvaCache.meses.length) {
-      host.innerHTML = '<div class="estado-vazio"><p class="text-sm">Sem dados suficientes para calcular o IDP.</p></div>';
-      return;
-    }
-    const meses = _curvaCache.meses.map(m => ({
-      label: m.label,
-      idp: (m.planAcum > 0.01 && m.realAcum != null) ? (m.realAcum / m.planAcum) : null,
-      origemReal: m.origemReal,
-    }));
-    host.innerHTML = _svgIDP(meses, _curvaCache.hojeIdx);
-    _attachHover(host, meses, (m) => `
-      <div class="db-tt-titulo">${m.label} ${m.origemReal === 'historico' ? '<span class="badge badge-sucesso" style="font-size:.6rem;">real</span>' : '<span class="badge badge-neutro" style="font-size:.6rem;">estimado</span>'}</div>
-      <div class="db-tt-linha">IDP: <b>${m.idp != null ? m.idp.toFixed(2) : '—'}</b></div>
-      <div class="text-sm text-muted" style="margin-top:4px;max-width:190px;">IDP ≥ 1 significa que o executado está igual ou à frente do esperado até este mês.</div>
-    `);
-  }
-
-  function _svgIDP(meses, hojeIdx) {
-    const n = meses.length;
-    const W = Math.max(900, n * 46), H = 260;
-    const padL = 34, padR = 30, padT = 34, padB = 30;
-    const plotW = W - padL - padR, plotH = H - padT - padB;
-    const valores = meses.map(m => m.idp).filter(v => v != null);
-    const maxV = Math.max(2, ...(valores.length ? valores : [1]) .map(v => v * 1.15));
-    const x = i => padL + (n === 1 ? 0 : (i / (n - 1)) * plotW);
-    const y = v => padT + plotH - (Math.max(0, v) / maxV) * plotH;
-
-    let pathD = '', pontos = '', hits = '';
-    let iniciado = false;
-    meses.forEach((m, i) => {
-      const larguraHit = plotW / n;
-      hits += `<rect class="db-hit" data-idx="${i}" x="${(x(i) - larguraHit / 2).toFixed(1)}" y="${padT}" width="${larguraHit.toFixed(1)}" height="${plotH}" fill="transparent" style="cursor:pointer;"/>`;
-      if (m.idp == null) return;
-      pathD += `${!iniciado ? 'M' : 'L'}${x(i).toFixed(1)},${y(m.idp).toFixed(1)} `;
-      iniciado = true;
-      pontos += `<circle cx="${x(i).toFixed(1)}" cy="${y(m.idp).toFixed(1)}" r="3.5" fill="var(--cor-primaria-dark,#B89400)"/>
-        <rect x="${(x(i) - 17).toFixed(1)}" y="${(y(m.idp) - 24).toFixed(1)}" width="34" height="16" rx="4" fill="#1a1a1a"/>
-        <text x="${x(i).toFixed(1)}" y="${(y(m.idp) - 12.5).toFixed(1)}" font-size="9.5" fill="#fff" text-anchor="middle">${m.idp.toFixed(2)}</text>`;
-    });
-
-    const labelStep = Math.max(1, Math.ceil(n / 18));
-    let labels = '';
-    meses.forEach((m, i) => {
-      if (i % labelStep !== 0 && i !== n - 1) return;
-      labels += `<text x="${x(i).toFixed(1)}" y="${H - 8}" font-size="10" fill="#888" text-anchor="middle">${m.label}</text>`;
-    });
-
-    const gridVals = [0, 0.5, 1, 1.5, 2].filter(v => v <= maxV);
-    const gridY = gridVals.map(v => `<line x1="${padL}" x2="${W - padR}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}" stroke="#eee" stroke-width="1"/><text x="4" y="${(y(v) + 3).toFixed(1)}" font-size="9" fill="#999">${v.toFixed(2)}</text>`).join('');
-
-    return `
-      <div style="overflow-x:auto;">
-        <svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block;min-width:${W}px;">
-          ${gridY}
-          <line x1="${padL}" x2="${W - padR}" y1="${y(1).toFixed(1)}" y2="${y(1).toFixed(1)}" stroke="#ef4444" stroke-width="1.5" stroke-dasharray="6,3"/>
-          <text x="${W - padR}" y="${(y(1) - 5).toFixed(1)}" font-size="10" fill="#ef4444" text-anchor="end">Ideal</text>
-          <line x1="${x(hojeIdx).toFixed(1)}" x2="${x(hojeIdx).toFixed(1)}" y1="${padT}" y2="${padT + plotH}" stroke="#94a3b8" stroke-width="1" stroke-dasharray="4,3"/>
-          <path d="${pathD}" fill="none" stroke="var(--cor-primaria-dark,#B89400)" stroke-width="2"/>
-          ${pontos}
-          ${labels}
-          ${hits}
-        </svg>
-      </div>
-      <div class="db-tooltip"></div>
-      <div class="text-sm text-muted" style="margin-top:6px;">IDP = Executado Acumulado ÷ Esperado Acumulado da Curva S acima. A partir da linha verde na Curva S, usa histórico real salvo diariamente; antes dela, é uma estimativa retroativa.</div>`;
-  }
 
   // ===================== AVANÇO POR PACOTES =====================
   // 4 visões, igual ao modelo de referência: "Pacotes" mostra cada tarefa-folha
@@ -2847,5 +2428,5 @@ const Dashboard = (() => {
       </div>`;
   }
 
-  return { init, onObraChanged, setResumoView, setPacotesView, setCurvaGranularidade, toggleMostrarConcreto, _arvToggle, _arvNivelFixo, _arvHorizonte, _fecharPopupProjeto, _popupNavegar, _popupZoomAjustar, _painelSetModo, _abrirConfigPainel, _salvarConfigPainel, _painelAbrirDetalhe, _painelCfgToggleAberto, _painelCfgFiltrar, _painelCfgNovaLinha, _painelCfgRenomear, _painelCfgRemoverLinha, _painelCfgToggleEditor, _painelCfgToggleTarefa };
+  return { init, onObraChanged, setResumoView, setPacotesView, toggleMostrarConcreto, _arvToggle, _arvNivelFixo, _arvHorizonte, _fecharPopupProjeto, _popupNavegar, _popupZoomAjustar, _painelSetModo, _abrirConfigPainel, _salvarConfigPainel, _painelAbrirDetalhe, _painelCfgToggleAberto, _painelCfgFiltrar, _painelCfgNovaLinha, _painelCfgRenomear, _painelCfgRemoverLinha, _painelCfgToggleEditor, _painelCfgToggleTarefa };
 })();
