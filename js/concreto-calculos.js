@@ -115,7 +115,7 @@ const ConcretoCalculos = (() => {
   }
 
   // ── Índice de perda ─────────────────────────
-  function calcIndicePerda(lans, btsConfig) {
+  function calcIndicePerda(lans, btsConfig, perdaSoloTotal = 0) {
     const btIds = [...new Set(lans.map(l => l.btConfigId))];
     let totalPrevisto = 0, totalExecutado = 0, totalPerdaObra = 0, totalPerdaCocho = 0;
     const detalhes = [];
@@ -134,13 +134,17 @@ const ConcretoCalculos = (() => {
       detalhes.push({ bt, usado, perdaObra: perdaO, perdaCocho: perdaC, difCaminhao: difCam });
     });
     const perdaCaminhao = totalPrevisto - totalExecutado;
-    const perdaTotal = totalPerdaObra + Math.max(0, perdaCaminhao);
+    const perdaTotal = totalPerdaObra + Math.max(0, perdaCaminhao) + perdaSoloTotal;
     const previstoSemCocho = totalPrevisto - totalPerdaCocho;
+    // Perda de solo (estacas que consomem mais concreto que o projeto) É
+    // perda de verdade — sem isso, uma BT 100% usada (sem sobrar nada nela)
+    // dava índice 0%, mesmo tendo "sobrado" tudo esse volume extra no solo
+    // em vez de na betoneira.
     const indice = previstoSemCocho > 0
-      ? (Math.max(0, previstoSemCocho - totalExecutado) / previstoSemCocho) * 100
+      ? ((Math.max(0, previstoSemCocho - totalExecutado) + perdaSoloTotal) / previstoSemCocho) * 100
       : 0;
     return {
-      indice, perdaTotal, perdaCaminhao,
+      indice, perdaTotal, perdaCaminhao, perdaSolo: perdaSoloTotal,
       perdaObra: totalPerdaObra, perdaCocho: totalPerdaCocho,
       totalPrevisto, totalExecutado, detalhes,
     };
@@ -176,7 +180,7 @@ const ConcretoCalculos = (() => {
     const projFaltando = Math.max(0, totalVol - prev.lancado);
     const realFaltando = Math.max(0, totalVol - execVol);
     const pctConc = totalVol > 0 ? (concVol / totalVol) * 100 : 0;
-    const perdaInfo = calcIndicePerda(lans, btsConfig);
+    const perdaInfo = calcIndicePerda(lans, btsConfig, perdaSoloTotal);
     return {
       totalVol, concVol, execVol, projFaltando, realFaltando, pctConc,
       volPrevisto: prev.total, volPrevistoFaltando: prev.faltando,

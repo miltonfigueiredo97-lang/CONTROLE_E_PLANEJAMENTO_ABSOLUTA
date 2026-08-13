@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.60.28',
+  versaoAtual: 'V2.60.29',
 
   versoes: [
     {
@@ -5693,11 +5693,16 @@ const NotasVersao = {
     {versao:'V2.60.27',status:'fechada',data:'2026-08-13',tipo:'correcao',
       titulo:'Controle de Estacas: menos espaço vazio no topo da tela cheia',
       itens:['O botão "Fechar tela cheia" ocupava uma linha inteira sozinho, empurrando o resto pra baixo — agora flutua no canto superior direito (sem reservar espaço na fila normal), então as abas Marcadores/Planejamento/Acompanhamento começam bem mais perto do topo.']},
-    {versao:'V2.60.28',status:'aberta',data:'2026-08-13',tipo:'melhoria',
+    {versao:'V2.60.28',status:'fechada',data:'2026-08-13',tipo:'melhoria',
       titulo:'Controle de Estacas: aviso de BT já alocada + Controle de Concreto entende perda de solo das estacas',
       itens:['Popup de lançar por estaca: o seletor de BT agora mostra "(X% em outras peças)" quando essa BT já foi usada noutra peça, e o campo de % avisa em vermelho se o valor digitado passar de 100% da BT.',
         'Controle de Concreto: peças com subtipo Estacas que lançam mais volume real do que o projeto previa NÃO entram mais no aviso vermelho "corrija esses lançamentos" — é normal em estaca, o furo real costuma sair maior que o calculado (perda de solo). Agora aparece numa seção informativa separada (azul), explicando que não precisa corrigir.',
-        'Volume Executado de Projeto continua igual — capado em 100% de cada peça, então esse excesso não infla o % de conclusão.']}
+        'Volume Executado de Projeto continua igual — capado em 100% de cada peça, então esse excesso não infla o % de conclusão.']},
+    {versao:'V2.60.29',status:'aberta',data:'2026-08-13',tipo:'correcao',
+      titulo:'Controle de Concreto: índice de perda agora conta a perda de solo das estacas — antes ficava 0% mesmo sobrando tudo no solo',
+      itens:['Bug real: quando todas as BTs de uma concretagem eram 100% usadas (sem sobrar nada na betoneira), o índice de perda dava 0% mesmo se as estacas tivessem consumido bem mais concreto que o projeto — a perda "foi" pro solo, não pra betoneira, e o cálculo só olhava pra betoneira.',
+        'Corrigido: perda de solo (peça de subtipo Estacas que lançou mais real do que o projeto) agora entra na conta do índice de perda geral, junto com sobra de caminhão e perda em obra — tanto na tela principal quanto no Relatório.',
+        'Lista peça-por-peça da perda de solo agora vem recolhida por padrão (clique pra expandir) — só o resumo (quantas estacas, quantos m³) aparece direto, pra não ficar poluído quando tiver muitas estacas.']}
   ],
 
   render(containerId) {
