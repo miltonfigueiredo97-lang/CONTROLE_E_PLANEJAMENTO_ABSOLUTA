@@ -438,7 +438,7 @@ const Dashboard = (() => {
   // batem naquele cruzamento tarefa-mãe × local.
   const PAINEL_FAIXAS = { vermelho: 30, amarelo: 70 }; // 0-30 vermelho, 31-70 amarelo, 71-100 verde — ajustável aqui
   let _painelModo = localStorage.getItem('db_painel_modo') || 'pavimento'; // 'pavimento' | 'apartamento'
-  let _painelMaesConfig = []; // ids de tarefa-mãe escolhidos, de config/dashboardPainel
+  let _painelLinhasConfig = []; // [{ id, nome, tarefaIds: [...] }], de config/dashboardPainel
   let _painelEstrutura = null; // { torres: [...] } de config/estruturaObra
   let _painelDados = null; // cache do último cálculo, usado pelo popover de detalhe
 
@@ -470,7 +470,13 @@ const Dashboard = (() => {
         Database.obter(obraId, 'config', 'dashboardPainel').catch(() => null),
         Database.obter(obraId, 'config', 'estruturaObra').catch(() => null),
       ]);
-      _painelMaesConfig = cfgPainel?.maesIds || [];
+      // Formato: linhas = [{ id, nome, tarefaIds: [...] }] — cada linha é um
+      // NOME FIXO escolhido pelo usuário (ex: "Instalações Hidráulicas"),
+      // que pode juntar 2+ tarefas-mãe diferentes do Planejamento (ex:
+      // "Distribuição" + outra) — pedido explícito: o rótulo da linha é
+      // independente do nome real da tarefa no Planejamento, e uma linha
+      // agrega TODAS as folhas de TODAS as tarefas-mãe vinculadas a ela.
+      _painelLinhasConfig = cfgPainel?.linhas || [];
       _painelEstrutura = estrutura || { torres: [] };
       const toggle = document.getElementById('db-painel-toggle');
       if (toggle) toggle.querySelectorAll('.aba-btn').forEach(b => b.classList.toggle('ativo', b.dataset.v === _painelModo));
@@ -479,14 +485,17 @@ const Dashboard = (() => {
         host.innerHTML = '<div class="estado-vazio"><p class="text-sm">Nenhuma Estrutura da Obra cadastrada ainda — configure em Planejamento → 🏢 Estrutura da Obra.</p></div>';
         return;
       }
-      if (!_painelMaesConfig.length) {
-        host.innerHTML = '<div class="estado-vazio"><p class="text-sm">Nenhuma tarefa-mãe escolhida ainda pra este painel — clique em "⚙️ Configurar" acima.</p></div>';
+      if (!_painelLinhasConfig.length) {
+        host.innerHTML = '<div class="estado-vazio"><p class="text-sm">Nenhuma linha configurada ainda pra este painel — clique em "⚙️ Configurar" acima.</p></div>';
         return;
       }
       const sorted = [...tarefas].sort((a, b) => (a.ordem || 0) - (b.ordem || 0));
-      const maes = _painelMaesConfig.map(id => sorted.find(t => t.id === id)).filter(Boolean);
-      if (!maes.length) {
-        host.innerHTML = '<div class="estado-vazio"><p class="text-sm">As tarefas-mãe configuradas não existem mais no Planejamento — reconfigure em "⚙️ Configurar".</p></div>';
+      const linhasValidas = _painelLinhasConfig.map(linha => {
+        const maes = (linha.tarefaIds || []).map(id => sorted.find(t => t.id === id)).filter(Boolean);
+        return { ...linha, maes };
+      }).filter(l => l.maes.length); // linha sem nenhuma tarefa-mãe existente é ignorada (mas continua configurada, pra não perder ao reabrir a config)
+      if (!linhasValidas.length) {
+        host.innerHTML = '<div class="estado-vazio"><p class="text-sm">As tarefas vinculadas às linhas configuradas não existem mais no Planejamento — reconfigure em "⚙️ Configurar".</p></div>';
         return;
       }
 
@@ -504,13 +513,14 @@ const Dashboard = (() => {
         });
       });
 
-      // Pra cada mãe × coluna, acha as tarefas-folha da mãe cujo
-      // vinculoEstrutura bate com a coluna (pavimento inteiro conta pra
-      // TODAS as colunas de apto daquele pavimento também, conforme spec).
-      const dados = maes.map(mae => {
-        const folhasDaMae = _folhasDescendentes(mae, sorted);
+      // Pra cada linha × coluna, acha as tarefas-folha de TODAS as
+      // tarefas-mãe daquela linha cujo vinculoEstrutura bate com a coluna
+      // (pavimento inteiro conta pra TODAS as colunas de apto daquele
+      // pavimento também, conforme spec).
+      const dados = linhasValidas.map(linha => {
+        const folhasDaLinha = linha.maes.flatMap(mae => _folhasDescendentes(mae, sorted));
         const celulas = colunas.map(col => {
-          const tarefasDaCelula = folhasDaMae.filter(t => (t.vinculoEstrutura || []).some(v => {
+          const tarefasDaCelula = folhasDaLinha.filter(t => (t.vinculoEstrutura || []).some(v => {
             if (v.pavimentoId !== col.pavimentoId) return false;
             if (!col.apartamentoId) return true; // coluna é pavimento inteiro — qualquer vínculo daquele pavimento entra
             return !v.apartamentoId || v.apartamentoId === col.apartamentoId; // vínculo no pavimento inteiro OU no apto certo
@@ -528,7 +538,7 @@ const Dashboard = (() => {
             tarefas: tarefasDaCelula,
           };
         });
-        return { mae, celulas };
+        return { nome: linha.nome, celulas };
       });
       _painelDados = { dados, colunas };
       host.innerHTML = _htmlPainelAndamento(dados, colunas);
@@ -552,7 +562,7 @@ const Dashboard = (() => {
           <tbody>
             ${dados.map((linha, li) => `
               <tr>
-                <td style="position:sticky;left:0;background:#fff;padding:6px 10px;border:1px solid #e5e5e5;font-weight:600;white-space:nowrap;z-index:1;">${linha.mae.nome || 'Sem nome'}</td>
+                <td style="position:sticky;left:0;background:#fff;padding:6px 10px;border:1px solid #e5e5e5;font-weight:600;white-space:nowrap;z-index:1;">${linha.nome || 'Sem nome'}</td>
                 ${linha.celulas.map((cel, ci) => {
                   if (!cel) return `<td style="background:#f4f4f4;border:1px solid #e5e5e5;"></td>`;
                   const cor = _painelCorProgresso(cel.percentual);
@@ -596,7 +606,7 @@ const Dashboard = (() => {
     overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
     overlay.innerHTML = `
       <div style="background:#fff;border-radius:10px;max-width:480px;width:100%;max-height:80vh;overflow-y:auto;padding:16px;">
-        <div style="font-weight:700;margin-bottom:2px;">${linha.mae.nome}</div>
+        <div style="font-weight:700;margin-bottom:2px;">${linha.nome}</div>
         <div class="text-sm text-muted" style="margin-bottom:10px;">${col.label} — ${Math.round(cel.percentual)}% (peso por duração)</div>
         ${cel.tarefas.map(t => `
           <div style="display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid #eee;">
@@ -618,8 +628,14 @@ const Dashboard = (() => {
   // expandidos — só visual, não é salvo (reabre sempre fechado, pra não
   // sobrecarregar em obras com árvore grande).
   let _painelCfgAbertos = new Set();
+  let _painelCfgLinhasEdicao = []; // cópia de trabalho de _painelLinhasConfig, editada até "Salvar"
+  let _painelCfgLinhaAtiva = null; // id da linha cujo editor de tarefas está aberto (null = nenhum)
+
   async function _abrirConfigPainel() {
     _painelCfgAbertos = new Set();
+    _painelCfgLinhaAtiva = null;
+    // Cópia de trabalho — só grava em Firestore ao clicar "Salvar Tudo".
+    _painelCfgLinhasEdicao = _painelLinhasConfig.map(l => ({ ...l, tarefaIds: [...(l.tarefaIds || [])] }));
     let overlay = document.getElementById('db-painelcfg-overlay');
     if (overlay) overlay.remove();
     overlay = document.createElement('div');
@@ -627,33 +643,88 @@ const Dashboard = (() => {
     overlay.style.cssText = 'position:fixed;inset:0;z-index:600;background:rgba(15,23,42,.5);display:flex;align-items:center;justify-content:center;padding:24px;';
     overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
     overlay.innerHTML = `
-      <div style="background:#fff;border-radius:10px;max-width:460px;width:100%;max-height:82vh;overflow-y:auto;padding:16px;display:flex;flex-direction:column;">
+      <div style="background:#fff;border-radius:10px;max-width:520px;width:100%;max-height:86vh;overflow-y:auto;padding:16px;display:flex;flex-direction:column;">
         <div style="font-weight:700;margin-bottom:4px;">⚙️ Configurar Painel de Andamento</div>
-        <div class="text-sm text-muted" style="margin-bottom:8px;">Marque as tarefas (de qualquer nível) que devem virar linha na tabela. Clique no nome pra abrir/fechar o grupo.</div>
-        <input type="text" id="db-painelcfg-busca" class="input" placeholder="Buscar tarefa..." style="margin-bottom:10px;" oninput="Dashboard._painelCfgFiltrar(this.value)">
-        <div id="db-painelcfg-lista" style="display:flex;flex-direction:column;gap:1px;overflow-y:auto;flex:1;"></div>
-        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px;">
+        <div class="text-sm text-muted" style="margin-bottom:10px;">Cada linha tem um nome próprio (fixo) e pode juntar uma ou mais tarefas do Planejamento — útil quando o nome que você quer ver não é igual ao nome da tarefa lá, ou quando quer somar 2 tarefas numa linha só.</div>
+        <div id="db-painelcfg-linhas" style="display:flex;flex-direction:column;gap:8px;"></div>
+        <button class="btn btn-secundario btn-sm" style="margin-top:10px;" onclick="Dashboard._painelCfgNovaLinha()">+ Nova linha</button>
+        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px;border-top:1px solid #eee;padding-top:12px;">
           <button class="btn btn-secundario btn-sm" onclick="document.getElementById('db-painelcfg-overlay').remove()">Cancelar</button>
-          <button class="btn btn-primario btn-sm" onclick="Dashboard._salvarConfigPainel()">Salvar</button>
+          <button class="btn btn-primario btn-sm" onclick="Dashboard._salvarConfigPainel()">Salvar Tudo</button>
         </div>
       </div>`;
     document.body.appendChild(overlay);
-    _renderPainelCfgArvore();
+    _renderPainelCfgLinhas();
   }
 
-  // Renderiza a árvore de seleção. Cada grupo (nó com filhos) mostra ▶/▼ +
-  // checkbox pra marcar ELE MESMO como tarefa-mãe (o Painel usa as FOLHAS
-  // dele pra agregar); folhas puras aparecem só quando o grupo pai está
-  // aberto, sem checkbox (folha isolada não faz sentido como linha própria
-  // do Painel — spec pede "tarefa-mãe", que sempre tem filhos).
-  function _renderPainelCfgArvore(filtroTexto) {
-    const el = document.getElementById('db-painelcfg-lista');
+  // Lista de linhas já criadas (nome editável + tags das tarefas vinculadas
+  // + botão de abrir o editor de tarefas daquela linha específica).
+  function _renderPainelCfgLinhas() {
+    const el = document.getElementById('db-painelcfg-linhas');
     if (!el) return;
+    const sorted = [...tarefas].sort((a, b) => (a.ordem || 0) - (b.ordem || 0));
+    if (!_painelCfgLinhasEdicao.length) {
+      el.innerHTML = '<div class="text-sm text-muted" style="padding:8px 0;">Nenhuma linha ainda — clique em "+ Nova linha".</div>';
+      return;
+    }
+    el.innerHTML = _painelCfgLinhasEdicao.map(linha => {
+      const tarefasVinculadas = (linha.tarefaIds || []).map(id => sorted.find(t => t.id === id)).filter(Boolean);
+      const editorAberto = _painelCfgLinhaAtiva === linha.id;
+      return `
+        <div style="border:1px solid #e5e5e5;border-radius:8px;padding:8px 10px;">
+          <div style="display:flex;align-items:center;gap:6px;">
+            <input type="text" value="${(linha.nome || '').replace(/"/g, '&quot;')}" placeholder="Nome da linha (ex: Instalações Hidráulicas)"
+              class="input" style="flex:1;font-size:.82rem;padding:4px 8px;" oninput="Dashboard._painelCfgRenomear('${linha.id}', this.value)">
+            <button class="btn btn-secundario btn-sm" style="padding:3px 8px;" onclick="Dashboard._painelCfgToggleEditor('${linha.id}')">${editorAberto ? 'Fechar' : (tarefasVinculadas.length ? 'Editar' : 'Vincular')} tarefas</button>
+            <button class="btn btn-secundario btn-sm" style="padding:3px 8px;color:#dc2626;" onclick="Dashboard._painelCfgRemoverLinha('${linha.id}')">🗑</button>
+          </div>
+          <div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px;">
+            ${tarefasVinculadas.length
+              ? tarefasVinculadas.map(t => `<span style="background:#f0f0f0;border-radius:4px;padding:2px 8px;font-size:.72rem;">${t.nome || 'Sem nome'}</span>`).join('')
+              : '<span class="text-sm text-muted" style="font-size:.72rem;">Nenhuma tarefa vinculada ainda.</span>'}
+          </div>
+          ${editorAberto ? `
+            <div style="margin-top:8px;border-top:1px solid #eee;padding-top:8px;">
+              <input type="text" placeholder="Buscar tarefa..." class="input" style="margin-bottom:6px;font-size:.8rem;" oninput="Dashboard._painelCfgFiltrar(this.value)">
+              <div id="db-painelcfg-arvore" style="display:flex;flex-direction:column;gap:1px;max-height:260px;overflow-y:auto;"></div>
+            </div>` : ''}
+        </div>`;
+    }).join('');
+    if (_painelCfgLinhaAtiva) _renderPainelCfgArvore();
+  }
+
+  function _painelCfgNovaLinha() {
+    const id = 'linha_' + Date.now().toString(36);
+    _painelCfgLinhasEdicao.push({ id, nome: '', tarefaIds: [] });
+    _painelCfgLinhaAtiva = id; // abre direto o editor de tarefas na linha nova
+    _renderPainelCfgLinhas();
+  }
+  function _painelCfgRenomear(id, nome) {
+    const linha = _painelCfgLinhasEdicao.find(l => l.id === id);
+    if (linha) linha.nome = nome;
+    // Não re-renderiza a lista inteira aqui — perderia o foco do campo de
+    // texto enquanto o usuário digita. Só atualiza o dado em memória.
+  }
+  function _painelCfgRemoverLinha(id) {
+    _painelCfgLinhasEdicao = _painelCfgLinhasEdicao.filter(l => l.id !== id);
+    if (_painelCfgLinhaAtiva === id) _painelCfgLinhaAtiva = null;
+    _renderPainelCfgLinhas();
+  }
+  function _painelCfgToggleEditor(id) {
+    _painelCfgLinhaAtiva = _painelCfgLinhaAtiva === id ? null : id;
+    _painelCfgAbertos = new Set();
+    _renderPainelCfgLinhas();
+  }
+
+  // Árvore de tarefas do Planejamento — mesmo padrão de antes (expandir por
+  // clique, checkbox em qualquer grupo com filhos), só que agora ligada à
+  // linha ATIVA (_painelCfgLinhaAtiva), não a uma lista única global.
+  function _renderPainelCfgArvore(filtroTexto) {
+    const el = document.getElementById('db-painelcfg-arvore');
+    if (!el || !_painelCfgLinhaAtiva) return;
     const sorted = [...tarefas].sort((a, b) => (a.ordem || 0) - (b.ordem || 0));
     const filtro = (filtroTexto || '').toLowerCase().trim();
 
-    // Com filtro de busca ativo: mostra lista achatada só dos GRUPOS cujo
-    // nome bate a busca (a árvore normal volta quando o campo é limpo).
     if (filtro) {
       const candidatas = sorted.filter(t => _temFilhos(t, sorted) && (t.nome || '').toLowerCase().includes(filtro));
       el.innerHTML = candidatas.length
@@ -661,13 +732,16 @@ const Dashboard = (() => {
         : '<div class="text-sm text-muted" style="padding:10px 0;">Nenhum grupo encontrado.</div>';
       return;
     }
-
     const raizes = sorted.filter(t => (t.nivel || 0) === 0);
     el.innerHTML = _painelCfgRenderNivel(raizes, sorted, 0) || '<div class="text-sm text-muted">Nenhuma tarefa encontrada no Planejamento.</div>';
   }
+  function _painelCfgTarefaMarcada(id) {
+    const linha = _painelCfgLinhasEdicao.find(l => l.id === _painelCfgLinhaAtiva);
+    return linha ? (linha.tarefaIds || []).includes(id) : false;
+  }
   function _painelCfgLinhaCheckbox(t, indent) {
     return `<label style="display:flex;align-items:center;gap:8px;font-size:.82rem;padding:4px 2px;cursor:pointer;border-radius:4px;" onmouseover="this.style.background='#f7f7f7'" onmouseout="this.style.background='transparent'">
-      <input type="checkbox" value="${t.id}" ${_painelMaesConfig.includes(t.id) ? 'checked' : ''}>
+      <input type="checkbox" value="${t.id}" ${_painelCfgTarefaMarcada(t.id) ? 'checked' : ''} onchange="Dashboard._painelCfgToggleTarefa('${t.id}', this.checked)">
       <span style="padding-left:${indent}px;">${t.nome || 'Sem nome'}</span>
     </label>`;
   }
@@ -685,7 +759,7 @@ const Dashboard = (() => {
       html += `<div style="display:flex;align-items:center;gap:4px;padding:4px 2px;border-radius:4px;" onmouseover="this.style.background='#f7f7f7'" onmouseout="this.style.background='transparent'">
         <span onclick="Dashboard._painelCfgToggleAberto('${t.id}')" style="width:16px;text-align:center;cursor:pointer;color:#888;font-size:.7rem;flex-shrink:0;">${aberto ? '▼' : '▶'}</span>
         <label style="display:flex;align-items:center;gap:8px;font-size:.82rem;flex:1;cursor:pointer;padding-left:${indent}px;">
-          <input type="checkbox" value="${t.id}" ${_painelMaesConfig.includes(t.id) ? 'checked' : ''}>
+          <input type="checkbox" value="${t.id}" ${_painelCfgTarefaMarcada(t.id) ? 'checked' : ''} onchange="Dashboard._painelCfgToggleTarefa('${t.id}', this.checked)">
           <span style="font-weight:600;">${t.nome || 'Sem nome'}</span>
         </label>
       </div>`;
@@ -695,31 +769,33 @@ const Dashboard = (() => {
   }
   function _painelCfgToggleAberto(id) {
     if (_painelCfgAbertos.has(id)) _painelCfgAbertos.delete(id); else _painelCfgAbertos.add(id);
-    // Preserva o que já estava marcado antes de re-renderizar.
-    _painelCfgSincronizarMarcados();
     _renderPainelCfgArvore();
   }
   function _painelCfgFiltrar(texto) {
-    _painelCfgSincronizarMarcados();
     _renderPainelCfgArvore(texto);
   }
-  // Antes de qualquer re-render da árvore (expandir/buscar), lê os
-  // checkboxes marcados na tela ATUAL e atualiza _painelMaesConfig — senão
-  // marcar um item, depois expandir outro grupo, perderia a marcação.
-  function _painelCfgSincronizarMarcados() {
-    const el = document.getElementById('db-painelcfg-lista');
-    if (!el) return;
-    const marcados = [...el.querySelectorAll('input[type="checkbox"]:checked')].map(cb => cb.value);
-    const desmarcados = [...el.querySelectorAll('input[type="checkbox"]:not(:checked)')].map(cb => cb.value);
-    _painelMaesConfig = _painelMaesConfig.filter(id => !desmarcados.includes(id));
-    marcados.forEach(id => { if (!_painelMaesConfig.includes(id)) _painelMaesConfig.push(id); });
+  // Toggle direto no checkbox (substitui a leitura em massa do DOM que
+  // existia antes) — marca/desmarca a tarefa na linha ATIVA imediatamente,
+  // sem depender de sincronizar tudo antes de salvar.
+  function _painelCfgToggleTarefa(tarefaId, marcado) {
+    const linha = _painelCfgLinhasEdicao.find(l => l.id === _painelCfgLinhaAtiva);
+    if (!linha) return;
+    linha.tarefaIds = linha.tarefaIds || [];
+    if (marcado && !linha.tarefaIds.includes(tarefaId)) linha.tarefaIds.push(tarefaId);
+    if (!marcado) linha.tarefaIds = linha.tarefaIds.filter(id => id !== tarefaId);
+    // Reconstrói a lista de linhas inteira (tags + árvore) — simples e
+    // seguro; o único custo é o campo de busca da árvore resetar, aceitável
+    // pro tamanho típico dessa tela.
+    _renderPainelCfgLinhas();
   }
 
   async function _salvarConfigPainel() {
-    _painelCfgSincronizarMarcados(); // captura o que está marcado na tela ATUAL antes de salvar
     const overlay = document.getElementById('db-painelcfg-overlay');
+    // Ignora linhas sem nome OU sem nenhuma tarefa vinculada — não fazem
+    // sentido aparecer na tabela.
+    const linhasValidas = _painelCfgLinhasEdicao.filter(l => (l.nome || '').trim() && (l.tarefaIds || []).length);
     try {
-      await db.collection('obras').doc(obraAtual.id).collection('config').doc('dashboardPainel').set({ maesIds: _painelMaesConfig }, { merge: true });
+      await db.collection('obras').doc(obraAtual.id).collection('config').doc('dashboardPainel').set({ linhas: linhasValidas }, { merge: true });
       overlay.remove();
       Utils.toast('Configuração salva.', 'sucesso');
       await _renderPainelAndamento();
@@ -2666,5 +2742,5 @@ const Dashboard = (() => {
       </div>`;
   }
 
-  return { init, onObraChanged, setResumoView, setPacotesView, setCurvaGranularidade, toggleMostrarConcreto, _arvToggle, _arvNivelFixo, _arvHorizonte, _fecharPopupProjeto, _popupNavegar, _popupZoomAjustar, _painelSetModo, _abrirConfigPainel, _salvarConfigPainel, _painelAbrirDetalhe, _painelCfgToggleAberto, _painelCfgFiltrar };
+  return { init, onObraChanged, setResumoView, setPacotesView, setCurvaGranularidade, toggleMostrarConcreto, _arvToggle, _arvNivelFixo, _arvHorizonte, _fecharPopupProjeto, _popupNavegar, _popupZoomAjustar, _painelSetModo, _abrirConfigPainel, _salvarConfigPainel, _painelAbrirDetalhe, _painelCfgToggleAberto, _painelCfgFiltrar, _painelCfgNovaLinha, _painelCfgRenomear, _painelCfgRemoverLinha, _painelCfgToggleEditor, _painelCfgToggleTarefa };
 })();

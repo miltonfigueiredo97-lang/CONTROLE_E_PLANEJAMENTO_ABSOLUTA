@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.60.33',
+  versaoAtual: 'V2.60.34',
 
   versoes: [
     {
@@ -5719,11 +5719,16 @@ const NotasVersao = {
         'Rótulo "Estacas"/"Fundação"/"Estrutura" dentro da barra agora aparece SEMPRE (antes só aparecia quando havia mais de 1 categoria no mesmo andar) — nunca depende só da cor pra identificar o que é.',
         '"Motor de cálculo de Solo Grampeado não carregado": adicionado um pequeno retry (até 1s) antes de desistir, e mensagem mais clara sugerindo recarregar — não foi possível confirmar/reproduzir a causa raiz exata sem acesso à rede/console do navegador.',
         'Curva S mostrando só 1 mês mesmo com planejamento espalhado por vários meses: não foi possível confirmar a causa sem ver os dados reais das tarefas — pendente, precisa de mais informação pra corrigir com segurança.']},
-    {versao:'V2.60.33',status:'aberta',data:'2026-08-13',tipo:'funcionalidade',
+    {versao:'V2.60.33',status:'fechada',data:'2026-08-13',tipo:'funcionalidade',
       titulo:'Dashboard: Curva S com diagnóstico visível + novas Métricas de Estacas (obra inteira)',
       itens:['Curva S: quando aparecer com 1-2 meses só, agora mostra uma linha de diagnóstico com quantas tarefas-folha entraram no cálculo e o período de datas encontrado — ajuda a identificar se é dado real (poucas tarefas com data) ou algo que precisa ser preenchido no Planejamento (Início/Término Planejado das tarefas-folha, não só dos grupos).',
         'Novo bloco "Métricas de Estacas (obra inteira)" dentro do card Estacas e Fundações (mesmo checkbox "Mostrar Contenção, Fundação e Estrutura" de sempre): Total de estacas, Estacas feitas, Volume total (m³), Volume feito (m³), Índice de perda médio (mesma fórmula corrigida do Controle de Estacas na V2.60.31), Consumo médio por estaca.',
-        'Tabela por tipo (Ø × comprimento): quantidade, feitas, volume projeto, volume real e consumo médio de cada tipo de estaca separadamente — mostra exatamente onde o consumo real está passando do previsto (ex: estaca prevista com 14m³ e consumindo 16-17m³ na prática).']}
+        'Tabela por tipo (Ø × comprimento): quantidade, feitas, volume projeto, volume real e consumo médio de cada tipo de estaca separadamente — mostra exatamente onde o consumo real está passando do previsto (ex: estaca prevista com 14m³ e consumindo 16-17m³ na prática).']},
+    {versao:'V2.60.34',status:'aberta',data:'2026-08-13',tipo:'funcionalidade',
+      titulo:'Dashboard: Painel de Andamento agora usa linhas com NOME PRÓPRIO, cada uma podendo juntar 2+ tarefas do Planejamento',
+      itens:['Antes cada linha da tabela era 1 tarefa-mãe direto do Planejamento, com o nome exatamente igual ao de lá. Agora: cada linha tem um nome PRÓPRIO (fixo, editável) e uma lista de tarefas do Planejamento vinculadas a ela — útil quando o nome que se quer ver não bate com o nome da tarefa, ou quando é preciso somar 2+ tarefas numa linha só (ex: "Instalações Hidráulicas" = Distribuição + Prumadas).',
+        'Tela de configuração reformulada: lista as linhas já criadas (nome editável + tags das tarefas vinculadas), botão "+ Nova linha", e um "Vincular/Editar tarefas" por linha que abre a mesma árvore navegável de antes, mas ligada só àquela linha.',
+        'Linha sem nome ou sem nenhuma tarefa vinculada é ignorada ao salvar (não aparece vazia na tabela).']}
   ],
 
   render(containerId) {
