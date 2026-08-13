@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.60.26',
+  versaoAtual: 'V2.60.27',
 
   versoes: [
     {
@@ -5686,10 +5686,13 @@ const NotasVersao = {
       itens:['A lista de BTs + "Lançar por Estaca/Fundação" ficavam sempre abertos em cima do mapa, empurrando o desenho pra baixo (pior ainda na tela cheia). Virou botão único "🚚 N BTs nesta concretagem", que abre um popup só pra gerenciar as BTs.',
         'Removido o seletor "Selecione a peça" — agora é só clicar na estaca/fundação no mapa (a mesma que já fica com o anel amarelo, planejada nesta concretagem) que abre o popup de lançar, com o nome dela já no título.',
         'O mapa agora ocupa quase toda a tela — só o essencial (seletor de concretagem + botão de BTs + legenda) fica em cima.']},
-    {versao:'V2.60.26',status:'aberta',data:'2026-08-13',tipo:'melhoria',
+    {versao:'V2.60.26',status:'fechada',data:'2026-08-13',tipo:'melhoria',
       titulo:'Controle de Estacas: Acompanhamento ganha volume total/executado (projeto)/executado real (BTs)/índice de perda',
       itens:['Novos 4 cartões na concretagem selecionada: Volume total (o que o projeto precisa), Executado (projeto) — capado em 100% por peça, não conta excesso —, Executado real (BTs) — soma bruta do que as BTs entregaram, sem capar, mostra se sobrou/faltou além do previsto —, e Índice de perda — (sobra + perda em obra + perda cocho) das BTs usadas, dividido pelo volume previsto delas.',
-        'Índice de perda acima de 5% pinta o cartão laranja, pra chamar atenção.']}
+        'Índice de perda acima de 5% pinta o cartão laranja, pra chamar atenção.']},
+    {versao:'V2.60.27',status:'aberta',data:'2026-08-13',tipo:'correcao',
+      titulo:'Controle de Estacas: menos espaço vazio no topo da tela cheia',
+      itens:['O botão "Fechar tela cheia" ocupava uma linha inteira sozinho, empurrando o resto pra baixo — agora flutua no canto superior direito (sem reservar espaço na fila normal), então as abas Marcadores/Planejamento/Acompanhamento começam bem mais perto do topo.']}
   ],
 
   render(containerId) {

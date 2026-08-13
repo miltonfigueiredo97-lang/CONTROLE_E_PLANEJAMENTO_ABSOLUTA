@@ -246,8 +246,8 @@ const ControleEstacas = (() => {
     telaCheiaGuardado = { parent: corpo.parentNode, next: corpo.nextSibling };
     const overlay = document.createElement('div');
     overlay.id = 'ce-tela-cheia-overlay';
-    overlay.style.cssText = 'position:fixed;inset:0;z-index:500;background:var(--cor-fundo,#f1f5f9);overflow:auto;padding:16px;';
-    overlay.innerHTML = '<div style="display:flex;justify-content:flex-end;margin-bottom:10px;"><button class="btn btn-secundario btn-sm" onclick="CE.alternarTelaCheia()">✕ Fechar tela cheia (Esc)</button></div>';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:500;background:var(--cor-fundo,#f1f5f9);overflow:auto;padding:10px 16px 16px;';
+    overlay.innerHTML = '<button class="btn btn-secundario btn-sm" style="position:absolute;top:10px;right:16px;z-index:1;" onclick="CE.alternarTelaCheia()">✕ Fechar tela cheia (Esc)</button>';
     document.body.appendChild(overlay);
     overlay.appendChild(corpo);
     document.body.style.overflow = 'hidden';
