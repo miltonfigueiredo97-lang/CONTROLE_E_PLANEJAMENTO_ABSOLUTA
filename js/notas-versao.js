@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.60.24',
+  versaoAtual: 'V2.60.25',
 
   versoes: [
     {
@@ -5675,12 +5675,17 @@ const NotasVersao = {
         'Botão "🗑 Excluir BT" — pra quando adicionar uma BT errada. Remove a BT e os lançamentos dela (confirma antes).',
         'Botão "✓ Add. pendentes 100%" agora adiciona uma linha nova pra cada peça pendente da concretagem (sem duplicar as que já estão nas linhas), em vez de forçar 100% numa lista fixa.',
         'Peça já lançada em outra BT desta concretagem aparece marcada no seletor, pra não escolher a mesma por engano.']},
-    {versao:'V2.60.24',status:'aberta',data:'2026-08-13',tipo:'melhoria',
+    {versao:'V2.60.24',status:'fechada',data:'2026-08-13',tipo:'melhoria',
       titulo:'Controle de Estacas: Acompanhamento inverte o fluxo — agora é por ESTACA (BTs que a fizeram), não por BT',
       itens:['Antes: selecionava a BT e informava o % de cada peça que ela concretou (difícil de saber em campo — o % da peça é praticamente impossível de estimar olhando pra estaca).',
         'Agora: seleciona a ESTACA/FUNDAÇÃO, e informa quais BTs contribuíram nela e quanto % de CADA BT foi usado ali (ex: 100% da BT-1, 100% da BT-2, 40% da BT-3) — muito mais fácil de responder olhando pro caminhão, não pra peça.',
         'Por trás, os dados continuam salvos e somados exatamente igual — o % e volume gravados no lançamento são calculados a partir do %-da-BT informado, então o Controle de Concreto e todo o resto do sistema batem igual, só a forma de PERGUNTAR mudou.',
-        'BTs agora têm edição própria (✎) pra ajustar número, volume previsto, NF, código, sobra, perda e cocho depois de criadas — esses dados são do caminhão inteiro, então valem pra todas as peças que ele concretou.']}
+        'BTs agora têm edição própria (✎) pra ajustar número, volume previsto, NF, código, sobra, perda e cocho depois de criadas — esses dados são do caminhão inteiro, então valem pra todas as peças que ele concretou.']},
+    {versao:'V2.60.25',status:'aberta',data:'2026-08-13',tipo:'melhoria',
+      titulo:'Controle de Estacas: Acompanhamento em popups — menu de cima parou de tampar o mapa',
+      itens:['A lista de BTs + "Lançar por Estaca/Fundação" ficavam sempre abertos em cima do mapa, empurrando o desenho pra baixo (pior ainda na tela cheia). Virou botão único "🚚 N BTs nesta concretagem", que abre um popup só pra gerenciar as BTs.',
+        'Removido o seletor "Selecione a peça" — agora é só clicar na estaca/fundação no mapa (a mesma que já fica com o anel amarelo, planejada nesta concretagem) que abre o popup de lançar, com o nome dela já no título.',
+        'O mapa agora ocupa quase toda a tela — só o essencial (seletor de concretagem + botão de BTs + legenda) fica em cima.']}
   ],
 
   render(containerId) {

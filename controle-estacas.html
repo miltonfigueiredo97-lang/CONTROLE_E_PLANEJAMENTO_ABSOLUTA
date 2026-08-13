@@ -47,7 +47,7 @@
       <a href="admin-permissoes.html" data-perm="admin:ver"><span class="nav-icon">🔑</span> Permissões</a>
       <div class="sidebar-section-title">Sistema</div>
       <a href="backup-planejamento.html" data-perm="backupPlanejamento:ver"><span class="nav-icon">🗂️</span> Backup de Planejamentos</a>
-      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V2.60.24</span></a>
+      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V2.60.25</span></a>
     </nav>
     <div class="sidebar-user">
       <div class="user-avatar">U</div>
@@ -96,6 +96,35 @@
     <div class="modal-body" id="ce-atribuir-conc-body"></div>
     <div class="modal-footer">
       <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-ce-atribuir-conc')">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Gerenciar BTs da concretagem (Acompanhamento) -->
+<div class="modal-overlay" id="modal-ce-bts-conc">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <h3>🚚 BTs desta concretagem</h3>
+      <button class="modal-close" onclick="Utils.fecharModal('modal-ce-bts-conc')">&times;</button>
+    </div>
+    <div class="modal-body" id="ce-bts-conc-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-ce-bts-conc')">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Lançar concretagem por estaca/fundação (clique no marcador) -->
+<div class="modal-overlay" id="modal-ce-lancar-estaca">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-header">
+      <h3 id="ce-lancar-titulo">🚚 Lançar</h3>
+      <button class="modal-close" onclick="Utils.fecharModal('modal-ce-lancar-estaca')">&times;</button>
+    </div>
+    <div class="modal-body" id="ce-lancar-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-ce-lancar-estaca')">Cancelar</button>
+      <button class="btn btn-primario" data-perm="controleEstacas:criar" onclick="CE.salvarEstacaAcomp()">✓ Salvar</button>
     </div>
   </div>
 </div>

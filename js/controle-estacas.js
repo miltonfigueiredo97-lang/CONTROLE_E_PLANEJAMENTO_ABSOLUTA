@@ -705,19 +705,20 @@ const ControleEstacas = (() => {
     const executadas = listaPecas.filter(_pecaExecutada);
     const pendentes = listaPecas.filter(p => !_pecaExecutada(p));
     const resumoObra = _resumoObraEstacas();
+    const qtdBTs = acompConcretagemId ? _btsDaConcretagem(acompConcretagemId).length : 0;
     el.innerHTML = `
       <div class="cc-panel">
-        <div class="cc-panelTitle">✅ Acompanhamento — lançar BT</div>
+        <div class="cc-panelTitle">✅ Acompanhamento — clique numa estaca/fundação no mapa pra lançar</div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px;">
           <select class="form-control" id="ce-acomp-conc" style="max-width:280px;" onchange="CE.onTrocarAcompConcretagem()">
             <option value="">— Selecione uma concretagem —</option>
             ${concsComPlano.map(c => `<option value="${c.id}" ${c.id === acompConcretagemId ? 'selected' : ''}>${esc(_concLabel(c))}</option>`).join('')}
           </select>
           ${!concsComPlano.length ? '<span class="text-sm text-muted">Nenhuma concretagem com peças planejadas ainda — vá em Planejamento primeiro.</span>' : ''}
+          ${acompConcretagemId ? `<button class="btn btn-secundario btn-sm" onclick="CE.abrirModalBTs()">🚚 ${qtdBTs} BT${qtdBTs !== 1 ? 's' : ''} nesta concretagem</button>` : ''}
         </div>
         ${acompConcretagemId ? `
-          <div id="ce-bt-painel"></div>
-          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin:14px 0 4px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:4px;">
             <div class="aba-toggle">
               <button class="aba-btn ${view === 'estacas' ? 'ativo' : ''}" onclick="CE.onTrocarView('estacas')">⚫ Estacas</button>
               <button class="aba-btn ${view === 'fundacoes' ? 'ativo' : ''}" onclick="CE.onTrocarView('fundacoes')">⬛ Fundações</button>
@@ -725,13 +726,10 @@ const ControleEstacas = (() => {
             <span class="text-sm text-muted">🟢 concretado · 🟠 parcial · 🟡 anel = planejada, ainda pendente</span>
           </div>
           ${_legendaGrupos()}
-          <div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0;align-items:center;">
-            <span class="text-sm text-muted">Mapa só pra acompanhar visualmente — o real é lançado pela BT acima.</span>
-            <span style="display:flex;gap:2px;align-items:center;margin-left:auto;">
-              <button class="btn btn-secundario btn-sm" onclick="CE.zoomAjustar(-0.25)">−</button>
-              <span class="text-sm text-muted" style="width:48px;text-align:center;">${Math.round(zoomE * 100)}%</span>
-              <button class="btn btn-secundario btn-sm" onclick="CE.zoomAjustar(0.25)">+</button>
-            </span>
+          <div style="display:flex;gap:2px;align-items:center;justify-content:flex-end;margin:6px 0;">
+            <button class="btn btn-secundario btn-sm" onclick="CE.zoomAjustar(-0.25)">−</button>
+            <span class="text-sm text-muted" style="width:48px;text-align:center;">${Math.round(zoomE * 100)}%</span>
+            <button class="btn btn-secundario btn-sm" onclick="CE.zoomAjustar(0.25)">+</button>
           </div>
           <div id="ce-acomp-mapa-host"></div>
           <div class="cc-kpiGrid" style="grid-template-columns:repeat(2,1fr);margin-top:14px;">
@@ -748,7 +746,7 @@ const ControleEstacas = (() => {
               ${_resumoDiamHTML(_resumoDiamDeLista(pendentes))}
             </div>
           </div>
-        ` : `<div class="cc-empty">Selecione uma concretagem planejada pra lançar a BT.</div>`}
+        ` : `<div class="cc-empty">Selecione uma concretagem planejada.</div>`}
       </div>
       <div class="cc-panel">
         <div class="cc-panelTitle">📊 Estacas da obra — visão geral</div>
@@ -774,7 +772,6 @@ const ControleEstacas = (() => {
       </div>
     `;
     Permissions.aplicarNaTela();
-    _renderPainelBT();
     if (acompConcretagemId) await renderMapaAcompanhamento();
     const scrollNovo = document.querySelector('#ce-acomp-mapa-host .est-map-scroll');
     if (scrollNovo && scrollPos) { scrollNovo.scrollLeft = scrollPos.left; scrollNovo.scrollTop = scrollPos.top; }
@@ -800,7 +797,9 @@ const ControleEstacas = (() => {
       const p = pecas.find(x => x.id === m.pecaId);
       return !p || !_pecaExecutada(p);
     });
-    _ligarPanZoom('ce-acomp-stage');
+    // Clicar numa peça planejada nesta concretagem abre o popup de lançar
+    // (por fora dela, nada acontece — não faz sentido lançar o que não tá programado aqui).
+    _ligarEventosToggle('ce-acomp-stage', lista.filter(m => idsPlanejados.has(m.pecaId)), m => abrirEstacaModal(m.pecaId));
   }
 
   // ══════════════════════════════════════════
@@ -821,9 +820,9 @@ const ControleEstacas = (() => {
   function abrirNovaBT() {
     if (!Permissions.pode('controleEstacas', 'criar')) { Utils.toast('Sem permissão para criar.', 'erro'); return; }
     bt = { concId: acompConcretagemId, btId: '', modo: 'nova-meta', numeroForm: _proximoNumeroBT(acompConcretagemId) };
-    _renderPainelBT();
+    _renderModalBTs();
   }
-  function fecharPainelBT() { bt = null; _renderPainelBT(); }
+  function fecharPainelBT() { bt = null; _renderModalBTs(); }
 
   async function criarBTEstacas() {
     if (!Permissions.pode('controleEstacas', 'criar')) { Utils.toast('Sem permissão para criar.', 'erro'); return; }
@@ -835,8 +834,8 @@ const ControleEstacas = (() => {
       const id = await Database.criar(obraId, COL_BTS, { concretagemId: bt.concId, numero, volumePrevisto, notaFiscal: '', codigoBT: '', obraId }, EC.genId('bt'));
       btsConfig.push({ id, concretagemId: bt.concId, numero, volumePrevisto, notaFiscal: '', codigoBT: '', obraId });
       bt = null;
-      _renderPainelBT();
-      Utils.toast('✓ BT criada! Agora selecione a estaca e lance a contribuição dela.', 'sucesso');
+      _renderModalBTs();
+      Utils.toast('✓ BT criada! Agora clique na estaca no mapa e lance a contribuição dela.', 'sucesso');
     } catch (e) {
       Utils.toast('Erro ao criar BT: ' + e.message, 'erro');
     } finally {
@@ -850,7 +849,7 @@ const ControleEstacas = (() => {
     if (!b) return;
     const meta = _metaBT(id);
     bt = { concId: acompConcretagemId, btId: id, modo: 'editar-meta', numeroForm: b.numero, volumeForm: b.volumePrevisto, nf: b.notaFiscal || '', cod: b.codigoBT || '', ...meta };
-    _renderPainelBT();
+    _renderModalBTs();
   }
 
   async function salvarMetaBT() {
@@ -877,7 +876,7 @@ const ControleEstacas = (() => {
         lansBT.forEach(l => Object.assign(l, { sobraCaminhao: sobra, perdaObra: perda, perdaCocho, hora }));
       }
       bt = null;
-      _renderPainelBT();
+      _renderModalBTs();
       Utils.toast('✓ BT atualizada!', 'sucesso');
     } catch (e) {
       Utils.toast('Erro ao salvar: ' + e.message, 'erro');
@@ -903,6 +902,7 @@ const ControleEstacas = (() => {
       await EstacasCalculos.sincronizarVinculosPlanejamento(obraId).catch(e => console.error('Sync Planejamento:', e));
       bt = null;
       _renderAbaAcompanhamento();
+      _renderModalBTs();
       Utils.toast('BT excluída.', 'sucesso');
     } catch (e) {
       Utils.toast('Erro ao excluir: ' + e.message, 'erro');
@@ -938,11 +938,6 @@ const ControleEstacas = (() => {
   // e todo o resto do sistema) é derivado desse volume — a conta de sempre,
   // só a ENTRADA que inverteu.
   // ══════════════════════════════════════════
-  function onSelecionarEstacaAcomp(pecaId) {
-    if (!pecaId) { estacaAtual = null; _renderPainelBT(); return; }
-    _abrirEstaca(pecaId);
-  }
-
   function _abrirEstaca(pecaId) {
     const lansPeca = lancamentos.filter(l => l.pecaId === pecaId && l.concretagemId === acompConcretagemId);
     const linhas = lansPeca.map(l => {
@@ -952,14 +947,13 @@ const ControleEstacas = (() => {
     });
     if (!linhas.length) linhas.push({ btId: '', pctBT: '' });
     estacaAtual = { concId: acompConcretagemId, pecaId, linhas };
-    _renderPainelBT();
   }
 
-  function btAddLinhaPeca() { estacaAtual.linhas.push({ btId: '', pctBT: '' }); _renderPainelBT(); }
-  function btRemLinhaPeca(i) { estacaAtual.linhas.splice(i, 1); _renderPainelBT(); }
+  function btAddLinhaPeca() { estacaAtual.linhas.push({ btId: '', pctBT: '' }); _renderLancarEstacaBody(); }
+  function btRemLinhaPeca(i) { estacaAtual.linhas.splice(i, 1); _renderLancarEstacaBody(); }
   function btUpdLinhaPeca(i, campo, valor) {
     estacaAtual.linhas[i][campo] = valor;
-    if (campo === 'btId') { _renderPainelBT(); return; }
+    if (campo === 'btId') { _renderLancarEstacaBody(); return; }
     // só o % mudou — atualiza volume da linha e o total, sem re-render total
     const b = btsConfig.find(x => x.id === estacaAtual.linhas[i].btId);
     if (b) {
@@ -1016,6 +1010,7 @@ const ControleEstacas = (() => {
       await carregar();
       await EstacasCalculos.sincronizarVinculosPlanejamento(obraId).catch(e => console.error('Sync Planejamento:', e));
       estacaAtual = null;
+      Utils.fecharModal('modal-ce-lancar-estaca');
       _renderAbaAcompanhamento();
       Utils.toast('✓ Lançamento salvo!', 'sucesso');
     } catch (e) {
@@ -1025,17 +1020,18 @@ const ControleEstacas = (() => {
     }
   }
 
-  function fecharEstacaAcomp() { estacaAtual = null; _renderPainelBT(); }
+  function abrirModalBTs() {
+    _renderModalBTs();
+    Utils.abrirModal('modal-ce-bts-conc');
+  }
 
-  function _renderPainelBT() {
-    const el = document.getElementById('ce-bt-painel');
+  function _renderModalBTs() {
+    const el = document.getElementById('ce-bts-conc-body');
     if (!el) return;
     if (!acompConcretagemId) { el.innerHTML = ''; return; }
     const btsConc = _btsDaConcretagem(acompConcretagemId);
-    const listaPecas = _pecasPlanejadas(acompConcretagemId);
 
     let html = `
-      <div class="cc-panelTitle" style="font-size:.85rem;">🚚 BTs desta concretagem</div>
       <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
         ${btsConc.map(b => {
           const jafoi = lancamentos.some(l => l.btConfigId === b.id);
@@ -1084,62 +1080,57 @@ const ControleEstacas = (() => {
           </div>
         </div>`;
     }
-
-    html += `
-      <div class="cc-panelTitle" style="font-size:.85rem;margin-top:6px;">⚫ Lançar por estaca/fundação</div>
-      <div class="form-grupo">
-        <select class="form-control" onchange="CE.onSelecionarEstacaAcomp(this.value)">
-          <option value="">— Selecione a peça —</option>
-          ${listaPecas.map(p => {
-            const pct = ConcretoCalculos.pctConcretado(p, lancamentos);
-            const statusTxt = pct >= 100 ? '✓ concretada' : pct > 0 ? `${EC.fmt1(pct)}% feita` : 'pendente';
-            return `<option value="${p.id}" ${estacaAtual && estacaAtual.pecaId === p.id ? 'selected' : ''}>${esc(p.nome)}${p.diametro ? ` ⌀${EC.num(p.diametro)}cm` : ''} — ${statusTxt}</option>`;
-          }).join('')}
-        </select>
-      </div>`;
-
-    if (estacaAtual && estacaAtual.pecaId) {
-      const p = pecas.find(x => x.id === estacaAtual.pecaId);
-      const volNecessario = p ? _volumeConcPeca(p, estacaAtual.concId) : 0;
-      const totalRecebido = estacaAtual.linhas.reduce((s, l) => {
-        const b = btsConfig.find(x => x.id === l.btId);
-        if (!b) return s;
-        return s + (EC.num((l.pctBT || '').replace(',', '.')) / 100) * b.volumePrevisto;
-      }, 0);
-      const idsUsados = new Set(estacaAtual.linhas.map(l => l.btId).filter(Boolean));
-      const opcoesBT = selId => {
-        return `<option value="">— BT —</option>` + btsConc.filter(b => b.id === selId || !idsUsados.has(b.id)).map(b =>
-          `<option value="${b.id}" ${selId === b.id ? 'selected' : ''}>BT-${b.numero} · ${EC.fmt1(b.volumePrevisto)}m³</option>`).join('');
-      };
-      html += `
-        <div style="border:1px solid var(--cv-border,#e2e8f0);border-radius:8px;padding:12px;margin-top:8px;">
-          <div style="font-weight:700;margin-bottom:4px;">${p ? esc(p.nome) : ''}${p && p.diametro ? ` ⌀${EC.num(p.diametro)}cm` : ''}</div>
-          <div class="text-sm text-muted" style="margin-bottom:10px;">Precisa de ${EC.fmt1(volNecessario)} m³ · recebido até agora ${EC.fmt1(totalRecebido)} m³ (${EC.fmt1(volNecessario > 0 ? totalRecebido / volNecessario * 100 : 0)}%)</div>
-          <label class="text-sm text-muted" style="display:block;margin-bottom:4px;">Quais BTs concretaram esta peça, e quanto % de CADA BT foi usado aqui</label>
-          ${!btsConc.length ? '<div class="cc-empty">Nenhuma BT criada ainda nesta concretagem — crie uma acima.</div>' : `
-            <div id="ce-est-linhas">
-              ${estacaAtual.linhas.map((l, i) => {
-                const b = btsConfig.find(x => x.id === l.btId);
-                const vol = b ? (EC.num((l.pctBT || '').replace(',', '.')) / 100) * b.volumePrevisto : 0;
-                return `<div style="display:grid;grid-template-columns:1fr 100px 90px auto;gap:8px;margin-bottom:6px;align-items:center;">
-                  <select class="form-control" onchange="CE.btUpdLinhaPeca(${i}, 'btId', this.value)">${opcoesBT(l.btId)}</select>
-                  <input type="text" inputmode="decimal" class="form-control" placeholder="% da BT" value="${esc(l.pctBT)}" oninput="CE.btUpdLinhaPeca(${i}, 'pctBT', this.value)">
-                  <span id="ce-est-vol-${i}" style="font-family:var(--font-mono);font-size:.78rem;color:var(--cor-texto-secundario);text-align:right;">${EC.fmt1(vol)} m³</span>
-                  <button class="btn btn-secundario btn-sm" style="color:var(--cv-red,#ef4444);" onclick="CE.btRemLinhaPeca(${i})" ${estacaAtual.linhas.length <= 1 ? 'disabled' : ''}>✕</button>
-                </div>`;
-              }).join('')}
-            </div>
-            <button class="btn btn-secundario btn-sm" onclick="CE.btAddLinhaPeca()">+ BT</button>
-            <div style="display:flex;justify-content:space-between;align-items:center;background:var(--cv-surface2,#f8fafc);border:1px solid var(--cv-border,#e2e8f0);border-radius:8px;padding:8px 12px;margin-top:10px;font-family:var(--font-mono);font-size:.82rem;">
-              <span>Total recebido: <b id="ce-est-total-recebido">${EC.fmt1(totalRecebido)} m³</b></span>
-            </div>
-            <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;">
-              <button class="btn btn-secundario btn-sm" onclick="CE.fecharEstacaAcomp()">Cancelar</button>
-              <button class="btn btn-primario btn-sm" data-perm="controleEstacas:criar" onclick="CE.salvarEstacaAcomp()">✓ Salvar</button>
-            </div>`}
-        </div>`;
-    }
     el.innerHTML = html;
+    Permissions.aplicarNaTela();
+  }
+
+  // ── Popup de lançar por estaca — aberto ao clicar no marcador no mapa ──
+  function abrirEstacaModal(pecaId) {
+    _abrirEstaca(pecaId);
+    const p = pecas.find(x => x.id === pecaId);
+    const titEl = document.getElementById('ce-lancar-titulo');
+    if (titEl) titEl.textContent = `🚚 Lançar — ${p ? p.nome : ''}`;
+    _renderLancarEstacaBody();
+    Utils.abrirModal('modal-ce-lancar-estaca');
+  }
+
+  function _renderLancarEstacaBody() {
+    const el = document.getElementById('ce-lancar-body');
+    if (!el || !estacaAtual) return;
+    const btsConc = _btsDaConcretagem(estacaAtual.concId);
+    const p = pecas.find(x => x.id === estacaAtual.pecaId);
+    const volNecessario = p ? _volumeConcPeca(p, estacaAtual.concId) : 0;
+    const totalRecebido = estacaAtual.linhas.reduce((s, l) => {
+      const b = btsConfig.find(x => x.id === l.btId);
+      if (!b) return s;
+      return s + (EC.num((l.pctBT || '').replace(',', '.')) / 100) * b.volumePrevisto;
+    }, 0);
+    const idsUsados = new Set(estacaAtual.linhas.map(l => l.btId).filter(Boolean));
+    const opcoesBT = selId => {
+      return `<option value="">— BT —</option>` + btsConc.filter(b => b.id === selId || !idsUsados.has(b.id)).map(b =>
+        `<option value="${b.id}" ${selId === b.id ? 'selected' : ''}>BT-${b.numero} · ${EC.fmt1(b.volumePrevisto)}m³</option>`).join('');
+    };
+    el.innerHTML = `
+      <div class="text-sm text-muted" style="margin-bottom:10px;">Precisa de ${EC.fmt1(volNecessario)} m³ · recebido até agora ${EC.fmt1(totalRecebido)} m³ (${EC.fmt1(volNecessario > 0 ? totalRecebido / volNecessario * 100 : 0)}%)</div>
+      ${!btsConc.length ? `<div class="cc-empty">Nenhuma BT criada ainda nesta concretagem. <button class="btn btn-secundario btn-sm" data-perm="controleEstacas:criar" onclick="Utils.fecharModal('modal-ce-lancar-estaca');CE.abrirModalBTs();CE.abrirNovaBT();">+ Criar BT</button></div>` : `
+        <label class="text-sm text-muted" style="display:block;margin-bottom:4px;">Quais BTs concretaram esta peça, e quanto % de CADA BT foi usado aqui</label>
+        <div id="ce-est-linhas">
+          ${estacaAtual.linhas.map((l, i) => {
+            const b = btsConfig.find(x => x.id === l.btId);
+            const vol = b ? (EC.num((l.pctBT || '').replace(',', '.')) / 100) * b.volumePrevisto : 0;
+            return `<div style="display:grid;grid-template-columns:1fr 100px 90px auto;gap:8px;margin-bottom:6px;align-items:center;">
+              <select class="form-control" onchange="CE.btUpdLinhaPeca(${i}, 'btId', this.value)">${opcoesBT(l.btId)}</select>
+              <input type="text" inputmode="decimal" class="form-control" placeholder="% da BT" value="${esc(l.pctBT)}" oninput="CE.btUpdLinhaPeca(${i}, 'pctBT', this.value)">
+              <span id="ce-est-vol-${i}" style="font-family:var(--font-mono);font-size:.78rem;color:var(--cor-texto-secundario);text-align:right;">${EC.fmt1(vol)} m³</span>
+              <button class="btn btn-secundario btn-sm" style="color:var(--cv-red,#ef4444);" onclick="CE.btRemLinhaPeca(${i})" ${estacaAtual.linhas.length <= 1 ? 'disabled' : ''}>✕</button>
+            </div>`;
+          }).join('')}
+        </div>
+        <button class="btn btn-secundario btn-sm" onclick="CE.btAddLinhaPeca()">+ BT</button>
+        <div style="display:flex;justify-content:space-between;align-items:center;background:var(--cv-surface2,#f8fafc);border:1px solid var(--cv-border,#e2e8f0);border-radius:8px;padding:8px 12px;margin-top:10px;font-family:var(--font-mono);font-size:.82rem;">
+          <span>Total recebido: <b id="ce-est-total-recebido">${EC.fmt1(totalRecebido)} m³</b></span>
+        </div>`}
+    `;
     Permissions.aplicarNaTela();
   }
 
@@ -2077,7 +2068,7 @@ const ControleEstacas = (() => {
     atribuirConcretagemNumero, atribuirConcretagemNumeroInput, removerDaConcretagem, onTrocarAcompConcretagem,
     toggleNovaConcPlan, criarConcretagemPlan, focarConcretagemPlan,
     abrirNovaBT, fecharPainelBT, criarBTEstacas, abrirEditarMetaBT, salvarMetaBT, excluirBTEstacas,
-    onSelecionarEstacaAcomp, btAddLinhaPeca, btRemLinhaPeca, btUpdLinhaPeca, salvarEstacaAcomp, fecharEstacaAcomp,
+    abrirModalBTs, abrirEstacaModal, btAddLinhaPeca, btRemLinhaPeca, btUpdLinhaPeca, salvarEstacaAcomp,
   };
 })();
 
