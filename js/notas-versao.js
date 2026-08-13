@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.60.22',
+  versaoAtual: 'V2.60.23',
 
   versoes: [
     {
@@ -5664,11 +5664,17 @@ const NotasVersao = {
         'Visual: estaca 100% concretada agora fica com preenchimento sólido/opaco (antes era sempre translúcido, mesmo pronta, parecia "fraca"). O anel amarelo de "planejada, pendente" some assim que chega em 100%.',
         'Novo painel "Estacas da obra — visão geral" no Acompanhamento: total de estacas cadastradas, volume executado da obra inteira, % geral, e tabela por diâmetro (qtd. feita/total, volume feito/total, % de cada tipo).',
         'Zoom/pan por toque (tablet/celular): pinça com 2 dedos dá zoom, 1 dedo arrasta o mapa — antes só funcionava com mouse (Ctrl+roda/Ctrl+arrastar).']},
-    {versao:'V2.60.22',status:'aberta',data:'2026-08-13',tipo:'correcao',
+    {versao:'V2.60.22',status:'fechada',data:'2026-08-13',tipo:'correcao',
       titulo:'Planejamento: editar Início na tabela não recalculava o Término (deixava a Duração em branco) — a regra estava na ordem errada em relação ao MS Project',
       itens:['Causa: editar Início tentava calcular a DURAÇÃO (mantendo o Término fixo) — mas se o Término ainda estivesse vazio (comum em tarefa nova ou recém-importada), a condição falhava e nada era recalculado, deixando a Duração em "—".',
         'Corrigido pra bater com a convenção do MS Project: editar Início MANTÉM a Duração e recalcula o Término; editar Término MANTÉM o Início e recalcula a Duração; editar Duração MANTÉM o Início e recalcula o Término. Exatamente como pedido.',
-        'Fallback mantido só pra quando a tarefa ainda não tem Duração salva (aí sim calcula a Duração a partir do Término existente, uma única vez, pra não deixar tudo em branco na primeira vez).']}
+        'Fallback mantido só pra quando a tarefa ainda não tem Duração salva (aí sim calcula a Duração a partir do Término existente, uma única vez, pra não deixar tudo em branco na primeira vez).']},
+    {versao:'V2.60.23',status:'aberta',data:'2026-08-13',tipo:'melhoria',
+      titulo:'Controle de Estacas: lançar BT vira seletor de peças (não lista fixa) + excluir BT',
+      itens:['Lançar BT não mostra mais uma lista fixa com TODAS as peças da concretagem — agora é um seletor: escolhe a peça, o %, e "+ Peça" pra adicionar mais uma linha, se a BT concretou mais de uma. Igual ao Controle de Concreto.',
+        'Botão "🗑 Excluir BT" — pra quando adicionar uma BT errada. Remove a BT e os lançamentos dela (confirma antes).',
+        'Botão "✓ Add. pendentes 100%" agora adiciona uma linha nova pra cada peça pendente da concretagem (sem duplicar as que já estão nas linhas), em vez de forçar 100% numa lista fixa.',
+        'Peça já lançada em outra BT desta concretagem aparece marcada no seletor, pra não escolher a mesma por engano.']}
   ],
 
   render(containerId) {
