@@ -555,7 +555,7 @@ const Dashboard = (() => {
         <table style="border-collapse:collapse;width:100%;font-size:.78rem;">
           <thead>
             <tr>
-              <th style="position:sticky;left:0;background:${corHeader};padding:6px 10px;text-align:left;border:1px solid #e5e5e5;min-width:140px;z-index:1;">Tarefa</th>
+              <th style="position:sticky;left:0;background:${corHeader};padding:6px 10px;text-align:left;border:1px solid #e5e5e5;min-width:140px;z-index:1;">Linha</th>
               ${colunas.map(c => `<th style="background:${corHeader};padding:6px 8px;border:1px solid #e5e5e5;min-width:64px;font-weight:600;white-space:nowrap;">${c.label}</th>`).join('')}
             </tr>
           </thead>
