@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.61.0',
+  versaoAtual: 'V2.62.0',
 
   versoes: [
     {
@@ -5763,11 +5763,20 @@ const NotasVersao = {
       itens:['A página parava na seção 2 por um erro de ordem de declaração no próprio código do diagnóstico (uma função auxiliar era usada antes de ser criada). Corrigido.',
         'Confirmado que a correção da V2.60.39 funcionou: todos os motores de cálculo agora aparecem como OK (antes, todos apareciam como "não carregou").',
         'Nova tabela na seção 5: lista cada Pavimento e Apartamento cadastrado na Estrutura da Obra e mostra quantas tarefas do Planejamento contêm aquele texto no nome — que é exatamente o critério do Auto-vincular. Quem aparecer com "0 — não casa" está com o nome escrito diferente do que aparece nas tarefas (ex: "1° Pavimento" com símbolo de grau vs "1º Pavimento" com ordinal). Junto vem uma amostra dos nomes reais das tarefas pra comparação direta.']},
-    {versao:'V2.61.0',status:'aberta',data:'2026-08-13',tipo:'funcionalidade',
+    {versao:'V2.61.0',status:'fechada',data:'2026-08-13',tipo:'funcionalidade',
       titulo:'Curva S removida do Dashboard',
       itens:['A Curva S foi removida permanentemente a pedido: o cálculo dependia de um histórico diário que só passou a ser gravado recentemente, e as tentativas de reconstruir o passado a partir de dados incompletos produziam valores que não refletiam a realidade da obra (executado saltando pra 100%, meses anteriores zerados). Dava mais trabalho de manter do que valor entregava.',
         'Removidos junto: o gráfico de Índice de Desempenho de Prazo (IDP), que dependia dela e já não era exibido, e o seletor Mensal/Semanal. Ao todo, 405 linhas de código a menos no Dashboard.',
-        'O histórico de execução (obras/{obra}/historicoExecucao) continua sendo gravado normalmente a cada atualização de tarefa — nada foi perdido no banco, caso no futuro se queira retomar algum gráfico de evolução com base histórica já consolidada.']}
+        'O histórico de execução (obras/{obra}/historicoExecucao) continua sendo gravado normalmente a cada atualização de tarefa — nada foi perdido no banco, caso no futuro se queira retomar algum gráfico de evolução com base histórica já consolidada.']},
+    {versao:'V2.62.0',status:'aberta',data:'2026-08-13',tipo:'funcionalidade',
+      titulo:'Dashboard renovado: frentes de trabalho automáticas e visual novo',
+      itens:['O Dashboard foi dividido internamente em seções independentes (Frentes, Suprimentos, Contenção, Fundação/Estrutura, Estacas, Resumo por Apartamento) — cada uma no seu próprio arquivo. Mexer numa não afeta as outras, e um erro em uma seção não derruba mais a página inteira.',
+        'Nova visão central: "Andamento por Frente de Trabalho". Linha = frente/serviço com nome amigável, coluna = pavimento (ou apartamento), célula = % com micro-barra de progresso e ✓ quando concluída. Cabeçalho e primeira coluna ficam fixos ao rolar; clique numa célula abre as tarefas daquele cruzamento.',
+        'Auto-configuração: as frentes agora se montam SOZINHAS a partir do Planejamento — cada grupo pai de tarefas vinculadas a um local vira uma frente, na ordem da EAP, mesclando grupos de mesmo nome entre torres. Configurou a Estrutura da Obra e vinculou as tarefas uma vez, o Dashboard se atualiza pra sempre. Edição manual continua possível em ⚙️ Configurar (desliga o automático), com botões "Regerar do Planejamento" e "Voltar ao automático".',
+        'Removida a antiga seção "Atividades" (listas de Em Execução/Próximas com as linhas cruas do planejamento) — substituída pela visão de frentes.',
+        'Hero da obra redesenhado: barra de progresso executado (amarelo) com marcador branco do previsto, % grande, badges de prazo (No prazo / X meses atrasado) e seletor de obra integrado.',
+        'Suprimentos, minimapas de Contenção e Estacas e Resumo por Apartamento ganharam o mesmo padrão visual (chips, estados vazios amigáveis, tabelas limpas). Seções de Contenção e Estacas agora somem sozinhas quando a obra não tem essas disciplinas.',
+        'Limpeza: removidos códigos mortos (PPC semanal, Motivos de Atraso, Pacotes) que não eram exibidos desde versões anteriores.']}
   ],
 
   render(containerId) {

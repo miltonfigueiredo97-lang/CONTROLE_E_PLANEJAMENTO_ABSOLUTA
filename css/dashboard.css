@@ -1,41 +1,36 @@
 /* ============================================
-   Dashboard (expandido conforme módulo Dashboard for construído)
+   Dashboard Principal — Identidade Absoluta
+   Cada seção do Dashboard tem seu bloco aqui, na mesma ordem da tela.
    ============================================ */
 
-.dashboard-stats {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 16px;
-  margin-bottom: 24px;
-}
-.stat-card {
-  background: #fff;
-  border: 1px solid var(--cor-borda-light);
-  border-radius: var(--borda-radius-lg);
-  padding: 20px;
-}
-.stat-card .stat-label {
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  color: var(--cor-texto-muted);
-  margin-bottom: 6px;
-}
-.stat-card .stat-valor {
-  font-size: 2rem;
-  font-weight: 700;
-  font-family: var(--font-mono);
-  color: var(--cor-texto);
-  line-height: 1;
-}
-.stat-card .stat-sub {
-  font-size: 0.8rem;
-  color: var(--cor-texto-secundario);
-  margin-top: 6px;
-}
+.db-row { margin-bottom: 16px; }
+.db-secao-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; flex-wrap: wrap; gap: 8px; }
+.db-secao-header h3 { font-size: 0.95rem; font-weight: 700; color: var(--cor-texto); letter-spacing: -0.01em; }
+
+/* ---- Estados vazios / avisos (padrão de todas as seções) ---- */
+.db-vazio { text-align: center; padding: 36px 24px; }
+.db-vazio-icone { font-size: 2.2rem; opacity: 0.45; margin-bottom: 10px; }
+.db-vazio-titulo { font-weight: 700; color: var(--cor-texto); margin-bottom: 4px; }
+.db-vazio-sub { font-size: 0.82rem; color: var(--cor-texto-muted); max-width: 520px; margin: 0 auto; line-height: 1.55; }
+.db-vazio-sub a { color: var(--cor-primaria-dark); font-weight: 600; }
+.db-vazio-inline { font-size: 0.82rem; color: var(--cor-texto-muted); padding: 14px 0; }
+
+/* ---- Chips / pills reutilizáveis ---- */
+.db-chip { background: var(--cor-fundo); border: 1px solid var(--cor-borda-light); border-radius: 100px; padding: 2px 9px; font-size: 0.72rem; color: var(--cor-texto-secundario); white-space: nowrap; }
+.db-chip-alerta { background: var(--cor-alerta-bg); border-color: transparent; color: #92600a; font-weight: 600; }
+.db-pills { display: inline-flex; gap: 3px; background: var(--cor-fundo); border-radius: 100px; padding: 3px; }
+.db-pill { border: none; background: transparent; border-radius: 100px; padding: 3px 10px; font-size: 0.7rem; font-weight: 600; color: var(--cor-texto-muted); cursor: pointer; font-family: var(--font-principal); transition: all var(--transicao); }
+.db-pill:hover { color: var(--cor-texto); }
+.db-pill.ativo { background: var(--cor-dark-900); color: var(--cor-primaria); }
+
+/* ---- Overlays (detalhe de célula, config) ---- */
+.db-overlay { position: fixed; inset: 0; z-index: 600; background: rgba(13,13,13,0.55); display: flex; align-items: center; justify-content: center; padding: 24px; }
+.db-overlay-card { background: #fff; border-radius: var(--borda-radius-xl); border-top: 4px solid var(--cor-primaria); box-shadow: 0 20px 60px rgba(0,0,0,0.25); width: 100%; max-height: 86vh; overflow-y: auto; padding: 18px 20px; }
+.db-overlay-titulo { font-weight: 800; font-size: 1rem; margin-bottom: 2px; color: var(--cor-texto); }
+.db-overlay-sub { font-size: 0.8rem; color: var(--cor-texto-secundario); margin-bottom: 12px; line-height: 1.5; }
 
 /* ============================================
-   HERO — seletor de obra + imagem de capa + KPIs
+   HERO — obra + progresso executado × previsto
    ============================================ */
 .db-hero {
   position: relative;
@@ -45,63 +40,125 @@
   background-position: center;
   overflow: hidden;
   margin-bottom: 16px;
-  min-height: 220px;
+  min-height: 230px;
 }
 .db-hero-overlay {
-  background: linear-gradient(100deg, rgba(13,13,13,0.92) 0%, rgba(13,13,13,0.78) 45%, rgba(13,13,13,0.55) 100%);
-  padding: 16px 22px 20px;
+  background: linear-gradient(100deg, rgba(13,13,13,0.94) 0%, rgba(13,13,13,0.80) 45%, rgba(13,13,13,0.55) 100%);
+  padding: 16px 24px 22px;
   height: 100%;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
 }
 .db-hero-top { display: flex; align-items: center; gap: 8px; }
-.db-hero-select-label { font-size: 0.7rem; color: rgba(255,255,255,0.6); text-transform: uppercase; letter-spacing: 0.4px; }
+.db-hero-select-label { font-size: 0.68rem; color: rgba(255,255,255,0.55); text-transform: uppercase; letter-spacing: 0.5px; }
 .db-hero-select {
   background: rgba(255,255,255,0.08);
-  border: 1px solid rgba(255,255,255,0.25);
+  border: 1px solid rgba(255,255,255,0.22);
   color: #fff;
   border-radius: var(--borda-radius);
   padding: 5px 10px;
   font-size: 0.82rem;
   max-width: 260px;
 }
-.db-hero-info h1 { color: #fff; font-size: 1.5rem; font-weight: 800; margin-bottom: 2px; }
-.db-hero-sub { color: rgba(255,255,255,0.65); font-size: 0.85rem; margin-bottom: 14px; }
+.db-hero-info h1 { color: #fff; font-size: 1.55rem; font-weight: 800; margin-bottom: 1px; letter-spacing: -0.02em; }
+.db-hero-sub { color: rgba(255,255,255,0.6); font-size: 0.85rem; margin-bottom: 14px; }
+
+/* Barra executado × previsto — leitura em 1 segundo: quanto andou (amarelo)
+   e onde deveria estar (marcador branco). */
+.db-hero-progresso { max-width: 560px; margin-bottom: 16px; }
+.db-hero-prog-labels { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; font-size: 0.8rem; color: rgba(255,255,255,0.85); }
+.db-hero-prog-labels b { font-family: var(--font-mono); font-size: 1.25rem; color: var(--cor-primaria); font-weight: 700; }
+.db-hero-prog-esp { color: rgba(255,255,255,0.55); font-size: 0.74rem; }
+.db-hero-prog-barra { position: relative; height: 10px; background: rgba(255,255,255,0.14); border-radius: 100px; overflow: visible; }
+.db-hero-prog-exec { position: absolute; left: 0; top: 0; bottom: 0; background: linear-gradient(90deg, var(--cor-primaria-dark), var(--cor-primaria)); border-radius: 100px; display: block; transition: width 0.6s ease; }
+.db-hero-prog-marco { position: absolute; top: -4px; bottom: -4px; width: 3px; background: #fff; border-radius: 2px; box-shadow: 0 0 4px rgba(0,0,0,0.5); transform: translateX(-50%); }
+
 .db-hero-kpis { display: flex; flex-wrap: wrap; gap: 28px; }
-.db-kpi-valor { font-family: var(--font-mono); font-size: 1.3rem; font-weight: 700; color: #fff; }
-.db-kpi-label { font-size: 0.72rem; color: rgba(255,255,255,0.6); margin-top: 2px; display: flex; align-items: center; }
+.db-kpi-valor { font-family: var(--font-mono); font-size: 1.15rem; font-weight: 700; color: #fff; }
+.db-kpi-label { font-size: 0.7rem; color: rgba(255,255,255,0.55); margin-top: 2px; display: flex; align-items: center; }
+
+/* Toggle Fundação/Estrutura no header */
+.db-toggle-concreto { display: flex; align-items: center; gap: 6px; font-size: 0.78rem; color: var(--cor-texto-secundario); cursor: pointer; }
+.db-toggle-concreto input { accent-color: var(--cor-primaria); }
 
 /* ============================================
-   Seções em linha cheia (Curva S, IDP, Pacotes, Atividades, Resumo)
+   ANDAMENTO POR FRENTE DE TRABALHO (heatmap)
    ============================================ */
-.db-row { margin-bottom: 16px; }
-.db-grid-2 {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-  margin-bottom: 16px;
-}
-@media (max-width: 980px) {
-  .db-grid-2 { grid-template-columns: 1fr; }
-}
-.db-secao-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; flex-wrap: wrap; gap: 8px; }
-.db-secao-header h3 { font-size: 0.95rem; font-weight: 700; color: var(--cor-texto); }
+.db-fr-scroll { overflow: auto; max-height: 560px; border: 1px solid var(--cor-borda-light); border-radius: var(--borda-radius-lg); }
+.db-fr-tabela { border-collapse: separate; border-spacing: 0; width: 100%; font-size: 0.78rem; }
 
-/* ---- Atividades ---- */
-.db-ativ-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
-@media (max-width: 700px) { .db-ativ-grid { grid-template-columns: 1fr; } }
-.db-ativ-col-titulo { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: var(--cor-texto-muted); margin-bottom: 6px; }
-.db-ativ-item { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--cor-borda-light); }
-.db-ativ-item:last-child { border-bottom: none; }
-.db-ativ-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
-.db-ativ-info { flex: 1; min-width: 0; }
-.db-ativ-nome { font-size: 0.85rem; font-weight: 600; color: var(--cor-texto); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.db-ativ-sub { margin-top: 1px; }
-.db-ativ-perc { font-family: var(--font-mono); font-size: 0.8rem; font-weight: 700; color: var(--cor-primaria-dark); flex-shrink: 0; }
+.db-fr-tabela thead th { position: sticky; top: 0; z-index: 3; background: var(--cor-dark-900); color: #fff; font-weight: 600; }
+.db-fr-htorre th { padding: 6px 10px; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.6px; color: var(--cor-primaria); border-bottom: 1px solid var(--cor-dark-600); text-align: center; }
+.db-fr-hcol th { padding: 7px 8px; text-align: center; min-width: 66px; border-bottom: 2px solid var(--cor-primaria); }
+.db-fr-htorre + .db-fr-hcol th { top: 27px; } /* segunda linha sticky abaixo da primeira */
+.db-fr-hcol-main { font-weight: 700; font-size: 0.75rem; white-space: nowrap; }
+.db-fr-hcol-sub { font-weight: 400; font-size: 0.64rem; color: rgba(255,255,255,0.55); white-space: nowrap; }
+.db-fr-hgeral { min-width: 58px; }
 
-/* ---- Gráficos: legenda + tooltip flutuante (Curva S, IDP, Pacotes) ---- */
-.db-legenda { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 8px; font-size: 0.72rem; color: var(--cor-texto-secundario); }
+.db-fr-sticky { position: sticky; left: 0; z-index: 2; background: #fff; text-align: left !important; }
+thead .db-fr-sticky { z-index: 4; background: var(--cor-dark-900); }
+.db-fr-nome { font-weight: 600; color: var(--cor-texto); padding: 8px 12px; white-space: nowrap; border-bottom: 1px solid var(--cor-borda-light); border-right: 1px solid var(--cor-borda-light); max-width: 240px; overflow: hidden; text-overflow: ellipsis; }
+
+.db-fr-tabela tbody td { border-bottom: 1px solid var(--cor-borda-light); }
+.db-fr-cel { padding: 6px 6px 5px; text-align: center; cursor: pointer; transition: filter var(--transicao); min-width: 62px; }
+.db-fr-cel:hover { filter: brightness(0.96); }
+.db-fr-cel.pausada { opacity: 0.55; }
+.db-fr-cel.pausada .db-fr-cel-pct::after { content: ' ⏸'; font-size: 0.6rem; }
+.db-fr-cel-pct { font-family: var(--font-mono); font-weight: 700; font-size: 0.8rem; line-height: 1.2; }
+.db-fr-cel-barra { height: 3px; background: rgba(0,0,0,0.07); border-radius: 100px; margin-top: 4px; overflow: hidden; }
+.db-fr-cel-barra i { display: block; height: 100%; border-radius: 100px; }
+.db-fr-cel-vazia { background: repeating-linear-gradient(45deg, #fafafa 0 6px, #f3f3f3 6px 12px); }
+.db-fr-geral { font-family: var(--font-mono); font-weight: 800; font-size: 0.8rem; border-left: 2px solid var(--cor-borda); cursor: default; }
+
+.db-fr-rodape { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+.db-fr-fonte { font-size: 0.72rem; color: var(--cor-texto-muted); }
+
+/* Detalhe da célula */
+.db-fr-det-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--cor-borda-light); }
+.db-fr-det-item:last-of-type { border-bottom: none; }
+.db-fr-det-info { flex: 1; min-width: 0; }
+.db-fr-det-nome { font-weight: 600; font-size: 0.83rem; color: var(--cor-texto); }
+.db-fr-det-sub { font-size: 0.72rem; color: var(--cor-texto-muted); margin-top: 1px; }
+.db-fr-det-pct { font-family: var(--font-mono); font-weight: 700; font-size: 0.9rem; flex-shrink: 0; }
+
+/* ============================================
+   SUPRIMENTOS
+   ============================================ */
+.db-sup-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+.db-sup-lista { display: flex; flex-direction: column; }
+.db-sup-item { display: flex; align-items: center; gap: 10px; padding: 7px 4px; border-bottom: 1px solid var(--cor-borda-light); }
+.db-sup-item:last-child { border-bottom: none; }
+.db-sup-grupo { cursor: pointer; border-radius: var(--borda-radius-sm); }
+.db-sup-grupo:hover { background: var(--cor-fundo); }
+.db-sup-seta { width: 14px; flex-shrink: 0; text-align: center; color: var(--cor-texto-muted); font-size: 0.72rem; }
+.db-sup-flag { flex-shrink: 0; font-size: 0.85rem; }
+.db-sup-info { flex: 1; min-width: 0; }
+.db-sup-nome { font-size: 0.84rem; font-weight: 600; color: var(--cor-texto); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.db-sup-qtd { display: inline-block; background: var(--cor-fundo); border-radius: 100px; font-size: 0.66rem; font-weight: 700; color: var(--cor-texto-muted); padding: 0 7px; margin-left: 4px; vertical-align: middle; }
+.db-sup-sub { font-size: 0.72rem; color: var(--cor-texto-muted); margin-top: 1px; }
+
+/* ============================================
+   MINIMAPAS (Contenção / Estacas)
+   ============================================ */
+.db-minimapas { display: flex; flex-wrap: wrap; gap: 16px; }
+.db-minimapa { border: 1px solid var(--cor-borda-light); border-radius: var(--borda-radius-lg); padding: 10px 12px 8px; background: #fff; }
+.db-minimapa-titulo { font-weight: 700; font-size: 0.82rem; margin-bottom: 6px; color: var(--cor-texto); }
+.db-minimapa-rodape { font-size: 0.76rem; color: var(--cor-texto-secundario); font-family: var(--font-mono); margin-top: 6px; }
+
+/* ---- Métricas de Estacas ---- */
+.db-metrica-card { border: 1px solid var(--cor-borda-light); border-radius: var(--borda-radius-lg); padding: 10px 12px; background: #fff; }
+.db-metrica-valor { font-size: 1.15rem; font-weight: 700; font-family: var(--font-mono); color: var(--cor-texto); }
+.db-metrica-label { font-size: 0.68rem; color: var(--cor-texto-muted); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.3px; }
+
+/* Tabela limpa (métricas de estacas por tipo) */
+.db-tabela-clean { border-collapse: collapse; width: 100%; font-size: 0.78rem; }
+.db-tabela-clean th { padding: 6px 8px; border-bottom: 2px solid var(--cor-borda); text-align: center; font-weight: 700; color: var(--cor-texto-secundario); }
+.db-tabela-clean td { padding: 6px 8px; border-bottom: 1px solid var(--cor-borda-light); text-align: center; font-family: var(--font-mono); }
+.db-tabela-clean tbody tr:hover { background: var(--cor-fundo); }
+
+/* ---- Gráficos: legenda + tooltip flutuante ---- */
+.db-legenda { display: flex; flex-wrap: wrap; gap: 14px; font-size: 0.72rem; color: var(--cor-texto-secundario); }
 .db-legenda span { display: flex; align-items: center; gap: 5px; }
 .db-legenda i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
 
@@ -119,17 +176,8 @@
   z-index: 30;
   pointer-events: none;
 }
-.db-tt-titulo { font-weight: 700; margin-bottom: 6px; color: var(--cor-texto); }
-.db-tt-linha { display: flex; align-items: center; gap: 6px; padding: 2px 0; color: var(--cor-texto-secundario); }
-.db-tt-linha i { width: 9px; height: 9px; display: inline-block; flex-shrink: 0; }
-.db-tt-linha b { color: var(--cor-texto); margin-left: auto; font-family: var(--font-mono); }
 
 /* ---- Resumo por Apartamento ---- */
 .db-resumo-categoria td { background: var(--cor-primaria-ultra-light); font-weight: 700; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.3px; padding: 6px 14px; color: var(--cor-primaria-dark); }
 .db-subtotal-col { background: var(--cor-fundo-hover, #f7f7f7); font-weight: 600; }
 th.db-subtotal-col { font-size: 0.68rem; line-height: 1.15; }
-
-/* ---- Métricas de Estacas (Dashboard) ---- */
-.db-metrica-card { border: 1px solid var(--cor-borda-light); border-radius: 8px; padding: 10px 12px; background: #fff; }
-.db-metrica-valor { font-size: 1.15rem; font-weight: 700; font-family: var(--font-mono); color: var(--cor-texto); }
-.db-metrica-label { font-size: 0.68rem; color: var(--cor-texto-muted); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.3px; }
