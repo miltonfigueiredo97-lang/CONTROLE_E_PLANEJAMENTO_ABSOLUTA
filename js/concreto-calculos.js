@@ -158,13 +158,20 @@ const ConcretoCalculos = (() => {
       const volProj = orig ? orig.volume : p.volume;
       return s + Math.min(volProj, volLancadoPeca(p.id, lans));
     }, 0);
-    const pecasExcesso = ps.filter(p => {
+    // Estacas: o volume real normalmente passa do projeto por causa do solo
+    // (o furo sai maior que o calculado) — isso é ESPERADO, não erro de
+    // lançamento. Separa em "perda de solo" (informativo) do excesso de
+    // outras peças (que aí sim é pra corrigir — provável erro de lançamento).
+    const todosExcesso = ps.filter(p => {
       const lanTotal = volLancadoPeca(p.id, lans);
       return lanTotal > (p.volume || 0) * 1.001;
     }).map(p => {
       const lanTotal = volLancadoPeca(p.id, lans);
       return { ...p, lanTotal, excesso: lanTotal - p.volume };
     });
+    const pecasExcesso = todosExcesso.filter(p => p.subTipo !== 'Estacas');
+    const pecasPerdaSolo = todosExcesso.filter(p => p.subTipo === 'Estacas');
+    const perdaSoloTotal = pecasPerdaSolo.reduce((s, p) => s + p.excesso, 0);
     const prev = calcVolumePrevisto(btsConfig, lans);
     const projFaltando = Math.max(0, totalVol - prev.lancado);
     const realFaltando = Math.max(0, totalVol - execVol);
@@ -173,7 +180,7 @@ const ConcretoCalculos = (() => {
     return {
       totalVol, concVol, execVol, projFaltando, realFaltando, pctConc,
       volPrevisto: prev.total, volPrevistoFaltando: prev.faltando,
-      perdaInfo, pecasExcesso,
+      perdaInfo, pecasExcesso, pecasPerdaSolo, perdaSoloTotal,
     };
   }
 

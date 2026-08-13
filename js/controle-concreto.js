@@ -276,6 +276,27 @@ const ControleConcreto = (() => {
           <div style="margin-top:10px;font-size:11px;color:var(--cv-text3);">ℹ Corrija os lançamentos dessas peças — o Volume Real Concretado foi limitado ao projeto.</div>
         </div>` : ''}
 
+      ${kpis.pecasPerdaSolo && kpis.pecasPerdaSolo.length ? `
+        <div class="cc-alertBlue">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap;">
+            <span style="font-size:18px;">ℹ️</span>
+            <span style="font-weight:700;font-size:14px;">${kpis.pecasPerdaSolo.length} estaca${kpis.pecasPerdaSolo.length !== 1 ? 's' : ''} consumiu mais concreto que o projeto — perda de solo esperada</span>
+            <span style="font-family:var(--cv-mono);font-size:11px;color:var(--cv-text3);margin-left:auto;">Perda de solo: ${CC.fmt4(kpis.perdaSoloTotal)} m³</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            ${kpis.pecasPerdaSolo.map(p => `
+              <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 12px;background:rgba(59,130,246,0.06);border-radius:var(--cv-radius-sm);border-left:3px solid var(--cv-blue);flex-wrap:wrap;">
+                <div><span style="font-weight:600;font-size:13px;color:var(--cv-text);">${esc(p.nome)}</span><span style="font-size:12px;color:var(--cv-text3);margin-left:8px;">${esc(p.andar)}</span></div>
+                <div style="font-family:var(--cv-mono);font-size:12px;text-align:right;">
+                  <span style="color:var(--cv-text2);">Projeto: ${CC.fmt4(p.volume)} m³</span>
+                  <span style="color:var(--cv-blue);font-weight:700;margin-left:12px;">Real: ${CC.fmt4(p.lanTotal)} m³</span>
+                  <span style="background:var(--cv-blue);color:#fff;font-weight:700;font-size:11px;padding:2px 8px;border-radius:4px;margin-left:8px;">+${CC.fmt4(p.excesso)} m³ de solo</span>
+                </div>
+              </div>`).join('')}
+          </div>
+          <div style="margin-top:10px;font-size:11px;color:var(--cv-text3);">ℹ Normal em estacas — o furo real costuma sair maior que o calculado no projeto. Não precisa corrigir; o Volume Executado de Projeto continua limitado a 100% de cada peça.</div>
+        </div>` : ''}
+
       <div class="cc-launchBar">
         <div class="cc-launchBarContent">
           <div class="cc-launchBarLeft">

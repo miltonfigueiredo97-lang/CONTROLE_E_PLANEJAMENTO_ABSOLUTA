@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.60.27',
+  versaoAtual: 'V2.60.28',
 
   versoes: [
     {
@@ -5690,9 +5690,14 @@ const NotasVersao = {
       titulo:'Controle de Estacas: Acompanhamento ganha volume total/executado (projeto)/executado real (BTs)/índice de perda',
       itens:['Novos 4 cartões na concretagem selecionada: Volume total (o que o projeto precisa), Executado (projeto) — capado em 100% por peça, não conta excesso —, Executado real (BTs) — soma bruta do que as BTs entregaram, sem capar, mostra se sobrou/faltou além do previsto —, e Índice de perda — (sobra + perda em obra + perda cocho) das BTs usadas, dividido pelo volume previsto delas.',
         'Índice de perda acima de 5% pinta o cartão laranja, pra chamar atenção.']},
-    {versao:'V2.60.27',status:'aberta',data:'2026-08-13',tipo:'correcao',
+    {versao:'V2.60.27',status:'fechada',data:'2026-08-13',tipo:'correcao',
       titulo:'Controle de Estacas: menos espaço vazio no topo da tela cheia',
-      itens:['O botão "Fechar tela cheia" ocupava uma linha inteira sozinho, empurrando o resto pra baixo — agora flutua no canto superior direito (sem reservar espaço na fila normal), então as abas Marcadores/Planejamento/Acompanhamento começam bem mais perto do topo.']}
+      itens:['O botão "Fechar tela cheia" ocupava uma linha inteira sozinho, empurrando o resto pra baixo — agora flutua no canto superior direito (sem reservar espaço na fila normal), então as abas Marcadores/Planejamento/Acompanhamento começam bem mais perto do topo.']},
+    {versao:'V2.60.28',status:'aberta',data:'2026-08-13',tipo:'melhoria',
+      titulo:'Controle de Estacas: aviso de BT já alocada + Controle de Concreto entende perda de solo das estacas',
+      itens:['Popup de lançar por estaca: o seletor de BT agora mostra "(X% em outras peças)" quando essa BT já foi usada noutra peça, e o campo de % avisa em vermelho se o valor digitado passar de 100% da BT.',
+        'Controle de Concreto: peças com subtipo Estacas que lançam mais volume real do que o projeto previa NÃO entram mais no aviso vermelho "corrija esses lançamentos" — é normal em estaca, o furo real costuma sair maior que o calculado (perda de solo). Agora aparece numa seção informativa separada (azul), explicando que não precisa corrigir.',
+        'Volume Executado de Projeto continua igual — capado em 100% de cada peça, então esse excesso não infla o % de conclusão.']}
   ],
 
   render(containerId) {

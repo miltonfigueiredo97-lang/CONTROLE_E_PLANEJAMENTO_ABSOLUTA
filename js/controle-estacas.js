@@ -990,12 +990,20 @@ const ControleEstacas = (() => {
   function btUpdLinhaPeca(i, campo, valor) {
     estacaAtual.linhas[i][campo] = valor;
     if (campo === 'btId') { _renderLancarEstacaBody(); return; }
-    // só o % mudou — atualiza volume da linha e o total, sem re-render total
+    // só o % mudou — atualiza volume da linha, o aviso de excesso e o total, sem re-render total
     const b = btsConfig.find(x => x.id === estacaAtual.linhas[i].btId);
     if (b) {
       const vol = (EC.num(valor.replace(',', '.')) / 100) * b.volumePrevisto;
       const volEl = document.getElementById('ce-est-vol-' + i);
       if (volEl) volEl.textContent = EC.fmt1(vol) + ' m³';
+      const pctOutras = _pctBTAlocadaOutrasPecas(b.id, estacaAtual.pecaId);
+      const pctEsta = EC.num(valor.replace(',', '.'));
+      const avisoEl = document.getElementById('ce-est-aviso-' + i);
+      if (avisoEl) {
+        const excesso = (pctOutras + pctEsta) > 100.05;
+        avisoEl.style.display = excesso ? '' : 'none';
+        if (excesso) avisoEl.textContent = `⚠ Essa BT já tem ${EC.fmt1(pctOutras)}% usado em outra peça — com esse %, passaria de 100% da BT.`;
+      }
     }
     _atualizarTotalEstaca();
   }
@@ -1008,6 +1016,16 @@ const ControleEstacas = (() => {
       return s + (EC.num((l.pctBT || '').replace(',', '.')) / 100) * b.volumePrevisto;
     }, 0);
     totalEl.textContent = EC.fmt1(total) + ' m³';
+  }
+
+  // % de uma BT já alocado em OUTRAS peças (lançamentos já salvos no
+  // Firestore, excluindo a peça que está sendo editada agora) — usada pra
+  // avisar antes de passar de 100% de uma BT dividida entre peças.
+  function _pctBTAlocadaOutrasPecas(btId, excetoPecaId) {
+    const b = btsConfig.find(x => x.id === btId);
+    if (!b || !b.volumePrevisto) return 0;
+    const volOutras = lancamentos.filter(l => l.btConfigId === btId && l.pecaId !== excetoPecaId).reduce((s, l) => s + (l.volume || 0), 0);
+    return (volOutras / b.volumePrevisto) * 100;
   }
 
   async function salvarEstacaAcomp() {
@@ -1142,9 +1160,13 @@ const ControleEstacas = (() => {
       return s + (EC.num((l.pctBT || '').replace(',', '.')) / 100) * b.volumePrevisto;
     }, 0);
     const idsUsados = new Set(estacaAtual.linhas.map(l => l.btId).filter(Boolean));
+    // % de cada BT já alocado em OUTRAS peças (lançamentos já salvos, exceto a peça atual) —
+    // pra não passar de 100% da BT sem perceber, já que uma BT pode ser dividida entre várias peças.
     const opcoesBT = selId => {
-      return `<option value="">— BT —</option>` + btsConc.filter(b => b.id === selId || !idsUsados.has(b.id)).map(b =>
-        `<option value="${b.id}" ${selId === b.id ? 'selected' : ''}>BT-${b.numero} · ${EC.fmt1(b.volumePrevisto)}m³</option>`).join('');
+      return `<option value="">— BT —</option>` + btsConc.filter(b => b.id === selId || !idsUsados.has(b.id)).map(b => {
+        const pctOutras = _pctBTAlocadaOutrasPecas(b.id, estacaAtual.pecaId);
+        return `<option value="${b.id}" ${selId === b.id ? 'selected' : ''}>BT-${b.numero} · ${EC.fmt1(b.volumePrevisto)}m³${pctOutras > 0.01 ? ` (${EC.fmt1(pctOutras)}% em outras peças)` : ''}</option>`;
+      }).join('');
     };
     el.innerHTML = `
       <div class="text-sm text-muted" style="margin-bottom:10px;">Precisa de ${EC.fmt1(volNecessario)} m³ · recebido até agora ${EC.fmt1(totalRecebido)} m³ (${EC.fmt1(volNecessario > 0 ? totalRecebido / volNecessario * 100 : 0)}%)</div>
@@ -1154,11 +1176,17 @@ const ControleEstacas = (() => {
           ${estacaAtual.linhas.map((l, i) => {
             const b = btsConfig.find(x => x.id === l.btId);
             const vol = b ? (EC.num((l.pctBT || '').replace(',', '.')) / 100) * b.volumePrevisto : 0;
-            return `<div style="display:grid;grid-template-columns:1fr 100px 90px auto;gap:8px;margin-bottom:6px;align-items:center;">
-              <select class="form-control" onchange="CE.btUpdLinhaPeca(${i}, 'btId', this.value)">${opcoesBT(l.btId)}</select>
-              <input type="text" inputmode="decimal" class="form-control" placeholder="% da BT" value="${esc(l.pctBT)}" oninput="CE.btUpdLinhaPeca(${i}, 'pctBT', this.value)">
-              <span id="ce-est-vol-${i}" style="font-family:var(--font-mono);font-size:.78rem;color:var(--cor-texto-secundario);text-align:right;">${EC.fmt1(vol)} m³</span>
-              <button class="btn btn-secundario btn-sm" style="color:var(--cv-red,#ef4444);" onclick="CE.btRemLinhaPeca(${i})" ${estacaAtual.linhas.length <= 1 ? 'disabled' : ''}>✕</button>
+            const pctOutras = b ? _pctBTAlocadaOutrasPecas(b.id, estacaAtual.pecaId) : 0;
+            const pctEsta = EC.num((l.pctBT || '').replace(',', '.'));
+            const excesso = b && (pctOutras + pctEsta) > 100.05;
+            return `<div style="margin-bottom:6px;">
+              <div style="display:grid;grid-template-columns:1fr 100px 90px auto;gap:8px;align-items:center;">
+                <select class="form-control" onchange="CE.btUpdLinhaPeca(${i}, 'btId', this.value)">${opcoesBT(l.btId)}</select>
+                <input type="text" inputmode="decimal" class="form-control" style="${excesso ? 'border-color:#ef4444;' : ''}" placeholder="% da BT" value="${esc(l.pctBT)}" oninput="CE.btUpdLinhaPeca(${i}, 'pctBT', this.value)">
+                <span id="ce-est-vol-${i}" style="font-family:var(--font-mono);font-size:.78rem;color:var(--cor-texto-secundario);text-align:right;">${EC.fmt1(vol)} m³</span>
+                <button class="btn btn-secundario btn-sm" style="color:var(--cv-red,#ef4444);" onclick="CE.btRemLinhaPeca(${i})" ${estacaAtual.linhas.length <= 1 ? 'disabled' : ''}>✕</button>
+              </div>
+              <div id="ce-est-aviso-${i}" class="text-sm" style="color:#ef4444;margin-top:2px;${excesso ? '' : 'display:none;'}">⚠ Essa BT já tem ${EC.fmt1(pctOutras)}% usado em outra peça — com esse %, passaria de 100% da BT.</div>
             </div>`;
           }).join('')}
         </div>
