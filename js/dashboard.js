@@ -2341,15 +2341,16 @@ const Dashboard = (() => {
   function _svgFundacaoEstruturaPorAndar(dados) {
     const n = dados.length;
     const nCat = CATEGORIAS_CONCRETO.length;
-    // Cada andar tem largura FIXA confortável — o gráfico cresce pra direita
-    // conforme a quantidade de andares e ganha scroll horizontal quando
-    // precisa. Antes o SVG era espremido pra caber 100% na largura do card,
-    // o que reduzia barras e fontes pra tamanho ilegível em obras com muitos
-    // andares (22 andares = tudo com metade do tamanho na tela).
+    // Largura por andar é FIXA (não encolhe com muitos andares — ganha
+    // scroll horizontal em vez de virar ilegível), e a largura TOTAL é
+    // proporcional ao conteúdo real: com 1 andar o gráfico é estreito, não
+    // um bloco gigante esticado por uma largura mínima artificial.
     const larguraGrupoPx = 112;
-    const H = 460; // mais alto: barras respiram e os valores ficam legíveis
-    const padL = 60, padR = 20, padT = 28, padB = 120;
-    const W = Math.max(700, n * larguraGrupoPx + padL + padR);
+    // Altura também acompanha: obra com 1-2 andares não precisa (nem fica
+    // bem) com um gráfico de 460px de altura.
+    const H = n <= 2 ? 300 : 460;
+    const padL = 60, padR = 20, padT = 28, padB = n <= 2 ? 90 : 120;
+    const W = n * larguraGrupoPx + padL + padR;
     const plotW = W - padL - padR, plotH = H - padT - padB;
     const maxV = Math.max(1, ...dados.flatMap(d => d.porCategoria.map(c => Math.max(c.previsto, c.executado))));
     const barW = 13; // fixo e grosso o suficiente pra ler o rótulo dentro

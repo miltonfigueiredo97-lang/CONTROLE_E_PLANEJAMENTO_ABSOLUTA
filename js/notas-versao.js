@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.60.36',
+  versaoAtual: 'V2.60.37',
 
   versoes: [
     {
@@ -5733,11 +5733,15 @@ const NotasVersao = {
       titulo:'Dashboard: Curva S e Solo Grampeado sumindo sem erro — cada seção agora isolada, uma não trava mais as outras',
       itens:['Causa estrutural provável: as 9 seções do Dashboard (Hero, Atividades, Painel de Andamento, Solo Grampeado, Fundação e Estrutura, Estacas, Curva S, Resumo por Apartamento) compartilhavam um único try/catch em sequência — se qualquer uma lançasse uma exceção não tratada internamente, TODAS as seções seguintes na lista simplesmente não rodavam, sem nenhuma mensagem visível (só um toast genérico que passa rápido). Agora cada seção tem seu próprio try/catch isolado: uma falha não impede mais as outras de aparecer.',
         'Motor de cálculo de Solo Grampeado: retry aumentado (de 1s pra 2s) e, se ainda não carregar, tenta reinjetar o script automaticamente antes de desistir — cobre falha pontual de rede ao baixar o arquivo, não só timing.']},
-    {versao:'V2.60.36',status:'aberta',data:'2026-08-13',tipo:'correcao',
+    {versao:'V2.60.36',status:'fechada',data:'2026-08-13',tipo:'correcao',
       titulo:'Dashboard: gráfico Fundação e Estrutura estava minúsculo e ilegível em obras com muitos andares',
       itens:['Erro na tentativa anterior de "caber tudo sem scroll": o SVG era espremido pra 100% da largura do card, então com 22 andares cada barra virava ~7px e as fontes ~5px na tela — impossível de ler.',
         'Agora cada andar tem largura FIXA de 112px e o gráfico é bem mais alto (460px): barras de 13px, valores em fonte 11px, nomes dos andares em 12px. Quando há muitos andares, o gráfico ganha scroll horizontal em vez de encolher tudo — melhor rolar do que não conseguir ler.',
-        'Nome da categoria (Estacas/Fundação/Estrutura) dentro da barra só aparece quando a barra tem altura suficiente pro texto caber, evitando texto espremido/cortado nas barras pequenas.']}
+        'Nome da categoria (Estacas/Fundação/Estrutura) dentro da barra só aparece quando a barra tem altura suficiente pro texto caber, evitando texto espremido/cortado nas barras pequenas.']},
+    {versao:'V2.60.37',status:'aberta',data:'2026-08-13',tipo:'correcao',
+      titulo:'Dashboard: gráfico Fundação e Estrutura virava um bloco gigante em obra com poucos andares',
+      itens:['A correção da V2.60.36 tinha uma largura mínima artificial de 700px — numa obra com 1 andar só (ex: Zenith Residence, só 2º Subsolo), a barra ficava esticada ocupando a tela inteira.',
+        'Agora a largura total é proporcional ao conteúdo real (1 andar = gráfico estreito de ~190px; 22 andares = ~2.500px com scroll lateral) e a altura acompanha (300px com até 2 andares, 460px acima disso) — sem mínimo forçado nem bloco desproporcional.']}
   ],
 
   render(containerId) {
