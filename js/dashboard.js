@@ -198,15 +198,35 @@ const Dashboard = (() => {
       historicoExecucao = hist;
       suprimentos = sup;
       el.innerHTML = _htmlEsqueleto();
-      _renderHero();
-      _renderAtividades();
-      _renderSuprimentosDash();
-      await _renderPainelAndamento();
-      _renderSoloGrampeadoPanel();
-      await _renderFundacaoEstrutura();
-      await _renderEstacasPanel();
-      _renderCurvaS();
-      await _renderResumoApartamento();
+      // Cada seção isolada com seu próprio try/catch — uma exceção numa
+      // seção (ex: dado inesperado que quebra um cálculo) não pode mais
+      // impedir as seções seguintes de renderizar. Antes, um erro em
+      // qualquer uma delas (ex: Painel de Andamento) fazia a Curva S e o
+      // Solo Grampeado ficarem em branco sem nenhum aviso, porque o catch
+      // era um só pra tudo e parava a execução no meio da sequência.
+      const secoes = [
+        ['Hero', () => _renderHero()],
+        ['Atividades', () => _renderAtividades()],
+        ['Suprimentos', () => _renderSuprimentosDash()],
+        ['Painel de Andamento', () => _renderPainelAndamento()],
+        ['Solo Grampeado', () => _renderSoloGrampeadoPanel()],
+        ['Fundação e Estrutura', () => _renderFundacaoEstrutura()],
+        ['Estacas', () => _renderEstacasPanel()],
+        ['Curva S', () => _renderCurvaS()],
+        ['Resumo por Apartamento', () => _renderResumoApartamento()],
+      ];
+      for (const [nomeSecao, fn] of secoes) {
+        try {
+          await fn();
+        } catch (eSecao) {
+          console.error(`Erro na seção "${nomeSecao}" do Dashboard:`, eSecao);
+          // Não interrompe as próximas seções — só registra no console.
+          // Se essa seção específica tinha seu próprio host/try interno,
+          // ela já deve ter mostrado sua mensagem de erro própria; isto
+          // aqui é rede de segurança pra quando o erro acontece FORA do
+          // try interno de cada função (ex: antes do primeiro await).
+        }
+      }
     } catch (e) {
       console.error(e);
       Utils.toast('Erro ao carregar dashboard.', 'erro');
@@ -2091,17 +2111,31 @@ const Dashboard = (() => {
   async function _renderSoloGrampeadoMinimapas() {
     const host = document.getElementById('db-solo-grampeado');
     if (!host) return;
-    // Pequeno retry defensivo: em rede lenta, o script pode ainda estar
-    // sendo interpretado no instante exato em que esta função roda (mesmo
-    // vindo antes no HTML) — espera até 1s antes de desistir, em vez de
-    // falhar na primeira checagem.
+    // Retry defensivo: espera até 2s (rede lenta) e, se ainda não achou o
+    // motor, tenta reinjetar o script na página manualmente antes de
+    // desistir — cobre o caso de o <script> original ter falhado (erro de
+    // rede pontual) sem travar o carregamento do resto da página.
     let SG = window.SoloGrampeadoCalculos;
-    for (let tentativa = 0; !SG && tentativa < 5; tentativa++) {
+    for (let tentativa = 0; !SG && tentativa < 10; tentativa++) {
       await new Promise(r => setTimeout(r, 200));
       SG = window.SoloGrampeadoCalculos;
     }
     if (!SG) {
-      host.innerHTML = '<div class="estado-vazio"><p class="text-sm">Motor de cálculo de Solo Grampeado não carregou (js/solo-grampeado-calculos.js). Recarregue a página (Ctrl+Shift+R); se persistir, verifique a conexão.</p></div>';
+      try {
+        await new Promise((resolve, reject) => {
+          const s = document.createElement('script');
+          s.src = 'js/solo-grampeado-calculos.js?retry=' + Date.now(); // cache-bust
+          s.onload = resolve;
+          s.onerror = reject;
+          document.head.appendChild(s);
+        });
+        SG = window.SoloGrampeadoCalculos;
+      } catch (eScript) {
+        console.error('Falha ao reinjetar solo-grampeado-calculos.js:', eScript);
+      }
+    }
+    if (!SG) {
+      host.innerHTML = '<div class="estado-vazio"><p class="text-sm">Motor de cálculo de Solo Grampeado não carregou (js/solo-grampeado-calculos.js), mesmo após nova tentativa. Verifique sua conexão com a internet ou tente novamente em alguns minutos.</p></div>';
       return;
     }
     try {
