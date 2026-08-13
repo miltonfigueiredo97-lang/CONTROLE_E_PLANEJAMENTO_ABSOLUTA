@@ -514,9 +514,33 @@ const DashConcreto = (() => {
       elConteudo.innerHTML = `<div id="db-projeto-zoomable" style="transform:scale(${_popupZoom});transform-origin:top center;transition:transform .1s;">${stage}</div>`;
       const scrollEl = document.getElementById('db-projeto-scroll');
       if (scrollEl) {
+        // Ctrl+scroll (ou pinça do touchpad) = zoom; scroll normal = pan
+        // nativo (vertical; Shift+scroll = horizontal, padrão do navegador).
         scrollEl.onwheel = (ev) => {
+          if (!ev.ctrlKey) return;
           ev.preventDefault();
           popupZoomAjustar(ev.deltaY < 0 ? 0.15 : -0.15, andar);
+        };
+        // Pan por arrasto: segurar botão esquerdo (ou do meio) e mover.
+        scrollEl.style.cursor = 'grab';
+        scrollEl.onmousedown = (ev) => {
+          if (ev.button !== 0 && ev.button !== 1) return;
+          if (ev.target.closest('button')) return; // não sequestrar cliques nos botões ‹ ›
+          ev.preventDefault();
+          const startX = ev.clientX, startY = ev.clientY;
+          const startL = scrollEl.scrollLeft, startT = scrollEl.scrollTop;
+          scrollEl.style.cursor = 'grabbing';
+          const mover = (m) => {
+            scrollEl.scrollLeft = startL - (m.clientX - startX);
+            scrollEl.scrollTop = startT - (m.clientY - startY);
+          };
+          const soltar = () => {
+            scrollEl.style.cursor = 'grab';
+            document.removeEventListener('mousemove', mover);
+            document.removeEventListener('mouseup', soltar);
+          };
+          document.addEventListener('mousemove', mover);
+          document.addEventListener('mouseup', soltar);
         };
       }
     } catch (e) {

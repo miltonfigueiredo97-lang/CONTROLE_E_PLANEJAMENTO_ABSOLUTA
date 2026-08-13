@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.62.0',
+  versaoAtual: 'V2.62.1',
 
   versoes: [
     {
@@ -5768,7 +5768,7 @@ const NotasVersao = {
       itens:['A Curva S foi removida permanentemente a pedido: o cálculo dependia de um histórico diário que só passou a ser gravado recentemente, e as tentativas de reconstruir o passado a partir de dados incompletos produziam valores que não refletiam a realidade da obra (executado saltando pra 100%, meses anteriores zerados). Dava mais trabalho de manter do que valor entregava.',
         'Removidos junto: o gráfico de Índice de Desempenho de Prazo (IDP), que dependia dela e já não era exibido, e o seletor Mensal/Semanal. Ao todo, 405 linhas de código a menos no Dashboard.',
         'O histórico de execução (obras/{obra}/historicoExecucao) continua sendo gravado normalmente a cada atualização de tarefa — nada foi perdido no banco, caso no futuro se queira retomar algum gráfico de evolução com base histórica já consolidada.']},
-    {versao:'V2.62.0',status:'aberta',data:'2026-08-13',tipo:'funcionalidade',
+    {versao:'V2.62.0',status:'fechada',data:'2026-08-13',tipo:'funcionalidade',
       titulo:'Dashboard renovado: frentes de trabalho automáticas e visual novo',
       itens:['O Dashboard foi dividido internamente em seções independentes (Frentes, Suprimentos, Contenção, Fundação/Estrutura, Estacas, Resumo por Apartamento) — cada uma no seu próprio arquivo. Mexer numa não afeta as outras, e um erro em uma seção não derruba mais a página inteira.',
         'Nova visão central: "Andamento por Frente de Trabalho". Linha = frente/serviço com nome amigável, coluna = pavimento (ou apartamento), célula = % com micro-barra de progresso e ✓ quando concluída. Cabeçalho e primeira coluna ficam fixos ao rolar; clique numa célula abre as tarefas daquele cruzamento.',
@@ -5776,7 +5776,11 @@ const NotasVersao = {
         'Removida a antiga seção "Atividades" (listas de Em Execução/Próximas com as linhas cruas do planejamento) — substituída pela visão de frentes.',
         'Hero da obra redesenhado: barra de progresso executado (amarelo) com marcador branco do previsto, % grande, badges de prazo (No prazo / X meses atrasado) e seletor de obra integrado.',
         'Suprimentos, minimapas de Contenção e Estacas e Resumo por Apartamento ganharam o mesmo padrão visual (chips, estados vazios amigáveis, tabelas limpas). Seções de Contenção e Estacas agora somem sozinhas quando a obra não tem essas disciplinas.',
-        'Limpeza: removidos códigos mortos (PPC semanal, Motivos de Atraso, Pacotes) que não eram exibidos desde versões anteriores.']}
+        'Limpeza: removidos códigos mortos (PPC semanal, Motivos de Atraso, Pacotes) que não eram exibidos desde versões anteriores.']},
+    {versao:'V2.62.1',status:'aberta',data:'2026-08-13',tipo:'correcao',
+      titulo:'Popup do projeto: pan por arrasto + zoom com Ctrl+scroll',
+      itens:['No popup que abre ao clicar numa barra de Fundação/Estrutura, agora dá pra ARRASTAR a prancha segurando o botão esquerdo (ou do meio) do mouse — cursor vira mãozinha.',
+        'Zoom passou a ser Ctrl+scroll (ou pinça do touchpad); o scroll normal volta a rolar a prancha (pan vertical, Shift+scroll horizontal), como em softwares de CAD/mapas. Antes o scroll dava zoom e não havia como navegar arrastando.']}
   ],
 
   render(containerId) {
