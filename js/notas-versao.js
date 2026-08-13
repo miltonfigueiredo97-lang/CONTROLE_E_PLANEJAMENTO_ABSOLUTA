@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.60.25',
+  versaoAtual: 'V2.60.26',
 
   versoes: [
     {
@@ -5681,11 +5681,15 @@ const NotasVersao = {
         'Agora: seleciona a ESTACA/FUNDAÇÃO, e informa quais BTs contribuíram nela e quanto % de CADA BT foi usado ali (ex: 100% da BT-1, 100% da BT-2, 40% da BT-3) — muito mais fácil de responder olhando pro caminhão, não pra peça.',
         'Por trás, os dados continuam salvos e somados exatamente igual — o % e volume gravados no lançamento são calculados a partir do %-da-BT informado, então o Controle de Concreto e todo o resto do sistema batem igual, só a forma de PERGUNTAR mudou.',
         'BTs agora têm edição própria (✎) pra ajustar número, volume previsto, NF, código, sobra, perda e cocho depois de criadas — esses dados são do caminhão inteiro, então valem pra todas as peças que ele concretou.']},
-    {versao:'V2.60.25',status:'aberta',data:'2026-08-13',tipo:'melhoria',
+    {versao:'V2.60.25',status:'fechada',data:'2026-08-13',tipo:'melhoria',
       titulo:'Controle de Estacas: Acompanhamento em popups — menu de cima parou de tampar o mapa',
       itens:['A lista de BTs + "Lançar por Estaca/Fundação" ficavam sempre abertos em cima do mapa, empurrando o desenho pra baixo (pior ainda na tela cheia). Virou botão único "🚚 N BTs nesta concretagem", que abre um popup só pra gerenciar as BTs.',
         'Removido o seletor "Selecione a peça" — agora é só clicar na estaca/fundação no mapa (a mesma que já fica com o anel amarelo, planejada nesta concretagem) que abre o popup de lançar, com o nome dela já no título.',
-        'O mapa agora ocupa quase toda a tela — só o essencial (seletor de concretagem + botão de BTs + legenda) fica em cima.']}
+        'O mapa agora ocupa quase toda a tela — só o essencial (seletor de concretagem + botão de BTs + legenda) fica em cima.']},
+    {versao:'V2.60.26',status:'aberta',data:'2026-08-13',tipo:'melhoria',
+      titulo:'Controle de Estacas: Acompanhamento ganha volume total/executado (projeto)/executado real (BTs)/índice de perda',
+      itens:['Novos 4 cartões na concretagem selecionada: Volume total (o que o projeto precisa), Executado (projeto) — capado em 100% por peça, não conta excesso —, Executado real (BTs) — soma bruta do que as BTs entregaram, sem capar, mostra se sobrou/faltou além do previsto —, e Índice de perda — (sobra + perda em obra + perda cocho) das BTs usadas, dividido pelo volume previsto delas.',
+        'Índice de perda acima de 5% pinta o cartão laranja, pra chamar atenção.']}
   ],
 
   render(containerId) {

@@ -705,6 +705,7 @@ const ControleEstacas = (() => {
     const executadas = listaPecas.filter(_pecaExecutada);
     const pendentes = listaPecas.filter(p => !_pecaExecutada(p));
     const resumoObra = _resumoObraEstacas();
+    const resumoVol = acompConcretagemId ? _resumoVolumesConcretagem(acompConcretagemId) : null;
     const qtdBTs = acompConcretagemId ? _btsDaConcretagem(acompConcretagemId).length : 0;
     el.innerHTML = `
       <div class="cc-panel">
@@ -732,7 +733,13 @@ const ControleEstacas = (() => {
             <button class="btn btn-secundario btn-sm" onclick="CE.zoomAjustar(0.25)">+</button>
           </div>
           <div id="ce-acomp-mapa-host"></div>
-          <div class="cc-kpiGrid" style="grid-template-columns:repeat(2,1fr);margin-top:14px;">
+          <div class="cc-kpiGrid" style="grid-template-columns:repeat(4,1fr);margin-top:14px;">
+            <div class="cc-kpi"><div class="cc-kpiIcon">📦</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Volume total (projeto)</div><div class="cc-kpiValue">${EC.fmt1(resumoVol.volumeTotal)}<span class="cc-kpiUnit">m³</span></div></div></div>
+            <div class="cc-kpi cc-kpiGreen"><div class="cc-kpiIcon">✅</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Executado (projeto)</div><div class="cc-kpiValue">${EC.fmt1(resumoVol.volumeExecutadoProjeto)}<span class="cc-kpiUnit">m³</span></div></div></div>
+            <div class="cc-kpi cc-kpiBlue"><div class="cc-kpiIcon">🚚</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Executado real (BTs)</div><div class="cc-kpiValue">${EC.fmt1(resumoVol.volumeExecutadoReal)}<span class="cc-kpiUnit">m³</span></div></div></div>
+            <div class="cc-kpi ${resumoVol.indicePerda > 5 ? 'cc-kpiOrange' : ''}"><div class="cc-kpiIcon">📉</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Índice de perda</div><div class="cc-kpiValue">${EC.fmt1(resumoVol.indicePerda)}<span class="cc-kpiUnit">%</span></div></div></div>
+          </div>
+          <div class="cc-kpiGrid" style="grid-template-columns:repeat(2,1fr);margin-top:10px;">
             <div class="cc-kpi cc-kpiGreen"><div class="cc-kpiIcon">✅</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Executado (concretagem)</div><div class="cc-kpiValue">${executadas.length}<span class="cc-kpiUnit">/ ${listaPecas.length}</span></div></div></div>
             <div class="cc-kpi cc-kpiOrange"><div class="cc-kpiIcon">⏳</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Faltando (concretagem)</div><div class="cc-kpiValue">${pendentes.length}<span class="cc-kpiUnit">/ ${listaPecas.length}</span></div></div></div>
           </div>
@@ -927,6 +934,35 @@ const ControleEstacas = (() => {
     const pc = pecaConc.find(x => x.pecaId === p.id && x.concretagemId === concId);
     const pctConc = pc ? (parseFloat(pc.pctConcretagem) || 0) / 100 : 1;
     return (p.volume || 0) * pctConc;
+  }
+
+  // Volume total (o que o PROJETO precisa) x executado (capado em 100% por
+  // peça — não conta excesso) x executado REAL pelas BTs (soma bruta do que
+  // as BTs entregaram nas peças, sem capar — mostra se sobrou/faltou além
+  // do previsto) x índice de perda (sobra+perda das BTs usadas / volume
+  // previsto delas).
+  function _resumoVolumesConcretagem(concId) {
+    const listaPecas = _pecasPlanejadas(concId);
+    let volumeTotal = 0, volumeExecutadoProjeto = 0;
+    listaPecas.forEach(p => {
+      const volNecessario = _volumeConcPeca(p, concId);
+      const pct = ConcretoCalculos.pctConcretado(p, lancamentos);
+      volumeTotal += volNecessario;
+      volumeExecutadoProjeto += Math.min(volNecessario, (pct / 100) * volNecessario);
+    });
+    const lansConc = lancamentos.filter(l => l.concretagemId === concId);
+    const volumeExecutadoReal = lansConc.reduce((s, l) => s + (l.volume || 0), 0);
+    const idsBTsUsadas = new Set(lansConc.map(l => l.btConfigId));
+    let volumePrevistoBTs = 0, perdaBTs = 0;
+    idsBTsUsadas.forEach(btId => {
+      const b = btsConfig.find(x => x.id === btId);
+      if (!b) return;
+      volumePrevistoBTs += b.volumePrevisto || 0;
+      const lan = lansConc.find(l => l.btConfigId === btId);
+      perdaBTs += (lan?.sobraCaminhao || 0) + (lan?.perdaObra || 0) + (lan?.perdaCocho || 0);
+    });
+    const indicePerda = volumePrevistoBTs > 0 ? (perdaBTs / volumePrevistoBTs) * 100 : 0;
+    return { volumeTotal, volumeExecutadoProjeto, volumeExecutadoReal, indicePerda };
   }
 
   // ══════════════════════════════════════════
