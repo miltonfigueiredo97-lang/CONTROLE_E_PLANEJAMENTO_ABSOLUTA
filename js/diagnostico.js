@@ -117,6 +117,9 @@ const Diagnostico = (() => {
       const pecasFundacao = pc.filter(p => p.tipo === 'Fundação' && !isEstaca(p));
       const pecasEstrutura = pc.filter(p => p.tipo !== 'Fundação');
       const CC = window.ConcretoCalculos;
+      // Normalizador de nome de andar (tolera acento/grau/maiúscula) — usado
+      // já na seção 3 e de novo na 4, por isso declarado aqui no topo.
+      const norm = a => CC ? CC.normalizarAndar(a) : String(a || '').trim();
       const comLancamento = pecasEstaca.filter(p => lans.some(l => l.pecaId === p.id));
       const pctPorPeca = pecasEstaca.map(p => ({ p, pct: CC ? CC.pctConcretado(p, lans) : 0 }));
       const emExecucao = pctPorPeca.filter(x => x.pct > 0);
@@ -176,7 +179,6 @@ const Diagnostico = (() => {
       // ---- 4. ANDARES: grafias distintas (causa de barra duplicada/split) ----
       const andaresBrutos = [...new Set(pc.map(p => p.andar || '(vazio)'))];
       const ordemSalva = cfgConcreto?.ordemAndares || [];
-      const norm = a => CC ? CC.normalizarAndar(a) : String(a || '').trim();
       const gruposNorm = new Map();
       andaresBrutos.forEach(a => {
         const k = norm(a);
@@ -209,7 +211,25 @@ const Diagnostico = (() => {
         <div class="diag-titulo">5. Estrutura da Obra e vínculos (Painel de Andamento)</div>
         <div class="diag-linha">Torres: <b>${torres.length}</b> · Pavimentos: <b>${qtdPav}</b> · Apartamentos: <b>${qtdApto}</b> ${torres.length ? '' : badge('não cadastrada', ERRO)}</div>
         <div class="diag-linha">Tarefas com vínculo de local preenchido: ${tarefasComVinculo.length ? badge(tarefasComVinculo.length + ' de ' + tf.length, OK) : badge('0 — Painel fica vazio sem isso', ERRO)}</div>
-        <div class="diag-linha" style="color:#666;">Sem vínculo: rode Planejamento → ⚙ Ferramentas → 🔗 Auto-vincular por Nome.</div>
+        <div style="margin-top:8px;"><b style="font-size:.8rem;">Nomes cadastrados na Estrutura da Obra × quantas tarefas contêm esse nome (é assim que o Auto-vincular casa):</b>
+          <table class="diag-tabela" style="margin-top:4px;">
+            <tr><th>Tipo</th><th>Nome cadastrado (exato)</th><th>Tarefas que contêm esse texto</th></tr>
+            ${torres.flatMap(t => (t.pavimentos || []).flatMap(p => {
+              const nomeP = p.nome || '';
+              const achouP = tf.filter(x => (x.nome || '').toLowerCase().includes(nomeP.toLowerCase())).length;
+              const linhaP = `<tr><td>Pavimento</td><td>"${esc(nomeP)}"</td><td>${achouP ? badge(achouP, OK) : badge('0 — não casa', ERRO)}</td></tr>`;
+              const linhasA = (p.apartamentos || []).map(a => {
+                const nomeA = a.nome || '';
+                const achouA = tf.filter(x => (x.nome || '').toLowerCase().includes(nomeA.toLowerCase())).length;
+                return `<tr><td style="padding-left:18px;">↳ Apto</td><td>"${esc(nomeA)}"</td><td>${achouA ? badge(achouA, OK) : badge('0 — não casa', ERRO)}</td></tr>`;
+              });
+              return [linhaP, ...linhasA];
+            })).join('')}
+          </table></div>
+        <div style="margin-top:8px;"><b style="font-size:.8rem;">Amostra de 8 nomes REAIS de tarefas-folha (compare com os nomes acima):</b>
+          ${folhas.slice(0, 8).map(t => `<div class="diag-linha">"${esc(t.nome || '')}"</div>`).join('')}
+        </div>
+        <div class="diag-linha" style="color:#666;margin-top:6px;">Se um pavimento/apto aparece com "0 — não casa", o nome cadastrado na Estrutura precisa ser escrito igual ao que aparece dentro do nome das tarefas (ex: se a tarefa diz "1° Pavimento" com símbolo de grau e a Estrutura tem "1º Pavimento" com ordinal, não casa).</div>
       </div>`;
 
       // ---- 6. Erros de leitura de coleção ----

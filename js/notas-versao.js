@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.60.40',
+  versaoAtual: 'V2.60.41',
 
   versoes: [
     {
@@ -5757,7 +5757,12 @@ const NotasVersao = {
         'A estimativa dos meses anteriores ao histórico distribuía o progresso de cada tarefa do início dela até HOJE, empurrando tudo pro presente e achatando a curva no passado. Agora distribui pelo período planejado real da tarefa (limitado a hoje).',
         'A transição estimativa → histórico criava um degrau vertical: o histórico recomeçava do zero em vez de continuar do patamar já atingido. Corrigido — o histórico soma a partir de onde a estimativa parou.',
         'Ancoragem final: a curva executada agora é ajustada pra terminar exatamente no percentual real da obra (a mesma soma ponderada por duração que aparece no Hero). Antes podia terminar em 100% com a obra em 12%.',
-        'A linha do Executado para no mês atual — antes seguia reta até o fim do gráfico, dando a impressão de que a obra já estava executada nos meses futuros.']}
+        'A linha do Executado para no mês atual — antes seguia reta até o fim do gráfico, dando a impressão de que a obra já estava executada nos meses futuros.']},
+    {versao:'V2.60.41',status:'aberta',data:'2026-08-13',tipo:'correcao',
+      titulo:'Diagnóstico: erro "Cannot access norm before initialization" + nova seção que mostra por que o Auto-vincular não casa todas as tarefas',
+      itens:['A página parava na seção 2 por um erro de ordem de declaração no próprio código do diagnóstico (uma função auxiliar era usada antes de ser criada). Corrigido.',
+        'Confirmado que a correção da V2.60.39 funcionou: todos os motores de cálculo agora aparecem como OK (antes, todos apareciam como "não carregou").',
+        'Nova tabela na seção 5: lista cada Pavimento e Apartamento cadastrado na Estrutura da Obra e mostra quantas tarefas do Planejamento contêm aquele texto no nome — que é exatamente o critério do Auto-vincular. Quem aparecer com "0 — não casa" está com o nome escrito diferente do que aparece nas tarefas (ex: "1° Pavimento" com símbolo de grau vs "1º Pavimento" com ordinal). Junto vem uma amostra dos nomes reais das tarefas pra comparação direta.']}
   ],
 
   render(containerId) {
