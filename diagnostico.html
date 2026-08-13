@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Diagnóstico — Controle e Planejamento de Obras Absoluta</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/tabelas.css">
+  <link rel="stylesheet" href="css/modulos.css">
+  <style>
+    .diag-bloco { border:1px solid var(--cor-borda-light); border-radius:8px; padding:14px; margin-bottom:14px; background:#fff; }
+    .diag-titulo { font-weight:700; font-size:.95rem; margin-bottom:8px; display:flex; align-items:center; gap:8px; }
+    .diag-ok { color:#16a34a; } .diag-erro { color:#dc2626; } .diag-alerta { color:#d97706; }
+    .diag-linha { font-family:var(--font-mono); font-size:.78rem; padding:3px 0; border-bottom:1px solid #f0f0f0; }
+    .diag-tabela { width:100%; border-collapse:collapse; font-size:.75rem; font-family:var(--font-mono); }
+    .diag-tabela th { text-align:left; background:#f7f7f7; padding:4px 8px; border:1px solid #e5e5e5; font-weight:700; }
+    .diag-tabela td { padding:3px 8px; border:1px solid #eee; }
+    .diag-badge { display:inline-block; padding:1px 7px; border-radius:4px; font-size:.7rem; font-weight:700; }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <aside class="sidebar">
+      <div class="sidebar-logo">
+        <img src="assets/images/logo-absoluta.png" class="logo-full" alt="Absoluta"
+             onerror="this.parentElement.innerHTML='<div class=\'logo-fallback\'><div class=\'logo-icon\'><span style=\'font-size:1.3rem;font-weight:900;color:#000;\'>A</span></div><div class=\'logo-text\'>ABSOLUTA<span>Controle de Obras</span></div></div>'">
+      </div>
+      <div class="sidebar-obra-selector">
+        <label>Obra ativa</label>
+        <select id="seletor-obra"><option value="">Selecione...</option></select>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="sidebar-section-title">Principal</div>
+        <a href="obras.html"><span class="nav-icon">🏗️</span> Obras</a>
+        <a href="dashboard.html"><span class="nav-icon">📊</span> Dashboard</a>
+        <a href="diagnostico.html"><span class="nav-icon">🔍</span> Diagnóstico</a>
+      </nav>
+      <div class="sidebar-user">
+        <div class="user-avatar">U</div>
+        <div class="user-info">
+          <div class="user-name">Usuário</div>
+          <div class="user-role">—</div>
+        </div>
+        <button class="btn-logout" onclick="Auth.logout()" title="Sair">⏻</button>
+      </div>
+    </aside>
+
+    <header class="header">
+      <div class="header-title"><h1>Diagnóstico do Sistema</h1></div>
+      <div class="header-actions">
+        <button class="btn btn-primario btn-sm" onclick="Diagnostico.rodar()">🔄 Rodar de novo</button>
+      </div>
+    </header>
+
+    <main class="content">
+      <div id="modulo-content">
+        <div class="estado-vazio"><div class="icone">🔍</div><p>Carregando diagnóstico...</p></div>
+      </div>
+    </main>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+
+  <script src="js/firebase-config.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/database.js"></script>
+  <script src="js/router.js"></script>
+  <script src="js/permissions.js"></script>
+  <script src="js/audit.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/solo-grampeado-calculos.js"></script>
+  <script src="js/concreto-calculos.js"></script>
+  <script src="js/estacas-calculos.js"></script>
+  <script src="js/diagnostico.js"></script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      await Diagnostico.init();
+    });
+  </script>
+</body>
+</html>
