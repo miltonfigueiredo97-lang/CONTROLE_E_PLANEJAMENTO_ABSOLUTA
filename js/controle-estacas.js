@@ -58,6 +58,7 @@ const ControleEstacas = (() => {
   let planFocoConcretagemId = null; // concretagem selecionada no Planejamento — clique na peça já atribui direto
   let novaConcPlanAberta = false;   // form de "+ Nova concretagem" aberto no Planejamento
   let telaCheiaAtiva = false;
+  let painelMinimizado = false; // esconde toggle/legenda/seletor pra deixar só o mapa
   let telaCheiaGuardado = null;   // {parent, next} — pra devolver #ce-aba-body ao saír da tela cheia
 
   const esc = EC.esc;
@@ -227,6 +228,14 @@ const ControleEstacas = (() => {
     else _renderAbaMarcadores();
   }
 
+  // Minimiza/mostra o cabeçalho de controles (toggle estaca/fundação,
+  // legenda, seletores, girar, zoom) — deixa só o mapa em foco. Zoom por
+  // Ctrl+roda/pinça continua funcionando mesmo minimizado.
+  function toggleMinimizarPainel() {
+    painelMinimizado = !painelMinimizado;
+    _renderAbaAtual();
+  }
+
   // ══════════════════════════════════════════
   // TELA CHEIA — realoca o #ce-tela-cheia-wrap (toggle de abas + #ce-aba-body,
   // com TODAS as features: toggle estaca/fundação, seletor de prancha,
@@ -309,7 +318,7 @@ const ControleEstacas = (() => {
     const pctMedio = total ? marcadoresView.reduce((s, m) => s + (statusMarcador(m).pct || 0), 0) / total : 0;
 
     el.innerHTML = `
-      ${telaCheiaAtiva ? '' : `
+      ${(telaCheiaAtiva || painelMinimizado) ? '' : `
       <div class="cc-kpiGrid" style="grid-template-columns:repeat(4,1fr);">
         <div class="cc-kpi"><div class="cc-kpiIcon">${view === 'estacas' ? '⚫' : '⬛'}</div><div class="cc-kpiBody"><div class="cc-kpiLabel">${view === 'estacas' ? 'Estacas' : 'Fundações'} marcadas</div><div class="cc-kpiValue">${total}</div></div></div>
         <div class="cc-kpi cc-kpiBlue"><div class="cc-kpiIcon">🔗</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Vinculadas ao levantamento</div><div class="cc-kpiValue">${vinculados}<span class="cc-kpiUnit">/ ${total}</span></div></div></div>
@@ -318,6 +327,10 @@ const ControleEstacas = (() => {
       </div>`}
 
       <div class="cc-panel">
+        <div style="display:flex;justify-content:flex-end;margin-bottom:${painelMinimizado ? '0' : '4px'};">
+          <button class="btn btn-secundario btn-sm" onclick="CE.toggleMinimizarPainel()">${painelMinimizado ? '▼ Mostrar controles' : '▲ Minimizar'}</button>
+        </div>
+        ${painelMinimizado ? '' : `
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:4px;">
           <div class="aba-toggle">
             <button class="aba-btn ${view === 'estacas' ? 'ativo' : ''}" onclick="CE.onTrocarView('estacas')">⚫ Estacas</button>
@@ -338,14 +351,15 @@ const ControleEstacas = (() => {
             <span class="text-sm text-muted" id="ce-zoom-label" style="width:48px;text-align:center;">${Math.round(zoomE * 100)}%</span>
             <button class="btn btn-secundario btn-sm" onclick="CE.zoomAjustar(0.25)">+</button>
           </span>
-        </div>
+        </div>`}
         <div id="ce-mapa-host"></div>
       </div>
 
+      ${painelMinimizado ? '' : `
       <div class="cc-panel">
         <div class="cc-panelTitle">◈ ${view === 'estacas' ? 'Estacas' : 'Fundações'} desta prancha</div>
         <div id="ce-tabela"></div>
-      </div>
+      </div>`}
     `;
     await renderMapa();
     const scrollNovo = document.querySelector('#ce-mapa-host .est-map-scroll');
@@ -422,6 +436,10 @@ const ControleEstacas = (() => {
     const scrollPos = scrollAntigo ? { left: scrollAntigo.scrollLeft, top: scrollAntigo.scrollTop } : null;
     el.innerHTML = `
       <div class="cc-panel">
+        <div style="display:flex;justify-content:flex-end;margin-bottom:${painelMinimizado ? '0' : '4px'};">
+          <button class="btn btn-secundario btn-sm" onclick="CE.toggleMinimizarPainel()">${painelMinimizado ? '▼ Mostrar controles' : '▲ Minimizar'}</button>
+        </div>
+        ${painelMinimizado ? '' : `
         <div class="cc-panelTitle">🗓 Planejamento de Concretagem</div>
         <div class="text-sm text-muted" style="margin-bottom:10px;">Mesmo projeto da aba Marcadores.${planFocoConcretagemId ? ' Concretagem selecionada abaixo — clique nas peças no desenho pra atribuir direto.' : ' Selecione uma concretagem abaixo (ou crie uma nova) pra atribuir direto no clique, ou clique numa peça sem selecionar nada pra escolher pelo popup.'}</div>
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:4px;">
@@ -439,7 +457,7 @@ const ControleEstacas = (() => {
             <span class="text-sm text-muted" style="width:48px;text-align:center;">${Math.round(zoomE * 100)}%</span>
             <button class="btn btn-secundario btn-sm" onclick="CE.zoomAjustar(0.25)">+</button>
           </span>
-        </div>
+        </div>`}
         <div id="ce-plan-mapa-host"></div>
       </div>
       <div class="cc-panel">
@@ -709,6 +727,10 @@ const ControleEstacas = (() => {
     const qtdBTs = acompConcretagemId ? _btsDaConcretagem(acompConcretagemId).length : 0;
     el.innerHTML = `
       <div class="cc-panel">
+        <div style="display:flex;justify-content:flex-end;margin-bottom:${painelMinimizado ? '0' : '4px'};">
+          <button class="btn btn-secundario btn-sm" onclick="CE.toggleMinimizarPainel()">${painelMinimizado ? '▼ Mostrar controles' : '▲ Minimizar'}</button>
+        </div>
+        ${painelMinimizado ? '' : `
         <div class="cc-panelTitle">✅ Acompanhamento — clique numa estaca/fundação no mapa pra lançar</div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px;">
           <select class="form-control" id="ce-acomp-conc" style="max-width:280px;" onchange="CE.onTrocarAcompConcretagem()">
@@ -732,7 +754,10 @@ const ControleEstacas = (() => {
             <span class="text-sm text-muted" style="width:48px;text-align:center;">${Math.round(zoomE * 100)}%</span>
             <button class="btn btn-secundario btn-sm" onclick="CE.zoomAjustar(0.25)">+</button>
           </div>
-          <div id="ce-acomp-mapa-host"></div>
+        ` : ''}` }
+        ${!painelMinimizado && !acompConcretagemId ? '<div class="cc-empty">Selecione uma concretagem planejada.</div>' : ''}
+        <div id="ce-acomp-mapa-host"></div>
+        ${acompConcretagemId ? `
           <div class="cc-kpiGrid" style="grid-template-columns:repeat(4,1fr);margin-top:14px;">
             <div class="cc-kpi"><div class="cc-kpiIcon">📦</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Volume total (projeto)</div><div class="cc-kpiValue">${EC.fmt1(resumoVol.volumeTotal)}<span class="cc-kpiUnit">m³</span></div></div></div>
             <div class="cc-kpi cc-kpiGreen"><div class="cc-kpiIcon">✅</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Executado (projeto)</div><div class="cc-kpiValue">${EC.fmt1(resumoVol.volumeExecutadoProjeto)}<span class="cc-kpiUnit">m³</span></div></div></div>
@@ -753,7 +778,7 @@ const ControleEstacas = (() => {
               ${_resumoDiamHTML(_resumoDiamDeLista(pendentes))}
             </div>
           </div>
-        ` : `<div class="cc-empty">Selecione uma concretagem planejada.</div>`}
+        ` : ''}
       </div>
       <div class="cc-panel">
         <div class="cc-panelTitle">📊 Estacas da obra — visão geral</div>
@@ -2122,7 +2147,7 @@ const ControleEstacas = (() => {
   }
 
   return {
-    init, recarregar, renderizar, setAbaPrincipal, alternarTelaCheia,
+    init, recarregar, renderizar, setAbaPrincipal, alternarTelaCheia, toggleMinimizarPainel,
     onTrocarView, onTrocarPranchaAtiva, zoomAjustar, girarPrancha,
     iniciarAdicionarCirculo, iniciarAdicionarPoligono, cancelarModo, desfazerPontoPoligono, concluirPoligono,
     iniciarAjusteForma, concluirAjusteForma, cancelarAjusteForma,

@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.60.29',
+  versaoAtual: 'V2.60.30',
 
   versoes: [
     {
@@ -5698,11 +5698,15 @@ const NotasVersao = {
       itens:['Popup de lançar por estaca: o seletor de BT agora mostra "(X% em outras peças)" quando essa BT já foi usada noutra peça, e o campo de % avisa em vermelho se o valor digitado passar de 100% da BT.',
         'Controle de Concreto: peças com subtipo Estacas que lançam mais volume real do que o projeto previa NÃO entram mais no aviso vermelho "corrija esses lançamentos" — é normal em estaca, o furo real costuma sair maior que o calculado (perda de solo). Agora aparece numa seção informativa separada (azul), explicando que não precisa corrigir.',
         'Volume Executado de Projeto continua igual — capado em 100% de cada peça, então esse excesso não infla o % de conclusão.']},
-    {versao:'V2.60.29',status:'aberta',data:'2026-08-13',tipo:'correcao',
+    {versao:'V2.60.29',status:'fechada',data:'2026-08-13',tipo:'correcao',
       titulo:'Controle de Concreto: índice de perda agora conta a perda de solo das estacas — antes ficava 0% mesmo sobrando tudo no solo',
       itens:['Bug real: quando todas as BTs de uma concretagem eram 100% usadas (sem sobrar nada na betoneira), o índice de perda dava 0% mesmo se as estacas tivessem consumido bem mais concreto que o projeto — a perda "foi" pro solo, não pra betoneira, e o cálculo só olhava pra betoneira.',
         'Corrigido: perda de solo (peça de subtipo Estacas que lançou mais real do que o projeto) agora entra na conta do índice de perda geral, junto com sobra de caminhão e perda em obra — tanto na tela principal quanto no Relatório.',
-        'Lista peça-por-peça da perda de solo agora vem recolhida por padrão (clique pra expandir) — só o resumo (quantas estacas, quantos m³) aparece direto, pra não ficar poluído quando tiver muitas estacas.']}
+        'Lista peça-por-peça da perda de solo agora vem recolhida por padrão (clique pra expandir) — só o resumo (quantas estacas, quantos m³) aparece direto, pra não ficar poluído quando tiver muitas estacas.']},
+    {versao:'V2.60.30',status:'aberta',data:'2026-08-13',tipo:'melhoria',
+      titulo:'Controle de Estacas: botão pra minimizar o cabeçalho de controles nas 3 abas',
+      itens:['Novo botão "▲ Minimizar" em Marcadores, Planejamento e Acompanhamento — esconde toggle Estacas/Fundações, legenda, seletores e girar/zoom, deixando só o mapa em foco. Zoom por Ctrl+roda ou pinça (toque) continua funcionando mesmo minimizado.',
+        'Botão vira "▼ Mostrar controles" pra reabrir tudo de novo.']}
   ],
 
   render(containerId) {
