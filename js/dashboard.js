@@ -1207,7 +1207,7 @@ const Dashboard = (() => {
       acumRealAnterior = m.realAcum;
       if (m.inicio <= hoje) hojeIdx = i;
     });
-    return { meses, hojeIdx, idxInicioHistorico };
+    return { meses, hojeIdx, idxInicioHistorico, _diag: { leavesCount: leaves.length, dMin, dMax } };
   }
 
   function setCurvaGranularidade(g) {
@@ -1226,7 +1226,15 @@ const Dashboard = (() => {
       return;
     }
     const rotuloPeriodo = _curvaGranularidade === 'semanal' ? 'Semanal' : 'Mensal';
-    host.innerHTML = _svgCurva(curva.meses, curva.hojeIdx, {
+    // Diagnóstico visível quando a curva tem poucos meses/semanas — pode ser
+    // dado real limitado (obra pequena/curta) ou sinal de que algo no
+    // Planejamento não está preenchendo datas como esperado. Mostra quantas
+    // tarefas-folha entraram e o range de datas encontrado, pra dar pista
+    // sem precisar abrir o console.
+    const diagHtml = curva.meses.length <= 2
+      ? `<div class="text-sm text-muted" style="margin-bottom:6px;">Diagnóstico: ${curva._diag.leavesCount} tarefa(s)-folha com data encontrada · período ${Utils.formatarData(curva._diag.dMin)} a ${Utils.formatarData(curva._diag.dMax)}. Se o Planejamento tem tarefas em outros meses, confira se elas têm Início/Término Planejado preenchidos (não só as tarefas-mãe/grupos).</div>`
+      : '';
+    host.innerHTML = diagHtml + _svgCurva(curva.meses, curva.hojeIdx, {
       idTooltip: 'db-curva-tooltip',
       idHits: 'db-curva-hit-',
       alturaGrafico: 420,
@@ -2076,15 +2084,15 @@ const Dashboard = (() => {
     if (!EC) { host.innerHTML = ''; return; }
     try {
       const obraId = obraAtual.id;
-      const [pranchas, marcadores, pecas, lancamentos] = await Promise.all([
+      const [pranchas, marcadores, pecas, lancamentos, btsConfig] = await Promise.all([
         Database.listar(obraId, 'estacasPranchas', null).catch(() => []),
         Database.listar(obraId, 'estacasMarcadores', null).catch(() => []),
         Database.listar(obraId, 'concretoPecas', null).catch(() => []),
         Database.listar(obraId, 'concretoLancamentos', null).catch(() => []),
+        Database.listar(obraId, 'concretoBTs', null).catch(() => []),
       ]);
       const pranchasComImagem = pranchas.filter(p => Number(p.imgWidthPx) > 0 && Number(p.imgHeightPx) > 0)
         .sort((a, b) => (a.ordem || 0) - (b.ordem || 0));
-      if (!pranchasComImagem.length) { host.innerHTML = ''; return; }
 
       const CC = window.ConcretoCalculos;
       const mapaCoresGrupo = EC.mapaCoresGrupoEstaca(pecas);
@@ -2103,15 +2111,97 @@ const Dashboard = (() => {
       const concluidos = marcadores.filter(m => { const s = statusFn(m); return s.pct !== null && s.pct >= 100; }).length;
       const pctMedio = total ? marcadores.reduce((s, m) => s + (statusFn(m).pct || 0), 0) / total : 0;
 
+      // ===== Métricas detalhadas (toda a obra) — separadas do resumo de
+      // minimapas acima, ficam numa seção própria embaixo, dentro do mesmo
+      // card. Mesma convenção de índice de perda já corrigida no Controle de
+      // Estacas (V2.60.31): perda = (volume real das BTs - volume do
+      // projeto) + sobra/perda registrada nas próprias BTs.
+      const isEstacaPeca = p => p.tipo === 'Fundação' && (p.subTipo === 'Estacas' || (!p.subTipo && EC.num(p.diametro) > 0 && EC.num(p.comprimento) > 0));
+      const pecasEstaca = pecas.filter(isEstacaPeca);
+      const idsPecasEstaca = new Set(pecasEstaca.map(p => p.id));
+      const lansEstaca = lancamentos.filter(l => idsPecasEstaca.has(l.pecaId));
+
+      const qtdTotal = pecasEstaca.length;
+      const qtdFeitas = pecasEstaca.filter(p => (CC ? CC.pctConcretado(p, lancamentos) : 0) >= 100).length;
+      const volumeTotalProjeto = pecasEstaca.reduce((s, p) => s + EC.num(p.volume), 0);
+      const volumeFeitoProjeto = pecasEstaca.reduce((s, p) => {
+        const pct = CC ? CC.pctConcretado(p, lancamentos) : 0;
+        return s + Math.min(EC.num(p.volume), (pct / 100) * EC.num(p.volume));
+      }, 0);
+      const volumeRealBTs = lansEstaca.reduce((s, l) => s + EC.num(l.volume), 0);
+      const idsBTsUsadas = new Set(lansEstaca.map(l => l.btConfigId));
+      let volumePrevistoBTs = 0, perdaBTsRegistrada = 0;
+      idsBTsUsadas.forEach(btId => {
+        const b = btsConfig.find(x => x.id === btId);
+        if (!b) return;
+        volumePrevistoBTs += EC.num(b.volumePrevisto);
+        const lansDaBT = lansEstaca.filter(l => l.btConfigId === btId);
+        lansDaBT.forEach(l => { perdaBTsRegistrada += EC.num(l.sobraCaminhao) + EC.num(l.perdaObra) + EC.num(l.perdaCocho); });
+      });
+      const perdaSolo = Math.max(0, volumeRealBTs - volumeTotalProjeto);
+      const perdaTotalObra = perdaBTsRegistrada + perdaSolo;
+      const indicePerdaObra = volumePrevistoBTs > 0 ? (perdaTotalObra / volumePrevistoBTs) * 100 : 0;
+      const consumoMedioPorEstaca = qtdFeitas > 0 ? volumeRealBTs / qtdFeitas : 0;
+
+      // Por tipo (diâmetro × comprimento) — mesmo agrupamento visual usado
+      // no mapa (EC.chaveGrupoEstaca), só que aqui como tabela de totais.
+      const gruposPorTipo = new Map(); // chave -> { diametro, comprimento, qtd, qtdFeitas, volumeProjeto, volumeReal }
+      pecasEstaca.forEach(p => {
+        const chave = EC.chaveGrupoEstaca(p.diametro, p.comprimento);
+        if (!gruposPorTipo.has(chave)) gruposPorTipo.set(chave, { diametro: EC.num(p.diametro), comprimento: EC.num(p.comprimento), qtd: 0, qtdFeitas: 0, volumeProjeto: 0, volumeReal: 0 });
+        const g = gruposPorTipo.get(chave);
+        g.qtd++;
+        const pct = CC ? CC.pctConcretado(p, lancamentos) : 0;
+        if (pct >= 100) g.qtdFeitas++;
+        g.volumeProjeto += EC.num(p.volume);
+        g.volumeReal += lancamentos.filter(l => l.pecaId === p.id).reduce((s, l) => s + EC.num(l.volume), 0);
+      });
+      const gruposOrdenados = [...gruposPorTipo.values()].sort((a, b) => (a.diametro - b.diametro) || (a.comprimento - b.comprimento));
+
       host.innerHTML = `
         <div class="card db-row">
           <div class="card-body">
             <div class="db-secao-header"><h3>Estacas e Fundações</h3></div>
             <div class="text-sm text-muted" style="margin-bottom:10px;">${vinculados}/${total} marcadores vinculados · ${concluidos}/${total} concretados · ${EC.fmt1(pctMedio)}% médio · <a href="controle-estacas.html" style="color:var(--cor-primaria-dark);font-weight:600;">abrir controle</a></div>
             <div id="db-estacas-minimapas"></div>
+            ${qtdTotal ? `
+              <div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--cor-borda-light);">
+                <div class="db-secao-header" style="margin-bottom:8px;"><h4 style="font-size:.85rem;">Métricas de Estacas (obra inteira)</h4></div>
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:14px;">
+                  <div class="db-metrica-card"><div class="db-metrica-valor">${qtdTotal}</div><div class="db-metrica-label">Total de estacas</div></div>
+                  <div class="db-metrica-card"><div class="db-metrica-valor">${qtdFeitas}</div><div class="db-metrica-label">Estacas feitas</div></div>
+                  <div class="db-metrica-card"><div class="db-metrica-valor">${EC.fmt1(volumeTotalProjeto)}</div><div class="db-metrica-label">Volume total (m³)</div></div>
+                  <div class="db-metrica-card"><div class="db-metrica-valor">${EC.fmt1(volumeFeitoProjeto)}</div><div class="db-metrica-label">Volume feito (m³)</div></div>
+                  <div class="db-metrica-card" style="${indicePerdaObra > 10 ? 'border-color:#dc2626;' : ''}"><div class="db-metrica-valor" style="${indicePerdaObra > 10 ? 'color:#dc2626;' : ''}">${EC.fmt1(indicePerdaObra)}%</div><div class="db-metrica-label">Índice de perda médio</div></div>
+                  <div class="db-metrica-card"><div class="db-metrica-valor">${CC ? CC.fmt2(consumoMedioPorEstaca) : consumoMedioPorEstaca.toFixed(2)}</div><div class="db-metrica-label">Consumo médio/estaca (m³)</div></div>
+                </div>
+                <div style="overflow-x:auto;">
+                  <table style="border-collapse:collapse;width:100%;font-size:.78rem;">
+                    <thead><tr>
+                      <th style="text-align:left;padding:5px 8px;border-bottom:2px solid #e5e5e5;">Tipo (Ø × comprimento)</th>
+                      <th style="padding:5px 8px;border-bottom:2px solid #e5e5e5;">Qtd</th>
+                      <th style="padding:5px 8px;border-bottom:2px solid #e5e5e5;">Feitas</th>
+                      <th style="padding:5px 8px;border-bottom:2px solid #e5e5e5;">Vol. Projeto (m³)</th>
+                      <th style="padding:5px 8px;border-bottom:2px solid #e5e5e5;">Vol. Real (m³)</th>
+                      <th style="padding:5px 8px;border-bottom:2px solid #e5e5e5;">Consumo médio (m³)</th>
+                    </tr></thead>
+                    <tbody>
+                      ${gruposOrdenados.map(g => `<tr>
+                        <td style="padding:5px 8px;border-bottom:1px solid #eee;">Ø${EC.fmt1(g.diametro)}cm × ${EC.fmt1(g.comprimento)}m</td>
+                        <td style="text-align:center;padding:5px 8px;border-bottom:1px solid #eee;">${g.qtd}</td>
+                        <td style="text-align:center;padding:5px 8px;border-bottom:1px solid #eee;">${g.qtdFeitas}</td>
+                        <td style="text-align:center;padding:5px 8px;border-bottom:1px solid #eee;">${EC.fmt1(g.volumeProjeto)}</td>
+                        <td style="text-align:center;padding:5px 8px;border-bottom:1px solid #eee;">${EC.fmt1(g.volumeReal)}</td>
+                        <td style="text-align:center;padding:5px 8px;border-bottom:1px solid #eee;">${g.qtdFeitas ? (CC ? CC.fmt2(g.volumeReal / g.qtdFeitas) : (g.volumeReal / g.qtdFeitas).toFixed(2)) : '—'}</td>
+                      </tr>`).join('')}
+                    </tbody>
+                  </table>
+                </div>
+              </div>` : ''}
           </div>
         </div>`;
 
+      if (!pranchasComImagem.length) return;
       const LARGURA_CARD = 340;
       const cardsHtml = await Promise.all(pranchasComImagem.map(async p => {
         let imagem = null;

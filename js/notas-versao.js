@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.60.32',
+  versaoAtual: 'V2.60.33',
 
   versoes: [
     {
@@ -5712,13 +5712,18 @@ const NotasVersao = {
       itens:['Achado o mesmo bug de índice de perda 0% de novo — só que numa conta DIFERENTE, a de dentro do próprio Controle de Estacas (os 4 cartões Volume total/Executado/Executado real/Índice de perda). Corrigida igual à do Controle de Concreto: a diferença entre o volume real (BTs) e o volume do projeto agora entra na conta.',
         'Botão "Minimizar" ficou bem mais agressivo: agora esconde TAMBÉM os cartões de resumo abaixo do mapa (Acompanhamento) e o painel de concretagens (Planejamento) — sobra só o mapa mesmo. Clicar numa estaca continua abrindo o popup de lançar normalmente.',
         'Mapa fica mais alto quando minimizado, aproveitando o espaço que sobrou — ainda mais generoso combinado com tela cheia.']},
-    {versao:'V2.60.32',status:'aberta',data:'2026-08-13',tipo:'correcao',
+    {versao:'V2.60.32',status:'fechada',data:'2026-08-13',tipo:'correcao',
       titulo:'Dashboard: popup de Estaca/Fundação não abria mesmo com dado real cadastrado + gráfico feio com poucos andares + motor Solo Grampeado',
       itens:['Popup de Estaca/Fundação e de Estrutura (PDF de concretagem): mesmo bug de grafia (° vs º) do gráfico principal (V2.60.12) também afetava essas duas funções — corrigido; agora avisa por toast quando não encontra peça, em vez de sair em silêncio.',
         'Gráfico Fundação e Estrutura: largura agora se ajusta à quantidade real de andares em vez de fixa em 1180px — com poucos andares (ex: 1), o gráfico fica compacto em vez de uma barra isolada perdida num espaço vazio gigante.',
         'Rótulo "Estacas"/"Fundação"/"Estrutura" dentro da barra agora aparece SEMPRE (antes só aparecia quando havia mais de 1 categoria no mesmo andar) — nunca depende só da cor pra identificar o que é.',
         '"Motor de cálculo de Solo Grampeado não carregado": adicionado um pequeno retry (até 1s) antes de desistir, e mensagem mais clara sugerindo recarregar — não foi possível confirmar/reproduzir a causa raiz exata sem acesso à rede/console do navegador.',
-        'Curva S mostrando só 1 mês mesmo com planejamento espalhado por vários meses: não foi possível confirmar a causa sem ver os dados reais das tarefas — pendente, precisa de mais informação pra corrigir com segurança.']}
+        'Curva S mostrando só 1 mês mesmo com planejamento espalhado por vários meses: não foi possível confirmar a causa sem ver os dados reais das tarefas — pendente, precisa de mais informação pra corrigir com segurança.']},
+    {versao:'V2.60.33',status:'aberta',data:'2026-08-13',tipo:'funcionalidade',
+      titulo:'Dashboard: Curva S com diagnóstico visível + novas Métricas de Estacas (obra inteira)',
+      itens:['Curva S: quando aparecer com 1-2 meses só, agora mostra uma linha de diagnóstico com quantas tarefas-folha entraram no cálculo e o período de datas encontrado — ajuda a identificar se é dado real (poucas tarefas com data) ou algo que precisa ser preenchido no Planejamento (Início/Término Planejado das tarefas-folha, não só dos grupos).',
+        'Novo bloco "Métricas de Estacas (obra inteira)" dentro do card Estacas e Fundações (mesmo checkbox "Mostrar Contenção, Fundação e Estrutura" de sempre): Total de estacas, Estacas feitas, Volume total (m³), Volume feito (m³), Índice de perda médio (mesma fórmula corrigida do Controle de Estacas na V2.60.31), Consumo médio por estaca.',
+        'Tabela por tipo (Ø × comprimento): quantidade, feitas, volume projeto, volume real e consumo médio de cada tipo de estaca separadamente — mostra exatamente onde o consumo real está passando do previsto (ex: estaca prevista com 14m³ e consumindo 16-17m³ na prática).']}
   ],
 
   render(containerId) {
