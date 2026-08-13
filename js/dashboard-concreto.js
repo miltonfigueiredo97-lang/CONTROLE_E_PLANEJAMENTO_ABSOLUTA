@@ -235,16 +235,14 @@ const DashConcreto = (() => {
         .sort((a, b) => (a.ordem || 0) - (b.ordem || 0));
 
       const CC = window.ConcretoCalculos;
-      const mapaCoresGrupo = EC.mapaCoresGrupoEstaca(pecas);
+      // Minimapa do Dashboard fica LIMPO: sem o anel colorido de tipo de
+      // estaca (Ø×comprimento) do Controle — aqui só interessa o que já foi
+      // executado sobre o projeto "zerado".
       const statusFn = (m) => {
         const p = m.pecaId ? pecas.find(x => x.id === m.pecaId) : null;
         if (!p) return { pct: null, label: 'Sem peça vinculada' };
         const pct = CC ? CC.pctConcretado(p, lancamentos) : 0;
-        let corGrupo = null;
-        if (p.subTipo === 'Estacas' && (p.diametro || p.comprimento)) {
-          corGrupo = mapaCoresGrupo.get(EC.chaveGrupoEstaca(p.diametro, p.comprimento)) || null;
-        }
-        return { pct, label: `${p.nome} — ${EC.statusLabel(pct)}`, corGrupo };
+        return { pct, label: `${p.nome} — ${EC.statusLabel(pct)}` };
       };
 
       // Métricas de estacas (obra inteira)
@@ -278,7 +276,12 @@ const DashConcreto = (() => {
         const lansDaBT = lansEstaca.filter(l => l.btConfigId === btId);
         lansDaBT.forEach(l => { perdaBTsRegistrada += EC.num(l.sobraCaminhao) + EC.num(l.perdaObra) + EC.num(l.perdaCocho); });
       });
-      const perdaSolo = Math.max(0, volumeRealBTs - volumeTotalProjeto);
+      // Perda de solo: volume real (BTs) passando do volume de projeto DAS
+      // PEÇAS JÁ EXECUTADAS — comparar com o projeto inteiro (obra em
+      // andamento) zerava o índice sempre, pois o real ainda é muito menor
+      // que o total da obra. Mesma metodologia do Controle de Estacas, que
+      // faz essa conta por concretagem (lá o universo já é só o executado).
+      const perdaSolo = Math.max(0, volumeRealBTs - volumeFeitoProjeto);
       const perdaTotalObra = perdaBTsRegistrada + perdaSolo;
       const indicePerdaObra = volumePrevistoBTs > 0 ? (perdaTotalObra / volumePrevistoBTs) * 100 : 0;
       const consumoMedioPorEstaca = qtdFeitas > 0 ? volumeRealBTs / qtdFeitas : 0;
@@ -347,7 +350,14 @@ const DashConcreto = (() => {
           const doc = await db.collection('obras').doc(obraId).collection('config').doc('estacasImagem_' + p.id).get();
           imagem = doc.exists ? (doc.data().img || null) : null;
         } catch (e) {}
-        const lista = marcadores.filter(m => m.pranchaId === p.id);
+        // Só marcadores com execução iniciada (pct > 0): a prancha aparece
+        // "zerada" e vai sendo pintada conforme executa — sem a nuvem de
+        // círculos de todas as estacas configuradas.
+        const lista = marcadores.filter(m => {
+          if (m.pranchaId !== p.id) return false;
+          const s = statusFn(m);
+          return s.pct !== null && s.pct > 0;
+        });
         const zoom = LARGURA_CARD / Number(p.imgWidthPx);
         const alturaCard = Math.round(Number(p.imgHeightPx) * zoom);
         const svg = EC.stageHTML(p, imagem, lista, statusFn, { interativo: false, mini: true, zoom, maxHeight: Math.min(280, Math.max(60, alturaCard)) });

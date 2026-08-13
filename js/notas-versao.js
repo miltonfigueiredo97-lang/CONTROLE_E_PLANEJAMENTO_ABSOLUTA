@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.62.1',
+  versaoAtual: 'V2.62.2',
 
   versoes: [
     {
@@ -5777,10 +5777,14 @@ const NotasVersao = {
         'Hero da obra redesenhado: barra de progresso executado (amarelo) com marcador branco do previsto, % grande, badges de prazo (No prazo / X meses atrasado) e seletor de obra integrado.',
         'Suprimentos, minimapas de Contenção e Estacas e Resumo por Apartamento ganharam o mesmo padrão visual (chips, estados vazios amigáveis, tabelas limpas). Seções de Contenção e Estacas agora somem sozinhas quando a obra não tem essas disciplinas.',
         'Limpeza: removidos códigos mortos (PPC semanal, Motivos de Atraso, Pacotes) que não eram exibidos desde versões anteriores.']},
-    {versao:'V2.62.1',status:'aberta',data:'2026-08-13',tipo:'correcao',
+    {versao:'V2.62.1',status:'fechada',data:'2026-08-13',tipo:'correcao',
       titulo:'Popup do projeto: pan por arrasto + zoom com Ctrl+scroll',
       itens:['No popup que abre ao clicar numa barra de Fundação/Estrutura, agora dá pra ARRASTAR a prancha segurando o botão esquerdo (ou do meio) do mouse — cursor vira mãozinha.',
-        'Zoom passou a ser Ctrl+scroll (ou pinça do touchpad); o scroll normal volta a rolar a prancha (pan vertical, Shift+scroll horizontal), como em softwares de CAD/mapas. Antes o scroll dava zoom e não havia como navegar arrastando.']}
+        'Zoom passou a ser Ctrl+scroll (ou pinça do touchpad); o scroll normal volta a rolar a prancha (pan vertical, Shift+scroll horizontal), como em softwares de CAD/mapas. Antes o scroll dava zoom e não havia como navegar arrastando.']},
+    {versao:'V2.62.2',status:'aberta',data:'2026-08-13',tipo:'correcao',
+      titulo:'Estacas no Dashboard: índice de perda corrigido e minimapa limpo',
+      itens:['Índice de perda médio estava sempre 0,0%: a "perda de solo" comparava o volume real das BTs com o volume de projeto da OBRA INTEIRA — com a obra em andamento, o real é sempre menor que o total e a conta zerava. Agora compara com o volume de projeto das peças JÁ EXECUTADAS (mesma metodologia do Controle de Estacas). Ex: 69,0 m³ reais sobre 58,5 m³ de projeto executado passam a acusar a perda corretamente.',
+        'Minimapa da prancha agora aparece "zerado": mostra APENAS as estacas com execução iniciada, sem a nuvem de círculos de todas as estacas configuradas nem os anéis coloridos por tipo — a prancha vai sendo pintada conforme a obra avança. No popup em tela cheia (clique na barra de Fundação/Estrutura) os anéis por tipo continuam, pois lá servem de leitura do projeto.']}
   ],
 
   render(containerId) {
