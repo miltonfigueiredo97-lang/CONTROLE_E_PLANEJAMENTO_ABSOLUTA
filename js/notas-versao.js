@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.60.20',
+  versaoAtual: 'V2.60.21',
 
   versoes: [
     {
@@ -5652,11 +5652,18 @@ const NotasVersao = {
       itens:['Menu ⚙ Ferramentas → "🔗 Auto-vincular por Nome": compara o NOME de cada tarefa-folha com os nomes já cadastrados em Estrutura da Obra (ex: tarefa "Contrapiso: 1º Pavimento - Final 02" casa com o pavimento "1º Pavimento" e o apto "Final 02", se ambos estiverem cadastrados lá) e propõe o vínculo automaticamente — sem precisar abrir a coluna Local tarefa por tarefa.',
         'Sempre mostra uma PRÉVIA antes de aplicar: lista cada tarefa com o local detectado, com checkbox pra desmarcar as que estiverem erradas, e aviso visual em quem já tinha vínculo manual (será sobrescrito se ficar marcado). Nada é gravado sem confirmar.',
         'Funciona com qualquer padrão de nome que a obra já usa — não é regex de formato fixo, é busca pelo nome real do pavimento/apto (já cadastrado) dentro do nome da tarefa. Pavimento sem apto correspondente no nome vincula "o pavimento inteiro".']},
-    {versao:'V2.60.20',status:'aberta',data:'2026-08-06',tipo:'melhoria',
+    {versao:'V2.60.20',status:'fechada',data:'2026-08-06',tipo:'melhoria',
       titulo:'Dashboard: tela "⚙️ Configurar" do Painel de Andamento virou árvore expansível com busca (era lista plana de todos os níveis misturados)',
       itens:['A lista antiga mostrava TODOS os grupos, de TODOS os níveis, achatados numa lista só — difícil de escanear e entender qual tarefa era filha de qual em obras com muita hierarquia.',
         'Agora é uma árvore igual ao Editor de Estrutura do Planejamento: começa fechada nas raízes, clica pra abrir/fechar cada grupo, e marca a tarefa-mãe em QUALQUER nível — nível 0, 1, 2, o que precisar em cada obra.',
-        'Campo de busca por nome: com texto digitado, mostra direto os grupos que batem (sem precisar abrir a árvore manualmente até achar); campo vazio volta pra árvore normal.']}
+        'Campo de busca por nome: com texto digitado, mostra direto os grupos que batem (sem precisar abrir a árvore manualmente até achar); campo vazio volta pra árvore normal.']},
+    {versao:'V2.60.21',status:'aberta',data:'2026-08-06',tipo:'funcionalidade',
+      titulo:'Controle de Estacas: Acompanhamento agora lança BT de verdade (igual Controle de Concreto), toque em tablet, e visual/resumo melhorados',
+      itens:['Removido o sistema de "BT única auto-gerenciada" por concretagem — não fazia sentido (uma concretagem real pode ter várias BTs/caminhões, cada um com seu próprio volume).',
+        'Novo: dentro do Acompanhamento, "🚚 BTs desta concretagem" — cria uma BT (número + volume previsto), e lança o % de CADA estaca/fundação da programação que aquela BT concretou (com NF, código, hora, sobra, perda, cocho — os mesmos campos do Controle de Concreto). Grava concretoLancamentos de verdade, aparece sincronizado no Controle de Concreto também.',
+        'Visual: estaca 100% concretada agora fica com preenchimento sólido/opaco (antes era sempre translúcido, mesmo pronta, parecia "fraca"). O anel amarelo de "planejada, pendente" some assim que chega em 100%.',
+        'Novo painel "Estacas da obra — visão geral" no Acompanhamento: total de estacas cadastradas, volume executado da obra inteira, % geral, e tabela por diâmetro (qtd. feita/total, volume feito/total, % de cada tipo).',
+        'Zoom/pan por toque (tablet/celular): pinça com 2 dedos dá zoom, 1 dedo arrasta o mapa — antes só funcionava com mouse (Ctrl+roda/Ctrl+arrastar).']}
   ],
 
   render(containerId) {

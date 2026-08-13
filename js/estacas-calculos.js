@@ -81,13 +81,16 @@ const EstacasCalculos = (() => {
     const circulos = (marcadores || []).filter(m => m.tipo === 'circulo').map(m => {
       const st = statusFn(m);
       const cor = corStatus(st.pct);
+      const concluido = st.pct !== null && st.pct !== undefined && st.pct >= 100;
       const diam = Math.max(6, num(m.raio) * 2 * w);
       const tracejado = (st.pct === null || st.pct === undefined) ? 'border-style:dashed;' : 'border-style:solid;';
       const titulo = opts.mini ? '' : ` title="${esc(st.label || '')}${st.grupoLabel ? ' — ' + esc(st.grupoLabel) : ''}"`;
       // Anel externo colorido por grupo (diâmetro+comprimento) — some ao redor do
       // status, não substitui: o preenchimento/borda continuam mostrando o %.
       const anel = st.corGrupo ? `box-shadow:0 0 0 3px ${st.corGrupo};` : '';
-      return `<div class="est-marcador est-circulo" data-id="${m.id}" style="position:absolute;left:${(m.cx * 100).toFixed(3)}%;top:${(m.cy * 100).toFixed(3)}%;width:${diam.toFixed(1)}px;height:${diam.toFixed(1)}px;transform:translate(-50%,-50%);border-radius:50%;background:${cor}99;border:2px ${cor};${tracejado}${anel}${cursor}z-index:2;box-sizing:border-box;"${titulo}></div>`;
+      // Concluído (100%) fica sólido/opaco de verdade — antes ficava sempre
+      // translúcido (60%), mesmo terminado, e ficava "fraco" visualmente.
+      return `<div class="est-marcador est-circulo" data-id="${m.id}" style="position:absolute;left:${(m.cx * 100).toFixed(3)}%;top:${(m.cy * 100).toFixed(3)}%;width:${diam.toFixed(1)}px;height:${diam.toFixed(1)}px;transform:translate(-50%,-50%);border-radius:50%;background:${cor}${concluido ? '' : '99'};border:2px ${cor};${tracejado}${anel}${cursor}z-index:2;box-sizing:border-box;"${titulo}></div>`;
     }).join('');
 
     const poligonos = (marcadores || []).filter(m => m.tipo === 'poligono' && m.pontos && m.pontos.length >= 3).map(m => {
@@ -106,7 +109,7 @@ const EstacasCalculos = (() => {
       : `<div style="width:100%;height:100%;background:repeating-linear-gradient(45deg,#f1f5f9,#f1f5f9 10px,#e2e8f0 10px,#e2e8f0 20px);"></div>`;
     const maxH = opts.mini ? (opts.maxHeight || 240) : (opts.maxHeight || 600);
     return `<div class="est-map-scroll" style="overflow:${opts.mini ? 'hidden' : 'auto'};max-height:${maxH}px;border:1px solid #e2e8f0;border-radius:8px;background:#fff;">
-      <div id="${opts.stageId || 'est-stage'}" class="est-map-stage" style="position:relative;width:${w}px;height:${h}px;">
+      <div id="${opts.stageId || 'est-stage'}" class="est-map-stage" style="position:relative;width:${w}px;height:${h}px;touch-action:none;">
         ${bg}${poligonos}${circulos}
       </div>
     </div>`;
