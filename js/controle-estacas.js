@@ -286,7 +286,8 @@ const ControleEstacas = (() => {
 
   // Altura do mapa: bem maior quando em tela cheia, pra aproveitar o espaço.
   function _alturaMapa() {
-    return telaCheiaAtiva ? Math.max(420, window.innerHeight - 230) : 600;
+    if (telaCheiaAtiva) return Math.max(420, window.innerHeight - (painelMinimizado ? 90 : 230));
+    return painelMinimizado ? 720 : 600;
   }
 
   function setAbaPrincipal(a) {
@@ -460,13 +461,14 @@ const ControleEstacas = (() => {
         </div>`}
         <div id="ce-plan-mapa-host"></div>
       </div>
+      ${painelMinimizado ? '' : `
       <div class="cc-panel">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
           <div class="cc-panelTitle" style="margin:0;">📅 Concretagens planejadas</div>
           <button class="btn btn-secundario btn-sm" onclick="CE.toggleNovaConcPlan()">${novaConcPlanAberta ? '✕ Cancelar' : '+ Nova concretagem'}</button>
         </div>
         <div id="ce-plan-cards-body"></div>
-      </div>
+      </div>` }
     `;
     _renderCardsConcretagem();
     Permissions.aplicarNaTela();
@@ -757,7 +759,7 @@ const ControleEstacas = (() => {
         ` : ''}` }
         ${!painelMinimizado && !acompConcretagemId ? '<div class="cc-empty">Selecione uma concretagem planejada.</div>' : ''}
         <div id="ce-acomp-mapa-host"></div>
-        ${acompConcretagemId ? `
+        ${!painelMinimizado && acompConcretagemId ? `
           <div class="cc-kpiGrid" style="grid-template-columns:repeat(4,1fr);margin-top:14px;">
             <div class="cc-kpi"><div class="cc-kpiIcon">📦</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Volume total (projeto)</div><div class="cc-kpiValue">${EC.fmt1(resumoVol.volumeTotal)}<span class="cc-kpiUnit">m³</span></div></div></div>
             <div class="cc-kpi cc-kpiGreen"><div class="cc-kpiIcon">✅</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Executado (projeto)</div><div class="cc-kpiValue">${EC.fmt1(resumoVol.volumeExecutadoProjeto)}<span class="cc-kpiUnit">m³</span></div></div></div>
@@ -780,6 +782,7 @@ const ControleEstacas = (() => {
           </div>
         ` : ''}
       </div>
+      ${painelMinimizado ? '' : `
       <div class="cc-panel">
         <div class="cc-panelTitle">📊 Estacas da obra — visão geral</div>
         <div class="cc-kpiGrid" style="grid-template-columns:repeat(3,1fr);margin-bottom:14px;">
@@ -801,7 +804,7 @@ const ControleEstacas = (() => {
               </tbody>
             </table>
           </div>` : '<div class="cc-empty">Nenhuma estaca cadastrada ainda.</div>'}
-      </div>
+      </div>` }
     `;
     Permissions.aplicarNaTela();
     if (acompConcretagemId) await renderMapaAcompanhamento();
@@ -986,8 +989,14 @@ const ControleEstacas = (() => {
       const lan = lansConc.find(l => l.btConfigId === btId);
       perdaBTs += (lan?.sobraCaminhao || 0) + (lan?.perdaObra || 0) + (lan?.perdaCocho || 0);
     });
-    const indicePerda = volumePrevistoBTs > 0 ? (perdaBTs / volumePrevistoBTs) * 100 : 0;
-    return { volumeTotal, volumeExecutadoProjeto, volumeExecutadoReal, indicePerda };
+    // Perda de solo: o volume real (BTs) passando do volume do projeto —
+    // normal em estacas (furo sai maior), mas é perda de verdade e precisa
+    // entrar no índice, senão fica 0% mesmo "sobrando" tudo isso no solo em
+    // vez de na betoneira (mesmo ajuste já feito no Controle de Concreto).
+    const perdaSolo = Math.max(0, volumeExecutadoReal - volumeTotal);
+    const perdaTotal = perdaBTs + perdaSolo;
+    const indicePerda = volumePrevistoBTs > 0 ? (perdaTotal / volumePrevistoBTs) * 100 : 0;
+    return { volumeTotal, volumeExecutadoProjeto, volumeExecutadoReal, indicePerda, perdaSolo };
   }
 
   // ══════════════════════════════════════════
