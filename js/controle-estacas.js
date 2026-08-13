@@ -810,7 +810,8 @@ const ControleEstacas = (() => {
   // da programação que aquela BT concretou — grava concretoLancamentos de
   // verdade, visível também no Controle de Concreto/relatórios de BT.
   // ══════════════════════════════════════════
-  let bt = null; // {concId, btId, modo:'nova'|'editar', linhas:[{pecaId,pct}]}
+  let bt = null; // {concId, btId, modo} — só pra criar/editar metadados da BT (nº, volume, NF, código)
+  let estacaAtual = null; // {concId, pecaId, linhas:[{btId,pctBT}]} — lançamento por peça (o fluxo principal)
 
   function _proximoNumeroBT(concId) {
     const bts = _btsDaConcretagem(concId);
@@ -819,7 +820,7 @@ const ControleEstacas = (() => {
 
   function abrirNovaBT() {
     if (!Permissions.pode('controleEstacas', 'criar')) { Utils.toast('Sem permissão para criar.', 'erro'); return; }
-    bt = { concId: acompConcretagemId, btId: '', modo: '', numeroForm: _proximoNumeroBT(acompConcretagemId), volumeForm: '', linhas: [] };
+    bt = { concId: acompConcretagemId, btId: '', modo: 'nova-meta', numeroForm: _proximoNumeroBT(acompConcretagemId) };
     _renderPainelBT();
   }
   function fecharPainelBT() { bt = null; _renderPainelBT(); }
@@ -833,9 +834,9 @@ const ControleEstacas = (() => {
     try {
       const id = await Database.criar(obraId, COL_BTS, { concretagemId: bt.concId, numero, volumePrevisto, notaFiscal: '', codigoBT: '', obraId }, EC.genId('bt'));
       btsConfig.push({ id, concretagemId: bt.concId, numero, volumePrevisto, notaFiscal: '', codigoBT: '', obraId });
-      bt.btId = id; bt.modo = 'nova';
-      _iniciarLinhasBT();
+      bt = null;
       _renderPainelBT();
+      Utils.toast('✓ BT criada! Agora selecione a estaca e lance a contribuição dela.', 'sucesso');
     } catch (e) {
       Utils.toast('Erro ao criar BT: ' + e.message, 'erro');
     } finally {
@@ -843,25 +844,60 @@ const ControleEstacas = (() => {
     }
   }
 
-  function selecionarBTEstacas(id) {
-    bt.btId = id;
-    const jaLancada = lancamentos.some(l => l.btConfigId === id);
-    bt.modo = jaLancada ? 'editar' : 'nova';
-    _iniciarLinhasBT();
+  function abrirEditarMetaBT(id) {
+    if (!Permissions.pode('controleEstacas', 'editar')) { Utils.toast('Sem permissão para editar.', 'erro'); return; }
+    const b = btsConfig.find(x => x.id === id);
+    if (!b) return;
+    const meta = _metaBT(id);
+    bt = { concId: acompConcretagemId, btId: id, modo: 'editar-meta', numeroForm: b.numero, volumeForm: b.volumePrevisto, nf: b.notaFiscal || '', cod: b.codigoBT || '', ...meta };
     _renderPainelBT();
   }
 
-  async function excluirBTEstacas() {
+  async function salvarMetaBT() {
+    if (!Permissions.pode('controleEstacas', 'editar')) { Utils.toast('Sem permissão para editar.', 'erro'); return; }
+    const numero = parseInt(document.getElementById('ce-bt-numero-edit').value) || bt.numeroForm;
+    const volumePrevisto = EC.num((document.getElementById('ce-bt-volume-edit').value || '').replace(',', '.'));
+    const nf = (document.getElementById('ce-bt-nf-edit')?.value || '').trim();
+    const cod = (document.getElementById('ce-bt-cod-edit')?.value || '').trim();
+    const hora = document.getElementById('ce-bt-hora-edit')?.value || '';
+    const sobra = EC.num((document.getElementById('ce-bt-sobra-edit')?.value || '').replace(',', '.'));
+    const perda = EC.num((document.getElementById('ce-bt-perda-edit')?.value || '').replace(',', '.'));
+    const perdaCocho = EC.num((document.getElementById('ce-bt-perdacocho-edit')?.value || '').replace(',', '.'));
+    Utils.mostrarLoading();
+    try {
+      await Database.atualizar(obraId, COL_BTS, bt.btId, { numero, volumePrevisto, notaFiscal: nf, codigoBT: cod });
+      const bCfg = btsConfig.find(x => x.id === bt.btId);
+      if (bCfg) Object.assign(bCfg, { numero, volumePrevisto, notaFiscal: nf, codigoBT: cod });
+      // Propaga sobra/perda/cocho/hora pra todos os lançamentos já feitos com essa BT
+      // (são atributos do caminhão inteiro, não da peça — ficam iguais em todos).
+      const lansBT = lancamentos.filter(l => l.btConfigId === bt.btId);
+      if (lansBT.length) {
+        const ops = lansBT.map(l => ({ type: 'update', ref: Database.ref(obraId, COL_LANS).doc(l.id), data: { sobraCaminhao: sobra, perdaObra: perda, perdaCocho, hora } }));
+        await Database.batchWrite(ops);
+        lansBT.forEach(l => Object.assign(l, { sobraCaminhao: sobra, perdaObra: perda, perdaCocho, hora }));
+      }
+      bt = null;
+      _renderPainelBT();
+      Utils.toast('✓ BT atualizada!', 'sucesso');
+    } catch (e) {
+      Utils.toast('Erro ao salvar: ' + e.message, 'erro');
+    } finally {
+      Utils.esconderLoading();
+    }
+  }
+
+  async function excluirBTEstacas(idPre) {
     if (!Permissions.pode('controleEstacas', 'excluir')) { Utils.toast('Sem permissão para excluir.', 'erro'); return; }
-    if (!bt || !bt.btId) return;
-    const bSel = btsConfig.find(x => x.id === bt.btId);
-    const qtdLan = lancamentos.filter(l => l.btConfigId === bt.btId).length;
+    const btId = idPre || (bt && bt.btId);
+    if (!btId) return;
+    const bSel = btsConfig.find(x => x.id === btId);
+    const qtdLan = lancamentos.filter(l => l.btConfigId === btId).length;
     const ok = await Utils.confirmar(`Excluir a BT-${bSel?.numero}${qtdLan ? ` e os ${qtdLan} lançamento(s) dela` : ''}? Não tem volta.`);
     if (!ok) return;
     Utils.mostrarLoading();
     try {
-      const ops = [{ type: 'delete', ref: Database.ref(obraId, COL_BTS).doc(bt.btId) }];
-      lancamentos.filter(l => l.btConfigId === bt.btId).forEach(l => ops.push({ type: 'delete', ref: Database.ref(obraId, COL_LANS).doc(l.id) }));
+      const ops = [{ type: 'delete', ref: Database.ref(obraId, COL_BTS).doc(btId) }];
+      lancamentos.filter(l => l.btConfigId === btId).forEach(l => ops.push({ type: 'delete', ref: Database.ref(obraId, COL_LANS).doc(l.id) }));
       await Database.batchWrite(ops);
       await carregar();
       await EstacasCalculos.sincronizarVinculosPlanejamento(obraId).catch(e => console.error('Sync Planejamento:', e));
@@ -875,24 +911,16 @@ const ControleEstacas = (() => {
     }
   }
 
-  // Uma linha por peça já lançada nesta BT — se não tem nenhuma ainda,
-  // começa com 1 linha vazia (pra escolher a primeira peça).
-  function _iniciarLinhasBT() {
-    const b = btsConfig.find(x => x.id === bt.btId);
-    bt.nf = b?.notaFiscal || ''; bt.cod = b?.codigoBT || '';
-    const lansBT = lancamentos.filter(l => l.btConfigId === bt.btId);
-    bt.sobra = String(lansBT[0]?.sobraCaminhao ?? '');
-    bt.perda = String(lansBT[0]?.perdaObra ?? '');
-    bt.perdaCocho = String(lansBT[0]?.perdaCocho ?? '');
-    bt.hora = lansBT[0]?.hora || '';
-    bt.linhas = lansBT.map(l => {
-      const p = pecas.find(x => x.id === l.pecaId);
-      if (!p) return { pecaId: l.pecaId, pct: '' };
-      const volConc = _volumeConcPeca(p, bt.concId);
-      const pctRaw = volConc > 0 ? (l.volume / volConc) * 100 : 0;
-      return { pecaId: l.pecaId, pct: String(Math.round(pctRaw * 100) / 100) };
-    });
-    if (!bt.linhas.length) bt.linhas = [{ pecaId: '', pct: '' }];
+  // Metadados "do caminhão inteiro" (sobra/perda/cocho/hora) — lidos de
+  // qualquer lançamento já feito com essa BT (todos têm os mesmos valores).
+  function _metaBT(btId) {
+    const existente = lancamentos.find(l => l.btConfigId === btId);
+    return {
+      sobra: String(existente?.sobraCaminhao ?? ''),
+      perda: String(existente?.perdaObra ?? ''),
+      perdaCocho: String(existente?.perdaCocho ?? ''),
+      hora: existente?.hora || '',
+    };
   }
 
   function _volumeConcPeca(p, concId) {
@@ -901,122 +929,128 @@ const ControleEstacas = (() => {
     return (p.volume || 0) * pctConc;
   }
 
-  function btUpdCampo(campo, valor) { bt[campo] = valor; }
-
-  // % já lançado da peça nesta concretagem, EXCLUINDO a BT atual (pra avisar
-  // se uma peça já foi parcialmente concretada por outra BT).
-  function _pctJaLancadaOutraBT(pecaId) {
-    const p = pecas.find(x => x.id === pecaId);
-    if (!p) return 0;
-    const volConc = _volumeConcPeca(p, bt.concId);
-    if (volConc <= 0) return 0;
-    const lans = lancamentos.filter(l => l.pecaId === pecaId && l.btConfigId !== bt.btId && l.concretagemId === bt.concId);
-    const jaLan = lans.reduce((s, l) => s + (l.volume || 0), 0);
-    return (jaLan / volConc) * 100;
+  // ══════════════════════════════════════════
+  // LANÇAR POR ESTACA — o fluxo principal: escolhe a peça (estaca/fundação)
+  // e lista quais BTs concretaram ela e quanto % de CADA BT foi usado nesta
+  // peça (não % da peça — % do caminhão, que é o que dá pra saber de
+  // verdade em campo). O volume salvo é (%BT/100)*volumePrevisto da BT, e o
+  // %-da-peça guardado no lançamento (pra bater com o Controle de Concreto
+  // e todo o resto do sistema) é derivado desse volume — a conta de sempre,
+  // só a ENTRADA que inverteu.
+  // ══════════════════════════════════════════
+  function onSelecionarEstacaAcomp(pecaId) {
+    if (!pecaId) { estacaAtual = null; _renderPainelBT(); return; }
+    _abrirEstaca(pecaId);
   }
 
-  function btAddLinhaEstacas() { bt.linhas.push({ pecaId: '', pct: '' }); _renderPainelBT(); }
-  function btRemLinhaEstacas(i) { bt.linhas.splice(i, 1); _renderPainelBT(); }
-  function btUpdLinhaEstacas(i, campo, valor) {
-    bt.linhas[i][campo] = valor;
-    if (campo === 'pecaId') { _renderPainelBT(); return; }
-    // só o % mudou — atualiza o volume da linha e o total, sem re-render total
-    const p = pecas.find(x => x.id === bt.linhas[i].pecaId);
-    if (p) {
-      const vol = (EC.num(valor.replace(',', '.')) / 100) * _volumeConcPeca(p, bt.concId);
-      const volEl = document.getElementById('ce-bt-vol-' + i);
-      if (volEl) volEl.textContent = EC.fmt1(vol) + ' m³';
-    }
-    const totalEl = document.getElementById('ce-bt-total-usado');
-    if (totalEl) {
-      const total = bt.linhas.reduce((s, l) => {
-        const pp = pecas.find(x => x.id === l.pecaId);
-        if (!pp) return s;
-        return s + (EC.num((l.pct || '').replace(',', '.')) / 100) * _volumeConcPeca(pp, bt.concId);
-      }, 0);
-      totalEl.textContent = EC.fmt1(total) + ' m³';
-    }
-  }
-
-  // Acrescenta uma linha nova (100%) pra cada peça da concretagem que ainda
-  // não está 100% concretada E ainda não está em nenhuma linha desta BT.
-  function btMarcarTodas100() {
-    const jaNasLinhas = new Set(bt.linhas.map(l => l.pecaId).filter(Boolean));
-    _pecasPlanejadas(bt.concId).forEach(p => {
-      if (!_pecaExecutada(p) && !jaNasLinhas.has(p.id)) bt.linhas.push({ pecaId: p.id, pct: '100' });
+  function _abrirEstaca(pecaId) {
+    const lansPeca = lancamentos.filter(l => l.pecaId === pecaId && l.concretagemId === acompConcretagemId);
+    const linhas = lansPeca.map(l => {
+      const b = btsConfig.find(x => x.id === l.btConfigId);
+      const pctBT = b && b.volumePrevisto > 0 ? (l.volume / b.volumePrevisto) * 100 : 0;
+      return { btId: l.btConfigId, pctBT: String(Math.round(pctBT * 100) / 100) };
     });
-    bt.linhas = bt.linhas.filter(l => l.pecaId); // remove a linha vazia inicial, se sobrou
-    if (!bt.linhas.length) bt.linhas = [{ pecaId: '', pct: '' }];
+    if (!linhas.length) linhas.push({ btId: '', pctBT: '' });
+    estacaAtual = { concId: acompConcretagemId, pecaId, linhas };
     _renderPainelBT();
   }
 
-  async function salvarBTEstacas() {
+  function btAddLinhaPeca() { estacaAtual.linhas.push({ btId: '', pctBT: '' }); _renderPainelBT(); }
+  function btRemLinhaPeca(i) { estacaAtual.linhas.splice(i, 1); _renderPainelBT(); }
+  function btUpdLinhaPeca(i, campo, valor) {
+    estacaAtual.linhas[i][campo] = valor;
+    if (campo === 'btId') { _renderPainelBT(); return; }
+    // só o % mudou — atualiza volume da linha e o total, sem re-render total
+    const b = btsConfig.find(x => x.id === estacaAtual.linhas[i].btId);
+    if (b) {
+      const vol = (EC.num(valor.replace(',', '.')) / 100) * b.volumePrevisto;
+      const volEl = document.getElementById('ce-est-vol-' + i);
+      if (volEl) volEl.textContent = EC.fmt1(vol) + ' m³';
+    }
+    _atualizarTotalEstaca();
+  }
+  function _atualizarTotalEstaca() {
+    const totalEl = document.getElementById('ce-est-total-recebido');
+    if (!totalEl) return;
+    const total = estacaAtual.linhas.reduce((s, l) => {
+      const b = btsConfig.find(x => x.id === l.btId);
+      if (!b) return s;
+      return s + (EC.num((l.pctBT || '').replace(',', '.')) / 100) * b.volumePrevisto;
+    }, 0);
+    totalEl.textContent = EC.fmt1(total) + ' m³';
+  }
+
+  async function salvarEstacaAcomp() {
     if (!Permissions.pode('controleEstacas', 'editar') && !Permissions.pode('controleEstacas', 'criar')) { Utils.toast('Sem permissão.', 'erro'); return; }
-    if (!bt || !bt.btId) return;
+    if (!estacaAtual || !estacaAtual.pecaId) return;
+    const p = pecas.find(x => x.id === estacaAtual.pecaId);
+    if (!p) return;
     Utils.mostrarLoading();
     try {
-      const nf = (document.getElementById('ce-bt-nf')?.value || '').trim();
-      const cod = (document.getElementById('ce-bt-cod')?.value || '').trim();
-      const hora = document.getElementById('ce-bt-hora')?.value || '';
-      const sobra = EC.num((document.getElementById('ce-bt-sobra')?.value || '').replace(',', '.'));
-      const perda = EC.num((document.getElementById('ce-bt-perda')?.value || '').replace(',', '.'));
-      const perdaCocho = EC.num((document.getElementById('ce-bt-perdacocho')?.value || '').replace(',', '.'));
-      await Database.atualizar(obraId, COL_BTS, bt.btId, { notaFiscal: nf, codigoBT: cod });
-      const bCfg = btsConfig.find(x => x.id === bt.btId);
-      if (bCfg) { bCfg.notaFiscal = nf; bCfg.codigoBT = cod; }
+      const volConcPeca = _volumeConcPeca(p, estacaAtual.concId);
       const ops = [];
-      // Peças que ficaram nas linhas (com pct>0) — cria/atualiza o lançamento
-      const idsNasLinhas = new Set();
-      bt.linhas.forEach(l => {
-        const p = pecas.find(x => x.id === l.pecaId);
-        if (!p) return;
-        const pct = EC.num((l.pct || '').replace(',', '.'));
-        if (pct <= 0) return;
-        idsNasLinhas.add(p.id);
-        const volConc = _volumeConcPeca(p, bt.concId);
-        const vol = (pct / 100) * volConc;
-        const existente = lancamentos.find(x => x.btConfigId === bt.btId && x.pecaId === p.id);
-        const dados = { btConfigId: bt.btId, concretagemId: bt.concId, pecaId: p.id, pct, volume: +vol.toFixed(4), hora, sobraCaminhao: sobra, perdaObra: perda, perdaCocho, obraId };
+      const idsUsados = new Set();
+      estacaAtual.linhas.forEach(l => {
+        const b = btsConfig.find(x => x.id === l.btId);
+        if (!b) return;
+        const pctBT = EC.num((l.pctBT || '').replace(',', '.'));
+        if (pctBT <= 0) return;
+        idsUsados.add(b.id);
+        const volume = (pctBT / 100) * b.volumePrevisto;
+        const pctPeca = volConcPeca > 0 ? (volume / volConcPeca) * 100 : 0;
+        const meta = _metaBT(b.id);
+        const existente = lancamentos.find(x => x.btConfigId === b.id && x.pecaId === p.id);
+        const dados = {
+          btConfigId: b.id, concretagemId: estacaAtual.concId, pecaId: p.id,
+          pct: +pctPeca.toFixed(2), volume: +volume.toFixed(4),
+          hora: meta.hora, sobraCaminhao: EC.num(meta.sobra), perdaObra: EC.num(meta.perda), perdaCocho: EC.num(meta.perdaCocho), obraId,
+        };
         if (existente) ops.push({ type: 'update', ref: Database.ref(obraId, COL_LANS).doc(existente.id), data: dados });
         else ops.push({ type: 'set', ref: Database.ref(obraId, COL_LANS).doc(EC.genId('lan')), data: dados });
       });
-      // Peças que tinham lançamento nesta BT antes mas foram removidas da lista agora
-      lancamentos.filter(l => l.btConfigId === bt.btId && !idsNasLinhas.has(l.pecaId)).forEach(l => {
+      // BTs que tinham lançamento nesta peça antes, mas foram removidos da lista agora
+      lancamentos.filter(l => l.pecaId === p.id && l.concretagemId === estacaAtual.concId && !idsUsados.has(l.btConfigId)).forEach(l => {
         ops.push({ type: 'delete', ref: Database.ref(obraId, COL_LANS).doc(l.id) });
       });
       if (ops.length) await Database.batchWrite(ops);
       await carregar();
       await EstacasCalculos.sincronizarVinculosPlanejamento(obraId).catch(e => console.error('Sync Planejamento:', e));
-      bt = null;
+      estacaAtual = null;
       _renderAbaAcompanhamento();
-      Utils.toast('✓ BT lançada!', 'sucesso');
+      Utils.toast('✓ Lançamento salvo!', 'sucesso');
     } catch (e) {
-      Utils.toast('Erro ao lançar BT: ' + e.message, 'erro');
+      Utils.toast('Erro ao salvar: ' + e.message, 'erro');
     } finally {
       Utils.esconderLoading();
     }
   }
 
+  function fecharEstacaAcomp() { estacaAtual = null; _renderPainelBT(); }
+
   function _renderPainelBT() {
     const el = document.getElementById('ce-bt-painel');
     if (!el) return;
     if (!acompConcretagemId) { el.innerHTML = ''; return; }
-    if (!bt || bt.concId !== acompConcretagemId) bt = { concId: acompConcretagemId, btId: '', modo: '', numeroForm: _proximoNumeroBT(acompConcretagemId), volumeForm: '', linhas: [] };
-    const btsConc = _btsDaConcretagem(bt.concId);
+    const btsConc = _btsDaConcretagem(acompConcretagemId);
+    const listaPecas = _pecasPlanejadas(acompConcretagemId);
+
     let html = `
       <div class="cc-panelTitle" style="font-size:.85rem;">🚚 BTs desta concretagem</div>
       <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
         ${btsConc.map(b => {
           const jafoi = lancamentos.some(l => l.btConfigId === b.id);
-          const sel = b.id === bt.btId;
-          return `<button class="btn ${sel ? 'btn-primario' : 'btn-secundario'} btn-sm" style="${jafoi && !sel ? 'border-color:#16a34a;color:#16a34a;' : ''}" onclick="CE.selecionarBTEstacas('${b.id}')">BT-${b.numero} · ${EC.fmt1(b.volumePrevisto)}m³${jafoi ? ' ✓' : ''}</button>`;
+          return `<span style="display:inline-flex;align-items:center;gap:4px;border:1px solid ${jafoi ? '#16a34a' : 'var(--cv-border,#e2e8f0)'};border-radius:8px;padding:4px 4px 4px 10px;font-size:.82rem;">
+            BT-${b.numero} · ${EC.fmt1(b.volumePrevisto)}m³${jafoi ? ' ✓' : ''}
+            <button class="btn btn-secundario btn-sm" style="padding:2px 6px;" onclick="CE.abrirEditarMetaBT('${b.id}')" title="Editar BT">✎</button>
+            <button class="btn btn-secundario btn-sm" style="padding:2px 6px;color:var(--cv-red,#ef4444);" onclick="CE.excluirBTEstacas('${b.id}')" title="Excluir BT">🗑</button>
+          </span>`;
         }).join('')}
         <button class="btn btn-secundario btn-sm" data-perm="controleEstacas:criar" onclick="CE.abrirNovaBT()">+ Nova BT</button>
       </div>`;
 
-    if (bt.modo === '' && !bt.btId) {
+    if (bt && bt.modo === 'nova-meta') {
       html += `
-        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;padding:10px;border:1px dashed var(--cv-border,#e2e8f0);border-radius:8px;">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;padding:10px;border:1px dashed var(--cv-border,#e2e8f0);border-radius:8px;margin-bottom:10px;">
           <div><label class="text-sm text-muted" style="display:block;">Nº BT</label><input type="number" id="ce-bt-numero-novo" class="form-control" style="width:80px;" value="${bt.numeroForm}"></div>
           <div><label class="text-sm text-muted" style="display:block;">Volume previsto [m³]</label><input type="text" inputmode="decimal" id="ce-bt-volume-novo" class="form-control" style="width:130px;" placeholder="ex: 8"></div>
           <button class="btn btn-primario btn-sm" onclick="CE.criarBTEstacas()">Criar BT</button>
@@ -1024,63 +1058,85 @@ const ControleEstacas = (() => {
         </div>`;
     }
 
-    if (bt.btId && (bt.modo === 'nova' || bt.modo === 'editar')) {
-      const bSel = btsConfig.find(x => x.id === bt.btId);
-      const totalUsado = bt.linhas.reduce((s, l) => {
-        const p = pecas.find(x => x.id === l.pecaId);
-        if (!p) return s;
-        return s + (EC.num((l.pct || '').replace(',', '.')) / 100) * _volumeConcPeca(p, bt.concId);
-      }, 0);
-      const idsUsados = new Set(bt.linhas.map(l => l.pecaId).filter(Boolean));
-      const opcoesPeca = selId => {
-        const disponiveis = _pecasPlanejadas(bt.concId).filter(p => p.id === selId || !idsUsados.has(p.id));
-        return `<option value="">— peça —</option>` + disponiveis.map(p => {
-          const ja = _pctJaLancadaOutraBT(p.id);
-          return `<option value="${p.id}" ${selId === p.id ? 'selected' : ''}>${esc(p.nome)}${p.diametro ? ` ⌀${EC.num(p.diametro)}cm` : ''}${ja > 0.01 ? ` · ${EC.fmt1(ja)}% outra BT` : ''}</option>`;
-        }).join('');
-      };
+    if (bt && bt.modo === 'editar-meta') {
       html += `
-        <div style="border:1px solid var(--cv-border,#e2e8f0);border-radius:8px;padding:12px;margin-top:4px;">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:8px;">
-            <div style="font-weight:700;">${bt.modo === 'editar' ? '✎ Editando' : '⊕ Lançando'} BT-${bSel?.numero} <span style="font-family:var(--font-mono);font-weight:400;font-size:.75rem;color:var(--cv-text3,#94a3b8);">previsto ${EC.fmt1(bSel?.volumePrevisto)} m³</span></div>
-            <div style="display:flex;gap:6px;">
-              <button class="btn btn-secundario btn-sm" onclick="CE.btMarcarTodas100()">✓ Add. pendentes 100%</button>
-              <button class="btn btn-secundario btn-sm" style="color:var(--cv-red,#ef4444);" data-perm="controleEstacas:excluir" onclick="CE.excluirBTEstacas()">🗑 Excluir BT</button>
-            </div>
+        <div style="border:1px solid var(--cv-border,#e2e8f0);border-radius:8px;padding:12px;margin-bottom:10px;">
+          <div style="font-weight:700;margin-bottom:8px;">✎ Editando BT-${bt.numeroForm}</div>
+          <div class="form-row" style="margin-bottom:8px;">
+            <div class="form-grupo" style="margin-bottom:0;"><label>Nº</label><input type="number" id="ce-bt-numero-edit" class="form-control" value="${bt.numeroForm}"></div>
+            <div class="form-grupo" style="margin-bottom:0;"><label>Volume previsto [m³]</label><input type="text" inputmode="decimal" id="ce-bt-volume-edit" class="form-control" value="${EC.fmt1(bt.volumeForm)}"></div>
           </div>
           <div class="form-row" style="margin-bottom:8px;">
-            <div class="form-grupo" style="margin-bottom:0;"><label>Nota Fiscal</label><input type="text" id="ce-bt-nf" class="form-control" value="${esc(bt.nf || '')}" placeholder="opcional"></div>
-            <div class="form-grupo" style="margin-bottom:0;"><label>Código BT</label><input type="text" id="ce-bt-cod" class="form-control" value="${esc(bt.cod || '')}" placeholder="opcional"></div>
+            <div class="form-grupo" style="margin-bottom:0;"><label>Nota Fiscal</label><input type="text" id="ce-bt-nf-edit" class="form-control" value="${esc(bt.nf || '')}" placeholder="opcional"></div>
+            <div class="form-grupo" style="margin-bottom:0;"><label>Código BT</label><input type="text" id="ce-bt-cod-edit" class="form-control" value="${esc(bt.cod || '')}" placeholder="opcional"></div>
           </div>
-          <label class="text-sm text-muted" style="display:block;margin-bottom:4px;">Selecione as peças que esta BT concretou</label>
-          <div id="ce-bt-linhas">
-            ${bt.linhas.map((l, i) => {
-              const p = pecas.find(x => x.id === l.pecaId);
-              const vol = p ? (EC.num((l.pct || '').replace(',', '.')) / 100) * _volumeConcPeca(p, bt.concId) : 0;
-              return `<div style="display:grid;grid-template-columns:1fr 80px 90px auto;gap:8px;margin-bottom:6px;align-items:center;">
-                <select class="form-control" onchange="CE.btUpdLinhaEstacas(${i}, 'pecaId', this.value)">${opcoesPeca(l.pecaId)}</select>
-                <input type="text" inputmode="decimal" class="form-control" placeholder="%" value="${esc(l.pct)}" oninput="CE.btUpdLinhaEstacas(${i}, 'pct', this.value)">
-                <span id="ce-bt-vol-${i}" style="font-family:var(--font-mono);font-size:.78rem;color:var(--cor-texto-secundario);text-align:right;">${EC.fmt1(vol)} m³</span>
-                <button class="btn btn-secundario btn-sm" style="color:var(--cv-red,#ef4444);" onclick="CE.btRemLinhaEstacas(${i})" ${bt.linhas.length <= 1 ? 'disabled' : ''}>✕</button>
-              </div>`;
-            }).join('')}
+          <div class="form-row" style="margin-bottom:8px;">
+            <div class="form-grupo" style="margin-bottom:0;"><label>Sobra Caminhão [m³]</label><input type="text" inputmode="decimal" id="ce-bt-sobra-edit" class="form-control" value="${esc(bt.sobra || '')}" placeholder="0"></div>
+            <div class="form-grupo" style="margin-bottom:0;"><label>Perda em Obra [m³]</label><input type="text" inputmode="decimal" id="ce-bt-perda-edit" class="form-control" value="${esc(bt.perda || '')}" placeholder="0"></div>
           </div>
-          <button class="btn btn-secundario btn-sm" onclick="CE.btAddLinhaEstacas()">+ Peça</button>
-          <div style="display:flex;justify-content:space-between;align-items:center;background:var(--cv-surface2,#f8fafc);border:1px solid var(--cv-border,#e2e8f0);border-radius:8px;padding:8px 12px;margin-top:10px;font-family:var(--font-mono);font-size:.82rem;">
-            <span>Total usado: <b id="ce-bt-total-usado">${EC.fmt1(totalUsado)} m³</b></span>
+          <div class="form-row" style="margin-bottom:8px;">
+            <div class="form-grupo" style="margin-bottom:0;"><label>Cocho + Linha [m³]</label><input type="text" inputmode="decimal" id="ce-bt-perdacocho-edit" class="form-control" value="${esc(bt.perdaCocho || '')}" placeholder="0"></div>
+            <div class="form-grupo" style="margin-bottom:0;"><label>Hora</label><input type="time" id="ce-bt-hora-edit" class="form-control" value="${esc(bt.hora || '')}"></div>
           </div>
-          <div class="form-row" style="margin-top:10px;">
-            <div class="form-grupo" style="margin-bottom:0;"><label>Sobra Caminhão [m³]</label><input type="text" inputmode="decimal" id="ce-bt-sobra" class="form-control" value="${esc(bt.sobra || '')}" placeholder="0"></div>
-            <div class="form-grupo" style="margin-bottom:0;"><label>Perda em Obra [m³]</label><input type="text" inputmode="decimal" id="ce-bt-perda" class="form-control" value="${esc(bt.perda || '')}" placeholder="0"></div>
-          </div>
-          <div class="form-row" style="margin-top:8px;">
-            <div class="form-grupo" style="margin-bottom:0;"><label>Cocho + Linha [m³]</label><input type="text" inputmode="decimal" id="ce-bt-perdacocho" class="form-control" value="${esc(bt.perdaCocho || '')}" placeholder="0"></div>
-            <div class="form-grupo" style="margin-bottom:0;"><label>Hora</label><input type="time" id="ce-bt-hora" class="form-control" value="${esc(bt.hora || '')}"></div>
-          </div>
-          <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;">
+          <div style="display:flex;justify-content:flex-end;gap:8px;">
             <button class="btn btn-secundario btn-sm" onclick="CE.fecharPainelBT()">Cancelar</button>
-            <button class="btn btn-primario btn-sm" data-perm="controleEstacas:criar" onclick="CE.salvarBTEstacas()">${bt.modo === 'editar' ? '✓ Salvar Alterações' : '✓ Lançar BT'}</button>
+            <button class="btn btn-primario btn-sm" onclick="CE.salvarMetaBT()">✓ Salvar BT</button>
           </div>
+        </div>`;
+    }
+
+    html += `
+      <div class="cc-panelTitle" style="font-size:.85rem;margin-top:6px;">⚫ Lançar por estaca/fundação</div>
+      <div class="form-grupo">
+        <select class="form-control" onchange="CE.onSelecionarEstacaAcomp(this.value)">
+          <option value="">— Selecione a peça —</option>
+          ${listaPecas.map(p => {
+            const pct = ConcretoCalculos.pctConcretado(p, lancamentos);
+            const statusTxt = pct >= 100 ? '✓ concretada' : pct > 0 ? `${EC.fmt1(pct)}% feita` : 'pendente';
+            return `<option value="${p.id}" ${estacaAtual && estacaAtual.pecaId === p.id ? 'selected' : ''}>${esc(p.nome)}${p.diametro ? ` ⌀${EC.num(p.diametro)}cm` : ''} — ${statusTxt}</option>`;
+          }).join('')}
+        </select>
+      </div>`;
+
+    if (estacaAtual && estacaAtual.pecaId) {
+      const p = pecas.find(x => x.id === estacaAtual.pecaId);
+      const volNecessario = p ? _volumeConcPeca(p, estacaAtual.concId) : 0;
+      const totalRecebido = estacaAtual.linhas.reduce((s, l) => {
+        const b = btsConfig.find(x => x.id === l.btId);
+        if (!b) return s;
+        return s + (EC.num((l.pctBT || '').replace(',', '.')) / 100) * b.volumePrevisto;
+      }, 0);
+      const idsUsados = new Set(estacaAtual.linhas.map(l => l.btId).filter(Boolean));
+      const opcoesBT = selId => {
+        return `<option value="">— BT —</option>` + btsConc.filter(b => b.id === selId || !idsUsados.has(b.id)).map(b =>
+          `<option value="${b.id}" ${selId === b.id ? 'selected' : ''}>BT-${b.numero} · ${EC.fmt1(b.volumePrevisto)}m³</option>`).join('');
+      };
+      html += `
+        <div style="border:1px solid var(--cv-border,#e2e8f0);border-radius:8px;padding:12px;margin-top:8px;">
+          <div style="font-weight:700;margin-bottom:4px;">${p ? esc(p.nome) : ''}${p && p.diametro ? ` ⌀${EC.num(p.diametro)}cm` : ''}</div>
+          <div class="text-sm text-muted" style="margin-bottom:10px;">Precisa de ${EC.fmt1(volNecessario)} m³ · recebido até agora ${EC.fmt1(totalRecebido)} m³ (${EC.fmt1(volNecessario > 0 ? totalRecebido / volNecessario * 100 : 0)}%)</div>
+          <label class="text-sm text-muted" style="display:block;margin-bottom:4px;">Quais BTs concretaram esta peça, e quanto % de CADA BT foi usado aqui</label>
+          ${!btsConc.length ? '<div class="cc-empty">Nenhuma BT criada ainda nesta concretagem — crie uma acima.</div>' : `
+            <div id="ce-est-linhas">
+              ${estacaAtual.linhas.map((l, i) => {
+                const b = btsConfig.find(x => x.id === l.btId);
+                const vol = b ? (EC.num((l.pctBT || '').replace(',', '.')) / 100) * b.volumePrevisto : 0;
+                return `<div style="display:grid;grid-template-columns:1fr 100px 90px auto;gap:8px;margin-bottom:6px;align-items:center;">
+                  <select class="form-control" onchange="CE.btUpdLinhaPeca(${i}, 'btId', this.value)">${opcoesBT(l.btId)}</select>
+                  <input type="text" inputmode="decimal" class="form-control" placeholder="% da BT" value="${esc(l.pctBT)}" oninput="CE.btUpdLinhaPeca(${i}, 'pctBT', this.value)">
+                  <span id="ce-est-vol-${i}" style="font-family:var(--font-mono);font-size:.78rem;color:var(--cor-texto-secundario);text-align:right;">${EC.fmt1(vol)} m³</span>
+                  <button class="btn btn-secundario btn-sm" style="color:var(--cv-red,#ef4444);" onclick="CE.btRemLinhaPeca(${i})" ${estacaAtual.linhas.length <= 1 ? 'disabled' : ''}>✕</button>
+                </div>`;
+              }).join('')}
+            </div>
+            <button class="btn btn-secundario btn-sm" onclick="CE.btAddLinhaPeca()">+ BT</button>
+            <div style="display:flex;justify-content:space-between;align-items:center;background:var(--cv-surface2,#f8fafc);border:1px solid var(--cv-border,#e2e8f0);border-radius:8px;padding:8px 12px;margin-top:10px;font-family:var(--font-mono);font-size:.82rem;">
+              <span>Total recebido: <b id="ce-est-total-recebido">${EC.fmt1(totalRecebido)} m³</b></span>
+            </div>
+            <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;">
+              <button class="btn btn-secundario btn-sm" onclick="CE.fecharEstacaAcomp()">Cancelar</button>
+              <button class="btn btn-primario btn-sm" data-perm="controleEstacas:criar" onclick="CE.salvarEstacaAcomp()">✓ Salvar</button>
+            </div>`}
         </div>`;
     }
     el.innerHTML = html;
@@ -2020,8 +2076,8 @@ const ControleEstacas = (() => {
     abrirPranchas, novaPrancha, renomearPrancha, excluirPrancha, abrirUploadImagem, onImagemArquivo,
     atribuirConcretagemNumero, atribuirConcretagemNumeroInput, removerDaConcretagem, onTrocarAcompConcretagem,
     toggleNovaConcPlan, criarConcretagemPlan, focarConcretagemPlan,
-    abrirNovaBT, fecharPainelBT, criarBTEstacas, selecionarBTEstacas, excluirBTEstacas, btUpdCampo,
-    btAddLinhaEstacas, btRemLinhaEstacas, btUpdLinhaEstacas, btMarcarTodas100, salvarBTEstacas,
+    abrirNovaBT, fecharPainelBT, criarBTEstacas, abrirEditarMetaBT, salvarMetaBT, excluirBTEstacas,
+    onSelecionarEstacaAcomp, btAddLinhaPeca, btRemLinhaPeca, btUpdLinhaPeca, salvarEstacaAcomp, fecharEstacaAcomp,
   };
 })();
 
