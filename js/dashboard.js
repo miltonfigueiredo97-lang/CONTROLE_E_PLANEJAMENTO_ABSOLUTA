@@ -1827,9 +1827,15 @@ const Dashboard = (() => {
     const ctx = _feContexto;
     if (!ctx) return;
     const CC = window.ConcretoCalculos;
+    const norm = a => (CC ? CC.normalizarAndar(a) : String(a || '').trim());
     const cat = CATEGORIAS_CONCRETO.find(c => c.chave === categoriaChave);
-    const pecasDoAndar = ctx.pecas.filter(p => (p.andar || 'Sem andar') === andar && cat.filtro(p));
-    if (!pecasDoAndar.length) return;
+    // Comparação por nome NORMALIZADO — mesmo fix já aplicado no cálculo do
+    // gráfico (V2.60.12): grafias diferentes do mesmo andar (ex: "2° Subsolo"
+    // com símbolo de grau vs "2º Subsolo" ordinal) faziam esta função nem
+    // achar peça nenhuma e sair em silêncio, sem toast — parecia que o popup
+    // "não tinha nada pronto" mesmo com dado real cadastrado.
+    const pecasDoAndar = ctx.pecas.filter(p => norm(p.andar || 'Sem andar') === norm(andar) && cat.filtro(p));
+    if (!pecasDoAndar.length) { Utils.toast('Nenhuma peça encontrada para este andar/categoria.', 'alerta'); return; }
     const pecaPorId = new Map(pecasDoAndar.map(p => [p.id, p]));
     const emExecucao = pecasDoAndar.filter(p => CC ? CC.pctConcretado(p, ctx.lancamentos) > 0 : false);
     if (!emExecucao.length) {
@@ -1862,9 +1868,11 @@ const Dashboard = (() => {
   function _abrirPopupConcretagens(andar, categoriaChave) {
     const ctx = _feContexto;
     if (!ctx) return;
+    const CC = window.ConcretoCalculos;
+    const norm = a => (CC ? CC.normalizarAndar(a) : String(a || '').trim());
     const cat = CATEGORIAS_CONCRETO.find(c => c.chave === categoriaChave);
-    const pecasDoAndar = ctx.pecas.filter(p => (p.andar || 'Sem andar') === andar && cat.filtro(p));
-    if (!pecasDoAndar.length) return;
+    const pecasDoAndar = ctx.pecas.filter(p => norm(p.andar || 'Sem andar') === norm(andar) && cat.filtro(p));
+    if (!pecasDoAndar.length) { Utils.toast('Nenhuma peça encontrada para este andar/categoria.', 'alerta'); return; }
     const idsPecas = new Set(pecasDoAndar.map(p => p.id));
     const concIds = new Set(ctx.pecaConc.filter(pc => idsPecas.has(pc.pecaId)).map(pc => pc.concretagemId));
     const concsDoAndar = ctx.concretagens.filter(c => concIds.has(c.id)).sort((a, b) => a.numero - b.numero);
@@ -1999,8 +2007,19 @@ const Dashboard = (() => {
   async function _renderSoloGrampeadoMinimapas() {
     const host = document.getElementById('db-solo-grampeado');
     if (!host) return;
-    const SG = window.SoloGrampeadoCalculos;
-    if (!SG) { host.innerHTML = '<div class="estado-vazio"><p class="text-sm">Motor de cálculo de Solo Grampeado não carregado.</p></div>'; return; }
+    // Pequeno retry defensivo: em rede lenta, o script pode ainda estar
+    // sendo interpretado no instante exato em que esta função roda (mesmo
+    // vindo antes no HTML) — espera até 1s antes de desistir, em vez de
+    // falhar na primeira checagem.
+    let SG = window.SoloGrampeadoCalculos;
+    for (let tentativa = 0; !SG && tentativa < 5; tentativa++) {
+      await new Promise(r => setTimeout(r, 200));
+      SG = window.SoloGrampeadoCalculos;
+    }
+    if (!SG) {
+      host.innerHTML = '<div class="estado-vazio"><p class="text-sm">Motor de cálculo de Solo Grampeado não carregou (js/solo-grampeado-calculos.js). Recarregue a página (Ctrl+Shift+R); se persistir, verifique a conexão.</p></div>';
+      return;
+    }
     try {
       const obraId = obraAtual.id;
       const [vistas, chumbadores, execucoes, areas] = await Promise.all([
@@ -2121,18 +2140,19 @@ const Dashboard = (() => {
   // categoria (executado). `dados` = [{ andar, porCategoria: [{chave,previsto,executado}, ...] }].
   function _svgFundacaoEstruturaPorAndar(dados) {
     const n = dados.length;
-    // Larguras compactas — cabe tudo sem scroll horizontal: 2 barrinhas
-    // (Previsto+Executado) por categoria presente naquele andar, cada
-    // categoria com seu par bem junto, e espaço mínimo entre andares.
-    const W = 1180, H = 360;
+    const nCat = CATEGORIAS_CONCRETO.length;
+    // Largura por grupo (andar) tem um mínimo confortável e um máximo pra
+    // não ficar espremido — com poucos andares (ex: 1), o gráfico inteiro
+    // fica compacto em vez de esticar uma barra isolada por 1180px de vazio.
+    const larguraGrupoMin = 110, larguraGrupoMax = 230;
+    const larguraGrupoPx = Math.max(larguraGrupoMin, Math.min(larguraGrupoMax, 900 / Math.max(1, n)));
+    const W = Math.max(360, n * larguraGrupoPx + 60), H = 360;
     const padL = 46, padR = 12, padT = 22, padB = 92;
     const plotW = W - padL - padR, plotH = H - padT - padB;
     const maxV = Math.max(1, ...dados.flatMap(d => d.porCategoria.map(c => Math.max(c.previsto, c.executado))));
-    const larguraGrupoPx = plotW / n;
-    const nCat = CATEGORIAS_CONCRETO.length;
     // Barra fininha: cabem as 3 categorias (2 barras cada = 6 barras) até no
     // andar de Fundação, que é o único com mais de 1 categoria ativa.
-    const barW = Math.max(2.5, Math.min(7, (larguraGrupoPx * 0.82) / (nCat * 2)));
+    const barW = Math.max(4, Math.min(22, (larguraGrupoPx * 0.78) / (nCat * 2)));
     const gapBarras = 1; // entre Previsto/Executado da mesma categoria
     const gapCategoria = 3; // entre categorias diferentes do mesmo andar
 
@@ -2156,10 +2176,10 @@ const Dashboard = (() => {
         bars += `<rect x="${xExec.toFixed(1)}" y="${(padT + plotH - hExec).toFixed(1)}" width="${barW.toFixed(1)}" height="${hExec.toFixed(1)}" fill="${cat.cor}"/>`;
         if (c.previsto > 0 && barW > 4) bars += `<text x="${(xPrev + barW / 2).toFixed(1)}" y="${(padT + plotH - hPrev - 3).toFixed(1)}" font-size="7" fill="#555" font-weight="600" text-anchor="middle">${Utils.formatarNumero(c.previsto, 0)}</text>`;
         // Rótulo do NOME da categoria, inclinado, escrito dentro/sobre a
-        // própria barra de Previsto — só quando o andar tem mais de 1
-        // categoria ativa (ex: Fundação com Estaca+Fundação juntas), pra
-        // não repetir óbvio nos andares que só têm Estrutura.
-        if (catsAtivas.length > 1) {
+        // própria barra de Previsto — sempre visível (mesmo com 1 única
+        // categoria no andar), pra nunca depender só da cor pra identificar
+        // o que é Estaca/Fundação/Estrutura.
+        if (barW > 5) {
           const catLabel = cat.chave === 'estaca' ? 'Estacas' : cat.chave === 'fundacao' ? 'Fundação' : 'Estrutura';
           const yBase = padT + plotH - Math.max(hPrev, hExec) / 2;
           bars += `<text x="${(xPrev + barW).toFixed(1)}" y="${yBase.toFixed(1)}" font-size="7.5" fill="#fff" font-weight="700" text-anchor="middle" transform="rotate(-90 ${(xPrev + barW).toFixed(1)} ${yBase.toFixed(1)})" style="paint-order:stroke;stroke:${cat.cor};stroke-width:3px;">${catLabel}</text>`;
