@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.60.35',
+  versaoAtual: 'V2.60.36',
 
   versoes: [
     {
@@ -5729,10 +5729,15 @@ const NotasVersao = {
       itens:['Antes cada linha da tabela era 1 tarefa-mãe direto do Planejamento, com o nome exatamente igual ao de lá. Agora: cada linha tem um nome PRÓPRIO (fixo, editável) e uma lista de tarefas do Planejamento vinculadas a ela — útil quando o nome que se quer ver não bate com o nome da tarefa, ou quando é preciso somar 2+ tarefas numa linha só (ex: "Instalações Hidráulicas" = Distribuição + Prumadas).',
         'Tela de configuração reformulada: lista as linhas já criadas (nome editável + tags das tarefas vinculadas), botão "+ Nova linha", e um "Vincular/Editar tarefas" por linha que abre a mesma árvore navegável de antes, mas ligada só àquela linha.',
         'Linha sem nome ou sem nenhuma tarefa vinculada é ignorada ao salvar (não aparece vazia na tabela).']},
-    {versao:'V2.60.35',status:'aberta',data:'2026-08-13',tipo:'correcao',
+    {versao:'V2.60.35',status:'fechada',data:'2026-08-13',tipo:'correcao',
       titulo:'Dashboard: Curva S e Solo Grampeado sumindo sem erro — cada seção agora isolada, uma não trava mais as outras',
       itens:['Causa estrutural provável: as 9 seções do Dashboard (Hero, Atividades, Painel de Andamento, Solo Grampeado, Fundação e Estrutura, Estacas, Curva S, Resumo por Apartamento) compartilhavam um único try/catch em sequência — se qualquer uma lançasse uma exceção não tratada internamente, TODAS as seções seguintes na lista simplesmente não rodavam, sem nenhuma mensagem visível (só um toast genérico que passa rápido). Agora cada seção tem seu próprio try/catch isolado: uma falha não impede mais as outras de aparecer.',
-        'Motor de cálculo de Solo Grampeado: retry aumentado (de 1s pra 2s) e, se ainda não carregar, tenta reinjetar o script automaticamente antes de desistir — cobre falha pontual de rede ao baixar o arquivo, não só timing.']}
+        'Motor de cálculo de Solo Grampeado: retry aumentado (de 1s pra 2s) e, se ainda não carregar, tenta reinjetar o script automaticamente antes de desistir — cobre falha pontual de rede ao baixar o arquivo, não só timing.']},
+    {versao:'V2.60.36',status:'aberta',data:'2026-08-13',tipo:'correcao',
+      titulo:'Dashboard: gráfico Fundação e Estrutura estava minúsculo e ilegível em obras com muitos andares',
+      itens:['Erro na tentativa anterior de "caber tudo sem scroll": o SVG era espremido pra 100% da largura do card, então com 22 andares cada barra virava ~7px e as fontes ~5px na tela — impossível de ler.',
+        'Agora cada andar tem largura FIXA de 112px e o gráfico é bem mais alto (460px): barras de 13px, valores em fonte 11px, nomes dos andares em 12px. Quando há muitos andares, o gráfico ganha scroll horizontal em vez de encolher tudo — melhor rolar do que não conseguir ler.',
+        'Nome da categoria (Estacas/Fundação/Estrutura) dentro da barra só aparece quando a barra tem altura suficiente pro texto caber, evitando texto espremido/cortado nas barras pequenas.']}
   ],
 
   render(containerId) {

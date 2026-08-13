@@ -2341,20 +2341,20 @@ const Dashboard = (() => {
   function _svgFundacaoEstruturaPorAndar(dados) {
     const n = dados.length;
     const nCat = CATEGORIAS_CONCRETO.length;
-    // Largura por grupo (andar) tem um mínimo confortável e um máximo pra
-    // não ficar espremido — com poucos andares (ex: 1), o gráfico inteiro
-    // fica compacto em vez de esticar uma barra isolada por 1180px de vazio.
-    const larguraGrupoMin = 110, larguraGrupoMax = 230;
-    const larguraGrupoPx = Math.max(larguraGrupoMin, Math.min(larguraGrupoMax, 900 / Math.max(1, n)));
-    const W = Math.max(360, n * larguraGrupoPx + 60), H = 360;
-    const padL = 46, padR = 12, padT = 22, padB = 92;
+    // Cada andar tem largura FIXA confortável — o gráfico cresce pra direita
+    // conforme a quantidade de andares e ganha scroll horizontal quando
+    // precisa. Antes o SVG era espremido pra caber 100% na largura do card,
+    // o que reduzia barras e fontes pra tamanho ilegível em obras com muitos
+    // andares (22 andares = tudo com metade do tamanho na tela).
+    const larguraGrupoPx = 112;
+    const H = 460; // mais alto: barras respiram e os valores ficam legíveis
+    const padL = 60, padR = 20, padT = 28, padB = 120;
+    const W = Math.max(700, n * larguraGrupoPx + padL + padR);
     const plotW = W - padL - padR, plotH = H - padT - padB;
     const maxV = Math.max(1, ...dados.flatMap(d => d.porCategoria.map(c => Math.max(c.previsto, c.executado))));
-    // Barra fininha: cabem as 3 categorias (2 barras cada = 6 barras) até no
-    // andar de Fundação, que é o único com mais de 1 categoria ativa.
-    const barW = Math.max(4, Math.min(22, (larguraGrupoPx * 0.78) / (nCat * 2)));
-    const gapBarras = 1; // entre Previsto/Executado da mesma categoria
-    const gapCategoria = 3; // entre categorias diferentes do mesmo andar
+    const barW = 13; // fixo e grosso o suficiente pra ler o rótulo dentro
+    const gapBarras = 2; // entre Previsto/Executado da mesma categoria
+    const gapCategoria = 6; // entre categorias diferentes do mesmo andar
 
     let bars = '', labels = '', hits = '', separadores = '', faixas = '', guias = '';
     dados.forEach((d, i) => {
@@ -2369,51 +2369,47 @@ const Dashboard = (() => {
         const cat = CATEGORIAS_CONCRETO.find(cc => cc.chave === c.chave);
         const hPrev = (c.previsto / maxV) * plotH, hExec = (c.executado / maxV) * plotH;
         const xPrev = cursorX, xExec = cursorX + barW + gapBarras;
-        // Previsto: preenchimento SÓLIDO no tom claro da categoria (não
-        // contorno vazio) — cor sempre forte e visível, do jeito pedido.
-        bars += `<rect x="${xPrev.toFixed(1)}" y="${(padT + plotH - hPrev).toFixed(1)}" width="${barW.toFixed(1)}" height="${hPrev.toFixed(1)}" fill="${cat.corClara}"/>`;
-        // Executado: preenchimento SÓLIDO no tom forte da categoria.
-        bars += `<rect x="${xExec.toFixed(1)}" y="${(padT + plotH - hExec).toFixed(1)}" width="${barW.toFixed(1)}" height="${hExec.toFixed(1)}" fill="${cat.cor}"/>`;
-        if (c.previsto > 0 && barW > 4) bars += `<text x="${(xPrev + barW / 2).toFixed(1)}" y="${(padT + plotH - hPrev - 3).toFixed(1)}" font-size="7" fill="#555" font-weight="600" text-anchor="middle">${Utils.formatarNumero(c.previsto, 0)}</text>`;
-        // Rótulo do NOME da categoria, inclinado, escrito dentro/sobre a
-        // própria barra de Previsto — sempre visível (mesmo com 1 única
-        // categoria no andar), pra nunca depender só da cor pra identificar
-        // o que é Estaca/Fundação/Estrutura.
-        if (barW > 5) {
-          const catLabel = cat.chave === 'estaca' ? 'Estacas' : cat.chave === 'fundacao' ? 'Fundação' : 'Estrutura';
-          const yBase = padT + plotH - Math.max(hPrev, hExec) / 2;
-          bars += `<text x="${(xPrev + barW).toFixed(1)}" y="${yBase.toFixed(1)}" font-size="7.5" fill="#fff" font-weight="700" text-anchor="middle" transform="rotate(-90 ${(xPrev + barW).toFixed(1)} ${yBase.toFixed(1)})" style="paint-order:stroke;stroke:${cat.cor};stroke-width:3px;">${catLabel}</text>`;
+        // Previsto: tom claro da categoria. Executado: tom forte.
+        bars += `<rect x="${xPrev.toFixed(1)}" y="${(padT + plotH - hPrev).toFixed(1)}" width="${barW}" height="${hPrev.toFixed(1)}" fill="${cat.corClara}"/>`;
+        bars += `<rect x="${xExec.toFixed(1)}" y="${(padT + plotH - hExec).toFixed(1)}" width="${barW}" height="${hExec.toFixed(1)}" fill="${cat.cor}"/>`;
+        if (c.previsto > 0) bars += `<text x="${(xPrev + barW / 2).toFixed(1)}" y="${(padT + plotH - hPrev - 5).toFixed(1)}" font-size="11" fill="#333" font-weight="700" text-anchor="middle">${Utils.formatarNumero(c.previsto, 0)}</text>`;
+        // Nome da categoria escrito na vertical dentro da barra de Previsto.
+        const catLabel = cat.chave === 'estaca' ? 'Estacas' : cat.chave === 'fundacao' ? 'Fundação' : 'Estrutura';
+        const alturaMaior = Math.max(hPrev, hExec);
+        if (alturaMaior > 46) { // só escreve se a barra tem altura pra caber o texto
+          const yBase = padT + plotH - alturaMaior / 2;
+          bars += `<text x="${(xPrev + barW + gapBarras / 2).toFixed(1)}" y="${yBase.toFixed(1)}" font-size="10" fill="#fff" font-weight="700" text-anchor="middle" transform="rotate(-90 ${(xPrev + barW + gapBarras / 2).toFixed(1)} ${yBase.toFixed(1)})" style="paint-order:stroke;stroke:${cat.cor};stroke-width:3.5px;">${catLabel}</text>`;
         }
         hits += `<rect class="db-hit" data-idx="${i}" data-cat="${cat.chave}" x="${cursorX.toFixed(1)}" y="${padT}" width="${(barW * 2 + gapBarras).toFixed(1)}" height="${plotH}" fill="transparent" style="cursor:pointer;"/>`;
         cursorX += barW * 2 + gapBarras + gapCategoria;
       });
 
-      // Rótulo do andar com LINHA GUIA vertical até a base do grupo — resolve
-      // a ambiguidade de "essa barra é de qual andar" quando o texto
-      // inclinado fica entre dois rótulos.
+      // Rótulo do andar com LINHA GUIA vertical até a base do grupo.
       const cxLabel = grupoX + larguraGrupoPx / 2;
       const yBase = padT + plotH;
-      guias += `<line x1="${cxLabel.toFixed(1)}" x2="${cxLabel.toFixed(1)}" y1="${yBase.toFixed(1)}" y2="${(yBase + 5).toFixed(1)}" stroke="#999" stroke-width="1"/>`;
-      const nomeCurto = d.andar.length > 14 ? d.andar.slice(0, 13) + '…' : d.andar;
-      labels += `<text x="${cxLabel.toFixed(1)}" y="${(yBase + 16).toFixed(1)}" font-size="9" fill="#222" font-weight="600" text-anchor="end" transform="rotate(-55 ${cxLabel.toFixed(1)} ${(yBase + 16).toFixed(1)})"><title>${d.andar}</title>${nomeCurto}</text>`;
-      if (i < n - 1) separadores += `<line x1="${(grupoX + larguraGrupoPx).toFixed(1)}" x2="${(grupoX + larguraGrupoPx).toFixed(1)}" y1="${padT}" y2="${padT + plotH}" stroke="#ddd" stroke-width="1"/>`;
+      guias += `<line x1="${cxLabel.toFixed(1)}" x2="${cxLabel.toFixed(1)}" y1="${yBase.toFixed(1)}" y2="${(yBase + 6).toFixed(1)}" stroke="#999" stroke-width="1"/>`;
+      const nomeCurto = d.andar.length > 18 ? d.andar.slice(0, 17) + '…' : d.andar;
+      labels += `<text x="${cxLabel.toFixed(1)}" y="${(yBase + 20).toFixed(1)}" font-size="12" fill="#222" font-weight="600" text-anchor="end" transform="rotate(-45 ${cxLabel.toFixed(1)} ${(yBase + 20).toFixed(1)})"><title>${d.andar}</title>${nomeCurto}</text>`;
+      if (i < n - 1) separadores += `<line x1="${(grupoX + larguraGrupoPx).toFixed(1)}" x2="${(grupoX + larguraGrupoPx).toFixed(1)}" y1="${padT}" y2="${padT + plotH}" stroke="#e0e0e0" stroke-width="1"/>`;
     });
 
     const gridY = [0, 0.25, 0.5, 0.75, 1].map(f => {
       const y = padT + plotH - f * plotH;
-      return `<line x1="${padL}" x2="${W - padR}" y1="${y.toFixed(1)}" y2="${y.toFixed(1)}" stroke="#eee" stroke-width="1"/><text x="4" y="${(y + 3).toFixed(1)}" font-size="9" fill="#999">${Utils.formatarNumero(f * maxV, 0)}</text>`;
+      return `<line x1="${padL}" x2="${W - padR}" y1="${y.toFixed(1)}" y2="${y.toFixed(1)}" stroke="#eee" stroke-width="1"/><text x="8" y="${(y + 4).toFixed(1)}" font-size="12" fill="#888">${Utils.formatarNumero(f * maxV, 0)}</text>`;
     }).join('');
 
     return `
-      <svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block;">
-        ${faixas}
-        ${gridY}
-        ${separadores}
-        ${bars}
-        ${guias}
-        ${labels}
-        ${hits}
-      </svg>
+      <div style="overflow-x:auto;">
+        <svg viewBox="0 0 ${W} ${H}" style="width:${W}px;max-width:none;height:${H}px;display:block;">
+          ${faixas}
+          ${gridY}
+          ${separadores}
+          ${bars}
+          ${guias}
+          ${labels}
+          ${hits}
+        </svg>
+      </div>
       <div class="db-tooltip"></div>
       <div class="db-legenda">
         ${CATEGORIAS_CONCRETO.map(cat => `<span><i style="background:${cat.corClara};"></i> ${cat.titulo} — Previsto</span>`).join('')}
