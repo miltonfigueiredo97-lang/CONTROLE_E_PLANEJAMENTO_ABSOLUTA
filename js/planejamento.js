@@ -2579,6 +2579,7 @@ const Planejamento = (() => {
       {rotulo:'Exportar Excel (simples)',grupo:'Importar & Exportar',html:'<button class="btn btn-secundario btn-sm" data-perm="planejamento:exportar" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.exportar()" title="Planilha crua com todas as colunas — boa pra reimportar/tratar dados">📤 Exportar Excel (simples)</button>'},
       {rotulo:'Exportar Excel (formatado)',grupo:'Importar & Exportar',html:'<button class="btn btn-secundario btn-sm" data-perm="planejamento:exportar" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.exportarExcelBonito()" title="Planilha estilizada: grupos coloridos por nível, indentação, cabeçalho fixo com filtro — pronta pra apresentar/imprimir">🎨 Exportar Excel (formatado)</button>'},
       {rotulo:'Exportar MS Project',grupo:'Importar & Exportar',html:'<button class="btn btn-secundario btn-sm" data-perm="planejamento:exportar" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.exportarMSProject()" title="XML no formato do MS Project (hierarquia, datas, duração, % e predecessoras) — abre direto no Project">📊 Exportar MS Project (.xml)</button>'},
+      {rotulo:'Baixar PDF',grupo:'Importar & Exportar',html:'<button class="btn btn-secundario btn-sm" data-perm="planejamento:exportar" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.baixarPDF()" title="Baixa o arquivo .pdf direto (sem passar pela impressão) — mesmo visual bonito, A4 paisagem">📄 Baixar PDF</button>'},
       {rotulo:'Imprimir / PDF',grupo:'Importar & Exportar',html:'<button class="btn btn-secundario btn-sm" data-perm="planejamento:exportar" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.abrirImpressao()" title="Abre a visão bonita em página branca pronta pra imprimir ou salvar em PDF (cabeçalho repete em cada página)">🖨 Imprimir / PDF</button>'},
       {rotulo:'Histórico de Alterações',grupo:'Ferramentas da Obra',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento._abrirHistoricoAlteracoes()" title="Lista todas as trocas de predecessora/% feitas com motivo registrado">📋 Histórico de Alterações</button>'},
       {rotulo:'Importar',grupo:'Importar & Exportar',html:'<label class="btn btn-secundario btn-sm" style="cursor:pointer;font-size:.75rem;display:block;text-align:left;" title="Cria/atualiza por Código, nunca apaga (comportamento atual, mais seguro)">📥 Importar<input type="file" accept=".xlsx,.xls" style="display:none" onchange="Planejamento.importarExcel(event)"></label>'},
@@ -4441,6 +4442,51 @@ const Planejamento = (() => {
   // Abre uma janela limpa, fundo branco, com a MESMA visão hierárquica bonita
   // da tela (indentação, grupos coloridos por nível, status) — o diálogo de
   // impressão do navegador imprime ou salva em PDF direto.
+  // ===================== BAIXAR PDF DIRETO =====================
+  // Gera e baixa o arquivo .pdf na hora (sem passar pelo diálogo de
+  // impressão) — mesmo visual da impressão: A4 paisagem, cabeçalho escuro
+  // repetido em cada página, grupos coloridos por nível, indentação.
+  async function baixarPDF(){
+    if(!Permissions.pode('planejamento','exportar')){Utils.toast('Sem permissão para exportar.','erro');return;}
+    try{Utils.mostrarLoading('Gerando PDF...');
+      if(!window.jspdf){
+        await _ls('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+        await _ls('https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js');
+      }
+      const {jsPDF}=window.jspdf;
+      const doc=new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
+      const sorted=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
+      const temFilho=sorted.map((t,i)=>i+1<sorted.length&&(sorted[i+1].nivel||0)>(t.nivel||0));
+      const CORES_NIVEL=[[245,200,0],[253,230,138],[254,243,199],[243,244,246]];
+      const obra=Router.getObra();
+      const body=sorted.map((t,i)=>[i+1,'   '.repeat(t.nivel||0)+(t.nome||''),
+        t.duracao?t.duracao+'d':'',_fBR(t.inicioPlanejado),_fBR(t.terminoPlanejado),
+        _percEsp(t)+'%',(t.percentualConcluido||0)+'%',t._predDisplay||'',t.responsavel||'']);
+      doc.setFontSize(13);doc.text(`Cronograma — ${obra?.nome||'Obra'}`,14,12);
+      doc.setFontSize(8);doc.setTextColor(107,114,128);
+      doc.text(`Gerado em ${new Date().toLocaleString('pt-BR')} · ${sorted.length} tarefas · Absoluta Engenharia`,14,17);
+      doc.autoTable({
+        head:[['#','Tarefa','Dur.','Início','Término','% Esp.','% Conc.','Predecessora','Responsável']],
+        body,startY:21,
+        styles:{fontSize:6.8,cellPadding:1.2,lineColor:[209,213,219],lineWidth:0.1,textColor:[17,17,17]},
+        headStyles:{fillColor:[17,24,39],textColor:[255,255,255],fontStyle:'bold',halign:'center',fontSize:6.8},
+        columnStyles:{0:{halign:'center',cellWidth:9},1:{cellWidth:100},2:{halign:'center',cellWidth:12},3:{halign:'center',cellWidth:19},4:{halign:'center',cellWidth:19},5:{halign:'center',cellWidth:13},6:{halign:'center',cellWidth:13},7:{halign:'center',cellWidth:32},8:{cellWidth:'auto'}},
+        didParseCell:d=>{
+          if(d.section!=='body')return;
+          const i=d.row.index,t=sorted[i];
+          if(!t)return;
+          if(temFilho[i]){
+            d.cell.styles.fontStyle='bold';
+            d.cell.styles.fillColor=CORES_NIVEL[Math.min(t.nivel||0,CORES_NIVEL.length-1)];
+          } else if(i%2){d.cell.styles.fillColor=[250,250,250];}
+          if(d.column.index===6&&(t.percentualConcluido||0)>=100)d.cell.styles.textColor=[21,128,61];
+        },
+      });
+      doc.save(`cronograma_${(obra?.nome||'obra').replace(/[^a-z0-9]/gi,'_')}.pdf`);
+      Utils.toast('PDF baixado!','sucesso');
+    }catch(e){console.error(e);Utils.toast('Erro: '+e.message,'erro');}finally{Utils.esconderLoading();}
+  }
+
   function abrirImpressao(){
     if(!Permissions.pode('planejamento','exportar')){Utils.toast('Sem permissão para exportar.','erro');return;}
     const sorted=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
@@ -5570,7 +5616,7 @@ const Planejamento = (() => {
     _rowDragStart,toggleSel,_limparSelecao,_moverSel,_bulkNivel,_bulkDuplicar,_bulkExcluir,
     toggleStatusFiltro,_aplicarStatusFiltro,_abrirFiltroResponsavel,_aplicarFiltroResponsavel,_limparFiltroResponsavel,undo,
     onBusca,limparBusca,_buscaKey,
-    importarExcel,importarBaseCompleta,importarCorrecoes,_executarCorrecoes,_mostrarRevisaoCorrecoes,exportar,exportarExcelBonito,exportarMSProject,abrirImpressao,exportarPNG,corrigirOrdensDuplicadas,_corrigirNiveisSoltos,_corrigirNivelPeloCodigo,_migrarPredecessorasParaId,_recalcularDatasPais,_recalcularPercTodosPais,_orfasMarcarTodas,_orfasExcluirMarcadas,_gerarPNG,_predPopup,_predSalvar,_predCellClick,_predAddLinha,_predLinhaAtualizar,
+    importarExcel,importarBaseCompleta,importarCorrecoes,_executarCorrecoes,_mostrarRevisaoCorrecoes,exportar,exportarExcelBonito,exportarMSProject,abrirImpressao,baixarPDF,exportarPNG,corrigirOrdensDuplicadas,_corrigirNiveisSoltos,_corrigirNivelPeloCodigo,_migrarPredecessorasParaId,_recalcularDatasPais,_recalcularPercTodosPais,_orfasMarcarTodas,_orfasExcluirMarcadas,_gerarPNG,_predPopup,_predSalvar,_predCellClick,_predAddLinha,_predLinhaAtualizar,
     abrirVinculosView,fecharVinculosView,abrirVincularTarefa,abrirVincularAqui,onVincTipoChange,
     onVincNavModulo,onVincNavModuloMetrica,onVincNavMetrica,onVincNavEntrar,onVincNavBreadcrumb,onVincNavVoltar,
     onBuscaEscolhaAlvoVinc,onEscolherAlvoVinc,onTrocarAlvoVinc,

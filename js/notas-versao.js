@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.62.11',
+  versaoAtual: 'V2.62.12',
 
   versoes: [
     {
@@ -5823,10 +5823,14 @@ const NotasVersao = {
       itens:['Clicar num minimapa de Estacas no Dashboard agora abre a prancha em POPUP DE TELA CHEIA, em qualidade máxima, mantendo a mesma visão limpa do minimapa (só as estacas executadas, sem anéis de tipo).',
         'Navegação no popup: zoom com Ctrl+scroll (ou botões −/+), arrastar com o botão esquerdo ou do meio do mouse (pan), scroll normal rola a prancha, setas ‹ › alternam entre pranchas, Esc fecha.',
         'Cards do minimapa ganharam indicação visual de clique (lupa + destaque no hover).']},
-    {versao:'V2.62.11',status:'aberta',data:'2026-08-14',tipo:'correcao',
+    {versao:'V2.62.11',status:'fechada',data:'2026-08-14',tipo:'correcao',
       titulo:'Dashboard se atualiza sozinho ao voltar pra aba',
       itens:['O Dashboard carregava os dados só na abertura: quem mudava a % no Planejamento em outra aba e voltava continuava vendo o retrato antigo (parecia que a mudança "não tinha mexido em nada"). Agora, ao voltar pra aba do Dashboard, ele recarrega os dados automaticamente (de forma silenciosa, sem tela de loading).',
-        'Botão "↻ Atualizar" no cabeçalho do Andamento por Frente pra forçar a recarga a qualquer momento.']}
+        'Botão "↻ Atualizar" no cabeçalho do Andamento por Frente pra forçar a recarga a qualquer momento.']},
+    {versao:'V2.62.12',status:'aberta',data:'2026-08-14',tipo:'melhoria',
+      titulo:'Planejamento: novo "📄 Baixar PDF" — baixa o arquivo .pdf direto, sem passar pelo diálogo de impressão',
+      itens:['Mesmo visual bonito do Imprimir/PDF (A4 paisagem, cabeçalho escuro repetido em cada página, grupos coloridos por nível, indentação, % concluído verde quando 100%), só que já salva o arquivo .pdf na hora, com um clique.',
+        'O "🖨 Imprimir / PDF" continua disponível pra quem prefere imprimir em papel ou ajustar opções no diálogo do navegador. Ambos em ⚙ Ferramentas → Importar & Exportar.']}
   ],
 
   render(containerId) {
