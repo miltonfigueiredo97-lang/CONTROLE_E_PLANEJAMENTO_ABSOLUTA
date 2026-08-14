@@ -85,12 +85,12 @@ sed -i 's/V3.X.Y/V3.X.Z/g' *.html
 
 # 2. js/notas-versao.js:
 #   - versaoAtual: 'V3.X.Z'
-#   - Fechar versão anterior (status: 'fechada')
-#   - Inserir novo objeto no FIM do array versoes (status: 'aberta'), com data e tipo corretos
+#   - Inserir novo objeto no FIM do array versoes (status: 'fechada' — o campo status foi
+#     aposentado; a mais recente ganha o selo "● Atual" sozinha no render), com data e tipo corretos
 #   - Tipos: lancamento (A) · funcionalidade (B) · correcao (C) · melhoria (D)
 ```
 
-**Página de Notas de Versão (notas-versao.html):** hero com stats (versões, features, correções, melhorias, dias de projeto, dias c/ entrega), busca, filtros por tipo + filtro "● Em aberto", cards colapsáveis em timeline. O render escapa HTML dos itens — pode escrever `<select>` etc. nos textos sem quebrar.
+**Página de Notas de Versão (notas-versao.html):** hero com stats (versões, features, correções, melhorias, dias de projeto, dias c/ entrega), busca, filtros por tipo (a versão mais recente ganha selo "● Atual" automático), cards colapsáveis em timeline. O render escapa HTML dos itens — pode escrever `<select>` etc. nos textos sem quebrar.
 
 ---
 

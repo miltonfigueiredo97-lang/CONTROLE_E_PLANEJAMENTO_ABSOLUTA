@@ -5605,7 +5605,7 @@ const NotasVersao = {
     {
       "versao": "V3.1.23",
       "legado": "V2.57.35",
-      "status": "aberta",
+      "status": "fechada",
       "data": "2026-07-28",
       "tipo": "correcao",
       "titulo": "Suprimentos: cor do fundo verde e altura da célula corrigidas — extraídas pixel a pixel do print de referência",
@@ -6033,7 +6033,7 @@ const NotasVersao = {
     {
       "versao": "V3.1.46.1",
       "legado": "V2.57.69",
-      "status": "aberta",
+      "status": "fechada",
       "data": "2026-07-30",
       "tipo": "funcionalidade",
       "titulo": "Levantamento de Solo Grampeado: ferramenta \"Medir Área\" — desenha o contorno real da vista e calcula o m² pela escala, em vez de só digitar o valor",
@@ -6047,7 +6047,7 @@ const NotasVersao = {
     {
       "versao": "V3.1.46.2",
       "legado": "V2.57.70",
-      "status": "aberta",
+      "status": "fechada",
       "data": "2026-07-30",
       "tipo": "melhoria",
       "titulo": "Levantamento de Solo Grampeado: cor do chumbador por comprimento e formato por tipo (bolinha = horizontal, triângulo = vertical)",
@@ -6302,7 +6302,7 @@ const NotasVersao = {
     {
       "versao": "V3.2.12",
       "legado": "V2.58.18",
-      "status": "aberta",
+      "status": "fechada",
       "data": "2026-07-31",
       "tipo": "correcao",
       "titulo": "Obras: botões de Editar/Configurar ficavam clicáveis mesmo sem permissão",
@@ -7352,7 +7352,7 @@ const NotasVersao = {
     {
       "versao": "V3.4.10",
       "legado": "V2.60.39",
-      "status": "aberta",
+      "status": "fechada",
       "data": "2026-08-13",
       "tipo": "correcao",
       "titulo": "CAUSA RAIZ encontrada: os motores de cálculo nunca ficavam disponíveis como window.X — origem de vários bugs do Dashboard de uma vez",
@@ -7365,7 +7365,7 @@ const NotasVersao = {
     {
       "versao": "V3.4.11",
       "legado": "V2.60.40",
-      "status": "aberta",
+      "status": "fechada",
       "data": "2026-08-13",
       "tipo": "correcao",
       "titulo": "Curva S: executado saltava para 100% num único mês e não batia com o % real da obra",
@@ -7380,7 +7380,7 @@ const NotasVersao = {
     {
       "versao": "V3.4.12",
       "legado": "V2.60.41",
-      "status": "aberta",
+      "status": "fechada",
       "data": "2026-08-13",
       "tipo": "correcao",
       "titulo": "Diagnóstico: erro \"Cannot access norm before initialization\" + nova seção que mostra por que o Auto-vincular não casa todas as tarefas",
@@ -7634,14 +7634,14 @@ const NotasVersao = {
     {
       "versao": "V3.5.0.0",
       "legado": "V2.63.0",
-      "status": "aberta",
+      "status": "fechada",
       "data": "2026-08-14",
       "tipo": "funcionalidade",
       "titulo": "Versionamento reanalisado versão a versão — nova era A.B.C.D + Notas de Versão repaginadas",
       "itens": [
         "Renumeração completa seguindo a regra A.B.C.D, analisada versão por versão desde a V1 — nenhuma versão foi juntada (as 408 continuam no histórico, cada uma com seu próprio número): A sobe em sistema novo funcional (V1 = Base · V2 = Reescrita do Planejamento · V3 = marco Suprimentos), B sobe apenas em feature/módulo GRANDE (analisado título a título — funcionalidades menores são sub-features no D), C a cada correção, D a cada melhoria/sub-feature — sempre zerando as casas abaixo.",
         "O número antigo de cada versão fica registrado no card como \"antes: V2.xx\".",
-        "Novo filtro \"● Em aberto\" nas Notas de Versão — mostra as versões que nunca foram fechadas (havia 7 esquecidas no histórico).",
+        "Status aberta/fechada aposentado — não significava nada por versão e confundia (havia 7 \"abertas\" esquecidas). Agora a mais recente ganha o selo ● Atual automaticamente.",
         "PROJETO.md atualizado com a regra oficial de versionamento A.B.C.D para todas as sessões Claude seguirem.",
         "Página redesenhada: hero escuro com a versão atual e o total de versões lançadas, cards de estatísticas (versões, features, correções, melhorias).",
         "Busca por texto (versão, título ou item) e filtro por tipo (Lançamento / Funcionalidade / Correção / Melhoria).",
@@ -7697,7 +7697,6 @@ const NotasVersao = {
         <input id="nvBusca" type="text" placeholder="🔍 Buscar versão, título ou item..." style="flex:1;min-width:220px;padding:9px 14px;border:1.5px solid var(--cor-borda-light);border-radius:100px;font-size:.85rem;outline:none;" />
         <div id="nvFiltros" style="display:flex;gap:6px;flex-wrap:wrap;">
           <button class="nv-f ativo" data-t="todos" style="padding:7px 14px;border-radius:100px;border:1.5px solid #222;background:#222;color:#fff;font-size:.75rem;font-weight:700;cursor:pointer;">Todos</button>
-          <button class="nv-f" data-t="aberta" style="padding:7px 14px;border-radius:100px;border:1.5px solid var(--cor-primaria);background:#fff;color:#8a7400;font-size:.75rem;font-weight:700;cursor:pointer;">● Em aberto</button>
           ${Object.entries(TIPOS).map(([k,t])=>`
             <button class="nv-f" data-t="${k}" style="padding:7px 14px;border-radius:100px;border:1.5px solid var(--cor-borda-light);background:#fff;color:#555;font-size:.75rem;font-weight:700;cursor:pointer;">${t.icon} ${t.label}</button>`).join('')}
         </div>
@@ -7707,7 +7706,7 @@ const NotasVersao = {
         <div style="position:absolute;left:19px;top:10px;bottom:10px;width:2px;background:var(--cor-borda-light);"></div>
         ${vs.map((v,i) => {
           const t = TIPOS[v.tipo]||{icon:'📌',label:v.tipo,cor:'#888'};
-          const aberta = v.status==='aberta';
+          const aberta = i===0; // mais recente = Atual
           const hay = esc((v.versao+' '+(v.legado||'')+' '+v.titulo+' '+v.itens.join(' ')).toLowerCase());
           return `
           <div class="nv-card" data-t="${v.tipo}" data-aberta="${aberta?1:0}" data-hay="${hay}" style="display:flex;gap:14px;position:relative;padding:6px 0;">
@@ -7721,7 +7720,7 @@ const NotasVersao = {
                     <span style="font-weight:900;font-size:.95rem;color:var(--cor-texto);">${v.versao}</span>
                     ${v.legado&&v.legado!==v.versao?`<span style="font-size:.65rem;color:#999;background:#f4f4f4;border-radius:100px;padding:2px 8px;font-weight:700;" title="Numeração antiga">antes: ${v.legado}</span>`:''}
                     <span style="font-size:.65rem;font-weight:800;color:#fff;background:${t.cor};border-radius:100px;padding:2px 9px;">${t.label}</span>
-                    ${aberta?'<span style="font-size:.65rem;font-weight:800;color:#000;background:var(--cor-primaria);border-radius:100px;padding:2px 9px;">● Em aberto</span>':''}
+                    ${aberta?'<span style="font-size:.65rem;font-weight:800;color:#000;background:var(--cor-primaria);border-radius:100px;padding:2px 9px;">● Atual</span>':''}
                   </div>
                   <div style="font-size:.85rem;font-weight:600;color:var(--cor-texto);margin-top:4px;line-height:1.35;">${esc(v.titulo)}</div>
                 </div>
@@ -7760,7 +7759,7 @@ const NotasVersao = {
       const q = (busca.value||'').toLowerCase().trim();
       let visiveis = 0;
       c.querySelectorAll('.nv-card').forEach(card => {
-        const okT = filtroTipo==='todos' || (filtroTipo==='aberta' ? card.dataset.aberta==='1' : card.dataset.t===filtroTipo);
+        const okT = filtroTipo==='todos' || card.dataset.t===filtroTipo;
         const okQ = !q || card.dataset.hay.includes(q);
         const show = okT && okQ;
         card.style.display = show ? 'flex' : 'none';
