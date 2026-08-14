@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.62.16',
+  versaoAtual: 'V2.62.17',
 
   versoes: [
     {
@@ -5844,10 +5844,14 @@ const NotasVersao = {
       titulo:'Em Execução escondia tarefas por causa de horizonte antigo',
       itens:['ACHADO: a coluna "Em Execução" das Atividades aplicava, por engano, um horizonte de tempo herdado das preferências antigas (pré-V2.62) — e o filtro era pela data de TÉRMINO planejado. Resultado: tarefas em execução com término distante sumiam (ex: Custos Indiretos 14%, término em 2028, e Cravação de Estacas 8% não apareciam).',
         'Corrigido: Em Execução NUNCA aplica horizonte — se a tarefa tem % entre 1 e 99, ela aparece, sempre. O horizonte continua valendo só nas Próximas e em Suprimentos, onde faz sentido.']},
-    {versao:'V2.62.16',status:'aberta',data:'2026-08-14',tipo:'correcao',
+    {versao:'V2.62.16',status:'fechada',data:'2026-08-14',tipo:'correcao',
       titulo:'Menu: seção "Administração" unificada + correção de e-mail em convite pendente',
       itens:['Sidebar: "Permissões" saiu de "Análise" (lugar errado) e entrou, junto com Relatórios, Histograma, Backup de Planejamentos e Notas de Versão, numa única seção "Administração".',
-        'Admin > Permissões: convite pendente agora permite editar o e-mail (corrigir erro de digitação) — ao salvar, atualiza o e-mail no Firebase Auth e reenvia o convite automaticamente para o endereço corrigido.']}
+        'Admin > Permissões: convite pendente agora permite editar o e-mail (corrigir erro de digitação) — ao salvar, atualiza o e-mail no Firebase Auth e reenvia o convite automaticamente para o endereço corrigido.']},
+    {versao:'V2.62.17',status:'aberta',data:'2026-08-14',tipo:'correcao',
+      titulo:'Seletor de Nível não esconde mais tarefas (Atividades e Suprimentos)',
+      itens:['O seletor "Nível N" filtrava a árvore pra mostrar SÓ tarefas daquele nível exato: com "Nível 5" marcado e as tarefas em execução nos níveis 2–3, a coluna Em Execução ficava vazia ("Nenhuma atividade em execução"), mesmo com Cravação 8% e Custos Indiretos 14% no banco.',
+        'Agora o "Nível N" controla apenas a PROFUNDIDADE que a árvore vem pré-expandida — nenhuma tarefa é escondida por causa do nível. Vale pra Atividades (Em Execução e Próximas) e Suprimentos.']}
   ],
 
   render(containerId) {

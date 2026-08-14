@@ -95,7 +95,9 @@ const DashSuprimentos = (() => {
     if (!host) return;
 
     const sorted = [...ctx.tarefas].sort((a, b) => (a.ordem || 0) - (b.ordem || 0));
-    const raizes = sorted.filter(t => (t.nivel || 0) === _st.nivelFixo);
+    // "Nível N" = profundidade pré-expandida, não filtro (ver DashAtividades).
+    const nivelMin = sorted.reduce((m, t) => Math.min(m, t.nivel || 0), 99);
+    const raizes = sorted.filter(t => (t.nivel || 0) === (Number.isFinite(nivelMin) ? nivelMin : 0));
     const max = sorted.reduce((m, t) => Math.max(m, t.nivel || 0), 0);
 
     const linhaFolha = (t, indent) => `

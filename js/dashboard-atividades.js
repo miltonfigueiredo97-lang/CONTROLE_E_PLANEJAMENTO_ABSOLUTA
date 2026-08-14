@@ -111,7 +111,12 @@ const DashAtividades = (() => {
     const cfg = COLS[chave];
     const st = _st[chave];
     const statusFiltro = chave === 'ativ_execucao' ? _emExecucaoFiltro : _proximasFiltro;
-    const raizes = sorted.filter(t => (t.nivel || 0) === st.nivelFixo);
+    // O seletor "Nível N" controla a PROFUNDIDADE PRÉ-EXPANDIDA da árvore
+    // (tudo acima de N vem aberto) — ele NÃO esconde tarefas. Antes ele
+    // filtrava as raízes pra "só tarefas de nível N": com Nível 5 marcado e
+    // as tarefas em execução nos níveis 2–3, a coluna aparecia vazia.
+    const nivelMin = sorted.reduce((m, t) => Math.min(m, t.nivel || 0), 99);
+    const raizes = sorted.filter(t => (t.nivel || 0) === (Number.isFinite(nivelMin) ? nivelMin : 0));
     const max = sorted.reduce((m, t) => Math.max(m, t.nivel || 0), 0);
 
     const linhaFolha = (t, indent) => {
