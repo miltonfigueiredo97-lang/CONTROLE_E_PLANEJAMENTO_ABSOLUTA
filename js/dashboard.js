@@ -34,6 +34,7 @@ const Dashboard = (() => {
     try {
       const user = await Database.getUser(uid);
       DashSuprimentos.aplicarPrefsRemotas(user?.dashboardArvorePrefs);
+      DashAtividades.aplicarPrefsRemotas(user?.dashboardArvorePrefs);
     } catch (e) { /* segue com o cache local */ }
   }
 
@@ -68,6 +69,7 @@ const Dashboard = (() => {
       const ctx = { obraId, obra: obraAtual, tarefas, suprimentos };
       const secoes = [
         ['Frentes de Trabalho', () => DashFrentes.render(ctx)],
+        ['Atividades', () => DashAtividades.render(ctx)],
         ['Suprimentos', () => DashSuprimentos.render(ctx)],
         ['Contenção', () => DashContencao.render(ctx)],
         ['Fundação e Estrutura', () => DashConcreto.renderFundacaoEstrutura(ctx)],
@@ -134,6 +136,13 @@ const Dashboard = (() => {
             </div>
           </div>
           <div id="db-frentes"></div>
+        </div>
+      </div>
+
+      <div class="card db-row">
+        <div class="card-body">
+          <div class="db-secao-header"><h3>📋 Atividades</h3></div>
+          <div id="db-atividades"></div>
         </div>
       </div>
 

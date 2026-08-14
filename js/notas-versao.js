@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.62.2',
+  versaoAtual: 'V2.62.3',
 
   versoes: [
     {
@@ -5781,10 +5781,14 @@ const NotasVersao = {
       titulo:'Popup do projeto: pan por arrasto + zoom com Ctrl+scroll',
       itens:['No popup que abre ao clicar numa barra de Fundação/Estrutura, agora dá pra ARRASTAR a prancha segurando o botão esquerdo (ou do meio) do mouse — cursor vira mãozinha.',
         'Zoom passou a ser Ctrl+scroll (ou pinça do touchpad); o scroll normal volta a rolar a prancha (pan vertical, Shift+scroll horizontal), como em softwares de CAD/mapas. Antes o scroll dava zoom e não havia como navegar arrastando.']},
-    {versao:'V2.62.2',status:'aberta',data:'2026-08-13',tipo:'correcao',
+    {versao:'V2.62.2',status:'fechada',data:'2026-08-13',tipo:'correcao',
       titulo:'Estacas no Dashboard: índice de perda corrigido e minimapa limpo',
       itens:['Índice de perda médio estava sempre 0,0%: a "perda de solo" comparava o volume real das BTs com o volume de projeto da OBRA INTEIRA — com a obra em andamento, o real é sempre menor que o total e a conta zerava. Agora compara com o volume de projeto das peças JÁ EXECUTADAS (mesma metodologia do Controle de Estacas). Ex: 69,0 m³ reais sobre 58,5 m³ de projeto executado passam a acusar a perda corretamente.',
-        'Minimapa da prancha agora aparece "zerado": mostra APENAS as estacas com execução iniciada, sem a nuvem de círculos de todas as estacas configuradas nem os anéis coloridos por tipo — a prancha vai sendo pintada conforme a obra avança. No popup em tela cheia (clique na barra de Fundação/Estrutura) os anéis por tipo continuam, pois lá servem de leitura do projeto.']}
+        'Minimapa da prancha agora aparece "zerado": mostra APENAS as estacas com execução iniciada, sem a nuvem de círculos de todas as estacas configuradas nem os anéis coloridos por tipo — a prancha vai sendo pintada conforme a obra avança. No popup em tela cheia (clique na barra de Fundação/Estrutura) os anéis por tipo continuam, pois lá servem de leitura do projeto.']},
+    {versao:'V2.62.3',status:'aberta',data:'2026-08-13',tipo:'correcao',
+      titulo:'Seção Atividades de volta no Dashboard',
+      itens:['A seção "Atividades" (Em Execução + Próximas), removida por engano no redesign V2.62.0, voltou — agora como módulo próprio (js/dashboard-atividades.js) e no padrão visual novo: pills de nível, árvore expansível com resumo agregado, % colorido por faixa e horizonte de tempo nas Próximas.',
+        'As preferências de nível/horizonte salvas por usuário antes da V2.62.0 continuam valendo (mesmas chaves em users/{uid}.dashboardArvorePrefs).']}
   ],
 
   render(containerId) {
