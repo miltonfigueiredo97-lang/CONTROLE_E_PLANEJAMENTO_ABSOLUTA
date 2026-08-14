@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.62.8',
+  versaoAtual: 'V2.62.9',
 
   versoes: [
     {
@@ -5810,10 +5810,14 @@ const NotasVersao = {
         'Campos: A (meia largura, centro até a lateral reta), B (altura de cada ponta), C (altura da parte reta central), D (altura/espessura do bloco).',
         'Fórmula: Área da planta = 2A×(B+C) [retângulo central + duas pontas triangulares] · Volume = Área × D.',
         'Diagrama de referência desenhado na tela com os mesmos rótulos A/B/C/D do desenho técnico enviado.']},
-    {versao:'V2.62.8',status:'aberta',data:'2026-08-14',tipo:'correcao',
+    {versao:'V2.62.8',status:'fechada',data:'2026-08-14',tipo:'correcao',
       titulo:'Bloco Hexagonal — troca o SVG desenhado pela imagem técnica real',
       itens:['O SVG genérico (feito só a partir da descrição em texto) foi trocado pelo desenho técnico real enviado — mesma referência que os outros tipos de fundação usam (imagem, não SVG).',
-        'Fórmula não mudou: a imagem real confirma D = h = altura do bloco, batendo com o que já estava implementado.']}
+        'Fórmula não mudou: a imagem real confirma D = h = altura do bloco, batendo com o que já estava implementado.']},
+    {versao:'V2.62.9',status:'aberta',data:'2026-08-14',tipo:'melhoria',
+      titulo:'Controle de Estacas: seletor de BT esconde por padrão as já 100% usadas noutras peças',
+      itens:['No popup de lançar por estaca, BTs que já estão 100% alocadas em outra peça (não sobra nada pra usar ali) somem do seletor por padrão — deixa a lista bem mais curta quando tem muitas BTs.',
+        'Aparece um checkbox "Mostrar N BTs 100% usadas" pra reexibir, se precisar reajustar algo numa BT que já foi totalmente usada.']}
   ],
 
   render(containerId) {

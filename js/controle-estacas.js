@@ -846,6 +846,7 @@ const ControleEstacas = (() => {
   // ══════════════════════════════════════════
   let bt = null; // {concId, btId, modo} — só pra criar/editar metadados da BT (nº, volume, NF, código)
   let estacaAtual = null; // {concId, pecaId, linhas:[{btId,pctBT}]} — lançamento por peça (o fluxo principal)
+  let mostrarBTsCompletas = false; // por padrão esconde BTs já 100% alocadas noutras peças no seletor
 
   function _proximoNumeroBT(concId) {
     const bts = _btsDaConcretagem(concId);
@@ -1062,6 +1063,8 @@ const ControleEstacas = (() => {
     return (volOutras / b.volumePrevisto) * 100;
   }
 
+  function toggleMostrarBTsCompletas(v) { mostrarBTsCompletas = v; _renderLancarEstacaBody(); }
+
   async function salvarEstacaAcomp() {
     if (!Permissions.pode('controleEstacas', 'editar') && !Permissions.pode('controleEstacas', 'criar')) { Utils.toast('Sem permissão.', 'erro'); return; }
     if (!estacaAtual || !estacaAtual.pecaId) return;
@@ -1196,8 +1199,15 @@ const ControleEstacas = (() => {
     const idsUsados = new Set(estacaAtual.linhas.map(l => l.btId).filter(Boolean));
     // % de cada BT já alocado em OUTRAS peças (lançamentos já salvos, exceto a peça atual) —
     // pra não passar de 100% da BT sem perceber, já que uma BT pode ser dividida entre várias peças.
+    // Por padrão, esconde do seletor as que já estão 100% alocadas noutras peças (não sobra nada
+    // pra usar aqui mesmo) — "Mostrar BTs 100% usadas" reexibe, se precisar reajustar algo.
+    const qtdCompletas = btsConc.filter(b => !idsUsados.has(b.id) && _pctBTAlocadaOutrasPecas(b.id, estacaAtual.pecaId) >= 99.99).length;
     const opcoesBT = selId => {
-      return `<option value="">— BT —</option>` + btsConc.filter(b => b.id === selId || !idsUsados.has(b.id)).map(b => {
+      return `<option value="">— BT —</option>` + btsConc.filter(b => {
+        if (b.id === selId || idsUsados.has(b.id)) return true;
+        const pctOutras = _pctBTAlocadaOutrasPecas(b.id, estacaAtual.pecaId);
+        return mostrarBTsCompletas || pctOutras < 99.99;
+      }).map(b => {
         const pctOutras = _pctBTAlocadaOutrasPecas(b.id, estacaAtual.pecaId);
         return `<option value="${b.id}" ${selId === b.id ? 'selected' : ''}>BT-${b.numero} · ${EC.fmt1(b.volumePrevisto)}m³${pctOutras > 0.01 ? ` (${EC.fmt1(pctOutras)}% em outras peças)` : ''}</option>`;
       }).join('');
@@ -1205,7 +1215,10 @@ const ControleEstacas = (() => {
     el.innerHTML = `
       <div class="text-sm text-muted" style="margin-bottom:10px;">Precisa de ${EC.fmt1(volNecessario)} m³ · recebido até agora ${EC.fmt1(totalRecebido)} m³ (${EC.fmt1(volNecessario > 0 ? totalRecebido / volNecessario * 100 : 0)}%)</div>
       ${!btsConc.length ? `<div class="cc-empty">Nenhuma BT criada ainda nesta concretagem. <button class="btn btn-secundario btn-sm" data-perm="controleEstacas:criar" onclick="Utils.fecharModal('modal-ce-lancar-estaca');CE.abrirModalBTs();CE.abrirNovaBT();">+ Criar BT</button></div>` : `
-        <label class="text-sm text-muted" style="display:block;margin-bottom:4px;">Quais BTs concretaram esta peça, e quanto % de CADA BT foi usado aqui</label>
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:4px;">
+          <label class="text-sm text-muted" style="margin:0;">Quais BTs concretaram esta peça, e quanto % de CADA BT foi usado aqui</label>
+          ${qtdCompletas > 0 ? `<label class="text-sm" style="display:flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap;"><input type="checkbox" ${mostrarBTsCompletas ? 'checked' : ''} onchange="CE.toggleMostrarBTsCompletas(this.checked)"> Mostrar ${qtdCompletas} BT${qtdCompletas !== 1 ? 's' : ''} 100% usada${qtdCompletas !== 1 ? 's' : ''}</label>` : ''}
+        </div>
         <div id="ce-est-linhas">
           ${estacaAtual.linhas.map((l, i) => {
             const b = btsConfig.find(x => x.id === l.btId);
@@ -2166,7 +2179,7 @@ const ControleEstacas = (() => {
     atribuirConcretagemNumero, atribuirConcretagemNumeroInput, removerDaConcretagem, onTrocarAcompConcretagem,
     toggleNovaConcPlan, criarConcretagemPlan, focarConcretagemPlan,
     abrirNovaBT, fecharPainelBT, criarBTEstacas, abrirEditarMetaBT, salvarMetaBT, excluirBTEstacas,
-    abrirModalBTs, abrirEstacaModal, btAddLinhaPeca, btRemLinhaPeca, btUpdLinhaPeca, salvarEstacaAcomp,
+    abrirModalBTs, abrirEstacaModal, btAddLinhaPeca, btRemLinhaPeca, btUpdLinhaPeca, salvarEstacaAcomp, toggleMostrarBTsCompletas,
   };
 })();
 
