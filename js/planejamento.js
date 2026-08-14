@@ -2563,7 +2563,10 @@ const Planejamento = (() => {
       {rotulo:'Corrigir Ordens',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.corrigirOrdensDuplicadas()" title="Corrige tarefas com número de ordem duplicado">🔧 Corrigir Ordens</button>'},
       {rotulo:'Corrigir Predecessoras (por ID)',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento._migrarPredecessorasParaId()" title="Converte predecessoras antigas (por número de linha) pro formato por ID — imune a reordenação. Roda sozinho ao carregar, use aqui só se quiser confirmar manualmente.">🔗 Corrigir Predecessoras (por ID)</button>'},
       {rotulo:'Estrutura da Obra',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento._abrirEstruturaObra()" title="Cadastra Torre → Pavimento → Apto, pra vincular tarefas a um local">🏢 Estrutura da Obra</button>'},
-      {rotulo:'Exportar',html:'<button class="btn btn-secundario btn-sm" data-perm="planejamento:exportar" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.exportar()">📤 Exportar</button>'},
+      {rotulo:'Exportar Excel (simples)',html:'<button class="btn btn-secundario btn-sm" data-perm="planejamento:exportar" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.exportar()" title="Planilha crua com todas as colunas — boa pra reimportar/tratar dados">📤 Exportar Excel (simples)</button>'},
+      {rotulo:'Exportar Excel (formatado)',html:'<button class="btn btn-secundario btn-sm" data-perm="planejamento:exportar" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.exportarExcelBonito()" title="Planilha estilizada: grupos coloridos por nível, indentação, cabeçalho fixo com filtro — pronta pra apresentar/imprimir">🎨 Exportar Excel (formatado)</button>'},
+      {rotulo:'Exportar MS Project',html:'<button class="btn btn-secundario btn-sm" data-perm="planejamento:exportar" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.exportarMSProject()" title="XML no formato do MS Project (hierarquia, datas, duração, % e predecessoras) — abre direto no Project">📊 Exportar MS Project (.xml)</button>'},
+      {rotulo:'Imprimir / PDF',html:'<button class="btn btn-secundario btn-sm" data-perm="planejamento:exportar" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.abrirImpressao()" title="Abre a visão bonita em página branca pronta pra imprimir ou salvar em PDF (cabeçalho repete em cada página)">🖨 Imprimir / PDF</button>'},
       {rotulo:'Histórico de Alterações',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento._abrirHistoricoAlteracoes()" title="Lista todas as trocas de predecessora/% feitas com motivo registrado">📋 Histórico de Alterações</button>'},
       {rotulo:'Importar',html:'<label class="btn btn-secundario btn-sm" style="cursor:pointer;font-size:.75rem;display:block;text-align:left;" title="Cria/atualiza por Código, nunca apaga (comportamento atual, mais seguro)">📥 Importar<input type="file" accept=".xlsx,.xls" style="display:none" onchange="Planejamento.importarExcel(event)"></label>'},
       {rotulo:'Importar Base Completa',html:'<label class="btn btn-secundario btn-sm" style="cursor:pointer;font-size:.75rem;display:block;text-align:left;color:#f87171;" title="Apaga TUDO e recria do zero — só pra substituir a base inteira">📥 Importar Base Completa (apaga tudo)<input type="file" accept=".xlsx,.xls" style="display:none" onchange="Planejamento.importarBaseCompleta(event)"></label>'},
@@ -4308,6 +4311,147 @@ const Planejamento = (() => {
   function _pDur(v){return parseInt(String(v||'').replace(/\D/g,''))||0;}
   function _pN(v){return parseFloat(String(v||'').replace(',','.'))||0;}
   function _ls(src){return new Promise((r,j)=>{const s=document.createElement('script');s.src=src;s.onload=r;s.onerror=j;document.head.appendChild(s);});}
+
+  // ===================== EXPORTAR EXCEL BONITO (com estilos) =====================
+  // Usa xlsx-js-style (drop-in do SheetJS com suporte a estilo de célula):
+  // cabeçalho escuro, grupos com cor por nível, indentação, bordas, filtro e
+  // linha de cabeçalho congelada — pronto pra ler e imprimir direto do Excel.
+  async function exportarExcelBonito(){
+    if(!Permissions.pode('planejamento','exportar')){Utils.toast('Sem permissão para exportar.','erro');return;}
+    try{Utils.mostrarLoading('Gerando Excel formatado...');
+      if(typeof XLSXStyle==='undefined'&&!window._xlsxStyleLoaded){
+        await _ls('https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js');
+        window._xlsxStyleLoaded=true;
+      }
+      const X=window.XLSX; // xlsx-js-style substitui o global com API compatível
+      const sorted=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
+      const H=['#','Nome','Duração','Início','Término','% Esp.','% Conc.','Predecessora','Responsável','Início Real','Término Real'];
+      const rows=sorted.map((t,i)=>[i+1,'    '.repeat(t.nivel||0)+(t.nome||''),
+        t.duracao?t.duracao+'d':'',_fBR(t.inicioPlanejado),_fBR(t.terminoPlanejado),
+        (t.percentualEsperado||0)+'%',(t.percentualConcluido||0)+'%',t._predDisplay||'',
+        t.responsavel||'',_fBR(t.inicioReal),_fBR(t.terminoReal)]);
+      const ws=X.utils.aoa_to_sheet([H,...rows]);
+      ws['!cols']=[{wch:5},{wch:55},{wch:8},{wch:11},{wch:11},{wch:8},{wch:8},{wch:14},{wch:16},{wch:11},{wch:11}];
+      ws['!freeze']={xSplit:0,ySplit:1};
+      ws['!autofilter']={ref:X.utils.encode_range({s:{r:0,c:0},e:{r:rows.length,c:H.length-1}})};
+
+      // Quem tem filho direto (grupo de verdade), pra dar negrito/cor por nível
+      const temFilho=sorted.map((t,i)=>i+1<sorted.length&&(sorted[i+1].nivel||0)>(t.nivel||0));
+      const bordas={top:{style:'thin',color:{rgb:'D1D5DB'}},bottom:{style:'thin',color:{rgb:'D1D5DB'}},left:{style:'thin',color:{rgb:'D1D5DB'}},right:{style:'thin',color:{rgb:'D1D5DB'}}};
+      const CORES_NIVEL=['F5C800','FDE68A','FEF3C7','F3F4F6']; // nível 0,1,2,3+ (grupos)
+      for(let c=0;c<H.length;c++){
+        const ref=X.utils.encode_cell({r:0,c});
+        if(ws[ref])ws[ref].s={font:{bold:true,color:{rgb:'FFFFFF'},sz:11},fill:{fgColor:{rgb:'111827'}},alignment:{horizontal:'center',vertical:'center'},border:bordas};
+      }
+      for(let r=0;r<sorted.length;r++){
+        const t=sorted[r],niv=t.nivel||0,grupo=temFilho[r];
+        const fill=grupo?{fgColor:{rgb:CORES_NIVEL[Math.min(niv,CORES_NIVEL.length-1)]}}:(r%2?{fgColor:{rgb:'FAFAFA'}}:null);
+        for(let c=0;c<H.length;c++){
+          const ref=X.utils.encode_cell({r:r+1,c});
+          if(!ws[ref])continue;
+          const s={font:{bold:!!grupo,sz:10},border:bordas,alignment:{horizontal:c===1?'left':'center',vertical:'center'}};
+          if(fill)s.fill=fill;
+          if(c===6&&(t.percentualConcluido||0)>=100)s.font.color={rgb:'15803D'};
+          ws[ref].s=s;
+        }
+      }
+      const wb=X.utils.book_new();X.utils.book_append_sheet(wb,ws,'Cronograma');
+      const obra=Router.getObra();
+      X.writeFile(wb,`cronograma_${(obra?.nome||'obra').replace(/[^a-z0-9]/gi,'_')}_formatado.xlsx`);
+      Utils.toast('Excel formatado exportado!','sucesso');
+    }catch(e){console.error(e);Utils.toast('Erro: '+e.message,'erro');}finally{Utils.esconderLoading();}
+  }
+
+  // ===================== EXPORTAR MS PROJECT (.xml MSPDI) =====================
+  // Gera XML no formato nativo de troca do MS Project (MSPDI) — abre direto no
+  // Project (Arquivo > Abrir), com hierarquia (OutlineLevel), datas, duração,
+  // % e predecessoras (tipo TI/II/TT/IT + defasagem).
+  function exportarMSProject(){
+    if(!Permissions.pode('planejamento','exportar')){Utils.toast('Sem permissão para exportar.','erro');return;}
+    try{Utils.mostrarLoading('Gerando XML do MS Project...');
+      const sorted=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
+      const idNum=new Map(sorted.map((t,i)=>[t.id,i+1]));
+      const escXml=s=>String(s??'').replace(/[<>&'"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;',"'":'&apos;','"':'&quot;'}[c]));
+      // Tipo nosso -> código MSPDI: FF=0(TT) FS=1(TI) SF=2(IT) SS=3(II)
+      const TIPO_MS={TT:0,TI:1,IT:2,II:3};
+      const temFilho=sorted.map((t,i)=>i+1<sorted.length&&(sorted[i+1].nivel||0)>(t.nivel||0));
+      const obra=Router.getObra();
+      let tasksXml='';
+      sorted.forEach((t,i)=>{
+        const uid=i+1;
+        const dur=Number(t.duracao)||0;
+        const ini=t.inicioPlanejado?`${t.inicioPlanejado}T08:00:00`:'';
+        const fim=t.terminoPlanejado?`${t.terminoPlanejado}T17:00:00`:'';
+        let preds='';
+        for(const p of _predParse(t.predecessora)){
+          const pUid=idNum.get(p.id);
+          if(!pUid)continue;
+          const lagDias=parseInt(p.lag)||0;
+          preds+=`<PredecessorLink><PredecessorUID>${pUid}</PredecessorUID><Type>${TIPO_MS[p.tipo]??1}</Type><CrossProject>0</CrossProject><LinkLag>${lagDias*4800}</LinkLag><LagFormat>7</LagFormat></PredecessorLink>`;
+        }
+        tasksXml+=`<Task><UID>${uid}</UID><ID>${uid}</ID><Name>${escXml(t.nome)}</Name><Active>1</Active><Type>0</Type><OutlineLevel>${(t.nivel||0)+1}</OutlineLevel><Summary>${temFilho[i]?1:0}</Summary>`+
+          (ini?`<Start>${ini}</Start>`:'')+(fim?`<Finish>${fim}</Finish>`:'')+
+          `<Duration>PT${dur*8}H0M0S</Duration><DurationFormat>7</DurationFormat><PercentComplete>${Math.round(t.percentualConcluido||0)}</PercentComplete>${preds}</Task>`;
+      });
+      const xml=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Project xmlns="http://schemas.microsoft.com/project"><Name>${escXml(obra?.nome||'Obra')}</Name><Title>${escXml(obra?.nome||'Obra')}</Title><ScheduleFromStart>1</ScheduleFromStart><CalendarUID>1</CalendarUID><Calendars><Calendar><UID>1</UID><Name>Padrão</Name><IsBaseCalendar>1</IsBaseCalendar><WeekDays><WeekDay><DayType>1</DayType><DayWorking>0</DayWorking></WeekDay><WeekDay><DayType>2</DayType><DayWorking>1</DayWorking><WorkingTimes><WorkingTime><FromTime>08:00:00</FromTime><ToTime>12:00:00</ToTime></WorkingTime><WorkingTime><FromTime>13:00:00</FromTime><ToTime>17:00:00</ToTime></WorkingTimes></WeekDay><WeekDay><DayType>3</DayType><DayWorking>1</DayWorking><WorkingTimes><WorkingTime><FromTime>08:00:00</FromTime><ToTime>12:00:00</ToTime></WorkingTime><WorkingTime><FromTime>13:00:00</FromTime><ToTime>17:00:00</ToTime></WorkingTimes></WeekDay><WeekDay><DayType>4</DayType><DayWorking>1</DayWorking><WorkingTimes><WorkingTime><FromTime>08:00:00</FromTime><ToTime>12:00:00</ToTime></WorkingTime><WorkingTime><FromTime>13:00:00</FromTime><ToTime>17:00:00</ToTime></WorkingTimes></WeekDay><WeekDay><DayType>5</DayType><DayWorking>1</DayWorking><WorkingTimes><WorkingTime><FromTime>08:00:00</FromTime><ToTime>12:00:00</ToTime></WorkingTime><WorkingTime><FromTime>13:00:00</FromTime><ToTime>17:00:00</ToTime></WorkingTimes></WeekDay><WeekDay><DayType>6</DayType><DayWorking>1</DayWorking><WorkingTimes><WorkingTime><FromTime>08:00:00</FromTime><ToTime>12:00:00</ToTime></WorkingTime><WorkingTime><FromTime>13:00:00</FromTime><ToTime>17:00:00</ToTime></WorkingTimes></WeekDay><WeekDay><DayType>7</DayType><DayWorking>0</DayWorking></WeekDay></WeekDays></Calendar></Calendars><Tasks>${tasksXml}</Tasks></Project>`;
+      const blob=new Blob([xml],{type:'application/xml'});
+      const a=document.createElement('a');
+      a.href=URL.createObjectURL(blob);
+      a.download=`cronograma_${(obra?.nome||'obra').replace(/[^a-z0-9]/gi,'_')}_msproject.xml`;
+      a.click();URL.revokeObjectURL(a.href);
+      Utils.toast('XML do MS Project exportado! No Project: Arquivo → Abrir.','sucesso');
+    }catch(e){console.error(e);Utils.toast('Erro: '+e.message,'erro');}finally{Utils.esconderLoading();}
+  }
+
+  // ===================== IMPRIMIR / PDF (visão bonita) =====================
+  // Abre uma janela limpa, fundo branco, com a MESMA visão hierárquica bonita
+  // da tela (indentação, grupos coloridos por nível, status) — o diálogo de
+  // impressão do navegador imprime ou salva em PDF direto.
+  function abrirImpressao(){
+    if(!Permissions.pode('planejamento','exportar')){Utils.toast('Sem permissão para exportar.','erro');return;}
+    const sorted=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
+    const temFilho=sorted.map((t,i)=>i+1<sorted.length&&(sorted[i+1].nivel||0)>(t.nivel||0));
+    const CORES_NIVEL=['#F5C800','#FDE68A','#FEF3C7','#F3F4F6'];
+    const obra=Router.getObra();
+    const linhas=sorted.map((t,i)=>{
+      const niv=t.nivel||0,grupo=temFilho[i];
+      const bg=grupo?CORES_NIVEL[Math.min(niv,CORES_NIVEL.length-1)]:(i%2?'#FAFAFA':'#FFF');
+      const perc=t.percentualConcluido||0;
+      return `<tr style="background:${bg};${grupo?'font-weight:700;':''}">
+        <td style="text-align:center;">${i+1}</td>
+        <td style="padding-left:${8+niv*16}px;">${_esc(t.nome||'')}</td>
+        <td style="text-align:center;">${t.duracao?t.duracao+'d':''}</td>
+        <td style="text-align:center;">${_fBR(t.inicioPlanejado)}</td>
+        <td style="text-align:center;">${_fBR(t.terminoPlanejado)}</td>
+        <td style="text-align:center;">${t.percentualEsperado||0}%</td>
+        <td style="text-align:center;color:${perc>=100?'#15803D':perc>0?'#2563EB':'#6B7280'};font-weight:600;">${perc}%</td>
+        <td style="text-align:center;">${_esc(t._predDisplay||'')}</td>
+        <td>${_esc(t.responsavel||'')}</td>
+      </tr>`;
+    }).join('');
+    const w=window.open('','_blank');
+    if(!w){Utils.toast('Popup bloqueado — libere popups pra imprimir.','alerta');return;}
+    w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Cronograma — ${_esc(obra?.nome||'Obra')}</title>
+      <style>
+        body{font-family:'Segoe UI',Arial,sans-serif;margin:20px;color:#111;}
+        h1{font-size:18px;margin:0 0 2px;}
+        .sub{font-size:11px;color:#6B7280;margin-bottom:14px;}
+        table{border-collapse:collapse;width:100%;font-size:10.5px;}
+        th{background:#111827;color:#FFF;padding:6px 8px;text-align:center;font-size:10px;text-transform:uppercase;letter-spacing:.3px;}
+        td{border:1px solid #D1D5DB;padding:4px 8px;}
+        thead{display:table-header-group;} /* repete cabeçalho em cada página impressa */
+        tr{page-break-inside:avoid;}
+        @media print{body{margin:8mm;} @page{size:A4 landscape;margin:8mm;}}
+      </style></head><body>
+      <h1>Cronograma — ${_esc(obra?.nome||'Obra')}</h1>
+      <div class="sub">Gerado em ${new Date().toLocaleString('pt-BR')} · ${sorted.length} tarefas · Absoluta Engenharia</div>
+      <table><thead><tr><th>#</th><th style="text-align:left;">Tarefa</th><th>Dur.</th><th>Início</th><th>Término</th><th>% Esp.</th><th>% Conc.</th><th>Predecessora</th><th>Responsável</th></tr></thead>
+      <tbody>${linhas}</tbody></table>
+      <script>window.onload=()=>setTimeout(()=>window.print(),300);<\/script>
+      </body></html>`);
+    w.document.close();
+  }
+
   function setZoom(z){zoomGantt=z;_render();}
 
   // Popup de predecessora
@@ -5392,7 +5536,7 @@ const Planejamento = (() => {
     _rowDragStart,toggleSel,_limparSelecao,_moverSel,_bulkNivel,_bulkDuplicar,_bulkExcluir,
     toggleStatusFiltro,_aplicarStatusFiltro,_abrirFiltroResponsavel,_aplicarFiltroResponsavel,_limparFiltroResponsavel,undo,
     onBusca,limparBusca,_buscaKey,
-    importarExcel,importarBaseCompleta,importarCorrecoes,_executarCorrecoes,_mostrarRevisaoCorrecoes,exportar,exportarPNG,corrigirOrdensDuplicadas,_corrigirNiveisSoltos,_corrigirNivelPeloCodigo,_migrarPredecessorasParaId,_recalcularDatasPais,_recalcularPercTodosPais,_orfasMarcarTodas,_orfasExcluirMarcadas,_gerarPNG,_predPopup,_predSalvar,_predCellClick,_predAddLinha,_predLinhaAtualizar,
+    importarExcel,importarBaseCompleta,importarCorrecoes,_executarCorrecoes,_mostrarRevisaoCorrecoes,exportar,exportarExcelBonito,exportarMSProject,abrirImpressao,exportarPNG,corrigirOrdensDuplicadas,_corrigirNiveisSoltos,_corrigirNivelPeloCodigo,_migrarPredecessorasParaId,_recalcularDatasPais,_recalcularPercTodosPais,_orfasMarcarTodas,_orfasExcluirMarcadas,_gerarPNG,_predPopup,_predSalvar,_predCellClick,_predAddLinha,_predLinhaAtualizar,
     abrirVinculosView,fecharVinculosView,abrirVincularTarefa,abrirVincularAqui,onVincTipoChange,
     onVincNavModulo,onVincNavModuloMetrica,onVincNavMetrica,onVincNavEntrar,onVincNavBreadcrumb,onVincNavVoltar,
     onBuscaEscolhaAlvoVinc,onEscolherAlvoVinc,onTrocarAlvoVinc,

@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.62.4',
+  versaoAtual: 'V2.62.5',
 
   versoes: [
     {
@@ -5789,10 +5789,16 @@ const NotasVersao = {
       titulo:'Seção Atividades de volta no Dashboard',
       itens:['A seção "Atividades" (Em Execução + Próximas), removida por engano no redesign V2.62.0, voltou — agora como módulo próprio (js/dashboard-atividades.js) e no padrão visual novo: pills de nível, árvore expansível com resumo agregado, % colorido por faixa e horizonte de tempo nas Próximas.',
         'As preferências de nível/horizonte salvas por usuário antes da V2.62.0 continuam valendo (mesmas chaves em users/{uid}.dashboardArvorePrefs).']},
-    {versao:'V2.62.4',status:'aberta',data:'2026-08-14',tipo:'correcao',
+    {versao:'V2.62.4',status:'fechada',data:'2026-08-14',tipo:'correcao',
       titulo:'Horizonte de 2 meses + alerta de início vencido nas Próximas',
       itens:['Opção "2 meses" adicionada no filtro de horizonte de Atividades (Próximas) e Suprimentos.',
-        'Nas Próximas, tarefas com início planejado já vencido e 0% ganham o selo vermelho "deveria ter iniciado" — lembra de atualizar o % no Planejamento (a coluna Em Execução só considera tarefas com progresso entre 1% e 99%).']}
+        'Nas Próximas, tarefas com início planejado já vencido e 0% ganham o selo vermelho "deveria ter iniciado" — lembra de atualizar o % no Planejamento (a coluna Em Execução só considera tarefas com progresso entre 1% e 99%).']},
+    {versao:'V2.62.5',status:'aberta',data:'2026-08-14',tipo:'funcionalidade',
+      titulo:'Novos exports no Planejamento: Excel FORMATADO (bonito), MS Project (.xml) e Imprimir/PDF — o export cru continua disponível como "Excel (simples)"',
+      itens:['🎨 Exportar Excel (formatado): planilha estilizada pronta pra apresentar — cabeçalho escuro fixo com filtro, grupos coloridos por nível (dourado → tons mais claros), indentação por hierarquia, bordas, % concluído verde quando 100%. O export antigo (cru, com todas as colunas, bom pra reimportar) continua como "Exportar Excel (simples)".',
+        '📊 Exportar MS Project (.xml): gera XML no formato nativo de troca do Project (MSPDI) — abre direto no MS Project (Arquivo → Abrir) com hierarquia, datas, duração, % concluído e predecessoras completas (tipo TI/II/TT/IT + defasagem), calendário padrão seg-sex 8h.',
+        '🖨 Imprimir / PDF: abre a visão hierárquica bonita numa página branca limpa e chama a impressão do navegador — dá pra imprimir direto ou salvar em PDF. Cabeçalho da tabela repete em toda página, formato paisagem A4, linhas não quebram no meio.',
+        'Os três estão no menu ⚙ Ferramentas (ordem alfabética, como sempre).']}
   ],
 
   render(containerId) {
