@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.62.6',
+  versaoAtual: 'V2.62.7',
 
   versoes: [
     {
@@ -5799,11 +5799,17 @@ const NotasVersao = {
         '📊 Exportar MS Project (.xml): gera XML no formato nativo de troca do Project (MSPDI) — abre direto no MS Project (Arquivo → Abrir) com hierarquia, datas, duração, % concluído e predecessoras completas (tipo TI/II/TT/IT + defasagem), calendário padrão seg-sex 8h.',
         '🖨 Imprimir / PDF: abre a visão hierárquica bonita numa página branca limpa e chama a impressão do navegador — dá pra imprimir direto ou salvar em PDF. Cabeçalho da tabela repete em toda página, formato paisagem A4, linhas não quebram no meio.',
         'Os três estão no menu ⚙ Ferramentas (ordem alfabética, como sempre).']},
-    {versao:'V2.62.6',status:'aberta',data:'2026-08-14',tipo:'correcao',
+    {versao:'V2.62.6',status:'fechada',data:'2026-08-14',tipo:'correcao',
       titulo:'% Esperado agora é calculado AUTOMATICAMENTE pela data (nunca mais fica defasado); Término nunca mais fica antes do Início; menu Ferramentas organizado em categorias',
       itens:['% Esperado deixou de ser um número estático importado da planilha (que ficava velho no dia seguinte): agora é calculado ao vivo — posição de HOJE dentro do intervalo Início→Término planejado (mesma fórmula do "prev." do Diário de Obra). Antes do início = 0%, depois do término = 100%, no meio = proporcional. Os dois módulos agora sempre batem. A coluna deixou de ser editável (não faz sentido editar algo calculado).',
         'Datas: editar o Início pra DEPOIS do Término existente (em tarefa sem duração salva) deixava a tarefa "voltando no tempo" (ex: 12/08→04/08). Agora o Término é arrastado junto pro mesmo dia, com aviso. E editar o Término pra antes do Início é rejeitado na hora, sem salvar nada.',
-        'Menu ⚙ Ferramentas reorganizado em 3 categorias com cabeçalho — "Importar & Exportar", "Correções & Recálculos" e "Ferramentas da Obra" — em vez de uma lista única gigante ("salada de frutas"). Ordem alfabética dentro de cada grupo.']}
+        'Menu ⚙ Ferramentas reorganizado em 3 categorias com cabeçalho — "Importar & Exportar", "Correções & Recálculos" e "Ferramentas da Obra" — em vez de uma lista única gigante ("salada de frutas"). Ordem alfabética dentro de cada grupo.']},
+    {versao:'V2.62.7',status:'aberta',data:'2026-08-14',tipo:'funcionalidade',
+      titulo:'Levantamento de Concreto — novo tipo de Fundação: Bloco Hexagonal',
+      itens:['Novo tipo na calculadora de Fundação: "Bloco Hexagonal" (bloco de coroamento para 7 estacas, com pontas triangulares no topo e na base).',
+        'Campos: A (meia largura, centro até a lateral reta), B (altura de cada ponta), C (altura da parte reta central), D (altura/espessura do bloco).',
+        'Fórmula: Área da planta = 2A×(B+C) [retângulo central + duas pontas triangulares] · Volume = Área × D.',
+        'Diagrama de referência desenhado na tela com os mesmos rótulos A/B/C/D do desenho técnico enviado.']}
   ],
 
   render(containerId) {

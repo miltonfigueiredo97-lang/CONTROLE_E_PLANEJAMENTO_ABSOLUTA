@@ -264,7 +264,7 @@ const ConcretoCalculos = (() => {
   // ── Fundação — 9 tipos (port fiel da aba "Fundações" do Obra Essence) ──
   // Todas as medidas de entrada em cm; retorna volume em m³.
   const TIPOS_FUNDACAO = [
-    'Viga Baldrame', 'Estacas', 'Bloco Retângular', 'Bloco Triângular',
+    'Viga Baldrame', 'Estacas', 'Bloco Retângular', 'Bloco Triângular', 'Bloco Hexagonal',
     'Sapata Isolada Piramidal', 'Sapata de Divisa Piramidal', 'Tubulão a Céu Aberto',
     'Sapata de Divisa em Bloco', 'Sapata Isolada em Bloco',
   ];
@@ -289,6 +289,13 @@ const ConcretoCalculos = (() => {
           return ((1.74 * A * B) + (0.44 * B * B) + (0.44 * A * A)) * C / 1000000;
         }
         return ((((B + D) / 2) * E) + (((A + D) / 2) * F)) * C / 1000000;
+
+      case 'Bloco Hexagonal':
+        // A = meia largura (centro até a lateral reta) · B = altura de cada ponta (topo/base) ·
+        // C = altura da parte reta central · D = altura do bloco (espessura)
+        // Área (planta) = retângulo central (2A×C) + 2 pontas triangulares (base 2A, altura B) = 2A(B+C)
+        // Volume = Área × D
+        return (2 * A * (B + C) * D) / 1000000;
 
       case 'Sapata Isolada Piramidal':
         // A,B = base maior (embaixo) · C,D = base menor/pescoço (em cima) · E = altura base reta · F = altura total

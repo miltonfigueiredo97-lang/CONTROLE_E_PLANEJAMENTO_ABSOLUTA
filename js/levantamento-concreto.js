@@ -518,6 +518,30 @@ const LevantamentoConcreto = (() => {
   }
 
   function esquemaFundacao(tipo) {
+    if (tipo === 'Bloco Hexagonal') {
+      return `
+        <svg viewBox="0 0 260 300" width="100%" style="max-height:380px;display:block;margin:0 auto;">
+          <polygon points="130,30 200,75 200,205 130,250 60,205 60,75" fill="rgba(245,200,0,0.10)" stroke="var(--cor-primaria)" stroke-width="2.5"/>
+          <circle cx="130" cy="140" r="3" fill="#94a3b8"/>
+          <line x1="60" y1="14" x2="200" y2="14" stroke="#3b82f6" stroke-width="1.2"/>
+          <line x1="60" y1="8" x2="60" y2="20" stroke="#3b82f6" stroke-width="1.2"/>
+          <line x1="130" y1="8" x2="130" y2="20" stroke="#3b82f6" stroke-width="1.2"/>
+          <line x1="200" y1="8" x2="200" y2="20" stroke="#3b82f6" stroke-width="1.2"/>
+          <text x="95" y="10" text-anchor="middle" font-size="12" fill="#3b82f6" font-weight="bold">A</text>
+          <text x="165" y="10" text-anchor="middle" font-size="12" fill="#3b82f6" font-weight="bold">A</text>
+          <line x1="212" y1="30" x2="212" y2="75" stroke="#16a34a" stroke-width="1.2"/>
+          <line x1="212" y1="75" x2="212" y2="205" stroke="#ef4444" stroke-width="1.2"/>
+          <line x1="212" y1="205" x2="212" y2="250" stroke="#16a34a" stroke-width="1.2"/>
+          <line x1="206" y1="30" x2="218" y2="30" stroke="#16a34a" stroke-width="1.2"/>
+          <line x1="206" y1="75" x2="218" y2="75" stroke="#16a34a" stroke-width="1.2"/>
+          <line x1="206" y1="205" x2="218" y2="205" stroke="#ef4444" stroke-width="1.2"/>
+          <line x1="206" y1="250" x2="218" y2="250" stroke="#16a34a" stroke-width="1.2"/>
+          <text x="234" y="56" text-anchor="middle" font-size="12" fill="#16a34a" font-weight="bold">B</text>
+          <text x="234" y="144" text-anchor="middle" font-size="12" fill="#ef4444" font-weight="bold">C</text>
+          <text x="234" y="232" text-anchor="middle" font-size="12" fill="#16a34a" font-weight="bold">B</text>
+          <text x="130" y="278" text-anchor="middle" font-size="11" fill="#a855f7" font-weight="bold">D = altura do bloco (espessura)</text>
+        </svg>`;
+    }
     const arquivo = {
       'Estacas': 'estacas-tubuloes.png',
       'Tubulão a Céu Aberto': 'tubulao-ceu-aberto.png',
@@ -671,6 +695,7 @@ const LevantamentoConcreto = (() => {
         if (tipoF === 'Tubulão a Céu Aberto') return 'tubulao';
         if (tipoF === 'Sapata Isolada Piramidal' || tipoF === 'Sapata de Divisa Piramidal') return 'piramide';
         if (tipoF === 'Bloco Triângular') return 'triangular';
+        if (tipoF === 'Bloco Hexagonal') return 'hexagonal';
         return 'bloco';
       };
       const g = grupo(calc.tipoFund);
@@ -705,6 +730,17 @@ const LevantamentoConcreto = (() => {
             ${campoNum('E [cm] (opcional)', 'fE', calc.fE, '#a855f7', '')}
           </div>
           ${campoNum('F [cm] (opcional)', 'fF', calc.fF, '#a855f7', '')}`;
+      } else if (g === 'hexagonal') {
+        campos = `
+          <p class="text-sm text-muted mb-1">A = metade da largura (centro até a lateral reta) · B = altura de cada ponta (topo e base, mesma medida) · C = altura da parte reta central · D = altura/espessura do bloco.</p>
+          <div class="form-row">
+            ${campoNum('A — Meia largura [cm]', 'fA', calc.fA, '#3b82f6', '85')}
+            ${campoNum('B — Altura da ponta [cm]', 'fB', calc.fB, '#16a34a', '50')}
+          </div>
+          <div class="form-row">
+            ${campoNum('C — Altura da parte reta [cm]', 'fC', calc.fC, '#ef4444', '100')}
+            ${campoNum('D — Altura do bloco [cm]', 'fD', calc.fD, '#a855f7', '170')}
+          </div>`;
       } else if (g === 'piramide') {
         campos = `
           <p class="text-sm text-muted mb-1">A/B = base maior (embaixo) · C/D = base menor / pescoço (em cima)</p>
