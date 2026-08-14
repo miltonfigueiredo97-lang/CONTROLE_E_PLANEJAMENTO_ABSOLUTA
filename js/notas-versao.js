@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.62.10',
+  versaoAtual: 'V2.62.11',
 
   versoes: [
     {
@@ -5818,11 +5818,15 @@ const NotasVersao = {
       titulo:'Controle de Estacas: seletor de BT esconde por padrão as já 100% usadas noutras peças',
       itens:['No popup de lançar por estaca, BTs que já estão 100% alocadas em outra peça (não sobra nada pra usar ali) somem do seletor por padrão — deixa a lista bem mais curta quando tem muitas BTs.',
         'Aparece um checkbox "Mostrar N BTs 100% usadas" pra reexibir, se precisar reajustar algo numa BT que já foi totalmente usada.']},
-    {versao:'V2.62.10',status:'aberta',data:'2026-08-14',tipo:'melhoria',
+    {versao:'V2.62.10',status:'fechada',data:'2026-08-14',tipo:'melhoria',
       titulo:'Minimapa de Estacas clicável: prancha em tela cheia',
       itens:['Clicar num minimapa de Estacas no Dashboard agora abre a prancha em POPUP DE TELA CHEIA, em qualidade máxima, mantendo a mesma visão limpa do minimapa (só as estacas executadas, sem anéis de tipo).',
         'Navegação no popup: zoom com Ctrl+scroll (ou botões −/+), arrastar com o botão esquerdo ou do meio do mouse (pan), scroll normal rola a prancha, setas ‹ › alternam entre pranchas, Esc fecha.',
-        'Cards do minimapa ganharam indicação visual de clique (lupa + destaque no hover).']}
+        'Cards do minimapa ganharam indicação visual de clique (lupa + destaque no hover).']},
+    {versao:'V2.62.11',status:'aberta',data:'2026-08-14',tipo:'correcao',
+      titulo:'Dashboard se atualiza sozinho ao voltar pra aba',
+      itens:['O Dashboard carregava os dados só na abertura: quem mudava a % no Planejamento em outra aba e voltava continuava vendo o retrato antigo (parecia que a mudança "não tinha mexido em nada"). Agora, ao voltar pra aba do Dashboard, ele recarrega os dados automaticamente (de forma silenciosa, sem tela de loading).',
+        'Botão "↻ Atualizar" no cabeçalho do Andamento por Frente pra forçar a recarga a qualquer momento.']}
   ],
 
   render(containerId) {

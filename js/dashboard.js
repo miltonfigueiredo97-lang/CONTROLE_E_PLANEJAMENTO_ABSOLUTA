@@ -16,6 +16,8 @@ const Dashboard = (() => {
   let obraAtual = null;
   let tarefas = [];
   let suprimentos = [];
+  let _ultimoLoad = 0;
+  let _carregando = false;
 
   async function init() {
     const ok = await Utils.initPagina();
@@ -24,6 +26,12 @@ const Dashboard = (() => {
     DashConcreto.renderToggle();
     await _carregarPrefsRemotas();
     await carregar();
+    // Auto-refresh: ao voltar pra esta aba (depois de editar % no
+    // Planejamento em outra aba, por exemplo), recarrega os dados sozinho —
+    // o Dashboard sempre mostra o retrato atual sem precisar de F5.
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && Date.now() - _ultimoLoad > 5000) carregar(true);
+    });
   }
 
   // Preferências pessoais de UI (nível/horizonte da árvore de Suprimentos)
@@ -44,16 +52,18 @@ const Dashboard = (() => {
   }
   window.onObraChanged = onObraChanged;
 
-  async function carregar() {
+  async function carregar(silencioso) {
     const el = document.getElementById('modulo-content');
     if (!el) return;
+    if (_carregando) return; // evita corrida de dois loads simultâneos
     if (!obraAtual || !obraAtual.id) {
       el.innerHTML = _htmlSemObra();
       await _popularSeletorVazio();
       return;
     }
     try {
-      Utils.mostrarLoading('Carregando dashboard...');
+      _carregando = true;
+      if (!silencioso) Utils.mostrarLoading('Carregando dashboard...');
       const obraId = obraAtual.id;
       const [obraCompleta, tf, sup] = await Promise.all([
         Database.getObra(obraId),
@@ -84,15 +94,20 @@ const Dashboard = (() => {
           console.error(`Erro na seção "${nome}" do Dashboard:`, e);
         }
       }
+      _ultimoLoad = Date.now();
       const atualizado = document.getElementById('db-atualizado-em');
       if (atualizado) atualizado.textContent = 'Atualizado ' + Utils.formatarDataHora(new Date());
     } catch (e) {
       console.error(e);
       Utils.toast('Erro ao carregar dashboard.', 'erro');
     } finally {
+      _carregando = false;
       Utils.esconderLoading();
     }
   }
+
+  // Botão ↻ das Frentes — recarrega tudo na hora.
+  async function atualizar() { await carregar(); }
 
   function _htmlSemObra() {
     return `<div class="estado-vazio">
@@ -128,6 +143,7 @@ const Dashboard = (() => {
             <h3>🏗️ Andamento por Frente de Trabalho</h3>
             <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
               <span class="text-sm text-muted" id="db-atualizado-em"></span>
+              <button class="btn btn-secundario btn-sm" onclick="Dashboard.atualizar()" title="Recarregar dados do Planejamento agora">↻ Atualizar</button>
               <div class="aba-toggle" id="db-painel-toggle">
                 <button class="aba-btn ativo" data-v="pavimento" onclick="DashFrentes.setModo('pavimento')">Por Pavimento</button>
                 <button class="aba-btn" data-v="apartamento" onclick="DashFrentes.setModo('apartamento')">Por Apartamento</button>
@@ -250,5 +266,5 @@ const Dashboard = (() => {
     return { atrasado: true, badge: `<span class="badge badge-perigo" style="margin-left:4px;">${txt}</span>` };
   }
 
-  return { init, onObraChanged };
+  return { init, onObraChanged, atualizar };
 })();
