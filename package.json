@@ -1,8 +1,0 @@
-{
-  "name": "controle-e-planejamento-absoluta",
-  "private": true,
-  "version": "2.58.0",
-  "dependencies": {
-    "firebase-admin": "^12.6.0"
-  }
-}
