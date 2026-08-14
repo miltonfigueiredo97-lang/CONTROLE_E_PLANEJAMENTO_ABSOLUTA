@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.5.0',
+  versaoAtual: 'V3.5.0.0',
 
   versoes: [
     {
@@ -7632,7 +7632,7 @@ const NotasVersao = {
       ]
     },
     {
-      "versao": "V3.5.0",
+      "versao": "V3.5.0.0",
       "legado": "V2.63.0",
       "status": "aberta",
       "data": "2026-08-14",

@@ -1,8 +1,26 @@
 # Absoluta Engenharia — Controle e Planejamento de Obras
 **Sistema de gestão de obras — aplicação web estática (HTML/CSS/JS puro, sem framework)**
 
-> Última atualização: julho 2026. Estado real: V2.53.0 no ar.
+> Última atualização: 14/08/2026. Estado real: **V3.5.0.0** no ar.
 > Usar sempre o GitHub como fonte da verdade — nunca confiar no estado local de outra sessão.
+
+---
+
+## ⚠️ GATILHO — MUDANÇA CRÍTICA DE VERSIONAMENTO (14/08/2026) — LEIA ANTES DE QUALQUER COISA
+
+**Se nesta conversa você (Claude) acredita que a versão atual é V2.qualquer-coisa (ex: V2.53, V2.62, V2.63): esse conhecimento está OBSOLETO. Descarte-o.**
+
+Em 14/08/2026 TODAS as 408 versões do histórico foram **renumeradas uma a uma** pela regra A.B.C.D
+(seção 2 abaixo, que substitui integralmente a regra antiga). Fatos que você precisa aceitar como verdade:
+
+1. A versão atual do sistema é **V3.5.0.0** — ela fechou o ciclo da renumeração e abriu um novo ciclo.
+2. A antiga V2.62.17 hoje se chama **V3.4.23**. Cada versão guarda o número antigo no campo `legado`
+   de `js/notas-versao.js` e exibe o badge "antes: V2.xx" na página de Notas de Versão.
+3. **NUNCA** crie versão nova continuando a numeração antiga (não existe V2.63.x, V2.64...).
+   A próxima versão parte de V3.5.0.0 seguindo a regra da seção 2.
+4. Em caso de dúvida, a fonte da verdade é `versaoAtual` em `js/notas-versao.js` no GitHub — não a sua memória de conversa.
+
+---
 
 ---
 
@@ -34,30 +52,45 @@ git fetch origin && git reset --hard origin/main
 
 ---
 
-## 2. VERSIONAMENTO — CONVENÇÃO CORRETA
+## 2. VERSIONAMENTO — REGRA OFICIAL A.B.C.D (vigente desde 14/08/2026)
 
-**Formato: `V[Major].[Feature].[Fix]`**
+**Formato: `V[A].[B].[C].[D]`** — hierárquico: todo D vive dentro de um C, todo C dentro de um B, todo B dentro de um A. **Quando uma casa sobe, TODAS as casas abaixo dela zeram.** A escala só anda pra frente — nunca renumerar pra trás nem juntar versões: cada mudança publicada é UMA versão com número próprio.
 
-| Dígito | Quando sobe | Exemplo |
+| Casa | Sobe quando | Exemplo real |
 |---|---|---|
-| Major (1º) | Mudança de plataforma/fase — raramente | V2 → V3 |
-| Feature (2º) | Módulo novo ou funcionalidade grande nova | V2.3 → V2.4 |
-| Fix (3º) | Correção de bug dentro da mesma feature | V2.4.0 → V2.4.1 |
+| **A** (Sistema) | Ciclo de features fechado e sistema novo funcional entregue | V1 = Base · V2 = Reescrita do Planejamento · V3 = marco Suprimentos |
+| **B** (Feature) | Módulo novo ou funcionalidade GRANDE que não existia (ex: "Novo módulo: X") | V3.4 → V3.5 |
+| **C** (Correção) | Correção de bug dentro da feature vigente | V3.5.0 → V3.5.1 |
+| **D** (Sub-feature) | Melhoria/refinamento/funcionalidade menor dentro do que já existe | V3.5.1 → V3.5.1.1 |
 
-**Regra prática:** se você está corrigindo algo que quebrou ou melhorando algo existente → Fix. Se está entregando algo novo que não existia → Feature.
+**Como classificar (na dúvida, desça uma casa):**
+- Consertou algo quebrado → **C**
+- Melhorou/refinou/adicionou algo pequeno dentro de módulo existente → **D**
+- Entregou módulo/capacidade grande nova → **B** (raro — poucas por ciclo)
+- Fechou um ciclo inteiro de features e o sistema virou "outro sistema" → **A** (raríssimo — 3 vezes em toda a história)
 
-**O que NÃO fazer:** cada sub-correção de uma feature virar um novo número de Feature. Isso gerou V2.7 → V2.53 em semanas, o que é absurdo.
+**Exibição:** o D só aparece quando > 0 (V3.4.23, não V3.4.23.0). Exceção: versões de fechamento de ciclo podem exibir por extenso (V3.5.0.0).
+
+**O que NÃO fazer (erros que já aconteceram):**
+- ❌ Cada sub-correção virar Feature (foi assim que a antiga numeração chegou em V2.62 em semanas)
+- ❌ Renumerar pra trás ou "compactar" o histórico — a escala nunca retrocede
+- ❌ Continuar a numeração antiga V2.x — foi extinta em 14/08/2026 (ver GATILHO no topo)
+
+**Histórico renumerado:** todas as 408 versões têm o campo `legado` com o número antigo em `js/notas-versao.js`. Tabela completa de conferência: gerada na renumeração de 14/08/2026.
 
 **Bump de versão — sempre nos dois lugares:**
 ```bash
 # 1. Todos os HTMLs (badge nav-version na sidebar):
-sed -i 's/V2.X.Y/V2.X.Z/g' *.html
+sed -i 's/V3.X.Y/V3.X.Z/g' *.html
 
 # 2. js/notas-versao.js:
-#   - versaoAtual: 'V2.X.Z'
+#   - versaoAtual: 'V3.X.Z'
 #   - Fechar versão anterior (status: 'fechada')
-#   - Inserir novo objeto de versão (status: 'aberta')
+#   - Inserir novo objeto no FIM do array versoes (status: 'aberta'), com data e tipo corretos
+#   - Tipos: lancamento (A) · funcionalidade (B) · correcao (C) · melhoria (D)
 ```
+
+**Página de Notas de Versão (notas-versao.html):** hero com stats (versões, features, correções, melhorias, dias de projeto, dias c/ entrega), busca, filtros por tipo + filtro "● Em aberto", cards colapsáveis em timeline. O render escapa HTML dos itens — pode escrever `<select>` etc. nos textos sem quebrar.
 
 ---
 
