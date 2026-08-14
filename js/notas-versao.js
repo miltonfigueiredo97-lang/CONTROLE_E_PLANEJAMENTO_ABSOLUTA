@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.36.6.1',
+  versaoAtual: 'V3.4.23.1',
 
   versoes: [
     {
@@ -211,7 +211,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V1.1.0', legado: 'V1.1.0',
+      versao: 'V1.0.9.1', legado: 'V1.1.0',
       status: 'fechada',
       data: '2025-07-04',
       tipo: 'funcionalidade',
@@ -231,7 +231,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V1.1.1', legado: 'V1.1.1',
+      versao: 'V1.0.10', legado: 'V1.1.1',
       status: 'fechada',
       data: '2025-07-04',
       tipo: 'correcao',
@@ -248,7 +248,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V1.1.2', legado: 'V1.1.2',
+      versao: 'V1.0.11', legado: 'V1.1.2',
       status: 'fechada',
       data: '2025-07-04',
       tipo: 'correcao',
@@ -263,7 +263,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V1.1.3', legado: 'V1.1.3',
+      versao: 'V1.0.12', legado: 'V1.1.3',
       status: 'fechada',
       data: '2025-07-05',
       tipo: 'correcao',
@@ -282,7 +282,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V1.1.4', legado: 'V1.1.4',
+      versao: 'V1.0.13', legado: 'V1.1.4',
       status: 'fechada',
       data: '2025-07-05',
       tipo: 'correcao',
@@ -297,7 +297,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V1.1.5', legado: 'V1.1.5',
+      versao: 'V1.0.14', legado: 'V1.1.5',
       status: 'fechada',
       data: '2025-07-05',
       tipo: 'correcao',
@@ -310,7 +310,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V1.1.6', legado: 'V1.1.6',
+      versao: 'V1.0.15', legado: 'V1.1.6',
       status: 'fechada',
       data: '2025-07-05',
       tipo: 'correcao',
@@ -325,7 +325,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V1.2.0', legado: 'V1.2',
+      versao: 'V1.1.0', legado: 'V1.2',
       status: 'fechada',
       data: '2025-07-05',
       tipo: 'funcionalidade',
@@ -354,7 +354,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V1.2.1', legado: 'V1.2.1',
+      versao: 'V1.1.1', legado: 'V1.2.1',
       status: 'fechada',
       data: '2025-07-05',
       tipo: 'correcao',
@@ -370,7 +370,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V1.3.0', legado: 'V1.2.2',
+      versao: 'V1.1.1.1', legado: 'V1.2.2',
       status: 'fechada',
       data: '2025-07-05',
       tipo: 'funcionalidade',
@@ -390,7 +390,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V1.3.1', legado: 'V1.2.3',
+      versao: 'V1.1.2', legado: 'V1.2.3',
       status: 'fechada',
       data: '2025-07-05',
       tipo: 'correcao',
@@ -409,7 +409,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V1.3.2', legado: 'V1.2.4',
+      versao: 'V1.1.3', legado: 'V1.2.4',
       status: 'fechada',
       data: '2025-07-05',
       tipo: 'correcao',
@@ -428,7 +428,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V1.3.3', legado: 'V1.2.5',
+      versao: 'V1.1.4', legado: 'V1.2.5',
       status: 'fechada',
       data: '2025-07-05',
       tipo: 'correcao',
@@ -451,7 +451,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V1.4.0', legado: 'V1.3',
+      versao: 'V1.2.0', legado: 'V1.3',
       status: 'fechada',
       data: '2025-07-06',
       tipo: 'funcionalidade',
@@ -472,7 +472,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V1.4.1', legado: 'V1.3.1',
+      versao: 'V1.2.1', legado: 'V1.3.1',
       status: 'fechada',
       data: '2025-07-06',
       tipo: 'correcao',
@@ -493,7 +493,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V1.4.2', legado: 'V1.3.2',
+      versao: 'V1.2.2', legado: 'V1.3.2',
       status: 'fechada',
       data: '2025-07-06',
       tipo: 'correcao',
@@ -512,7 +512,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V1.4.3', legado: 'V1.3.3',
+      versao: 'V1.2.3', legado: 'V1.3.3',
       status: 'fechada',
       data: '2025-07-06',
       tipo: 'correcao',
@@ -794,7 +794,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.2.0', legado: 'V2.1.3',
+      versao: 'V2.1.2.1', legado: 'V2.1.3',
       status: 'fechada',
       data: '2025-07-07',
       tipo: 'funcionalidade',
@@ -810,7 +810,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.2.1', legado: 'V2.1.4',
+      versao: 'V2.1.3', legado: 'V2.1.4',
       status: 'fechada',
       data: '2025-07-07',
       tipo: 'correcao',
@@ -823,7 +823,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.3.0', legado: 'V2.1.5',
+      versao: 'V2.1.3.1', legado: 'V2.1.5',
       status: 'fechada',
       data: '2025-07-07',
       tipo: 'funcionalidade',
@@ -838,7 +838,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.3.1', legado: 'V2.1.6',
+      versao: 'V2.1.4', legado: 'V2.1.6',
       status: 'fechada',
       data: '2025-07-07',
       tipo: 'correcao',
@@ -852,7 +852,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.4.0', legado: 'V2.2.0',
+      versao: 'V2.1.4.1', legado: 'V2.2.0',
       status: 'fechada',
       data: '2025-07-07',
       tipo: 'funcionalidade',
@@ -881,7 +881,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.4.1', legado: 'V2.2.1',
+      versao: 'V2.1.5', legado: 'V2.2.1',
       status: 'fechada',
       data: '2026-07-07',
       tipo: 'correcao',
@@ -914,7 +914,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.4.2', legado: 'V2.2.2',
+      versao: 'V2.1.6', legado: 'V2.2.2',
       status: 'fechada',
       data: '2026-07-07',
       tipo: 'correcao',
@@ -938,7 +938,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.4.3', legado: 'V2.2.8',
+      versao: 'V2.1.7', legado: 'V2.2.8',
       status: 'fechada',
       data: '2026-07-07',
       tipo: 'correcao',
@@ -961,7 +961,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.4.4', legado: 'V2.2.9',
+      versao: 'V2.1.8', legado: 'V2.2.9',
       status: 'fechada',
       data: '2026-07-07',
       tipo: 'correcao',
@@ -976,7 +976,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.4.5', legado: 'V2.3.0',
+      versao: 'V2.1.9', legado: 'V2.3.0',
       status: 'fechada',
       data: '2026-07-07',
       tipo: 'correcao',
@@ -1005,7 +1005,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.5.0', legado: 'V2.3.1',
+      versao: 'V2.1.9.1', legado: 'V2.3.1',
       status: 'fechada',
       data: '2026-07-07',
       tipo: 'funcionalidade',
@@ -1032,7 +1032,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.6.0', legado: 'V2.4.0',
+      versao: 'V2.2.0', legado: 'V2.4.0',
       status: 'fechada',
       data: '2026-07-07',
       tipo: 'funcionalidade',
@@ -1057,7 +1057,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.6.1', legado: 'V2.4.1',
+      versao: 'V2.2.1', legado: 'V2.4.1',
       status: 'fechada',
       data: '2026-07-07',
       tipo: 'correcao',
@@ -1070,7 +1070,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.7.0', legado: 'V2.5.0',
+      versao: 'V2.3.0', legado: 'V2.5.0',
       status: 'fechada',
       data: '2026-07-07',
       tipo: 'funcionalidade',
@@ -1108,7 +1108,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.7.1', legado: 'V2.5.1',
+      versao: 'V2.3.1', legado: 'V2.5.1',
       status: 'fechada',
       data: '2026-07-08',
       tipo: 'correcao',
@@ -1123,7 +1123,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.8.0', legado: 'V2.6.0',
+      versao: 'V2.4.0', legado: 'V2.6.0',
       status: 'fechada',
       data: '2026-07-08',
       tipo: 'funcionalidade',
@@ -1143,7 +1143,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.9.0', legado: 'V2.7.0',
+      versao: 'V2.4.0.1', legado: 'V2.7.0',
       status: 'fechada',
       data: '2026-07-08',
       tipo: 'funcionalidade',
@@ -1178,7 +1178,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.9.1', legado: 'V2.7.1',
+      versao: 'V2.4.1', legado: 'V2.7.1',
       status: 'fechada',
       data: '2026-07-08',
       tipo: 'correcao',
@@ -1195,7 +1195,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.9.2', legado: 'V2.7.2',
+      versao: 'V2.4.2', legado: 'V2.7.2',
       status: 'fechada',
       data: '2026-07-08',
       tipo: 'correcao',
@@ -1214,7 +1214,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.10.0', legado: 'V2.8.0',
+      versao: 'V2.4.2.1', legado: 'V2.8.0',
       status: 'fechada',
       data: '2026-07-08',
       tipo: 'funcionalidade',
@@ -1238,7 +1238,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.11.0', legado: 'V2.8.1',
+      versao: 'V2.4.2.2', legado: 'V2.8.1',
       status: 'fechada',
       data: '2026-07-08',
       tipo: 'funcionalidade',
@@ -1260,7 +1260,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.12.0', legado: 'V2.8.2',
+      versao: 'V2.4.2.3', legado: 'V2.8.2',
       status: 'fechada',
       data: '2026-07-08',
       tipo: 'funcionalidade',
@@ -1284,7 +1284,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.13.0', legado: 'V2.8.3',
+      versao: 'V2.4.2.4', legado: 'V2.8.3',
       status: 'fechada',
       data: '2026-07-08',
       tipo: 'funcionalidade',
@@ -1304,7 +1304,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.14.0', legado: 'V2.9.0',
+      versao: 'V2.4.2.5', legado: 'V2.9.0',
       status: 'fechada',
       data: '2026-07-09',
       tipo: 'funcionalidade',
@@ -1332,7 +1332,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.15.0', legado: 'V2.10.0',
+      versao: 'V2.4.2.6', legado: 'V2.10.0',
       status: 'fechada',
       data: '2026-07-09',
       tipo: 'funcionalidade',
@@ -1365,7 +1365,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.16.0', legado: 'V2.11.0',
+      versao: 'V2.5.0', legado: 'V2.11.0',
       status: 'fechada',
       data: '2026-07-09',
       tipo: 'funcionalidade',
@@ -1394,7 +1394,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.16.1', legado: 'V2.11.1',
+      versao: 'V2.5.1', legado: 'V2.11.1',
       status: 'fechada',
       data: '2026-07-09',
       tipo: 'correcao',
@@ -1410,7 +1410,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.17.0', legado: 'V2.12.0',
+      versao: 'V2.5.1.1', legado: 'V2.12.0',
       status: 'fechada',
       data: '2026-07-09',
       tipo: 'funcionalidade',
@@ -1432,7 +1432,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.18.0', legado: 'V2.13.0',
+      versao: 'V2.5.1.2', legado: 'V2.13.0',
       status: 'fechada',
       data: '2026-07-09',
       tipo: 'funcionalidade',
@@ -1463,7 +1463,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.18.0.1', legado: 'V2.13.1',
+      versao: 'V2.5.1.3', legado: 'V2.13.1',
       status: 'fechada',
       data: '2026-07-09',
       tipo: 'melhoria',
@@ -1486,7 +1486,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.18.1', legado: 'V2.14.0',
+      versao: 'V2.5.2', legado: 'V2.14.0',
       status: 'fechada',
       data: '2026-07-10',
       tipo: 'correcao',
@@ -1526,7 +1526,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.19.0', legado: 'V2.14.1',
+      versao: 'V2.5.2.1', legado: 'V2.14.1',
       status: 'fechada',
       data: '2026-07-10',
       tipo: 'funcionalidade',
@@ -1558,7 +1558,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.19.1', legado: 'V2.14.1',
+      versao: 'V2.5.3', legado: 'V2.14.1',
       status: 'fechada',
       data: '2026-07-10',
       tipo: 'correcao',
@@ -1587,7 +1587,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.20.0', legado: 'V2.15.0',
+      versao: 'V2.6.0', legado: 'V2.15.0',
       status: 'fechada',
       data: '2026-07-10',
       tipo: 'funcionalidade',
@@ -1602,7 +1602,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.20.1', legado: 'V2.14.2',
+      versao: 'V2.6.1', legado: 'V2.14.2',
       status: 'fechada',
       data: '2026-07-10',
       tipo: 'correcao',
@@ -1632,7 +1632,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.21.0', legado: 'V2.16.0',
+      versao: 'V2.7.0', legado: 'V2.16.0',
       status: 'fechada',
       data: '2026-07-11',
       tipo: 'funcionalidade',
@@ -1681,7 +1681,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.22.0', legado: 'V2.17.0',
+      versao: 'V2.7.0.1', legado: 'V2.17.0',
       status: 'fechada',
       data: '2026-07-11',
       tipo: 'funcionalidade',
@@ -1701,7 +1701,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.22.0.1', legado: 'V2.17.1',
+      versao: 'V2.7.0.2', legado: 'V2.17.1',
       status: 'fechada',
       data: '2026-07-11',
       tipo: 'melhoria',
@@ -1719,7 +1719,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.22.1', legado: 'V2.17.2',
+      versao: 'V2.7.1', legado: 'V2.17.2',
       status: 'fechada',
       data: '2026-07-11',
       tipo: 'correcao',
@@ -1754,7 +1754,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.22.2', legado: 'V2.17.3',
+      versao: 'V2.7.2', legado: 'V2.17.3',
       status: 'fechada',
       data: '2026-07-11',
       tipo: 'correcao',
@@ -1787,7 +1787,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.22.3', legado: 'V2.17.4',
+      versao: 'V2.7.3', legado: 'V2.17.4',
       status: 'fechada',
       data: '2026-07-11',
       tipo: 'correcao',
@@ -1805,7 +1805,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.23.0', legado: 'V2.17.5',
+      versao: 'V2.7.3.1', legado: 'V2.17.5',
       status: 'fechada',
       data: '2026-07-12',
       tipo: 'funcionalidade',
@@ -1827,7 +1827,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.24.0', legado: 'V2.17.6',
+      versao: 'V2.7.3.2', legado: 'V2.17.6',
       status: 'fechada',
       data: '2026-07-12',
       tipo: 'funcionalidade',
@@ -1849,7 +1849,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.24.1', legado: 'V2.17.7',
+      versao: 'V2.7.4', legado: 'V2.17.7',
       status: 'fechada',
       data: '2026-07-12',
       tipo: 'correcao',
@@ -1870,7 +1870,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.24.1.1', legado: 'V2.17.8',
+      versao: 'V2.7.4.1', legado: 'V2.17.8',
       status: 'fechada',
       data: '2026-07-12',
       tipo: 'melhoria',
@@ -1889,7 +1889,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.25.0', legado: 'V2.17.9',
+      versao: 'V2.7.4.2', legado: 'V2.17.9',
       status: 'fechada',
       data: '2026-07-12',
       tipo: 'funcionalidade',
@@ -1904,7 +1904,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.25.1', legado: 'V2.17.10',
+      versao: 'V2.7.5', legado: 'V2.17.10',
       status: 'fechada',
       data: '2026-07-12',
       tipo: 'correcao',
@@ -1921,7 +1921,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.25.2', legado: 'V2.17.11',
+      versao: 'V2.7.6', legado: 'V2.17.11',
       status: 'fechada',
       data: '2026-07-12',
       tipo: 'correcao',
@@ -1942,7 +1942,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.26.0', legado: 'V2.17.12',
+      versao: 'V2.7.6.1', legado: 'V2.17.12',
       status: 'fechada',
       data: '2026-07-12',
       tipo: 'funcionalidade',
@@ -1959,7 +1959,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.27.0', legado: 'V2.17.13',
+      versao: 'V2.7.6.2', legado: 'V2.17.13',
       status: 'fechada',
       data: '2026-07-12',
       tipo: 'funcionalidade',
@@ -1988,7 +1988,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.27.0.1', legado: 'V2.17.14',
+      versao: 'V2.7.6.3', legado: 'V2.17.14',
       status: 'fechada',
       data: '2026-07-12',
       tipo: 'melhoria',
@@ -2008,7 +2008,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.28.0', legado: 'V2.17.15',
+      versao: 'V2.7.6.4', legado: 'V2.17.15',
       status: 'fechada',
       data: '2026-07-12',
       tipo: 'funcionalidade',
@@ -2022,7 +2022,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.28.1', legado: 'V2.17.16',
+      versao: 'V2.7.7', legado: 'V2.17.16',
       status: 'fechada',
       data: '2026-07-12',
       tipo: 'correcao',
@@ -2035,7 +2035,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.29.0', legado: 'V2.17.17',
+      versao: 'V2.7.7.1', legado: 'V2.17.17',
       status: 'fechada',
       data: '2026-07-12',
       tipo: 'funcionalidade',
@@ -2054,7 +2054,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.29.0.1', legado: 'V2.17.18',
+      versao: 'V2.7.7.2', legado: 'V2.17.18',
       status: 'fechada',
       data: '2026-07-12',
       tipo: 'melhoria',
@@ -2075,7 +2075,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.29.0.2', legado: 'V2.17.19',
+      versao: 'V2.7.7.3', legado: 'V2.17.19',
       status: 'fechada',
       data: '2026-07-12',
       tipo: 'melhoria',
@@ -2092,7 +2092,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.29.0.3', legado: 'V2.17.20',
+      versao: 'V2.7.7.4', legado: 'V2.17.20',
       status: 'fechada',
       data: '2026-07-12',
       tipo: 'melhoria',
@@ -2111,7 +2111,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.29.0.4', legado: 'V2.17.21',
+      versao: 'V2.7.7.5', legado: 'V2.17.21',
       status: 'fechada',
       data: '2026-07-12',
       tipo: 'melhoria',
@@ -2126,7 +2126,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.30.0', legado: 'V2.17.22',
+      versao: 'V2.7.7.6', legado: 'V2.17.22',
       status: 'fechada',
       data: '2026-07-12',
       tipo: 'funcionalidade',
@@ -2142,7 +2142,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.31.0', legado: 'V2.17.23',
+      versao: 'V2.7.7.7', legado: 'V2.17.23',
       status: 'fechada',
       data: '2026-07-12',
       tipo: 'funcionalidade',
@@ -2179,7 +2179,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.32.0', legado: 'V2.18.0',
+      versao: 'V2.7.7.8', legado: 'V2.18.0',
       status: 'fechada',
       data: '2026-07-12',
       tipo: 'funcionalidade',
@@ -2223,7 +2223,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.32.0.1', legado: 'V2.18.1',
+      versao: 'V2.7.7.9', legado: 'V2.18.1',
       status: 'fechada',
       data: '2026-07-12',
       tipo: 'melhoria',
@@ -2264,7 +2264,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.32.1', legado: 'V2.18.2',
+      versao: 'V2.7.8', legado: 'V2.18.2',
       status: 'fechada',
       data: '2026-07-12',
       tipo: 'correcao',
@@ -2291,7 +2291,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.33.0', legado: 'V2.18.3',
+      versao: 'V2.7.8.1', legado: 'V2.18.3',
       status: 'fechada',
       data: '2026-07-10',
       tipo: 'funcionalidade',
@@ -2311,7 +2311,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.34.0', legado: 'V2.18.4',
+      versao: 'V2.7.8.2', legado: 'V2.18.4',
       status: 'fechada',
       data: '2026-07-13',
       tipo: 'funcionalidade',
@@ -2345,7 +2345,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.35.0', legado: 'V2.19.0',
+      versao: 'V2.8.0', legado: 'V2.19.0',
       status: 'fechada',
       data: '2026-07-13',
       tipo: 'funcionalidade',
@@ -2378,7 +2378,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.35.1', legado: 'V2.19.1',
+      versao: 'V2.8.1', legado: 'V2.19.1',
       status: 'fechada',
       data: '2026-07-13',
       tipo: 'correcao',
@@ -2392,7 +2392,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.35.2', legado: 'V2.19.2',
+      versao: 'V2.8.2', legado: 'V2.19.2',
       status: 'fechada',
       data: '2026-07-13',
       tipo: 'correcao',
@@ -2424,7 +2424,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.36.0', legado: 'V2.19.3',
+      versao: 'V2.8.2.1', legado: 'V2.19.3',
       status: 'fechada',
       data: '2026-07-13',
       tipo: 'funcionalidade',
@@ -2454,7 +2454,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.37.0', legado: 'V2.19.4',
+      versao: 'V2.8.2.2', legado: 'V2.19.4',
       status: 'fechada',
       data: '2026-07-13',
       tipo: 'funcionalidade',
@@ -2485,7 +2485,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.38.0', legado: 'V2.20.0',
+      versao: 'V2.8.2.3', legado: 'V2.20.0',
       status: 'fechada',
       data: '2026-07-13',
       tipo: 'funcionalidade',
@@ -2523,7 +2523,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.39.0', legado: 'V2.20.1',
+      versao: 'V2.8.2.4', legado: 'V2.20.1',
       status: 'fechada',
       data: '2026-07-13',
       tipo: 'funcionalidade',
@@ -2552,7 +2552,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.40.0', legado: 'V2.21.0',
+      versao: 'V2.9.0', legado: 'V2.21.0',
       status: 'fechada',
       data: '2026-07-13',
       tipo: 'funcionalidade',
@@ -2580,7 +2580,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.40.1', legado: 'V2.21.1',
+      versao: 'V2.9.1', legado: 'V2.21.1',
       status: 'fechada',
       data: '2026-07-13',
       tipo: 'correcao',
@@ -2595,7 +2595,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.40.2', legado: 'V2.21.2',
+      versao: 'V2.9.2', legado: 'V2.21.2',
       status: 'fechada',
       data: '2026-07-13',
       tipo: 'correcao',
@@ -2613,7 +2613,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.41.0', legado: 'V2.22.0',
+      versao: 'V2.9.2.1', legado: 'V2.22.0',
       status: 'fechada',
       data: '2026-07-13',
       tipo: 'funcionalidade',
@@ -2642,7 +2642,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.42.0', legado: 'V2.22.1',
+      versao: 'V2.9.2.2', legado: 'V2.22.1',
       status: 'fechada',
       data: '2026-07-13',
       tipo: 'funcionalidade',
@@ -2667,7 +2667,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.42.1', legado: 'V2.22.2',
+      versao: 'V2.9.3', legado: 'V2.22.2',
       status: 'fechada',
       data: '2026-07-13',
       tipo: 'correcao',
@@ -2689,7 +2689,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.43.0', legado: 'V2.22.3',
+      versao: 'V2.9.3.1', legado: 'V2.22.3',
       status: 'fechada',
       data: '2026-07-13',
       tipo: 'funcionalidade',
@@ -2713,7 +2713,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.43.1', legado: 'V2.22.4',
+      versao: 'V2.9.4', legado: 'V2.22.4',
       status: 'fechada',
       data: '2026-07-13',
       tipo: 'correcao',
@@ -2734,7 +2734,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.44.0', legado: 'V2.23.0',
+      versao: 'V2.9.4.1', legado: 'V2.23.0',
       status: 'fechada',
       data: '2026-07-13',
       tipo: 'funcionalidade',
@@ -2764,7 +2764,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.44.1', legado: 'V2.23.1',
+      versao: 'V2.9.5', legado: 'V2.23.1',
       status: 'fechada',
       data: '2026-07-13',
       tipo: 'correcao',
@@ -2785,7 +2785,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.45.0', legado: 'V2.24.0',
+      versao: 'V2.9.5.1', legado: 'V2.24.0',
       status: 'fechada',
       data: '2026-07-13',
       tipo: 'funcionalidade',
@@ -2805,7 +2805,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.45.1', legado: 'V2.24.1',
+      versao: 'V2.9.6', legado: 'V2.24.1',
       status: 'fechada',
       data: '2026-07-13',
       tipo: 'correcao',
@@ -2824,7 +2824,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.46.0', legado: 'V2.24.2',
+      versao: 'V2.9.6.1', legado: 'V2.24.2',
       status: 'fechada',
       data: '2026-07-13',
       tipo: 'funcionalidade',
@@ -2844,7 +2844,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.46.1', legado: 'V2.24.3',
+      versao: 'V2.9.7', legado: 'V2.24.3',
       status: 'fechada',
       data: '2026-07-13',
       tipo: 'correcao',
@@ -2862,7 +2862,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.46.2', legado: 'V2.24.4',
+      versao: 'V2.9.8', legado: 'V2.24.4',
       status: 'fechada',
       data: '2026-07-13',
       tipo: 'correcao',
@@ -2879,7 +2879,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.46.3', legado: 'V2.24.5',
+      versao: 'V2.9.9', legado: 'V2.24.5',
       status: 'fechada',
       data: '2026-07-13',
       tipo: 'correcao',
@@ -2896,7 +2896,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.47.0', legado: 'V2.25.0',
+      versao: 'V2.9.9.1', legado: 'V2.25.0',
       status: 'fechada',
       data: '2026-07-13',
       tipo: 'funcionalidade',
@@ -2922,7 +2922,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.47.1', legado: 'V2.25.1',
+      versao: 'V2.9.10', legado: 'V2.25.1',
       status: 'fechada',
       data: '2026-07-13',
       tipo: 'correcao',
@@ -2944,7 +2944,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.47.2', legado: 'V2.25.2',
+      versao: 'V2.9.11', legado: 'V2.25.2',
       status: 'fechada',
       data: '2026-07-13',
       tipo: 'correcao',
@@ -2961,7 +2961,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.47.3', legado: 'V2.25.3',
+      versao: 'V2.9.12', legado: 'V2.25.3',
       status: 'fechada',
       data: '2026-07-13',
       tipo: 'correcao',
@@ -2980,7 +2980,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.48.0', legado: 'V2.26.0',
+      versao: 'V2.9.12.1', legado: 'V2.26.0',
       status: 'fechada',
       data: '2026-07-13',
       tipo: 'funcionalidade',
@@ -3006,7 +3006,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.48.1', legado: 'V2.26.1',
+      versao: 'V2.9.13', legado: 'V2.26.1',
       status: 'fechada',
       data: '2026-07-13',
       tipo: 'correcao',
@@ -3031,7 +3031,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.48.2', legado: 'V2.26.2',
+      versao: 'V2.9.14', legado: 'V2.26.2',
       status: 'fechada',
       data: '2026-07-13',
       tipo: 'correcao',
@@ -3048,7 +3048,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.48.3', legado: 'V2.26.3',
+      versao: 'V2.9.15', legado: 'V2.26.3',
       status: 'fechada',
       data: '2026-07-13',
       tipo: 'correcao',
@@ -3068,7 +3068,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.49.0', legado: 'V2.27.0',
+      versao: 'V2.9.15.1', legado: 'V2.27.0',
       status: 'fechada',
       data: '2026-07-13',
       tipo: 'funcionalidade',
@@ -3091,7 +3091,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.49.1', legado: 'V2.27.1',
+      versao: 'V2.9.16', legado: 'V2.27.1',
       status: 'fechada',
       data: '2026-07-13',
       tipo: 'correcao',
@@ -3115,7 +3115,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.49.2', legado: 'V2.27.2',
+      versao: 'V2.9.17', legado: 'V2.27.2',
       status: 'fechada',
       data: '2026-07-13',
       tipo: 'correcao',
@@ -3133,7 +3133,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.50.0', legado: 'V2.28.0',
+      versao: 'V2.9.17.1', legado: 'V2.28.0',
       status: 'fechada',
       data: '2026-07-13',
       tipo: 'funcionalidade',
@@ -3150,7 +3150,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.50.0.1', legado: 'V2.28.1',
+      versao: 'V2.9.17.2', legado: 'V2.28.1',
       status: 'fechada',
       data: '2026-07-13',
       tipo: 'melhoria',
@@ -3168,7 +3168,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.50.1', legado: 'V2.28.2',
+      versao: 'V2.9.18', legado: 'V2.28.2',
       status: 'fechada',
       data: '2026-07-13',
       tipo: 'correcao',
@@ -3185,7 +3185,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.50.2', legado: 'V2.28.3',
+      versao: 'V2.9.19', legado: 'V2.28.3',
       status: 'fechada',
       data: '2026-07-13',
       tipo: 'correcao',
@@ -3199,7 +3199,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.50.3', legado: 'V2.28.4',
+      versao: 'V2.9.20', legado: 'V2.28.4',
       status: 'fechada',
       data: '2026-07-13',
       tipo: 'correcao',
@@ -3217,7 +3217,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.50.4', legado: 'V2.28.5',
+      versao: 'V2.9.21', legado: 'V2.28.5',
       status: 'fechada',
       data: '2026-07-13',
       tipo: 'correcao',
@@ -3235,7 +3235,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.51.0', legado: 'V2.29.0',
+      versao: 'V2.10.0', legado: 'V2.29.0',
       status: 'fechada',
       data: '2026-07-14',
       tipo: 'funcionalidade',
@@ -3256,7 +3256,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.51.1', legado: 'V2.29.1',
+      versao: 'V2.10.1', legado: 'V2.29.1',
       status: 'fechada',
       data: '2026-07-14',
       tipo: 'correcao',
@@ -3273,7 +3273,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.51.2', legado: 'V2.29.2',
+      versao: 'V2.10.2', legado: 'V2.29.2',
       status: 'fechada',
       data: '2026-07-14',
       tipo: 'correcao',
@@ -3290,7 +3290,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.51.3', legado: 'V2.29.3',
+      versao: 'V2.10.3', legado: 'V2.29.3',
       status: 'fechada',
       data: '2026-07-14',
       tipo: 'correcao',
@@ -3311,7 +3311,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.51.4', legado: 'V2.29.4',
+      versao: 'V2.10.4', legado: 'V2.29.4',
       status: 'fechada',
       data: '2026-07-14',
       tipo: 'correcao',
@@ -3336,7 +3336,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.51.5', legado: 'V2.29.5',
+      versao: 'V2.10.5', legado: 'V2.29.5',
       status: 'fechada',
       data: '2026-07-14',
       tipo: 'correcao',
@@ -3355,7 +3355,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.51.6', legado: 'V2.30.0',
+      versao: 'V2.10.6', legado: 'V2.30.0',
       status: 'fechada',
       data: '2026-07-11',
       tipo: 'correcao',
@@ -3383,7 +3383,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.51.7', legado: 'V2.30.1',
+      versao: 'V2.10.7', legado: 'V2.30.1',
       status: 'fechada',
       data: '2026-07-11',
       tipo: 'correcao',
@@ -3406,7 +3406,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.52.0', legado: 'V2.31.0',
+      versao: 'V2.11.0', legado: 'V2.31.0',
       status: 'fechada',
       data: '2026-07-14',
       tipo: 'funcionalidade',
@@ -3440,7 +3440,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.53.0', legado: 'V2.32.0',
+      versao: 'V2.11.0.1', legado: 'V2.32.0',
       status: 'fechada',
       data: '2026-07-15',
       tipo: 'funcionalidade',
@@ -3475,7 +3475,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.53.1', legado: 'V2.32.1',
+      versao: 'V2.11.1', legado: 'V2.32.1',
       status: 'fechada',
       data: '2026-07-15',
       tipo: 'correcao',
@@ -3502,7 +3502,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.53.2', legado: 'V2.32.2',
+      versao: 'V2.11.2', legado: 'V2.32.2',
       status: 'fechada',
       data: '2026-07-15',
       tipo: 'correcao',
@@ -3525,7 +3525,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.53.3', legado: 'V2.32.3',
+      versao: 'V2.11.3', legado: 'V2.32.3',
       status: 'fechada',
       data: '2026-07-15',
       tipo: 'correcao',
@@ -3547,7 +3547,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.54.0', legado: 'V2.33.0',
+      versao: 'V2.12.0', legado: 'V2.33.0',
       status: 'fechada',
       data: '2026-07-15',
       tipo: 'funcionalidade',
@@ -3567,7 +3567,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.55.0', legado: 'V2.33.1',
+      versao: 'V2.12.0.1', legado: 'V2.33.1',
       status: 'fechada',
       data: '2026-07-15',
       tipo: 'funcionalidade',
@@ -3585,7 +3585,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.56.0', legado: 'V2.31.0',
+      versao: 'V2.12.0.2', legado: 'V2.31.0',
       status: 'fechada',
       data: '2026-07-11',
       tipo: 'funcionalidade',
@@ -3612,7 +3612,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.56.1', legado: 'V2.31.1',
+      versao: 'V2.12.1', legado: 'V2.31.1',
       status: 'fechada',
       data: '2026-07-11',
       tipo: 'correcao',
@@ -3640,7 +3640,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.56.2', legado: 'V2.32.0',
+      versao: 'V2.12.2', legado: 'V2.32.0',
       status: 'fechada',
       data: '2026-07-11',
       tipo: 'correcao',
@@ -3668,7 +3668,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.56.3', legado: 'V2.34.0',
+      versao: 'V2.12.3', legado: 'V2.34.0',
       status: 'fechada',
       data: '2026-07-16',
       tipo: 'correcao',
@@ -3711,7 +3711,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.56.3.1', legado: 'V2.35.0',
+      versao: 'V2.12.3.1', legado: 'V2.35.0',
       status: 'fechada',
       data: '2026-07-16',
       tipo: 'melhoria',
@@ -3733,7 +3733,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.56.3.2', legado: 'V2.36.0',
+      versao: 'V2.12.3.2', legado: 'V2.36.0',
       status: 'fechada',
       data: '2026-07-16',
       tipo: 'melhoria',
@@ -3772,7 +3772,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.57.0', legado: 'V2.37.0',
+      versao: 'V2.12.3.3', legado: 'V2.37.0',
       status: 'fechada',
       data: '2026-07-16',
       tipo: 'funcionalidade',
@@ -3803,7 +3803,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.57.1', legado: 'V2.38.0',
+      versao: 'V2.12.4', legado: 'V2.38.0',
       status: 'fechada',
       data: '2026-07-16',
       tipo: 'correcao',
@@ -3839,7 +3839,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.57.1.1', legado: 'V2.38.1',
+      versao: 'V2.12.4.1', legado: 'V2.38.1',
       status: 'fechada',
       data: '2026-07-16',
       tipo: 'melhoria',
@@ -3853,7 +3853,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.57.1.2', legado: 'V2.38.2',
+      versao: 'V2.12.4.2', legado: 'V2.38.2',
       status: 'fechada',
       data: '2026-07-16',
       tipo: 'melhoria',
@@ -3869,7 +3869,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.57.1.3', legado: 'V2.39.0',
+      versao: 'V2.12.4.3', legado: 'V2.39.0',
       status: 'fechada',
       data: '2026-07-16',
       tipo: 'melhoria',
@@ -3903,7 +3903,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.57.1.4', legado: 'V2.39.1',
+      versao: 'V2.12.4.4', legado: 'V2.39.1',
       status: 'fechada',
       data: '2026-07-16',
       tipo: 'melhoria',
@@ -3918,7 +3918,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.57.1.5', legado: 'V2.40.0',
+      versao: 'V2.12.4.5', legado: 'V2.40.0',
       status: 'fechada',
       data: '2026-07-16',
       tipo: 'melhoria',
@@ -3953,7 +3953,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.58.0', legado: 'V2.41.0',
+      versao: 'V2.13.0', legado: 'V2.41.0',
       status: 'fechada',
       data: '2026-07-16',
       tipo: 'funcionalidade',
@@ -3992,7 +3992,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.58.0.1', legado: 'V2.41.1',
+      versao: 'V2.13.0.1', legado: 'V2.41.1',
       status: 'fechada',
       data: '2026-07-16',
       tipo: 'melhoria',
@@ -4008,7 +4008,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.58.0.2', legado: 'V2.42.0',
+      versao: 'V2.13.0.2', legado: 'V2.42.0',
       status: 'fechada',
       data: '2026-07-17',
       tipo: 'melhoria',
@@ -4051,7 +4051,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.58.1', legado: 'V2.42.1',
+      versao: 'V2.13.1', legado: 'V2.42.1',
       status: 'fechada',
       data: '2026-07-17',
       tipo: 'correcao',
@@ -4077,7 +4077,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.59.0', legado: 'V2.43.0',
+      versao: 'V2.13.1.1', legado: 'V2.43.0',
       status: 'fechada',
       data: '2026-07-17',
       tipo: 'funcionalidade',
@@ -4112,7 +4112,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.59.0.1', legado: 'V2.43.1',
+      versao: 'V2.13.1.2', legado: 'V2.43.1',
       status: 'fechada',
       data: '2026-07-17',
       tipo: 'melhoria',
@@ -4133,7 +4133,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.59.1', legado: 'V2.43.2',
+      versao: 'V2.13.2', legado: 'V2.43.2',
       status: 'fechada',
       data: '2026-07-17',
       tipo: 'correcao',
@@ -4148,7 +4148,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.59.2', legado: 'V2.43.3',
+      versao: 'V2.13.3', legado: 'V2.43.3',
       status: 'fechada',
       data: '2026-07-17',
       tipo: 'correcao',
@@ -4172,7 +4172,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.59.2.1', legado: 'V2.44.0',
+      versao: 'V2.13.3.1', legado: 'V2.44.0',
       status: 'fechada',
       data: '2026-07-17',
       tipo: 'melhoria',
@@ -4204,7 +4204,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.59.3', legado: 'V2.44.1',
+      versao: 'V2.13.4', legado: 'V2.44.1',
       status: 'fechada',
       data: '2026-07-17',
       tipo: 'correcao',
@@ -4221,7 +4221,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.59.4', legado: 'V2.44.2',
+      versao: 'V2.13.5', legado: 'V2.44.2',
       status: 'fechada',
       data: '2026-07-17',
       tipo: 'correcao',
@@ -4244,7 +4244,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.59.5', legado: 'V2.44.3',
+      versao: 'V2.13.6', legado: 'V2.44.3',
       status: 'fechada',
       data: '2026-07-17',
       tipo: 'correcao',
@@ -4267,7 +4267,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.59.5.1', legado: 'V2.44.4',
+      versao: 'V2.13.6.1', legado: 'V2.44.4',
       status: 'fechada',
       data: '2026-07-17',
       tipo: 'melhoria',
@@ -4280,7 +4280,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.60.0', legado: 'V2.45.0',
+      versao: 'V2.13.6.2', legado: 'V2.45.0',
       status: 'fechada',
       data: '2026-07-21',
       tipo: 'funcionalidade',
@@ -4311,7 +4311,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.61.0', legado: 'V2.46.0',
+      versao: 'V2.14.0', legado: 'V2.46.0',
       status: 'fechada',
       data: '2026-07-21',
       tipo: 'funcionalidade',
@@ -4364,7 +4364,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.61.0.1', legado: 'V2.47.0',
+      versao: 'V2.14.0.1', legado: 'V2.47.0',
       status: 'fechada',
       data: '2026-07-22',
       tipo: 'melhoria',
@@ -4404,7 +4404,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.62.0', legado: 'V2.48.0',
+      versao: 'V2.15.0', legado: 'V2.48.0',
       status: 'fechada',
       data: '2026-07-22',
       tipo: 'funcionalidade',
@@ -4437,7 +4437,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.63.0', legado: 'V2.49.0',
+      versao: 'V2.15.0.1', legado: 'V2.49.0',
       status: 'fechada',
       data: '2026-07-09',
       tipo: 'funcionalidade',
@@ -4464,7 +4464,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.64.0', legado: 'V2.50.0',
+      versao: 'V2.15.0.2', legado: 'V2.50.0',
       status: 'fechada',
       data: '2026-07-09',
       tipo: 'funcionalidade',
@@ -4490,7 +4490,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.65.0', legado: 'V2.51.0',
+      versao: 'V2.16.0', legado: 'V2.51.0',
       status: 'fechada',
       data: '2026-07-11',
       tipo: 'funcionalidade',
@@ -4521,7 +4521,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.65.1', legado: 'V2.51.1',
+      versao: 'V2.16.1', legado: 'V2.51.1',
       status: 'fechada',
       data: '2026-07-11',
       tipo: 'correcao',
@@ -4534,7 +4534,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.65.2', legado: 'V2.51.2',
+      versao: 'V2.16.2', legado: 'V2.51.2',
       status: 'fechada',
       data: '2026-07-11',
       tipo: 'correcao',
@@ -4552,7 +4552,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.66.0', legado: 'V2.53.0',
+      versao: 'V2.17.0', legado: 'V2.53.0',
       status: 'fechada',
       data: '2026-07-09',
       tipo: 'funcionalidade',
@@ -4583,7 +4583,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.66.1', legado: 'V2.51.3',
+      versao: 'V2.17.1', legado: 'V2.51.3',
       status: 'fechada',
       data: '2026-07-11',
       tipo: 'correcao',
@@ -4605,7 +4605,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.66.2', legado: 'V2.51.4',
+      versao: 'V2.17.2', legado: 'V2.51.4',
       status: 'fechada',
       data: '2026-07-11',
       tipo: 'correcao',
@@ -4624,7 +4624,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.66.3', legado: 'V2.51.5',
+      versao: 'V2.17.3', legado: 'V2.51.5',
       status: 'fechada',
       data: '2026-07-11',
       tipo: 'correcao',
@@ -4648,7 +4648,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.66.4', legado: 'V2.53.1',
+      versao: 'V2.17.4', legado: 'V2.53.1',
       status: 'fechada',
       data: '2026-07-22',
       tipo: 'correcao',
@@ -4667,7 +4667,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.66.5', legado: 'V2.53.2',
+      versao: 'V2.17.5', legado: 'V2.53.2',
       status: 'fechada',
       data: '2026-07-22',
       tipo: 'correcao',
@@ -4686,7 +4686,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.67.0', legado: 'V2.53.3',
+      versao: 'V2.17.5.1', legado: 'V2.53.3',
       status: 'fechada',
       data: '2026-07-22',
       tipo: 'funcionalidade',
@@ -4704,7 +4704,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.67.1', legado: 'V2.53.4',
+      versao: 'V2.17.6', legado: 'V2.53.4',
       status: 'fechada',
       data: '2026-07-22',
       tipo: 'correcao',
@@ -4730,7 +4730,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.67.2', legado: 'V2.53.5',
+      versao: 'V2.17.7', legado: 'V2.53.5',
       status: 'fechada',
       data: '2026-07-22',
       tipo: 'correcao',
@@ -4750,7 +4750,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.67.3', legado: 'V2.53.6',
+      versao: 'V2.17.8', legado: 'V2.53.6',
       status: 'fechada',
       data: '2026-07-22',
       tipo: 'correcao',
@@ -4780,7 +4780,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V2.67.4', legado: 'V2.53.7',
+      versao: 'V2.17.9', legado: 'V2.53.7',
       status: 'fechada',
       data: '2026-07-22',
       tipo: 'correcao',
@@ -4841,7 +4841,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V3.1.0', legado: 'V2.55.0',
+      versao: 'V3.0.1.1', legado: 'V2.55.0',
       status: 'fechada',
       data: '2026-07-23',
       tipo: 'funcionalidade',
@@ -4868,7 +4868,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V3.2.0', legado: 'V2.55.1',
+      versao: 'V3.0.1.2', legado: 'V2.55.1',
       status: 'fechada',
       data: '2026-07-23',
       tipo: 'funcionalidade',
@@ -4889,7 +4889,7 @@ const NotasVersao = {
       ]
     },
     {
-      versao: 'V3.2.1', legado: 'V2.55.2',
+      versao: 'V3.0.2', legado: 'V2.55.2',
       status: 'fechada',
       data: '2026-07-23',
       tipo: 'correcao',
@@ -4905,12 +4905,12 @@ const NotasVersao = {
         '  embaixo dele, numa área rolável própria',
       ]
     },
-    {versao: 'V3.2.2', legado: 'V2.55.3',status:'fechada',data:'2026-07-22',tipo:'correcao',
+    {versao: 'V3.0.3', legado: 'V2.55.3',status:'fechada',data:'2026-07-22',tipo:'correcao',
       titulo:'Editor: 3 fixes críticos (filhos sumindo, scroll, saves concorrentes)',
       itens:['Filhos sumindo: ordemAntes capturado ANTES do splice (estava depois).',
         'Saves concorrentes: fila serializada _arvSaveQueue — movimentos rápidos não se sobrepõem.',
         'Scroll subindo: _arvToggle preserva scrollTop do arv-corpo.']},
-    {versao: 'V3.3.0', legado: 'V2.56.0',status:'fechada',data:'2026-07-23',tipo:'funcionalidade',
+    {versao: 'V3.1.0', legado: 'V2.56.0',status:'fechada',data:'2026-07-23',tipo:'funcionalidade',
       titulo:'Levantamento e Controle de Solo Grampeado: mapa sobre PDF/imagem da elevação, escala calibrada e execução por etapas',
       itens:['Levantamento: cada vista recebe um PDF (elevação) ou imagem — chumbadores são posicionados livremente por clique sobre ela (as vistas reais são irregulares: espaçamento variável, terreno inclinado — não davam pra usar um grid regular).',
         'PDF renderizado via pdf.js e comprimido (JPEG, redimensionado se preciso) antes de salvar, respeitando o limite de ~950KB do Firestore.',
@@ -4922,212 +4922,212 @@ const NotasVersao = {
         '% de execução da vista pelo peso das 5 etapas; cada marcação gera lançamento automático no Relatório Diário.',
         'Vínculo com o Planejamento: métricas de Metro Linear, Quantidade de Chumbadores e Área (m²) de Solo Grampeado.',
         'Dashboard: painel "Contenção (Solo Grampeado)" com o mapa de cada vista na proporção real da imagem (larga/baixa nas elevações compridas).']},
-    {versao: 'V3.3.0.1', legado: 'V2.57.0',status:'fechada',data:'2026-07-23',tipo:'melhoria',
+    {versao: 'V3.1.0.1', legado: 'V2.57.0',status:'fechada',data:'2026-07-23',tipo:'melhoria',
       titulo:'Dashboard: reordenado (Atividades → Suprimentos → Contenção/Fundação/Estrutura → Curva S → Resumo por Apartamento), PPC Semanal/Motivos de Atraso removidos, Suprimentos e Fundação/Estrutura com dados reais',
       itens:['Nova ordem pedida pelo Milton: Atividades, Suprimentos, Contenção, Fundação e Estrutura, Curva S, Resumo por Apartamento — o resto (PPC Semanal, Motivos de Atraso Semanais) foi removido da tela.',
         'Suprimentos: card deixou de ser texto fixo — mostra as Próximas Atividades (ainda não iniciadas no Planejamento) cujo pipeline de Suprimentos ainda não foi tocado (todas as 5 etapas em "não iniciado", ou nem tem doc ainda). Selo vermelho "Sem registro" vs laranja "Não iniciado".',
         'Fundação e Estrutura: o gráfico comparava só 2 totais (Fundação x Estrutura) — trocado por Previsto x Executado (m³) POR ANDAR, na mesma ordem de andar do Controle de Concreto (CC.ordenarAndares, respeita ordem customizada se existir), com tooltip mostrando a data do último lançamento daquele andar.',
         'Contenção e Fundação/Estrutura trocaram de posição (Contenção primeiro, como pedido).']},
-    {versao: 'V3.3.1', legado: 'V2.57.1',status:'fechada',data:'2026-07-24',tipo:'correcao',
+    {versao: 'V3.1.1', legado: 'V2.57.1',status:'fechada',data:'2026-07-24',tipo:'correcao',
       titulo:'Produção: % Concl. de tarefa-pai usava campo cru, não o cálculo ponderado por duração',
       itens:['Coluna "% Concl." de tarefas-pai (grupos) na tela de Produção lia t.percentualConcluido direto do Firestore, que só é sincronizado quando alguém edita % pelo próprio Planejamento — podendo ficar dessincronizado do valor real quando o % do pai muda por outros caminhos.',
         'Corrigido para usar fam.percCalculado(t) — mesma convenção já usada por Dashboard/obras.js e Diário de Obra, ponderando por duração dos filhos.',
         'Sem impacto em tarefas-folha (continuam lendo percentualConcluido direto, que é o valor real editável).']},
-    {versao: 'V3.3.2', legado: 'V2.57.2',status:'fechada',data:'2026-07-24',tipo:'correcao',
+    {versao: 'V3.1.2', legado: 'V2.57.2',status:'fechada',data:'2026-07-24',tipo:'correcao',
       titulo:'Planejamento: corrigido bug crítico que fazia tarefas mudarem de posição sozinhas ao salvar/recarregar',
       itens:['Causa raiz: o botão "+ Tarefa" calculava a ordem da tarefa nova como sel.ordem+1 — que colide exatamente com a ordem da próxima tarefa já existente (lista normalizada em inteiros sequenciais). Esse empate era resolvido pelo Firestore por ID do documento, não pela ordem pretendida, e por isso a posição (e o numLinha, usado nas Predecessoras) mudava sozinha no reload seguinte — carregar() roda a cada Salvar/Excluir/Importar.',
         'inserirTarefa() agora calcula a ordem da tarefa nova como um valor estritamente entre a tarefa selecionada e a próxima (mesma técnica já usada no Editor de Estrutura), garantindo que nunca colide.',
         'salvarTarefa() ganhou um guard anti-colisão: se o valor de "Ordem" (calculado ou digitado manualmente no formulário) já pertencer a outra tarefa, é ajustado em micro-incremento antes de salvar.',
         'Novo botão "🔧 Corrigir Ordens" na barra do Planejamento: renumera e persiste a ordem de TODAS as tarefas da obra em sequência única, corrigindo qualquer duplicata que já exista em produção (causada pelo bug antes desta versão). Preserva a ordem visual atual — só remove os empates internos. Recomendado rodar uma vez em cada obra.']},
-    {versao: 'V3.3.3', legado: 'V2.57.3',status:'fechada',data:'2026-07-24',tipo:'correcao',
+    {versao: 'V3.1.3', legado: 'V2.57.3',status:'fechada',data:'2026-07-24',tipo:'correcao',
       titulo:'Editor de Estrutura: corrigido o segundo bug que quebrava a estrutura — inserir tarefa (irmã acima/abaixo ou filha) desalinhava a ordem de TODAS as outras tarefas no Firestore',
       itens:['Causa raiz #2: _arvInserirAcima, _arvInserirAbaixo e _arvCriarFilho renumeravam a ordem de TODAS as tarefas localmente (para ficar 1,2,3... "bonito" na tela), mas só salvavam essa renumeração da tarefa recém-criada no Firestore. Todas as outras tarefas ficavam com a ordem antiga, desatualizada, gravada no banco — invisível na sessão atual, mas exposta assim que a tela era recarregada (ou lida pela outra conta Claude/sessão), reaparecendo em posições e níveis diferentes do esperado.',
         'As 3 funções agora só inserem a tarefa nova com uma ordem fracionária única entre as vizinhas (sem tocar na ordem das demais) — elimina de vez a divergência entre o que a tela mostra e o que está gravado.',
         'Se a Estrutura de alguma obra específica ainda estiver com posições/níveis errados (resíduo do bug antes desta versão), use o botão "🔧 Corrigir Ordens" (Gantt → barra superior) uma vez para renumerar e persistir tudo corretamente.']},
-    {versao: 'V3.3.4', legado: 'V2.57.4',status:'fechada',data:'2026-07-24',tipo:'correcao',
+    {versao: 'V3.1.4', legado: 'V2.57.4',status:'fechada',data:'2026-07-24',tipo:'correcao',
       titulo:'Editor de Estrutura: corrigido o terceiro bug — soltar o card fora de uma linha (espaço vazio da árvore) movia o galho inteiro para a raiz sem querer, zerando o nível',
       itens:['Causa raiz #3: o container da árvore tem seu próprio ondrop escutando "mover para raiz" (targetId=null) — usado para permitir soltar após a última linha. Como o alvo de drop no navegador é determinado pela posição exata do cursor, soltar perto da borda de uma linha (ou num espaço entre linhas) cai no container em vez da linha, disparando "mover para raiz" sem intenção. Isso zera o nível da tarefa arrastada e desloca todo o galho de filhos junto, na mesma proporção — exatamente o padrão de "vários níveis 0 fantasmas com estrutura interna intacta" visto pelo Milton.',
         'Mover para raiz via drop no espaço vazio agora exige confirmação explícita antes de aplicar. Mover para raiz de propósito continua disponível e direto pelo botão ↗ "Mover para" → Raiz.',
         'Barra de ferramentas do Planejamento: os botões não quebram mais para uma segunda linha (rolagem horizontal em vez de quebra).']},
-    {versao: 'V3.3.5', legado: 'V2.57.5',status:'fechada',data:'2026-07-24',tipo:'correcao',
+    {versao: 'V3.1.5', legado: 'V2.57.5',status:'fechada',data:'2026-07-24',tipo:'correcao',
       titulo:'Importar/Exportar Excel: hierarquia (Nível) não sobrevivia a uma reestruturação manual da árvore seguida de reimportação',
       itens:['Causa raiz: o Código (texto digitado manualmente, ex. "1.3.2.4.1") não é recalculado quando a árvore é reestruturada no Editor de Estrutura (criar um grupo novo por cima de tarefas existentes, mover, etc.) — só o campo Nível (numérico) reflete a estrutura real. Só que o Importar priorizava o Código (contagem de pontos) para calcular o nível, e por estar desatualizado, tarefas reagrupadas voltavam "soltas" (irmãs) em vez de aninhadas dentro do novo grupo pai ao reimportar.',
         'Exportar agora grava uma coluna "Nível" explícita, sempre fiel à árvore atual.',
         'Importar agora prioriza essa coluna "Nível" quando presente — Código/indentação viram apenas fallback para planilhas externas que não tenham essa coluna.',
         'Recomendado: para editar e reimportar sem perder a estrutura, sempre exporte deste sistema primeiro (a coluna Nível vai junto) em vez de reaproveitar uma planilha antiga sem essa coluna.']},
-    {versao: 'V3.3.6', legado: 'V2.57.6',status:'fechada',data:'2026-07-24',tipo:'correcao',
+    {versao: 'V3.1.6', legado: 'V2.57.6',status:'fechada',data:'2026-07-24',tipo:'correcao',
       titulo:'Planejamento: revertida a troca de quebra-de-linha por scroll horizontal na barra de ferramentas — espremia o seletor Atual/Linha de Base/Desafio em telas estreitas',
       itens:['O fix da V2.57.4 (nowrap+scroll horizontal) evitava a 2ª linha, mas em telas mais estreitas forçava o grupo de botões "Atual/Linha de Base/Desafio" a encolher e sobrepor o próprio texto. Voltou a quebrar linha (flex-wrap), que é só cosmético e não causa esse problema visual.']},
-    {versao: 'V3.3.6.1', legado: 'V2.57.7',status:'fechada',data:'2026-07-24',tipo:'melhoria',
+    {versao: 'V3.1.6.1', legado: 'V2.57.7',status:'fechada',data:'2026-07-24',tipo:'melhoria',
       titulo:'Planejamento: barra de ferramentas cabe numa linha só — Importar/Exportar/Corrigir Ordens/PNG/Vínculos agrupados em um menu "⚙ Ferramentas"',
       itens:['Reduz de 12 para 8 elementos na barra, cabendo numa linha só na maioria das telas sem quebrar nem espremer o seletor Atual/Linha de Base/Desafio.']},
-    {versao: 'V3.4.0', legado: 'V2.57.8',status:'fechada',data:'2026-07-24',tipo:'funcionalidade',
+    {versao: 'V3.1.6.2', legado: 'V2.57.8',status:'fechada',data:'2026-07-24',tipo:'funcionalidade',
       titulo:'Editor de Estrutura: seleção múltipla de tarefas — clique+Shift (intervalo) ou clique+Ctrl (avulsas), depois arrasta todas juntas para dentro de uma nova tarefa/pai',
       itens:['Clique numa linha seleciona só ela; Shift+clique seleciona o intervalo entre a última clicada e essa; Ctrl/Cmd+clique adiciona/remove uma linha avulsa da seleção — linhas selecionadas ficam destacadas em amarelo.',
         'Arrastar qualquer linha selecionada move o grupo inteiro junto (cada uma com seus próprios filhos) para o novo pai/posição, de uma vez só — sem precisar arrastar uma de cada vez.',
         'Se a seleção incluir um pai e algum filho dele junto, o filho não é movido em duplicidade — só o bloco do pai (que já leva o filho junto).',
         'Mesma proteção da V2.57.4 se aplica: soltar fora de uma linha (mover tudo para a raiz) pede confirmação.']},
-    {versao: 'V3.4.1', legado: 'V2.57.9',status:'fechada',data:'2026-07-24',tipo:'correcao',
+    {versao: 'V3.1.7', legado: 'V2.57.9',status:'fechada',data:'2026-07-24',tipo:'correcao',
       titulo:'Editor de Estrutura: clicar numa linha para selecioná-la pulava a tela pro topo',
       itens:['Selecionar não preservava a posição do scroll. Corrigido.']},
-    {versao: 'V3.4.2', legado: 'V2.57.10',status:'fechada',data:'2026-07-24',tipo:'correcao',
+    {versao: 'V3.1.8', legado: 'V2.57.10',status:'fechada',data:'2026-07-24',tipo:'correcao',
       titulo:'Predecessoras: suporte a múltiplas predecessoras (ex: "7TI; 98II+10d") e a sufixo de dias no atraso (ex: "+10d") — formato usado pelo cronograma do CSO',
       itens:['Causa: o cálculo automático de datas por predecessora só entendia UMA predecessora por tarefa (regex ancorada do início ao fim da string) e não tolerava a letra "d" no atraso. Qualquer tarefa com mais de uma predecessora (separadas por ";") ou com atraso escrito como "+10d" em vez de "+10" tinha o cálculo de data silenciosamente ignorado.',
         'Agora aceita múltiplas predecessoras separadas por ";" e usa a mais restritiva (data mais tardia) entre elas — mesma regra do MS Project/CPM.',
         'Aceita sufixo "d"/"dd" no atraso.',
         'Remapeamento de predecessoras ao reordenar tarefas (_remapearPredecessoras) também corrigido para atualizar TODAS as predecessoras de uma tarefa, não só a primeira.',
         'Relevante para importar cronogramas vindos do CSO: cerca de 60% das tarefas de um cronograma típico usam múltiplas predecessoras.']},
-    {versao: 'V3.4.3', legado: 'V2.57.11',status:'fechada',data:'2026-07-24',tipo:'correcao',
+    {versao: 'V3.1.9', legado: 'V2.57.11',status:'fechada',data:'2026-07-24',tipo:'correcao',
       titulo:'Importar Excel: travava/parava na metade em planilhas grandes (ex: 1755 tarefas só importava ~1000)',
       itens:['Causa: toda tarefa criada também grava um snapshot em historicoExecucao/{hoje} — um único documento no Firestore. Ao importar centenas/milhares de tarefas de uma vez em paralelo, todas competem para escrever nesse MESMO documento, e o Firestore derruba parte dessas escritas concorrentes (limite prático de throughput por documento) — o import parava silenciosamente na metade sem erro visível.',
         'Import em massa agora pula esse snapshot (ele é só um histórico auxiliar de % concluído/quantidade por dia, não a tarefa em si).',
         'Import agora também informa se alguma tarefa falhou, em vez de contar silenciosamente menos do que o esperado.']},
-    {versao: 'V3.4.4', legado: 'V2.57.12',status:'fechada',data:'2026-07-24',tipo:'correcao',
+    {versao: 'V3.1.10', legado: 'V2.57.12',status:'fechada',data:'2026-07-24',tipo:'correcao',
       titulo:'Importar Excel: mesmo após a V2.57.11, planilha de 1755 linhas ainda travava sempre exatamente na linha 1000',
       itens:['O corte reprodutível sempre na mesma linha (não aleatório) indicava o SDK do Firestore travando por excesso de escrita simultânea — 200 tarefas em paralelo por lote era demais, mesmo sem o snapshot da V2.57.11 (provavelmente agravado pelo cache offline do navegador).',
         'Reduzido o lote de 200 para 20 escritas simultâneas, e adicionado timeout de 15s por tarefa: se uma escrita travar, ela vira uma falha reportada em vez de travar o import inteiro para sempre.']},
-    {versao: 'V3.4.5', legado: 'V2.57.13',status:'fechada',data:'2026-07-24',tipo:'correcao',
+    {versao: 'V3.1.11', legado: 'V2.57.13',status:'fechada',data:'2026-07-24',tipo:'correcao',
       titulo:'Importar Excel: o corte em ~1000 persistia mesmo com lote menor — causa era o import reiniciar do ZERO a cada tentativa (apagava tudo antes de recriar), travando sempre no mesmo ponto e nunca progredindo',
       itens:['Import agora NÃO apaga mais as tarefas existentes antes de importar. Em vez disso, faz upsert por Código: tarefa com Código já existente é ATUALIZADA, tarefa nova é CRIADA. Tarefas antigas que não estão mais na planilha não são apagadas.',
         'Isso torna o import retomável: se travar/falhar no meio de uma planilha grande por qualquer motivo de ambiente, importar de novo (o mesmo arquivo) completa só o que faltou, em vez de reiniciar do zero e travar no mesmo lugar de novo.',
         'Recomendado rodar "🔧 Corrigir Ordens" depois de um import grande, para garantir que a ordem de exibição fique limpa.']},
-    {versao: 'V3.4.5.1', legado: 'V2.57.14',status:'fechada',data:'2026-07-24',tipo:'melhoria',
+    {versao: 'V3.1.11.1', legado: 'V2.57.14',status:'fechada',data:'2026-07-24',tipo:'melhoria',
       titulo:'Importar Excel: tarefas que existiam antes e não vieram na planilha agora aparecem num painel de revisão pra decidir excluir ou manter — em vez de ficarem soltas',
       itens:['Depois do import (upsert por Código da V2.57.13), abre um painel listando as tarefas que tinham Código mas não apareceram na planilha importada — com checkbox por tarefa, "marcar/desmarcar todas" e botão para excluir só as marcadas. Fechar sem marcar nada mantém tudo como está.']},
-    {versao: 'V3.4.5.2', legado: 'V2.57.15',status:'fechada',data:'2026-07-27',tipo:'melhoria',
+    {versao: 'V3.1.11.2', legado: 'V2.57.15',status:'fechada',data:'2026-07-27',tipo:'melhoria',
       titulo:'Dashboard: filtro por grupo-pai nos cards Atividades e Suprimentos (substituído na V2.57.16)',
       itens:['Novo seletor no topo dos cards "Atividades" e "Suprimentos" pra restringir a lista ao grupo-pai escolhido (ex: só "Alvenaria", em vez de todos os apartamentos misturados de todos os serviços).',
         'O pai de cada tarefa-folha é achado pela mesma lógica de ordem/nível já usada no resto do sistema (não existe parentId nos dados) — é o registro mais próximo acima dela na ordem geral com nível menor.',
         'O filtro é independente entre os dois cards: pode ver "Alvenaria" em Atividades e "Todos os grupos" em Suprimentos ao mesmo tempo.']},
-    {versao: 'V3.4.5.3', legado: 'V2.57.16',status:'fechada',data:'2026-07-27',tipo:'melhoria',
+    {versao: 'V3.1.11.3', legado: 'V2.57.16',status:'fechada',data:'2026-07-27',tipo:'melhoria',
       titulo:'Dashboard: filtro da V2.57.15 substituído por árvore navegável (igual ao Editor de Estrutura do Planejamento) em Atividades e Suprimentos',
       itens:['O filtro por grupo-pai escondia grupos cujas tarefas mais próximas estavam fora do corte de "8 mais próximas" (ex: "1ª Demão" com tudo daqui a meses simplesmente não aparecia na lista de opções).',
         'Substituído por árvore expansível: cada card mostra os grupos a partir de um nível fixo escolhido (botões "Nível 0/1/2/3..."), com clique pra abrir/fechar e ver os níveis abaixo ou o grupo acima.',
         'Grupo recolhido mostra resumo agregado das tarefas-folha dentro dele (peso por duração, mesma convenção do resto do Dashboard): quantidade de itens, % médio e a data mais próxima (prazo em Em Execução, início em Próximas/Suprimentos) — sem limite de 8, então grupos só com tarefas distantes no tempo continuam aparecendo.',
         'Estado de nível/expansão independente entre Atividades e Suprimentos.']},
-    {versao: 'V3.4.5.4', legado: 'V2.57.17',status:'fechada',data:'2026-07-27',tipo:'melhoria',
+    {versao: 'V3.1.11.4', legado: 'V2.57.17',status:'fechada',data:'2026-07-27',tipo:'melhoria',
       titulo:'Dashboard: horizonte de tempo em Próximas/Suprimentos + Em Execução e Próximas empilhadas (não mais lado a lado) + nível sem teto',
       itens:['Sem limite de tempo, "Próximas" e "Suprimentos" mostrariam literalmente TODA tarefa futura da obra (anos à frente) — agora tem seletor de horizonte (7 dias / 1 mês / 3 meses / 6 meses / 1 ano / Tudo), padrão 1 mês. "Em Execução" não usa horizonte (é o que está rolando agora).',
         '"Em Execução" e "Próximas" deixaram de ficar lado a lado (um ficava vazio enquanto o outro lotava com o filtro) — agora empilhadas, cada uma com seu próprio nível fixo e (no caso de Próximas) seu próprio horizonte.',
         'Botões de nível fixo não travam mais em 4 — vão até o nível mais profundo que existir de fato nos dados da obra.',
         'Grupo recolhido não mostra mais a linha de data (só nome, contagem e %) — some ao abrir, deixando a árvore mais enxuta conforme desce de nível.']},
-    {versao: 'V3.4.6', legado: 'V2.57.18',status:'fechada',data:'2026-07-27',tipo:'correcao',
+    {versao: 'V3.1.12', legado: 'V2.57.18',status:'fechada',data:'2026-07-27',tipo:'correcao',
       titulo:'Levantamento Ar Condicionado: itens vinculados (ex: espuma) sumiam/se fundiam no Resumo consolidado quando duas máquinas com diâmetros diferentes usavam o mesmo material',
       itens:['Só o item principal de cobre separava por diâmetro no resumo (chave materialId+diâmetro); os itens vinculados (espuma etc.) agregavam só por materialId — se duas máquinas de diâmetros diferentes (ex: Ø 1/2" e Ø 1/4") usassem o mesmo material vinculado, uma entrada sobrescrevia/fundia com a outra e sumia do resumo.',
         'Corrigido: itens vinculados agora também separam por diâmetro no resumo (mesma lógica do cobre), com o diâmetro aparecendo no nome (ex: "Espuma Polipex (Ø 1/2)").']},
-    {versao: 'V3.4.7', legado: 'V2.57.19',status:'fechada',data:'2026-07-27',tipo:'correcao',
+    {versao: 'V3.1.13', legado: 'V2.57.19',status:'fechada',data:'2026-07-27',tipo:'correcao',
       titulo:'Levantamento AC: fix V2.57.18 duplicava diâmetro no nome (ex: "(Ø 1/4) (Ø 3/8)") quando usuário já escreve o diâmetro manualmente no nome do item',
       itens:['Máquina não tem campo estruturado de diâmetro por item — usuário digita o diâmetro no próprio nome. V2.57.18 concatenava o diâmetro da máquina por cima, duplicando.',
         'Revertida concatenação automática; separação no resumo agora usa o nome completo como chave (sem sobrescrever nome digitado).']},
-    {versao: 'V3.4.8', legado: 'V2.57.20',status:'fechada',data:'2026-07-27',tipo:'correcao',
+    {versao: 'V3.1.14', legado: 'V2.57.20',status:'fechada',data:'2026-07-27',tipo:'correcao',
       titulo:'Levantamento AC: fix V2.57.19 removeu diâmetro do Cobre principal no resumo (campo estruturado da máquina, diferente do texto livre dos vinculados)',
       itens:['Cobre principal tem campo de diâmetro estruturado próprio (separado do texto livre dos vinculados) — restaurado no nome do resumo.']},
-    {versao: 'V3.4.9', legado: 'V2.57.21',status:'fechada',data:'2026-07-27',tipo:'correcao',
+    {versao: 'V3.1.15', legado: 'V2.57.21',status:'fechada',data:'2026-07-27',tipo:'correcao',
       titulo:'Dashboard: árvore de Atividades/Suprimentos esquecia o nível e o horizonte de tempo escolhidos a cada F5',
       itens:['Nível fixo e horizonte de tempo dos cards Em Execução/Próximas/Suprimentos agora persistem em localStorage (preferência de UI, não dado da obra) — a árvore volta a abrir onde o usuário deixou, em vez de sempre no Nível 0.',
         'Quais grupos estavam abertos/fechados continua reiniciando a cada carregamento (não faz sentido persistir isso entre trocas de obra).']},
-    {versao: 'V3.4.9.1', legado: 'V2.57.22',status:'fechada',data:'2026-07-27',tipo:'melhoria',
+    {versao: 'V3.1.15.1', legado: 'V2.57.22',status:'fechada',data:'2026-07-27',tipo:'melhoria',
       titulo:'Dashboard: nível/horizonte da árvore agora seguem o usuário entre PCs (não só localStorage)',
       itens:['Preferência salva em Firestore (users/{uid}.dashboardArvorePrefs), por ser pessoal do usuário — não da obra. Abrir em outro computador já traz o nível e o horizonte que o usuário deixou da última vez.',
         'localStorage continua sendo usado como cache local instantâneo (evita a árvore nascer no Nível 0 e só "pular" pro nível certo depois que o Firestore responder).',
         'Gravação com pequeno atraso (debounce) pra não gerar uma escrita a cada clique isolado se o usuário mexer em vários controles em sequência.']},
-    {versao: 'V3.4.9.2', legado: 'V2.57.23',status:'fechada',data:'2026-07-28',tipo:'melhoria',
+    {versao: 'V3.1.15.2', legado: 'V2.57.23',status:'fechada',data:'2026-07-28',tipo:'melhoria',
       titulo:'Suprimentos: filtro por nível, status "Em Andamento", edição inline mais rápida e filtro de status por etapa',
       itens:['Filtro por nível hierárquico (botões Nível 0/1/2...) igual ao padrão do Dashboard — mostra só os pais do nível escolhido, preferência salva em localStorage.',
         'Novo status "Em Andamento" nas 5 etapas, além de Não Iniciado/Concluído (cor azul, --cor-info).',
         'Clique/edição inline (data e status) não reconstrói mais a tabela inteira a cada mudança — atualiza só a célula editada, resolvendo a lentidão/travamento reportado.',
         'Cores dos selects de status com contorno e fundo mais destacados (mais fácil bater o olho e diferenciar).',
         'Filtro por status (▼) no cabeçalho de cada etapa, igual ao filtro de status do Planejamento — combina com o filtro de nível.']},
-    {versao: 'V3.5.0', legado: 'V2.57.24',status:'fechada',data:'2026-07-28',tipo:'funcionalidade',
+    {versao: 'V3.1.15.3', legado: 'V2.57.24',status:'fechada',data:'2026-07-28',tipo:'funcionalidade',
       titulo:'Suprimentos: prazo customizável por tarefa (além do padrão global)',
       itens:['Modal de Configurações agora tem 2ª coluna com a lista de tarefas (filtrável por nível), cada uma marcada "Padrão" ou "Customizado".',
         'Editar o prazo de uma tarefa que tem filhos aplica o mesmo prazo a todos os descendentes dela (cascata pai → filhos).',
         'Botão para remover a customização e voltar ao padrão global.',
         'Cálculo de datas (geração de pendentes e recálculo) agora usa o prazo customizado da tarefa quando existir; senão usa o padrão global — sem mudar o comportamento de quem nunca customizou nada.']},
-    {versao: 'V3.5.0.1', legado: 'V2.57.25',status:'fechada',data:'2026-07-28',tipo:'melhoria',
+    {versao: 'V3.1.15.4', legado: 'V2.57.25',status:'fechada',data:'2026-07-28',tipo:'melhoria',
       titulo:'Suprimentos: seleção manual de quais tarefas entram no pipeline (troca o filtro por nível)',
       itens:['Removido o filtro por nível hierárquico da tela principal — causava linhas de grupo vazias/"undefined" e escondia dados em níveis intermediários.',
         'Novo botão "☑️ Configurar Suprimentos" abre a árvore inteira do Planejamento (todos os níveis) com checkbox por linha — o usuário escolhe exatamente quais tarefas precisam de suprimento (ex.: só "Alvenaria Estrutural", sem repetir por lado A/B).',
         'Tela principal agora é uma lista plana só com as tarefas marcadas — sempre com dados completos, sem depender de folha/grupo.',
         'Dados antigos gerados automaticamente (por tarefa-folha) foram zerados ao trocar de modelo — a seleção começa do zero, conforme combinado.',
         'Salvar a seleção apaga o pipeline das tarefas desmarcadas e gera pendentes das que entraram, sem duplicar quem já tinha doc.']},
-    {versao: 'V3.5.0.2', legado: 'V2.57.26',status:'fechada',data:'2026-07-28',tipo:'melhoria',
+    {versao: 'V3.1.15.5', legado: 'V2.57.26',status:'fechada',data:'2026-07-28',tipo:'melhoria',
       titulo:'Suprimentos: marcador de 3 estados (dados/título/oculto) e formatação visual das células',
       itens:['Marcador de seleção agora tem 3 estados ao clicar: vazio → ✓ (linha com dados/pipeline completo) → ● (linha só como título, sem pipeline) → vazio de novo.',
         'Linha em modo "título" mostra só o nome da tarefa, útil pra organizar visualmente sem gerar suprimento pra ela (ex.: mostrar o pai acima de um grupo de filhos).',
         'Correção visual: selects de status com fonte maior e seta customizada (o texto "Não Iniciado" cortava dentro da caixa antes), inputs de data com contorno mais grosso e cores mais sólidas.',
         'Colunas de Data/Status com largura mínima maior para não espremer o conteúdo.']},
-    {versao: 'V3.6.0', legado: 'V2.57.27',status:'fechada',data:'2026-07-24',tipo:'funcionalidade',
+    {versao: 'V3.1.15.6', legado: 'V2.57.27',status:'fechada',data:'2026-07-24',tipo:'funcionalidade',
       titulo:'Planejamento: tarefas-pai (grupos) agora recebem início/término automaticamente — início = o menor dos filhos, término = o maior — inclusive gravado no Firestore (necessário pro Suprimentos e outros módulos que leem essa data direto)',
       itens:['Antes, um pai só tinha data se ela tivesse sido digitada/importada manualmente ali — se não tivesse, ficava em branco mesmo com todos os filhos preenchidos, e módulos que leem inicioPlanejado direto do documento da tarefa ficavam sem essa informação.',
         'Agora recalcula de baixo pra cima (filho antes do pai, pai antes do avô) e GRAVA o resultado no pai — não é só um efeito visual na tela.',
         'Roda automaticamente depois de: importar Excel, salvar uma tarefa pelo formulário, editar Início/Término/Início Real/Término Real direto na célula.',
         'Também disponível manualmente em ⚙ Ferramentas → "📐 Recalcular Datas dos Pais", pra rodar em obras que já tinham pais com data errada/em branco de antes desta versão.',
         'Novas colunas Início Real e Término Real na tabela do Planejamento (visualização — preenchidas pelo Diário de Obra, Medições e Semanal, que já alimentavam esses campos mas não apareciam aqui).']},
-    {versao: 'V3.6.1', legado: 'V2.57.28',status:'fechada',data:'2026-07-28',tipo:'correcao',
+    {versao: 'V3.1.16', legado: 'V2.57.28',status:'fechada',data:'2026-07-28',tipo:'correcao',
       titulo:'Suprimentos: colunas da direita cortadas — coluna Nome da Tarefa agora fixa (sticky) ao rolar',
       itens:['Larguras mínimas das colunas reduzidas (estavam exageradas, empurrando a tabela pra fora da tela sem indicação clara de rolagem).',
         'Coluna "Nome da Tarefa" fixa (sticky) na lateral esquerda — ao rolar horizontalmente pra ver Mobilização/Folga/Desvio, o nome da tarefa não some mais.']},
-    {versao: 'V3.6.2', legado: 'V2.57.29',status:'fechada',data:'2026-07-28',tipo:'correcao',
+    {versao: 'V3.1.17', legado: 'V2.57.29',status:'fechada',data:'2026-07-28',tipo:'correcao',
       titulo:'Suprimentos: correção V2.57.28 (sticky) piorou o corte de colunas — revertida',
       itens:['O position:sticky na coluna Nome da Tarefa não funcionou bem junto com o scroll da tabela e piorou o corte à direita — removido.',
         'Larguras mínimas de todas as colunas (Data, Status, Desvio, Início) reduzidas mais uma vez, para caber mais colunas na tela antes de precisar rolar.']},
-    {versao: 'V3.6.3', legado: 'V2.57.30',status:'fechada',data:'2026-07-28',tipo:'correcao',
+    {versao: 'V3.1.18', legado: 'V2.57.30',status:'fechada',data:'2026-07-28',tipo:'correcao',
       titulo:'Suprimentos: tabela agora usa table-layout:fixed — todas as colunas cabem na tela sem scroll horizontal',
       itens:['Causa raiz: os min-width somados de todas as colunas ultrapassavam a largura da tela, empurrando as últimas colunas (Mobilização, Folga) pra fora — cada correção anterior só mexeu nos números sem resolver a causa.',
         'Removidos todos os min-width forçados de colunas e do select de status. A tabela agora usa table-layout:fixed, que distribui o espaço disponível entre as colunas em vez de deixá-las "vazar" pra fora.',
         'Nome da Tarefa quebra em 2 linhas quando necessário, em vez de empurrar as demais colunas.']},
-    {versao: 'V3.6.4', legado: 'V2.57.31',status:'fechada',data:'2026-07-28',tipo:'correcao',
+    {versao: 'V3.1.19', legado: 'V2.57.31',status:'fechada',data:'2026-07-28',tipo:'correcao',
       titulo:'Suprimentos: célula de data virou pill compacto sem ícone de calendário nativo — testado sem overflow em 1366px/1920px antes de publicar',
       itens:['O input date nativo do navegador reserva espaço fixo pro ícone de calendário, e isso — somado ao select de status — não deixava as 5 etapas caberem lado a lado em nenhuma largura de tela testada.',
         'Data agora aparece como texto colorido compacto (mesmo padrão do exemplo enviado), sem o ícone nativo — clicar em qualquer parte da célula ainda abre o calendário do navegador normalmente.',
         'Status voltou a ser um select simples com fundo branco (mais parecido com o exemplo de referência), sem seta customizada nem cores fortes no fundo.',
         'Desta vez a correção foi validada com medição real de largura (Playwright/Chromium headless) em 1366px, 1550px e 1920px antes do commit — sem overflow em nenhuma delas.']},
-    {versao: 'V3.6.5', legado: 'V2.57.32',status:'fechada',data:'2026-07-28',tipo:'correcao',
+    {versao: 'V3.1.20', legado: 'V2.57.32',status:'fechada',data:'2026-07-28',tipo:'correcao',
       titulo:'Suprimentos: corrige "undefined" ao editar célula, e marcar Concluído agora pede a data real de conclusão',
       itens:['Causa raiz do "undefined": a edição inline reconstruía a célula usando um <tr> criado solto (fora de uma <table>) e definia innerHTML nele — isso não é um contexto válido de tabela, e o navegador descartava as tags <td>, deixando texto solto aparecer na tela. Corrigido usando uma <table> completa como contêiner temporário antes de mover as células — testado em navegador real antes de publicar.',
         'Ao marcar uma etapa como "Concluído", agora abre um pequeno popup pedindo a data real em que foi concluída (padrão: hoje) — antes o sistema só trocava o status sem perguntar a data, então "Concluído" ficava com a data planejada em vez da data real.',
         'Cancelar o popup de conclusão desfaz a troca de status (volta pro que estava salvo antes).']},
-    {versao: 'V3.6.6', legado: 'V2.57.33',status:'fechada',data:'2026-07-28',tipo:'correcao',
+    {versao: 'V3.1.21', legado: 'V2.57.33',status:'fechada',data:'2026-07-28',tipo:'correcao',
       titulo:'Suprimentos: célula de data com fundo colorido sólido (verde/vermelho/amarelo), igual ao modelo de referência',
       itens:['A versão anterior deixava a data como um "pill" pequeno dentro de uma célula branca — o modelo de referência enviado pede o fundo preenchendo a célula toda, cor sólida forte (verde = ok/concluído, vermelho = atrasado, amarelo = próximo do prazo).',
         'Mantido o clique em qualquer parte da célula abrindo o calendário nativo do navegador (input date real por baixo, só visualmente escondido).']},
-    {versao: 'V3.6.7', legado: 'V2.57.34',status:'fechada',data:'2026-07-28',tipo:'correcao',
+    {versao: 'V3.1.22', legado: 'V2.57.34',status:'fechada',data:'2026-07-28',tipo:'correcao',
       titulo:'Suprimentos: texto da data agora é preto (era branco/marrom em alguns estados), igual ao modelo de referência',
       itens:['Cor do texto dentro do fundo colorido (verde/vermelho/amarelo) padronizada pra preto em todos os estados.']},
-    {versao: 'V3.6.8', legado: 'V2.57.35',status:'aberta',data:'2026-07-28',tipo:'correcao',
+    {versao: 'V3.1.23', legado: 'V2.57.35',status:'aberta',data:'2026-07-28',tipo:'correcao',
       titulo:'Suprimentos: cor do fundo verde e altura da célula corrigidas — extraídas pixel a pixel do print de referência',
       itens:['A cor verde usada antes (#66bb6a) era mais escura/dessaturada que a do modelo — extraída a cor exata do print enviado (#54F777) e conferida pixel a pixel antes de publicar.',
         'Vermelho e amarelo recalculados com a mesma saturação/luminosidade do verde de referência, pra manter a família de cores consistente.',
         'Altura da célula estava quase o dobro do modelo (o <input type="date"> escondido estava reservando espaço extra) — corrigida para bater com a proporção do print de referência.']},
-    {versao: 'V3.6.9', legado: 'V2.57.36',status:'fechada',data:'2026-07-28',tipo:'correcao',
+    {versao: 'V3.1.24', legado: 'V2.57.36',status:'fechada',data:'2026-07-28',tipo:'correcao',
       titulo:'Editor de Estrutura: soltar uma tarefa "depois" de outra quase sempre virava filho por engano',
       itens:['Zona de drop para "depois" (irmã, não filha) era só 10% da altura da linha — quase impossível de acertar. Alargada para 30%.']},
-    {versao: 'V3.6.10', legado: 'V2.57.37',status:'fechada',data:'2026-07-28',tipo:'correcao',
+    {versao: 'V3.1.25', legado: 'V2.57.37',status:'fechada',data:'2026-07-28',tipo:'correcao',
       titulo:'Editor de Estrutura: bug real por trás dos "filhos trocando de dono" — soltar "depois" de uma tarefa que já tem filhos próprios entrava NO MEIO dela e dos filhos dela',
       itens:['Causa raiz: soltar "depois" de uma tarefa X inseria logo após a LINHA de X (índice+1) — mas se X já tinha filhos próprios logo em seguida, a tarefa recém-movida entrava bem ali no meio, entre X e os filhos dele. Como "quem é filho de quem" é decidido só pela sequência (nível maior logo depois = filho), os filhos verdadeiros de X ficaram "órfãos" de X e a tarefa recém-inserida roubou esse vínculo — exatamente o sintoma relatado: a tarefa de cima perde a setinha de expandir (vira um pontinho, sem filhos) e o que estava dentro dela aparece dentro da de baixo.',
         'Corrigido: soltar "depois" agora pula o bloco INTEIRO da tarefa-alvo (ela + todos os filhos próprios dela) antes de inserir — a nova tarefa vira irmã de verdade, depois de tudo que já pertencia ao alvo.',
         'Também corrigido: soltar/mover na árvore não pula mais o scroll pro topo — mantém a posição de onde você estava mexendo.']},
-    {versao: 'V3.6.11', legado: 'V2.57.38',status:'fechada',data:'2026-07-28',tipo:'correcao',
+    {versao: 'V3.1.26', legado: 'V2.57.38',status:'fechada',data:'2026-07-28',tipo:'correcao',
       titulo:'Editor de Estrutura: mover/reordenar às vezes "voltava sozinho" depois de sair e voltar da página — falha ao salvar no Firestore era engolida silenciosamente',
       itens:['Causa: quando uma gravação de ordem/nível falhava (rede instável, sobrecarga de escritas simultâneas), o erro só ia pro console — a árvore continuava mostrando a mudança na tela (otimista), mas nada tinha sido salvo de verdade. Um reload trazia o estado antigo de volta, parecendo que o sistema "desfez sozinho".',
         'Reduzida a concorrência de escrita (50→20 simultâneas) e adicionado timeout de 15s por gravação, igual ao fix já aplicado no Importar Excel.',
         'Agora, se alguma gravação falhar, aparece um aviso explícito na tela avisando pra tentar mover de novo — em vez de falhar em silêncio.']},
-    {versao: 'V3.6.12', legado: 'V2.57.39',status:'fechada',data:'2026-07-28',tipo:'correcao',
+    {versao: 'V3.1.27', legado: 'V2.57.39',status:'fechada',data:'2026-07-28',tipo:'correcao',
       titulo:'Editor de Estrutura e Planejamento mostravam estruturas DIFERENTES — causa: nível "solto" (com salto) torna uma tarefa invisível na árvore mas ela continua aparecendo normalmente na tabela',
       itens:['Causa raiz: o Editor de Estrutura só reconhece uma tarefa como raiz se nível===0, e só como filha de outra se nível===pai+1 (ver _arvFilhos). Se uma tarefa acaba com nível 4 mas a anterior tem nível 2 (faltando o 3 no meio — pode vir de import, edição manual do campo Nível, ou um bug já corrigido), ela não vira filha de ninguém nem raiz: some da árvore. A tabela do Planejamento não tem essa exigência (só usa nível pra indentar), então continua mostrando ela normalmente — daí a divergência entre as duas telas relatada pelo Milton (tarefa "Forro Escadaria" via na tabela, sumida na árvore).',
         'Novo botão ⚙ Ferramentas → "🌳 Corrigir Níveis Soltos": percorre a obra inteira e garante que nenhuma tarefa pule mais de 1 nível de profundidade em relação à anterior (mesma regra de qualquer outline — Word/PowerPoint/MS Project). Roda automaticamente também depois de importar Excel.',
         'Rode esse botão agora pra recuperar tarefas que sumiram da árvore por esse motivo.']},
-    {versao: 'V3.6.13', legado: 'V2.57.40',status:'fechada',data:'2026-07-28',tipo:'correcao',
+    {versao: 'V3.1.28', legado: 'V2.57.40',status:'fechada',data:'2026-07-28',tipo:'correcao',
       titulo:'Achada a causa raiz de verdade da estrutura bagunçada: o campo Nível está corrompido em 1510 de 2398 tarefas desta obra (Código bate certinho, Nível não) — novo reparo "Corrigir Nível pelo Código"',
       itens:['O V2.57.39 corrigia só "saltos impossíveis" de nível — mas isso não pega um nível que está ERRADO só por estar errado (ex: devia ser 4 e ficou 6, sem pular etapa nenhuma). Analisando o Excel exportado, 63% das tarefas com Código têm o Nível salvo divergindo da contagem de pontos do próprio Código — resultado de bugs de drag&drop/import já corrigidos ao longo desta conversa, acumulados na obra.',
         'O Código nunca é escrito automaticamente pelo sistema (só vem de import ou digitação manual), então é a fonte confiável. Novo botão ⚙ Ferramentas → "🩹 Corrigir Nível pelo Código": para toda tarefa que tem Código, recalcula o Nível pela contagem de pontos dele (ex: "1.3.6.20.2" → nível 4) e grava no Firestore.',
         'Tarefas SEM Código (grupos criados manualmente na árvore, ex: "Gesso e Forro") não são tocadas por esse reparo — se alguma delas ainda ficar no nível errado depois, precisa de ajuste manual (← / →) uma a uma, mas são poucas comparado ao total.']},
-    {versao: 'V3.6.14', legado: 'V2.57.41',status:'fechada',data:'2026-07-28',tipo:'correcao',
+    {versao: 'V3.1.29', legado: 'V2.57.41',status:'fechada',data:'2026-07-28',tipo:'correcao',
       titulo:'Predecessoras: inserir OU excluir qualquer tarefa (Editor de Estrutura ou tabela normal) não atualizava as predecessoras de tudo que vinha depois — só arrastar na árvore fazia isso',
       itens:['Inserir/excluir uma tarefa desloca o número de linha (o "#" que as predecessoras referenciam, tipo "5TI") de tudo que vem depois dela. Até esta versão, só o arrastar-e-soltar no Editor de Estrutura corrigia essas referências (_remapearPredecessoras); os botões ↑＋/↓＋/＋▸ de inserir na árvore, o "+ Tarefa" da tabela normal, e excluir tarefa não faziam esse remapeamento — deixando predecessoras de tarefas mais abaixo silenciosamente apontando pra linha errada toda vez que algo era inserido ou excluído antes delas.',
         'Agora TODA inserção e exclusão de tarefa (árvore ou tabela) remapeia as predecessoras de quem mudou de linha, do mesmo jeito que já acontecia ao arrastar.']},
-    {versao: 'V3.6.15', legado: 'V2.57.42',status:'fechada',data:'2026-07-28',tipo:'correcao',
+    {versao: 'V3.1.30', legado: 'V2.57.42',status:'fechada',data:'2026-07-28',tipo:'correcao',
       titulo:'Auditoria completa de todos os botões do Planejamento/Editor de Estrutura: mais 4 pontos sem remapeamento de predecessoras corrigidos, e um botão que salvava a obra INTEIRA a cada clique',
       itens:['Duplicar tarefa(s) selecionada(s) pela tabela (botão em massa) — não remapeava. Corrigido.',
         'Excluir tarefa(s) selecionada(s) em massa pela tabela — não remapeava. Corrigido.',
@@ -5135,108 +5135,108 @@ const NotasVersao = {
         'Importar Excel — tarefas mantidas que não vieram na planilha (órfãs) podiam ter a predecessora desatualizada se o import deslocou a posição delas. Corrigido.',
         'Mover linha ↑/↓ (botões "Acima"/"Abaixo" da tabela): salvava TODAS as ~2400 tarefas da obra no Firestore a cada clique, mesmo as que não mudaram de posição — desnecessário e um risco real de sobrecarga (mesma causa que já travou o Importar Excel outras vezes). Agora só salva quem realmente mudou, em lotes com timeout.',
         'Conferido também: arrastar na tabela normal (_reordenarTarefa) e Mover-para-outro-pai (Editor de Estrutura) já remapeavam corretamente — nenhuma mudança necessária ali.']},
-    {versao: 'V3.7.0', legado: 'V2.57.43',status:'fechada',data:'2026-07-28',tipo:'funcionalidade',
+    {versao: 'V3.1.30.1', legado: 'V2.57.43',status:'fechada',data:'2026-07-28',tipo:'funcionalidade',
       titulo:'Dois novos modos de importar Excel: "Importar Base Completa" (substitui tudo) e "Importar Correções" (atualiza só campos escolhidos, casando por Nome — não mexe em posição/nível/estrutura)',
       itens:['"Importar Base Completa": apaga TODAS as tarefas da obra e recria do zero a partir da planilha — pra quando o Milton quer mesmo substituir a base inteira (ex: reconciliar com um cronograma do CSO totalmente reestruturado). Pede confirmação em dobro por ser destrutivo.',
         '"Importar Correções": não cria nem apaga nenhuma tarefa, não toca em posição/nível/código — casa cada linha da planilha com a tarefa de MESMO NOME já existente na obra, e atualiza só os campos marcados numa lista de checkbox (Início Real, Término Real, % Concluído, Duração, Responsável, etc). Pensado pro caso do Milton: preencheu datas reais numa planilha à parte e quer trazer só isso, sem risco de bagunçar a árvore que ele organizou no Editor de Estrutura.',
         'Correções mostra um resumo ANTES de aplicar: quantas tarefas serão atualizadas, quantas não foram encontradas (nome não bate) e quantas são ambíguas (mais de uma tarefa com o mesmo nome — puladas por segurança, para nunca atualizar a tarefa errada).',
         'O "Importar" original (upsert por Código) continua existindo e é o padrão recomendado no dia a dia.']},
-    {versao: 'V3.7.1', legado: 'V2.57.44',status:'fechada',data:'2026-07-28',tipo:'correcao',
+    {versao: 'V3.1.31', legado: 'V2.57.44',status:'fechada',data:'2026-07-28',tipo:'correcao',
       titulo:'Removido do menu o botão "Corrigir Nível pelo Código" — era um reparo de uso único (dano histórico dos bugs já corrigidos) e perigoso como ferramenta recorrente',
       itens:['O Código de uma tarefa fica desatualizado assim que ela é reestruturada manualmente no Editor de Estrutura (aninhada num grupo novo, por exemplo) — só o Nível reflete a posição real depois disso. Deixar esse botão disponível no dia a dia significava correr o risco de, sem querer, reverter uma reestruturação manual de volta pro nível antigo (baseado no Código desatualizado), depois de já ter sido corrigida à mão.',
         'Serviu seu propósito (reparar o estrago histórico) e foi removido do menu. A função continua existindo no código só para emergência, mas não aparece mais como botão clicável no dia a dia.']},
-    {versao: 'V3.8.0', legado: 'V2.57.45',status:'fechada',data:'2026-07-28',tipo:'funcionalidade',
+    {versao: 'V3.1.31.1', legado: 'V2.57.45',status:'fechada',data:'2026-07-28',tipo:'funcionalidade',
       titulo:'Editor de Estrutura: botões "💾 Backup" e "📤 Restaurar" — salva um snapshot local da estrutura (nome/nível/ordem/código/predecessora) antes de mexer, pra restaurar se algo der errado',
       itens:['💾 Backup baixa um arquivo .json no seu computador com o estado atual de todas as tarefas (nível, ordem, código, predecessora) — não fica salvo em nenhum lugar do sistema, só no seu computador.',
         '📤 Restaurar lê esse arquivo depois e devolve nível/ordem/código/predecessora pro que estava salvo, tarefa por tarefa (casando pelo ID interno — funciona mesmo se você reorganizou tudo depois, mas não funciona se a tarefa foi excluída e recriada).',
         'Recomendado: bata um backup antes de reestruturar bastante coisa de uma vez.']},
-    {versao: 'V3.8.1', legado: 'V2.57.46',status:'fechada',data:'2026-07-28',tipo:'correcao',
+    {versao: 'V3.1.32', legado: 'V2.57.46',status:'fechada',data:'2026-07-28',tipo:'correcao',
       titulo:'Ctrl+Z (desfazer): escrevia todas as ~2400 tarefas uma por uma, sem timeout e sem trava contra clique duplo — podia travar no meio e restaurar só parte, ou misturar dois estados se apertado duas vezes',
       itens:['Causa: undo() gravava CADA tarefa da obra sequencialmente no Firestore, uma de cada vez, aguardando cada escrita terminar antes de ir pra próxima — se uma travasse (mesma causa de travamentos já vistos no Import), tudo depois dela na lista nunca era restaurado de verdade, mesmo a tela mostrando que sim.',
         'Sem trava alguma: apertar Ctrl+Z de novo antes do primeiro terminar disparava um SEGUNDO desfazer em paralelo, escrevendo por cima do primeiro — cada tarefa podia acabar com um valor de um snapshot, outra com valor de outro, misturando dois estados diferentes (exatamente o padrão relatado: uma tarefa some do lugar certo e os filhos de outra trocam de dono).',
         'Corrigido: desfazer agora ignora um segundo Ctrl+Z enquanto o anterior ainda está gravando, só grava as tarefas que realmente mudaram (mais rápido), em lotes com timeout de 15s, e avisa na tela se alguma não foi restaurada.']},
-    {versao: 'V3.9.0', legado: 'V2.57.47',status:'fechada',data:'2026-07-28',tipo:'funcionalidade',
+    {versao: 'V3.1.32.1', legado: 'V2.57.47',status:'fechada',data:'2026-07-28',tipo:'funcionalidade',
       titulo:'Editor de Estrutura: novo botão "💾 Salvar e Atualizar Planejamento" — força regravar ordem/nível de TODAS as tarefas e recarrega, sem depender do salvamento automático em segundo plano',
       itens:['Regrava ordem e nível de todas as tarefas do jeito que está na tela agora, em lotes com timeout, e recarrega o Planejamento no final — um "tenho certeza que salvou" manual, pra quando o salvamento automático em segundo plano não é suficiente ou o Milton quer confirmação explícita de que o Planejamento está de fato igual à árvore.']},
-    {versao: 'V3.9.1', legado: 'V2.57.48',status:'fechada',data:'2026-07-28',tipo:'correcao',
+    {versao: 'V3.1.33', legado: 'V2.57.48',status:'fechada',data:'2026-07-28',tipo:'correcao',
       titulo:'Editor de Estrutura: tela de "Carregando" removida de criar irmã/filha (ação instantânea não precisava bloquear a tela) — e reduzida ainda mais a zona de "virar filho" ao arrastar',
       itens:['Criar tarefa acima/abaixo/filha/raiz é uma escrita só no Firestore, rápida — não precisava da tela de carregando bloqueando a interface a cada clique. Removida nas 4 ações de criar; a linha nova já aparece na hora.',
         'Zona de drop "virar filho" ao arrastar reduzida de 40% para 20% da altura da linha (bem no centro) — reordenar como irmã (antes/depois) agora domina 80% da linha. Pra aninhar de propósito, use os botões "＋▸ Criar filho" ou "↗ Mover para" em vez de mirar num alvo pequeno arrastando.']},
-    {versao: 'V3.9.2', legado: 'V2.57.49',status:'fechada',data:'2026-07-28',tipo:'correcao',
+    {versao: 'V3.1.34', legado: 'V2.57.49',status:'fechada',data:'2026-07-28',tipo:'correcao',
       titulo:'Criar uma linha na árvore ficava lento quando afetava muitas predecessoras — a atualização delas gravava uma por uma (sequencial) e travava a tela esperando',
       itens:['Inserir uma tarefa desloca o número de linha de tudo depois dela, e qualquer predecessora que aponte pra um desses números precisa ser atualizada — em cronogramas grandes isso pode afetar centenas de tarefas de uma vez. A gravação dessas atualizações era sequencial (uma de cada vez, esperando terminar antes de ir pra próxima) — corrigido pra lote com timeout, igual ao resto do sistema.',
         'Além disso, criar tarefa na árvore não trava mais esperando essa atualização de predecessoras terminar — ela roda em segundo plano, e você já pode continuar mexendo.']},
-    {versao: 'V3.9.3', legado: 'V2.57.50',status:'fechada',data:'2026-07-28',tipo:'correcao',
+    {versao: 'V3.1.35', legado: 'V2.57.50',status:'fechada',data:'2026-07-28',tipo:'correcao',
       titulo:'Busca do Planejamento não encontrava tarefas escondidas dentro de uma família recolhida — parecia que tinham sido excluídas',
       itens:['Causa: a busca só olhava a lista "filtradas" (que já esconde os filhos de qualquer família recolhida) em vez de todas as tarefas da obra. Se o item buscado estava dentro de uma família fechada, a busca simplesmente não olhava pra ele — dava a impressão de ter sido apagado, quando só estava escondido.',
         'Agora a busca olha TODAS as tarefas, e se o resultado estiver escondido, expande automaticamente todas as famílias recolhidas no caminho até ele antes de pular pra lá.']},
-    {versao: 'V3.10.0', legado: 'V2.57.51',status:'fechada',data:'2026-07-29',tipo:'funcionalidade',
+    {versao: 'V3.1.35.1', legado: 'V2.57.51',status:'fechada',data:'2026-07-29',tipo:'funcionalidade',
       titulo:'Nova coluna "Sucessora" no Planejamento — o inverso da Predecessora, calculado automaticamente',
       itens:['Mostra quais tarefas têm ESTA tarefa como predecessora (quem depende dela) — não é um campo salvo, é recalculado toda vez a partir das predecessoras de todo mundo, então nunca fica desatualizado sozinho.',
         'Somente leitura (não dá pra editar direto — a fonte da verdade continua sendo a Predecessora de cada tarefa).']},
-    {versao: 'V3.10.0.1', legado: 'V2.57.52',status:'fechada',data:'2026-07-29',tipo:'melhoria',
+    {versao: 'V3.1.35.2', legado: 'V2.57.52',status:'fechada',data:'2026-07-29',tipo:'melhoria',
       titulo:'Predecessora e Sucessora: passar o mouse por cima mostra o número + nome de cada uma, sem precisar clicar',
       itens:['Tooltip nativo do navegador — passa o mouse em cima da célula e mostra cada referência numérica com o nome da tarefa correspondente, uma por linha (ex: "5TI — Serviços Iniciais").']},
-    {versao: 'V3.10.1', legado: 'V2.57.53',status:'fechada',data:'2026-07-29',tipo:'correcao',
+    {versao: 'V3.1.36', legado: 'V2.57.53',status:'fechada',data:'2026-07-29',tipo:'correcao',
       titulo:'Recalcular Datas dos Pais (V2.57.27) podia ZERAR o início/término de uma tarefa-folha se ela ficasse ao lado de um "gap" de nível — bug real de perda de dados relatado pelo Milton',
       itens:['Causa: a função considerava "tarefa-pai" qualquer linha em que a PRÓXIMA linha tivesse nível maior — mas isso não garante que exista um filho DIRETO (nível+1) de verdade. Se por qualquer desalinhamento momentâneo o "filho" aparente estivesse 2+ níveis mais profundo (um gap), a função não achava nenhum filho direto, calculava a data como vazia, e GRAVAVA essa data vazia por cima da data própria da tarefa — mesmo ela sendo uma folha comum com data certa.',
         'Corrigido: só trata como tarefa-pai (e sobrescreve a data) quem tem de fato pelo menos um filho direto (nível exatamente +1). Sem isso, a tarefa mantém a própria data intacta, nunca mais é zerada por engano.',
         'Mesma correção vale pra Início Real/Término Real, que tinham o mesmo risco.']},
-    {versao: 'V3.10.2', legado: 'V2.57.54',status:'fechada',data:'2026-07-29',tipo:'correcao',
+    {versao: 'V3.1.37', legado: 'V2.57.54',status:'fechada',data:'2026-07-29',tipo:'correcao',
       titulo:'Recalcular Datas dos Pais nunca cobria Linha de Base e Desafio — grupos ficavam sempre em branco nessas duas versões mesmo com os filhos preenchidos. Reordenados os botões: Linha de Base, Desafio, Atual (Atual sempre por último/fixo)',
       itens:['O agregador de datas dos pais (menor início/maior término dos filhos) só olhava Início/Término Planejado e Início/Término Real — Linha de Base e Desafio nunca eram calculados pros grupos, mesmo com todos os filhos tendo essas datas preenchidas na planilha importada.',
         'Agora as 4 versões (Atual, Real, Linha de Base, Desafio) são agregadas igualmente pros pais.',
         'Botões do topo reordenados pra Linha de Base | Desafio | Atual — Atual sempre por último, mais visível e é a versão padrão ao entrar no Planejamento.']},
-    {versao: 'V3.10.3', legado: 'V2.57.55',status:'fechada',data:'2026-07-29',tipo:'correcao',
+    {versao: 'V3.1.38', legado: 'V2.57.55',status:'fechada',data:'2026-07-29',tipo:'correcao',
       titulo:'Editor de Estrutura: criar tarefa (acima/abaixo/filha) e apertar Enter pra confirmar o nome pulava a tela pro topo',
       itens:['Salvar o nome digitado (Enter ou clicar fora) não preservava o scroll — mesma classe de bug já corrigida em outros lugares da árvore (seleção, drop). Agora a tela fica fixa onde você está trabalhando, tanto ao criar a tarefa quanto ao confirmar o nome dela.']},
-    {versao: 'V3.11.0', legado: 'V2.57.56',status:'fechada',data:'2026-07-29',tipo:'funcionalidade',
+    {versao: 'V3.1.38.1', legado: 'V2.57.56',status:'fechada',data:'2026-07-29',tipo:'funcionalidade',
       titulo:'MUDANÇA DE ARQUITETURA: Predecessora agora é vinculada por ID interno da tarefa, não mais por número de linha — reordenar NUNCA MAIS quebra o vínculo',
       itens:['Causa raiz de todos os bugs de predecessora desta obra: o vínculo era guardado como TEXTO com o número da linha (ex: "5TI"). Qualquer inserção, exclusão ou movimentação em QUALQUER lugar da obra desloca esses números, e por mais completo que fosse o "remapeamento" depois de cada operação, sempre sobrava algum caso não coberto — é uma abordagem fundamentalmente frágil.',
         'Agora o vínculo é guardado pelo ID interno da tarefa (o mesmo ID que o Firestore já dá a cada tarefa, criado uma vez e nunca muda) — não existe mais "remapear" porque não existe mais nada para remapear: reordenar, mover, inserir, excluir, nada disso afeta o vínculo, porque ele nunca dependeu de posição.',
         'O número de linha (5, 12, etc) continua aparecendo normalmente na tela e na exportação pra Excel — só que agora é calculado ao vivo a partir do ID, sempre correto, nunca precisa ser corrigido.',
         'Migração automática: ao abrir o Planejamento, qualquer predecessora ainda no formato antigo é convertida sozinha, em segundo plano, sem precisar fazer nada. Botão manual também disponível em ⚙ Ferramentas → "🔗 Corrigir Predecessoras (por ID)" se quiser confirmar.',
         'Os 3 importadores (Importar, Importar Base Completa, Importar Correções) já gravam direto no novo formato — Importar Correções resolve por nome (a predecessora na planilha aponta pra outra linha da MESMA planilha, que agora é traduzida pro nome e depois pro ID da tarefa atual).']},
-    {versao: 'V3.11.1', legado: 'V2.57.57',status:'fechada',data:'2026-07-29',tipo:'correcao',
+    {versao: 'V3.1.39', legado: 'V2.57.57',status:'fechada',data:'2026-07-29',tipo:'correcao',
       titulo:'Importar Correções: os textos ao lado dos checkboxes de campo (Início Real, % Concluído, etc) não apareciam — só os quadradinhos em branco',
       itens:['Reforçado o HTML dos checkboxes com cor explícita e o texto envolto num <span> — evita qualquer problema de herança de cor entre o texto e o fundo escuro do modal.']},
-    {versao: 'V3.11.2', legado: 'V2.57.58',status:'fechada',data:'2026-07-29',tipo:'correcao',
+    {versao: 'V3.1.40', legado: 'V2.57.58',status:'fechada',data:'2026-07-29',tipo:'correcao',
       titulo:'Predecessora agora funciona matematicamente de verdade: editar a data de uma tarefa propaga automaticamente pra quem depende dela (sucessoras), em cadeia — e a Sucessora aparece na hora, sem precisar recarregar',
       itens:['Causa raiz #1: Sucessora é calculada a partir das predecessoras de TODO MUNDO — mas editar a predecessora de uma tarefa (inline, popup ou modal) só atualizava aquela tarefa na tela, sem recalcular quem virou sucessora de quem. Corrigido: editar a predecessora agora recalcula as sucessoras de toda a obra na hora.',
         'Causa raiz #2 (a mais importante): quando você edita o início/término de uma tarefa, a data das tarefas que a têm como predecessora NUNCA era recalculada automaticamente — só era calculada uma vez, no momento em que você define a predecessora, e nunca mais. Se "Laje" atrasa, "Alvenaria Estrutural" (que depende dela) ficava com a data velha, achando que a predecessora era só um número decorativo.',
         'Agora, editar início/término de qualquer tarefa (tabela, modal ou popup de predecessora) propaga automaticamente a nova data pra todas as sucessoras, em cadeia (se a sucessora também tiver sucessoras, propaga mais adiante, e assim por diante) — exatamente como MS Project. Corte de dependência circular incluído, pra nunca entrar em loop infinito.',
         'Corrigido também: o campo Predecessora do formulário grande de editar tarefa não convertia o texto digitado pro formato novo por ID — ficava salvando/mostrando o formato interno bruto (ilegível). Agora mostra e converte certo, igual à célula da tabela.']},
-    {versao: 'V3.11.3', legado: 'V2.57.59',status:'fechada',data:'2026-07-29',tipo:'correcao',
+    {versao: 'V3.1.41', legado: 'V2.57.59',status:'fechada',data:'2026-07-29',tipo:'correcao',
       titulo:'Cascata de datas (V2.57.58) não propagava quando a mudança vinha de um FILHO cuja data recalcula o PAI — exatamente o caso relatado: editar "Serviços Iniciais" (filho) não afetava "Estacas/Fundação", que tem o grupo "Serviços Iniciais" (pai) como predecessora',
       itens:['A cascata da V2.57.58 só propagava a partir da tarefa que você editou DIRETAMENTE. Mas editar um filho recalcula a data do PAI (agregação automática da V2.57.27/54) — e essa mudança no pai não disparava cascata pra quem tem o PAI como predecessora.',
         'Corrigido: agora, sempre que a agregação de datas dos pais muda alguma coisa, a cascata também propaga a partir de CADA pai alterado, não só da tarefa editada originalmente.']},
-    {versao: 'V3.11.3.1', legado: 'V2.57.60',status:'fechada',data:'2026-07-29',tipo:'melhoria',
+    {versao: 'V3.1.41.1', legado: 'V2.57.60',status:'fechada',data:'2026-07-29',tipo:'melhoria',
       titulo:'Predecessora: triplo-clique na célula abre o popup guiado (Código/Tipo/Defasagem), já preenchido com o que estiver lá',
       itens:['1 ou 2 cliques continua abrindo o editor de texto direto na célula (aceita várias predecessoras separadas por ";"). Triplo-clique abre a telinha guiada — igual ao MS Project — já com o vínculo atual pré-carregado nos campos.']},
-    {versao: 'V3.11.3.2', legado: 'V2.57.61',status:'fechada',data:'2026-07-29',tipo:'melhoria',
+    {versao: 'V3.1.41.2', legado: 'V2.57.61',status:'fechada',data:'2026-07-29',tipo:'melhoria',
       titulo:'Popup de Predecessora agora é uma tabela de várias linhas (igual MS Project: Nº/Código, Nome da Tarefa, Tipo, Defasagem) — antes editava só uma predecessora por vez',
       itens:['Cada predecessora já vinculada aparece numa linha própria, com o nome da tarefa mostrado automaticamente ao lado (não precisa lembrar o nome, só o número/código). Botão "＋ Adicionar linha" pra incluir mais, "✕" em cada linha pra remover.',
         'Mantida a formatação escura do sistema — mesma ideia do MS Project, com nossa cara.']},
-    {versao: 'V3.11.3.3', legado: 'V2.57.62',status:'fechada',data:'2026-07-29',tipo:'melhoria',
+    {versao: 'V3.1.41.3', legado: 'V2.57.62',status:'fechada',data:'2026-07-29',tipo:'melhoria',
       titulo:'Popup de Predecessora: coluna Tipo mostra o nome completo (ex: "Término-a-Início (TI)"), colorido — antes só a sigla',
       itens:['Cores seguem o padrão MS Project: TI azul, II neutro, TT vermelho, IT verde. Coluna e popup alargados pra caber o texto completo.']},
-    {versao: 'V3.11.3.4', legado: 'V2.57.63',status:'fechada',data:'2026-07-29',tipo:'melhoria',
+    {versao: 'V3.1.41.4', legado: 'V2.57.63',status:'fechada',data:'2026-07-29',tipo:'melhoria',
       titulo:'Importar Correções: agora mostra a LISTA exata de quais nomes não bateram ou eram ambíguos, em vez de só um número',
       itens:['Depois de aplicar, se sobrou algum "não encontrado" (nome da planilha não bate com nenhuma tarefa atual, ex: Cofield renomeou algo) ou "ambíguo" (mais de uma tarefa sua com o mesmo nome), abre um painel listando exatamente quais são — pra revisar/renomear manualmente se for o caso.',
         'Confirmado: Importar Correções nunca cria tarefa nova nem move nada — só atualiza campo por campo em tarefas já existentes, casando por Nome. O que não bate fica de fora, sem efeito nenhum na estrutura.']},
-    {versao: 'V3.11.4', legado: 'V2.57.64',status:'fechada',data:'2026-07-29',tipo:'correcao',
+    {versao: 'V3.1.42', legado: 'V2.57.64',status:'fechada',data:'2026-07-29',tipo:'correcao',
       titulo:'Editor de Estrutura: "←"/"→" (subir/descer nível) só ajustava UM bloco por vez, mesmo com vários selecionados — se tinha 9 grupos irmãos soltos no nível errado, tinha que clicar um por um',
       itens:['Clicar "←" numa tarefa selecionada em grupo (Ctrl+clique) só subia o nível DAQUELA tarefa e dos filhos dela — os outros itens selecionados ao lado (irmãos) ficavam intocados, mesmo estando marcados.',
         'Corrigido: agora, se houver seleção múltipla, "←"/"→" ajusta o nível de TODOS os blocos selecionados de uma vez (cada um com seus próprios filhos) — resolve de vez o caso de vários grupos soltos no nível errado por conta de um código de planilha que não corresponde à posição real que a tarefa deveria ocupar.']},
-    {versao: 'V3.11.5', legado: 'V2.57.65',status:'fechada',data:'2026-07-29',tipo:'correcao',
+    {versao: 'V3.1.43', legado: 'V2.57.65',status:'fechada',data:'2026-07-29',tipo:'correcao',
       titulo:'Achada a causa raiz do "nível impossível": arrastar uma tarefa na TABELA NORMAL do Planejamento (Ctrl+botão direito, fora do Editor de Estrutura) nunca ajustava o nível — só a posição',
       itens:['Diferente do arrastar no Editor de Estrutura (que já ajusta o nível pro contexto de onde solta), o arrastar-com-Ctrl+botão-direito na tabela normal do Planejamento só movia a ORDEM da tarefa — o nível ficava exatamente como estava antes, não importa onde ela caía. Se você arrastasse um bloco de nível 3 pra encostar num item de nível 1, ele ficava com nível 3 ali mesmo — um salto impossível (teria que existir um nível 2 no meio), que é exatamente o que ficava invisível no Editor de Estrutura.',
         'Corrigido: agora esse arrastar também ajusta o nível do bloco pro nível de quem está do lado, igual já acontece no Editor de Estrutura — usando a mesma lógica já testada.',
         'Também corrigido: o nível ajustado agora é de fato salvo no Firestore (antes só a ordem era gravada).']},
-    {versao: 'V3.11.6', legado: 'V2.57.66',status:'fechada',data:'2026-07-29',tipo:'correcao',
+    {versao: 'V3.1.44', legado: 'V2.57.66',status:'fechada',data:'2026-07-29',tipo:'correcao',
       titulo:'Planejamento: tela ficava toda preta ao clicar numa célula, aleatoriamente — agora um erro numa linha/célula mostra um aviso naquela linha só, em vez de travar a tabela inteira',
       itens:['Blindagem geral: se der erro ao montar uma linha específica da tabela (dado inesperado numa tarefa) ou ao abrir a edição de uma célula, o resto do Planejamento continua funcionando — aparece um aviso "⚠ Erro ao mostrar esta linha" só naquela linha, e o erro detalhado vai pro console (F12), em vez de a tela inteira ficar preta.']},
-    {versao: 'V3.11.7', legado: 'V2.57.67',status:'fechada',data:'2026-07-30',tipo:'correcao',
+    {versao: 'V3.1.45', legado: 'V2.57.67',status:'fechada',data:'2026-07-30',tipo:'correcao',
       titulo:'Solo Grampeado: botões de modo recriavam o painel inteiro e perdiam a posição do mapa — agora só atualizam o mapa; adicionado pan/zoom com Ctrl',
       itens:['Levantamento e Controle: os botões (Adicionar Chumbador, Calibrar Escala, Marcar Projeção/Acabamento) chamavam um redesenho completo do painel a cada clique, o que resetava o scroll do mapa e travava a interação em desenhos compridos.',
         'Corrigido: esses botões agora só atualizam o próprio texto/classe e re-renderizam o mapa, preservando zoom e posição de scroll.',
@@ -5247,25 +5247,25 @@ const NotasVersao = {
         'Numeração em sequência: clicando à direita do último chumbador, o número continua incrementando sozinho (como os chumbadores reais são numerados em linha, esquerda→direita). Se o clique não for à direita do anterior (nova linha), para e pergunta o número inicial dela antes de continuar.',
         'Controle: novo painel "Medidor Diário" — meta por vista (chumbadores concluídos/dia e/ou m² executados/dia, cada uma opcional), comparando dia a dia o realizado contra a meta com % e cor (verde ≥100%, amarelo ≥60%, vermelho abaixo).',
         'Calibrar Escala: corrigido caso em que "Salvar" não fazia nada (falha silenciosa) — agora valida cada etapa (pontos perdidos, imagem sem tamanho salvo, pontos iguais) com mensagem de erro específica em vez de simplesmente não salvar. A linha de calibração agora fica salva e sempre visível no mapa (verde, com o valor em cm), pra conferir depois se ainda está correta — antes ela desaparecia depois de confirmar.']},
-    {versao: 'V3.11.8', legado: 'V2.57.68',status:'fechada',data:'2026-07-30',tipo:'correcao',
+    {versao: 'V3.1.46', legado: 'V2.57.68',status:'fechada',data:'2026-07-30',tipo:'correcao',
       titulo:'Dashboard: painel "Contenção (Solo Grampeado)" nunca aparecia — estava preso dentro do toggle "Mostrar Contenção, Fundação e Estrutura" (checkbox desligado por padrão)',
       itens:['O painel de minimapas do Solo Grampeado tinha sido colocado dentro do bloco condicionado ao checkbox "Mostrar Contenção, Fundação e Estrutura" — um toggle de preferência pessoal (guardado no localStorage do navegador) que vem desligado por padrão. Resultado: quem nunca marcou esse checkbox nunca via o painel, mesmo com vistas/execução cadastradas.',
         'Corrigido: "Contenção (Solo Grampeado)" agora é uma seção própria do Dashboard, sempre visível, independente desse toggle (que continua controlando só o gráfico de Fundação e Estrutura).']},
-    {versao: 'V3.12.0', legado: 'V2.57.69',status:'aberta',data:'2026-07-30',tipo:'funcionalidade',
+    {versao: 'V3.1.46.1', legado: 'V2.57.69',status:'aberta',data:'2026-07-30',tipo:'funcionalidade',
       titulo:'Levantamento de Solo Grampeado: ferramenta "Medir Área" — desenha o contorno real da vista e calcula o m² pela escala, em vez de só digitar o valor',
       itens:['Botão "📐 Medir Área" (exige escala já calibrada): clique nos vértices do contorno real da vista (segue o desenho, inclusive terreno inclinado, reentrâncias etc.) — cada clique marca um vértice, com desfazer último ponto e um botão "Concluir Polígono" a partir de 3 pontos.',
         'Área calculada pela fórmula de Shoelace em cima da escala calibrada (não é mais só a área do retângulo da imagem inteira) — mostra o resultado num modal de confirmação, ainda editável antes de salvar.',
         'O contorno medido fica salvo e sempre visível no mapa (azul, tracejado, com o m² escrito no meio), pra conferir depois se ainda bate com a vista — mesmo princípio já usado na linha de calibração de escala.',
         'O campo "m² total" com edição manual (✎) continua existindo, pra ajuste fino depois de medir.']},
-    {versao: 'V3.12.0.1', legado: 'V2.57.70',status:'aberta',data:'2026-07-30',tipo:'melhoria',
+    {versao: 'V3.1.46.2', legado: 'V2.57.70',status:'aberta',data:'2026-07-30',tipo:'melhoria',
       titulo:'Levantamento de Solo Grampeado: cor do chumbador por comprimento e formato por tipo (bolinha = horizontal, triângulo = vertical)',
       itens:['Chumbadores Horizontais viram bolinhas; Verticais viram triângulos — dá pra diferenciar o tipo só olhando o mapa.',
         'A cor de cada chumbador agora reflete o comprimento (ml) dele, de forma determinística: o mesmo valor sempre cai na mesma cor (ex: 6ml sempre azul), independente da ordem em que foram cadastrados. Se mudar o comprimento de um chumbador, a cor muda junto.',
         'Legenda embaixo do mapa mostra a cor de cada comprimento usado na vista.']},
-    {versao: 'V3.12.0.2', legado: 'V2.57.71',status:'fechada',data:'2026-07-30',tipo:'melhoria',
+    {versao: 'V3.1.46.3', legado: 'V2.57.71',status:'fechada',data:'2026-07-30',tipo:'melhoria',
       titulo:'Levantamento de Solo Grampeado: botão Excluir direto no popup de editar chumbador',
       itens:['Antes só dava pra excluir um chumbador pela tabela embaixo — agora tem um botão "🗑 Excluir" direto no popup que abre ao clicar na bolinha/triângulo, sem precisar descer até a tabela.']},
-    {versao: 'V3.13.0', legado: 'V2.58.0',status:'fechada',data:'2026-07-31',tipo:'funcionalidade',
+    {versao: 'V3.2.0', legado: 'V2.58.0',status:'fechada',data:'2026-07-31',tipo:'funcionalidade',
       titulo:'Módulo de Usuários e Permissões — convite por e-mail + controle de acesso granular por módulo e por obra',
       itens:['Nova tela "Permissões": lista de usuários com convidar, editar permissões, reenviar acesso, ativar/desativar e excluir.',
         'Convite por e-mail: admin cadastra o usuário (nome, e-mail, permissões, acesso por obra) e o sistema envia um e-mail (via Firebase, sem provedor externo) para o usuário definir a própria senha em definir-senha.html — a conta só fica ativa depois disso.',
@@ -5275,101 +5275,101 @@ const NotasVersao = {
         'Mecanismo data-perm="modulo:acao" nos botões (aplicado por enquanto em Obras, como padrão de referência) — próximas sessões devem estender aos demais módulos.',
         'Correção de segurança: usuário novo sem perfil carregado deixou de virar admin por padrão — agora o padrão é sem nenhum acesso até o admin configurar.',
         'Backend novo: api/usuarios.js (Firebase Admin SDK) cria/exclui usuários no Firebase Auth — exige a env var FIREBASE_SERVICE_ACCOUNT_KEY na Vercel.']},
-    {versao: 'V3.13.1', legado: 'V2.58.1',status:'fechada',data:'2026-07-31',tipo:'correcao',
+    {versao: 'V3.2.1', legado: 'V2.58.1',status:'fechada',data:'2026-07-31',tipo:'correcao',
       titulo:'Permissões: guards de acesso estendidos a todos os módulos (não só Obras)',
       itens:['Todo módulo com CRUD real agora checa a permissão do usuário antes de criar/editar/excluir/importar/exportar: Planejamento (com edição inline de célula e Editor de Estrutura), Materiais, Mão de Obra, Diário de Obra (lançamentos, avulsas, pauta rápida), Semanal, Medições, Relatórios, os 9 módulos de Levantamento, os 3 de Controle, Produção, Configuração de Obra e Backup de Planejamentos.',
         'Semanal: reaproveitado o mecanismo de somente-leitura que já existia pra semana fechada — agora também vale pra usuário sem permissão de editar, sem precisar duplicar lógica.',
         'Vários Levantamentos (Piso, Teto, Paredes, Pintura) guardam a árvore de locais num único ponto de gravação — o guard foi colocado ali, cobrindo automaticamente todas as ações do Editor de Estrutura de uma vez.',
         'Restrições, Orçamentos, Suprimentos e Histograma continuam stub — nada para travar além do gate de página que já existia.',
         'Cobertura visual (esconder o botão, não só bloquear a ação) aplicada nos módulos de CRUD simples (Materiais, Mão de Obra, Diário, Medições, Relatórios, Planejamento); os módulos de canvas/mapa (Levantamentos e Controles) por ora têm o bloqueio funcional mas o botão ainda aparece na tela — ficar de olho, é o próximo refinamento.']},
-    {versao: 'V3.13.1.1', legado: 'V2.58.2',status:'fechada',data:'2026-07-31',tipo:'melhoria',
+    {versao: 'V3.2.1.1', legado: 'V2.58.2',status:'fechada',data:'2026-07-31',tipo:'melhoria',
       titulo:'Permissões: hubs de Levantamento e Controle já filtram os cards por permissão',
       itens:['Os cards de calculadora em Levantamentos (hub) e Controle (hub) agora somem se o usuário não tiver "Ver" no módulo correspondente — antes só bloqueava ao entrar na página de destino, agora nem aparece o card.',
         'Levantamento de Fachada: primeiro módulo de canvas/mapa a ganhar cobertura visual completa (+ Nova Fachada, + Balancim, excluir/duplicar em cada nível) — modelo de referência para estender aos demais Levantamentos e Controles.']},
-    {versao: 'V3.13.1.2', legado: 'V2.58.3',status:'fechada',data:'2026-07-31',tipo:'melhoria',
+    {versao: 'V3.2.1.2', legado: 'V2.58.3',status:'fechada',data:'2026-07-31',tipo:'melhoria',
       titulo:'Permissões: cobertura visual completa em todos os Levantamentos e Controles',
       itens:['Botões de criar/excluir/importar agora somem (não só bloqueiam) quando o usuário não tem permissão, nos módulos que faltavam: Piso, Teto, Paredes, Concreto, Ar Condicionado, Pintura, Solo Grampeado e Terraplanagem (Levantamento), e Controle Concreto, Controle Solo Grampeado e Controle Terraplanagem.',
         'Com isso, todo o sistema de permissões — página, ação e visual — está com cobertura completa nos 26 módulos reais. Restrições/Orçamentos/Suprimentos/Histograma continuam stub, sem nada pra travar ainda.']},
-    {versao: 'V3.13.2', legado: 'V2.58.4',status:'fechada',data:'2026-07-31',tipo:'correcao',
+    {versao: 'V3.2.2', legado: 'V2.58.4',status:'fechada',data:'2026-07-31',tipo:'correcao',
       titulo:'Permissões: layout da lista de módulos no convite/edição de usuário estava desalinhado',
       itens:['O grid de 2 módulos por linha desalinhava tudo sempre que um módulo tinha mais ações que o vizinho (ex: Planejamento com 6 ações ao lado de um módulo com 5) — a linha de baixo quebrava e ficava torta.',
         'Trocado para lista de uma coluna, um módulo por linha, com o nome à esquerda e as ações à direita — cada linha quebra sozinha, sem empurrar a vizinha.',
         'Modal de convite/edição ficou mais largo (860px) pra acomodar melhor as linhas com mais ações.']},
-    {versao: 'V3.13.3', legado: 'V2.58.5',status:'fechada',data:'2026-07-31',tipo:'correcao',
+    {versao: 'V3.2.3', legado: 'V2.58.5',status:'fechada',data:'2026-07-31',tipo:'correcao',
       titulo:'Permissões: erro "No document to update" ao editar permissões de usuário antigo',
       itens:['Usuários criados antes do V2.58 (ex: as contas admin/chefe originais) não têm o documento em permissions/{uid} — só é criado agora, no momento do convite. Editar as permissões desses usuários chamava .update() nesse doc inexistente e falhava.',
         'Corrigido: agora usa set com merge (upsert) — cria o documento se não existir, atualiza se já existir.']},
-    {versao: 'V3.13.4', legado: 'V2.58.6',status:'fechada',data:'2026-07-31',tipo:'correcao',
+    {versao: 'V3.2.4', legado: 'V2.58.6',status:'fechada',data:'2026-07-31',tipo:'correcao',
       titulo:'Permissões: checklist de módulos reformulado pra bater com o padrão de referência (uma ação por linha)',
       itens:['A tentativa anterior colocava várias ações numa linha só por módulo, o que ainda desalinhava quando o texto quebrava. Agora cada ação é sua própria linha (checkbox + rótulo curto), num grid de 2 colunas por módulo — mesmo padrão do exemplo que o Milton mandou (Estoque/Pedidos/Ferramentas): cada item é auto-contido, então sempre alinha.',
         'Módulos continuam agrupados por categoria, com o nome do módulo como sub-título acima do grid de ações dele.']},
-    {versao: 'V3.13.5', legado: 'V2.58.7',status:'fechada',data:'2026-07-31',tipo:'correcao',
+    {versao: 'V3.2.5', legado: 'V2.58.7',status:'fechada',data:'2026-07-31',tipo:'correcao',
       titulo:'Permissões: 2ª coluna de checkboxes ficava muito distante da 1ª',
       itens:['grid-template-columns:1fr 1fr fazia cada coluna ocupar 50% da largura do modal — com o texto do checkbox sendo curto, a 2ª coluna acabava lá na borda direita, bem separada da 1ª.',
         'Corrigido: colunas do tamanho do próprio conteúdo (max-content), coladas uma na outra como no exemplo — modal também ficou mais estreito (620px), já que não precisa mais de tanto espaço.']},
-    {versao: 'V3.13.5.1', legado: 'V2.58.8',status:'fechada',data:'2026-07-31',tipo:'melhoria',
+    {versao: 'V3.2.5.1', legado: 'V2.58.8',status:'fechada',data:'2026-07-31',tipo:'melhoria',
       titulo:'Permissões: lista de módulos em 2 colunas (CSS multi-column) — corta o scroll pela metade',
       itens:['A lista inteira de categorias/módulos era uma coluna só, obrigando a rolar bastante pra ver os módulos de baixo enquanto sobrava bastante espaço em branco do lado.',
         'Agora o conteúdo flui em 2 colunas (column-count), cada módulo inteiro protegido (break-inside:avoid-column) pra nunca cortar um módulo no meio — e o título da categoria fica colado ao primeiro módulo dela, nunca isolado no fim de uma coluna.',
         'Modal ficou mais largo (980px) pra caber as 2 colunas confortavelmente.']},
-    {versao: 'V3.13.6', legado: 'V2.58.9',status:'fechada',data:'2026-07-31',tipo:'correcao',
+    {versao: 'V3.2.6', legado: 'V2.58.9',status:'fechada',data:'2026-07-31',tipo:'correcao',
       titulo:'Permissões: categoria "Produção" estava sendo cortada e espalhada entre as duas colunas',
       itens:['A proteção break-inside:avoid-column da vez anterior estava só em cada módulo isolado — a categoria em si (Produção, com 14 módulos) não tinha proteção, então o navegador cortava ela no meio e mandava a segunda metade pra coluna seguinte, embaralhando com outra categoria.',
         'Corrigido: agora a categoria inteira (título + todos os módulos dela) é um bloco atômico só — nunca mais é cortada, sempre fica junta na mesma coluna, do início ao fim.',
         'Aumentado pra 3 colunas e reduzido o espaçamento entre elas (36px → 22px) — menos espaço em branco, mais aproveitamento da largura.',
         'Modal mais largo (1180px) pra caber as 3 colunas.']},
-    {versao: 'V3.13.7', legado: 'V2.58.10',status:'fechada',data:'2026-07-31',tipo:'correcao',
+    {versao: 'V3.2.7', legado: 'V2.58.10',status:'fechada',data:'2026-07-31',tipo:'correcao',
       titulo:'Permissões: balanceamento automático do CSS deixava as colunas com alturas muito desiguais',
       itens:['Mesmo sem cortar nenhuma categoria no meio, o algoritmo de balanço do navegador (column-count) decidia sozinho onde cortar entre colunas — e como Produção tem 14 módulos contra 2 da Principal, o resultado era uma coluna quase vazia ao lado de outra lotada.',
         'Trocado o balanceamento automático do CSS por uma distribuição manual: calculo o "peso" de cada categoria (baseado em quantas linhas de checkbox ela tem) e distribuo com um algoritmo guloso — cada categoria inteira sempre vai pra coluna que está mais vazia no momento. Nenhuma categoria nunca é dividida entre colunas.',
         'Produção continua sendo, de longe, a categoria maior do sistema — nenhuma distribuição vai deixar as 3 colunas com altura idêntica sem quebrar uma categoria no meio, o que foi decidido não fazer.']},
-    {versao: 'V3.13.7.1', legado: 'V2.58.11',status:'fechada',data:'2026-07-31',tipo:'melhoria',
+    {versao: 'V3.2.7.1', legado: 'V2.58.11',status:'fechada',data:'2026-07-31',tipo:'melhoria',
       titulo:'Permissões: checklist reformulado — módulo é a célula do grid, não a categoria',
       itens:['Trocada a lógica de novo: em vez de jogar categorias inteiras em 3 colunas (o que sempre deixava alguma desbalanceada), agora cada MÓDULO é uma célula de um grid CSS de 4 colunas — dentro de "Produção" os módulos preenchem a linha em ordem (Planejamento, Fachada, Piso, Teto, ...), voltando pra próxima linha quando enche, exatamente como pedido.',
         'O título de cada categoria ocupa a linha inteira (grid-column:1/-1) — como isso nunca cabe numa linha que já tem módulo de outra categoria, o próprio CSS Grid empurra ele pra uma linha nova, garantindo que "Custos" nunca comece misturado com o fim de "Produção".',
         'Modal mais largo (1280px) pra acomodar as 4 colunas de módulo.']},
-    {versao: 'V3.13.7.2', legado: 'V2.58.12',status:'fechada',data:'2026-07-31',tipo:'melhoria',
+    {versao: 'V3.2.7.2', legado: 'V2.58.12',status:'fechada',data:'2026-07-31',tipo:'melhoria',
       titulo:'Permissões: linhas claras separando cada módulo no checklist',
       itens:['Cada módulo agora tem uma borda sutil ao redor (tipo card), separando visualmente um do outro na grade — antes ficavam soltos, só o espaçamento entre eles.']},
-    {versao: 'V3.13.7.3', legado: 'V2.58.13',status:'fechada',data:'2026-07-31',tipo:'melhoria',
+    {versao: 'V3.2.7.3', legado: 'V2.58.13',status:'fechada',data:'2026-07-31',tipo:'melhoria',
       titulo:'Permissões: título das categorias (Produção, Custos, etc.) maior e em negrito',
       itens:['Estava usando a classe de título da sidebar (pensada pra menu estreito, 0.57rem) — ficava minúsculo dentro do modal. Aumentado pra .98rem, negrito, pra separar melhor visualmente do nome dos módulos.']},
-    {versao: 'V3.13.8', legado: 'V2.58.14',status:'fechada',data:'2026-07-31',tipo:'correcao',
+    {versao: 'V3.2.8', legado: 'V2.58.14',status:'fechada',data:'2026-07-31',tipo:'correcao',
       titulo:'Permissões: convite falhava com "Domain not allowlisted" se o domínio não estiver nos Authorized domains do Firebase',
       itens:['O link de "definir senha" usa uma continue-URL customizada (nossa própria página, em vez da padrão do Firebase) — isso exige que o domínio esteja em Firebase Console > Authentication > Settings > Authorized domains. Sem isso configurado, o envio falhava por completo.',
         'Adicionado fallback: se o domínio não estiver autorizado, tenta de novo sem a URL customizada — o e-mail sai mesmo assim (só cai na página padrão do Firebase em vez da nossa própria), com um aviso claro na tela pra configurar o domínio.']},
-    {versao: 'V3.13.9', legado: 'V2.58.15',status:'fechada',data:'2026-07-31',tipo:'correcao',
+    {versao: 'V3.2.9', legado: 'V2.58.15',status:'fechada',data:'2026-07-31',tipo:'correcao',
       titulo:'definir-senha.html ficava travado pra sempre em "Verificando convite..."',
       itens:['Faltava carregar o SDK do Firebase Storage nessa página — initFirebase() sempre tenta iniciar firebase.storage(), isso lançava um erro silencioso, e a função de verificação do convite parava no meio sem nunca trocar de tela.',
         'Corrigido: adicionado o script que faltava, e a função agora sempre mostra a tela de "link inválido" em caso de qualquer falha ao iniciar o Firebase, em vez de travar sem feedback nenhum.']},
-    {versao: 'V3.13.10', legado: 'V2.58.16',status:'fechada',data:'2026-07-31',tipo:'correcao',
+    {versao: 'V3.2.10', legado: 'V2.58.16',status:'fechada',data:'2026-07-31',tipo:'correcao',
       titulo:'Conta convidada carregava e era expulsa em seguida (definir-senha.html engolia erro de ativação)',
       itens:['Depois de definir a senha, o código marcava a conta como ativa no banco (ativo:true) mas engolia qualquer erro nessa gravação e navegava pra frente mesmo assim — se a gravação falhasse, a conta ficava salva como ativo:false pra sempre, e o gate de permissões (que rejeita contas inativas) expulsava o usuário assim que a próxima página carregasse.',
         'Corrigido: troquei de .update() pra .set com merge (mais robusto) e parei de engolir o erro — se falhar, agora mostra uma mensagem clara na tela em vez de navegar e deixar o problema estourar em silêncio mais tarde.',
         'Se alguma conta já ficou travada nesse estado antes dessa correção: em Permissões, ache o usuário e clique no botão ▶️ (Ativar) na lista — resolve na hora, sem precisar reenviar convite.']},
-    {versao: 'V3.13.11', legado: 'V2.58.17',status:'fechada',data:'2026-07-31',tipo:'correcao',
+    {versao: 'V3.2.11', legado: 'V2.58.17',status:'fechada',data:'2026-07-31',tipo:'correcao',
       titulo:'Menu lateral mostrava "Levantamentos", "Controle" e categorias vazias mesmo sem permissão nenhuma',
       itens:['"Levantamentos" e "Controle" são hubs (agrupam vários módulos) e nunca tinham checagem própria — apareciam pra todo mundo, mesmo quem não tinha acesso a nenhum levantamento/controle. Corrigido: agora só aparecem se o usuário tiver "Ver" em pelo menos um dos módulos daquele grupo.',
         'Categorias do menu (Gestão, Custos, Análise...) ficavam com o título visível mesmo sem nenhum link embaixo, por serem apenas texto sem checagem. Agora o título da categoria some automaticamente quando nenhum item dela está visível.',
         'Um usuário com acesso só ao Dashboard agora vê exatamente isso: Obras e Dashboard — nada mais no menu.']},
-    {versao: 'V3.13.12', legado: 'V2.58.18',status:'aberta',data:'2026-07-31',tipo:'correcao',
+    {versao: 'V3.2.12', legado: 'V2.58.18',status:'aberta',data:'2026-07-31',tipo:'correcao',
       titulo:'Obras: botões de Editar/Configurar ficavam clicáveis mesmo sem permissão',
       itens:['O render dos cards de obra acontece depois do carregamento assíncrono das obras — ou seja, depois do gate inicial da página já ter rodado uma vez. Como renderizar() nunca chamava Permissions.aplicarNaTela() de novo, os botões dinâmicos (Editar, Configurar) nunca ficavam escondidos, mesmo sem a permissão marcada.',
         'Corrigido: renderizar() agora reaplica as permissões depois de montar os cards. Também adicionado guard direto nas funções (abrirFormEditar, abrirConfiguracao, abrirFormNova, salvar) — mesmo que o botão apareça por algum motivo, a ação real é recusada.',
         'Corrigido de brinde: o botão "⚙️ Configurar Obra" estava checando a permissão errada (obras:editar) — ele na verdade abre a página configuracao-obra.html, então agora checa o módulo certo (configuracaoObra).',
         'Auditei todos os outros módulos por esse mesmo tipo de bug (data-perm sem nenhuma chamada a aplicarNaTela) — nenhum outro caso encontrado.']},
-    {versao: 'V3.13.12.1', legado: 'V2.58.19',status:'fechada',data:'2026-07-31',tipo:'melhoria',
+    {versao: 'V3.2.12.1', legado: 'V2.58.19',status:'fechada',data:'2026-07-31',tipo:'melhoria',
       titulo:'Solo Grampeado — Levantamento: rótulo de m² do polígono medido vira arrastável; vértices do polígono em desenho também ficam arrastáveis',
       itens:['O rótulo "📐 X m²" do polígono já salvo ficava sempre fixo no centroide, muitas vezes cobrindo os números dos chumbadores no desenho — agora pode ser arrastado pra qualquer posição do mapa, e a posição fica salva por vista.',
         'Ao desenhar um novo polígono (Medir Área), os vértices já marcados agora podem ser arrastados pra corrigir a posição, sem precisar desfazer e clicar de novo.',
         'O m² calculado também aparece fora da imagem, na barra de ferramentas, atualizando ao vivo enquanto os vértices são adicionados/ajustados.']},
-    {versao: 'V3.13.13', legado: 'V2.58.21',status:'fechada',data:'2026-07-31',tipo:'correcao',
+    {versao: 'V3.2.13', legado: 'V2.58.21',status:'fechada',data:'2026-07-31',tipo:'correcao',
       titulo:'Planejamento mostrava % concluído da obra diferente do Dashboard (27% vs 12,68% na mesma obra) — dois métodos de cálculo diferentes coexistindo',
       itens:['O % de uma tarefa-pai no Planejamento (e Diário/Semanal/Produção, que usam a mesma função Utils.percFamilia) era calculado de forma RECURSIVA: média dos filhos diretos ponderada pela duração de CADA FILHO — e essa duração de um filho-grupo normalmente é o intervalo de calendário dele, não a soma do trabalho real dentro dele.',
         'O Dashboard (e a listagem de Obras) usa outra fórmula, mais simples e correta: pondera TODAS as folhas (tarefas sem filhos) pela duração de CADA FOLHA, direto — sem passar por médias intermediárias de grupo.',
         'Essas duas contas divergem MUITO quando a obra tem grupos desbalanceados (ex: um grupo com pouco andamento escondendo, lá dentro, uma tarefa gigante ainda em 0% — o método recursivo "amortece" isso, o método direto não deixa passar).',
         'Corrigido: Utils.percFamilia agora usa a MESMA fórmula do Dashboard/Obras em todo lugar (Planejamento, Diário de Obra, Semanal, Produção) — o % da obra agora bate igual em qualquer tela.']},
-    {versao: 'V3.14.0', legado: 'V2.59.0',status:'fechada',data:'2026-08-01',tipo:'funcionalidade',
+    {versao: 'V3.3.0', legado: 'V2.59.0',status:'fechada',data:'2026-08-01',tipo:'funcionalidade',
       titulo:'Novo módulo: Controle de Estacas e Fundações',
       itens:['Importa o PDF (ou imagem) da prancha do projeto — cada obra pode ter várias pranchas.',
         'Estacas: marcador circular — clique no centro e arraste pra definir o raio, do tamanho da estaca no desenho.',
@@ -5378,34 +5378,34 @@ const NotasVersao = {
         'O status pintado (🟢 concretado · 🟠 parcial · ⚪ pendente · ▢ sem vínculo) vem direto do % concretado da peça no Controle de Concreto (BTs/lançamentos) — este módulo não lança volume, só posiciona e exibe.',
         'Formas ajustáveis depois de criadas: mover/redimensionar o círculo, arrastar vértices do polígono.',
         'Dashboard: painel novo com minimapa de cada prancha (somente leitura) mostrando o mesmo status pintado.']},
-    {versao: 'V3.14.1', legado: 'V2.59.1',status:'fechada',data:'2026-08-01',tipo:'correcao',
+    {versao: 'V3.3.1', legado: 'V2.59.1',status:'fechada',data:'2026-08-01',tipo:'correcao',
       titulo:'Levantamento de Concreto — Estacas: cadastro por grupos (diâmetro + comprimento + quantidade)',
       itens:['Antes: 1 peça "Estacas" = 1 diâmetro + 1 comprimento, salva com o nome do pilar.',
         'Agora: informa o nome do pilar 1x, e adiciona quantos grupos de diâmetro/comprimento/quantidade precisar (ex: 10 estacas de Ø40 + 2 de Ø50 no mesmo pilar).',
         'Cada estaca vira uma peça individual no levantamento, rotulada por letra: Pilar10-a, Pilar10-b... seguindo a ordem dos grupos, até o total de estacas.',
         'Ao trocar de pilar (nome), a letra reinicia em "a".',
         'subTipo continua "Estacas" — mantém o vínculo com o módulo Controle de Estacas e Fundações.']},
-    {versao: 'V3.14.2', legado: 'V2.59.2',status:'fechada',data:'2026-08-01',tipo:'correcao',
+    {versao: 'V3.3.2', legado: 'V2.59.2',status:'fechada',data:'2026-08-01',tipo:'correcao',
       titulo:'Levantamento de Concreto — criar andar direto na calculadora',
       itens:['Antes: a calculadora só listava andares já existentes (de peças salvas ou da tela ⚙️ Config) — obra nova sem nenhum andar cadastrado deixava o campo "Andar" vazio e travava o botão de salvar.',
         'Agora: o seletor de Andar tem a opção "+ Criar novo andar...", que abre um campo pra digitar o nome e já salva na configuração da obra, sem precisar fechar a calculadora.']},
-    {versao: 'V3.14.3', legado: 'V2.59.3',status:'fechada',data:'2026-08-01',tipo:'correcao',
+    {versao: 'V3.3.3', legado: 'V2.59.3',status:'fechada',data:'2026-08-01',tipo:'correcao',
       titulo:'Levantamento de Concreto — editar peças no Levantamento (antes de enviar pra Base) + repasse de diâmetro/comprimento',
       itens:['Botão ✎ em cada item do Levantamento (staging) — edita nome, andar e volume ali mesmo, sem precisar mandar pra Base primeiro.',
         'Peças de Estacas mostram diâmetro e comprimento editáveis + botão ↻ que recalcula o volume automaticamente a partir deles.',
         'Confirmado: cada estaca gerada (P110-a, P110-b...) já grava o volume individual dela, não o total do pilar — o número "Volume calculado" da calculadora é só a prévia da soma de tudo que vai ser criado.',
         'Corrigido: diâmetro/comprimento das estacas estavam se perdendo ao mandar do Levantamento pra Base (não eram repassados) — agora vão junto.']},
-    {versao: 'V3.14.4', legado: 'V2.59.4',status:'fechada',data:'2026-08-01',tipo:'correcao',
+    {versao: 'V3.3.4', legado: 'V2.59.4',status:'fechada',data:'2026-08-01',tipo:'correcao',
       titulo:'Levantamento de Concreto — Estacas: editar o conjunto inteiro do pilar, não só uma letra',
       itens:['Problema: editar uma peça isolada (ex: só a "f") não resolvia quando a quantidade errada — não dava pra criar uma "g" nova.',
         'Agora as estacas de um mesmo pilar aparecem AGRUPADAS no Levantamento ("P110 · 6 estacas"), com um único ✎ que abre o conjunto inteiro (mesma tela de grupos diâmetro/comprimento/quantidade da calculadora).',
         'Muda a quantidade (6→7), adiciona um novo grupo de diâmetro, ou remove um grupo — ao salvar, todas as estacas do pilar são apagadas e recriadas com as letras certas (a até a nova quantidade total).',
         'Selecionar/remover também passou a ser por conjunto inteiro (marca ou apaga o pilar todo de uma vez).']},
-    {versao: 'V3.14.5', legado: 'V2.59.5',status:'fechada',data:'2026-08-01',tipo:'correcao',
+    {versao: 'V3.3.5', legado: 'V2.59.5',status:'fechada',data:'2026-08-01',tipo:'correcao',
       titulo:'Levantamento de Concreto — lista não pula mais pro topo ao editar',
       itens:['Ao clicar ✎ numa peça/conjunto lá embaixo na lista do Levantamento, a tela voltava pro topo — dava a impressão de estar editando o item errado.',
         'Corrigido: a posição do scroll agora é preservada ao abrir/fechar edição.']},
-    {versao: 'V3.15.0', legado: 'V2.59.6',status:'fechada',data:'2026-08-01',tipo:'funcionalidade',
+    {versao: 'V3.3.5.1', legado: 'V2.59.6',status:'fechada',data:'2026-08-01',tipo:'funcionalidade',
       titulo:'Controle de Estacas e Fundações ganha Planejamento e Acompanhamento, e importar prancha vira um passo só',
       itens:['Importar prancha simplificado: nome + PDF/imagem agora ficam no mesmo formulário — antes era preciso criar a prancha primeiro e só depois um segundo popup pedia o arquivo.',
         'Nova aba Planejamento: escolhe ou cria uma Concretagem (a mesma coleção do Levantamento/Controle de Concreto — nº compartilhado em todo o sistema) e marca, clicando na prancha, quais estacas/fundações (já vinculadas a uma peça) entram nela. Uma BT única é auto-gerenciada por concretagem, com volume previsto = soma do volume das peças planejadas.',
@@ -5413,362 +5413,362 @@ const NotasVersao = {
         'Estacas/Fundações: seletor de estaca vs. fundação disponível também dentro do Planejamento e do Acompanhamento, não só na aba Marcadores.',
         'Planejamento (Gantt): uma tarefa pode se vincular ao % de execução de UMA peça específica ou de UMA concretagem inteira (a pessoa escolhe qual, na hora) — o % da tarefa deixa de ser digitado à mão e passa a vir automaticamente da execução real, se atualizando sempre que um real é lançado no Acompanhamento ou quando o Planejamento é reaberto. Cálculo centralizado em EstacasCalculos.sincronizarVinculosPlanejamento, pra nunca haver dois números divergentes.',
         'Controle de Estacas: modal de vincular marcador mostra um resumo da quantidade de estacas por diâmetro no levantamento (usa o campo diâmetro já salvo por peça, do Levantamento de Concreto), pra ajudar a escolher qual peça corresponde à estaca do projeto.']},
-    {versao: 'V3.15.1', legado: 'V2.59.7',status:'fechada',data:'2026-08-01',tipo:'correcao',
+    {versao: 'V3.3.6', legado: 'V2.59.7',status:'fechada',data:'2026-08-01',tipo:'correcao',
       titulo:'Levantamento de Concreto — diâmetro/comprimento das estacas agora aparecem em todo lugar',
       itens:['Diâmetro/comprimento já eram gravados no banco, mas ficavam invisíveis — não apareciam em lugar nenhum da tela.',
         'Tabela de Peças (Base): nova coluna "Ø / Comp." (ex: Ø40cm × 6m) para peças de Estacas.',
         'Levantamento (staging): o card do conjunto do pilar agora mostra o diâmetro/comprimento (ou "N diâmetros diferentes" se o pilar tiver mais de um tipo de estaca).',
         'Editar Peça (Base): formulário ganhou campos de Diâmetro e Comprimento — dá pra ver e corrigir mesmo depois de já ter ido pra base.']},
-    {versao: 'V3.15.1.1', legado: 'V2.59.8',status:'fechada',data:'2026-08-01',tipo:'melhoria',
+    {versao: 'V3.3.6.1', legado: 'V2.59.8',status:'fechada',data:'2026-08-01',tipo:'melhoria',
       titulo:'Controle de Estacas: combobox de busca pra vincular peça, e cor por diâmetro/comprimento no desenho',
       itens:['Vincular marcador: o antigo <select> (tinha que rolar a lista inteira) virou um campo de busca — digita parte do nome, andar ou diâmetro e a lista filtra na hora; clica pra selecionar.',
         'Cada combinação de diâmetro+comprimento de estaca agora ganha um anel colorido próprio ao redor do círculo no desenho, além da cor de status (verde/laranja/cinza) que já existia — dá pra ver de longe quais estacas são de qual "tipo" sem precisar clicar uma por uma. Legenda das cores aparece embaixo do seletor Estacas/Fundações, nas três abas (Marcadores, Planejamento, Acompanhamento) e também no minimapa do Dashboard.']},
-    {versao: 'V3.15.2', legado: 'V2.59.9',status:'fechada',data:'2026-08-01',tipo:'correcao',
+    {versao: 'V3.3.7', legado: 'V2.59.9',status:'fechada',data:'2026-08-01',tipo:'correcao',
       titulo:'Levantamento de Concreto — tela de Peças não pula mais pro topo ao salvar uma edição',
       itens:['Editar uma peça (✎) e clicar Salvar recarregava a tela inteira e voltava o scroll pro topo da lista de Peças — muito ruim numa obra com centenas de peças.',
         'Corrigido: a posição do scroll da tela principal agora é preservada ao salvar/atualizar qualquer peça.']},
-    {versao: 'V3.15.2.1', legado: 'V2.59.10',status:'fechada',data:'2026-08-01',tipo:'melhoria',
+    {versao: 'V3.3.7.1', legado: 'V2.59.10',status:'fechada',data:'2026-08-01',tipo:'melhoria',
       titulo:'Levantamento de Concreto — filtro de Peças cobre qualquer coluna + filtro por status',
       itens:['A busca de texto agora casa com QUALQUER coluna da tabela: nome, tipo, andar, diâmetro, comprimento e volume — antes só buscava nome/tipo/andar.',
         'Novo select "Status" (Pendente/Parcial/Completo) — filtra pelo mesmo % de concretado que aparece na coluna.']},
-    {versao: 'V3.15.3', legado: 'V2.59.11',status:'fechada',data:'2026-08-01',tipo:'correcao',
+    {versao: 'V3.3.8', legado: 'V2.59.11',status:'fechada',data:'2026-08-01',tipo:'correcao',
       titulo:'Levantamento de Concreto — filtro por coluna de verdade (não mais uma busca única)',
       itens:['Trocada a busca única por um filtro embaixo de CADA coluna da tabela de Peças: Nome, Tipo, Andar, Ø/Comp., Volume e Status — cada um filtra independente, do jeito que a pessoa quiser combinar.',
         'Clicar no título de qualquer coluna ordena a lista por ela (▲/▼); clica de novo inverte.',
         'Botão ✕ na linha de filtros limpa tudo de uma vez.']},
-    {versao: 'V3.15.4', legado: 'V2.59.12',status:'fechada',data:'2026-08-01',tipo:'correcao',
+    {versao: 'V3.3.9', legado: 'V2.59.12',status:'fechada',data:'2026-08-01',tipo:'correcao',
       titulo:'Levantamento de Concreto — bug real: filtro perdia o foco a cada letra digitada',
       itens:['Causa: cada tecla digitada num campo de filtro (Nome, Ø/Comp., Volume) reconstruía a tabela INTEIRA — inclusive o próprio campo onde a pessoa estava digitando — então o cursor saía do campo a cada letra. Dava a impressão de "não funcionar".',
         'Corrigido: digitar agora só atualiza as linhas da tabela, sem tocar na linha de filtros — o campo mantém o foco, dá pra digitar a palavra inteira normalmente.']},
-    {versao: 'V3.16.0', legado: 'V2.59.13',status:'fechada',data:'2026-08-01',tipo:'funcionalidade',
+    {versao: 'V3.3.9.1', legado: 'V2.59.13',status:'fechada',data:'2026-08-01',tipo:'funcionalidade',
       titulo:'Controle de Estacas: girar o projeto, e Planejamento/Acompanhamento repensados (atribuição direta por clique)',
       itens:['Girar 90°: gira a prancha (imagem + todos os marcadores já feitos) de vez — não é um toggle de visualização, fica fixa no sentido escolhido. Disponível nas abas Marcadores e Planejamento.',
         'Planejamento: não pede mais pra criar uma Concretagem antes (nº, data, descrição) — agora é só clicar na peça já vinculada na prancha (a mesma prancha da aba Marcadores, sem seletor próprio) e dizer o número da concretagem (existente ou novo); o registro é criado na hora, sem formulário.',
         'Cada peça já atribuída mostra o número da concretagem em cima do marcador, direto na prancha.',
         'Embaixo do mapa, um card por concretagem mostra quantidade de peças, volume total e o detalhamento por diâmetro — a separação "por dia de concretagem" com os volumes de cada uma.',
         'Acompanhamento: escolhe a concretagem e vai marcando peça por peça (feito/pendente) — cada clique grava um lançamento de verdade (aparece no Controle de Concreto também) e atualiza o % do Planejamento (Gantt) na hora. Resumo mostra volume e quantidade por diâmetro, executado × faltando.']},
-    {versao: 'V3.17.0', legado: 'V2.59.14',status:'fechada',data:'2026-08-01',tipo:'funcionalidade',
+    {versao: 'V3.3.9.2', legado: 'V2.59.14',status:'fechada',data:'2026-08-01',tipo:'funcionalidade',
       titulo:'Controle de Estacas: tela cheia (Marcadores, Planejamento e Acompanhamento)',
       itens:['Botão "⛶ Tela cheia" no topo do módulo — expande a aba atual (a mesma área, com TODAS as funções: toggle estaca/fundação, seletor de prancha, adicionar, girar, zoom, legenda, clicar pra vincular/atribuir/marcar real) pra ocupar a tela inteira, sem a barra lateral no caminho.',
         'O mapa também fica bem maior dentro da tela cheia, usando quase toda a altura disponível.',
         'Sai com o botão "✕ Fechar tela cheia" ou apertando Esc.']},
-    {versao: 'V3.17.1', legado: 'V2.59.15',status:'fechada',data:'2026-08-01',tipo:'correcao',
+    {versao: 'V3.3.10', legado: 'V2.59.15',status:'fechada',data:'2026-08-01',tipo:'correcao',
       titulo:'Controle de Estacas: tela cheia mostra só o quadro do mapa, sem a faixa de cima',
       itens:['Na aba Marcadores, a tela cheia estava trazendo também os 4 cartões de resumo (estacas marcadas, vinculadas, concretadas, % médio) acima do mapa — agora só o quadro com o mapa em si aparece.',
         'Na aba Planejamento, o card "Concretagens planejadas" (embaixo do mapa) também some na tela cheia, pelo mesmo motivo.']},
-    {versao: 'V3.17.2', legado: 'V2.59.16',status:'fechada',data:'2026-08-01',tipo:'correcao',
+    {versao: 'V3.3.11', legado: 'V2.59.16',status:'fechada',data:'2026-08-01',tipo:'correcao',
       titulo:'Controle de Estacas: correção de verdade da V2.59.15 — os cartões continuavam aparecendo na tela cheia',
       itens:['A V2.59.15 escondia os cartões só na PRÓXIMA renderização — mas entrar/saír da tela cheia só atualizava o mapa, não o painel inteiro, então o HTML antigo (com os cartões) continuava ali, só realocado pra tela cheia sem re-render.',
         'Corrigido: entrar/saír da tela cheia agora reconstrói o painel da aba inteiro (não só o mapa), então o esconde/mostra dos cartões passa a valer de fato.']},
-    {versao: 'V3.17.2.1', legado: 'V2.59.17',status:'fechada',data:'2026-08-01',tipo:'melhoria',
+    {versao: 'V3.3.11.1', legado: 'V2.59.17',status:'fechada',data:'2026-08-01',tipo:'melhoria',
       titulo:'Controle de Estacas: botões Marcadores/Planejamento/Acompanhamento disponíveis dentro da tela cheia',
       itens:['A tela cheia não trazia o seletor de abas — pra trocar entre Marcadores/Planejamento/Acompanhamento era preciso saír da tela cheia primeiro.',
         'Agora o seletor de abas vai junto pra dentro da tela cheia — dá pra trocar de aba sem sair.']},
-    {versao: 'V3.17.3', legado: 'V2.59.18',status:'fechada',data:'2026-08-01',tipo:'correcao',
+    {versao: 'V3.3.12', legado: 'V2.59.18',status:'fechada',data:'2026-08-01',tipo:'correcao',
       titulo:'Controle de Estacas: painéis de baixo (tabela / concretagens) voltam a aparecer na tela cheia',
       itens:['Só o card de resumo (4 cartões no topo) deveria sumir na tela cheia — mas por engano a tabela "Estacas/Fundações desta prancha" (Marcadores) e o card "Concretagens planejadas" (Planejamento) também estavam sumindo.',
         'Corrigido: agora só a faixa de cartões do topo fica de fora; os painéis de baixo continuam disponíveis na tela cheia.']},
-    {versao: 'V3.17.4', legado: 'V2.59.19',status:'fechada',data:'2026-08-01',tipo:'correcao',
+    {versao: 'V3.3.13', legado: 'V2.59.19',status:'fechada',data:'2026-08-01',tipo:'correcao',
       titulo:'Controle de Estacas: clicar em "Adicionar Estaca"/"Adicionar Fundação" não deve mais fazer a prancha "saltar" pro topo',
       itens:['Clicar em Adicionar Estaca/Fundação chamava um re-render da PÁGINA INTEIRA (KPI, tabela, tudo) só pra ligar o modo de criação — isso recriava o mapa do zero e perdia a posição do scroll, dando a impressão de que a prancha "andava"/pulava.',
         'Isso também podia fazer o clique de criação (arrastar pra definir o raio) não terminar de registrar corretamente, dependendo do timing — daí o popup de vincular às vezes não abria.',
         'Corrigido: ligar/desligar o modo de criação agora só atualiza o mapa e o botão em si (mesmo caminho leve que "Cancelar" já usava) — sem recriar a página, sem perder o scroll.']},
-    {versao: 'V3.17.5', legado: 'V2.59.20',status:'fechada',data:'2026-08-01',tipo:'correcao',
+    {versao: 'V3.3.14', legado: 'V2.59.20',status:'fechada',data:'2026-08-01',tipo:'correcao',
       titulo:'Controle de Estacas: achada a corrida real do popup que não abria ao Adicionar Estaca',
       itens:['Quando a imagem da prancha não estava em cache (ex: logo depois de girar 90°), buscar ela no Firestore levava um instante — e nesse meio tempo o mapa em tela ainda era o ANTIGO, com os listeners do modo anterior (não do modo "criar estaca").',
         'Se a pessoa clicasse pra criar a estaca durante essa janela, o clique caía no listener errado (modo normal, que só reage a marcador já existente) — nada acontecia, nem erro nem popup.',
         'Isso explica por que parecia "só funcionar" às vezes: quanto mais devagar a conexão ou quanto mais cedo depois de girar a prancha, maior a chance de cair nessa janela.',
         'Corrigido: agora, se a imagem precisa ser buscada, a tela trava com um loading até o mapa novo (já no modo certo) estar pronto — sem essa janela de clique “no vazio”.']},
-    {versao: 'V3.18.0', legado: 'V2.59.21',status:'fechada',data:'2026-08-01',tipo:'funcionalidade',
+    {versao: 'V3.3.14.1', legado: 'V2.59.21',status:'fechada',data:'2026-08-01',tipo:'funcionalidade',
       titulo:'Controle de Estacas: achado o bug do zoom + botões de seleção rápida por tipo de estaca',
       itens:['Bug real encontrado: o tamanho mínimo do arrasto pra criar uma estaca era medido como fração da LARGURA DA IMAGEM, não em pixels de tela. Com zoom alto, um arrasto de tamanho normal na tela virava uma fração pequena da imagem (que agora é enorme) e caía por baixo do mínimo — descartado em silêncio, sem popup, sem erro. Corrigido: o mínimo agora é medido em pixels de tela (constante, não muda com o zoom).',
         'Novidade: botões de seleção rápida por tipo — em vez do botão genérico "Adicionar Estaca" (que exige arrastar pra definir o tamanho toda vez), agora aparece um botão pra cada diâmetro×comprimento já cadastrado no Levantamento (ex: "⌀90cm × 23m"). Clica no tipo, depois só clica em cada estaca daquele tipo no desenho — sai automaticamente no tamanho certo pro zoom atual, sem arrastar.',
         'O tamanho de referência é calculado pela escala já usada pelas estacas existentes no desenho (mesmo que sejam de outro diâmetro) — então funciona até no primeiro clique de um tipo novo, sem precisar cadastrar manualmente nenhuma escala.',
         'Clique rápido no modo por tipo não abre popup a cada estaca (fica sem vincular por enquanto) — assim dá pra marcar todas as de um tipo em sequência rapidamente; a vinculação com a peça é feita depois, uma a uma, na aba Marcadores normal.']},
-    {versao: 'V3.18.1', legado: 'V2.59.22',status:'fechada',data:'2026-08-01',tipo:'correcao',
+    {versao: 'V3.3.15', legado: 'V2.59.22',status:'fechada',data:'2026-08-01',tipo:'correcao',
       titulo:'Controle de Estacas: removidos os botões por tipo (não ficaram bons) + corrigido salto de tela ao excluir marcador',
       itens:['Removida a seleção rápida por tipo de estaca (V2.59.21) — voltou pro botão único "Adicionar Estaca" (arrastar pra definir o tamanho). O fix real do bug do zoom (limiar em pixels de tela, não fração da imagem) continua valendo.',
         'Excluir marcador (e outras ações que recarregam a prancha) fazia a tela "saltar" pro topo — mesma causa das vezes anteriores: o painel inteiro era reconstruído do zero antes do mapa novo aparecer, perdendo a posição do scroll.',
         'Corrigido de forma mais ampla: a posição do scroll agora é guardada ANTES de qualquer reconstrução do painel de Marcadores e devolvida DEPOIS que o mapa novo termina de carregar — cobre excluir, vincular e qualquer outra ação que recarregue a prancha, não só zoom/girar.']},
-    {versao: 'V3.18.1.1', legado: 'V2.59.23',status:'fechada',data:'2026-08-01',tipo:'melhoria',
+    {versao: 'V3.3.15.1', legado: 'V2.59.23',status:'fechada',data:'2026-08-01',tipo:'melhoria',
       titulo:'Controle de Estacas: arrastar estaca já existente pra reposicionar, e "Salvar e Próximo" no vincular',
       itens:['Segurar e arrastar uma estaca (círculo) já marcada agora move ela direto, sem precisar abrir o popup e clicar em "Ajustar forma" antes — clique rápido sem arrastar continua abrindo o vínculo, normal.',
         'Modal de vincular ganhou o botão "💾 Salvar e Próximo" — salva o vínculo, fecha o popup e já reentra no modo de adicionar (círculo ou polígono, igual ao marcador que acabou de salvar), sem precisar clicar de novo em "Adicionar Estaca"/"Adicionar Fundação".']},
-    {versao: 'V3.18.1.2', legado: 'V2.59.24',status:'fechada',data:'2026-08-01',tipo:'melhoria',
+    {versao: 'V3.3.15.2', legado: 'V2.59.24',status:'fechada',data:'2026-08-01',tipo:'melhoria',
       titulo:'Controle de Estacas: Planejamento e Acompanhamento ganham zoom/pan igual Marcadores, e atribuição rápida de concretagem',
       itens:['Ctrl+roda (zoom) e Ctrl+arrastar (mover o mapa) agora funcionam em Planejamento e Acompanhamento também — antes só existiam na aba Marcadores.',
         'Planejamento: agora dá pra criar a concretagem direto ali em cima (nº, data, descrição), sem precisar passar pelo popup de uma peça.',
         'Clique num card de concretagem pra selecionar (fica marcado 📌) — com uma selecionada, clicar nas peças no desenho já atribui direto, sem abrir popup a cada uma; clique de novo numa peça já atribuída à mesma concretagem remove. Clique numa peça sem nenhuma concretagem selecionada continua abrindo o popup de escolha, como antes.',
         'Confirmado: uma concretagem criada em Controle de Estacas usa exatamente os mesmos campos do Assistente de Concretagem do Levantamento de Concreto — aparece e funciona normalmente dentro do Controle de Concreto, sem nenhum ajuste extra.']},
-    {versao: 'V3.19.0', legado: 'V2.59.25',status:'fechada',data:'2026-08-03',tipo:'funcionalidade',
+    {versao: 'V3.3.15.3', legado: 'V2.59.25',status:'fechada',data:'2026-08-03',tipo:'funcionalidade',
       titulo:'Vínculos com Levantamento: Terraplanagem entra no módulo + Concreto navega por Andar/Tipo/Concretagem',
       itens:['Terraplanagem estava de fora dos Vínculos desde que foi lançada — agora aparece com 2 métricas: Volume de Corte (banco) e Volume Solto (empolado), calculadas igual ao Levantamento (sem separação por local, é 1 volume só da obra).',
         'Concreto: antes só existia 1 número (volume total da obra). Agora dá pra navegar em pastas por Andar → Tipo (Pilar, Viga, Laje...) e vincular a quantidade exata de cada combinação a uma tarefa.',
         'Concreto também ganhou pastas por Concretagem (ex: "Concretagem Nº5 — Pilares Térreo") — soma o volume das peças vinculadas àquela concretagem (respeitando o % de cada peça), útil pra vincular pela etapa de execução em vez do local físico.']},
-    {versao: 'V3.19.0.1', legado: 'V2.59.26',status:'fechada',data:'2026-08-03',tipo:'melhoria',
+    {versao: 'V3.3.15.4', legado: 'V2.59.26',status:'fechada',data:'2026-08-03',tipo:'melhoria',
       titulo:'Dashboard: gráfico "Fundação e Estrutura" separado em 3 (Fundação Profunda/Estacas, Fundação, Estrutura)',
       itens:['Antes era 1 gráfico só somando Fundação+Estrutura. Agora são 3 gráficos por andar, mesmo critério do Controle de Estacas: Fundação Profunda (Estacas) = peça Fundação com subtipo Estacas; Fundação = peça Fundação sem esse subtipo (rasa/superficial); Estrutura = todo o resto (Pilar/Viga/Laje/Cortina/Escada/Rampa/Caixa D\'água/Outro).']},
-    {versao: 'V3.19.0.2', legado: 'V2.59.27',status:'fechada',data:'2026-08-03',tipo:'melhoria',
+    {versao: 'V3.3.15.5', legado: 'V2.59.27',status:'fechada',data:'2026-08-03',tipo:'melhoria',
       titulo:'Dashboard: clique na barra de Fundação Profunda/Fundação/Estrutura abre o projeto correspondente',
       itens:['Fundação Profunda (Estacas) e Fundação: clique na barra do andar abre a prancha (PDF/imagem) já cadastrada no Controle de Estacas e Fundações, com as peças daquele andar marcadas. Se houver mais de uma prancha, abre a da primeira concretagem e navega pelas demais com as setas.',
         'Estrutura: clique na barra leva direto pro Controle de Concreto, já na aba Relatórios com aquele andar aberto.']},
-    {versao: 'V3.19.1', legado: 'V2.59.28',status:'fechada',data:'2026-08-03',tipo:'correcao',
+    {versao: 'V3.3.16', legado: 'V2.59.28',status:'fechada',data:'2026-08-03',tipo:'correcao',
       titulo:'Dashboard: peça de estaca antiga sem subTipo caía em "Fundação" + ordem de andares travava em andar novo criado após reordenar manualmente',
       itens:['Peças de Fundação criadas antes do campo subTipo existir não tinham esse campo gravado — caíam sempre em "Fundação" mesmo sendo estaca de verdade. Agora, sem subTipo mas com diâmetro E comprimento preenchidos (só faz sentido em estaca), o Dashboard classifica como Fundação Profunda (Estacas).',
         'Ordenação de andares (Controle de Concreto, Dashboard, e onde mais usa CC.ordenarAndares): depois que a ordem era reorganizada manualmente uma vez, todo andar criado depois caía sempre no FINAL da lista por ordem de criação — nunca mais era posicionado pelo número (causa do "10º, 11º, 12º... 1º, 1º Subsolo, 2º..." fora de ordem). Corrigido: a ordem manual entre os andares já reorganizados continua 100% preservada; andares novos agora são inseridos automaticamente na posição numérica correta dentro dela.']},
-    {versao: 'V3.19.2', legado: 'V2.59.29',status:'fechada',data:'2026-08-03',tipo:'correcao',
+    {versao: 'V3.3.17', legado: 'V2.59.29',status:'fechada',data:'2026-08-03',tipo:'correcao',
       titulo:'Dashboard: clique nas barras de Fundação/Estrutura não disparava (V2.59.27 não funcionava na prática)',
       itens:['O clique era ligado direto no retângulo invisível de cada coluna (addEventListener por elemento) — trocado por delegação de evento no card inteiro (elemento pai fixo, nunca recriado), que é mais robusto contra qualquer problema de timing/anexação em nós SVG gerados dinamicamente.']},
-    {versao: 'V3.20.0', legado: 'V2.59.30',status:'fechada',data:'2026-08-03',tipo:'funcionalidade',
+    {versao: 'V3.3.17.1', legado: 'V2.59.30',status:'fechada',data:'2026-08-03',tipo:'funcionalidade',
       titulo:'Dashboard: volta a ser 1 gráfico só (Fundação Profunda/Fundação/Estrutura em cores, não mais 3 gráficos) + ordem exata do Controle de Concreto',
       itens:['Voltou a ser um único gráfico "Fundação e Estrutura" — as 3 categorias (Fundação Profunda/Estacas roxo, Fundação laranja, Estrutura amarelo) aparecem como barras coloridas lado a lado dentro do mesmo andar, em vez de 3 gráficos separados.',
         'Ordem dos andares agora usa EXATAMENTE a lista configurada no Controle de Concreto (tela de arrastar) — sem recalcular ou reordenar por número; é a mesma lista, na mesma ordem.']},
-    {versao: 'V3.21.0', legado: 'V2.59.31',status:'fechada',data:'2026-08-03',tipo:'funcionalidade',
+    {versao: 'V3.3.17.2', legado: 'V2.59.31',status:'fechada',data:'2026-08-03',tipo:'funcionalidade',
       titulo:'Levantamento de Concreto: Inserir PDF por concretagem (movido pro Controle de Concreto na V2.59.32)',
       itens:['Levantamento de Concreto → Concretagens → Editar/Excluir ganhou "📎 Inserir PDF desta concretagem" — guarda o PDF de verdade no Firebase Storage (não rasteriza, mantém todas as páginas e o zoom nativo do PDF).']},
-    {versao: 'V3.21.1', legado: 'V2.59.32',status:'fechada',data:'2026-08-03',tipo:'correcao',
+    {versao: 'V3.3.18', legado: 'V2.59.32',status:'fechada',data:'2026-08-03',tipo:'correcao',
       titulo:'Dashboard: cada categoria do gráfico Fundação e Estrutura busca o PDF do lugar certo — Estaca/Fundação do Controle de Estacas, Estrutura do Controle de Concreto',
       itens:['Fundação Profunda (Estacas) e Fundação: clique na barra abre a prancha (PDF/imagem) do Controle de Estacas e Fundações vinculada às peças daquele andar — é de lá que vem o projeto dessas duas categorias.',
         'Estrutura: clique na barra abre o PDF anexado na concretagem (Controle de Concreto → Lançar BT → 📎 Inserir PDF desta concretagem, botão movido do Levantamento de Concreto pra cá, no nível certo). Um andar com várias concretagens mostra menu pra escolher.',
         'O "Inserir PDF" que estava no Levantamento de Concreto (V2.59.31) foi removido de lá — o lugar certo, confirmado, é dentro do Controle de Concreto/Lançar BT, selecionando a concretagem.']},
-    {versao: 'V3.21.1.1', legado: 'V2.59.33',status:'fechada',data:'2026-08-03',tipo:'melhoria',
+    {versao: 'V3.3.18.1', legado: 'V2.59.33',status:'fechada',data:'2026-08-03',tipo:'melhoria',
       titulo:'Dashboard: clique no gráfico Fundação e Estrutura abre o projeto num popup em tela cheia, sem navegar para outra tela',
       itens:['Antes o clique navegava pro Controle de Estacas ou abria o PDF em nova aba. Agora abre direto num popup em tela cheia sobre o próprio Dashboard — Estrutura mostra o PDF de verdade (com todas as páginas e zoom nativo); Estaca/Fundação mostra a imagem da prancha na mesma qualidade que aparece no Controle de Estacas.',
         'Andar com mais de um item (várias concretagens, ou peças espalhadas em mais de uma prancha) navega entre eles com as setas dentro do próprio popup — não abre várias telas.']},
-    {versao: 'V3.21.2', legado: 'V2.59.34',status:'fechada',data:'2026-08-03',tipo:'correcao',
+    {versao: 'V3.3.19', legado: 'V2.59.34',status:'fechada',data:'2026-08-03',tipo:'correcao',
       titulo:'Dashboard: popup de Estaca/Fundação mostrava a imagem crua (sem bolinhas) e sem zoom',
       itens:['Agora desenha os marcadores (bolinhas coloridas por status) por cima da imagem da prancha, igual ao Controle de Estacas — só as peças daquele andar que já estão EM EXECUÇÃO (% concretado > 0), pra ficar limpo em vez de mostrar a prancha inteira.',
         'Zoom de verdade: botões +/− visíveis e roda do mouse (sem precisar de Ctrl, já que é uma tela dedicada) — de 30% a 400%.']},
-    {versao: 'V3.21.3', legado: 'V2.59.35',status:'fechada',data:'2026-08-03',tipo:'correcao',
+    {versao: 'V3.3.20', legado: 'V2.59.35',status:'fechada',data:'2026-08-03',tipo:'correcao',
       titulo:'Dashboard: gráfico Fundação e Estrutura saía de ordem mesmo com a lista certa configurada + visual melhorado',
       itens:['Causa real da ordem errada: pequenas diferenças de grafia entre o nome do andar salvo na peça e o nome salvo na lista configurada (ex: acento, maiúscula, espaço) faziam o andar "não bater" e cair fora de ordem, no final. Comparação agora usa o mesmo normalizador de nome de andar (CC.normalizarAndar) já usado no resto do sistema — tolerante a essas diferenças.',
         'Cores fortes e vivas (roxo/laranja/azul) em vez de opacidade baixa — Previsto agora é contorno colorido com fundo branco (não mais "lavado"), Executado é preenchimento sólido.',
         'Linha separadora vertical + faixa de fundo alternada (zebra) entre cada andar, pra ficar claro onde um grupo de barras termina e o outro começa.']},
-    {versao: 'V3.21.3.1', legado: 'V2.59.36',status:'fechada',data:'2026-08-03',tipo:'melhoria',
+    {versao: 'V3.3.20.1', legado: 'V2.59.36',status:'fechada',data:'2026-08-03',tipo:'melhoria',
       titulo:'Dashboard: gráfico Fundação e Estrutura sem scroll horizontal, barras compactas, linha guia no rótulo, texto "Estacas"/"Fundação" na própria barra',
       itens:['Removido o scroll lateral — largura fixa e barras estreitas o suficiente pra caber TODOS os andares na mesma tela de uma vez, sem precisar arrastar.',
         'Cada andar mostra só as categorias que de fato têm peça ali (a maioria só tem Estrutura — 2 barrinhas; só Fundação/Térreo costuma ter Estaca+Fundação juntas — até 3 categorias/6 barrinhas).',
         'Linha guia vertical entre o eixo e o rótulo do andar — resolve a ambiguidade de "essa barra é de qual andar" quando o texto inclinado ficava entre dois nomes.',
         'Quando o andar tem mais de uma categoria (ex: Fundação com Estaca+Fundação), cada par de barras ganha um texto vertical "Estacas"/"Fundação"/"Estrutura" escrito dentro da própria barra, com contorno da cor da categoria — não precisa mais adivinhar pela cor sozinha.']},
-    {versao: 'V3.21.3.2', legado: 'V2.59.37',status:'fechada',data:'2026-08-03',tipo:'melhoria',
+    {versao: 'V3.3.20.2', legado: 'V2.59.37',status:'fechada',data:'2026-08-03',tipo:'melhoria',
       titulo:'Dashboard: gráfico Fundação e Estrutura volta a usar só tons de amarelo (identidade única) em vez de roxo/laranja/azul',
       itens:['Estrutura = amarelo oficial da empresa (#F5C800); Fundação e Estacas = tons de amarelo mais escuros — as 3 categorias ficam na mesma família de cor, sem parecer "gráfico colorido".',
         'Executado agora é sempre preto/cinza escuro nas 3 categorias — a cor (tom de amarelo) identifica a CATEGORIA, o preto identifica que aquele volume já foi executado. Previsto continua como contorno no tom da categoria, com fundo branco.']},
-    {versao: 'V3.21.4', legado: 'V2.59.38',status:'fechada',data:'2026-08-03',tipo:'correcao',
+    {versao: 'V3.3.21', legado: 'V2.59.38',status:'fechada',data:'2026-08-03',tipo:'correcao',
       titulo:'Dashboard: gráfico Fundação e Estrutura parou de carregar ("Erro ao carregar dados do Controle de Concreto")',
       itens:['Bug introduzido numa limpeza de código anterior: a variável CC (ConcretoCalculos) usada pra ordenar os andares por nome normalizado tinha sido removida sem querer, causando erro em toda tentativa de carregar o gráfico. Restaurada.']},
-    {versao: 'V3.21.5', legado: 'V2.59.39',status:'fechada',data:'2026-08-03',tipo:'correcao',
+    {versao: 'V3.3.22', legado: 'V2.59.39',status:'fechada',data:'2026-08-03',tipo:'correcao',
       titulo:'Dashboard: andar com peça de Fundação de verdade (volume > 0 confirmado no Levantamento) não aparecia no gráfico',
       itens:['O cálculo do gráfico usava Number(p.volume) puro, que retorna NaN se o volume estiver salvo em formato de vírgula decimal ("150,5") — e NaN||0 some silenciosamente como zero, fazendo o andar inteiro desaparecer do gráfico mesmo com peça e volume reais. Trocado por CC.num(), a mesma função (tolerante a vírgula) já usada em todo o resto do sistema.',
         'Sem acesso ao dado real da obra pra confirmar 100% que essa era a causa exata — é a explicação técnica mais sólida encontrada; se o problema persistir, precisa de acesso ao Firestore ou ao DevTools do navegador pra investigar a fundo.']},
-    {versao: 'V3.21.6', legado: 'V2.59.40',status:'fechada',data:'2026-08-03',tipo:'correcao',
+    {versao: 'V3.3.23', legado: 'V2.59.40',status:'fechada',data:'2026-08-03',tipo:'correcao',
       titulo:'Dashboard: erro no gráfico Fundação e Estrutura continuava mesmo depois do fix da V2.59.39 — mensagem de erro real agora aparece na tela',
       itens:['Não foi possível confirmar/reproduzir a causa exata sem acesso ao Firestore ou ao console do navegador. A tela de erro agora mostra o texto técnico exato da exceção (não só "Erro ao carregar..."), pra dar o próximo passo real do diagnóstico direto pela tela, sem precisar abrir o DevTools.']},
-    {versao: 'V3.21.7', legado: 'V2.59.41',status:'fechada',data:'2026-08-03',tipo:'correcao',
+    {versao: 'V3.3.24', legado: 'V2.59.41',status:'fechada',data:'2026-08-03',tipo:'correcao',
       titulo:'Dashboard: erro real identificado — "Cannot read properties of undefined (reading \'num\')" — CC (ConcretoCalculos) indisponível no momento do cálculo',
       itens:['O gráfico dependia de window.ConcretoCalculos estar carregado no exato momento do cálculo — se por qualquer motivo (cache de CDN desalinhado entre deploys, timing) isso não estivesse disponível, a leitura de CC.num() quebrava o gráfico inteiro.',
         'Criada uma função de conversão numérica local, com o mesmo comportamento (tolera vírgula decimal), que NUNCA depende de CC estar disponível — o gráfico não quebra mais por esse motivo, independente da causa raiz de CC ter ficado indisponível.']},
-    {versao: 'V3.22.0', legado: 'V2.60.0',status:'fechada',data:'2026-08-05',tipo:'funcionalidade',
+    {versao: 'V3.3.24.1', legado: 'V2.60.0',status:'fechada',data:'2026-08-05',tipo:'funcionalidade',
       titulo:'Levantamento de Fachada — Visão Geral: zoom/pan no mapa e filtro Externa/Interna nas caixas',
       itens:['Zoom e movimentação (pan) no mapa da Visão Geral — igual aos outros módulos: roda do mouse para zoom (centrado no cursor), arrastar para mover, botões ➖/100%/➕.',
         'Novo seletor "Vista: Externa / Interna" — cada botão liga/desliga independente. Os dois ativos = total combinado (comportamento de antes). Só um ativo = caixas e Total Geral mostram só aquela vista.']},
-    {versao: 'V3.22.0.1', legado: 'V2.60.1',status:'fechada',data:'2026-08-05',tipo:'melhoria',
+    {versao: 'V3.3.24.2', legado: 'V2.60.1',status:'fechada',data:'2026-08-05',tipo:'melhoria',
       titulo:'Levantamento de Fachada — Visão Geral: botão para travar o zoom/movimentação do mapa',
       itens:['🔓 Travar Zoom / 🔒 Travado na barra do mapa: enquanto travado, roda do mouse e arrastar não alteram mais o zoom/posição — evita mexer sem querer depois de ajustar do jeito que quer.']},
-    {versao: 'V3.23.0', legado: 'V2.60.3',status:'fechada',data:'2026-08-05',tipo:'funcionalidade',
+    {versao: 'V3.3.24.3', legado: 'V2.60.3',status:'fechada',data:'2026-08-05',tipo:'funcionalidade',
       titulo:'Planejamento: novo botão "🔒 Liberar Edição de Real" — permite editar Início Real e Término Real direto na tabela, quando liberado',
       itens:['Início Real/Término Real são normalmente só leitura no Planejamento (a fonte de verdade é Diário de Obra, Medições ou Semanal) — travado assim de propósito, pra não editar por engano.',
         'Pra correções em massa pontuais (ex: atualizar a base sem gerar relatório/lançamento), clique em "🔒 Liberar Edição de Real" — as duas colunas ficam editáveis direto na célula, igual Início/Término Planejado. Clique de novo pra travar.']},
-    {versao: 'V3.23.0.1', legado: 'V2.60.4',status:'fechada',data:'2026-08-05',tipo:'melhoria',
+    {versao: 'V3.3.24.4', legado: 'V2.60.4',status:'fechada',data:'2026-08-05',tipo:'melhoria',
       titulo:'Planejamento: botão "Liberar Edição de Real" movido pra dentro do menu ⚙ Ferramentas — estava solto na barra principal',
       itens:['Menos um botão poluindo a barra de cima; mesma função, agora dentro do menu Ferramentas.']},
-    {versao: 'V3.23.1', legado: 'V2.60.5',status:'fechada',data:'2026-08-05',tipo:'correcao',
+    {versao: 'V3.3.25', legado: 'V2.60.5',status:'fechada',data:'2026-08-05',tipo:'correcao',
       titulo:'BUG CRÍTICO: salvar o % de um grupo com valor desatualizado sobrescrevia o % de TODOS os descendentes em silêncio — provável causa de "todas as tarefas com 27%"',
       itens:['Editar o % Concluído de uma tarefa-pai (via célula ou modal) distribui esse valor pra todos os descendentes — funcionalidade existente, correta quando intencional. O problema: isso rodava sem nenhum aviso, e se o valor no formulário/célula estivesse desatualizado (ex: formulário aberto antes de um recálculo de %), salvar sobrescrevia silenciosamente o % de centenas de tarefas de uma vez, apagando progresso real de todo mundo.',
         'Corrigido: agora, se a tarefa tiver mais de 3 descendentes, pede confirmação explícita ANTES de aplicar qualquer coisa — mostra quantas tarefas serão afetadas e o valor que vai ser aplicado. Cancelar não salva nada, nem localmente.',
         'Vale tanto pra edição na célula da tabela quanto pelo formulário grande de editar tarefa.']},
-    {versao: 'V3.23.2', legado: 'V2.60.6',status:'fechada',data:'2026-08-05',tipo:'correcao',
+    {versao: 'V3.3.26', legado: 'V2.60.6',status:'fechada',data:'2026-08-05',tipo:'correcao',
       titulo:'CORREÇÃO DE RUMO: % das tarefas-pai voltou a ser RECURSIVO nível por nível (média dos filhos DIRETOS), igual MS Project — a V2.58.21/V2.60.2 tinha trocado pro método errado',
       itens:['O Milton mostrou o comportamento correto do MS Project com um exemplo real: cada pai é a média ponderada (por duração) só dos filhos DIRETOS dele — e cada filho, recursivamente, é a média dos PRÓPRIOS filhos diretos, nível por nível. Isso é o padrão profissional de gestão de projetos.',
         'A V2.58.21 tinha trocado isso por um cálculo "achatado" (ponderar direto por todas as folhas, ignorando os níveis intermediários) achando que estava corrigindo uma divergência com o Dashboard — só que essa mudança estava errada. Revertido pro método recursivo, confirmado batendo exatamente com o exemplo do Milton (níveis 3→2→1→0: 100%+50%→75%; 75%+100%→87,5%; 87,5%+100%→93,75%).',
         'O mais importante: agora, TODA vez que a estrutura muda no Editor de Estrutura (mover, inserir, excluir tarefa, subir/descer nível, importar) o % de TODOS os pais afetados é recalculado automaticamente e salvo — antes, mover uma tarefa entre níveis não atualizava o % de ninguém, ficava desatualizado até alguém editar manualmente.',
         'Novo botão ⚙ Ferramentas → "📊 Recalcular % dos Pais" pra rodar manualmente em qualquer obra que ainda esteja com % desatualizado por esses bugs.']},
-    {versao: 'V3.23.2.1', legado: 'V2.60.7',status:'fechada',data:'2026-08-06',tipo:'melhoria',
+    {versao: 'V3.3.26.1', legado: 'V2.60.7',status:'fechada',data:'2026-08-06',tipo:'melhoria',
       titulo:'Importar Correções: quando o Nome é ambíguo (duplicado), tenta desambiguar automaticamente pelo Código antes de desistir',
       itens:['Antes, qualquer nome duplicado na obra (ex: mesma tarefa repetida em dois ramos, tipo "Hall" com códigos 1.3.6.x e 1.3.4.x) caía direto em "ambígua" e ficava fora do import — mesmo quando o Código bastava pra saber exatamente qual era qual.',
         'Agora, se o nome bate em mais de uma tarefa, verifica se o Código da linha da planilha bate com o Código de exatamente uma delas — só cai em "ambígua" de verdade se nem o código resolver (ex: grupos criados manualmente sem código). Testado numa obra real: resolveu 61 de 70 casos que antes ficavam de fora.']},
-    {versao: 'V3.23.3', legado: 'V2.60.8',status:'fechada',data:'2026-08-06',tipo:'correcao',
+    {versao: 'V3.3.27', legado: 'V2.60.8',status:'fechada',data:'2026-08-06',tipo:'correcao',
       titulo:'CORREÇÃO IMPORTANTE: % geral da obra vinha inflado — o peso de um grupo na média do pai usava a duração PRÓPRIA dele, que fica vazia/0 em grupos criados manualmente no Editor de Estrutura',
       itens:['Achado com um caso real: o Milton criou grupos organizacionais (ex: "Concretagens", "Hall", "Gesso e Forro", "Pintura") pra agrupar tarefas já existentes, sem mudar nenhum trabalho real. Só que o % da obra subiu de ~16% (base oficial da Cofield) pra 39% na nossa — mesma obra, mesmo trabalho, só a estrutura organizada diferente.',
         'Causa: um grupo criado assim fica com "Duração" própria vazia (0) — e a fórmula de % usava exatamente essa duração como peso do grupo na média do PAI dele. Um grupo com 500+ dias de trabalho real lá dentro contava como peso 1 (quase zero) — o efeito prático é que trabalho ainda não iniciado, quando "escondido" dentro de um grupo assim, quase não pesava na conta, inflando o % geral pra cima.',
         'Corrigido: o peso de qualquer tarefa na média agora é sempre a SOMA REAL da duração de tudo que tem dentro dela (calculado recursivamente, folha por folha) — nunca mais a duração própria de um grupo, que pode estar errada/vazia sem afetar o resultado. Testado com os dados reais da obra: o % da raiz caiu de 39,3% pra 14,64%, muito mais alinhado com os 16% da Cofield.',
         'Rode ⚙ Ferramentas → "📊 Recalcular % dos Pais" pra aplicar a correção na obra atual.']},
-    {versao: 'V3.23.3.1', legado: 'V2.60.9',status:'fechada',data:'2026-08-06',tipo:'melhoria',
+    {versao: 'V3.3.27.1', legado: 'V2.60.9',status:'fechada',data:'2026-08-06',tipo:'melhoria',
       titulo:'Duração das tarefas-pai também passou a ser calculada automaticamente — não fica mais vazia/0',
       itens:['Igual início/término, a Duração de uma tarefa-pai agora é calculada automaticamente (dias corridos entre o início e o término agregados dos filhos) sempre que a estrutura muda — mesmo gatilho do "📐 Recalcular Datas dos Pais".',
         'Grupos criados manualmente no Editor de Estrutura (que antes ficavam com Duração vazia pra sempre) passam a ter um valor real, condizente com o que tem dentro deles.']},
-    {versao: 'V3.23.4', legado: 'V2.60.10',status:'fechada',data:'2026-08-06',tipo:'correcao',
+    {versao: 'V3.3.28', legado: 'V2.60.10',status:'fechada',data:'2026-08-06',tipo:'correcao',
       titulo:'Removido da coluna % Concluído o ícone de vincular a Estacas/Fundações — não deveria estar ali (pedido do Milton)',
       itens:['Aparecia em TODA tarefa, mesmo sem nenhuma relação com fundação/estaca (ex: "Prumadas Esgoto") — voltou a ser uma célula de % simples, editável normalmente. O vínculo de tarefas já existentes com Estacas/Fundações continua salvo no banco, só não aparece mais aqui.']},
-    {versao: 'V3.24.0', legado: 'V2.60.11',status:'fechada',data:'2026-08-06',tipo:'funcionalidade',
+    {versao: 'V3.4.0', legado: 'V2.60.11',status:'fechada',data:'2026-08-06',tipo:'funcionalidade',
       titulo:'Novo: Estrutura da Obra (Torre → Pavimento → Apto) + vínculo por tarefa — independente dos módulos de Levantamento',
       itens:['Botão "🏢 Estrutura da Obra" na toolbar do Planejamento: cadastra Torres, Pavimentos e Apartamentos/Unidades (nome + ordem, editável, com exclusão avisando se alguma tarefa já está vinculada).',
         'Nova coluna "Local (Pav/Apto)" na tabela — clicável, abre um picker pra marcar um pavimento inteiro (vale pra todos os aptos dele) ou apto(s) específico(s). Mostra resumo curto na célula (ex: "1º Pav (todos)" ou "1º Pav: 101, 102").',
         'Guardado em obras/{obra}/config/estruturaObra (nova, isolada) e no campo vinculoEstrutura de cada tarefa — não migra nem toca em pisoArvore/tetoArvore/paredesArvore, que continuam servindo só os módulos de Levantamento.',
         'Vínculo "órfão" (referenciando um pavimento/apto que foi excluído depois) aparece com aviso visual em vermelho na célula, em vez de quebrar silenciosamente.']},
-    {versao: 'V3.24.1', legado: 'V2.60.12',status:'fechada',data:'2026-08-06',tipo:'correcao',
+    {versao: 'V3.4.1', legado: 'V2.60.12',status:'fechada',data:'2026-08-06',tipo:'correcao',
       titulo:'Dashboard: volume de Fundação aparecia menor do que o real em obras com grafia inconsistente do nome do andar (° em vez de º)',
       itens:['Peças com "2° Subsolo" (símbolo de grau) e "2º Subsolo" (ordinal correto) eram tratadas como DOIS andares diferentes em qualquer soma — cada grafia virava uma barra própria, com só parte do volume real. CC.normalizarAndar (usado em todo o sistema) agora unifica esse caso.',
         'Gráfico Fundação e Estrutura: soma por andar agora agrupa por nome NORMALIZADO, deduplicando grafias equivalentes antes de montar as barras — não só na ordenação (como já era desde a V2.59.35), também no cálculo do valor.',
         'Visual: Previsto virou preenchimento sólido no tom claro da categoria (não mais contorno vazio) — pedido explícito de "quero colorido forte, não branco com borda".']},
-    {versao: 'V3.25.0', legado: 'V2.60.13',status:'fechada',data:'2026-08-06',tipo:'funcionalidade',
+    {versao: 'V3.4.1.1', legado: 'V2.60.13',status:'fechada',data:'2026-08-06',tipo:'funcionalidade',
       titulo:'Novo: Painel de Andamento no Dashboard (tarefas-mãe × Pavimento/Apartamento)',
       itens:['Nova tabela no Dashboard: cada linha é uma tarefa-mãe (grupo) escolhida pelo usuário em "⚙️ Configurar", cada coluna é um Pavimento ou Apartamento (toggle no topo) — usa a Estrutura da Obra (Torre/Pavimento/Apto) e o vínculo por tarefa já publicados no Planejamento.',
         'Célula mostra % agregado (peso por duração, mesma regra do resto do sistema) com cor de fundo por faixa de progresso (vermelho até 30%, amarelo até 70%, verde daí — ajustável no código) e borda por status (azul em andamento, verde sólida finalizada, cinza tracejada pausada).',
         'Pavimento vinculado "inteiro" (sem apto específico) conta em TODAS as colunas de apartamento daquele pavimento no modo Por Apartamento, além de na própria coluna do pavimento no modo Por Pavimento.',
         'Clique na célula abre o detalhamento: quais tarefas específicas compõem aquele número, com % individual e duração (peso) de cada uma.',
         'Configuração (quais tarefas-mãe aparecem) salva em config/dashboardPainel — lista qualquer grupo de qualquer nível do Planejamento, não só o nível mais alto.']},
-    {versao: 'V3.26.0', legado: 'V2.60.15',status:'fechada',data:'2026-08-06',tipo:'funcionalidade',
+    {versao: 'V3.4.1.2', legado: 'V2.60.15',status:'fechada',data:'2026-08-06',tipo:'funcionalidade',
       titulo:'Novo: Atualização Rápida de Predecessora/% com log obrigatório de motivo — histórico de alterações consultável',
       itens:['Ícone "🔗" na coluna de ações de cada tarefa: abre modal pra trocar predecessora e/ou % concluído sem editar direto na grid, exigindo o MOTIVO da mudança (info que hoje só existe verbalmente, na conversa com o encarregado).',
         'Predecessora nova é validada com o mesmo parser já usado na célula — formato inválido não deixa salvar.',
         'Salvar dispara o MESMO recálculo automático de datas/sucessoras/% dos pais que já existe hoje (nada de novo ali) — só acrescenta o registro do motivo.',
         'Novo botão ⚙ Ferramentas → "📋 Histórico de Alterações": lista todos os registros da obra (mais recente primeiro), com filtro por tarefa e por usuário. Somente leitura.',
         'Guardado em obras/{obra}/logAlteracoes — coleção nova, isolada.']},
-    {versao: 'V3.27.0', legado: 'V2.60.16',status:'fechada',data:'2026-08-06',tipo:'funcionalidade',
+    {versao: 'V3.4.1.3', legado: 'V2.60.16',status:'fechada',data:'2026-08-06',tipo:'funcionalidade',
       titulo:'Novo: filtro "👷 Ver por Responsável" no Planejamento',
       itens:['Botão na toolbar abre lista de responsáveis distintos já usados na obra (sem duplicados/vazios) — selecionar um filtra a grid instantaneamente, "Todos" limpa o filtro.',
         'Combina com os filtros já existentes (status, busca) — é mais uma condição, não substitui nenhum.',
         'Preferência fica só no navegador (localStorage, cache de sessão) — não grava nada novo no Firestore, nem usa campo novo (lê o "Responsável" que já existe em cada tarefa).']},
-    {versao: 'V3.27.0.1', legado: 'V2.60.17',status:'fechada',data:'2026-08-06',tipo:'melhoria',
+    {versao: 'V3.4.1.4', legado: 'V2.60.17',status:'fechada',data:'2026-08-06',tipo:'melhoria',
       titulo:'Estrutura da Obra: botão "📋 duplicar" em cada pavimento — copia o pavimento inteiro com os apartamentos dele',
       itens:['Útil pra torres com andares repetidos (mesmo layout de apto do 1º ao 15º, por exemplo): duplica o pavimento e todos os apartamentos dele de uma vez, com IDs novos (nunca reaproveita ID de outro nó — evitaria vínculo ambíguo entre original e cópia). Só precisa editar o nome depois.']},
-    {versao: 'V3.27.0.2', legado: 'V2.60.18',status:'fechada',data:'2026-08-06',tipo:'melhoria',
+    {versao: 'V3.4.1.5', legado: 'V2.60.18',status:'fechada',data:'2026-08-06',tipo:'melhoria',
       titulo:'Toolbar do Planejamento organizada: "Estrutura da Obra" e "Ver por Responsável" movidos pra dentro de ⚙ Ferramentas — e o menu inteiro agora fica em ordem alfabética',
       itens:['Toolbar principal menos poluída — só ficam os botões mais usados no dia a dia. As duas funções continuam idênticas, só mudaram de lugar.',
         'Menu Ferramentas reorganizado pra ordem alfabética (Corrigir Níveis Soltos → Corrigir Ordens → Corrigir Predecessoras → Estrutura da Obra → Exportar → Histórico → Importar → Importar Base Completa → Importar Correções → Liberar Edição de Real → PNG → Recalcular % → Recalcular Datas → Ver por Responsável → Vínculos com Levantamento) — adicionar item novo no futuro entra na ordem certa automaticamente.']},
-    {versao: 'V3.28.0', legado: 'V2.60.19',status:'fechada',data:'2026-08-06',tipo:'funcionalidade',
+    {versao: 'V3.4.1.6', legado: 'V2.60.19',status:'fechada',data:'2026-08-06',tipo:'funcionalidade',
       titulo:'Novo: Auto-vincular por Nome — detecta o pavimento/apto de cada tarefa automaticamente, sem clicar tarefa por tarefa',
       itens:['Menu ⚙ Ferramentas → "🔗 Auto-vincular por Nome": compara o NOME de cada tarefa-folha com os nomes já cadastrados em Estrutura da Obra (ex: tarefa "Contrapiso: 1º Pavimento - Final 02" casa com o pavimento "1º Pavimento" e o apto "Final 02", se ambos estiverem cadastrados lá) e propõe o vínculo automaticamente — sem precisar abrir a coluna Local tarefa por tarefa.',
         'Sempre mostra uma PRÉVIA antes de aplicar: lista cada tarefa com o local detectado, com checkbox pra desmarcar as que estiverem erradas, e aviso visual em quem já tinha vínculo manual (será sobrescrito se ficar marcado). Nada é gravado sem confirmar.',
         'Funciona com qualquer padrão de nome que a obra já usa — não é regex de formato fixo, é busca pelo nome real do pavimento/apto (já cadastrado) dentro do nome da tarefa. Pavimento sem apto correspondente no nome vincula "o pavimento inteiro".']},
-    {versao: 'V3.28.0.1', legado: 'V2.60.20',status:'fechada',data:'2026-08-06',tipo:'melhoria',
+    {versao: 'V3.4.1.7', legado: 'V2.60.20',status:'fechada',data:'2026-08-06',tipo:'melhoria',
       titulo:'Dashboard: tela "⚙️ Configurar" do Painel de Andamento virou árvore expansível com busca (era lista plana de todos os níveis misturados)',
       itens:['A lista antiga mostrava TODOS os grupos, de TODOS os níveis, achatados numa lista só — difícil de escanear e entender qual tarefa era filha de qual em obras com muita hierarquia.',
         'Agora é uma árvore igual ao Editor de Estrutura do Planejamento: começa fechada nas raízes, clica pra abrir/fechar cada grupo, e marca a tarefa-mãe em QUALQUER nível — nível 0, 1, 2, o que precisar em cada obra.',
         'Campo de busca por nome: com texto digitado, mostra direto os grupos que batem (sem precisar abrir a árvore manualmente até achar); campo vazio volta pra árvore normal.']},
-    {versao: 'V3.29.0', legado: 'V2.60.21',status:'fechada',data:'2026-08-06',tipo:'funcionalidade',
+    {versao: 'V3.4.1.8', legado: 'V2.60.21',status:'fechada',data:'2026-08-06',tipo:'funcionalidade',
       titulo:'Controle de Estacas: Acompanhamento agora lança BT de verdade (igual Controle de Concreto), toque em tablet, e visual/resumo melhorados',
       itens:['Removido o sistema de "BT única auto-gerenciada" por concretagem — não fazia sentido (uma concretagem real pode ter várias BTs/caminhões, cada um com seu próprio volume).',
         'Novo: dentro do Acompanhamento, "🚚 BTs desta concretagem" — cria uma BT (número + volume previsto), e lança o % de CADA estaca/fundação da programação que aquela BT concretou (com NF, código, hora, sobra, perda, cocho — os mesmos campos do Controle de Concreto). Grava concretoLancamentos de verdade, aparece sincronizado no Controle de Concreto também.',
         'Visual: estaca 100% concretada agora fica com preenchimento sólido/opaco (antes era sempre translúcido, mesmo pronta, parecia "fraca"). O anel amarelo de "planejada, pendente" some assim que chega em 100%.',
         'Novo painel "Estacas da obra — visão geral" no Acompanhamento: total de estacas cadastradas, volume executado da obra inteira, % geral, e tabela por diâmetro (qtd. feita/total, volume feito/total, % de cada tipo).',
         'Zoom/pan por toque (tablet/celular): pinça com 2 dedos dá zoom, 1 dedo arrasta o mapa — antes só funcionava com mouse (Ctrl+roda/Ctrl+arrastar).']},
-    {versao: 'V3.29.1', legado: 'V2.60.22',status:'fechada',data:'2026-08-13',tipo:'correcao',
+    {versao: 'V3.4.2', legado: 'V2.60.22',status:'fechada',data:'2026-08-13',tipo:'correcao',
       titulo:'Planejamento: editar Início na tabela não recalculava o Término (deixava a Duração em branco) — a regra estava na ordem errada em relação ao MS Project',
       itens:['Causa: editar Início tentava calcular a DURAÇÃO (mantendo o Término fixo) — mas se o Término ainda estivesse vazio (comum em tarefa nova ou recém-importada), a condição falhava e nada era recalculado, deixando a Duração em "—".',
         'Corrigido pra bater com a convenção do MS Project: editar Início MANTÉM a Duração e recalcula o Término; editar Término MANTÉM o Início e recalcula a Duração; editar Duração MANTÉM o Início e recalcula o Término. Exatamente como pedido.',
         'Fallback mantido só pra quando a tarefa ainda não tem Duração salva (aí sim calcula a Duração a partir do Término existente, uma única vez, pra não deixar tudo em branco na primeira vez).']},
-    {versao: 'V3.29.1.1', legado: 'V2.60.23',status:'fechada',data:'2026-08-13',tipo:'melhoria',
+    {versao: 'V3.4.2.1', legado: 'V2.60.23',status:'fechada',data:'2026-08-13',tipo:'melhoria',
       titulo:'Controle de Estacas: lançar BT vira seletor de peças (não lista fixa) + excluir BT',
       itens:['Lançar BT não mostra mais uma lista fixa com TODAS as peças da concretagem — agora é um seletor: escolhe a peça, o %, e "+ Peça" pra adicionar mais uma linha, se a BT concretou mais de uma. Igual ao Controle de Concreto.',
         'Botão "🗑 Excluir BT" — pra quando adicionar uma BT errada. Remove a BT e os lançamentos dela (confirma antes).',
         'Botão "✓ Add. pendentes 100%" agora adiciona uma linha nova pra cada peça pendente da concretagem (sem duplicar as que já estão nas linhas), em vez de forçar 100% numa lista fixa.',
         'Peça já lançada em outra BT desta concretagem aparece marcada no seletor, pra não escolher a mesma por engano.']},
-    {versao: 'V3.29.1.2', legado: 'V2.60.24',status:'fechada',data:'2026-08-13',tipo:'melhoria',
+    {versao: 'V3.4.2.2', legado: 'V2.60.24',status:'fechada',data:'2026-08-13',tipo:'melhoria',
       titulo:'Controle de Estacas: Acompanhamento inverte o fluxo — agora é por ESTACA (BTs que a fizeram), não por BT',
       itens:['Antes: selecionava a BT e informava o % de cada peça que ela concretou (difícil de saber em campo — o % da peça é praticamente impossível de estimar olhando pra estaca).',
         'Agora: seleciona a ESTACA/FUNDAÇÃO, e informa quais BTs contribuíram nela e quanto % de CADA BT foi usado ali (ex: 100% da BT-1, 100% da BT-2, 40% da BT-3) — muito mais fácil de responder olhando pro caminhão, não pra peça.',
         'Por trás, os dados continuam salvos e somados exatamente igual — o % e volume gravados no lançamento são calculados a partir do %-da-BT informado, então o Controle de Concreto e todo o resto do sistema batem igual, só a forma de PERGUNTAR mudou.',
         'BTs agora têm edição própria (✎) pra ajustar número, volume previsto, NF, código, sobra, perda e cocho depois de criadas — esses dados são do caminhão inteiro, então valem pra todas as peças que ele concretou.']},
-    {versao: 'V3.29.1.3', legado: 'V2.60.25',status:'fechada',data:'2026-08-13',tipo:'melhoria',
+    {versao: 'V3.4.2.3', legado: 'V2.60.25',status:'fechada',data:'2026-08-13',tipo:'melhoria',
       titulo:'Controle de Estacas: Acompanhamento em popups — menu de cima parou de tampar o mapa',
       itens:['A lista de BTs + "Lançar por Estaca/Fundação" ficavam sempre abertos em cima do mapa, empurrando o desenho pra baixo (pior ainda na tela cheia). Virou botão único "🚚 N BTs nesta concretagem", que abre um popup só pra gerenciar as BTs.',
         'Removido o seletor "Selecione a peça" — agora é só clicar na estaca/fundação no mapa (a mesma que já fica com o anel amarelo, planejada nesta concretagem) que abre o popup de lançar, com o nome dela já no título.',
         'O mapa agora ocupa quase toda a tela — só o essencial (seletor de concretagem + botão de BTs + legenda) fica em cima.']},
-    {versao: 'V3.29.1.4', legado: 'V2.60.26',status:'fechada',data:'2026-08-13',tipo:'melhoria',
+    {versao: 'V3.4.2.4', legado: 'V2.60.26',status:'fechada',data:'2026-08-13',tipo:'melhoria',
       titulo:'Controle de Estacas: Acompanhamento ganha volume total/executado (projeto)/executado real (BTs)/índice de perda',
       itens:['Novos 4 cartões na concretagem selecionada: Volume total (o que o projeto precisa), Executado (projeto) — capado em 100% por peça, não conta excesso —, Executado real (BTs) — soma bruta do que as BTs entregaram, sem capar, mostra se sobrou/faltou além do previsto —, e Índice de perda — (sobra + perda em obra + perda cocho) das BTs usadas, dividido pelo volume previsto delas.',
         'Índice de perda acima de 5% pinta o cartão laranja, pra chamar atenção.']},
-    {versao: 'V3.29.2', legado: 'V2.60.27',status:'fechada',data:'2026-08-13',tipo:'correcao',
+    {versao: 'V3.4.3', legado: 'V2.60.27',status:'fechada',data:'2026-08-13',tipo:'correcao',
       titulo:'Controle de Estacas: menos espaço vazio no topo da tela cheia',
       itens:['O botão "Fechar tela cheia" ocupava uma linha inteira sozinho, empurrando o resto pra baixo — agora flutua no canto superior direito (sem reservar espaço na fila normal), então as abas Marcadores/Planejamento/Acompanhamento começam bem mais perto do topo.']},
-    {versao: 'V3.29.2.1', legado: 'V2.60.28',status:'fechada',data:'2026-08-13',tipo:'melhoria',
+    {versao: 'V3.4.3.1', legado: 'V2.60.28',status:'fechada',data:'2026-08-13',tipo:'melhoria',
       titulo:'Controle de Estacas: aviso de BT já alocada + Controle de Concreto entende perda de solo das estacas',
       itens:['Popup de lançar por estaca: o seletor de BT agora mostra "(X% em outras peças)" quando essa BT já foi usada noutra peça, e o campo de % avisa em vermelho se o valor digitado passar de 100% da BT.',
         'Controle de Concreto: peças com subtipo Estacas que lançam mais volume real do que o projeto previa NÃO entram mais no aviso vermelho "corrija esses lançamentos" — é normal em estaca, o furo real costuma sair maior que o calculado (perda de solo). Agora aparece numa seção informativa separada (azul), explicando que não precisa corrigir.',
         'Volume Executado de Projeto continua igual — capado em 100% de cada peça, então esse excesso não infla o % de conclusão.']},
-    {versao: 'V3.29.3', legado: 'V2.60.29',status:'fechada',data:'2026-08-13',tipo:'correcao',
+    {versao: 'V3.4.4', legado: 'V2.60.29',status:'fechada',data:'2026-08-13',tipo:'correcao',
       titulo:'Controle de Concreto: índice de perda agora conta a perda de solo das estacas — antes ficava 0% mesmo sobrando tudo no solo',
       itens:['Bug real: quando todas as BTs de uma concretagem eram 100% usadas (sem sobrar nada na betoneira), o índice de perda dava 0% mesmo se as estacas tivessem consumido bem mais concreto que o projeto — a perda "foi" pro solo, não pra betoneira, e o cálculo só olhava pra betoneira.',
         'Corrigido: perda de solo (peça de subtipo Estacas que lançou mais real do que o projeto) agora entra na conta do índice de perda geral, junto com sobra de caminhão e perda em obra — tanto na tela principal quanto no Relatório.',
         'Lista peça-por-peça da perda de solo agora vem recolhida por padrão (clique pra expandir) — só o resumo (quantas estacas, quantos m³) aparece direto, pra não ficar poluído quando tiver muitas estacas.']},
-    {versao: 'V3.29.3.1', legado: 'V2.60.30',status:'fechada',data:'2026-08-13',tipo:'melhoria',
+    {versao: 'V3.4.4.1', legado: 'V2.60.30',status:'fechada',data:'2026-08-13',tipo:'melhoria',
       titulo:'Controle de Estacas: botão pra minimizar o cabeçalho de controles nas 3 abas',
       itens:['Novo botão "▲ Minimizar" em Marcadores, Planejamento e Acompanhamento — esconde toggle Estacas/Fundações, legenda, seletores e girar/zoom, deixando só o mapa em foco. Zoom por Ctrl+roda ou pinça (toque) continua funcionando mesmo minimizado.',
         'Botão vira "▼ Mostrar controles" pra reabrir tudo de novo.']},
-    {versao: 'V3.29.4', legado: 'V2.60.31',status:'fechada',data:'2026-08-13',tipo:'correcao',
+    {versao: 'V3.4.5', legado: 'V2.60.31',status:'fechada',data:'2026-08-13',tipo:'correcao',
       titulo:'Controle de Estacas: índice de perda corrigido de novo (cálculo próprio, separado do Controle de Concreto) + Minimizar agora é bem mais agressivo',
       itens:['Achado o mesmo bug de índice de perda 0% de novo — só que numa conta DIFERENTE, a de dentro do próprio Controle de Estacas (os 4 cartões Volume total/Executado/Executado real/Índice de perda). Corrigida igual à do Controle de Concreto: a diferença entre o volume real (BTs) e o volume do projeto agora entra na conta.',
         'Botão "Minimizar" ficou bem mais agressivo: agora esconde TAMBÉM os cartões de resumo abaixo do mapa (Acompanhamento) e o painel de concretagens (Planejamento) — sobra só o mapa mesmo. Clicar numa estaca continua abrindo o popup de lançar normalmente.',
         'Mapa fica mais alto quando minimizado, aproveitando o espaço que sobrou — ainda mais generoso combinado com tela cheia.']},
-    {versao: 'V3.29.5', legado: 'V2.60.32',status:'fechada',data:'2026-08-13',tipo:'correcao',
+    {versao: 'V3.4.6', legado: 'V2.60.32',status:'fechada',data:'2026-08-13',tipo:'correcao',
       titulo:'Dashboard: popup de Estaca/Fundação não abria mesmo com dado real cadastrado + gráfico feio com poucos andares + motor Solo Grampeado',
       itens:['Popup de Estaca/Fundação e de Estrutura (PDF de concretagem): mesmo bug de grafia (° vs º) do gráfico principal (V2.60.12) também afetava essas duas funções — corrigido; agora avisa por toast quando não encontra peça, em vez de sair em silêncio.',
         'Gráfico Fundação e Estrutura: largura agora se ajusta à quantidade real de andares em vez de fixa em 1180px — com poucos andares (ex: 1), o gráfico fica compacto em vez de uma barra isolada perdida num espaço vazio gigante.',
         'Rótulo "Estacas"/"Fundação"/"Estrutura" dentro da barra agora aparece SEMPRE (antes só aparecia quando havia mais de 1 categoria no mesmo andar) — nunca depende só da cor pra identificar o que é.',
         '"Motor de cálculo de Solo Grampeado não carregado": adicionado um pequeno retry (até 1s) antes de desistir, e mensagem mais clara sugerindo recarregar — não foi possível confirmar/reproduzir a causa raiz exata sem acesso à rede/console do navegador.',
         'Curva S mostrando só 1 mês mesmo com planejamento espalhado por vários meses: não foi possível confirmar a causa sem ver os dados reais das tarefas — pendente, precisa de mais informação pra corrigir com segurança.']},
-    {versao: 'V3.30.0', legado: 'V2.60.33',status:'fechada',data:'2026-08-13',tipo:'funcionalidade',
+    {versao: 'V3.4.6.1', legado: 'V2.60.33',status:'fechada',data:'2026-08-13',tipo:'funcionalidade',
       titulo:'Dashboard: Curva S com diagnóstico visível + novas Métricas de Estacas (obra inteira)',
       itens:['Curva S: quando aparecer com 1-2 meses só, agora mostra uma linha de diagnóstico com quantas tarefas-folha entraram no cálculo e o período de datas encontrado — ajuda a identificar se é dado real (poucas tarefas com data) ou algo que precisa ser preenchido no Planejamento (Início/Término Planejado das tarefas-folha, não só dos grupos).',
         'Novo bloco "Métricas de Estacas (obra inteira)" dentro do card Estacas e Fundações (mesmo checkbox "Mostrar Contenção, Fundação e Estrutura" de sempre): Total de estacas, Estacas feitas, Volume total (m³), Volume feito (m³), Índice de perda médio (mesma fórmula corrigida do Controle de Estacas na V2.60.31), Consumo médio por estaca.',
         'Tabela por tipo (Ø × comprimento): quantidade, feitas, volume projeto, volume real e consumo médio de cada tipo de estaca separadamente — mostra exatamente onde o consumo real está passando do previsto (ex: estaca prevista com 14m³ e consumindo 16-17m³ na prática).']},
-    {versao: 'V3.31.0', legado: 'V2.60.34',status:'fechada',data:'2026-08-13',tipo:'funcionalidade',
+    {versao: 'V3.4.6.2', legado: 'V2.60.34',status:'fechada',data:'2026-08-13',tipo:'funcionalidade',
       titulo:'Dashboard: Painel de Andamento agora usa linhas com NOME PRÓPRIO, cada uma podendo juntar 2+ tarefas do Planejamento',
       itens:['Antes cada linha da tabela era 1 tarefa-mãe direto do Planejamento, com o nome exatamente igual ao de lá. Agora: cada linha tem um nome PRÓPRIO (fixo, editável) e uma lista de tarefas do Planejamento vinculadas a ela — útil quando o nome que se quer ver não bate com o nome da tarefa, ou quando é preciso somar 2+ tarefas numa linha só (ex: "Instalações Hidráulicas" = Distribuição + Prumadas).',
         'Tela de configuração reformulada: lista as linhas já criadas (nome editável + tags das tarefas vinculadas), botão "+ Nova linha", e um "Vincular/Editar tarefas" por linha que abre a mesma árvore navegável de antes, mas ligada só àquela linha.',
         'Linha sem nome ou sem nenhuma tarefa vinculada é ignorada ao salvar (não aparece vazia na tabela).']},
-    {versao: 'V3.31.1', legado: 'V2.60.35',status:'fechada',data:'2026-08-13',tipo:'correcao',
+    {versao: 'V3.4.7', legado: 'V2.60.35',status:'fechada',data:'2026-08-13',tipo:'correcao',
       titulo:'Dashboard: Curva S e Solo Grampeado sumindo sem erro — cada seção agora isolada, uma não trava mais as outras',
       itens:['Causa estrutural provável: as 9 seções do Dashboard (Hero, Atividades, Painel de Andamento, Solo Grampeado, Fundação e Estrutura, Estacas, Curva S, Resumo por Apartamento) compartilhavam um único try/catch em sequência — se qualquer uma lançasse uma exceção não tratada internamente, TODAS as seções seguintes na lista simplesmente não rodavam, sem nenhuma mensagem visível (só um toast genérico que passa rápido). Agora cada seção tem seu próprio try/catch isolado: uma falha não impede mais as outras de aparecer.',
         'Motor de cálculo de Solo Grampeado: retry aumentado (de 1s pra 2s) e, se ainda não carregar, tenta reinjetar o script automaticamente antes de desistir — cobre falha pontual de rede ao baixar o arquivo, não só timing.']},
-    {versao: 'V3.31.2', legado: 'V2.60.36',status:'fechada',data:'2026-08-13',tipo:'correcao',
+    {versao: 'V3.4.8', legado: 'V2.60.36',status:'fechada',data:'2026-08-13',tipo:'correcao',
       titulo:'Dashboard: gráfico Fundação e Estrutura estava minúsculo e ilegível em obras com muitos andares',
       itens:['Erro na tentativa anterior de "caber tudo sem scroll": o SVG era espremido pra 100% da largura do card, então com 22 andares cada barra virava ~7px e as fontes ~5px na tela — impossível de ler.',
         'Agora cada andar tem largura FIXA de 112px e o gráfico é bem mais alto (460px): barras de 13px, valores em fonte 11px, nomes dos andares em 12px. Quando há muitos andares, o gráfico ganha scroll horizontal em vez de encolher tudo — melhor rolar do que não conseguir ler.',
         'Nome da categoria (Estacas/Fundação/Estrutura) dentro da barra só aparece quando a barra tem altura suficiente pro texto caber, evitando texto espremido/cortado nas barras pequenas.']},
-    {versao: 'V3.31.3', legado: 'V2.60.37',status:'fechada',data:'2026-08-13',tipo:'correcao',
+    {versao: 'V3.4.9', legado: 'V2.60.37',status:'fechada',data:'2026-08-13',tipo:'correcao',
       titulo:'Dashboard: gráfico Fundação e Estrutura virava um bloco gigante em obra com poucos andares',
       itens:['A correção da V2.60.36 tinha uma largura mínima artificial de 700px — numa obra com 1 andar só (ex: Zenith Residence, só 2º Subsolo), a barra ficava esticada ocupando a tela inteira.',
         'Agora a largura total é proporcional ao conteúdo real (1 andar = gráfico estreito de ~190px; 22 andares = ~2.500px com scroll lateral) e a altura acompanha (300px com até 2 andares, 460px acima disso) — sem mínimo forçado nem bloco desproporcional.']},
-    {versao: 'V3.32.0', legado: 'V2.60.38',status:'fechada',data:'2026-08-13',tipo:'funcionalidade',
+    {versao: 'V3.4.9.1', legado: 'V2.60.38',status:'fechada',data:'2026-08-13',tipo:'funcionalidade',
       titulo:'Nova página de Diagnóstico — mostra na tela os dados que hoje só dava pra ver abrindo o console (F12)',
       itens:['Menu lateral → 🔍 Diagnóstico. Somente leitura, não grava nada. Mostra de uma vez: quais motores de cálculo carregaram (Solo Grampeado, Concreto, Estacas); quantas tarefas-folha têm data e qual o período real (causa da Curva S curta); quantas estacas têm lançamento vinculado e o % calculado de cada uma (causa do "nada lançado" ao clicar); os nomes EXATOS dos andares gravados nas peças, apontando quando o mesmo andar tem duas grafias diferentes (que dividia o volume em duas barras); e se a Estrutura da Obra e os vínculos de local estão preenchidos (causa do Painel de Andamento vazio).',
         'Feita pra resolver o problema de suporte: em vez de pedir print do console ou exportação do banco, basta abrir essa página e mandar um print — todos os dados de investigação aparecem juntos.']},
-    {versao: 'V3.32.1', legado: 'V2.60.39',status:'aberta',data:'2026-08-13',tipo:'correcao',
+    {versao: 'V3.4.10', legado: 'V2.60.39',status:'aberta',data:'2026-08-13',tipo:'correcao',
       titulo:'CAUSA RAIZ encontrada: os motores de cálculo nunca ficavam disponíveis como window.X — origem de vários bugs do Dashboard de uma vez',
       itens:['O diagnóstico revelou que TODOS os motores apareciam como "não carregado" — inclusive Utils e Database, que obviamente estavam funcionando (a própria página leu 2.439 tarefas). O motivo: declarar "const X = (...)()" no topo de um script NÃO cria window.X automaticamente (só "var" faz isso). Como o Dashboard checava window.ConcretoCalculos / window.SoloGrampeadoCalculos / window.EstacasCalculos, ele sempre recebia undefined.',
         'Isso explica de uma só vez: o "Motor de cálculo de Solo Grampeado não carregado", o erro "Cannot read properties of undefined (reading \'num\')" e vários cálculos do Dashboard silenciosamente zerados. Corrigido na origem: cada módulo agora se expõe explicitamente em window ao final do arquivo.',
         'Diagnóstico ganhou os botões "📋 Copiar como texto" e "⬇️ Baixar .txt" (texto puro, sem perder formatação ao colar), e passou a mostrar a distribuição real dos valores do campo "tipo" das peças — investigando por que Estacas e Fundação aparecem como 0 mesmo havendo 108 peças no andar "Fundação".']},
-    {versao: 'V3.32.2', legado: 'V2.60.40',status:'aberta',data:'2026-08-13',tipo:'correcao',
+    {versao: 'V3.4.11', legado: 'V2.60.40',status:'aberta',data:'2026-08-13',tipo:'correcao',
       titulo:'Curva S: executado saltava para 100% num único mês e não batia com o % real da obra',
       itens:['Bug principal: a reconstrução pelo histórico semeava TODAS as tarefas com o percentual de HOJE e depois reaplicava os poucos snapshots existentes. Numa obra com histórico recente (8 registros, todos de julho/26), isso jogava o progresso atual da obra inteira retroativamente naquele mês — daí o salto vertical de ~5% para 100% e o "94,43% executado no mês". Agora o estado começa zerado e só considera o que o histórico de fato registrou.',
         'A estimativa dos meses anteriores ao histórico distribuía o progresso de cada tarefa do início dela até HOJE, empurrando tudo pro presente e achatando a curva no passado. Agora distribui pelo período planejado real da tarefa (limitado a hoje).',
         'A transição estimativa → histórico criava um degrau vertical: o histórico recomeçava do zero em vez de continuar do patamar já atingido. Corrigido — o histórico soma a partir de onde a estimativa parou.',
         'Ancoragem final: a curva executada agora é ajustada pra terminar exatamente no percentual real da obra (a mesma soma ponderada por duração que aparece no Hero). Antes podia terminar em 100% com a obra em 12%.',
         'A linha do Executado para no mês atual — antes seguia reta até o fim do gráfico, dando a impressão de que a obra já estava executada nos meses futuros.']},
-    {versao: 'V3.32.3', legado: 'V2.60.41',status:'aberta',data:'2026-08-13',tipo:'correcao',
+    {versao: 'V3.4.12', legado: 'V2.60.41',status:'aberta',data:'2026-08-13',tipo:'correcao',
       titulo:'Diagnóstico: erro "Cannot access norm before initialization" + nova seção que mostra por que o Auto-vincular não casa todas as tarefas',
       itens:['A página parava na seção 2 por um erro de ordem de declaração no próprio código do diagnóstico (uma função auxiliar era usada antes de ser criada). Corrigido.',
         'Confirmado que a correção da V2.60.39 funcionou: todos os motores de cálculo agora aparecem como OK (antes, todos apareciam como "não carregou").',
         'Nova tabela na seção 5: lista cada Pavimento e Apartamento cadastrado na Estrutura da Obra e mostra quantas tarefas do Planejamento contêm aquele texto no nome — que é exatamente o critério do Auto-vincular. Quem aparecer com "0 — não casa" está com o nome escrito diferente do que aparece nas tarefas (ex: "1° Pavimento" com símbolo de grau vs "1º Pavimento" com ordinal). Junto vem uma amostra dos nomes reais das tarefas pra comparação direta.']},
-    {versao: 'V3.33.0', legado: 'V2.61.0',status:'fechada',data:'2026-08-13',tipo:'funcionalidade',
+    {versao: 'V3.4.12.1', legado: 'V2.61.0',status:'fechada',data:'2026-08-13',tipo:'funcionalidade',
       titulo:'Curva S removida do Dashboard',
       itens:['A Curva S foi removida permanentemente a pedido: o cálculo dependia de um histórico diário que só passou a ser gravado recentemente, e as tentativas de reconstruir o passado a partir de dados incompletos produziam valores que não refletiam a realidade da obra (executado saltando pra 100%, meses anteriores zerados). Dava mais trabalho de manter do que valor entregava.',
         'Removidos junto: o gráfico de Índice de Desempenho de Prazo (IDP), que dependia dela e já não era exibido, e o seletor Mensal/Semanal. Ao todo, 405 linhas de código a menos no Dashboard.',
         'O histórico de execução (obras/{obra}/historicoExecucao) continua sendo gravado normalmente a cada atualização de tarefa — nada foi perdido no banco, caso no futuro se queira retomar algum gráfico de evolução com base histórica já consolidada.']},
-    {versao: 'V3.34.0', legado: 'V2.62.0',status:'fechada',data:'2026-08-13',tipo:'funcionalidade',
+    {versao: 'V3.4.12.2', legado: 'V2.62.0',status:'fechada',data:'2026-08-13',tipo:'funcionalidade',
       titulo:'Dashboard renovado: frentes de trabalho automáticas e visual novo',
       itens:['O Dashboard foi dividido internamente em seções independentes (Frentes, Suprimentos, Contenção, Fundação/Estrutura, Estacas, Resumo por Apartamento) — cada uma no seu próprio arquivo. Mexer numa não afeta as outras, e um erro em uma seção não derruba mais a página inteira.',
         'Nova visão central: "Andamento por Frente de Trabalho". Linha = frente/serviço com nome amigável, coluna = pavimento (ou apartamento), célula = % com micro-barra de progresso e ✓ quando concluída. Cabeçalho e primeira coluna ficam fixos ao rolar; clique numa célula abre as tarefas daquele cruzamento.',
@@ -5777,84 +5777,84 @@ const NotasVersao = {
         'Hero da obra redesenhado: barra de progresso executado (amarelo) com marcador branco do previsto, % grande, badges de prazo (No prazo / X meses atrasado) e seletor de obra integrado.',
         'Suprimentos, minimapas de Contenção e Estacas e Resumo por Apartamento ganharam o mesmo padrão visual (chips, estados vazios amigáveis, tabelas limpas). Seções de Contenção e Estacas agora somem sozinhas quando a obra não tem essas disciplinas.',
         'Limpeza: removidos códigos mortos (PPC semanal, Motivos de Atraso, Pacotes) que não eram exibidos desde versões anteriores.']},
-    {versao: 'V3.34.1', legado: 'V2.62.1',status:'fechada',data:'2026-08-13',tipo:'correcao',
+    {versao: 'V3.4.13', legado: 'V2.62.1',status:'fechada',data:'2026-08-13',tipo:'correcao',
       titulo:'Popup do projeto: pan por arrasto + zoom com Ctrl+scroll',
       itens:['No popup que abre ao clicar numa barra de Fundação/Estrutura, agora dá pra ARRASTAR a prancha segurando o botão esquerdo (ou do meio) do mouse — cursor vira mãozinha.',
         'Zoom passou a ser Ctrl+scroll (ou pinça do touchpad); o scroll normal volta a rolar a prancha (pan vertical, Shift+scroll horizontal), como em softwares de CAD/mapas. Antes o scroll dava zoom e não havia como navegar arrastando.']},
-    {versao: 'V3.34.2', legado: 'V2.62.2',status:'fechada',data:'2026-08-13',tipo:'correcao',
+    {versao: 'V3.4.14', legado: 'V2.62.2',status:'fechada',data:'2026-08-13',tipo:'correcao',
       titulo:'Estacas no Dashboard: índice de perda corrigido e minimapa limpo',
       itens:['Índice de perda médio estava sempre 0,0%: a "perda de solo" comparava o volume real das BTs com o volume de projeto da OBRA INTEIRA — com a obra em andamento, o real é sempre menor que o total e a conta zerava. Agora compara com o volume de projeto das peças JÁ EXECUTADAS (mesma metodologia do Controle de Estacas). Ex: 69,0 m³ reais sobre 58,5 m³ de projeto executado passam a acusar a perda corretamente.',
         'Minimapa da prancha agora aparece "zerado": mostra APENAS as estacas com execução iniciada, sem a nuvem de círculos de todas as estacas configuradas nem os anéis coloridos por tipo — a prancha vai sendo pintada conforme a obra avança. No popup em tela cheia (clique na barra de Fundação/Estrutura) os anéis por tipo continuam, pois lá servem de leitura do projeto.']},
-    {versao: 'V3.34.3', legado: 'V2.62.3',status:'fechada',data:'2026-08-13',tipo:'correcao',
+    {versao: 'V3.4.15', legado: 'V2.62.3',status:'fechada',data:'2026-08-13',tipo:'correcao',
       titulo:'Seção Atividades de volta no Dashboard',
       itens:['A seção "Atividades" (Em Execução + Próximas), removida por engano no redesign V2.62.0, voltou — agora como módulo próprio (js/dashboard-atividades.js) e no padrão visual novo: pills de nível, árvore expansível com resumo agregado, % colorido por faixa e horizonte de tempo nas Próximas.',
         'As preferências de nível/horizonte salvas por usuário antes da V2.62.0 continuam valendo (mesmas chaves em users/{uid}.dashboardArvorePrefs).']},
-    {versao: 'V3.34.4', legado: 'V2.62.4',status:'fechada',data:'2026-08-14',tipo:'correcao',
+    {versao: 'V3.4.16', legado: 'V2.62.4',status:'fechada',data:'2026-08-14',tipo:'correcao',
       titulo:'Horizonte de 2 meses + alerta de início vencido nas Próximas',
       itens:['Opção "2 meses" adicionada no filtro de horizonte de Atividades (Próximas) e Suprimentos.',
         'Nas Próximas, tarefas com início planejado já vencido e 0% ganham o selo vermelho "deveria ter iniciado" — lembra de atualizar o % no Planejamento (a coluna Em Execução só considera tarefas com progresso entre 1% e 99%).']},
-    {versao: 'V3.35.0', legado: 'V2.62.5',status:'fechada',data:'2026-08-14',tipo:'funcionalidade',
+    {versao: 'V3.4.16.1', legado: 'V2.62.5',status:'fechada',data:'2026-08-14',tipo:'funcionalidade',
       titulo:'Novos exports no Planejamento: Excel FORMATADO (bonito), MS Project (.xml) e Imprimir/PDF — o export cru continua disponível como "Excel (simples)"',
       itens:['🎨 Exportar Excel (formatado): planilha estilizada pronta pra apresentar — cabeçalho escuro fixo com filtro, grupos coloridos por nível (dourado → tons mais claros), indentação por hierarquia, bordas, % concluído verde quando 100%. O export antigo (cru, com todas as colunas, bom pra reimportar) continua como "Exportar Excel (simples)".',
         '📊 Exportar MS Project (.xml): gera XML no formato nativo de troca do Project (MSPDI) — abre direto no MS Project (Arquivo → Abrir) com hierarquia, datas, duração, % concluído e predecessoras completas (tipo TI/II/TT/IT + defasagem), calendário padrão seg-sex 8h.',
         '🖨 Imprimir / PDF: abre a visão hierárquica bonita numa página branca limpa e chama a impressão do navegador — dá pra imprimir direto ou salvar em PDF. Cabeçalho da tabela repete em toda página, formato paisagem A4, linhas não quebram no meio.',
         'Os três estão no menu ⚙ Ferramentas (ordem alfabética, como sempre).']},
-    {versao: 'V3.35.1', legado: 'V2.62.6',status:'fechada',data:'2026-08-14',tipo:'correcao',
+    {versao: 'V3.4.17', legado: 'V2.62.6',status:'fechada',data:'2026-08-14',tipo:'correcao',
       titulo:'% Esperado agora é calculado AUTOMATICAMENTE pela data (nunca mais fica defasado); Término nunca mais fica antes do Início; menu Ferramentas organizado em categorias',
       itens:['% Esperado deixou de ser um número estático importado da planilha (que ficava velho no dia seguinte): agora é calculado ao vivo — posição de HOJE dentro do intervalo Início→Término planejado (mesma fórmula do "prev." do Diário de Obra). Antes do início = 0%, depois do término = 100%, no meio = proporcional. Os dois módulos agora sempre batem. A coluna deixou de ser editável (não faz sentido editar algo calculado).',
         'Datas: editar o Início pra DEPOIS do Término existente (em tarefa sem duração salva) deixava a tarefa "voltando no tempo" (ex: 12/08→04/08). Agora o Término é arrastado junto pro mesmo dia, com aviso. E editar o Término pra antes do Início é rejeitado na hora, sem salvar nada.',
         'Menu ⚙ Ferramentas reorganizado em 3 categorias com cabeçalho — "Importar & Exportar", "Correções & Recálculos" e "Ferramentas da Obra" — em vez de uma lista única gigante ("salada de frutas"). Ordem alfabética dentro de cada grupo.']},
-    {versao: 'V3.36.0', legado: 'V2.62.7',status:'fechada',data:'2026-08-14',tipo:'funcionalidade',
+    {versao: 'V3.4.17.1', legado: 'V2.62.7',status:'fechada',data:'2026-08-14',tipo:'funcionalidade',
       titulo:'Levantamento de Concreto — novo tipo de Fundação: Bloco Hexagonal',
       itens:['Novo tipo na calculadora de Fundação: "Bloco Hexagonal" (bloco de coroamento para 7 estacas, com pontas triangulares no topo e na base).',
         'Campos: A (meia largura, centro até a lateral reta), B (altura de cada ponta), C (altura da parte reta central), D (altura/espessura do bloco).',
         'Fórmula: Área da planta = 2A×(B+C) [retângulo central + duas pontas triangulares] · Volume = Área × D.',
         'Diagrama de referência desenhado na tela com os mesmos rótulos A/B/C/D do desenho técnico enviado.']},
-    {versao: 'V3.36.1', legado: 'V2.62.8',status:'fechada',data:'2026-08-14',tipo:'correcao',
+    {versao: 'V3.4.18', legado: 'V2.62.8',status:'fechada',data:'2026-08-14',tipo:'correcao',
       titulo:'Bloco Hexagonal — troca o SVG desenhado pela imagem técnica real',
       itens:['O SVG genérico (feito só a partir da descrição em texto) foi trocado pelo desenho técnico real enviado — mesma referência que os outros tipos de fundação usam (imagem, não SVG).',
         'Fórmula não mudou: a imagem real confirma D = h = altura do bloco, batendo com o que já estava implementado.']},
-    {versao: 'V3.36.1.1', legado: 'V2.62.9',status:'fechada',data:'2026-08-14',tipo:'melhoria',
+    {versao: 'V3.4.18.1', legado: 'V2.62.9',status:'fechada',data:'2026-08-14',tipo:'melhoria',
       titulo:'Controle de Estacas: seletor de BT esconde por padrão as já 100% usadas noutras peças',
       itens:['No popup de lançar por estaca, BTs que já estão 100% alocadas em outra peça (não sobra nada pra usar ali) somem do seletor por padrão — deixa a lista bem mais curta quando tem muitas BTs.',
         'Aparece um checkbox "Mostrar N BTs 100% usadas" pra reexibir, se precisar reajustar algo numa BT que já foi totalmente usada.']},
-    {versao: 'V3.36.1.2', legado: 'V2.62.10',status:'fechada',data:'2026-08-14',tipo:'melhoria',
+    {versao: 'V3.4.18.2', legado: 'V2.62.10',status:'fechada',data:'2026-08-14',tipo:'melhoria',
       titulo:'Minimapa de Estacas clicável: prancha em tela cheia',
       itens:['Clicar num minimapa de Estacas no Dashboard agora abre a prancha em POPUP DE TELA CHEIA, em qualidade máxima, mantendo a mesma visão limpa do minimapa (só as estacas executadas, sem anéis de tipo).',
         'Navegação no popup: zoom com Ctrl+scroll (ou botões −/+), arrastar com o botão esquerdo ou do meio do mouse (pan), scroll normal rola a prancha, setas ‹ › alternam entre pranchas, Esc fecha.',
         'Cards do minimapa ganharam indicação visual de clique (lupa + destaque no hover).']},
-    {versao: 'V3.36.2', legado: 'V2.62.11',status:'fechada',data:'2026-08-14',tipo:'correcao',
+    {versao: 'V3.4.19', legado: 'V2.62.11',status:'fechada',data:'2026-08-14',tipo:'correcao',
       titulo:'Dashboard se atualiza sozinho ao voltar pra aba',
       itens:['O Dashboard carregava os dados só na abertura: quem mudava a % no Planejamento em outra aba e voltava continuava vendo o retrato antigo (parecia que a mudança "não tinha mexido em nada"). Agora, ao voltar pra aba do Dashboard, ele recarrega os dados automaticamente (de forma silenciosa, sem tela de loading).',
         'Botão "↻ Atualizar" no cabeçalho do Andamento por Frente pra forçar a recarga a qualquer momento.']},
-    {versao: 'V3.36.2.1', legado: 'V2.62.12',status:'fechada',data:'2026-08-14',tipo:'melhoria',
+    {versao: 'V3.4.19.1', legado: 'V2.62.12',status:'fechada',data:'2026-08-14',tipo:'melhoria',
       titulo:'Planejamento: novo "📄 Baixar PDF" — baixa o arquivo .pdf direto, sem passar pelo diálogo de impressão',
       itens:['Mesmo visual bonito do Imprimir/PDF (A4 paisagem, cabeçalho escuro repetido em cada página, grupos coloridos por nível, indentação, % concluído verde quando 100%), só que já salva o arquivo .pdf na hora, com um clique.',
         'O "🖨 Imprimir / PDF" continua disponível pra quem prefere imprimir em papel ou ajustar opções no diálogo do navegador. Ambos em ⚙ Ferramentas → Importar & Exportar.']},
-    {versao: 'V3.36.2.2', legado: 'V2.62.13',status:'fechada',data:'2026-08-14',tipo:'melhoria',
+    {versao: 'V3.4.19.2', legado: 'V2.62.13',status:'fechada',data:'2026-08-14',tipo:'melhoria',
       titulo:'Dashboard em TEMPO REAL',
       itens:['O Dashboard agora escuta o Firestore ao vivo: qualquer % ou dado alterado no Planejamento — nesta aba, em outra aba ou em outro computador — atualiza Hero, Andamento por Frente, Atividades e Suprimentos NA HORA, sem F5, sem loading e sem clicar em nada.',
         'Indicador verde ● ao lado de "Atualizado às..." mostra quando a tela acabou de se atualizar sozinha.',
         'As seções pesadas (Contenção, Fundação/Estrutura, Estacas, Resumo por Apartamento) continuam recarregando ao voltar pra aba ou pelo botão ↻ — evita custo desnecessário de leitura contínua onde os dados mudam pouco.']},
-    {versao: 'V3.36.3', legado: 'V2.62.14',status:'fechada',data:'2026-08-14',tipo:'correcao',
+    {versao: 'V3.4.20', legado: 'V2.62.14',status:'fechada',data:'2026-08-14',tipo:'correcao',
       titulo:'Dashboard sincroniza % de Estacas igual ao Planejamento',
       itens:['O Planejamento recalcula e grava o % das tarefas vinculadas a peças de Estacas (a partir da execução real) toda vez que abre — o Dashboard não fazia isso e podia ler o estado ANTERIOR: tarefas já iniciadas apareciam com 0% e caíam em "Próximas" como atrasadas. Agora o Dashboard roda a MESMA sincronização antes de carregar.',
         'Log de diagnóstico no console do navegador (F12) mostrando quantas tarefas/folhas/em execução o Dashboard leu do banco — facilita rastrear qualquer divergência que ainda apareça.']},
-    {versao: 'V3.36.4', legado: 'V2.62.15',status:'fechada',data:'2026-08-14',tipo:'correcao',
+    {versao: 'V3.4.21', legado: 'V2.62.15',status:'fechada',data:'2026-08-14',tipo:'correcao',
       titulo:'Em Execução escondia tarefas por causa de horizonte antigo',
       itens:['ACHADO: a coluna "Em Execução" das Atividades aplicava, por engano, um horizonte de tempo herdado das preferências antigas (pré-V2.62) — e o filtro era pela data de TÉRMINO planejado. Resultado: tarefas em execução com término distante sumiam (ex: Custos Indiretos 14%, término em 2028, e Cravação de Estacas 8% não apareciam).',
         'Corrigido: Em Execução NUNCA aplica horizonte — se a tarefa tem % entre 1 e 99, ela aparece, sempre. O horizonte continua valendo só nas Próximas e em Suprimentos, onde faz sentido.']},
-    {versao: 'V3.36.5', legado: 'V2.62.16',status:'fechada',data:'2026-08-14',tipo:'correcao',
+    {versao: 'V3.4.22', legado: 'V2.62.16',status:'fechada',data:'2026-08-14',tipo:'correcao',
       titulo:'Menu: seção "Administração" unificada + correção de e-mail em convite pendente',
       itens:['Sidebar: "Permissões" saiu de "Análise" (lugar errado) e entrou, junto com Relatórios, Histograma, Backup de Planejamentos e Notas de Versão, numa única seção "Administração".',
         'Admin > Permissões: convite pendente agora permite editar o e-mail (corrigir erro de digitação) — ao salvar, atualiza o e-mail no Firebase Auth e reenvia o convite automaticamente para o endereço corrigido.']},
-    {versao: 'V3.36.6', legado: 'V2.62.17',status:'fechada',data:'2026-08-14',tipo:'correcao',
+    {versao: 'V3.4.23', legado: 'V2.62.17',status:'fechada',data:'2026-08-14',tipo:'correcao',
       titulo:'Seletor de Nível não esconde mais tarefas (Atividades e Suprimentos)',
       itens:['O seletor "Nível N" filtrava a árvore pra mostrar SÓ tarefas daquele nível exato: com "Nível 5" marcado e as tarefas em execução nos níveis 2–3, a coluna Em Execução ficava vazia ("Nenhuma atividade em execução"), mesmo com Cravação 8% e Custos Indiretos 14% no banco.',
         'Agora o "Nível N" controla apenas a PROFUNDIDADE que a árvore vem pré-expandida — nenhuma tarefa é escondida por causa do nível. Vale pra Atividades (Em Execução e Próximas) e Suprimentos.']},
-    {versao: 'V3.36.6.1', legado: 'V2.63.0',status:'aberta',data:'2026-08-14',tipo:'melhoria',
-      titulo:'Versionamento reanalisado versão a versão (V2.63.0 → V3.36.6.1) + Notas de Versão repaginadas',
-      itens:['Renumeração completa seguindo a regra A.B.C.D, analisada versão por versão desde a V1 — nenhuma versão foi juntada (as 408 continuam no histórico, cada uma com seu próprio número): A sobe em sistema novo funcional (V1 = Base · V2 = Reescrita do Planejamento · V3 = marco Suprimentos), B sobe a cada feature nova, C a cada correção, D a cada melhoria/sub-feature — sempre zerando as casas abaixo.',
+    {versao: 'V3.4.23.1', legado: 'V2.63.0',status:'aberta',data:'2026-08-14',tipo:'melhoria',
+      titulo:'Versionamento reanalisado versão a versão (V2.63.0 → V3.4.23.1) + Notas de Versão repaginadas',
+      itens:['Renumeração completa seguindo a regra A.B.C.D, analisada versão por versão desde a V1 — nenhuma versão foi juntada (as 408 continuam no histórico, cada uma com seu próprio número): A sobe em sistema novo funcional (V1 = Base · V2 = Reescrita do Planejamento · V3 = marco Suprimentos), B sobe apenas em feature/módulo GRANDE (analisado título a título — funcionalidades menores são sub-features no D), C a cada correção, D a cada melhoria/sub-feature — sempre zerando as casas abaixo.',
         'O número antigo de cada versão fica registrado no card como "antes: V2.xx".',
         'Página redesenhada: hero escuro com a versão atual e o total de versões lançadas, cards de estatísticas (versões, features, correções, melhorias).',
         'Busca por texto (versão, título ou item) e filtro por tipo (Lançamento / Funcionalidade / Correção / Melhoria).',
