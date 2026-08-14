@@ -187,3 +187,8 @@ th.db-subtotal-col { font-size: 0.68rem; line-height: 1.15; }
 .db-ativ-col-titulo { font-size: 0.8rem; font-weight: 700; color: var(--cor-texto); }
 .db-ativ-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 .db-ativ-pct { font-family: var(--font-mono); font-weight: 700; font-size: 0.8rem; flex-shrink: 0; }
+
+/* Minimapa clicável (abre popup em tela cheia) */
+.db-minimapa-click { cursor: zoom-in; transition: box-shadow var(--transicao), border-color var(--transicao); }
+.db-minimapa-click:hover { border-color: var(--cor-primaria); box-shadow: var(--sombra-lg); }
+.db-minimapa-lupa { font-size: 0.7rem; opacity: 0.45; }

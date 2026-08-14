@@ -343,6 +343,8 @@ const DashConcreto = (() => {
         </div>`;
 
       if (!pranchasComImagem.length) return;
+      // Contexto pro popup em tela cheia ao clicar num minimapa.
+      _estacasCtx = { obraId, pranchas: pranchasComImagem, marcadores, pecas, lancamentos };
       const LARGURA_CARD = 340;
       const cardsHtml = await Promise.all(pranchasComImagem.map(async p => {
         let imagem = null;
@@ -361,8 +363,8 @@ const DashConcreto = (() => {
         const zoom = LARGURA_CARD / Number(p.imgWidthPx);
         const alturaCard = Math.round(Number(p.imgHeightPx) * zoom);
         const svg = EC.stageHTML(p, imagem, lista, statusFn, { interativo: false, mini: true, zoom, maxHeight: Math.min(280, Math.max(60, alturaCard)) });
-        return `<div class="db-minimapa" style="width:${LARGURA_CARD}px;">
-          <div class="db-minimapa-titulo">${DashCore.esc(p.nome || 'Prancha')}</div>
+        return `<div class="db-minimapa db-minimapa-click" style="width:${LARGURA_CARD}px;" onclick="DashConcreto.abrirPrancha('${p.id}')" title="Clique para ampliar">
+          <div class="db-minimapa-titulo">${DashCore.esc(p.nome || 'Prancha')} <span class="db-minimapa-lupa">🔍</span></div>
           ${svg}
         </div>`;
       }));
@@ -438,9 +440,40 @@ const DashConcreto = (() => {
   let _popupItens = [];
   let _popupIdx = 0;
   let _popupZoom = 1;
-  function _abrirPopup(andar, itens) {
+  let _estacasCtx = null;
+
+  // Popup em tela cheia a partir do clique num minimapa de Estacas: mesma
+  // visão do minimapa (prancha zerada + só executadas, sem anéis de tipo),
+  // em qualidade máxima, com zoom (Ctrl+scroll / botões) e pan por arrasto.
+  function abrirPrancha(pranchaId) {
+    const ctx = _estacasCtx;
+    if (!ctx) return;
+    const CC = window.ConcretoCalculos;
+    const pecaPorId = new Map(ctx.pecas.map(p => [p.id, p]));
+    const itens = ctx.pranchas.map(p => ({
+      tipo: 'imagem',
+      titulo: p.nome || 'Prancha',
+      pranchaId: p.id,
+      prancha: p,
+      obraId: ctx.obraId,
+      pecas: ctx.pecas,
+      lancamentos: ctx.lancamentos,
+      semAneis: true,
+      marcadores: ctx.marcadores.filter(m => {
+        if (m.pranchaId !== p.id) return false;
+        const peca = m.pecaId ? pecaPorId.get(m.pecaId) : null;
+        if (!peca) return false;
+        return (CC ? CC.pctConcretado(peca, ctx.lancamentos) : 0) > 0;
+      }),
+      pecaPorId,
+    }));
+    const idx = Math.max(0, itens.findIndex(i => i.pranchaId === pranchaId));
+    _abrirPopup('Estacas', itens, idx);
+  }
+
+  function _abrirPopup(andar, itens, idxInicial) {
     _popupItens = itens;
-    _popupIdx = 0;
+    _popupIdx = idxInicial || 0;
     _popupZoom = 1;
     _renderPopup(andar);
   }
@@ -507,15 +540,21 @@ const DashConcreto = (() => {
     const CC = window.ConcretoCalculos;
     if (!EC) { elConteudo.innerHTML = '<div class="db-vazio-inline">Motor de cálculo de Estacas não carregado.</div>'; return; }
     try {
-      const doc = await db.collection('obras').doc(_feContexto.obraId).collection('config').doc('estacasImagem_' + item.pranchaId).get();
+      // Contexto: itens vindos do minimapa de Estacas carregam o próprio
+      // (obraId/pecas/lancamentos + semAneis); os do gráfico F/E usam o
+      // _feContexto como antes.
+      const obraId = item.obraId || (_feContexto && _feContexto.obraId);
+      const pecasCtx = item.pecas || (_feContexto && _feContexto.pecas) || [];
+      const lancsCtx = item.lancamentos || (_feContexto && _feContexto.lancamentos) || [];
+      const doc = await db.collection('obras').doc(obraId).collection('config').doc('estacasImagem_' + item.pranchaId).get();
       const img = doc.exists ? (doc.data().img || null) : null;
-      const mapaCoresGrupo = EC.mapaCoresGrupoEstaca(_feContexto.pecas);
+      const mapaCoresGrupo = item.semAneis ? null : EC.mapaCoresGrupoEstaca(pecasCtx);
       const statusFn = (m) => {
         const p = m.pecaId ? item.pecaPorId.get(m.pecaId) : null;
         if (!p) return { pct: null, label: 'Sem peça vinculada' };
-        const pct = CC ? CC.pctConcretado(p, _feContexto.lancamentos) : 0;
+        const pct = CC ? CC.pctConcretado(p, lancsCtx) : 0;
         let corGrupo = null;
-        if (p.subTipo === 'Estacas' && (p.diametro || p.comprimento)) {
+        if (mapaCoresGrupo && p.subTipo === 'Estacas' && (p.diametro || p.comprimento)) {
           corGrupo = mapaCoresGrupo.get(EC.chaveGrupoEstaca(p.diametro, p.comprimento)) || null;
         }
         return { pct, label: `${p.nome} — ${EC.statusLabel(pct)}`, corGrupo };
@@ -559,6 +598,6 @@ const DashConcreto = (() => {
     }
   }
 
-  return { renderToggle, toggleMostrar, renderFundacaoEstrutura, renderEstacas, popupNavegar, popupZoomAjustar, fecharPopup };
+  return { renderToggle, toggleMostrar, renderFundacaoEstrutura, renderEstacas, abrirPrancha, popupNavegar, popupZoomAjustar, fecharPopup };
 })();
 window.DashConcreto = DashConcreto;

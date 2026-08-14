@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.62.9',
+  versaoAtual: 'V2.62.10',
 
   versoes: [
     {
@@ -5814,10 +5814,15 @@ const NotasVersao = {
       titulo:'Bloco Hexagonal — troca o SVG desenhado pela imagem técnica real',
       itens:['O SVG genérico (feito só a partir da descrição em texto) foi trocado pelo desenho técnico real enviado — mesma referência que os outros tipos de fundação usam (imagem, não SVG).',
         'Fórmula não mudou: a imagem real confirma D = h = altura do bloco, batendo com o que já estava implementado.']},
-    {versao:'V2.62.9',status:'aberta',data:'2026-08-14',tipo:'melhoria',
+    {versao:'V2.62.9',status:'fechada',data:'2026-08-14',tipo:'melhoria',
       titulo:'Controle de Estacas: seletor de BT esconde por padrão as já 100% usadas noutras peças',
       itens:['No popup de lançar por estaca, BTs que já estão 100% alocadas em outra peça (não sobra nada pra usar ali) somem do seletor por padrão — deixa a lista bem mais curta quando tem muitas BTs.',
-        'Aparece um checkbox "Mostrar N BTs 100% usadas" pra reexibir, se precisar reajustar algo numa BT que já foi totalmente usada.']}
+        'Aparece um checkbox "Mostrar N BTs 100% usadas" pra reexibir, se precisar reajustar algo numa BT que já foi totalmente usada.']},
+    {versao:'V2.62.10',status:'aberta',data:'2026-08-14',tipo:'melhoria',
+      titulo:'Minimapa de Estacas clicável: prancha em tela cheia',
+      itens:['Clicar num minimapa de Estacas no Dashboard agora abre a prancha em POPUP DE TELA CHEIA, em qualidade máxima, mantendo a mesma visão limpa do minimapa (só as estacas executadas, sem anéis de tipo).',
+        'Navegação no popup: zoom com Ctrl+scroll (ou botões −/+), arrastar com o botão esquerdo ou do meio do mouse (pan), scroll normal rola a prancha, setas ‹ › alternam entre pranchas, Esc fecha.',
+        'Cards do minimapa ganharam indicação visual de clique (lupa + destaque no hover).']}
   ],
 
   render(containerId) {
