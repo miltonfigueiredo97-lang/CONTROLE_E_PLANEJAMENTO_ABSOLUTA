@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.62.12',
+  versaoAtual: 'V2.62.13',
 
   versoes: [
     {
@@ -5827,10 +5827,15 @@ const NotasVersao = {
       titulo:'Dashboard se atualiza sozinho ao voltar pra aba',
       itens:['O Dashboard carregava os dados só na abertura: quem mudava a % no Planejamento em outra aba e voltava continuava vendo o retrato antigo (parecia que a mudança "não tinha mexido em nada"). Agora, ao voltar pra aba do Dashboard, ele recarrega os dados automaticamente (de forma silenciosa, sem tela de loading).',
         'Botão "↻ Atualizar" no cabeçalho do Andamento por Frente pra forçar a recarga a qualquer momento.']},
-    {versao:'V2.62.12',status:'aberta',data:'2026-08-14',tipo:'melhoria',
+    {versao:'V2.62.12',status:'fechada',data:'2026-08-14',tipo:'melhoria',
       titulo:'Planejamento: novo "📄 Baixar PDF" — baixa o arquivo .pdf direto, sem passar pelo diálogo de impressão',
       itens:['Mesmo visual bonito do Imprimir/PDF (A4 paisagem, cabeçalho escuro repetido em cada página, grupos coloridos por nível, indentação, % concluído verde quando 100%), só que já salva o arquivo .pdf na hora, com um clique.',
-        'O "🖨 Imprimir / PDF" continua disponível pra quem prefere imprimir em papel ou ajustar opções no diálogo do navegador. Ambos em ⚙ Ferramentas → Importar & Exportar.']}
+        'O "🖨 Imprimir / PDF" continua disponível pra quem prefere imprimir em papel ou ajustar opções no diálogo do navegador. Ambos em ⚙ Ferramentas → Importar & Exportar.']},
+    {versao:'V2.62.13',status:'aberta',data:'2026-08-14',tipo:'melhoria',
+      titulo:'Dashboard em TEMPO REAL',
+      itens:['O Dashboard agora escuta o Firestore ao vivo: qualquer % ou dado alterado no Planejamento — nesta aba, em outra aba ou em outro computador — atualiza Hero, Andamento por Frente, Atividades e Suprimentos NA HORA, sem F5, sem loading e sem clicar em nada.',
+        'Indicador verde ● ao lado de "Atualizado às..." mostra quando a tela acabou de se atualizar sozinha.',
+        'As seções pesadas (Contenção, Fundação/Estrutura, Estacas, Resumo por Apartamento) continuam recarregando ao voltar pra aba ou pelo botão ↻ — evita custo desnecessário de leitura contínua onde os dados mudam pouco.']}
   ],
 
   render(containerId) {

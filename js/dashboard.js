@@ -18,6 +18,9 @@ const Dashboard = (() => {
   let suprimentos = [];
   let _ultimoLoad = 0;
   let _carregando = false;
+  let _unsubTarefas = null;
+  let _unsubSup = null;
+  let _rtTimer = null;
 
   async function init() {
     const ok = await Utils.initPagina();
@@ -95,8 +98,8 @@ const Dashboard = (() => {
         }
       }
       _ultimoLoad = Date.now();
-      const atualizado = document.getElementById('db-atualizado-em');
-      if (atualizado) atualizado.textContent = 'Atualizado ' + Utils.formatarDataHora(new Date());
+      _marcarAtualizado();
+      _ligarTempoReal(obraId);
     } catch (e) {
       console.error(e);
       Utils.toast('Erro ao carregar dashboard.', 'erro');
@@ -104,6 +107,50 @@ const Dashboard = (() => {
       _carregando = false;
       Utils.esconderLoading();
     }
+  }
+
+
+  // ===================== TEMPO REAL =====================
+  // Listeners do Firestore em tarefas e suprimentos: qualquer % ou dado
+  // alterado no Planejamento (nesta ou em OUTRA aba/máquina) re-renderiza
+  // Hero, Frentes, Atividades e Suprimentos na hora — sem F5, sem loading,
+  // sem clicar em nada. Debounce de 400ms agrupa rajadas de gravação (ex:
+  // distribuir % pela família salva várias tarefas em sequência).
+  function _ligarTempoReal(obraId) {
+    _desligarTempoReal();
+    const ref = db.collection('obras').doc(obraId);
+    let primeiraT = true, primeiraS = true;
+    _unsubTarefas = ref.collection('tarefas').onSnapshot(snap => {
+      if (primeiraT) { primeiraT = false; return; } // 1º snapshot = estado já carregado
+      tarefas = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      _agendarRerenderTempoReal();
+    }, e => console.warn('Listener de tarefas caiu:', e));
+    _unsubSup = ref.collection('suprimentos').onSnapshot(snap => {
+      if (primeiraS) { primeiraS = false; return; }
+      suprimentos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      _agendarRerenderTempoReal();
+    }, e => console.warn('Listener de suprimentos caiu:', e));
+  }
+  function _desligarTempoReal() {
+    if (_unsubTarefas) { _unsubTarefas(); _unsubTarefas = null; }
+    if (_unsubSup) { _unsubSup(); _unsubSup = null; }
+  }
+  function _agendarRerenderTempoReal() {
+    clearTimeout(_rtTimer);
+    _rtTimer = setTimeout(async () => {
+      if (!obraAtual || !obraAtual.id) return;
+      const ctx = { obraId: obraAtual.id, obra: obraAtual, tarefas, suprimentos };
+      try { _renderHero(); } catch (e) { console.error(e); }
+      try { await DashFrentes.render(ctx); } catch (e) { console.error(e); }
+      try { DashAtividades.render(ctx); } catch (e) { console.error(e); }
+      try { DashSuprimentos.render(ctx); } catch (e) { console.error(e); }
+      _ultimoLoad = Date.now();
+      _marcarAtualizado(true);
+    }, 400);
+  }
+  function _marcarAtualizado(aoVivo) {
+    const el = document.getElementById('db-atualizado-em');
+    if (el) el.innerHTML = (aoVivo ? '<span style="color:#16a34a;">●</span> ' : '') + 'Atualizado ' + Utils.formatarDataHora(new Date());
   }
 
   // Botão ↻ das Frentes — recarrega tudo na hora.
