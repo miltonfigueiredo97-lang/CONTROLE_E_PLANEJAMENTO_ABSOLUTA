@@ -7,7 +7,7 @@ const NotasVersao = {
       "versao": "V1.0.0",
       "legado": "V1.0",
       "status": "fechada",
-      "data": "2025-07-04",
+      "data": "2026-07-04",
       "tipo": "lancamento",
       "titulo": "Lançamento Oficial da Base",
       "itens": [
@@ -34,7 +34,7 @@ const NotasVersao = {
       "versao": "V1.0.1",
       "legado": "V1.0.1",
       "status": "fechada",
-      "data": "2025-07-04",
+      "data": "2026-07-04",
       "tipo": "correcao",
       "titulo": "Correções de autenticação e dados",
       "itens": [
@@ -54,7 +54,7 @@ const NotasVersao = {
       "versao": "V1.0.2",
       "legado": "V1.0.2",
       "status": "fechada",
-      "data": "2025-07-04",
+      "data": "2026-07-04",
       "tipo": "correcao",
       "titulo": "Correção definitiva de autenticação",
       "itens": [
@@ -103,7 +103,7 @@ const NotasVersao = {
       "versao": "V1.0.3",
       "legado": "V1.0.3",
       "status": "fechada",
-      "data": "2025-07-04",
+      "data": "2026-07-04",
       "tipo": "correcao",
       "titulo": "Correções de layout e mapa",
       "itens": [
@@ -122,7 +122,7 @@ const NotasVersao = {
       "versao": "V1.0.4",
       "legado": "V1.0.4",
       "status": "fechada",
-      "data": "2025-07-04",
+      "data": "2026-07-04",
       "tipo": "correcao",
       "titulo": "Visão Geral: sidebar, drag e imagem corrigidos",
       "itens": [
@@ -142,7 +142,7 @@ const NotasVersao = {
       "versao": "V1.0.5",
       "legado": "V1.0.5",
       "status": "fechada",
-      "data": "2025-07-04",
+      "data": "2026-07-04",
       "tipo": "correcao",
       "titulo": "Sidebar, caixas livres e imagem fit",
       "itens": [
@@ -157,7 +157,7 @@ const NotasVersao = {
       "versao": "V1.0.6",
       "legado": "V1.0.6",
       "status": "fechada",
-      "data": "2025-07-04",
+      "data": "2026-07-04",
       "tipo": "correcao",
       "titulo": "Estrutura some + zoom do mapa",
       "itens": [
@@ -174,7 +174,7 @@ const NotasVersao = {
       "versao": "V1.0.7",
       "legado": "V1.0.7",
       "status": "fechada",
-      "data": "2025-07-04",
+      "data": "2026-07-04",
       "tipo": "correcao",
       "titulo": "Canvas infinito + redimensionar imagem",
       "itens": [
@@ -192,7 +192,7 @@ const NotasVersao = {
       "versao": "V1.0.8",
       "legado": "V1.0.8",
       "status": "fechada",
-      "data": "2025-07-04",
+      "data": "2026-07-04",
       "tipo": "correcao",
       "titulo": "Imagem arrastável e redimensionável com handles",
       "itens": [
@@ -209,7 +209,7 @@ const NotasVersao = {
       "versao": "V1.0.9",
       "legado": "V1.0.9",
       "status": "fechada",
-      "data": "2025-07-04",
+      "data": "2026-07-04",
       "tipo": "correcao",
       "titulo": "Resize correto, fundo branco, caixas livres, cadeado legível",
       "itens": [
@@ -224,7 +224,7 @@ const NotasVersao = {
       "versao": "V1.0.9.1",
       "legado": "V1.1.0",
       "status": "fechada",
-      "data": "2025-07-04",
+      "data": "2026-07-04",
       "tipo": "funcionalidade",
       "titulo": "Resize completo de imagem e caixas na Visão Geral",
       "itens": [
@@ -245,7 +245,7 @@ const NotasVersao = {
       "versao": "V1.0.10",
       "legado": "V1.1.1",
       "status": "fechada",
-      "data": "2025-07-04",
+      "data": "2026-07-04",
       "tipo": "correcao",
       "titulo": "Visão Geral: modo edição, imgState no Firestore, resize caixas",
       "itens": [
@@ -263,7 +263,7 @@ const NotasVersao = {
       "versao": "V1.0.11",
       "legado": "V1.1.2",
       "status": "fechada",
-      "data": "2025-07-04",
+      "data": "2026-07-04",
       "tipo": "correcao",
       "titulo": "Caixas nunca cortadas + imgState persistido",
       "itens": [
@@ -279,7 +279,7 @@ const NotasVersao = {
       "versao": "V1.0.12",
       "legado": "V1.1.3",
       "status": "fechada",
-      "data": "2025-07-05",
+      "data": "2026-07-05",
       "tipo": "correcao",
       "titulo": "Auth corrigido, fórmula ML do config, vãos múltiplos",
       "itens": [
@@ -299,7 +299,7 @@ const NotasVersao = {
       "versao": "V1.0.13",
       "legado": "V1.1.4",
       "status": "fechada",
-      "data": "2025-07-05",
+      "data": "2026-07-05",
       "tipo": "correcao",
       "titulo": "CRÍTICO: funções perdidas restauradas",
       "itens": [
@@ -315,7 +315,7 @@ const NotasVersao = {
       "versao": "V1.0.14",
       "legado": "V1.1.5",
       "status": "fechada",
-      "data": "2025-07-05",
+      "data": "2026-07-05",
       "tipo": "correcao",
       "titulo": "Drag das caixas: reescrito simples e direto",
       "itens": [
@@ -329,7 +329,7 @@ const NotasVersao = {
       "versao": "V1.0.15",
       "legado": "V1.1.6",
       "status": "fechada",
-      "data": "2025-07-05",
+      "data": "2026-07-05",
       "tipo": "correcao",
       "titulo": "Drag caixas: header é a alça de arrasto",
       "itens": [
@@ -345,7 +345,7 @@ const NotasVersao = {
       "versao": "V1.1.0",
       "legado": "V1.2",
       "status": "fechada",
-      "data": "2025-07-05",
+      "data": "2026-07-05",
       "tipo": "funcionalidade",
       "titulo": "Planejamento funcional + Módulo Materiais",
       "itens": [
@@ -375,7 +375,7 @@ const NotasVersao = {
       "versao": "V1.1.1",
       "legado": "V1.2.1",
       "status": "fechada",
-      "data": "2025-07-05",
+      "data": "2026-07-05",
       "tipo": "correcao",
       "titulo": "Correções Planejamento e Materiais",
       "itens": [
@@ -392,7 +392,7 @@ const NotasVersao = {
       "versao": "V1.1.1.1",
       "legado": "V1.2.2",
       "status": "fechada",
-      "data": "2025-07-05",
+      "data": "2026-07-05",
       "tipo": "funcionalidade",
       "titulo": "Materiais: biblioteca + vínculos por UID",
       "itens": [
@@ -413,7 +413,7 @@ const NotasVersao = {
       "versao": "V1.1.2",
       "legado": "V1.2.3",
       "status": "fechada",
-      "data": "2025-07-05",
+      "data": "2026-07-05",
       "tipo": "correcao",
       "titulo": "Materiais polido + Excel sem conflito",
       "itens": [
@@ -433,7 +433,7 @@ const NotasVersao = {
       "versao": "V1.1.3",
       "legado": "V1.2.4",
       "status": "fechada",
-      "data": "2025-07-05",
+      "data": "2026-07-05",
       "tipo": "correcao",
       "titulo": "Materiais: editar corrigido, embalagem, relatório por balancim",
       "itens": [
@@ -453,7 +453,7 @@ const NotasVersao = {
       "versao": "V1.1.4",
       "legado": "V1.2.5",
       "status": "fechada",
-      "data": "2025-07-05",
+      "data": "2026-07-05",
       "tipo": "correcao",
       "titulo": "Importar/Exportar Excel: formato exato do modelo",
       "itens": [
@@ -477,7 +477,7 @@ const NotasVersao = {
       "versao": "V1.2.0",
       "legado": "V1.3",
       "status": "fechada",
-      "data": "2025-07-06",
+      "data": "2026-07-06",
       "tipo": "funcionalidade",
       "titulo": "Planejamento: Gantt tipo MS Project",
       "itens": [
@@ -499,7 +499,7 @@ const NotasVersao = {
       "versao": "V1.2.1",
       "legado": "V1.3.1",
       "status": "fechada",
-      "data": "2025-07-06",
+      "data": "2026-07-06",
       "tipo": "correcao",
       "titulo": "Planejamento: performance + duplicatas + colunas",
       "itens": [
@@ -521,7 +521,7 @@ const NotasVersao = {
       "versao": "V1.2.2",
       "legado": "V1.3.2",
       "status": "fechada",
-      "data": "2025-07-06",
+      "data": "2026-07-06",
       "tipo": "correcao",
       "titulo": "Planejamento: colunas, import, hierarquia, zoom",
       "itens": [
@@ -541,7 +541,7 @@ const NotasVersao = {
       "versao": "V1.2.3",
       "legado": "V1.3.3",
       "status": "fechada",
-      "data": "2025-07-06",
+      "data": "2026-07-06",
       "tipo": "correcao",
       "titulo": "Planejamento: ← → no Gantt, zoom correto, esconder Gantt",
       "itens": [
@@ -563,7 +563,7 @@ const NotasVersao = {
       "versao": "V2.0.0",
       "legado": "V2.0",
       "status": "fechada",
-      "data": "2025-07-06",
+      "data": "2026-07-06",
       "tipo": "funcionalidade",
       "titulo": "Planejamento V2.0 — reescrita completa",
       "itens": [
@@ -600,7 +600,7 @@ const NotasVersao = {
       "versao": "V2.0.1",
       "legado": "V2.0.1",
       "status": "fechada",
-      "data": "2025-07-06",
+      "data": "2026-07-06",
       "tipo": "correcao",
       "titulo": "Gantt corrigido, hierarquia funcional, nível por código",
       "itens": [
@@ -619,7 +619,7 @@ const NotasVersao = {
       "versao": "V2.0.2",
       "legado": "V2.0.2",
       "status": "fechada",
-      "data": "2025-07-06",
+      "data": "2026-07-06",
       "tipo": "correcao",
       "titulo": "Gantt restaurado, hierarquia por nível, famílias",
       "itens": [
@@ -639,7 +639,7 @@ const NotasVersao = {
       "versao": "V2.0.3",
       "legado": "V2.0.3",
       "status": "fechada",
-      "data": "2025-07-06",
+      "data": "2026-07-06",
       "tipo": "correcao",
       "titulo": "Divisor livre, nível por spinner, datas automáticas, predecessora",
       "itens": [
@@ -663,7 +663,7 @@ const NotasVersao = {
       "versao": "V2.0.4",
       "legado": "V2.0.4",
       "status": "fechada",
-      "data": "2025-07-06",
+      "data": "2026-07-06",
       "tipo": "correcao",
       "titulo": "Colunas resize/reorder, predecessora popup, esconder coluna",
       "itens": [
@@ -688,7 +688,7 @@ const NotasVersao = {
       "versao": "V2.0.5",
       "legado": "V2.0.5",
       "status": "fechada",
-      "data": "2025-07-06",
+      "data": "2026-07-06",
       "tipo": "correcao",
       "titulo": "Resize/reorder colunas corrigidos, predecessora popup, PNG intervalo",
       "itens": [
@@ -711,7 +711,7 @@ const NotasVersao = {
       "versao": "V2.0.6",
       "legado": "V2.0.6",
       "status": "fechada",
-      "data": "2025-07-06",
+      "data": "2026-07-06",
       "tipo": "correcao",
       "titulo": "Resize colunas, reordenar, predecessora, PNG corrigidos",
       "itens": [
@@ -732,7 +732,7 @@ const NotasVersao = {
       "versao": "V2.0.7",
       "legado": "V2.0.7",
       "status": "fechada",
-      "data": "2025-07-06",
+      "data": "2026-07-06",
       "tipo": "correcao",
       "titulo": "CRÍTICO: funções faltando no return corrigidas",
       "itens": [
@@ -747,7 +747,7 @@ const NotasVersao = {
       "versao": "V2.0.8",
       "legado": "V2.0.8",
       "status": "fechada",
-      "data": "2025-07-06",
+      "data": "2026-07-06",
       "tipo": "correcao",
       "titulo": "Divisor independente, resize colunas, PNG confiável",
       "itens": [
@@ -768,7 +768,7 @@ const NotasVersao = {
       "versao": "V2.0.9",
       "legado": "V2.0.9",
       "status": "fechada",
-      "data": "2025-07-07",
+      "data": "2026-07-07",
       "tipo": "correcao",
       "titulo": "CRÍTICO: _totalColWidth não definida quebrava o módulo",
       "itens": [
@@ -783,7 +783,7 @@ const NotasVersao = {
       "versao": "V2.1.0",
       "legado": "V2.1.0",
       "status": "fechada",
-      "data": "2025-07-07",
+      "data": "2026-07-07",
       "tipo": "funcionalidade",
       "titulo": "Módulo Relatórios: \"Relatórios de Vista\" com IA",
       "itens": [
@@ -806,7 +806,7 @@ const NotasVersao = {
       "versao": "V2.1.1",
       "legado": "V2.1.1",
       "status": "fechada",
-      "data": "2025-07-07",
+      "data": "2026-07-07",
       "tipo": "correcao",
       "titulo": "Relatórios: troca de provedor de IA para API gratuita",
       "itens": [
@@ -823,7 +823,7 @@ const NotasVersao = {
       "versao": "V2.1.2",
       "legado": "V2.1.2",
       "status": "fechada",
-      "data": "2025-07-07",
+      "data": "2026-07-07",
       "tipo": "correcao",
       "titulo": "CRÍTICO: relatorios.html não chamava Relatorios.init()",
       "itens": [
@@ -837,7 +837,7 @@ const NotasVersao = {
       "versao": "V2.1.2.1",
       "legado": "V2.1.3",
       "status": "fechada",
-      "data": "2025-07-07",
+      "data": "2026-07-07",
       "tipo": "funcionalidade",
       "titulo": "Relatórios: fallback automático Gemini → Claude",
       "itens": [
@@ -854,7 +854,7 @@ const NotasVersao = {
       "versao": "V2.1.3",
       "legado": "V2.1.4",
       "status": "fechada",
-      "data": "2025-07-07",
+      "data": "2026-07-07",
       "tipo": "correcao",
       "titulo": "Relatórios: link de compartilhar força download do PDF",
       "itens": [
@@ -868,7 +868,7 @@ const NotasVersao = {
       "versao": "V2.1.3.1",
       "legado": "V2.1.5",
       "status": "fechada",
-      "data": "2025-07-07",
+      "data": "2026-07-07",
       "tipo": "funcionalidade",
       "titulo": "Relatórios: compartilhar envia o PDF anexado de verdade (no celular)",
       "itens": [
@@ -884,7 +884,7 @@ const NotasVersao = {
       "versao": "V2.1.4",
       "legado": "V2.1.6",
       "status": "fechada",
-      "data": "2025-07-07",
+      "data": "2026-07-07",
       "tipo": "correcao",
       "titulo": "Relatórios: nome do arquivo baixado/compartilhado padronizado",
       "itens": [
@@ -899,7 +899,7 @@ const NotasVersao = {
       "versao": "V2.1.4.1",
       "legado": "V2.2.0",
       "status": "fechada",
-      "data": "2025-07-07",
+      "data": "2026-07-07",
       "tipo": "funcionalidade",
       "titulo": "Relatórios: compartilhamento direto do Samsung Notes (PWA) + aba Pendentes",
       "itens": [
