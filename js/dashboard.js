@@ -68,6 +68,13 @@ const Dashboard = (() => {
       _carregando = true;
       if (!silencioso) Utils.mostrarLoading('Carregando dashboard...');
       const obraId = obraAtual.id;
+      // PARIDADE COM O PLANEJAMENTO: tarefas vinculadas a peças de Estacas
+      // têm o % recalculado da execução real e GRAVADO ao abrir o
+      // Planejamento. Sem rodar a mesma sync aqui, o Dashboard lia o estado
+      // anterior (tarefas "iniciadas" aparecendo com 0% / como Próximas).
+      if (typeof EstacasCalculos !== 'undefined' && EstacasCalculos.sincronizarVinculosPlanejamento) {
+        await EstacasCalculos.sincronizarVinculosPlanejamento(obraId).catch(e => console.error('Sync vínculos Estacas:', e));
+      }
       const [obraCompleta, tf, sup] = await Promise.all([
         Database.getObra(obraId),
         Database.listar(obraId, 'tarefas', 'ordem').catch(() => []),
@@ -98,6 +105,13 @@ const Dashboard = (() => {
         }
       }
       _ultimoLoad = Date.now();
+      // Diagnóstico (console): o que o Dashboard REALMENTE leu do Firestore.
+      try {
+        const folhasDiag = DashCore.folhas(tarefas);
+        const emExec = folhasDiag.filter(t => (Number(t.percentualConcluido) || 0) > 0 && (Number(t.percentualConcluido) || 0) < 100);
+        console.info(`[Dashboard] ${tarefas.length} tarefas · ${folhasDiag.length} folhas · ${emExec.length} em execução (1–99%)`,
+          emExec.slice(0, 5).map(t => `${t.nome}: ${t.percentualConcluido}%`));
+      } catch (e) {}
       _marcarAtualizado();
       _ligarTempoReal(obraId);
     } catch (e) {
