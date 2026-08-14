@@ -105,7 +105,7 @@ const Planejamento = (() => {
 
   const COL_LABELS={sel:'',num:'#',status:'',nivel:'Nível',codigo:'Código',nome:'Tarefa',inicio:'Início',termino:'Término',inicioReal:'Início Real',terminoReal:'Término Real',duracao:'Duração',percEsp:'% Esperado',percConc:'% Concluído',predecessora:'Predecessora',sucessora:'Sucessora',responsavel:'Responsável',local:'Local',vinculoEstrutura:'Local (Pav/Apto)',grupo:'Grupo',quantidade:'Quantidade',equipe:'Equipe',custoMaterial:'Custo Material',custoMaoObra:'Custo M.Obra',acoes:''};
   const COL_FIXED=new Set(['sel','num','status','nome','acoes']);
-  const COL_EDITABLE=new Set(['codigo','nome','inicio','termino','duracao','percEsp','percConc','predecessora','responsavel','local','grupo','nivel','equipe','inicioReal','terminoReal']);
+  const COL_EDITABLE=new Set(['codigo','nome','inicio','termino','duracao','percConc','predecessora','responsavel','local','grupo','nivel','equipe','inicioReal','terminoReal']); // percEsp saiu: agora é calculado ao vivo pela data (não editável)
 
   // ===================== VÍNCULOS COM LEVANTAMENTO =====================
   // Tela separada (não é a visão de Gantt) onde cada tarefa do Planejamento
@@ -1689,7 +1689,7 @@ const Planejamento = (() => {
         } else if(cid==='duracao'){
           cells+=`<div style="${base}color:#666;font-size:.7rem;justify-content:center;cursor:pointer;" ${clickEdit}>${t.duracao||'—'}</div>`;
         } else if(cid==='percEsp'){
-          cells+=`<div style="${base}color:#555;font-size:.7rem;justify-content:center;cursor:pointer;" ${clickEdit}>${t.percentualEsperado||0}%</div>`;
+          cells+=`<div style="${base}color:#555;font-size:.7rem;justify-content:center;" title="Calculado automaticamente pela data de hoje dentro do intervalo Início→Término">${_percEsp(t)}%</div>`;
         } else if(cid==='percConc'){
           cells+=`<div style="${base}font-size:.7rem;justify-content:center;color:${perc>=100?'#16a34a':perc>0?'#2563eb':'#555'};cursor:pointer;" ${clickEdit}>${perc}%</div>`;
         } else if(cid==='predecessora'){
@@ -1884,13 +1884,26 @@ const Planejamento = (() => {
         if(t.duracao>0){
           const fim=new Date(v);fim.setDate(fim.getDate()+Number(t.duracao));
           updates.terminoPlanejado=fim.toISOString().split('T')[0];
-        } else if(t.terminoPlanejado){
+        } else if(t.terminoPlanejado&&t.terminoPlanejado>=v){
           // Sem duração salva ainda (ex: tarefa nova) — só nesse caso cai pro
           // fallback de calcular a duração a partir do término existente,
           // pra não deixar tudo em branco na primeira vez.
           updates.duracao=Math.max(0,Math.ceil((new Date(t.terminoPlanejado)-new Date(v))/864e5));
+        } else if(t.terminoPlanejado&&t.terminoPlanejado<v){
+          // Término existente ficou ANTES do novo início (impossível: a tarefa
+          // "voltaria no tempo") — arrasta o término junto pro mesmo dia.
+          // Foi exatamente esse buraco que deixou 12/08→04/08 salvo no banco.
+          updates.terminoPlanejado=v;
+          updates.duracao=0;
+          Utils.toast('Término ficava antes do novo início — ajustado pro mesmo dia. Defina a duração ou o término correto.','alerta');
         }
       } else if(_versaoData==='atual'&&field==='terminoPlanejado'&&v&&t.inicioPlanejado){
+        if(v<t.inicioPlanejado){
+          // Término antes do início não existe — rejeita sem salvar nada.
+          Utils.toast(`Término (${_fd(v)}) não pode ser antes do Início (${_fd(t.inicioPlanejado)}). Nada foi salvo.`,'erro');
+          _paintRows();
+          return;
+        }
         // Término editado → MANTÉM o início e recalcula a Duração.
         updates.duracao=Math.max(0,Math.ceil((new Date(v)-new Date(t.inicioPlanejado))/864e5));
       } else if(field==='duracao'&&v>0&&t.inicioPlanejado){
@@ -2558,19 +2571,19 @@ const Planejamento = (() => {
     // ordenar alfabeticamente) e o HTML final. Adicionar item novo: só
     // colocar no array, a ordem alfabética é automática.
     const itens=[
-      {rotulo:'Auto-vincular por Nome',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento._abrirAutoVincular()" title="Detecta o pavimento/apto pelo NOME da tarefa e vincula tudo de uma vez, com prévia pra revisar antes de aplicar">🔗 Auto-vincular por Nome</button>'},
-      {rotulo:'Corrigir Níveis Soltos',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento._corrigirNiveisSoltos()" title="Corrige tarefas com nível soltos (invisíveis no Editor de Estrutura)">🌳 Corrigir Níveis Soltos</button>'},
-      {rotulo:'Corrigir Ordens',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.corrigirOrdensDuplicadas()" title="Corrige tarefas com número de ordem duplicado">🔧 Corrigir Ordens</button>'},
-      {rotulo:'Corrigir Predecessoras (por ID)',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento._migrarPredecessorasParaId()" title="Converte predecessoras antigas (por número de linha) pro formato por ID — imune a reordenação. Roda sozinho ao carregar, use aqui só se quiser confirmar manualmente.">🔗 Corrigir Predecessoras (por ID)</button>'},
-      {rotulo:'Estrutura da Obra',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento._abrirEstruturaObra()" title="Cadastra Torre → Pavimento → Apto, pra vincular tarefas a um local">🏢 Estrutura da Obra</button>'},
-      {rotulo:'Exportar Excel (simples)',html:'<button class="btn btn-secundario btn-sm" data-perm="planejamento:exportar" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.exportar()" title="Planilha crua com todas as colunas — boa pra reimportar/tratar dados">📤 Exportar Excel (simples)</button>'},
-      {rotulo:'Exportar Excel (formatado)',html:'<button class="btn btn-secundario btn-sm" data-perm="planejamento:exportar" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.exportarExcelBonito()" title="Planilha estilizada: grupos coloridos por nível, indentação, cabeçalho fixo com filtro — pronta pra apresentar/imprimir">🎨 Exportar Excel (formatado)</button>'},
-      {rotulo:'Exportar MS Project',html:'<button class="btn btn-secundario btn-sm" data-perm="planejamento:exportar" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.exportarMSProject()" title="XML no formato do MS Project (hierarquia, datas, duração, % e predecessoras) — abre direto no Project">📊 Exportar MS Project (.xml)</button>'},
-      {rotulo:'Imprimir / PDF',html:'<button class="btn btn-secundario btn-sm" data-perm="planejamento:exportar" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.abrirImpressao()" title="Abre a visão bonita em página branca pronta pra imprimir ou salvar em PDF (cabeçalho repete em cada página)">🖨 Imprimir / PDF</button>'},
-      {rotulo:'Histórico de Alterações',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento._abrirHistoricoAlteracoes()" title="Lista todas as trocas de predecessora/% feitas com motivo registrado">📋 Histórico de Alterações</button>'},
-      {rotulo:'Importar',html:'<label class="btn btn-secundario btn-sm" style="cursor:pointer;font-size:.75rem;display:block;text-align:left;" title="Cria/atualiza por Código, nunca apaga (comportamento atual, mais seguro)">📥 Importar<input type="file" accept=".xlsx,.xls" style="display:none" onchange="Planejamento.importarExcel(event)"></label>'},
-      {rotulo:'Importar Base Completa',html:'<label class="btn btn-secundario btn-sm" style="cursor:pointer;font-size:.75rem;display:block;text-align:left;color:#f87171;" title="Apaga TUDO e recria do zero — só pra substituir a base inteira">📥 Importar Base Completa (apaga tudo)<input type="file" accept=".xlsx,.xls" style="display:none" onchange="Planejamento.importarBaseCompleta(event)"></label>'},
-      {rotulo:'Importar Correções',html:'<label class="btn btn-secundario btn-sm" style="cursor:pointer;font-size:.75rem;display:block;text-align:left;" title="Casa por Nome, atualiza só os campos escolhidos — não mexe em posição/estrutura">📥 Importar Correções (por campo)<input type="file" accept=".xlsx,.xls" style="display:none" onchange="Planejamento.importarCorrecoes(event)"></label>'},
+      {rotulo:'Auto-vincular por Nome',grupo:'Ferramentas da Obra',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento._abrirAutoVincular()" title="Detecta o pavimento/apto pelo NOME da tarefa e vincula tudo de uma vez, com prévia pra revisar antes de aplicar">🔗 Auto-vincular por Nome</button>'},
+      {rotulo:'Corrigir Níveis Soltos',grupo:'Correções & Recálculos',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento._corrigirNiveisSoltos()" title="Corrige tarefas com nível soltos (invisíveis no Editor de Estrutura)">🌳 Corrigir Níveis Soltos</button>'},
+      {rotulo:'Corrigir Ordens',grupo:'Correções & Recálculos',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.corrigirOrdensDuplicadas()" title="Corrige tarefas com número de ordem duplicado">🔧 Corrigir Ordens</button>'},
+      {rotulo:'Corrigir Predecessoras (por ID)',grupo:'Correções & Recálculos',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento._migrarPredecessorasParaId()" title="Converte predecessoras antigas (por número de linha) pro formato por ID — imune a reordenação. Roda sozinho ao carregar, use aqui só se quiser confirmar manualmente.">🔗 Corrigir Predecessoras (por ID)</button>'},
+      {rotulo:'Estrutura da Obra',grupo:'Ferramentas da Obra',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento._abrirEstruturaObra()" title="Cadastra Torre → Pavimento → Apto, pra vincular tarefas a um local">🏢 Estrutura da Obra</button>'},
+      {rotulo:'Exportar Excel (simples)',grupo:'Importar & Exportar',html:'<button class="btn btn-secundario btn-sm" data-perm="planejamento:exportar" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.exportar()" title="Planilha crua com todas as colunas — boa pra reimportar/tratar dados">📤 Exportar Excel (simples)</button>'},
+      {rotulo:'Exportar Excel (formatado)',grupo:'Importar & Exportar',html:'<button class="btn btn-secundario btn-sm" data-perm="planejamento:exportar" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.exportarExcelBonito()" title="Planilha estilizada: grupos coloridos por nível, indentação, cabeçalho fixo com filtro — pronta pra apresentar/imprimir">🎨 Exportar Excel (formatado)</button>'},
+      {rotulo:'Exportar MS Project',grupo:'Importar & Exportar',html:'<button class="btn btn-secundario btn-sm" data-perm="planejamento:exportar" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.exportarMSProject()" title="XML no formato do MS Project (hierarquia, datas, duração, % e predecessoras) — abre direto no Project">📊 Exportar MS Project (.xml)</button>'},
+      {rotulo:'Imprimir / PDF',grupo:'Importar & Exportar',html:'<button class="btn btn-secundario btn-sm" data-perm="planejamento:exportar" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.abrirImpressao()" title="Abre a visão bonita em página branca pronta pra imprimir ou salvar em PDF (cabeçalho repete em cada página)">🖨 Imprimir / PDF</button>'},
+      {rotulo:'Histórico de Alterações',grupo:'Ferramentas da Obra',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento._abrirHistoricoAlteracoes()" title="Lista todas as trocas de predecessora/% feitas com motivo registrado">📋 Histórico de Alterações</button>'},
+      {rotulo:'Importar',grupo:'Importar & Exportar',html:'<label class="btn btn-secundario btn-sm" style="cursor:pointer;font-size:.75rem;display:block;text-align:left;" title="Cria/atualiza por Código, nunca apaga (comportamento atual, mais seguro)">📥 Importar<input type="file" accept=".xlsx,.xls" style="display:none" onchange="Planejamento.importarExcel(event)"></label>'},
+      {rotulo:'Importar Base Completa',grupo:'Importar & Exportar',html:'<label class="btn btn-secundario btn-sm" style="cursor:pointer;font-size:.75rem;display:block;text-align:left;color:#f87171;" title="Apaga TUDO e recria do zero — só pra substituir a base inteira">📥 Importar Base Completa (apaga tudo)<input type="file" accept=".xlsx,.xls" style="display:none" onchange="Planejamento.importarBaseCompleta(event)"></label>'},
+      {rotulo:'Importar Correções',grupo:'Importar & Exportar',html:'<label class="btn btn-secundario btn-sm" style="cursor:pointer;font-size:.75rem;display:block;text-align:left;" title="Casa por Nome, atualiza só os campos escolhidos — não mexe em posição/estrutura">📥 Importar Correções (por campo)<input type="file" accept=".xlsx,.xls" style="display:none" onchange="Planejamento.importarCorrecoes(event)"></label>'},
       // "Corrigir Nível pelo Código" foi removido do menu — era um reparo de uso
       // único (histórico corrompido por bugs já corrigidos). Como ferramenta
       // recorrente é perigoso: se você aninhar uma tarefa com Código dentro de um
@@ -2579,15 +2592,22 @@ const Planejamento = (() => {
       // antigo, desfazendo a reestruturação. A função continua existindo no
       // código (Planejamento._corrigirNivelPeloCodigo()) só pra emergência, mas
       // não deve ser clicada por engano no dia a dia.
-      {rotulo:_liberarEdicaoReal?'Edição de Real Liberada':'Liberar Edição de Real',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;'+(_liberarEdicaoReal?'background:#dc2626;color:#fff;':'')+'" onclick="Planejamento.toggleLiberarEdicaoReal()" title="Início/Término Real normalmente só são preenchidos via Diário/Medições/Semanal. Libere aqui só pra correção manual pontual.">'+(_liberarEdicaoReal?'🔓 Edição de Real Liberada':'🔒 Liberar Edição de Real')+'</button>'},
-      {rotulo:'PNG',html:'<button class="btn btn-secundario btn-sm" data-perm="planejamento:exportar" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.exportarPNG()">🖼 PNG</button>'},
-      {rotulo:'Recalcular % dos Pais',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento._recalcularPercTodosPais()" title="Recalcula o % de toda tarefa-pai a partir dos filhos diretos (nível por nível, igual MS Project)">📊 Recalcular % dos Pais</button>'},
-      {rotulo:'Recalcular Datas dos Pais',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento._recalcularDatasPais()" title="Recalcula início/término das tarefas-pai a partir dos filhos">📐 Recalcular Datas dos Pais</button>'},
-      {rotulo:'Ver por Responsável',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;'+(_filtroResponsavel?'background:var(--cor-primaria);color:#000;':'')+'" onclick="Planejamento._abrirFiltroResponsavel()" title="Filtra a grid por responsável/especialidade">👷 '+(_filtroResponsavel?_esc(_filtroResponsavel):'Ver por Responsável')+'</button>'},
-      {rotulo:'Vínculos com Levantamento',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.abrirVinculosView()">🔗 Vínculos com Levantamento</button>'},
+      {rotulo:_liberarEdicaoReal?'Edição de Real Liberada':'Liberar Edição de Real',grupo:'Ferramentas da Obra',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;'+(_liberarEdicaoReal?'background:#dc2626;color:#fff;':'')+'" onclick="Planejamento.toggleLiberarEdicaoReal()" title="Início/Término Real normalmente só são preenchidos via Diário/Medições/Semanal. Libere aqui só pra correção manual pontual.">'+(_liberarEdicaoReal?'🔓 Edição de Real Liberada':'🔒 Liberar Edição de Real')+'</button>'},
+      {rotulo:'PNG',grupo:'Importar & Exportar',html:'<button class="btn btn-secundario btn-sm" data-perm="planejamento:exportar" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.exportarPNG()">🖼 PNG</button>'},
+      {rotulo:'Recalcular % dos Pais',grupo:'Correções & Recálculos',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento._recalcularPercTodosPais()" title="Recalcula o % de toda tarefa-pai a partir dos filhos diretos (nível por nível, igual MS Project)">📊 Recalcular % dos Pais</button>'},
+      {rotulo:'Recalcular Datas dos Pais',grupo:'Correções & Recálculos',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento._recalcularDatasPais()" title="Recalcula início/término das tarefas-pai a partir dos filhos">📐 Recalcular Datas dos Pais</button>'},
+      {rotulo:'Ver por Responsável',grupo:'Ferramentas da Obra',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;'+(_filtroResponsavel?'background:var(--cor-primaria);color:#000;':'')+'" onclick="Planejamento._abrirFiltroResponsavel()" title="Filtra a grid por responsável/especialidade">👷 '+(_filtroResponsavel?_esc(_filtroResponsavel):'Ver por Responsável')+'</button>'},
+      {rotulo:'Vínculos com Levantamento',grupo:'Ferramentas da Obra',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.abrirVinculosView()">🔗 Vínculos com Levantamento</button>'},
     ];
+    // Agrupa por categoria (com cabeçalho visual) e ordena alfabeticamente
+    // DENTRO de cada grupo — menu deixou de ser uma lista única gigante.
+    const GRUPOS=['Importar & Exportar','Correções & Recálculos','Ferramentas da Obra'];
     itens.sort((a,b)=>a.rotulo.localeCompare(b.rotulo,'pt-BR'));
-    pop.innerHTML=itens.map(i=>i.html).join('');
+    pop.innerHTML=GRUPOS.map(g=>{
+      const doGrupo=itens.filter(i=>i.grupo===g);
+      if(!doGrupo.length)return'';
+      return `<div style="font-size:.62rem;color:#666;text-transform:uppercase;letter-spacing:.6px;padding:6px 4px 2px;font-weight:700;">${g}</div>`+doGrupo.map(i=>i.html).join('');
+    }).join('');
     document.body.appendChild(pop);
     setTimeout(()=>document.addEventListener('click',function h(e){if(!pop.contains(e.target)&&!e.target.closest('[onclick*="_toggleMenuFerramentas"]')){pop.remove();document.removeEventListener('click',h);}},false),50);
   }
@@ -4041,7 +4061,7 @@ const Planejamento = (() => {
       const sorted=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
       const rows=sorted.map((t,i)=>[i+1,t.codigo||'',t.nivel||0,'  '.repeat(t.nivel||0)+(t.nome||''),
         t.duracao?t.duracao+'d':'',_fBR(t.inicioPlanejado),_fBR(t.terminoPlanejado),
-        t.percentualEsperado||0,t.percentualConcluido||0,t._predDisplay||'',t.tarefaPai||'',
+        _percEsp(t),t.percentualConcluido||0,t._predDisplay||'',t.tarefaPai||'',
         t.grupo||'',t.local||'',t.custo||0,t.receita||0,t.responsavel||'',
         _fBR(t.inicioPlanejadoBase),_fBR(t.terminoPlanejadoBase),_fBR(t.inicioDesafio),_fBR(t.terminoDesafio)]);
       const ws=XLSX.utils.aoa_to_sheet([H,...rows]);
@@ -4174,7 +4194,7 @@ const Planejamento = (() => {
             else if(cid==='inicioReal')cells+=`<div style="${base}color:#888;font-size:.7rem;justify-content:center;" title="Preenchido via Diário de Obra, Medições ou Semanal">${_fd(t.inicioReal)}</div>`;
             else if(cid==='terminoReal')cells+=`<div style="${base}color:#888;font-size:.7rem;justify-content:center;" title="Preenchido via Diário de Obra, Medições ou Semanal">${_fd(t.terminoReal)}</div>`;
             else if(cid==='duracao')cells+=`<div style="${base}color:#666;font-size:.7rem;justify-content:center;">${t.duracao||'—'}</div>`;
-            else if(cid==='percEsp')cells+=`<div style="${base}color:#555;font-size:.7rem;justify-content:center;">${t.percentualEsperado||0}%</div>`;
+            else if(cid==='percEsp')cells+=`<div style="${base}color:#555;font-size:.7rem;justify-content:center;">${_percEsp(t)}%</div>`;
             else if(cid==='percConc')cells+=`<div style="${base}font-size:.7rem;justify-content:center;color:${perc>=100?'#16a34a':perc>0?'#2563eb':'#555'};">${perc}%</div>`;
             else if(cid==='predecessora')cells+=`<div style="${base}color:#555;font-size:.7rem;justify-content:center;" title="${_esc(_tooltipPred(t))}">${t._predDisplay||'—'}</div>`;
             else if(cid==='sucessora')cells+=`<div style="${base}color:#666;font-size:.7rem;justify-content:center;" title="${_esc(_tooltipSuc(t._sucessoras))||'Calculado automaticamente'}">${(t._sucessoras&&t._sucessoras.length)?t._sucessoras.join(', '):'—'}</div>`;
@@ -4300,6 +4320,20 @@ const Planejamento = (() => {
     return'em_dia';
   }
   function _perc(t){return Math.round(t.percentualConcluido||0);}
+  // % Esperado calculado AO VIVO pela data de hoje dentro do intervalo
+  // início→término planejado (mesma fórmula do Diário de Obra) — o campo
+  // percentualEsperado salvo no banco (importado da Cofield) fica defasado
+  // no dia seguinte ao import; esse cálculo nunca fica.
+  function _percEsp(t){
+    const i=t.inicioPlanejado,f=t.terminoPlanejado;
+    if(!i||!f)return t.percentualEsperado||0; // sem datas: mostra o salvo (melhor que nada)
+    const hoje=new Date().toISOString().split('T')[0];
+    if(hoje<i)return 0;
+    if(hoje>=f)return 100;
+    const total=(new Date(f)-new Date(i))/864e5+1;
+    const dec=(new Date(hoje)-new Date(i))/864e5+1;
+    return Math.round(dec/total*100);
+  }
   function _fd(d){if(!d)return'—';try{return new Date(d+'T12:00:00').toLocaleDateString('pt-BR');}catch(e){return d;}}
   function _fBR(d){if(!d)return'';try{return new Date(d+'T12:00:00').toLocaleDateString('pt-BR');}catch(e){return'';}}
   function _fMoeda(n){return Number(n||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});}
@@ -4328,7 +4362,7 @@ const Planejamento = (() => {
       const H=['#','Nome','Duração','Início','Término','% Esp.','% Conc.','Predecessora','Responsável','Início Real','Término Real'];
       const rows=sorted.map((t,i)=>[i+1,'    '.repeat(t.nivel||0)+(t.nome||''),
         t.duracao?t.duracao+'d':'',_fBR(t.inicioPlanejado),_fBR(t.terminoPlanejado),
-        (t.percentualEsperado||0)+'%',(t.percentualConcluido||0)+'%',t._predDisplay||'',
+        _percEsp(t)+'%',(t.percentualConcluido||0)+'%',t._predDisplay||'',
         t.responsavel||'',_fBR(t.inicioReal),_fBR(t.terminoReal)]);
       const ws=X.utils.aoa_to_sheet([H,...rows]);
       ws['!cols']=[{wch:5},{wch:55},{wch:8},{wch:11},{wch:11},{wch:8},{wch:8},{wch:14},{wch:16},{wch:11},{wch:11}];
@@ -4423,7 +4457,7 @@ const Planejamento = (() => {
         <td style="text-align:center;">${t.duracao?t.duracao+'d':''}</td>
         <td style="text-align:center;">${_fBR(t.inicioPlanejado)}</td>
         <td style="text-align:center;">${_fBR(t.terminoPlanejado)}</td>
-        <td style="text-align:center;">${t.percentualEsperado||0}%</td>
+        <td style="text-align:center;">${_percEsp(t)}%</td>
         <td style="text-align:center;color:${perc>=100?'#15803D':perc>0?'#2563EB':'#6B7280'};font-weight:600;">${perc}%</td>
         <td style="text-align:center;">${_esc(t._predDisplay||'')}</td>
         <td>${_esc(t.responsavel||'')}</td>

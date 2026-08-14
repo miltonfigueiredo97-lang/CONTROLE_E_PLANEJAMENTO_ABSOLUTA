@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.62.5',
+  versaoAtual: 'V2.62.6',
 
   versoes: [
     {
@@ -5793,12 +5793,17 @@ const NotasVersao = {
       titulo:'Horizonte de 2 meses + alerta de início vencido nas Próximas',
       itens:['Opção "2 meses" adicionada no filtro de horizonte de Atividades (Próximas) e Suprimentos.',
         'Nas Próximas, tarefas com início planejado já vencido e 0% ganham o selo vermelho "deveria ter iniciado" — lembra de atualizar o % no Planejamento (a coluna Em Execução só considera tarefas com progresso entre 1% e 99%).']},
-    {versao:'V2.62.5',status:'aberta',data:'2026-08-14',tipo:'funcionalidade',
+    {versao:'V2.62.5',status:'fechada',data:'2026-08-14',tipo:'funcionalidade',
       titulo:'Novos exports no Planejamento: Excel FORMATADO (bonito), MS Project (.xml) e Imprimir/PDF — o export cru continua disponível como "Excel (simples)"',
       itens:['🎨 Exportar Excel (formatado): planilha estilizada pronta pra apresentar — cabeçalho escuro fixo com filtro, grupos coloridos por nível (dourado → tons mais claros), indentação por hierarquia, bordas, % concluído verde quando 100%. O export antigo (cru, com todas as colunas, bom pra reimportar) continua como "Exportar Excel (simples)".',
         '📊 Exportar MS Project (.xml): gera XML no formato nativo de troca do Project (MSPDI) — abre direto no MS Project (Arquivo → Abrir) com hierarquia, datas, duração, % concluído e predecessoras completas (tipo TI/II/TT/IT + defasagem), calendário padrão seg-sex 8h.',
         '🖨 Imprimir / PDF: abre a visão hierárquica bonita numa página branca limpa e chama a impressão do navegador — dá pra imprimir direto ou salvar em PDF. Cabeçalho da tabela repete em toda página, formato paisagem A4, linhas não quebram no meio.',
-        'Os três estão no menu ⚙ Ferramentas (ordem alfabética, como sempre).']}
+        'Os três estão no menu ⚙ Ferramentas (ordem alfabética, como sempre).']},
+    {versao:'V2.62.6',status:'aberta',data:'2026-08-14',tipo:'correcao',
+      titulo:'% Esperado agora é calculado AUTOMATICAMENTE pela data (nunca mais fica defasado); Término nunca mais fica antes do Início; menu Ferramentas organizado em categorias',
+      itens:['% Esperado deixou de ser um número estático importado da planilha (que ficava velho no dia seguinte): agora é calculado ao vivo — posição de HOJE dentro do intervalo Início→Término planejado (mesma fórmula do "prev." do Diário de Obra). Antes do início = 0%, depois do término = 100%, no meio = proporcional. Os dois módulos agora sempre batem. A coluna deixou de ser editável (não faz sentido editar algo calculado).',
+        'Datas: editar o Início pra DEPOIS do Término existente (em tarefa sem duração salva) deixava a tarefa "voltando no tempo" (ex: 12/08→04/08). Agora o Término é arrastado junto pro mesmo dia, com aviso. E editar o Término pra antes do Início é rejeitado na hora, sem salvar nada.',
+        'Menu ⚙ Ferramentas reorganizado em 3 categorias com cabeçalho — "Importar & Exportar", "Correções & Recálculos" e "Ferramentas da Obra" — em vez de uma lista única gigante ("salada de frutas"). Ordem alfabética dentro de cada grupo.']}
   ],
 
   render(containerId) {
