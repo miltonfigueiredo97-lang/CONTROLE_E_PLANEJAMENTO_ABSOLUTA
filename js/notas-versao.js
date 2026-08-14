@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.4.23.1',
+  versaoAtual: 'V3.5.0',
 
   versoes: [
     {
@@ -7632,15 +7632,17 @@ const NotasVersao = {
       ]
     },
     {
-      "versao": "V3.4.23.1",
+      "versao": "V3.5.0",
       "legado": "V2.63.0",
       "status": "aberta",
       "data": "2026-08-14",
-      "tipo": "melhoria",
-      "titulo": "Versionamento reanalisado versão a versão (V2.63.0 → V3.4.23.1) + Notas de Versão repaginadas",
+      "tipo": "funcionalidade",
+      "titulo": "Versionamento reanalisado versão a versão — nova era A.B.C.D + Notas de Versão repaginadas",
       "itens": [
         "Renumeração completa seguindo a regra A.B.C.D, analisada versão por versão desde a V1 — nenhuma versão foi juntada (as 408 continuam no histórico, cada uma com seu próprio número): A sobe em sistema novo funcional (V1 = Base · V2 = Reescrita do Planejamento · V3 = marco Suprimentos), B sobe apenas em feature/módulo GRANDE (analisado título a título — funcionalidades menores são sub-features no D), C a cada correção, D a cada melhoria/sub-feature — sempre zerando as casas abaixo.",
         "O número antigo de cada versão fica registrado no card como \"antes: V2.xx\".",
+        "Novo filtro \"● Em aberto\" nas Notas de Versão — mostra as versões que nunca foram fechadas (havia 7 esquecidas no histórico).",
+        "PROJETO.md atualizado com a regra oficial de versionamento A.B.C.D para todas as sessões Claude seguirem.",
         "Página redesenhada: hero escuro com a versão atual e o total de versões lançadas, cards de estatísticas (versões, features, correções, melhorias).",
         "Busca por texto (versão, título ou item) e filtro por tipo (Lançamento / Funcionalidade / Correção / Melhoria).",
         "Timeline com cards colapsáveis — clique no cabeçalho para expandir; só a versão em aberto vem expandida.",
@@ -7695,6 +7697,7 @@ const NotasVersao = {
         <input id="nvBusca" type="text" placeholder="🔍 Buscar versão, título ou item..." style="flex:1;min-width:220px;padding:9px 14px;border:1.5px solid var(--cor-borda-light);border-radius:100px;font-size:.85rem;outline:none;" />
         <div id="nvFiltros" style="display:flex;gap:6px;flex-wrap:wrap;">
           <button class="nv-f ativo" data-t="todos" style="padding:7px 14px;border-radius:100px;border:1.5px solid #222;background:#222;color:#fff;font-size:.75rem;font-weight:700;cursor:pointer;">Todos</button>
+          <button class="nv-f" data-t="aberta" style="padding:7px 14px;border-radius:100px;border:1.5px solid var(--cor-primaria);background:#fff;color:#8a7400;font-size:.75rem;font-weight:700;cursor:pointer;">● Em aberto</button>
           ${Object.entries(TIPOS).map(([k,t])=>`
             <button class="nv-f" data-t="${k}" style="padding:7px 14px;border-radius:100px;border:1.5px solid var(--cor-borda-light);background:#fff;color:#555;font-size:.75rem;font-weight:700;cursor:pointer;">${t.icon} ${t.label}</button>`).join('')}
         </div>
@@ -7707,7 +7710,7 @@ const NotasVersao = {
           const aberta = v.status==='aberta';
           const hay = esc((v.versao+' '+(v.legado||'')+' '+v.titulo+' '+v.itens.join(' ')).toLowerCase());
           return `
-          <div class="nv-card" data-t="${v.tipo}" data-hay="${hay}" style="display:flex;gap:14px;position:relative;padding:6px 0;">
+          <div class="nv-card" data-t="${v.tipo}" data-aberta="${aberta?1:0}" data-hay="${hay}" style="display:flex;gap:14px;position:relative;padding:6px 0;">
             <div style="width:40px;flex-shrink:0;display:flex;justify-content:center;">
               <div style="width:34px;height:34px;border-radius:50%;background:${aberta?'var(--cor-primaria)':'#fff'};border:2px solid ${aberta?'var(--cor-primaria)':t.cor};display:flex;align-items:center;justify-content:center;font-size:.95rem;z-index:1;margin-top:8px;">${t.icon}</div>
             </div>
@@ -7757,7 +7760,7 @@ const NotasVersao = {
       const q = (busca.value||'').toLowerCase().trim();
       let visiveis = 0;
       c.querySelectorAll('.nv-card').forEach(card => {
-        const okT = filtroTipo==='todos' || card.dataset.t===filtroTipo;
+        const okT = filtroTipo==='todos' || (filtroTipo==='aberta' ? card.dataset.aberta==='1' : card.dataset.t===filtroTipo);
         const okQ = !q || card.dataset.hay.includes(q);
         const show = okT && okQ;
         card.style.display = show ? 'flex' : 'none';
