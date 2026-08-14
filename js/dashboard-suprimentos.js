@@ -85,7 +85,7 @@ const DashSuprimentos = (() => {
 
   // ---------- Render ----------
   const HORIZONTES = [
-    { dias: 7, label: '7 dias' }, { dias: 30, label: '1 mês' }, { dias: 90, label: '3 meses' },
+    { dias: 7, label: '7 dias' }, { dias: 30, label: '1 mês' }, { dias: 60, label: '2 meses' }, { dias: 90, label: '3 meses' },
     { dias: 180, label: '6 meses' }, { dias: 365, label: '1 ano' }, { dias: null, label: 'Tudo' },
   ];
 

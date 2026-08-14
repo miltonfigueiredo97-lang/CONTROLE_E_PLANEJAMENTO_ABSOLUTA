@@ -90,7 +90,7 @@ const DashAtividades = (() => {
   }
 
   const HORIZONTES = [
-    { dias: 7, label: '7 dias' }, { dias: 30, label: '1 mês' }, { dias: 90, label: '3 meses' },
+    { dias: 7, label: '7 dias' }, { dias: 30, label: '1 mês' }, { dias: 60, label: '2 meses' }, { dias: 90, label: '3 meses' },
     { dias: 180, label: '6 meses' }, { dias: 365, label: '1 ano' }, { dias: null, label: 'Tudo' },
   ];
 
@@ -111,6 +111,13 @@ const DashAtividades = (() => {
 
     const linhaFolha = (t, indent) => {
       const pct = Math.round(Number(t.percentualConcluido) || 0);
+      // Próximas com início planejado já vencido: alerta visual — a tarefa
+      // deveria ter começado (ou o % está desatualizado no Planejamento).
+      let chipAtraso = '';
+      if (chave === 'ativ_proximas' && t.inicioPlanejado) {
+        const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+        if (new Date(t.inicioPlanejado) < hoje) chipAtraso = '<span class="db-chip" style="background:#fdf0ef;color:#b91c1c;border-color:transparent;font-weight:600;">deveria ter iniciado</span>';
+      }
       return `
       <div class="db-sup-item" style="padding-left:${indent}px;">
         <span class="db-ativ-dot" style="background:${cfg.dot};"></span>
@@ -118,6 +125,7 @@ const DashAtividades = (() => {
           <div class="db-sup-nome">${DashCore.esc(t.nome || 'Sem nome')}</div>
           <div class="db-sup-sub">${t.local ? DashCore.esc(t.local) + ' · ' : ''}${cfg.rotuloData} ${Utils.formatarData(_campoData(chave, t))}</div>
         </div>
+        ${chipAtraso}
         <span class="db-ativ-pct" style="color:${_tomPct(pct)};">${pct}%</span>
       </div>`;
     };

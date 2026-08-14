@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.62.3',
+  versaoAtual: 'V2.62.4',
 
   versoes: [
     {
@@ -5785,10 +5785,14 @@ const NotasVersao = {
       titulo:'Estacas no Dashboard: índice de perda corrigido e minimapa limpo',
       itens:['Índice de perda médio estava sempre 0,0%: a "perda de solo" comparava o volume real das BTs com o volume de projeto da OBRA INTEIRA — com a obra em andamento, o real é sempre menor que o total e a conta zerava. Agora compara com o volume de projeto das peças JÁ EXECUTADAS (mesma metodologia do Controle de Estacas). Ex: 69,0 m³ reais sobre 58,5 m³ de projeto executado passam a acusar a perda corretamente.',
         'Minimapa da prancha agora aparece "zerado": mostra APENAS as estacas com execução iniciada, sem a nuvem de círculos de todas as estacas configuradas nem os anéis coloridos por tipo — a prancha vai sendo pintada conforme a obra avança. No popup em tela cheia (clique na barra de Fundação/Estrutura) os anéis por tipo continuam, pois lá servem de leitura do projeto.']},
-    {versao:'V2.62.3',status:'aberta',data:'2026-08-13',tipo:'correcao',
+    {versao:'V2.62.3',status:'fechada',data:'2026-08-13',tipo:'correcao',
       titulo:'Seção Atividades de volta no Dashboard',
       itens:['A seção "Atividades" (Em Execução + Próximas), removida por engano no redesign V2.62.0, voltou — agora como módulo próprio (js/dashboard-atividades.js) e no padrão visual novo: pills de nível, árvore expansível com resumo agregado, % colorido por faixa e horizonte de tempo nas Próximas.',
-        'As preferências de nível/horizonte salvas por usuário antes da V2.62.0 continuam valendo (mesmas chaves em users/{uid}.dashboardArvorePrefs).']}
+        'As preferências de nível/horizonte salvas por usuário antes da V2.62.0 continuam valendo (mesmas chaves em users/{uid}.dashboardArvorePrefs).']},
+    {versao:'V2.62.4',status:'aberta',data:'2026-08-14',tipo:'correcao',
+      titulo:'Horizonte de 2 meses + alerta de início vencido nas Próximas',
+      itens:['Opção "2 meses" adicionada no filtro de horizonte de Atividades (Próximas) e Suprimentos.',
+        'Nas Próximas, tarefas com início planejado já vencido e 0% ganham o selo vermelho "deveria ter iniciado" — lembra de atualizar o % no Planejamento (a coluna Em Execução só considera tarefas com progresso entre 1% e 99%).']}
   ],
 
   render(containerId) {
