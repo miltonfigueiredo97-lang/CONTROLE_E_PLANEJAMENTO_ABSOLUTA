@@ -518,36 +518,13 @@ const LevantamentoConcreto = (() => {
   }
 
   function esquemaFundacao(tipo) {
-    if (tipo === 'Bloco Hexagonal') {
-      return `
-        <svg viewBox="0 0 260 300" width="100%" style="max-height:380px;display:block;margin:0 auto;">
-          <polygon points="130,30 200,75 200,205 130,250 60,205 60,75" fill="rgba(245,200,0,0.10)" stroke="var(--cor-primaria)" stroke-width="2.5"/>
-          <circle cx="130" cy="140" r="3" fill="#94a3b8"/>
-          <line x1="60" y1="14" x2="200" y2="14" stroke="#3b82f6" stroke-width="1.2"/>
-          <line x1="60" y1="8" x2="60" y2="20" stroke="#3b82f6" stroke-width="1.2"/>
-          <line x1="130" y1="8" x2="130" y2="20" stroke="#3b82f6" stroke-width="1.2"/>
-          <line x1="200" y1="8" x2="200" y2="20" stroke="#3b82f6" stroke-width="1.2"/>
-          <text x="95" y="10" text-anchor="middle" font-size="12" fill="#3b82f6" font-weight="bold">A</text>
-          <text x="165" y="10" text-anchor="middle" font-size="12" fill="#3b82f6" font-weight="bold">A</text>
-          <line x1="212" y1="30" x2="212" y2="75" stroke="#16a34a" stroke-width="1.2"/>
-          <line x1="212" y1="75" x2="212" y2="205" stroke="#ef4444" stroke-width="1.2"/>
-          <line x1="212" y1="205" x2="212" y2="250" stroke="#16a34a" stroke-width="1.2"/>
-          <line x1="206" y1="30" x2="218" y2="30" stroke="#16a34a" stroke-width="1.2"/>
-          <line x1="206" y1="75" x2="218" y2="75" stroke="#16a34a" stroke-width="1.2"/>
-          <line x1="206" y1="205" x2="218" y2="205" stroke="#ef4444" stroke-width="1.2"/>
-          <line x1="206" y1="250" x2="218" y2="250" stroke="#16a34a" stroke-width="1.2"/>
-          <text x="234" y="56" text-anchor="middle" font-size="12" fill="#16a34a" font-weight="bold">B</text>
-          <text x="234" y="144" text-anchor="middle" font-size="12" fill="#ef4444" font-weight="bold">C</text>
-          <text x="234" y="232" text-anchor="middle" font-size="12" fill="#16a34a" font-weight="bold">B</text>
-          <text x="130" y="278" text-anchor="middle" font-size="11" fill="#a855f7" font-weight="bold">D = altura do bloco (espessura)</text>
-        </svg>`;
-    }
     const arquivo = {
       'Estacas': 'estacas-tubuloes.png',
       'Tubulão a Céu Aberto': 'tubulao-ceu-aberto.png',
       'Sapata Isolada Piramidal': 'sapata-isolada-piramidal.png',
       'Sapata de Divisa Piramidal': 'sapata-divisa-piramidal.png',
       'Bloco Triângular': 'blocos-triangulares.png',
+      'Bloco Hexagonal': 'bloco-hexagonal.png',
     }[tipo] || 'blocos-retangulares.png'; // Bloco Retângular / Viga Baldrame / Sapata Isolada/Divisa em Bloco
     return `<img src="assets/images/fundacoes/${arquivo}" alt="${esc(tipo)}" style="max-height:380px;max-width:100%;width:auto;height:auto;display:block;margin:0 auto;image-rendering:-webkit-optimize-contrast;">`;
   }
