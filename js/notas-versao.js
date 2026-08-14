@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.62.14',
+  versaoAtual: 'V2.62.15',
 
   versoes: [
     {
@@ -5836,10 +5836,14 @@ const NotasVersao = {
       itens:['O Dashboard agora escuta o Firestore ao vivo: qualquer % ou dado alterado no Planejamento — nesta aba, em outra aba ou em outro computador — atualiza Hero, Andamento por Frente, Atividades e Suprimentos NA HORA, sem F5, sem loading e sem clicar em nada.',
         'Indicador verde ● ao lado de "Atualizado às..." mostra quando a tela acabou de se atualizar sozinha.',
         'As seções pesadas (Contenção, Fundação/Estrutura, Estacas, Resumo por Apartamento) continuam recarregando ao voltar pra aba ou pelo botão ↻ — evita custo desnecessário de leitura contínua onde os dados mudam pouco.']},
-    {versao:'V2.62.14',status:'aberta',data:'2026-08-14',tipo:'correcao',
+    {versao:'V2.62.14',status:'fechada',data:'2026-08-14',tipo:'correcao',
       titulo:'Dashboard sincroniza % de Estacas igual ao Planejamento',
       itens:['O Planejamento recalcula e grava o % das tarefas vinculadas a peças de Estacas (a partir da execução real) toda vez que abre — o Dashboard não fazia isso e podia ler o estado ANTERIOR: tarefas já iniciadas apareciam com 0% e caíam em "Próximas" como atrasadas. Agora o Dashboard roda a MESMA sincronização antes de carregar.',
-        'Log de diagnóstico no console do navegador (F12) mostrando quantas tarefas/folhas/em execução o Dashboard leu do banco — facilita rastrear qualquer divergência que ainda apareça.']}
+        'Log de diagnóstico no console do navegador (F12) mostrando quantas tarefas/folhas/em execução o Dashboard leu do banco — facilita rastrear qualquer divergência que ainda apareça.']},
+    {versao:'V2.62.15',status:'aberta',data:'2026-08-14',tipo:'correcao',
+      titulo:'Em Execução escondia tarefas por causa de horizonte antigo',
+      itens:['ACHADO: a coluna "Em Execução" das Atividades aplicava, por engano, um horizonte de tempo herdado das preferências antigas (pré-V2.62) — e o filtro era pela data de TÉRMINO planejado. Resultado: tarefas em execução com término distante sumiam (ex: Custos Indiretos 14%, término em 2028, e Cravação de Estacas 8% não apareciam).',
+        'Corrigido: Em Execução NUNCA aplica horizonte — se a tarefa tem % entre 1 e 99, ela aparece, sempre. O horizonte continua valendo só nas Próximas e em Suprimentos, onde faz sentido.']}
   ],
 
   render(containerId) {

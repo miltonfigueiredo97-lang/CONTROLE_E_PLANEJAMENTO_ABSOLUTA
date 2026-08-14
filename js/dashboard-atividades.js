@@ -61,6 +61,11 @@ const DashAtividades = (() => {
   function _proximasFiltro(t) { return !(Number(t.percentualConcluido) > 0); }
   function _campoData(chave, t) { return chave === 'ativ_execucao' ? t.terminoPlanejado : t.inicioPlanejado; }
   function _dentroHorizonte(chave, data) {
+    // Em Execução NUNCA aplica horizonte: se está em execução, mostra —
+    // prefs antigas (pré-V2.62) traziam horizonteDias gravado pra essa
+    // coluna e filtravam por TÉRMINO planejado, escondendo tarefas em
+    // execução com término distante (ex: Custos Indiretos até 2028).
+    if (!COLS[chave].usaHorizonte) return true;
     const st = _st[chave];
     if (st.horizonteDias == null) return true;
     if (!data) return true;
