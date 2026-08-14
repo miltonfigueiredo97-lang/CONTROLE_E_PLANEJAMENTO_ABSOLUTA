@@ -79,6 +79,24 @@ module.exports = async function handler(req, res) {
       return;
     }
 
+    if (action === 'editarEmail') {
+      const { uid, novoEmail } = req.body;
+      if (!uid || !novoEmail) { res.status(400).json({ error: 'uid e novoEmail são obrigatórios.' }); return; }
+
+      const doc = await admin.firestore().collection('users').doc(uid).get();
+      if (!doc.exists) { res.status(404).json({ error: 'Usuário não encontrado.' }); return; }
+      if (doc.data().status !== 'convidado') {
+        res.status(400).json({ error: 'Só é possível editar o e-mail de um convite pendente.' });
+        return;
+      }
+
+      await admin.auth().updateUser(uid, { email: novoEmail });
+      await admin.firestore().collection('users').doc(uid).update({ email: novoEmail });
+
+      res.status(200).json({ ok: true });
+      return;
+    }
+
     if (action === 'excluir') {
       const { uid } = req.body;
       if (!uid) { res.status(400).json({ error: 'uid é obrigatório.' }); return; }

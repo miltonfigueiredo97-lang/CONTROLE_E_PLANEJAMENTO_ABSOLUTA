@@ -157,10 +157,12 @@ const AdminPermissoes = (() => {
 
     document.getElementById('modal-usuario-titulo').textContent = 'Editar permissões';
     document.getElementById('form-usuario-uid').value = uid;
+    const pendente = u.status === 'convidado';
     document.getElementById('form-usuario-nome').value = u.nome || '';
     document.getElementById('form-usuario-nome').disabled = true;
     document.getElementById('form-usuario-email').value = u.email || '';
-    document.getElementById('form-usuario-email').disabled = true;
+    document.getElementById('form-usuario-email').disabled = !pendente;
+    document.getElementById('form-usuario-email').title = pendente ? 'Convite pendente: pode corrigir o e-mail.' : '';
     document.getElementById('form-usuario-perfil').value = u.perfil || 'usuario';
     document.getElementById('btn-salvar-usuario').textContent = 'Salvar alterações';
 
@@ -216,12 +218,21 @@ const AdminPermissoes = (() => {
     try {
       if (uid) {
         // Edição de usuário existente
+        const usuarioAtual = usuarios.find(u => u.id === uid);
+        const emailEditavel = !document.getElementById('form-usuario-email').disabled;
+        const emailMudou = emailEditavel && email && email !== usuarioAtual?.email;
+
+        if (emailMudou) {
+          await _editarEmail(uid, email);
+          await _dispararEmailSenha(email);
+        }
+
         await Permissions.salvarPermissoesUsuario(uid, modulos, acessoObras);
-        if (perfil !== usuarios.find(u => u.id === uid)?.perfil) {
+        if (perfil !== usuarioAtual?.perfil) {
           await Database.atualizarRaiz('users', uid, { perfil });
         }
         permissoesPorUid[uid] = modulos;
-        Utils.toast('Permissões atualizadas!', 'sucesso');
+        Utils.toast(emailMudou ? 'E-mail corrigido e convite reenviado!' : 'Permissões atualizadas!', 'sucesso');
       } else {
         // Convite de usuário novo
         if (!nome || !email) { Utils.toast('Informe nome e e-mail.', 'alerta'); btn.disabled = false; return; }
@@ -274,6 +285,18 @@ const AdminPermissoes = (() => {
     if (!resp.ok) throw new Error(data.error || 'Erro ao criar usuário.');
 
     await _dispararEmailSenha(email);
+    return data;
+  }
+
+  async function _editarEmail(uid, novoEmail) {
+    const idToken = await Auth.getUser().getIdToken();
+    const resp = await fetch('/api/usuarios', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + idToken },
+      body: JSON.stringify({ action: 'editarEmail', uid, novoEmail })
+    });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || 'Erro ao editar e-mail.');
     return data;
   }
 

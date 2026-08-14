@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.62.14',
+  versaoAtual: 'V2.62.15',
 
   versoes: [
     {
@@ -5836,10 +5836,14 @@ const NotasVersao = {
       itens:['O Dashboard agora escuta o Firestore ao vivo: qualquer % ou dado alterado no Planejamento — nesta aba, em outra aba ou em outro computador — atualiza Hero, Andamento por Frente, Atividades e Suprimentos NA HORA, sem F5, sem loading e sem clicar em nada.',
         'Indicador verde ● ao lado de "Atualizado às..." mostra quando a tela acabou de se atualizar sozinha.',
         'As seções pesadas (Contenção, Fundação/Estrutura, Estacas, Resumo por Apartamento) continuam recarregando ao voltar pra aba ou pelo botão ↻ — evita custo desnecessário de leitura contínua onde os dados mudam pouco.']},
-    {versao:'V2.62.14',status:'aberta',data:'2026-08-14',tipo:'correcao',
+    {versao:'V2.62.14',status:'fechada',data:'2026-08-14',tipo:'correcao',
       titulo:'Dashboard sincroniza % de Estacas igual ao Planejamento',
       itens:['O Planejamento recalcula e grava o % das tarefas vinculadas a peças de Estacas (a partir da execução real) toda vez que abre — o Dashboard não fazia isso e podia ler o estado ANTERIOR: tarefas já iniciadas apareciam com 0% e caíam em "Próximas" como atrasadas. Agora o Dashboard roda a MESMA sincronização antes de carregar.',
-        'Log de diagnóstico no console do navegador (F12) mostrando quantas tarefas/folhas/em execução o Dashboard leu do banco — facilita rastrear qualquer divergência que ainda apareça.']}
+        'Log de diagnóstico no console do navegador (F12) mostrando quantas tarefas/folhas/em execução o Dashboard leu do banco — facilita rastrear qualquer divergência que ainda apareça.']},
+    {versao:'V2.62.15',status:'aberta',data:'2026-08-14',tipo:'correcao',
+      titulo:'Menu: seção "Administração" unificada + correção de e-mail em convite pendente',
+      itens:['Sidebar: "Permissões" saiu de "Análise" (lugar errado) e entrou, junto com Relatórios, Histograma, Backup de Planejamentos e Notas de Versão, numa única seção "Administração".',
+        'Admin > Permissões: convite pendente agora permite editar o e-mail (corrigir erro de digitação) — ao salvar, atualiza o e-mail no Firebase Auth e reenvia o convite automaticamente para o endereço corrigido.']}
   ],
 
   render(containerId) {
