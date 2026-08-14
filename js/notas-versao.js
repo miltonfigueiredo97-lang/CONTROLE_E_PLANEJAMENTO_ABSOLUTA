@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V2.62.15',
+  versaoAtual: 'V2.62.16',
 
   versoes: [
     {
@@ -5840,7 +5840,11 @@ const NotasVersao = {
       titulo:'Dashboard sincroniza % de Estacas igual ao Planejamento',
       itens:['O Planejamento recalcula e grava o % das tarefas vinculadas a peças de Estacas (a partir da execução real) toda vez que abre — o Dashboard não fazia isso e podia ler o estado ANTERIOR: tarefas já iniciadas apareciam com 0% e caíam em "Próximas" como atrasadas. Agora o Dashboard roda a MESMA sincronização antes de carregar.',
         'Log de diagnóstico no console do navegador (F12) mostrando quantas tarefas/folhas/em execução o Dashboard leu do banco — facilita rastrear qualquer divergência que ainda apareça.']},
-    {versao:'V2.62.15',status:'aberta',data:'2026-08-14',tipo:'correcao',
+    {versao:'V2.62.15',status:'fechada',data:'2026-08-14',tipo:'correcao',
+      titulo:'Em Execução escondia tarefas por causa de horizonte antigo',
+      itens:['ACHADO: a coluna "Em Execução" das Atividades aplicava, por engano, um horizonte de tempo herdado das preferências antigas (pré-V2.62) — e o filtro era pela data de TÉRMINO planejado. Resultado: tarefas em execução com término distante sumiam (ex: Custos Indiretos 14%, término em 2028, e Cravação de Estacas 8% não apareciam).',
+        'Corrigido: Em Execução NUNCA aplica horizonte — se a tarefa tem % entre 1 e 99, ela aparece, sempre. O horizonte continua valendo só nas Próximas e em Suprimentos, onde faz sentido.']},
+    {versao:'V2.62.16',status:'aberta',data:'2026-08-14',tipo:'correcao',
       titulo:'Menu: seção "Administração" unificada + correção de e-mail em convite pendente',
       itens:['Sidebar: "Permissões" saiu de "Análise" (lugar errado) e entrou, junto com Relatórios, Histograma, Backup de Planejamentos e Notas de Versão, numa única seção "Administração".',
         'Admin > Permissões: convite pendente agora permite editar o e-mail (corrigir erro de digitação) — ao salvar, atualiza o e-mail no Firebase Auth e reenvia o convite automaticamente para o endereço corrigido.']}
