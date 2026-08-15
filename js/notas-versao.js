@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.5.1.7',
+  versaoAtual: 'V3.5.1.8',
 
   versoes: [
     {
@@ -7738,6 +7738,16 @@ const NotasVersao = {
       "itens": [
         "O botão \"✎ sobra/perda\" ainda aparecia em TODAS as linhas de BT do popup de lançar por estaca, mesmo já só mostrando os campos certos dentro dele — poluía a tela com botão irrelevante em toda BT do meio.",
         "Agora o botão só aparece na linha da BT que é a primeira (mostra \"✎ cocho\") ou a última (mostra \"✎ sobra\") da concretagem inteira. BTs do meio não têm nenhum botão ali — não tem nada de cocho/sobra pra editar mesmo."
+      ]
+    },
+    {
+      "versao": "V3.5.1.8",
+      "data": "2026-08-15",
+      "tipo": "correcao",
+      "titulo": "Controle de Estacas: formatação do mini-form de sobra/perda arrumada",
+      "itens": [
+        "Layout do mini-formulário (dentro do popup de lançar por estaca) estava quebrado: quando só tinha 1 campo na linha (ex: só \\\"Perda em Obra\\\" numa BT do meio, ou o rótulo \\\"Cocho + Linha [m³] (primeira BT)\\\" quebrando em 2 linhas), esticava feio ou desalinhava.",
+        "Agora é uma grade fixa de 3 colunas, sempre igual. O texto explicando \\\"é a primeira BT, tem cocho\\\"/\\\"é a última, tem sobra\\\" saiu do rótulo do campo e foi pro texto de cima, sem quebrar linha."
       ]
     }
   ],

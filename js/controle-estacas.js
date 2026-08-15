@@ -1299,17 +1299,14 @@ const ControleEstacas = (() => {
                 const ehUltima = ultimaBT && b.id === ultimaBT.id;
                 return `
                 <div style="border:1px dashed var(--cv-border,#e2e8f0);border-radius:8px;padding:10px;margin-top:6px;background:var(--cv-surface2,#f8fafc);">
-                  <div class="text-sm text-muted" style="margin-bottom:6px;">Sobra/perda de BT-${b.numero} — vale pra todas as peças que essa BT concretou, não só esta.</div>
-                  ${!ehPrimeira && !ehUltima ? `<div class="text-sm text-muted" style="margin-bottom:8px;">Essa é uma BT do meio — cocho/linha só na primeira, sobra só na última.</div>` : ''}
-                  <div class="form-row" style="margin-bottom:8px;">
-                    ${ehUltima ? `<div class="form-grupo" style="margin-bottom:0;"><label>Sobra Caminhão [m³] <span class="text-sm text-muted">(última BT)</span></label><input type="text" inputmode="decimal" id="ce-meta-sobra-${b.id}" class="form-control" value="${esc(meta.sobra)}" placeholder="0"></div>` : ''}
+                  <div class="text-sm text-muted" style="margin-bottom:10px;">Sobra/perda de BT-${b.numero} — vale pra todas as peças que essa BT concretou, não só esta.${ehPrimeira ? ' É a <b>primeira</b> BT: tem cocho/linha.' : ''}${ehUltima ? ' É a <b>última</b> BT: tem sobra de caminhão.' : ''}</div>
+                  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
+                    ${ehUltima ? `<div class="form-grupo" style="margin-bottom:0;"><label>Sobra Caminhão [m³]</label><input type="text" inputmode="decimal" id="ce-meta-sobra-${b.id}" class="form-control" value="${esc(meta.sobra)}" placeholder="0"></div>` : ''}
+                    ${ehPrimeira ? `<div class="form-grupo" style="margin-bottom:0;"><label>Cocho + Linha [m³]</label><input type="text" inputmode="decimal" id="ce-meta-cocho-${b.id}" class="form-control" value="${esc(meta.perdaCocho)}" placeholder="0"></div>` : ''}
                     <div class="form-grupo" style="margin-bottom:0;"><label>Perda em Obra [m³]</label><input type="text" inputmode="decimal" id="ce-meta-perda-${b.id}" class="form-control" value="${esc(meta.perda)}" placeholder="0"></div>
-                  </div>
-                  <div class="form-row" style="margin-bottom:8px;">
-                    ${ehPrimeira ? `<div class="form-grupo" style="margin-bottom:0;"><label>Cocho + Linha [m³] <span class="text-sm text-muted">(primeira BT)</span></label><input type="text" inputmode="decimal" id="ce-meta-cocho-${b.id}" class="form-control" value="${esc(meta.perdaCocho)}" placeholder="0"></div>` : ''}
                     <div class="form-grupo" style="margin-bottom:0;"><label>Hora</label><input type="time" id="ce-meta-hora-${b.id}" class="form-control" value="${esc(meta.hora)}"></div>
                   </div>
-                  <div style="display:flex;justify-content:flex-end;gap:8px;">
+                  <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:10px;">
                     <button class="btn btn-secundario btn-sm" onclick="CE.toggleMetaInline('${b.id}')">Fechar</button>
                     <button class="btn btn-primario btn-sm" onclick="CE.salvarMetaBTInline('${b.id}')">✓ Salvar</button>
                   </div>
