@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.7.0',
+  versaoAtual: 'V3.7.1',
 
   versoes: [
     {
@@ -7871,6 +7871,18 @@ const NotasVersao = {
         "PDF pode ser baixado direto (\"💾 Baixar PDF\") ou compartilhado (\"📤 Compartilhar\") — no celular abre o menu nativo de compartilhamento com o PDF já anexado, WhatsApp incluso; no navegador sem esse suporte, baixa o arquivo pra anexar manualmente.",
         "Levantamento de Terraplanagem: botão \"🧊 Ver em 3D\" na Calculadora de Corte de Terra — monta um sólido 3D fazendo o loft entre as seções da direção atual (Horizontais ou Verticais), do jeito que elas já são calculadas (cotas + distâncias + cota de referência), funciona tanto no modo Manual quanto no modo Marcar no Projeto.",
         "O 3D colore a superfície do terreno por profundidade do corte (verde = raso, vermelho = fundo) e mostra a cota de referência como um plano laranja translúcido por baixo — arrasta pra girar, scroll pra zoom."
+      ]
+    },
+    {
+      "versao": "V3.7.1",
+      "data": "2026-08-15",
+      "tipo": "melhoria",
+      "titulo": "Limpar Base (Terraplanagem) com permissão dedicada + auditoria de permissões",
+      "itens": [
+        "Novo botão \"🗑 Limpar Base\" no Controle de Terraplanagem: apaga TODAS as viagens da obra (e opcionalmente os caminhões). Proteção tripla: exige a nova permissão \"Limpar base (tudo)\" concedida na Administração, confirmação de aviso e digitação da palavra LIMPAR.",
+        "Novo botão \"🗑 Limpar Base\" no Levantamento de Terraplanagem: apaga todas as seções (horizontais e verticais), o projeto inserido e a escala calibrada — mesma proteção tripla. Caminhões e configuração de empolamento/capacidades são preservados.",
+        "Nova ação \"limpar\" no catálogo de permissões — aparece automaticamente na tela de Administração/Permissões pros dois módulos de Terraplanagem, desligada por padrão pra usuários não-admin.",
+        "Auditoria de permissões de tudo criado nas últimas versões: Importar Planilha (controleTerra:importar), Relatório PDF (controleTerra:exportar), Limpar Base (limpar nos dois módulos) — todos com bloqueio funcional (a ação é recusada mesmo forçando pelo console) e botão escondido na tela pra quem não tem a permissão."
       ]
     }
   ],

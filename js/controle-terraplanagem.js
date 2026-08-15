@@ -868,10 +868,37 @@ const ControleTerraplanagem = (() => {
     }
   }
 
+  // ══════════════════════════════════════════
+  // LIMPAR BASE — apaga TODAS as viagens e (opcionalmente) caminhões da obra.
+  // Exige a permissão dedicada "limpar" (controleTerra:limpar) + confirmação
+  // dupla com digitação da palavra LIMPAR (proteção contra clique acidental).
+  // ══════════════════════════════════════════
+  async function limparBase() {
+    if (!Permissions.pode('controleTerra', 'limpar')) { Utils.toast('Sem permissão para limpar a base.', 'erro'); return; }
+    const ok1 = await Utils.confirmar(`⚠️ Isso vai APAGAR TODAS as ${entregas.length} viagens registradas desta obra. Essa ação NÃO pode ser desfeita. Continuar?`);
+    if (!ok1) return;
+    const palavra = prompt('Pra confirmar, digite LIMPAR (em maiúsculas):');
+    if (palavra !== 'LIMPAR') { Utils.toast('Confirmação incorreta — nada foi apagado.', 'alerta'); return; }
+    const apagarCaminhoes = await Utils.confirmar(`Apagar também os ${caminhoes.length} caminhões cadastrados? (OK = apaga caminhões também · Cancelar = mantém os caminhões)`);
+    Utils.mostrarLoading('Limpando base...');
+    try {
+      const ops = entregas.map(e => ({ type: 'delete', ref: Database.ref(obraId, COL_ENTREGAS).doc(e.id) }));
+      if (apagarCaminhoes) caminhoes.forEach(c => ops.push({ type: 'delete', ref: Database.ref(obraId, COL_CAMINHOES).doc(c.id) }));
+      for (let i = 0; i < ops.length; i += 400) await Database.batchWrite(ops.slice(i, i + 400));
+      await carregar();
+      Utils.toast(`✓ Base limpa — ${entregas.length === 0 ? 'todas as viagens apagadas' : 'concluído'}.`, 'sucesso');
+    } catch (e) {
+      console.error(e);
+      Utils.toast('Erro ao limpar: ' + e.message, 'erro');
+    } finally {
+      Utils.esconderLoading();
+    }
+  }
+
   return {
     init, recarregar, renderizar, onFiltro, setAbaRel,
     abrirEntrega, autoVolumePorPlaca, salvarEntrega, excluirEntrega,
-    importarPlanilha,
+    importarPlanilha, limparBase,
     abrirRelatorioPeriodo, gerarRelatorioPeriodo, baixarRelatorioPDF, compartilharRelatorioPDF,
   };
 })();

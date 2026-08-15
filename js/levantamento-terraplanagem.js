@@ -186,6 +186,7 @@ const LevantamentoTerraplanagem = (() => {
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <button class="btn btn-secundario btn-sm" onclick="TP_UI.abrirConfig()">⚙️ Config</button>
           <button class="btn btn-primario btn-sm" onclick="TP_UI.abrirCaminhoes()">🚚 Caminhões</button>
+          <button class="btn btn-secundario btn-sm" data-perm="levantamentoTerra:limpar" style="color:var(--cv-red,#dc2626);" onclick="TP_UI.limparBase()">🗑 Limpar Base</button>
         </div>
       </div>
 
@@ -202,6 +203,7 @@ const LevantamentoTerraplanagem = (() => {
       </div>
     `;
     renderSecoes();
+    Permissions.aplicarNaTela();
   }
 
   // ══════════════════════════════════════════
@@ -903,6 +905,38 @@ const LevantamentoTerraplanagem = (() => {
     }
   }
 
+  // ══════════════════════════════════════════
+  // LIMPAR BASE — apaga TODAS as seções (horizontais e verticais), o
+  // projeto (imagem) e a calibração de escala desta obra. Caminhões e
+  // config de empolamento/capacidades ficam. Exige a permissão dedicada
+  // "limpar" (levantamentoTerra:limpar) + confirmação dupla digitada.
+  // ══════════════════════════════════════════
+  async function limparBase() {
+    if (!Permissions.pode('levantamentoTerra', 'limpar')) { Utils.toast('Sem permissão para limpar a base.', 'erro'); return; }
+    const totalSec = (secoes.horizontal || []).length + (secoes.vertical || []).length;
+    const ok1 = await Utils.confirmar(`⚠️ Isso vai APAGAR TODAS as ${totalSec} seções (horizontais e verticais), o projeto inserido e a escala calibrada desta obra. Essa ação NÃO pode ser desfeita. Continuar?`);
+    if (!ok1) return;
+    const palavra = prompt('Pra confirmar, digite LIMPAR (em maiúsculas):');
+    if (palavra !== 'LIMPAR') { Utils.toast('Confirmação incorreta — nada foi apagado.', 'alerta'); return; }
+    Utils.mostrarLoading('Limpando base do levantamento...');
+    try {
+      secoes = { horizontal: [], vertical: [] };
+      await db.collection('obras').doc(obraId).collection('config').doc(DOC_SECOES).set(secoes, { merge: false });
+      try { await db.collection('obras').doc(obraId).collection('config').doc(DOC_PROJETO_IMG).delete(); } catch (e) {}
+      config.temImagemProjeto = false; config.imgW = 0; config.imgH = 0; config.escalaPxPorMetro = 0;
+      imagemProjetoCache = null;
+      secAberta = null; calibrando = false; calibPontoTemp = null;
+      await salvarConfig();
+      Utils.toast('✓ Base do levantamento limpa.', 'sucesso');
+      renderizar();
+    } catch (e) {
+      console.error(e);
+      Utils.toast('Erro ao limpar: ' + e.message, 'erro');
+    } finally {
+      Utils.esconderLoading();
+    }
+  }
+
   return {
     init, recarregar, renderizar,
     setSecDir, setModoLevantamento, secAdd, secRemover, secToggle,
@@ -911,7 +945,7 @@ const LevantamentoTerraplanagem = (() => {
     escolherImagemProjeto, processarImagemProjeto, calibrarProjeto,
     abrirConfig, salvarConfigBtn, aplicarPresetEmpolamento,
     abrirCaminhoes, salvarCaminhao, excluirCaminhao,
-    abrir3D, fechar3D,
+    abrir3D, fechar3D, limparBase,
   };
 })();
 

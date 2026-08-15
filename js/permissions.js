@@ -21,10 +21,10 @@ const Permissions = (() => {
     levantamentoAr:      { label: 'Levantamento — Ar Condicionado', categoria: 'Produção', acoes: ['ver','criar','editar','excluir','exportar'] },
     levantamentoPintura: { label: 'Levantamento — Pintura',         categoria: 'Produção', acoes: ['ver','criar','editar','excluir'] },
     levantamentoSolo:    { label: 'Levantamento — Solo Grampeado',  categoria: 'Produção', acoes: ['ver','criar','editar','excluir'] },
-    levantamentoTerra:   { label: 'Levantamento — Terraplanagem',   categoria: 'Produção', acoes: ['ver','criar','editar','excluir'] },
+    levantamentoTerra:   { label: 'Levantamento — Terraplanagem',   categoria: 'Produção', acoes: ['ver','criar','editar','excluir','limpar'] },
     controleConcreto:    { label: 'Controle — Concreto',            categoria: 'Produção', acoes: ['ver','criar','editar','excluir'] },
     controleSolo:        { label: 'Controle — Solo Grampeado',      categoria: 'Produção', acoes: ['ver','criar','editar','excluir'] },
-    controleTerra:       { label: 'Controle — Terraplanagem',       categoria: 'Produção', acoes: ['ver','criar','editar','excluir','importar','exportar'] },
+    controleTerra:       { label: 'Controle — Terraplanagem',       categoria: 'Produção', acoes: ['ver','criar','editar','excluir','importar','exportar','limpar'] },
     controleEstacas:     { label: 'Controle — Estacas e Fundações', categoria: 'Produção', acoes: ['ver','criar','editar','excluir'] },
     producao:            { label: 'Produção',                       categoria: 'Produção', acoes: ['ver','criar','editar','excluir'] },
 
@@ -48,7 +48,8 @@ const Permissions = (() => {
 
   const ACAO_LABEL = {
     ver: 'Ver', criar: 'Criar', editar: 'Editar', excluir: 'Excluir',
-    exportar: 'Exportar', importar: 'Importar', convidar: 'Convidar usuário'
+    exportar: 'Exportar', importar: 'Importar', convidar: 'Convidar usuário',
+    limpar: 'Limpar base (tudo)'
   };
 
   // Nome do arquivo (sem .html) -> chave do módulo, para o gate de página.
