@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.6.1',
+  versaoAtual: 'V3.6.2',
 
   versoes: [
     {
@@ -7823,6 +7823,18 @@ const NotasVersao = {
       "itens": [
         "Registrar viagem manual e importar planilha já funcionavam sem nenhum volume previsto cadastrado — mas o card \"Já Removido\" e o cabeçalho da tabela mostravam \"0% concluído\"/\"acumulado 0%\", como se faltasse algo, quando na verdade é só falta de Levantamento pra comparar.",
         "Agora, sem volume previsto: o card \"Volume Previsto\" mostra \"—\" com a nota \"Sem Levantamento cadastrado ainda\", e os dois \"% concluído\" somem — sem nenhum índice de erro ou percentual enganoso. Assim que o Levantamento for cadastrado, os percentuais voltam a aparecer normalmente."
+      ]
+    },
+    {
+      "versao": "V3.6.2",
+      "data": "2026-08-15",
+      "tipo": "correcao",
+      "titulo": "Levantamento de Terraplanagem: projeto único compartilhado por todas as seções (não mais um por seção)",
+      "itens": [
+        "Correção de arquitetura do modo \"🖼️ Marcar no Projeto\": antes cada seção pedia sua própria imagem, o que não fazia sentido — a obra tem UM projeto (planta/foto) só, com todas as seções marcadas nele.",
+        "Agora o projeto é inserido e calibrado uma única vez, no topo da Calculadora de Corte de Terra (antes das abas Horizontais/Verticais) — o toggle ✍️ Manual / 🖼️ Marcar no Projeto também é único pra calculadora inteira, não mais por seção.",
+        "Cada seção vira uma linha de pontos marcada em cima dessa mesma imagem, com cor própria (bolinha + linha conectando os pontos) — pra marcar pontos numa seção, basta abrir ela na lista (fica destacada como \"seção ativa\") e clicar na imagem do projeto.",
+        "Trocar o projeto por uma imagem nova avisa e apaga a escala + pontos de todas as seções (as posições não valem mais na imagem diferente)."
       ]
     }
   ],
