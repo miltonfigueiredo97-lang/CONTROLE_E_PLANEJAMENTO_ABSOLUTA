@@ -847,6 +847,8 @@ const ControleEstacas = (() => {
   let bt = null; // {concId, btId, modo} — só pra criar/editar metadados da BT (nº, volume, NF, código)
   let estacaAtual = null; // {concId, pecaId, linhas:[{btId,pctBT}]} — lançamento por peça (o fluxo principal)
   let mostrarBTsCompletas = false; // por padrão esconde BTs já 100% alocadas noutras peças no seletor
+  let btMetaInlineId = null; // BT com o mini-form de sobra/perda/cocho aberto, dentro do popup de lançar estaca
+  let metaBTPendente = {}; // {btId: {sobra,perda,perdaCocho,hora}} — usado quando a BT ainda não tem NENHUM lançamento salvo (não tem onde persistir ainda; aplica no próximo Salvar)
 
   function _proximoNumeroBT(concId) {
     const bts = _btsDaConcretagem(concId);
@@ -950,6 +952,7 @@ const ControleEstacas = (() => {
   // Metadados "do caminhão inteiro" (sobra/perda/cocho/hora) — lidos de
   // qualquer lançamento já feito com essa BT (todos têm os mesmos valores).
   function _metaBT(btId) {
+    if (metaBTPendente[btId]) return metaBTPendente[btId];
     const existente = lancamentos.find(l => l.btConfigId === btId);
     return {
       sobra: String(existente?.sobraCaminhao ?? ''),
@@ -957,6 +960,46 @@ const ControleEstacas = (() => {
       perdaCocho: String(existente?.perdaCocho ?? ''),
       hora: existente?.hora || '',
     };
+  }
+
+  function toggleMetaInline(btId) {
+    btMetaInlineId = btMetaInlineId === btId ? null : btId;
+    _renderLancarEstacaBody();
+  }
+
+  // Salva sobra/perda/cocho/hora de uma BT direto do popup de lançar por
+  // estaca — sem fechar/perder o que já foi digitado nas linhas. Propaga
+  // pra todos os lançamentos já feitos com essa BT (é do caminhão inteiro).
+  async function salvarMetaBTInline(btId) {
+    if (!Permissions.pode('controleEstacas', 'editar')) { Utils.toast('Sem permissão para editar.', 'erro'); return; }
+    const sobra = (document.getElementById('ce-meta-sobra-' + btId)?.value || '').trim();
+    const perda = (document.getElementById('ce-meta-perda-' + btId)?.value || '').trim();
+    const perdaCocho = (document.getElementById('ce-meta-cocho-' + btId)?.value || '').trim();
+    const hora = document.getElementById('ce-meta-hora-' + btId)?.value || '';
+    metaBTPendente[btId] = { sobra, perda, perdaCocho, hora };
+    const lansBT = lancamentos.filter(l => l.btConfigId === btId);
+    if (!lansBT.length) {
+      // Ainda não existe nenhum lançamento dessa BT — fica guardado aqui e
+      // entra automaticamente quando o lançamento desta peça for salvo.
+      btMetaInlineId = null;
+      _renderLancarEstacaBody();
+      Utils.toast('✓ Guardado — vai entrar quando você salvar o lançamento desta peça.', 'sucesso');
+      return;
+    }
+    Utils.mostrarLoading();
+    try {
+      const dados = { sobraCaminhao: EC.num(sobra.replace(',', '.')), perdaObra: EC.num(perda.replace(',', '.')), perdaCocho: EC.num(perdaCocho.replace(',', '.')), hora };
+      const ops = lansBT.map(l => ({ type: 'update', ref: Database.ref(obraId, COL_LANS).doc(l.id), data: dados }));
+      await Database.batchWrite(ops);
+      lansBT.forEach(l => Object.assign(l, dados));
+      btMetaInlineId = null;
+      _renderLancarEstacaBody();
+      Utils.toast('✓ Sobra/perda salvas!', 'sucesso');
+    } catch (e) {
+      Utils.toast('Erro ao salvar: ' + e.message, 'erro');
+    } finally {
+      Utils.esconderLoading();
+    }
   }
 
   function _volumeConcPeca(p, concId) {
@@ -1232,14 +1275,33 @@ const ControleEstacas = (() => {
             const pctOutras = b ? _pctBTAlocadaOutrasPecas(b.id, estacaAtual.pecaId) : 0;
             const pctEsta = EC.num((l.pctBT || '').replace(',', '.'));
             const excesso = b && (pctOutras + pctEsta) > 100.05;
+            const meta = b ? _metaBT(b.id) : null;
+            const temPerda = meta && (EC.num(meta.sobra) > 0 || EC.num(meta.perda) > 0 || EC.num(meta.perdaCocho) > 0);
             return `<div style="margin-bottom:6px;">
-              <div style="display:grid;grid-template-columns:1fr 100px 90px auto;gap:8px;align-items:center;">
+              <div style="display:grid;grid-template-columns:1fr 100px 90px auto auto;gap:8px;align-items:center;">
                 <select class="form-control" onchange="CE.btUpdLinhaPeca(${i}, 'btId', this.value)">${opcoesBT(l.btId)}</select>
                 <input type="text" inputmode="decimal" class="form-control" style="${excesso ? 'border-color:#ef4444;' : ''}" placeholder="% da BT" value="${esc(l.pctBT)}" oninput="CE.btUpdLinhaPeca(${i}, 'pctBT', this.value)">
                 <span id="ce-est-vol-${i}" style="font-family:var(--font-mono);font-size:.78rem;color:var(--cor-texto-secundario);text-align:right;">${EC.fmt1(vol)} m³</span>
+                ${b ? `<button class="btn btn-secundario btn-sm" style="${temPerda ? 'border-color:#f59e0b;color:#f59e0b;' : ''}" title="Sobra/perda em obra/cocho e linha desta BT" onclick="CE.toggleMetaInline('${b.id}')">✎ sobra/perda</button>` : '<span></span>'}
                 <button class="btn btn-secundario btn-sm" style="color:var(--cv-red,#ef4444);" onclick="CE.btRemLinhaPeca(${i})" ${estacaAtual.linhas.length <= 1 ? 'disabled' : ''}>✕</button>
               </div>
               <div id="ce-est-aviso-${i}" class="text-sm" style="color:#ef4444;margin-top:2px;${excesso ? '' : 'display:none;'}">⚠ Essa BT já tem ${EC.fmt1(pctOutras)}% usado em outra peça — com esse %, passaria de 100% da BT.</div>
+              ${b && btMetaInlineId === b.id ? `
+                <div style="border:1px dashed var(--cv-border,#e2e8f0);border-radius:8px;padding:10px;margin-top:6px;background:var(--cv-surface2,#f8fafc);">
+                  <div class="text-sm text-muted" style="margin-bottom:6px;">Sobra/perda de BT-${b.numero} — vale pra todas as peças que essa BT concretou, não só esta.</div>
+                  <div class="form-row" style="margin-bottom:8px;">
+                    <div class="form-grupo" style="margin-bottom:0;"><label>Sobra Caminhão [m³]</label><input type="text" inputmode="decimal" id="ce-meta-sobra-${b.id}" class="form-control" value="${esc(meta.sobra)}" placeholder="0"></div>
+                    <div class="form-grupo" style="margin-bottom:0;"><label>Perda em Obra [m³]</label><input type="text" inputmode="decimal" id="ce-meta-perda-${b.id}" class="form-control" value="${esc(meta.perda)}" placeholder="0"></div>
+                  </div>
+                  <div class="form-row" style="margin-bottom:8px;">
+                    <div class="form-grupo" style="margin-bottom:0;"><label>Cocho + Linha [m³]</label><input type="text" inputmode="decimal" id="ce-meta-cocho-${b.id}" class="form-control" value="${esc(meta.perdaCocho)}" placeholder="0"></div>
+                    <div class="form-grupo" style="margin-bottom:0;"><label>Hora</label><input type="time" id="ce-meta-hora-${b.id}" class="form-control" value="${esc(meta.hora)}"></div>
+                  </div>
+                  <div style="display:flex;justify-content:flex-end;gap:8px;">
+                    <button class="btn btn-secundario btn-sm" onclick="CE.toggleMetaInline('${b.id}')">Fechar</button>
+                    <button class="btn btn-primario btn-sm" onclick="CE.salvarMetaBTInline('${b.id}')">✓ Salvar</button>
+                  </div>
+                </div>` : ''}
             </div>`;
           }).join('')}
         </div>
@@ -2186,6 +2248,7 @@ const ControleEstacas = (() => {
     toggleNovaConcPlan, criarConcretagemPlan, focarConcretagemPlan,
     abrirNovaBT, fecharPainelBT, criarBTEstacas, abrirEditarMetaBT, salvarMetaBT, excluirBTEstacas,
     abrirModalBTs, abrirEstacaModal, btAddLinhaPeca, btRemLinhaPeca, btUpdLinhaPeca, salvarEstacaAcomp, toggleMostrarBTsCompletas,
+    toggleMetaInline, salvarMetaBTInline,
   };
 })();
 

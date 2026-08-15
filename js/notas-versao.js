@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.5.1.4',
+  versaoAtual: 'V3.5.1.5',
 
   versoes: [
     {
@@ -7706,6 +7706,17 @@ const NotasVersao = {
         "Dentro de cada dia (e no consolidado/WhatsApp), as estacas saem na ORDEM DAS BTs (BT1,BT2,BT3 antes de BT3,BT4,BT5) — a sequência real de execução, não a ordem alfabética.",
         "Índice de perda do relatório ALINHADO à fórmula corrigida do Controle de Estacas (V3.5.1.3): cocho/linha é descontado antes de comparar com o projeto (não conta mais em dobro), perda de solo = usado − projeto, somando perda de obra e sobra de caminhão. Como essas perdas são por BT e uma BT pode servir várias estacas, o relatório RATEIA proporcionalmente ao volume que cada estaca tirou da BT — a soma bate com o índice do Controle.",
         "Perda do TOTAL DO DIA, por tipo e do resumo geral também recalculadas nessa mesma base. IMPORTANTE: o relatório não copia o número do Controle — ele aplica a mesma fórmula; se a fórmula mudar de novo no Controle, precisa ser espelhada aqui."
+      ]
+    },
+    {
+      "versao": "V3.5.1.5",
+      "data": "2026-08-15",
+      "tipo": "melhoria",
+      "titulo": "Controle de Estacas: sobra/perda de cocho e linha direto no popup de lançar por estaca",
+      "itens": [
+        "Novo botão \"✎ sobra/perda\" em cada linha de BT do popup de lançar por estaca — abre um mini-formulário ali mesmo (sobra caminhão, perda em obra, cocho + linha, hora), sem precisar sair pra outro menu.",
+        "Se a BT ainda não tem nenhum lançamento salvo (primeira peça dela), o valor fica guardado e entra automaticamente quando você salvar o lançamento — antes não tinha onde persistir isso.",
+        "Botão fica com borda laranja quando a BT já tem alguma sobra/perda cadastrada, pra saber de relance quais já foram preenchidas."
       ]
     }
   ],
