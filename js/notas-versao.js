@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.5.0.0',
+  versaoAtual: 'V3.5.1',
 
   versoes: [
     {
@@ -7647,6 +7647,17 @@ const NotasVersao = {
         "Busca por texto (versão, título ou item) e filtro por tipo (Lançamento / Funcionalidade / Correção / Melhoria).",
         "Timeline com cards colapsáveis — clique no cabeçalho para expandir; só a versão em aberto vem expandida.",
         "Correção de bug latente: itens contendo tags HTML (ex: <select>) quebravam a renderização e escondiam mais da metade do histórico — agora tudo é escapado e as 408 versões aparecem."
+      ]
+    },
+    {
+      "versao": "V3.5.1",
+      "data": "2026-08-15",
+      "tipo": "correcao",
+      "titulo": "Popup da prancha: pan destravado (câmera nova)",
+      "itens": [
+        "O arrasto (pan) dentro do popup da prancha estava TRAVADO: o modelo antigo dependia da barra de rolagem do container, mas o zoom por transform não cria rolagem de verdade — então não havia o que arrastar.",
+        "Reescrito como câmera de mapa (translate + scale): arrastar com o mouse funciona sempre, em qualquer nível de zoom; Ctrl+scroll dá zoom ancorado no ponto do cursor; scroll normal desliza a prancha (Shift = horizontal); botões −/+ dão zoom no centro.",
+        "A prancha abre ajustada pra caber inteira na tela, centralizada."
       ]
     }
   ],

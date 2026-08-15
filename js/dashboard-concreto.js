@@ -440,7 +440,25 @@ const DashConcreto = (() => {
   let _popupItens = [];
   let _popupIdx = 0;
   let _popupZoom = 1;
+  let _popupPan = { x: 0, y: 0 };
+  let _popupMinZoom = 0.1;
   let _estacasCtx = null;
+
+  function _aplicarCamera() {
+    const el = document.getElementById('db-projeto-zoomable');
+    if (el) el.style.transform = `translate(${_popupPan.x.toFixed(1)}px,${_popupPan.y.toFixed(1)}px) scale(${_popupZoom.toFixed(4)})`;
+    const label = document.getElementById('db-projeto-zoomlabel');
+    if (label) label.textContent = Math.round(_popupZoom * 100) + '%';
+  }
+  // Zoom mantendo o ponto (px,py do viewport) parado na tela.
+  function _zoomNoPonto(novoZoom, px, py) {
+    novoZoom = Math.max(_popupMinZoom, Math.min(8, novoZoom));
+    const fator = novoZoom / _popupZoom;
+    _popupPan.x = px - (px - _popupPan.x) * fator;
+    _popupPan.y = py - (py - _popupPan.y) * fator;
+    _popupZoom = novoZoom;
+    _aplicarCamera();
+  }
 
   // Popup em tela cheia a partir do clique num minimapa de Estacas: mesma
   // visão do minimapa (prancha zerada + só executadas, sem anéis de tipo),
@@ -479,12 +497,14 @@ const DashConcreto = (() => {
   }
   function popupNavegar(delta, andar) {
     _popupIdx = (_popupIdx + delta + _popupItens.length) % _popupItens.length;
-    _popupZoom = 1;
-    _renderPopup(andar);
+    _renderPopup(andar); // câmera (fit + centralização) é recalculada no render
   }
-  function popupZoomAjustar(delta, andar) {
-    _popupZoom = Math.max(0.3, Math.min(4, _popupZoom + delta));
-    _renderPopup(andar, true);
+  // Botões −/+ do topo: zoom ancorado no centro do viewport.
+  function popupZoomAjustar(delta) {
+    const viewport = document.getElementById('db-projeto-viewport');
+    if (!viewport) return;
+    const fator = delta > 0 ? 1.25 : 1 / 1.25;
+    _zoomNoPonto(_popupZoom * fator, viewport.clientWidth / 2, viewport.clientHeight / 2);
   }
   function fecharPopup() {
     const overlay = document.getElementById('db-projeto-overlay');
@@ -493,7 +513,7 @@ const DashConcreto = (() => {
   }
   function _popupTeclaEsc(e) { if (e.key === 'Escape') fecharPopup(); }
 
-  async function _renderPopup(andar, soZoom) {
+  async function _renderPopup(andar) {
     let overlay = document.getElementById('db-projeto-overlay');
     if (!overlay) {
       overlay = document.createElement('div');
@@ -506,29 +526,21 @@ const DashConcreto = (() => {
     const temVarios = _popupItens.length > 1;
     const andarEsc = andar.replace(/'/g, "\\'");
 
-    if (soZoom) {
-      const zoomEl = document.getElementById('db-projeto-zoomable');
-      if (zoomEl) zoomEl.style.transform = `scale(${_popupZoom})`;
-      const label = document.getElementById('db-projeto-zoomlabel');
-      if (label) label.textContent = Math.round(_popupZoom * 100) + '%';
-      return;
-    }
-
     overlay.innerHTML = `
       <div style="display:flex;align-items:center;justify-content:space-between;padding:4px 8px 12px;color:#fff;gap:10px;flex-wrap:wrap;">
         <div style="font-weight:700;">${DashCore.esc(andar)} — ${DashCore.esc(item.titulo)}${temVarios ? ` <span style="opacity:.7;font-weight:400;">(${_popupIdx + 1}/${_popupItens.length})</span>` : ''}</div>
         <div style="display:flex;align-items:center;gap:6px;">
           ${item.tipo === 'imagem' ? `
-            <button class="btn btn-secundario btn-sm" onclick="DashConcreto.popupZoomAjustar(-0.2,'${andarEsc}')">−</button>
+            <button class="btn btn-secundario btn-sm" onclick="DashConcreto.popupZoomAjustar(-1)">−</button>
             <span id="db-projeto-zoomlabel" style="color:#fff;font-size:0.78rem;min-width:42px;text-align:center;">${Math.round(_popupZoom * 100)}%</span>
-            <button class="btn btn-secundario btn-sm" onclick="DashConcreto.popupZoomAjustar(0.2,'${andarEsc}')">+</button>
+            <button class="btn btn-secundario btn-sm" onclick="DashConcreto.popupZoomAjustar(1)">+</button>
           ` : ''}
           <button class="btn btn-secundario btn-sm" onclick="DashConcreto.fecharPopup()">✕ Fechar</button>
         </div>
       </div>
-      <div id="db-projeto-scroll" style="position:relative;flex:1;overflow:auto;display:flex;align-items:flex-start;justify-content:center;background:#fff;border-radius:8px;">
+      <div id="db-projeto-viewport" style="position:relative;flex:1;overflow:hidden;background:#fff;border-radius:8px;">
         ${temVarios ? `<button class="btn btn-secundario" style="position:fixed;left:24px;top:50%;transform:translateY(-50%);z-index:2;" onclick="DashConcreto.popupNavegar(-1,'${andarEsc}')">‹</button>` : ''}
-        <div id="db-projeto-conteudo" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;">Carregando...</div>
+        <div id="db-projeto-conteudo" style="width:100%;height:100%;">Carregando...</div>
         ${temVarios ? `<button class="btn btn-secundario" style="position:fixed;right:24px;top:50%;transform:translateY(-50%);z-index:2;" onclick="DashConcreto.popupNavegar(1,'${andarEsc}')">›</button>` : ''}
       </div>`;
     const elConteudo = document.getElementById('db-projeto-conteudo');
@@ -560,38 +572,56 @@ const DashConcreto = (() => {
         return { pct, label: `${p.nome} — ${EC.statusLabel(pct)}`, corGrupo };
       };
       const stage = EC.stageHTML(item.prancha, img, item.marcadores, statusFn, { zoom: 1, maxHeight: 999999, stageId: 'db-projeto-stage' });
-      elConteudo.innerHTML = `<div id="db-projeto-zoomable" style="transform:scale(${_popupZoom});transform-origin:top center;transition:transform .1s;">${stage}</div>`;
-      const scrollEl = document.getElementById('db-projeto-scroll');
-      if (scrollEl) {
-        // Ctrl+scroll (ou pinça do touchpad) = zoom; scroll normal = pan
-        // nativo (vertical; Shift+scroll = horizontal, padrão do navegador).
-        scrollEl.onwheel = (ev) => {
-          if (!ev.ctrlKey) return;
-          ev.preventDefault();
-          popupZoomAjustar(ev.deltaY < 0 ? 0.15 : -0.15, andar);
+      // CÂMERA translate+scale (o modelo antigo, por scroll, ficava TRAVADO:
+      // transform:scale não cria overflow de layout, então o container nunca
+      // tinha o que rolar). Aqui o conteúdo é posicionado por transform puro
+      // — pan e zoom funcionam sempre, em qualquer nível de zoom.
+      elConteudo.innerHTML = `<div id="db-projeto-zoomable" style="position:absolute;left:0;top:0;transform-origin:0 0;will-change:transform;">${stage}</div>`;
+      const viewport = document.getElementById('db-projeto-viewport');
+      const W = Number(item.prancha.imgWidthPx) || 800;
+      const H = Number(item.prancha.imgHeightPx) || 500;
+      // Zoom inicial = caber inteira na tela, centralizada.
+      const fit = Math.min(viewport.clientWidth / W, viewport.clientHeight / H) * 0.98;
+      _popupZoom = fit;
+      _popupPan = { x: (viewport.clientWidth - W * fit) / 2, y: (viewport.clientHeight - H * fit) / 2 };
+      _popupMinZoom = fit * 0.4;
+      _aplicarCamera();
+
+      viewport.style.cursor = 'grab';
+      viewport.onwheel = (ev) => {
+        ev.preventDefault();
+        const r = viewport.getBoundingClientRect();
+        if (ev.ctrlKey) {
+          // Ctrl+scroll (ou pinça): zoom ancorado no ponto do cursor.
+          const fator = ev.deltaY < 0 ? 1.15 : 1 / 1.15;
+          _zoomNoPonto(_popupZoom * fator, ev.clientX - r.left, ev.clientY - r.top);
+        } else {
+          // Scroll normal: pan (Shift = horizontal) — não há mais scrollbar.
+          if (ev.shiftKey) _popupPan.x -= ev.deltaY;
+          else { _popupPan.x -= ev.deltaX; _popupPan.y -= ev.deltaY; }
+          _aplicarCamera();
+        }
+      };
+      viewport.onmousedown = (ev) => {
+        if (ev.button !== 0 && ev.button !== 1) return;
+        if (ev.target.closest('button')) return; // não sequestrar os botões ‹ ›
+        ev.preventDefault();
+        const startX = ev.clientX, startY = ev.clientY;
+        const startPan = { x: _popupPan.x, y: _popupPan.y };
+        viewport.style.cursor = 'grabbing';
+        const mover = (m) => {
+          _popupPan.x = startPan.x + (m.clientX - startX);
+          _popupPan.y = startPan.y + (m.clientY - startY);
+          _aplicarCamera();
         };
-        // Pan por arrasto: segurar botão esquerdo (ou do meio) e mover.
-        scrollEl.style.cursor = 'grab';
-        scrollEl.onmousedown = (ev) => {
-          if (ev.button !== 0 && ev.button !== 1) return;
-          if (ev.target.closest('button')) return; // não sequestrar cliques nos botões ‹ ›
-          ev.preventDefault();
-          const startX = ev.clientX, startY = ev.clientY;
-          const startL = scrollEl.scrollLeft, startT = scrollEl.scrollTop;
-          scrollEl.style.cursor = 'grabbing';
-          const mover = (m) => {
-            scrollEl.scrollLeft = startL - (m.clientX - startX);
-            scrollEl.scrollTop = startT - (m.clientY - startY);
-          };
-          const soltar = () => {
-            scrollEl.style.cursor = 'grab';
-            document.removeEventListener('mousemove', mover);
-            document.removeEventListener('mouseup', soltar);
-          };
-          document.addEventListener('mousemove', mover);
-          document.addEventListener('mouseup', soltar);
+        const soltar = () => {
+          viewport.style.cursor = 'grab';
+          document.removeEventListener('mousemove', mover);
+          document.removeEventListener('mouseup', soltar);
         };
-      }
+        document.addEventListener('mousemove', mover);
+        document.addEventListener('mouseup', soltar);
+      };
     } catch (e) {
       console.error(e);
       elConteudo.innerHTML = '<div class="db-vazio-inline">Erro ao carregar a imagem.</div>';
