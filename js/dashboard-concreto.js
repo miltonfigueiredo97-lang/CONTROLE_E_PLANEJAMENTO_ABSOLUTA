@@ -303,7 +303,10 @@ const DashConcreto = (() => {
         <div class="card db-row">
           <div class="card-body">
             <div class="db-secao-header"><h3>⚓ Estacas e Fundações</h3></div>
-            <div class="text-sm text-muted" style="margin-bottom:10px;">${vinculados}/${total} marcadores vinculados · ${concluidos}/${total} concretados · ${EC.fmt1(pctMedio)}% médio · <a href="controle-estacas.html" style="color:var(--cor-primaria-dark);font-weight:600;">abrir controle</a></div>
+            <div class="text-sm text-muted" style="margin-bottom:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+              <span>${vinculados}/${total} marcadores vinculados · ${concluidos}/${total} concretados · ${EC.fmt1(pctMedio)}% médio · <a href="controle-estacas.html" style="color:var(--cor-primaria-dark);font-weight:600;">abrir controle</a></span>
+              <button class="btn btn-secundario btn-sm" onclick="DashEstacasRel.abrir()">📄 Exportar relatório</button>
+            </div>
             <div id="db-estacas-minimapas"></div>
             ${qtdTotal ? `
               <div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--cor-borda-light);">

@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.5.1',
+  versaoAtual: 'V3.5.1.1',
 
   versoes: [
     {
@@ -7658,6 +7658,20 @@ const NotasVersao = {
         "O arrasto (pan) dentro do popup da prancha estava TRAVADO: o modelo antigo dependia da barra de rolagem do container, mas o zoom por transform não cria rolagem de verdade — então não havia o que arrastar.",
         "Reescrito como câmera de mapa (translate + scale): arrastar com o mouse funciona sempre, em qualquer nível de zoom; Ctrl+scroll dá zoom ancorado no ponto do cursor; scroll normal desliza a prancha (Shift = horizontal); botões −/+ dão zoom no centro.",
         "A prancha abre ajustada pra caber inteira na tela, centralizada."
+      ]
+    },
+    {
+      "versao": "V3.5.1.1",
+      "data": "2026-08-15",
+      "tipo": "melhoria",
+      "titulo": "Relatório de Concretagem de Estacas (com PDF e prancha preenchida)",
+      "itens": [
+        "Novo botão \"📄 Exportar relatório\" na seção Estacas e Fundações do Dashboard.",
+        "Escolha as datas de concretagem (uma, várias, ou todas marcadas = relatório total até agora).",
+        "Por dia: executado por tipo (Ø × comprimento), tabela com nº da estaca, BT que a executou (com Nota Fiscal e código quando cadastrados, senão só o número, ex: BT5), volume calculado, volume real utilizado e índice de perda daquela estaca; totais do dia em quantidade, ML e m³.",
+        "Fecho do relatório: total de dias de concretagem e resumo geral consolidado (sem separar por dia), por tipo e nos números da obra.",
+        "⬇ Baixar PDF: gera o arquivo direto (sem diálogo de impressão), com a prancha do projeto preenchida — só as estacas executadas, verde = concluída, amarelo = parcial — seguida do relatório dia a dia e do resumo.",
+        "Estaca concretada em mais de um dia aparece em cada dia com o volume daquele dia, e no resumo total é contada uma vez só."
       ]
     }
   ],
