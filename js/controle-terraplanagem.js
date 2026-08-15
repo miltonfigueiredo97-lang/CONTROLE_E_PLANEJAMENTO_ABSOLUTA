@@ -439,22 +439,63 @@ const ControleTerraplanagem = (() => {
       const placasExistentes = new Set(caminhoes.map(c => c.placa));
       const novosCaminhoes = new Set();
       const regs = [];
-      let puladasDuplicadas = 0, puladasInvalidas = 0;
+      let puladasDuplicadas = 0, puladasInvalidas = 0, puladasSemVolume = 0;
+      let linhasSoCanhoto = 0, completadasPorPlaca = 0, completadasPorCadastro = 0;
 
+      const limpa = v => { const s = String(v ?? '').trim(); return (s === '-' || s === '—') ? '' : s; };
+
+      // 1ª passada: extrai as linhas em bruto, já ignorando linhas totalmente vazias
+      // e linhas que só têm o N° Canhoto preenchido (pra você, "nem existem").
+      const brutos = [];
       for (let r = headerRowIdx + 1; r < rows.length; r++) {
         const row = rows[r];
         if (!row || !row.length) continue;
-        const nCanhoto = String(row[iCanhoto] ?? '').trim();
+        const nCanhoto = limpa(row[iCanhoto]);
         const data = _pDataImport(row[iData]);
-        let material = String(row[iMaterial] ?? '').trim();
-        if (material === '-' || material === '—') material = ''; // placeholder de "sem material informado"
-        const volume = TC.num(row[iVolume]);
-        const placa = String(row[iPlaca] ?? '').trim().toUpperCase();
-        if (!data || !(volume > 0)) { puladasInvalidas++; continue; }
-        if (nCanhoto && canhotosExistentes.has(nCanhoto)) { puladasDuplicadas++; continue; }
-        if (nCanhoto) canhotosExistentes.add(nCanhoto); // evita duplicar dentro da própria planilha também
-        if (placa && !placasExistentes.has(placa)) { novosCaminhoes.add(placa); placasExistentes.add(placa); }
-        regs.push({ nCanhoto, data, material, volume, placa });
+        let material = limpa(row[iMaterial]);
+        const volumeBruto = limpa(row[iVolume]);
+        const volume = TC.num(volumeBruto);
+        const placa = limpa(row[iPlaca]).toUpperCase();
+        const outrosCampos = data !== '' || material !== '' || volumeBruto !== '' || placa !== '';
+        if (!outrosCampos) { if (nCanhoto) linhasSoCanhoto++; continue; } // só canhoto (ou nada) — nem existe
+        if (!data) { puladasInvalidas++; continue; } // sem data não dá pra saber quando foi
+        brutos.push({ nCanhoto, data, material, volume, volumeInformado: volume > 0, placa });
+      }
+
+      // Volume mais comum já visto pra cada placa NESTA planilha (um caminhão sempre
+      // carrega o mesmo volume — "ele vai sempre encher") — usado pra completar linhas
+      // sem volume informado, antes de recorrer ao cadastro de Caminhões.
+      const contagemVolPorPlaca = {};
+      brutos.forEach(b => {
+        if (b.volumeInformado && b.placa) {
+          contagemVolPorPlaca[b.placa] = contagemVolPorPlaca[b.placa] || {};
+          contagemVolPorPlaca[b.placa][b.volume] = (contagemVolPorPlaca[b.placa][b.volume] || 0) + 1;
+        }
+      });
+      const volumeTipicoDaPlaca = placa => {
+        const contagem = contagemVolPorPlaca[placa];
+        if (!contagem) return 0;
+        let melhor = 0, melhorCont = 0;
+        for (const [vol, cont] of Object.entries(contagem)) if (cont > melhorCont) { melhorCont = cont; melhor = TC.num(vol); }
+        return melhor;
+      };
+
+      // 2ª passada: completa volume faltante e monta os registros finais
+      for (const b of brutos) {
+        let volume = b.volume;
+        if (!(volume > 0) && b.placa) {
+          const volPlaca = volumeTipicoDaPlaca(b.placa);
+          if (volPlaca > 0) { volume = volPlaca; completadasPorPlaca++; }
+          else {
+            const cam = caminhoes.find(c => c.placa === b.placa);
+            if (cam) { volume = cam.tamanho === 'Grande' ? config.capacidadeGrande : config.capacidadePequena; completadasPorCadastro++; }
+          }
+        }
+        if (!(volume > 0)) { puladasSemVolume++; continue; } // sem placa E sem volume — não tem como saber
+        if (b.nCanhoto && canhotosExistentes.has(b.nCanhoto)) { puladasDuplicadas++; continue; }
+        if (b.nCanhoto) canhotosExistentes.add(b.nCanhoto); // evita duplicar dentro da própria planilha também
+        if (b.placa && !placasExistentes.has(b.placa)) { novosCaminhoes.add(b.placa); placasExistentes.add(b.placa); }
+        regs.push({ nCanhoto: b.nCanhoto, data: b.data, material: b.material, volume, placa: b.placa });
       }
 
       if (!regs.length) {
@@ -476,8 +517,11 @@ const ControleTerraplanagem = (() => {
         el.innerHTML = `
           <p>✅ <strong>${regs.length}</strong> viagem${regs.length !== 1 ? 'ns' : ''} importada${regs.length !== 1 ? 's' : ''}.</p>
           ${novosCaminhoes.size ? `<p>🚚 <strong>${novosCaminhoes.size}</strong> caminhão(ões) novo(s) cadastrado(s) automaticamente: ${[...novosCaminhoes].map(esc).join(', ')}. Complete tamanho/empresa em "🚚 Caminhões".</p>` : ''}
+          ${(completadasPorPlaca + completadasPorCadastro) ? `<p>🔧 <strong>${completadasPorPlaca + completadasPorCadastro}</strong> linha(s) sem volume tiveram o volume completado automaticamente (${completadasPorPlaca} pelo volume típico da placa nesta planilha, ${completadasPorCadastro} pela capacidade cadastrada do caminhão).</p>` : ''}
+          ${linhasSoCanhoto ? `<p style="color:var(--cv-text3);">${linhasSoCanhoto} linha(s) com só o N° Canhoto (sem mais nenhuma informação) foram ignoradas — não contam como erro.</p>` : ''}
           ${puladasDuplicadas ? `<p>⏭️ <strong>${puladasDuplicadas}</strong> linha(s) pulada(s) por N° Canhoto já existente (duplicata).</p>` : ''}
-          ${puladasInvalidas ? `<p>⚠️ <strong>${puladasInvalidas}</strong> linha(s) ignorada(s) por falta de Data, Placa ou Volume válido.</p>` : ''}
+          ${puladasSemVolume ? `<p>⚠️ <strong>${puladasSemVolume}</strong> linha(s) sem volume e sem placa cadastrada pra estimar — não deu pra completar.</p>` : ''}
+          ${puladasInvalidas ? `<p>⚠️ <strong>${puladasInvalidas}</strong> linha(s) ignorada(s) por falta de Data.</p>` : ''}
         `;
       }
       Utils.abrirModal('modal-tpc-import-result');

@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.6.3',
+  versaoAtual: 'V3.6.4',
 
   versoes: [
     {
@@ -7847,6 +7847,18 @@ const NotasVersao = {
         "Reconhecimento de coluna ficou mais tolerante (ex: \"PLACA VEICULO\", \"DATA:\") — casa por conter o nome da coluna, não só igualdade exata.",
         "Placa deixou de ser obrigatória pra importar a linha: se a planilha tiver canhoto/data/material/volume mas a placa vier em branco, a viagem entra mesmo assim (sem descartar volume real por causa disso) — só não cadastra caminhão novo nesse caso.",
         "Planilha com mais de uma aba (uma por obra, como no arquivo de teste ZENITH+DOM): pergunta qual aba é da obra atual antes de importar, em vez de pegar a primeira aba sempre — evita importar os dados errados na obra errada. Continua sendo política do usuário separar em arquivos por obra antes de importar; isso é só uma trava de segurança a mais."
+      ]
+    },
+    {
+      "versao": "V3.6.4",
+      "data": "2026-08-15",
+      "tipo": "melhoria",
+      "titulo": "Importar Planilha: 3 regras de tolerância a dado faltante",
+      "itens": [
+        "Linha com só o N° Canhoto preenchido (mais nada) é ignorada silenciosamente — não conta como erro, é tratada como se a linha nem existisse.",
+        "Linha sem placa continua sendo importada normalmente (regra já existia) — provavelmente esqueceram de anotar o caminhão.",
+        "Novo: linha sem volume agora é completada automaticamente, na ordem: 1) volume mais comum já visto pra aquela placa na própria planilha (um caminhão sempre carrega o mesmo volume) 2) se a placa não aparece em nenhuma outra linha com volume, usa a capacidade cadastrada do caminhão (Grande/Pequeno) em \"🚚 Caminhões\". Só fica de fora se não der pra descobrir por nenhuma das duas formas.",
+        "O resultado da importação agora mostra quantas linhas tiveram o volume completado (e por qual dos dois jeitos) e quantas foram ignoradas por terem só o canhoto."
       ]
     }
   ],
