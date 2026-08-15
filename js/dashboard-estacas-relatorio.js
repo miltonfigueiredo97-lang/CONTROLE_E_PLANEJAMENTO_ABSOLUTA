@@ -253,6 +253,7 @@ const DashEstacasRel = (() => {
         ml: [...unicas.values()].reduce((s, e) => s + e.comprimento, 0),
         m3: totReal,
         volCalc: totCalc,
+        perdaVol: totPerdaVol,
         perdaMedia: totCalc > 0 ? (totPerdaVol / totCalc) * 100 : null,
         porTipo: [...totalPorTipo.entries()].sort((a, b) => a[0].localeCompare(b[0], 'pt-BR', { numeric: true })),
       },
@@ -309,7 +310,7 @@ const DashEstacasRel = (() => {
         </div>
       </div>`).join('');
 
-    const consolidadoHtml = _modoTotal ? `
+    const consolidadoHtml = `
       <div style="overflow-x:auto;margin-bottom:14px;">
         <table class="db-tabela-clean">
           <thead><tr>
@@ -328,23 +329,39 @@ const DashEstacasRel = (() => {
             </tr>`).join('')}
           </tbody>
         </table>
-      </div>` : '';
+      </div>`;
 
     const t = rel.total;
     const totalHtml = `
       <div style="border-top:3px solid var(--cor-primaria);margin-top:6px;padding-top:12px;">
         <div style="font-weight:800;font-size:.95rem;margin-bottom:2px;">RESUMO TOTAL — ${t.dias} dia${t.dias > 1 ? 's' : ''} de concretagem</div>
         <div class="text-sm text-muted" style="margin-bottom:8px;">${rel.periodo ? 'Período: ' + _fBR(rel.periodo.de) + (rel.periodo.ate !== rel.periodo.de ? ' a ' + _fBR(rel.periodo.ate) : '') : ''}</div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:10px;">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(125px,1fr));gap:10px;margin-bottom:10px;">
           <div class="db-metrica-card"><div class="db-metrica-valor">${t.qtd}</div><div class="db-metrica-label">Estacas executadas</div></div>
           <div class="db-metrica-card"><div class="db-metrica-valor">${_fmt1(t.ml)}</div><div class="db-metrica-label">ML executado</div></div>
           <div class="db-metrica-card"><div class="db-metrica-valor">${_fmt2(t.m3)}</div><div class="db-metrica-label">m³ real utilizado</div></div>
           <div class="db-metrica-card"><div class="db-metrica-valor">${_fmt2(t.volCalc)}</div><div class="db-metrica-label">m³ calculado</div></div>
-          <div class="db-metrica-card"><div class="db-metrica-valor">${t.perdaMedia != null ? _fmt1(t.perdaMedia) + '%' : '—'}</div><div class="db-metrica-label">Índice de perda</div></div>
+          <div class="db-metrica-card"><div class="db-metrica-valor">${_fmt2(t.perdaVol)}</div><div class="db-metrica-label">Perda (m³)</div></div>
+          <div class="db-metrica-card"><div class="db-metrica-valor" style="color:${t.perdaMedia != null && t.perdaMedia > 10 ? '#dc2626' : '#15803d'};">${t.perdaMedia != null ? _fmt1(t.perdaMedia) + '%' : '—'}</div><div class="db-metrica-label">Índice de perda</div></div>
+          <div class="db-metrica-card"><div class="db-metrica-valor">${t.qtd ? _fmt2(t.m3 / t.qtd) : '—'}</div><div class="db-metrica-label">Consumo médio/estaca (m³)</div></div>
+          <div class="db-metrica-card"><div class="db-metrica-valor">${t.dias ? _fmt1(t.qtd / t.dias) : '—'}</div><div class="db-metrica-label">Média estacas/dia</div></div>
         </div>
-        <div style="display:flex;flex-wrap:wrap;gap:6px;">
-          ${t.porTipo.map(([tipo, g]) => `<span class="db-chip">${tipo}: <b>${g.qtd}</b> un · ${_fmt1(g.ml)} ml · ${_fmt2(g.volReal)} m³</span>`).join('')}
+        <div style="overflow-x:auto;margin-bottom:12px;">
+          <table class="db-tabela-clean">
+            <thead><tr>
+              <th style="text-align:left;">Tipo (Ø × comprimento)</th><th>Qtd</th><th>ML</th><th>m³ real</th><th>m³ calculado</th><th>Consumo médio (m³)</th><th>Perda</th>
+            </tr></thead>
+            <tbody>
+              ${t.porTipo.map(([tipo, g]) => `<tr>
+                <td style="text-align:left;">${tipo}</td><td>${g.qtd}</td><td>${_fmt1(g.ml)}</td><td>${_fmt2(g.volReal)}</td><td>${_fmt2(g.volCalc)}</td>
+                <td>${g.qtd ? _fmt2(g.volReal / g.qtd) : '—'}</td>
+                <td>${_perdaHtml(g.volCalc > 0 ? (g.perdaVol / g.volCalc) * 100 : null)}</td>
+              </tr>`).join('')}
+            </tbody>
+          </table>
         </div>
+        <div style="font-weight:700;font-size:.85rem;margin-bottom:6px;">Estacas executadas — consolidado (${t.qtd})</div>
+        ${consolidadoHtml}
       </div>`;
 
     let overlay = document.createElement('div');
@@ -365,7 +382,6 @@ const DashEstacasRel = (() => {
           </div>
         </div>
         ${diasHtml}
-        ${consolidadoHtml}
         ${totalHtml}
       </div>`;
     document.body.appendChild(overlay);
@@ -489,6 +505,8 @@ const DashEstacasRel = (() => {
           headStyles: { fillColor: [245, 200, 0], textColor: [13, 13, 13], fontStyle: 'bold' },
           columnStyles: { 3: { halign: 'right' }, 4: { halign: 'right' }, 5: { halign: 'right' } },
           didParseCell: (data) => {
+            const alinhaDia = { 3: 'right', 4: 'right', 5: 'right' };
+            if (data.section === 'head' && alinhaDia[data.column.index]) data.cell.styles.halign = alinhaDia[data.column.index];
             if (data.section === 'body' && data.column.index === 5 && String(data.cell.raw).includes('%')) {
               const v = parseFloat(String(data.cell.raw).replace('.', '').replace(',', '.'));
               if (!isNaN(v)) data.cell.styles.textColor = v > 10 ? [220, 38, 38] : v > 0 ? [161, 98, 7] : [21, 128, 61];
@@ -513,11 +531,13 @@ const DashEstacasRel = (() => {
 
       // Cards de métricas (desenhados, não tabela)
       const cards = [
-        { v: String(t.qtd), l: 'ESTACAS EXECUTADAS' },
+        { v: String(t.qtd), l: 'ESTACAS' },
         { v: _fmt1(t.ml), l: 'ML EXECUTADO' },
-        { v: _fmt2(t.m3), l: 'M³ REAL UTILIZADO' },
+        { v: _fmt2(t.m3), l: 'M³ REAL' },
         { v: _fmt2(t.volCalc), l: 'M³ CALCULADO' },
+        { v: _fmt2(t.perdaVol), l: 'PERDA (M³)', perda: t.perdaMedia },
         { v: t.perdaMedia != null ? _fmt1(t.perdaMedia) + '%' : '—', l: 'ÍNDICE DE PERDA', perda: t.perdaMedia },
+        { v: t.qtd ? _fmt2(t.m3 / t.qtd) : '—', l: 'CONSUMO MÉDIO (M³)' },
       ];
       const gap = 4, cw = (PW - 24 - gap * (cards.length - 1)) / cards.length, ch = 17;
       cards.forEach((card, i) => {
@@ -539,18 +559,23 @@ const DashEstacasRel = (() => {
       // Tabela por tipo (com perda por tipo)
       doc.setTextColor(13, 13, 13); doc.setFontSize(9.5); doc.setFont(undefined, 'bold');
       doc.text('Executado por tipo', 12, y + 3);
+      const alinhaTipo = { 1: 'center', 2: 'right', 3: 'right', 4: 'right', 5: 'right', 6: 'right' };
       doc.autoTable({
         startY: y + 5,
-        head: [['Tipo (Ø × comprimento)', 'Qtd', 'ML', 'm³ real', 'm³ calculado', 'Perda']],
+        head: [['Tipo (Ø × comprimento)', 'Qtd', 'ML', 'm³ real', 'm³ calculado', 'Consumo médio (m³)', 'Perda']],
         body: t.porTipo.map(([tipo, g]) => [tipo, String(g.qtd), _fmt1(g.ml), _fmt2(g.volReal), _fmt2(g.volCalc),
+          g.qtd ? _fmt2(g.volReal / g.qtd) : '—',
           g.volCalc > 0 ? _fmt1((g.perdaVol / g.volCalc) * 100) + '%' : '—']),
         margin: { left: 12, right: 12 },
         styles: { fontSize: 8.5, cellPadding: 2.2 },
         headStyles: { fillColor: [245, 200, 0], textColor: [13, 13, 13], fontStyle: 'bold' },
         alternateRowStyles: { fillColor: [250, 250, 250] },
-        columnStyles: { 1: { halign: 'center' }, 2: { halign: 'right' }, 3: { halign: 'right' }, 4: { halign: 'right' }, 5: { halign: 'right', fontStyle: 'bold' } },
+        columnStyles: { 1: { halign: 'center' }, 2: { halign: 'right' }, 3: { halign: 'right' }, 4: { halign: 'right' }, 5: { halign: 'right' }, 6: { halign: 'right', fontStyle: 'bold' } },
         didParseCell: (data) => {
-          if (data.section === 'body' && data.column.index === 5 && String(data.cell.raw).includes('%')) {
+          // Cabeçalho alinhado igual à coluna — número descolado do título
+          // dava impressão de "não pertencer" à coluna.
+          if (data.section === 'head' && alinhaTipo[data.column.index]) data.cell.styles.halign = alinhaTipo[data.column.index];
+          if (data.section === 'body' && data.column.index === 6 && String(data.cell.raw).includes('%')) {
             const v = parseFloat(String(data.cell.raw).replace('.', '').replace(',', '.'));
             if (!isNaN(v)) data.cell.styles.textColor = v > 10 ? [220, 38, 38] : v > 0 ? [161, 98, 7] : [21, 128, 61];
           }
@@ -558,8 +583,8 @@ const DashEstacasRel = (() => {
       });
       y = doc.lastAutoTable.finalY + 7;
 
-      // Modo "só total": tabela consolidada de todas as estacas
-      if (_modoTotal) {
+      // Tabela consolidada de todas as estacas — SEMPRE no resumo total.
+      {
         if (y > 240) { doc.addPage(); y = 14; }
         doc.setTextColor(13, 13, 13); doc.setFontSize(9.5); doc.setFont(undefined, 'bold');
         doc.text('Estacas executadas (consolidado)', 12, y + 3);
@@ -576,6 +601,8 @@ const DashEstacasRel = (() => {
           alternateRowStyles: { fillColor: [250, 250, 250] },
           columnStyles: { 2: { halign: 'center' }, 4: { halign: 'right' }, 5: { halign: 'right' }, 6: { halign: 'right', fontStyle: 'bold' } },
           didParseCell: (data) => {
+            const alinhaCons = { 2: 'center', 4: 'right', 5: 'right', 6: 'right' };
+            if (data.section === 'head' && alinhaCons[data.column.index]) data.cell.styles.halign = alinhaCons[data.column.index];
             if (data.section === 'body' && data.column.index === 6 && String(data.cell.raw).includes('%')) {
               const v = parseFloat(String(data.cell.raw).replace('.', '').replace(',', '.'));
               if (!isNaN(v)) data.cell.styles.textColor = v > 10 ? [220, 38, 38] : v > 0 ? [161, 98, 7] : [21, 128, 61];

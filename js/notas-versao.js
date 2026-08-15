@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.5.1.10',
+  versaoAtual: 'V3.5.1.11',
 
   versoes: [
     {
@@ -7769,6 +7769,17 @@ const NotasVersao = {
       "itens": [
         "As linhas de BT apareciam na ordem em que os lançamentos foram salvos no banco (aleatória), não na ordem numérica das BTs — agora sempre ordenadas BT-1, BT-2, BT-3...",
         "A coluna do botão \\\"✎ cocho/sobra\\\" usava largura automática — quando o botão não aparecia (BT do meio), a linha toda encolhia e desalinhava com as outras. Agora a coluna tem largura fixa, alinhado sempre, com ou sem botão."
+      ]
+    },
+    {
+      "versao": "V3.5.1.11",
+      "data": "2026-08-15",
+      "tipo": "melhoria",
+      "titulo": "Resumo Total do Relatório de Estacas completo e alinhado",
+      "itens": [
+        "O RESUMO TOTAL agora traz a TABELA DE CADA ESTACA (consolidado com Concretagem Nº, BTs, vol. calculado, vol. real e perda) em TODOS os modos — antes só saía no modo \"Só total\".",
+        "Mais dados: cards de Perda em m³, Consumo médio por estaca e Média de estacas/dia; tabela por tipo ganhou colunas de m³ calculado, consumo médio e perda — na prévia e no PDF.",
+        "Formatação corrigida no PDF: os títulos das colunas numéricas agora ficam alinhados com os números (à direita/centro) — antes o cabeçalho ficava à esquerda e o valor à direita, parecendo de outra coluna. Vale pras tabelas do dia, por tipo e consolidada."
       ]
     }
   ],
