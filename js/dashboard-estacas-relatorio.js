@@ -228,9 +228,10 @@ const DashEstacasRel = (() => {
         perda: p2.indice, perdaVol: p2.perdaVol,
       };
     });
-    // Consolidado também em ordem de BT.
+    // Consolidado: 1º pela ordem da CONCRETAGEM, depois pela ordem das BTs.
     const _minBTc = e => e.bts.length ? Math.min(...e.bts.map(b => b.numero || 9e9)) : 9e9;
-    consolidadas.sort((a, b) => _minBTc(a) - _minBTc(b) || (a.peca.nome || '').localeCompare(b.peca.nome || '', 'pt-BR', { numeric: true }));
+    const _minConc = e => e.concNums.length ? Math.min(...e.concNums) : 9e9;
+    consolidadas.sort((a, b) => _minConc(a) - _minConc(b) || _minBTc(a) - _minBTc(b) || (a.peca.nome || '').localeCompare(b.peca.nome || '', 'pt-BR', { numeric: true }));
     const totalPorTipo = new Map();
     consolidadas.forEach(e => {
       const t = _tipoLabel(e.peca);

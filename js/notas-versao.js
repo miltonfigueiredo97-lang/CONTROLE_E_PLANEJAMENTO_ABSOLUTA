@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.5.1.11',
+  versaoAtual: 'V3.5.1.12',
 
   versoes: [
     {
@@ -7780,6 +7780,15 @@ const NotasVersao = {
         "O RESUMO TOTAL agora traz a TABELA DE CADA ESTACA (consolidado com Concretagem Nº, BTs, vol. calculado, vol. real e perda) em TODOS os modos — antes só saía no modo \"Só total\".",
         "Mais dados: cards de Perda em m³, Consumo médio por estaca e Média de estacas/dia; tabela por tipo ganhou colunas de m³ calculado, consumo médio e perda — na prévia e no PDF.",
         "Formatação corrigida no PDF: os títulos das colunas numéricas agora ficam alinhados com os números (à direita/centro) — antes o cabeçalho ficava à esquerda e o valor à direita, parecendo de outra coluna. Vale pras tabelas do dia, por tipo e consolidada."
+      ]
+    },
+    {
+      "versao": "V3.5.1.12",
+      "data": "2026-08-15",
+      "tipo": "melhoria",
+      "titulo": "Consolidado do relatório: ordem por Concretagem e depois por BT",
+      "itens": [
+        "Na tabela \"Estacas executadas (consolidado)\" do Resumo Total, as estacas agora saem ordenadas primeiro pelo Nº DA CONCRETAGEM e, dentro dela, pela ordem das BTs — antes a ordem das BTs vinha misturando estacas de concretagens diferentes."
       ]
     }
   ],
