@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.5.1.13',
+  versaoAtual: 'V3.6.0',
 
   versoes: [
     {
@@ -7800,6 +7800,19 @@ const NotasVersao = {
         "Novo campo N° Canhoto em cada viagem/remoção — aparece no registro manual e na tabela.",
         "Botão \"📥 Importar Planilha\" no Controle de Terraplanagem: lê .xlsx/.xls/.csv com as colunas N Canhoto, Data, Material, Volume e Placa (nome das colunas flexível, ordem não importa). Placas ainda não cadastradas são criadas automaticamente em Caminhões. Linhas com N° Canhoto repetido são puladas (evita duplicar se a planilha for importada de novo).",
         "Painel \"Viagens/Remoções\" ganhou abas: Viagens (lista, como antes), Por Dia (viagens e volume por data) e Por Caminhão (viagens, volume total e média por placa)."
+      ]
+    },
+    {
+      "versao": "V3.6.0",
+      "data": "2026-08-15",
+      "tipo": "funcionalidade",
+      "titulo": "Levantamento de Terraplanagem: novo modo \"Marcar no Projeto\" (planta + pontos + escala)",
+      "itens": [
+        "Cada seção agora pode ser preenchida de duas formas: ✍️ Digitar Manualmente (como antes, cotas e distâncias em texto) ou 🖼️ Marcar no Projeto — insere a planta/foto (imagem ou PDF) da seção, calibra a escala (clica em 2 pontos e informa a distância real entre eles) e depois marca os pontos direto na imagem, informando a cota de cada um.",
+        "A distância entre pontos consecutivos passa a ser calculada automaticamente pela escala calibrada — não precisa mais digitar as distâncias.",
+        "Cota de Referência: pode ser definida uma vez em ⚙️ Config (padrão de toda a obra) ou individualmente em cada seção (sobrepõe a padrão). A altura usada no cálculo da área é sempre cota do ponto menos cota de referência.",
+        "⚙️ Config ganhou um seletor de preset de Taxa de Empolamento (Material Útil 30%, Argila 40%) — só preenche o campo, que continua editável pra qualquer outro valor.",
+        "Seções já cadastradas continuam funcionando normalmente no modo manual — nada muda pra quem não usar o novo modo visual."
       ]
     }
   ],
