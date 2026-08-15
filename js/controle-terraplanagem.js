@@ -21,6 +21,9 @@ const ControleTerraplanagem = (() => {
   let config = { taxaEmpolamento: 0.3, capacidadeGrande: 15.6, capacidadePequena: 10 };
   let secoes = { horizontal: [], vertical: [] };
   let fBusca = '';
+  let abaRel = 'viagens'; // 'viagens' | 'porDia' | 'porCaminhao'
+
+  function _ls(src) { return new Promise((r, j) => { const s = document.createElement('script'); s.src = src; s.onload = r; s.onerror = j; document.head.appendChild(s); }); }
 
   // ══════════════════════════════════════════
   // INIT / CARREGAMENTO
@@ -77,6 +80,7 @@ const ControleTerraplanagem = (() => {
     obraId = Router.getObraId();
     if (!obraId) return;
     fBusca = '';
+    abaRel = 'viagens';
     await carregar();
   }
 
@@ -129,19 +133,98 @@ const ControleTerraplanagem = (() => {
 
       <div class="cc-panel">
         <div class="cc-panelTitle">📋 Viagens / Remoções <span style="font-family:var(--cv-mono);font-size:10px;color:var(--cv-text3);font-weight:400;text-transform:none;letter-spacing:0;">acumulado ${TC.fmt1(k.pct)}%</span></div>
-        <input type="text" class="form-control" id="tpc-busca" placeholder="🔍 Buscar por placa ou material..." style="margin-bottom:12px;" value="${esc(fBusca)}" oninput="TPC_UI.onFiltro()">
+        <div class="aba-toggle" style="margin-bottom:14px;">
+          <button class="aba-btn ${abaRel === 'viagens' ? 'ativo' : ''}" onclick="TPC_UI.setAbaRel('viagens')">Viagens</button>
+          <button class="aba-btn ${abaRel === 'porDia' ? 'ativo' : ''}" onclick="TPC_UI.setAbaRel('porDia')">Por Dia</button>
+          <button class="aba-btn ${abaRel === 'porCaminhao' ? 'ativo' : ''}" onclick="TPC_UI.setAbaRel('porCaminhao')">Por Caminhão</button>
+        </div>
+        ${abaRel === 'viagens' ? `<input type="text" class="form-control" id="tpc-busca" placeholder="🔍 Buscar por placa, canhoto ou material..." style="margin-bottom:12px;" value="${esc(fBusca)}" oninput="TPC_UI.onFiltro()">` : ''}
         <div id="tpc-tabela"></div>
       </div>
       </div>
     `;
     renderCurva(k.volEmpolado);
-    renderTabela();
+    renderPainelRegistros();
     Permissions.aplicarNaTela();
   }
 
   function onFiltro() {
     fBusca = document.getElementById('tpc-busca').value;
-    renderTabela();
+    renderPainelRegistros();
+  }
+  function setAbaRel(aba) { abaRel = aba; renderPainelRegistros(); }
+  function renderPainelRegistros() {
+    if (abaRel === 'porDia') renderPorDia();
+    else if (abaRel === 'porCaminhao') renderPorCaminhao();
+    else renderTabela();
+  }
+
+  // ── Resumo por dia (volume e nº de viagens) ──
+  function renderPorDia() {
+    const el = document.getElementById('tpc-tabela');
+    if (!el) return;
+    if (!entregas.length) { el.innerHTML = `<div class="cc-empty">Nenhuma viagem registrada ainda.</div>`; return; }
+    const mapa = {};
+    entregas.forEach(e => {
+      const d = e.data || '—';
+      if (!mapa[d]) mapa[d] = { data: d, viagens: 0, volume: 0 };
+      mapa[d].viagens++;
+      mapa[d].volume += TC.num(e.volume);
+    });
+    const lista = Object.values(mapa).sort((a, b) => (b.data || '').localeCompare(a.data || ''));
+    const totalVol = lista.reduce((s, r) => s + r.volume, 0);
+    const totalViagens = lista.reduce((s, r) => s + r.viagens, 0);
+    el.innerHTML = `
+      <div class="cc-tableWrap" style="max-height:400px;overflow-y:auto;">
+      <table class="cc-table">
+        <thead><tr><th>Data</th><th class="col-num">Viagens</th><th class="col-num">Volume (m³)</th><th class="col-num">% do total</th></tr></thead>
+        <tbody>
+          ${lista.map(r => `<tr>
+            <td class="cc-tdMono" style="font-weight:700;">${esc(r.data)}</td>
+            <td class="col-num cc-tdMono">${r.viagens}</td>
+            <td class="col-num cc-tdMono">${TC.fmt1(r.volume)}</td>
+            <td class="col-num cc-tdAccent" style="font-weight:700;">${totalVol > 0 ? TC.fmt1((r.volume / totalVol) * 100) : '0,0'}%</td>
+          </tr>`).join('')}
+        </tbody>
+        <tfoot><tr><td style="font-weight:700;">${lista.length} dia${lista.length !== 1 ? 's' : ''}</td><td class="col-num cc-tdMono" style="font-weight:700;">${totalViagens}</td><td class="col-num cc-tdMono" style="font-weight:700;">${TC.fmt1(totalVol)}</td><td></td></tr></tfoot>
+      </table>
+      </div>`;
+  }
+
+  // ── Resumo por caminhão (placa): viagens, volume total e médio ──
+  function renderPorCaminhao() {
+    const el = document.getElementById('tpc-tabela');
+    if (!el) return;
+    if (!entregas.length) { el.innerHTML = `<div class="cc-empty">Nenhuma viagem registrada ainda.</div>`; return; }
+    const mapa = {};
+    entregas.forEach(e => {
+      const p = e.placa || '— sem placa —';
+      if (!mapa[p]) mapa[p] = { placa: p, viagens: 0, volume: 0 };
+      mapa[p].viagens++;
+      mapa[p].volume += TC.num(e.volume);
+    });
+    const lista = Object.values(mapa).sort((a, b) => b.volume - a.volume);
+    const totalVol = lista.reduce((s, r) => s + r.volume, 0);
+    const totalViagens = lista.reduce((s, r) => s + r.viagens, 0);
+    el.innerHTML = `
+      <div class="cc-tableWrap" style="max-height:400px;overflow-y:auto;">
+      <table class="cc-table">
+        <thead><tr><th>Placa</th><th>Empresa</th><th class="col-num">Viagens</th><th class="col-num">Volume Total (m³)</th><th class="col-num">Média/Viagem (m³)</th></tr></thead>
+        <tbody>
+          ${lista.map(r => {
+            const cam = caminhoes.find(c => c.placa === r.placa);
+            return `<tr>
+              <td class="cc-tdMono" style="font-weight:700;">${esc(r.placa)}</td>
+              <td>${esc(cam?.empresa || '—')}</td>
+              <td class="col-num cc-tdMono">${r.viagens}</td>
+              <td class="col-num cc-tdMono">${TC.fmt1(r.volume)}</td>
+              <td class="col-num cc-tdMono">${TC.fmt1(r.volume / r.viagens)}</td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+        <tfoot><tr><td style="font-weight:700;" colspan="2">${lista.length} caminhão${lista.length !== 1 ? 'ões' : ''}</td><td class="col-num cc-tdMono" style="font-weight:700;">${totalViagens}</td><td class="col-num cc-tdMono" style="font-weight:700;">${TC.fmt1(totalVol)}</td><td></td></tr></tfoot>
+      </table>
+      </div>`;
   }
 
   // ── Curva de progresso acumulado ──
@@ -197,16 +280,19 @@ const ControleTerraplanagem = (() => {
     if (!el) return;
     el.innerHTML = `
       <div class="form-row">
+        <div class="form-grupo"><label>N° Canhoto</label><input type="text" id="tpc-ent-canhoto" class="form-control" placeholder="opcional"></div>
         <div class="form-grupo"><label>Data</label><input type="date" id="tpc-ent-data" class="form-control" value="${esc(Utils.hoje())}"></div>
+      </div>
+      <div class="form-row">
         <div class="form-grupo"><label>Placa</label>
           <select id="tpc-ent-placa" class="form-control" onchange="TPC_UI.autoVolumePorPlaca()">
             <option value="">— selecione —</option>
             ${caminhoes.map(c => `<option value="${esc(c.placa)}">${esc(c.placa)} (${esc(c.tamanho)})</option>`).join('')}
           </select>
         </div>
+        <div class="form-grupo"><label>Material</label><input type="text" id="tpc-ent-material" class="form-control" placeholder="Terra / Aterro"></div>
       </div>
       <div class="form-row">
-        <div class="form-grupo"><label>Material</label><input type="text" id="tpc-ent-material" class="form-control" placeholder="Terra / Aterro"></div>
         <div class="form-grupo"><label>Tipo</label><input type="text" id="tpc-ent-tipo" class="form-control" placeholder="Remoção / Entrega"></div>
       </div>
       <div class="form-row">
@@ -225,6 +311,7 @@ const ControleTerraplanagem = (() => {
   }
   async function salvarEntrega() {
     if(!Permissions.pode('controleTerra','criar')&&!Permissions.pode('controleTerra','editar')){Utils.toast('Sem permissão.','erro');return;}
+    const nCanhoto = document.getElementById('tpc-ent-canhoto').value.trim();
     const data = document.getElementById('tpc-ent-data').value;
     const placaSel = document.getElementById('tpc-ent-placa').value;
     const material = document.getElementById('tpc-ent-material').value.trim();
@@ -234,7 +321,7 @@ const ControleTerraplanagem = (() => {
     if (!data || !(volume > 0)) { Utils.toast('Informe data e volume maior que zero.', 'alerta'); return; }
     Utils.mostrarLoading();
     try {
-      await Database.criar(obraId, COL_ENTREGAS, { data, placa: placaSel, material, tipo, fornecedor, volume }, TC.genId('ent'));
+      await Database.criar(obraId, COL_ENTREGAS, { nCanhoto, data, placa: placaSel, material, tipo, fornecedor, volume }, TC.genId('ent'));
       Utils.toast('✓ Viagem registrada!', 'sucesso');
       Utils.fecharModal('modal-tpc-entrega');
       await carregar();
@@ -259,12 +346,116 @@ const ControleTerraplanagem = (() => {
     }
   }
 
+  // ══════════════════════════════════════════
+  // IMPORTAÇÃO DE PLANILHA (N Canhoto, Data, Material, Volume, Placa)
+  // Aceita .xlsx/.xls/.csv. Colunas identificadas por nome (com aliases,
+  // sem acento/maiúsculas) — ordem das colunas na planilha não importa.
+  // Dedup: linhas com N Canhoto já existente em terraEntregas são puladas
+  // (evita duplicar se a mesma planilha for importada de novo).
+  // Placas não cadastradas em terraCaminhoes são criadas automaticamente
+  // (tamanho fica em branco — dá pra completar depois em "🚚 Caminhões").
+  // ══════════════════════════════════════════
+  function _pDataImport(v) {
+    if (!v && v !== 0) return '';
+    if (v instanceof Date) return v.toISOString().split('T')[0];
+    if (typeof v === 'number') return new Date((v - 25569) * 864e5).toISOString().split('T')[0];
+    const s = String(v).trim();
+    let m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (m) return `${m[3]}-${m[2]}-${m[1]}`;
+    m = s.match(/^(\d{2})-(\d{2})-(\d{4})$/);
+    if (m) return `${m[3]}-${m[2]}-${m[1]}`;
+    if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.split('T')[0];
+    return '';
+  }
+
+  async function importarPlanilha(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    event.target.value = '';
+    if (!Permissions.pode('controleTerra', 'importar')) { Utils.toast('Sem permissão para importar.', 'erro'); return; }
+    Utils.mostrarLoading('Lendo planilha...');
+    try {
+      if (typeof XLSX === 'undefined') await _ls('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');
+      const ab = await file.arrayBuffer();
+      const wb = XLSX.read(ab, { type: 'array' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+      if (rows.length < 2) throw new Error('Planilha vazia ou sem linhas de dados.');
+
+      const norm = h => String(h || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ');
+      const hdrs = rows[0].map(norm);
+      const ALIASES = {
+        nCanhoto: ['n canhoto', 'numero canhoto', 'no canhoto', 'canhoto', 'nº canhoto', 'n° canhoto', 'ticket', 'nota'],
+        data: ['data', 'date', 'dia'],
+        material: ['material'],
+        volume: ['volume', 'volume m3', 'volume (m3)', 'm3', 'qtd', 'quantidade'],
+        placa: ['placa', 'placa caminhao', 'veiculo', 'caminhao'],
+      };
+      const ci = campo => { for (const alias of ALIASES[campo]) { const i = hdrs.indexOf(alias); if (i >= 0) return i; } return -1; };
+      const iCanhoto = ci('nCanhoto'), iData = ci('data'), iMaterial = ci('material'), iVolume = ci('volume'), iPlaca = ci('placa');
+      if (iData < 0 || iVolume < 0 || iPlaca < 0) {
+        throw new Error('Não encontrei as colunas obrigatórias (Data, Volume, Placa). Confira o cabeçalho da planilha.');
+      }
+
+      const canhotosExistentes = new Set(entregas.map(e => (e.nCanhoto || '').trim()).filter(Boolean));
+      const placasExistentes = new Set(caminhoes.map(c => c.placa));
+      const novosCaminhoes = new Set();
+      const regs = [];
+      let puladasDuplicadas = 0, puladasInvalidas = 0;
+
+      for (let r = 1; r < rows.length; r++) {
+        const row = rows[r];
+        if (!row || !row.length) continue;
+        const nCanhoto = String(row[iCanhoto] ?? '').trim();
+        const data = _pDataImport(row[iData]);
+        const material = String(row[iMaterial] ?? '').trim();
+        const volume = TC.num(row[iVolume]);
+        const placa = String(row[iPlaca] ?? '').trim().toUpperCase();
+        if (!data || !placa || !(volume > 0)) { puladasInvalidas++; continue; }
+        if (nCanhoto && canhotosExistentes.has(nCanhoto)) { puladasDuplicadas++; continue; }
+        if (nCanhoto) canhotosExistentes.add(nCanhoto); // evita duplicar dentro da própria planilha também
+        if (placa && !placasExistentes.has(placa)) { novosCaminhoes.add(placa); placasExistentes.add(placa); }
+        regs.push({ nCanhoto, data, material, volume, placa });
+      }
+
+      if (!regs.length) {
+        Utils.esconderLoading();
+        Utils.toast('Nenhuma linha válida encontrada para importar.', 'alerta');
+        return;
+      }
+
+      Utils.mostrarLoading(`Importando ${regs.length} viagens...`);
+      const ops = regs.map(reg => ({ type: 'set', ref: Database.ref(obraId, COL_ENTREGAS).doc(TC.genId('ent')), data: reg }));
+      [...novosCaminhoes].forEach(placa => {
+        ops.push({ type: 'set', ref: Database.ref(obraId, COL_CAMINHOES).doc(TC.genId('cam')), data: { placa, tamanho: '', empresa: '' } });
+      });
+      for (let i = 0; i < ops.length; i += 400) await Database.batchWrite(ops.slice(i, i + 400));
+
+      await carregar();
+      const el = document.getElementById('tpc-import-result-body');
+      if (el) {
+        el.innerHTML = `
+          <p>✅ <strong>${regs.length}</strong> viagem${regs.length !== 1 ? 'ns' : ''} importada${regs.length !== 1 ? 's' : ''}.</p>
+          ${novosCaminhoes.size ? `<p>🚚 <strong>${novosCaminhoes.size}</strong> caminhão(ões) novo(s) cadastrado(s) automaticamente: ${[...novosCaminhoes].map(esc).join(', ')}. Complete tamanho/empresa em "🚚 Caminhões".</p>` : ''}
+          ${puladasDuplicadas ? `<p>⏭️ <strong>${puladasDuplicadas}</strong> linha(s) pulada(s) por N° Canhoto já existente (duplicata).</p>` : ''}
+          ${puladasInvalidas ? `<p>⚠️ <strong>${puladasInvalidas}</strong> linha(s) ignorada(s) por falta de Data, Placa ou Volume válido.</p>` : ''}
+        `;
+      }
+      Utils.abrirModal('modal-tpc-import-result');
+    } catch (e) {
+      console.error(e);
+      Utils.toast('Erro ao importar: ' + e.message, 'erro');
+    } finally {
+      Utils.esconderLoading();
+    }
+  }
+
   function renderTabela() {
     const el = document.getElementById('tpc-tabela');
     if (!el) return;
     const busca = fBusca.toLowerCase();
     const lista = [...entregas]
-      .filter(e => !busca || (e.placa || '').toLowerCase().includes(busca) || (e.material || '').toLowerCase().includes(busca))
+      .filter(e => !busca || (e.placa || '').toLowerCase().includes(busca) || (e.material || '').toLowerCase().includes(busca) || (e.nCanhoto || '').toLowerCase().includes(busca))
       .sort((a, b) => (b.data || '').localeCompare(a.data || ''));
 
     if (!lista.length) {
@@ -280,12 +471,13 @@ const ControleTerraplanagem = (() => {
     el.innerHTML = `
       <div class="cc-tableWrap" style="max-height:400px;overflow-y:auto;">
       <table class="cc-table">
-        <thead><tr><th>Data</th><th>Placa</th><th>Material</th><th>Tipo</th><th class="col-num">Volume (m³)</th><th class="col-num">Acum. (m³)</th><th class="col-num">Acum. %</th><th class="col-acoes"></th></tr></thead>
+        <thead><tr><th>Canhoto</th><th>Data</th><th>Placa</th><th>Material</th><th>Tipo</th><th class="col-num">Volume (m³)</th><th class="col-num">Acum. (m³)</th><th class="col-num">Acum. %</th><th class="col-acoes"></th></tr></thead>
         <tbody>
           ${lista.map(e => {
             const acum = acumuladoPorId[e.id] || 0;
             const pctAcum = totalGeral > 0 ? (acum / totalGeral) * 100 : 0;
             return `<tr>
+              <td class="cc-tdMono">${esc(e.nCanhoto || '—')}</td>
               <td class="cc-tdMono">${esc(e.data)}</td>
               <td class="cc-tdMono" style="font-weight:700;">${esc(e.placa || '—')}</td>
               <td>${esc(e.material || '—')}</td>
@@ -297,14 +489,15 @@ const ControleTerraplanagem = (() => {
             </tr>`;
           }).join('')}
         </tbody>
-        <tfoot><tr><td colspan="4" style="font-weight:700;">${lista.length} viagem${lista.length !== 1 ? 'ns' : ''}</td><td class="col-num cc-tdMono" style="font-weight:700;">${TC.fmt1(lista.reduce((s, e) => s + TC.num(e.volume), 0))}</td><td colspan="3"></td></tr></tfoot>
+        <tfoot><tr><td colspan="5" style="font-weight:700;">${lista.length} viagem${lista.length !== 1 ? 'ns' : ''}</td><td class="col-num cc-tdMono" style="font-weight:700;">${TC.fmt1(lista.reduce((s, e) => s + TC.num(e.volume), 0))}</td><td colspan="3"></td></tr></tfoot>
       </table>
       </div>`;
   }
 
   return {
-    init, recarregar, renderizar, onFiltro,
+    init, recarregar, renderizar, onFiltro, setAbaRel,
     abrirEntrega, autoVolumePorPlaca, salvarEntrega, excluirEntrega,
+    importarPlanilha,
   };
 })();
 

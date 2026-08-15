@@ -46,7 +46,7 @@
       <a href="histograma.html" data-perm="histograma:ver"><span class="nav-icon">📊</span> Histograma</a>
       <a href="admin-permissoes.html" data-perm="admin:ver"><span class="nav-icon">🔑</span> Permissões</a>
       <a href="backup-planejamento.html" data-perm="backupPlanejamento:ver"><span class="nav-icon">🗂️</span> Backup de Planejamentos</a>
-      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V3.5.1.12</span></a>
+      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V3.5.1.13</span></a>
     </nav>
     <div class="sidebar-user">
       <div class="user-avatar">U</div>
@@ -63,10 +63,26 @@
       <h1>Controle de Terraplanagem</h1>
       <div class="header-breadcrumb"><a href="controle.html">Controle</a><span class="sep">›</span><span>Terraplanagem</span></div>
     </div>
-    <div class="header-actions"></div>
+    <div class="header-actions">
+      <label class="btn btn-secundario btn-sm" style="cursor:pointer;" data-perm="controleTerra:importar" title="Colunas: N Canhoto, Data, Material, Volume, Placa">📥 Importar Planilha<input type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="TPC_UI.importarPlanilha(event)"></label>
+    </div>
   </header>
 
   <main class="content" id="tpc-content"></main>
+</div>
+
+<!-- MODAL: Resultado da Importação -->
+<div class="modal-overlay" id="modal-tpc-import-result">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-header">
+      <h3>📥 Importação de Viagens</h3>
+      <button class="modal-close" onclick="Utils.fecharModal('modal-tpc-import-result')">&times;</button>
+    </div>
+    <div class="modal-body" id="tpc-import-result-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-primario" onclick="Utils.fecharModal('modal-tpc-import-result')">Fechar</button>
+    </div>
+  </div>
 </div>
 
 <!-- MODAL: Registrar Viagem/Entrega -->

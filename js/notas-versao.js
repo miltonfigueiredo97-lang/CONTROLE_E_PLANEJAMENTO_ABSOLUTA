@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.5.1.12',
+  versaoAtual: 'V3.5.1.13',
 
   versoes: [
     {
@@ -7789,6 +7789,17 @@ const NotasVersao = {
       "titulo": "Consolidado do relatório: ordem por Concretagem e depois por BT",
       "itens": [
         "Na tabela \"Estacas executadas (consolidado)\" do Resumo Total, as estacas agora saem ordenadas primeiro pelo Nº DA CONCRETAGEM e, dentro dela, pela ordem das BTs — antes a ordem das BTs vinha misturando estacas de concretagens diferentes."
+      ]
+    },
+    {
+      "versao": "V3.5.1.13",
+      "data": "2026-08-15",
+      "tipo": "melhoria",
+      "titulo": "Controle de Terraplanagem: N° Canhoto, importação de planilha e relatórios por dia/caminhão",
+      "itens": [
+        "Novo campo N° Canhoto em cada viagem/remoção — aparece no registro manual e na tabela.",
+        "Botão \"📥 Importar Planilha\" no Controle de Terraplanagem: lê .xlsx/.xls/.csv com as colunas N Canhoto, Data, Material, Volume e Placa (nome das colunas flexível, ordem não importa). Placas ainda não cadastradas são criadas automaticamente em Caminhões. Linhas com N° Canhoto repetido são puladas (evita duplicar se a planilha for importada de novo).",
+        "Painel \"Viagens/Remoções\" ganhou abas: Viagens (lista, como antes), Por Dia (viagens e volume por data) e Por Caminhão (viagens, volume total e média por placa)."
       ]
     }
   ],
