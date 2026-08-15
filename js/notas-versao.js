@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.5.1.3',
+  versaoAtual: 'V3.5.1.4',
 
   versoes: [
     {
@@ -7695,6 +7695,17 @@ const NotasVersao = {
         "Bug real: a perda de cocho e linha (que acontece antes de o concreto chegar na peça, normalmente na 1ª BT) entrava DUAS vezes na conta — uma escondida (na diferença bruta entre volume real e projeto) e outra somada de novo por cima — dobrando o índice de perda.",
         "Corrigido: agora desconta o cocho/linha do volume executado real UMA vez, ANTES de comparar com o volume do projeto. Exemplo: projeto 10m³, usado 12m³, cocho 2m³ → usado real 10m³ → perda 0%. Projeto 10m³, usado 15m³, cocho 2m³ → usado real 13m³ → perda 3m³ = 30%.",
         "\"Executado real (BTs)\" agora mostra o volume previsto (nominal) das BTs usadas — igual ao \"Volume Real Concretado\" do Controle de Concreto, pros dois módulos baterem."
+      ]
+    },
+    {
+      "versao": "V3.5.1.4",
+      "data": "2026-08-15",
+      "tipo": "melhoria",
+      "titulo": "Relatório de Estacas: ordem pelas BTs e perda na fórmula nova do Controle",
+      "itens": [
+        "Dentro de cada dia (e no consolidado/WhatsApp), as estacas saem na ORDEM DAS BTs (BT1,BT2,BT3 antes de BT3,BT4,BT5) — a sequência real de execução, não a ordem alfabética.",
+        "Índice de perda do relatório ALINHADO à fórmula corrigida do Controle de Estacas (V3.5.1.3): cocho/linha é descontado antes de comparar com o projeto (não conta mais em dobro), perda de solo = usado − projeto, somando perda de obra e sobra de caminhão. Como essas perdas são por BT e uma BT pode servir várias estacas, o relatório RATEIA proporcionalmente ao volume que cada estaca tirou da BT — a soma bate com o índice do Controle.",
+        "Perda do TOTAL DO DIA, por tipo e do resumo geral também recalculadas nessa mesma base. IMPORTANTE: o relatório não copia o número do Controle — ele aplica a mesma fórmula; se a fórmula mudar de novo no Controle, precisa ser espelhada aqui."
       ]
     }
   ],

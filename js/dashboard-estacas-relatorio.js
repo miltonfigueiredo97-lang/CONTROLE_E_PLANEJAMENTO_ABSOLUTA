@@ -130,6 +130,36 @@ const DashEstacasRel = (() => {
     const concPorId = new Map(_dados.concretagens.map(c => [c.id, c]));
     const btPorId = new Map(_dados.bts.map(b => [b.id, b]));
 
+    // ---- Perda por estaca ALINHADA à fórmula do Controle de Estacas
+    // (V3.5.1.3): cocho/linha se perde antes de chegar na peça (desconta do
+    // que chegou), perda de solo = usado − projeto, e soma perda de obra +
+    // sobra de caminhão. Como essas perdas são POR BT (e uma BT pode servir
+    // várias estacas), aqui elas são RATEADAS proporcionalmente ao volume
+    // que cada estaca tirou da BT — somando as estacas, bate com o índice
+    // por concretagem do Controle.
+    const volTotalPorBT = new Map(); // btConfigId -> Σ volume de todos os lançamentos de estaca daquela BT
+    _dados.lancamentos.forEach(l => {
+      const p = pecaPorId.get(l.pecaId);
+      if (!p || !_isEstaca(p)) return;
+      volTotalPorBT.set(l.btConfigId, (volTotalPorBT.get(l.btConfigId) || 0) + _num(l.volume));
+    });
+    function _perdaEstaca(lans, volCalc) {
+      let usoNominal = 0, cocho = 0, obra = 0, sobra = 0;
+      lans.forEach(l => {
+        const v = _num(l.volume);
+        usoNominal += v;
+        const totBT = volTotalPorBT.get(l.btConfigId) || 0;
+        const frac = totBT > 0 ? v / totBT : 0;
+        cocho += _num(l.perdaCocho) * frac;
+        obra += _num(l.perdaObra) * frac;
+        sobra += _num(l.sobraCaminhao) * frac;
+      });
+      const usado = usoNominal - cocho;
+      const perdaSolo = Math.max(0, usado - volCalc);
+      const perdaVol = perdaSolo + obra + sobra;
+      return { perdaVol, indice: volCalc > 0 ? (perdaVol / volCalc) * 100 : null };
+    }
+
     // Lançamentos de estacas dentro das datas escolhidas, agrupados por dia.
     const porDia = new Map(); // data -> Map(pecaId -> { peca, lans: [] })
     _dados.lancamentos.forEach(l => {
@@ -149,10 +179,14 @@ const DashEstacasRel = (() => {
         const volCalc = _num(peca.volume);
         const btsDaEstaca = [...new Set(lans.map(l => l.btConfigId))].map(id => btPorId.get(id)).filter(Boolean)
           .sort((a, b) => (a.numero || 0) - (b.numero || 0));
-        const perda = volCalc > 0 ? ((volReal - volCalc) / volCalc) * 100 : null;
+        const p2 = _perdaEstaca(lans, volCalc);
         const concNums = [...new Set(lans.map(l => concPorId.get(l.concretagemId)?.numero).filter(n => n != null))];
-        return { peca, volCalc, volReal, perda, bts: btsDaEstaca, comprimento: _num(peca.comprimento), concNums };
-      }).sort((a, b) => (a.peca.nome || '').localeCompare(b.peca.nome || '', 'pt-BR', { numeric: true }));
+        return { peca, volCalc, volReal, perda: p2.indice, perdaVol: p2.perdaVol, lans, bts: btsDaEstaca, comprimento: _num(peca.comprimento), concNums };
+      });
+      // Ordem de execução = ordem das BTs (BT1,BT2,BT3 → próxima BT3,BT4,BT5),
+      // não alfabética pelo nome da estaca.
+      const _minBT = e => e.bts.length ? Math.min(...e.bts.map(b => b.numero || 9e9)) : 9e9;
+      estacas.sort((a, b) => _minBT(a) - _minBT(b) || (a.peca.nome || '').localeCompare(b.peca.nome || '', 'pt-BR', { numeric: true }));
 
       // Executado por tipo no dia
       const porTipo = new Map();
@@ -171,33 +205,42 @@ const DashEstacasRel = (() => {
         totMl: estacas.reduce((s, e) => s + e.comprimento, 0),
         totM3: estacas.reduce((s, e) => s + e.volReal, 0),
         totCalc: estacas.reduce((s, e) => s + e.volCalc, 0),
+        totPerdaVol: estacas.reduce((s, e) => s + (e.perdaVol || 0), 0),
       };
     });
 
     // Resumo total (estacas ÚNICAS — se uma estaca aparece em 2 dias, conta 1)
     const unicas = new Map(); // pecaId -> { peca, volCalc, volReal, comprimento, bts:Set, concNums:Set }
     dias.forEach(d => d.estacas.forEach(e => {
-      if (!unicas.has(e.peca.id)) unicas.set(e.peca.id, { peca: e.peca, volCalc: e.volCalc, volReal: 0, comprimento: e.comprimento, bts: new Map(), concNums: new Set() });
+      if (!unicas.has(e.peca.id)) unicas.set(e.peca.id, { peca: e.peca, volCalc: e.volCalc, volReal: 0, comprimento: e.comprimento, bts: new Map(), concNums: new Set(), lans: [] });
       const u = unicas.get(e.peca.id);
       u.volReal += e.volReal;
+      u.lans = u.lans.concat(e.lans || []);
       e.bts.forEach(b => u.bts.set(b.id, b));
       (e.concNums || []).forEach(n => u.concNums.add(n));
     }));
-    const consolidadas = [...unicas.values()].map(u => ({
-      peca: u.peca, volCalc: u.volCalc, volReal: u.volReal, comprimento: u.comprimento,
-      bts: [...u.bts.values()].sort((a, b) => (a.numero || 0) - (b.numero || 0)),
-      concNums: [...u.concNums].sort((a, b) => a - b),
-      perda: u.volCalc > 0 ? ((u.volReal - u.volCalc) / u.volCalc) * 100 : null,
-    })).sort((a, b) => (a.peca.nome || '').localeCompare(b.peca.nome || '', 'pt-BR', { numeric: true }));
-    const totalPorTipo = new Map();
-    unicas.forEach(e => {
-      const t = _tipoLabel(e.peca);
-      if (!totalPorTipo.has(t)) totalPorTipo.set(t, { qtd: 0, volCalc: 0, volReal: 0, ml: 0 });
-      const g = totalPorTipo.get(t);
-      g.qtd++; g.volCalc += e.volCalc; g.volReal += e.volReal; g.ml += e.comprimento;
+    const consolidadas = [...unicas.values()].map(u => {
+      const p2 = _perdaEstaca(u.lans, u.volCalc);
+      return {
+        peca: u.peca, volCalc: u.volCalc, volReal: u.volReal, comprimento: u.comprimento,
+        bts: [...u.bts.values()].sort((a, b) => (a.numero || 0) - (b.numero || 0)),
+        concNums: [...u.concNums].sort((a, b) => a - b),
+        perda: p2.indice, perdaVol: p2.perdaVol,
+      };
     });
-    const totCalc = [...unicas.values()].reduce((s, e) => s + e.volCalc, 0);
-    const totReal = [...unicas.values()].reduce((s, e) => s + e.volReal, 0);
+    // Consolidado também em ordem de BT.
+    const _minBTc = e => e.bts.length ? Math.min(...e.bts.map(b => b.numero || 9e9)) : 9e9;
+    consolidadas.sort((a, b) => _minBTc(a) - _minBTc(b) || (a.peca.nome || '').localeCompare(b.peca.nome || '', 'pt-BR', { numeric: true }));
+    const totalPorTipo = new Map();
+    consolidadas.forEach(e => {
+      const t = _tipoLabel(e.peca);
+      if (!totalPorTipo.has(t)) totalPorTipo.set(t, { qtd: 0, volCalc: 0, volReal: 0, ml: 0, perdaVol: 0 });
+      const g = totalPorTipo.get(t);
+      g.qtd++; g.volCalc += e.volCalc; g.volReal += e.volReal; g.ml += e.comprimento; g.perdaVol += (e.perdaVol || 0);
+    });
+    const totCalc = consolidadas.reduce((s, e) => s + e.volCalc, 0);
+    const totReal = consolidadas.reduce((s, e) => s + e.volReal, 0);
+    const totPerdaVol = consolidadas.reduce((s, e) => s + (e.perdaVol || 0), 0);
 
     const datasOrd = dias.map(d => d.data).sort();
     return {
@@ -210,7 +253,7 @@ const DashEstacasRel = (() => {
         ml: [...unicas.values()].reduce((s, e) => s + e.comprimento, 0),
         m3: totReal,
         volCalc: totCalc,
-        perdaMedia: totCalc > 0 ? ((totReal - totCalc) / totCalc) * 100 : null,
+        perdaMedia: totCalc > 0 ? (totPerdaVol / totCalc) * 100 : null,
         porTipo: [...totalPorTipo.entries()].sort((a, b) => a[0].localeCompare(b[0], 'pt-BR', { numeric: true })),
       },
     };
@@ -259,7 +302,7 @@ const DashEstacasRel = (() => {
                 <td style="text-align:left;" colspan="3">TOTAL DO DIA — ${d.totQtd} estaca${d.totQtd > 1 ? 's' : ''} · ${_fmt1(d.totMl)} ml</td>
                 <td>${_fmt2(d.totCalc)}</td>
                 <td>${_fmt2(d.totM3)}</td>
-                <td>${_perdaHtml(d.totCalc > 0 ? ((d.totM3 - d.totCalc) / d.totCalc) * 100 : null)}</td>
+                <td>${_perdaHtml(d.totCalc > 0 ? (d.totPerdaVol / d.totCalc) * 100 : null)}</td>
               </tr>
             </tbody>
           </table>
@@ -439,7 +482,7 @@ const DashEstacasRel = (() => {
             [{ content: `TOTAL DO DIA — ${d.totQtd} estaca(s) · ${_fmt1(d.totMl)} ml`, colSpan: 3, styles: { fontStyle: 'bold', fillColor: [255, 252, 240] } },
               { content: _fmt2(d.totCalc), styles: { fontStyle: 'bold', fillColor: [255, 252, 240] } },
               { content: _fmt2(d.totM3), styles: { fontStyle: 'bold', fillColor: [255, 252, 240] } },
-              { content: d.totCalc > 0 ? _fmt1(((d.totM3 - d.totCalc) / d.totCalc) * 100) + '%' : '—', styles: { fontStyle: 'bold', fillColor: [255, 252, 240] } }],
+              { content: d.totCalc > 0 ? _fmt1((d.totPerdaVol / d.totCalc) * 100) + '%' : '—', styles: { fontStyle: 'bold', fillColor: [255, 252, 240] } }],
           ],
           margin: { left: 12, right: 12 },
           styles: { fontSize: 7.5, cellPadding: 1.6 },
@@ -500,7 +543,7 @@ const DashEstacasRel = (() => {
         startY: y + 5,
         head: [['Tipo (Ø × comprimento)', 'Qtd', 'ML', 'm³ real', 'm³ calculado', 'Perda']],
         body: t.porTipo.map(([tipo, g]) => [tipo, String(g.qtd), _fmt1(g.ml), _fmt2(g.volReal), _fmt2(g.volCalc),
-          g.volCalc > 0 ? _fmt1(((g.volReal - g.volCalc) / g.volCalc) * 100) + '%' : '—']),
+          g.volCalc > 0 ? _fmt1((g.perdaVol / g.volCalc) * 100) + '%' : '—']),
         margin: { left: 12, right: 12 },
         styles: { fontSize: 8.5, cellPadding: 2.2 },
         headStyles: { fillColor: [245, 200, 0], textColor: [13, 13, 13], fontStyle: 'bold' },
