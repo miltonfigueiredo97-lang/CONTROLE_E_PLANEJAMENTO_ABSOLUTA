@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.5.1.6',
+  versaoAtual: 'V3.5.1.7',
 
   versoes: [
     {
@@ -7728,6 +7728,16 @@ const NotasVersao = {
         "Corrigido: o mini-form de sobra/perda mostrava Cocho+Linha e Sobra Caminhão em QUALQUER BT — errado, cocho/linha só acontece uma vez (na 1ª BT do dia) e sobra de caminhão só faz sentido na ÚLTIMA (se ela não foi totalmente usada).",
         "Agora: Cocho + Linha só aparece na primeira BT da concretagem (menor número), Sobra Caminhão só na última (maior número). BTs do meio só têm Perda em Obra e Hora — com um aviso explicando.",
         "Primeira/última são calculadas pelo número da BT dentro da concretagem, ordem que reflete a sequência real de chegada dos caminhões."
+      ]
+    },
+    {
+      "versao": "V3.5.1.7",
+      "data": "2026-08-15",
+      "tipo": "correcao",
+      "titulo": "Controle de Estacas: botão de sobra/perda some das BTs do meio — só aparece na 1ª e na última",
+      "itens": [
+        "O botão \"✎ sobra/perda\" ainda aparecia em TODAS as linhas de BT do popup de lançar por estaca, mesmo já só mostrando os campos certos dentro dele — poluía a tela com botão irrelevante em toda BT do meio.",
+        "Agora o botão só aparece na linha da BT que é a primeira (mostra \"✎ cocho\") ou a última (mostra \"✎ sobra\") da concretagem inteira. BTs do meio não têm nenhum botão ali — não tem nada de cocho/sobra pra editar mesmo."
       ]
     }
   ],
