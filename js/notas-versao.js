@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.5.1.1',
+  versaoAtual: 'V3.5.1.2',
 
   versoes: [
     {
@@ -7672,6 +7672,18 @@ const NotasVersao = {
         "Fecho do relatório: total de dias de concretagem e resumo geral consolidado (sem separar por dia), por tipo e nos números da obra.",
         "⬇ Baixar PDF: gera o arquivo direto (sem diálogo de impressão), com a prancha do projeto preenchida — só as estacas executadas, verde = concluída, amarelo = parcial — seguida do relatório dia a dia e do resumo.",
         "Estaca concretada em mais de um dia aparece em cada dia com o volume daquele dia, e no resumo total é contada uma vez só."
+      ]
+    },
+    {
+      "versao": "V3.5.1.2",
+      "data": "2026-08-15",
+      "tipo": "melhoria",
+      "titulo": "Relatório de Estacas: modo Só Total, texto pra WhatsApp, PDF repaginado e Nº da concretagem na prancha",
+      "itens": [
+        "Nova opção na geração: \"Só o resumo total (sem separar por dia)\" — sai o consolidado da obra com a tabela de todas as estacas executadas (com Nº da concretagem de cada uma), sem o dia a dia.",
+        "📱 Copiar p/ WhatsApp: botão que monta o relatório em texto (negritos e marcadores no formato do WhatsApp) e copia — é só colar na conversa.",
+        "RESUMO TOTAL do PDF redesenhado: banner preto com período, cards de métricas (estacas, ML, m³ real, m³ calculado, índice de perda colorido), tabela por tipo agora com coluna de perda e zebra.",
+        "Prancha do PDF: quando o relatório cobre MAIS DE UM DIA, cada estaca marcada mostra o Nº da concretagem dentro do círculo — dá pra saber qual concretagem executou cada estaca só de olhar."
       ]
     }
   ],
