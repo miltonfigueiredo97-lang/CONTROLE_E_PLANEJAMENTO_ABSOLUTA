@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.5.1.2',
+  versaoAtual: 'V3.5.1.3',
 
   versoes: [
     {
@@ -7684,6 +7684,17 @@ const NotasVersao = {
         "📱 Copiar p/ WhatsApp: botão que monta o relatório em texto (negritos e marcadores no formato do WhatsApp) e copia — é só colar na conversa.",
         "RESUMO TOTAL do PDF redesenhado: banner preto com período, cards de métricas (estacas, ML, m³ real, m³ calculado, índice de perda colorido), tabela por tipo agora com coluna de perda e zebra.",
         "Prancha do PDF: quando o relatório cobre MAIS DE UM DIA, cada estaca marcada mostra o Nº da concretagem dentro do círculo — dá pra saber qual concretagem executou cada estaca só de olhar."
+      ]
+    },
+    {
+      "versao": "V3.5.1.3",
+      "data": "2026-08-15",
+      "tipo": "correcao",
+      "titulo": "Controle de Estacas: índice de perda corrigido — cocho/linha estava contado em dobro",
+      "itens": [
+        "Bug real: a perda de cocho e linha (que acontece antes de o concreto chegar na peça, normalmente na 1ª BT) entrava DUAS vezes na conta — uma escondida (na diferença bruta entre volume real e projeto) e outra somada de novo por cima — dobrando o índice de perda.",
+        "Corrigido: agora desconta o cocho/linha do volume executado real UMA vez, ANTES de comparar com o volume do projeto. Exemplo: projeto 10m³, usado 12m³, cocho 2m³ → usado real 10m³ → perda 0%. Projeto 10m³, usado 15m³, cocho 2m³ → usado real 13m³ → perda 3m³ = 30%.",
+        "\"Executado real (BTs)\" agora mostra o volume previsto (nominal) das BTs usadas — igual ao \"Volume Real Concretado\" do Controle de Concreto, pros dois módulos baterem."
       ]
     }
   ],

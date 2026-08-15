@@ -980,23 +980,29 @@ const ControleEstacas = (() => {
       volumeExecutadoProjeto += Math.min(volNecessario, (pct / 100) * volNecessario);
     });
     const lansConc = lancamentos.filter(l => l.concretagemId === concId);
-    const volumeExecutadoReal = lansConc.reduce((s, l) => s + (l.volume || 0), 0);
     const idsBTsUsadas = new Set(lansConc.map(l => l.btConfigId));
-    let volumePrevistoBTs = 0, perdaBTs = 0;
+    let volumePrevistoBTs = 0, perdaCochoTotal = 0, perdaObraTotal = 0, sobraTotal = 0;
     idsBTsUsadas.forEach(btId => {
       const b = btsConfig.find(x => x.id === btId);
       if (!b) return;
       volumePrevistoBTs += b.volumePrevisto || 0;
       const lan = lansConc.find(l => l.btConfigId === btId);
-      perdaBTs += (lan?.sobraCaminhao || 0) + (lan?.perdaObra || 0) + (lan?.perdaCocho || 0);
+      perdaCochoTotal += (lan?.perdaCocho || 0);
+      perdaObraTotal += (lan?.perdaObra || 0);
+      sobraTotal += (lan?.sobraCaminhao || 0);
     });
-    // Perda de solo: o volume real (BTs) passando do volume do projeto —
-    // normal em estacas (furo sai maior), mas é perda de verdade e precisa
-    // entrar no índice, senão fica 0% mesmo "sobrando" tudo isso no solo em
-    // vez de na betoneira (mesmo ajuste já feito no Controle de Concreto).
-    const perdaSolo = Math.max(0, volumeExecutadoReal - volumeTotal);
-    const perdaTotal = perdaBTs + perdaSolo;
-    const indicePerda = volumePrevistoBTs > 0 ? (perdaTotal / volumePrevistoBTs) * 100 : 0;
+    // "Executado real (BTs)" = volume previsto (nominal) das BTs usadas —
+    // igual ao "Volume Real Concretado" do Controle de Concreto.
+    const volumeExecutadoReal = volumePrevistoBTs;
+    // Cocho e linha se perdem ANTES de chegar na peça (normalmente na 1ª BT)
+    // — desconta isso primeiro pra achar o que de fato chegou na peça.
+    // Erro antigo: essa perda entrava DUAS vezes (implícita na diferença
+    // bruta real-vs-projeto, e de novo somada explicitamente) — dobrava o
+    // índice. Agora desconta uma vez só, antes de comparar com o projeto.
+    const volumeUsadoReal = volumeExecutadoReal - perdaCochoTotal;
+    const perdaSolo = Math.max(0, volumeUsadoReal - volumeTotal);
+    const perdaTotal = perdaSolo + perdaObraTotal + sobraTotal;
+    const indicePerda = volumeTotal > 0 ? (perdaTotal / volumeTotal) * 100 : 0;
     return { volumeTotal, volumeExecutadoProjeto, volumeExecutadoReal, indicePerda, perdaSolo };
   }
 
