@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.5.1.5',
+  versaoAtual: 'V3.5.1.6',
 
   versoes: [
     {
@@ -7717,6 +7717,17 @@ const NotasVersao = {
         "Novo botão \"✎ sobra/perda\" em cada linha de BT do popup de lançar por estaca — abre um mini-formulário ali mesmo (sobra caminhão, perda em obra, cocho + linha, hora), sem precisar sair pra outro menu.",
         "Se a BT ainda não tem nenhum lançamento salvo (primeira peça dela), o valor fica guardado e entra automaticamente quando você salvar o lançamento — antes não tinha onde persistir isso.",
         "Botão fica com borda laranja quando a BT já tem alguma sobra/perda cadastrada, pra saber de relance quais já foram preenchidas."
+      ]
+    },
+    {
+      "versao": "V3.5.1.6",
+      "data": "2026-08-15",
+      "tipo": "correcao",
+      "titulo": "Controle de Estacas: cocho/linha só na primeira BT, sobra de caminhão só na última",
+      "itens": [
+        "Corrigido: o mini-form de sobra/perda mostrava Cocho+Linha e Sobra Caminhão em QUALQUER BT — errado, cocho/linha só acontece uma vez (na 1ª BT do dia) e sobra de caminhão só faz sentido na ÚLTIMA (se ela não foi totalmente usada).",
+        "Agora: Cocho + Linha só aparece na primeira BT da concretagem (menor número), Sobra Caminhão só na última (maior número). BTs do meio só têm Perda em Obra e Hora — com um aviso explicando.",
+        "Primeira/última são calculadas pelo número da BT dentro da concretagem, ordem que reflete a sequência real de chegada dos caminhões."
       ]
     }
   ],

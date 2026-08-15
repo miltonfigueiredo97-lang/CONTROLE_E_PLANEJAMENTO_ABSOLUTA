@@ -407,6 +407,11 @@ const ControleEstacas = (() => {
   }
   function _volumePlanejado(concretagemId) { return _pecasPlanejadas(concretagemId).reduce((s, p) => s + (p.volume || 0), 0); }
   function _btsDaConcretagem(concretagemId) { return btsConfig.filter(b => b.concretagemId === concretagemId).sort((a, b) => (a.numero || 0) - (b.numero || 0)); }
+  // Cocho e linha só fazem sentido na PRIMEIRA BT do dia (perda de partida,
+  // acontece uma vez). Sobra de caminhão só faz sentido na ÚLTIMA (se ela
+  // não foi usada até o fim). As do meio não têm nem um nem outro.
+  function _primeiraBTConcretagem(concId) { const l = _btsDaConcretagem(concId); return l[0] || null; }
+  function _ultimaBTConcretagem(concId) { const l = _btsDaConcretagem(concId); return l[l.length - 1] || null; }
   function _concretagemDaPeca(pecaId) { const pc = pecaConc.find(x => x.pecaId === pecaId); return pc ? (concretagens.find(c => c.id === pc.concretagemId) || null) : null; }
 
   // Resumo por diâmetro+comprimento de um conjunto de peças — usado nos
@@ -1238,6 +1243,8 @@ const ControleEstacas = (() => {
     const el = document.getElementById('ce-lancar-body');
     if (!el || !estacaAtual) return;
     const btsConc = _btsDaConcretagem(estacaAtual.concId);
+    const primeiraBT = _primeiraBTConcretagem(estacaAtual.concId);
+    const ultimaBT = _ultimaBTConcretagem(estacaAtual.concId);
     const p = pecas.find(x => x.id === estacaAtual.pecaId);
     const volNecessario = p ? _volumeConcPeca(p, estacaAtual.concId) : 0;
     const totalRecebido = estacaAtual.linhas.reduce((s, l) => {
@@ -1286,22 +1293,27 @@ const ControleEstacas = (() => {
                 <button class="btn btn-secundario btn-sm" style="color:var(--cv-red,#ef4444);" onclick="CE.btRemLinhaPeca(${i})" ${estacaAtual.linhas.length <= 1 ? 'disabled' : ''}>✕</button>
               </div>
               <div id="ce-est-aviso-${i}" class="text-sm" style="color:#ef4444;margin-top:2px;${excesso ? '' : 'display:none;'}">⚠ Essa BT já tem ${EC.fmt1(pctOutras)}% usado em outra peça — com esse %, passaria de 100% da BT.</div>
-              ${b && btMetaInlineId === b.id ? `
+              ${b && btMetaInlineId === b.id ? (() => {
+                const ehPrimeira = primeiraBT && b.id === primeiraBT.id;
+                const ehUltima = ultimaBT && b.id === ultimaBT.id;
+                return `
                 <div style="border:1px dashed var(--cv-border,#e2e8f0);border-radius:8px;padding:10px;margin-top:6px;background:var(--cv-surface2,#f8fafc);">
                   <div class="text-sm text-muted" style="margin-bottom:6px;">Sobra/perda de BT-${b.numero} — vale pra todas as peças que essa BT concretou, não só esta.</div>
+                  ${!ehPrimeira && !ehUltima ? `<div class="text-sm text-muted" style="margin-bottom:8px;">Essa é uma BT do meio — cocho/linha só na primeira, sobra só na última.</div>` : ''}
                   <div class="form-row" style="margin-bottom:8px;">
-                    <div class="form-grupo" style="margin-bottom:0;"><label>Sobra Caminhão [m³]</label><input type="text" inputmode="decimal" id="ce-meta-sobra-${b.id}" class="form-control" value="${esc(meta.sobra)}" placeholder="0"></div>
+                    ${ehUltima ? `<div class="form-grupo" style="margin-bottom:0;"><label>Sobra Caminhão [m³] <span class="text-sm text-muted">(última BT)</span></label><input type="text" inputmode="decimal" id="ce-meta-sobra-${b.id}" class="form-control" value="${esc(meta.sobra)}" placeholder="0"></div>` : ''}
                     <div class="form-grupo" style="margin-bottom:0;"><label>Perda em Obra [m³]</label><input type="text" inputmode="decimal" id="ce-meta-perda-${b.id}" class="form-control" value="${esc(meta.perda)}" placeholder="0"></div>
                   </div>
                   <div class="form-row" style="margin-bottom:8px;">
-                    <div class="form-grupo" style="margin-bottom:0;"><label>Cocho + Linha [m³]</label><input type="text" inputmode="decimal" id="ce-meta-cocho-${b.id}" class="form-control" value="${esc(meta.perdaCocho)}" placeholder="0"></div>
+                    ${ehPrimeira ? `<div class="form-grupo" style="margin-bottom:0;"><label>Cocho + Linha [m³] <span class="text-sm text-muted">(primeira BT)</span></label><input type="text" inputmode="decimal" id="ce-meta-cocho-${b.id}" class="form-control" value="${esc(meta.perdaCocho)}" placeholder="0"></div>` : ''}
                     <div class="form-grupo" style="margin-bottom:0;"><label>Hora</label><input type="time" id="ce-meta-hora-${b.id}" class="form-control" value="${esc(meta.hora)}"></div>
                   </div>
                   <div style="display:flex;justify-content:flex-end;gap:8px;">
                     <button class="btn btn-secundario btn-sm" onclick="CE.toggleMetaInline('${b.id}')">Fechar</button>
                     <button class="btn btn-primario btn-sm" onclick="CE.salvarMetaBTInline('${b.id}')">✓ Salvar</button>
                   </div>
-                </div>` : ''}
+                </div>`;
+              })() : ''}
             </div>`;
           }).join('')}
         </div>
