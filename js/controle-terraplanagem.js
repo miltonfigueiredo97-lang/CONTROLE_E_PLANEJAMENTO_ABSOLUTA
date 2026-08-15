@@ -94,7 +94,9 @@ const ControleTerraplanagem = (() => {
     const volMedio = TC.calcVolumeMedio(volH, volV);
     const volEmpolado = TC.calcVolumeComEmpolamento(volMedio, config.taxaEmpolamento);
     const volRemovido = entregas.reduce((s, e) => s + TC.num(e.volume), 0);
-    const pct = volEmpolado > 0 ? Math.min(100, (volRemovido / volEmpolado) * 100) : 0;
+    // Sem volume previsto (Levantamento ainda não feito/cadastrado) não é "0% concluído"
+    // — é "sem previsão pra comparar". Lançar viagens/planilha nunca depende disso.
+    const pct = volEmpolado > 0 ? Math.min(100, (volRemovido / volEmpolado) * 100) : null;
     return { volEmpolado, volRemovido, pct };
   }
 
@@ -120,8 +122,8 @@ const ControleTerraplanagem = (() => {
       </div>
 
       <div class="cc-kpiGrid" style="grid-template-columns:repeat(4,1fr);">
-        <div class="cc-kpi cc-kpiOrange"><div class="cc-kpiIcon">📦</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Volume Previsto (a remover)</div><div class="cc-kpiValue">${TC.fmt1(k.volEmpolado)}<span class="cc-kpiUnit">m³</span></div></div></div>
-        <div class="cc-kpi cc-kpiGreen"><div class="cc-kpiIcon">✅</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Já Removido</div><div class="cc-kpiValue">${TC.fmt1(k.volRemovido)}<span class="cc-kpiUnit">m³</span></div><div class="cc-kpiSub">${TC.fmt1(k.pct)}% concluído</div></div></div>
+        <div class="cc-kpi cc-kpiOrange"><div class="cc-kpiIcon">📦</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Volume Previsto (a remover)</div><div class="cc-kpiValue">${k.volEmpolado > 0 ? TC.fmt1(k.volEmpolado) + '<span class="cc-kpiUnit">m³</span>' : '—'}</div>${k.volEmpolado > 0 ? '' : '<div class="cc-kpiSub">Sem Levantamento cadastrado ainda</div>'}</div></div>
+        <div class="cc-kpi cc-kpiGreen"><div class="cc-kpiIcon">✅</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Já Removido</div><div class="cc-kpiValue">${TC.fmt1(k.volRemovido)}<span class="cc-kpiUnit">m³</span></div>${k.pct !== null ? `<div class="cc-kpiSub">${TC.fmt1(k.pct)}% concluído</div>` : ''}</div></div>
         <div class="cc-kpi cc-kpiBlue"><div class="cc-kpiIcon">🚚</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Caminhões</div><div class="cc-kpiValue">${caminhoes.length}</div></div></div>
         <div class="cc-kpi cc-kpiPurple"><div class="cc-kpiIcon">📋</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Viagens Registradas</div><div class="cc-kpiValue">${entregas.length}</div></div></div>
       </div>
@@ -132,7 +134,7 @@ const ControleTerraplanagem = (() => {
       </div>
 
       <div class="cc-panel">
-        <div class="cc-panelTitle">📋 Viagens / Remoções <span style="font-family:var(--cv-mono);font-size:10px;color:var(--cv-text3);font-weight:400;text-transform:none;letter-spacing:0;">acumulado ${TC.fmt1(k.pct)}%</span></div>
+        <div class="cc-panelTitle">📋 Viagens / Remoções ${k.pct !== null ? `<span style="font-family:var(--cv-mono);font-size:10px;color:var(--cv-text3);font-weight:400;text-transform:none;letter-spacing:0;">acumulado ${TC.fmt1(k.pct)}%</span>` : ''}</div>
         <div class="aba-toggle" style="margin-bottom:14px;">
           <button class="aba-btn ${abaRel === 'viagens' ? 'ativo' : ''}" onclick="TPC_UI.setAbaRel('viagens')">Viagens</button>
           <button class="aba-btn ${abaRel === 'porDia' ? 'ativo' : ''}" onclick="TPC_UI.setAbaRel('porDia')">Por Dia</button>

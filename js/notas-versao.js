@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.6.0',
+  versaoAtual: 'V3.6.1',
 
   versoes: [
     {
@@ -7813,6 +7813,16 @@ const NotasVersao = {
         "Cota de Referência: pode ser definida uma vez em ⚙️ Config (padrão de toda a obra) ou individualmente em cada seção (sobrepõe a padrão). A altura usada no cálculo da área é sempre cota do ponto menos cota de referência.",
         "⚙️ Config ganhou um seletor de preset de Taxa de Empolamento (Material Útil 30%, Argila 40%) — só preenche o campo, que continua editável pra qualquer outro valor.",
         "Seções já cadastradas continuam funcionando normalmente no modo manual — nada muda pra quem não usar o novo modo visual."
+      ]
+    },
+    {
+      "versao": "V3.6.1",
+      "data": "2026-08-15",
+      "tipo": "correcao",
+      "titulo": "Controle de Terraplanagem: lançar viagens/planilha nunca depende de ter Levantamento cadastrado",
+      "itens": [
+        "Registrar viagem manual e importar planilha já funcionavam sem nenhum volume previsto cadastrado — mas o card \"Já Removido\" e o cabeçalho da tabela mostravam \"0% concluído\"/\"acumulado 0%\", como se faltasse algo, quando na verdade é só falta de Levantamento pra comparar.",
+        "Agora, sem volume previsto: o card \"Volume Previsto\" mostra \"—\" com a nota \"Sem Levantamento cadastrado ainda\", e os dois \"% concluído\" somem — sem nenhum índice de erro ou percentual enganoso. Assim que o Levantamento for cadastrado, os percentuais voltam a aparecer normalmente."
       ]
     }
   ],
