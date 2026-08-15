@@ -753,7 +753,7 @@ const ControleEstacas = (() => {
               <button class="aba-btn ${view === 'estacas' ? 'ativo' : ''}" onclick="CE.onTrocarView('estacas')">⚫ Estacas</button>
               <button class="aba-btn ${view === 'fundacoes' ? 'ativo' : ''}" onclick="CE.onTrocarView('fundacoes')">⬛ Fundações</button>
             </div>
-            <span class="text-sm text-muted">🟢 concretado · 🟠 parcial · 🟡 anel = planejada, ainda pendente</span>
+            <span class="text-sm text-muted">🟢 concretado · 🟠 parcial · 🟡 anel = planejada, ainda pendente · nº no marcador = concretagem dela</span>
           </div>
           ${_legendaGrupos()}
           <div style="display:flex;gap:2px;align-items:center;justify-content:flex-end;margin:6px 0;">
@@ -825,12 +825,25 @@ const ControleEstacas = (() => {
     const imagem = await _obterImagemPrancha(pr.id);
     if (!imagem) { host.innerHTML = `<div class="cc-empty">Esta prancha ainda não tem PDF/imagem.</div>`; return; }
     const idsPlanejados = new Set(_pecaConcDaConcretagem(acompConcretagemId).map(pc => pc.pecaId));
-    const lista = marcadoresDaPranchaView(pr.id).filter(m => m.pecaId);
+    // Só mostra peças da concretagem selecionada + das ANTERIORES (por número) —
+    // nunca as de concretagens futuras, senão todas as concretagens mostram o
+    // mesmo mapa preenchido e confunde qual foi feito em qual dia. Peça sem
+    // concretagem nenhuma continua aparecendo normal (não é passado nem futuro).
+    const concSel = concretagens.find(c => c.id === acompConcretagemId);
+    const numeroSel = concSel ? (concSel.numero || 0) : Infinity;
+    const lista = marcadoresDaPranchaView(pr.id).filter(m => {
+      if (!m.pecaId) return false;
+      const c = _concretagemDaPeca(m.pecaId);
+      return !c || (c.numero || 0) <= numeroSel;
+    });
     const scrollAntigo = document.querySelector('#ce-acomp-mapa-host .est-map-scroll');
     const scrollPos = scrollAntigo ? { left: scrollAntigo.scrollLeft, top: scrollAntigo.scrollTop } : null;
     host.innerHTML = EC.stageHTML(pr, imagem, lista, statusMarcador, { interativo: true, zoom: zoomE, stageId: 'ce-acomp-stage', maxHeight: _alturaMapa() });
     const scrollNovo = document.querySelector('#ce-acomp-mapa-host .est-map-scroll');
     if (scrollNovo && scrollPos) { scrollNovo.scrollLeft = scrollPos.left; scrollNovo.scrollTop = scrollPos.top; }
+    // Nº da concretagem em cima de cada marcador — pra saber de qual dia é
+    // cada estaca (ex: ver que aquela verde ali é da concretagem 1, não da 2).
+    _desenharNumerosConcretagem('ce-acomp-stage', lista);
     // Anel amarelo só nas peças planejadas AINDA PENDENTES — uma vez 100%
     // (verde sólido), o anel some, pra ficar visualmente claro que terminou.
     _desenharDestaques('ce-acomp-stage', lista.filter(m => idsPlanejados.has(m.pecaId)), m => {

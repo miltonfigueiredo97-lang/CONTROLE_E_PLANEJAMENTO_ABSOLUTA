@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.5.1.8',
+  versaoAtual: 'V3.5.1.9',
 
   versoes: [
     {
@@ -7748,6 +7748,17 @@ const NotasVersao = {
       "itens": [
         "Layout do mini-formulário (dentro do popup de lançar por estaca) estava quebrado: quando só tinha 1 campo na linha (ex: só \\\"Perda em Obra\\\" numa BT do meio, ou o rótulo \\\"Cocho + Linha [m³] (primeira BT)\\\" quebrando em 2 linhas), esticava feio ou desalinhava.",
         "Agora é uma grade fixa de 3 colunas, sempre igual. O texto explicando \\\"é a primeira BT, tem cocho\\\"/\\\"é a última, tem sobra\\\" saiu do rótulo do campo e foi pro texto de cima, sem quebrar linha."
+      ]
+    },
+    {
+      "versao": "V3.5.1.9",
+      "data": "2026-08-15",
+      "tipo": "correcao",
+      "titulo": "Controle de Estacas: mapa do Acompanhamento não mostra mais concretagens futuras",
+      "itens": [
+        "Bug real: o mapa de qualquer concretagem selecionada mostrava TODAS as peças da prancha já concretadas, mesmo as de concretagens FUTURAS — concretagem Nº 1 e Nº 2 mostravam o mapa idêntico, confundindo o que já foi feito de fato até aquele dia.",
+        "Corrigido: agora o mapa só mostra peças da concretagem selecionada + das ANTERIORES (por número) — nunca as de concretagens com número maior. Concretagem Nº 1 só mostra suas próprias peças; Nº 2 mostra as da 1 e da 2; Nº 3 mostra 1, 2 e 3.",
+        "Cada peça concretada agora exibe um número em cima mostrando de QUAL concretagem ela é — pra não confundir qual estaca foi feita em qual dia."
       ]
     }
   ],
