@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.7.1',
+  versaoAtual: 'V3.7.1.1',
 
   versoes: [
     {
@@ -7883,6 +7883,19 @@ const NotasVersao = {
         "Novo botão \"🗑 Limpar Base\" no Levantamento de Terraplanagem: apaga todas as seções (horizontais e verticais), o projeto inserido e a escala calibrada — mesma proteção tripla. Caminhões e configuração de empolamento/capacidades são preservados.",
         "Nova ação \"limpar\" no catálogo de permissões — aparece automaticamente na tela de Administração/Permissões pros dois módulos de Terraplanagem, desligada por padrão pra usuários não-admin.",
         "Auditoria de permissões de tudo criado nas últimas versões: Importar Planilha (controleTerra:importar), Relatório PDF (controleTerra:exportar), Limpar Base (limpar nos dois módulos) — todos com bloqueio funcional (a ação é recusada mesmo forçando pelo console) e botão escondido na tela pra quem não tem a permissão."
+      ]
+    },
+    {
+      "versao": "V3.7.1.1",
+      "data": "2026-08-15",
+      "tipo": "melhoria",
+      "titulo": "Controle de Terraplanagem: TERRA separada de ENTULHO (e demais materiais)",
+      "itens": [
+        "Materiais agora são classificados automaticamente: TERRA = terraplanagem de verdade; ENTULHO = demolição (pago separado); qualquer outro material vira grupo próprio. A classificação lê o campo material de cada viagem (importada ou manual).",
+        "Só TERRA entra no cálculo de terraplanagem: o percentual concluído, a curva de Progresso de Remoção e a comparação com o volume previsto do Levantamento consideram apenas viagens de terra — entulho não conta.",
+        "Cards do topo redesenhados: Terra Prevista, Terra Removida (com % da terraplanagem), Entulho Removido (marcado como \\\"não entra na terraplanagem\\\"), Caminhões e Viagens.",
+        "Nova aba \\\"Por Material\\\" nas Viagens/Remoções: volume, viagens e % de cada material, com a classificação (terraplanagem × demolição × fora da terraplanagem).",
+        "Relatório PDF de período atualizado: cards separados de Terra e Entulho, % Terra × Previsto calculado só com terra, e nova tabela \\\"Volume por material\\\" com a classificação de cada um."
       ]
     }
   ],

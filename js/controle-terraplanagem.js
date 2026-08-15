@@ -91,16 +91,42 @@ const ControleTerraplanagem = (() => {
     return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
+  // ── Classificação de material ──
+  // TERRA = terraplanagem de verdade (é o que compara com o volume previsto
+  // do Levantamento). ENTULHO = demolição, pago separado — NUNCA entra no
+  // cálculo/percentual de terraplanagem. Qualquer outro material vira grupo
+  // próprio também (registro separado, valores diferentes).
+  function _classMat(material) {
+    const m = String(material || '').trim().toUpperCase();
+    if (!m) return 'SEM MATERIAL';
+    if (m.includes('TERRA')) return 'TERRA';
+    if (m.includes('ENTULHO')) return 'ENTULHO';
+    return m;
+  }
+  function _volPorMaterial(lista) {
+    const grupos = {};
+    (lista || entregas).forEach(e => {
+      const g = _classMat(e.material);
+      grupos[g] = grupos[g] || { material: g, viagens: 0, volume: 0 };
+      grupos[g].viagens++;
+      grupos[g].volume += TC.num(e.volume);
+    });
+    return Object.values(grupos).sort((a, b) => b.volume - a.volume);
+  }
+
   function kpisGerais() {
     const volH = TC.calcVolumeTotalSecoes(secoes.horizontal || []);
     const volV = TC.calcVolumeTotalSecoes(secoes.vertical || []);
     const volMedio = TC.calcVolumeMedio(volH, volV);
     const volEmpolado = TC.calcVolumeComEmpolamento(volMedio, config.taxaEmpolamento);
     const volRemovido = entregas.reduce((s, e) => s + TC.num(e.volume), 0);
+    // Só TERRA compara com o previsto — entulho é demolição, não terraplanagem.
+    const volTerra = entregas.filter(e => _classMat(e.material) === 'TERRA').reduce((s, e) => s + TC.num(e.volume), 0);
+    const volEntulho = entregas.filter(e => _classMat(e.material) === 'ENTULHO').reduce((s, e) => s + TC.num(e.volume), 0);
     // Sem volume previsto (Levantamento ainda não feito/cadastrado) não é "0% concluído"
     // — é "sem previsão pra comparar". Lançar viagens/planilha nunca depende disso.
-    const pct = volEmpolado > 0 ? Math.min(100, (volRemovido / volEmpolado) * 100) : null;
-    return { volEmpolado, volRemovido, pct };
+    const pct = volEmpolado > 0 ? Math.min(100, (volTerra / volEmpolado) * 100) : null;
+    return { volEmpolado, volRemovido, volTerra, volEntulho, pct };
   }
 
   // ══════════════════════════════════════════
@@ -124,22 +150,24 @@ const ControleTerraplanagem = (() => {
         </div>
       </div>
 
-      <div class="cc-kpiGrid" style="grid-template-columns:repeat(4,1fr);">
-        <div class="cc-kpi cc-kpiOrange"><div class="cc-kpiIcon">📦</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Volume Previsto (a remover)</div><div class="cc-kpiValue">${k.volEmpolado > 0 ? TC.fmt1(k.volEmpolado) + '<span class="cc-kpiUnit">m³</span>' : '—'}</div>${k.volEmpolado > 0 ? '' : '<div class="cc-kpiSub">Sem Levantamento cadastrado ainda</div>'}</div></div>
-        <div class="cc-kpi cc-kpiGreen"><div class="cc-kpiIcon">✅</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Já Removido</div><div class="cc-kpiValue">${TC.fmt1(k.volRemovido)}<span class="cc-kpiUnit">m³</span></div>${k.pct !== null ? `<div class="cc-kpiSub">${TC.fmt1(k.pct)}% concluído</div>` : ''}</div></div>
+      <div class="cc-kpiGrid" style="grid-template-columns:repeat(5,1fr);">
+        <div class="cc-kpi cc-kpiOrange"><div class="cc-kpiIcon">📦</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Terra Prevista (a remover)</div><div class="cc-kpiValue">${k.volEmpolado > 0 ? TC.fmt1(k.volEmpolado) + '<span class="cc-kpiUnit">m³</span>' : '—'}</div>${k.volEmpolado > 0 ? '' : '<div class="cc-kpiSub">Sem Levantamento cadastrado ainda</div>'}</div></div>
+        <div class="cc-kpi cc-kpiGreen"><div class="cc-kpiIcon">🟤</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Terra Removida</div><div class="cc-kpiValue">${TC.fmt1(k.volTerra)}<span class="cc-kpiUnit">m³</span></div>${k.pct !== null ? `<div class="cc-kpiSub">${TC.fmt1(k.pct)}% da terraplanagem</div>` : ''}</div></div>
+        <div class="cc-kpi"><div class="cc-kpiIcon">🧱</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Entulho Removido (demolição)</div><div class="cc-kpiValue">${TC.fmt1(k.volEntulho)}<span class="cc-kpiUnit">m³</span></div><div class="cc-kpiSub">não entra na terraplanagem</div></div></div>
         <div class="cc-kpi cc-kpiBlue"><div class="cc-kpiIcon">🚚</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Caminhões</div><div class="cc-kpiValue">${caminhoes.length}</div></div></div>
         <div class="cc-kpi cc-kpiPurple"><div class="cc-kpiIcon">📋</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Viagens Registradas</div><div class="cc-kpiValue">${entregas.length}</div></div></div>
       </div>
 
       <div class="cc-panel">
-        <div class="cc-panelTitle">📈 Progresso de Remoção</div>
+        <div class="cc-panelTitle">📈 Progresso de Remoção <span style="font-family:var(--cv-mono);font-size:10px;color:var(--cv-text3);font-weight:400;text-transform:none;letter-spacing:0;">só TERRA — entulho não conta na terraplanagem</span></div>
         <div id="tpc-curva"></div>
       </div>
 
       <div class="cc-panel">
-        <div class="cc-panelTitle">📋 Viagens / Remoções ${k.pct !== null ? `<span style="font-family:var(--cv-mono);font-size:10px;color:var(--cv-text3);font-weight:400;text-transform:none;letter-spacing:0;">acumulado ${TC.fmt1(k.pct)}%</span>` : ''}</div>
+        <div class="cc-panelTitle">📋 Viagens / Remoções ${k.pct !== null ? `<span style="font-family:var(--cv-mono);font-size:10px;color:var(--cv-text3);font-weight:400;text-transform:none;letter-spacing:0;">terra acumulada ${TC.fmt1(k.pct)}%</span>` : ''}</div>
         <div class="aba-toggle" style="margin-bottom:14px;">
           <button class="aba-btn ${abaRel === 'viagens' ? 'ativo' : ''}" onclick="TPC_UI.setAbaRel('viagens')">Viagens</button>
+          <button class="aba-btn ${abaRel === 'porMaterial' ? 'ativo' : ''}" onclick="TPC_UI.setAbaRel('porMaterial')">Por Material</button>
           <button class="aba-btn ${abaRel === 'porDia' ? 'ativo' : ''}" onclick="TPC_UI.setAbaRel('porDia')">Por Dia</button>
           <button class="aba-btn ${abaRel === 'porCaminhao' ? 'ativo' : ''}" onclick="TPC_UI.setAbaRel('porCaminhao')">Por Caminhão</button>
         </div>
@@ -161,7 +189,35 @@ const ControleTerraplanagem = (() => {
   function renderPainelRegistros() {
     if (abaRel === 'porDia') renderPorDia();
     else if (abaRel === 'porCaminhao') renderPorCaminhao();
+    else if (abaRel === 'porMaterial') renderPorMaterial();
     else renderTabela();
+  }
+
+  // ── Resumo por material (TERRA x ENTULHO x outros — pagos separados) ──
+  function renderPorMaterial() {
+    const el = document.getElementById('tpc-tabela');
+    if (!el) return;
+    if (!entregas.length) { el.innerHTML = `<div class="cc-empty">Nenhuma viagem registrada ainda.</div>`; return; }
+    const grupos = _volPorMaterial();
+    const totalVol = grupos.reduce((s, g) => s + g.volume, 0);
+    const totalViagens = grupos.reduce((s, g) => s + g.viagens, 0);
+    const k = kpisGerais();
+    el.innerHTML = `
+      <div class="cc-tableWrap" style="max-height:400px;overflow-y:auto;">
+      <table class="cc-table">
+        <thead><tr><th>Material</th><th></th><th class="col-num">Viagens</th><th class="col-num">Volume (m³)</th><th class="col-num">% do total removido</th></tr></thead>
+        <tbody>
+          ${grupos.map(g => `<tr>
+            <td style="font-weight:700;">${g.material === 'TERRA' ? '🟤' : g.material === 'ENTULHO' ? '🧱' : '📦'} ${esc(g.material)}</td>
+            <td style="font-size:.75rem;color:var(--cv-text3);">${g.material === 'TERRA' ? (k.volEmpolado > 0 ? `terraplanagem — ${TC.fmt1(Math.min(100, (g.volume / k.volEmpolado) * 100))}% do previsto` : 'terraplanagem') : g.material === 'ENTULHO' ? 'demolição — fora da terraplanagem' : 'fora da terraplanagem'}</td>
+            <td class="col-num cc-tdMono">${g.viagens}</td>
+            <td class="col-num cc-tdMono" style="font-weight:700;">${TC.fmt1(g.volume)}</td>
+            <td class="col-num cc-tdAccent" style="font-weight:700;">${totalVol > 0 ? TC.fmt1((g.volume / totalVol) * 100) : '0,0'}%</td>
+          </tr>`).join('')}
+        </tbody>
+        <tfoot><tr><td style="font-weight:700;" colspan="2">${grupos.length} materia${grupos.length !== 1 ? 'is' : 'l'}</td><td class="col-num cc-tdMono" style="font-weight:700;">${totalViagens}</td><td class="col-num cc-tdMono" style="font-weight:700;">${TC.fmt1(totalVol)}</td><td></td></tr></tfoot>
+      </table>
+      </div>`;
   }
 
   // ── Resumo por dia (volume e nº de viagens) ──
@@ -232,12 +288,13 @@ const ControleTerraplanagem = (() => {
       </div>`;
   }
 
-  // ── Curva de progresso acumulado ──
+  // ── Curva de progresso acumulado (só TERRA — é o que compara com o previsto) ──
   function renderCurva(volPrevisto) {
     const el = document.getElementById('tpc-curva');
     if (!el) return;
-    if (!entregas.length) { el.innerHTML = `<div class="cc-empty">Nenhuma viagem registrada ainda.</div>`; return; }
-    const ordemAsc = [...entregas].sort((a, b) => (a.data || '').localeCompare(b.data || ''));
+    const soTerra = entregas.filter(e => _classMat(e.material) === 'TERRA');
+    if (!soTerra.length) { el.innerHTML = `<div class="cc-empty">Nenhuma viagem de TERRA registrada ainda${entregas.length ? ' (as viagens existentes são de outros materiais)' : ''}.</div>`; return; }
+    const ordemAsc = [...soTerra].sort((a, b) => (a.data || '').localeCompare(b.data || ''));
     const porData = {};
     ordemAsc.forEach(e => { porData[e.data] = (porData[e.data] || 0) + TC.num(e.volume); });
     const datas = Object.keys(porData).sort();
@@ -628,9 +685,12 @@ const ControleTerraplanagem = (() => {
     });
     const dias = Object.values(porDia).sort((a, b) => a.data.localeCompare(b.data));
     const caminhoesList = Object.values(porCaminhao).sort((a, b) => b.volume - a.volume);
+    const porMaterial = _volPorMaterial(lista);
     const totalVolume = lista.reduce((s, e) => s + TC.num(e.volume), 0);
+    const volTerra = (porMaterial.find(g => g.material === 'TERRA') || {}).volume || 0;
+    const volEntulho = (porMaterial.find(g => g.material === 'ENTULHO') || {}).volume || 0;
     const totalCaminhoes = caminhoesList.filter(c => c.placa !== '— sem placa —').length;
-    return { inicio, fim, lista, dias, caminhoesList, totalVolume, totalViagens: lista.length, totalCaminhoes };
+    return { inicio, fim, lista, dias, caminhoesList, porMaterial, totalVolume, volTerra, volEntulho, totalViagens: lista.length, totalCaminhoes };
   }
 
   function gerarRelatorioPeriodo() {
@@ -659,9 +719,10 @@ const ControleTerraplanagem = (() => {
       return `<rect x="${x}" y="${chartH - h}" width="${barW}" height="${Math.max(1, h)}" fill="var(--cor-primaria,#f5c800)" rx="1.5"><title>${esc(d.data)}: ${TC.fmt1(d.volume)} m³</title></rect>`;
     }).join('');
     el.innerHTML = `
-      <div class="cc-kpiGrid" style="grid-template-columns:repeat(4,1fr);margin-bottom:14px;">
+      <div class="cc-kpiGrid" style="grid-template-columns:repeat(5,1fr);margin-bottom:14px;">
         <div class="cc-kpi"><div class="cc-kpiIcon">📋</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Viagens</div><div class="cc-kpiValue">${r.totalViagens}</div></div></div>
-        <div class="cc-kpi cc-kpiOrange"><div class="cc-kpiIcon">📦</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Volume Total</div><div class="cc-kpiValue">${TC.fmt1(r.totalVolume)}<span class="cc-kpiUnit">m³</span></div></div></div>
+        <div class="cc-kpi cc-kpiGreen"><div class="cc-kpiIcon">🟤</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Terra</div><div class="cc-kpiValue">${TC.fmt1(r.volTerra)}<span class="cc-kpiUnit">m³</span></div></div></div>
+        <div class="cc-kpi cc-kpiOrange"><div class="cc-kpiIcon">🧱</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Entulho</div><div class="cc-kpiValue">${TC.fmt1(r.volEntulho)}<span class="cc-kpiUnit">m³</span></div></div></div>
         <div class="cc-kpi cc-kpiBlue"><div class="cc-kpiIcon">🚚</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Caminhões</div><div class="cc-kpiValue">${r.totalCaminhoes}</div></div></div>
         <div class="cc-kpi cc-kpiPurple"><div class="cc-kpiIcon">📅</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Dias c/ Registro</div><div class="cc-kpiValue">${r.dias.length}</div></div></div>
       </div>
@@ -701,13 +762,14 @@ const ControleTerraplanagem = (() => {
     doc.text(`Período: ${_fBR(r.inicio)} a ${_fBR(r.fim)}`, 12, y);
     y += 8;
 
-    // Cards de KPI
+    // Cards de KPI (Terra separada de Entulho — só terra compara com o previsto)
     const cards = [
       { v: String(r.totalViagens), l: 'VIAGENS' },
+      { v: TC.fmt1(r.volTerra), l: 'TERRA (M³)' },
+      { v: TC.fmt1(r.volEntulho), l: 'ENTULHO (M³)' },
       { v: TC.fmt1(r.totalVolume), l: 'VOLUME TOTAL (M³)' },
       { v: String(r.totalCaminhoes), l: 'CAMINHÕES' },
-      { v: String(r.dias.length), l: 'DIAS C/ REGISTRO' },
-      ...(k.volEmpolado > 0 ? [{ v: TC.fmt1((r.totalVolume / k.volEmpolado) * 100) + '%', l: 'DO PREVISTO TOTAL' }] : []),
+      ...(k.volEmpolado > 0 ? [{ v: TC.fmt1((r.volTerra / k.volEmpolado) * 100) + '%', l: 'TERRA × PREVISTO' }] : [{ v: String(r.dias.length), l: 'DIAS C/ REGISTRO' }]),
     ];
     const gap = 4, cw = (PW - 24 - gap * (cards.length - 1)) / cards.length, ch = 17;
     cards.forEach((card, i) => {
@@ -753,6 +815,27 @@ const ControleTerraplanagem = (() => {
       });
       y = chartYTop + chartH2 + 9;
     }
+
+    // Tabela por material (TERRA = terraplanagem · ENTULHO = demolição — pagos separados)
+    if (y > 235) { doc.addPage(); y = 14; }
+    doc.setTextColor(13, 13, 13); doc.setFontSize(9.5); doc.setFont(undefined, 'bold');
+    doc.text('Volume por material', 12, y + 3);
+    doc.autoTable({
+      startY: y + 5,
+      head: [['Material', 'Classificação', 'Viagens', 'Volume (m³)', '% do total']],
+      body: r.porMaterial.map(g => [
+        g.material,
+        g.material === 'TERRA' ? 'Terraplanagem' : g.material === 'ENTULHO' ? 'Demolição (fora da terraplanagem)' : 'Fora da terraplanagem',
+        String(g.viagens), TC.fmt1(g.volume),
+        r.totalVolume > 0 ? TC.fmt1((g.volume / r.totalVolume) * 100) + '%' : '—',
+      ]),
+      margin: { left: 12, right: 12 },
+      styles: { fontSize: 8, cellPadding: 1.8 },
+      headStyles: { fillColor: [13, 13, 13], textColor: [245, 200, 0], fontStyle: 'bold' },
+      alternateRowStyles: { fillColor: [250, 250, 250] },
+      columnStyles: { 2: { halign: 'center' }, 3: { halign: 'right', fontStyle: 'bold' }, 4: { halign: 'right' } },
+    });
+    y = doc.lastAutoTable.finalY + 8;
 
     // Tabela por dia
     if (y > 235) { doc.addPage(); y = 14; }
