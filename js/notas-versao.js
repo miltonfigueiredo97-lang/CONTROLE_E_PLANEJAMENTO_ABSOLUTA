@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.6.2',
+  versaoAtual: 'V3.6.3',
 
   versoes: [
     {
@@ -7835,6 +7835,18 @@ const NotasVersao = {
         "Agora o projeto é inserido e calibrado uma única vez, no topo da Calculadora de Corte de Terra (antes das abas Horizontais/Verticais) — o toggle ✍️ Manual / 🖼️ Marcar no Projeto também é único pra calculadora inteira, não mais por seção.",
         "Cada seção vira uma linha de pontos marcada em cima dessa mesma imagem, com cor própria (bolinha + linha conectando os pontos) — pra marcar pontos numa seção, basta abrir ela na lista (fica destacada como \"seção ativa\") e clicar na imagem do projeto.",
         "Trocar o projeto por uma imagem nova avisa e apaga a escala + pontos de todas as seções (as posições não valem mais na imagem diferente)."
+      ]
+    },
+    {
+      "versao": "V3.6.3",
+      "data": "2026-08-15",
+      "tipo": "correcao",
+      "titulo": "Importar Planilha (Controle Terraplanagem): testado com planilha real, 3 ajustes",
+      "itens": [
+        "Cabeçalho da planilha agora é localizado automaticamente nas primeiras linhas — antes só funcionava se a primeira linha já fosse o cabeçalho; planilhas com um título/logo acima (ex: \"PIZANI TERRAPLENAGEM, ZENITH\" na linha 1 e o cabeçalho de verdade na linha 2) agora são lidas certo.",
+        "Reconhecimento de coluna ficou mais tolerante (ex: \"PLACA VEICULO\", \"DATA:\") — casa por conter o nome da coluna, não só igualdade exata.",
+        "Placa deixou de ser obrigatória pra importar a linha: se a planilha tiver canhoto/data/material/volume mas a placa vier em branco, a viagem entra mesmo assim (sem descartar volume real por causa disso) — só não cadastra caminhão novo nesse caso.",
+        "Planilha com mais de uma aba (uma por obra, como no arquivo de teste ZENITH+DOM): pergunta qual aba é da obra atual antes de importar, em vez de pegar a primeira aba sempre — evita importar os dados errados na obra errada. Continua sendo política do usuário separar em arquivos por obra antes de importar; isso é só uma trava de segurança a mais."
       ]
     }
   ],

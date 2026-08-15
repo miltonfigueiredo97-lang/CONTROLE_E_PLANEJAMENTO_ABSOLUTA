@@ -380,20 +380,56 @@ const ControleTerraplanagem = (() => {
       if (typeof XLSX === 'undefined') await _ls('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');
       const ab = await file.arrayBuffer();
       const wb = XLSX.read(ab, { type: 'array' });
-      const ws = wb.Sheets[wb.SheetNames[0]];
+
+      // Planilha com mais de uma aba = mais de uma obra na mesma pasta.
+      // Cada obra deve ser importada separadamente (na tela da obra certa) —
+      // pergunta qual aba corresponde a ESTA obra em vez de adivinhar.
+      let sheetName = wb.SheetNames[0];
+      if (wb.SheetNames.length > 1) {
+        const escolha = prompt(
+          `Essa planilha tem ${wb.SheetNames.length} abas (${wb.SheetNames.join(', ')}) — provavelmente uma por obra.\n` +
+          `Qual aba é DESTA obra? (digite o nome exatamente como na lista acima)`,
+          wb.SheetNames[0]
+        );
+        if (escolha === null) { Utils.esconderLoading(); return; }
+        const achada = wb.SheetNames.find(n => n.trim().toLowerCase() === escolha.trim().toLowerCase());
+        if (!achada) throw new Error(`Aba "${escolha}" não encontrada. Abas disponíveis: ${wb.SheetNames.join(', ')}`);
+        sheetName = achada;
+      }
+      const ws = wb.Sheets[sheetName];
       const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
       if (rows.length < 2) throw new Error('Planilha vazia ou sem linhas de dados.');
 
-      const norm = h => String(h || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ');
-      const hdrs = rows[0].map(norm);
+      const norm = h => String(h ?? '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[:.]+$/g, '').replace(/\s+/g, ' ').trim();
       const ALIASES = {
         nCanhoto: ['n canhoto', 'numero canhoto', 'no canhoto', 'canhoto', 'nº canhoto', 'n° canhoto', 'ticket', 'nota'],
         data: ['data', 'date', 'dia'],
         material: ['material'],
         volume: ['volume', 'volume m3', 'volume (m3)', 'm3', 'qtd', 'quantidade'],
-        placa: ['placa', 'placa caminhao', 'veiculo', 'caminhao'],
+        placa: ['placa veiculo', 'placa do veiculo', 'placa caminhao', 'placa', 'veiculo', 'caminhao'],
       };
-      const ci = campo => { for (const alias of ALIASES[campo]) { const i = hdrs.indexOf(alias); if (i >= 0) return i; } return -1; };
+      // Colunas podem ter um título/logo acima do cabeçalho de verdade (ex: linha 1
+      // = "PIZANI TERRAPLENAGEM, ZENITH", linha 2 = "N° CANHOTO | DATA | ..."). Varre
+      // as primeiras linhas e usa a primeira que pareça mesmo um cabeçalho.
+      let headerRowIdx = 0;
+      for (let r = 0; r < Math.min(rows.length, 10); r++) {
+        const normed = (rows[r] || []).map(norm);
+        const hits = ['data', 'volume', 'placa'].filter(chave => normed.some(h => h.includes(chave))).length;
+        if (hits >= 2) { headerRowIdx = r; break; }
+      }
+      const hdrs = (rows[headerRowIdx] || []).map(norm);
+      // Casa por igualdade OU por conter o alias (ex: "placa veiculo" contém "placa")
+      const ci = campo => {
+        for (const alias of ALIASES[campo]) {
+          let i = hdrs.indexOf(alias);
+          if (i >= 0) return i;
+        }
+        for (const alias of ALIASES[campo]) {
+          const i = hdrs.findIndex(h => h.includes(alias));
+          if (i >= 0) return i;
+        }
+        return -1;
+      };
       const iCanhoto = ci('nCanhoto'), iData = ci('data'), iMaterial = ci('material'), iVolume = ci('volume'), iPlaca = ci('placa');
       if (iData < 0 || iVolume < 0 || iPlaca < 0) {
         throw new Error('Não encontrei as colunas obrigatórias (Data, Volume, Placa). Confira o cabeçalho da planilha.');
@@ -405,15 +441,16 @@ const ControleTerraplanagem = (() => {
       const regs = [];
       let puladasDuplicadas = 0, puladasInvalidas = 0;
 
-      for (let r = 1; r < rows.length; r++) {
+      for (let r = headerRowIdx + 1; r < rows.length; r++) {
         const row = rows[r];
         if (!row || !row.length) continue;
         const nCanhoto = String(row[iCanhoto] ?? '').trim();
         const data = _pDataImport(row[iData]);
-        const material = String(row[iMaterial] ?? '').trim();
+        let material = String(row[iMaterial] ?? '').trim();
+        if (material === '-' || material === '—') material = ''; // placeholder de "sem material informado"
         const volume = TC.num(row[iVolume]);
         const placa = String(row[iPlaca] ?? '').trim().toUpperCase();
-        if (!data || !placa || !(volume > 0)) { puladasInvalidas++; continue; }
+        if (!data || !(volume > 0)) { puladasInvalidas++; continue; }
         if (nCanhoto && canhotosExistentes.has(nCanhoto)) { puladasDuplicadas++; continue; }
         if (nCanhoto) canhotosExistentes.add(nCanhoto); // evita duplicar dentro da própria planilha também
         if (placa && !placasExistentes.has(placa)) { novosCaminhoes.add(placa); placasExistentes.add(placa); }
