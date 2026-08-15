@@ -1082,6 +1082,10 @@ const ControleEstacas = (() => {
       const b = btsConfig.find(x => x.id === l.btConfigId);
       const pctBT = b && b.volumePrevisto > 0 ? (l.volume / b.volumePrevisto) * 100 : 0;
       return { btId: l.btConfigId, pctBT: String(Math.round(pctBT * 100) / 100) };
+    }).sort((a, b) => {
+      const na = btsConfig.find(x => x.id === a.btId)?.numero || 0;
+      const nb = btsConfig.find(x => x.id === b.btId)?.numero || 0;
+      return na - nb;
     });
     if (!linhas.length) linhas.push({ btId: '', pctBT: '' });
     estacaAtual = { concId: acompConcretagemId, pecaId, linhas };
@@ -1299,11 +1303,11 @@ const ControleEstacas = (() => {
             const temPerda = meta && (EC.num(meta.sobra) > 0 || EC.num(meta.perda) > 0 || EC.num(meta.perdaCocho) > 0);
             const ehPrimeiraOuUltima = b && ((primeiraBT && b.id === primeiraBT.id) || (ultimaBT && b.id === ultimaBT.id));
             return `<div style="margin-bottom:6px;">
-              <div style="display:grid;grid-template-columns:1fr 100px 90px auto auto;gap:8px;align-items:center;">
+              <div style="display:grid;grid-template-columns:1fr 100px 90px 100px 36px;gap:8px;align-items:center;">
                 <select class="form-control" onchange="CE.btUpdLinhaPeca(${i}, 'btId', this.value)">${opcoesBT(l.btId)}</select>
                 <input type="text" inputmode="decimal" class="form-control" style="${excesso ? 'border-color:#ef4444;' : ''}" placeholder="% da BT" value="${esc(l.pctBT)}" oninput="CE.btUpdLinhaPeca(${i}, 'pctBT', this.value)">
                 <span id="ce-est-vol-${i}" style="font-family:var(--font-mono);font-size:.78rem;color:var(--cor-texto-secundario);text-align:right;">${EC.fmt1(vol)} m³</span>
-                ${ehPrimeiraOuUltima ? `<button class="btn btn-secundario btn-sm" style="${temPerda ? 'border-color:#f59e0b;color:#f59e0b;' : ''}" title="${b.id === primeiraBT?.id ? 'Cocho/linha desta BT (é a primeira)' : 'Sobra de caminhão desta BT (é a última)'}" onclick="CE.toggleMetaInline('${b.id}')">✎ ${b.id === primeiraBT?.id ? 'cocho' : 'sobra'}</button>` : '<span></span>'}
+                ${ehPrimeiraOuUltima ? `<button class="btn btn-secundario btn-sm" style="${temPerda ? 'border-color:#f59e0b;color:#f59e0b;' : ''}" title="${b.id === primeiraBT?.id ? 'Cocho/linha desta BT (é a primeira)' : 'Sobra de caminhão desta BT (é a última)'}" onclick="CE.toggleMetaInline('${b.id}')">✎ ${b.id === primeiraBT?.id ? 'cocho' : 'sobra'}</button>` : ''}
                 <button class="btn btn-secundario btn-sm" style="color:var(--cv-red,#ef4444);" onclick="CE.btRemLinhaPeca(${i})" ${estacaAtual.linhas.length <= 1 ? 'disabled' : ''}>✕</button>
               </div>
               <div id="ce-est-aviso-${i}" class="text-sm" style="color:#ef4444;margin-top:2px;${excesso ? '' : 'display:none;'}">⚠ Essa BT já tem ${EC.fmt1(pctOutras)}% usado em outra peça — com esse %, passaria de 100% da BT.</div>

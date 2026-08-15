@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.5.1.9',
+  versaoAtual: 'V3.5.1.10',
 
   versoes: [
     {
@@ -7759,6 +7759,16 @@ const NotasVersao = {
         "Bug real: o mapa de qualquer concretagem selecionada mostrava TODAS as peças da prancha já concretadas, mesmo as de concretagens FUTURAS — concretagem Nº 1 e Nº 2 mostravam o mapa idêntico, confundindo o que já foi feito de fato até aquele dia.",
         "Corrigido: agora o mapa só mostra peças da concretagem selecionada + das ANTERIORES (por número) — nunca as de concretagens com número maior. Concretagem Nº 1 só mostra suas próprias peças; Nº 2 mostra as da 1 e da 2; Nº 3 mostra 1, 2 e 3.",
         "Cada peça concretada agora exibe um número em cima mostrando de QUAL concretagem ela é — pra não confundir qual estaca foi feita em qual dia."
+      ]
+    },
+    {
+      "versao": "V3.5.1.10",
+      "data": "2026-08-15",
+      "tipo": "correcao",
+      "titulo": "Controle de Estacas: BTs fora de ordem e linhas desalinhadas no popup de lançar por estaca",
+      "itens": [
+        "As linhas de BT apareciam na ordem em que os lançamentos foram salvos no banco (aleatória), não na ordem numérica das BTs — agora sempre ordenadas BT-1, BT-2, BT-3...",
+        "A coluna do botão \\\"✎ cocho/sobra\\\" usava largura automática — quando o botão não aparecia (BT do meio), a linha toda encolhia e desalinhava com as outras. Agora a coluna tem largura fixa, alinhado sempre, com ou sem botão."
       ]
     }
   ],
