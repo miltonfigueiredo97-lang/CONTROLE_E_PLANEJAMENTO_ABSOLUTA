@@ -46,7 +46,7 @@
       <a href="histograma.html" data-perm="histograma:ver"><span class="nav-icon">📊</span> Histograma</a>
       <a href="admin-permissoes.html" data-perm="admin:ver"><span class="nav-icon">🔑</span> Permissões</a>
       <a href="backup-planejamento.html" data-perm="backupPlanejamento:ver"><span class="nav-icon">🗂️</span> Backup de Planejamentos</a>
-      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V3.6.4</span></a>
+      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V3.7.0</span></a>
     </nav>
     <div class="sidebar-user">
       <div class="user-avatar">U</div>
@@ -98,6 +98,22 @@
   </div>
 </div>
 
+
+<!-- MODAL: Visualização 3D do corte de terra -->
+<div class="modal-overlay" id="modal-tp-3d">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <h3>🧊 Corte de Terra em 3D</h3>
+      <button class="modal-close" onclick="TP_UI.fechar3D()">&times;</button>
+    </div>
+    <div class="modal-body" style="padding:0;">
+      <div id="tp-3d-container" style="position:relative;width:100%;height:60vh;min-height:360px;background:linear-gradient(180deg,#1a1a2e,#0d0d0d);border-radius:0 0 8px 8px;overflow:hidden;">
+        <div id="tp-3d-legenda" style="position:absolute;top:10px;left:10px;background:rgba(0,0,0,.55);color:#fff;font-size:11px;padding:8px 10px;border-radius:6px;font-family:var(--cv-mono,monospace);line-height:1.6;pointer-events:none;"></div>
+        <div style="position:absolute;bottom:10px;left:10px;background:rgba(0,0,0,.55);color:#ccc;font-size:10px;padding:6px 10px;border-radius:6px;pointer-events:none;">🖱️ arraste pra girar · scroll pra zoom</div>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- Firebase SDKs -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>

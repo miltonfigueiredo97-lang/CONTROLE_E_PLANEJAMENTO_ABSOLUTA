@@ -16,6 +16,7 @@ const ControleTerraplanagem = (() => {
   const DOC_SECOES = 'terraplanagemSecoes';
 
   let obraId = null;
+  let obraNome = '';
   let caminhoes = [];
   let entregas = [];
   let config = { taxaEmpolamento: 0.3, capacidadeGrande: 15.6, capacidadePequena: 10 };
@@ -32,6 +33,7 @@ const ControleTerraplanagem = (() => {
     const ok = await Utils.initPagina({ requireObra: true });
     if (!ok) return;
     obraId = Router.getObraId();
+    obraNome = Router.getObra()?.nome || '';
     if (!obraId) {
       document.getElementById('tpc-content').innerHTML =
         `<div class="estado-vazio"><div class="icone">✅</div><p>Selecione uma obra para acessar o controle de terraplanagem.</p></div>`;
@@ -78,6 +80,7 @@ const ControleTerraplanagem = (() => {
 
   async function recarregar() {
     obraId = Router.getObraId();
+    obraNome = Router.getObra()?.nome || '';
     if (!obraId) return;
     fBusca = '';
     abaRel = 'viagens';
@@ -577,10 +580,299 @@ const ControleTerraplanagem = (() => {
       </div>`;
   }
 
+  // ══════════════════════════════════════════
+  // RELATÓRIO DE PERÍODO (PDF) — viagens, volume e caminhões num intervalo
+  // Escolhe início/fim, mostra prévia (KPIs + gráfico) e gera PDF pra
+  // baixar direto ou compartilhar (Web Share API — WhatsApp entra como
+  // opção nativa no celular).
+  // ══════════════════════════════════════════
+  let _relPeriodo = null;
+
+  function _fBR(iso) {
+    if (!iso) return '—';
+    const p = String(iso).split('-');
+    return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : iso;
+  }
+  function _minMaxData() {
+    if (!entregas.length) return { min: Utils.hoje(), max: Utils.hoje() };
+    const datas = entregas.map(e => e.data).filter(Boolean).sort();
+    return { min: datas[0], max: datas[datas.length - 1] };
+  }
+
+  function abrirRelatorioPeriodo() {
+    if (!Permissions.pode('controleTerra', 'exportar')) { Utils.toast('Sem permissão para exportar.', 'erro'); return; }
+    const { min, max } = _minMaxData();
+    _relPeriodo = null;
+    const el = document.getElementById('tpc-relatorio-body');
+    el.innerHTML = `
+      <div class="form-row">
+        <div class="form-grupo"><label>Data Início</label><input type="date" id="tpc-rel-inicio" class="form-control" value="${esc(min)}"></div>
+        <div class="form-grupo"><label>Data Fim</label><input type="date" id="tpc-rel-fim" class="form-control" value="${esc(max)}"></div>
+      </div>
+      <button class="btn btn-primario btn-sm" onclick="TPC_UI.gerarRelatorioPeriodo()">📊 Gerar Relatório</button>
+      <div id="tpc-relatorio-preview" style="margin-top:16px;"></div>
+    `;
+    Utils.abrirModal('modal-tpc-relatorio');
+  }
+
+  function _calcularRelatorioPeriodo(inicio, fim) {
+    const lista = entregas.filter(e => e.data && e.data >= inicio && e.data <= fim).sort((a, b) => (a.data || '').localeCompare(b.data || ''));
+    const porDia = {}, porCaminhao = {};
+    lista.forEach(e => {
+      const d = e.data || '—';
+      porDia[d] = porDia[d] || { data: d, viagens: 0, volume: 0 };
+      porDia[d].viagens++; porDia[d].volume += TC.num(e.volume);
+      const chave = e.placa || '— sem placa —';
+      porCaminhao[chave] = porCaminhao[chave] || { placa: chave, viagens: 0, volume: 0 };
+      porCaminhao[chave].viagens++; porCaminhao[chave].volume += TC.num(e.volume);
+    });
+    const dias = Object.values(porDia).sort((a, b) => a.data.localeCompare(b.data));
+    const caminhoesList = Object.values(porCaminhao).sort((a, b) => b.volume - a.volume);
+    const totalVolume = lista.reduce((s, e) => s + TC.num(e.volume), 0);
+    const totalCaminhoes = caminhoesList.filter(c => c.placa !== '— sem placa —').length;
+    return { inicio, fim, lista, dias, caminhoesList, totalVolume, totalViagens: lista.length, totalCaminhoes };
+  }
+
+  function gerarRelatorioPeriodo() {
+    const inicio = document.getElementById('tpc-rel-inicio').value;
+    const fim = document.getElementById('tpc-rel-fim').value;
+    if (!inicio || !fim || inicio > fim) { Utils.toast('Informe um período válido (início antes do fim).', 'alerta'); return; }
+    _relPeriodo = _calcularRelatorioPeriodo(inicio, fim);
+    _renderPreviewRelatorio();
+  }
+
+  function _renderPreviewRelatorio() {
+    const el = document.getElementById('tpc-relatorio-preview');
+    if (!el || !_relPeriodo) return;
+    const r = _relPeriodo;
+    if (!r.lista.length) {
+      el.innerHTML = `<div class="cc-empty" style="margin-top:8px;">Nenhuma viagem registrada nesse período.</div>`;
+      return;
+    }
+    const maxVol = Math.max(...r.dias.map(d => d.volume), 1);
+    const barW = Math.max(5, Math.min(26, 620 / r.dias.length - 4));
+    const chartH = 110;
+    const chartW = r.dias.length * (barW + 4);
+    const bars = r.dias.map((d, i) => {
+      const h = (d.volume / maxVol) * chartH;
+      const x = i * (barW + 4);
+      return `<rect x="${x}" y="${chartH - h}" width="${barW}" height="${Math.max(1, h)}" fill="var(--cor-primaria,#f5c800)" rx="1.5"><title>${esc(d.data)}: ${TC.fmt1(d.volume)} m³</title></rect>`;
+    }).join('');
+    el.innerHTML = `
+      <div class="cc-kpiGrid" style="grid-template-columns:repeat(4,1fr);margin-bottom:14px;">
+        <div class="cc-kpi"><div class="cc-kpiIcon">📋</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Viagens</div><div class="cc-kpiValue">${r.totalViagens}</div></div></div>
+        <div class="cc-kpi cc-kpiOrange"><div class="cc-kpiIcon">📦</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Volume Total</div><div class="cc-kpiValue">${TC.fmt1(r.totalVolume)}<span class="cc-kpiUnit">m³</span></div></div></div>
+        <div class="cc-kpi cc-kpiBlue"><div class="cc-kpiIcon">🚚</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Caminhões</div><div class="cc-kpiValue">${r.totalCaminhoes}</div></div></div>
+        <div class="cc-kpi cc-kpiPurple"><div class="cc-kpiIcon">📅</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Dias c/ Registro</div><div class="cc-kpiValue">${r.dias.length}</div></div></div>
+      </div>
+      <div style="overflow-x:auto;margin-bottom:14px;background:var(--cv-surface2);border-radius:8px;padding:10px;">
+        <svg viewBox="0 0 ${Math.max(chartW, 100)} ${chartH + 6}" width="100%" style="max-width:${Math.max(chartW, 300)}px;height:${chartH + 6}px;display:block;">${bars}</svg>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-primario btn-sm" onclick="TPC_UI.baixarRelatorioPDF()">💾 Baixar PDF</button>
+        <button class="btn btn-secundario btn-sm" onclick="TPC_UI.compartilharRelatorioPDF()">📤 Compartilhar</button>
+      </div>
+    `;
+  }
+
+  async function _gerarRelatorioPdfBlob() {
+    if (typeof window.jspdf === 'undefined') {
+      await _ls('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+      await _ls('https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js');
+    }
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+    const PW = doc.internal.pageSize.getWidth();
+    const r = _relPeriodo;
+    const k = kpisGerais();
+
+    // Cabeçalho
+    doc.setFillColor(13, 13, 13); doc.rect(0, 0, PW, 26, 'F');
+    doc.setFillColor(245, 200, 0); doc.rect(0, 26, PW, 1.5, 'F');
+    doc.setTextColor(255); doc.setFontSize(14); doc.setFont(undefined, 'bold');
+    doc.text('Relatório de Terraplanagem — Controle de Período', 12, 11);
+    doc.setFontSize(9); doc.setFont(undefined, 'normal'); doc.setTextColor(245, 200, 0);
+    doc.text(obraNome || '', 12, 18);
+    doc.setTextColor(200);
+    doc.text(`Gerado em ${new Date().toLocaleString('pt-BR')} · Absoluta Engenharia`, 12, 23);
+    let y = 34;
+
+    doc.setTextColor(13, 13, 13); doc.setFontSize(10); doc.setFont(undefined, 'bold');
+    doc.text(`Período: ${_fBR(r.inicio)} a ${_fBR(r.fim)}`, 12, y);
+    y += 8;
+
+    // Cards de KPI
+    const cards = [
+      { v: String(r.totalViagens), l: 'VIAGENS' },
+      { v: TC.fmt1(r.totalVolume), l: 'VOLUME TOTAL (M³)' },
+      { v: String(r.totalCaminhoes), l: 'CAMINHÕES' },
+      { v: String(r.dias.length), l: 'DIAS C/ REGISTRO' },
+      ...(k.volEmpolado > 0 ? [{ v: TC.fmt1((r.totalVolume / k.volEmpolado) * 100) + '%', l: 'DO PREVISTO TOTAL' }] : []),
+    ];
+    const gap = 4, cw = (PW - 24 - gap * (cards.length - 1)) / cards.length, ch = 17;
+    cards.forEach((card, i) => {
+      const x = 12 + i * (cw + gap);
+      doc.setFillColor(250, 250, 250); doc.setDrawColor(229, 229, 229);
+      doc.roundedRect(x, y, cw, ch, 1.8, 1.8, 'FD');
+      doc.setTextColor(13, 13, 13); doc.setFontSize(13); doc.setFont(undefined, 'bold');
+      doc.text(card.v, x + cw / 2, y + 8, { align: 'center' });
+      doc.setTextColor(120); doc.setFontSize(5.6); doc.setFont(undefined, 'normal');
+      doc.text(card.l, x + cw / 2, y + 13.5, { align: 'center' });
+    });
+    y += ch + 8;
+
+    // Gráfico de barras (volume por dia) — desenhado nativo no PDF
+    if (r.dias.length) {
+      doc.setTextColor(13, 13, 13); doc.setFontSize(9.5); doc.setFont(undefined, 'bold');
+      doc.text('Volume por dia', 12, y + 3);
+      y += 7;
+      const chartX = 12, chartW2 = PW - 24, chartYTop = y, chartH2 = 36;
+      const maxVol = Math.max(...r.dias.map(d => d.volume), 1);
+      doc.setDrawColor(226, 232, 240); doc.setLineWidth(0.1);
+      for (let g = 0; g <= 4; g++) {
+        const gy = chartYTop + chartH2 - (g / 4) * chartH2;
+        doc.line(chartX, gy, chartX + chartW2, gy);
+      }
+      const n = r.dias.length;
+      const passoBarra = chartW2 / n;
+      const barW2 = Math.max(0.8, passoBarra - 0.6);
+      doc.setFillColor(245, 200, 0);
+      r.dias.forEach((d, i) => {
+        const h = (d.volume / maxVol) * chartH2;
+        const x = chartX + i * passoBarra + 0.3;
+        doc.rect(x, chartYTop + chartH2 - h, barW2, Math.max(0.3, h), 'F');
+      });
+      doc.setDrawColor(150); doc.setLineWidth(0.2);
+      doc.line(chartX, chartYTop + chartH2, chartX + chartW2, chartYTop + chartH2);
+      doc.setFontSize(5.5); doc.setTextColor(100);
+      const passoLabel = Math.max(1, Math.ceil(n / 8));
+      r.dias.forEach((d, i) => {
+        if (i % passoLabel !== 0 && i !== n - 1) return;
+        const x = chartX + i * passoBarra + passoBarra / 2;
+        doc.text(_fBR(d.data), x, chartYTop + chartH2 + 4, { align: 'center' });
+      });
+      y = chartYTop + chartH2 + 9;
+    }
+
+    // Tabela por dia
+    if (y > 235) { doc.addPage(); y = 14; }
+    doc.setTextColor(13, 13, 13); doc.setFontSize(9.5); doc.setFont(undefined, 'bold');
+    doc.text('Volume por dia (detalhado)', 12, y + 3);
+    doc.autoTable({
+      startY: y + 5,
+      head: [['Data', 'Viagens', 'Volume (m³)', '% do total']],
+      body: r.dias.map(d => [_fBR(d.data), String(d.viagens), TC.fmt1(d.volume), r.totalVolume > 0 ? TC.fmt1((d.volume / r.totalVolume) * 100) + '%' : '—']),
+      margin: { left: 12, right: 12 },
+      styles: { fontSize: 8, cellPadding: 1.8 },
+      headStyles: { fillColor: [245, 200, 0], textColor: [13, 13, 13], fontStyle: 'bold' },
+      alternateRowStyles: { fillColor: [250, 250, 250] },
+      columnStyles: { 1: { halign: 'center' }, 2: { halign: 'right' }, 3: { halign: 'right' } },
+    });
+    y = doc.lastAutoTable.finalY + 8;
+
+    // Tabela por caminhão
+    if (y > 235) { doc.addPage(); y = 14; }
+    doc.setTextColor(13, 13, 13); doc.setFontSize(9.5); doc.setFont(undefined, 'bold');
+    doc.text('Volume por caminhão', 12, y + 3);
+    doc.autoTable({
+      startY: y + 5,
+      head: [['Placa', 'Empresa', 'Viagens', 'Volume Total (m³)', 'Média/Viagem (m³)']],
+      body: r.caminhoesList.map(c => {
+        const cam = caminhoes.find(x => x.placa === c.placa);
+        return [c.placa, cam?.empresa || '—', String(c.viagens), TC.fmt1(c.volume), TC.fmt1(c.volume / c.viagens)];
+      }),
+      margin: { left: 12, right: 12 },
+      styles: { fontSize: 8, cellPadding: 1.8 },
+      headStyles: { fillColor: [13, 13, 13], textColor: [245, 200, 0], fontStyle: 'bold' },
+      alternateRowStyles: { fillColor: [250, 250, 250] },
+      columnStyles: { 2: { halign: 'center' }, 3: { halign: 'right' }, 4: { halign: 'right' } },
+    });
+    y = doc.lastAutoTable.finalY + 8;
+
+    // Tabela detalhada — todas as viagens do período
+    if (y > 225) { doc.addPage(); y = 14; }
+    doc.setTextColor(13, 13, 13); doc.setFontSize(9.5); doc.setFont(undefined, 'bold');
+    doc.text(`Viagens do período (${r.lista.length})`, 12, y + 3);
+    doc.autoTable({
+      startY: y + 5,
+      head: [['Canhoto', 'Data', 'Placa', 'Material', 'Volume (m³)']],
+      body: r.lista.map(e => [e.nCanhoto || '—', _fBR(e.data), e.placa || '—', e.material || '—', TC.fmt1(e.volume)]),
+      margin: { left: 12, right: 12 },
+      styles: { fontSize: 7, cellPadding: 1.3 },
+      headStyles: { fillColor: [245, 200, 0], textColor: [13, 13, 13], fontStyle: 'bold' },
+      alternateRowStyles: { fillColor: [250, 250, 250] },
+      columnStyles: { 4: { halign: 'right' } },
+    });
+
+    return doc.output('blob');
+  }
+
+  function _nomeArquivoRelatorio() {
+    const nomeObra = (obraNome || 'obra').replace(/[^a-z0-9]/gi, '_');
+    return `Relatorio_Terraplanagem_${nomeObra}_${_relPeriodo.inicio}_a_${_relPeriodo.fim}.pdf`;
+  }
+
+  async function baixarRelatorioPDF() {
+    if (!_relPeriodo) return;
+    Utils.mostrarLoading('Gerando PDF...');
+    try {
+      const blob = await _gerarRelatorioPdfBlob();
+      const nome = _nomeArquivoRelatorio();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = nome;
+      document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(url);
+      Utils.toast('✓ PDF gerado!', 'sucesso');
+    } catch (e) {
+      console.error(e);
+      Utils.toast('Erro ao gerar PDF: ' + e.message, 'erro');
+    } finally {
+      Utils.esconderLoading();
+    }
+  }
+
+  async function compartilharRelatorioPDF() {
+    if (!_relPeriodo) return;
+    Utils.mostrarLoading('Preparando PDF pra compartilhar...');
+    try {
+      const blob = await _gerarRelatorioPdfBlob();
+      const nome = _nomeArquivoRelatorio();
+      let compartilhado = false;
+      try {
+        const file = new File([blob], nome, { type: 'application/pdf' });
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          Utils.esconderLoading();
+          await navigator.share({
+            files: [file], title: 'Relatório de Terraplanagem',
+            text: `📦 Relatório de Terraplanagem — ${obraNome}\nPeríodo: ${_fBR(_relPeriodo.inicio)} a ${_fBR(_relPeriodo.fim)}\n${_relPeriodo.totalViagens} viagens · ${TC.fmt1(_relPeriodo.totalVolume)} m³`,
+          });
+          compartilhado = true;
+        }
+      } catch (eShare) {
+        if (eShare.name === 'AbortError') { Utils.esconderLoading(); return; }
+      }
+      if (!compartilhado) {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = nome;
+        document.body.appendChild(a); a.click(); a.remove();
+        URL.revokeObjectURL(url);
+        Utils.toast('Esse navegador não compartilha arquivo direto — o PDF foi baixado, é só anexar no WhatsApp.', 'info');
+      }
+    } catch (e) {
+      console.error(e);
+      Utils.toast('Erro ao gerar PDF: ' + e.message, 'erro');
+    } finally {
+      Utils.esconderLoading();
+    }
+  }
+
   return {
     init, recarregar, renderizar, onFiltro, setAbaRel,
     abrirEntrega, autoVolumePorPlaca, salvarEntrega, excluirEntrega,
     importarPlanilha,
+    abrirRelatorioPeriodo, gerarRelatorioPeriodo, baixarRelatorioPDF, compartilharRelatorioPDF,
   };
 })();
 

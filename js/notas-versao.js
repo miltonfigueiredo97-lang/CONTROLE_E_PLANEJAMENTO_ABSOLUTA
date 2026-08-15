@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.6.4',
+  versaoAtual: 'V3.7.0',
 
   versoes: [
     {
@@ -7859,6 +7859,18 @@ const NotasVersao = {
         "Linha sem placa continua sendo importada normalmente (regra já existia) — provavelmente esqueceram de anotar o caminhão.",
         "Novo: linha sem volume agora é completada automaticamente, na ordem: 1) volume mais comum já visto pra aquela placa na própria planilha (um caminhão sempre carrega o mesmo volume) 2) se a placa não aparece em nenhuma outra linha com volume, usa a capacidade cadastrada do caminhão (Grande/Pequeno) em \"🚚 Caminhões\". Só fica de fora se não der pra descobrir por nenhuma das duas formas.",
         "O resultado da importação agora mostra quantas linhas tiveram o volume completado (e por qual dos dois jeitos) e quantas foram ignoradas por terem só o canhoto."
+      ]
+    },
+    {
+      "versao": "V3.7.0",
+      "data": "2026-08-15",
+      "tipo": "funcionalidade",
+      "titulo": "Relatório de Período em PDF (Controle) e Visualização 3D do corte (Levantamento)",
+      "itens": [
+        "Controle de Terraplanagem: botão \"📄 Relatório\" — escolhe data início/fim, mostra prévia (viagens, volume total, caminhões, dias, gráfico de volume por dia) e gera um PDF bonito com capa, cards de resumo, gráfico, tabela por dia, tabela por caminhão e a lista detalhada de viagens do período.",
+        "PDF pode ser baixado direto (\"💾 Baixar PDF\") ou compartilhado (\"📤 Compartilhar\") — no celular abre o menu nativo de compartilhamento com o PDF já anexado, WhatsApp incluso; no navegador sem esse suporte, baixa o arquivo pra anexar manualmente.",
+        "Levantamento de Terraplanagem: botão \"🧊 Ver em 3D\" na Calculadora de Corte de Terra — monta um sólido 3D fazendo o loft entre as seções da direção atual (Horizontais ou Verticais), do jeito que elas já são calculadas (cotas + distâncias + cota de referência), funciona tanto no modo Manual quanto no modo Marcar no Projeto.",
+        "O 3D colore a superfície do terreno por profundidade do corte (verde = raso, vermelho = fundo) e mostra a cota de referência como um plano laranja translúcido por baixo — arrasta pra girar, scroll pra zoom."
       ]
     }
   ],

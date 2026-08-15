@@ -237,7 +237,10 @@ const LevantamentoTerraplanagem = (() => {
       </div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
         <span style="font-family:var(--cv-mono);font-size:0.85rem;font-weight:700;color:var(--cv-accent3);">Volume total ${secDir}: ${TC.fmt1(volTotal)} m³</span>
-        <button class="btn btn-secundario btn-sm" onclick="TP_UI.secAdd()">+ Nova Seção</button>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-secundario btn-sm" onclick="TP_UI.abrir3D()">🧊 Ver em 3D</button>
+          <button class="btn btn-secundario btn-sm" onclick="TP_UI.secAdd()">+ Nova Seção</button>
+        </div>
       </div>
       ${!lista.length ? `<div class="cc-empty">Nenhuma seção cadastrada. Clique em "+ Nova Seção" para começar.</div>` :
       lista.map((s, i) => `
@@ -690,6 +693,216 @@ const LevantamentoTerraplanagem = (() => {
     }
   }
 
+  // ══════════════════════════════════════════
+  // VISUALIZAÇÃO 3D — loft entre as seções da direção atual, formando o
+  // sólido do corte de terra (superfície do terreno até a cota de
+  // referência). Usa Three.js puro (sem OrbitControls — rotação/zoom
+  // feitos na mão, com pointer events, pra não depender de addon externo).
+  // ══════════════════════════════════════════
+  let _3d = null; // { renderer, scene, camera, group, raf, ...estado de arraste }
+
+  // Reamostra o perfil (distância acumulada x cota) de uma seção em N pontos
+  // uniformes ao longo do comprimento total dela, via interpolação linear.
+  function _reamostrarPerfil(distancias, cotas, n) {
+    const acc = [0];
+    for (let i = 0; i < distancias.length; i++) acc.push(acc[i] + TC.num(distancias[i]));
+    const largura = acc[acc.length - 1] || 0;
+    const out = [];
+    for (let k = 0; k < n; k++) {
+      const alvo = largura * (k / (n - 1));
+      let seg = 0;
+      while (seg < acc.length - 2 && acc[seg + 1] < alvo) seg++;
+      const d0 = acc[seg], d1 = acc[seg + 1] ?? d0;
+      const c0 = TC.num(cotas[seg]), c1 = TC.num(cotas[seg + 1] ?? cotas[seg]);
+      const t = d1 > d0 ? (alvo - d0) / (d1 - d0) : 0;
+      out.push({ x: alvo, cota: c0 + (c1 - c0) * t });
+    }
+    return out;
+  }
+
+  function _corProfundidade(prof, profMin, profMax) {
+    const t = profMax > profMin ? Math.max(0, Math.min(1, (prof - profMin) / (profMax - profMin))) : 0;
+    // raso (t=0) verde → fundo (t=1) vermelho
+    const r = Math.round(34 + t * (220 - 34));
+    const g = Math.round(160 - t * (160 - 38));
+    const b = Math.round(70 - t * (70 - 38));
+    return { r: r / 255, g: g / 255, b: b / 255 };
+  }
+
+  async function abrir3D() {
+    const lista = (secoes[secDir] || []).filter(s => (s.cotas || []).length >= 2);
+    if (lista.length < 1) { Utils.toast('Marque pelo menos uma seção com 2+ pontos pra gerar o 3D.', 'alerta'); return; }
+    Utils.mostrarLoading('Montando visualização 3D...');
+    try {
+      if (typeof THREE === 'undefined') await _ls('https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js');
+      Utils.abrirModal('modal-tp-3d');
+      await new Promise(r => setTimeout(r, 60)); // deixa o modal montar antes de medir o container
+      _montarCena(lista);
+    } catch (e) {
+      console.error(e);
+      Utils.toast('Erro ao montar o 3D: ' + e.message, 'erro');
+    } finally {
+      Utils.esconderLoading();
+    }
+  }
+
+  function fechar3D() {
+    if (_3d) {
+      cancelAnimationFrame(_3d.raf);
+      _3d.container.removeEventListener('pointerdown', _3d.onDown);
+      window.removeEventListener('pointermove', _3d.onMove);
+      window.removeEventListener('pointerup', _3d.onUp);
+      _3d.container.removeEventListener('wheel', _3d.onWheel);
+      _3d.renderer.dispose();
+      if (_3d.renderer.domElement.parentNode) _3d.renderer.domElement.parentNode.removeChild(_3d.renderer.domElement);
+      _3d = null;
+    }
+    Utils.fecharModal('modal-tp-3d');
+  }
+
+  function _montarCena(lista) {
+    const container = document.getElementById('tp-3d-container');
+    if (!container) return;
+    const N = 22; // amostras por seção
+    const perfis = lista.map(s => _reamostrarPerfil(s.distanciasCotas || [], s.cotas || [], N));
+    const cotasFinal = lista.map(s => TC.num(s.cotaFinal));
+    // profundidade acumulada (Z) — soma das distâncias entre seções anteriores
+    const zAcum = [0];
+    for (let i = 0; i < lista.length - 1; i++) zAcum.push(zAcum[i] + (TC.num(lista[i].distanciaProxima) || 3));
+    // Só uma seção marcada — duplica o perfil com uma profundidade artificial
+    // pequena, senão não há entre-seções pra formar nenhuma face (malha vazia).
+    if (perfis.length === 1) { perfis.push(perfis[0]); cotasFinal.push(cotasFinal[0]); zAcum.push(zAcum[0] + 3); }
+
+    // Bounds pra centralizar e pra escala de cor
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity, minProf = Infinity, maxProf = -Infinity;
+    perfis.forEach((p, si) => p.forEach(pt => {
+      minX = Math.min(minX, pt.x); maxX = Math.max(maxX, pt.x);
+      minY = Math.min(minY, pt.cota, cotasFinal[si]); maxY = Math.max(maxY, pt.cota, cotasFinal[si]);
+      const prof = pt.cota - cotasFinal[si];
+      minProf = Math.min(minProf, prof); maxProf = Math.max(maxProf, prof);
+    }));
+    const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2, cz = zAcum[zAcum.length - 1] / 2;
+    const escala = 100 / Math.max(maxX - minX, maxY - minY, zAcum[zAcum.length - 1] || 1, 1); // normaliza pra caber numa cena ~100 unidades
+
+    const posTopo = [], corTopo = [], posFundo = [];
+    perfis.forEach((p, si) => p.forEach(pt => {
+      posTopo.push((pt.x - cx) * escala, (pt.cota - cy) * escala, (zAcum[si] - cz) * escala);
+      posFundo.push((pt.x - cx) * escala, (cotasFinal[si] - cy) * escala, (zAcum[si] - cz) * escala);
+      const c = _corProfundidade(pt.cota - cotasFinal[si], minProf, maxProf);
+      corTopo.push(c.r, c.g, c.b);
+    }));
+
+    const idx = (si, pi) => si * N + pi;
+    const facesTopo = [], facesFundo = [];
+    for (let si = 0; si < perfis.length - 1; si++) {
+      for (let pi = 0; pi < N - 1; pi++) {
+        const a = idx(si, pi), b = idx(si, pi + 1), c = idx(si + 1, pi), d = idx(si + 1, pi + 1);
+        facesTopo.push(a, c, b, b, c, d);
+        facesFundo.push(a, b, c, b, d, c); // fundo com winding invertido (normal pra baixo)
+      }
+    }
+
+    const THREE_ = window.THREE;
+    const scene = new THREE_.Scene();
+    scene.background = new THREE_.Color(0x14141f);
+
+    // Superfície do terreno (topo) — colorida por profundidade do corte
+    const geoTopo = new THREE_.BufferGeometry();
+    geoTopo.setAttribute('position', new THREE_.Float32BufferAttribute(posTopo, 3));
+    geoTopo.setAttribute('color', new THREE_.Float32BufferAttribute(corTopo, 3));
+    geoTopo.setIndex(facesTopo);
+    geoTopo.computeVertexNormals();
+    const matTopo = new THREE_.MeshStandardMaterial({ vertexColors: true, side: THREE_.DoubleSide, flatShading: true, roughness: 0.85, metalness: 0.05 });
+    const meshTopo = new THREE_.Mesh(geoTopo, matTopo);
+
+    // Superfície de referência (fundo/cota final) — translúcida
+    const geoFundo = new THREE_.BufferGeometry();
+    geoFundo.setAttribute('position', new THREE_.Float32BufferAttribute(posFundo, 3));
+    geoFundo.setIndex(perfis.length > 1 ? facesFundo : []);
+    geoFundo.computeVertexNormals();
+    const matFundo = new THREE_.MeshStandardMaterial({ color: 0xf59e0b, transparent: true, opacity: 0.35, side: THREE_.DoubleSide, roughness: 0.9 });
+    const meshFundo = new THREE_.Mesh(geoFundo, matFundo);
+
+    const group = new THREE_.Group();
+    group.add(meshTopo);
+    if (perfis.length > 1) group.add(meshFundo);
+
+    // Paredes de fechamento nas duas pontas (primeira e última seção) — mostra a face do corte
+    [0, perfis.length - 1].forEach(si => {
+      const posParede = [];
+      for (let pi = 0; pi < N; pi++) {
+        posParede.push((perfis[si][pi].x - cx) * escala, (perfis[si][pi].cota - cy) * escala, (zAcum[si] - cz) * escala);
+        posParede.push((perfis[si][pi].x - cx) * escala, (cotasFinal[si] - cy) * escala, (zAcum[si] - cz) * escala);
+      }
+      const facesParede = [];
+      for (let pi = 0; pi < N - 1; pi++) {
+        const a = pi * 2, b = pi * 2 + 1, c = (pi + 1) * 2, d = (pi + 1) * 2 + 1;
+        facesParede.push(a, c, b, b, c, d);
+      }
+      const geoParede = new THREE_.BufferGeometry();
+      geoParede.setAttribute('position', new THREE_.Float32BufferAttribute(posParede, 3));
+      geoParede.setIndex(facesParede);
+      geoParede.computeVertexNormals();
+      const matParede = new THREE_.MeshStandardMaterial({ color: 0x8b7355, side: THREE_.DoubleSide, roughness: 0.95 });
+      group.add(new THREE_.Mesh(geoParede, matParede));
+    });
+
+    scene.add(group);
+    scene.add(new THREE_.AmbientLight(0xffffff, 0.55));
+    const dirLight = new THREE_.DirectionalLight(0xffffff, 0.9);
+    dirLight.position.set(60, 100, 80);
+    scene.add(dirLight);
+    const dirLight2 = new THREE_.DirectionalLight(0x88aaff, 0.3);
+    dirLight2.position.set(-60, 40, -80);
+    scene.add(dirLight2);
+
+    const W = container.clientWidth || 600, H = container.clientHeight || 400;
+    const camera = new THREE_.PerspectiveCamera(45, W / H, 0.1, 2000);
+    const renderer = new THREE_.WebGLRenderer({ antialias: true, alpha: false });
+    renderer.setSize(W, H);
+    renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+    container.appendChild(renderer.domElement);
+
+    let rotY = -0.7, rotX = -0.35, dist = 130;
+    let dragging = false, lastX = 0, lastY = 0;
+    function atualizarCamera() {
+      camera.position.set(
+        dist * Math.sin(rotY) * Math.cos(rotX),
+        dist * Math.sin(rotX) * -1 + 20,
+        dist * Math.cos(rotY) * Math.cos(rotX)
+      );
+      camera.lookAt(0, 0, 0);
+    }
+    atualizarCamera();
+
+    const onDown = ev => { dragging = true; lastX = ev.clientX; lastY = ev.clientY; };
+    const onMove = ev => {
+      if (!dragging) return;
+      rotY += (ev.clientX - lastX) * 0.008;
+      rotX = Math.max(-1.3, Math.min(1.3, rotX + (ev.clientY - lastY) * 0.008));
+      lastX = ev.clientX; lastY = ev.clientY;
+      atualizarCamera();
+    };
+    const onUp = () => { dragging = false; };
+    const onWheel = ev => { ev.preventDefault(); dist = Math.max(30, Math.min(400, dist + ev.deltaY * 0.15)); atualizarCamera(); };
+    container.addEventListener('pointerdown', onDown);
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    container.addEventListener('wheel', onWheel, { passive: false });
+
+    function loop() {
+      _3d.raf = requestAnimationFrame(loop);
+      renderer.render(scene, camera);
+    }
+    _3d = { renderer, scene, camera, group, container, onDown, onMove, onUp, onWheel, raf: 0 };
+    loop();
+
+    const legenda = document.getElementById('tp-3d-legenda');
+    if (legenda) {
+      legenda.innerHTML = `${lista.length} seção${lista.length !== 1 ? 'ões' : ''} (${secDir}) · 🟩 corte raso → 🟥 corte fundo · 🟧 cota de referência`;
+    }
+  }
+
   return {
     init, recarregar, renderizar,
     setSecDir, setModoLevantamento, secAdd, secRemover, secToggle,
@@ -698,6 +911,7 @@ const LevantamentoTerraplanagem = (() => {
     escolherImagemProjeto, processarImagemProjeto, calibrarProjeto,
     abrirConfig, salvarConfigBtn, aplicarPresetEmpolamento,
     abrirCaminhoes, salvarCaminhao, excluirCaminhao,
+    abrir3D, fechar3D,
   };
 })();
 
