@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.7.1.5',
+  versaoAtual: 'V3.7.1.6',
 
   versoes: [
     {
@@ -7938,6 +7938,17 @@ const NotasVersao = {
       "itens": [
         "Bug de digitação na reversão pro select nativo: a condição que decide se uma BT aparece no seletor estava com o \\\"não\\\" faltando — em vez de esconder BTs já usadas em outra linha da mesma peça, o código fazia o oposto (só mostrava as JÁ usadas), permitindo selecionar a mesma BT duas vezes.",
         "Corrigido — 1 caractere (o `!` que faltava). Agora uma BT já escolhida numa linha desaparece do seletor das outras linhas da mesma peça (a não ser que seja a seleção daquela própria linha)."
+      ]
+    },
+    {
+      "versao": "V3.7.1.6",
+      "data": "2026-08-15",
+      "tipo": "correcao",
+      "titulo": "Sistema inteiro: cache-busting em todos os arquivos .js e .css — resolve \"corrigi mas não resolveu\"",
+      "itens": [
+        "Achada uma causa raiz provável de vários casos de \"corrigi no código mas o usuário continua vendo o bug antigo\": os arquivos js/*.js e css/*.css eram carregados sem nenhum parâmetro de versão (ex: js/controle-estacas.js). O navegador pode cachear esse arquivo agressivamente e continuar servindo a versão ANTIGA mesmo depois do deploy novo — mesmo com o número da versão certo aparecendo na tela (esse texto vem de outro lugar, o script em si ficava desatualizado).",
+        "Corrigido em TODOS os 40 arquivos HTML do sistema: agora todo <script src=\"js/...\"> e <link href=\"css/...\"> carrega com ?v=VERSAO (ex: controle-estacas.js?v=V3.7.1.6). Toda vez que a versão muda, o navegador é obrigado a buscar o arquivo de novo.",
+        "Não precisa de passo manual extra daqui pra frente: o mesmo comando de bump de versão (sed trocando o número antigo pelo novo em todos os HTMLs) já atualiza o badge E o parâmetro de cache-busting ao mesmo tempo, automaticamente."
       ]
     }
   ],
