@@ -359,6 +359,7 @@ const ControleTerraplanagem = (() => {
   // VIAGENS / ENTREGAS
   // ══════════════════════════════════════════
   function abrirEntrega() {
+    _valorFoiManual = false;
     renderFormEntrega();
     Utils.abrirModal('modal-tpc-entrega');
   }
@@ -377,7 +378,7 @@ const ControleTerraplanagem = (() => {
             ${caminhoes.map(c => `<option value="${esc(c.placa)}">${esc(c.placa)} (${esc(c.tamanho)})</option>`).join('')}
           </select>
         </div>
-        <div class="form-grupo"><label>Material</label><input type="text" id="tpc-ent-material" class="form-control" placeholder="Terra / Aterro"></div>
+        <div class="form-grupo"><label>Material</label><input type="text" id="tpc-ent-material" class="form-control" placeholder="Terra / Entulho" oninput="TPC_UI.autoValorPorMaterial()"></div>
       </div>
       <div class="form-row">
         <div class="form-grupo"><label>Tipo</label><input type="text" id="tpc-ent-tipo" class="form-control" placeholder="Remoção / Entrega"></div>
@@ -386,7 +387,7 @@ const ControleTerraplanagem = (() => {
         <div class="form-grupo"><label>Fornecedor</label><input type="text" id="tpc-ent-fornecedor" class="form-control" placeholder="opcional"></div>
         <div class="form-grupo"><label>Volume (m³)</label><input type="text" inputmode="decimal" id="tpc-ent-volume" class="form-control" placeholder="15.6"></div>
       </div>
-      <div class="form-grupo"><label>Valor da viagem (R$) — em branco usa o padrão do material (💰 Valores)</label><input type="text" inputmode="decimal" id="tpc-ent-valor" class="form-control" placeholder="${config.valorViagemTerra > 0 || config.valorViagemEntulho > 0 ? `padrão: terra ${_fRS(config.valorViagemTerra)} · entulho ${_fRS(config.valorViagemEntulho)}` : 'ex: 350'}"></div>
+      <div class="form-grupo"><label>Valor da viagem (R$) <span id="tpc-ent-valor-hint" style="font-weight:400;color:var(--cv-text3);"></span></label><input type="text" inputmode="decimal" id="tpc-ent-valor" class="form-control" placeholder="${config.valorViagemTerra > 0 || config.valorViagemEntulho > 0 ? `terra ${_fRS(config.valorViagemTerra)} · entulho ${_fRS(config.valorViagemEntulho)}` : 'ex: 350'}" oninput="TPC_UI.marcarValorManual()"></div>
       <button class="btn btn-primario" data-perm="controleTerra:criar" onclick="TPC_UI.salvarEntrega()">+ Registrar Viagem</button>
     `;
   }
@@ -429,6 +430,32 @@ const ControleTerraplanagem = (() => {
     if (volEl.value) return;
     const cam = caminhoes.find(c => c.placa === placaSel);
     if (cam) volEl.value = cam.tamanho === 'Grande' ? config.capacidadeGrande : config.capacidadePequena;
+  }
+
+  // ── Auto-preenchimento do Valor pelo material digitado ──
+  // Digitou "terra" → puxa o padrão de terra; "entulho" → o de entulho.
+  // O campo continua 100% editável (cada viagem pode ter valor próprio);
+  // só re-preenche automaticamente enquanto o usuário NÃO mexeu no valor
+  // à mão (_valorFoiManual) — depois disso o auto para de sobrescrever.
+  let _valorFoiManual = false;
+  function marcarValorManual() { _valorFoiManual = true; const h = document.getElementById('tpc-ent-valor-hint'); if (h) h.textContent = ''; }
+  function autoValorPorMaterial() {
+    if (_valorFoiManual) return;
+    const material = document.getElementById('tpc-ent-material').value;
+    const valEl = document.getElementById('tpc-ent-valor');
+    const hint = document.getElementById('tpc-ent-valor-hint');
+    if (!valEl) return;
+    const grupo = _classMat(material);
+    let padrao = 0;
+    if (grupo === 'TERRA') padrao = TC.num(config.valorViagemTerra);
+    else if (grupo === 'ENTULHO') padrao = TC.num(config.valorViagemEntulho);
+    if (padrao > 0) {
+      valEl.value = padrao;
+      if (hint) hint.textContent = `(padrão de ${grupo.toLowerCase()} — pode alterar)`;
+    } else {
+      valEl.value = '';
+      if (hint) hint.textContent = grupo === 'TERRA' || grupo === 'ENTULHO' ? '(sem padrão definido em 💰 Valores)' : '';
+    }
   }
   async function salvarEntrega() {
     if(!Permissions.pode('controleTerra','criar')&&!Permissions.pode('controleTerra','editar')){Utils.toast('Sem permissão.','erro');return;}
@@ -1088,7 +1115,7 @@ const ControleTerraplanagem = (() => {
 
   return {
     init, recarregar, renderizar, onFiltro, setAbaRel,
-    abrirEntrega, autoVolumePorPlaca, salvarEntrega, excluirEntrega,
+    abrirEntrega, autoVolumePorPlaca, autoValorPorMaterial, marcarValorManual, salvarEntrega, excluirEntrega,
     importarPlanilha, limparBase,
     abrirRelatorioPeriodo, gerarRelatorioPeriodo, baixarRelatorioPDF, compartilharRelatorioPDF,
     abrirValores, salvarValores,

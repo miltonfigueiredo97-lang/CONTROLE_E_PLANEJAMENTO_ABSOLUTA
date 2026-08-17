@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.7.1.10',
+  versaoAtual: 'V3.7.1.11',
 
   versoes: [
     {
@@ -7997,6 +7997,17 @@ const NotasVersao = {
         "Viagens do período: novas colunas % Acumulada (do volume) e R$ Acumulado por viagem, além do valor de cada uma — a última linha fecha em 100% e no total gasto.",
         "Volume por material: além do % do volume, agora mostra também o % do custo de cada material (terra × entulho consomem fatias diferentes do dinheiro).",
         "Volume por caminhão: nova coluna % do volume total."
+      ]
+    },
+    {
+      "versao": "V3.7.1.11",
+      "data": "2026-08-15",
+      "tipo": "melhoria",
+      "titulo": "Registrar Viagem: valor preenchido automaticamente pelo material digitado",
+      "itens": [
+        "Ao digitar o material no registro manual, o campo \"Valor da viagem (R$)\" já se preenche sozinho com o padrão daquele material (terra puxa o valor de terra, entulho o de entulho — definidos em 💰 Valores), com a indicação \"padrão de terra — pode alterar\".",
+        "O campo continua totalmente editável: normalmente é o mesmo valor, mas cada viagem pode ter o seu — assim que você mexe no valor à mão, o preenchimento automático para de sobrescrever o que você digitou.",
+        "Com o valor agora gravado explicitamente em cada viagem manual, mudar o padrão depois NÃO altera as viagens já registradas manualmente (só as importadas por planilha, que continuam usando o padrão do material)."
       ]
     }
   ],
