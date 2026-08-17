@@ -19,7 +19,7 @@ const ControleTerraplanagem = (() => {
   let obraNome = '';
   let caminhoes = [];
   let entregas = [];
-  let config = { taxaEmpolamento: 0.3, capacidadeGrande: 15.6, capacidadePequena: 10 };
+  let config = { taxaEmpolamento: 0.3, capacidadeGrande: 15.6, capacidadePequena: 10, valorViagemTerra: 0, valorViagemEntulho: 0 };
   let secoes = { horizontal: [], vertical: [] };
   let fBusca = '';
   let abaRel = 'viagens'; // 'viagens' | 'porDia' | 'porCaminhao'
@@ -91,6 +91,21 @@ const ControleTerraplanagem = (() => {
     return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
+  // ── Custo por viagem ──
+  // Valor digitado na própria viagem tem prioridade; senão usa o valor padrão
+  // por material (⚙️ 💰 Valores): terra e entulho têm preços diferentes.
+  // O valor calculado NÃO é gravado — é resolvido na leitura, então mudar o
+  // padrão em Valores atualiza retroativamente todas as viagens sem valor próprio.
+  function _valorViagem(e) {
+    if (TC.num(e.valor) > 0) return TC.num(e.valor);
+    const c = _classMat(e.material);
+    if (c === 'TERRA') return TC.num(config.valorViagemTerra);
+    if (c === 'ENTULHO') return TC.num(config.valorViagemEntulho);
+    return 0;
+  }
+  function _custoTotal(lista) { return (lista || entregas).reduce((s, e) => s + _valorViagem(e), 0); }
+  function _fRS(n) { return 'R$ ' + Number(n || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+
   // ── Classificação de material ──
   // TERRA = terraplanagem de verdade (é o que compara com o volume previsto
   // do Levantamento). ENTULHO = demolição, pago separado — NUNCA entra no
@@ -146,6 +161,7 @@ const ControleTerraplanagem = (() => {
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <a class="btn btn-secundario btn-sm" href="levantamento-terraplanagem.html">🚚 Levantamento Terraplanagem</a>
+          <button class="btn btn-secundario btn-sm" data-perm="controleTerra:editar" onclick="TPC_UI.abrirValores()">💰 Valores</button>
           <button class="btn btn-primario btn-sm" onclick="TPC_UI.abrirEntrega()">+ Registrar Viagem</button>
         </div>
       </div>
@@ -154,7 +170,7 @@ const ControleTerraplanagem = (() => {
         <div class="cc-kpi cc-kpiOrange"><div class="cc-kpiIcon">📦</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Terra Prevista (a remover)</div><div class="cc-kpiValue">${k.volEmpolado > 0 ? TC.fmt1(k.volEmpolado) + '<span class="cc-kpiUnit">m³</span>' : '—'}</div>${k.volEmpolado > 0 ? '' : '<div class="cc-kpiSub">Sem Levantamento cadastrado ainda</div>'}</div></div>
         <div class="cc-kpi cc-kpiGreen"><div class="cc-kpiIcon">🟤</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Terra Removida</div><div class="cc-kpiValue">${TC.fmt1(k.volTerra)}<span class="cc-kpiUnit">m³</span></div>${k.pct !== null ? `<div class="cc-kpiSub">${TC.fmt1(k.pct)}% da terraplanagem</div>` : ''}</div></div>
         <div class="cc-kpi"><div class="cc-kpiIcon">🧱</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Entulho Removido (demolição)</div><div class="cc-kpiValue">${TC.fmt1(k.volEntulho)}<span class="cc-kpiUnit">m³</span></div><div class="cc-kpiSub">não entra na terraplanagem</div></div></div>
-        <div class="cc-kpi cc-kpiBlue"><div class="cc-kpiIcon">🚚</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Caminhões</div><div class="cc-kpiValue">${caminhoes.length}</div></div></div>
+        <div class="cc-kpi cc-kpiBlue"><div class="cc-kpiIcon">💰</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Valor Gasto</div><div class="cc-kpiValue" style="font-size:1.15rem;">${_fRS(_custoTotal())}</div></div></div>
         <div class="cc-kpi cc-kpiPurple"><div class="cc-kpiIcon">📋</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Viagens Registradas</div><div class="cc-kpiValue">${entregas.length}</div></div></div>
       </div>
 
@@ -199,23 +215,26 @@ const ControleTerraplanagem = (() => {
     if (!el) return;
     if (!entregas.length) { el.innerHTML = `<div class="cc-empty">Nenhuma viagem registrada ainda.</div>`; return; }
     const grupos = _volPorMaterial();
+    grupos.forEach(g => { g.custo = entregas.filter(e => _classMat(e.material) === g.material).reduce((s, e) => s + _valorViagem(e), 0); });
     const totalVol = grupos.reduce((s, g) => s + g.volume, 0);
     const totalViagens = grupos.reduce((s, g) => s + g.viagens, 0);
+    const totalCusto = grupos.reduce((s, g) => s + g.custo, 0);
     const k = kpisGerais();
     el.innerHTML = `
       <div class="cc-tableWrap" style="max-height:400px;overflow-y:auto;">
       <table class="cc-table">
-        <thead><tr><th>Material</th><th></th><th class="col-num">Viagens</th><th class="col-num">Volume (m³)</th><th class="col-num">% do total removido</th></tr></thead>
+        <thead><tr><th>Material</th><th></th><th class="col-num">Viagens</th><th class="col-num">Volume (m³)</th><th class="col-num">Custo (R$)</th><th class="col-num">% do total removido</th></tr></thead>
         <tbody>
           ${grupos.map(g => `<tr>
             <td style="font-weight:700;">${g.material === 'TERRA' ? '🟤' : g.material === 'ENTULHO' ? '🧱' : '📦'} ${esc(g.material)}</td>
             <td style="font-size:.75rem;color:var(--cv-text3);">${g.material === 'TERRA' ? (k.volEmpolado > 0 ? `terraplanagem — ${TC.fmt1(Math.min(100, (g.volume / k.volEmpolado) * 100))}% do previsto` : 'terraplanagem') : g.material === 'ENTULHO' ? 'demolição — fora da terraplanagem' : 'fora da terraplanagem'}</td>
             <td class="col-num cc-tdMono">${g.viagens}</td>
             <td class="col-num cc-tdMono" style="font-weight:700;">${TC.fmt1(g.volume)}</td>
+            <td class="col-num cc-tdMono" style="font-weight:700;">${_fRS(g.custo)}</td>
             <td class="col-num cc-tdAccent" style="font-weight:700;">${totalVol > 0 ? TC.fmt1((g.volume / totalVol) * 100) : '0,0'}%</td>
           </tr>`).join('')}
         </tbody>
-        <tfoot><tr><td style="font-weight:700;" colspan="2">${grupos.length} materia${grupos.length !== 1 ? 'is' : 'l'}</td><td class="col-num cc-tdMono" style="font-weight:700;">${totalViagens}</td><td class="col-num cc-tdMono" style="font-weight:700;">${TC.fmt1(totalVol)}</td><td></td></tr></tfoot>
+        <tfoot><tr><td style="font-weight:700;" colspan="2">${grupos.length} materia${grupos.length !== 1 ? 'is' : 'l'}</td><td class="col-num cc-tdMono" style="font-weight:700;">${totalViagens}</td><td class="col-num cc-tdMono" style="font-weight:700;">${TC.fmt1(totalVol)}</td><td class="col-num cc-tdMono" style="font-weight:700;">${_fRS(totalCusto)}</td><td></td></tr></tfoot>
       </table>
       </div>`;
   }
@@ -228,26 +247,29 @@ const ControleTerraplanagem = (() => {
     const mapa = {};
     entregas.forEach(e => {
       const d = e.data || '—';
-      if (!mapa[d]) mapa[d] = { data: d, viagens: 0, volume: 0 };
+      if (!mapa[d]) mapa[d] = { data: d, viagens: 0, volume: 0, custo: 0 };
       mapa[d].viagens++;
       mapa[d].volume += TC.num(e.volume);
+      mapa[d].custo += _valorViagem(e);
     });
     const lista = Object.values(mapa).sort((a, b) => (b.data || '').localeCompare(a.data || ''));
     const totalVol = lista.reduce((s, r) => s + r.volume, 0);
     const totalViagens = lista.reduce((s, r) => s + r.viagens, 0);
+    const totalCusto = lista.reduce((s, r) => s + r.custo, 0);
     el.innerHTML = `
       <div class="cc-tableWrap" style="max-height:400px;overflow-y:auto;">
       <table class="cc-table">
-        <thead><tr><th>Data</th><th class="col-num">Viagens</th><th class="col-num">Volume (m³)</th><th class="col-num">% do total</th></tr></thead>
+        <thead><tr><th>Data</th><th class="col-num">Viagens</th><th class="col-num">Volume (m³)</th><th class="col-num">Custo (R$)</th><th class="col-num">% do total</th></tr></thead>
         <tbody>
           ${lista.map(r => `<tr>
             <td class="cc-tdMono" style="font-weight:700;">${esc(r.data)}</td>
             <td class="col-num cc-tdMono">${r.viagens}</td>
             <td class="col-num cc-tdMono">${TC.fmt1(r.volume)}</td>
+            <td class="col-num cc-tdMono">${_fRS(r.custo)}</td>
             <td class="col-num cc-tdAccent" style="font-weight:700;">${totalVol > 0 ? TC.fmt1((r.volume / totalVol) * 100) : '0,0'}%</td>
           </tr>`).join('')}
         </tbody>
-        <tfoot><tr><td style="font-weight:700;">${lista.length} dia${lista.length !== 1 ? 's' : ''}</td><td class="col-num cc-tdMono" style="font-weight:700;">${totalViagens}</td><td class="col-num cc-tdMono" style="font-weight:700;">${TC.fmt1(totalVol)}</td><td></td></tr></tfoot>
+        <tfoot><tr><td style="font-weight:700;">${lista.length} dia${lista.length !== 1 ? 's' : ''}</td><td class="col-num cc-tdMono" style="font-weight:700;">${totalViagens}</td><td class="col-num cc-tdMono" style="font-weight:700;">${TC.fmt1(totalVol)}</td><td class="col-num cc-tdMono" style="font-weight:700;">${_fRS(totalCusto)}</td><td></td></tr></tfoot>
       </table>
       </div>`;
   }
@@ -260,17 +282,19 @@ const ControleTerraplanagem = (() => {
     const mapa = {};
     entregas.forEach(e => {
       const p = e.placa || '— sem placa —';
-      if (!mapa[p]) mapa[p] = { placa: p, viagens: 0, volume: 0 };
+      if (!mapa[p]) mapa[p] = { placa: p, viagens: 0, volume: 0, custo: 0 };
       mapa[p].viagens++;
       mapa[p].volume += TC.num(e.volume);
+      mapa[p].custo += _valorViagem(e);
     });
     const lista = Object.values(mapa).sort((a, b) => b.volume - a.volume);
     const totalVol = lista.reduce((s, r) => s + r.volume, 0);
     const totalViagens = lista.reduce((s, r) => s + r.viagens, 0);
+    const totalCusto = lista.reduce((s, r) => s + r.custo, 0);
     el.innerHTML = `
       <div class="cc-tableWrap" style="max-height:400px;overflow-y:auto;">
       <table class="cc-table">
-        <thead><tr><th>Placa</th><th>Empresa</th><th class="col-num">Viagens</th><th class="col-num">Volume Total (m³)</th><th class="col-num">Média/Viagem (m³)</th></tr></thead>
+        <thead><tr><th>Placa</th><th>Empresa</th><th class="col-num">Viagens</th><th class="col-num">Volume Total (m³)</th><th class="col-num">Custo (R$)</th><th class="col-num">Média/Viagem (m³)</th></tr></thead>
         <tbody>
           ${lista.map(r => {
             const cam = caminhoes.find(c => c.placa === r.placa);
@@ -279,11 +303,12 @@ const ControleTerraplanagem = (() => {
               <td>${esc(cam?.empresa || '—')}</td>
               <td class="col-num cc-tdMono">${r.viagens}</td>
               <td class="col-num cc-tdMono">${TC.fmt1(r.volume)}</td>
+              <td class="col-num cc-tdMono">${_fRS(r.custo)}</td>
               <td class="col-num cc-tdMono">${TC.fmt1(r.volume / r.viagens)}</td>
             </tr>`;
           }).join('')}
         </tbody>
-        <tfoot><tr><td style="font-weight:700;" colspan="2">${lista.length} caminhão${lista.length !== 1 ? 'ões' : ''}</td><td class="col-num cc-tdMono" style="font-weight:700;">${totalViagens}</td><td class="col-num cc-tdMono" style="font-weight:700;">${TC.fmt1(totalVol)}</td><td></td></tr></tfoot>
+        <tfoot><tr><td style="font-weight:700;" colspan="2">${lista.length} caminhão${lista.length !== 1 ? 'ões' : ''}</td><td class="col-num cc-tdMono" style="font-weight:700;">${totalViagens}</td><td class="col-num cc-tdMono" style="font-weight:700;">${TC.fmt1(totalVol)}</td><td class="col-num cc-tdMono" style="font-weight:700;">${_fRS(totalCusto)}</td><td></td></tr></tfoot>
       </table>
       </div>`;
   }
@@ -361,8 +386,42 @@ const ControleTerraplanagem = (() => {
         <div class="form-grupo"><label>Fornecedor</label><input type="text" id="tpc-ent-fornecedor" class="form-control" placeholder="opcional"></div>
         <div class="form-grupo"><label>Volume (m³)</label><input type="text" inputmode="decimal" id="tpc-ent-volume" class="form-control" placeholder="15.6"></div>
       </div>
+      <div class="form-grupo"><label>Valor da viagem (R$) — em branco usa o padrão do material (💰 Valores)</label><input type="text" inputmode="decimal" id="tpc-ent-valor" class="form-control" placeholder="${config.valorViagemTerra > 0 || config.valorViagemEntulho > 0 ? `padrão: terra ${_fRS(config.valorViagemTerra)} · entulho ${_fRS(config.valorViagemEntulho)}` : 'ex: 350'}"></div>
       <button class="btn btn-primario" data-perm="controleTerra:criar" onclick="TPC_UI.salvarEntrega()">+ Registrar Viagem</button>
     `;
+  }
+
+  // ── Valores padrão por material (R$/viagem — terra e entulho têm preços diferentes) ──
+  function abrirValores() {
+    if (!Permissions.pode('controleTerra', 'editar')) { Utils.toast('Sem permissão.', 'erro'); return; }
+    const el = document.getElementById('tpc-valores-body');
+    if (!el) return;
+    el.innerHTML = `
+      <p class="text-sm text-muted mb-1">Valor padrão por viagem, por material. Viagens sem valor próprio usam esses valores — mudar aqui atualiza retroativamente o custo de todas elas (o valor não fica gravado na viagem).</p>
+      <div class="form-row">
+        <div class="form-grupo"><label>🟤 Terra — R$ por viagem</label><input type="text" inputmode="decimal" id="tpc-val-terra" class="form-control" value="${config.valorViagemTerra || ''}" placeholder="ex: 350"></div>
+        <div class="form-grupo"><label>🧱 Entulho — R$ por viagem</label><input type="text" inputmode="decimal" id="tpc-val-entulho" class="form-control" value="${config.valorViagemEntulho || ''}" placeholder="ex: 450"></div>
+      </div>
+      <button class="btn btn-primario" onclick="TPC_UI.salvarValores()">✓ Salvar</button>
+    `;
+    Utils.abrirModal('modal-tpc-valores');
+  }
+  async function salvarValores() {
+    if (!Permissions.pode('controleTerra', 'editar')) { Utils.toast('Sem permissão.', 'erro'); return; }
+    config.valorViagemTerra = TC.num(document.getElementById('tpc-val-terra').value);
+    config.valorViagemEntulho = TC.num(document.getElementById('tpc-val-entulho').value);
+    Utils.mostrarLoading();
+    try {
+      await db.collection('obras').doc(obraId).collection('config').doc(DOC_CONFIG).set(
+        { valorViagemTerra: config.valorViagemTerra, valorViagemEntulho: config.valorViagemEntulho }, { merge: true });
+      Utils.toast('✓ Valores salvos!', 'sucesso');
+      Utils.fecharModal('modal-tpc-valores');
+      renderizar();
+    } catch (e) {
+      Utils.toast('Erro: ' + e.message, 'erro');
+    } finally {
+      Utils.esconderLoading();
+    }
   }
   function autoVolumePorPlaca() {
     const placaSel = document.getElementById('tpc-ent-placa').value;
@@ -380,10 +439,11 @@ const ControleTerraplanagem = (() => {
     const tipo = document.getElementById('tpc-ent-tipo').value.trim();
     const fornecedor = document.getElementById('tpc-ent-fornecedor').value.trim();
     const volume = TC.num(document.getElementById('tpc-ent-volume').value);
+    const valor = TC.num(document.getElementById('tpc-ent-valor').value);
     if (!data || !(volume > 0)) { Utils.toast('Informe data e volume maior que zero.', 'alerta'); return; }
     Utils.mostrarLoading();
     try {
-      await Database.criar(obraId, COL_ENTREGAS, { nCanhoto, data, placa: placaSel, material, tipo, fornecedor, volume }, TC.genId('ent'));
+      await Database.criar(obraId, COL_ENTREGAS, { nCanhoto, data, placa: placaSel, material, tipo, fornecedor, volume, valor }, TC.genId('ent'));
       Utils.toast('✓ Viagem registrada!', 'sucesso');
       Utils.fecharModal('modal-tpc-entrega');
       await carregar();
@@ -614,7 +674,7 @@ const ControleTerraplanagem = (() => {
     el.innerHTML = `
       <div class="cc-tableWrap" style="max-height:400px;overflow-y:auto;">
       <table class="cc-table">
-        <thead><tr><th>Canhoto</th><th>Data</th><th>Placa</th><th>Material</th><th>Tipo</th><th class="col-num">Volume (m³)</th><th class="col-num">Acum. (m³)</th><th class="col-num">Acum. %</th><th class="col-acoes"></th></tr></thead>
+        <thead><tr><th>Canhoto</th><th>Data</th><th>Placa</th><th>Material</th><th>Tipo</th><th class="col-num">Volume (m³)</th><th class="col-num">Valor (R$)</th><th class="col-num">Acum. (m³)</th><th class="col-num">Acum. %</th><th class="col-acoes"></th></tr></thead>
         <tbody>
           ${lista.map(e => {
             const acum = acumuladoPorId[e.id] || 0;
@@ -626,13 +686,14 @@ const ControleTerraplanagem = (() => {
               <td>${esc(e.material || '—')}</td>
               <td>${esc(e.tipo || '—')}</td>
               <td class="col-num cc-tdMono">${TC.fmt1(e.volume)}</td>
+              <td class="col-num cc-tdMono">${_fRS(_valorViagem(e))}</td>
               <td class="col-num cc-tdMono">${TC.fmt1(acum)}</td>
               <td class="col-num cc-tdAccent" style="font-weight:700;">${TC.fmt1(pctAcum)}%</td>
               <td class="col-acoes"><button class="btn btn-secundario btn-sm" data-perm="controleTerra:excluir" style="color:var(--cv-red);" onclick="TPC_UI.excluirEntrega('${e.id}')">🗑</button></td>
             </tr>`;
           }).join('')}
         </tbody>
-        <tfoot><tr><td colspan="5" style="font-weight:700;">${lista.length} viagem${lista.length !== 1 ? 'ns' : ''}</td><td class="col-num cc-tdMono" style="font-weight:700;">${TC.fmt1(lista.reduce((s, e) => s + TC.num(e.volume), 0))}</td><td colspan="3"></td></tr></tfoot>
+        <tfoot><tr><td colspan="5" style="font-weight:700;">${lista.length} viagem${lista.length !== 1 ? 'ns' : ''}</td><td class="col-num cc-tdMono" style="font-weight:700;">${TC.fmt1(lista.reduce((s, e) => s + TC.num(e.volume), 0))}</td><td class="col-num cc-tdMono" style="font-weight:700;">${_fRS(_custoTotal(lista))}</td><td colspan="3"></td></tr></tfoot>
       </table>
       </div>`;
   }
@@ -676,21 +737,26 @@ const ControleTerraplanagem = (() => {
     const lista = entregas.filter(e => e.data && e.data >= inicio && e.data <= fim).sort((a, b) => (a.data || '').localeCompare(b.data || ''));
     const porDia = {}, porCaminhao = {};
     lista.forEach(e => {
+      const custo = _valorViagem(e);
       const d = e.data || '—';
-      porDia[d] = porDia[d] || { data: d, viagens: 0, volume: 0 };
-      porDia[d].viagens++; porDia[d].volume += TC.num(e.volume);
+      porDia[d] = porDia[d] || { data: d, viagens: 0, volume: 0, custo: 0 };
+      porDia[d].viagens++; porDia[d].volume += TC.num(e.volume); porDia[d].custo += custo;
       const chave = e.placa || '— sem placa —';
-      porCaminhao[chave] = porCaminhao[chave] || { placa: chave, viagens: 0, volume: 0 };
-      porCaminhao[chave].viagens++; porCaminhao[chave].volume += TC.num(e.volume);
+      porCaminhao[chave] = porCaminhao[chave] || { placa: chave, viagens: 0, volume: 0, custo: 0 };
+      porCaminhao[chave].viagens++; porCaminhao[chave].volume += TC.num(e.volume); porCaminhao[chave].custo += custo;
     });
     const dias = Object.values(porDia).sort((a, b) => a.data.localeCompare(b.data));
+    // custo acumulado dia a dia (curva de gasto até o momento)
+    let accCusto = 0;
+    dias.forEach(d => { accCusto += d.custo; d.custoAcum = accCusto; });
     const caminhoesList = Object.values(porCaminhao).sort((a, b) => b.volume - a.volume);
     const porMaterial = _volPorMaterial(lista);
+    porMaterial.forEach(g => { g.custo = lista.filter(e => _classMat(e.material) === g.material).reduce((s, e) => s + _valorViagem(e), 0); });
     const totalVolume = lista.reduce((s, e) => s + TC.num(e.volume), 0);
+    const totalCusto = lista.reduce((s, e) => s + _valorViagem(e), 0);
     const volTerra = (porMaterial.find(g => g.material === 'TERRA') || {}).volume || 0;
     const volEntulho = (porMaterial.find(g => g.material === 'ENTULHO') || {}).volume || 0;
-    const totalCaminhoes = caminhoesList.filter(c => c.placa !== '— sem placa —').length;
-    return { inicio, fim, lista, dias, caminhoesList, porMaterial, totalVolume, volTerra, volEntulho, totalViagens: lista.length, totalCaminhoes };
+    return { inicio, fim, lista, dias, caminhoesList, porMaterial, totalVolume, totalCusto, volTerra, volEntulho, totalViagens: lista.length };
   }
 
   function gerarRelatorioPeriodo() {
@@ -710,25 +776,29 @@ const ControleTerraplanagem = (() => {
       return;
     }
     const maxVol = Math.max(...r.dias.map(d => d.volume), 1);
+    const maxCusto = Math.max(...r.dias.map(d => d.custoAcum), 1);
     const barW = Math.max(5, Math.min(26, 620 / r.dias.length - 4));
     const chartH = 110;
     const chartW = r.dias.length * (barW + 4);
     const bars = r.dias.map((d, i) => {
       const h = (d.volume / maxVol) * chartH;
       const x = i * (barW + 4);
-      return `<rect x="${x}" y="${chartH - h}" width="${barW}" height="${Math.max(1, h)}" fill="var(--cor-primaria,#f5c800)" rx="1.5"><title>${esc(d.data)}: ${TC.fmt1(d.volume)} m³</title></rect>`;
+      return `<rect x="${x}" y="${chartH - h}" width="${barW}" height="${Math.max(1, h)}" fill="var(--cor-primaria,#f5c800)" rx="1.5"><title>${esc(d.data)}: ${TC.fmt1(d.volume)} m³ · ${_fRS(d.custo)}</title></rect>`;
     }).join('');
+    // Linha de custo acumulado por cima das barras (escala própria, normalizada pelo total)
+    const linhaCusto = r.dias.length > 1 && r.totalCusto > 0 ? `<polyline points="${r.dias.map((d, i) => `${(i * (barW + 4) + barW / 2).toFixed(1)},${(chartH - (d.custoAcum / maxCusto) * chartH).toFixed(1)}`).join(' ')}" fill="none" stroke="#16a34a" stroke-width="2.5"/>` : '';
     el.innerHTML = `
       <div class="cc-kpiGrid" style="grid-template-columns:repeat(5,1fr);margin-bottom:14px;">
         <div class="cc-kpi"><div class="cc-kpiIcon">📋</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Viagens</div><div class="cc-kpiValue">${r.totalViagens}</div></div></div>
         <div class="cc-kpi cc-kpiGreen"><div class="cc-kpiIcon">🟤</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Terra</div><div class="cc-kpiValue">${TC.fmt1(r.volTerra)}<span class="cc-kpiUnit">m³</span></div></div></div>
         <div class="cc-kpi cc-kpiOrange"><div class="cc-kpiIcon">🧱</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Entulho</div><div class="cc-kpiValue">${TC.fmt1(r.volEntulho)}<span class="cc-kpiUnit">m³</span></div></div></div>
-        <div class="cc-kpi cc-kpiBlue"><div class="cc-kpiIcon">🚚</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Caminhões</div><div class="cc-kpiValue">${r.totalCaminhoes}</div></div></div>
+        <div class="cc-kpi cc-kpiBlue"><div class="cc-kpiIcon">💰</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Valor Gasto</div><div class="cc-kpiValue" style="font-size:1.05rem;">${_fRS(r.totalCusto)}</div></div></div>
         <div class="cc-kpi cc-kpiPurple"><div class="cc-kpiIcon">📅</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Dias c/ Registro</div><div class="cc-kpiValue">${r.dias.length}</div></div></div>
       </div>
-      <div style="overflow-x:auto;margin-bottom:14px;background:var(--cv-surface2);border-radius:8px;padding:10px;">
-        <svg viewBox="0 0 ${Math.max(chartW, 100)} ${chartH + 6}" width="100%" style="max-width:${Math.max(chartW, 300)}px;height:${chartH + 6}px;display:block;">${bars}</svg>
+      <div style="overflow-x:auto;margin-bottom:6px;background:var(--cv-surface2);border-radius:8px;padding:10px;">
+        <svg viewBox="0 0 ${Math.max(chartW, 100)} ${chartH + 6}" width="100%" style="max-width:${Math.max(chartW, 300)}px;height:${chartH + 6}px;display:block;">${bars}${linhaCusto}</svg>
       </div>
+      <div style="font-size:.72rem;color:var(--cv-text3);margin-bottom:14px;">🟨 volume por dia (m³) · <span style="color:#16a34a;font-weight:700;">▬ custo acumulado</span> (${_fRS(r.totalCusto)} no total)</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <button class="btn btn-primario btn-sm" onclick="TPC_UI.baixarRelatorioPDF()">💾 Baixar PDF</button>
         <button class="btn btn-secundario btn-sm" onclick="TPC_UI.compartilharRelatorioPDF()">📤 Compartilhar</button>
@@ -768,7 +838,7 @@ const ControleTerraplanagem = (() => {
       { v: TC.fmt1(r.volTerra), l: 'TERRA (M³)' },
       { v: TC.fmt1(r.volEntulho), l: 'ENTULHO (M³)' },
       { v: TC.fmt1(r.totalVolume), l: 'VOLUME TOTAL (M³)' },
-      { v: String(r.totalCaminhoes), l: 'CAMINHÕES' },
+      { v: _fRS(r.totalCusto), l: 'VALOR GASTO', menor: true },
       ...(k.volEmpolado > 0 ? [{ v: TC.fmt1((r.volTerra / k.volEmpolado) * 100) + '%', l: 'TERRA × PREVISTO' }] : [{ v: String(r.dias.length), l: 'DIAS C/ REGISTRO' }]),
     ];
     const gap = 4, cw = (PW - 24 - gap * (cards.length - 1)) / cards.length, ch = 17;
@@ -776,7 +846,7 @@ const ControleTerraplanagem = (() => {
       const x = 12 + i * (cw + gap);
       doc.setFillColor(250, 250, 250); doc.setDrawColor(229, 229, 229);
       doc.roundedRect(x, y, cw, ch, 1.8, 1.8, 'FD');
-      doc.setTextColor(13, 13, 13); doc.setFontSize(13); doc.setFont(undefined, 'bold');
+      doc.setTextColor(13, 13, 13); doc.setFontSize(card.menor ? 9.5 : 13); doc.setFont(undefined, 'bold');
       doc.text(card.v, x + cw / 2, y + 8, { align: 'center' });
       doc.setTextColor(120); doc.setFontSize(5.6); doc.setFont(undefined, 'normal');
       doc.text(card.l, x + cw / 2, y + 13.5, { align: 'center' });
@@ -786,10 +856,15 @@ const ControleTerraplanagem = (() => {
     // Gráfico de barras (volume por dia) — desenhado nativo no PDF
     if (r.dias.length) {
       doc.setTextColor(13, 13, 13); doc.setFontSize(9.5); doc.setFont(undefined, 'bold');
-      doc.text('Volume por dia', 12, y + 3);
+      doc.text('Volume por dia + custo acumulado', 12, y + 3);
+      doc.setFontSize(6); doc.setFont(undefined, 'normal'); doc.setTextColor(100);
+      doc.text('barras = volume (m³)', PW - 12, y, { align: 'right' });
+      doc.setTextColor(22, 163, 74);
+      doc.text('linha verde = R$ acumulado', PW - 12, y + 3, { align: 'right' });
       y += 7;
       const chartX = 12, chartW2 = PW - 24, chartYTop = y, chartH2 = 36;
       const maxVol = Math.max(...r.dias.map(d => d.volume), 1);
+      const maxCustoAcum = Math.max(...r.dias.map(d => d.custoAcum), 1);
       doc.setDrawColor(226, 232, 240); doc.setLineWidth(0.1);
       for (let g = 0; g <= 4; g++) {
         const gy = chartYTop + chartH2 - (g / 4) * chartH2;
@@ -804,6 +879,20 @@ const ControleTerraplanagem = (() => {
         const x = chartX + i * passoBarra + 0.3;
         doc.rect(x, chartYTop + chartH2 - h, barW2, Math.max(0.3, h), 'F');
       });
+      // Linha do custo acumulado (verde) sobre as barras, escala própria
+      if (r.totalCusto > 0 && n > 1) {
+        doc.setDrawColor(22, 163, 74); doc.setLineWidth(0.7);
+        let px = null, py = null;
+        r.dias.forEach((d, i) => {
+          const lx = chartX + i * passoBarra + passoBarra / 2;
+          const ly = chartYTop + chartH2 - (d.custoAcum / maxCustoAcum) * chartH2;
+          if (px !== null) doc.line(px, py, lx, ly);
+          px = lx; py = ly;
+        });
+        doc.setFontSize(6); doc.setTextColor(22, 163, 74); doc.setFont(undefined, 'bold');
+        doc.text(_fRS(r.totalCusto), chartX + chartW2, chartYTop - 1.5, { align: 'right' });
+        doc.setFont(undefined, 'normal');
+      }
       doc.setDrawColor(150); doc.setLineWidth(0.2);
       doc.line(chartX, chartYTop + chartH2, chartX + chartW2, chartYTop + chartH2);
       doc.setFontSize(5.5); doc.setTextColor(100);
@@ -822,18 +911,18 @@ const ControleTerraplanagem = (() => {
     doc.text('Volume por material', 12, y + 3);
     doc.autoTable({
       startY: y + 5,
-      head: [['Material', 'Classificação', 'Viagens', 'Volume (m³)', '% do total']],
+      head: [['Material', 'Classificação', 'Viagens', 'Volume (m³)', 'Custo (R$)', '% do total']],
       body: r.porMaterial.map(g => [
         g.material,
         g.material === 'TERRA' ? 'Terraplanagem' : g.material === 'ENTULHO' ? 'Demolição (fora da terraplanagem)' : 'Fora da terraplanagem',
-        String(g.viagens), TC.fmt1(g.volume),
+        String(g.viagens), TC.fmt1(g.volume), _fRS(g.custo),
         r.totalVolume > 0 ? TC.fmt1((g.volume / r.totalVolume) * 100) + '%' : '—',
       ]),
       margin: { left: 12, right: 12 },
       styles: { fontSize: 8, cellPadding: 1.8 },
       headStyles: { fillColor: [13, 13, 13], textColor: [245, 200, 0], fontStyle: 'bold' },
       alternateRowStyles: { fillColor: [250, 250, 250] },
-      columnStyles: { 2: { halign: 'center' }, 3: { halign: 'right', fontStyle: 'bold' }, 4: { halign: 'right' } },
+      columnStyles: { 2: { halign: 'center' }, 3: { halign: 'right' }, 4: { halign: 'right', fontStyle: 'bold' }, 5: { halign: 'right' } },
     });
     y = doc.lastAutoTable.finalY + 8;
 
@@ -843,48 +932,50 @@ const ControleTerraplanagem = (() => {
     doc.text('Volume por dia (detalhado)', 12, y + 3);
     doc.autoTable({
       startY: y + 5,
-      head: [['Data', 'Viagens', 'Volume (m³)', '% do total']],
-      body: r.dias.map(d => [_fBR(d.data), String(d.viagens), TC.fmt1(d.volume), r.totalVolume > 0 ? TC.fmt1((d.volume / r.totalVolume) * 100) + '%' : '—']),
+      head: [['Data', 'Viagens', 'Volume (m³)', 'Custo (R$)', 'R$ Acumulado', '% do total']],
+      body: r.dias.map(d => [_fBR(d.data), String(d.viagens), TC.fmt1(d.volume), _fRS(d.custo), _fRS(d.custoAcum), r.totalVolume > 0 ? TC.fmt1((d.volume / r.totalVolume) * 100) + '%' : '—']),
       margin: { left: 12, right: 12 },
       styles: { fontSize: 8, cellPadding: 1.8 },
       headStyles: { fillColor: [245, 200, 0], textColor: [13, 13, 13], fontStyle: 'bold' },
       alternateRowStyles: { fillColor: [250, 250, 250] },
-      columnStyles: { 1: { halign: 'center' }, 2: { halign: 'right' }, 3: { halign: 'right' } },
+      columnStyles: { 1: { halign: 'center' }, 2: { halign: 'right' }, 3: { halign: 'right' }, 4: { halign: 'right', fontStyle: 'bold' }, 5: { halign: 'right' } },
     });
     y = doc.lastAutoTable.finalY + 8;
 
-    // Tabela por caminhão
-    if (y > 235) { doc.addPage(); y = 14; }
-    doc.setTextColor(13, 13, 13); doc.setFontSize(9.5); doc.setFont(undefined, 'bold');
-    doc.text('Volume por caminhão', 12, y + 3);
-    doc.autoTable({
-      startY: y + 5,
-      head: [['Placa', 'Empresa', 'Viagens', 'Volume Total (m³)', 'Média/Viagem (m³)']],
-      body: r.caminhoesList.map(c => {
-        const cam = caminhoes.find(x => x.placa === c.placa);
-        return [c.placa, cam?.empresa || '—', String(c.viagens), TC.fmt1(c.volume), TC.fmt1(c.volume / c.viagens)];
-      }),
-      margin: { left: 12, right: 12 },
-      styles: { fontSize: 8, cellPadding: 1.8 },
-      headStyles: { fillColor: [13, 13, 13], textColor: [245, 200, 0], fontStyle: 'bold' },
-      alternateRowStyles: { fillColor: [250, 250, 250] },
-      columnStyles: { 2: { halign: 'center' }, 3: { halign: 'right' }, 4: { halign: 'right' } },
-    });
-    y = doc.lastAutoTable.finalY + 8;
-
-    // Tabela detalhada — todas as viagens do período
+    // Tabela detalhada — todas as viagens do período (mais importante — vem antes)
     if (y > 225) { doc.addPage(); y = 14; }
     doc.setTextColor(13, 13, 13); doc.setFontSize(9.5); doc.setFont(undefined, 'bold');
     doc.text(`Viagens do período (${r.lista.length})`, 12, y + 3);
     doc.autoTable({
       startY: y + 5,
-      head: [['Canhoto', 'Data', 'Placa', 'Material', 'Volume (m³)']],
-      body: r.lista.map(e => [e.nCanhoto || '—', _fBR(e.data), e.placa || '—', e.material || '—', TC.fmt1(e.volume)]),
+      head: [['Canhoto', 'Data', 'Placa', 'Material', 'Volume (m³)', 'Valor (R$)']],
+      body: r.lista.map(e => [e.nCanhoto || '—', _fBR(e.data), e.placa || '—', e.material || '—', TC.fmt1(e.volume), _fRS(_valorViagem(e))]),
+      foot: [[{ content: 'TOTAL', colSpan: 4, styles: { fontStyle: 'bold', halign: 'right' } }, { content: TC.fmt1(r.totalVolume), styles: { fontStyle: 'bold', halign: 'right' } }, { content: _fRS(r.totalCusto), styles: { fontStyle: 'bold', halign: 'right' } }]],
       margin: { left: 12, right: 12 },
       styles: { fontSize: 7, cellPadding: 1.3 },
       headStyles: { fillColor: [245, 200, 0], textColor: [13, 13, 13], fontStyle: 'bold' },
+      footStyles: { fillColor: [255, 252, 240], textColor: [13, 13, 13] },
       alternateRowStyles: { fillColor: [250, 250, 250] },
-      columnStyles: { 4: { halign: 'right' } },
+      columnStyles: { 4: { halign: 'right' }, 5: { halign: 'right', fontStyle: 'bold' } },
+    });
+    y = doc.lastAutoTable.finalY + 8;
+
+    // Tabela por caminhão (menos importante — por último)
+    if (y > 235) { doc.addPage(); y = 14; }
+    doc.setTextColor(13, 13, 13); doc.setFontSize(9.5); doc.setFont(undefined, 'bold');
+    doc.text('Volume por caminhão', 12, y + 3);
+    doc.autoTable({
+      startY: y + 5,
+      head: [['Placa', 'Empresa', 'Viagens', 'Volume Total (m³)', 'Custo (R$)', 'Média/Viagem (m³)']],
+      body: r.caminhoesList.map(c => {
+        const cam = caminhoes.find(x => x.placa === c.placa);
+        return [c.placa, cam?.empresa || '—', String(c.viagens), TC.fmt1(c.volume), _fRS(c.custo), TC.fmt1(c.volume / c.viagens)];
+      }),
+      margin: { left: 12, right: 12 },
+      styles: { fontSize: 8, cellPadding: 1.8 },
+      headStyles: { fillColor: [13, 13, 13], textColor: [245, 200, 0], fontStyle: 'bold' },
+      alternateRowStyles: { fillColor: [250, 250, 250] },
+      columnStyles: { 2: { halign: 'center' }, 3: { halign: 'right' }, 4: { halign: 'right', fontStyle: 'bold' }, 5: { halign: 'right' } },
     });
 
     return doc.output('blob');
@@ -928,7 +1019,7 @@ const ControleTerraplanagem = (() => {
           Utils.esconderLoading();
           await navigator.share({
             files: [file], title: 'Relatório de Terraplanagem',
-            text: `📦 Relatório de Terraplanagem — ${obraNome}\nPeríodo: ${_fBR(_relPeriodo.inicio)} a ${_fBR(_relPeriodo.fim)}\n${_relPeriodo.totalViagens} viagens · ${TC.fmt1(_relPeriodo.totalVolume)} m³`,
+            text: `📦 Relatório de Terraplanagem — ${obraNome}\nPeríodo: ${_fBR(_relPeriodo.inicio)} a ${_fBR(_relPeriodo.fim)}\n${_relPeriodo.totalViagens} viagens · ${TC.fmt1(_relPeriodo.totalVolume)} m³ · ${_fRS(_relPeriodo.totalCusto)}`,
           });
           compartilhado = true;
         }
@@ -983,6 +1074,7 @@ const ControleTerraplanagem = (() => {
     abrirEntrega, autoVolumePorPlaca, salvarEntrega, excluirEntrega,
     importarPlanilha, limparBase,
     abrirRelatorioPeriodo, gerarRelatorioPeriodo, baixarRelatorioPDF, compartilharRelatorioPDF,
+    abrirValores, salvarValores,
   };
 })();
 

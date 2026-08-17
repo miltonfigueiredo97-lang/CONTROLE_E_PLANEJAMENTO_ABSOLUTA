@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.7.1.6',
+  versaoAtual: 'V3.7.1.7',
 
   versoes: [
     {
@@ -7949,6 +7949,20 @@ const NotasVersao = {
         "Achada uma causa raiz provável de vários casos de \"corrigi no código mas o usuário continua vendo o bug antigo\": os arquivos js/*.js e css/*.css eram carregados sem nenhum parâmetro de versão (ex: js/controle-estacas.js). O navegador pode cachear esse arquivo agressivamente e continuar servindo a versão ANTIGA mesmo depois do deploy novo — mesmo com o número da versão certo aparecendo na tela (esse texto vem de outro lugar, o script em si ficava desatualizado).",
         "Corrigido em TODOS os 40 arquivos HTML do sistema: agora todo <script src=\"js/...\"> e <link href=\"css/...\"> carrega com ?v=VERSAO (ex: controle-estacas.js?v=V3.7.1.6). Toda vez que a versão muda, o navegador é obrigado a buscar o arquivo de novo.",
         "Não precisa de passo manual extra daqui pra frente: o mesmo comando de bump de versão (sed trocando o número antigo pelo novo em todos os HTMLs) já atualiza o badge E o parâmetro de cache-busting ao mesmo tempo, automaticamente."
+      ]
+    },
+    {
+      "versao": "V3.7.1.7",
+      "data": "2026-08-15",
+      "tipo": "melhoria",
+      "titulo": "Controle de Terraplanagem: custo por viagem (R$) em tudo",
+      "itens": [
+        "Novo botão \"💰 Valores\": define o valor padrão POR VIAGEM de Terra e de Entulho (preços diferentes). Viagens sem valor próprio usam o padrão do material — e como o valor é resolvido na leitura (não fica gravado), mudar o padrão atualiza retroativamente todas as viagens já lançadas, incluindo as importadas por planilha.",
+        "Registrar Viagem ganhou o campo \"Valor da viagem (R$)\" — preenchido sobrepõe o padrão; em branco usa o padrão do material.",
+        "Custo em tudo na tela: card \"Valor Gasto\" no topo, coluna Valor na lista de Viagens e coluna Custo nas abas Por Material, Por Dia e Por Caminhão.",
+        "Relatório PDF: card \"VALOR GASTO\" no resumo, linha verde de custo acumulado por cima do gráfico de volume por dia (com o total em R$ na ponta), colunas Custo e R$ Acumulado na tabela por dia, Valor em cada viagem (com total no rodapé) e Custo por caminhão.",
+        "Ordem das tabelas do PDF por importância: Volume por material → Volume por dia → Viagens do período → Volume por caminhão (por último).",
+        "Card \"Caminhões\" (contagem de placas distintas) removido da tela, da prévia e do PDF — informação inútil, deu lugar ao Valor Gasto."
       ]
     }
   ],
