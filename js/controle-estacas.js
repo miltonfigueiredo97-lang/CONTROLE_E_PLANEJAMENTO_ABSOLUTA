@@ -885,6 +885,11 @@ const ControleEstacas = (() => {
     const numero = parseInt(document.getElementById('ce-bt-numero-novo').value) || _proximoNumeroBT(bt.concId);
     const volumePrevisto = EC.num((document.getElementById('ce-bt-volume-novo').value || '').replace(',', '.'));
     if (!volumePrevisto) { Utils.toast('Informe o volume previsto da BT.', 'alerta'); return; }
+    // Bloqueia número repetido — 2 BTs (documentos diferentes) com o MESMO
+    // número apareciam iguais no seletor ("BT-1" duas vezes), passando por
+    // cima do bloqueio de duplicidade (que só compara pelo ID interno).
+    const jaExiste = _btsDaConcretagem(bt.concId).some(b => b.numero === numero);
+    if (jaExiste) { Utils.toast(`Já existe uma BT-${numero} nesta concretagem — escolha outro número.`, 'alerta'); return; }
     Utils.mostrarLoading();
     try {
       const id = await Database.criar(obraId, COL_BTS, { concretagemId: bt.concId, numero, volumePrevisto, notaFiscal: '', codigoBT: '', obraId }, EC.genId('bt'));
@@ -918,6 +923,9 @@ const ControleEstacas = (() => {
     const sobra = EC.num((document.getElementById('ce-bt-sobra-edit')?.value || '').replace(',', '.'));
     const perda = EC.num((document.getElementById('ce-bt-perda-edit')?.value || '').replace(',', '.'));
     const perdaCocho = EC.num((document.getElementById('ce-bt-perdacocho-edit')?.value || '').replace(',', '.'));
+    // Mesma proteção da criação — não deixa renomear pra um número que já é de OUTRA BT
+    const conflito = _btsDaConcretagem(bt.concId).find(b => b.numero === numero && b.id !== bt.btId);
+    if (conflito) { Utils.toast(`Já existe uma BT-${numero} nesta concretagem — escolha outro número.`, 'alerta'); return; }
     Utils.mostrarLoading();
     try {
       await Database.atualizar(obraId, COL_BTS, bt.btId, { numero, volumePrevisto, notaFiscal: nf, codigoBT: cod });
@@ -1213,12 +1221,19 @@ const ControleEstacas = (() => {
     if (!el) return;
     if (!acompConcretagemId) { el.innerHTML = ''; return; }
     const btsConc = _btsDaConcretagem(acompConcretagemId);
+    // Detecta números repetidos (2 documentos de BT diferentes com o mesmo
+    // número) — dado ruim que já existia antes da validação de duplicidade.
+    const contagemNumero = new Map();
+    btsConc.forEach(b => contagemNumero.set(b.numero, (contagemNumero.get(b.numero) || 0) + 1));
+    const numerosDuplicados = [...contagemNumero.entries()].filter(([, qtd]) => qtd > 1).map(([n]) => n);
 
     let html = `
+      ${numerosDuplicados.length ? `<div class="cc-alertRed" style="margin-bottom:10px;">⚠ Número${numerosDuplicados.length > 1 ? 's' : ''} repetido${numerosDuplicados.length > 1 ? 's' : ''} entre BTs diferentes: ${numerosDuplicados.map(n => 'BT-' + n).join(', ')} — são documentos DIFERENTES com o mesmo número, marcados em vermelho abaixo. Confira qual é a certa e exclua a duplicata (os lançamentos dela precisam ser refeitos na BT certa antes de excluir).</div>` : ''}
       <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
         ${btsConc.map(b => {
           const jafoi = lancamentos.some(l => l.btConfigId === b.id);
-          return `<span style="display:inline-flex;align-items:center;gap:4px;border:1px solid ${jafoi ? '#16a34a' : 'var(--cv-border,#e2e8f0)'};border-radius:8px;padding:4px 4px 4px 10px;font-size:.82rem;">
+          const duplicada = numerosDuplicados.includes(b.numero);
+          return `<span style="display:inline-flex;align-items:center;gap:4px;border:1px solid ${duplicada ? 'var(--cv-red,#ef4444)' : jafoi ? '#16a34a' : 'var(--cv-border,#e2e8f0)'};${duplicada ? 'background:rgba(239,68,68,.06);' : ''}border-radius:8px;padding:4px 4px 4px 10px;font-size:.82rem;">
             BT-${b.numero} · ${EC.fmt1(b.volumePrevisto)}m³${jafoi ? ' ✓' : ''}
             <button class="btn btn-secundario btn-sm" style="padding:2px 6px;" onclick="CE.abrirEditarMetaBT('${b.id}')" title="Editar BT">✎</button>
             <button class="btn btn-secundario btn-sm" style="padding:2px 6px;color:var(--cv-red,#ef4444);" onclick="CE.excluirBTEstacas('${b.id}')" title="Excluir BT">🗑</button>
@@ -1281,8 +1296,13 @@ const ControleEstacas = (() => {
   function _opcoesBTHTML(selId) {
     const btsConc = _btsDaConcretagem(estacaAtual.concId);
     const idsUsados = new Set(estacaAtual.linhas.map(l => l.btId).filter(Boolean));
+    // Compara também por NÚMERO (não só ID) — protege contra dado antigo com
+    // 2 BTs diferentes (documentos distintos) e o MESMO número, que passariam
+    // batido no bloqueio antigo (que só comparava por ID interno).
+    const numerosUsados = new Set([...idsUsados].map(id => btsConfig.find(x => x.id === id)?.numero).filter(n => n !== undefined));
     return `<option value="">— BT —</option>` + btsConc.filter(b => {
-      if (b.id === selId || !idsUsados.has(b.id)) return true;
+      if (b.id === selId) return true;
+      if (idsUsados.has(b.id) || numerosUsados.has(b.numero)) return false;
       const pctOutras = _pctBTAlocadaOutrasPecas(b.id, estacaAtual.pecaId);
       return mostrarBTsCompletas || pctOutras < 99.99;
     }).map(b => {

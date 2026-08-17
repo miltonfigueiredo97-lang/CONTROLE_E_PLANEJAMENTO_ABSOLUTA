@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.7.1.8',
+  versaoAtual: 'V3.7.1.9',
 
   versoes: [
     {
@@ -7974,6 +7974,17 @@ const NotasVersao = {
         "Novos botões \"📄 Relatório PDF\" e \"📤 Compartilhar\" no Levantamento de Terraplanagem — gera um PDF com todos os dados do levantamento: cards de volume (horizontal, vertical, médio de banco, taxa de empolamento e volume a remover), o PROJETO com todas as seções desenhadas por cima (linhas coloridas, pontos numerados, rótulo S1/S2... — verticais tracejadas pra diferenciar das horizontais) e IMAGENS DO 3D do corte (uma pras seções horizontais, outra pras verticais), com a mesma coloração por profundidade da tela.",
         "O PDF fecha com as tabelas de seções das duas direções: área, comprimento, distância até a próxima e volume entre seções.",
         "\"📤 Compartilhar\" abre o menu nativo do celular com o PDF anexado (WhatsApp incluso); em navegador sem esse suporte, baixa o arquivo pra anexar manualmente."
+      ]
+    },
+    {
+      "versao": "V3.7.1.9",
+      "data": "2026-08-15",
+      "tipo": "correcao",
+      "titulo": "Controle de Estacas: achada a causa raiz do \"BT duplicada\" — 2 BTs diferentes com o mesmo número",
+      "itens": [
+        "Causa raiz real do bug que parecia insistir: era possível criar 2 BTs (documentos diferentes no banco) com o MESMO número — ambas apareciam como \"BT-1\" no seletor, e por serem documentos DIFERENTES, o bloqueio de duplicidade (que comparava só pelo ID interno) não pegava.",
+        "Corrigido em 2 pontos: criar uma BT nova ou editar o número de uma já existente agora é bloqueado se o número já pertencer a outra BT da mesma concretagem. Além disso, o seletor de BT do popup de lançar por estaca agora compara também por NÚMERO (não só por ID) — protege contra o dado antigo que já ficou duplicado.",
+        "Na tela \"Gerenciar BTs\", números repetidos entre documentos diferentes agora aparecem destacados em vermelho com um aviso — ajuda a achar e limpar manualmente o que já foi criado errado antes desta correção (os lançamentos da BT duplicada precisam ser conferidos e refeitos na BT certa antes de excluir a errada)."
       ]
     }
   ],
