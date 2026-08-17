@@ -145,21 +145,20 @@ const LevantamentoTerraplanagem = (() => {
     return { volH, volV, volMedio, volEmpolado };
   }
 
-  // ÚNICA convenção de cota, sempre: o valor que você digita — tanto a cota
-  // final (referência/fundo) quanto a cota do terreno — já é a altura direta
-  // em relação a UM ZERO comum. Positivo = acima do zero (corte). Negativo =
-  // abaixo do zero (aterro). Simples assim, sem precisar escolher nada.
-  // calcAreaSecao faz (cota-cotaFinal) — desloca cota por +cotaFinal, que
-  // cancela exatamente na subtração e sobra só o valor que você digitou.
+  // Altura de corte/aterro = cota do terreno MENOS cota final — subtração
+  // padrão, que já funciona certo com valores negativos dos dois lados (ex:
+  // terreno -4,57 e cota final -7,18 → altura = -4,57-(-7,18) = +2,61,
+  // positivo, corte — bate certo). A versão anterior deslocava a cota pela
+  // própria cota final antes de subtrair, o que CANCELAVA a cota final da
+  // conta (o resultado saía sempre = a cota digitada, ignorando o fundo) —
+  // por isso qualquer terreno com valor negativo saía tudo aterro, errado.
   function _ajustarConvencao(cotas, cotaFinal) {
-    const cf = TC.num(cotaFinal);
-    return { cotas: cotas.map(c => TC.num(c) + cf), cotaFinal: cf };
+    return { cotas: cotas.map(c => TC.num(c)), cotaFinal: TC.num(cotaFinal) };
   }
   // Mesma lógica, versão escalar (um ponto por vez) — usada no 3D, que
   // trabalha em cima de uma grade de pontos, não de arrays de seção.
   function _ajustarConvencaoEscalar(cota, cotaFinal) {
-    const cf = TC.num(cotaFinal);
-    return { cota: TC.num(cota) + cf, cotaFinal: cf };
+    return { cota: TC.num(cota), cotaFinal: TC.num(cotaFinal) };
   }
 
   function recalcArea(s) {

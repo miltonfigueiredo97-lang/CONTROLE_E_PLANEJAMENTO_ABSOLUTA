@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.9.6',
+  versaoAtual: 'V3.9.7',
 
   versoes: [
     {
@@ -8408,6 +8408,16 @@ const NotasVersao = {
       "itens": [
         "As 3 opções (Elevação/Profundidade/Relativa) eram complexidade desnecessária — na prática o lançamento é sempre o mesmo: cota final é a profundidade de referência (zero), e cada cota do terreno é digitada com sinal em relação a esse zero — positivo = acima (corte), negativo = abaixo (aterro). Sempre assim, sem escolher nada.",
         "Removida a pergunta de convenção ao criar área, removido o botão de trocar na tabela — só sobrou o campo Cota Final, direto. Testado matematicamente: com cotas +2, -1 e +3 (cota final -5), a área bate exatamente com os trapézios calculados a partir dos valores digitados, sem depender do valor da cota final."
+      ]
+    },
+    {
+      "versao": "V3.9.7",
+      "data": "2026-08-16",
+      "tipo": "correcao",
+      "titulo": "Corrigido de vez o cálculo: a versão anterior (V3.9.6) tinha um erro sério — cancelava a cota final da conta",
+      "itens": [
+        "A simplificação da V3.9.6 tentava fazer a cota digitada já ser a altura direta, mas a fórmula usada CANCELAVA a cota final da conta por engano — o resultado saía sempre igual ao valor bruto do terreno, ignorando totalmente a cota final. Num terreno com valores negativos (comum quando tudo é medido abaixo de uma referência zero), isso fazia TUDO sair aterro (negativo), mesmo terreno claramente mais alto que a cota final.",
+        "Corrigido: a altura volta a ser a subtração padrão (cota do terreno MENOS cota final) — que já funciona certo com valores negativos dos dois lados, sem precisar de nenhum ajuste especial. Testado com os números reais (terreno -4,5/-4,9, cota final -7,18): deu +24,80 m² positivo (corte, correto). Testado também o caso inverso (terreno já mais fundo que a cota final): deu negativo (aterro), como devia."
       ]
     }
   ],
