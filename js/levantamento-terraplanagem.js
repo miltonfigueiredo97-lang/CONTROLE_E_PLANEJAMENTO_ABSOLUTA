@@ -332,18 +332,20 @@ const LevantamentoTerraplanagem = (() => {
         ${areas.length ? `
         <div class="cc-tableWrap" style="margin-top:8px;">
           <table class="cc-table">
-            <thead><tr><th></th><th>Área</th><th class="col-num">Cota Final</th><th class="col-num">Pontos de Cota</th><th class="col-acoes"></th></tr></thead>
+            <thead><tr><th></th><th>Área</th><th class="col-num">Dimensões (m)</th><th class="col-num">Cota Final</th><th class="col-num">Pontos de Cota</th><th class="col-acoes"></th></tr></thead>
             <tbody>
-              ${areas.map((a, ai) => `<tr>
+              ${areas.map((a, ai) => { const dim = _dimensoesArea(a); return `<tr>
                 <td><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:${_corSecao(ai)};"></span></td>
                 <td>Área ${ai + 1}</td>
+                <td class="col-num cc-tdMono">${TC.fmt1(dim.largura)} × ${TC.fmt1(dim.altura)}</td>
                 <td class="col-num"><input type="text" inputmode="decimal" class="form-control" style="width:90px;display:inline-block;" value="${esc(a.cotaFinal)}" onchange="TP_UI.atualizarCotaArea('${a.id}', this.value)"></td>
                 <td class="col-num cc-tdMono">${pontosCota.filter(p => p.areaId === a.id).length}</td>
                 <td class="col-acoes"><button class="btn btn-secundario btn-sm" style="color:var(--cv-red);" onclick="TP_UI.removerArea('${a.id}')">🗑</button></td>
-              </tr>`).join('')}
+              </tr>`; }).join('')}
             </tbody>
           </table>
-        </div>` : ''}
+        </div>
+        <p class="text-sm text-muted mt-1">⚠️ As dimensões acima são a largura/altura REAL da área desenhada (calculadas pela escala). Se o prédio inteiro mede, por exemplo, 52m e sua área aparece com menos que isso, é porque o desenho da área não cobriu o prédio todo (redesenhe maior) — ou a escala foi calibrada errado (confira "🔁 Recalibrar" usando uma medida já impressa na planta, se tiver).</p>` : ''}
       </div>
     `;
   }
@@ -401,16 +403,26 @@ const LevantamentoTerraplanagem = (() => {
     renderSecoes();
   }
   function cancelarArea() { areaEmDesenho = null; ferramenta = null; renderSecoes(); }
+  function _dimensoesArea(area) {
+    const m = area.pontos.map(_paraMetros);
+    const xs = m.map(p => p.x), ys = m.map(p => p.y);
+    return { largura: Math.max(...xs) - Math.min(...xs), altura: Math.max(...ys) - Math.min(...ys) };
+  }
   async function concluirArea() {
     if (!areaEmDesenho || areaEmDesenho.pontos.length < 3) { Utils.toast('Marque pelo menos 3 pontos pra formar a área.', 'alerta'); return; }
     const cotaStr = prompt('Cota Final (referência/projeto) desta área:', config.cotaReferencia || '');
     if (cotaStr === null) return;
     const cotaFinal = TC.num(cotaStr);
+    const novaArea = { id: TC.genId('area'), pontos: areaEmDesenho.pontos, cotaFinal };
     config.areas = config.areas || [];
-    config.areas.push({ id: TC.genId('area'), pontos: areaEmDesenho.pontos, cotaFinal });
+    config.areas.push(novaArea);
     areaEmDesenho = null; ferramenta = null;
+    const dim = _dimensoesArea(novaArea);
     Utils.mostrarLoading();
-    try { await salvarConfig(); Utils.toast('✓ Área criada!', 'sucesso'); } finally { Utils.esconderLoading(); }
+    try {
+      await salvarConfig();
+      Utils.toast(`✓ Área criada! Dimensões reais: ${TC.fmt1(dim.largura)}m × ${TC.fmt1(dim.altura)}m — confira se bate com o que você esperava (ex: a medida impressa na planta).`, 'sucesso');
+    } finally { Utils.esconderLoading(); }
     renderSecoes();
   }
   async function removerArea(id) {

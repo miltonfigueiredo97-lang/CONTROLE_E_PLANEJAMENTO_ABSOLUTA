@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.8.1',
+  versaoAtual: 'V3.8.1.1',
 
   versoes: [
     {
@@ -8033,6 +8033,17 @@ const NotasVersao = {
         "Corrigido: cada área agora é marcada (areaId) e só é considerada \"vizinha\" de outra seção da MESMA área — a fronteira entre áreas aparece na lista como \"· fim desta área ·\" em vez de uma distância/volume errados. O 3D também passou a desenhar cada área como um sólido independente, lado a lado, nunca conectando o loft entre áreas diferentes.",
         "3D confirmado: topo = cota superior marcada (interpolada), fundo = cota final da área — já estava assim, mas ficava distorcido pelo bug acima.",
         "Nova tela \"👁️ Ver Seções\": mostra a planta com todas as linhas de seção desenhadas (clique numa linha ou na lista pra selecionar) e, embaixo, o perfil lateral 2D da seção escolhida — terreno x cota final, com o trecho em VERDE onde o terreno está acima da referência (corte) e em VERMELHO onde está abaixo. É assim que dá pra ver na hora por que uma área específica saiu negativa: quando o vermelho (terreno abaixo da cota final ali) pesa mais que o verde na seção."
+      ]
+    },
+    {
+      "versao": "V3.8.1.1",
+      "data": "2026-08-16",
+      "tipo": "melhoria",
+      "titulo": "Área: mostra a dimensão real (metros) pra diagnosticar área pequena demais ou escala calibrada errada",
+      "itens": [
+        "Confirmado: o número de seções geradas depende do tamanho da ÁREA que você desenha (dividida em grade de 1,5m) — se a área desenhada for menor que o prédio todo, sai menos seção mesmo, é esperado. Se o prédio é irregular (tipo um P), as seções de fato ficam mais curtas onde não tem prédio, mas continuam cobrindo toda a largura marcada.",
+        "Ao concluir uma área agora aparece um aviso com a dimensão REAL dela (largura × altura em metros, calculada pela escala) — compare com uma medida que você já sabe (ex: a cota impressa na própria planta) pra confirmar se a área ficou do tamanho certo ou se a escala foi calibrada errada.",
+        "A tabela de áreas (dentro do painel do projeto) também ganhou a coluna \"Dimensões (m)\" com a mesma informação, sempre visível."
       ]
     }
   ],
