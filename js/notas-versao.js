@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.7.1.2',
+  versaoAtual: 'V3.7.1.3',
 
   versoes: [
     {
@@ -7907,6 +7907,16 @@ const NotasVersao = {
         "Bug real de dados: era possível a mesma BT aparecer em 2 linhas da mesma peça (de lançamentos antigos duplicados) — ao salvar, isso geraria 2 documentos separados ou quebraria o lançamento em lote. Corrigido em 3 pontos: ao abrir a peça, lançamentos duplicados da mesma BT são mesclados (soma o volume); ao selecionar uma BT já usada noutra linha, é bloqueado com aviso; ao salvar, linhas da mesma BT são somadas antes de gravar (nunca 2 documentos pra mesma peça+BT).",
         "O seletor de BT (era um <select> nativo do navegador) foi trocado por um combobox controlado, digita e filtra — em alguns aparelhos o select nativo abria com a lista cortada/ilegível, sem dar pra ler as opções. Agora é HTML/CSS próprio, com o mesmo comportamento em qualquer tela.",
         "Adicionar uma BT nova (+ BT) já abre o combobox dela direto, sem precisar clicar de novo."
+      ]
+    },
+    {
+      "versao": "V3.7.1.3",
+      "data": "2026-08-15",
+      "tipo": "correcao",
+      "titulo": "Controle de Estacas: combobox de BT não abria — bug introduzido na versão anterior",
+      "itens": [
+        "O combobox novo (V3.7.1.2) tinha um bug sério: ao focar no campo, ele recriava o popup INTEIRO — o que destrói o próprio campo que acabou de receber o foco, fechando tudo na hora. Por isso não abria de jeito nenhum.",
+        "Corrigido: agora abrir/fechar a lista só troca a visibilidade dela (a lista de cada linha já existe escondida no DOM) — nunca recria o campo. Testado o fluxo completo: focar abre, digitar filtra, clicar seleciona, sair sem escolher fecha e restaura o valor certo."
       ]
     }
   ],

@@ -1102,9 +1102,10 @@ const ControleEstacas = (() => {
 
   function btAddLinhaPeca() {
     estacaAtual.linhas.push({ btId: '', pctBT: '' });
-    btBuscaLinhaAberta = estacaAtual.linhas.length - 1;
-    btBuscaTexto = '';
+    const novoIndice = estacaAtual.linhas.length - 1;
     _renderLancarEstacaBody();
+    const inputEl = document.getElementById('ce-bt-busca-input-' + novoIndice);
+    if (inputEl) inputEl.focus(); // dispara abrirBuscaBTLinha via onfocus
   }
   function btRemLinhaPeca(i) {
     estacaAtual.linhas.splice(i, 1);
@@ -1163,24 +1164,44 @@ const ControleEstacas = (() => {
 
   // ── Combobox de BT por linha (digita e filtra, clica e seleciona) —
   // substitui o <select> nativo, que em alguns aparelhos abria a lista
-  // cortada/ilegível. Só 1 aberto por vez. ──
+  // cortada/ilegível. A lista de cada linha já existe no DOM (escondida) —
+  // abrir/fechar só troca display, NUNCA recria o input via re-render total
+  // (recriar destrói o próprio campo que acabou de receber o foco).
   function abrirBuscaBTLinha(i) {
+    if (btBuscaLinhaAberta !== null && btBuscaLinhaAberta !== i) {
+      const outra = document.getElementById('ce-bt-busca-lista-' + btBuscaLinhaAberta);
+      if (outra) outra.style.display = 'none';
+    }
     btBuscaLinhaAberta = i;
     btBuscaTexto = '';
-    _renderLancarEstacaBody();
+    const inputEl = document.getElementById('ce-bt-busca-input-' + i);
+    if (inputEl) inputEl.value = '';
+    const listaEl = document.getElementById('ce-bt-busca-lista-' + i);
+    if (listaEl) { listaEl.innerHTML = _listaBTBuscaHTML(i); listaEl.style.display = 'block'; }
   }
   function fecharBuscaBTLinha() {
+    if (btBuscaLinhaAberta === null) return;
+    const i = btBuscaLinhaAberta;
+    const listaEl = document.getElementById('ce-bt-busca-lista-' + i);
+    if (listaEl) listaEl.style.display = 'none';
+    const inputEl = document.getElementById('ce-bt-busca-input-' + i);
+    if (inputEl && estacaAtual && estacaAtual.linhas[i]) {
+      const b = btsConfig.find(x => x.id === estacaAtual.linhas[i].btId);
+      inputEl.value = b ? `BT-${b.numero} · ${EC.fmt1(b.volumePrevisto)}m³` : '';
+    }
     btBuscaLinhaAberta = null;
-    _renderLancarEstacaBody();
   }
   function onDigitarBuscaBTLinha(v) {
     btBuscaTexto = v;
-    const listaEl = document.getElementById('ce-bt-busca-lista');
-    if (listaEl) listaEl.innerHTML = _listaBTBuscaHTML(btBuscaLinhaAberta);
+    const i = btBuscaLinhaAberta;
+    const listaEl = document.getElementById('ce-bt-busca-lista-' + i);
+    if (listaEl) listaEl.innerHTML = _listaBTBuscaHTML(i);
   }
   function selecionarBTLinha(i, btId) {
+    const listaEl = document.getElementById('ce-bt-busca-lista-' + i);
+    if (listaEl) listaEl.style.display = 'none';
     btBuscaLinhaAberta = null;
-    btUpdLinhaPeca(i, 'btId', btId);
+    btUpdLinhaPeca(i, 'btId', btId); // essa sim faz o re-render total — mas já fora do fluxo de foco/blur
   }
   function _listaBTBuscaHTML(i) {
     const termo = (btBuscaTexto || '').trim().toLowerCase();
@@ -1377,11 +1398,11 @@ const ControleEstacas = (() => {
             return `<div style="margin-bottom:6px;">
               <div style="display:grid;grid-template-columns:1fr 100px 90px 100px 36px;gap:8px;align-items:center;">
                 <div style="position:relative;">
-                  <input type="text" class="form-control" placeholder="Buscar BT..." autocomplete="off"
-                    value="${btBuscaLinhaAberta === i ? esc(btBuscaTexto) : (b ? `BT-${b.numero} · ${EC.fmt1(b.volumePrevisto)}m³` : '')}"
+                  <input type="text" id="ce-bt-busca-input-${i}" class="form-control" placeholder="Buscar BT" autocomplete="off"
+                    value="${b ? `BT-${b.numero} · ${EC.fmt1(b.volumePrevisto)}m³` : ''}"
                     onfocus="CE.abrirBuscaBTLinha(${i})" oninput="CE.onDigitarBuscaBTLinha(this.value)"
                     onblur="setTimeout(()=>CE.fecharBuscaBTLinha(),150)">
-                  ${btBuscaLinhaAberta === i ? `<div id="ce-bt-busca-lista" style="position:absolute;top:100%;left:0;right:0;z-index:30;background:#fff;border:1px solid var(--cv-border,#e2e8f0);border-radius:8px;max-height:200px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,.15);margin-top:4px;">${_listaBTBuscaHTML(i)}</div>` : ''}
+                  <div id="ce-bt-busca-lista-${i}" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:30;background:#fff;border:1px solid var(--cv-border,#e2e8f0);border-radius:8px;max-height:200px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,.15);margin-top:4px;"></div>
                 </div>
                 <input type="text" inputmode="decimal" class="form-control" style="${excesso ? 'border-color:#ef4444;' : ''}" placeholder="% da BT" value="${esc(l.pctBT)}" oninput="CE.btUpdLinhaPeca(${i}, 'pctBT', this.value)">
                 <span id="ce-est-vol-${i}" style="font-family:var(--font-mono);font-size:.78rem;color:var(--cor-texto-secundario);text-align:right;">${EC.fmt1(vol)} m³</span>
