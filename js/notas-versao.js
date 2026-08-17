@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.8.2.2',
+  versaoAtual: 'V3.8.4',
 
   versoes: [
     {
@@ -8090,6 +8090,17 @@ const NotasVersao = {
         "Nova seção 🚜 Terraplanagem (ao lado de Fundação e Estrutura): infos rápidas em cards — volume previsto (m³ empolado, das seções do Levantamento), volume removido, terra × entulho, % concluído, saldo restante, nº de viagens (caminhões), média m³/dia e custo total.",
         "Gráfico por dia: barras empilhadas de volume (🟤 terra + 🧱 entulho) com o nº de caminhões do dia em cima e o custo do dia embaixo — mesma pegada visual do gráfico de Fundação e Estrutura.",
         "A seção some sozinha quando a obra não tem terraplanagem lançada, e os dados vêm direto do Controle de Terraplanagem (link no rodapé da seção)."
+      ]
+    },
+    {
+      "versao": "V3.8.4",
+      "data": "2026-08-16",
+      "tipo": "correcao",
+      "titulo": "Causa raiz de vez do 3D errado: prédio com reentrância cruzava a grade em pedaços separados, e o sistema colava um no outro",
+      "itens": [
+        "Prédio com formato L/T/U (não-convexo) faz uma linha da grade (1,5m) cruzar o polígono em MAIS DE UM pedaço separado (ex: um braço de cada lado de um pátio/reentrância). O sistema tratava tudo como um pedaço só, \"colando\" o lado esquerdo ao direito por cima do vazio — aí sim o 3D saía deformado e o volume incluía área que não existe.",
+        "Corrigido: cada linha da grade agora é dividida nos pedaços contínuos de verdade, e os pedaços são agrupados em CADEIAS (cada \"braço\" do prédio rastreado de linha em linha, por sobreposição de posição) — cada cadeia vira seu próprio sólido independente no 3D, lado a lado, nunca ligando partes sem relação.",
+        "No caminho, achei e corrigi um bug na própria implementação dessa correção (a distância entre linhas da mesma cadeia estava sendo calculada errado depois de juntar tudo num array só, e isso zerava o volume). Testado num prédio simulado em U com pátio no meio: reconhece as 2 cadeias certas e o volume bate com a área real × altura (dentro da margem normal de discretização da grade)."
       ]
     }
   ],

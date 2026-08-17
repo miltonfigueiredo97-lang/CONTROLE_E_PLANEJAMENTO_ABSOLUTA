@@ -244,7 +244,7 @@ const LevantamentoTerraplanagem = (() => {
             ${i < lista.length - 1 ? (s.distanciaProxima !== '' && s.distanciaProxima != null
               ? `<span style="font-family:var(--cv-mono);font-size:0.78rem;color:var(--cv-text2);">Dist. próxima: ${TC.fmt1(s.distanciaProxima)} m</span>
                  <span style="font-family:var(--cv-mono);font-size:0.78rem;color:var(--cv-accent3);font-weight:700;">Vol. entre: ${TC.fmt1(s.volEntre)} m³</span>`
-              : `<span style="font-family:var(--cv-mono);font-size:0.72rem;color:var(--cv-text3);">· fim desta área ·</span>`) : ''}
+              : `<span style="font-family:var(--cv-mono);font-size:0.72rem;color:var(--cv-text3);">· fim deste trecho ·</span>`) : ''}
             <span style="margin-left:auto;color:var(--cv-text3);">${secAberta === i ? '▲' : '▼'}</span>
             <button class="btn btn-secundario btn-sm" style="color:var(--cv-red);" onclick="event.stopPropagation();TP_UI.secRemover(${i})">🗑</button>
           </div>
@@ -516,32 +516,82 @@ const LevantamentoTerraplanagem = (() => {
     }
 
     const sinalConv = area.convencao === 'profundidade' ? -1 : 1;
+    // Uma linha de grade pode cruzar um prédio não-convexo (formato L/T/U, com
+    // reentrâncias) em MAIS DE UM pedaço separado. Sem tratar isso, o pedaço da
+    // esquerda ficava "colado" ao da direita como se fosse terreno contínuo por
+    // cima do vazio — é aí que o 3D saía com formato errado. Agora cada linha é
+    // dividida em segmentos contínuos, e os segmentos são agrupados em CADEIAS
+    // (por sobreposição de posição com a linha anterior) — cada cadeia é um
+    // "braço" do prédio, virando seu próprio loft independente no 3D.
     function linhasNaDirecao(fixarX) {
-      const linhas = [];
       const inicioFixo = fixarX ? minX : minY, fimFixo = fixarX ? maxX : maxY;
       const outroMin = fixarX ? minY : minX, outroMax = fixarX ? maxY : maxX;
+
+      const linhasBrutas = [];
       for (let v = inicioFixo; v <= fimFixo + 1e-6; v += PASSO_GRADE) {
-        const amostras = [];
+        const pontosLinha = [];
         for (let o = outroMin; o <= outroMax + 1e-6; o += PASSO_AMOSTRA) {
           const pt = fixarX ? { x: v, y: o } : { x: o, y: v };
-          if (_pontoDentroPoligono(pt, poligonoM)) amostras.push({ o, cota: interpolarCota(pt.x, pt.y) });
+          pontosLinha.push({ o, dentro: _pontoDentroPoligono(pt, poligonoM) });
         }
-        if (amostras.length < 2) continue;
-        const cotas = amostras.map(a2 => a2.cota);
-        const distancias = [];
-        for (let k = 0; k < amostras.length - 1; k++) distancias.push(+(amostras[k + 1].o - amostras[k].o).toFixed(3));
-        const pInicioM = fixarX ? { x: v, y: amostras[0].o } : { x: amostras[0].o, y: v };
-        const pFimM = fixarX ? { x: v, y: amostras[amostras.length - 1].o } : { x: amostras[amostras.length - 1].o, y: v };
-        // Na convenção "profundidade" (nº maior = mais embaixo, ex: térreo=0), a altura
-        // certa é cotaFinal − cota (inverso da elevação) — nega os dois lados antes de
-        // calcular, o resultado dá o mesmo sinal correto sem duplicar a fórmula.
-        linhas.push({
-          pos: v, cotas, distanciasCotas: distancias, cotaFinal: area.cotaFinal, convencao: area.convencao,
-          area: TC.calcAreaSecao(cotas.map(c => c * sinalConv), area.cotaFinal * sinalConv, distancias),
-          areaId: area.id, origemFrac: _paraFracao(pInicioM), fimFrac: _paraFracao(pFimM),
-          origemLocal: +(amostras[0].o - outroMin).toFixed(3), // offset real (m) — pro 3D não esticar linhas de larguras diferentes como se fossem iguais
+        const segmentos = [];
+        let atual = [];
+        pontosLinha.forEach(p => {
+          if (p.dentro) atual.push(p.o);
+          else { if (atual.length >= 2) segmentos.push(atual); atual = []; }
         });
+        if (atual.length >= 2) segmentos.push(atual);
+        linhasBrutas.push({ v, segmentos });
       }
+
+      // Agrupa segmentos em cadeias por sobreposição de intervalo com a linha anterior
+      const cadeias = [];
+      let cadeiasAtivas = [];
+      linhasBrutas.forEach(({ v, segmentos }) => {
+        const novasAtivas = [];
+        const usadas = new Set();
+        segmentos.forEach(seg => {
+          const oIni = seg[0], oFim = seg[seg.length - 1];
+          let melhor = null, melhorSobreposicao = 0;
+          cadeiasAtivas.forEach((cad, ci) => {
+            if (usadas.has(ci)) return;
+            const ultimo = cad[cad.length - 1];
+            const sobreposicao = Math.min(oFim, ultimo.oFim) - Math.max(oIni, ultimo.oIni);
+            if (sobreposicao > melhorSobreposicao) { melhorSobreposicao = sobreposicao; melhor = ci; }
+          });
+          const item = { v, seg, oIni, oFim };
+          if (melhor !== null) { cadeiasAtivas[melhor].push(item); usadas.add(melhor); novasAtivas[melhor] = cadeiasAtivas[melhor]; }
+          else { const nova = [item]; cadeias.push(nova); novasAtivas.push(nova); }
+        });
+        cadeiasAtivas = novasAtivas.filter(Boolean);
+      });
+
+      // Cada cadeia vira sua própria sequência de seções (loft independente).
+      // distanciaProxima é calculada AQUI, dentro da cadeia (não depois, num
+      // sort global) — senão, quando duas cadeias têm linhas no mesmo "pos",
+      // o merge/sort intercala elas e quebra a sequência de cada uma.
+      const linhas = [];
+      cadeias.forEach((cadeia, ci) => {
+        cadeia.forEach(({ v, seg }, idx) => {
+          const amostras = seg.map(o => ({ o, cota: interpolarCota(fixarX ? v : o, fixarX ? o : v) }));
+          const cotas = amostras.map(a2 => a2.cota);
+          const distancias = [];
+          for (let k = 0; k < amostras.length - 1; k++) distancias.push(+(amostras[k + 1].o - amostras[k].o).toFixed(3));
+          const pInicioM = fixarX ? { x: v, y: amostras[0].o } : { x: amostras[0].o, y: v };
+          const pFimM = fixarX ? { x: v, y: amostras[amostras.length - 1].o } : { x: amostras[amostras.length - 1].o, y: v };
+          const proximaNaCadeia = cadeia[idx + 1];
+          // Na convenção "profundidade" (nº maior = mais embaixo, ex: térreo=0), a altura
+          // certa é cotaFinal − cota (inverso da elevação) — nega os dois lados antes de
+          // calcular, o resultado dá o mesmo sinal correto sem duplicar a fórmula.
+          linhas.push({
+            pos: v, cadeiaId: ci, cotas, distanciasCotas: distancias, cotaFinal: area.cotaFinal, convencao: area.convencao,
+            area: TC.calcAreaSecao(cotas.map(c => c * sinalConv), area.cotaFinal * sinalConv, distancias),
+            areaId: area.id, origemFrac: _paraFracao(pInicioM), fimFrac: _paraFracao(pFimM),
+            origemLocal: +(amostras[0].o - outroMin).toFixed(3), // offset real (m) — pro 3D não esticar linhas de larguras diferentes como se fossem iguais
+            distanciaProxima: proximaNaCadeia ? +(proximaNaCadeia.v - v).toFixed(3) : '',
+          });
+        });
+      });
       return linhas;
     }
 
@@ -569,18 +619,13 @@ const LevantamentoTerraplanagem = (() => {
       }
       todasH.sort((a, b) => a.pos - b.pos);
       todasV.sort((a, b) => a.pos - b.pos);
-      // IMPORTANTE: seções de áreas DIFERENTES não são vizinhas de verdade —
-      // zera a distância entre elas pra "volume entre seções" não somar um
-      // volume fantasma ligando dois lugares sem relação (bug que também
-      // deixava o 3D com formato errado, misturando sólidos de áreas distintas).
-      const monta = linhas => linhas.map((l, i) => {
-        const proximaMesmaArea = i < linhas.length - 1 && linhas[i + 1].areaId === l.areaId;
-        return {
-          id: TC.genId('sec'), numero: i + 1, cotas: l.cotas, distanciasCotas: l.distanciasCotas, cotaFinal: l.cotaFinal,
-          area: l.area, distanciaProxima: proximaMesmaArea ? +(linhas[i + 1].pos - l.pos).toFixed(3) : '', areaManual: '',
-          areaId: l.areaId, origemFrac: l.origemFrac, fimFrac: l.fimFrac, origemLocal: l.origemLocal, convencao: l.convencao,
-        };
-      });
+      // distanciaProxima já vem certa de cada cadeia (calculada lá dentro,
+      // antes do sort abaixo — que só serve pra numerar/exibir em ordem).
+      const monta = linhas => linhas.map((l, i) => ({
+        id: TC.genId('sec'), numero: i + 1, cotas: l.cotas, distanciasCotas: l.distanciasCotas, cotaFinal: l.cotaFinal,
+        area: l.area, distanciaProxima: l.distanciaProxima, areaManual: '',
+        areaId: l.areaId, cadeiaId: l.cadeiaId, origemFrac: l.origemFrac, fimFrac: l.fimFrac, origemLocal: l.origemLocal, convencao: l.convencao,
+      }));
       secoes.horizontal = monta(todasH);
       secoes.vertical = monta(todasV);
       secAberta = null;
@@ -1107,7 +1152,7 @@ const LevantamentoTerraplanagem = (() => {
     const grupos = [];
     const porAreaId = new Map();
     lista.forEach(s => {
-      const chave = s.areaId ?? '__sem_area__';
+      const chave = (s.areaId ?? '__sem_area__') + '_' + (s.cadeiaId ?? 0);
       if (!porAreaId.has(chave)) { const g = []; porAreaId.set(chave, g); grupos.push(g); }
       porAreaId.get(chave).push(s);
     });
