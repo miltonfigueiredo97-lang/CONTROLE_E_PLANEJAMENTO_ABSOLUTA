@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.8.1.2',
+  versaoAtual: 'V3.8.2',
 
   versoes: [
     {
@@ -8056,6 +8056,18 @@ const NotasVersao = {
         "\"👁️ Ver Seções\" reformulado: em vez de mostrar as 30+ linhas juntas (impossível de ler), agora só a seção SELECIONADA aparece riscada (em vermelho) na planta — as outras ficam apagadas.",
         "Mapa da planta bem maior (quase a tela toda) e com zoom/pan: botões ➕/➖/🔄 Resetar, além de dar scroll pra zoom e arrastar pra mover (quando tem zoom aplicado).",
         "Se a seção não tiver posição salva (foi gerada antes desta função existir), agora avisa pra gerar de novo em vez de simplesmente não mostrar nada."
+      ]
+    },
+    {
+      "versao": "V3.8.2",
+      "data": "2026-08-16",
+      "tipo": "correcao",
+      "titulo": "Nova opção por área: Elevação x Profundidade — resolve as áreas saindo negativas",
+      "itens": [
+        "Causa raiz do \"área negativa\": o sistema sempre assumiu ELEVAÇÃO (nº maior = mais alto, cota do terreno maior que a cota final — padrão topografia). Só que em obra medida por PROFUNDIDADE a partir de uma referência (ex: térreo = cota 0, e o número CRESCE conforme desce), é o contrário: a cota final (mais funda) tem número MAIOR que a cota do terreno marcada (mais rasa, mais perto do térreo) — com a fórmula antiga isso sempre dava negativo.",
+        "Ao concluir uma área agora pergunta a convenção: Profundidade (nº maior = mais embaixo) ou Elevação (nº maior = mais alto, padrão). Dá pra trocar depois também, direto na tabela de áreas (botão ⬇️ Profundidade / ⬆️ Elevação).",
+        "A escolha afeta tudo: cálculo de área/volume da seção, cores do 3D (verde=raso/vermelho=fundo) e do perfil lateral em \"Ver Seções\", e a posição visual — sempre respeitando o que você digitou (os números mostrados na tela continuam exatamente os que você marcou, só a lógica interna de qual é \"mais alto\"/\"mais baixo\" muda).",
+        "Testado com o exemplo real (cota final 7,18 profundidade, terreno marcado 4,9): sem a correção dava -9,12 m², com \"Profundidade\" marcado dá +9,12 m² — confere com o esperado (2,28m de altura de escavação × 4m de largura)."
       ]
     }
   ],

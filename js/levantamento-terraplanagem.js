@@ -332,20 +332,21 @@ const LevantamentoTerraplanagem = (() => {
         ${areas.length ? `
         <div class="cc-tableWrap" style="margin-top:8px;">
           <table class="cc-table">
-            <thead><tr><th></th><th>Área</th><th class="col-num">Dimensões (m)</th><th class="col-num">Cota Final</th><th class="col-num">Pontos de Cota</th><th class="col-acoes"></th></tr></thead>
+            <thead><tr><th></th><th>Área</th><th class="col-num">Dimensões (m)</th><th class="col-num">Cota Final</th><th>Convenção</th><th class="col-num">Pontos de Cota</th><th class="col-acoes"></th></tr></thead>
             <tbody>
               ${areas.map((a, ai) => { const dim = _dimensoesArea(a); return `<tr>
                 <td><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:${_corSecao(ai)};"></span></td>
                 <td>Área ${ai + 1}</td>
                 <td class="col-num cc-tdMono">${TC.fmt1(dim.largura)} × ${TC.fmt1(dim.altura)}</td>
                 <td class="col-num"><input type="text" inputmode="decimal" class="form-control" style="width:90px;display:inline-block;" value="${esc(a.cotaFinal)}" onchange="TP_UI.atualizarCotaArea('${a.id}', this.value)"></td>
+                <td><button class="btn btn-secundario btn-sm" onclick="TP_UI.alternarConvencaoArea('${a.id}')" title="Clique pra trocar">${a.convencao === 'profundidade' ? '⬇️ Profundidade' : '⬆️ Elevação'}</button></td>
                 <td class="col-num cc-tdMono">${pontosCota.filter(p => p.areaId === a.id).length}</td>
                 <td class="col-acoes"><button class="btn btn-secundario btn-sm" style="color:var(--cv-red);" onclick="TP_UI.removerArea('${a.id}')">🗑</button></td>
               </tr>`; }).join('')}
             </tbody>
           </table>
         </div>
-        <p class="text-sm text-muted mt-1">⚠️ As dimensões acima são a largura/altura REAL da área desenhada (calculadas pela escala). Se o prédio inteiro mede, por exemplo, 52m e sua área aparece com menos que isso, é porque o desenho da área não cobriu o prédio todo (redesenhe maior) — ou a escala foi calibrada errado (confira "🔁 Recalibrar" usando uma medida já impressa na planta, se tiver).</p>` : ''}
+        <p class="text-sm text-muted mt-1">⚠️ As dimensões acima são a largura/altura REAL da área desenhada (calculadas pela escala). Se o prédio inteiro mede, por exemplo, 52m e sua área aparece com menos que isso, é porque o desenho da área não cobriu o prédio todo (redesenhe maior) — ou a escala foi calibrada errado (confira "🔁 Recalibrar" usando uma medida já impressa na planta, se tiver). "Convenção" define se a cota final é a MAIS BAIXA (⬆️ elevação, padrão topografia) ou a MAIS FUNDA/número maior (⬇️ profundidade, ex: térreo = 0 e vai aumentando pra baixo) — clique no botão pra trocar se a área saiu com volume negativo por engano de convenção.</p>` : ''}
       </div>
     `;
   }
@@ -413,7 +414,12 @@ const LevantamentoTerraplanagem = (() => {
     const cotaStr = prompt('Cota Final (referência/projeto) desta área:', config.cotaReferencia || '');
     if (cotaStr === null) return;
     const cotaFinal = TC.num(cotaStr);
-    const novaArea = { id: TC.genId('area'), pontos: areaEmDesenho.pontos, cotaFinal };
+    const profundidade = await Utils.confirmar(
+      'Como você mede as cotas nesta área?\n\n' +
+      'OK = PROFUNDIDADE a partir de uma referência (ex: térreo = 0) — quanto MAIOR o número, mais embaixo. A cota final (mais funda) tem um número MAIOR que a cota do terreno marcada nos pontos.\n\n' +
+      'Cancelar = ELEVAÇÃO (padrão de topografia) — quanto MAIOR o número, mais alto. A cota do terreno marcada tem um número MAIOR que a cota final (a referência fica mais baixa).'
+    );
+    const novaArea = { id: TC.genId('area'), pontos: areaEmDesenho.pontos, cotaFinal, convencao: profundidade ? 'profundidade' : 'elevacao' };
     config.areas = config.areas || [];
     config.areas.push(novaArea);
     areaEmDesenho = null; ferramenta = null;
@@ -421,8 +427,15 @@ const LevantamentoTerraplanagem = (() => {
     Utils.mostrarLoading();
     try {
       await salvarConfig();
-      Utils.toast(`✓ Área criada! Dimensões reais: ${TC.fmt1(dim.largura)}m × ${TC.fmt1(dim.altura)}m — confira se bate com o que você esperava (ex: a medida impressa na planta).`, 'sucesso');
+      Utils.toast(`✓ Área criada (${profundidade ? 'profundidade' : 'elevação'})! Dimensões reais: ${TC.fmt1(dim.largura)}m × ${TC.fmt1(dim.altura)}m — confira se bate com o que você esperava.`, 'sucesso');
     } finally { Utils.esconderLoading(); }
+    renderSecoes();
+  }
+  function alternarConvencaoArea(id) {
+    const a = (config.areas || []).find(x => x.id === id);
+    if (!a) return;
+    a.convencao = a.convencao === 'profundidade' ? 'elevacao' : 'profundidade';
+    salvarConfig().catch(() => {});
     renderSecoes();
   }
   async function removerArea(id) {
@@ -490,6 +503,7 @@ const LevantamentoTerraplanagem = (() => {
       return somaPeso > 0 ? somaPesoCota / somaPeso : area.cotaFinal;
     }
 
+    const sinalConv = area.convencao === 'profundidade' ? -1 : 1;
     function linhasNaDirecao(fixarX) {
       const linhas = [];
       const inicioFixo = fixarX ? minX : minY, fimFixo = fixarX ? maxX : maxY;
@@ -506,9 +520,12 @@ const LevantamentoTerraplanagem = (() => {
         for (let k = 0; k < amostras.length - 1; k++) distancias.push(+(amostras[k + 1].o - amostras[k].o).toFixed(3));
         const pInicioM = fixarX ? { x: v, y: amostras[0].o } : { x: amostras[0].o, y: v };
         const pFimM = fixarX ? { x: v, y: amostras[amostras.length - 1].o } : { x: amostras[amostras.length - 1].o, y: v };
+        // Na convenção "profundidade" (nº maior = mais embaixo, ex: térreo=0), a altura
+        // certa é cotaFinal − cota (inverso da elevação) — nega os dois lados antes de
+        // calcular, o resultado dá o mesmo sinal correto sem duplicar a fórmula.
         linhas.push({
-          pos: v, cotas, distanciasCotas: distancias, cotaFinal: area.cotaFinal,
-          area: TC.calcAreaSecao(cotas, area.cotaFinal, distancias),
+          pos: v, cotas, distanciasCotas: distancias, cotaFinal: area.cotaFinal, convencao: area.convencao,
+          area: TC.calcAreaSecao(cotas.map(c => c * sinalConv), area.cotaFinal * sinalConv, distancias),
           areaId: area.id, origemFrac: _paraFracao(pInicioM), fimFrac: _paraFracao(pFimM),
           origemLocal: +(amostras[0].o - outroMin).toFixed(3), // offset real (m) — pro 3D não esticar linhas de larguras diferentes como se fossem iguais
         });
@@ -549,7 +566,7 @@ const LevantamentoTerraplanagem = (() => {
         return {
           id: TC.genId('sec'), numero: i + 1, cotas: l.cotas, distanciasCotas: l.distanciasCotas, cotaFinal: l.cotaFinal,
           area: l.area, distanciaProxima: proximaMesmaArea ? +(linhas[i + 1].pos - l.pos).toFixed(3) : '', areaManual: '',
-          areaId: l.areaId, origemFrac: l.origemFrac, fimFrac: l.fimFrac, origemLocal: l.origemLocal,
+          areaId: l.areaId, origemFrac: l.origemFrac, fimFrac: l.fimFrac, origemLocal: l.origemLocal, convencao: l.convencao,
         };
       });
       secoes.horizontal = monta(todasH);
@@ -1003,13 +1020,17 @@ const LevantamentoTerraplanagem = (() => {
   // terreno tá acima da referência (corte), vermelho onde tá abaixo
   // (contribui NEGATIVO pra área — é aqui que dá pra ver o porquê).
   function _svgPerfilLateral(s) {
-    const cotas = (s.cotas || []).map(c => TC.num(c));
+    const cotas = (s.cotas || []).map(c => TC.num(c)); // valores ORIGINAIS (como digitado/marcado) — sempre usados nos textos
     const dist = s.distanciasCotas || [];
     const cf = TC.num(s.cotaFinal);
     if (cotas.length < 2) return `<div class="cc-empty">Esta seção não tem cotas suficientes pra desenhar o perfil.</div>`;
+    // "profundidade" (nº maior = mais embaixo, ex: térreo=0): inverte o sinal só
+    // pra POSICIONAR e COLORIR certo — os textos continuam com o valor original.
+    const sinal = s.convencao === 'profundidade' ? -1 : 1;
+    const cotasPos = cotas.map(c => c * sinal), cfPos = cf * sinal;
     const xs = [0];
     for (let i = 0; i < dist.length; i++) xs.push(xs[i] + TC.num(dist[i]));
-    const minY = Math.min(...cotas, cf), maxY = Math.max(...cotas, cf);
+    const minY = Math.min(...cotasPos, cfPos), maxY = Math.max(...cotasPos, cfPos);
     const pad = Math.max(0.3, (maxY - minY) * 0.15);
     const yLo = minY - pad, yHi = maxY + pad;
     const totalW = xs[xs.length - 1] || 1;
@@ -1017,17 +1038,17 @@ const LevantamentoTerraplanagem = (() => {
     const mapX = x => PX0 + (x / totalW) * (PX1 - PX0);
     const mapY = y => yHi > yLo ? PY1 - ((y - yLo) / (yHi - yLo)) * (PY1 - PY0) : (PY0 + PY1) / 2;
     const quads = [];
-    for (let i = 0; i < cotas.length - 1; i++) {
+    for (let i = 0; i < cotasPos.length - 1; i++) {
       const x1 = mapX(xs[i]), x2 = mapX(xs[i + 1]);
-      const y1 = mapY(cotas[i]), y2 = mapY(cotas[i + 1]), yf = mapY(cf);
-      const media = (cotas[i] + cotas[i + 1]) / 2;
-      const cor = media >= cf ? '#22c55e' : '#ef4444';
+      const y1 = mapY(cotasPos[i]), y2 = mapY(cotasPos[i + 1]), yf = mapY(cfPos);
+      const media = (cotasPos[i] + cotasPos[i + 1]) / 2;
+      const cor = media >= cfPos ? '#22c55e' : '#ef4444';
       quads.push(`<polygon points="${x1},${y1} ${x2},${y2} ${x2},${yf} ${x1},${yf}" fill="${cor}" fill-opacity="0.4"/>`);
     }
-    const linhaCf = `<line x1="${PX0}" y1="${mapY(cf).toFixed(1)}" x2="${PX1}" y2="${mapY(cf).toFixed(1)}" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="5,3"/>`;
-    const linhaTerreno = `<polyline points="${cotas.map((c, i) => `${mapX(xs[i]).toFixed(1)},${mapY(c).toFixed(1)}`).join(' ')}" fill="none" stroke="#fff" stroke-width="2"/>`;
-    const pontos = cotas.map((c, i) => `<circle cx="${mapX(xs[i]).toFixed(1)}" cy="${mapY(c).toFixed(1)}" r="3.5" fill="#3b82f6" stroke="#fff" stroke-width="1"/><text x="${mapX(xs[i]).toFixed(1)}" y="${(mapY(c) - 8).toFixed(1)}" font-size="9" fill="#fff" text-anchor="middle" font-family="monospace">${TC.fmt2(c)}</text>`).join('');
-    const rotuloCf = `<text x="${PX0 + 4}" y="${(mapY(cf) - 5).toFixed(1)}" font-size="10" fill="#f59e0b" font-family="monospace">Cota Final: ${TC.fmt2(cf)}</text>`;
+    const linhaCf = `<line x1="${PX0}" y1="${mapY(cfPos).toFixed(1)}" x2="${PX1}" y2="${mapY(cfPos).toFixed(1)}" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="5,3"/>`;
+    const linhaTerreno = `<polyline points="${cotasPos.map((c, i) => `${mapX(xs[i]).toFixed(1)},${mapY(c).toFixed(1)}`).join(' ')}" fill="none" stroke="#fff" stroke-width="2"/>`;
+    const pontos = cotas.map((c, i) => `<circle cx="${mapX(xs[i]).toFixed(1)}" cy="${mapY(cotasPos[i]).toFixed(1)}" r="3.5" fill="#3b82f6" stroke="#fff" stroke-width="1"/><text x="${mapX(xs[i]).toFixed(1)}" y="${(mapY(cotasPos[i]) - 8).toFixed(1)}" font-size="9" fill="#fff" text-anchor="middle" font-family="monospace">${TC.fmt2(c)}</text>`).join('');
+    const rotuloCf = `<text x="${PX0 + 4}" y="${(mapY(cfPos) - 5).toFixed(1)}" font-size="10" fill="#f59e0b" font-family="monospace">Cota Final: ${TC.fmt2(cf)}${s.convencao === 'profundidade' ? ' (profundidade)' : ''}</text>`;
     return `<svg viewBox="0 0 620 270" style="width:100%;background:#14141f;border-radius:8px;display:block;">${quads.join('')}${linhaCf}${linhaTerreno}${pontos}${rotuloCf}</svg>`;
   }
 
@@ -1084,19 +1105,23 @@ const LevantamentoTerraplanagem = (() => {
     const dadosGrupos = grupos.map(secs => {
       const perfis = secs.map(s => _reamostrarPerfil(s.distanciasCotas || [], s.cotas || [], N, s.origemLocal));
       const cotasFinal = secs.map(s => TC.num(s.cotaFinal));
+      // "profundidade" (nº maior = mais embaixo) — inverte o sinal só pra
+      // posicionar/colorir certo no 3D (elevação: nº maior = mais alto, sem inverter).
+      const sinais = secs.map(s => s.convencao === 'profundidade' ? -1 : 1);
       const zAcumLocal = [0];
       for (let i = 0; i < secs.length - 1; i++) zAcumLocal.push(zAcumLocal[i] + (TC.num(secs[i].distanciaProxima) || 3));
-      if (perfis.length === 1) { perfis.push(perfis[0]); cotasFinal.push(cotasFinal[0]); zAcumLocal.push(zAcumLocal[0] + 3); }
+      if (perfis.length === 1) { perfis.push(perfis[0]); cotasFinal.push(cotasFinal[0]); sinais.push(sinais[0]); zAcumLocal.push(zAcumLocal[0] + 3); }
       perfis.forEach((p, si) => p.forEach(pt => {
+        const cotaPos = pt.cota * sinais[si], cfPos = cotasFinal[si] * sinais[si];
         minX = Math.min(minX, pt.x); maxX = Math.max(maxX, pt.x);
-        minY = Math.min(minY, pt.cota, cotasFinal[si]); maxY = Math.max(maxY, pt.cota, cotasFinal[si]);
-        const prof = pt.cota - cotasFinal[si];
+        minY = Math.min(minY, cotaPos, cfPos); maxY = Math.max(maxY, cotaPos, cfPos);
+        const prof = cotaPos - cfPos;
         minProf = Math.min(minProf, prof); maxProf = Math.max(maxProf, prof);
       }));
       const larguraGrupo = zAcumLocal[zAcumLocal.length - 1];
       const offsetZ = zTotal;
       zTotal += larguraGrupo + GAP_ENTRE_AREAS;
-      return { perfis, cotasFinal, zAcum: zAcumLocal.map(z => z + offsetZ) };
+      return { perfis, cotasFinal, sinais, zAcum: zAcumLocal.map(z => z + offsetZ) };
     });
     zTotal -= GAP_ENTRE_AREAS; // não conta o respiro depois do último grupo
 
@@ -1108,12 +1133,13 @@ const LevantamentoTerraplanagem = (() => {
     scene.background = new THREE_.Color(0x14141f);
     const group = new THREE_.Group();
 
-    dadosGrupos.forEach(({ perfis, cotasFinal, zAcum }) => {
+    dadosGrupos.forEach(({ perfis, cotasFinal, sinais, zAcum }) => {
       const posTopo = [], corTopo = [], posFundo = [];
       perfis.forEach((p, si) => p.forEach(pt => {
-        posTopo.push((pt.x - cx) * escala, (pt.cota - cy) * escala, (zAcum[si] - cz) * escala);
-        posFundo.push((pt.x - cx) * escala, (cotasFinal[si] - cy) * escala, (zAcum[si] - cz) * escala);
-        const c = _corProfundidade(pt.cota - cotasFinal[si], minProf, maxProf);
+        const cotaPos = pt.cota * sinais[si], cfPos = cotasFinal[si] * sinais[si];
+        posTopo.push((pt.x - cx) * escala, (cotaPos - cy) * escala, (zAcum[si] - cz) * escala);
+        posFundo.push((pt.x - cx) * escala, (cfPos - cy) * escala, (zAcum[si] - cz) * escala);
+        const c = _corProfundidade(cotaPos - cfPos, minProf, maxProf);
         corTopo.push(c.r, c.g, c.b);
       }));
 
@@ -1146,8 +1172,8 @@ const LevantamentoTerraplanagem = (() => {
       [0, perfis.length - 1].forEach(si => {
         const posParede = [];
         for (let pi = 0; pi < N; pi++) {
-          posParede.push((perfis[si][pi].x - cx) * escala, (perfis[si][pi].cota - cy) * escala, (zAcum[si] - cz) * escala);
-          posParede.push((perfis[si][pi].x - cx) * escala, (cotasFinal[si] - cy) * escala, (zAcum[si] - cz) * escala);
+          posParede.push((perfis[si][pi].x - cx) * escala, (perfis[si][pi].cota * sinais[si] - cy) * escala, (zAcum[si] - cz) * escala);
+          posParede.push((perfis[si][pi].x - cx) * escala, (cotasFinal[si] * sinais[si] - cy) * escala, (zAcum[si] - cz) * escala);
         }
         const facesParede = [];
         for (let pi = 0; pi < N - 1; pi++) {
@@ -1489,7 +1515,7 @@ const LevantamentoTerraplanagem = (() => {
     setSecDir, setModoLevantamento, secAdd, secRemover, secToggle,
     secUpd, secUpdCotas, secUpdCotaFinal, secUpdDistCotas, secUpdAreaManual, salvarSecoesBtn,
     escolherImagemProjeto, processarImagemProjeto, calibrarProjeto,
-    setFerramenta, concluirArea, cancelarArea, removerArea, atualizarCotaArea, gerarSecoes,
+    setFerramenta, concluirArea, cancelarArea, removerArea, atualizarCotaArea, alternarConvencaoArea, gerarSecoes,
     abrirConfig, salvarConfigBtn, aplicarPresetEmpolamento,
     adicionarTipoCaminhao, atualizarTipoCaminhao, removerTipoCaminhao,
     abrirCaminhoes, salvarCaminhao, excluirCaminhao,
