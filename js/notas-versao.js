@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.8.10',
+  versaoAtual: 'V3.8.10.1',
 
   versoes: [
     {
@@ -8163,6 +8163,15 @@ const NotasVersao = {
       "itens": [
         "A imagem da planta em \"Ver Seções\" usava um encaixe que deixa barra preta nas laterais quando a proporção da planta não é igual à da caixa (comum, já que cada projeto tem um formato diferente) — só que o desenho da linha por cima (a seção selecionada, em vermelho) sempre cobria a caixa inteira, incluindo essas barras pretas, então a posição da linha saía toda desalinhada, podendo aparecer fora da planta de verdade.",
         "Corrigido: a caixa agora respeita a proporção real da imagem (sem sobra nem corte), então a linha vermelha sempre cai em cima da planta, na posição certa. O painel \"Marcar no Projeto\" (onde você desenha áreas e marca cotas) não tinha esse problema — lá a imagem sempre ocupava a largura toda sem barra, então clique e desenho já batiam certo."
+      ]
+    },
+    {
+      "versao": "V3.8.10.1",
+      "data": "2026-08-17",
+      "tipo": "melhoria",
+      "titulo": "Gráfico de Terraplanagem com unidade m³ nos rótulos",
+      "itens": [
+        "O número em cima de cada barra do gráfico de Terraplanagem agora mostra a unidade: \"416 m³\" em vez de só \"416\"."
       ]
     }
   ],

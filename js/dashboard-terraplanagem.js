@@ -130,7 +130,7 @@ const DashTerra = (() => {
       if (g.volTerra > 0) bars += `<rect x="${x}" y="${yT.toFixed(1)}" width="${barW}" height="${hT.toFixed(1)}" fill="#8b5e34" rx="2"><title>${data} — terra ${Utils.formatarNumero(g.volTerra, 0)} m³</title></rect>`;
       if (g.volEntulho > 0) bars += `<rect x="${x}" y="${yE.toFixed(1)}" width="${barW}" height="${hE.toFixed(1)}" fill="#b0b0b0" rx="2"><title>${data} — entulho ${Utils.formatarNumero(g.volEntulho, 0)} m³</title></rect>`;
       // Volume total + viagens no topo da barra
-      bars += `<text x="${(x + barW / 2).toFixed(1)}" y="${(yE - 14).toFixed(1)}" font-size="10" fill="#333" font-weight="700" text-anchor="middle">${Utils.formatarNumero(g.volTerra + g.volEntulho, 0)}</text>`;
+      bars += `<text x="${(x + barW / 2).toFixed(1)}" y="${(yE - 14).toFixed(1)}" font-size="10" fill="#333" font-weight="700" text-anchor="middle">${Utils.formatarNumero(g.volTerra + g.volEntulho, 0)} m³</text>`;
       bars += `<text x="${(x + barW / 2).toFixed(1)}" y="${(yE - 4).toFixed(1)}" font-size="9" fill="#777" text-anchor="middle">🚚${g.viagens}</text>`;
       // Data + custo embaixo
       const dataBR = data === 'sem-data' ? 'sem data' : data.slice(8, 10) + '/' + data.slice(5, 7);
