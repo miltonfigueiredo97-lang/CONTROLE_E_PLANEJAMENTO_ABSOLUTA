@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.8.0',
+  versaoAtual: 'V3.8.1',
 
   versoes: [
     {
@@ -8021,6 +8021,18 @@ const NotasVersao = {
         "Pode ter mais de uma área (ex: dois blocos diferentes da obra, cada um com sua própria cota final) — cada área aparece com uma cor própria no projeto, e a lista embaixo mostra/permite editar a cota final e remover.",
         "Tipos de caminhão deixaram de ser fixos (só Grande/Pequeno) — em ⚙️ Config agora dá pra cadastrar quantos tipos precisar, cada um com nome e capacidade próprios (ex: \"Barra Azul\").",
         "Seções geradas pela grade continuam 100% editáveis como texto (cotas, distâncias, cota final) — se precisar corrigir um ponto específico depois de gerar, é só abrir a seção e ajustar direto."
+      ]
+    },
+    {
+      "versao": "V3.8.1",
+      "data": "2026-08-16",
+      "tipo": "correcao",
+      "titulo": "Levantamento de Terraplanagem: corrigido bug real do 3D/volume com mais de uma área + nova tela \"Ver Seções\"",
+      "itens": [
+        "Causa raiz do 3D \"em outro formato\": quando havia mais de uma Área, o \"Gerar Seções\" juntava as seções de áreas DIFERENTES numa lista só ordenada por posição — a última seção de uma área virava \"vizinha\" da primeira da área seguinte, mesmo estando em lugares sem relação nenhuma. Isso inflava o volume com um vão fantasma (testei: um caso simples foi de 300m³ certo pra 7575m³ com o bug) e deformava o 3D, que tentava fazer um loft contínuo ligando as duas áreas.",
+        "Corrigido: cada área agora é marcada (areaId) e só é considerada \"vizinha\" de outra seção da MESMA área — a fronteira entre áreas aparece na lista como \"· fim desta área ·\" em vez de uma distância/volume errados. O 3D também passou a desenhar cada área como um sólido independente, lado a lado, nunca conectando o loft entre áreas diferentes.",
+        "3D confirmado: topo = cota superior marcada (interpolada), fundo = cota final da área — já estava assim, mas ficava distorcido pelo bug acima.",
+        "Nova tela \"👁️ Ver Seções\": mostra a planta com todas as linhas de seção desenhadas (clique numa linha ou na lista pra selecionar) e, embaixo, o perfil lateral 2D da seção escolhida — terreno x cota final, com o trecho em VERDE onde o terreno está acima da referência (corte) e em VERMELHO onde está abaixo. É assim que dá pra ver na hora por que uma área específica saiu negativa: quando o vermelho (terreno abaixo da cota final ali) pesa mais que o verde na seção."
       ]
     }
   ],

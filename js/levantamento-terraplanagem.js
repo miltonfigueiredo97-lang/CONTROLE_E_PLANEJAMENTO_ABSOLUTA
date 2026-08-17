@@ -230,6 +230,7 @@ const LevantamentoTerraplanagem = (() => {
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
         <span style="font-family:var(--cv-mono);font-size:0.85rem;font-weight:700;color:var(--cv-accent3);">Volume total ${secDir}: ${TC.fmt1(volTotal)} m³</span>
         <div style="display:flex;gap:8px;">
+          <button class="btn btn-secundario btn-sm" onclick="TP_UI.abrirVerSecoes()">👁️ Ver Seções</button>
           <button class="btn btn-secundario btn-sm" onclick="TP_UI.abrir3D()">🧊 Ver em 3D</button>
           <button class="btn btn-secundario btn-sm" onclick="TP_UI.secAdd()">+ Nova Seção</button>
         </div>
@@ -240,8 +241,10 @@ const LevantamentoTerraplanagem = (() => {
           <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--cv-surface2);cursor:pointer;" onclick="TP_UI.secToggle(${i})">
             <span style="font-weight:700;font-size:0.85rem;color:var(--cv-accent3);min-width:70px;">Seção ${s.numero ?? i + 1}</span>
             <span style="font-family:var(--cv-mono);font-size:0.78rem;color:var(--cv-text2);">Área: ${TC.fmt2(s.area)} m²</span>
-            ${i < lista.length - 1 ? `<span style="font-family:var(--cv-mono);font-size:0.78rem;color:var(--cv-text2);">Dist. próxima: ${TC.fmt1(s.distanciaProxima)} m</span>
-              <span style="font-family:var(--cv-mono);font-size:0.78rem;color:var(--cv-accent3);font-weight:700;">Vol. entre: ${TC.fmt1(s.volEntre)} m³</span>` : ''}
+            ${i < lista.length - 1 ? (s.distanciaProxima !== '' && s.distanciaProxima != null
+              ? `<span style="font-family:var(--cv-mono);font-size:0.78rem;color:var(--cv-text2);">Dist. próxima: ${TC.fmt1(s.distanciaProxima)} m</span>
+                 <span style="font-family:var(--cv-mono);font-size:0.78rem;color:var(--cv-accent3);font-weight:700;">Vol. entre: ${TC.fmt1(s.volEntre)} m³</span>`
+              : `<span style="font-family:var(--cv-mono);font-size:0.72rem;color:var(--cv-text3);">· fim desta área ·</span>`) : ''}
             <span style="margin-left:auto;color:var(--cv-text3);">${secAberta === i ? '▲' : '▼'}</span>
             <button class="btn btn-secundario btn-sm" style="color:var(--cv-red);" onclick="event.stopPropagation();TP_UI.secRemover(${i})">🗑</button>
           </div>
@@ -444,6 +447,11 @@ const LevantamentoTerraplanagem = (() => {
   function _paraMetros(p) {
     return { x: p.x * config.imgW / config.escalaPxPorMetro, y: p.y * config.imgH / config.escalaPxPorMetro };
   }
+  // Inverso de _paraMetros — usado pra desenhar de volta na planta as linhas
+  // de seção geradas (que só existem em metros durante o cálculo).
+  function _paraFracao(pMetros) {
+    return { x: pMetros.x * config.escalaPxPorMetro / config.imgW, y: pMetros.y * config.escalaPxPorMetro / config.imgH };
+  }
 
   // Gera as seções (horizontais e verticais) de UMA área: divide o
   // retângulo da área numa grade de 1,5m, corta cada linha pelo polígono
@@ -484,7 +492,13 @@ const LevantamentoTerraplanagem = (() => {
         const cotas = amostras.map(a2 => a2.cota);
         const distancias = [];
         for (let k = 0; k < amostras.length - 1; k++) distancias.push(+(amostras[k + 1].o - amostras[k].o).toFixed(3));
-        linhas.push({ pos: v, cotas, distanciasCotas: distancias, cotaFinal: area.cotaFinal, area: TC.calcAreaSecao(cotas, area.cotaFinal, distancias) });
+        const pInicioM = fixarX ? { x: v, y: amostras[0].o } : { x: amostras[0].o, y: v };
+        const pFimM = fixarX ? { x: v, y: amostras[amostras.length - 1].o } : { x: amostras[amostras.length - 1].o, y: v };
+        linhas.push({
+          pos: v, cotas, distanciasCotas: distancias, cotaFinal: area.cotaFinal,
+          area: TC.calcAreaSecao(cotas, area.cotaFinal, distancias),
+          areaId: area.id, origemFrac: _paraFracao(pInicioM), fimFrac: _paraFracao(pFimM),
+        });
       }
       return linhas;
     }
@@ -513,10 +527,18 @@ const LevantamentoTerraplanagem = (() => {
       }
       todasH.sort((a, b) => a.pos - b.pos);
       todasV.sort((a, b) => a.pos - b.pos);
-      const monta = linhas => linhas.map((l, i) => ({
-        id: TC.genId('sec'), numero: i + 1, cotas: l.cotas, distanciasCotas: l.distanciasCotas, cotaFinal: l.cotaFinal,
-        area: l.area, distanciaProxima: i < linhas.length - 1 ? +(linhas[i + 1].pos - l.pos).toFixed(3) : '', areaManual: '',
-      }));
+      // IMPORTANTE: seções de áreas DIFERENTES não são vizinhas de verdade —
+      // zera a distância entre elas pra "volume entre seções" não somar um
+      // volume fantasma ligando dois lugares sem relação (bug que também
+      // deixava o 3D com formato errado, misturando sólidos de áreas distintas).
+      const monta = linhas => linhas.map((l, i) => {
+        const proximaMesmaArea = i < linhas.length - 1 && linhas[i + 1].areaId === l.areaId;
+        return {
+          id: TC.genId('sec'), numero: i + 1, cotas: l.cotas, distanciasCotas: l.distanciasCotas, cotaFinal: l.cotaFinal,
+          area: l.area, distanciaProxima: proximaMesmaArea ? +(linhas[i + 1].pos - l.pos).toFixed(3) : '', areaManual: '',
+          areaId: l.areaId, origemFrac: l.origemFrac, fimFrac: l.fimFrac,
+        };
+      });
       secoes.horizontal = monta(todasH);
       secoes.vertical = monta(todasV);
       secAberta = null;
@@ -864,6 +886,101 @@ const LevantamentoTerraplanagem = (() => {
     return { r: r / 255, g: g / 255, b: b / 255 };
   }
 
+  // ══════════════════════════════════════════
+  // VER SEÇÕES — planta com todas as linhas desenhadas (clicáveis) +
+  // perfil lateral (2D) da seção selecionada, mostrando o terreno x cota
+  // final com trechos VERDES (corte, acima da referência) e VERMELHOS
+  // (abaixo — é aí que a área de uma seção pode sair negativa).
+  // ══════════════════════════════════════════
+  let secaoVisualizada = 0;
+  function abrirVerSecoes() {
+    const lista = secoes[secDir] || [];
+    if (!lista.length) { Utils.toast('Nenhuma seção nesta direção ainda.', 'alerta'); return; }
+    secaoVisualizada = 0;
+    renderVerSecoes();
+    Utils.abrirModal('modal-tp-versecoes');
+  }
+  function fecharVerSecoes() { Utils.fecharModal('modal-tp-versecoes'); }
+  function selecionarSecaoVisualizada(i) { secaoVisualizada = i; renderVerSecoes(); }
+
+  function renderVerSecoes() {
+    const el = document.getElementById('tp-versecoes-body');
+    if (!el) return;
+    const lista = secoesComVolume(secoes[secDir] || []);
+    if (secaoVisualizada >= lista.length) secaoVisualizada = 0;
+    const s = lista[secaoVisualizada];
+    const temPlanta = config.temImagemProjeto && imagemProjetoCache;
+    el.innerHTML = `
+      <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:12px;">
+        ${temPlanta ? `
+        <div style="flex:1 1 300px;min-width:260px;">
+          <div style="border:1px solid var(--cv-border);border-radius:6px;overflow:hidden;position:relative;">
+            <img src="${imagemProjetoCache}" style="width:100%;display:block;">
+            <svg viewBox="0 0 100 100" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%;">
+              ${lista.map((sec, i) => sec.origemFrac && sec.fimFrac
+                ? `<line x1="${(sec.origemFrac.x * 100).toFixed(2)}" y1="${(sec.origemFrac.y * 100).toFixed(2)}" x2="${(sec.fimFrac.x * 100).toFixed(2)}" y2="${(sec.fimFrac.y * 100).toFixed(2)}" stroke="${i === secaoVisualizada ? '#ffffff' : _corSecao(i)}" stroke-width="${i === secaoVisualizada ? 0.9 : 0.35}" vector-effect="non-scaling-stroke" style="cursor:pointer;pointer-events:auto;" onclick="TP_UI.selecionarSecaoVisualizada(${i})"/>`
+                : '').join('')}
+            </svg>
+          </div>
+          <p class="text-sm text-muted mt-1">Clique numa linha da planta pra ver o perfil dela.</p>
+        </div>` : ''}
+        <div style="flex:1 1 220px;min-width:200px;">
+          <div class="cc-tableWrap" style="max-height:260px;overflow-y:auto;">
+            <table class="cc-table">
+              <thead><tr><th></th><th>#</th><th class="col-num">Área (m²)</th></tr></thead>
+              <tbody>
+                ${lista.map((sec, i) => `<tr style="cursor:pointer;${i === secaoVisualizada ? 'background:var(--cv-surface2);' : ''}" onclick="TP_UI.selecionarSecaoVisualizada(${i})">
+                  <td><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${_corSecao(i)};"></span></td>
+                  <td class="cc-tdMono">${sec.numero ?? i + 1}</td>
+                  <td class="col-num cc-tdMono" style="${sec.area < 0 ? 'color:var(--cv-red);font-weight:700;' : ''}">${TC.fmt2(sec.area)}</td>
+                </tr>`).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      ${s ? `
+      <div style="font-family:var(--cv-mono);font-size:.85rem;margin-bottom:8px;">
+        Seção ${s.numero ?? secaoVisualizada + 1} — Área: <b style="${s.area < 0 ? 'color:var(--cv-red);' : 'color:var(--cv-accent3);'}">${TC.fmt2(s.area)} m²</b>
+        ${s.area < 0 ? ' ⚠️ negativa — tem trecho do terreno ABAIXO da cota final desta área (em vermelho no desenho)' : ''}
+      </div>
+      ${_svgPerfilLateral(s)}` : `<div class="cc-empty">Selecione uma seção.</div>`}
+    `;
+  }
+
+  // Desenha o perfil 2D (lateral) de uma seção: linha do terreno, linha
+  // pontilhada da cota final, e o preenchimento por trecho — verde onde o
+  // terreno tá acima da referência (corte), vermelho onde tá abaixo
+  // (contribui NEGATIVO pra área — é aqui que dá pra ver o porquê).
+  function _svgPerfilLateral(s) {
+    const cotas = (s.cotas || []).map(c => TC.num(c));
+    const dist = s.distanciasCotas || [];
+    const cf = TC.num(s.cotaFinal);
+    if (cotas.length < 2) return `<div class="cc-empty">Esta seção não tem cotas suficientes pra desenhar o perfil.</div>`;
+    const xs = [0];
+    for (let i = 0; i < dist.length; i++) xs.push(xs[i] + TC.num(dist[i]));
+    const minY = Math.min(...cotas, cf), maxY = Math.max(...cotas, cf);
+    const pad = Math.max(0.3, (maxY - minY) * 0.15);
+    const yLo = minY - pad, yHi = maxY + pad;
+    const totalW = xs[xs.length - 1] || 1;
+    const PX0 = 55, PX1 = 590, PY0 = 20, PY1 = 250;
+    const mapX = x => PX0 + (x / totalW) * (PX1 - PX0);
+    const mapY = y => yHi > yLo ? PY1 - ((y - yLo) / (yHi - yLo)) * (PY1 - PY0) : (PY0 + PY1) / 2;
+    const quads = [];
+    for (let i = 0; i < cotas.length - 1; i++) {
+      const x1 = mapX(xs[i]), x2 = mapX(xs[i + 1]);
+      const y1 = mapY(cotas[i]), y2 = mapY(cotas[i + 1]), yf = mapY(cf);
+      const media = (cotas[i] + cotas[i + 1]) / 2;
+      const cor = media >= cf ? '#22c55e' : '#ef4444';
+      quads.push(`<polygon points="${x1},${y1} ${x2},${y2} ${x2},${yf} ${x1},${yf}" fill="${cor}" fill-opacity="0.4"/>`);
+    }
+    const linhaCf = `<line x1="${PX0}" y1="${mapY(cf).toFixed(1)}" x2="${PX1}" y2="${mapY(cf).toFixed(1)}" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="5,3"/>`;
+    const linhaTerreno = `<polyline points="${cotas.map((c, i) => `${mapX(xs[i]).toFixed(1)},${mapY(c).toFixed(1)}`).join(' ')}" fill="none" stroke="#fff" stroke-width="2"/>`;
+    const pontos = cotas.map((c, i) => `<circle cx="${mapX(xs[i]).toFixed(1)}" cy="${mapY(c).toFixed(1)}" r="3.5" fill="#3b82f6" stroke="#fff" stroke-width="1"/><text x="${mapX(xs[i]).toFixed(1)}" y="${(mapY(c) - 8).toFixed(1)}" font-size="9" fill="#fff" text-anchor="middle" font-family="monospace">${TC.fmt2(c)}</text>`).join('');
+    const rotuloCf = `<text x="${PX0 + 4}" y="${(mapY(cf) - 5).toFixed(1)}" font-size="10" fill="#f59e0b" font-family="monospace">Cota Final: ${TC.fmt2(cf)}</text>`;
+    return `<svg viewBox="0 0 620 270" style="width:100%;background:#14141f;border-radius:8px;display:block;">${quads.join('')}${linhaCf}${linhaTerreno}${pontos}${rotuloCf}</svg>`;
+  }
+
   async function abrir3D() {
     const lista = (secoes[secDir] || []).filter(s => (s.cotas || []).length >= 2);
     if (lista.length < 1) { Utils.toast('Marque pelo menos uma seção com 2+ pontos pra gerar o 3D.', 'alerta'); return; }
@@ -896,90 +1013,104 @@ const LevantamentoTerraplanagem = (() => {
   }
 
   // Constrói cena Three.js do loft entre seções — usada tanto no modal
-  // interativo quanto no snapshot pro PDF do relatório.
+  // interativo quanto no snapshot pro PDF do relatório. Agrupa por área
+  // (areaId) — nunca conecta o loft entre seções de áreas DIFERENTES,
+  // cada área vira um sólido independente, lado a lado na cena.
   function _construirCena3D(lista) {
     const N = 22; // amostras por seção
-    const perfis = lista.map(s => _reamostrarPerfil(s.distanciasCotas || [], s.cotas || [], N));
-    const cotasFinal = lista.map(s => TC.num(s.cotaFinal));
-    // profundidade acumulada (Z) — soma das distâncias entre seções anteriores
-    const zAcum = [0];
-    for (let i = 0; i < lista.length - 1; i++) zAcum.push(zAcum[i] + (TC.num(lista[i].distanciaProxima) || 3));
-    // Só uma seção marcada — duplica o perfil com uma profundidade artificial
-    // pequena, senão não há entre-seções pra formar nenhuma face (malha vazia).
-    if (perfis.length === 1) { perfis.push(perfis[0]); cotasFinal.push(cotasFinal[0]); zAcum.push(zAcum[0] + 3); }
+    const GAP_ENTRE_AREAS = 3; // metros de respiro entre sólidos de áreas diferentes
 
-    // Bounds pra centralizar e pra escala de cor
-    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity, minProf = Infinity, maxProf = -Infinity;
-    perfis.forEach((p, si) => p.forEach(pt => {
-      minX = Math.min(minX, pt.x); maxX = Math.max(maxX, pt.x);
-      minY = Math.min(minY, pt.cota, cotasFinal[si]); maxY = Math.max(maxY, pt.cota, cotasFinal[si]);
-      const prof = pt.cota - cotasFinal[si];
-      minProf = Math.min(minProf, prof); maxProf = Math.max(maxProf, prof);
-    }));
-    const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2, cz = zAcum[zAcum.length - 1] / 2;
-    const escala = 100 / Math.max(maxX - minX, maxY - minY, zAcum[zAcum.length - 1] || 1, 1); // normaliza pra caber numa cena ~100 unidades
+    // Agrupa mantendo a ordem original, mas juntando todas as seções da mesma área
+    const grupos = [];
+    const porAreaId = new Map();
+    lista.forEach(s => {
+      const chave = s.areaId ?? '__sem_area__';
+      if (!porAreaId.has(chave)) { const g = []; porAreaId.set(chave, g); grupos.push(g); }
+      porAreaId.get(chave).push(s);
+    });
 
-    const posTopo = [], corTopo = [], posFundo = [];
-    perfis.forEach((p, si) => p.forEach(pt => {
-      posTopo.push((pt.x - cx) * escala, (pt.cota - cy) * escala, (zAcum[si] - cz) * escala);
-      posFundo.push((pt.x - cx) * escala, (cotasFinal[si] - cy) * escala, (zAcum[si] - cz) * escala);
-      const c = _corProfundidade(pt.cota - cotasFinal[si], minProf, maxProf);
-      corTopo.push(c.r, c.g, c.b);
-    }));
+    // Bounds globais (pra cor por profundidade e escala ficarem consistentes entre grupos)
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity, minProf = Infinity, maxProf = -Infinity, zTotal = 0;
+    const dadosGrupos = grupos.map(secs => {
+      const perfis = secs.map(s => _reamostrarPerfil(s.distanciasCotas || [], s.cotas || [], N));
+      const cotasFinal = secs.map(s => TC.num(s.cotaFinal));
+      const zAcumLocal = [0];
+      for (let i = 0; i < secs.length - 1; i++) zAcumLocal.push(zAcumLocal[i] + (TC.num(secs[i].distanciaProxima) || 3));
+      if (perfis.length === 1) { perfis.push(perfis[0]); cotasFinal.push(cotasFinal[0]); zAcumLocal.push(zAcumLocal[0] + 3); }
+      perfis.forEach((p, si) => p.forEach(pt => {
+        minX = Math.min(minX, pt.x); maxX = Math.max(maxX, pt.x);
+        minY = Math.min(minY, pt.cota, cotasFinal[si]); maxY = Math.max(maxY, pt.cota, cotasFinal[si]);
+        const prof = pt.cota - cotasFinal[si];
+        minProf = Math.min(minProf, prof); maxProf = Math.max(maxProf, prof);
+      }));
+      const larguraGrupo = zAcumLocal[zAcumLocal.length - 1];
+      const offsetZ = zTotal;
+      zTotal += larguraGrupo + GAP_ENTRE_AREAS;
+      return { perfis, cotasFinal, zAcum: zAcumLocal.map(z => z + offsetZ) };
+    });
+    zTotal -= GAP_ENTRE_AREAS; // não conta o respiro depois do último grupo
 
-    const idx = (si, pi) => si * N + pi;
-    const facesTopo = [], facesFundo = [];
-    for (let si = 0; si < perfis.length - 1; si++) {
-      for (let pi = 0; pi < N - 1; pi++) {
-        const a = idx(si, pi), b = idx(si, pi + 1), c = idx(si + 1, pi), d = idx(si + 1, pi + 1);
-        facesTopo.push(a, c, b, b, c, d);
-        facesFundo.push(a, b, c, b, d, c); // fundo com winding invertido (normal pra baixo)
-      }
-    }
+    const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2, cz = zTotal / 2;
+    const escala = 100 / Math.max(maxX - minX, maxY - minY, zTotal || 1, 1); // normaliza pra caber numa cena ~100 unidades
 
     const THREE_ = window.THREE;
     const scene = new THREE_.Scene();
     scene.background = new THREE_.Color(0x14141f);
-
-    // Superfície do terreno (topo) — colorida por profundidade do corte
-    const geoTopo = new THREE_.BufferGeometry();
-    geoTopo.setAttribute('position', new THREE_.Float32BufferAttribute(posTopo, 3));
-    geoTopo.setAttribute('color', new THREE_.Float32BufferAttribute(corTopo, 3));
-    geoTopo.setIndex(facesTopo);
-    geoTopo.computeVertexNormals();
-    const matTopo = new THREE_.MeshStandardMaterial({ vertexColors: true, side: THREE_.DoubleSide, flatShading: true, roughness: 0.85, metalness: 0.05 });
-    const meshTopo = new THREE_.Mesh(geoTopo, matTopo);
-
-    // Superfície de referência (fundo/cota final) — translúcida
-    const geoFundo = new THREE_.BufferGeometry();
-    geoFundo.setAttribute('position', new THREE_.Float32BufferAttribute(posFundo, 3));
-    geoFundo.setIndex(perfis.length > 1 ? facesFundo : []);
-    geoFundo.computeVertexNormals();
-    const matFundo = new THREE_.MeshStandardMaterial({ color: 0xf59e0b, transparent: true, opacity: 0.35, side: THREE_.DoubleSide, roughness: 0.9 });
-    const meshFundo = new THREE_.Mesh(geoFundo, matFundo);
-
     const group = new THREE_.Group();
-    group.add(meshTopo);
-    if (perfis.length > 1) group.add(meshFundo);
 
-    // Paredes de fechamento nas duas pontas (primeira e última seção) — mostra a face do corte
-    [0, perfis.length - 1].forEach(si => {
-      const posParede = [];
-      for (let pi = 0; pi < N; pi++) {
-        posParede.push((perfis[si][pi].x - cx) * escala, (perfis[si][pi].cota - cy) * escala, (zAcum[si] - cz) * escala);
-        posParede.push((perfis[si][pi].x - cx) * escala, (cotasFinal[si] - cy) * escala, (zAcum[si] - cz) * escala);
+    dadosGrupos.forEach(({ perfis, cotasFinal, zAcum }) => {
+      const posTopo = [], corTopo = [], posFundo = [];
+      perfis.forEach((p, si) => p.forEach(pt => {
+        posTopo.push((pt.x - cx) * escala, (pt.cota - cy) * escala, (zAcum[si] - cz) * escala);
+        posFundo.push((pt.x - cx) * escala, (cotasFinal[si] - cy) * escala, (zAcum[si] - cz) * escala);
+        const c = _corProfundidade(pt.cota - cotasFinal[si], minProf, maxProf);
+        corTopo.push(c.r, c.g, c.b);
+      }));
+
+      const idx = (si, pi) => si * N + pi;
+      const facesTopo = [], facesFundo = [];
+      for (let si = 0; si < perfis.length - 1; si++) {
+        for (let pi = 0; pi < N - 1; pi++) {
+          const a = idx(si, pi), b = idx(si, pi + 1), c = idx(si + 1, pi), d = idx(si + 1, pi + 1);
+          facesTopo.push(a, c, b, b, c, d);
+          facesFundo.push(a, b, c, b, d, c); // fundo com winding invertido (normal pra baixo)
+        }
       }
-      const facesParede = [];
-      for (let pi = 0; pi < N - 1; pi++) {
-        const a = pi * 2, b = pi * 2 + 1, c = (pi + 1) * 2, d = (pi + 1) * 2 + 1;
-        facesParede.push(a, c, b, b, c, d);
-      }
-      const geoParede = new THREE_.BufferGeometry();
-      geoParede.setAttribute('position', new THREE_.Float32BufferAttribute(posParede, 3));
-      geoParede.setIndex(facesParede);
-      geoParede.computeVertexNormals();
-      const matParede = new THREE_.MeshStandardMaterial({ color: 0x8b7355, side: THREE_.DoubleSide, roughness: 0.95 });
-      group.add(new THREE_.Mesh(geoParede, matParede));
+
+      const geoTopo = new THREE_.BufferGeometry();
+      geoTopo.setAttribute('position', new THREE_.Float32BufferAttribute(posTopo, 3));
+      geoTopo.setAttribute('color', new THREE_.Float32BufferAttribute(corTopo, 3));
+      geoTopo.setIndex(facesTopo);
+      geoTopo.computeVertexNormals();
+      const matTopo = new THREE_.MeshStandardMaterial({ vertexColors: true, side: THREE_.DoubleSide, flatShading: true, roughness: 0.85, metalness: 0.05 });
+      group.add(new THREE_.Mesh(geoTopo, matTopo));
+
+      const geoFundo = new THREE_.BufferGeometry();
+      geoFundo.setAttribute('position', new THREE_.Float32BufferAttribute(posFundo, 3));
+      geoFundo.setIndex(perfis.length > 1 ? facesFundo : []);
+      geoFundo.computeVertexNormals();
+      const matFundo = new THREE_.MeshStandardMaterial({ color: 0xf59e0b, transparent: true, opacity: 0.35, side: THREE_.DoubleSide, roughness: 0.9 });
+      if (perfis.length > 1) group.add(new THREE_.Mesh(geoFundo, matFundo));
+
+      // Paredes de fechamento nas duas pontas do grupo — mostra a face do corte
+      [0, perfis.length - 1].forEach(si => {
+        const posParede = [];
+        for (let pi = 0; pi < N; pi++) {
+          posParede.push((perfis[si][pi].x - cx) * escala, (perfis[si][pi].cota - cy) * escala, (zAcum[si] - cz) * escala);
+          posParede.push((perfis[si][pi].x - cx) * escala, (cotasFinal[si] - cy) * escala, (zAcum[si] - cz) * escala);
+        }
+        const facesParede = [];
+        for (let pi = 0; pi < N - 1; pi++) {
+          const a = pi * 2, b = pi * 2 + 1, c = (pi + 1) * 2, d = (pi + 1) * 2 + 1;
+          facesParede.push(a, c, b, b, c, d);
+        }
+        const geoParede = new THREE_.BufferGeometry();
+        geoParede.setAttribute('position', new THREE_.Float32BufferAttribute(posParede, 3));
+        geoParede.setIndex(facesParede);
+        geoParede.computeVertexNormals();
+        const matParede = new THREE_.MeshStandardMaterial({ color: 0x8b7355, side: THREE_.DoubleSide, roughness: 0.95 });
+        group.add(new THREE_.Mesh(geoParede, matParede));
+      });
     });
 
     scene.add(group);
@@ -1227,8 +1358,8 @@ const LevantamentoTerraplanagem = (() => {
         head: [['Seção', 'Área (m²)', 'Comprimento (m)', 'Dist. próxima (m)', 'Vol. entre (m³)']],
         body: lista.map((s, i) => [
           String(s.numero ?? i + 1), TC.fmt2(s.area), TC.fmt1(TC.calcComprimentoSecao(s.distanciasCotas || [])),
-          i < lista.length - 1 ? TC.fmt1(s.distanciaProxima) : '—',
-          i < lista.length - 1 ? TC.fmt1(s.volEntre) : '—',
+          (s.distanciaProxima !== '' && s.distanciaProxima != null) ? TC.fmt1(s.distanciaProxima) : '—',
+          (s.distanciaProxima !== '' && s.distanciaProxima != null) ? TC.fmt1(s.volEntre) : '—',
         ]),
         margin: { left: 12, right: 12 },
         styles: { fontSize: 8, cellPadding: 1.8 },
@@ -1312,6 +1443,7 @@ const LevantamentoTerraplanagem = (() => {
     abrirConfig, salvarConfigBtn, aplicarPresetEmpolamento,
     adicionarTipoCaminhao, atualizarTipoCaminhao, removerTipoCaminhao,
     abrirCaminhoes, salvarCaminhao, excluirCaminhao,
+    abrirVerSecoes, fecharVerSecoes, selecionarSecaoVisualizada,
     abrir3D, fechar3D, limparBase,
     baixarLevantamentoPDF, compartilharLevantamentoPDF,
   };
