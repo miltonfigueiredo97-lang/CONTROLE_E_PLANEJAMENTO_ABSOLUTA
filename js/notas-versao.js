@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.9.4',
+  versaoAtual: 'V3.9.5',
 
   versoes: [
     {
@@ -8388,6 +8388,16 @@ const NotasVersao = {
         "Causa raiz de uma conta errada de verdade: o sistema só tinha \\\"Elevação\\\" e \\\"Profundidade\\\", mas tem projeto que mede diferente — o valor digitado JÁ É a altura com sinal em relação a uma referência (R.N.): positivo quando o ponto está ACIMA da referência (é corte), negativo quando está ABAIXO (é aterro), sempre, não importa o valor da própria referência. Nenhuma das duas opções antigas cobria isso.",
         "Nova convenção \\\"↕️ Relativa ao R.N.\\\": ao concluir uma área, agora pergunta as 3 opções (Profundidade / Relativa / Elevação). Pra áreas já criadas, clicar no botão de convenção na tabela agora CICLA entre as 3.",
         "Testado matematicamente: com a mesma dupla de pontos (+3 e -2, distância 10m), o resultado da área deu EXATAMENTE igual usando R.N.=0 ou R.N.=779,84 como referência — confirma que só o sinal digitado importa, como esperado."
+      ]
+    },
+    {
+      "versao": "V3.9.5",
+      "data": "2026-08-16",
+      "tipo": "correcao",
+      "titulo": "3D: revertido o \"piso global\" — cada área volta a ter o fundo dela mesma (degrau real entre profundidades diferentes)",
+      "itens": [
+        "A correção anterior (piso único bem lá embaixo, pra fechar um vão entre áreas vizinhas) tinha um efeito colateral errado: nivelava TODAS as áreas na mesma profundidade lá embaixo, mesmo quando cada uma tem sua própria cota final. Se uma área é mais funda que a outra, o fundo TEM que formar um degrau real ali — não faz sentido físico ficar tudo liso.",
+        "Revertido: paredes e o fundo (agora sólido, não mais translúcido) voltam a usar a cota final da PRÓPRIA área — cada área com sua profundidade certa, degrau de verdade onde uma é diferente da outra."
       ]
     }
   ],

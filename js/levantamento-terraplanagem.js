@@ -1385,12 +1385,6 @@ const LevantamentoTerraplanagem = (() => {
     // profundidade pra ela ficar sempre bem visível, sem depender do tamanho da planta.
     const ALTURA_VISUAL = 20;
     const escalaY = Math.min(ALTURA_VISUAL / Math.max(maxY - minY, 0.5), escalaXZ * 2);
-    // Piso global (bem abaixo da cota mais funda de TODAS as áreas) — as
-    // PAREDES esticam até aqui, não só até a cota final da própria área.
-    // Sem isso, quando duas áreas vizinhas têm cota final diferente (ou a
-    // borda de uma não encosta 100% na da outra, por imprecisão de clique),
-    // sobrava um vão/buraco vazio bem na costura entre elas.
-    const pisoGlobal = minY - Math.max((maxY - minY) * 0.15, 1);
 
     const THREE_ = window.THREE;
     const scene = new THREE_.Scene();
@@ -1430,30 +1424,16 @@ const LevantamentoTerraplanagem = (() => {
       const matTopo = new THREE_.MeshStandardMaterial({ vertexColors: true, side: THREE_.DoubleSide, flatShading: true, roughness: 0.85, metalness: 0.05 });
       group.add(new THREE_.Mesh(geoTopo, matTopo));
 
+      // Fundo SÓLIDO (não mais translúcido) na cota final DESTA área — cada
+      // área tem seu próprio nível de fundo. Se uma área é mais funda que a
+      // vizinha, o fundo forma um DEGRAU real entre elas — não tem como (nem
+      // deveria) ficar tudo liso numa profundidade só, como o Milton apontou.
       const geoFundo = new THREE_.BufferGeometry();
       geoFundo.setAttribute('position', new THREE_.Float32BufferAttribute(posFundo, 3));
       geoFundo.setIndex(facesFundo);
       geoFundo.computeVertexNormals();
-      const matFundo = new THREE_.MeshStandardMaterial({ color: 0xf59e0b, transparent: true, opacity: 0.35, side: THREE_.DoubleSide, roughness: 0.9 });
+      const matFundo = new THREE_.MeshStandardMaterial({ color: 0xd97706, side: THREE_.DoubleSide, roughness: 0.9 });
       group.add(new THREE_.Mesh(geoFundo, matFundo));
-
-      // Tampa sólida no PISO GLOBAL — mesma forma/triangulação do topo, só
-      // achatada lá embaixo. Sem isso, o objeto ficava "sem fundo": paredes
-      // fechavam os lados mas o corpo continuava oco por baixo.
-      const posTampa = [];
-      for (let j = 0; j < g.ny; j++) {
-        for (let i = 0; i < g.nx; i++) {
-          const pt = g.grid[j][i];
-          if (!pt.dentro) { posTampa.push(0, 0, 0); continue; }
-          posTampa.push((pt.x - cx) * escalaXZ, (pisoGlobal - cy) * escalaY, (pt.y - cz) * escalaXZ);
-        }
-      }
-      const geoTampa = new THREE_.BufferGeometry();
-      geoTampa.setAttribute('position', new THREE_.Float32BufferAttribute(posTampa, 3));
-      geoTampa.setIndex(facesFundo); // mesmo winding do fundo — normal pra baixo, visível de baixo
-      geoTampa.computeVertexNormals();
-      const matTampa = new THREE_.MeshStandardMaterial({ color: 0x6b5642, side: THREE_.DoubleSide, roughness: 0.95 });
-      group.add(new THREE_.Mesh(geoTampa, matTampa));
 
       // Paredes sólidas seguindo o CONTORNO REAL da malha — fecha o vão entre
       // topo e fundo em toda borda de verdade (inclusive em reentrâncias tipo
@@ -1469,12 +1449,13 @@ const LevantamentoTerraplanagem = (() => {
       function addParede(pA, pB) {
         const cotaA = _ajustarConvencaoEscalar(pA.cota, g.cotaFinal, g.convencao).cota;
         const cotaB = _ajustarConvencaoEscalar(pB.cota, g.cotaFinal, g.convencao).cota;
+        const cf = _ajustarConvencaoEscalar(pA.cota, g.cotaFinal, g.convencao).cotaFinal; // mesma pra qualquer ponto desta área
         const base = posParede.length / 3;
         posParede.push(
           (pA.x - cx) * escalaXZ, (cotaA - cy) * escalaY, (pA.y - cz) * escalaXZ,
           (pB.x - cx) * escalaXZ, (cotaB - cy) * escalaY, (pB.y - cz) * escalaXZ,
-          (pA.x - cx) * escalaXZ, (pisoGlobal - cy) * escalaY, (pA.y - cz) * escalaXZ,
-          (pB.x - cx) * escalaXZ, (pisoGlobal - cy) * escalaY, (pB.y - cz) * escalaXZ,
+          (pA.x - cx) * escalaXZ, (cf - cy) * escalaY, (pA.y - cz) * escalaXZ,
+          (pB.x - cx) * escalaXZ, (cf - cy) * escalaY, (pB.y - cz) * escalaXZ,
         );
         facesParede.push(base, base + 2, base + 1, base + 1, base + 2, base + 3);
       }
