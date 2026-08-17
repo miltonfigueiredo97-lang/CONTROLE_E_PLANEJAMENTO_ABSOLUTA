@@ -41,6 +41,11 @@ const ControleTerraplanagem = (() => {
     }
     document.addEventListener('keydown', e => { if (e.key === 'Escape') Utils.fecharTodosModais(); });
     await carregar();
+    // Chegou pelo botão "Gerar relatório" do Dashboard (?relatorio=1):
+    // abre direto o modal do relatório de período, com as datas preenchidas.
+    if (new URLSearchParams(location.search).get('relatorio') === '1') {
+      abrirRelatorioPeriodo();
+    }
   }
 
   async function carregar() {

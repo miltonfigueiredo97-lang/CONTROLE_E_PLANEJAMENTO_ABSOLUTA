@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.8.10.1',
+  versaoAtual: 'V3.8.10.2',
 
   versoes: [
     {
@@ -8172,6 +8172,16 @@ const NotasVersao = {
       "titulo": "Gráfico de Terraplanagem com unidade m³ nos rótulos",
       "itens": [
         "O número em cima de cada barra do gráfico de Terraplanagem agora mostra a unidade: \"416 m³\" em vez de só \"416\"."
+      ]
+    },
+    {
+      "versao": "V3.8.10.2",
+      "data": "2026-08-17",
+      "tipo": "melhoria",
+      "titulo": "Botão Gerar Relatório de Terraplanagem direto do Dashboard",
+      "itens": [
+        "A seção 🚜 Terraplanagem do Dashboard ganhou o botão \"📊 Gerar relatório\" em cima do gráfico: um clique abre o relatório de período do Controle de Terraplanagem já com o modal aberto e as datas preenchidas — sem precisar navegar e procurar o botão lá dentro.",
+        "É o MESMO relatório do Controle (uma fonte única de cálculo): prévia com KPIs e gráfico, PDF pra baixar e compartilhar."
       ]
     }
   ],

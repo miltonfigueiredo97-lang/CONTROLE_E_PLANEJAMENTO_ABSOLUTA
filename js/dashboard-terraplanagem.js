@@ -32,7 +32,10 @@ const DashTerra = (() => {
     host.innerHTML = `
       <div class="card db-row">
         <div class="card-body">
-          <div class="db-secao-header"><h3>🚜 Terraplanagem</h3></div>
+          <div class="db-secao-header">
+            <h3>🚜 Terraplanagem</h3>
+            <a class="btn btn-secundario btn-sm" href="controle-terraplanagem.html?relatorio=1" title="Abre o relatório de período com as datas já preenchidas">📊 Gerar relatório</a>
+          </div>
           <div id="db-terra">Carregando...</div>
         </div>
       </div>`;
