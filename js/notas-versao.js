@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.9.7',
+  versaoAtual: 'V3.9.8',
 
   versoes: [
     {
@@ -8418,6 +8418,15 @@ const NotasVersao = {
       "itens": [
         "A simplificação da V3.9.6 tentava fazer a cota digitada já ser a altura direta, mas a fórmula usada CANCELAVA a cota final da conta por engano — o resultado saía sempre igual ao valor bruto do terreno, ignorando totalmente a cota final. Num terreno com valores negativos (comum quando tudo é medido abaixo de uma referência zero), isso fazia TUDO sair aterro (negativo), mesmo terreno claramente mais alto que a cota final.",
         "Corrigido: a altura volta a ser a subtração padrão (cota do terreno MENOS cota final) — que já funciona certo com valores negativos dos dois lados, sem precisar de nenhum ajuste especial. Testado com os números reais (terreno -4,5/-4,9, cota final -7,18): deu +24,80 m² positivo (corte, correto). Testado também o caso inverso (terreno já mais fundo que a cota final): deu negativo (aterro), como devia."
+      ]
+    },
+    {
+      "versao": "V3.9.8",
+      "data": "2026-08-16",
+      "tipo": "melhoria",
+      "titulo": "Perfil lateral (\"Ver Seções\") ganhou a linha de referência Cota 0",
+      "itens": [
+        "O gráfico só mostrava a linha da Cota Final (laranja) — agora mostra também uma linha pontilhada cinza marcando a Cota 0 (o zero de referência), separada da cota final. O gráfico se ajusta pra sempre incluir o zero na área visível, mesmo se ele estiver bem longe do terreno ou da cota final."
       ]
     }
   ],

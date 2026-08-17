@@ -1225,7 +1225,7 @@ const LevantamentoTerraplanagem = (() => {
     const cotasPos = adj.cotas, cfPos = adj.cotaFinal;
     const xs = [0];
     for (let i = 0; i < dist.length; i++) xs.push(xs[i] + TC.num(dist[i]));
-    const minY = Math.min(...cotasPos, cfPos), maxY = Math.max(...cotasPos, cfPos);
+    const minY = Math.min(...cotasPos, cfPos, 0), maxY = Math.max(...cotasPos, cfPos, 0); // inclui 0 sempre, pra linha de referência aparecer
     const pad = Math.max(0.3, (maxY - minY) * 0.15);
     const yLo = minY - pad, yHi = maxY + pad;
     const totalW = xs[xs.length - 1] || 1;
@@ -1246,11 +1246,12 @@ const LevantamentoTerraplanagem = (() => {
       quads.push(`<polygon points="${x1},${y1} ${x2},${y2} ${x2},${yf} ${x1},${yf}" fill="${cor}" fill-opacity="${contrib >= 0 ? 0.4 : 0.65}"/>`);
     }
     const linhaCf = `<line x1="${PX0}" y1="${mapY(cfPos).toFixed(1)}" x2="${PX1}" y2="${mapY(cfPos).toFixed(1)}" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="5,3"/>`;
+    const linhaZero = `<line x1="${PX0}" y1="${mapY(0).toFixed(1)}" x2="${PX1}" y2="${mapY(0).toFixed(1)}" stroke="#94a3b8" stroke-width="1" stroke-dasharray="2,3"/><text x="${PX1 - 4}" y="${(mapY(0) - 5).toFixed(1)}" font-size="10" fill="#94a3b8" text-anchor="end" font-family="monospace">Cota 0</text>`;
     const linhaTerreno = `<polyline points="${cotasPos.map((c, i) => `${mapX(xs[i]).toFixed(1)},${mapY(c).toFixed(1)}`).join(' ')}" fill="none" stroke="#fff" stroke-width="2"/>`;
     const pontos = cotas.map((c, i) => `<circle cx="${mapX(xs[i]).toFixed(1)}" cy="${mapY(cotasPos[i]).toFixed(1)}" r="3.5" fill="#3b82f6" stroke="#fff" stroke-width="1"/><text x="${mapX(xs[i]).toFixed(1)}" y="${(mapY(cotasPos[i]) - 8).toFixed(1)}" font-size="9" fill="#fff" text-anchor="middle" font-family="monospace">${TC.fmt2(c)}</text>`).join('');
     const rotuloCf = `<text x="${PX0 + 4}" y="${(mapY(cfPos) - 5).toFixed(1)}" font-size="10" fill="#f59e0b" font-family="monospace">Cota Final: ${TC.fmt2(cf)}</text>`;
     const resumo = `<p class="text-sm" style="font-family:var(--cv-mono);margin-top:6px;">🟩 Corte: <b style="color:#22c55e;">+${TC.fmt2(areaCorte)} m²</b> · 🟥 Aterro: <b style="color:#ef4444;">${TC.fmt2(areaAterro)} m²</b> · Líquido: <b>${TC.fmt2(areaCorte + areaAterro)} m²</b></p>`;
-    return `<svg viewBox="0 0 620 270" style="width:100%;background:#14141f;border-radius:8px;display:block;">${quads.join('')}${linhaCf}${linhaTerreno}${pontos}${rotuloCf}</svg>${resumo}`;
+    return `<svg viewBox="0 0 620 270" style="width:100%;background:#14141f;border-radius:8px;display:block;">${quads.join('')}${linhaZero}${linhaCf}${linhaTerreno}${pontos}${rotuloCf}</svg>${resumo}`;
   }
 
   async function abrir3D() {
