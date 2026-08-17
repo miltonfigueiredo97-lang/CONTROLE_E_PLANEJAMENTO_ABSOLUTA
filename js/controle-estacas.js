@@ -866,6 +866,8 @@ const ControleEstacas = (() => {
   let estacaAtual = null; // {concId, pecaId, linhas:[{btId,pctBT}]} — lançamento por peça (o fluxo principal)
   let mostrarBTsCompletas = false; // por padrão esconde BTs já 100% alocadas noutras peças no seletor
   let btMetaInlineId = null; // BT com o mini-form de sobra/perda/cocho aberto, dentro do popup de lançar estaca
+  let btBuscaLinhaAberta = null; // índice da linha com o combobox de BT aberto (só 1 por vez)
+  let btBuscaTexto = ''; // texto digitado na busca do combobox de BT
   let metaBTPendente = {}; // {btId: {sobra,perda,perdaCocho,hora}} — usado quando a BT ainda não tem NENHUM lançamento salvo (não tem onde persistir ainda; aplica no próximo Salvar)
 
   function _proximoNumeroBT(concId) {
@@ -1078,10 +1080,17 @@ const ControleEstacas = (() => {
   // ══════════════════════════════════════════
   function _abrirEstaca(pecaId) {
     const lansPeca = lancamentos.filter(l => l.pecaId === pecaId && l.concretagemId === acompConcretagemId);
-    const linhas = lansPeca.map(l => {
-      const b = btsConfig.find(x => x.id === l.btConfigId);
-      const pctBT = b && b.volumePrevisto > 0 ? (l.volume / b.volumePrevisto) * 100 : 0;
-      return { btId: l.btConfigId, pctBT: String(Math.round(pctBT * 100) / 100) };
+    // Mescla por BT (soma o volume) — proteção contra dado antigo com 2
+    // lançamentos pra mesma (peça, BT), que mostraria a mesma BT 2x na lista.
+    const porBT = new Map();
+    lansPeca.forEach(l => {
+      const acc = porBT.get(l.btConfigId) || 0;
+      porBT.set(l.btConfigId, acc + (l.volume || 0));
+    });
+    const linhas = [...porBT.entries()].map(([btId, volume]) => {
+      const b = btsConfig.find(x => x.id === btId);
+      const pctBT = b && b.volumePrevisto > 0 ? (volume / b.volumePrevisto) * 100 : 0;
+      return { btId, pctBT: String(Math.round(pctBT * 100) / 100) };
     }).sort((a, b) => {
       const na = btsConfig.find(x => x.id === a.btId)?.numero || 0;
       const nb = btsConfig.find(x => x.id === b.btId)?.numero || 0;
@@ -1091,9 +1100,25 @@ const ControleEstacas = (() => {
     estacaAtual = { concId: acompConcretagemId, pecaId, linhas };
   }
 
-  function btAddLinhaPeca() { estacaAtual.linhas.push({ btId: '', pctBT: '' }); _renderLancarEstacaBody(); }
-  function btRemLinhaPeca(i) { estacaAtual.linhas.splice(i, 1); _renderLancarEstacaBody(); }
+  function btAddLinhaPeca() {
+    estacaAtual.linhas.push({ btId: '', pctBT: '' });
+    btBuscaLinhaAberta = estacaAtual.linhas.length - 1;
+    btBuscaTexto = '';
+    _renderLancarEstacaBody();
+  }
+  function btRemLinhaPeca(i) {
+    estacaAtual.linhas.splice(i, 1);
+    btBuscaLinhaAberta = null; // índice pode ter ficado desatualizado com o splice
+    _renderLancarEstacaBody();
+  }
   function btUpdLinhaPeca(i, campo, valor) {
+    if (campo === 'btId' && valor) {
+      const jaEmOutraLinha = estacaAtual.linhas.some((l, idx) => idx !== i && l.btId === valor);
+      if (jaEmOutraLinha) {
+        Utils.toast('Essa BT já está em outra linha desta peça — escolha outra.', 'alerta');
+        return;
+      }
+    }
     estacaAtual.linhas[i][campo] = valor;
     if (campo === 'btId') { _renderLancarEstacaBody(); return; }
     // só o % mudou — atualiza volume da linha, o aviso de excesso e o total, sem re-render total
@@ -1136,6 +1161,54 @@ const ControleEstacas = (() => {
 
   function toggleMostrarBTsCompletas(v) { mostrarBTsCompletas = v; _renderLancarEstacaBody(); }
 
+  // ── Combobox de BT por linha (digita e filtra, clica e seleciona) —
+  // substitui o <select> nativo, que em alguns aparelhos abria a lista
+  // cortada/ilegível. Só 1 aberto por vez. ──
+  function abrirBuscaBTLinha(i) {
+    btBuscaLinhaAberta = i;
+    btBuscaTexto = '';
+    _renderLancarEstacaBody();
+  }
+  function fecharBuscaBTLinha() {
+    btBuscaLinhaAberta = null;
+    _renderLancarEstacaBody();
+  }
+  function onDigitarBuscaBTLinha(v) {
+    btBuscaTexto = v;
+    const listaEl = document.getElementById('ce-bt-busca-lista');
+    if (listaEl) listaEl.innerHTML = _listaBTBuscaHTML(btBuscaLinhaAberta);
+  }
+  function selecionarBTLinha(i, btId) {
+    btBuscaLinhaAberta = null;
+    btUpdLinhaPeca(i, 'btId', btId);
+  }
+  function _listaBTBuscaHTML(i) {
+    const termo = (btBuscaTexto || '').trim().toLowerCase();
+    const idsUsadosOutras = new Set(estacaAtual.linhas.map((l, idx) => idx !== i ? l.btId : null).filter(Boolean));
+    const btAtual = estacaAtual.linhas[i].btId;
+    const btsConc = _btsDaConcretagem(estacaAtual.concId);
+    const opcoes = btsConc.filter(b => {
+      if (idsUsadosOutras.has(b.id)) return false; // já está em OUTRA linha desta peça
+      const pctOutras = _pctBTAlocadaOutrasPecas(b.id, estacaAtual.pecaId);
+      if (!mostrarBTsCompletas && pctOutras >= 99.99 && b.id !== btAtual) return false;
+      if (termo) {
+        const label = `bt-${b.numero}`.toLowerCase();
+        if (!label.includes(termo) && !String(b.numero).includes(termo)) return false;
+      }
+      return true;
+    });
+    return `
+      <div style="padding:8px 12px;cursor:pointer;color:var(--cv-text3,#94a3b8);font-size:.85rem;" onmousedown="CE.selecionarBTLinha(${i},'')">— Nenhuma —</div>
+      ${opcoes.length ? opcoes.map(b => {
+        const pctOutras = _pctBTAlocadaOutrasPecas(b.id, estacaAtual.pecaId);
+        return `<div style="padding:8px 12px;cursor:pointer;border-top:1px solid var(--cv-border,#f1f5f9);" onmousedown="CE.selecionarBTLinha(${i},'${b.id}')">
+          <div style="font-weight:600;font-size:.85rem;">BT-${b.numero} · ${EC.fmt1(b.volumePrevisto)}m³</div>
+          ${pctOutras > 0.01 ? `<div class="text-sm text-muted">${EC.fmt1(pctOutras)}% em outra peça</div>` : ''}
+        </div>`;
+      }).join('') : '<div style="padding:10px 12px;color:var(--cv-text3,#94a3b8);font-size:.82rem;">Nenhuma BT encontrada.</div>'}
+    `;
+  }
+
   async function salvarEstacaAcomp() {
     if (!Permissions.pode('controleEstacas', 'editar') && !Permissions.pode('controleEstacas', 'criar')) { Utils.toast('Sem permissão.', 'erro'); return; }
     if (!estacaAtual || !estacaAtual.pecaId) return;
@@ -1146,18 +1219,25 @@ const ControleEstacas = (() => {
       const volConcPeca = _volumeConcPeca(p, estacaAtual.concId);
       const ops = [];
       const idsUsados = new Set();
+      // Mescla linhas com a MESMA BT (soma o volume) antes de gravar — nunca
+      // pode existir 2 documentos pra (peça, BT), quebraria o batch write.
+      const volumePorBT = new Map();
       estacaAtual.linhas.forEach(l => {
         const b = btsConfig.find(x => x.id === l.btId);
         if (!b) return;
         const pctBT = EC.num((l.pctBT || '').replace(',', '.'));
         if (pctBT <= 0) return;
-        idsUsados.add(b.id);
-        const volume = (pctBT / 100) * b.volumePrevisto;
+        const volumeLinha = (pctBT / 100) * b.volumePrevisto;
+        volumePorBT.set(b.id, (volumePorBT.get(b.id) || 0) + volumeLinha);
+      });
+      volumePorBT.forEach((volume, btId) => {
+        const b = btsConfig.find(x => x.id === btId);
+        idsUsados.add(btId);
         const pctPeca = volConcPeca > 0 ? (volume / volConcPeca) * 100 : 0;
-        const meta = _metaBT(b.id);
-        const existente = lancamentos.find(x => x.btConfigId === b.id && x.pecaId === p.id);
+        const meta = _metaBT(btId);
+        const existente = lancamentos.find(x => x.btConfigId === btId && x.pecaId === p.id);
         const dados = {
-          btConfigId: b.id, concretagemId: estacaAtual.concId, pecaId: p.id,
+          btConfigId: btId, concretagemId: estacaAtual.concId, pecaId: p.id,
           pct: +pctPeca.toFixed(2), volume: +volume.toFixed(4),
           hora: meta.hora, sobraCaminhao: EC.num(meta.sobra), perdaObra: EC.num(meta.perda), perdaCocho: EC.num(meta.perdaCocho), obraId,
         };
@@ -1249,6 +1329,8 @@ const ControleEstacas = (() => {
   // ── Popup de lançar por estaca — aberto ao clicar no marcador no mapa ──
   function abrirEstacaModal(pecaId) {
     _abrirEstaca(pecaId);
+    btBuscaLinhaAberta = null;
+    btMetaInlineId = null;
     const p = pecas.find(x => x.id === pecaId);
     const titEl = document.getElementById('ce-lancar-titulo');
     if (titEl) titEl.textContent = `🚚 Lançar — ${p ? p.nome : ''}`;
@@ -1275,16 +1357,6 @@ const ControleEstacas = (() => {
     // Por padrão, esconde do seletor as que já estão 100% alocadas noutras peças (não sobra nada
     // pra usar aqui mesmo) — "Mostrar BTs 100% usadas" reexibe, se precisar reajustar algo.
     const qtdCompletas = btsConc.filter(b => !idsUsados.has(b.id) && _pctBTAlocadaOutrasPecas(b.id, estacaAtual.pecaId) >= 99.99).length;
-    const opcoesBT = selId => {
-      return `<option value="">— BT —</option>` + btsConc.filter(b => {
-        if (b.id === selId || idsUsados.has(b.id)) return true;
-        const pctOutras = _pctBTAlocadaOutrasPecas(b.id, estacaAtual.pecaId);
-        return mostrarBTsCompletas || pctOutras < 99.99;
-      }).map(b => {
-        const pctOutras = _pctBTAlocadaOutrasPecas(b.id, estacaAtual.pecaId);
-        return `<option value="${b.id}" ${selId === b.id ? 'selected' : ''}>BT-${b.numero} · ${EC.fmt1(b.volumePrevisto)}m³${pctOutras > 0.01 ? ` (${EC.fmt1(pctOutras)}% em outras peças)` : ''}</option>`;
-      }).join('');
-    };
     el.innerHTML = `
       <div class="text-sm text-muted" style="margin-bottom:10px;">Precisa de ${EC.fmt1(volNecessario)} m³ · recebido até agora ${EC.fmt1(totalRecebido)} m³ (${EC.fmt1(volNecessario > 0 ? totalRecebido / volNecessario * 100 : 0)}%)</div>
       ${!btsConc.length ? `<div class="cc-empty">Nenhuma BT criada ainda nesta concretagem. <button class="btn btn-secundario btn-sm" data-perm="controleEstacas:criar" onclick="Utils.fecharModal('modal-ce-lancar-estaca');CE.abrirModalBTs();CE.abrirNovaBT();">+ Criar BT</button></div>` : `
@@ -1304,7 +1376,13 @@ const ControleEstacas = (() => {
             const ehPrimeiraOuUltima = b && ((primeiraBT && b.id === primeiraBT.id) || (ultimaBT && b.id === ultimaBT.id));
             return `<div style="margin-bottom:6px;">
               <div style="display:grid;grid-template-columns:1fr 100px 90px 100px 36px;gap:8px;align-items:center;">
-                <select class="form-control" onchange="CE.btUpdLinhaPeca(${i}, 'btId', this.value)">${opcoesBT(l.btId)}</select>
+                <div style="position:relative;">
+                  <input type="text" class="form-control" placeholder="Buscar BT..." autocomplete="off"
+                    value="${btBuscaLinhaAberta === i ? esc(btBuscaTexto) : (b ? `BT-${b.numero} · ${EC.fmt1(b.volumePrevisto)}m³` : '')}"
+                    onfocus="CE.abrirBuscaBTLinha(${i})" oninput="CE.onDigitarBuscaBTLinha(this.value)"
+                    onblur="setTimeout(()=>CE.fecharBuscaBTLinha(),150)">
+                  ${btBuscaLinhaAberta === i ? `<div id="ce-bt-busca-lista" style="position:absolute;top:100%;left:0;right:0;z-index:30;background:#fff;border:1px solid var(--cv-border,#e2e8f0);border-radius:8px;max-height:200px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,.15);margin-top:4px;">${_listaBTBuscaHTML(i)}</div>` : ''}
+                </div>
                 <input type="text" inputmode="decimal" class="form-control" style="${excesso ? 'border-color:#ef4444;' : ''}" placeholder="% da BT" value="${esc(l.pctBT)}" oninput="CE.btUpdLinhaPeca(${i}, 'pctBT', this.value)">
                 <span id="ce-est-vol-${i}" style="font-family:var(--font-mono);font-size:.78rem;color:var(--cor-texto-secundario);text-align:right;">${EC.fmt1(vol)} m³</span>
                 ${ehPrimeiraOuUltima ? `<button class="btn btn-secundario btn-sm" style="${temPerda ? 'border-color:#f59e0b;color:#f59e0b;' : ''}" title="${b.id === primeiraBT?.id ? 'Cocho/linha desta BT (é a primeira)' : 'Sobra de caminhão desta BT (é a última)'}" onclick="CE.toggleMetaInline('${b.id}')">✎ ${b.id === primeiraBT?.id ? 'cocho' : 'sobra'}</button>` : ''}
@@ -2276,6 +2354,7 @@ const ControleEstacas = (() => {
     abrirNovaBT, fecharPainelBT, criarBTEstacas, abrirEditarMetaBT, salvarMetaBT, excluirBTEstacas,
     abrirModalBTs, abrirEstacaModal, btAddLinhaPeca, btRemLinhaPeca, btUpdLinhaPeca, salvarEstacaAcomp, toggleMostrarBTsCompletas,
     toggleMetaInline, salvarMetaBTInline,
+    abrirBuscaBTLinha, fecharBuscaBTLinha, onDigitarBuscaBTLinha, selecionarBTLinha,
   };
 })();
 

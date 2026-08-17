@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.7.1.1',
+  versaoAtual: 'V3.7.1.2',
 
   versoes: [
     {
@@ -7896,6 +7896,17 @@ const NotasVersao = {
         "Cards do topo redesenhados: Terra Prevista, Terra Removida (com % da terraplanagem), Entulho Removido (marcado como \\\"não entra na terraplanagem\\\"), Caminhões e Viagens.",
         "Nova aba \\\"Por Material\\\" nas Viagens/Remoções: volume, viagens e % de cada material, com a classificação (terraplanagem × demolição × fora da terraplanagem).",
         "Relatório PDF de período atualizado: cards separados de Terra e Entulho, % Terra × Previsto calculado só com terra, e nova tabela \\\"Volume por material\\\" com a classificação de cada um."
+      ]
+    },
+    {
+      "versao": "V3.7.1.2",
+      "data": "2026-08-15",
+      "tipo": "correcao",
+      "titulo": "Controle de Estacas: BT duplicada numa mesma peça + seletor nativo trocado por combobox controlado",
+      "itens": [
+        "Bug real de dados: era possível a mesma BT aparecer em 2 linhas da mesma peça (de lançamentos antigos duplicados) — ao salvar, isso geraria 2 documentos separados ou quebraria o lançamento em lote. Corrigido em 3 pontos: ao abrir a peça, lançamentos duplicados da mesma BT são mesclados (soma o volume); ao selecionar uma BT já usada noutra linha, é bloqueado com aviso; ao salvar, linhas da mesma BT são somadas antes de gravar (nunca 2 documentos pra mesma peça+BT).",
+        "O seletor de BT (era um <select> nativo do navegador) foi trocado por um combobox controlado, digita e filtra — em alguns aparelhos o select nativo abria com a lista cortada/ilegível, sem dar pra ler as opções. Agora é HTML/CSS próprio, com o mesmo comportamento em qualquer tela.",
+        "Adicionar uma BT nova (+ BT) já abre o combobox dela direto, sem precisar clicar de novo."
       ]
     }
   ],
