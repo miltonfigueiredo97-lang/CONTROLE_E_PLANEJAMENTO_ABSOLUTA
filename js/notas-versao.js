@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.8.14',
+  versaoAtual: 'V3.8.14.1',
 
   versoes: [
     {
@@ -8258,6 +8258,17 @@ const NotasVersao = {
         "Painel \"Marcar no Projeto\" (onde calibra a escala, desenha áreas e marca cotas) ganhou os mesmos controles de zoom/pan do \"Ver Seções\" — dá pra ampliar bem de perto pra calibrar com precisão, clicando exatamente nos dois pontos certos de uma medida conhecida na planta. Arrastar com zoom aplicado dá pan; clique sem arrastar continua marcando o ponto normalmente (as duas ações não se confundem mais).",
         "3D: removidas as \"paredes\" sólidas nas pontas de cada seção — eram elas que, junto com o exagero vertical, davam a impressão de uma caixa/torre em vez de um terreno. Ficou só a superfície do terreno (colorida por profundidade) e o plano de referência translúcido embaixo.",
         "Exagero vertical também reduzido (teto de 2x a escala horizontal, era 4x) — mais conservador, prioriza não distorcer sobre ficar bem alto."
+      ]
+    },
+    {
+      "versao": "V3.8.14.1",
+      "data": "2026-08-16",
+      "tipo": "correcao",
+      "titulo": "Zoom/pan \"correndo pra longe\" durante arrasto — causa era a transição CSS suave",
+      "itens": [
+        "O zoom/pan (tanto no \"Marcar no Projeto\" quanto no \"Ver Seções\") tinha uma transição suave (0,05s) pra deixar o clique nos botões ➕➖ mais bonito. Só que durante um ARRASTO ou SCROLL contínuo, os eventos chegam mais rápido que essa animação — a tela fica tentando alcançar cada posição nova e nunca chega, dando a impressão de que a imagem \"corre pra longe\" a cada movimento.",
+        "Removida a transição — agora o zoom/pan responde 1:1 com o dedo/mouse, sem atraso nem efeito elástico.",
+        "De quebra, o arrasto agora captura o ponteiro (setPointerCapture) — continua funcionando direto mesmo se o mouse sair rápido da área da imagem no meio do movimento."
       ]
     }
   ],
