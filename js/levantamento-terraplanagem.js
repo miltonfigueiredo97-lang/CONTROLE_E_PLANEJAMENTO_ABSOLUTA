@@ -452,6 +452,21 @@ const LevantamentoTerraplanagem = (() => {
       return;
     }
     if (ferramenta === 'cota') {
+      // Clicar num ponto JÁ marcado edita ele (em vez de criar um novo por
+      // cima) — procura o ponto mais próximo dentro de 1m de tolerância.
+      const pontoExistente = _pontoCotaProximo(p, 1.0);
+      if (pontoExistente) {
+        const novoValor = prompt('Editar cota deste ponto (apague o texto e confirme pra REMOVER o ponto):', pontoExistente.cota);
+        if (novoValor === null) return;
+        if (novoValor.trim() === '') {
+          config.pontosCota = (config.pontosCota || []).filter(pc => pc.id !== pontoExistente.id);
+        } else {
+          pontoExistente.cota = TC.num(novoValor);
+        }
+        salvarConfig().catch(() => {});
+        renderSecoes();
+        return;
+      }
       const area = _areaQueContem(p);
       if (!area) { Utils.toast('Clique dentro de uma área já desenhada.', 'alerta'); return; }
       const cotaStr = prompt('Cota (elevação) do terreno neste ponto:');
@@ -584,6 +599,19 @@ const LevantamentoTerraplanagem = (() => {
   }
   function _areaQueContem(pFrac) {
     return (config.areas || []).find(a => _pontoDentroPoligono(pFrac, a.pontos));
+  }
+  // Acha o ponto de cota já marcado mais próximo de um clique (em metros
+  // reais, dentro de uma tolerância) — usado pra clicar num ponto e EDITAR
+  // ele, em vez de sempre criar um novo por cima.
+  function _pontoCotaProximo(pFrac, tolMetros) {
+    const pM = _paraMetros(pFrac);
+    let melhor = null, melhorDist = Infinity;
+    for (const pc of (config.pontosCota || [])) {
+      const pcM = _paraMetros(pc);
+      const d = Math.hypot(pcM.x - pM.x, pcM.y - pM.y);
+      if (d < tolMetros && d < melhorDist) { melhor = pc; melhorDist = d; }
+    }
+    return melhor;
   }
   // Converte um ponto em fração (0..1 da imagem) pra metros reais, usando
   // a mesma escala calibrada (assume escala igual em X e Y — planta sem distorção).

@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.10.2',
+  versaoAtual: 'V3.10.3',
 
   versoes: [
     {
@@ -8460,6 +8460,15 @@ const NotasVersao = {
       "itens": [
         "Achada a causa do padrão inconsistente reportado (seções vizinhas, uma junta certo e outra não): se a borda de duas áreas vizinhas não encosta 100% perfeita (poucos centímetros de desvio ao clicar, invisível no zoom normal — quase impossível desenhar pixel-perfeito), o sistema tratava esse vão minúsculo como vazio de verdade — mas só em ALGUMAS posições da grade (as que calhavam de cair bem no vão), enquanto posições vizinhas passavam direto por sorte. Testado com uma simulação de borda levemente torta: reproduziu exatamente esse padrão (uma posição juntando, a próxima não).",
         "Corrigido com uma tolerância de 30cm: se um ponto da grade não cai dentro de nenhuma área, o sistema testa uma pequena vizinhança antes de considerar vazio de verdade — pequenos desvios de clique não quebram mais a seção. Aplicado tanto nas seções quanto no 3D. Testado com a mesma simulação: todas as posições passaram a dar o mesmo resultado (uma peça só, 40m completos)."
+      ]
+    },
+    {
+      "versao": "V3.10.3",
+      "data": "2026-08-16",
+      "tipo": "melhoria",
+      "titulo": "Clicar num ponto de cota já marcado agora edita ele (em vez de criar um novo por cima)",
+      "itens": [
+        "No modo \"📍 Marcar Cota\", clicar perto de um ponto que já existe (dentro de 1m de tolerância) abre a edição do valor dele — apagar o texto e confirmar remove o ponto. Clicar num lugar vazio continua criando um ponto novo normalmente."
       ]
     }
   ],
