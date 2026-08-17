@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.8.7',
+  versaoAtual: 'V3.8.8',
 
   versoes: [
     {
@@ -8132,6 +8132,16 @@ const NotasVersao = {
       "itens": [
         "Marcar 🚜 Terraplanagem no menu Extras não fazia nada e a marcação se perdia ao recarregar: uma atualização paralela dos scripts do dashboard.html derrubou o arquivo da seção (dashboard-terraplanagem.js) e o motor de cálculo (terraplanagem-calculos.js). Os dois voltaram pra página.",
         "Com a seção ligada e a obra ainda sem viagens/seções lançadas, agora aparece um aviso orientando onde lançar — antes o card sumia em silêncio e parecia que o botão não funcionava."
+      ]
+    },
+    {
+      "versao": "V3.8.8",
+      "data": "2026-08-17",
+      "tipo": "melhoria",
+      "titulo": "Controle de Estacas: campo de data direto no popup de atribuir à concretagem",
+      "itens": [
+        "Popup \"Atribuir à Concretagem\" ganhou um campo de data ao lado do número, na seção \"criar/atribuir um número novo\" — se o número digitado for novo, a concretagem já nasce com essa data (em vez de sempre hoje, precisando editar depois pelo ✎ do card).",
+        "A data só é usada quando cria uma concretagem nova; atribuindo a um número já existente, a data dela não muda."
       ]
     }
   ],

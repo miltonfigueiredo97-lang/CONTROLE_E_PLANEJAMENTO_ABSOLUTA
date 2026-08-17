@@ -681,10 +681,12 @@ const ControleEstacas = (() => {
       </div>
       <div class="form-grupo">
         <label>Ou criar/atribuir um número novo</label>
-        <div style="display:flex;gap:8px;">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <input type="number" id="ce-atribuir-numero" class="form-control" style="width:100px;" value="${_proximoNumeroConc()}">
+          <input type="date" id="ce-atribuir-data" class="form-control" style="width:150px;" value="${new Date().toISOString().slice(0, 10)}" title="Data — só é usada se o número acima for novo (vai criar a concretagem já com essa data)">
           <button class="btn btn-primario btn-sm" onclick="CE.atribuirConcretagemNumeroInput()">Atribuir</button>
         </div>
+        <span class="text-sm text-muted">A data só é usada se o número acima ainda não existir (vai criar a concretagem com essa data, em vez de hoje). Atribuindo a um número já existente, a data dele não muda.</span>
       </div>
       ${atual ? `<button class="btn btn-secundario btn-sm" style="color:var(--cv-red,#ef4444);margin-top:6px;" onclick="CE.removerDaConcretagem()">🗑 Remover desta concretagem</button>` : ''}
     `;
@@ -692,9 +694,10 @@ const ControleEstacas = (() => {
   function atribuirConcretagemNumeroInput() {
     const numero = parseInt(document.getElementById('ce-atribuir-numero').value) || null;
     if (!numero) { Utils.toast('Digite um número válido.', 'alerta'); return; }
-    atribuirConcretagemNumero(numero);
+    const data = document.getElementById('ce-atribuir-data')?.value || new Date().toISOString().slice(0, 10);
+    atribuirConcretagemNumero(numero, data);
   }
-  async function atribuirConcretagemNumero(numero) {
+  async function atribuirConcretagemNumero(numero, dataNova) {
     if (!Permissions.pode('controleEstacas', 'editar') && !Permissions.pode('controleEstacas', 'criar')) { Utils.toast('Sem permissão.', 'erro'); return; }
     const m = marcadores.find(x => x.id === atribuirMarcadorId);
     if (!m) return;
@@ -702,14 +705,15 @@ const ControleEstacas = (() => {
     try {
       const concExistente = concretagens.find(c => c.numero === numero);
       const criouNova = !concExistente;
-      const concId = concExistente ? concExistente.id : await Database.criar(obraId, COL_CONCS, { numero, data: new Date().toISOString().slice(0, 10), descricao: '', obraId }, EC.genId('conc'));
+      const data = dataNova || new Date().toISOString().slice(0, 10);
+      const concId = concExistente ? concExistente.id : await Database.criar(obraId, COL_CONCS, { numero, data, descricao: '', obraId }, EC.genId('conc'));
       const existente = pecaConc.find(pc => pc.pecaId === m.pecaId);
       if (existente) await Database.deletar(obraId, COL_PC, existente.id);
       await Database.criar(obraId, COL_PC, { pecaId: m.pecaId, concretagemId: concId, pctConcretagem: 100, obraId }, EC.genId('pc'));
       await carregar();
       Utils.fecharModal('modal-ce-atribuir-conc');
       _renderAbaPlanejamento();
-      if (criouNova) Utils.toast(`✓ Concretagem Nº ${numero} criada com a data de hoje — clique no ✎ do card pra corrigir a data, se não for hoje.`, 'sucesso');
+      if (criouNova) Utils.toast(`✓ Concretagem Nº ${numero} criada com data ${_dataBR(data)}!`, 'sucesso');
       else Utils.toast(`✓ Atribuída à Concretagem Nº ${numero}!`, 'sucesso');
     } catch (e) {
       Utils.toast('Erro: ' + e.message, 'erro');
