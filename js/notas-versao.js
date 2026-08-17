@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.9.5',
+  versaoAtual: 'V3.9.6',
 
   versoes: [
     {
@@ -8398,6 +8398,16 @@ const NotasVersao = {
       "itens": [
         "A correção anterior (piso único bem lá embaixo, pra fechar um vão entre áreas vizinhas) tinha um efeito colateral errado: nivelava TODAS as áreas na mesma profundidade lá embaixo, mesmo quando cada uma tem sua própria cota final. Se uma área é mais funda que a outra, o fundo TEM que formar um degrau real ali — não faz sentido físico ficar tudo liso.",
         "Revertido: paredes e o fundo (agora sólido, não mais translúcido) voltam a usar a cota final da PRÓPRIA área — cada área com sua profundidade certa, degrau de verdade onde uma é diferente da outra."
+      ]
+    },
+    {
+      "versao": "V3.9.6",
+      "data": "2026-08-16",
+      "tipo": "correcao",
+      "titulo": "Removida a confusão de 3 convenções — só existe UM jeito, sempre: sinal relativo ao zero",
+      "itens": [
+        "As 3 opções (Elevação/Profundidade/Relativa) eram complexidade desnecessária — na prática o lançamento é sempre o mesmo: cota final é a profundidade de referência (zero), e cada cota do terreno é digitada com sinal em relação a esse zero — positivo = acima (corte), negativo = abaixo (aterro). Sempre assim, sem escolher nada.",
+        "Removida a pergunta de convenção ao criar área, removido o botão de trocar na tabela — só sobrou o campo Cota Final, direto. Testado matematicamente: com cotas +2, -1 e +3 (cota final -5), a área bate exatamente com os trapézios calculados a partir dos valores digitados, sem depender do valor da cota final."
       ]
     }
   ],
