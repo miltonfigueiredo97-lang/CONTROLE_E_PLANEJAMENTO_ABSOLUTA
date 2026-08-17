@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.8.5',
+  versaoAtual: 'V3.8.6',
 
   versoes: [
     {
@@ -8110,6 +8110,18 @@ const NotasVersao = {
       "titulo": "Menu Extras não fica mais escondido atrás do conteúdo",
       "itens": [
         "O menu do seletor ➕ Extras abria por trás do hero do Dashboard: o cabeçalho da página tinha overflow escondido (cortava o dropdown) e ficava abaixo do conteúdo na pilha. Cabeçalho agora fica acima do conteúdo e o corte de título longo passou pro elemento do título — o menu abre por cima de tudo."
+      ]
+    },
+    {
+      "versao": "V3.8.6",
+      "data": "2026-08-17",
+      "tipo": "melhoria",
+      "titulo": "Controle de Estacas: agora dá pra editar número/data/descrição de uma concretagem já criada",
+      "itens": [
+        "Achada a causa raiz do relatório de concretagem mostrando menos dias do que deveria: o fluxo rápido de criar concretagem (digitar um número novo direto no popup de atribuir peça) sempre criava com a DATA DE HOJE, sem perguntar nada — e não existia nenhuma forma de corrigir isso depois. Concretagens criadas em dias diferentes de planejamento, mas com a mesma data de criação, ficavam todas com a mesma data errada, e o relatório (que agrupa por data) mostrava menos dias distintos do que o real.",
+        "Cada card de concretagem no Planejamento ganhou um botão \\\"✎\\\" — abre um mini-formulário pra corrigir número, data e descrição. Bloqueia se o número escolhido já for de outra concretagem.",
+        "O fluxo rápido de criar concretagem pelo popup agora avisa claramente que a data virou \\\"hoje\\\" e que pode ser corrigida pelo ✎ do card, em vez de deixar passar em silêncio.",
+        "Concretagem sem data cadastrada aparece com aviso em vermelho \\\"sem data\\\" no card, pra achar fácil as que precisam de correção."
       ]
     }
   ],

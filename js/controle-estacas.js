@@ -56,6 +56,7 @@ const ControleEstacas = (() => {
   let pdfjsCarregado = false;
   let acompConcretagemId = null;  // concretagem ativa na aba Acompanhamento
   let planFocoConcretagemId = null; // concretagem selecionada no Planejamento — clique na peça já atribui direto
+  let concEditandoId = null; // card de concretagem com o mini-form de editar número/data/descrição aberto
   let novaConcPlanAberta = false;   // form de "+ Nova concretagem" aberto no Planejamento
   let telaCheiaAtiva = false;
   let painelMinimizado = false; // esconde toggle/legenda/seletor pra deixar só o mapa
@@ -500,17 +501,63 @@ const ControleEstacas = (() => {
             const listaPecas = _pecasPlanejadas(c.id);
             const resumo = _resumoDiamDeLista(listaPecas);
             const focado = planFocoConcretagemId === c.id;
+            const editando = concEditandoId === c.id;
             return `
-              <div id="ce-card-conc-${c.id}" style="border:1.5px solid ${focado ? 'var(--cor-primaria)' : 'var(--cv-border,#e2e8f0)'};background:${focado ? 'var(--cv-surface2,#eff6ff)' : 'transparent'};border-radius:8px;padding:10px 14px;cursor:pointer;" onclick="CE.focarConcretagemPlan('${c.id}')" title="Clique pra selecionar/desmarcar — com uma selecionada, clique nas peças no desenho já atribui direto">
-                <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
-                  <div style="font-weight:700;">${focado ? '📌 ' : ''}Concretagem Nº ${c.numero}${c.data ? ` <span style="font-weight:400;color:var(--cv-text3,#94a3b8);font-size:.8rem;">${esc(c.data)}</span>` : ''}</div>
-                  <div class="text-sm text-muted">${listaPecas.length} peça${listaPecas.length !== 1 ? 's' : ''} · ${EC.fmt1(_volumePlanejado(c.id))} m³</div>
+              <div id="ce-card-conc-${c.id}" style="border:1.5px solid ${focado ? 'var(--cor-primaria)' : 'var(--cv-border,#e2e8f0)'};background:${focado ? 'var(--cv-surface2,#eff6ff)' : 'transparent'};border-radius:8px;padding:10px 14px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;cursor:pointer;" onclick="CE.focarConcretagemPlan('${c.id}')" title="Clique pra selecionar/desmarcar — com uma selecionada, clique nas peças no desenho já atribui direto">
+                  <div style="font-weight:700;">${focado ? '📌 ' : ''}Concretagem Nº ${c.numero}${c.data ? ` <span style="font-weight:400;color:var(--cv-text3,#94a3b8);font-size:.8rem;">${_dataBR(c.data)}</span>` : ' <span style="font-weight:400;color:var(--cv-red,#ef4444);font-size:.8rem;">sem data</span>'}</div>
+                  <div style="display:flex;align-items:center;gap:8px;">
+                    <div class="text-sm text-muted">${listaPecas.length} peça${listaPecas.length !== 1 ? 's' : ''} · ${EC.fmt1(_volumePlanejado(c.id))} m³</div>
+                    <button class="btn btn-secundario btn-sm" style="padding:2px 6px;" onclick="event.stopPropagation();CE.toggleEditarConc('${c.id}')" title="Editar número/data/descrição">✎</button>
+                  </div>
                 </div>
+                ${editando ? `
+                  <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-top:10px;padding-top:10px;border-top:1px dashed var(--cv-border,#e2e8f0);" onclick="event.stopPropagation();">
+                    <div><label class="text-sm text-muted" style="display:block;">Nº</label><input type="number" id="ce-edit-conc-num-${c.id}" class="form-control" style="width:80px;" value="${c.numero}"></div>
+                    <div><label class="text-sm text-muted" style="display:block;">Data</label><input type="date" id="ce-edit-conc-data-${c.id}" class="form-control" value="${c.data || ''}"></div>
+                    <div style="flex:1;min-width:160px;"><label class="text-sm text-muted" style="display:block;">Descrição</label><input type="text" id="ce-edit-conc-desc-${c.id}" class="form-control" value="${esc(c.descricao || '')}"></div>
+                    <button class="btn btn-secundario btn-sm" onclick="CE.toggleEditarConc('${c.id}')">Cancelar</button>
+                    <button class="btn btn-primario btn-sm" onclick="CE.salvarEdicaoConc('${c.id}')">✓ Salvar</button>
+                  </div>` : ''}
                 ${resumo.length ? `<div style="margin-top:8px;">${_resumoDiamHTML(resumo)}</div>` : ''}
               </div>`;
           }).join('')}
         </div>`}
     `;
+  }
+
+  function _dataBR(iso) {
+    if (!iso) return '';
+    const [ano, mes, dia] = iso.split('-');
+    return dia && mes && ano ? `${dia}/${mes}/${ano}` : iso;
+  }
+
+  function toggleEditarConc(id) {
+    concEditandoId = concEditandoId === id ? null : id;
+    _renderCardsConcretagem();
+  }
+
+  async function salvarEdicaoConc(id) {
+    if (!Permissions.pode('controleEstacas', 'editar')) { Utils.toast('Sem permissão para editar.', 'erro'); return; }
+    const numero = parseInt(document.getElementById(`ce-edit-conc-num-${id}`).value) || 0;
+    const data = document.getElementById(`ce-edit-conc-data-${id}`).value || '';
+    const descricao = (document.getElementById(`ce-edit-conc-desc-${id}`).value || '').trim();
+    if (!numero) { Utils.toast('Informe o número da concretagem.', 'alerta'); return; }
+    const conflito = concretagens.find(c => c.numero === numero && c.id !== id);
+    if (conflito) { Utils.toast(`Já existe a Concretagem Nº ${numero} — escolha outro número.`, 'alerta'); return; }
+    Utils.mostrarLoading();
+    try {
+      await Database.atualizar(obraId, COL_CONCS, id, { numero, data, descricao });
+      const c = concretagens.find(x => x.id === id);
+      if (c) Object.assign(c, { numero, data, descricao });
+      concEditandoId = null;
+      _renderCardsConcretagem();
+      Utils.toast('✓ Concretagem atualizada!', 'sucesso');
+    } catch (e) {
+      Utils.toast('Erro ao salvar: ' + e.message, 'erro');
+    } finally {
+      Utils.esconderLoading();
+    }
   }
 
   function toggleNovaConcPlan() {
@@ -654,6 +701,7 @@ const ControleEstacas = (() => {
     Utils.mostrarLoading();
     try {
       const concExistente = concretagens.find(c => c.numero === numero);
+      const criouNova = !concExistente;
       const concId = concExistente ? concExistente.id : await Database.criar(obraId, COL_CONCS, { numero, data: new Date().toISOString().slice(0, 10), descricao: '', obraId }, EC.genId('conc'));
       const existente = pecaConc.find(pc => pc.pecaId === m.pecaId);
       if (existente) await Database.deletar(obraId, COL_PC, existente.id);
@@ -661,7 +709,8 @@ const ControleEstacas = (() => {
       await carregar();
       Utils.fecharModal('modal-ce-atribuir-conc');
       _renderAbaPlanejamento();
-      Utils.toast(`✓ Atribuída à Concretagem Nº ${numero}!`, 'sucesso');
+      if (criouNova) Utils.toast(`✓ Concretagem Nº ${numero} criada com a data de hoje — clique no ✎ do card pra corrigir a data, se não for hoje.`, 'sucesso');
+      else Utils.toast(`✓ Atribuída à Concretagem Nº ${numero}!`, 'sucesso');
     } catch (e) {
       Utils.toast('Erro: ' + e.message, 'erro');
     } finally {
@@ -2317,7 +2366,7 @@ const ControleEstacas = (() => {
     onFocoBuscaPeca, fecharListaPecaBusca, onBuscaPeca, selecionarPecaBusca,
     abrirPranchas, novaPrancha, renomearPrancha, excluirPrancha, abrirUploadImagem, onImagemArquivo,
     atribuirConcretagemNumero, atribuirConcretagemNumeroInput, removerDaConcretagem, onTrocarAcompConcretagem,
-    toggleNovaConcPlan, criarConcretagemPlan, focarConcretagemPlan,
+    toggleNovaConcPlan, criarConcretagemPlan, focarConcretagemPlan, toggleEditarConc, salvarEdicaoConc,
     abrirNovaBT, fecharPainelBT, criarBTEstacas, abrirEditarMetaBT, salvarMetaBT, excluirBTEstacas,
     abrirModalBTs, abrirEstacaModal, btAddLinhaPeca, btRemLinhaPeca, btUpdLinhaPeca, salvarEstacaAcomp, toggleMostrarBTsCompletas,
     toggleMetaInline, salvarMetaBTInline,
