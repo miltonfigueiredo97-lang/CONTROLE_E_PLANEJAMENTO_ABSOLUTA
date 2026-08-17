@@ -9,6 +9,7 @@
 // ============================================
 const DashTerra = (() => {
   let _ctx = null;
+  let _cacheRel = null;
   let _mostrar = localStorage.getItem('db_mostrar_terraplanagem') === 'true';
 
   function setMostrar(v) {
@@ -34,7 +35,7 @@ const DashTerra = (() => {
         <div class="card-body">
           <div class="db-secao-header">
             <h3>🚜 Terraplanagem</h3>
-            <a class="btn btn-secundario btn-sm" href="controle-terraplanagem.html?relatorio=1" title="Abre o relatório de período com as datas já preenchidas">📊 Gerar relatório</a>
+            <button class="btn btn-secundario btn-sm" onclick="DashTerra.abrirRelatorio()" title="Gera o relatório de período aqui mesmo, sem sair do Dashboard">📊 Gerar relatório</button>
           </div>
           <div id="db-terra">Carregando...</div>
         </div>
@@ -43,8 +44,9 @@ const DashTerra = (() => {
     const TC = window.TerraplanagemCalculos;
     try {
       const obraId = ctx.obraId;
-      const [entregas, cfgDoc, secDoc] = await Promise.all([
+      const [entregas, caminhoes, cfgDoc, secDoc] = await Promise.all([
         Database.listar(obraId, 'terraEntregas', null).catch(() => []),
+        Database.listar(obraId, 'terraCaminhoes', null).catch(() => []),
         Database.obter(obraId, 'config', 'terraplanagem').catch(() => null),
         Database.obter(obraId, 'config', 'terraplanagemSecoes').catch(() => null),
       ]);
@@ -68,6 +70,9 @@ const DashTerra = (() => {
         const volV = TC.calcVolumeTotalSecoes(secDoc.vertical || []);
         volEmpolado = TC.calcVolumeComEmpolamento(TC.calcVolumeMedio(volH, volV), taxa);
       }
+
+      // Cache pro relatório de período (TerraRel) — gerado sem sair da tela.
+      _cacheRel = { obraNome: ctx.obra?.nome || '', entregas, caminhoes, config: cfgDoc || {}, volEmpolado };
 
       const volTerra = entregas.filter(e => _classMat(e.material) === 'TERRA').reduce((s, e) => s + num(e.volume), 0);
       const volEntulho = entregas.filter(e => _classMat(e.material) === 'ENTULHO').reduce((s, e) => s + num(e.volume), 0);
@@ -159,6 +164,12 @@ const DashTerra = (() => {
       </div>`;
   }
 
-  return { render, setMostrar, getMostrar };
+  // Abre o relatório de período AQUI no Dashboard (overlay do TerraRel).
+  function abrirRelatorio() {
+    if (!_cacheRel) { Utils.toast('Aguarde a seção carregar e tente de novo.', 'alerta'); return; }
+    TerraRel.abrir(_cacheRel);
+  }
+
+  return { render, setMostrar, getMostrar, abrirRelatorio };
 })();
 window.DashTerra = DashTerra;

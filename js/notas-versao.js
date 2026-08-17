@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.8.10.2',
+  versaoAtual: 'V3.8.10.3',
 
   versoes: [
     {
@@ -8182,6 +8182,17 @@ const NotasVersao = {
       "itens": [
         "A seção 🚜 Terraplanagem do Dashboard ganhou o botão \"📊 Gerar relatório\" em cima do gráfico: um clique abre o relatório de período do Controle de Terraplanagem já com o modal aberto e as datas preenchidas — sem precisar navegar e procurar o botão lá dentro.",
         "É o MESMO relatório do Controle (uma fonte única de cálculo): prévia com KPIs e gráfico, PDF pra baixar e compartilhar."
+      ]
+    },
+    {
+      "versao": "V3.8.10.3",
+      "data": "2026-08-17",
+      "tipo": "melhoria",
+      "titulo": "Relatório de Terraplanagem gerado DENTRO do Dashboard",
+      "itens": [
+        "O botão 📊 Gerar relatório da seção Terraplanagem agora abre o relatório ali mesmo, num painel sobre o Dashboard — sem navegar pro Controle. Já abre com o período completo calculado; é ajustar as datas se quiser, baixar o PDF ou compartilhar.",
+        "Por baixo, o relatório virou um módulo compartilhado (js/terraplanagem-relatorio.js) usado pelas duas telas — Controle e Dashboard geram exatamente o mesmo PDF, sem risco de divergência de cálculo.",
+        "O botão 📄 Relatório do Controle de Terraplanagem continua funcionando igual, agora apontando pra essa fonte única."
       ]
     }
   ],
