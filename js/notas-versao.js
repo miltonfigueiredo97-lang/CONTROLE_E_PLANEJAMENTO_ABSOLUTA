@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.10.1',
+  versaoAtual: 'V3.10.2',
 
   versoes: [
     {
@@ -8450,6 +8450,16 @@ const NotasVersao = {
         "A V3.10.0 unificou as SEÇÕES (área/volume), mas o 3D continuava construindo a malha por área SEPARADA — duas áreas vizinhas viravam dois sólidos distintos, com parede nos dois lados da fronteira, aparecendo como um vão/buraco ali mesmo sem ter buraco nenhum no projeto.",
         "Aplicada a mesma correção no 3D: agora gera UMA grade de alturas cobrindo todas as áreas juntas — cada célula sabe a qual área pertence (cota final própria, criando o degrau real onde muda), mas a malha é uma peça sólida só. Parede só aparece na borda de verdade (perímetro externo ou reentrância), nunca entre duas áreas que se tocam.",
         "No caminho, achado e corrigido outro bug: os pontos da grade nas bordas EXATAS caíam bem em cima da linha do polígono, onde o teste \\\"dentro ou fora\\\" fica ambíguo — isso sumia a borda inteira (não só a costura entre áreas). Corrigido encolhendo a amostragem por uma margem mínima. Testado: malha 100% completa, 0 células faltando, na simulação das 2 áreas adjacentes."
+      ]
+    },
+    {
+      "versao": "V3.10.2",
+      "data": "2026-08-16",
+      "tipo": "correcao",
+      "titulo": "Tolerância de 30cm na costura entre áreas — corrige junção INCONSISTENTE (algumas seções juntavam, outras não)",
+      "itens": [
+        "Achada a causa do padrão inconsistente reportado (seções vizinhas, uma junta certo e outra não): se a borda de duas áreas vizinhas não encosta 100% perfeita (poucos centímetros de desvio ao clicar, invisível no zoom normal — quase impossível desenhar pixel-perfeito), o sistema tratava esse vão minúsculo como vazio de verdade — mas só em ALGUMAS posições da grade (as que calhavam de cair bem no vão), enquanto posições vizinhas passavam direto por sorte. Testado com uma simulação de borda levemente torta: reproduziu exatamente esse padrão (uma posição juntando, a próxima não).",
+        "Corrigido com uma tolerância de 30cm: se um ponto da grade não cai dentro de nenhuma área, o sistema testa uma pequena vizinhança antes de considerar vazio de verdade — pequenos desvios de clique não quebram mais a seção. Aplicado tanto nas seções quanto no 3D. Testado com a mesma simulação: todas as posições passaram a dar o mesmo resultado (uma peça só, 40m completos)."
       ]
     }
   ],

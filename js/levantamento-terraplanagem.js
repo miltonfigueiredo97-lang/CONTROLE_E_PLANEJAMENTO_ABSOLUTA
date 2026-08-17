@@ -638,8 +638,29 @@ const LevantamentoTerraplanagem = (() => {
       });
     });
 
-    function acharAreaNoPonto(pt) {
+    // Acha a área que contém um ponto, com uma tolerância pequena (30cm) pra
+    // imprecisão normal de desenho — se a borda de duas áreas vizinhas não
+    // encosta 100% perfeita (poucos cm de desvio ao clicar, invisível no
+    // zoom normal), pontos que caem nesse vão mínimo ainda acham a área mais
+    // próxima em vez de virar um vazio de verdade. Sem isso, a mesma
+    // reentrância minúscula quebrava a seção só em ALGUMAS posições da
+    // grade (as que calhavam de cair bem no vão), dando resultado
+    // inconsistente entre seções vizinhas que deveriam ser iguais.
+    const TOLERANCIA_BORDA = 0.3;
+    function _acharAreaEstrito(pt) {
       for (const ap of areasComPontos) if (_pontoDentroPoligono(pt, ap.poligonoM)) return ap;
+      return null;
+    }
+    function acharAreaNoPonto(pt) {
+      let ap = _acharAreaEstrito(pt);
+      if (ap) return ap;
+      for (const dx of [0, TOLERANCIA_BORDA, -TOLERANCIA_BORDA]) {
+        for (const dy of [0, TOLERANCIA_BORDA, -TOLERANCIA_BORDA]) {
+          if (dx === 0 && dy === 0) continue;
+          ap = _acharAreaEstrito({ x: pt.x + dx, y: pt.y + dy });
+          if (ap) return ap;
+        }
+      }
       return null;
     }
     function interpolarNaArea(ap, x, y) {
@@ -1321,8 +1342,24 @@ const LevantamentoTerraplanagem = (() => {
       minY = Math.min(minY, p.y); maxY = Math.max(maxY, p.y);
     }));
 
-    function acharAreaNoPonto(pt) {
+    // Mesma tolerância de imprecisão de borda aplicada nas seções — evita que
+    // um vão minúsculo entre áreas vizinhas (poucos cm, imprecisão normal de
+    // clique) apareça como buraco no 3D.
+    const TOLERANCIA_BORDA = 0.3;
+    function _acharAreaEstrito(pt) {
       for (const ap of areasComPontos) if (_pontoDentroPoligono(pt, ap.poligonoM)) return ap;
+      return null;
+    }
+    function acharAreaNoPonto(pt) {
+      let ap = _acharAreaEstrito(pt);
+      if (ap) return ap;
+      for (const dx of [0, TOLERANCIA_BORDA, -TOLERANCIA_BORDA]) {
+        for (const dy of [0, TOLERANCIA_BORDA, -TOLERANCIA_BORDA]) {
+          if (dx === 0 && dy === 0) continue;
+          ap = _acharAreaEstrito({ x: pt.x + dx, y: pt.y + dy });
+          if (ap) return ap;
+        }
+      }
       return null;
     }
     function interpolarNaArea(ap, x, y) {
