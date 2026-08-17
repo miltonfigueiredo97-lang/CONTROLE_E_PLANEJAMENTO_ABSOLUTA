@@ -332,12 +332,11 @@ const LevantamentoTerraplanagem = (() => {
         ${areas.length ? `
         <div class="cc-tableWrap" style="margin-top:8px;">
           <table class="cc-table">
-            <thead><tr><th></th><th>Área</th><th class="col-num">Caixa (m)</th><th class="col-num">Área Real (m²)</th><th class="col-num">Cota Final</th><th>Convenção</th><th class="col-num">Pontos de Cota</th><th class="col-acoes"></th></tr></thead>
+            <thead><tr><th></th><th>Área</th><th class="col-num">Área Real (m²)</th><th class="col-num">Cota Final</th><th>Convenção</th><th class="col-num">Pontos de Cota</th><th class="col-acoes"></th></tr></thead>
             <tbody>
               ${areas.map((a, ai) => { const dim = _dimensoesArea(a); return `<tr>
                 <td><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:${_corSecao(ai)};"></span></td>
                 <td>Área ${ai + 1}</td>
-                <td class="col-num cc-tdMono" style="color:var(--cv-text3);">${TC.fmt1(dim.largura)} × ${TC.fmt1(dim.altura)}</td>
                 <td class="col-num cc-tdMono" style="font-weight:700;">${TC.fmt1(dim.areaReal)}</td>
                 <td class="col-num"><input type="text" inputmode="decimal" class="form-control" style="width:90px;display:inline-block;" value="${esc(a.cotaFinal)}" onchange="TP_UI.atualizarCotaArea('${a.id}', this.value)"></td>
                 <td><button class="btn btn-secundario btn-sm" onclick="TP_UI.alternarConvencaoArea('${a.id}')" title="Clique pra trocar">${a.convencao === 'profundidade' ? '⬇️ Profundidade' : '⬆️ Elevação'}</button></td>
@@ -347,7 +346,7 @@ const LevantamentoTerraplanagem = (() => {
             </tbody>
           </table>
         </div>
-        <p class="text-sm text-muted mt-1">"Caixa (m)" é largura × altura do RETÂNGULO que envolve a área desenhada, não o formato dela — se a área não é um retângulo (ex: L, T), a caixa é sempre maior que a área real. "Área Real (m²)" é o tamanho de verdade do polígono que você desenhou. Se o prédio inteiro mede, por exemplo, 52m de largura e sua caixa aparece com menos que isso, é porque o desenho não cobriu o prédio todo (redesenhe maior) — ou a escala foi calibrada errado (confira "🔁 Recalibrar" usando uma medida já impressa na planta, se tiver). "Convenção" define se a cota final é a MAIS BAIXA (⬆️ elevação, padrão topografia) ou a MAIS FUNDA/número maior (⬇️ profundidade, ex: térreo = 0 e vai aumentando pra baixo).</p>` : ''}
+        <p class="text-sm text-muted mt-1">"Área Real (m²)" é o tamanho de verdade do polígono que você desenhou (não é uma caixa/retângulo — calculado certo mesmo em formato L, T etc.). Se o prédio inteiro cobre uma área bem maior que isso, é porque o desenho não cobriu tudo (redesenhe maior) — ou a escala foi calibrada errado (confira "🔁 Recalibrar" usando uma medida já impressa na planta, se tiver). "Convenção" define se a cota final é a MAIS BAIXA (⬆️ elevação, padrão topografia) ou a MAIS FUNDA/número maior (⬇️ profundidade, ex: térreo = 0 e vai aumentando pra baixo).</p>` : ''}
       </div>
     `;
   }
@@ -439,7 +438,7 @@ const LevantamentoTerraplanagem = (() => {
     Utils.mostrarLoading();
     try {
       await salvarConfig();
-      Utils.toast(`✓ Área criada (${profundidade ? 'profundidade' : 'elevação'})! Caixa: ${TC.fmt1(dim.largura)}m × ${TC.fmt1(dim.altura)}m · Área real: ${TC.fmt1(dim.areaReal)} m² — confira se bate com o que você esperava.`, 'sucesso');
+      Utils.toast(`✓ Área criada (${profundidade ? 'profundidade' : 'elevação'})! Área real: ${TC.fmt1(dim.areaReal)} m² — confira se bate com o que você esperava.`, 'sucesso');
     } finally { Utils.esconderLoading(); }
     renderSecoes();
   }
@@ -1200,7 +1199,14 @@ const LevantamentoTerraplanagem = (() => {
     zTotal -= GAP_ENTRE_AREAS; // não conta o respiro depois da última área
 
     const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2, cz = zTotal / 2;
-    const escala = 100 / Math.max(maxX - minX, maxY - minY, zTotal || 1, 1); // normaliza pra caber numa cena ~100 unidades
+    // Escala horizontal (X/Z) fiel à planta — normaliza pra caber numa cena ~100 unidades.
+    const escalaXZ = 100 / Math.max(maxX - minX, zTotal || 1, 1);
+    // Escala vertical (Y = profundidade do corte) INDEPENDENTE da horizontal —
+    // senão, como o corte costuma ser de só alguns metros num prédio de
+    // dezenas de metros, o 3D saía todo achatado. Exagera visualmente a
+    // profundidade pra ela ficar sempre bem visível, sem depender do tamanho da planta.
+    const ALTURA_VISUAL = 30;
+    const escalaY = ALTURA_VISUAL / Math.max(maxY - minY, 0.5);
 
     const THREE_ = window.THREE;
     const scene = new THREE_.Scene();
@@ -1211,8 +1217,8 @@ const LevantamentoTerraplanagem = (() => {
       const posTopo = [], corTopo = [], posFundo = [];
       perfis.forEach((p, si) => p.forEach(pt => {
         const cotaPos = pt.cota * sinais[si], cfPos = cotasFinal[si] * sinais[si];
-        posTopo.push((pt.x - cx) * escala, (cotaPos - cy) * escala, (zAcum[si] - cz) * escala);
-        posFundo.push((pt.x - cx) * escala, (cfPos - cy) * escala, (zAcum[si] - cz) * escala);
+        posTopo.push((pt.x - cx) * escalaXZ, (cotaPos - cy) * escalaY, (zAcum[si] - cz) * escalaXZ);
+        posFundo.push((pt.x - cx) * escalaXZ, (cfPos - cy) * escalaY, (zAcum[si] - cz) * escalaXZ);
         const c = _corProfundidade(cotaPos - cfPos, minProf, maxProf);
         corTopo.push(c.r, c.g, c.b);
       }));
@@ -1246,8 +1252,8 @@ const LevantamentoTerraplanagem = (() => {
       [0, perfis.length - 1].forEach(si => {
         const posParede = [];
         for (let pi = 0; pi < N; pi++) {
-          posParede.push((perfis[si][pi].x - cx) * escala, (perfis[si][pi].cota * sinais[si] - cy) * escala, (zAcum[si] - cz) * escala);
-          posParede.push((perfis[si][pi].x - cx) * escala, (cotasFinal[si] * sinais[si] - cy) * escala, (zAcum[si] - cz) * escala);
+          posParede.push((perfis[si][pi].x - cx) * escalaXZ, (perfis[si][pi].cota * sinais[si] - cy) * escalaY, (zAcum[si] - cz) * escalaXZ);
+          posParede.push((perfis[si][pi].x - cx) * escalaXZ, (cotasFinal[si] * sinais[si] - cy) * escalaY, (zAcum[si] - cz) * escalaXZ);
         }
         const facesParede = [];
         for (let pi = 0; pi < N - 1; pi++) {
@@ -1326,7 +1332,7 @@ const LevantamentoTerraplanagem = (() => {
 
     const legenda = document.getElementById('tp-3d-legenda');
     if (legenda) {
-      legenda.innerHTML = `${lista.length} seção${lista.length !== 1 ? 'ões' : ''} (${secDir}) · 🟩 corte raso → 🟥 corte fundo · 🟧 cota de referência`;
+      legenda.innerHTML = `${lista.length} seção${lista.length !== 1 ? 'ões' : ''} (${secDir}) · 🟩 corte raso → 🟥 corte fundo · 🟧 cota de referência · ⚠️ profundidade exagerada visualmente (planta é fiel, altura não)`;
     }
   }
 

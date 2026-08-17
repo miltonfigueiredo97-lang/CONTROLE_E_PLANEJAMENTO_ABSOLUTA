@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.8.10.3',
+  versaoAtual: 'V3.8.10.4',
 
   versoes: [
     {
@@ -8193,6 +8193,17 @@ const NotasVersao = {
         "O botão 📊 Gerar relatório da seção Terraplanagem agora abre o relatório ali mesmo, num painel sobre o Dashboard — sem navegar pro Controle. Já abre com o período completo calculado; é ajustar as datas se quiser, baixar o PDF ou compartilhar.",
         "Por baixo, o relatório virou um módulo compartilhado (js/terraplanagem-relatorio.js) usado pelas duas telas — Controle e Dashboard geram exatamente o mesmo PDF, sem risco de divergência de cálculo.",
         "O botão 📄 Relatório do Controle de Terraplanagem continua funcionando igual, agora apontando pra essa fonte única."
+      ]
+    },
+    {
+      "versao": "V3.8.10.4",
+      "data": "2026-08-16",
+      "tipo": "correcao",
+      "titulo": "3D achatado corrigido (escala vertical separada) + removida a coluna \"Caixa\" que confundia",
+      "itens": [
+        "O 3D usava a MESMA escala pra planta (X/Z, geralmente dezenas de metros) e pra profundidade do corte (Y, geralmente só alguns metros) — como a profundidade é sempre muito menor que o tamanho do prédio, o resultado saía achatado (ex: num prédio de 52m com corte de 3m, a altura na cena ficava com menos de 7 unidades, quase imperceptível).",
+        "Agora a escala vertical (profundidade) é calculada separada da horizontal, com exagero visual pra ficar sempre bem visível (30 unidades de cena, independente do tamanho da planta) — a vista de cima continua 100% fiel à planta, só a altura fica exagerada de propósito pra dar pra ver o corte.",
+        "Removida a coluna \"Caixa (m)\" da tabela de áreas — só confundia (parecia que a área tinha formato de retângulo). Ficou só \"Área Real (m²)\", que é o que importa."
       ]
     }
   ],
