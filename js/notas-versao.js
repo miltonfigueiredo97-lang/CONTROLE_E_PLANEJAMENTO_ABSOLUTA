@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.7.1.4',
+  versaoAtual: 'V3.7.1.5',
 
   versoes: [
     {
@@ -7928,6 +7928,16 @@ const NotasVersao = {
         "O combobox customizado continuou com problema mesmo após o ajuste — sem conseguir testar ao vivo em tablet, seguir tentando ajustar um componente próprio complexo é arriscado demais.",
         "Voltou pro <select> nativo do navegador — comportamento garantido pela plataforma, mesmo que a lista longa de BTs não fique tão bonita quanto um combobox customizado em alguns aparelhos.",
         "Todas as outras correções desta rodada continuam valendo: BT duplicada mesclada/bloqueada/somada, ordem por número da BT, e alinhamento fixo das colunas."
+      ]
+    },
+    {
+      "versao": "V3.7.1.5",
+      "data": "2026-08-15",
+      "tipo": "correcao",
+      "titulo": "Controle de Estacas: achado o bug real — lógica do filtro de BT já usada estava invertida",
+      "itens": [
+        "Bug de digitação na reversão pro select nativo: a condição que decide se uma BT aparece no seletor estava com o \\\"não\\\" faltando — em vez de esconder BTs já usadas em outra linha da mesma peça, o código fazia o oposto (só mostrava as JÁ usadas), permitindo selecionar a mesma BT duas vezes.",
+        "Corrigido — 1 caractere (o `!` que faltava). Agora uma BT já escolhida numa linha desaparece do seletor das outras linhas da mesma peça (a não ser que seja a seleção daquela própria linha)."
       ]
     }
   ],

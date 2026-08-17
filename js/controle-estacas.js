@@ -1282,7 +1282,7 @@ const ControleEstacas = (() => {
     const btsConc = _btsDaConcretagem(estacaAtual.concId);
     const idsUsados = new Set(estacaAtual.linhas.map(l => l.btId).filter(Boolean));
     return `<option value="">— BT —</option>` + btsConc.filter(b => {
-      if (b.id === selId || idsUsados.has(b.id)) return true;
+      if (b.id === selId || !idsUsados.has(b.id)) return true;
       const pctOutras = _pctBTAlocadaOutrasPecas(b.id, estacaAtual.pecaId);
       return mostrarBTsCompletas || pctOutras < 99.99;
     }).map(b => {
