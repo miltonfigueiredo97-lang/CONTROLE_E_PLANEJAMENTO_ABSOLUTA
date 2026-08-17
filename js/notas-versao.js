@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.7.1.3',
+  versaoAtual: 'V3.7.1.4',
 
   versoes: [
     {
@@ -7917,6 +7917,17 @@ const NotasVersao = {
       "itens": [
         "O combobox novo (V3.7.1.2) tinha um bug sério: ao focar no campo, ele recriava o popup INTEIRO — o que destrói o próprio campo que acabou de receber o foco, fechando tudo na hora. Por isso não abria de jeito nenhum.",
         "Corrigido: agora abrir/fechar a lista só troca a visibilidade dela (a lista de cada linha já existe escondida no DOM) — nunca recria o campo. Testado o fluxo completo: focar abre, digitar filtra, clicar seleciona, sair sem escolher fecha e restaura o valor certo."
+      ]
+    },
+    {
+      "versao": "V3.7.1.4",
+      "data": "2026-08-15",
+      "tipo": "correcao",
+      "titulo": "Controle de Estacas: seletor de BT voltou a ser o <select> nativo",
+      "itens": [
+        "O combobox customizado continuou com problema mesmo após o ajuste — sem conseguir testar ao vivo em tablet, seguir tentando ajustar um componente próprio complexo é arriscado demais.",
+        "Voltou pro <select> nativo do navegador — comportamento garantido pela plataforma, mesmo que a lista longa de BTs não fique tão bonita quanto um combobox customizado em alguns aparelhos.",
+        "Todas as outras correções desta rodada continuam valendo: BT duplicada mesclada/bloqueada/somada, ordem por número da BT, e alinhamento fixo das colunas."
       ]
     }
   ],

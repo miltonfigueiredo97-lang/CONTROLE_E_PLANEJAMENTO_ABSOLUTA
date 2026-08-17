@@ -866,8 +866,6 @@ const ControleEstacas = (() => {
   let estacaAtual = null; // {concId, pecaId, linhas:[{btId,pctBT}]} — lançamento por peça (o fluxo principal)
   let mostrarBTsCompletas = false; // por padrão esconde BTs já 100% alocadas noutras peças no seletor
   let btMetaInlineId = null; // BT com o mini-form de sobra/perda/cocho aberto, dentro do popup de lançar estaca
-  let btBuscaLinhaAberta = null; // índice da linha com o combobox de BT aberto (só 1 por vez)
-  let btBuscaTexto = ''; // texto digitado na busca do combobox de BT
   let metaBTPendente = {}; // {btId: {sobra,perda,perdaCocho,hora}} — usado quando a BT ainda não tem NENHUM lançamento salvo (não tem onde persistir ainda; aplica no próximo Salvar)
 
   function _proximoNumeroBT(concId) {
@@ -1100,18 +1098,8 @@ const ControleEstacas = (() => {
     estacaAtual = { concId: acompConcretagemId, pecaId, linhas };
   }
 
-  function btAddLinhaPeca() {
-    estacaAtual.linhas.push({ btId: '', pctBT: '' });
-    const novoIndice = estacaAtual.linhas.length - 1;
-    _renderLancarEstacaBody();
-    const inputEl = document.getElementById('ce-bt-busca-input-' + novoIndice);
-    if (inputEl) inputEl.focus(); // dispara abrirBuscaBTLinha via onfocus
-  }
-  function btRemLinhaPeca(i) {
-    estacaAtual.linhas.splice(i, 1);
-    btBuscaLinhaAberta = null; // índice pode ter ficado desatualizado com o splice
-    _renderLancarEstacaBody();
-  }
+  function btAddLinhaPeca() { estacaAtual.linhas.push({ btId: '', pctBT: '' }); _renderLancarEstacaBody(); }
+  function btRemLinhaPeca(i) { estacaAtual.linhas.splice(i, 1); _renderLancarEstacaBody(); }
   function btUpdLinhaPeca(i, campo, valor) {
     if (campo === 'btId' && valor) {
       const jaEmOutraLinha = estacaAtual.linhas.some((l, idx) => idx !== i && l.btId === valor);
@@ -1161,74 +1149,6 @@ const ControleEstacas = (() => {
   }
 
   function toggleMostrarBTsCompletas(v) { mostrarBTsCompletas = v; _renderLancarEstacaBody(); }
-
-  // ── Combobox de BT por linha (digita e filtra, clica e seleciona) —
-  // substitui o <select> nativo, que em alguns aparelhos abria a lista
-  // cortada/ilegível. A lista de cada linha já existe no DOM (escondida) —
-  // abrir/fechar só troca display, NUNCA recria o input via re-render total
-  // (recriar destrói o próprio campo que acabou de receber o foco).
-  function abrirBuscaBTLinha(i) {
-    if (btBuscaLinhaAberta !== null && btBuscaLinhaAberta !== i) {
-      const outra = document.getElementById('ce-bt-busca-lista-' + btBuscaLinhaAberta);
-      if (outra) outra.style.display = 'none';
-    }
-    btBuscaLinhaAberta = i;
-    btBuscaTexto = '';
-    const inputEl = document.getElementById('ce-bt-busca-input-' + i);
-    if (inputEl) inputEl.value = '';
-    const listaEl = document.getElementById('ce-bt-busca-lista-' + i);
-    if (listaEl) { listaEl.innerHTML = _listaBTBuscaHTML(i); listaEl.style.display = 'block'; }
-  }
-  function fecharBuscaBTLinha() {
-    if (btBuscaLinhaAberta === null) return;
-    const i = btBuscaLinhaAberta;
-    const listaEl = document.getElementById('ce-bt-busca-lista-' + i);
-    if (listaEl) listaEl.style.display = 'none';
-    const inputEl = document.getElementById('ce-bt-busca-input-' + i);
-    if (inputEl && estacaAtual && estacaAtual.linhas[i]) {
-      const b = btsConfig.find(x => x.id === estacaAtual.linhas[i].btId);
-      inputEl.value = b ? `BT-${b.numero} · ${EC.fmt1(b.volumePrevisto)}m³` : '';
-    }
-    btBuscaLinhaAberta = null;
-  }
-  function onDigitarBuscaBTLinha(v) {
-    btBuscaTexto = v;
-    const i = btBuscaLinhaAberta;
-    const listaEl = document.getElementById('ce-bt-busca-lista-' + i);
-    if (listaEl) listaEl.innerHTML = _listaBTBuscaHTML(i);
-  }
-  function selecionarBTLinha(i, btId) {
-    const listaEl = document.getElementById('ce-bt-busca-lista-' + i);
-    if (listaEl) listaEl.style.display = 'none';
-    btBuscaLinhaAberta = null;
-    btUpdLinhaPeca(i, 'btId', btId); // essa sim faz o re-render total — mas já fora do fluxo de foco/blur
-  }
-  function _listaBTBuscaHTML(i) {
-    const termo = (btBuscaTexto || '').trim().toLowerCase();
-    const idsUsadosOutras = new Set(estacaAtual.linhas.map((l, idx) => idx !== i ? l.btId : null).filter(Boolean));
-    const btAtual = estacaAtual.linhas[i].btId;
-    const btsConc = _btsDaConcretagem(estacaAtual.concId);
-    const opcoes = btsConc.filter(b => {
-      if (idsUsadosOutras.has(b.id)) return false; // já está em OUTRA linha desta peça
-      const pctOutras = _pctBTAlocadaOutrasPecas(b.id, estacaAtual.pecaId);
-      if (!mostrarBTsCompletas && pctOutras >= 99.99 && b.id !== btAtual) return false;
-      if (termo) {
-        const label = `bt-${b.numero}`.toLowerCase();
-        if (!label.includes(termo) && !String(b.numero).includes(termo)) return false;
-      }
-      return true;
-    });
-    return `
-      <div style="padding:8px 12px;cursor:pointer;color:var(--cv-text3,#94a3b8);font-size:.85rem;" onmousedown="CE.selecionarBTLinha(${i},'')">— Nenhuma —</div>
-      ${opcoes.length ? opcoes.map(b => {
-        const pctOutras = _pctBTAlocadaOutrasPecas(b.id, estacaAtual.pecaId);
-        return `<div style="padding:8px 12px;cursor:pointer;border-top:1px solid var(--cv-border,#f1f5f9);" onmousedown="CE.selecionarBTLinha(${i},'${b.id}')">
-          <div style="font-weight:600;font-size:.85rem;">BT-${b.numero} · ${EC.fmt1(b.volumePrevisto)}m³</div>
-          ${pctOutras > 0.01 ? `<div class="text-sm text-muted">${EC.fmt1(pctOutras)}% em outra peça</div>` : ''}
-        </div>`;
-      }).join('') : '<div style="padding:10px 12px;color:var(--cv-text3,#94a3b8);font-size:.82rem;">Nenhuma BT encontrada.</div>'}
-    `;
-  }
 
   async function salvarEstacaAcomp() {
     if (!Permissions.pode('controleEstacas', 'editar') && !Permissions.pode('controleEstacas', 'criar')) { Utils.toast('Sem permissão.', 'erro'); return; }
@@ -1350,13 +1270,25 @@ const ControleEstacas = (() => {
   // ── Popup de lançar por estaca — aberto ao clicar no marcador no mapa ──
   function abrirEstacaModal(pecaId) {
     _abrirEstaca(pecaId);
-    btBuscaLinhaAberta = null;
     btMetaInlineId = null;
     const p = pecas.find(x => x.id === pecaId);
     const titEl = document.getElementById('ce-lancar-titulo');
     if (titEl) titEl.textContent = `🚚 Lançar — ${p ? p.nome : ''}`;
     _renderLancarEstacaBody();
     Utils.abrirModal('modal-ce-lancar-estaca');
+  }
+
+  function _opcoesBTHTML(selId) {
+    const btsConc = _btsDaConcretagem(estacaAtual.concId);
+    const idsUsados = new Set(estacaAtual.linhas.map(l => l.btId).filter(Boolean));
+    return `<option value="">— BT —</option>` + btsConc.filter(b => {
+      if (b.id === selId || idsUsados.has(b.id)) return true;
+      const pctOutras = _pctBTAlocadaOutrasPecas(b.id, estacaAtual.pecaId);
+      return mostrarBTsCompletas || pctOutras < 99.99;
+    }).map(b => {
+      const pctOutras = _pctBTAlocadaOutrasPecas(b.id, estacaAtual.pecaId);
+      return `<option value="${b.id}" ${selId === b.id ? 'selected' : ''}>BT-${b.numero} · ${EC.fmt1(b.volumePrevisto)}m³${pctOutras > 0.01 ? ` (${EC.fmt1(pctOutras)}% em outras peças)` : ''}</option>`;
+    }).join('');
   }
 
   function _renderLancarEstacaBody() {
@@ -1397,13 +1329,7 @@ const ControleEstacas = (() => {
             const ehPrimeiraOuUltima = b && ((primeiraBT && b.id === primeiraBT.id) || (ultimaBT && b.id === ultimaBT.id));
             return `<div style="margin-bottom:6px;">
               <div style="display:grid;grid-template-columns:1fr 100px 90px 100px 36px;gap:8px;align-items:center;">
-                <div style="position:relative;">
-                  <input type="text" id="ce-bt-busca-input-${i}" class="form-control" placeholder="Buscar BT" autocomplete="off"
-                    value="${b ? `BT-${b.numero} · ${EC.fmt1(b.volumePrevisto)}m³` : ''}"
-                    onfocus="CE.abrirBuscaBTLinha(${i})" oninput="CE.onDigitarBuscaBTLinha(this.value)"
-                    onblur="setTimeout(()=>CE.fecharBuscaBTLinha(),150)">
-                  <div id="ce-bt-busca-lista-${i}" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:30;background:#fff;border:1px solid var(--cv-border,#e2e8f0);border-radius:8px;max-height:200px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,.15);margin-top:4px;"></div>
-                </div>
+                <select class="form-control" onchange="CE.btUpdLinhaPeca(${i}, 'btId', this.value)">${_opcoesBTHTML(l.btId)}</select>
                 <input type="text" inputmode="decimal" class="form-control" style="${excesso ? 'border-color:#ef4444;' : ''}" placeholder="% da BT" value="${esc(l.pctBT)}" oninput="CE.btUpdLinhaPeca(${i}, 'pctBT', this.value)">
                 <span id="ce-est-vol-${i}" style="font-family:var(--font-mono);font-size:.78rem;color:var(--cor-texto-secundario);text-align:right;">${EC.fmt1(vol)} m³</span>
                 ${ehPrimeiraOuUltima ? `<button class="btn btn-secundario btn-sm" style="${temPerda ? 'border-color:#f59e0b;color:#f59e0b;' : ''}" title="${b.id === primeiraBT?.id ? 'Cocho/linha desta BT (é a primeira)' : 'Sobra de caminhão desta BT (é a última)'}" onclick="CE.toggleMetaInline('${b.id}')">✎ ${b.id === primeiraBT?.id ? 'cocho' : 'sobra'}</button>` : ''}
@@ -2375,7 +2301,6 @@ const ControleEstacas = (() => {
     abrirNovaBT, fecharPainelBT, criarBTEstacas, abrirEditarMetaBT, salvarMetaBT, excluirBTEstacas,
     abrirModalBTs, abrirEstacaModal, btAddLinhaPeca, btRemLinhaPeca, btUpdLinhaPeca, salvarEstacaAcomp, toggleMostrarBTsCompletas,
     toggleMetaInline, salvarMetaBTInline,
-    abrirBuscaBTLinha, fecharBuscaBTLinha, onDigitarBuscaBTLinha, selecionarBTLinha,
   };
 })();
 
