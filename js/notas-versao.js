@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.10.3',
+  versaoAtual: 'V3.10.4',
 
   versoes: [
     {
@@ -8469,6 +8469,16 @@ const NotasVersao = {
       "titulo": "Clicar num ponto de cota já marcado agora edita ele (em vez de criar um novo por cima)",
       "itens": [
         "No modo \"📍 Marcar Cota\", clicar perto de um ponto que já existe (dentro de 1m de tolerância) abre a edição do valor dele — apagar o texto e confirmar remove o ponto. Clicar num lugar vazio continua criando um ponto novo normalmente."
+      ]
+    },
+    {
+      "versao": "V3.10.4",
+      "data": "2026-08-17",
+      "tipo": "correcao",
+      "titulo": "Controle de Estacas: toque no mobile não seleciona mais a imagem inteira",
+      "itens": [
+        "No celular/tablet, tocar numa estaca às vezes acionava o menu nativo de \\\"selecionar/salvar imagem\\\" do navegador (comum no Safari/iOS) em vez de abrir o marcador — faltava a propriedade -webkit-touch-callout:none, que é a que desliga esse menu de toque prolongado (user-select:none sozinho não resolve isso no iOS).",
+        "Adicionado -webkit-touch-callout:none e reforçado user-select:none na imagem da prancha e no mapa inteiro (herda pros marcadores) nas 3 abas."
       ]
     }
   ],

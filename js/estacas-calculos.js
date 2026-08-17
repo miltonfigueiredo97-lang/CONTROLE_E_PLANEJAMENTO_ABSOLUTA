@@ -105,11 +105,11 @@ const EstacasCalculos = (() => {
     }).join('');
 
     const bg = imagemBase64
-      ? `<img src="${imagemBase64}" style="width:100%;height:100%;display:block;user-select:none;pointer-events:none;" draggable="false">`
+      ? `<img src="${imagemBase64}" style="width:100%;height:100%;display:block;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;pointer-events:none;" draggable="false">`
       : `<div style="width:100%;height:100%;background:repeating-linear-gradient(45deg,#f1f5f9,#f1f5f9 10px,#e2e8f0 10px,#e2e8f0 20px);"></div>`;
     const maxH = opts.mini ? (opts.maxHeight || 240) : (opts.maxHeight || 600);
     return `<div class="est-map-scroll" style="overflow:${opts.mini ? 'hidden' : 'auto'};max-height:${maxH}px;border:1px solid #e2e8f0;border-radius:8px;background:#fff;">
-      <div id="${opts.stageId || 'est-stage'}" class="est-map-stage" style="position:relative;width:${w}px;height:${h}px;touch-action:none;">
+      <div id="${opts.stageId || 'est-stage'}" class="est-map-stage" style="position:relative;width:${w}px;height:${h}px;touch-action:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;">
         ${bg}${poligonos}${circulos}
       </div>
     </div>`;
