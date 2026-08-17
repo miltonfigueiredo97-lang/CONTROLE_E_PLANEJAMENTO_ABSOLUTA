@@ -13,7 +13,8 @@ const TerraRel = (() => {
   let _ctx = null;       // { obraNome, entregas, caminhoes, config, volEmpolado }
   let _rel = null;
 
-  const TC = () => window.TerraplanagemCalculos;
+  // Fallback duplo: window (agora exposto) ou o identificador global direto.
+  const TC = () => window.TerraplanagemCalculos || (typeof TerraplanagemCalculos !== 'undefined' ? TerraplanagemCalculos : null);
   function _fRS(n) { return 'R$ ' + Number(n || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
   function _fBR(iso) {
     if (!iso) return '—';
@@ -109,11 +110,17 @@ const TerraRel = (() => {
   }
 
   function gerar() {
-    const inicio = document.getElementById('terra-rel-inicio')?.value;
-    const fim = document.getElementById('terra-rel-fim')?.value;
-    if (!inicio || !fim || inicio > fim) { Utils.toast('Informe um período válido (início antes do fim).', 'alerta'); return; }
-    _rel = _calcular(inicio, fim);
-    _renderPreview();
+    try {
+      const inicio = document.getElementById('terra-rel-inicio')?.value;
+      const fim = document.getElementById('terra-rel-fim')?.value;
+      if (!inicio || !fim || inicio > fim) { Utils.toast('Informe um período válido (início antes do fim).', 'alerta'); return; }
+      if (!TC()) { Utils.toast('Motor de cálculo de Terraplanagem não carregou — recarregue a página (Ctrl+Shift+R).', 'erro'); return; }
+      _rel = _calcular(inicio, fim);
+      _renderPreview();
+    } catch (e) {
+      console.error('TerraRel.gerar:', e);
+      Utils.toast('Erro ao gerar o relatório: ' + e.message, 'erro');
+    }
   }
 
   function _renderPreview() {

@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.8.11',
+  versaoAtual: 'V3.8.12',
 
   versoes: [
     {
@@ -8215,6 +8215,17 @@ const NotasVersao = {
         "Achado o bug de verdade: \"Gerar Seções\" calculava a área CERTA (respeitando elevação/profundidade), mas toda vez que a tela renderizava de novo — o que acontece o tempo todo, incluindo só de abrir \"Ver Seções\" — uma função interna (recalcArea) recalculava a área SEM aplicar o sinal da convenção, sobrescrevendo o valor certo com a fórmula de elevação sempre. Por isso a área do resumo Corte/Aterro (que tinha sua própria conta, correta) batia positiva, mas o número \"Área\" mostrado em cima saía negativo — os dois deveriam ser iguais e não eram.",
         "Corrigido — recalcArea agora aplica o mesmo sinal de elevação/profundidade que o \"Gerar Seções\" usa. Testado com os números reais (cota final 7,18 profundidade, terreno raso ~4,9): área agora sai positiva e igual ao \"Líquido\" mostrado no resumo Corte/Aterro.",
         "Comprimento da seção também corrigido: a seção sempre parava no último ponto da GRADE de amostragem (de 0,5 em 0,5m), nunca exatamente no limite real da área desenhada — por isso um prédio de 52,04m aparecia com ~51m. Agora a borda de cada seção é ajustada por bisseção até bater com o limite verdadeiro do polígono. Testado: comprimento sai 52,040 exato."
+      ]
+    },
+    {
+      "versao": "V3.8.12",
+      "data": "2026-08-17",
+      "tipo": "correcao",
+      "titulo": "Gerar Relatório de Terraplanagem não respondia ao clique",
+      "itens": [
+        "O motor de cálculo (terraplanagem-calculos.js) era declarado como const de topo — que NÃO vira window.TerraplanagemCalculos — e o relatório compartilhado buscava por window.*: o clique em Gerar Relatório quebrava em silêncio. O motor agora é exposto explicitamente no window (com fallback duplo no relatório).",
+        "De quebra, o card \"Volume previsto\" do gráfico de Terraplanagem do Dashboard, que dependia do mesmo motor, volta a aparecer quando há Levantamento.",
+        "O botão Gerar agora tem tratamento de erro visível: se algo falhar, aparece um aviso em vez de nada acontecer."
       ]
     }
   ],

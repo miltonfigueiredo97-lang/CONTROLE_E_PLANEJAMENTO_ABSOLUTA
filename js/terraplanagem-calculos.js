@@ -133,3 +133,6 @@ const TerraplanagemCalculos = (() => {
     posRelativa, distanciaMetros, canvasParaDataURLLimitado,
   };
 })();
+// Exposto explicitamente: const de top-level NÃO vira propriedade de window,
+// e módulos como TerraRel/DashTerra acessam via window.TerraplanagemCalculos.
+window.TerraplanagemCalculos = TerraplanagemCalculos;
