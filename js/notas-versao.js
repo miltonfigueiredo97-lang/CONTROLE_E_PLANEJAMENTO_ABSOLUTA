@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.8.8',
+  versaoAtual: 'V3.8.9',
 
   versoes: [
     {
@@ -8142,6 +8142,17 @@ const NotasVersao = {
       "itens": [
         "Popup \"Atribuir à Concretagem\" ganhou um campo de data ao lado do número, na seção \"criar/atribuir um número novo\" — se o número digitado for novo, a concretagem já nasce com essa data (em vez de sempre hoje, precisando editar depois pelo ✎ do card).",
         "A data só é usada quando cria uma concretagem nova; atribuindo a um número já existente, a data dela não muda."
+      ]
+    },
+    {
+      "versao": "V3.8.9",
+      "data": "2026-08-16",
+      "tipo": "correcao",
+      "titulo": "3D: causa raiz de vez — agora a vista de cima bate exatamente com a planta",
+      "itens": [
+        "Achada a causa raiz definitiva do 3D com formato errado: a posição de cada linha no eixo de profundidade era um ACÚMULO artificial de distâncias entre seções (com gaps inventados nas fronteiras entre cadeias/áreas) — não a posição real dela na planta. Isso desconectava totalmente o 3D da planta.",
+        "Corrigido: agora usa a posição REAL (a mesma coordenada da grade de 1,5m) em vez do acúmulo. Testado com um prédio em T simulado: a reconstrução por posição real bate exatamente com o formato esperado (barra larga de um lado, perna estreita do outro, no lugar certo) — visto de cima, o 3D agora é o mesmo formato da planta.",
+        "Perfil lateral (\"Ver Seções\") ganhou um resumo numérico embaixo do gráfico: 🟩 Corte (soma só da parte positiva, acima da cota final) · 🟥 Aterro (soma só da parte negativa, abaixo) · Líquido (o resultado final, que pode ser negativo se o aterro pesar mais que o corte naquela seção específica — a área total nunca é \"impossível\", é a soma normal dessas duas partes). Vermelho também ficou bem mais forte no desenho pra não passar batido."
       ]
     }
   ],

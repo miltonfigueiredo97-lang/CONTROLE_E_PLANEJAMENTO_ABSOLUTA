@@ -1095,18 +1095,24 @@ const LevantamentoTerraplanagem = (() => {
     const mapX = x => PX0 + (x / totalW) * (PX1 - PX0);
     const mapY = y => yHi > yLo ? PY1 - ((y - yLo) / (yHi - yLo)) * (PY1 - PY0) : (PY0 + PY1) / 2;
     const quads = [];
+    // Corte (verde, positivo) e Aterro (vermelho, negativo) somados separado —
+    // é a MESMA decomposição da fórmula de área (trapézios), só exposta aqui
+    // pra dar pra auditar visualmente de onde vem um resultado negativo.
+    let areaCorte = 0, areaAterro = 0;
     for (let i = 0; i < cotasPos.length - 1; i++) {
       const x1 = mapX(xs[i]), x2 = mapX(xs[i + 1]);
       const y1 = mapY(cotasPos[i]), y2 = mapY(cotasPos[i + 1]), yf = mapY(cfPos);
-      const media = (cotasPos[i] + cotasPos[i + 1]) / 2;
-      const cor = media >= cfPos ? '#22c55e' : '#ef4444';
-      quads.push(`<polygon points="${x1},${y1} ${x2},${y2} ${x2},${yf} ${x1},${yf}" fill="${cor}" fill-opacity="0.4"/>`);
+      const contrib = ((cotasPos[i] - cfPos) + (cotasPos[i + 1] - cfPos)) / 2 * TC.num(dist[i]);
+      if (contrib >= 0) areaCorte += contrib; else areaAterro += contrib;
+      const cor = contrib >= 0 ? '#22c55e' : '#ef4444';
+      quads.push(`<polygon points="${x1},${y1} ${x2},${y2} ${x2},${yf} ${x1},${yf}" fill="${cor}" fill-opacity="${contrib >= 0 ? 0.4 : 0.65}"/>`);
     }
     const linhaCf = `<line x1="${PX0}" y1="${mapY(cfPos).toFixed(1)}" x2="${PX1}" y2="${mapY(cfPos).toFixed(1)}" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="5,3"/>`;
     const linhaTerreno = `<polyline points="${cotasPos.map((c, i) => `${mapX(xs[i]).toFixed(1)},${mapY(c).toFixed(1)}`).join(' ')}" fill="none" stroke="#fff" stroke-width="2"/>`;
     const pontos = cotas.map((c, i) => `<circle cx="${mapX(xs[i]).toFixed(1)}" cy="${mapY(cotasPos[i]).toFixed(1)}" r="3.5" fill="#3b82f6" stroke="#fff" stroke-width="1"/><text x="${mapX(xs[i]).toFixed(1)}" y="${(mapY(cotasPos[i]) - 8).toFixed(1)}" font-size="9" fill="#fff" text-anchor="middle" font-family="monospace">${TC.fmt2(c)}</text>`).join('');
     const rotuloCf = `<text x="${PX0 + 4}" y="${(mapY(cfPos) - 5).toFixed(1)}" font-size="10" fill="#f59e0b" font-family="monospace">Cota Final: ${TC.fmt2(cf)}${s.convencao === 'profundidade' ? ' (profundidade)' : ''}</text>`;
-    return `<svg viewBox="0 0 620 270" style="width:100%;background:#14141f;border-radius:8px;display:block;">${quads.join('')}${linhaCf}${linhaTerreno}${pontos}${rotuloCf}</svg>`;
+    const resumo = `<p class="text-sm" style="font-family:var(--cv-mono);margin-top:6px;">🟩 Corte: <b style="color:#22c55e;">+${TC.fmt2(areaCorte)} m²</b> · 🟥 Aterro: <b style="color:#ef4444;">${TC.fmt2(areaAterro)} m²</b> · Líquido: <b>${TC.fmt2(areaCorte + areaAterro)} m²</b></p>`;
+    return `<svg viewBox="0 0 620 270" style="width:100%;background:#14141f;border-radius:8px;display:block;">${quads.join('')}${linhaCf}${linhaTerreno}${pontos}${rotuloCf}</svg>${resumo}`;
   }
 
   async function abrir3D() {
@@ -1148,39 +1154,50 @@ const LevantamentoTerraplanagem = (() => {
     const N = 22; // amostras por seção
     const GAP_ENTRE_AREAS = 3; // metros de respiro entre sólidos de áreas diferentes
 
-    // Agrupa mantendo a ordem original, mas juntando todas as seções da mesma área
-    const grupos = [];
+    // Agrupa por ÁREA — todas as cadeias de uma mesma área compartilham o
+    // MESMO referencial de posição real (s.pos), garantindo que a vista de
+    // cima do 3D bata com a planta. Dentro da área, sub-agrupa por cadeiaId
+    // (cada cadeia = um "braço" do prédio, vira um sólido próprio — nunca
+    // conecta o loft entre cadeias, mesmo compartilhando o mesmo eixo Z).
+    const gruposArea = [];
     const porAreaId = new Map();
     lista.forEach(s => {
-      const chave = (s.areaId ?? '__sem_area__') + '_' + (s.cadeiaId ?? 0);
-      if (!porAreaId.has(chave)) { const g = []; porAreaId.set(chave, g); grupos.push(g); }
+      const chave = s.areaId ?? '__sem_area__';
+      if (!porAreaId.has(chave)) { const g = []; porAreaId.set(chave, g); gruposArea.push(g); }
       porAreaId.get(chave).push(s);
     });
 
     // Bounds globais (pra cor por profundidade e escala ficarem consistentes entre grupos)
     let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity, minProf = Infinity, maxProf = -Infinity, zTotal = 0;
-    const dadosGrupos = grupos.map(secs => {
-      const perfis = secs.map(s => _reamostrarPerfil(s.distanciasCotas || [], s.cotas || [], N, s.origemLocal));
-      const cotasFinal = secs.map(s => TC.num(s.cotaFinal));
-      // "profundidade" (nº maior = mais embaixo) — inverte o sinal só pra
-      // posicionar/colorir certo no 3D (elevação: nº maior = mais alto, sem inverter).
-      const sinais = secs.map(s => s.convencao === 'profundidade' ? -1 : 1);
-      const zAcumLocal = [0];
-      for (let i = 0; i < secs.length - 1; i++) zAcumLocal.push(zAcumLocal[i] + (TC.num(secs[i].distanciaProxima) || 3));
-      if (perfis.length === 1) { perfis.push(perfis[0]); cotasFinal.push(cotasFinal[0]); sinais.push(sinais[0]); zAcumLocal.push(zAcumLocal[0] + 3); }
-      perfis.forEach((p, si) => p.forEach(pt => {
-        const cotaPos = pt.cota * sinais[si], cfPos = cotasFinal[si] * sinais[si];
-        minX = Math.min(minX, pt.x); maxX = Math.max(maxX, pt.x);
-        minY = Math.min(minY, cotaPos, cfPos); maxY = Math.max(maxY, cotaPos, cfPos);
-        const prof = cotaPos - cfPos;
-        minProf = Math.min(minProf, prof); maxProf = Math.max(maxProf, prof);
-      }));
-      const larguraGrupo = zAcumLocal[zAcumLocal.length - 1];
-      const offsetZ = zTotal;
-      zTotal += larguraGrupo + GAP_ENTRE_AREAS;
-      return { perfis, cotasFinal, sinais, zAcum: zAcumLocal.map(z => z + offsetZ) };
+    const dadosGrupos = [];
+    gruposArea.forEach(secoesArea => {
+      const porCadeia = new Map();
+      secoesArea.forEach(s => { const k = s.cadeiaId ?? 0; if (!porCadeia.has(k)) porCadeia.set(k, []); porCadeia.get(k).push(s); });
+      const minPosArea = Math.min(...secoesArea.map(s => TC.num(s.pos)));
+      const larguraArea = Math.max(...secoesArea.map(s => TC.num(s.pos))) - minPosArea;
+
+      [...porCadeia.values()].forEach(secs => {
+        const perfis = secs.map(s => _reamostrarPerfil(s.distanciasCotas || [], s.cotas || [], N, s.origemLocal));
+        const cotasFinal = secs.map(s => TC.num(s.cotaFinal));
+        // "profundidade" (nº maior = mais embaixo) — inverte o sinal só pra
+        // posicionar/colorir certo no 3D (elevação: nº maior = mais alto, sem inverter).
+        const sinais = secs.map(s => s.convencao === 'profundidade' ? -1 : 1);
+        // Z = posição REAL (s.pos) relativa ao início da área + deslocamento global — NÃO
+        // é mais um acúmulo de distâncias (que perdia a posição verdadeira ao quebrar em cadeias).
+        let zAcumLocal = secs.map(s => TC.num(s.pos) - minPosArea + zTotal);
+        if (perfis.length === 1) { perfis.push(perfis[0]); cotasFinal.push(cotasFinal[0]); sinais.push(sinais[0]); zAcumLocal.push(zAcumLocal[0] + 1.5); }
+        perfis.forEach((p, si) => p.forEach(pt => {
+          const cotaPos = pt.cota * sinais[si], cfPos = cotasFinal[si] * sinais[si];
+          minX = Math.min(minX, pt.x); maxX = Math.max(maxX, pt.x);
+          minY = Math.min(minY, cotaPos, cfPos); maxY = Math.max(maxY, cotaPos, cfPos);
+          const prof = cotaPos - cfPos;
+          minProf = Math.min(minProf, prof); maxProf = Math.max(maxProf, prof);
+        }));
+        dadosGrupos.push({ perfis, cotasFinal, sinais, zAcum: zAcumLocal });
+      });
+      zTotal += larguraArea + GAP_ENTRE_AREAS;
     });
-    zTotal -= GAP_ENTRE_AREAS; // não conta o respiro depois do último grupo
+    zTotal -= GAP_ENTRE_AREAS; // não conta o respiro depois da última área
 
     const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2, cz = zTotal / 2;
     const escala = 100 / Math.max(maxX - minX, maxY - minY, zTotal || 1, 1); // normaliza pra caber numa cena ~100 unidades
