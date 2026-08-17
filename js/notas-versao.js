@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.8.4',
+  versaoAtual: 'V3.8.5',
 
   versoes: [
     {
@@ -8101,6 +8101,15 @@ const NotasVersao = {
         "Prédio com formato L/T/U (não-convexo) faz uma linha da grade (1,5m) cruzar o polígono em MAIS DE UM pedaço separado (ex: um braço de cada lado de um pátio/reentrância). O sistema tratava tudo como um pedaço só, \"colando\" o lado esquerdo ao direito por cima do vazio — aí sim o 3D saía deformado e o volume incluía área que não existe.",
         "Corrigido: cada linha da grade agora é dividida nos pedaços contínuos de verdade, e os pedaços são agrupados em CADEIAS (cada \"braço\" do prédio rastreado de linha em linha, por sobreposição de posição) — cada cadeia vira seu próprio sólido independente no 3D, lado a lado, nunca ligando partes sem relação.",
         "No caminho, achei e corrigi um bug na própria implementação dessa correção (a distância entre linhas da mesma cadeia estava sendo calculada errado depois de juntar tudo num array só, e isso zerava o volume). Testado num prédio simulado em U com pátio no meio: reconhece as 2 cadeias certas e o volume bate com a área real × altura (dentro da margem normal de discretização da grade)."
+      ]
+    },
+    {
+      "versao": "V3.8.5",
+      "data": "2026-08-17",
+      "tipo": "correcao",
+      "titulo": "Menu Extras não fica mais escondido atrás do conteúdo",
+      "itens": [
+        "O menu do seletor ➕ Extras abria por trás do hero do Dashboard: o cabeçalho da página tinha overflow escondido (cortava o dropdown) e ficava abaixo do conteúdo na pilha. Cabeçalho agora fica acima do conteúdo e o corte de título longo passou pro elemento do título — o menu abre por cima de tudo."
       ]
     }
   ],

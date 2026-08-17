@@ -104,9 +104,12 @@ html, body { height: 100%; overflow: hidden; margin: 0; padding: 0; }
   padding: 0 20px;
   display: flex; align-items: center; justify-content: space-between; gap: 16px;
   height: 54px;
-  overflow: hidden;
+  /* overflow:hidden cortava dropdowns do header (ex: seletor Extras do
+     Dashboard) — o clip agora é feito por elemento quando necessário. */
+  position: relative;
+  z-index: 500;
 }
-.header-title { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.header-title { display: flex; align-items: center; gap: 12px; min-width: 0; overflow: hidden; }
 .header-title h1 { font-size: 0.95rem; font-weight: 600; color: #fff; white-space: nowrap; }
 .header-breadcrumb { display: flex; align-items: center; gap: 5px; font-size: 0.75rem; color: #666; }
 .header-breadcrumb a { color: #777; } .header-breadcrumb a:hover { color: var(--cor-primaria); }
