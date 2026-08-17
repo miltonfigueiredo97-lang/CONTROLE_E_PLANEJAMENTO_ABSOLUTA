@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.8.12',
+  versaoAtual: 'V3.8.13',
 
   versoes: [
     {
@@ -8226,6 +8226,17 @@ const NotasVersao = {
         "O motor de cálculo (terraplanagem-calculos.js) era declarado como const de topo — que NÃO vira window.TerraplanagemCalculos — e o relatório compartilhado buscava por window.*: o clique em Gerar Relatório quebrava em silêncio. O motor agora é exposto explicitamente no window (com fallback duplo no relatório).",
         "De quebra, o card \"Volume previsto\" do gráfico de Terraplanagem do Dashboard, que dependia do mesmo motor, volta a aparecer quando há Levantamento.",
         "O botão Gerar agora tem tratamento de erro visível: se algo falhar, aparece um aviso em vez de nada acontecer."
+      ]
+    },
+    {
+      "versao": "V3.8.13",
+      "data": "2026-08-16",
+      "tipo": "correcao",
+      "titulo": "3D deformado (\"caixa com torre\") corrigido + comprimento visível em \"Ver Seções\"",
+      "itens": [
+        "O exagero vertical do 3D (adicionado pra corrigir o achatamento) não tinha limite — em seções com corte bem menor que o tamanho do prédio, o exagero ficava tão grande que virava uma distorção tipo \"caixa com torre\" em vez de um terreno. Agora tem um teto: no máximo 4x a escala horizontal, suficiente pra ver o corte sem virar uma caricatura.",
+        "Ângulo inicial da câmera também mudou: antes começava quase de lado (~28° de elevação, mostrando principalmente a parede da ponta) — agora começa numa vista aérea 3/4 (~53°), mais parecida com a vista de cima. Continua podendo girar livre com o mouse.",
+        "\"Ver Seções\" agora mostra o Comprimento da seção junto com a Área no cabeçalho — pra conferir direto se bate com a medida esperada, sem precisar abrir a seção na lista embaixo."
       ]
     }
   ],

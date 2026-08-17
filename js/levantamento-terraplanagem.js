@@ -1092,7 +1092,7 @@ const LevantamentoTerraplanagem = (() => {
       </div>
       ${s ? `
       <div style="font-family:var(--cv-mono);font-size:.85rem;margin-bottom:8px;">
-        Seção ${s.numero ?? secaoVisualizada + 1} — Área: <b style="${s.area < 0 ? 'color:var(--cv-red);' : 'color:var(--cv-accent3);'}">${TC.fmt2(s.area)} m²</b>
+        Seção ${s.numero ?? secaoVisualizada + 1} — Comprimento: <b style="color:var(--cv-accent3);">${TC.fmt2(TC.calcComprimentoSecao(s.distanciasCotas || []))} m</b> — Área: <b style="${s.area < 0 ? 'color:var(--cv-red);' : 'color:var(--cv-accent3);'}">${TC.fmt2(s.area)} m²</b>
         ${s.area < 0 ? ' ⚠️ negativa — tem trecho do terreno ABAIXO da cota final desta área (em vermelho no desenho)' : ''}
       </div>
       ${_svgPerfilLateral(s)}` : `<div class="cc-empty">Selecione uma seção.</div>`}
@@ -1235,7 +1235,7 @@ const LevantamentoTerraplanagem = (() => {
     // dezenas de metros, o 3D saía todo achatado. Exagera visualmente a
     // profundidade pra ela ficar sempre bem visível, sem depender do tamanho da planta.
     const ALTURA_VISUAL = 30;
-    const escalaY = ALTURA_VISUAL / Math.max(maxY - minY, 0.5);
+    const escalaY = Math.min(ALTURA_VISUAL / Math.max(maxY - minY, 0.5), escalaXZ * 4); // trava o exagero em no máx. 4x a escala horizontal — senão distorce demais (virava "caixa com torre")
 
     const THREE_ = window.THREE;
     const scene = new THREE_.Scene();
@@ -1332,7 +1332,7 @@ const LevantamentoTerraplanagem = (() => {
     renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
     container.appendChild(renderer.domElement);
 
-    let rotY = -0.7, rotX = -0.35, dist = 130;
+    let rotY = -0.7, rotX = -0.85, dist = 160;
     let dragging = false, lastX = 0, lastY = 0;
     const atualizarCamera = () => _posicionarCamera(camera, rotY, rotX, dist);
     atualizarCamera();
