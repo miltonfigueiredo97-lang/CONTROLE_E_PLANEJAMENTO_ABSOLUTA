@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.9.1',
+  versaoAtual: 'V3.9.1.1',
 
   versoes: [
     {
@@ -8347,6 +8347,16 @@ const NotasVersao = {
         "Confirmado: cada área já usa a cota final DELA MESMA no fundo — se duas áreas têm referências diferentes, cada uma aparece na profundidade certa (isso já funcionava, sem bug).",
         "Câmera: giro vertical tinha um limite curto (~74°) que travava antes de chegar perto de olhar de cima — aumentado pra quase 90° nos dois sentidos.",
         "Novo botão \\\"⬇️ Ver de Cima\\\" ao lado do \\\"🔄 Resetar Câmera\\\" — um clique já posiciona a câmera quase direto de cima, pra comparar o formato do 3D com a planta sem precisar arrastar tentando acertar o ângulo."
+      ]
+    },
+    {
+      "versao": "V3.9.1.1",
+      "data": "2026-08-16",
+      "tipo": "correcao",
+      "titulo": "\"Ver Seções\": lista voltava pro topo a cada clique",
+      "itens": [
+        "Clicar numa seção da lista reconstrói a tela (pra mostrar a seção selecionada) — e isso resetava o scroll da lista pro topo toda vez, obrigando rolar de novo até a seção seguinte quando navegando por várias seções em sequência.",
+        "Corrigido: a posição do scroll agora é guardada antes e restaurada depois do clique — a lista fica parada onde estava."
       ]
     }
   ],

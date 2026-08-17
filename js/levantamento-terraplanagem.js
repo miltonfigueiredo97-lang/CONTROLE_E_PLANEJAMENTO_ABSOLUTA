@@ -1156,6 +1156,8 @@ const LevantamentoTerraplanagem = (() => {
   function renderVerSecoes() {
     const el = document.getElementById('tp-versecoes-body');
     if (!el) return;
+    const listaEl = document.getElementById('tp-versecoes-lista');
+    const scrollAntes = listaEl ? listaEl.scrollTop : 0; // guarda antes de recriar o HTML, senão reseta pro topo a cada clique
     const lista = secoesComVolume(secoes[secDir] || []);
     if (secaoVisualizada >= lista.length) secaoVisualizada = 0;
     const s = lista[secaoVisualizada];
@@ -1181,7 +1183,7 @@ const LevantamentoTerraplanagem = (() => {
           <p class="text-sm text-muted mt-1">${semPosicaoSalva ? '⚠️ Estas seções foram geradas antes desta função existir — clique em "▦ Gerar Seções" de novo pra elas ganharem posição na planta.' : 'Arraste (com zoom) ou role o scroll pra dar zoom no mapa. A linha vermelha é a seção selecionada.'}</p>
         </div>` : ''}
         <div style="flex:1 1 220px;min-width:200px;">
-          <div class="cc-tableWrap" style="max-height:65vh;overflow-y:auto;">
+          <div id="tp-versecoes-lista" class="cc-tableWrap" style="max-height:65vh;overflow-y:auto;">
             <table class="cc-table">
               <thead><tr><th>#</th><th class="col-num">Área (m²)</th></tr></thead>
               <tbody>
@@ -1202,6 +1204,8 @@ const LevantamentoTerraplanagem = (() => {
       ${_svgPerfilLateral(s)}` : `<div class="cc-empty">Selecione uma seção.</div>`}
     `;
     if (temPlanta) { _attachPanZoomVerSecoes(); _aplicarZoomPan(); }
+    const listaElNova = document.getElementById('tp-versecoes-lista');
+    if (listaElNova) listaElNova.scrollTop = scrollAntes;
   }
 
   // Desenha o perfil 2D (lateral) de uma seção: linha do terreno, linha
