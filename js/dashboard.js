@@ -93,6 +93,7 @@ const Dashboard = (() => {
         ['Suprimentos', () => DashSuprimentos.render(ctx)],
         ['Contenção', () => DashContencao.render(ctx)],
         ['Fundação e Estrutura', () => DashConcreto.renderFundacaoEstrutura(ctx)],
+        ['Terraplanagem', () => DashTerra.render(ctx)],
         ['Estacas', () => DashConcreto.renderEstacas(ctx)],
         ['Resumo por Apartamento', () => DashResumo.render(ctx)],
       ];
@@ -233,6 +234,8 @@ const Dashboard = (() => {
       <div id="db-solo-grampeado-wrap"></div>
 
       <div id="db-fundacao-estrutura-wrap"></div>
+
+      <div id="db-terraplanagem-wrap"></div>
 
       <div id="db-estacas-wrap"></div>
 

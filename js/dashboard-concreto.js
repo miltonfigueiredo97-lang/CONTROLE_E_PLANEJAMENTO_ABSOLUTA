@@ -20,21 +20,41 @@ const DashConcreto = (() => {
     { chave: 'estrutura', titulo: 'Estrutura', cor: '#F5C800', corClara: '#fbe480', filtro: p => p.tipo !== 'Fundação' },
   ];
 
-  // ---------- Toggle (header) ----------
+  // ---------- Seletor "Extras" (header) ----------
+  // Dropdown único que liga/desliga as seções extras do Dashboard:
+  // Fundação e Estrutura (esta) e Terraplanagem (DashTerra).
   function renderToggle() {
     const host = document.getElementById('header-actions');
     if (!host) return;
+    const terra = window.DashTerra ? DashTerra.getMostrar() : false;
     host.innerHTML = `
-      <label class="db-toggle-concreto">
-        <input type="checkbox" id="db-check-concreto" ${_mostrar ? 'checked' : ''} onchange="DashConcreto.toggleMostrar()">
-        Mostrar Fundação e Estrutura
-      </label>`;
+      <div class="db-extras" id="db-extras">
+        <button class="btn btn-secundario btn-sm" onclick="DashConcreto.extrasToggleMenu(event)">➕ Extras ▾</button>
+        <div class="db-extras-menu" id="db-extras-menu" style="display:none;">
+          <label><input type="checkbox" ${_mostrar ? 'checked' : ''} onchange="DashConcreto.setMostrar(this.checked)"> 🏛️ Fundação e Estrutura</label>
+          <label><input type="checkbox" ${terra ? 'checked' : ''} onchange="DashTerra.setMostrar(this.checked)"> 🚜 Terraplanagem</label>
+        </div>
+      </div>`;
   }
-  async function toggleMostrar() {
-    _mostrar = document.getElementById('db-check-concreto')?.checked || false;
+  function extrasToggleMenu(ev) {
+    ev.stopPropagation();
+    const menu = document.getElementById('db-extras-menu');
+    if (!menu) return;
+    const abrir = menu.style.display === 'none';
+    menu.style.display = abrir ? 'flex' : 'none';
+    if (abrir) {
+      const fechar = (e) => {
+        if (!e.target.closest('#db-extras')) { menu.style.display = 'none'; document.removeEventListener('click', fechar); }
+      };
+      setTimeout(() => document.addEventListener('click', fechar), 0);
+    }
+  }
+  async function setMostrar(v) {
+    _mostrar = !!v;
     localStorage.setItem('db_mostrar_fundacao_estrutura', _mostrar ? 'true' : 'false');
     if (_ctx) await renderFundacaoEstrutura(_ctx);
   }
+  async function toggleMostrar() { await setMostrar(!_mostrar); } // compat
 
   // ---------- Fundação e Estrutura ----------
   async function renderFundacaoEstrutura(ctx) {
@@ -631,6 +651,6 @@ const DashConcreto = (() => {
     }
   }
 
-  return { renderToggle, toggleMostrar, renderFundacaoEstrutura, renderEstacas, abrirPrancha, popupNavegar, popupZoomAjustar, fecharPopup };
+  return { renderToggle, toggleMostrar, setMostrar, extrasToggleMenu, renderFundacaoEstrutura, renderEstacas, abrirPrancha, popupNavegar, popupZoomAjustar, fecharPopup };
 })();
 window.DashConcreto = DashConcreto;

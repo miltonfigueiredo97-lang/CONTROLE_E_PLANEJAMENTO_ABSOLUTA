@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.8.2.1',
+  versaoAtual: 'V3.8.2.2',
 
   versoes: [
     {
@@ -8078,6 +8078,18 @@ const NotasVersao = {
       "itens": [
         "A coluna \"Dimensões (m)\" mostrava largura × altura da CAIXA que envolve o polígono da área — não o formato real dela. Se a área desenhada é irregular (L, T, etc.), a caixa sempre parece maior do que a área de verdade, o que confundia (ex: área com formato de L pequeno mostrando uma caixa de 52m).",
         "Agora a tabela mostra as duas coisas separadas: \"Caixa (m)\" (só referência, largura × altura do retângulo envolvente) e \"Área Real (m²)\" (o tamanho de verdade do polígono desenhado, calculado certo mesmo pra formatos irregulares)."
+      ]
+    },
+    {
+      "versao": "V3.8.2.2",
+      "data": "2026-08-17",
+      "tipo": "melhoria",
+      "titulo": "Dashboard: seletor Extras + gráfico de Terraplanagem",
+      "itens": [
+        "O checkbox \"Mostrar Fundação e Estrutura\" do topo virou o seletor \"➕ Extras\": um menu com as seções extras do Dashboard pra ligar/desligar — Fundação e Estrutura, e agora Terraplanagem.",
+        "Nova seção 🚜 Terraplanagem (ao lado de Fundação e Estrutura): infos rápidas em cards — volume previsto (m³ empolado, das seções do Levantamento), volume removido, terra × entulho, % concluído, saldo restante, nº de viagens (caminhões), média m³/dia e custo total.",
+        "Gráfico por dia: barras empilhadas de volume (🟤 terra + 🧱 entulho) com o nº de caminhões do dia em cima e o custo do dia embaixo — mesma pegada visual do gráfico de Fundação e Estrutura.",
+        "A seção some sozinha quando a obra não tem terraplanagem lançada, e os dados vêm direto do Controle de Terraplanagem (link no rodapé da seção)."
       ]
     }
   ],
