@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.8.15',
+  versaoAtual: 'V3.8.16',
 
   versoes: [
     {
@@ -8311,6 +8311,17 @@ const NotasVersao = {
         "O \"prédio com pico\" que aparecia no 3D em meio a um terreno raso normalmente não é bug de renderização — é um ponto de cota digitado errado (ex: 78 em vez de 7,8), que faz a interpolação criar um espinho isolado bem ali, mesmo o resto do terreno estando consistente.",
         "Clique no número de \"Pontos de Cota\" de uma área (na tabela do painel do projeto) agora abre a lista de todos os pontos dela, ordenados por valor, com a mediana calculada — pontos bem diferentes da mediana aparecem destacados em vermelho com ⚠️, prontos pra editar (✎) ou remover (✕) ali mesmo.",
         "Testado com um terreno raso simulado (10 pontos entre 4,4 e 4,9) e um ponto digitado errado (78) — o sistema achou e marcou certinho."
+      ]
+    },
+    {
+      "versao": "V3.8.16",
+      "data": "2026-08-16",
+      "tipo": "correcao",
+      "titulo": "3D agora compõe TODAS as áreas juntas na posição real da planta (não mais cada uma isolada)",
+      "itens": [
+        "Causa raiz de mais uma versão do \\\"formato errado\\\": quando havia mais de uma área, o 3D desenhava cada uma separada, lado a lado, com um respiro artificial de 3m entre elas — em vez de posicionar cada uma no lugar REAL da planta. Isso desconectava totalmente a composição do terreno verdadeiro.",
+        "Corrigido: agora toda seção (de qualquer área) usa a posição REAL dela na planta (mesma escala/calibração) — sem nenhum deslocamento artificial. Se duas áreas são vizinhas de verdade, aparecem vizinhas no 3D; se estão longe uma da outra, aparecem exatamente na distância real. Testado com 2 áreas simuladas adjacentes (1,5m de diferença real) — ficaram nas posições certas, sem gap inventado.",
+        "Continua separando em sólidos diferentes só quando NÃO há conexão de verdade (cadeias diferentes, tipo braços separados por uma reentrância) — isso nunca foi o problema, o problema era o respiro artificial entre áreas inteiras."
       ]
     }
   ],

@@ -729,7 +729,7 @@ const LevantamentoTerraplanagem = (() => {
             pos: v, cadeiaId: ci, cotas, distanciasCotas: distancias, cotaFinal: area.cotaFinal, convencao: area.convencao,
             area: TC.calcAreaSecao(cotas.map(c => c * sinalConv), area.cotaFinal * sinalConv, distancias),
             areaId: area.id, origemFrac: _paraFracao(pInicioM), fimFrac: _paraFracao(pFimM),
-            origemLocal: +(amostras[0].o - outroMin).toFixed(3), // offset real (m) — pro 3D não esticar linhas de larguras diferentes como se fossem iguais
+            origemGlobal: +amostras[0].o.toFixed(3), // posição real (m) na MESMA planta — pro 3D compor todas as áreas juntas, cada uma no lugar certo, sem esticar nem separar artificialmente
             distanciaProxima: proximaNaCadeia ? +(proximaNaCadeia.v - v).toFixed(3) : '',
           });
         });
@@ -766,7 +766,7 @@ const LevantamentoTerraplanagem = (() => {
       const monta = linhas => linhas.map((l, i) => ({
         id: TC.genId('sec'), numero: i + 1, cotas: l.cotas, distanciasCotas: l.distanciasCotas, cotaFinal: l.cotaFinal,
         area: l.area, distanciaProxima: l.distanciaProxima, areaManual: '',
-        areaId: l.areaId, cadeiaId: l.cadeiaId, origemFrac: l.origemFrac, fimFrac: l.fimFrac, origemLocal: l.origemLocal, convencao: l.convencao,
+        areaId: l.areaId, cadeiaId: l.cadeiaId, origemFrac: l.origemFrac, fimFrac: l.fimFrac, origemGlobal: l.origemGlobal, convencao: l.convencao,
       }));
       secoes.horizontal = monta(todasH);
       secoes.vertical = monta(todasV);
@@ -1089,8 +1089,8 @@ const LevantamentoTerraplanagem = (() => {
 
   // Reamostra o perfil (distância acumulada x cota) de uma seção em N pontos
   // uniformes ao longo do comprimento total dela, via interpolação linear.
-  function _reamostrarPerfil(distancias, cotas, n, origemLocal) {
-    const off = TC.num(origemLocal);
+  function _reamostrarPerfil(distancias, cotas, n, origemGlobal) {
+    const off = TC.num(origemGlobal);
     const acc = [0];
     for (let i = 0; i < distancias.length; i++) acc.push(acc[i] + TC.num(distancias[i]));
     const largura = acc[acc.length - 1] || 0;
@@ -1299,61 +1299,49 @@ const LevantamentoTerraplanagem = (() => {
   }
 
   // Constrói cena Three.js do loft entre seções — usada tanto no modal
-  // interativo quanto no snapshot pro PDF do relatório. Agrupa por área
-  // (areaId) — nunca conecta o loft entre seções de áreas DIFERENTES,
-  // cada área vira um sólido independente, lado a lado na cena.
+  // interativo quanto no snapshot pro PDF do relatório. Todas as áreas
+  // compõem o MESMO terreno, cada seção na sua posição REAL da planta
+  // (mesma escala/calibração) — nunca com respiro artificial entre áreas.
+  // Só separa em sólidos diferentes quando NÃO HÁ conexão de verdade
+  // (cadeias diferentes — ex: braços separados por uma reentrância/pátio).
   function _construirCena3D(lista) {
     const N = 22; // amostras por seção
-    const GAP_ENTRE_AREAS = 3; // metros de respiro entre sólidos de áreas diferentes
 
-    // Agrupa por ÁREA — todas as cadeias de uma mesma área compartilham o
-    // MESMO referencial de posição real (s.pos), garantindo que a vista de
-    // cima do 3D bata com a planta. Dentro da área, sub-agrupa por cadeiaId
-    // (cada cadeia = um "braço" do prédio, vira um sólido próprio — nunca
-    // conecta o loft entre cadeias, mesmo compartilhando o mesmo eixo Z).
-    const gruposArea = [];
-    const porAreaId = new Map();
+    // Agrupa só pra saber quais seções formam um loft contínuo de verdade
+    // (mesma área + mesma cadeia) — a POSIÇÃO delas já é global, não precisa
+    // de nenhum deslocamento artificial pra "separar" áreas.
+    const grupos = [];
+    const porChave = new Map();
     lista.forEach(s => {
-      const chave = s.areaId ?? '__sem_area__';
-      if (!porAreaId.has(chave)) { const g = []; porAreaId.set(chave, g); gruposArea.push(g); }
-      porAreaId.get(chave).push(s);
+      const chave = (s.areaId ?? '__sem_area__') + '_' + (s.cadeiaId ?? 0);
+      if (!porChave.has(chave)) { const g = []; porChave.set(chave, g); grupos.push(g); }
+      porChave.get(chave).push(s);
     });
 
-    // Bounds globais (pra cor por profundidade e escala ficarem consistentes entre grupos)
-    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity, minProf = Infinity, maxProf = -Infinity, zTotal = 0;
-    const dadosGrupos = [];
-    gruposArea.forEach(secoesArea => {
-      const porCadeia = new Map();
-      secoesArea.forEach(s => { const k = s.cadeiaId ?? 0; if (!porCadeia.has(k)) porCadeia.set(k, []); porCadeia.get(k).push(s); });
-      const minPosArea = Math.min(...secoesArea.map(s => TC.num(s.pos)));
-      const larguraArea = Math.max(...secoesArea.map(s => TC.num(s.pos))) - minPosArea;
-
-      [...porCadeia.values()].forEach(secs => {
-        const perfis = secs.map(s => _reamostrarPerfil(s.distanciasCotas || [], s.cotas || [], N, s.origemLocal));
-        const cotasFinal = secs.map(s => TC.num(s.cotaFinal));
-        // "profundidade" (nº maior = mais embaixo) — inverte o sinal só pra
-        // posicionar/colorir certo no 3D (elevação: nº maior = mais alto, sem inverter).
-        const sinais = secs.map(s => s.convencao === 'profundidade' ? -1 : 1);
-        // Z = posição REAL (s.pos) relativa ao início da área + deslocamento global — NÃO
-        // é mais um acúmulo de distâncias (que perdia a posição verdadeira ao quebrar em cadeias).
-        let zAcumLocal = secs.map(s => TC.num(s.pos) - minPosArea + zTotal);
-        if (perfis.length === 1) { perfis.push(perfis[0]); cotasFinal.push(cotasFinal[0]); sinais.push(sinais[0]); zAcumLocal.push(zAcumLocal[0] + 1.5); }
-        perfis.forEach((p, si) => p.forEach(pt => {
-          const cotaPos = pt.cota * sinais[si], cfPos = cotasFinal[si] * sinais[si];
-          minX = Math.min(minX, pt.x); maxX = Math.max(maxX, pt.x);
-          minY = Math.min(minY, cotaPos, cfPos); maxY = Math.max(maxY, cotaPos, cfPos);
-          const prof = cotaPos - cfPos;
-          minProf = Math.min(minProf, prof); maxProf = Math.max(maxProf, prof);
-        }));
-        dadosGrupos.push({ perfis, cotasFinal, sinais, zAcum: zAcumLocal });
-      });
-      zTotal += larguraArea + GAP_ENTRE_AREAS;
+    // Bounds globais (pra centralizar, escalar e colorir tudo de forma consistente)
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity, minZ = Infinity, maxZ = -Infinity, minProf = Infinity, maxProf = -Infinity;
+    const dadosGrupos = grupos.map(secs => {
+      const perfis = secs.map(s => _reamostrarPerfil(s.distanciasCotas || [], s.cotas || [], N, s.origemGlobal));
+      const cotasFinal = secs.map(s => TC.num(s.cotaFinal));
+      const sinais = secs.map(s => s.convencao === 'profundidade' ? -1 : 1);
+      // Z = posição REAL (s.pos) na planta — mesma coordenada da grade de 1,5m,
+      // igual pra todas as áreas (mesma calibração), sem deslocamento nenhum.
+      let zReal = secs.map(s => TC.num(s.pos));
+      if (perfis.length === 1) { perfis.push(perfis[0]); cotasFinal.push(cotasFinal[0]); sinais.push(sinais[0]); zReal.push(zReal[0] + 1.5); }
+      perfis.forEach((p, si) => p.forEach(pt => {
+        const cotaPos = pt.cota * sinais[si], cfPos = cotasFinal[si] * sinais[si];
+        minX = Math.min(minX, pt.x); maxX = Math.max(maxX, pt.x);
+        minY = Math.min(minY, cotaPos, cfPos); maxY = Math.max(maxY, cotaPos, cfPos);
+        minZ = Math.min(minZ, zReal[si]); maxZ = Math.max(maxZ, zReal[si]);
+        const prof = cotaPos - cfPos;
+        minProf = Math.min(minProf, prof); maxProf = Math.max(maxProf, prof);
+      }));
+      return { perfis, cotasFinal, sinais, zAcum: zReal };
     });
-    zTotal -= GAP_ENTRE_AREAS; // não conta o respiro depois da última área
 
-    const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2, cz = zTotal / 2;
+    const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2, cz = (minZ + maxZ) / 2;
     // Escala horizontal (X/Z) fiel à planta — normaliza pra caber numa cena ~100 unidades.
-    const escalaXZ = 100 / Math.max(maxX - minX, zTotal || 1, 1);
+    const escalaXZ = 100 / Math.max(maxX - minX, maxZ - minZ || 1, 1);
     // Escala vertical (Y = profundidade do corte) INDEPENDENTE da horizontal —
     // senão, como o corte costuma ser de só alguns metros num prédio de
     // dezenas de metros, o 3D saía todo achatado. Exagera visualmente a
