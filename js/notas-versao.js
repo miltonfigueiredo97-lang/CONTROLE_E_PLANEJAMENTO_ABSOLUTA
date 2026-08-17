@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.8.14.2',
+  versaoAtual: 'V3.8.14.3',
 
   versoes: [
     {
@@ -8280,6 +8280,16 @@ const NotasVersao = {
         "Causa raiz de \"a imagem corre e fica tudo preto\" ao dar zoom com o scroll: o zoom sempre ampliava a partir do CENTRO da imagem, nunca de onde o mouse estava. Se você rolava o scroll olhando pra um canto, o que você queria ver se afastava cada vez mais do centro a cada tick de zoom, até sair da área visível — sobrando só o fundo preto do painel.",
         "Corrigido nos dois lugares (\\\"Marcar no Projeto\\\" e \\\"Ver Seções\\\"): o zoom no scroll agora mantém o ponto exatamente sob o cursor fixo na tela, como no Google Maps — dá pra ficar olhando pra qualquer canto e ir ampliando ali direto, sem sair correndo.",
         "Testado com simulação: 6 zooms consecutivos num ponto bem excêntrico (canto), o ponto ficou travado sob o cursor em todos eles."
+      ]
+    },
+    {
+      "versao": "V3.8.14.3",
+      "data": "2026-08-16",
+      "tipo": "correcao",
+      "titulo": "Causa raiz de vez: clicar pra marcar um ponto deixava a imagem \"presa\" no mouse depois",
+      "itens": [
+        "Achado o bug real do \"clico e a imagem fica travada no mouse, persegue qualquer movimento\": marcar um ponto (cota, canto de área, calibração) recria o painel do projeto do zero — e o código novo de arrastar/zoom não tinha nenhuma trava contra isso. No PRIMEIRO movimento do mouse depois de marcar um ponto (mesmo sem clicar de novo, só passar o mouse), a distância era calculada a partir de um valor zerado por padrão em vez da posição real — dava um número gigante, ativava o \"modo arrastar\" na hora, e a partir daí qualquer movimento (com ou sem o botão apertado) arrastava a planta.",
+        "Corrigido: agora só entra em modo de arrastar depois de um clique de verdade NESTA versão do painel (nunca herda estado de antes de marcar um ponto). Também tratado o cancelamento do ponteiro (ex: perder o toque na tela) pra nunca deixar o arrasto \"travado\" ligado."
       ]
     }
   ],

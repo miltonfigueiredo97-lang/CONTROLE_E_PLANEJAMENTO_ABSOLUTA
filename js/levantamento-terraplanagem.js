@@ -381,13 +381,20 @@ const LevantamentoTerraplanagem = (() => {
     const container = document.getElementById('tp-projeto-mapa');
     const img = document.getElementById('tp-img-projeto');
     if (!container || !img) return;
-    let baixouX = 0, baixouY = 0, arrastou = false, panX0 = 0, panY0 = 0;
+    let baixouX = 0, baixouY = 0, arrastou = false, panX0 = 0, panY0 = 0, rastreando = false;
     container.onpointerdown = ev => {
+      rastreando = true;
       baixouX = ev.clientX; baixouY = ev.clientY; arrastou = false;
       panX0 = projPanX; panY0 = projPanY;
       try { container.setPointerCapture(ev.pointerId); } catch (e) {}
     };
     container.onpointermove = ev => {
+      // SÓ calcula arrasto se houve um pointerdown de verdade NESTA instância do
+      // painel — sem essa trava, depois de marcar um ponto (o que recria o painel
+      // do zero), qualquer movimento do mouse (mesmo sem clicar) calculava a
+      // distância a partir de 0 (valor zerado por padrão), dava um número gigante,
+      // ativava o "modo arrastar" na hora e a imagem ficava perseguindo o mouse.
+      if (!rastreando) return;
       const dx = ev.clientX - baixouX, dy = ev.clientY - baixouY;
       if (!arrastou && Math.hypot(dx, dy) > 6) arrastou = true;
       if (arrastou && projZoom > 1) {
@@ -396,9 +403,11 @@ const LevantamentoTerraplanagem = (() => {
       }
     };
     container.onpointerup = ev => {
+      rastreando = false;
       if (arrastou) { container.style.cursor = 'grab'; return; } // foi pan, não marca ponto
       _tocarProjeto(ev, img);
     };
+    container.onpointercancel = () => { rastreando = false; arrastou = false; };
     container.onwheel = ev => {
       ev.preventDefault();
       const rect = container.getBoundingClientRect();
@@ -1085,7 +1094,11 @@ const LevantamentoTerraplanagem = (() => {
     const container = document.getElementById('tp-versecoes-mapa');
     if (!container) return;
     let arrastando = false, lastX = 0, lastY = 0;
-    container.onpointerdown = ev => { if (verSecZoom <= 1) return; arrastando = true; lastX = ev.clientX; lastY = ev.clientY; container.style.cursor = 'grabbing'; };
+    container.onpointerdown = ev => {
+      if (verSecZoom <= 1) return;
+      arrastando = true; lastX = ev.clientX; lastY = ev.clientY; container.style.cursor = 'grabbing';
+      try { container.setPointerCapture(ev.pointerId); } catch (e) {}
+    };
     container.onpointermove = ev => {
       if (!arrastando) return;
       verSecPanX += ev.clientX - lastX; verSecPanY += ev.clientY - lastY;
@@ -1093,7 +1106,7 @@ const LevantamentoTerraplanagem = (() => {
       _aplicarZoomPan();
     };
     const parar = () => { arrastando = false; container.style.cursor = verSecZoom > 1 ? 'grab' : 'default'; };
-    container.onpointerup = parar; container.onpointerleave = parar;
+    container.onpointerup = parar; container.onpointerleave = parar; container.onpointercancel = parar;
     container.onwheel = ev => {
       ev.preventDefault();
       const rect = container.getBoundingClientRect();
