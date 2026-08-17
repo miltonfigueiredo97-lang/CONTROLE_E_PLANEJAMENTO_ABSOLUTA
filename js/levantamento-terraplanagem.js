@@ -401,7 +401,16 @@ const LevantamentoTerraplanagem = (() => {
     };
     container.onwheel = ev => {
       ev.preventDefault();
+      const rect = container.getBoundingClientRect();
+      const cx = ev.clientX - rect.left - rect.width / 2, cy = ev.clientY - rect.top - rect.height / 2;
+      const zoomAntigo = projZoom;
       projZoom = Math.max(1, Math.min(6, projZoom * (ev.deltaY < 0 ? 1.15 : 0.87)));
+      // Mantém o ponto sob o cursor fixo na tela — sem isso, o zoom sempre
+      // amplia a partir do CENTRO da imagem, e o que você quer ver (se não
+      // estiver no meio) se afasta cada vez mais até sair da tela.
+      const fatorReal = projZoom / zoomAntigo;
+      projPanX = cx - (cx - projPanX) * fatorReal;
+      projPanY = cy - (cy - projPanY) * fatorReal;
       if (projZoom === 1) { projPanX = 0; projPanY = 0; }
       _aplicarZoomPanProjeto();
     };
@@ -1087,7 +1096,13 @@ const LevantamentoTerraplanagem = (() => {
     container.onpointerup = parar; container.onpointerleave = parar;
     container.onwheel = ev => {
       ev.preventDefault();
+      const rect = container.getBoundingClientRect();
+      const cx = ev.clientX - rect.left - rect.width / 2, cy = ev.clientY - rect.top - rect.height / 2;
+      const zoomAntigo = verSecZoom;
       verSecZoom = Math.max(1, Math.min(6, verSecZoom * (ev.deltaY < 0 ? 1.15 : 0.87)));
+      const fatorReal = verSecZoom / zoomAntigo;
+      verSecPanX = cx - (cx - verSecPanX) * fatorReal;
+      verSecPanY = cy - (cy - verSecPanY) * fatorReal;
       if (verSecZoom === 1) { verSecPanX = 0; verSecPanY = 0; }
       _aplicarZoomPan();
     };

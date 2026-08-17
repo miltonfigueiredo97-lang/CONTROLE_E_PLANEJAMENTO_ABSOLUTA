@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.8.14.1',
+  versaoAtual: 'V3.8.14.2',
 
   versoes: [
     {
@@ -8269,6 +8269,17 @@ const NotasVersao = {
         "O zoom/pan (tanto no \"Marcar no Projeto\" quanto no \"Ver Seções\") tinha uma transição suave (0,05s) pra deixar o clique nos botões ➕➖ mais bonito. Só que durante um ARRASTO ou SCROLL contínuo, os eventos chegam mais rápido que essa animação — a tela fica tentando alcançar cada posição nova e nunca chega, dando a impressão de que a imagem \"corre pra longe\" a cada movimento.",
         "Removida a transição — agora o zoom/pan responde 1:1 com o dedo/mouse, sem atraso nem efeito elástico.",
         "De quebra, o arrasto agora captura o ponteiro (setPointerCapture) — continua funcionando direto mesmo se o mouse sair rápido da área da imagem no meio do movimento."
+      ]
+    },
+    {
+      "versao": "V3.8.14.2",
+      "data": "2026-08-16",
+      "tipo": "correcao",
+      "titulo": "Zoom no scroll agora segue o cursor (antes sempre ampliava a partir do centro)",
+      "itens": [
+        "Causa raiz de \"a imagem corre e fica tudo preto\" ao dar zoom com o scroll: o zoom sempre ampliava a partir do CENTRO da imagem, nunca de onde o mouse estava. Se você rolava o scroll olhando pra um canto, o que você queria ver se afastava cada vez mais do centro a cada tick de zoom, até sair da área visível — sobrando só o fundo preto do painel.",
+        "Corrigido nos dois lugares (\\\"Marcar no Projeto\\\" e \\\"Ver Seções\\\"): o zoom no scroll agora mantém o ponto exatamente sob o cursor fixo na tela, como no Google Maps — dá pra ficar olhando pra qualquer canto e ir ampliando ali direto, sem sair correndo.",
+        "Testado com simulação: 6 zooms consecutivos num ponto bem excêntrico (canto), o ponto ficou travado sob o cursor em todos eles."
       ]
     }
   ],
