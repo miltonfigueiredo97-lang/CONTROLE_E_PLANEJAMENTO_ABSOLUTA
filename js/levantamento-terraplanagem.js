@@ -149,7 +149,13 @@ const LevantamentoTerraplanagem = (() => {
       s.area = TC.num(s.areaManual);
       return;
     }
-    s.area = TC.calcAreaSecao(s.cotas || [], s.cotaFinal || 0, s.distanciasCotas || []);
+    // "profundidade" (nº maior = mais embaixo) inverte o sinal — sem isso,
+    // toda vez que a tela renderiza (que chama recalcArea de novo) o valor
+    // certo gerado em "Gerar Seções" era sobrescrito com a fórmula de
+    // elevação, invertendo o resultado (essa era a causa da área negativa
+    // que não batia com o resumo Corte/Aterro, que já calculava certo).
+    const sinal = s.convencao === 'profundidade' ? -1 : 1;
+    s.area = TC.calcAreaSecao((s.cotas || []).map(c => TC.num(c) * sinal), TC.num(s.cotaFinal) * sinal, s.distanciasCotas || []);
   }
   function _recalcTudo() {
     (secoes.horizontal || []).forEach(recalcArea);
@@ -522,24 +528,47 @@ const LevantamentoTerraplanagem = (() => {
     // dividida em segmentos contínuos, e os segmentos são agrupados em CADEIAS
     // (por sobreposição de posição com a linha anterior) — cada cadeia é um
     // "braço" do prédio, virando seu próprio loft independente no 3D.
+    function _refinarBordaO(oDentro, oFora, fixarX, v) {
+      let a = oDentro, b = oFora;
+      for (let iter = 0; iter < 12; iter++) {
+        const m = (a + b) / 2;
+        const pt = fixarX ? { x: v, y: m } : { x: m, y: v };
+        if (_pontoDentroPoligono(pt, poligonoM)) a = m; else b = m;
+      }
+      return a;
+    }
+
     function linhasNaDirecao(fixarX) {
       const inicioFixo = fixarX ? minX : minY, fimFixo = fixarX ? maxX : maxY;
       const outroMin = fixarX ? minY : minX, outroMax = fixarX ? maxY : maxX;
 
       const linhasBrutas = [];
       for (let v = inicioFixo; v <= fimFixo + 1e-6; v += PASSO_GRADE) {
+        // Amostra 1 passo ANTES de outroMin e 1 DEPOIS de outroMax de propósito —
+        // garante um vizinho "de fora" real nas duas pontas pra refinar a borda
+        // por bisseção (senão a seção sempre parava no último ponto da GRADE,
+        // nunca no limite de verdade do polígono, ficando ~PASSO_AMOSTRA/2 mais curta).
         const pontosLinha = [];
-        for (let o = outroMin; o <= outroMax + 1e-6; o += PASSO_AMOSTRA) {
+        for (let o = outroMin - PASSO_AMOSTRA; o <= outroMax + PASSO_AMOSTRA + 1e-6; o += PASSO_AMOSTRA) {
           const pt = fixarX ? { x: v, y: o } : { x: o, y: v };
           pontosLinha.push({ o, dentro: _pontoDentroPoligono(pt, poligonoM) });
         }
         const segmentos = [];
-        let atual = [];
-        pontosLinha.forEach(p => {
-          if (p.dentro) atual.push(p.o);
-          else { if (atual.length >= 2) segmentos.push(atual); atual = []; }
-        });
-        if (atual.length >= 2) segmentos.push(atual);
+        let atual = [], inicioIdx = -1;
+        for (let i = 0; i < pontosLinha.length; i++) {
+          const p = pontosLinha[i];
+          if (p.dentro) { if (atual.length === 0) inicioIdx = i; atual.push(p.o); }
+          else {
+            if (atual.length >= 2) {
+              let oIni = atual[0], oFim = atual[atual.length - 1];
+              if (inicioIdx > 0) oIni = _refinarBordaO(oIni, pontosLinha[inicioIdx - 1].o, fixarX, v);
+              oFim = _refinarBordaO(oFim, p.o, fixarX, v);
+              segmentos.push([oIni, ...atual.slice(1, -1), oFim]);
+            }
+            atual = []; inicioIdx = -1;
+          }
+        }
+        if (atual.length >= 2) segmentos.push(atual); // só acontece se a área não fechar dentro da amostragem estendida (não deveria)
         linhasBrutas.push({ v, segmentos });
       }
 

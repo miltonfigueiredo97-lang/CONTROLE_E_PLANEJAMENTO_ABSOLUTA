@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.8.10.4',
+  versaoAtual: 'V3.8.11',
 
   versoes: [
     {
@@ -8204,6 +8204,17 @@ const NotasVersao = {
         "O 3D usava a MESMA escala pra planta (X/Z, geralmente dezenas de metros) e pra profundidade do corte (Y, geralmente só alguns metros) — como a profundidade é sempre muito menor que o tamanho do prédio, o resultado saía achatado (ex: num prédio de 52m com corte de 3m, a altura na cena ficava com menos de 7 unidades, quase imperceptível).",
         "Agora a escala vertical (profundidade) é calculada separada da horizontal, com exagero visual pra ficar sempre bem visível (30 unidades de cena, independente do tamanho da planta) — a vista de cima continua 100% fiel à planta, só a altura fica exagerada de propósito pra dar pra ver o corte.",
         "Removida a coluna \"Caixa (m)\" da tabela de áreas — só confundia (parecia que a área tinha formato de retângulo). Ficou só \"Área Real (m²)\", que é o que importa."
+      ]
+    },
+    {
+      "versao": "V3.8.11",
+      "data": "2026-08-16",
+      "tipo": "correcao",
+      "titulo": "Causa raiz REAL da área negativa: recalcArea sobrescrevia o valor certo com o sinal errado a cada render",
+      "itens": [
+        "Achado o bug de verdade: \"Gerar Seções\" calculava a área CERTA (respeitando elevação/profundidade), mas toda vez que a tela renderizava de novo — o que acontece o tempo todo, incluindo só de abrir \"Ver Seções\" — uma função interna (recalcArea) recalculava a área SEM aplicar o sinal da convenção, sobrescrevendo o valor certo com a fórmula de elevação sempre. Por isso a área do resumo Corte/Aterro (que tinha sua própria conta, correta) batia positiva, mas o número \"Área\" mostrado em cima saía negativo — os dois deveriam ser iguais e não eram.",
+        "Corrigido — recalcArea agora aplica o mesmo sinal de elevação/profundidade que o \"Gerar Seções\" usa. Testado com os números reais (cota final 7,18 profundidade, terreno raso ~4,9): área agora sai positiva e igual ao \"Líquido\" mostrado no resumo Corte/Aterro.",
+        "Comprimento da seção também corrigido: a seção sempre parava no último ponto da GRADE de amostragem (de 0,5 em 0,5m), nunca exatamente no limite real da área desenhada — por isso um prédio de 52,04m aparecia com ~51m. Agora a borda de cada seção é ajustada por bisseção até bater com o limite verdadeiro do polígono. Testado: comprimento sai 52,040 exato."
       ]
     }
   ],
