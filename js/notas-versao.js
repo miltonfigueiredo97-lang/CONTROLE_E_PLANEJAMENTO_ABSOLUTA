@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.10.4',
+  versaoAtual: 'V3.10.5',
 
   versoes: [
     {
@@ -8479,6 +8479,17 @@ const NotasVersao = {
       "itens": [
         "No celular/tablet, tocar numa estaca às vezes acionava o menu nativo de \\\"selecionar/salvar imagem\\\" do navegador (comum no Safari/iOS) em vez de abrir o marcador — faltava a propriedade -webkit-touch-callout:none, que é a que desliga esse menu de toque prolongado (user-select:none sozinho não resolve isso no iOS).",
         "Adicionado -webkit-touch-callout:none e reforçado user-select:none na imagem da prancha e no mapa inteiro (herda pros marcadores) nas 3 abas."
+      ]
+    },
+    {
+      "versao": "V3.10.5",
+      "data": "2026-08-17",
+      "tipo": "funcionalidade",
+      "titulo": "Levantamento: terreno interpola global (corrige salto na fronteira entre áreas) + volume das Estacas somado no total + giro do 3D no touch corrigido",
+      "itens": [
+        "Causa raiz do \"corte reto\" onde muda a área: o TERRENO era interpolado usando só os pontos de cota da própria área — na fronteira, o perfil pulava de um conjunto de pontos pro outro, dando um salto artificial mesmo sem cliff nenhum de verdade no solo. Corrigido: o terreno agora interpola com os pontos de TODAS as áreas juntos (é uma superfície física contínua, sem cliff nenhum só por causa de um limite administrativo) — só a Cota Final (o alvo/referência de projeto) continua variando por área, formando o degrau real só ali onde é pra formar.",
+        "Novo: o Volume de Estacas (somado automaticamente do Controle de Estacas — campo Volume de todas as peças Fundação → Estacas) agora aparece separado (banco e com empolamento) e soma no VOLUME TOTAL DA OBRA, junto com o corte de terra. Aparece na tela e no relatório PDF.",
+        "3D: no touch (celular/tablet), girar a câmera às vezes movia o fundo da página em vez de girar o 3D — faltava travar o toque (touch-action:none) no container e capturar o ponteiro. Corrigido."
       ]
     }
   ],

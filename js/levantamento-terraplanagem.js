@@ -25,6 +25,7 @@ const LevantamentoTerraplanagem = (() => {
 
   let obraId = null;
   let caminhoes = [];
+  let volumeTotalEstacas = 0; // vem do Controle de Estacas (concretoPecas), pra somar no total geral da obra
   let config = {
     taxaEmpolamento: 0.3, capacidadeGrande: 15.6, capacidadePequena: 10, cotaReferencia: '',
     tiposCaminhao: [{ nome: 'Grande', capacidade: 15.6 }, { nome: 'Pequeno', capacidade: 10 }],
@@ -72,6 +73,12 @@ const LevantamentoTerraplanagem = (() => {
       caminhoes = await Database.listar(obraId, COL_CAMINHOES, null);
       await carregarConfig();
       await carregarSecoes();
+      // Volume das estacas (Controle de Estacas) — soma aparte, pra entrar
+      // no volume total da obra sem se misturar com o corte de terra em si.
+      try {
+        const todasPecas = await Database.listar(obraId, 'concretoPecas', null);
+        volumeTotalEstacas = (todasPecas || []).filter(p => p.tipo === 'Fundação' && p.subTipo === 'Estacas').reduce((s, p) => s + (TC.num(p.volume) || 0), 0);
+      } catch (e) { volumeTotalEstacas = 0; }
       imagemProjetoCache = null; // força buscar de novo (troca de obra, etc.)
       renderizar();
       if (config.modoLevantamento === 'pontos') _garantirImagemProjetoCarregada();
@@ -142,7 +149,9 @@ const LevantamentoTerraplanagem = (() => {
     const volV = volumeTotalDirecao('vertical');
     const volMedio = TC.calcVolumeMedio(volH, volV);
     const volEmpolado = TC.calcVolumeComEmpolamento(volMedio, config.taxaEmpolamento);
-    return { volH, volV, volMedio, volEmpolado };
+    const volEstacasEmpolado = TC.calcVolumeComEmpolamento(volumeTotalEstacas, config.taxaEmpolamento);
+    const volTotalGeral = volEmpolado + volEstacasEmpolado;
+    return { volH, volV, volMedio, volEmpolado, volumeTotalEstacas, volEstacasEmpolado, volTotalGeral };
   }
 
   function recalcArea(s) {
@@ -189,9 +198,15 @@ const LevantamentoTerraplanagem = (() => {
 
       <div class="cc-kpiGrid" style="grid-template-columns:repeat(3,1fr);">
         <div class="cc-kpi"><div class="cc-kpiIcon">📐</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Vol. Médio (banco)</div><div class="cc-kpiValue">${TC.fmt1(k.volMedio)}<span class="cc-kpiUnit">m³</span></div><div class="cc-kpiSub">Horiz: ${TC.fmt1(k.volH)} · Vert: ${TC.fmt1(k.volV)}</div></div></div>
-        <div class="cc-kpi cc-kpiOrange"><div class="cc-kpiIcon">📦</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Vol. c/ Empolamento (a remover)</div><div class="cc-kpiValue">${TC.fmt1(k.volEmpolado)}<span class="cc-kpiUnit">m³</span></div><div class="cc-kpiSub">taxa ${TC.fmt1(config.taxaEmpolamento * 100)}%</div></div></div>
+        <div class="cc-kpi cc-kpiOrange"><div class="cc-kpiIcon">📦</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Vol. c/ Empolamento (terra, a remover)</div><div class="cc-kpiValue">${TC.fmt1(k.volEmpolado)}<span class="cc-kpiUnit">m³</span></div><div class="cc-kpiSub">taxa ${TC.fmt1(config.taxaEmpolamento * 100)}%</div></div></div>
         <div class="cc-kpi cc-kpiBlue"><div class="cc-kpiIcon">🚚</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Caminhões cadastrados</div><div class="cc-kpiValue">${caminhoes.length}</div></div></div>
       </div>
+      <div class="cc-kpiGrid" style="grid-template-columns:repeat(3,1fr);margin-top:8px;">
+        <div class="cc-kpi"><div class="cc-kpiIcon">🔩</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Vol. Estacas (banco)</div><div class="cc-kpiValue">${TC.fmt1(k.volumeTotalEstacas)}<span class="cc-kpiUnit">m³</span></div><div class="cc-kpiSub">do Controle de Estacas</div></div></div>
+        <div class="cc-kpi cc-kpiOrange"><div class="cc-kpiIcon">🔩</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Vol. Estacas c/ Empolamento</div><div class="cc-kpiValue">${TC.fmt1(k.volEstacasEmpolado)}<span class="cc-kpiUnit">m³</span></div><div class="cc-kpiSub">taxa ${TC.fmt1(config.taxaEmpolamento * 100)}%</div></div></div>
+        <div class="cc-kpi cc-kpiGreen"><div class="cc-kpiIcon">🏗️</div><div class="cc-kpiBody"><div class="cc-kpiLabel">VOLUME TOTAL DA OBRA</div><div class="cc-kpiValue">${TC.fmt1(k.volTotalGeral)}<span class="cc-kpiUnit">m³</span></div><div class="cc-kpiSub">terra + estacas, empolados</div></div></div>
+      </div>
+      <p class="text-sm text-muted mt-1">Volume de estacas somado do <b>Controle de Estacas</b> automaticamente (soma o campo Volume de todas as peças Fundação → Estacas). Sempre mostrado separado, mas incluído no Volume Total da Obra e no relatório PDF.</p>
 
       <div class="cc-panel">
         <div class="cc-panelTitle">📐 Calculadora de Corte de Terra <span style="font-family:var(--cv-mono);font-size:10px;color:var(--cv-text3);font-weight:400;text-transform:none;letter-spacing:0;">método das seções transversais</span></div>
@@ -691,15 +706,23 @@ const LevantamentoTerraplanagem = (() => {
       }
       return null;
     }
-    function interpolarNaArea(ap, x, y) {
+    // Todos os pontos de cota marcados, de TODAS as áreas juntos — o TERRENO
+    // é uma superfície física contínua, não tem cliff nenhum só porque
+    // cruzou o limite administrativo de uma área pra outra. Só a COTA FINAL
+    // (o alvo/referência de projeto) é que legitimamente muda de uma área
+    // pra outra — o terreno em si tem que interpolar suave, usando pontos
+    // dos dois lados perto da fronteira. Sem isso, o perfil da seção dava um
+    // salto artificial bem na linha da área (não uma queda real do terreno).
+    const todosPontos = areasComPontos.flatMap(ap => ap.pontosArea);
+    function interpolarTerrenoGlobal(x, y) {
       let somaPeso = 0, somaPesoCota = 0;
-      for (const p of ap.pontosArea) {
+      for (const p of todosPontos) {
         const d2 = (p.x - x) ** 2 + (p.y - y) ** 2;
         if (d2 < 1e-6) return p.cota;
         const peso = 1 / d2;
         somaPeso += peso; somaPesoCota += peso * p.cota;
       }
-      return somaPeso > 0 ? somaPesoCota / somaPeso : TC.num(ap.area.cotaFinal);
+      return somaPeso > 0 ? somaPesoCota / somaPeso : 0;
     }
     function _refinarBordaO(oDentro, oFora, fixarX, v) {
       let a = oDentro, b = oFora;
@@ -773,7 +796,7 @@ const LevantamentoTerraplanagem = (() => {
         cadeia.forEach(({ v, seg }, idx) => {
           const amostras = seg.map(p => ({
             o: p.o,
-            cota: interpolarNaArea(p.ap, fixarX ? v : p.o, fixarX ? p.o : v),
+            cota: interpolarTerrenoGlobal(fixarX ? v : p.o, fixarX ? p.o : v),
             cotaFinal: TC.num(p.ap.area.cotaFinal),
             areaId: p.ap.area.id,
           }));
@@ -1390,15 +1413,18 @@ const LevantamentoTerraplanagem = (() => {
       }
       return null;
     }
-    function interpolarNaArea(ap, x, y) {
+    // Todos os pontos de cota, de TODAS as áreas juntos — mesma correção
+    // aplicada nas seções: o terreno é contínuo, só a cota final varia por área.
+    const todosPontos = areasComPontos.flatMap(ap => ap.pontosArea);
+    function interpolarTerrenoGlobal(x, y) {
       let somaPeso = 0, somaPesoCota = 0;
-      for (const p of ap.pontosArea) {
+      for (const p of todosPontos) {
         const d2 = (p.x - x) ** 2 + (p.y - y) ** 2;
         if (d2 < 1e-6) return p.cota;
         const peso = 1 / d2;
         somaPeso += peso; somaPesoCota += peso * p.cota;
       }
-      return somaPeso > 0 ? somaPesoCota / somaPeso : TC.num(ap.area.cotaFinal);
+      return somaPeso > 0 ? somaPesoCota / somaPeso : 0;
     }
 
     const nx = Math.max(2, Math.round((maxX - minX) / passo) + 1);
@@ -1414,7 +1440,7 @@ const LevantamentoTerraplanagem = (() => {
       for (let i = 0; i < nx; i++) {
         const x = (minX + margemX) + (maxX - minX - 2 * margemX) * (nx > 1 ? i / (nx - 1) : 0);
         const ap = acharAreaNoPonto({ x, y });
-        linha.push({ x, y, dentro: !!ap, cota: ap ? interpolarNaArea(ap, x, y) : null, cotaFinal: ap ? TC.num(ap.area.cotaFinal) : null });
+        linha.push({ x, y, dentro: !!ap, cota: ap ? interpolarTerrenoGlobal(x, y) : null, cotaFinal: ap ? TC.num(ap.area.cotaFinal) : null });
       }
       grid.push(linha);
     }
@@ -1571,9 +1597,14 @@ const LevantamentoTerraplanagem = (() => {
     const atualizarCamera = () => _posicionarCamera(camera, rotY, rotX, dist);
     atualizarCamera();
 
-    const onDown = ev => { dragging = true; lastX = ev.clientX; lastY = ev.clientY; };
+    const onDown = ev => {
+      dragging = true; lastX = ev.clientX; lastY = ev.clientY;
+      try { container.setPointerCapture(ev.pointerId); } catch (e) {}
+      ev.preventDefault();
+    };
     const onMove = ev => {
       if (!dragging) return;
+      ev.preventDefault();
       rotY += (ev.clientX - lastX) * 0.008;
       rotX = Math.max(-1.55, Math.min(1.55, rotX + (ev.clientY - lastY) * 0.008));
       lastX = ev.clientX; lastY = ev.clientY;
@@ -1584,6 +1615,7 @@ const LevantamentoTerraplanagem = (() => {
     container.addEventListener('pointerdown', onDown);
     window.addEventListener('pointermove', onMove);
     window.addEventListener('pointerup', onUp);
+    window.addEventListener('pointercancel', onUp);
     container.addEventListener('wheel', onWheel, { passive: false });
 
     function loop() {
@@ -1725,7 +1757,7 @@ const LevantamentoTerraplanagem = (() => {
       { v: TC.fmt1(k.volV), l: 'VOL. VERTICAL (M³)' },
       { v: TC.fmt1(k.volMedio), l: 'VOL. MÉDIO BANCO (M³)' },
       { v: TC.fmt1(config.taxaEmpolamento * 100) + '%', l: 'EMPOLAMENTO' },
-      { v: TC.fmt1(k.volEmpolado), l: 'A REMOVER (M³)' },
+      { v: TC.fmt1(k.volEmpolado), l: 'TERRA A REMOVER (M³)' },
     ];
     const gap = 4, cw = (PW - 24 - gap * (cards.length - 1)) / cards.length, ch = 17;
     cards.forEach((card, i) => {
@@ -1736,6 +1768,25 @@ const LevantamentoTerraplanagem = (() => {
       doc.text(card.v, x + cw / 2, y + 8, { align: 'center' });
       doc.setTextColor(120); doc.setFontSize(5.4); doc.setFont(undefined, 'normal');
       doc.text(card.l, x + cw / 2, y + 13.5, { align: 'center' });
+    });
+    y += ch + 4;
+
+    // Cards de estacas + total geral (separado do corte de terra, somado no total)
+    const cardsEstacas = [
+      { v: TC.fmt1(k.volumeTotalEstacas), l: 'VOL. ESTACAS BANCO (M³)' },
+      { v: TC.fmt1(k.volEstacasEmpolado), l: 'ESTACAS C/ EMPOLAMENTO (M³)' },
+      { v: TC.fmt1(k.volTotalGeral), l: 'VOLUME TOTAL DA OBRA (M³)' },
+    ];
+    const gap2 = 4, cw2 = (PW - 24 - gap2 * (cardsEstacas.length - 1)) / cardsEstacas.length;
+    cardsEstacas.forEach((card, i) => {
+      const x = 12 + i * (cw2 + gap2);
+      const destaque = i === 2;
+      doc.setFillColor(destaque ? 240 : 250, destaque ? 253 : 250, destaque ? 244 : 250); doc.setDrawColor(229, 229, 229);
+      doc.roundedRect(x, y, cw2, ch, 1.8, 1.8, 'FD');
+      doc.setTextColor(13, 13, 13); doc.setFontSize(12); doc.setFont(undefined, 'bold');
+      doc.text(card.v, x + cw2 / 2, y + 8, { align: 'center' });
+      doc.setTextColor(120); doc.setFontSize(5.4); doc.setFont(undefined, 'normal');
+      doc.text(card.l, x + cw2 / 2, y + 13.5, { align: 'center' });
     });
     y += ch + 8;
 
