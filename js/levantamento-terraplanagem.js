@@ -1391,6 +1391,46 @@ const LevantamentoTerraplanagem = (() => {
       geoFundo.computeVertexNormals();
       const matFundo = new THREE_.MeshStandardMaterial({ color: 0xf59e0b, transparent: true, opacity: 0.35, side: THREE_.DoubleSide, roughness: 0.9 });
       group.add(new THREE_.Mesh(geoFundo, matFundo));
+
+      // Paredes sólidas seguindo o CONTORNO REAL da malha — fecha o vão entre
+      // topo e fundo em toda borda de verdade (inclusive em reentrâncias tipo
+      // L), não só num retângulo. Uma aresta de célula vira parede quando a
+      // célula do lado de dentro existe mas a vizinha do outro lado não.
+      const quadExiste = [];
+      for (let j = 0; j < g.ny - 1; j++) {
+        const linha = [];
+        for (let i = 0; i < g.nx - 1; i++) linha.push(g.grid[j][i].dentro && g.grid[j][i + 1].dentro && g.grid[j + 1][i].dentro && g.grid[j + 1][i + 1].dentro);
+        quadExiste.push(linha);
+      }
+      const posParede = [], facesParede = [];
+      function addParede(pA, pB) {
+        const cotaA = pA.cota * sinal, cotaB = pB.cota * sinal, cf = g.cotaFinal * sinal;
+        const base = posParede.length / 3;
+        posParede.push(
+          (pA.x - cx) * escalaXZ, (cotaA - cy) * escalaY, (pA.y - cz) * escalaXZ,
+          (pB.x - cx) * escalaXZ, (cotaB - cy) * escalaY, (pB.y - cz) * escalaXZ,
+          (pA.x - cx) * escalaXZ, (cf - cy) * escalaY, (pA.y - cz) * escalaXZ,
+          (pB.x - cx) * escalaXZ, (cf - cy) * escalaY, (pB.y - cz) * escalaXZ,
+        );
+        facesParede.push(base, base + 2, base + 1, base + 1, base + 2, base + 3);
+      }
+      for (let j = 0; j < g.ny - 1; j++) {
+        for (let i = 0; i < g.nx - 1; i++) {
+          if (!quadExiste[j][i]) continue;
+          if (i === 0 || !quadExiste[j][i - 1]) addParede(g.grid[j][i], g.grid[j + 1][i]);
+          if (i === g.nx - 2 || !quadExiste[j][i + 1]) addParede(g.grid[j][i + 1], g.grid[j + 1][i + 1]);
+          if (j === 0 || !quadExiste[j - 1][i]) addParede(g.grid[j][i], g.grid[j][i + 1]);
+          if (j === g.ny - 2 || !quadExiste[j + 1][i]) addParede(g.grid[j + 1][i], g.grid[j + 1][i + 1]);
+        }
+      }
+      if (facesParede.length) {
+        const geoParede = new THREE_.BufferGeometry();
+        geoParede.setAttribute('position', new THREE_.Float32BufferAttribute(posParede, 3));
+        geoParede.setIndex(facesParede);
+        geoParede.computeVertexNormals();
+        const matParede = new THREE_.MeshStandardMaterial({ color: 0x8b7355, side: THREE_.DoubleSide, roughness: 0.95 });
+        group.add(new THREE_.Mesh(geoParede, matParede));
+      }
     });
 
     scene.add(group);
@@ -1437,7 +1477,7 @@ const LevantamentoTerraplanagem = (() => {
     const onMove = ev => {
       if (!dragging) return;
       rotY += (ev.clientX - lastX) * 0.008;
-      rotX = Math.max(-1.3, Math.min(1.3, rotX + (ev.clientY - lastY) * 0.008));
+      rotX = Math.max(-1.55, Math.min(1.55, rotX + (ev.clientY - lastY) * 0.008));
       lastX = ev.clientX; lastY = ev.clientY;
       atualizarCamera();
     };
@@ -1455,6 +1495,7 @@ const LevantamentoTerraplanagem = (() => {
     _3d = {
       renderer, scene, camera, container, onDown, onMove, onUp, onWheel, raf: 0,
       resetar: () => { rotY = CAM_PADRAO.rotY; rotX = CAM_PADRAO.rotX; dist = CAM_PADRAO.dist; atualizarCamera(); },
+      verDeCima: () => { rotX = -1.5; atualizarCamera(); }, // quase -90° — câmera acima olhando pra baixo, pra comparar direto com a planta
     };
     loop();
 
@@ -1464,6 +1505,7 @@ const LevantamentoTerraplanagem = (() => {
     }
   }
   function resetarCamera3D() { if (_3d && _3d.resetar) _3d.resetar(); }
+  function verDeCima3D() { if (_3d && _3d.verDeCima) _3d.verDeCima(); }
 
   // Snapshot do 3D pra imagem (usado no PDF) — renderer offscreen, 1 frame.
   function _snapshot3D(w, h) {
@@ -1731,7 +1773,7 @@ const LevantamentoTerraplanagem = (() => {
     abrirVerSecoes, fecharVerSecoes, selecionarSecaoVisualizada,
     verSecZoomIn, verSecZoomOut, verSecZoomReset,
     projZoomIn, projZoomOut, projZoomReset,
-    abrir3D, fechar3D, resetarCamera3D, limparBase,
+    abrir3D, fechar3D, resetarCamera3D, verDeCima3D, limparBase,
     baixarLevantamentoPDF, compartilharLevantamentoPDF,
   };
 })();

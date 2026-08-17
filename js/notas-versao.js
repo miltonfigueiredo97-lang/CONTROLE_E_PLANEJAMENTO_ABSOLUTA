@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.9.0',
+  versaoAtual: 'V3.9.1',
 
   versoes: [
     {
@@ -8335,6 +8335,18 @@ const NotasVersao = {
         "Testado com um \\\"morro\\\" simulado (base 3m + pico 10m no centro, 20x20m): a grade capturou a variação certa nos dois eixos e o volume aproximado bateu bem maior que o de um terreno plano de mesma base, como esperado.",
         "Bônus: botão \\\"🔄 Resetar Câmera\\\" dentro do próprio 3D — se girar demais e a vista ficar confusa (de perfil, por exemplo), um clique volta pro ângulo padrão sem precisar fechar e abrir de novo.",
         "PDF do relatório agora traz só 1 snapshot 3D (a grade completa), não mais um por direção."
+      ]
+    },
+    {
+      "versao": "V3.9.1",
+      "data": "2026-08-16",
+      "tipo": "melhoria",
+      "titulo": "Paredes sólidas no 3D (fecha o vão entre topo e fundo) + câmera com bem mais liberdade de giro",
+      "itens": [
+        "O 3D tinha um vão vazio entre a superfície do terreno (topo) e o plano de referência (fundo) — agora tem paredes sólidas fechando esse espaço, seguindo o CONTORNO REAL de cada área (inclusive em reentrâncias tipo L/T, não só um retângulo). Testado com um formato em U (pátio no meio): as paredes cobriram tanto a borda externa quanto a borda do pátio.",
+        "Confirmado: cada área já usa a cota final DELA MESMA no fundo — se duas áreas têm referências diferentes, cada uma aparece na profundidade certa (isso já funcionava, sem bug).",
+        "Câmera: giro vertical tinha um limite curto (~74°) que travava antes de chegar perto de olhar de cima — aumentado pra quase 90° nos dois sentidos.",
+        "Novo botão \\\"⬇️ Ver de Cima\\\" ao lado do \\\"🔄 Resetar Câmera\\\" — um clique já posiciona a câmera quase direto de cima, pra comparar o formato do 3D com a planta sem precisar arrastar tentando acertar o ângulo."
       ]
     }
   ],
