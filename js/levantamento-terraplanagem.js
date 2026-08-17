@@ -45,6 +45,7 @@ const LevantamentoTerraplanagem = (() => {
   let calibPontoTemp = null;   // 1º ponto clicado da calibração, aguardando o 2º
   let pdfjsCarregado = false;
   let ferramenta = null;       // null | 'area' | 'cota' — ferramenta ativa no projeto
+  let pontosCotaAbertos = null; // id da área com a lista de pontos de cota expandida (achar outlier)
   let areaEmDesenho = null;    // { pontos: [] } enquanto uma área nova está sendo clicada
 
   function _corSecao(i) { return PALETA_SECOES[i % PALETA_SECOES.length]; }
@@ -347,15 +348,16 @@ const LevantamentoTerraplanagem = (() => {
           <table class="cc-table">
             <thead><tr><th></th><th>Área</th><th class="col-num">Área Real (m²)</th><th class="col-num">Cota Final</th><th>Convenção</th><th class="col-num">Pontos de Cota</th><th class="col-acoes"></th></tr></thead>
             <tbody>
-              ${areas.map((a, ai) => { const dim = _dimensoesArea(a); return `<tr>
+              ${areas.map((a, ai) => { const dim = _dimensoesArea(a); const pts = pontosCota.filter(p => p.areaId === a.id); return `<tr>
                 <td><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:${_corSecao(ai)};"></span></td>
                 <td>Área ${ai + 1}</td>
                 <td class="col-num cc-tdMono" style="font-weight:700;">${TC.fmt1(dim.areaReal)}</td>
                 <td class="col-num"><input type="text" inputmode="decimal" class="form-control" style="width:90px;display:inline-block;" value="${esc(a.cotaFinal)}" onchange="TP_UI.atualizarCotaArea('${a.id}', this.value)"></td>
                 <td><button class="btn btn-secundario btn-sm" onclick="TP_UI.alternarConvencaoArea('${a.id}')" title="Clique pra trocar">${a.convencao === 'profundidade' ? '⬇️ Profundidade' : '⬆️ Elevação'}</button></td>
-                <td class="col-num cc-tdMono">${pontosCota.filter(p => p.areaId === a.id).length}</td>
+                <td class="col-num cc-tdMono"><a href="#" onclick="event.preventDefault();TP_UI.togglePontosCota('${a.id}')" style="text-decoration:underline;">${pts.length} ${pontosCotaAbertos === a.id ? '▲' : '▼'}</a></td>
                 <td class="col-acoes"><button class="btn btn-secundario btn-sm" style="color:var(--cv-red);" onclick="TP_UI.removerArea('${a.id}')">🗑</button></td>
-              </tr>`; }).join('')}
+              </tr>
+              ${pontosCotaAbertos === a.id ? _linhaPontosCotaHTML(pts) : ''}`; }).join('')}
             </tbody>
           </table>
         </div>
@@ -472,6 +474,56 @@ const LevantamentoTerraplanagem = (() => {
     renderSecoes();
   }
   function cancelarArea() { areaEmDesenho = null; ferramenta = null; renderSecoes(); }
+  function togglePontosCota(areaId) {
+    pontosCotaAbertos = pontosCotaAbertos === areaId ? null : areaId;
+    renderSecoes();
+  }
+
+  // Lista os pontos de cota de uma área ordenados por valor — destaca em
+  // vermelho quem se desvia muito da mediana (é assim que se acha um ponto
+  // digitado errado, tipo "78" em vez de "7,8", que gera um espinho isolado
+  // no 3D mesmo o resto do terreno estando tudo raso e consistente).
+  function _linhaPontosCotaHTML(pontos) {
+    if (!pontos.length) return `<tr><td colspan="7" class="cc-empty" style="padding:8px 14px;">Nenhum ponto de cota nesta área ainda.</td></tr>`;
+    const valores = pontos.map(p => TC.num(p.cota)).sort((a, b) => a - b);
+    const mediana = valores.length % 2 ? valores[(valores.length - 1) / 2] : (valores[valores.length / 2 - 1] + valores[valores.length / 2]) / 2;
+    const desvios = valores.map(v => Math.abs(v - mediana)).sort((a, b) => a - b);
+    const madMediano = desvios[Math.floor(desvios.length / 2)] || 0;
+    const limiar = Math.max(madMediano * 5, 2); // tolera variação normal do terreno; só marca desvio grande
+    const ordenados = [...pontos].sort((a, b) => TC.num(a.cota) - TC.num(b.cota));
+    return `<tr><td colspan="7" style="padding:10px 14px;background:var(--cv-surface1,#fafafa);">
+      <div style="font-family:var(--cv-mono);font-size:.78rem;color:var(--cv-text2);margin-bottom:6px;">Mediana: ${TC.fmt2(mediana)} — pontos bem diferentes da mediana aparecem em vermelho (provável erro de digitação):</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;">
+        ${ordenados.map(p => {
+          const foraDoNormal = Math.abs(TC.num(p.cota) - mediana) > limiar;
+          return `<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:12px;font-family:var(--cv-mono);font-size:.78rem;background:${foraDoNormal ? '#fee2e2' : 'var(--cv-surface2)'};color:${foraDoNormal ? 'var(--cv-red)' : 'inherit'};font-weight:${foraDoNormal ? '700' : '400'};">
+            ${foraDoNormal ? '⚠️ ' : ''}${TC.fmt2(p.cota)}
+            <a href="#" onclick="event.preventDefault();TP_UI.editarPontoCota('${p.id}')" title="Editar">✎</a>
+            <a href="#" onclick="event.preventDefault();TP_UI.removerPontoCota('${p.id}')" title="Remover" style="color:var(--cv-red);">✕</a>
+          </span>`;
+        }).join('')}
+      </div>
+    </td></tr>`;
+  }
+
+  function editarPontoCota(pontoId) {
+    const p = (config.pontosCota || []).find(x => x.id === pontoId);
+    if (!p) return;
+    const novo = prompt('Nova cota deste ponto:', p.cota);
+    if (novo === null) return;
+    p.cota = TC.num(novo);
+    salvarConfig().catch(() => {});
+    renderSecoes();
+  }
+  async function removerPontoCota(pontoId) {
+    const ok = await Utils.confirmar('Remover este ponto de cota?');
+    if (!ok) return;
+    config.pontosCota = (config.pontosCota || []).filter(p => p.id !== pontoId);
+    Utils.mostrarLoading();
+    try { await salvarConfig(); } finally { Utils.esconderLoading(); }
+    renderSecoes();
+  }
+
   function _dimensoesArea(area) {
     const m = area.pontos.map(_paraMetros);
     const xs = m.map(p => p.x), ys = m.map(p => p.y);
@@ -1677,6 +1729,7 @@ const LevantamentoTerraplanagem = (() => {
     secUpd, secUpdCotas, secUpdCotaFinal, secUpdDistCotas, secUpdAreaManual, salvarSecoesBtn,
     escolherImagemProjeto, processarImagemProjeto, calibrarProjeto,
     setFerramenta, concluirArea, cancelarArea, removerArea, atualizarCotaArea, alternarConvencaoArea, gerarSecoes,
+    togglePontosCota, editarPontoCota, removerPontoCota,
     abrirConfig, salvarConfigBtn, aplicarPresetEmpolamento,
     adicionarTipoCaminhao, atualizarTipoCaminhao, removerTipoCaminhao,
     abrirCaminhoes, salvarCaminhao, excluirCaminhao,

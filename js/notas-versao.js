@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.8.14.4',
+  versaoAtual: 'V3.8.15',
 
   versoes: [
     {
@@ -8300,6 +8300,17 @@ const NotasVersao = {
       "itens": [
         "Os pontinhos marcados na planta (ponto de calibração, cantos de área, pontos de cota) tinham tamanho fixo em pixels — como eles ficam DENTRO da imagem que é ampliada pelo zoom, na prática cresciam junto: com bastante zoom, um marcador de 14px virava uma bola gigante, cobrindo exatamente o ponto que você precisava enxergar pra calibrar com precisão.",
         "Corrigido: os marcadores agora contra-escalam com o zoom (ficam menores dentro da imagem na mesma proporção que ela é ampliada), então o tamanho deles na TELA fica sempre igual, não importa o quanto você tenha ampliado — dá pra ver exatamente onde o ponto caiu."
+      ]
+    },
+    {
+      "versao": "V3.8.15",
+      "data": "2026-08-16",
+      "tipo": "melhoria",
+      "titulo": "Diagnóstico de ponto de cota errado (achar o \"espinho\" isolado no 3D)",
+      "itens": [
+        "O \"prédio com pico\" que aparecia no 3D em meio a um terreno raso normalmente não é bug de renderização — é um ponto de cota digitado errado (ex: 78 em vez de 7,8), que faz a interpolação criar um espinho isolado bem ali, mesmo o resto do terreno estando consistente.",
+        "Clique no número de \"Pontos de Cota\" de uma área (na tabela do painel do projeto) agora abre a lista de todos os pontos dela, ordenados por valor, com a mediana calculada — pontos bem diferentes da mediana aparecem destacados em vermelho com ⚠️, prontos pra editar (✎) ou remover (✕) ali mesmo.",
+        "Testado com um terreno raso simulado (10 pontos entre 4,4 e 4,9) e um ponto digitado errado (78) — o sistema achou e marcou certinho."
       ]
     }
   ],
