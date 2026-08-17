@@ -328,16 +328,16 @@ const LevantamentoTerraplanagem = (() => {
         <div id="tp-projeto-mapa" style="border:1px solid var(--cv-border);border-radius:6px;overflow:hidden;position:relative;height:55vh;min-height:380px;background:#111;touch-action:none;display:flex;align-items:center;justify-content:center;">
           <div id="tp-projeto-zoomwrap" style="transform-origin:center center;position:relative;max-width:100%;max-height:100%;aspect-ratio:${config.imgW || 1} / ${config.imgH || 1};">
             <img id="tp-img-projeto" src="${imagemProjetoCache}" style="width:100%;height:100%;display:block;user-select:none;cursor:${ferramenta ? 'crosshair' : 'default'};" draggable="false">
-            ${calibPontoTemp ? `<div style="position:absolute;left:${(calibPontoTemp.x * 100).toFixed(3)}%;top:${(calibPontoTemp.y * 100).toFixed(3)}%;transform:translate(-50%,-50%);width:14px;height:14px;border-radius:50%;background:#ef4444;box-shadow:0 0 0 2px #fff;pointer-events:none;"></div>` : ''}
+            ${calibPontoTemp ? `<div style="position:absolute;left:${(calibPontoTemp.x * 100).toFixed(3)}%;top:${(calibPontoTemp.y * 100).toFixed(3)}%;transform:translate(-50%,-50%) scale(${(1 / projZoom).toFixed(4)});width:12px;height:12px;border-radius:50%;background:#ef4444;box-shadow:0 0 0 2px #fff;pointer-events:none;"></div>` : ''}
             <svg viewBox="0 0 100 100" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;">
               ${areas.map((a, ai) => `<polygon points="${a.pontos.map(p => `${(p.x * 100).toFixed(3)},${(p.y * 100).toFixed(3)}`).join(' ')}" fill="${_corSecao(ai)}" fill-opacity="0.18" stroke="${_corSecao(ai)}" stroke-width="0.35" vector-effect="non-scaling-stroke"/>`).join('')}
               ${areaEmDesenho && areaEmDesenho.pontos.length ? `<polyline points="${areaEmDesenho.pontos.map(p => `${(p.x * 100).toFixed(3)},${(p.y * 100).toFixed(3)}`).join(' ')}" fill="none" stroke="#fff" stroke-width="0.4" stroke-dasharray="1.2,1" vector-effect="non-scaling-stroke"/>` : ''}
             </svg>
-            ${areaEmDesenho ? areaEmDesenho.pontos.map(p => `<div style="position:absolute;left:${(p.x * 100).toFixed(3)}%;top:${(p.y * 100).toFixed(3)}%;transform:translate(-50%,-50%);width:8px;height:8px;border-radius:50%;background:#fff;box-shadow:0 0 0 1.5px #000;pointer-events:none;"></div>`).join('') : ''}
+            ${areaEmDesenho ? areaEmDesenho.pontos.map(p => `<div style="position:absolute;left:${(p.x * 100).toFixed(3)}%;top:${(p.y * 100).toFixed(3)}%;transform:translate(-50%,-50%) scale(${(1 / projZoom).toFixed(4)});width:8px;height:8px;border-radius:50%;background:#fff;box-shadow:0 0 0 1.5px #000;pointer-events:none;"></div>`).join('') : ''}
             ${pontosCota.map(p => {
               const ai = areas.findIndex(a => a.id === p.areaId);
               const cor = ai >= 0 ? _corSecao(ai) : '#999';
-              return `<div style="position:absolute;left:${(p.x * 100).toFixed(3)}%;top:${(p.y * 100).toFixed(3)}%;transform:translate(-50%,-50%);width:9px;height:9px;border-radius:50%;background:${cor};box-shadow:0 0 0 1.5px #fff;pointer-events:none;" title="Cota ${TC.fmt2(p.cota)}"></div>`;
+              return `<div style="position:absolute;left:${(p.x * 100).toFixed(3)}%;top:${(p.y * 100).toFixed(3)}%;transform:translate(-50%,-50%) scale(${(1 / projZoom).toFixed(4)});width:9px;height:9px;border-radius:50%;background:${cor};box-shadow:0 0 0 1.5px #fff;pointer-events:none;" title="Cota ${TC.fmt2(p.cota)}"></div>`;
             }).join('')}
           </div>
         </div>

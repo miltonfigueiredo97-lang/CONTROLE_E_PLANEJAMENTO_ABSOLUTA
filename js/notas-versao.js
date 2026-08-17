@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.8.14.3',
+  versaoAtual: 'V3.8.14.4',
 
   versoes: [
     {
@@ -8290,6 +8290,16 @@ const NotasVersao = {
       "itens": [
         "Achado o bug real do \"clico e a imagem fica travada no mouse, persegue qualquer movimento\": marcar um ponto (cota, canto de área, calibração) recria o painel do projeto do zero — e o código novo de arrastar/zoom não tinha nenhuma trava contra isso. No PRIMEIRO movimento do mouse depois de marcar um ponto (mesmo sem clicar de novo, só passar o mouse), a distância era calculada a partir de um valor zerado por padrão em vez da posição real — dava um número gigante, ativava o \"modo arrastar\" na hora, e a partir daí qualquer movimento (com ou sem o botão apertado) arrastava a planta.",
         "Corrigido: agora só entra em modo de arrastar depois de um clique de verdade NESTA versão do painel (nunca herda estado de antes de marcar um ponto). Também tratado o cancelamento do ponteiro (ex: perder o toque na tela) pra nunca deixar o arrasto \"travado\" ligado."
+      ]
+    },
+    {
+      "versao": "V3.8.14.4",
+      "data": "2026-08-16",
+      "tipo": "correcao",
+      "titulo": "Marcadores (calibração, área, cota) não crescem mais junto com o zoom",
+      "itens": [
+        "Os pontinhos marcados na planta (ponto de calibração, cantos de área, pontos de cota) tinham tamanho fixo em pixels — como eles ficam DENTRO da imagem que é ampliada pelo zoom, na prática cresciam junto: com bastante zoom, um marcador de 14px virava uma bola gigante, cobrindo exatamente o ponto que você precisava enxergar pra calibrar com precisão.",
+        "Corrigido: os marcadores agora contra-escalam com o zoom (ficam menores dentro da imagem na mesma proporção que ela é ampliada), então o tamanho deles na TELA fica sempre igual, não importa o quanto você tenha ampliado — dá pra ver exatamente onde o ponto caiu."
       ]
     }
   ],
