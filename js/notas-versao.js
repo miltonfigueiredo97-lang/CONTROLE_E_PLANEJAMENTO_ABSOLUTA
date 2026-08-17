@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.9.2',
+  versaoAtual: 'V3.9.3',
 
   versoes: [
     {
@@ -8367,6 +8367,16 @@ const NotasVersao = {
       "itens": [
         "Causa raiz do buraco entre áreas: cada área esticava a parede só até a PRÓPRIA cota final — se duas áreas vizinhas têm cota final diferente, ou a borda de uma não encosta 100% na da outra (imprecisão normal de clique ao desenhar), sobrava um vão vazio bem na costura. Corrigido: agora as paredes esticam até um piso global (bem abaixo da cota mais funda de TODAS as áreas), garantindo que duas paredes vizinhas sempre se sobrepõem por baixo, sem vão — o fundo (plano de referência) de cada área continua mostrando a profundidade certa dela, só a parede que estica mais.",
         "Causa raiz de área pequena (tipo reservatório) sumindo do 3D: o sistema exigia pelo menos 3 pontos de cota marcados numa área pra gerar qualquer coisa nela — áreas pequenas com só 1 ou 2 pontos marcados ficavam de fora inteiras, aparecendo como um buraco na posição delas. Corrigido: agora 1 ponto já basta (a interpolação funciona matematicamente com qualquer quantidade ≥1)."
+      ]
+    },
+    {
+      "versao": "V3.9.3",
+      "data": "2026-08-16",
+      "tipo": "correcao",
+      "titulo": "3D: tampa sólida embaixo — o volume tava fechado nas laterais mas oco por baixo",
+      "itens": [
+        "Confirmado: as paredes laterais fechavam até o piso global, mas não tinha nenhuma tampa NAQUELE piso — o objeto ficava como uma caixa sem fundo, oca por dentro.",
+        "Adicionada a tampa: mesma forma/contorno do topo (mesmo formato do prédio, inclusive reentrâncias), só achatada lá embaixo no piso global. Agora o volume é sólido de verdade — topo, quatro/mais lados e fundo, todos fechados."
       ]
     }
   ],

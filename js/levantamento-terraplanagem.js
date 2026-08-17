@@ -1402,6 +1402,24 @@ const LevantamentoTerraplanagem = (() => {
       const matFundo = new THREE_.MeshStandardMaterial({ color: 0xf59e0b, transparent: true, opacity: 0.35, side: THREE_.DoubleSide, roughness: 0.9 });
       group.add(new THREE_.Mesh(geoFundo, matFundo));
 
+      // Tampa sólida no PISO GLOBAL — mesma forma/triangulação do topo, só
+      // achatada lá embaixo. Sem isso, o objeto ficava "sem fundo": paredes
+      // fechavam os lados mas o corpo continuava oco por baixo.
+      const posTampa = [];
+      for (let j = 0; j < g.ny; j++) {
+        for (let i = 0; i < g.nx; i++) {
+          const pt = g.grid[j][i];
+          if (!pt.dentro) { posTampa.push(0, 0, 0); continue; }
+          posTampa.push((pt.x - cx) * escalaXZ, (pisoGlobal - cy) * escalaY, (pt.y - cz) * escalaXZ);
+        }
+      }
+      const geoTampa = new THREE_.BufferGeometry();
+      geoTampa.setAttribute('position', new THREE_.Float32BufferAttribute(posTampa, 3));
+      geoTampa.setIndex(facesFundo); // mesmo winding do fundo — normal pra baixo, visível de baixo
+      geoTampa.computeVertexNormals();
+      const matTampa = new THREE_.MeshStandardMaterial({ color: 0x6b5642, side: THREE_.DoubleSide, roughness: 0.95 });
+      group.add(new THREE_.Mesh(geoTampa, matTampa));
+
       // Paredes sólidas seguindo o CONTORNO REAL da malha — fecha o vão entre
       // topo e fundo em toda borda de verdade (inclusive em reentrâncias tipo
       // L), não só num retângulo. Uma aresta de célula vira parede quando a
