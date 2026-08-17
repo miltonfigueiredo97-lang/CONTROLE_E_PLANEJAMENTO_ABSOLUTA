@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.8.1.1',
+  versaoAtual: 'V3.8.1.2',
 
   versoes: [
     {
@@ -8044,6 +8044,18 @@ const NotasVersao = {
         "Confirmado: o número de seções geradas depende do tamanho da ÁREA que você desenha (dividida em grade de 1,5m) — se a área desenhada for menor que o prédio todo, sai menos seção mesmo, é esperado. Se o prédio é irregular (tipo um P), as seções de fato ficam mais curtas onde não tem prédio, mas continuam cobrindo toda a largura marcada.",
         "Ao concluir uma área agora aparece um aviso com a dimensão REAL dela (largura × altura em metros, calculada pela escala) — compare com uma medida que você já sabe (ex: a cota impressa na própria planta) pra confirmar se a área ficou do tamanho certo ou se a escala foi calibrada errada.",
         "A tabela de áreas (dentro do painel do projeto) também ganhou a coluna \"Dimensões (m)\" com a mesma informação, sempre visível."
+      ]
+    },
+    {
+      "versao": "V3.8.1.2",
+      "data": "2026-08-16",
+      "tipo": "correcao",
+      "titulo": "3D: corrigido o formato errado em áreas irregulares (T virando L) + Ver Seções reformulado",
+      "itens": [
+        "Causa raiz do 3D com formato errado (\"T\" saindo como \"L\"): pra montar o 3D, cada linha de seção era esticada pra caber num intervalo padronizado de 0 a 1, sem guardar a posição/largura REAL dela dentro da área — então uma linha estreita (numa parte fina do prédio) virava do mesmo tamanho que uma linha larga (na parte cheia), distorcendo todo o formato. Corrigido: cada linha agora guarda o deslocamento real (metros) desde o início da área, e o 3D usa essa posição de verdade — larguras e deslocamentos diferentes aparecem exatamente onde são no prédio.",
+        "\"👁️ Ver Seções\" reformulado: em vez de mostrar as 30+ linhas juntas (impossível de ler), agora só a seção SELECIONADA aparece riscada (em vermelho) na planta — as outras ficam apagadas.",
+        "Mapa da planta bem maior (quase a tela toda) e com zoom/pan: botões ➕/➖/🔄 Resetar, além de dar scroll pra zoom e arrastar pra mover (quando tem zoom aplicado).",
+        "Se a seção não tiver posição salva (foi gerada antes desta função existir), agora avisa pra gerar de novo em vez de simplesmente não mostrar nada."
       ]
     }
   ],

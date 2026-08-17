@@ -510,6 +510,7 @@ const LevantamentoTerraplanagem = (() => {
           pos: v, cotas, distanciasCotas: distancias, cotaFinal: area.cotaFinal,
           area: TC.calcAreaSecao(cotas, area.cotaFinal, distancias),
           areaId: area.id, origemFrac: _paraFracao(pInicioM), fimFrac: _paraFracao(pFimM),
+          origemLocal: +(amostras[0].o - outroMin).toFixed(3), // offset real (m) — pro 3D não esticar linhas de larguras diferentes como se fossem iguais
         });
       }
       return linhas;
@@ -548,7 +549,7 @@ const LevantamentoTerraplanagem = (() => {
         return {
           id: TC.genId('sec'), numero: i + 1, cotas: l.cotas, distanciasCotas: l.distanciasCotas, cotaFinal: l.cotaFinal,
           area: l.area, distanciaProxima: proximaMesmaArea ? +(linhas[i + 1].pos - l.pos).toFixed(3) : '', areaManual: '',
-          areaId: l.areaId, origemFrac: l.origemFrac, fimFrac: l.fimFrac,
+          areaId: l.areaId, origemFrac: l.origemFrac, fimFrac: l.fimFrac, origemLocal: l.origemLocal,
         };
       });
       secoes.horizontal = monta(todasH);
@@ -872,7 +873,8 @@ const LevantamentoTerraplanagem = (() => {
 
   // Reamostra o perfil (distância acumulada x cota) de uma seção em N pontos
   // uniformes ao longo do comprimento total dela, via interpolação linear.
-  function _reamostrarPerfil(distancias, cotas, n) {
+  function _reamostrarPerfil(distancias, cotas, n, origemLocal) {
+    const off = TC.num(origemLocal);
     const acc = [0];
     for (let i = 0; i < distancias.length; i++) acc.push(acc[i] + TC.num(distancias[i]));
     const largura = acc[acc.length - 1] || 0;
@@ -884,7 +886,7 @@ const LevantamentoTerraplanagem = (() => {
       const d0 = acc[seg], d1 = acc[seg + 1] ?? d0;
       const c0 = TC.num(cotas[seg]), c1 = TC.num(cotas[seg + 1] ?? cotas[seg]);
       const t = d1 > d0 ? (alvo - d0) / (d1 - d0) : 0;
-      out.push({ x: alvo, cota: c0 + (c1 - c0) * t });
+      out.push({ x: alvo + off, cota: c0 + (c1 - c0) * t });
     }
     return out;
   }
@@ -899,21 +901,51 @@ const LevantamentoTerraplanagem = (() => {
   }
 
   // ══════════════════════════════════════════
-  // VER SEÇÕES — planta com todas as linhas desenhadas (clicáveis) +
-  // perfil lateral (2D) da seção selecionada, mostrando o terreno x cota
-  // final com trechos VERDES (corte, acima da referência) e VERMELHOS
-  // (abaixo — é aí que a área de uma seção pode sair negativa).
+  // VER SEÇÕES — planta com a linha da seção SELECIONADA riscada (só ela —
+  // as outras ficam apagadas, senão fica ilegível com 30+ seções) + zoom/pan
+  // no mapa + perfil lateral (2D) da seção, com trechos VERDES (corte, acima
+  // da referência) e VERMELHOS (abaixo — é aí que a área pode sair negativa).
   // ══════════════════════════════════════════
   let secaoVisualizada = 0;
-  function abrirVerSecoes() {
+  let verSecZoom = 1, verSecPanX = 0, verSecPanY = 0;
+  async function abrirVerSecoes() {
     const lista = secoes[secDir] || [];
     if (!lista.length) { Utils.toast('Nenhuma seção nesta direção ainda.', 'alerta'); return; }
     secaoVisualizada = 0;
+    verSecZoom = 1; verSecPanX = 0; verSecPanY = 0;
+    if (config.temImagemProjeto && !imagemProjetoCache) await _garantirImagemProjetoCarregada();
     renderVerSecoes();
     Utils.abrirModal('modal-tp-versecoes');
   }
   function fecharVerSecoes() { Utils.fecharModal('modal-tp-versecoes'); }
   function selecionarSecaoVisualizada(i) { secaoVisualizada = i; renderVerSecoes(); }
+  function verSecZoomIn() { verSecZoom = Math.min(6, verSecZoom * 1.4); _aplicarZoomPan(); }
+  function verSecZoomOut() { verSecZoom = Math.max(1, verSecZoom / 1.4); if (verSecZoom === 1) { verSecPanX = 0; verSecPanY = 0; } _aplicarZoomPan(); }
+  function verSecZoomReset() { verSecZoom = 1; verSecPanX = 0; verSecPanY = 0; _aplicarZoomPan(); }
+  function _aplicarZoomPan() {
+    const wrap = document.getElementById('tp-versecoes-zoomwrap');
+    if (wrap) wrap.style.transform = `translate(${verSecPanX}px, ${verSecPanY}px) scale(${verSecZoom})`;
+  }
+  function _attachPanZoomVerSecoes() {
+    const container = document.getElementById('tp-versecoes-mapa');
+    if (!container) return;
+    let arrastando = false, lastX = 0, lastY = 0;
+    container.onpointerdown = ev => { if (verSecZoom <= 1) return; arrastando = true; lastX = ev.clientX; lastY = ev.clientY; container.style.cursor = 'grabbing'; };
+    container.onpointermove = ev => {
+      if (!arrastando) return;
+      verSecPanX += ev.clientX - lastX; verSecPanY += ev.clientY - lastY;
+      lastX = ev.clientX; lastY = ev.clientY;
+      _aplicarZoomPan();
+    };
+    const parar = () => { arrastando = false; container.style.cursor = verSecZoom > 1 ? 'grab' : 'default'; };
+    container.onpointerup = parar; container.onpointerleave = parar;
+    container.onwheel = ev => {
+      ev.preventDefault();
+      verSecZoom = Math.max(1, Math.min(6, verSecZoom * (ev.deltaY < 0 ? 1.15 : 0.87)));
+      if (verSecZoom === 1) { verSecPanX = 0; verSecPanY = 0; }
+      _aplicarZoomPan();
+    };
+  }
 
   function renderVerSecoes() {
     const el = document.getElementById('tp-versecoes-body');
@@ -922,28 +954,33 @@ const LevantamentoTerraplanagem = (() => {
     if (secaoVisualizada >= lista.length) secaoVisualizada = 0;
     const s = lista[secaoVisualizada];
     const temPlanta = config.temImagemProjeto && imagemProjetoCache;
+    const semPosicaoSalva = temPlanta && lista.length && !lista.some(sec => sec.origemFrac && sec.fimFrac);
     el.innerHTML = `
       <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:12px;">
         ${temPlanta ? `
-        <div style="flex:1 1 300px;min-width:260px;">
-          <div style="border:1px solid var(--cv-border);border-radius:6px;overflow:hidden;position:relative;">
-            <img src="${imagemProjetoCache}" style="width:100%;display:block;">
-            <svg viewBox="0 0 100 100" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%;">
-              ${lista.map((sec, i) => sec.origemFrac && sec.fimFrac
-                ? `<line x1="${(sec.origemFrac.x * 100).toFixed(2)}" y1="${(sec.origemFrac.y * 100).toFixed(2)}" x2="${(sec.fimFrac.x * 100).toFixed(2)}" y2="${(sec.fimFrac.y * 100).toFixed(2)}" stroke="${i === secaoVisualizada ? '#ffffff' : _corSecao(i)}" stroke-width="${i === secaoVisualizada ? 0.9 : 0.35}" vector-effect="non-scaling-stroke" style="cursor:pointer;pointer-events:auto;" onclick="TP_UI.selecionarSecaoVisualizada(${i})"/>`
-                : '').join('')}
-            </svg>
+        <div style="flex:2 1 420px;min-width:280px;">
+          <div style="display:flex;gap:6px;margin-bottom:6px;">
+            <button class="btn btn-secundario btn-sm" onclick="TP_UI.verSecZoomOut()">➖</button>
+            <button class="btn btn-secundario btn-sm" onclick="TP_UI.verSecZoomIn()">➕</button>
+            <button class="btn btn-secundario btn-sm" onclick="TP_UI.verSecZoomReset()">🔄 Resetar zoom</button>
           </div>
-          <p class="text-sm text-muted mt-1">Clique numa linha da planta pra ver o perfil dela.</p>
+          <div id="tp-versecoes-mapa" style="border:1px solid var(--cv-border);border-radius:6px;overflow:hidden;position:relative;height:65vh;min-height:420px;background:#111;touch-action:none;">
+            <div id="tp-versecoes-zoomwrap" style="transform-origin:0 0;width:100%;height:100%;position:relative;transition:transform .05s linear;">
+              <img src="${imagemProjetoCache}" style="width:100%;height:100%;object-fit:contain;display:block;user-select:none;" draggable="false">
+              <svg viewBox="0 0 100 100" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;">
+                ${s && s.origemFrac && s.fimFrac ? `<line x1="${(s.origemFrac.x * 100).toFixed(2)}" y1="${(s.origemFrac.y * 100).toFixed(2)}" x2="${(s.fimFrac.x * 100).toFixed(2)}" y2="${(s.fimFrac.y * 100).toFixed(2)}" stroke="#ff2d55" stroke-width="1.1" vector-effect="non-scaling-stroke"/>` : ''}
+              </svg>
+            </div>
+          </div>
+          <p class="text-sm text-muted mt-1">${semPosicaoSalva ? '⚠️ Estas seções foram geradas antes desta função existir — clique em "▦ Gerar Seções" de novo pra elas ganharem posição na planta.' : 'Arraste (com zoom) ou role o scroll pra dar zoom no mapa. A linha vermelha é a seção selecionada.'}</p>
         </div>` : ''}
         <div style="flex:1 1 220px;min-width:200px;">
-          <div class="cc-tableWrap" style="max-height:260px;overflow-y:auto;">
+          <div class="cc-tableWrap" style="max-height:65vh;overflow-y:auto;">
             <table class="cc-table">
-              <thead><tr><th></th><th>#</th><th class="col-num">Área (m²)</th></tr></thead>
+              <thead><tr><th>#</th><th class="col-num">Área (m²)</th></tr></thead>
               <tbody>
                 ${lista.map((sec, i) => `<tr style="cursor:pointer;${i === secaoVisualizada ? 'background:var(--cv-surface2);' : ''}" onclick="TP_UI.selecionarSecaoVisualizada(${i})">
-                  <td><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${_corSecao(i)};"></span></td>
-                  <td class="cc-tdMono">${sec.numero ?? i + 1}</td>
+                  <td class="cc-tdMono" style="${i === secaoVisualizada ? 'color:#ff2d55;font-weight:700;' : ''}">${sec.numero ?? i + 1}</td>
                   <td class="col-num cc-tdMono" style="${sec.area < 0 ? 'color:var(--cv-red);font-weight:700;' : ''}">${TC.fmt2(sec.area)}</td>
                 </tr>`).join('')}
               </tbody>
@@ -958,6 +995,7 @@ const LevantamentoTerraplanagem = (() => {
       </div>
       ${_svgPerfilLateral(s)}` : `<div class="cc-empty">Selecione uma seção.</div>`}
     `;
+    if (temPlanta) { _attachPanZoomVerSecoes(); _aplicarZoomPan(); }
   }
 
   // Desenha o perfil 2D (lateral) de uma seção: linha do terreno, linha
@@ -1044,7 +1082,7 @@ const LevantamentoTerraplanagem = (() => {
     // Bounds globais (pra cor por profundidade e escala ficarem consistentes entre grupos)
     let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity, minProf = Infinity, maxProf = -Infinity, zTotal = 0;
     const dadosGrupos = grupos.map(secs => {
-      const perfis = secs.map(s => _reamostrarPerfil(s.distanciasCotas || [], s.cotas || [], N));
+      const perfis = secs.map(s => _reamostrarPerfil(s.distanciasCotas || [], s.cotas || [], N, s.origemLocal));
       const cotasFinal = secs.map(s => TC.num(s.cotaFinal));
       const zAcumLocal = [0];
       for (let i = 0; i < secs.length - 1; i++) zAcumLocal.push(zAcumLocal[i] + (TC.num(secs[i].distanciaProxima) || 3));
@@ -1456,6 +1494,7 @@ const LevantamentoTerraplanagem = (() => {
     adicionarTipoCaminhao, atualizarTipoCaminhao, removerTipoCaminhao,
     abrirCaminhoes, salvarCaminhao, excluirCaminhao,
     abrirVerSecoes, fecharVerSecoes, selecionarSecaoVisualizada,
+    verSecZoomIn, verSecZoomOut, verSecZoomReset,
     abrir3D, fechar3D, limparBase,
     baixarLevantamentoPDF, compartilharLevantamentoPDF,
   };
