@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.10.0',
+  versaoAtual: 'V3.10.1',
 
   versoes: [
     {
@@ -8439,6 +8439,17 @@ const NotasVersao = {
         "Reescrita a geração: agora todas as áreas são consideradas JUNTAS numa passada só. Uma linha de grade atravessa direto de uma área pra outra vizinha — só a cota final usada muda no meio (criando o degrau real na conta), a seção continua sendo UMA coisa só, com um comprimento só. A seção só quebra em duas de verdade quando não há NENHUMA área cobrindo aquele trecho (vazio de verdade) ou numa reentrância/pátio.",
         "O gráfico do perfil lateral (\\\"Ver Seções\\\") agora desenha a linha da Cota Final em DEGRAU (não mais uma reta única) — mostra o salto de verdade onde a seção passa de uma área pra outra, e avisa no rótulo quando isso acontece.",
         "Testado com o cenário exato do exemplo (2 áreas adjacentes, cotas finais -7,8 e -10,8): a seção saiu como UMA peça só, cobrindo os ~40m completos sem quebra, com a área já considerando o degrau certo em cada trecho."
+      ]
+    },
+    {
+      "versao": "V3.10.1",
+      "data": "2026-08-16",
+      "tipo": "correcao",
+      "titulo": "3D também unificado (mesma correção da V3.10.0) — sem buraco/vão entre áreas vizinhas",
+      "itens": [
+        "A V3.10.0 unificou as SEÇÕES (área/volume), mas o 3D continuava construindo a malha por área SEPARADA — duas áreas vizinhas viravam dois sólidos distintos, com parede nos dois lados da fronteira, aparecendo como um vão/buraco ali mesmo sem ter buraco nenhum no projeto.",
+        "Aplicada a mesma correção no 3D: agora gera UMA grade de alturas cobrindo todas as áreas juntas — cada célula sabe a qual área pertence (cota final própria, criando o degrau real onde muda), mas a malha é uma peça sólida só. Parede só aparece na borda de verdade (perímetro externo ou reentrância), nunca entre duas áreas que se tocam.",
+        "No caminho, achado e corrigido outro bug: os pontos da grade nas bordas EXATAS caíam bem em cima da linha do polígono, onde o teste \\\"dentro ou fora\\\" fica ambíguo — isso sumia a borda inteira (não só a costura entre áreas). Corrigido encolhendo a amostragem por uma margem mínima. Testado: malha 100% completa, 0 células faltando, na simulação das 2 áreas adjacentes."
       ]
     }
   ],

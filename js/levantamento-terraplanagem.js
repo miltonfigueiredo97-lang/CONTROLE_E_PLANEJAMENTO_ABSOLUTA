@@ -145,22 +145,6 @@ const LevantamentoTerraplanagem = (() => {
     return { volH, volV, volMedio, volEmpolado };
   }
 
-  // Altura de corte/aterro = cota do terreno MENOS cota final — subtração
-  // padrão, que já funciona certo com valores negativos dos dois lados (ex:
-  // terreno -4,57 e cota final -7,18 → altura = -4,57-(-7,18) = +2,61,
-  // positivo, corte — bate certo). A versão anterior deslocava a cota pela
-  // própria cota final antes de subtrair, o que CANCELAVA a cota final da
-  // conta (o resultado saía sempre = a cota digitada, ignorando o fundo) —
-  // por isso qualquer terreno com valor negativo saía tudo aterro, errado.
-  function _ajustarConvencao(cotas, cotaFinal) {
-    return { cotas: cotas.map(c => TC.num(c)), cotaFinal: TC.num(cotaFinal) };
-  }
-  // Mesma lógica, versão escalar (um ponto por vez) — usada no 3D, que
-  // trabalha em cima de uma grade de pontos, não de arrays de seção.
-  function _ajustarConvencaoEscalar(cota, cotaFinal) {
-    return { cota: TC.num(cota), cotaFinal: TC.num(cotaFinal) };
-  }
-
   function recalcArea(s) {
     if (s.areaManual !== '' && s.areaManual != null && !isNaN(parseFloat(s.areaManual))) {
       s.area = TC.num(s.areaManual);
@@ -1318,58 +1302,79 @@ const LevantamentoTerraplanagem = (() => {
   // de "passo" metros (em X e Y JUNTOS — não é seção de uma direção só) e
   // interpola a cota em cada nó da grade por IDW, igual ao cálculo de área.
   // É essa grade 2D que vira a malha 3D — não uma seção "esticada".
-  function _gerarGradeAltura(area, passo) {
-    const pontosArea = (config.pontosCota || []).filter(p => p.areaId === area.id).map(p => ({ ..._paraMetros(p), cota: p.cota }));
-    if (pontosArea.length < 1) return null; // sem nenhum ponto marcado não tem o que interpolar
-    const poligonoM = area.pontos.map(_paraMetros);
-    const xs = poligonoM.map(p => p.x), ys = poligonoM.map(p => p.y);
-    const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys);
-    function interpolarCota(x, y) {
-      let somaPeso = 0, somaPesoCota = 0;
-      for (const pt of pontosArea) {
-        const d2 = (pt.x - x) ** 2 + (pt.y - y) ** 2;
-        if (d2 < 1e-6) return pt.cota;
-        const peso = 1 / d2;
-        somaPeso += peso; somaPesoCota += peso * pt.cota;
-      }
-      return somaPeso > 0 ? somaPesoCota / somaPeso : area.cotaFinal;
+  // Gera UMA grade de alturas cobrindo TODAS as áreas juntas — cada nó da
+  // grade sabe a qual área pertence (pra interpolar certo e usar a cota
+  // final DAQUELA área), mas a malha é uma coisa só. Sem isso, duas áreas
+  // vizinhas (mesmo se tocando perfeitamente na planta) viravam dois sólidos
+  // 3D separados, com paredes nos dois lados da fronteira — aparecia como um
+  // buraco/vão ali, mesmo o projeto não tendo buraco nenhum entre elas.
+  function _gerarGradeUnificada(areas, passo) {
+    const areasComPontos = areas.map(area => {
+      const pontosArea = (config.pontosCota || []).filter(p => p.areaId === area.id).map(p => ({ ..._paraMetros(p), cota: p.cota }));
+      return { area, poligonoM: area.pontos.map(_paraMetros), pontosArea };
+    }).filter(ap => ap.pontosArea.length >= 1);
+    if (!areasComPontos.length) return null;
+
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    areasComPontos.forEach(ap => ap.poligonoM.forEach(p => {
+      minX = Math.min(minX, p.x); maxX = Math.max(maxX, p.x);
+      minY = Math.min(minY, p.y); maxY = Math.max(maxY, p.y);
+    }));
+
+    function acharAreaNoPonto(pt) {
+      for (const ap of areasComPontos) if (_pontoDentroPoligono(pt, ap.poligonoM)) return ap;
+      return null;
     }
+    function interpolarNaArea(ap, x, y) {
+      let somaPeso = 0, somaPesoCota = 0;
+      for (const p of ap.pontosArea) {
+        const d2 = (p.x - x) ** 2 + (p.y - y) ** 2;
+        if (d2 < 1e-6) return p.cota;
+        const peso = 1 / d2;
+        somaPeso += peso; somaPesoCota += peso * p.cota;
+      }
+      return somaPeso > 0 ? somaPesoCota / somaPeso : TC.num(ap.area.cotaFinal);
+    }
+
     const nx = Math.max(2, Math.round((maxX - minX) / passo) + 1);
     const ny = Math.max(2, Math.round((maxY - minY) / passo) + 1);
+    // Encolhe a amostragem por uma margem mínima — se o ponto cai EXATAMENTE
+    // na borda do polígono, o teste dentro/fora fica ambíguo (efeito colateral
+    // clássico de ray-casting) e a linha/coluna inteira da borda desaparecia.
+    const margemX = (maxX - minX) * 1e-6, margemY = (maxY - minY) * 1e-6;
     const grid = [];
     for (let j = 0; j < ny; j++) {
-      const y = minY + (maxY - minY) * (ny > 1 ? j / (ny - 1) : 0);
+      const y = (minY + margemY) + (maxY - minY - 2 * margemY) * (ny > 1 ? j / (ny - 1) : 0);
       const linha = [];
       for (let i = 0; i < nx; i++) {
-        const x = minX + (maxX - minX) * (nx > 1 ? i / (nx - 1) : 0);
-        const dentro = _pontoDentroPoligono({ x, y }, poligonoM);
-        linha.push({ x, y, dentro, cota: dentro ? interpolarCota(x, y) : null });
+        const x = (minX + margemX) + (maxX - minX - 2 * margemX) * (nx > 1 ? i / (nx - 1) : 0);
+        const ap = acharAreaNoPonto({ x, y });
+        linha.push({ x, y, dentro: !!ap, cota: ap ? interpolarNaArea(ap, x, y) : null, cotaFinal: ap ? TC.num(ap.area.cotaFinal) : null });
       }
       grid.push(linha);
     }
-    return { nx, ny, grid, cotaFinal: TC.num(area.cotaFinal) };
+    return { nx, ny, grid };
   }
 
-  // Constrói cena Three.js a partir da grade de alturas de TODAS as áreas —
-  // usada tanto no modal interativo quanto no snapshot pro PDF do relatório.
-  // Cada área na sua posição REAL da planta (mesma calibração), sem respiro
-  // artificial nenhum entre elas.
+  // Constrói cena Three.js a partir da grade UNIFICADA (todas as áreas numa
+  // malha só) — usada tanto no modal interativo quanto no snapshot pro PDF.
+  // Cada área na posição REAL da planta, cota final própria (degrau real
+  // onde muda), mas SEM parede/vão artificial entre áreas vizinhas que se
+  // tocam de verdade — só há parede na borda de fato (perímetro externo ou
+  // reentrância real).
   function _construirCena3D() {
-    const grades = (config.areas || []).map(a => _gerarGradeAltura(a, 1.5)).filter(Boolean);
-    if (!grades.length) return null;
+    const g = _gerarGradeUnificada(config.areas || [], 1.5);
+    if (!g) return null;
 
     let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity, minZ = Infinity, maxZ = -Infinity, minProf = Infinity, maxProf = -Infinity;
-    grades.forEach(g => {
-      g.grid.forEach(linha => linha.forEach(pt => {
-        if (!pt.dentro) return;
-        const { cota: cotaPos, cotaFinal: cfPos } = _ajustarConvencaoEscalar(pt.cota, g.cotaFinal);
-        minX = Math.min(minX, pt.x); maxX = Math.max(maxX, pt.x);
-        minZ = Math.min(minZ, pt.y); maxZ = Math.max(maxZ, pt.y); // Y da planta = Z da cena
-        minY = Math.min(minY, cotaPos, cfPos); maxY = Math.max(maxY, cotaPos, cfPos);
-        const prof = cotaPos - cfPos;
-        minProf = Math.min(minProf, prof); maxProf = Math.max(maxProf, prof);
-      }));
-    });
+    g.grid.forEach(linha => linha.forEach(pt => {
+      if (!pt.dentro) return;
+      minX = Math.min(minX, pt.x); maxX = Math.max(maxX, pt.x);
+      minZ = Math.min(minZ, pt.y); maxZ = Math.max(maxZ, pt.y); // Y da planta = Z da cena
+      minY = Math.min(minY, pt.cota, pt.cotaFinal); maxY = Math.max(maxY, pt.cota, pt.cotaFinal);
+      const prof = pt.cota - pt.cotaFinal;
+      minProf = Math.min(minProf, prof); maxProf = Math.max(maxProf, prof);
+    }));
 
     const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2, cz = (minZ + maxZ) / 2;
     // Escala horizontal (X/Z) fiel à planta — normaliza pra caber numa cena ~100 unidades.
@@ -1386,92 +1391,80 @@ const LevantamentoTerraplanagem = (() => {
     scene.background = new THREE_.Color(0x14141f);
     const group = new THREE_.Group();
 
-    grades.forEach(g => {
-      const idx = (i, j) => j * g.nx + i;
-      const posTopo = [], corTopo = [], posFundo = [];
-      for (let j = 0; j < g.ny; j++) {
-        for (let i = 0; i < g.nx; i++) {
-          const pt = g.grid[j][i];
-          if (!pt.dentro) { posTopo.push(0, 0, 0); posFundo.push(0, 0, 0); corTopo.push(0, 0, 0); continue; }
-          const { cota: cotaPos, cotaFinal: cfPos } = _ajustarConvencaoEscalar(pt.cota, g.cotaFinal);
-          posTopo.push((pt.x - cx) * escalaXZ, (cotaPos - cy) * escalaY, (pt.y - cz) * escalaXZ);
-          posFundo.push((pt.x - cx) * escalaXZ, (cfPos - cy) * escalaY, (pt.y - cz) * escalaXZ);
-          const c = _corProfundidade(cotaPos - cfPos, minProf, maxProf);
-          corTopo.push(c.r, c.g, c.b);
-        }
+    const idx = (i, j) => j * g.nx + i;
+    const posTopo = [], corTopo = [], posFundo = [];
+    for (let j = 0; j < g.ny; j++) {
+      for (let i = 0; i < g.nx; i++) {
+        const pt = g.grid[j][i];
+        if (!pt.dentro) { posTopo.push(0, 0, 0); posFundo.push(0, 0, 0); corTopo.push(0, 0, 0); continue; }
+        posTopo.push((pt.x - cx) * escalaXZ, (pt.cota - cy) * escalaY, (pt.y - cz) * escalaXZ);
+        posFundo.push((pt.x - cx) * escalaXZ, (pt.cotaFinal - cy) * escalaY, (pt.y - cz) * escalaXZ);
+        const c = _corProfundidade(pt.cota - pt.cotaFinal, minProf, maxProf);
+        corTopo.push(c.r, c.g, c.b);
       }
-      const facesTopo = [], facesFundo = [];
-      for (let j = 0; j < g.ny - 1; j++) {
-        for (let i = 0; i < g.nx - 1; i++) {
-          if (!g.grid[j][i].dentro || !g.grid[j][i + 1].dentro || !g.grid[j + 1][i].dentro || !g.grid[j + 1][i + 1].dentro) continue;
-          const a = idx(i, j), b = idx(i + 1, j), c = idx(i, j + 1), d = idx(i + 1, j + 1);
-          facesTopo.push(a, c, b, b, c, d);
-          facesFundo.push(a, b, c, b, d, c); // fundo com winding invertido (normal pra baixo)
-        }
+    }
+    const facesTopo = [], facesFundo = [];
+    for (let j = 0; j < g.ny - 1; j++) {
+      for (let i = 0; i < g.nx - 1; i++) {
+        if (!g.grid[j][i].dentro || !g.grid[j][i + 1].dentro || !g.grid[j + 1][i].dentro || !g.grid[j + 1][i + 1].dentro) continue;
+        const a = idx(i, j), b = idx(i + 1, j), c = idx(i, j + 1), d = idx(i + 1, j + 1);
+        facesTopo.push(a, c, b, b, c, d);
+        facesFundo.push(a, b, c, b, d, c); // fundo com winding invertido (normal pra baixo)
       }
-      if (!facesTopo.length) return;
+    }
+    if (!facesTopo.length) return scene;
 
-      const geoTopo = new THREE_.BufferGeometry();
-      geoTopo.setAttribute('position', new THREE_.Float32BufferAttribute(posTopo, 3));
-      geoTopo.setAttribute('color', new THREE_.Float32BufferAttribute(corTopo, 3));
-      geoTopo.setIndex(facesTopo);
-      geoTopo.computeVertexNormals();
-      const matTopo = new THREE_.MeshStandardMaterial({ vertexColors: true, side: THREE_.DoubleSide, flatShading: true, roughness: 0.85, metalness: 0.05 });
-      group.add(new THREE_.Mesh(geoTopo, matTopo));
+    const geoTopo = new THREE_.BufferGeometry();
+    geoTopo.setAttribute('position', new THREE_.Float32BufferAttribute(posTopo, 3));
+    geoTopo.setAttribute('color', new THREE_.Float32BufferAttribute(corTopo, 3));
+    geoTopo.setIndex(facesTopo);
+    geoTopo.computeVertexNormals();
+    group.add(new THREE_.Mesh(geoTopo, new THREE_.MeshStandardMaterial({ vertexColors: true, side: THREE_.DoubleSide, flatShading: true, roughness: 0.85, metalness: 0.05 })));
 
-      // Fundo SÓLIDO (não mais translúcido) na cota final DESTA área — cada
-      // área tem seu próprio nível de fundo. Se uma área é mais funda que a
-      // vizinha, o fundo forma um DEGRAU real entre elas — não tem como (nem
-      // deveria) ficar tudo liso numa profundidade só, como o Milton apontou.
-      const geoFundo = new THREE_.BufferGeometry();
-      geoFundo.setAttribute('position', new THREE_.Float32BufferAttribute(posFundo, 3));
-      geoFundo.setIndex(facesFundo);
-      geoFundo.computeVertexNormals();
-      const matFundo = new THREE_.MeshStandardMaterial({ color: 0xd97706, side: THREE_.DoubleSide, roughness: 0.9 });
-      group.add(new THREE_.Mesh(geoFundo, matFundo));
+    // Fundo SÓLIDO por ponto — cada célula usa a cota final da área a que
+    // pertence, formando um degrau real onde muda, sem vão nenhum entre elas.
+    const geoFundo = new THREE_.BufferGeometry();
+    geoFundo.setAttribute('position', new THREE_.Float32BufferAttribute(posFundo, 3));
+    geoFundo.setIndex(facesFundo);
+    geoFundo.computeVertexNormals();
+    group.add(new THREE_.Mesh(geoFundo, new THREE_.MeshStandardMaterial({ color: 0xd97706, side: THREE_.DoubleSide, roughness: 0.9 })));
 
-      // Paredes sólidas seguindo o CONTORNO REAL da malha — fecha o vão entre
-      // topo e fundo em toda borda de verdade (inclusive em reentrâncias tipo
-      // L), não só num retângulo. Uma aresta de célula vira parede quando a
-      // célula do lado de dentro existe mas a vizinha do outro lado não.
-      const quadExiste = [];
-      for (let j = 0; j < g.ny - 1; j++) {
-        const linha = [];
-        for (let i = 0; i < g.nx - 1; i++) linha.push(g.grid[j][i].dentro && g.grid[j][i + 1].dentro && g.grid[j + 1][i].dentro && g.grid[j + 1][i + 1].dentro);
-        quadExiste.push(linha);
+    // Paredes sólidas seguindo o CONTORNO REAL da malha UNIFICADA — só existe
+    // parede onde não há NENHUMA área do lado de fora (perímetro de verdade
+    // ou reentrância), nunca entre duas áreas vizinhas que se tocam.
+    const quadExiste = [];
+    for (let j = 0; j < g.ny - 1; j++) {
+      const linha = [];
+      for (let i = 0; i < g.nx - 1; i++) linha.push(g.grid[j][i].dentro && g.grid[j][i + 1].dentro && g.grid[j + 1][i].dentro && g.grid[j + 1][i + 1].dentro);
+      quadExiste.push(linha);
+    }
+    const posParede = [], facesParede = [];
+    function addParede(pA, pB) {
+      const base = posParede.length / 3;
+      posParede.push(
+        (pA.x - cx) * escalaXZ, (pA.cota - cy) * escalaY, (pA.y - cz) * escalaXZ,
+        (pB.x - cx) * escalaXZ, (pB.cota - cy) * escalaY, (pB.y - cz) * escalaXZ,
+        (pA.x - cx) * escalaXZ, (pA.cotaFinal - cy) * escalaY, (pA.y - cz) * escalaXZ,
+        (pB.x - cx) * escalaXZ, (pB.cotaFinal - cy) * escalaY, (pB.y - cz) * escalaXZ,
+      );
+      facesParede.push(base, base + 2, base + 1, base + 1, base + 2, base + 3);
+    }
+    for (let j = 0; j < g.ny - 1; j++) {
+      for (let i = 0; i < g.nx - 1; i++) {
+        if (!quadExiste[j][i]) continue;
+        if (i === 0 || !quadExiste[j][i - 1]) addParede(g.grid[j][i], g.grid[j + 1][i]);
+        if (i === g.nx - 2 || !quadExiste[j][i + 1]) addParede(g.grid[j][i + 1], g.grid[j + 1][i + 1]);
+        if (j === 0 || !quadExiste[j - 1][i]) addParede(g.grid[j][i], g.grid[j][i + 1]);
+        if (j === g.ny - 2 || !quadExiste[j + 1][i]) addParede(g.grid[j + 1][i], g.grid[j + 1][i + 1]);
       }
-      const posParede = [], facesParede = [];
-      function addParede(pA, pB) {
-        const cotaA = _ajustarConvencaoEscalar(pA.cota, g.cotaFinal).cota;
-        const cotaB = _ajustarConvencaoEscalar(pB.cota, g.cotaFinal).cota;
-        const cf = _ajustarConvencaoEscalar(pA.cota, g.cotaFinal).cotaFinal; // mesma pra qualquer ponto desta área
-        const base = posParede.length / 3;
-        posParede.push(
-          (pA.x - cx) * escalaXZ, (cotaA - cy) * escalaY, (pA.y - cz) * escalaXZ,
-          (pB.x - cx) * escalaXZ, (cotaB - cy) * escalaY, (pB.y - cz) * escalaXZ,
-          (pA.x - cx) * escalaXZ, (cf - cy) * escalaY, (pA.y - cz) * escalaXZ,
-          (pB.x - cx) * escalaXZ, (cf - cy) * escalaY, (pB.y - cz) * escalaXZ,
-        );
-        facesParede.push(base, base + 2, base + 1, base + 1, base + 2, base + 3);
-      }
-      for (let j = 0; j < g.ny - 1; j++) {
-        for (let i = 0; i < g.nx - 1; i++) {
-          if (!quadExiste[j][i]) continue;
-          if (i === 0 || !quadExiste[j][i - 1]) addParede(g.grid[j][i], g.grid[j + 1][i]);
-          if (i === g.nx - 2 || !quadExiste[j][i + 1]) addParede(g.grid[j][i + 1], g.grid[j + 1][i + 1]);
-          if (j === 0 || !quadExiste[j - 1][i]) addParede(g.grid[j][i], g.grid[j][i + 1]);
-          if (j === g.ny - 2 || !quadExiste[j + 1][i]) addParede(g.grid[j + 1][i], g.grid[j + 1][i + 1]);
-        }
-      }
-      if (facesParede.length) {
-        const geoParede = new THREE_.BufferGeometry();
-        geoParede.setAttribute('position', new THREE_.Float32BufferAttribute(posParede, 3));
-        geoParede.setIndex(facesParede);
-        geoParede.computeVertexNormals();
-        const matParede = new THREE_.MeshStandardMaterial({ color: 0x8b7355, side: THREE_.DoubleSide, roughness: 0.95 });
-        group.add(new THREE_.Mesh(geoParede, matParede));
-      }
-    });
+    }
+    if (facesParede.length) {
+      const geoParede = new THREE_.BufferGeometry();
+      geoParede.setAttribute('position', new THREE_.Float32BufferAttribute(posParede, 3));
+      geoParede.setIndex(facesParede);
+      geoParede.computeVertexNormals();
+      group.add(new THREE_.Mesh(geoParede, new THREE_.MeshStandardMaterial({ color: 0x8b7355, side: THREE_.DoubleSide, roughness: 0.95 })));
+    }
 
     scene.add(group);
     scene.add(new THREE_.AmbientLight(0xffffff, 0.55));
