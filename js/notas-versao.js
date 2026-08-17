@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.9.8',
+  versaoAtual: 'V3.10.0',
 
   versoes: [
     {
@@ -8427,6 +8427,18 @@ const NotasVersao = {
       "titulo": "Perfil lateral (\"Ver Seções\") ganhou a linha de referência Cota 0",
       "itens": [
         "O gráfico só mostrava a linha da Cota Final (laranja) — agora mostra também uma linha pontilhada cinza marcando a Cota 0 (o zero de referência), separada da cota final. O gráfico se ajusta pra sempre incluir o zero na área visível, mesmo se ele estiver bem longe do terreno ou da cota final."
+      ]
+    },
+    {
+      "versao": "V3.10.0",
+      "data": "2026-08-16",
+      "tipo": "funcionalidade",
+      "titulo": "Seção atravessa direto de uma área pra outra — a cota final agora varia ponto a ponto, sem quebrar a seção",
+      "itens": [
+        "Causa raiz de vez do \\\"a seção para no meio\\\": cada seção era gerada dentro de UMA área só — ao cruzar pra uma área vizinha (mesmo sendo fisicamente o mesmo corte contínuo, só com uma cota final diferente), a seção quebrava em duas, porque cada área só conhecia o próprio polígono. Isso está errado pra o caso real: duas áreas vizinhas com cotas finais diferentes formam UM corte só, com um degrau na referência no meio — não duas seções separadas.",
+        "Reescrita a geração: agora todas as áreas são consideradas JUNTAS numa passada só. Uma linha de grade atravessa direto de uma área pra outra vizinha — só a cota final usada muda no meio (criando o degrau real na conta), a seção continua sendo UMA coisa só, com um comprimento só. A seção só quebra em duas de verdade quando não há NENHUMA área cobrindo aquele trecho (vazio de verdade) ou numa reentrância/pátio.",
+        "O gráfico do perfil lateral (\\\"Ver Seções\\\") agora desenha a linha da Cota Final em DEGRAU (não mais uma reta única) — mostra o salto de verdade onde a seção passa de uma área pra outra, e avisa no rótulo quando isso acontece.",
+        "Testado com o cenário exato do exemplo (2 áreas adjacentes, cotas finais -7,8 e -10,8): a seção saiu como UMA peça só, cobrindo os ~40m completos sem quebra, com a área já considerando o degrau certo em cada trecho."
       ]
     }
   ],

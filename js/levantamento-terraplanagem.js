@@ -166,13 +166,13 @@ const LevantamentoTerraplanagem = (() => {
       s.area = TC.num(s.areaManual);
       return;
     }
-    // A área/volume tem que respeitar a convenção — sem isso, toda vez que a
-    // tela renderiza (que chama recalcArea de novo) o valor certo gerado em
-    // "Gerar Seções" era sobrescrito com a fórmula de elevação, invertendo o
-    // resultado (essa era a causa da área negativa que não batia com o
-    // resumo Corte/Aterro, que já calculava certo).
-    const adj = _ajustarConvencao(s.cotas || [], s.cotaFinal);
-    s.area = TC.calcAreaSecao(adj.cotas, adj.cotaFinal, s.distanciasCotas || []);
+    const cotas = s.cotas || [];
+    // Seções geradas depois da unificação por área já trazem cotasFinais[]
+    // (uma por ponto, varia se a seção atravessa pra outra área com cota
+    // final diferente). Seções antigas/manuais só têm o valor escalar —
+    // nesse caso, usa ele repetido pra todos os pontos (mesma conta de sempre).
+    const cotasFinais = (s.cotasFinais && s.cotasFinais.length === cotas.length) ? s.cotasFinais : cotas.map(() => s.cotaFinal);
+    s.area = _calcAreaSecaoVariavel(cotas, cotasFinais, s.distanciasCotas || []);
   }
   function _recalcTudo() {
     (secoes.horizontal || []).forEach(recalcArea);
@@ -617,39 +617,63 @@ const LevantamentoTerraplanagem = (() => {
   // (fica só o trecho por dentro), interpola a cota do terreno em cada
   // linha por IDW a partir dos pontos marcados, e calcula a área da seção
   // com o MESMO motor usado no modo manual (calcAreaSecao).
-  function _gerarSecoesDaArea(area) {
-    const PASSO_GRADE = 1.5, PASSO_AMOSTRA = 0.5;
-    const pontosArea = (config.pontosCota || []).filter(p => p.areaId === area.id).map(p => ({ ..._paraMetros(p), cota: p.cota }));
-    if (pontosArea.length < 1) return { horizontais: [], verticais: [] }; // sem nenhum ponto marcado não tem o que interpolar
-
-    const poligonoM = area.pontos.map(_paraMetros);
-    const xs = poligonoM.map(p => p.x), ys = poligonoM.map(p => p.y);
-    const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys);
-
-    function interpolarCota(x, y) {
-      let somaPeso = 0, somaPesoCota = 0;
-      for (const pt of pontosArea) {
-        const d2 = (pt.x - x) ** 2 + (pt.y - y) ** 2;
-        if (d2 < 1e-6) return pt.cota;
-        const peso = 1 / d2;
-        somaPeso += peso; somaPesoCota += peso * pt.cota;
-      }
-      return somaPeso > 0 ? somaPesoCota / somaPeso : area.cotaFinal;
+  // Área/volume com cota final VARIÁVEL ponto a ponto (não mais um valor só
+  // por seção) — cada trapézio usa a cota final do ponto de cada lado. Se os
+  // dois pontos são da mesma área, dá exatamente a mesma fórmula de sempre;
+  // se a seção atravessa pra uma área com cota final diferente, o trapézio
+  // daquele trecho já entra com o degrau certo, sem precisar quebrar a seção.
+  function _calcAreaSecaoVariavel(cotas, cotasFinais, distancias) {
+    let area = 0;
+    for (let i = 0; i < cotas.length - 1; i++) {
+      const h0 = TC.num(cotas[i]) - TC.num(cotasFinais[i]);
+      const h1 = TC.num(cotas[i + 1]) - TC.num(cotasFinais[i + 1]);
+      area += ((h0 + h1) / 2) * TC.num(distancias[i]);
     }
+    return area;
+  }
 
-    // Uma linha de grade pode cruzar um prédio não-convexo (formato L/T/U, com
-    // reentrâncias) em MAIS DE UM pedaço separado. Sem tratar isso, o pedaço da
-    // esquerda ficava "colado" ao da direita como se fosse terreno contínuo por
-    // cima do vazio — é aí que o 3D saía com formato errado. Agora cada linha é
-    // dividida em segmentos contínuos, e os segmentos são agrupados em CADEIAS
-    // (por sobreposição de posição com a linha anterior) — cada cadeia é um
-    // "braço" do prédio, virando seu próprio loft independente no 3D.
+  // Gera as seções considerando TODAS as áreas JUNTAS — uma linha de grade
+  // passa reto de uma área pra outra vizinha (só muda a cota final usada
+  // naquele trecho, criando o degrau real), e só quebra em cadeias/seções
+  // diferentes onde não há NENHUMA área cobrindo (vazio de verdade), ou onde
+  // há uma reentrância/pátio (formato não-convexo).
+  function _gerarSecoesUnificadas(areas) {
+    const PASSO_GRADE = 1.5, PASSO_AMOSTRA = 0.5;
+    const areasComPontos = areas.map(area => {
+      const pontosArea = (config.pontosCota || []).filter(p => p.areaId === area.id).map(p => ({ ..._paraMetros(p), cota: p.cota }));
+      return { area, poligonoM: area.pontos.map(_paraMetros), pontosArea };
+    }).filter(ap => ap.pontosArea.length >= 1);
+    if (!areasComPontos.length) return { horizontais: [], verticais: [] };
+
+    // Bounds globais — união das caixas de TODAS as áreas
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    areasComPontos.forEach(ap => {
+      ap.poligonoM.forEach(p => {
+        minX = Math.min(minX, p.x); maxX = Math.max(maxX, p.x);
+        minY = Math.min(minY, p.y); maxY = Math.max(maxY, p.y);
+      });
+    });
+
+    function acharAreaNoPonto(pt) {
+      for (const ap of areasComPontos) if (_pontoDentroPoligono(pt, ap.poligonoM)) return ap;
+      return null;
+    }
+    function interpolarNaArea(ap, x, y) {
+      let somaPeso = 0, somaPesoCota = 0;
+      for (const p of ap.pontosArea) {
+        const d2 = (p.x - x) ** 2 + (p.y - y) ** 2;
+        if (d2 < 1e-6) return p.cota;
+        const peso = 1 / d2;
+        somaPeso += peso; somaPesoCota += peso * p.cota;
+      }
+      return somaPeso > 0 ? somaPesoCota / somaPeso : TC.num(ap.area.cotaFinal);
+    }
     function _refinarBordaO(oDentro, oFora, fixarX, v) {
       let a = oDentro, b = oFora;
       for (let iter = 0; iter < 12; iter++) {
         const m = (a + b) / 2;
         const pt = fixarX ? { x: v, y: m } : { x: m, y: v };
-        if (_pontoDentroPoligono(pt, poligonoM)) a = m; else b = m;
+        if (acharAreaNoPonto(pt)) a = m; else b = m;
       }
       return a;
     }
@@ -660,42 +684,43 @@ const LevantamentoTerraplanagem = (() => {
 
       const linhasBrutas = [];
       for (let v = inicioFixo; v <= fimFixo + 1e-6; v += PASSO_GRADE) {
-        // Amostra 1 passo ANTES de outroMin e 1 DEPOIS de outroMax de propósito —
-        // garante um vizinho "de fora" real nas duas pontas pra refinar a borda
-        // por bisseção (senão a seção sempre parava no último ponto da GRADE,
-        // nunca no limite de verdade do polígono, ficando ~PASSO_AMOSTRA/2 mais curta).
         const pontosLinha = [];
         for (let o = outroMin - PASSO_AMOSTRA; o <= outroMax + PASSO_AMOSTRA + 1e-6; o += PASSO_AMOSTRA) {
           const pt = fixarX ? { x: v, y: o } : { x: o, y: v };
-          pontosLinha.push({ o, dentro: _pontoDentroPoligono(pt, poligonoM) });
+          pontosLinha.push({ o, ap: acharAreaNoPonto(pt) });
         }
         const segmentos = [];
         let atual = [], inicioIdx = -1;
         for (let i = 0; i < pontosLinha.length; i++) {
           const p = pontosLinha[i];
-          if (p.dentro) { if (atual.length === 0) inicioIdx = i; atual.push(p.o); }
+          if (p.ap) { if (atual.length === 0) inicioIdx = i; atual.push(p); }
           else {
             if (atual.length >= 2) {
-              let oIni = atual[0], oFim = atual[atual.length - 1];
+              let oIni = atual[0].o, oFim = atual[atual.length - 1].o;
               if (inicioIdx > 0) oIni = _refinarBordaO(oIni, pontosLinha[inicioIdx - 1].o, fixarX, v);
               oFim = _refinarBordaO(oFim, p.o, fixarX, v);
-              segmentos.push([oIni, ...atual.slice(1, -1), oFim]);
+              const ajustado = atual.slice();
+              ajustado[0] = { o: oIni, ap: atual[0].ap };
+              ajustado[ajustado.length - 1] = { o: oFim, ap: atual[atual.length - 1].ap };
+              segmentos.push(ajustado);
             }
             atual = []; inicioIdx = -1;
           }
         }
-        if (atual.length >= 2) segmentos.push(atual); // só acontece se a área não fechar dentro da amostragem estendida (não deveria)
+        if (atual.length >= 2) segmentos.push(atual);
         linhasBrutas.push({ v, segmentos });
       }
 
-      // Agrupa segmentos em cadeias por sobreposição de intervalo com a linha anterior
+      // Agrupa segmentos em cadeias por sobreposição de intervalo com a linha
+      // anterior — só quebra em vazio de verdade ou reentrância, NUNCA na
+      // fronteira entre duas áreas vizinhas (essa passa reto).
       const cadeias = [];
       let cadeiasAtivas = [];
       linhasBrutas.forEach(({ v, segmentos }) => {
         const novasAtivas = [];
         const usadas = new Set();
         segmentos.forEach(seg => {
-          const oIni = seg[0], oFim = seg[seg.length - 1];
+          const oIni = seg[0].o, oFim = seg[seg.length - 1].o;
           let melhor = null, melhorSobreposicao = 0;
           cadeiasAtivas.forEach((cad, ci) => {
             if (usadas.has(ci)) return;
@@ -710,28 +735,30 @@ const LevantamentoTerraplanagem = (() => {
         cadeiasAtivas = novasAtivas.filter(Boolean);
       });
 
-      // Cada cadeia vira sua própria sequência de seções (loft independente).
-      // distanciaProxima é calculada AQUI, dentro da cadeia (não depois, num
-      // sort global) — senão, quando duas cadeias têm linhas no mesmo "pos",
-      // o merge/sort intercala elas e quebra a sequência de cada uma.
       const linhas = [];
       cadeias.forEach((cadeia, ci) => {
         cadeia.forEach(({ v, seg }, idx) => {
-          const amostras = seg.map(o => ({ o, cota: interpolarCota(fixarX ? v : o, fixarX ? o : v) }));
+          const amostras = seg.map(p => ({
+            o: p.o,
+            cota: interpolarNaArea(p.ap, fixarX ? v : p.o, fixarX ? p.o : v),
+            cotaFinal: TC.num(p.ap.area.cotaFinal),
+            areaId: p.ap.area.id,
+          }));
           const cotas = amostras.map(a2 => a2.cota);
+          const cotasFinais = amostras.map(a2 => a2.cotaFinal);
+          const areaIds = amostras.map(a2 => a2.areaId);
           const distancias = [];
           for (let k = 0; k < amostras.length - 1; k++) distancias.push(+(amostras[k + 1].o - amostras[k].o).toFixed(3));
           const pInicioM = fixarX ? { x: v, y: amostras[0].o } : { x: amostras[0].o, y: v };
           const pFimM = fixarX ? { x: v, y: amostras[amostras.length - 1].o } : { x: amostras[amostras.length - 1].o, y: v };
           const proximaNaCadeia = cadeia[idx + 1];
-          // Ajusta cotas/cotaFinal conforme a convenção — respeita elevação,
-          // profundidade e relativa (o valor digitado já é a altura com sinal).
-          const adj = _ajustarConvencao(cotas, area.cotaFinal);
           linhas.push({
-            pos: v, cadeiaId: ci, cotas, distanciasCotas: distancias, cotaFinal: area.cotaFinal,
-            area: TC.calcAreaSecao(adj.cotas, adj.cotaFinal, distancias),
-            areaId: area.id, origemFrac: _paraFracao(pInicioM), fimFrac: _paraFracao(pFimM),
-            origemGlobal: +amostras[0].o.toFixed(3), // posição real (m) na MESMA planta — pro 3D compor todas as áreas juntas, cada uma no lugar certo, sem esticar nem separar artificialmente
+            pos: v, cadeiaId: ci, cotas, cotasFinais, areaIds, distanciasCotas: distancias,
+            cotaFinal: cotasFinais[0], // valor de referência (1º trecho) pra exibição simples — a conta usa cotasFinais[] completo
+            area: _calcAreaSecaoVariavel(cotas, cotasFinais, distancias),
+            areaId: areaIds[0],
+            origemFrac: _paraFracao(pInicioM), fimFrac: _paraFracao(pFimM),
+            origemGlobal: +amostras[0].o.toFixed(3),
             distanciaProxima: proximaNaCadeia ? +(proximaNaCadeia.v - v).toFixed(3) : '',
           });
         });
@@ -752,13 +779,9 @@ const LevantamentoTerraplanagem = (() => {
     }
     Utils.mostrarLoading('Gerando seções (grade de 1,5m)...');
     try {
-      let todasH = [], todasV = [];
-      areas.forEach(area => {
-        const { horizontais, verticais } = _gerarSecoesDaArea(area);
-        todasH.push(...horizontais); todasV.push(...verticais);
-      });
+      const { horizontais: todasH, verticais: todasV } = _gerarSecoesUnificadas(areas);
       if (!todasH.length && !todasV.length) {
-        Utils.toast('Nenhuma seção gerada — confira se marcou pontos de cota suficientes (mínimo 3) dentro das áreas.', 'alerta');
+        Utils.toast('Nenhuma seção gerada — confira se marcou pontos de cota suficientes (mínimo 1) dentro das áreas.', 'alerta');
         return;
       }
       todasH.sort((a, b) => a.pos - b.pos);
@@ -766,9 +789,9 @@ const LevantamentoTerraplanagem = (() => {
       // distanciaProxima já vem certa de cada cadeia (calculada lá dentro,
       // antes do sort abaixo — que só serve pra numerar/exibir em ordem).
       const monta = linhas => linhas.map((l, i) => ({
-        id: TC.genId('sec'), numero: i + 1, cotas: l.cotas, distanciasCotas: l.distanciasCotas, cotaFinal: l.cotaFinal,
+        id: TC.genId('sec'), numero: i + 1, cotas: l.cotas, cotasFinais: l.cotasFinais, distanciasCotas: l.distanciasCotas, cotaFinal: l.cotaFinal,
         area: l.area, distanciaProxima: l.distanciaProxima, areaManual: '',
-        areaId: l.areaId, cadeiaId: l.cadeiaId, origemFrac: l.origemFrac, fimFrac: l.fimFrac, origemGlobal: l.origemGlobal,
+        areaId: l.areaId, areaIds: l.areaIds, cadeiaId: l.cadeiaId, origemFrac: l.origemFrac, fimFrac: l.fimFrac, origemGlobal: l.origemGlobal,
       }));
       secoes.horizontal = monta(todasH);
       secoes.vertical = monta(todasV);
@@ -813,6 +836,7 @@ const LevantamentoTerraplanagem = (() => {
   function secUpdCotaFinal(i, valor) {
     const s = secoes[secDir][i];
     s.cotaFinal = valor;
+    s.cotasFinais = null; // edição manual do valor escalar sobrepõe o array por ponto (se tinha)
     recalcArea(s);
     renderSecoes();
   }
@@ -1217,15 +1241,14 @@ const LevantamentoTerraplanagem = (() => {
   function _svgPerfilLateral(s) {
     const cotas = (s.cotas || []).map(c => TC.num(c)); // valores ORIGINAIS (como digitado/marcado) — sempre usados nos textos
     const dist = s.distanciasCotas || [];
-    const cf = TC.num(s.cotaFinal);
     if (cotas.length < 2) return `<div class="cc-empty">Esta seção não tem cotas suficientes pra desenhar o perfil.</div>`;
-    // Ajusta pra POSICIONAR e COLORIR certo nas 3 convenções — os textos
-    // continuam sempre com o valor original (como você digitou).
-    const adj = _ajustarConvencao(cotas, cf);
-    const cotasPos = adj.cotas, cfPos = adj.cotaFinal;
+    // cotasFinais por ponto (degrau real se a seção atravessa pra outra área
+    // com cota final diferente) — seções antigas/manuais só têm o escalar,
+    // repete ele pra todos os pontos nesse caso.
+    const cotasFinais = (s.cotasFinais && s.cotasFinais.length === cotas.length) ? s.cotasFinais.map(c => TC.num(c)) : cotas.map(() => TC.num(s.cotaFinal));
     const xs = [0];
     for (let i = 0; i < dist.length; i++) xs.push(xs[i] + TC.num(dist[i]));
-    const minY = Math.min(...cotasPos, cfPos, 0), maxY = Math.max(...cotasPos, cfPos, 0); // inclui 0 sempre, pra linha de referência aparecer
+    const minY = Math.min(...cotas, ...cotasFinais, 0), maxY = Math.max(...cotas, ...cotasFinais, 0); // inclui 0 sempre, pra linha de referência aparecer
     const pad = Math.max(0.3, (maxY - minY) * 0.15);
     const yLo = minY - pad, yHi = maxY + pad;
     const totalW = xs[xs.length - 1] || 1;
@@ -1237,19 +1260,25 @@ const LevantamentoTerraplanagem = (() => {
     // é a MESMA decomposição da fórmula de área (trapézios), só exposta aqui
     // pra dar pra auditar visualmente de onde vem um resultado negativo.
     let areaCorte = 0, areaAterro = 0;
-    for (let i = 0; i < cotasPos.length - 1; i++) {
+    for (let i = 0; i < cotas.length - 1; i++) {
       const x1 = mapX(xs[i]), x2 = mapX(xs[i + 1]);
-      const y1 = mapY(cotasPos[i]), y2 = mapY(cotasPos[i + 1]), yf = mapY(cfPos);
-      const contrib = ((cotasPos[i] - cfPos) + (cotasPos[i + 1] - cfPos)) / 2 * TC.num(dist[i]);
+      const y1 = mapY(cotas[i]), y2 = mapY(cotas[i + 1]);
+      const yf1 = mapY(cotasFinais[i]), yf2 = mapY(cotasFinais[i + 1]);
+      const contrib = ((cotas[i] - cotasFinais[i]) + (cotas[i + 1] - cotasFinais[i + 1])) / 2 * TC.num(dist[i]);
       if (contrib >= 0) areaCorte += contrib; else areaAterro += contrib;
       const cor = contrib >= 0 ? '#22c55e' : '#ef4444';
-      quads.push(`<polygon points="${x1},${y1} ${x2},${y2} ${x2},${yf} ${x1},${yf}" fill="${cor}" fill-opacity="${contrib >= 0 ? 0.4 : 0.65}"/>`);
+      quads.push(`<polygon points="${x1},${y1} ${x2},${y2} ${x2},${yf2} ${x1},${yf1}" fill="${cor}" fill-opacity="${contrib >= 0 ? 0.4 : 0.65}"/>`);
     }
-    const linhaCf = `<line x1="${PX0}" y1="${mapY(cfPos).toFixed(1)}" x2="${PX1}" y2="${mapY(cfPos).toFixed(1)}" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="5,3"/>`;
+    // Linha da cota final em DEGRAU (não mais uma reta única) — segue
+    // cotasFinais[] ponto a ponto, mostrando o salto de verdade onde a seção
+    // atravessa de uma área pra outra com referência diferente.
+    const linhaCf = `<polyline points="${cotasFinais.map((c, i) => `${mapX(xs[i]).toFixed(1)},${mapY(c).toFixed(1)}`).join(' ')}" fill="none" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="5,3"/>`;
     const linhaZero = `<line x1="${PX0}" y1="${mapY(0).toFixed(1)}" x2="${PX1}" y2="${mapY(0).toFixed(1)}" stroke="#94a3b8" stroke-width="1" stroke-dasharray="2,3"/><text x="${PX1 - 4}" y="${(mapY(0) - 5).toFixed(1)}" font-size="10" fill="#94a3b8" text-anchor="end" font-family="monospace">Cota 0</text>`;
-    const linhaTerreno = `<polyline points="${cotasPos.map((c, i) => `${mapX(xs[i]).toFixed(1)},${mapY(c).toFixed(1)}`).join(' ')}" fill="none" stroke="#fff" stroke-width="2"/>`;
-    const pontos = cotas.map((c, i) => `<circle cx="${mapX(xs[i]).toFixed(1)}" cy="${mapY(cotasPos[i]).toFixed(1)}" r="3.5" fill="#3b82f6" stroke="#fff" stroke-width="1"/><text x="${mapX(xs[i]).toFixed(1)}" y="${(mapY(cotasPos[i]) - 8).toFixed(1)}" font-size="9" fill="#fff" text-anchor="middle" font-family="monospace">${TC.fmt2(c)}</text>`).join('');
-    const rotuloCf = `<text x="${PX0 + 4}" y="${(mapY(cfPos) - 5).toFixed(1)}" font-size="10" fill="#f59e0b" font-family="monospace">Cota Final: ${TC.fmt2(cf)}</text>`;
+    const linhaTerreno = `<polyline points="${cotas.map((c, i) => `${mapX(xs[i]).toFixed(1)},${mapY(c).toFixed(1)}`).join(' ')}" fill="none" stroke="#fff" stroke-width="2"/>`;
+    const pontos = cotas.map((c, i) => `<circle cx="${mapX(xs[i]).toFixed(1)}" cy="${mapY(c).toFixed(1)}" r="3.5" fill="#3b82f6" stroke="#fff" stroke-width="1"/><text x="${mapX(xs[i]).toFixed(1)}" y="${(mapY(c) - 8).toFixed(1)}" font-size="9" fill="#fff" text-anchor="middle" font-family="monospace">${TC.fmt2(c)}</text>`).join('');
+    // Rótulo mostra a cota final do PRIMEIRO trecho, e avisa se varia ao longo da seção
+    const varia = cotasFinais.some(c => Math.abs(c - cotasFinais[0]) > 1e-6);
+    const rotuloCf = `<text x="${PX0 + 4}" y="${(mapY(cotasFinais[0]) - 5).toFixed(1)}" font-size="10" fill="#f59e0b" font-family="monospace">Cota Final: ${TC.fmt2(cotasFinais[0])}${varia ? ' (varia — atravessa outra área)' : ''}</text>`;
     const resumo = `<p class="text-sm" style="font-family:var(--cv-mono);margin-top:6px;">🟩 Corte: <b style="color:#22c55e;">+${TC.fmt2(areaCorte)} m²</b> · 🟥 Aterro: <b style="color:#ef4444;">${TC.fmt2(areaAterro)} m²</b> · Líquido: <b>${TC.fmt2(areaCorte + areaAterro)} m²</b></p>`;
     return `<svg viewBox="0 0 620 270" style="width:100%;background:#14141f;border-radius:8px;display:block;">${quads.join('')}${linhaZero}${linhaCf}${linhaTerreno}${pontos}${rotuloCf}</svg>${resumo}`;
   }
