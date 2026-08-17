@@ -1087,26 +1087,6 @@ const LevantamentoTerraplanagem = (() => {
   // ══════════════════════════════════════════
   let _3d = null; // { renderer, scene, camera, group, raf, ...estado de arraste }
 
-  // Reamostra o perfil (distância acumulada x cota) de uma seção em N pontos
-  // uniformes ao longo do comprimento total dela, via interpolação linear.
-  function _reamostrarPerfil(distancias, cotas, n, origemGlobal) {
-    const off = TC.num(origemGlobal);
-    const acc = [0];
-    for (let i = 0; i < distancias.length; i++) acc.push(acc[i] + TC.num(distancias[i]));
-    const largura = acc[acc.length - 1] || 0;
-    const out = [];
-    for (let k = 0; k < n; k++) {
-      const alvo = largura * (k / (n - 1));
-      let seg = 0;
-      while (seg < acc.length - 2 && acc[seg + 1] < alvo) seg++;
-      const d0 = acc[seg], d1 = acc[seg + 1] ?? d0;
-      const c0 = TC.num(cotas[seg]), c1 = TC.num(cotas[seg + 1] ?? cotas[seg]);
-      const t = d1 > d0 ? (alvo - d0) / (d1 - d0) : 0;
-      out.push({ x: alvo + off, cota: c0 + (c1 - c0) * t });
-    }
-    return out;
-  }
-
   function _corProfundidade(prof, profMin, profMax) {
     const t = profMax > profMin ? Math.max(0, Math.min(1, (prof - profMin) / (profMax - profMin))) : 0;
     // raso (t=0) verde → fundo (t=1) vermelho
@@ -1268,14 +1248,14 @@ const LevantamentoTerraplanagem = (() => {
   }
 
   async function abrir3D() {
-    const lista = (secoes[secDir] || []).filter(s => (s.cotas || []).length >= 2);
-    if (lista.length < 1) { Utils.toast('Marque pelo menos uma seção com 2+ pontos pra gerar o 3D.', 'alerta'); return; }
+    const temDados = (config.areas || []).some(a => (config.pontosCota || []).filter(p => p.areaId === a.id).length >= 3);
+    if (!temDados) { Utils.toast('Marque pelo menos 3 pontos de cota numa área pra gerar o 3D.', 'alerta'); return; }
     Utils.mostrarLoading('Montando visualização 3D...');
     try {
       if (typeof THREE === 'undefined') await _ls('https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js');
       Utils.abrirModal('modal-tp-3d');
       await new Promise(r => setTimeout(r, 60)); // deixa o modal montar antes de medir o container
-      _montarCena(lista);
+      _montarCena();
     } catch (e) {
       console.error(e);
       Utils.toast('Erro ao montar o 3D: ' + e.message, 'erro');
@@ -1298,45 +1278,62 @@ const LevantamentoTerraplanagem = (() => {
     Utils.fecharModal('modal-tp-3d');
   }
 
-  // Constrói cena Three.js do loft entre seções — usada tanto no modal
-  // interativo quanto no snapshot pro PDF do relatório. Todas as áreas
-  // compõem o MESMO terreno, cada seção na sua posição REAL da planta
-  // (mesma escala/calibração) — nunca com respiro artificial entre áreas.
-  // Só separa em sólidos diferentes quando NÃO HÁ conexão de verdade
-  // (cadeias diferentes — ex: braços separados por uma reentrância/pátio).
-  function _construirCena3D(lista) {
-    const N = 22; // amostras por seção
+  // Gera uma grade de alturas de UMA área: divide o retângulo dela em células
+  // de "passo" metros (em X e Y JUNTOS — não é seção de uma direção só) e
+  // interpola a cota em cada nó da grade por IDW, igual ao cálculo de área.
+  // É essa grade 2D que vira a malha 3D — não uma seção "esticada".
+  function _gerarGradeAltura(area, passo) {
+    const pontosArea = (config.pontosCota || []).filter(p => p.areaId === area.id).map(p => ({ ..._paraMetros(p), cota: p.cota }));
+    if (pontosArea.length < 3) return null;
+    const poligonoM = area.pontos.map(_paraMetros);
+    const xs = poligonoM.map(p => p.x), ys = poligonoM.map(p => p.y);
+    const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys);
+    function interpolarCota(x, y) {
+      let somaPeso = 0, somaPesoCota = 0;
+      for (const pt of pontosArea) {
+        const d2 = (pt.x - x) ** 2 + (pt.y - y) ** 2;
+        if (d2 < 1e-6) return pt.cota;
+        const peso = 1 / d2;
+        somaPeso += peso; somaPesoCota += peso * pt.cota;
+      }
+      return somaPeso > 0 ? somaPesoCota / somaPeso : area.cotaFinal;
+    }
+    const nx = Math.max(2, Math.round((maxX - minX) / passo) + 1);
+    const ny = Math.max(2, Math.round((maxY - minY) / passo) + 1);
+    const grid = [];
+    for (let j = 0; j < ny; j++) {
+      const y = minY + (maxY - minY) * (ny > 1 ? j / (ny - 1) : 0);
+      const linha = [];
+      for (let i = 0; i < nx; i++) {
+        const x = minX + (maxX - minX) * (nx > 1 ? i / (nx - 1) : 0);
+        const dentro = _pontoDentroPoligono({ x, y }, poligonoM);
+        linha.push({ x, y, dentro, cota: dentro ? interpolarCota(x, y) : null });
+      }
+      grid.push(linha);
+    }
+    return { nx, ny, grid, cotaFinal: TC.num(area.cotaFinal), convencao: area.convencao };
+  }
 
-    // Agrupa só pra saber quais seções formam um loft contínuo de verdade
-    // (mesma área + mesma cadeia) — a POSIÇÃO delas já é global, não precisa
-    // de nenhum deslocamento artificial pra "separar" áreas.
-    const grupos = [];
-    const porChave = new Map();
-    lista.forEach(s => {
-      const chave = (s.areaId ?? '__sem_area__') + '_' + (s.cadeiaId ?? 0);
-      if (!porChave.has(chave)) { const g = []; porChave.set(chave, g); grupos.push(g); }
-      porChave.get(chave).push(s);
-    });
+  // Constrói cena Three.js a partir da grade de alturas de TODAS as áreas —
+  // usada tanto no modal interativo quanto no snapshot pro PDF do relatório.
+  // Cada área na sua posição REAL da planta (mesma calibração), sem respiro
+  // artificial nenhum entre elas.
+  function _construirCena3D() {
+    const grades = (config.areas || []).map(a => _gerarGradeAltura(a, 1.5)).filter(Boolean);
+    if (!grades.length) return null;
 
-    // Bounds globais (pra centralizar, escalar e colorir tudo de forma consistente)
     let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity, minZ = Infinity, maxZ = -Infinity, minProf = Infinity, maxProf = -Infinity;
-    const dadosGrupos = grupos.map(secs => {
-      const perfis = secs.map(s => _reamostrarPerfil(s.distanciasCotas || [], s.cotas || [], N, s.origemGlobal));
-      const cotasFinal = secs.map(s => TC.num(s.cotaFinal));
-      const sinais = secs.map(s => s.convencao === 'profundidade' ? -1 : 1);
-      // Z = posição REAL (s.pos) na planta — mesma coordenada da grade de 1,5m,
-      // igual pra todas as áreas (mesma calibração), sem deslocamento nenhum.
-      let zReal = secs.map(s => TC.num(s.pos));
-      if (perfis.length === 1) { perfis.push(perfis[0]); cotasFinal.push(cotasFinal[0]); sinais.push(sinais[0]); zReal.push(zReal[0] + 1.5); }
-      perfis.forEach((p, si) => p.forEach(pt => {
-        const cotaPos = pt.cota * sinais[si], cfPos = cotasFinal[si] * sinais[si];
+    grades.forEach(g => {
+      const sinal = g.convencao === 'profundidade' ? -1 : 1;
+      g.grid.forEach(linha => linha.forEach(pt => {
+        if (!pt.dentro) return;
+        const cotaPos = pt.cota * sinal, cfPos = g.cotaFinal * sinal;
         minX = Math.min(minX, pt.x); maxX = Math.max(maxX, pt.x);
+        minZ = Math.min(minZ, pt.y); maxZ = Math.max(maxZ, pt.y); // Y da planta = Z da cena
         minY = Math.min(minY, cotaPos, cfPos); maxY = Math.max(maxY, cotaPos, cfPos);
-        minZ = Math.min(minZ, zReal[si]); maxZ = Math.max(maxZ, zReal[si]);
         const prof = cotaPos - cfPos;
         minProf = Math.min(minProf, prof); maxProf = Math.max(maxProf, prof);
       }));
-      return { perfis, cotasFinal, sinais, zAcum: zReal };
     });
 
     const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2, cz = (minZ + maxZ) / 2;
@@ -1347,32 +1344,38 @@ const LevantamentoTerraplanagem = (() => {
     // dezenas de metros, o 3D saía todo achatado. Exagera visualmente a
     // profundidade pra ela ficar sempre bem visível, sem depender do tamanho da planta.
     const ALTURA_VISUAL = 20;
-    const escalaY = Math.min(ALTURA_VISUAL / Math.max(maxY - minY, 0.5), escalaXZ * 2); // trava o exagero em no máx. 2x a escala horizontal — 4x ainda distorcia demais
+    const escalaY = Math.min(ALTURA_VISUAL / Math.max(maxY - minY, 0.5), escalaXZ * 2);
 
     const THREE_ = window.THREE;
     const scene = new THREE_.Scene();
     scene.background = new THREE_.Color(0x14141f);
     const group = new THREE_.Group();
 
-    dadosGrupos.forEach(({ perfis, cotasFinal, sinais, zAcum }) => {
+    grades.forEach(g => {
+      const sinal = g.convencao === 'profundidade' ? -1 : 1;
+      const idx = (i, j) => j * g.nx + i;
       const posTopo = [], corTopo = [], posFundo = [];
-      perfis.forEach((p, si) => p.forEach(pt => {
-        const cotaPos = pt.cota * sinais[si], cfPos = cotasFinal[si] * sinais[si];
-        posTopo.push((pt.x - cx) * escalaXZ, (cotaPos - cy) * escalaY, (zAcum[si] - cz) * escalaXZ);
-        posFundo.push((pt.x - cx) * escalaXZ, (cfPos - cy) * escalaY, (zAcum[si] - cz) * escalaXZ);
-        const c = _corProfundidade(cotaPos - cfPos, minProf, maxProf);
-        corTopo.push(c.r, c.g, c.b);
-      }));
-
-      const idx = (si, pi) => si * N + pi;
+      for (let j = 0; j < g.ny; j++) {
+        for (let i = 0; i < g.nx; i++) {
+          const pt = g.grid[j][i];
+          if (!pt.dentro) { posTopo.push(0, 0, 0); posFundo.push(0, 0, 0); corTopo.push(0, 0, 0); continue; }
+          const cotaPos = pt.cota * sinal, cfPos = g.cotaFinal * sinal;
+          posTopo.push((pt.x - cx) * escalaXZ, (cotaPos - cy) * escalaY, (pt.y - cz) * escalaXZ);
+          posFundo.push((pt.x - cx) * escalaXZ, (cfPos - cy) * escalaY, (pt.y - cz) * escalaXZ);
+          const c = _corProfundidade(cotaPos - cfPos, minProf, maxProf);
+          corTopo.push(c.r, c.g, c.b);
+        }
+      }
       const facesTopo = [], facesFundo = [];
-      for (let si = 0; si < perfis.length - 1; si++) {
-        for (let pi = 0; pi < N - 1; pi++) {
-          const a = idx(si, pi), b = idx(si, pi + 1), c = idx(si + 1, pi), d = idx(si + 1, pi + 1);
+      for (let j = 0; j < g.ny - 1; j++) {
+        for (let i = 0; i < g.nx - 1; i++) {
+          if (!g.grid[j][i].dentro || !g.grid[j][i + 1].dentro || !g.grid[j + 1][i].dentro || !g.grid[j + 1][i + 1].dentro) continue;
+          const a = idx(i, j), b = idx(i + 1, j), c = idx(i, j + 1), d = idx(i + 1, j + 1);
           facesTopo.push(a, c, b, b, c, d);
           facesFundo.push(a, b, c, b, d, c); // fundo com winding invertido (normal pra baixo)
         }
       }
+      if (!facesTopo.length) return;
 
       const geoTopo = new THREE_.BufferGeometry();
       geoTopo.setAttribute('position', new THREE_.Float32BufferAttribute(posTopo, 3));
@@ -1384,10 +1387,10 @@ const LevantamentoTerraplanagem = (() => {
 
       const geoFundo = new THREE_.BufferGeometry();
       geoFundo.setAttribute('position', new THREE_.Float32BufferAttribute(posFundo, 3));
-      geoFundo.setIndex(perfis.length > 1 ? facesFundo : []);
+      geoFundo.setIndex(facesFundo);
       geoFundo.computeVertexNormals();
       const matFundo = new THREE_.MeshStandardMaterial({ color: 0xf59e0b, transparent: true, opacity: 0.35, side: THREE_.DoubleSide, roughness: 0.9 });
-      if (perfis.length > 1) group.add(new THREE_.Mesh(geoFundo, matFundo));
+      group.add(new THREE_.Mesh(geoFundo, matFundo));
     });
 
     scene.add(group);
@@ -1411,10 +1414,11 @@ const LevantamentoTerraplanagem = (() => {
     camera.lookAt(0, 0, 0);
   }
 
-  function _montarCena(lista) {
+  const CAM_PADRAO = { rotY: -0.7, rotX: -0.85, dist: 160 };
+  function _montarCena() {
     const container = document.getElementById('tp-3d-container');
     if (!container) return;
-    const scene = _construirCena3D(lista);
+    const scene = _construirCena3D();
     const THREE_ = window.THREE;
 
     const W = container.clientWidth || 600, H = container.clientHeight || 400;
@@ -1424,7 +1428,7 @@ const LevantamentoTerraplanagem = (() => {
     renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
     container.appendChild(renderer.domElement);
 
-    let rotY = -0.7, rotX = -0.85, dist = 160;
+    let rotY = CAM_PADRAO.rotY, rotX = CAM_PADRAO.rotX, dist = CAM_PADRAO.dist;
     let dragging = false, lastX = 0, lastY = 0;
     const atualizarCamera = () => _posicionarCamera(camera, rotY, rotX, dist);
     atualizarCamera();
@@ -1448,21 +1452,26 @@ const LevantamentoTerraplanagem = (() => {
       _3d.raf = requestAnimationFrame(loop);
       renderer.render(scene, camera);
     }
-    _3d = { renderer, scene, camera, container, onDown, onMove, onUp, onWheel, raf: 0 };
+    _3d = {
+      renderer, scene, camera, container, onDown, onMove, onUp, onWheel, raf: 0,
+      resetar: () => { rotY = CAM_PADRAO.rotY; rotX = CAM_PADRAO.rotX; dist = CAM_PADRAO.dist; atualizarCamera(); },
+    };
     loop();
 
     const legenda = document.getElementById('tp-3d-legenda');
     if (legenda) {
-      legenda.innerHTML = `${lista.length} seção${lista.length !== 1 ? 'ões' : ''} (${secDir}) · 🟩 corte raso → 🟥 corte fundo · 🟧 cota de referência · ⚠️ profundidade exagerada visualmente (planta é fiel, altura não)`;
+      legenda.innerHTML = `Grade de alturas — todas as áreas · 🟩 corte raso → 🟥 corte fundo · 🟧 cota de referência · ⚠️ profundidade exagerada visualmente (planta é fiel, altura não)`;
     }
   }
+  function resetarCamera3D() { if (_3d && _3d.resetar) _3d.resetar(); }
 
   // Snapshot do 3D pra imagem (usado no PDF) — renderer offscreen, 1 frame.
-  function _snapshot3D(lista, w, h) {
-    const scene = _construirCena3D(lista);
+  function _snapshot3D(w, h) {
+    const scene = _construirCena3D();
+    if (!scene) return null;
     const THREE_ = window.THREE;
     const camera = new THREE_.PerspectiveCamera(45, w / h, 0.1, 2000);
-    _posicionarCamera(camera, -0.7, -0.35, 130);
+    _posicionarCamera(camera, CAM_PADRAO.rotY, CAM_PADRAO.rotX, CAM_PADRAO.dist);
     const renderer = new THREE_.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
     renderer.setSize(w, h);
     renderer.render(scene, camera);
@@ -1605,22 +1614,20 @@ const LevantamentoTerraplanagem = (() => {
       try { doc.addImage(imgProjeto, 'JPEG', 12 + (larguraMax - larguraMm) / 2, y, larguraMm, alturaMm, undefined, 'FAST'); y += alturaMm + 7; } catch (e) {}
     }
 
-    // Snapshots 3D (horizontal e vertical, se tiverem seções com 2+ pontos)
-    for (const dir of ['horizontal', 'vertical']) {
-      const lista = (secoes[dir] || []).filter(s => (s.cotas || []).length >= 2);
-      if (!lista.length) continue;
-      try {
-        if (typeof THREE === 'undefined') await _ls('https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js');
-        const snap = _snapshot3D(lista, 1100, 620);
+    // Snapshot 3D único (grade de alturas, todas as áreas juntas)
+    try {
+      if (typeof THREE === 'undefined') await _ls('https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js');
+      const snap = _snapshot3D(1100, 620);
+      if (snap) {
         const larguraMm = PW - 24, alturaMm = larguraMm * (620 / 1100);
         if (y + alturaMm > 275) { doc.addPage(); y = 14; }
         doc.setTextColor(13, 13, 13); doc.setFontSize(9.5); doc.setFont(undefined, 'bold');
-        doc.text(`Corte de terra em 3D — seções ${dir === 'horizontal' ? 'horizontais' : 'verticais'} (verde = raso · vermelho = fundo · laranja = cota de referência)`, 12, y + 3);
+        doc.text('Corte de terra em 3D (verde = raso · vermelho = fundo · laranja = cota de referência)', 12, y + 3);
         y += 5;
         doc.addImage(snap, 'JPEG', 12, y, larguraMm, alturaMm, undefined, 'FAST');
         y += alturaMm + 7;
-      } catch (e) { console.error('snapshot 3D falhou', e); }
-    }
+      }
+    } catch (e) { console.error('snapshot 3D falhou', e); }
 
     // Tabelas de seções (uma por direção)
     for (const dir of ['horizontal', 'vertical']) {
@@ -1724,7 +1731,7 @@ const LevantamentoTerraplanagem = (() => {
     abrirVerSecoes, fecharVerSecoes, selecionarSecaoVisualizada,
     verSecZoomIn, verSecZoomOut, verSecZoomReset,
     projZoomIn, projZoomOut, projZoomReset,
-    abrir3D, fechar3D, limparBase,
+    abrir3D, fechar3D, resetarCamera3D, limparBase,
     baixarLevantamentoPDF, compartilharLevantamentoPDF,
   };
 })();

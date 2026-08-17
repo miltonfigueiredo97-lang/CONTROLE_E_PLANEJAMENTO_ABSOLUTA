@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.8.16',
+  versaoAtual: 'V3.9.0',
 
   versoes: [
     {
@@ -8322,6 +8322,19 @@ const NotasVersao = {
         "Causa raiz de mais uma versão do \\\"formato errado\\\": quando havia mais de uma área, o 3D desenhava cada uma separada, lado a lado, com um respiro artificial de 3m entre elas — em vez de posicionar cada uma no lugar REAL da planta. Isso desconectava totalmente a composição do terreno verdadeiro.",
         "Corrigido: agora toda seção (de qualquer área) usa a posição REAL dela na planta (mesma escala/calibração) — sem nenhum deslocamento artificial. Se duas áreas são vizinhas de verdade, aparecem vizinhas no 3D; se estão longe uma da outra, aparecem exatamente na distância real. Testado com 2 áreas simuladas adjacentes (1,5m de diferença real) — ficaram nas posições certas, sem gap inventado.",
         "Continua separando em sólidos diferentes só quando NÃO há conexão de verdade (cadeias diferentes, tipo braços separados por uma reentrância) — isso nunca foi o problema, o problema era o respiro artificial entre áreas inteiras."
+      ]
+    },
+    {
+      "versao": "V3.9.0",
+      "data": "2026-08-16",
+      "tipo": "funcionalidade",
+      "titulo": "3D reescrito do zero: malha de grade 2D real (X e Y juntos) em vez de esticar seções de uma direção só",
+      "itens": [
+        "Causa raiz de verdade de todos os formatos estranhos do 3D até aqui: a malha era construída ESTICANDO as seções de UMA direção só (horizontal OU vertical, o que estivesse selecionado) — dava detalhe fino só numa direção e achatado/reto na outra, virando uma \\\"fita\\\" que de certos ângulos parecia 2D (uma linha).",
+        "Reescrito: agora o 3D gera uma GRADE 2D de verdade (X e Y juntos, de 1,5 em 1,5m) direto dos pontos de cota marcados, igual pra qualquer área — a mesma interpolação usada no cálculo de área/volume, só que aplicada em toda a superfície, não só ao longo de linhas. Isso dá volume genuíno nas duas direções, não depende mais de qual direção (Horizontal/Vertical) está selecionada na tela — é uma cena só, sempre.",
+        "Testado com um \\\"morro\\\" simulado (base 3m + pico 10m no centro, 20x20m): a grade capturou a variação certa nos dois eixos e o volume aproximado bateu bem maior que o de um terreno plano de mesma base, como esperado.",
+        "Bônus: botão \\\"🔄 Resetar Câmera\\\" dentro do próprio 3D — se girar demais e a vista ficar confusa (de perfil, por exemplo), um clique volta pro ângulo padrão sem precisar fechar e abrir de novo.",
+        "PDF do relatório agora traz só 1 snapshot 3D (a grade completa), não mais um por direção."
       ]
     }
   ],
