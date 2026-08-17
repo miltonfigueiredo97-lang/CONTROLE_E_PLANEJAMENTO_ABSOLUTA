@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.8.6',
+  versaoAtual: 'V3.8.7',
 
   versoes: [
     {
@@ -8122,6 +8122,16 @@ const NotasVersao = {
         "Cada card de concretagem no Planejamento ganhou um botão \\\"✎\\\" — abre um mini-formulário pra corrigir número, data e descrição. Bloqueia se o número escolhido já for de outra concretagem.",
         "O fluxo rápido de criar concretagem pelo popup agora avisa claramente que a data virou \\\"hoje\\\" e que pode ser corrigida pelo ✎ do card, em vez de deixar passar em silêncio.",
         "Concretagem sem data cadastrada aparece com aviso em vermelho \\\"sem data\\\" no card, pra achar fácil as que precisam de correção."
+      ]
+    },
+    {
+      "versao": "V3.8.7",
+      "data": "2026-08-17",
+      "tipo": "correcao",
+      "titulo": "Terraplanagem do Dashboard voltou a funcionar",
+      "itens": [
+        "Marcar 🚜 Terraplanagem no menu Extras não fazia nada e a marcação se perdia ao recarregar: uma atualização paralela dos scripts do dashboard.html derrubou o arquivo da seção (dashboard-terraplanagem.js) e o motor de cálculo (terraplanagem-calculos.js). Os dois voltaram pra página.",
+        "Com a seção ligada e a obra ainda sem viagens/seções lançadas, agora aparece um aviso orientando onde lançar — antes o card sumia em silêncio e parecia que o botão não funcionava."
       ]
     }
   ],

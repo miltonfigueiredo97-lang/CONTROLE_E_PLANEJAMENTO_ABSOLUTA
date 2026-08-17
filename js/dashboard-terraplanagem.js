@@ -46,8 +46,13 @@ const DashTerra = (() => {
         Database.obter(obraId, 'config', 'terraplanagemSecoes').catch(() => null),
       ]);
       if (!entregas.length && !secDoc) {
-        // Obra sem terraplanagem lançada: some inteira.
-        host.innerHTML = '';
+        // Ligada no menu Extras mas sem dados ainda: mostra o card com
+        // orientação (sumir sem explicação parecia "não funcionou").
+        el.innerHTML = `<div class="db-vazio">
+          <div class="db-vazio-icone">🚜</div>
+          <div class="db-vazio-titulo">Nenhum dado de terraplanagem ainda</div>
+          <div class="db-vazio-sub">Lance as viagens no <a href="controle-terraplanagem.html">Controle de Terraplanagem</a> (ou gere as seções no Levantamento) — os gráficos e métricas aparecem aqui automaticamente.</div>
+        </div>`;
         return;
       }
       const num = v => (TC ? TC.num(v) : (parseFloat(String(v ?? '').replace(',', '.')) || 0));
