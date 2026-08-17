@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.8.13',
+  versaoAtual: 'V3.8.13.1',
 
   versoes: [
     {
@@ -8237,6 +8237,16 @@ const NotasVersao = {
         "O exagero vertical do 3D (adicionado pra corrigir o achatamento) não tinha limite — em seções com corte bem menor que o tamanho do prédio, o exagero ficava tão grande que virava uma distorção tipo \"caixa com torre\" em vez de um terreno. Agora tem um teto: no máximo 4x a escala horizontal, suficiente pra ver o corte sem virar uma caricatura.",
         "Ângulo inicial da câmera também mudou: antes começava quase de lado (~28° de elevação, mostrando principalmente a parede da ponta) — agora começa numa vista aérea 3/4 (~53°), mais parecida com a vista de cima. Continua podendo girar livre com o mouse.",
         "\"Ver Seções\" agora mostra o Comprimento da seção junto com a Área no cabeçalho — pra conferir direto se bate com a medida esperada, sem precisar abrir a seção na lista embaixo."
+      ]
+    },
+    {
+      "versao": "V3.8.13.1",
+      "data": "2026-08-17",
+      "tipo": "melhoria",
+      "titulo": "Relatório de Terraplanagem blindado contra cache antigo",
+      "itens": [
+        "O módulo do relatório agora acessa o motor de cálculo por referência direta (com fallback via window) — o erro \"Cannot read properties of undefined (reading 'num')\", que acontecia em páginas servidas do cache anterior à V3.8.12, não tem mais como ocorrer.",
+        "Se o Gerar Relatório não abrir a prévia, faça um hard refresh (Ctrl+Shift+R): o navegador pode estar segurando o dashboard.html antigo."
       ]
     }
   ],
