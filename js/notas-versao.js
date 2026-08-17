@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.9.1.1',
+  versaoAtual: 'V3.9.2',
 
   versoes: [
     {
@@ -8357,6 +8357,16 @@ const NotasVersao = {
       "itens": [
         "Clicar numa seção da lista reconstrói a tela (pra mostrar a seção selecionada) — e isso resetava o scroll da lista pro topo toda vez, obrigando rolar de novo até a seção seguinte quando navegando por várias seções em sequência.",
         "Corrigido: a posição do scroll agora é guardada antes e restaurada depois do clique — a lista fica parada onde estava."
+      ]
+    },
+    {
+      "versao": "V3.9.2",
+      "data": "2026-08-16",
+      "tipo": "correcao",
+      "titulo": "3D: fecha o \"buraco\" na costura entre áreas vizinhas + área pequena (ex: reservatório) não some mais",
+      "itens": [
+        "Causa raiz do buraco entre áreas: cada área esticava a parede só até a PRÓPRIA cota final — se duas áreas vizinhas têm cota final diferente, ou a borda de uma não encosta 100% na da outra (imprecisão normal de clique ao desenhar), sobrava um vão vazio bem na costura. Corrigido: agora as paredes esticam até um piso global (bem abaixo da cota mais funda de TODAS as áreas), garantindo que duas paredes vizinhas sempre se sobrepõem por baixo, sem vão — o fundo (plano de referência) de cada área continua mostrando a profundidade certa dela, só a parede que estica mais.",
+        "Causa raiz de área pequena (tipo reservatório) sumindo do 3D: o sistema exigia pelo menos 3 pontos de cota marcados numa área pra gerar qualquer coisa nela — áreas pequenas com só 1 ou 2 pontos marcados ficavam de fora inteiras, aparecendo como um buraco na posição delas. Corrigido: agora 1 ponto já basta (a interpolação funciona matematicamente com qualquer quantidade ≥1)."
       ]
     }
   ],

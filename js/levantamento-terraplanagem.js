@@ -617,7 +617,7 @@ const LevantamentoTerraplanagem = (() => {
   function _gerarSecoesDaArea(area) {
     const PASSO_GRADE = 1.5, PASSO_AMOSTRA = 0.5;
     const pontosArea = (config.pontosCota || []).filter(p => p.areaId === area.id).map(p => ({ ..._paraMetros(p), cota: p.cota }));
-    if (pontosArea.length < 3) return { horizontais: [], verticais: [] };
+    if (pontosArea.length < 1) return { horizontais: [], verticais: [] }; // sem nenhum ponto marcado não tem o que interpolar
 
     const poligonoM = area.pontos.map(_paraMetros);
     const xs = poligonoM.map(p => p.x), ys = poligonoM.map(p => p.y);
@@ -1288,7 +1288,7 @@ const LevantamentoTerraplanagem = (() => {
   // É essa grade 2D que vira a malha 3D — não uma seção "esticada".
   function _gerarGradeAltura(area, passo) {
     const pontosArea = (config.pontosCota || []).filter(p => p.areaId === area.id).map(p => ({ ..._paraMetros(p), cota: p.cota }));
-    if (pontosArea.length < 3) return null;
+    if (pontosArea.length < 1) return null; // sem nenhum ponto marcado não tem o que interpolar
     const poligonoM = area.pontos.map(_paraMetros);
     const xs = poligonoM.map(p => p.x), ys = poligonoM.map(p => p.y);
     const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys);
@@ -1349,6 +1349,12 @@ const LevantamentoTerraplanagem = (() => {
     // profundidade pra ela ficar sempre bem visível, sem depender do tamanho da planta.
     const ALTURA_VISUAL = 20;
     const escalaY = Math.min(ALTURA_VISUAL / Math.max(maxY - minY, 0.5), escalaXZ * 2);
+    // Piso global (bem abaixo da cota mais funda de TODAS as áreas) — as
+    // PAREDES esticam até aqui, não só até a cota final da própria área.
+    // Sem isso, quando duas áreas vizinhas têm cota final diferente (ou a
+    // borda de uma não encosta 100% na da outra, por imprecisão de clique),
+    // sobrava um vão/buraco vazio bem na costura entre elas.
+    const pisoGlobal = minY - Math.max((maxY - minY) * 0.15, 1);
 
     const THREE_ = window.THREE;
     const scene = new THREE_.Scene();
@@ -1408,13 +1414,13 @@ const LevantamentoTerraplanagem = (() => {
       }
       const posParede = [], facesParede = [];
       function addParede(pA, pB) {
-        const cotaA = pA.cota * sinal, cotaB = pB.cota * sinal, cf = g.cotaFinal * sinal;
+        const cotaA = pA.cota * sinal, cotaB = pB.cota * sinal;
         const base = posParede.length / 3;
         posParede.push(
           (pA.x - cx) * escalaXZ, (cotaA - cy) * escalaY, (pA.y - cz) * escalaXZ,
           (pB.x - cx) * escalaXZ, (cotaB - cy) * escalaY, (pB.y - cz) * escalaXZ,
-          (pA.x - cx) * escalaXZ, (cf - cy) * escalaY, (pA.y - cz) * escalaXZ,
-          (pB.x - cx) * escalaXZ, (cf - cy) * escalaY, (pB.y - cz) * escalaXZ,
+          (pA.x - cx) * escalaXZ, (pisoGlobal - cy) * escalaY, (pA.y - cz) * escalaXZ,
+          (pB.x - cx) * escalaXZ, (pisoGlobal - cy) * escalaY, (pB.y - cz) * escalaXZ,
         );
         facesParede.push(base, base + 2, base + 1, base + 1, base + 2, base + 3);
       }
