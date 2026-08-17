@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.7.1.7',
+  versaoAtual: 'V3.7.1.8',
 
   versoes: [
     {
@@ -7963,6 +7963,17 @@ const NotasVersao = {
         "Relatório PDF: card \"VALOR GASTO\" no resumo, linha verde de custo acumulado por cima do gráfico de volume por dia (com o total em R$ na ponta), colunas Custo e R$ Acumulado na tabela por dia, Valor em cada viagem (com total no rodapé) e Custo por caminhão.",
         "Ordem das tabelas do PDF por importância: Volume por material → Volume por dia → Viagens do período → Volume por caminhão (por último).",
         "Card \"Caminhões\" (contagem de placas distintas) removido da tela, da prévia e do PDF — informação inútil, deu lugar ao Valor Gasto."
+      ]
+    },
+    {
+      "versao": "V3.7.1.8",
+      "data": "2026-08-15",
+      "tipo": "melhoria",
+      "titulo": "Levantamento de Terraplanagem: Relatório PDF com projeto marcado e 3D dentro",
+      "itens": [
+        "Novos botões \"📄 Relatório PDF\" e \"📤 Compartilhar\" no Levantamento de Terraplanagem — gera um PDF com todos os dados do levantamento: cards de volume (horizontal, vertical, médio de banco, taxa de empolamento e volume a remover), o PROJETO com todas as seções desenhadas por cima (linhas coloridas, pontos numerados, rótulo S1/S2... — verticais tracejadas pra diferenciar das horizontais) e IMAGENS DO 3D do corte (uma pras seções horizontais, outra pras verticais), com a mesma coloração por profundidade da tela.",
+        "O PDF fecha com as tabelas de seções das duas direções: área, comprimento, distância até a próxima e volume entre seções.",
+        "\"📤 Compartilhar\" abre o menu nativo do celular com o PDF anexado (WhatsApp incluso); em navegador sem esse suporte, baixa o arquivo pra anexar manualmente."
       ]
     }
   ],

@@ -185,6 +185,8 @@ const LevantamentoTerraplanagem = (() => {
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <button class="btn btn-secundario btn-sm" onclick="TP_UI.abrirConfig()">⚙️ Config</button>
+          <button class="btn btn-secundario btn-sm" onclick="TP_UI.baixarLevantamentoPDF()">📄 Relatório PDF</button>
+          <button class="btn btn-secundario btn-sm" onclick="TP_UI.compartilharLevantamentoPDF()">📤 Compartilhar</button>
           <button class="btn btn-primario btn-sm" onclick="TP_UI.abrirCaminhoes()">🚚 Caminhões</button>
           <button class="btn btn-secundario btn-sm" data-perm="levantamentoTerra:limpar" style="color:var(--cv-red,#dc2626);" onclick="TP_UI.limparBase()">🗑 Limpar Base</button>
         </div>
@@ -762,9 +764,9 @@ const LevantamentoTerraplanagem = (() => {
     Utils.fecharModal('modal-tp-3d');
   }
 
-  function _montarCena(lista) {
-    const container = document.getElementById('tp-3d-container');
-    if (!container) return;
+  // Constrói cena Three.js do loft entre seções — usada tanto no modal
+  // interativo quanto no snapshot pro PDF do relatório.
+  function _construirCena3D(lista) {
     const N = 22; // amostras por seção
     const perfis = lista.map(s => _reamostrarPerfil(s.distanciasCotas || [], s.cotas || [], N));
     const cotasFinal = lista.map(s => TC.num(s.cotaFinal));
@@ -858,6 +860,24 @@ const LevantamentoTerraplanagem = (() => {
     dirLight2.position.set(-60, 40, -80);
     scene.add(dirLight2);
 
+    return scene;
+  }
+
+  function _posicionarCamera(camera, rotY, rotX, dist) {
+    camera.position.set(
+      dist * Math.sin(rotY) * Math.cos(rotX),
+      dist * Math.sin(rotX) * -1 + 20,
+      dist * Math.cos(rotY) * Math.cos(rotX)
+    );
+    camera.lookAt(0, 0, 0);
+  }
+
+  function _montarCena(lista) {
+    const container = document.getElementById('tp-3d-container');
+    if (!container) return;
+    const scene = _construirCena3D(lista);
+    const THREE_ = window.THREE;
+
     const W = container.clientWidth || 600, H = container.clientHeight || 400;
     const camera = new THREE_.PerspectiveCamera(45, W / H, 0.1, 2000);
     const renderer = new THREE_.WebGLRenderer({ antialias: true, alpha: false });
@@ -867,14 +887,7 @@ const LevantamentoTerraplanagem = (() => {
 
     let rotY = -0.7, rotX = -0.35, dist = 130;
     let dragging = false, lastX = 0, lastY = 0;
-    function atualizarCamera() {
-      camera.position.set(
-        dist * Math.sin(rotY) * Math.cos(rotX),
-        dist * Math.sin(rotX) * -1 + 20,
-        dist * Math.cos(rotY) * Math.cos(rotX)
-      );
-      camera.lookAt(0, 0, 0);
-    }
+    const atualizarCamera = () => _posicionarCamera(camera, rotY, rotX, dist);
     atualizarCamera();
 
     const onDown = ev => { dragging = true; lastX = ev.clientX; lastY = ev.clientY; };
@@ -896,13 +909,27 @@ const LevantamentoTerraplanagem = (() => {
       _3d.raf = requestAnimationFrame(loop);
       renderer.render(scene, camera);
     }
-    _3d = { renderer, scene, camera, group, container, onDown, onMove, onUp, onWheel, raf: 0 };
+    _3d = { renderer, scene, camera, container, onDown, onMove, onUp, onWheel, raf: 0 };
     loop();
 
     const legenda = document.getElementById('tp-3d-legenda');
     if (legenda) {
       legenda.innerHTML = `${lista.length} seção${lista.length !== 1 ? 'ões' : ''} (${secDir}) · 🟩 corte raso → 🟥 corte fundo · 🟧 cota de referência`;
     }
+  }
+
+  // Snapshot do 3D pra imagem (usado no PDF) — renderer offscreen, 1 frame.
+  function _snapshot3D(lista, w, h) {
+    const scene = _construirCena3D(lista);
+    const THREE_ = window.THREE;
+    const camera = new THREE_.PerspectiveCamera(45, w / h, 0.1, 2000);
+    _posicionarCamera(camera, -0.7, -0.35, 130);
+    const renderer = new THREE_.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+    renderer.setSize(w, h);
+    renderer.render(scene, camera);
+    const url = renderer.domElement.toDataURL('image/jpeg', 0.85);
+    renderer.dispose();
+    return url;
   }
 
   // ══════════════════════════════════════════
@@ -937,6 +964,232 @@ const LevantamentoTerraplanagem = (() => {
     }
   }
 
+  // ══════════════════════════════════════════
+  // RELATÓRIO PDF DO LEVANTAMENTO — volumes, projeto com as seções
+  // marcadas, snapshot 3D e tabelas de seções. Baixa direto ou
+  // compartilha (WhatsApp no menu nativo do celular).
+  // ══════════════════════════════════════════
+
+  // Desenha o projeto + linhas/pontos das seções num canvas e devolve dataURL
+  function _projetoMarcadoDataURL() {
+    if (!config.temImagemProjeto || !imagemProjetoCache) return null;
+    return new Promise(resolve => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth; canvas.height = img.naturalHeight;
+        const g = canvas.getContext('2d');
+        g.drawImage(img, 0, 0);
+        const desenhar = (lista, tracejado) => {
+          lista.forEach((s, si) => {
+            const pontos = s.pontos || [];
+            if (!pontos.length) return;
+            const cor = _corSecao(si);
+            g.strokeStyle = cor; g.fillStyle = cor;
+            g.lineWidth = Math.max(2, canvas.width / 450);
+            g.setLineDash(tracejado ? [g.lineWidth * 3, g.lineWidth * 2] : []);
+            if (pontos.length >= 2) {
+              g.beginPath();
+              pontos.forEach((p, pi) => { const x = p.x * canvas.width, y = p.y * canvas.height; pi === 0 ? g.moveTo(x, y) : g.lineTo(x, y); });
+              g.stroke();
+            }
+            const raio = Math.max(6, canvas.width / 160);
+            pontos.forEach((p, pi) => {
+              const x = p.x * canvas.width, y = p.y * canvas.height;
+              g.setLineDash([]);
+              g.fillStyle = cor;
+              g.beginPath(); g.arc(x, y, raio, 0, Math.PI * 2); g.fill();
+              g.strokeStyle = '#fff'; g.lineWidth = Math.max(1.5, raio / 5); g.stroke();
+              g.fillStyle = '#fff';
+              g.font = `bold ${Math.round(raio * 1.1)}px sans-serif`;
+              g.textAlign = 'center'; g.textBaseline = 'middle';
+              g.fillText(String(pi + 1), x, y);
+              g.strokeStyle = cor; g.lineWidth = Math.max(2, canvas.width / 450);
+              g.setLineDash(tracejado ? [g.lineWidth * 3, g.lineWidth * 2] : []);
+            });
+            // Rótulo da seção junto ao primeiro ponto
+            const p0 = pontos[0];
+            g.setLineDash([]);
+            g.font = `bold ${Math.round(raio * 1.5)}px sans-serif`;
+            g.fillStyle = cor;
+            g.strokeStyle = '#fff'; g.lineWidth = Math.max(2, raio / 3);
+            const rot = `S${s.numero ?? si + 1}${tracejado ? 'v' : ''}`;
+            const rx = p0.x * canvas.width, ry = Math.max(raio * 2, p0.y * canvas.height - raio * 2.2);
+            g.strokeText(rot, rx, ry); g.fillText(rot, rx, ry);
+          });
+        };
+        desenhar(secoes.horizontal || [], false);
+        desenhar(secoes.vertical || [], true); // verticais tracejadas pra diferenciar
+        resolve(TC.canvasParaDataURLLimitado(canvas, 1400000).url);
+      };
+      img.onerror = () => resolve(null);
+      img.src = imagemProjetoCache;
+    });
+  }
+
+  async function _gerarLevantamentoPdfBlob() {
+    if (typeof window.jspdf === 'undefined') {
+      await _ls('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+      await _ls('https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js');
+    }
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+    const PW = doc.internal.pageSize.getWidth();
+    const k = kpisGerais();
+    const obraNome = Router.getObra()?.nome || '';
+
+    // Cabeçalho
+    doc.setFillColor(13, 13, 13); doc.rect(0, 0, PW, 26, 'F');
+    doc.setFillColor(245, 200, 0); doc.rect(0, 26, PW, 1.5, 'F');
+    doc.setTextColor(255); doc.setFontSize(14); doc.setFont(undefined, 'bold');
+    doc.text('Relatório de Terraplanagem — Levantamento', 12, 11);
+    doc.setFontSize(9); doc.setFont(undefined, 'normal'); doc.setTextColor(245, 200, 0);
+    doc.text(obraNome, 12, 18);
+    doc.setTextColor(200);
+    doc.text(`Gerado em ${new Date().toLocaleString('pt-BR')} · Absoluta Engenharia`, 12, 23);
+    let y = 34;
+
+    // Cards de volume
+    const cards = [
+      { v: TC.fmt1(k.volH), l: 'VOL. HORIZONTAL (M³)' },
+      { v: TC.fmt1(k.volV), l: 'VOL. VERTICAL (M³)' },
+      { v: TC.fmt1(k.volMedio), l: 'VOL. MÉDIO BANCO (M³)' },
+      { v: TC.fmt1(config.taxaEmpolamento * 100) + '%', l: 'EMPOLAMENTO' },
+      { v: TC.fmt1(k.volEmpolado), l: 'A REMOVER (M³)' },
+    ];
+    const gap = 4, cw = (PW - 24 - gap * (cards.length - 1)) / cards.length, ch = 17;
+    cards.forEach((card, i) => {
+      const x = 12 + i * (cw + gap);
+      doc.setFillColor(250, 250, 250); doc.setDrawColor(229, 229, 229);
+      doc.roundedRect(x, y, cw, ch, 1.8, 1.8, 'FD');
+      doc.setTextColor(13, 13, 13); doc.setFontSize(12); doc.setFont(undefined, 'bold');
+      doc.text(card.v, x + cw / 2, y + 8, { align: 'center' });
+      doc.setTextColor(120); doc.setFontSize(5.4); doc.setFont(undefined, 'normal');
+      doc.text(card.l, x + cw / 2, y + 13.5, { align: 'center' });
+    });
+    y += ch + 8;
+
+    // Projeto com as seções marcadas (modo visual)
+    const imgProjeto = await _projetoMarcadoDataURL();
+    if (imgProjeto && config.imgW > 0) {
+      const propor = config.imgH / config.imgW;
+      const larguraMax = PW - 24;
+      let alturaMm = larguraMax * propor;
+      let larguraMm = larguraMax;
+      if (alturaMm > 150) { alturaMm = 150; larguraMm = alturaMm / propor; } // limita pra não comer a página toda
+      if (y + alturaMm > 270) { doc.addPage(); y = 14; }
+      doc.setTextColor(13, 13, 13); doc.setFontSize(9.5); doc.setFont(undefined, 'bold');
+      doc.text('Projeto com as seções marcadas (verticais tracejadas)', 12, y + 3);
+      y += 5;
+      try { doc.addImage(imgProjeto, 'JPEG', 12 + (larguraMax - larguraMm) / 2, y, larguraMm, alturaMm, undefined, 'FAST'); y += alturaMm + 7; } catch (e) {}
+    }
+
+    // Snapshots 3D (horizontal e vertical, se tiverem seções com 2+ pontos)
+    for (const dir of ['horizontal', 'vertical']) {
+      const lista = (secoes[dir] || []).filter(s => (s.cotas || []).length >= 2);
+      if (!lista.length) continue;
+      try {
+        if (typeof THREE === 'undefined') await _ls('https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js');
+        const snap = _snapshot3D(lista, 1100, 620);
+        const larguraMm = PW - 24, alturaMm = larguraMm * (620 / 1100);
+        if (y + alturaMm > 275) { doc.addPage(); y = 14; }
+        doc.setTextColor(13, 13, 13); doc.setFontSize(9.5); doc.setFont(undefined, 'bold');
+        doc.text(`Corte de terra em 3D — seções ${dir === 'horizontal' ? 'horizontais' : 'verticais'} (verde = raso · vermelho = fundo · laranja = cota de referência)`, 12, y + 3);
+        y += 5;
+        doc.addImage(snap, 'JPEG', 12, y, larguraMm, alturaMm, undefined, 'FAST');
+        y += alturaMm + 7;
+      } catch (e) { console.error('snapshot 3D falhou', e); }
+    }
+
+    // Tabelas de seções (uma por direção)
+    for (const dir of ['horizontal', 'vertical']) {
+      const lista = secoesComVolume(secoes[dir] || []);
+      if (!lista.length) continue;
+      const volDir = TC.calcVolumeTotalSecoes(secoes[dir] || []);
+      if (y > 230) { doc.addPage(); y = 14; }
+      doc.setTextColor(13, 13, 13); doc.setFontSize(9.5); doc.setFont(undefined, 'bold');
+      doc.text(`Seções ${dir === 'horizontal' ? 'horizontais' : 'verticais'} — volume total ${TC.fmt1(volDir)} m³`, 12, y + 3);
+      doc.autoTable({
+        startY: y + 5,
+        head: [['Seção', 'Área (m²)', 'Comprimento (m)', 'Dist. próxima (m)', 'Vol. entre (m³)']],
+        body: lista.map((s, i) => [
+          String(s.numero ?? i + 1), TC.fmt2(s.area), TC.fmt1(TC.calcComprimentoSecao(s.distanciasCotas || [])),
+          i < lista.length - 1 ? TC.fmt1(s.distanciaProxima) : '—',
+          i < lista.length - 1 ? TC.fmt1(s.volEntre) : '—',
+        ]),
+        margin: { left: 12, right: 12 },
+        styles: { fontSize: 8, cellPadding: 1.8 },
+        headStyles: { fillColor: [245, 200, 0], textColor: [13, 13, 13], fontStyle: 'bold' },
+        alternateRowStyles: { fillColor: [250, 250, 250] },
+        columnStyles: { 1: { halign: 'right' }, 2: { halign: 'right' }, 3: { halign: 'right' }, 4: { halign: 'right', fontStyle: 'bold' } },
+      });
+      y = doc.lastAutoTable.finalY + 8;
+    }
+
+    return doc.output('blob');
+  }
+
+  function _nomeArquivoLev() {
+    const nomeObra = (Router.getObra()?.nome || 'obra').replace(/[^a-z0-9]/gi, '_');
+    return `Levantamento_Terraplanagem_${nomeObra}_${new Date().toISOString().slice(0, 10)}.pdf`;
+  }
+
+  async function baixarLevantamentoPDF() {
+    Utils.mostrarLoading('Gerando PDF do levantamento...');
+    try {
+      if (config.temImagemProjeto && !imagemProjetoCache) await _garantirImagemProjetoCarregada();
+      const blob = await _gerarLevantamentoPdfBlob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = _nomeArquivoLev();
+      document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(url);
+      Utils.toast('✓ PDF gerado!', 'sucesso');
+    } catch (e) {
+      console.error(e);
+      Utils.toast('Erro ao gerar PDF: ' + e.message, 'erro');
+    } finally {
+      Utils.esconderLoading();
+    }
+  }
+
+  async function compartilharLevantamentoPDF() {
+    Utils.mostrarLoading('Preparando PDF pra compartilhar...');
+    try {
+      if (config.temImagemProjeto && !imagemProjetoCache) await _garantirImagemProjetoCarregada();
+      const blob = await _gerarLevantamentoPdfBlob();
+      const nome = _nomeArquivoLev();
+      const k = kpisGerais();
+      let compartilhado = false;
+      try {
+        const file = new File([blob], nome, { type: 'application/pdf' });
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          Utils.esconderLoading();
+          await navigator.share({
+            files: [file], title: 'Levantamento de Terraplanagem',
+            text: `📐 Levantamento de Terraplanagem — ${Router.getObra()?.nome || ''}\nVolume a remover: ${TC.fmt1(k.volEmpolado)} m³ (empolamento ${TC.fmt1(config.taxaEmpolamento * 100)}%)`,
+          });
+          compartilhado = true;
+        }
+      } catch (eShare) {
+        if (eShare.name === 'AbortError') { Utils.esconderLoading(); return; }
+      }
+      if (!compartilhado) {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = nome;
+        document.body.appendChild(a); a.click(); a.remove();
+        URL.revokeObjectURL(url);
+        Utils.toast('Esse navegador não compartilha arquivo direto — o PDF foi baixado, é só anexar no WhatsApp.', 'info');
+      }
+    } catch (e) {
+      console.error(e);
+      Utils.toast('Erro ao gerar PDF: ' + e.message, 'erro');
+    } finally {
+      Utils.esconderLoading();
+    }
+  }
+
   return {
     init, recarregar, renderizar,
     setSecDir, setModoLevantamento, secAdd, secRemover, secToggle,
@@ -946,6 +1199,7 @@ const LevantamentoTerraplanagem = (() => {
     abrirConfig, salvarConfigBtn, aplicarPresetEmpolamento,
     abrirCaminhoes, salvarCaminhao, excluirCaminhao,
     abrir3D, fechar3D, limparBase,
+    baixarLevantamentoPDF, compartilharLevantamentoPDF,
   };
 })();
 
