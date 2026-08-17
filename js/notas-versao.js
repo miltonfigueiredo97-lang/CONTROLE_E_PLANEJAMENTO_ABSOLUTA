@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.8.2',
+  versaoAtual: 'V3.8.2.1',
 
   versoes: [
     {
@@ -8068,6 +8068,16 @@ const NotasVersao = {
         "Ao concluir uma área agora pergunta a convenção: Profundidade (nº maior = mais embaixo) ou Elevação (nº maior = mais alto, padrão). Dá pra trocar depois também, direto na tabela de áreas (botão ⬇️ Profundidade / ⬆️ Elevação).",
         "A escolha afeta tudo: cálculo de área/volume da seção, cores do 3D (verde=raso/vermelho=fundo) e do perfil lateral em \"Ver Seções\", e a posição visual — sempre respeitando o que você digitou (os números mostrados na tela continuam exatamente os que você marcou, só a lógica interna de qual é \"mais alto\"/\"mais baixo\" muda).",
         "Testado com o exemplo real (cota final 7,18 profundidade, terreno marcado 4,9): sem a correção dava -9,12 m², com \"Profundidade\" marcado dá +9,12 m² — confere com o esperado (2,28m de altura de escavação × 4m de largura)."
+      ]
+    },
+    {
+      "versao": "V3.8.2.1",
+      "data": "2026-08-16",
+      "tipo": "melhoria",
+      "titulo": "Área: separa \"Caixa\" (bounding box) de \"Área Real\" — deixa claro que não é a mesma coisa",
+      "itens": [
+        "A coluna \"Dimensões (m)\" mostrava largura × altura da CAIXA que envolve o polígono da área — não o formato real dela. Se a área desenhada é irregular (L, T, etc.), a caixa sempre parece maior do que a área de verdade, o que confundia (ex: área com formato de L pequeno mostrando uma caixa de 52m).",
+        "Agora a tabela mostra as duas coisas separadas: \"Caixa (m)\" (só referência, largura × altura do retângulo envolvente) e \"Área Real (m²)\" (o tamanho de verdade do polígono desenhado, calculado certo mesmo pra formatos irregulares)."
       ]
     }
   ],

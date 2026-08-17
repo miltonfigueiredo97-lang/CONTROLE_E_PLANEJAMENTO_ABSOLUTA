@@ -332,12 +332,13 @@ const LevantamentoTerraplanagem = (() => {
         ${areas.length ? `
         <div class="cc-tableWrap" style="margin-top:8px;">
           <table class="cc-table">
-            <thead><tr><th></th><th>Área</th><th class="col-num">Dimensões (m)</th><th class="col-num">Cota Final</th><th>Convenção</th><th class="col-num">Pontos de Cota</th><th class="col-acoes"></th></tr></thead>
+            <thead><tr><th></th><th>Área</th><th class="col-num">Caixa (m)</th><th class="col-num">Área Real (m²)</th><th class="col-num">Cota Final</th><th>Convenção</th><th class="col-num">Pontos de Cota</th><th class="col-acoes"></th></tr></thead>
             <tbody>
               ${areas.map((a, ai) => { const dim = _dimensoesArea(a); return `<tr>
                 <td><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:${_corSecao(ai)};"></span></td>
                 <td>Área ${ai + 1}</td>
-                <td class="col-num cc-tdMono">${TC.fmt1(dim.largura)} × ${TC.fmt1(dim.altura)}</td>
+                <td class="col-num cc-tdMono" style="color:var(--cv-text3);">${TC.fmt1(dim.largura)} × ${TC.fmt1(dim.altura)}</td>
+                <td class="col-num cc-tdMono" style="font-weight:700;">${TC.fmt1(dim.areaReal)}</td>
                 <td class="col-num"><input type="text" inputmode="decimal" class="form-control" style="width:90px;display:inline-block;" value="${esc(a.cotaFinal)}" onchange="TP_UI.atualizarCotaArea('${a.id}', this.value)"></td>
                 <td><button class="btn btn-secundario btn-sm" onclick="TP_UI.alternarConvencaoArea('${a.id}')" title="Clique pra trocar">${a.convencao === 'profundidade' ? '⬇️ Profundidade' : '⬆️ Elevação'}</button></td>
                 <td class="col-num cc-tdMono">${pontosCota.filter(p => p.areaId === a.id).length}</td>
@@ -346,7 +347,7 @@ const LevantamentoTerraplanagem = (() => {
             </tbody>
           </table>
         </div>
-        <p class="text-sm text-muted mt-1">⚠️ As dimensões acima são a largura/altura REAL da área desenhada (calculadas pela escala). Se o prédio inteiro mede, por exemplo, 52m e sua área aparece com menos que isso, é porque o desenho da área não cobriu o prédio todo (redesenhe maior) — ou a escala foi calibrada errado (confira "🔁 Recalibrar" usando uma medida já impressa na planta, se tiver). "Convenção" define se a cota final é a MAIS BAIXA (⬆️ elevação, padrão topografia) ou a MAIS FUNDA/número maior (⬇️ profundidade, ex: térreo = 0 e vai aumentando pra baixo) — clique no botão pra trocar se a área saiu com volume negativo por engano de convenção.</p>` : ''}
+        <p class="text-sm text-muted mt-1">"Caixa (m)" é largura × altura do RETÂNGULO que envolve a área desenhada, não o formato dela — se a área não é um retângulo (ex: L, T), a caixa é sempre maior que a área real. "Área Real (m²)" é o tamanho de verdade do polígono que você desenhou. Se o prédio inteiro mede, por exemplo, 52m de largura e sua caixa aparece com menos que isso, é porque o desenho não cobriu o prédio todo (redesenhe maior) — ou a escala foi calibrada errado (confira "🔁 Recalibrar" usando uma medida já impressa na planta, se tiver). "Convenção" define se a cota final é a MAIS BAIXA (⬆️ elevação, padrão topografia) ou a MAIS FUNDA/número maior (⬇️ profundidade, ex: térreo = 0 e vai aumentando pra baixo).</p>` : ''}
       </div>
     `;
   }
@@ -407,7 +408,18 @@ const LevantamentoTerraplanagem = (() => {
   function _dimensoesArea(area) {
     const m = area.pontos.map(_paraMetros);
     const xs = m.map(p => p.x), ys = m.map(p => p.y);
-    return { largura: Math.max(...xs) - Math.min(...xs), altura: Math.max(...ys) - Math.min(...ys) };
+    return { largura: Math.max(...xs) - Math.min(...xs), altura: Math.max(...ys) - Math.min(...ys), areaReal: _areaPoligono(m) };
+  }
+  // Área real do polígono (fórmula de Shoelace) — diferente da caixa (largura
+  // × altura) quando a área não é um retângulo (ex: formato L, T, etc.)
+  function _areaPoligono(pontosMetros) {
+    let area = 0;
+    const n = pontosMetros.length;
+    for (let i = 0; i < n; i++) {
+      const j = (i + 1) % n;
+      area += pontosMetros[i].x * pontosMetros[j].y - pontosMetros[j].x * pontosMetros[i].y;
+    }
+    return Math.abs(area) / 2;
   }
   async function concluirArea() {
     if (!areaEmDesenho || areaEmDesenho.pontos.length < 3) { Utils.toast('Marque pelo menos 3 pontos pra formar a área.', 'alerta'); return; }
@@ -427,7 +439,7 @@ const LevantamentoTerraplanagem = (() => {
     Utils.mostrarLoading();
     try {
       await salvarConfig();
-      Utils.toast(`✓ Área criada (${profundidade ? 'profundidade' : 'elevação'})! Dimensões reais: ${TC.fmt1(dim.largura)}m × ${TC.fmt1(dim.altura)}m — confira se bate com o que você esperava.`, 'sucesso');
+      Utils.toast(`✓ Área criada (${profundidade ? 'profundidade' : 'elevação'})! Caixa: ${TC.fmt1(dim.largura)}m × ${TC.fmt1(dim.altura)}m · Área real: ${TC.fmt1(dim.areaReal)} m² — confira se bate com o que você esperava.`, 'sucesso');
     } finally { Utils.esconderLoading(); }
     renderSecoes();
   }
