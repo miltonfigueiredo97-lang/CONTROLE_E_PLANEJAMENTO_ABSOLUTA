@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.7.1.9',
+  versaoAtual: 'V3.7.1.10',
 
   versoes: [
     {
@@ -7985,6 +7985,18 @@ const NotasVersao = {
         "Causa raiz real do bug que parecia insistir: era possível criar 2 BTs (documentos diferentes no banco) com o MESMO número — ambas apareciam como \"BT-1\" no seletor, e por serem documentos DIFERENTES, o bloqueio de duplicidade (que comparava só pelo ID interno) não pegava.",
         "Corrigido em 2 pontos: criar uma BT nova ou editar o número de uma já existente agora é bloqueado se o número já pertencer a outra BT da mesma concretagem. Além disso, o seletor de BT do popup de lançar por estaca agora compara também por NÚMERO (não só por ID) — protege contra o dado antigo que já ficou duplicado.",
         "Na tela \"Gerenciar BTs\", números repetidos entre documentos diferentes agora aparecem destacados em vermelho com um aviso — ajuda a achar e limpar manualmente o que já foi criado errado antes desta correção (os lançamentos da BT duplicada precisam ser conferidos e refeitos na BT certa antes de excluir a errada)."
+      ]
+    },
+    {
+      "versao": "V3.7.1.10",
+      "data": "2026-08-15",
+      "tipo": "melhoria",
+      "titulo": "Relatório PDF de Terraplanagem: acumulados em todas as tabelas",
+      "itens": [
+        "Volume por dia: novas colunas Vol. Acumulado (m³) e % Acumulada (do total do período), mantendo Custo e R$ Acumulado — dá pra ver a evolução linha a linha.",
+        "Viagens do período: novas colunas % Acumulada (do volume) e R$ Acumulado por viagem, além do valor de cada uma — a última linha fecha em 100% e no total gasto.",
+        "Volume por material: além do % do volume, agora mostra também o % do custo de cada material (terra × entulho consomem fatias diferentes do dinheiro).",
+        "Volume por caminhão: nova coluna % do volume total."
       ]
     }
   ],

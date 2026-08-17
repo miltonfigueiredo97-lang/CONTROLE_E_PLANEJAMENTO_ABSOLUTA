@@ -911,34 +911,42 @@ const ControleTerraplanagem = (() => {
     doc.text('Volume por material', 12, y + 3);
     doc.autoTable({
       startY: y + 5,
-      head: [['Material', 'Classificação', 'Viagens', 'Volume (m³)', 'Custo (R$)', '% do total']],
+      head: [['Material', 'Classificação', 'Viagens', 'Volume (m³)', '% do vol.', 'Custo (R$)', '% do custo']],
       body: r.porMaterial.map(g => [
         g.material,
         g.material === 'TERRA' ? 'Terraplanagem' : g.material === 'ENTULHO' ? 'Demolição (fora da terraplanagem)' : 'Fora da terraplanagem',
-        String(g.viagens), TC.fmt1(g.volume), _fRS(g.custo),
+        String(g.viagens), TC.fmt1(g.volume),
         r.totalVolume > 0 ? TC.fmt1((g.volume / r.totalVolume) * 100) + '%' : '—',
+        _fRS(g.custo),
+        r.totalCusto > 0 ? TC.fmt1((g.custo / r.totalCusto) * 100) + '%' : '—',
       ]),
       margin: { left: 12, right: 12 },
       styles: { fontSize: 8, cellPadding: 1.8 },
       headStyles: { fillColor: [13, 13, 13], textColor: [245, 200, 0], fontStyle: 'bold' },
       alternateRowStyles: { fillColor: [250, 250, 250] },
-      columnStyles: { 2: { halign: 'center' }, 3: { halign: 'right' }, 4: { halign: 'right', fontStyle: 'bold' }, 5: { halign: 'right' } },
+      columnStyles: { 2: { halign: 'center' }, 3: { halign: 'right' }, 4: { halign: 'right' }, 5: { halign: 'right', fontStyle: 'bold' }, 6: { halign: 'right' } },
     });
     y = doc.lastAutoTable.finalY + 8;
 
-    // Tabela por dia
+    // Tabela por dia (com acumulados de volume, custo e %)
     if (y > 235) { doc.addPage(); y = 14; }
     doc.setTextColor(13, 13, 13); doc.setFontSize(9.5); doc.setFont(undefined, 'bold');
     doc.text('Volume por dia (detalhado)', 12, y + 3);
+    let _volAccDia = 0;
     doc.autoTable({
       startY: y + 5,
-      head: [['Data', 'Viagens', 'Volume (m³)', 'Custo (R$)', 'R$ Acumulado', '% do total']],
-      body: r.dias.map(d => [_fBR(d.data), String(d.viagens), TC.fmt1(d.volume), _fRS(d.custo), _fRS(d.custoAcum), r.totalVolume > 0 ? TC.fmt1((d.volume / r.totalVolume) * 100) + '%' : '—']),
+      head: [['Data', 'Viagens', 'Volume (m³)', 'Vol. Acum. (m³)', '% Acum.', 'Custo (R$)', 'R$ Acumulado']],
+      body: r.dias.map(d => {
+        _volAccDia += d.volume;
+        return [_fBR(d.data), String(d.viagens), TC.fmt1(d.volume), TC.fmt1(_volAccDia),
+          r.totalVolume > 0 ? TC.fmt1((_volAccDia / r.totalVolume) * 100) + '%' : '—',
+          _fRS(d.custo), _fRS(d.custoAcum)];
+      }),
       margin: { left: 12, right: 12 },
       styles: { fontSize: 8, cellPadding: 1.8 },
       headStyles: { fillColor: [245, 200, 0], textColor: [13, 13, 13], fontStyle: 'bold' },
       alternateRowStyles: { fillColor: [250, 250, 250] },
-      columnStyles: { 1: { halign: 'center' }, 2: { halign: 'right' }, 3: { halign: 'right' }, 4: { halign: 'right', fontStyle: 'bold' }, 5: { halign: 'right' } },
+      columnStyles: { 1: { halign: 'center' }, 2: { halign: 'right' }, 3: { halign: 'right' }, 4: { halign: 'right', fontStyle: 'bold' }, 5: { halign: 'right' }, 6: { halign: 'right', fontStyle: 'bold' } },
     });
     y = doc.lastAutoTable.finalY + 8;
 
@@ -946,17 +954,24 @@ const ControleTerraplanagem = (() => {
     if (y > 225) { doc.addPage(); y = 14; }
     doc.setTextColor(13, 13, 13); doc.setFontSize(9.5); doc.setFont(undefined, 'bold');
     doc.text(`Viagens do período (${r.lista.length})`, 12, y + 3);
+    let _volAccV = 0, _custoAccV = 0;
     doc.autoTable({
       startY: y + 5,
-      head: [['Canhoto', 'Data', 'Placa', 'Material', 'Volume (m³)', 'Valor (R$)']],
-      body: r.lista.map(e => [e.nCanhoto || '—', _fBR(e.data), e.placa || '—', e.material || '—', TC.fmt1(e.volume), _fRS(_valorViagem(e))]),
-      foot: [[{ content: 'TOTAL', colSpan: 4, styles: { fontStyle: 'bold', halign: 'right' } }, { content: TC.fmt1(r.totalVolume), styles: { fontStyle: 'bold', halign: 'right' } }, { content: _fRS(r.totalCusto), styles: { fontStyle: 'bold', halign: 'right' } }]],
+      head: [['Canhoto', 'Data', 'Placa', 'Material', 'Volume (m³)', '% Acum.', 'Valor (R$)', 'R$ Acumulado']],
+      body: r.lista.map(e => {
+        _volAccV += TC.num(e.volume);
+        _custoAccV += _valorViagem(e);
+        return [e.nCanhoto || '—', _fBR(e.data), e.placa || '—', e.material || '—', TC.fmt1(e.volume),
+          r.totalVolume > 0 ? TC.fmt1((_volAccV / r.totalVolume) * 100) + '%' : '—',
+          _fRS(_valorViagem(e)), _fRS(_custoAccV)];
+      }),
+      foot: [[{ content: 'TOTAL', colSpan: 4, styles: { fontStyle: 'bold', halign: 'right' } }, { content: TC.fmt1(r.totalVolume), styles: { fontStyle: 'bold', halign: 'right' } }, { content: '100%', styles: { fontStyle: 'bold', halign: 'right' } }, { content: _fRS(r.totalCusto), styles: { fontStyle: 'bold', halign: 'right' } }, { content: '', styles: {} }]],
       margin: { left: 12, right: 12 },
       styles: { fontSize: 7, cellPadding: 1.3 },
       headStyles: { fillColor: [245, 200, 0], textColor: [13, 13, 13], fontStyle: 'bold' },
       footStyles: { fillColor: [255, 252, 240], textColor: [13, 13, 13] },
       alternateRowStyles: { fillColor: [250, 250, 250] },
-      columnStyles: { 4: { halign: 'right' }, 5: { halign: 'right', fontStyle: 'bold' } },
+      columnStyles: { 4: { halign: 'right' }, 5: { halign: 'right', fontStyle: 'bold' }, 6: { halign: 'right' }, 7: { halign: 'right', fontStyle: 'bold' } },
     });
     y = doc.lastAutoTable.finalY + 8;
 
@@ -966,16 +981,18 @@ const ControleTerraplanagem = (() => {
     doc.text('Volume por caminhão', 12, y + 3);
     doc.autoTable({
       startY: y + 5,
-      head: [['Placa', 'Empresa', 'Viagens', 'Volume Total (m³)', 'Custo (R$)', 'Média/Viagem (m³)']],
+      head: [['Placa', 'Empresa', 'Viagens', 'Volume Total (m³)', '% do vol.', 'Custo (R$)', 'Média/Viagem (m³)']],
       body: r.caminhoesList.map(c => {
         const cam = caminhoes.find(x => x.placa === c.placa);
-        return [c.placa, cam?.empresa || '—', String(c.viagens), TC.fmt1(c.volume), _fRS(c.custo), TC.fmt1(c.volume / c.viagens)];
+        return [c.placa, cam?.empresa || '—', String(c.viagens), TC.fmt1(c.volume),
+          r.totalVolume > 0 ? TC.fmt1((c.volume / r.totalVolume) * 100) + '%' : '—',
+          _fRS(c.custo), TC.fmt1(c.volume / c.viagens)];
       }),
       margin: { left: 12, right: 12 },
       styles: { fontSize: 8, cellPadding: 1.8 },
       headStyles: { fillColor: [13, 13, 13], textColor: [245, 200, 0], fontStyle: 'bold' },
       alternateRowStyles: { fillColor: [250, 250, 250] },
-      columnStyles: { 2: { halign: 'center' }, 3: { halign: 'right' }, 4: { halign: 'right', fontStyle: 'bold' }, 5: { halign: 'right' } },
+      columnStyles: { 2: { halign: 'center' }, 3: { halign: 'right' }, 4: { halign: 'right' }, 5: { halign: 'right', fontStyle: 'bold' }, 6: { halign: 'right' } },
     });
 
     return doc.output('blob');
