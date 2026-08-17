@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.7.1.11',
+  versaoAtual: 'V3.8.0',
 
   versoes: [
     {
@@ -8008,6 +8008,19 @@ const NotasVersao = {
         "Ao digitar o material no registro manual, o campo \"Valor da viagem (R$)\" já se preenche sozinho com o padrão daquele material (terra puxa o valor de terra, entulho o de entulho — definidos em 💰 Valores), com a indicação \"padrão de terra — pode alterar\".",
         "O campo continua totalmente editável: normalmente é o mesmo valor, mas cada viagem pode ter o seu — assim que você mexe no valor à mão, o preenchimento automático para de sobrescrever o que você digitou.",
         "Com o valor agora gravado explicitamente em cada viagem manual, mudar o padrão depois NÃO altera as viagens já registradas manualmente (só as importadas por planilha, que continuam usando o padrão do material)."
+      ]
+    },
+    {
+      "versao": "V3.8.0",
+      "data": "2026-08-15",
+      "tipo": "correcao",
+      "titulo": "Levantamento de Terraplanagem: sistema de cálculo reescrito — áreas + cotas + grade automática de 1,5m",
+      "itens": [
+        "O modo \"🖼️ Marcar no Projeto\" estava errado (marcava ponto por ponto dentro de uma seção escolhida à mão) — reescrito do zero pro jeito certo: 1) desenha uma ou mais Áreas (polígono) no projeto e define a Cota Final de cada uma; 2) marca pontos de Cota Superior (a cota do terreno) dentro das áreas; 3) clica em \"▦ Gerar Seções\" e o sistema divide cada área numa grade de linhas horizontais e verticais de 1,5 em 1,5 metro, interpola a cota do terreno em cada linha a partir dos pontos marcados, calcula a área de cada linha (cota superior − cota final ao longo da seção) e o volume entre seções vizinhas — mesma fórmula de sempre: (área 1 + área 2)/2 × distância.",
+        "Volume final = média entre a soma das seções horizontais e a soma das verticais — os dois métodos calculados de forma independente, como pedido, e não mais misturados.",
+        "Pode ter mais de uma área (ex: dois blocos diferentes da obra, cada um com sua própria cota final) — cada área aparece com uma cor própria no projeto, e a lista embaixo mostra/permite editar a cota final e remover.",
+        "Tipos de caminhão deixaram de ser fixos (só Grande/Pequeno) — em ⚙️ Config agora dá pra cadastrar quantos tipos precisar, cada um com nome e capacidade próprios (ex: \"Barra Azul\").",
+        "Seções geradas pela grade continuam 100% editáveis como texto (cotas, distâncias, cota final) — se precisar corrigir um ponto específico depois de gerar, é só abrir a seção e ajustar direto."
       ]
     }
   ],

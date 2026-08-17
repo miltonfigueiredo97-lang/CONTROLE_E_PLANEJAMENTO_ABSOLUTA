@@ -27,8 +27,10 @@ const LevantamentoTerraplanagem = (() => {
   let caminhoes = [];
   let config = {
     taxaEmpolamento: 0.3, capacidadeGrande: 15.6, capacidadePequena: 10, cotaReferencia: '',
+    tiposCaminhao: [{ nome: 'Grande', capacidade: 15.6 }, { nome: 'Pequeno', capacidade: 10 }],
     modoLevantamento: 'manual', // 'manual' | 'pontos'
     temImagemProjeto: false, imgW: 0, imgH: 0, escalaPxPorMetro: 0,
+    areas: [], pontosCota: [], // modo "Marcar no Projeto": áreas (polígono + cota final) + pontos de cota superior dentro delas
   };
   let secoes = { horizontal: [], vertical: [] };
 
@@ -42,6 +44,8 @@ const LevantamentoTerraplanagem = (() => {
   let calibrando = false;      // aguardando os 2 cliques de calibração
   let calibPontoTemp = null;   // 1º ponto clicado da calibração, aguardando o 2º
   let pdfjsCarregado = false;
+  let ferramenta = null;       // null | 'area' | 'cota' — ferramenta ativa no projeto
+  let areaEmDesenho = null;    // { pontos: [] } enquanto uma área nova está sendo clicada
 
   function _corSecao(i) { return PALETA_SECOES[i % PALETA_SECOES.length]; }
 
@@ -83,6 +87,9 @@ const LevantamentoTerraplanagem = (() => {
       const doc = await db.collection('obras').doc(obraId).collection('config').doc(DOC_CONFIG).get();
       if (doc.exists) config = { ...config, ...doc.data() };
     } catch (e) { /* mantém default */ }
+    if (!Array.isArray(config.tiposCaminhao) || !config.tiposCaminhao.length) {
+      config.tiposCaminhao = [{ nome: 'Grande', capacidade: TC.num(config.capacidadeGrande) || 15.6 }, { nome: 'Pequeno', capacidade: TC.num(config.capacidadePequena) || 10 }];
+    }
   }
   async function carregarSecoes() {
     try {
@@ -92,15 +99,9 @@ const LevantamentoTerraplanagem = (() => {
         secoes = { horizontal: d.horizontal || [], vertical: d.vertical || [] };
       }
     } catch (e) { /* mantém default */ }
-    // Compatibilidade: preenche id/pontos que faltarem; remove campos de imagem
-    // por-seção de uma versão anterior (a imagem agora é única, em config).
+    // Compatibilidade: garante id nas seções carregadas
     ['horizontal', 'vertical'].forEach(dir => {
-      (secoes[dir] || []).forEach(s => {
-        if (!s.id) s.id = TC.genId('sec');
-        if (!s.pontos) s.pontos = [];
-        if (s.cotaFinalOverride == null) s.cotaFinalOverride = '';
-        delete s.modo; delete s.temImagem; delete s.imgW; delete s.imgH; delete s.escalaPxPorMetro;
-      });
+      (secoes[dir] || []).forEach(s => { if (!s.id) s.id = TC.genId('sec'); });
     });
   }
   async function salvarConfig() {
@@ -148,20 +149,7 @@ const LevantamentoTerraplanagem = (() => {
       s.area = TC.num(s.areaManual);
       return;
     }
-    if (config.modoLevantamento === 'pontos') {
-      const cotaFinal = (s.cotaFinalOverride !== '' && s.cotaFinalOverride != null)
-        ? TC.num(s.cotaFinalOverride) : TC.num(config.cotaReferencia);
-      const pontos = s.pontos || [];
-      const cotas = pontos.map(p => p.cota);
-      const distancias = [];
-      for (let k = 0; k < pontos.length - 1; k++) {
-        distancias.push(TC.distanciaMetros(pontos[k], pontos[k + 1], config.imgW, config.imgH, config.escalaPxPorMetro));
-      }
-      s.cotas = cotas; s.distanciasCotas = distancias; s.cotaFinal = cotaFinal;
-      s.area = TC.calcAreaSecao(cotas, cotaFinal, distancias);
-    } else {
-      s.area = TC.calcAreaSecao(s.cotas || [], s.cotaFinal || 0, s.distanciasCotas || []);
-    }
+    s.area = TC.calcAreaSecao(s.cotas || [], s.cotaFinal || 0, s.distanciasCotas || []);
   }
   function _recalcTudo() {
     (secoes.horizontal || []).forEach(recalcArea);
@@ -234,7 +222,7 @@ const LevantamentoTerraplanagem = (() => {
         <button class="aba-btn ${!modoPontos ? 'ativo' : ''}" onclick="TP_UI.setModoLevantamento('manual')">✍️ Digitar Manualmente</button>
         <button class="aba-btn ${modoPontos ? 'ativo' : ''}" onclick="TP_UI.setModoLevantamento('pontos')">🖼️ Marcar no Projeto</button>
       </div>
-      ${modoPontos ? _painelProjetoHTML(lista) : ''}
+      ${modoPontos ? _painelProjetoHTML() : ''}
       <div class="aba-toggle" style="margin-bottom:14px;">
         <button class="aba-btn ${secDir === 'horizontal' ? 'ativo' : ''}" onclick="TP_UI.setSecDir('horizontal')">Seções Horizontais</button>
         <button class="aba-btn ${secDir === 'vertical' ? 'ativo' : ''}" onclick="TP_UI.setSecDir('vertical')">Seções Verticais</button>
@@ -246,11 +234,10 @@ const LevantamentoTerraplanagem = (() => {
           <button class="btn btn-secundario btn-sm" onclick="TP_UI.secAdd()">+ Nova Seção</button>
         </div>
       </div>
-      ${!lista.length ? `<div class="cc-empty">Nenhuma seção cadastrada. Clique em "+ Nova Seção" para começar.</div>` :
+      ${!lista.length ? `<div class="cc-empty">Nenhuma seção cadastrada. ${modoPontos ? 'Desenhe áreas, marque cotas e clique em "▦ Gerar Seções" acima, ou' : 'Clique em'} "+ Nova Seção" pra criar manualmente.</div>` :
       lista.map((s, i) => `
-        <div style="border:1px solid var(--cv-border);margin-bottom:8px;${modoPontos && secAberta === i ? 'box-shadow:0 0 0 2px ' + _corSecao(i) + ';' : ''}">
+        <div style="border:1px solid var(--cv-border);margin-bottom:8px;">
           <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--cv-surface2);cursor:pointer;" onclick="TP_UI.secToggle(${i})">
-            ${modoPontos ? `<span style="width:11px;height:11px;border-radius:50%;background:${_corSecao(i)};flex-shrink:0;"></span>` : ''}
             <span style="font-weight:700;font-size:0.85rem;color:var(--cv-accent3);min-width:70px;">Seção ${s.numero ?? i + 1}</span>
             <span style="font-family:var(--cv-mono);font-size:0.78rem;color:var(--cv-text2);">Área: ${TC.fmt2(s.area)} m²</span>
             ${i < lista.length - 1 ? `<span style="font-family:var(--cv-mono);font-size:0.78rem;color:var(--cv-text2);">Dist. próxima: ${TC.fmt1(s.distanciaProxima)} m</span>
@@ -264,7 +251,7 @@ const LevantamentoTerraplanagem = (() => {
               <div class="form-grupo"><label>Nº da Seção</label><input type="text" class="form-control" value="${esc(s.numero ?? i + 1)}" oninput="TP_UI.secUpd(${i}, 'numero', this.value)"></div>
               <div class="form-grupo"><label>Distância até a próxima seção (m)</label><input type="text" inputmode="decimal" class="form-control" value="${esc(s.distanciaProxima ?? '')}" placeholder="15" oninput="TP_UI.secUpd(${i}, 'distanciaProxima', this.value)"></div>
             </div>
-            ${modoPontos ? _painelPontosSecaoHTML(i, s) : _painelManualHTML(i, s)}
+            ${_painelManualHTML(i, s)}
             <div style="font-family:var(--cv-mono);font-size:0.8rem;color:var(--cv-text2);margin-top:8px;">Área calculada: <b style="color:var(--cv-accent3);">${TC.fmt2(s.area)} m²</b> · Comprimento: <b>${TC.fmt1(TC.calcComprimentoSecao(s.distanciasCotas || []))} m</b></div>
             <p class="text-sm text-muted mt-1">Se preferir, pode digitar a área diretamente:</p>
             <div class="form-grupo"><label>Área manual (m²) — sobrepõe qualquer cálculo acima</label><input type="text" inputmode="decimal" class="form-control" value="${esc(s.areaManual ?? '')}" placeholder="deixe em branco para usar o cálculo acima" oninput="TP_UI.secUpdAreaManual(${i}, this.value)"></div>
@@ -288,8 +275,13 @@ const LevantamentoTerraplanagem = (() => {
   }
 
   // ── Painel do PROJETO ÚNICO (compartilhado por todas as seções) ──
-  // Aparece uma vez, acima da lista de seções, quando o modo é "pontos".
-  function _painelProjetoHTML(lista) {
+  // Fluxo: 1) desenha uma ou mais Áreas (polígono + cota final) — 2) marca
+  // pontos de Cota Superior dentro delas — 3) "Gerar Seções" divide cada
+  // área em linhas horizontais e verticais de 1,5 em 1,5m, interpola a cota
+  // em cada linha a partir dos pontos marcados e calcula área/volume —
+  // mesmo motor de cálculo das seções manuais (área = (cota_i+cota_i+1)/2
+  // − cotaFinal × distância, volume entre seções = média das áreas × 1,5m).
+  function _painelProjetoHTML() {
     if (!config.temImagemProjeto) {
       return `<div style="border:1px dashed var(--cv-border);border-radius:8px;padding:16px;margin-bottom:14px;text-align:center;">
         <div class="cc-empty" style="margin-bottom:10px;">Nenhum projeto (planta/imagem) inserido ainda — é um projeto só, compartilhado por todas as seções.</div>
@@ -300,6 +292,8 @@ const LevantamentoTerraplanagem = (() => {
       return `<div class="cc-empty" style="margin-bottom:14px;">⏳ Carregando projeto...</div>`;
     }
     const calibrado = config.escalaPxPorMetro > 0;
+    const areas = config.areas || [];
+    const pontosCota = config.pontosCota || [];
     return `
       <div style="border:1px solid var(--cv-border);border-radius:8px;padding:12px;margin-bottom:14px;background:var(--cv-surface2);">
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px;">
@@ -309,58 +303,49 @@ const LevantamentoTerraplanagem = (() => {
                <button class="btn btn-secundario btn-sm" onclick="TP_UI.calibrarProjeto()">🔁 Recalibrar</button>`}
           <button class="btn btn-secundario btn-sm" onclick="TP_UI.escolherImagemProjeto()">🖼️ Trocar Projeto</button>
         </div>
-        <div style="margin-bottom:8px;font-family:var(--cv-mono);font-size:.78rem;">
-          ${secAberta !== null
-            ? `<span>🎯 Marcando pontos em: <b style="color:${_corSecao(secAberta)};">Seção ${lista[secAberta]?.numero ?? secAberta + 1}</b> (${secDir})</span>`
-            : `<span style="color:var(--cv-text3);">⚠️ Abra (ou crie) uma seção na lista abaixo pra começar a marcar pontos nela.</span>`}
-        </div>
+        ${calibrado ? `
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px;">
+          <button class="btn ${ferramenta === 'area' ? 'btn-primario' : 'btn-secundario'} btn-sm" onclick="TP_UI.setFerramenta('area')">🔷 ${ferramenta === 'area' ? (areaEmDesenho ? `Área: ${areaEmDesenho.pontos.length} ponto${areaEmDesenho.pontos.length !== 1 ? 's' : ''} — clique nos cantos, depois "Concluir"` : 'Clique nos cantos da área...') : 'Nova Área'}</button>
+          ${ferramenta === 'area' && areaEmDesenho && areaEmDesenho.pontos.length >= 3 ? `<button class="btn btn-primario btn-sm" onclick="TP_UI.concluirArea()">✓ Concluir Área</button>` : ''}
+          ${ferramenta === 'area' ? `<button class="btn btn-secundario btn-sm" onclick="TP_UI.cancelarArea()">✕ Cancelar</button>` : ''}
+          <button class="btn ${ferramenta === 'cota' ? 'btn-primario' : 'btn-secundario'} btn-sm" onclick="TP_UI.setFerramenta('cota')" ${!areas.length ? 'disabled title="Desenhe uma área primeiro"' : ''}>📍 ${ferramenta === 'cota' ? 'Clique dentro de uma área pra marcar a cota...' : 'Marcar Cota'}</button>
+          <button class="btn btn-secundario btn-sm" onclick="TP_UI.gerarSecoes()" ${!areas.length || !pontosCota.length ? 'disabled title="Marque pontos de cota primeiro"' : ''}>▦ Gerar Seções (grade 1,5m)</button>
+        </div>` : ''}
         <div style="border:1px solid var(--cv-border);border-radius:6px;overflow:hidden;position:relative;max-width:100%;">
-          <img id="tp-img-projeto" src="${imagemProjetoCache}" style="width:100%;display:block;user-select:none;cursor:crosshair;" draggable="false">
+          <img id="tp-img-projeto" src="${imagemProjetoCache}" style="width:100%;display:block;user-select:none;cursor:${ferramenta ? 'crosshair' : 'default'};" draggable="false">
           ${calibPontoTemp ? `<div style="position:absolute;left:${(calibPontoTemp.x * 100).toFixed(3)}%;top:${(calibPontoTemp.y * 100).toFixed(3)}%;transform:translate(-50%,-50%);width:14px;height:14px;border-radius:50%;background:#ef4444;box-shadow:0 0 0 2px #fff;pointer-events:none;"></div>` : ''}
           <svg viewBox="0 0 100 100" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;">
-            ${lista.map((s, si) => (s.pontos || []).length >= 2 ? `<polyline points="${(s.pontos || []).map(p => `${(p.x * 100).toFixed(3)},${(p.y * 100).toFixed(3)}`).join(' ')}" fill="none" stroke="${_corSecao(si)}" stroke-width="0.3" vector-effect="non-scaling-stroke"/>` : '').join('')}
+            ${areas.map((a, ai) => `<polygon points="${a.pontos.map(p => `${(p.x * 100).toFixed(3)},${(p.y * 100).toFixed(3)}`).join(' ')}" fill="${_corSecao(ai)}" fill-opacity="0.18" stroke="${_corSecao(ai)}" stroke-width="0.35" vector-effect="non-scaling-stroke"/>`).join('')}
+            ${areaEmDesenho && areaEmDesenho.pontos.length ? `<polyline points="${areaEmDesenho.pontos.map(p => `${(p.x * 100).toFixed(3)},${(p.y * 100).toFixed(3)}`).join(' ')}" fill="none" stroke="#fff" stroke-width="0.4" stroke-dasharray="1.2,1" vector-effect="non-scaling-stroke"/>` : ''}
           </svg>
-          ${lista.map((s, si) => (s.pontos || []).map((p, pi) => `<div style="position:absolute;left:${(p.x * 100).toFixed(3)}%;top:${(p.y * 100).toFixed(3)}%;transform:translate(-50%,-50%);width:18px;height:18px;border-radius:50%;background:${_corSecao(si)};color:#fff;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;font-family:var(--cv-mono);pointer-events:none;box-shadow:0 0 0 2px #fff;" title="Seção ${s.numero} · ponto ${pi + 1}">${pi + 1}</div>`).join('')).join('')}
+          ${areaEmDesenho ? areaEmDesenho.pontos.map(p => `<div style="position:absolute;left:${(p.x * 100).toFixed(3)}%;top:${(p.y * 100).toFixed(3)}%;transform:translate(-50%,-50%);width:8px;height:8px;border-radius:50%;background:#fff;box-shadow:0 0 0 1.5px #000;pointer-events:none;"></div>`).join('') : ''}
+          ${pontosCota.map(p => {
+            const ai = areas.findIndex(a => a.id === p.areaId);
+            const cor = ai >= 0 ? _corSecao(ai) : '#999';
+            return `<div style="position:absolute;left:${(p.x * 100).toFixed(3)}%;top:${(p.y * 100).toFixed(3)}%;transform:translate(-50%,-50%);width:9px;height:9px;border-radius:50%;background:${cor};box-shadow:0 0 0 1.5px #fff;pointer-events:none;" title="Cota ${TC.fmt2(p.cota)}"></div>`;
+          }).join('')}
         </div>
-        <p class="text-sm text-muted mt-1">${calibrado ? 'Clique na imagem pra marcar um ponto na seção ativa (aberta na lista abaixo) e informar a cota.' : 'Calibre a escala antes de marcar pontos: clique em "🎯 Calibrar Escala" e depois em 2 pontos na imagem com distância real conhecida entre eles.'}</p>
+        <p class="text-sm text-muted mt-1">${!calibrado ? 'Calibre a escala antes de desenhar áreas: clique em "🎯 Calibrar Escala" e depois em 2 pontos na imagem com distância real conhecida entre eles.' : ferramenta === 'area' ? 'Clique nos cantos da área (mínimo 3) e depois em "✓ Concluir Área" pra fechar e definir a cota final.' : ferramenta === 'cota' ? 'Clique dentro de uma área já desenhada pra marcar a cota do terreno naquele ponto.' : 'Desenhe uma ou mais áreas, marque as cotas do terreno dentro delas, e clique em "▦ Gerar Seções" — o sistema divide cada área numa grade de linhas de 1,5m e calcula a área/volume de cada uma automaticamente.'}</p>
+        ${areas.length ? `
+        <div class="cc-tableWrap" style="margin-top:8px;">
+          <table class="cc-table">
+            <thead><tr><th></th><th>Área</th><th class="col-num">Cota Final</th><th class="col-num">Pontos de Cota</th><th class="col-acoes"></th></tr></thead>
+            <tbody>
+              ${areas.map((a, ai) => `<tr>
+                <td><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:${_corSecao(ai)};"></span></td>
+                <td>Área ${ai + 1}</td>
+                <td class="col-num"><input type="text" inputmode="decimal" class="form-control" style="width:90px;display:inline-block;" value="${esc(a.cotaFinal)}" onchange="TP_UI.atualizarCotaArea('${a.id}', this.value)"></td>
+                <td class="col-num cc-tdMono">${pontosCota.filter(p => p.areaId === a.id).length}</td>
+                <td class="col-acoes"><button class="btn btn-secundario btn-sm" style="color:var(--cv-red);" onclick="TP_UI.removerArea('${a.id}')">🗑</button></td>
+              </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>` : ''}
       </div>
     `;
   }
 
-  // ── Painel de UMA seção no modo pontos (cota override + tabela de pontos — sem imagem própria, ela é a única/compartilhada acima) ──
-  function _painelPontosSecaoHTML(i, s) {
-    const pontos = s.pontos || [];
-    return `
-      <div class="form-grupo"><label>Cota de Referência desta seção (opcional — em branco usa a padrão da obra${config.cotaReferencia ? ': ' + esc(config.cotaReferencia) : ''})</label><input type="text" inputmode="decimal" class="form-control" value="${esc(s.cotaFinalOverride ?? '')}" placeholder="ex: 93.40" oninput="TP_UI.secUpdCotaFinalOverride(${i}, this.value)"></div>
-      ${!(s.cotaFinalOverride !== '' && s.cotaFinalOverride != null) && !config.cotaReferencia ? `<p class="text-sm" style="color:var(--cv-red);margin-top:-6px;">⚠️ Nenhuma cota de referência definida (nem aqui, nem em ⚙️ Config) — a área está sendo calculada com cota 0, provavelmente errada.</p>` : ''}
-      ${!config.temImagemProjeto ? `<p class="text-sm text-muted">Insira o projeto acima pra poder marcar pontos.</p>`
-        : !(config.escalaPxPorMetro > 0) ? `<p class="text-sm text-muted">Calibre a escala acima pra poder marcar pontos.</p>`
-        : `<p class="text-sm" style="color:var(--cv-accent3);font-weight:700;">🎯 Clique na imagem do projeto (acima) pra marcar pontos aqui.</p>`}
-      ${pontos.length ? `
-      <div class="cc-tableWrap" style="margin-top:8px;max-height:220px;overflow-y:auto;">
-        <table class="cc-table">
-          <thead><tr><th>#</th><th class="col-num">Cota</th><th class="col-num">Dist. anterior (m)</th><th class="col-acoes"></th></tr></thead>
-          <tbody>
-            ${pontos.map((p, pi) => {
-              const distAnt = pi > 0 ? TC.fmt1(TC.distanciaMetros(pontos[pi - 1], p, config.imgW, config.imgH, config.escalaPxPorMetro)) : '—';
-              return `<tr>
-                <td class="cc-tdMono">${pi + 1}</td>
-                <td class="col-num cc-tdMono" style="cursor:pointer;" onclick="TP_UI.secEditarCota(${i},${pi})" title="Clique para editar">${TC.fmt2(p.cota)}</td>
-                <td class="col-num cc-tdMono">${distAnt}</td>
-                <td class="col-acoes" style="display:flex;gap:4px;justify-content:flex-end;">
-                  ${pi > 0 ? `<button class="btn btn-secundario btn-sm" onclick="TP_UI.secMoverPonto(${i},${pi},-1)" title="Mover pra cima">▲</button>` : ''}
-                  ${pi < pontos.length - 1 ? `<button class="btn btn-secundario btn-sm" onclick="TP_UI.secMoverPonto(${i},${pi},1)" title="Mover pra baixo">▼</button>` : ''}
-                  <button class="btn btn-secundario btn-sm" style="color:var(--cv-red);" onclick="TP_UI.secRemoverPonto(${i},${pi})">🗑</button>
-                </td>
-              </tr>`;
-            }).join('')}
-          </tbody>
-        </table>
-      </div>` : `<div class="cc-empty" style="margin-top:8px;">Nenhum ponto marcado ainda nesta seção.</div>`}
-    `;
-  }
-
-  // ── Clique na imagem ÚNICA do projeto: calibrar (2 cliques) ou marcar ponto na seção ativa ──
+  // ── Clique na imagem ÚNICA do projeto: calibrar, desenhar área ou marcar cota ──
   function _attachImgClickGlobal() {
     const img = document.getElementById('tp-img-projeto');
     if (!img) return;
@@ -383,24 +368,174 @@ const LevantamentoTerraplanagem = (() => {
         renderSecoes();
         return;
       }
-      if (secAberta === null) { Utils.toast('Abra ou crie uma seção na lista abaixo antes de marcar pontos.', 'alerta'); return; }
-      if (!(config.escalaPxPorMetro > 0)) { Utils.toast('Calibre a escala antes de marcar pontos.', 'alerta'); return; }
-      const cotaStr = prompt('Cota (elevação) deste ponto:');
-      if (cotaStr === null || cotaStr.trim() === '') return;
-      const s = secoes[secDir][secAberta];
-      s.pontos = s.pontos || [];
-      s.pontos.push({ x: p.x, y: p.y, cota: TC.num(cotaStr) });
-      recalcArea(s);
-      renderSecoes();
+      if (ferramenta === 'area') {
+        if (!areaEmDesenho) areaEmDesenho = { pontos: [] };
+        areaEmDesenho.pontos.push(p);
+        renderSecoes();
+        return;
+      }
+      if (ferramenta === 'cota') {
+        const area = _areaQueContem(p);
+        if (!area) { Utils.toast('Clique dentro de uma área já desenhada.', 'alerta'); return; }
+        const cotaStr = prompt('Cota (elevação) do terreno neste ponto:');
+        if (cotaStr === null || cotaStr.trim() === '') return;
+        config.pontosCota = config.pontosCota || [];
+        config.pontosCota.push({ id: TC.genId('pc'), x: p.x, y: p.y, cota: TC.num(cotaStr), areaId: area.id });
+        salvarConfig().catch(() => {});
+        renderSecoes();
+        return;
+      }
     };
+  }
+
+  // ══════════════════════════════════════════
+  // GEOMETRIA — áreas (polígono + cota final), pontos de cota superior,
+  // e geração automática de seções em grade (1,5m) por interpolação (IDW)
+  // ══════════════════════════════════════════
+  function setFerramenta(f) {
+    ferramenta = ferramenta === f ? null : f;
+    if (ferramenta !== 'area') areaEmDesenho = null;
+    renderSecoes();
+  }
+  function cancelarArea() { areaEmDesenho = null; ferramenta = null; renderSecoes(); }
+  async function concluirArea() {
+    if (!areaEmDesenho || areaEmDesenho.pontos.length < 3) { Utils.toast('Marque pelo menos 3 pontos pra formar a área.', 'alerta'); return; }
+    const cotaStr = prompt('Cota Final (referência/projeto) desta área:', config.cotaReferencia || '');
+    if (cotaStr === null) return;
+    const cotaFinal = TC.num(cotaStr);
+    config.areas = config.areas || [];
+    config.areas.push({ id: TC.genId('area'), pontos: areaEmDesenho.pontos, cotaFinal });
+    areaEmDesenho = null; ferramenta = null;
+    Utils.mostrarLoading();
+    try { await salvarConfig(); Utils.toast('✓ Área criada!', 'sucesso'); } finally { Utils.esconderLoading(); }
+    renderSecoes();
+  }
+  async function removerArea(id) {
+    const ok = await Utils.confirmar('Remover esta área? Os pontos de cota marcados dentro dela também serão removidos.');
+    if (!ok) return;
+    config.areas = (config.areas || []).filter(a => a.id !== id);
+    config.pontosCota = (config.pontosCota || []).filter(p => p.areaId !== id);
+    Utils.mostrarLoading();
+    try { await salvarConfig(); } finally { Utils.esconderLoading(); }
+    renderSecoes();
+  }
+  function atualizarCotaArea(id, valor) {
+    const a = (config.areas || []).find(x => x.id === id);
+    if (!a) return;
+    a.cotaFinal = TC.num(valor);
+    salvarConfig().catch(() => {});
+  }
+
+  // Ray casting — funciona em fração (0..1) ou em metros, contanto que
+  // ponto e polígono estejam no mesmo sistema.
+  function _pontoDentroPoligono(p, poligono) {
+    let dentro = false;
+    for (let i = 0, j = poligono.length - 1; i < poligono.length; j = i++) {
+      const xi = poligono[i].x, yi = poligono[i].y, xj = poligono[j].x, yj = poligono[j].y;
+      if (((yi > p.y) !== (yj > p.y)) && (p.x < (xj - xi) * (p.y - yi) / (yj - yi) + xi)) dentro = !dentro;
+    }
+    return dentro;
+  }
+  function _areaQueContem(pFrac) {
+    return (config.areas || []).find(a => _pontoDentroPoligono(pFrac, a.pontos));
+  }
+  // Converte um ponto em fração (0..1 da imagem) pra metros reais, usando
+  // a mesma escala calibrada (assume escala igual em X e Y — planta sem distorção).
+  function _paraMetros(p) {
+    return { x: p.x * config.imgW / config.escalaPxPorMetro, y: p.y * config.imgH / config.escalaPxPorMetro };
+  }
+
+  // Gera as seções (horizontais e verticais) de UMA área: divide o
+  // retângulo da área numa grade de 1,5m, corta cada linha pelo polígono
+  // (fica só o trecho por dentro), interpola a cota do terreno em cada
+  // linha por IDW a partir dos pontos marcados, e calcula a área da seção
+  // com o MESMO motor usado no modo manual (calcAreaSecao).
+  function _gerarSecoesDaArea(area) {
+    const PASSO_GRADE = 1.5, PASSO_AMOSTRA = 0.5;
+    const pontosArea = (config.pontosCota || []).filter(p => p.areaId === area.id).map(p => ({ ..._paraMetros(p), cota: p.cota }));
+    if (pontosArea.length < 3) return { horizontais: [], verticais: [] };
+
+    const poligonoM = area.pontos.map(_paraMetros);
+    const xs = poligonoM.map(p => p.x), ys = poligonoM.map(p => p.y);
+    const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys);
+
+    function interpolarCota(x, y) {
+      let somaPeso = 0, somaPesoCota = 0;
+      for (const pt of pontosArea) {
+        const d2 = (pt.x - x) ** 2 + (pt.y - y) ** 2;
+        if (d2 < 1e-6) return pt.cota;
+        const peso = 1 / d2;
+        somaPeso += peso; somaPesoCota += peso * pt.cota;
+      }
+      return somaPeso > 0 ? somaPesoCota / somaPeso : area.cotaFinal;
+    }
+
+    function linhasNaDirecao(fixarX) {
+      const linhas = [];
+      const inicioFixo = fixarX ? minX : minY, fimFixo = fixarX ? maxX : maxY;
+      const outroMin = fixarX ? minY : minX, outroMax = fixarX ? maxY : maxX;
+      for (let v = inicioFixo; v <= fimFixo + 1e-6; v += PASSO_GRADE) {
+        const amostras = [];
+        for (let o = outroMin; o <= outroMax + 1e-6; o += PASSO_AMOSTRA) {
+          const pt = fixarX ? { x: v, y: o } : { x: o, y: v };
+          if (_pontoDentroPoligono(pt, poligonoM)) amostras.push({ o, cota: interpolarCota(pt.x, pt.y) });
+        }
+        if (amostras.length < 2) continue;
+        const cotas = amostras.map(a2 => a2.cota);
+        const distancias = [];
+        for (let k = 0; k < amostras.length - 1; k++) distancias.push(+(amostras[k + 1].o - amostras[k].o).toFixed(3));
+        linhas.push({ pos: v, cotas, distanciasCotas: distancias, cotaFinal: area.cotaFinal, area: TC.calcAreaSecao(cotas, area.cotaFinal, distancias) });
+      }
+      return linhas;
+    }
+
+    return { verticais: linhasNaDirecao(true), horizontais: linhasNaDirecao(false) };
+  }
+
+  async function gerarSecoes() {
+    const areas = config.areas || [];
+    if (!areas.length) { Utils.toast('Desenhe pelo menos uma área antes.', 'alerta'); return; }
+    if (!(config.escalaPxPorMetro > 0)) { Utils.toast('Calibre a escala antes.', 'alerta'); return; }
+    if ((secoes.horizontal.length || secoes.vertical.length)) {
+      const ok = await Utils.confirmar('Gerar seções agora vai SUBSTITUIR todas as seções atuais (horizontais e verticais). Continuar?');
+      if (!ok) return;
+    }
+    Utils.mostrarLoading('Gerando seções (grade de 1,5m)...');
+    try {
+      let todasH = [], todasV = [];
+      areas.forEach(area => {
+        const { horizontais, verticais } = _gerarSecoesDaArea(area);
+        todasH.push(...horizontais); todasV.push(...verticais);
+      });
+      if (!todasH.length && !todasV.length) {
+        Utils.toast('Nenhuma seção gerada — confira se marcou pontos de cota suficientes (mínimo 3) dentro das áreas.', 'alerta');
+        return;
+      }
+      todasH.sort((a, b) => a.pos - b.pos);
+      todasV.sort((a, b) => a.pos - b.pos);
+      const monta = linhas => linhas.map((l, i) => ({
+        id: TC.genId('sec'), numero: i + 1, cotas: l.cotas, distanciasCotas: l.distanciasCotas, cotaFinal: l.cotaFinal,
+        area: l.area, distanciaProxima: i < linhas.length - 1 ? +(linhas[i + 1].pos - l.pos).toFixed(3) : '', areaManual: '',
+      }));
+      secoes.horizontal = monta(todasH);
+      secoes.vertical = monta(todasV);
+      secAberta = null;
+      await salvarSecoes();
+      Utils.toast(`✓ ${secoes.horizontal.length} seções horizontais e ${secoes.vertical.length} verticais geradas!`, 'sucesso');
+      renderizar();
+    } catch (e) {
+      console.error(e);
+      Utils.toast('Erro ao gerar seções: ' + e.message, 'erro');
+    } finally {
+      Utils.esconderLoading();
+    }
   }
 
   function secAdd() {
     const lista = secoes[secDir];
     lista.push({
       id: TC.genId('sec'), numero: lista.length + 1,
-      cotas: [], cotaFinal: '', distanciasCotas: [], area: 0, distanciaProxima: '',
-      pontos: [], cotaFinalOverride: '',
+      cotas: [], cotaFinal: '', distanciasCotas: [], area: 0, distanciaProxima: '', areaManual: '',
     });
     secAberta = lista.length - 1;
     renderSecoes();
@@ -437,35 +572,6 @@ const LevantamentoTerraplanagem = (() => {
   function secUpdAreaManual(i, valor) {
     const s = secoes[secDir][i];
     s.areaManual = valor;
-    recalcArea(s);
-    renderSecoes();
-  }
-  function secUpdCotaFinalOverride(i, valor) {
-    const s = secoes[secDir][i];
-    s.cotaFinalOverride = valor;
-    recalcArea(s);
-    renderSecoes();
-  }
-  function secEditarCota(i, pi) {
-    const s = secoes[secDir][i];
-    const atual = s.pontos[pi].cota;
-    const novo = prompt('Nova cota para o ponto ' + (pi + 1) + ':', atual);
-    if (novo === null) return;
-    s.pontos[pi].cota = TC.num(novo);
-    recalcArea(s);
-    renderSecoes();
-  }
-  function secRemoverPonto(i, pi) {
-    const s = secoes[secDir][i];
-    s.pontos.splice(pi, 1);
-    recalcArea(s);
-    renderSecoes();
-  }
-  function secMoverPonto(i, pi, dir) {
-    const s = secoes[secDir][i];
-    const novoIdx = pi + dir;
-    if (novoIdx < 0 || novoIdx >= s.pontos.length) return;
-    [s.pontos[pi], s.pontos[novoIdx]] = [s.pontos[novoIdx], s.pontos[pi]];
     recalcArea(s);
     renderSecoes();
   }
@@ -516,9 +622,9 @@ const LevantamentoTerraplanagem = (() => {
   async function processarImagemProjeto(file, eraTrocar) {
     if (!file) return;
     if (eraTrocar) {
-      const totalPontos = [...(secoes.horizontal || []), ...(secoes.vertical || [])].reduce((s, x) => s + (x.pontos || []).length, 0);
-      if (totalPontos > 0) {
-        const ok = await Utils.confirmar(`Trocar o projeto vai apagar a escala calibrada e os ${totalPontos} ponto(s) já marcado(s) em todas as seções (as posições não valem mais na imagem nova). Continuar?`);
+      const totalAreas = (config.areas || []).length, totalPontos = (config.pontosCota || []).length;
+      if (totalAreas > 0 || totalPontos > 0) {
+        const ok = await Utils.confirmar(`Trocar o projeto vai apagar a escala calibrada, ${totalAreas} área(s) e ${totalPontos} ponto(s) de cota já marcados (as posições não valem mais na imagem nova). As seções já geradas continuam salvas. Continuar?`);
         if (!ok) return;
       }
     }
@@ -551,10 +657,9 @@ const LevantamentoTerraplanagem = (() => {
       await db.collection('obras').doc(obraId).collection('config').doc(DOC_PROJETO_IMG).set({ img: url });
       imagemProjetoCache = url;
       config.temImagemProjeto = true; config.imgW = width; config.imgH = height; config.escalaPxPorMetro = 0;
-      ['horizontal', 'vertical'].forEach(dir => (secoes[dir] || []).forEach(s => { s.pontos = []; }));
-      _recalcTudo();
+      config.areas = []; config.pontosCota = [];
+      ferramenta = null; areaEmDesenho = null;
       await salvarConfig();
-      await salvarSecoes();
       Utils.toast('✓ Projeto inserido! Agora calibre a escala.', 'sucesso');
       renderSecoes();
     } catch (e) {
@@ -593,12 +698,30 @@ const LevantamentoTerraplanagem = (() => {
         </div>
         <div class="form-grupo"><label>Taxa de Empolamento (%)</label><input type="text" inputmode="decimal" id="tp-cfg-empolamento" class="form-control" value="${esc((config.taxaEmpolamento * 100).toString())}" placeholder="30"></div>
       </div>
-      <div class="form-row">
-        <div class="form-grupo"><label>Capacidade Caminhão Grande (m³)</label><input type="text" inputmode="decimal" id="tp-cfg-grande" class="form-control" value="${esc(config.capacidadeGrande)}" placeholder="15.6"></div>
-        <div class="form-grupo"><label>Capacidade Caminhão Pequeno (m³)</label><input type="text" inputmode="decimal" id="tp-cfg-pequeno" class="form-control" value="${esc(config.capacidadePequena)}" placeholder="10"></div>
-      </div>
       <p class="text-sm text-muted">A taxa de empolamento converte o volume de banco (corte) para o volume solto transportado pelos caminhões.</p>
+      <div class="cc-divider"></div>
+      <label style="font-weight:700;font-size:.85rem;">🚚 Tipos de Caminhão (nome + capacidade)</label>
+      <p class="text-sm text-muted mb-1">Não precisa ser só Grande/Pequeno — adicione quantos tipos precisar (ex: "Barra Azul").</p>
+      <div id="tp-cfg-tipos-lista">${_tiposCaminhaoRowsHTML()}</div>
+      <button class="btn btn-secundario btn-sm" onclick="TP_UI.adicionarTipoCaminhao()">+ Adicionar Tipo</button>
     `;
+  }
+  function _tiposCaminhaoRowsHTML() {
+    return (config.tiposCaminhao || []).map((t, i) => `
+      <div class="form-row" style="align-items:end;" data-tipo-row="${i}">
+        <div class="form-grupo"><label>Nome</label><input type="text" class="form-control" value="${esc(t.nome)}" placeholder="ex: Barra Azul" oninput="TP_UI.atualizarTipoCaminhao(${i},'nome',this.value)"></div>
+        <div class="form-grupo"><label>Capacidade (m³)</label><input type="text" inputmode="decimal" class="form-control" value="${esc(t.capacidade)}" placeholder="12" oninput="TP_UI.atualizarTipoCaminhao(${i},'capacidade',this.value)"></div>
+        <button class="btn btn-secundario btn-sm" style="color:var(--cv-red);height:38px;" onclick="TP_UI.removerTipoCaminhao(${i})" title="Remover tipo">🗑</button>
+      </div>`).join('');
+  }
+  function adicionarTipoCaminhao() {
+    config.tiposCaminhao.push({ nome: '', capacidade: '' });
+    document.getElementById('tp-cfg-tipos-lista').innerHTML = _tiposCaminhaoRowsHTML();
+  }
+  function atualizarTipoCaminhao(i, campo, valor) { config.tiposCaminhao[i][campo] = campo === 'capacidade' ? TC.num(valor) : valor; }
+  function removerTipoCaminhao(i) {
+    config.tiposCaminhao.splice(i, 1);
+    document.getElementById('tp-cfg-tipos-lista').innerHTML = _tiposCaminhaoRowsHTML();
   }
   function aplicarPresetEmpolamento() {
     const idx = document.getElementById('tp-cfg-empolamento-preset').value;
@@ -609,9 +732,16 @@ const LevantamentoTerraplanagem = (() => {
   async function salvarConfigBtn() {
     const empolPct = TC.num(document.getElementById('tp-cfg-empolamento').value);
     config.taxaEmpolamento = empolPct / 100;
-    config.capacidadeGrande = TC.num(document.getElementById('tp-cfg-grande').value) || 15.6;
-    config.capacidadePequena = TC.num(document.getElementById('tp-cfg-pequeno').value) || 10;
     config.cotaReferencia = document.getElementById('tp-cfg-cotaref').value.trim();
+    config.tiposCaminhao = (config.tiposCaminhao || []).filter(t => (t.nome || '').trim() && t.capacidade > 0);
+    if (!config.tiposCaminhao.length) { Utils.toast('Cadastre pelo menos 1 tipo de caminhão com nome e capacidade.', 'alerta'); return; }
+    const nomes = config.tiposCaminhao.map(t => t.nome.trim().toLowerCase());
+    if (new Set(nomes).size !== nomes.length) { Utils.toast('Tem tipo de caminhão com nome repetido.', 'alerta'); return; }
+    // compat: mantém capacidadeGrande/capacidadePequena legado sincronizado, se existirem os nomes
+    const grande = config.tiposCaminhao.find(t => t.nome.trim().toLowerCase() === 'grande');
+    const pequeno = config.tiposCaminhao.find(t => t.nome.trim().toLowerCase() === 'pequeno');
+    if (grande) config.capacidadeGrande = grande.capacidade;
+    if (pequeno) config.capacidadePequena = pequeno.capacidade;
     Utils.mostrarLoading();
     try {
       await salvarConfig();
@@ -639,8 +769,9 @@ const LevantamentoTerraplanagem = (() => {
     el.innerHTML = `
       <div class="form-row" style="align-items:end;">
         <div class="form-grupo"><label>Placa</label><input type="text" id="tp-cam-placa" class="form-control" placeholder="EZR-4251" style="text-transform:uppercase;"></div>
-        <div class="form-grupo"><label>Tamanho</label><select id="tp-cam-tamanho" class="form-control">${TC.TAMANHOS_CAMINHAO.map(t => `<option value="${t}">${t}</option>`).join('')}</select></div>
+        <div class="form-grupo"><label>Tamanho</label><select id="tp-cam-tamanho" class="form-control">${(config.tiposCaminhao || []).map(t => `<option value="${esc(t.nome)}">${esc(t.nome)} (${TC.fmt1(t.capacidade)} m³)</option>`).join('')}</select></div>
       </div>
+      <p class="text-sm text-muted" style="margin-top:-6px;">Precisa de outro tipo? Cadastra em <a href="#" onclick="event.preventDefault();Utils.fecharModal('modal-tp-caminhoes');TP_UI.abrirConfig();">⚙️ Config</a>.</p>
       <div class="form-row" style="align-items:end;">
         <div class="form-grupo"><label>Empresa</label><input type="text" id="tp-cam-empresa" class="form-control" placeholder="Locaterh"></div>
         <button class="btn btn-primario btn-sm" data-perm="levantamentoTerra:criar" style="height:38px;" onclick="TP_UI.salvarCaminhao()">+ Adicionar</button>
@@ -980,46 +1111,28 @@ const LevantamentoTerraplanagem = (() => {
         canvas.width = img.naturalWidth; canvas.height = img.naturalHeight;
         const g = canvas.getContext('2d');
         g.drawImage(img, 0, 0);
-        const desenhar = (lista, tracejado) => {
-          lista.forEach((s, si) => {
-            const pontos = s.pontos || [];
-            if (!pontos.length) return;
-            const cor = _corSecao(si);
-            g.strokeStyle = cor; g.fillStyle = cor;
-            g.lineWidth = Math.max(2, canvas.width / 450);
-            g.setLineDash(tracejado ? [g.lineWidth * 3, g.lineWidth * 2] : []);
-            if (pontos.length >= 2) {
-              g.beginPath();
-              pontos.forEach((p, pi) => { const x = p.x * canvas.width, y = p.y * canvas.height; pi === 0 ? g.moveTo(x, y) : g.lineTo(x, y); });
-              g.stroke();
-            }
-            const raio = Math.max(6, canvas.width / 160);
-            pontos.forEach((p, pi) => {
-              const x = p.x * canvas.width, y = p.y * canvas.height;
-              g.setLineDash([]);
-              g.fillStyle = cor;
-              g.beginPath(); g.arc(x, y, raio, 0, Math.PI * 2); g.fill();
-              g.strokeStyle = '#fff'; g.lineWidth = Math.max(1.5, raio / 5); g.stroke();
-              g.fillStyle = '#fff';
-              g.font = `bold ${Math.round(raio * 1.1)}px sans-serif`;
-              g.textAlign = 'center'; g.textBaseline = 'middle';
-              g.fillText(String(pi + 1), x, y);
-              g.strokeStyle = cor; g.lineWidth = Math.max(2, canvas.width / 450);
-              g.setLineDash(tracejado ? [g.lineWidth * 3, g.lineWidth * 2] : []);
-            });
-            // Rótulo da seção junto ao primeiro ponto
-            const p0 = pontos[0];
-            g.setLineDash([]);
-            g.font = `bold ${Math.round(raio * 1.5)}px sans-serif`;
-            g.fillStyle = cor;
-            g.strokeStyle = '#fff'; g.lineWidth = Math.max(2, raio / 3);
-            const rot = `S${s.numero ?? si + 1}${tracejado ? 'v' : ''}`;
-            const rx = p0.x * canvas.width, ry = Math.max(raio * 2, p0.y * canvas.height - raio * 2.2);
-            g.strokeText(rot, rx, ry); g.fillText(rot, rx, ry);
+        const areas = config.areas || [];
+        areas.forEach((a, ai) => {
+          const cor = _corSecao(ai);
+          g.beginPath();
+          a.pontos.forEach((p, pi) => { const x = p.x * canvas.width, y = p.y * canvas.height; pi === 0 ? g.moveTo(x, y) : g.lineTo(x, y); });
+          g.closePath();
+          g.globalAlpha = 0.18; g.fillStyle = cor; g.fill(); g.globalAlpha = 1;
+          g.strokeStyle = cor; g.lineWidth = Math.max(2, canvas.width / 400); g.stroke();
+          const raio = Math.max(6, canvas.width / 180);
+          (config.pontosCota || []).filter(p => p.areaId === a.id).forEach(p => {
+            const x = p.x * canvas.width, y = p.y * canvas.height;
+            g.beginPath(); g.arc(x, y, raio, 0, Math.PI * 2); g.fillStyle = cor; g.fill();
+            g.strokeStyle = '#fff'; g.lineWidth = Math.max(1.5, raio / 4); g.stroke();
           });
-        };
-        desenhar(secoes.horizontal || [], false);
-        desenhar(secoes.vertical || [], true); // verticais tracejadas pra diferenciar
+          const p0 = a.pontos[0];
+          g.font = `bold ${Math.round(raio * 1.6)}px sans-serif`;
+          g.fillStyle = cor; g.strokeStyle = '#fff'; g.lineWidth = Math.max(2, raio / 3);
+          g.textAlign = 'center'; g.textBaseline = 'middle';
+          const rot = `Área ${ai + 1} (cota ${TC.fmt2(a.cotaFinal)})`;
+          const rx = p0.x * canvas.width, ry = Math.max(raio * 2, p0.y * canvas.height - raio * 2.2);
+          g.strokeText(rot, rx, ry); g.fillText(rot, rx, ry);
+        });
         resolve(TC.canvasParaDataURLLimitado(canvas, 1400000).url);
       };
       img.onerror = () => resolve(null);
@@ -1193,10 +1306,11 @@ const LevantamentoTerraplanagem = (() => {
   return {
     init, recarregar, renderizar,
     setSecDir, setModoLevantamento, secAdd, secRemover, secToggle,
-    secUpd, secUpdCotas, secUpdCotaFinal, secUpdDistCotas, secUpdAreaManual, secUpdCotaFinalOverride,
-    secEditarCota, secRemoverPonto, secMoverPonto, salvarSecoesBtn,
+    secUpd, secUpdCotas, secUpdCotaFinal, secUpdDistCotas, secUpdAreaManual, salvarSecoesBtn,
     escolherImagemProjeto, processarImagemProjeto, calibrarProjeto,
+    setFerramenta, concluirArea, cancelarArea, removerArea, atualizarCotaArea, gerarSecoes,
     abrirConfig, salvarConfigBtn, aplicarPresetEmpolamento,
+    adicionarTipoCaminhao, atualizarTipoCaminhao, removerTipoCaminhao,
     abrirCaminhoes, salvarCaminhao, excluirCaminhao,
     abrir3D, fechar3D, limparBase,
     baixarLevantamentoPDF, compartilharLevantamentoPDF,

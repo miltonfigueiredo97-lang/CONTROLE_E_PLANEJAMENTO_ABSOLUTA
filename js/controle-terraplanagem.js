@@ -19,7 +19,7 @@ const ControleTerraplanagem = (() => {
   let obraNome = '';
   let caminhoes = [];
   let entregas = [];
-  let config = { taxaEmpolamento: 0.3, capacidadeGrande: 15.6, capacidadePequena: 10, valorViagemTerra: 0, valorViagemEntulho: 0 };
+  let config = { taxaEmpolamento: 0.3, capacidadeGrande: 15.6, capacidadePequena: 10, tiposCaminhao: [{ nome: 'Grande', capacidade: 15.6 }, { nome: 'Pequeno', capacidade: 10 }], valorViagemTerra: 0, valorViagemEntulho: 0 };
   let secoes = { horizontal: [], vertical: [] };
   let fBusca = '';
   let abaRel = 'viagens'; // 'viagens' | 'porDia' | 'porCaminhao'
@@ -67,6 +67,9 @@ const ControleTerraplanagem = (() => {
       const doc = await db.collection('obras').doc(obraId).collection('config').doc(DOC_CONFIG).get();
       if (doc.exists) config = { ...config, ...doc.data() };
     } catch (e) { /* mantém default */ }
+    if (!Array.isArray(config.tiposCaminhao) || !config.tiposCaminhao.length) {
+      config.tiposCaminhao = [{ nome: 'Grande', capacidade: TC.num(config.capacidadeGrande) || 15.6 }, { nome: 'Pequeno', capacidade: TC.num(config.capacidadePequena) || 10 }];
+    }
   }
   async function carregarSecoes() {
     try {
@@ -424,12 +427,16 @@ const ControleTerraplanagem = (() => {
       Utils.esconderLoading();
     }
   }
+  function _capacidadePorTamanho(tamanho) {
+    const t = (config.tiposCaminhao || []).find(x => x.nome === tamanho);
+    return t ? TC.num(t.capacidade) : (tamanho === 'Grande' ? config.capacidadeGrande : config.capacidadePequena);
+  }
   function autoVolumePorPlaca() {
     const placaSel = document.getElementById('tpc-ent-placa').value;
     const volEl = document.getElementById('tpc-ent-volume');
     if (volEl.value) return;
     const cam = caminhoes.find(c => c.placa === placaSel);
-    if (cam) volEl.value = cam.tamanho === 'Grande' ? config.capacidadeGrande : config.capacidadePequena;
+    if (cam) volEl.value = _capacidadePorTamanho(cam.tamanho);
   }
 
   // ── Auto-preenchimento do Valor pelo material digitado ──
@@ -635,7 +642,7 @@ const ControleTerraplanagem = (() => {
           if (volPlaca > 0) { volume = volPlaca; completadasPorPlaca++; }
           else {
             const cam = caminhoes.find(c => c.placa === b.placa);
-            if (cam) { volume = cam.tamanho === 'Grande' ? config.capacidadeGrande : config.capacidadePequena; completadasPorCadastro++; }
+            if (cam) { volume = _capacidadePorTamanho(cam.tamanho); completadasPorCadastro++; }
           }
         }
         if (!(volume > 0)) { puladasSemVolume++; continue; } // sem placa E sem volume — não tem como saber
