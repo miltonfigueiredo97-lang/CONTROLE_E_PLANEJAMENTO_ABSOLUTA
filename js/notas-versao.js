@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.9.3',
+  versaoAtual: 'V3.9.4',
 
   versoes: [
     {
@@ -8377,6 +8377,17 @@ const NotasVersao = {
       "itens": [
         "Confirmado: as paredes laterais fechavam até o piso global, mas não tinha nenhuma tampa NAQUELE piso — o objeto ficava como uma caixa sem fundo, oca por dentro.",
         "Adicionada a tampa: mesma forma/contorno do topo (mesmo formato do prédio, inclusive reentrâncias), só achatada lá embaixo no piso global. Agora o volume é sólido de verdade — topo, quatro/mais lados e fundo, todos fechados."
+      ]
+    },
+    {
+      "versao": "V3.9.4",
+      "data": "2026-08-16",
+      "tipo": "funcionalidade",
+      "titulo": "Nova convenção de cota: Relativa ao R.N. (o sinal digitado já é a altura, positivo=acima/negativo=abaixo)",
+      "itens": [
+        "Causa raiz de uma conta errada de verdade: o sistema só tinha \\\"Elevação\\\" e \\\"Profundidade\\\", mas tem projeto que mede diferente — o valor digitado JÁ É a altura com sinal em relação a uma referência (R.N.): positivo quando o ponto está ACIMA da referência (é corte), negativo quando está ABAIXO (é aterro), sempre, não importa o valor da própria referência. Nenhuma das duas opções antigas cobria isso.",
+        "Nova convenção \\\"↕️ Relativa ao R.N.\\\": ao concluir uma área, agora pergunta as 3 opções (Profundidade / Relativa / Elevação). Pra áreas já criadas, clicar no botão de convenção na tabela agora CICLA entre as 3.",
+        "Testado matematicamente: com a mesma dupla de pontos (+3 e -2, distância 10m), o resultado da área deu EXATAMENTE igual usando R.N.=0 ou R.N.=779,84 como referência — confirma que só o sinal digitado importa, como esperado."
       ]
     }
   ],
