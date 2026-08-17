@@ -1038,9 +1038,9 @@ const LevantamentoTerraplanagem = (() => {
             <button class="btn btn-secundario btn-sm" onclick="TP_UI.verSecZoomIn()">➕</button>
             <button class="btn btn-secundario btn-sm" onclick="TP_UI.verSecZoomReset()">🔄 Resetar zoom</button>
           </div>
-          <div id="tp-versecoes-mapa" style="border:1px solid var(--cv-border);border-radius:6px;overflow:hidden;position:relative;height:65vh;min-height:420px;background:#111;touch-action:none;">
-            <div id="tp-versecoes-zoomwrap" style="transform-origin:0 0;width:100%;height:100%;position:relative;transition:transform .05s linear;">
-              <img src="${imagemProjetoCache}" style="width:100%;height:100%;object-fit:contain;display:block;user-select:none;" draggable="false">
+          <div id="tp-versecoes-mapa" style="border:1px solid var(--cv-border);border-radius:6px;overflow:hidden;position:relative;height:65vh;min-height:420px;background:#111;touch-action:none;display:flex;align-items:center;justify-content:center;">
+            <div id="tp-versecoes-zoomwrap" style="transform-origin:center center;transition:transform .05s linear;position:relative;max-width:100%;max-height:100%;aspect-ratio:${config.imgW || 1} / ${config.imgH || 1};">
+              <img src="${imagemProjetoCache}" style="width:100%;height:100%;display:block;user-select:none;" draggable="false">
               <svg viewBox="0 0 100 100" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;">
                 ${s && s.origemFrac && s.fimFrac ? `<line x1="${(s.origemFrac.x * 100).toFixed(2)}" y1="${(s.origemFrac.y * 100).toFixed(2)}" x2="${(s.fimFrac.x * 100).toFixed(2)}" y2="${(s.fimFrac.y * 100).toFixed(2)}" stroke="#ff2d55" stroke-width="1.1" vector-effect="non-scaling-stroke"/>` : ''}
               </svg>

@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.8.9',
+  versaoAtual: 'V3.8.10',
 
   versoes: [
     {
@@ -8153,6 +8153,16 @@ const NotasVersao = {
         "Achada a causa raiz definitiva do 3D com formato errado: a posição de cada linha no eixo de profundidade era um ACÚMULO artificial de distâncias entre seções (com gaps inventados nas fronteiras entre cadeias/áreas) — não a posição real dela na planta. Isso desconectava totalmente o 3D da planta.",
         "Corrigido: agora usa a posição REAL (a mesma coordenada da grade de 1,5m) em vez do acúmulo. Testado com um prédio em T simulado: a reconstrução por posição real bate exatamente com o formato esperado (barra larga de um lado, perna estreita do outro, no lugar certo) — visto de cima, o 3D agora é o mesmo formato da planta.",
         "Perfil lateral (\"Ver Seções\") ganhou um resumo numérico embaixo do gráfico: 🟩 Corte (soma só da parte positiva, acima da cota final) · 🟥 Aterro (soma só da parte negativa, abaixo) · Líquido (o resultado final, que pode ser negativo se o aterro pesar mais que o corte naquela seção específica — a área total nunca é \"impossível\", é a soma normal dessas duas partes). Vermelho também ficou bem mais forte no desenho pra não passar batido."
+      ]
+    },
+    {
+      "versao": "V3.8.10",
+      "data": "2026-08-16",
+      "tipo": "correcao",
+      "titulo": "\"Ver Seções\": a linha riscada aparecia fora da planta (desalinhada)",
+      "itens": [
+        "A imagem da planta em \"Ver Seções\" usava um encaixe que deixa barra preta nas laterais quando a proporção da planta não é igual à da caixa (comum, já que cada projeto tem um formato diferente) — só que o desenho da linha por cima (a seção selecionada, em vermelho) sempre cobria a caixa inteira, incluindo essas barras pretas, então a posição da linha saía toda desalinhada, podendo aparecer fora da planta de verdade.",
+        "Corrigido: a caixa agora respeita a proporção real da imagem (sem sobra nem corte), então a linha vermelha sempre cai em cima da planta, na posição certa. O painel \"Marcar no Projeto\" (onde você desenha áreas e marca cotas) não tinha esse problema — lá a imagem sempre ocupava a largura toda sem barra, então clique e desenho já batiam certo."
       ]
     }
   ],
