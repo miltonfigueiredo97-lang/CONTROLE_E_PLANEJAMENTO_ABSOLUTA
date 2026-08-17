@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.8.13.1',
+  versaoAtual: 'V3.8.14',
 
   versoes: [
     {
@@ -8247,6 +8247,17 @@ const NotasVersao = {
       "itens": [
         "O módulo do relatório agora acessa o motor de cálculo por referência direta (com fallback via window) — o erro \"Cannot read properties of undefined (reading 'num')\", que acontecia em páginas servidas do cache anterior à V3.8.12, não tem mais como ocorrer.",
         "Se o Gerar Relatório não abrir a prévia, faça um hard refresh (Ctrl+Shift+R): o navegador pode estar segurando o dashboard.html antigo."
+      ]
+    },
+    {
+      "versao": "V3.8.14",
+      "data": "2026-08-16",
+      "tipo": "correcao",
+      "titulo": "Zoom/pan no painel do projeto (pra calibrar com precisão) + 3D simplificado (removidas as paredes que pareciam caixa)",
+      "itens": [
+        "Painel \"Marcar no Projeto\" (onde calibra a escala, desenha áreas e marca cotas) ganhou os mesmos controles de zoom/pan do \"Ver Seções\" — dá pra ampliar bem de perto pra calibrar com precisão, clicando exatamente nos dois pontos certos de uma medida conhecida na planta. Arrastar com zoom aplicado dá pan; clique sem arrastar continua marcando o ponto normalmente (as duas ações não se confundem mais).",
+        "3D: removidas as \"paredes\" sólidas nas pontas de cada seção — eram elas que, junto com o exagero vertical, davam a impressão de uma caixa/torre em vez de um terreno. Ficou só a superfície do terreno (colorida por profundidade) e o plano de referência translúcido embaixo.",
+        "Exagero vertical também reduzido (teto de 2x a escala horizontal, era 4x) — mais conservador, prioriza não distorcer sobre ficar bem alto."
       ]
     }
   ],

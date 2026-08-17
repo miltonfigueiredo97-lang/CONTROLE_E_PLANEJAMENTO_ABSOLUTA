@@ -268,7 +268,7 @@ const LevantamentoTerraplanagem = (() => {
         </div>`).join('')}
       ${lista.length ? `<div style="text-align:right;margin-top:8px;"><button class="btn btn-secundario btn-sm" onclick="TP_UI.salvarSecoesBtn()">💾 Salvar Seções</button></div>` : ''}
     `;
-    if (modoPontos) _attachImgClickGlobal();
+    if (modoPontos) { _attachImgClickGlobal(); _aplicarZoomPanProjeto(); }
   }
 
   // ── Painel modo MANUAL (texto — comportamento original, inalterado) ──
@@ -320,19 +320,26 @@ const LevantamentoTerraplanagem = (() => {
           <button class="btn ${ferramenta === 'cota' ? 'btn-primario' : 'btn-secundario'} btn-sm" onclick="TP_UI.setFerramenta('cota')" ${!areas.length ? 'disabled title="Desenhe uma área primeiro"' : ''}>📍 ${ferramenta === 'cota' ? 'Clique dentro de uma área pra marcar a cota...' : 'Marcar Cota'}</button>
           <button class="btn btn-secundario btn-sm" onclick="TP_UI.gerarSecoes()" ${!areas.length || !pontosCota.length ? 'disabled title="Marque pontos de cota primeiro"' : ''}>▦ Gerar Seções (grade 1,5m)</button>
         </div>` : ''}
-        <div style="border:1px solid var(--cv-border);border-radius:6px;overflow:hidden;position:relative;max-width:100%;">
-          <img id="tp-img-projeto" src="${imagemProjetoCache}" style="width:100%;display:block;user-select:none;cursor:${ferramenta ? 'crosshair' : 'default'};" draggable="false">
-          ${calibPontoTemp ? `<div style="position:absolute;left:${(calibPontoTemp.x * 100).toFixed(3)}%;top:${(calibPontoTemp.y * 100).toFixed(3)}%;transform:translate(-50%,-50%);width:14px;height:14px;border-radius:50%;background:#ef4444;box-shadow:0 0 0 2px #fff;pointer-events:none;"></div>` : ''}
-          <svg viewBox="0 0 100 100" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;">
-            ${areas.map((a, ai) => `<polygon points="${a.pontos.map(p => `${(p.x * 100).toFixed(3)},${(p.y * 100).toFixed(3)}`).join(' ')}" fill="${_corSecao(ai)}" fill-opacity="0.18" stroke="${_corSecao(ai)}" stroke-width="0.35" vector-effect="non-scaling-stroke"/>`).join('')}
-            ${areaEmDesenho && areaEmDesenho.pontos.length ? `<polyline points="${areaEmDesenho.pontos.map(p => `${(p.x * 100).toFixed(3)},${(p.y * 100).toFixed(3)}`).join(' ')}" fill="none" stroke="#fff" stroke-width="0.4" stroke-dasharray="1.2,1" vector-effect="non-scaling-stroke"/>` : ''}
-          </svg>
-          ${areaEmDesenho ? areaEmDesenho.pontos.map(p => `<div style="position:absolute;left:${(p.x * 100).toFixed(3)}%;top:${(p.y * 100).toFixed(3)}%;transform:translate(-50%,-50%);width:8px;height:8px;border-radius:50%;background:#fff;box-shadow:0 0 0 1.5px #000;pointer-events:none;"></div>`).join('') : ''}
-          ${pontosCota.map(p => {
-            const ai = areas.findIndex(a => a.id === p.areaId);
-            const cor = ai >= 0 ? _corSecao(ai) : '#999';
-            return `<div style="position:absolute;left:${(p.x * 100).toFixed(3)}%;top:${(p.y * 100).toFixed(3)}%;transform:translate(-50%,-50%);width:9px;height:9px;border-radius:50%;background:${cor};box-shadow:0 0 0 1.5px #fff;pointer-events:none;" title="Cota ${TC.fmt2(p.cota)}"></div>`;
-          }).join('')}
+        <div style="display:flex;gap:6px;margin-bottom:6px;">
+          <button class="btn btn-secundario btn-sm" onclick="TP_UI.projZoomOut()">➖</button>
+          <button class="btn btn-secundario btn-sm" onclick="TP_UI.projZoomIn()">➕</button>
+          <button class="btn btn-secundario btn-sm" onclick="TP_UI.projZoomReset()">🔄 Resetar zoom</button>
+        </div>
+        <div id="tp-projeto-mapa" style="border:1px solid var(--cv-border);border-radius:6px;overflow:hidden;position:relative;height:55vh;min-height:380px;background:#111;touch-action:none;display:flex;align-items:center;justify-content:center;">
+          <div id="tp-projeto-zoomwrap" style="transform-origin:center center;transition:transform .05s linear;position:relative;max-width:100%;max-height:100%;aspect-ratio:${config.imgW || 1} / ${config.imgH || 1};">
+            <img id="tp-img-projeto" src="${imagemProjetoCache}" style="width:100%;height:100%;display:block;user-select:none;cursor:${ferramenta ? 'crosshair' : 'default'};" draggable="false">
+            ${calibPontoTemp ? `<div style="position:absolute;left:${(calibPontoTemp.x * 100).toFixed(3)}%;top:${(calibPontoTemp.y * 100).toFixed(3)}%;transform:translate(-50%,-50%);width:14px;height:14px;border-radius:50%;background:#ef4444;box-shadow:0 0 0 2px #fff;pointer-events:none;"></div>` : ''}
+            <svg viewBox="0 0 100 100" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;">
+              ${areas.map((a, ai) => `<polygon points="${a.pontos.map(p => `${(p.x * 100).toFixed(3)},${(p.y * 100).toFixed(3)}`).join(' ')}" fill="${_corSecao(ai)}" fill-opacity="0.18" stroke="${_corSecao(ai)}" stroke-width="0.35" vector-effect="non-scaling-stroke"/>`).join('')}
+              ${areaEmDesenho && areaEmDesenho.pontos.length ? `<polyline points="${areaEmDesenho.pontos.map(p => `${(p.x * 100).toFixed(3)},${(p.y * 100).toFixed(3)}`).join(' ')}" fill="none" stroke="#fff" stroke-width="0.4" stroke-dasharray="1.2,1" vector-effect="non-scaling-stroke"/>` : ''}
+            </svg>
+            ${areaEmDesenho ? areaEmDesenho.pontos.map(p => `<div style="position:absolute;left:${(p.x * 100).toFixed(3)}%;top:${(p.y * 100).toFixed(3)}%;transform:translate(-50%,-50%);width:8px;height:8px;border-radius:50%;background:#fff;box-shadow:0 0 0 1.5px #000;pointer-events:none;"></div>`).join('') : ''}
+            ${pontosCota.map(p => {
+              const ai = areas.findIndex(a => a.id === p.areaId);
+              const cor = ai >= 0 ? _corSecao(ai) : '#999';
+              return `<div style="position:absolute;left:${(p.x * 100).toFixed(3)}%;top:${(p.y * 100).toFixed(3)}%;transform:translate(-50%,-50%);width:9px;height:9px;border-radius:50%;background:${cor};box-shadow:0 0 0 1.5px #fff;pointer-events:none;" title="Cota ${TC.fmt2(p.cota)}"></div>`;
+            }).join('')}
+          </div>
         </div>
         <p class="text-sm text-muted mt-1">${!calibrado ? 'Calibre a escala antes de desenhar áreas: clique em "🎯 Calibrar Escala" e depois em 2 pontos na imagem com distância real conhecida entre eles.' : ferramenta === 'area' ? 'Clique nos cantos da área (mínimo 3) e depois em "✓ Concluir Área" pra fechar e definir a cota final.' : ferramenta === 'cota' ? 'Clique dentro de uma área já desenhada pra marcar a cota do terreno naquele ponto.' : 'Desenhe uma ou mais áreas, marque as cotas do terreno dentro delas, e clique em "▦ Gerar Seções" — o sistema divide cada área numa grade de linhas de 1,5m e calcula a área/volume de cada uma automaticamente.'}</p>
         ${areas.length ? `
@@ -357,47 +364,83 @@ const LevantamentoTerraplanagem = (() => {
     `;
   }
 
-  // ── Clique na imagem ÚNICA do projeto: calibrar, desenhar área ou marcar cota ──
+  // ── Zoom/pan do painel "Marcar no Projeto" (mesma ideia do "Ver Seções") ──
+  let projZoom = 1, projPanX = 0, projPanY = 0;
+  function projZoomIn() { projZoom = Math.min(6, projZoom * 1.4); _aplicarZoomPanProjeto(); }
+  function projZoomOut() { projZoom = Math.max(1, projZoom / 1.4); if (projZoom === 1) { projPanX = 0; projPanY = 0; } _aplicarZoomPanProjeto(); }
+  function projZoomReset() { projZoom = 1; projPanX = 0; projPanY = 0; _aplicarZoomPanProjeto(); }
+  function _aplicarZoomPanProjeto() {
+    const wrap = document.getElementById('tp-projeto-zoomwrap');
+    if (wrap) wrap.style.transform = `translate(${projPanX}px, ${projPanY}px) scale(${projZoom})`;
+  }
+
+  // ── Clique/toque na imagem ÚNICA do projeto: calibrar, desenhar área ou
+  // marcar cota — usa pointer events pra distinguir TOQUE (marca um ponto)
+  // de ARRASTAR (só dá pan quando tem zoom, não marca nada por engano).
   function _attachImgClickGlobal() {
+    const container = document.getElementById('tp-projeto-mapa');
     const img = document.getElementById('tp-img-projeto');
-    if (!img) return;
-    img.onclick = (evt) => {
-      const p = TC.posRelativa(evt, img);
-      if (calibrando) {
-        if (!calibPontoTemp) { calibPontoTemp = p; renderSecoes(); return; }
-        const distStr = prompt('Distância real entre os dois pontos clicados (metros):');
-        const distM = TC.num(distStr);
-        if (!(distM > 0)) {
-          Utils.toast('Calibração cancelada — informe uma distância válida.', 'alerta');
-          calibrando = false; calibPontoTemp = null; renderSecoes(); return;
-        }
-        const distPx = Math.hypot((p.x - calibPontoTemp.x) * config.imgW, (p.y - calibPontoTemp.y) * config.imgH);
-        config.escalaPxPorMetro = distPx / distM;
-        calibrando = false; calibPontoTemp = null;
-        _recalcTudo();
-        Utils.toast('✓ Escala calibrada!', 'sucesso');
-        salvarConfig().catch(() => {});
-        renderSecoes();
-        return;
-      }
-      if (ferramenta === 'area') {
-        if (!areaEmDesenho) areaEmDesenho = { pontos: [] };
-        areaEmDesenho.pontos.push(p);
-        renderSecoes();
-        return;
-      }
-      if (ferramenta === 'cota') {
-        const area = _areaQueContem(p);
-        if (!area) { Utils.toast('Clique dentro de uma área já desenhada.', 'alerta'); return; }
-        const cotaStr = prompt('Cota (elevação) do terreno neste ponto:');
-        if (cotaStr === null || cotaStr.trim() === '') return;
-        config.pontosCota = config.pontosCota || [];
-        config.pontosCota.push({ id: TC.genId('pc'), x: p.x, y: p.y, cota: TC.num(cotaStr), areaId: area.id });
-        salvarConfig().catch(() => {});
-        renderSecoes();
-        return;
+    if (!container || !img) return;
+    let baixouX = 0, baixouY = 0, arrastou = false, panX0 = 0, panY0 = 0;
+    container.onpointerdown = ev => {
+      baixouX = ev.clientX; baixouY = ev.clientY; arrastou = false;
+      panX0 = projPanX; panY0 = projPanY;
+    };
+    container.onpointermove = ev => {
+      const dx = ev.clientX - baixouX, dy = ev.clientY - baixouY;
+      if (!arrastou && Math.hypot(dx, dy) > 6) arrastou = true;
+      if (arrastou && projZoom > 1) {
+        projPanX = panX0 + dx; projPanY = panY0 + dy;
+        _aplicarZoomPanProjeto();
       }
     };
+    container.onpointerup = ev => {
+      if (arrastou) { container.style.cursor = 'grab'; return; } // foi pan, não marca ponto
+      _tocarProjeto(ev, img);
+    };
+    container.onwheel = ev => {
+      ev.preventDefault();
+      projZoom = Math.max(1, Math.min(6, projZoom * (ev.deltaY < 0 ? 1.15 : 0.87)));
+      if (projZoom === 1) { projPanX = 0; projPanY = 0; }
+      _aplicarZoomPanProjeto();
+    };
+  }
+
+  function _tocarProjeto(evt, img) {
+    const p = TC.posRelativa(evt, img);
+    if (calibrando) {
+      if (!calibPontoTemp) { calibPontoTemp = p; renderSecoes(); return; }
+      const distStr = prompt('Distância real entre os dois pontos clicados (metros):');
+      const distM = TC.num(distStr);
+      if (!(distM > 0)) {
+        Utils.toast('Calibração cancelada — informe uma distância válida.', 'alerta');
+        calibrando = false; calibPontoTemp = null; renderSecoes(); return;
+      }
+      const distPx = Math.hypot((p.x - calibPontoTemp.x) * config.imgW, (p.y - calibPontoTemp.y) * config.imgH);
+      config.escalaPxPorMetro = distPx / distM;
+      calibrando = false; calibPontoTemp = null;
+      _recalcTudo();
+      Utils.toast('✓ Escala calibrada!', 'sucesso');
+      salvarConfig().catch(() => {});
+      renderSecoes();
+      return;
+    }
+    if (ferramenta === 'area') {
+      if (!areaEmDesenho) areaEmDesenho = { pontos: [] };
+      areaEmDesenho.pontos.push(p);
+      renderSecoes();
+      return;
+    }
+    if (ferramenta === 'cota') {
+      const area = _areaQueContem(p);
+      if (!area) { Utils.toast('Clique dentro de uma área já desenhada.', 'alerta'); return; }
+      const cotaStr = prompt('Cota (elevação) do terreno neste ponto:');
+      if (cotaStr === null || cotaStr.trim() === '') return;
+      config.pontosCota = config.pontosCota || [];
+      config.pontosCota.push({ id: TC.genId('pc'), x: p.x, y: p.y, cota: TC.num(cotaStr), areaId: area.id });
+      salvarConfig().catch(() => {});
+      renderSecoes();
+    }
   }
 
   // ══════════════════════════════════════════
@@ -1234,8 +1277,8 @@ const LevantamentoTerraplanagem = (() => {
     // senão, como o corte costuma ser de só alguns metros num prédio de
     // dezenas de metros, o 3D saía todo achatado. Exagera visualmente a
     // profundidade pra ela ficar sempre bem visível, sem depender do tamanho da planta.
-    const ALTURA_VISUAL = 30;
-    const escalaY = Math.min(ALTURA_VISUAL / Math.max(maxY - minY, 0.5), escalaXZ * 4); // trava o exagero em no máx. 4x a escala horizontal — senão distorce demais (virava "caixa com torre")
+    const ALTURA_VISUAL = 20;
+    const escalaY = Math.min(ALTURA_VISUAL / Math.max(maxY - minY, 0.5), escalaXZ * 2); // trava o exagero em no máx. 2x a escala horizontal — 4x ainda distorcia demais
 
     const THREE_ = window.THREE;
     const scene = new THREE_.Scene();
@@ -1276,26 +1319,6 @@ const LevantamentoTerraplanagem = (() => {
       geoFundo.computeVertexNormals();
       const matFundo = new THREE_.MeshStandardMaterial({ color: 0xf59e0b, transparent: true, opacity: 0.35, side: THREE_.DoubleSide, roughness: 0.9 });
       if (perfis.length > 1) group.add(new THREE_.Mesh(geoFundo, matFundo));
-
-      // Paredes de fechamento nas duas pontas do grupo — mostra a face do corte
-      [0, perfis.length - 1].forEach(si => {
-        const posParede = [];
-        for (let pi = 0; pi < N; pi++) {
-          posParede.push((perfis[si][pi].x - cx) * escalaXZ, (perfis[si][pi].cota * sinais[si] - cy) * escalaY, (zAcum[si] - cz) * escalaXZ);
-          posParede.push((perfis[si][pi].x - cx) * escalaXZ, (cotasFinal[si] * sinais[si] - cy) * escalaY, (zAcum[si] - cz) * escalaXZ);
-        }
-        const facesParede = [];
-        for (let pi = 0; pi < N - 1; pi++) {
-          const a = pi * 2, b = pi * 2 + 1, c = (pi + 1) * 2, d = (pi + 1) * 2 + 1;
-          facesParede.push(a, c, b, b, c, d);
-        }
-        const geoParede = new THREE_.BufferGeometry();
-        geoParede.setAttribute('position', new THREE_.Float32BufferAttribute(posParede, 3));
-        geoParede.setIndex(facesParede);
-        geoParede.computeVertexNormals();
-        const matParede = new THREE_.MeshStandardMaterial({ color: 0x8b7355, side: THREE_.DoubleSide, roughness: 0.95 });
-        group.add(new THREE_.Mesh(geoParede, matParede));
-      });
     });
 
     scene.add(group);
@@ -1630,6 +1653,7 @@ const LevantamentoTerraplanagem = (() => {
     abrirCaminhoes, salvarCaminhao, excluirCaminhao,
     abrirVerSecoes, fecharVerSecoes, selecionarSecaoVisualizada,
     verSecZoomIn, verSecZoomOut, verSecZoomReset,
+    projZoomIn, projZoomOut, projZoomReset,
     abrir3D, fechar3D, limparBase,
     baixarLevantamentoPDF, compartilharLevantamentoPDF,
   };
