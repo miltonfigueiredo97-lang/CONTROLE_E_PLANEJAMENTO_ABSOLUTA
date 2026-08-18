@@ -68,6 +68,11 @@ const LP = (() => {
   let _rodapeEditandoAreaId = null;   // se setado, o modo 'rodape' está editando o rodapé de uma área já salva
   let areaDestacadaId = null;      // área destacada temporariamente (ao focar pela árvore)
   let areasSelecionadasParaMover = new Set(); // ids marcados p/ mover/copiar — guardado à parte
+
+  // ── Seleção de paredes específicas p/ impermeabilização do rodapé (popup dedicado) ──
+  let _paredesImpermPoligono = null;      // polígono usado no popup em progresso
+  let _paredesImpermPendente = null;      // [{incluida, comprimentoTotal, comprimento}] por aresta — em edição no popup
+  let _paredesImpermSalvasPendente = null; // resultado confirmado, aguardando salvarArea() gravar em data.paredesImperm
                                                // (não só no DOM) pra não se perder se a árvore
                                                // redesenhar por qualquer motivo (ex: clique errado)
   let _destacarTimer = null;
@@ -147,11 +152,20 @@ const LP = (() => {
 
   // M² de impermeabilização de UMA área: área toda (se marcado) + rodapé impermeabilizado (ml × altura, se marcado).
   // impermAreaToda !== false -> default true, compat com áreas antigas gravadas antes deste campo existir.
+  // Rodapé: se a.paredesImperm existir (seleção específica de paredes/trechos), usa a soma dela;
+  // senão cai no comportamento antigo (ml total do rodapé da área, sem distinção de parede).
+  function _mlRodapeImpermSelecionado(a) {
+    if (Array.isArray(a.paredesImperm) && a.paredesImperm.length) {
+      return a.paredesImperm.filter(e => e && e.incluida).reduce((s, e) => s + (e.comprimento || 0), 0);
+    }
+    return a.mlRodape || 0;
+  }
+
   function _m2Imperm(a) {
     if (!a.impermeabilizacao) return 0;
     let m2 = 0;
     if (a.impermAreaToda !== false) m2 += (a.areaM2 || 0);
-    if (a.impermRodape) m2 += (a.mlRodape || 0) * (a.alturaRodapeImperm || 0);
+    if (a.impermRodape) m2 += _mlRodapeImpermSelecionado(a) * (a.alturaRodapeImperm || 0);
     return m2;
   }
   function num(v) { const n = parseFloat(String(v).replace(',', '.')); return isNaN(n) ? 0 : n; }
@@ -1292,6 +1306,7 @@ const LP = (() => {
     document.getElementById('lp-check-imperm-area-toda').checked = true;
     document.getElementById('lp-campo-imperm-rodape-altura').style.display = 'none';
     document.getElementById('lp-select-altura-rodape-preset').value = '';
+    _paredesImpermSalvasPendente = null;
     _atualizarLabelImpermAreaToda();
     _atualizarInfoImpermRodape();
     document.getElementById('lp-btn-excluir-area').style.display = 'none';
@@ -1347,6 +1362,7 @@ const LP = (() => {
     document.getElementById('lp-campo-imperm-tipo').style.display = a.impermeabilizacao ? '' : 'none';
     document.getElementById('lp-campo-imperm-rodape-altura').style.display = a.impermRodape ? '' : 'none';
     document.getElementById('lp-select-altura-rodape-preset').value = '';
+    _paredesImpermSalvasPendente = Array.isArray(a.paredesImperm) ? a.paredesImperm.slice() : null;
     _atualizarLabelImpermAreaToda();
     _atualizarInfoImpermRodape();
     document.getElementById('lp-btn-excluir-area').style.display = '';
@@ -1552,17 +1568,129 @@ const LP = (() => {
   }
 
   function _atualizarInfoImpermRodape() {
-    const ml = Utils.parseNum(document.getElementById('lp-area-ml-rodape-display').value);
+    const mlTotalRodape = Utils.parseNum(document.getElementById('lp-area-ml-rodape-display').value);
+    const ml = _paredesImpermSalvasPendente
+      ? _paredesImpermSalvasPendente.filter(e => e && e.incluida).reduce((s, e) => s + (e.comprimento || 0), 0)
+      : mlTotalRodape;
     const altura = Utils.parseNum(document.getElementById('lp-input-altura-rodape').value);
     const info = document.getElementById('lp-imperm-rodape-m2-info');
     if (!info) return;
     info.textContent = ml > 0
       ? `= ${fmt2(ml)}m × ${fmt2(altura)}m = ${fmt2(ml * altura)} m² de impermeabilização`
-      : 'Nenhum rodapé selecionado nesta área ainda.';
+      : 'Nenhuma parede/rodapé selecionado ainda.';
+    _atualizarResumoParedesImperm();
+  }
+
+  function _atualizarResumoParedesImperm() {
+    const el = document.getElementById('lp-paredes-imperm-resumo');
+    if (!el) return;
+    if (_paredesImpermSalvasPendente) {
+      const inc = _paredesImpermSalvasPendente.filter(e => e && e.incluida).length;
+      const tot = _paredesImpermSalvasPendente.filter(e => e && e.incluida).reduce((s, e) => s + (e.comprimento || 0), 0);
+      el.textContent = `${inc} de ${_paredesImpermSalvasPendente.length} parede(s) selecionada(s) — ${fmt2(tot)} m`;
+    } else {
+      el.textContent = 'Usando o rodapé todo da área (clique em "Selecionar Paredes" pra ajustar)';
+    }
+  }
+
+  // ══════════════════════════════════════════
+  // POPUP: Selecionar Paredes (impermeabilização do rodapé) — permite escolher
+  // quais arestas da área participam e, se for só um trecho, editar o comprimento.
+  // ══════════════════════════════════════════
+  function abrirSelecaoParedesImperm() {
+    let poligono, escala, rodapeAtual, existente;
+    if (areaEditId) {
+      const a = areas.find(x => x.id === areaEditId);
+      if (!a || !a.poligono) { Utils.toast('Esta área não tem polígono desenhado — não é possível selecionar paredes.', 'alerta'); return; }
+      poligono = a.poligono;
+      const r = _acharNode(a.nodeId);
+      escala = r ? (r.node.escalaMetrosPorPonto || 0) : 0;
+      rodapeAtual = a.rodapeArestas;
+      existente = _paredesImpermSalvasPendente || a.paredesImperm;
+    } else {
+      if (!areaPoligonoPendente) { Utils.toast('Desenhe a área primeiro.', 'alerta'); return; }
+      poligono = areaPoligonoPendente;
+      const r = _acharNode(areaNodeIdPendente || selNodeId);
+      escala = r ? (r.node.escalaMetrosPorPonto || 0) : 0;
+      rodapeAtual = rodapeArestasPendente;
+      existente = _paredesImpermSalvasPendente;
+    }
+    _paredesImpermPoligono = poligono;
+    _paredesImpermPendente = poligono.map((p, i) => {
+      const p2 = poligono[(i + 1) % poligono.length];
+      const compTotal = Math.hypot(p2.x - p.x, p2.y - p.y) * escala;
+      const salvo = existente && existente[i];
+      return {
+        incluida: salvo ? !!salvo.incluida : !!(rodapeAtual && rodapeAtual[i]),
+        comprimentoTotal: compTotal,
+        comprimento: (salvo && salvo.comprimento != null) ? Math.min(salvo.comprimento, compTotal) : compTotal,
+      };
+    });
+    _renderParedesImpermPopup();
+    Utils.abrirModal('modal-lp-paredes-imperm');
+  }
+
+  // Normaliza os pontos do polígono (coordenadas do PDF) pra caber num viewBox pequeno e "bonitinho"
+  function _normalizarPontosSVG(poligono, w, h, pad) {
+    const xs = poligono.map(p => p.x), ys = poligono.map(p => p.y);
+    const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys);
+    const bw = (maxX - minX) || 1, bh = (maxY - minY) || 1;
+    const escala = Math.min((w - 2 * pad) / bw, (h - 2 * pad) / bh);
+    return poligono.map(p => ({ x: pad + (p.x - minX) * escala, y: pad + (p.y - minY) * escala }));
+  }
+
+  function _renderParedesImpermPopup() {
+    const arr = _paredesImpermPendente;
+    const W = 300, H = 200, PAD = 26;
+    const norm = _normalizarPontosSVG(_paredesImpermPoligono, W, H, PAD);
+    let svg = `<svg viewBox="0 0 ${W} ${H}" style="width:100%;max-height:200px;display:block;">`;
+    svg += `<polygon points="${norm.map(p => p.x + ',' + p.y).join(' ')}" fill="#e2e8f0" opacity="0.35"/>`;
+    norm.forEach((p1, i) => {
+      const p2 = norm[(i + 1) % norm.length];
+      const inc = arr[i].incluida;
+      const mx = (p1.x + p2.x) / 2, my = (p1.y + p2.y) / 2;
+      const cor = inc ? '#7c3aed' : '#cbd5e1';
+      svg += `<line x1="${p1.x.toFixed(1)}" y1="${p1.y.toFixed(1)}" x2="${p2.x.toFixed(1)}" y2="${p2.y.toFixed(1)}" stroke="${cor}" stroke-width="${inc ? 6 : 4}" stroke-linecap="round" style="cursor:pointer;" onclick="LP.toggleParedeImperm(${i})"/>`;
+      svg += `<circle cx="${mx.toFixed(1)}" cy="${my.toFixed(1)}" r="9" fill="#fff" stroke="${cor}" stroke-width="1.5" style="cursor:pointer;" onclick="LP.toggleParedeImperm(${i})"/>`;
+      svg += `<text x="${mx.toFixed(1)}" y="${(my + 3).toFixed(1)}" text-anchor="middle" font-size="9" font-weight="700" fill="${cor}" style="pointer-events:none;">${i + 1}</text>`;
+    });
+    svg += `</svg>`;
+    document.getElementById('lp-paredes-imperm-svg-wrap').innerHTML = svg;
+
+    document.getElementById('lp-paredes-imperm-lista').innerHTML = arr.map((e, i) => `
+      <div style="display:flex;align-items:center;gap:8px;border:1px solid #e2e8f0;border-radius:6px;padding:8px;margin-bottom:6px;">
+        <input type="checkbox" id="lp-parede-imperm-chk-${i}" ${e.incluida ? 'checked' : ''} onchange="LP.toggleParedeImperm(${i})">
+        <label for="lp-parede-imperm-chk-${i}" style="flex:1;margin:0;font-size:0.85rem;">Parede ${i + 1} <span style="color:var(--cor-texto-muted);font-size:.75rem;">(${fmt2(e.comprimentoTotal)} m no total)</span></label>
+        <input type="number" step="0.01" min="0" max="${e.comprimentoTotal.toFixed(2)}" value="${e.comprimento.toFixed(2)}" class="form-control" style="width:78px;padding:4px 6px;" ${e.incluida ? '' : 'disabled'} oninput="LP.editarComprimentoParedeImperm(${i}, this.value)">
+        <span style="font-size:.75rem;color:var(--cor-texto-muted);">m</span>
+      </div>
+    `).join('');
+  }
+
+  function toggleParedeImperm(i) {
+    const e = _paredesImpermPendente[i]; if (!e) return;
+    e.incluida = !e.incluida;
+    if (e.incluida && (!e.comprimento || e.comprimento <= 0)) e.comprimento = e.comprimentoTotal;
+    _renderParedesImpermPopup();
+  }
+
+  function editarComprimentoParedeImperm(i, valor) {
+    const e = _paredesImpermPendente[i]; if (!e) return;
+    let n = Utils.parseNum(valor);
+    if (n < 0) n = 0;
+    if (n > e.comprimentoTotal) n = e.comprimentoTotal;
+    e.comprimento = n;
+  }
+
+  function confirmarParedesImperm() {
+    _paredesImpermSalvasPendente = _paredesImpermPendente.map(e => ({ incluida: e.incluida, comprimento: e.incluida ? e.comprimento : 0 }));
+    Utils.fecharModal('modal-lp-paredes-imperm');
+    _atualizarInfoImpermRodape();
   }
 
   function fecharModalArea() {
     Utils.fecharModal('modal-lp-area');
+    _paredesImpermSalvasPendente = null;
     if (areaEditId === null) {
       poligonoPontos = []; modo = 'nenhum'; areaPoligonoPendente = null;
       rodapeArestasPendente = null; mlRodapePendente = 0; poligonoRodapeSelecionado = [];
@@ -1580,7 +1708,8 @@ const LP = (() => {
       data.impermRodape = false;
       data.alturaRodapeImperm = 0;
     }
-    if (!data.impermRodape) data.alturaRodapeImperm = 0;
+    if (!data.impermRodape) { data.alturaRodapeImperm = 0; data.paredesImperm = null; }
+    else data.paredesImperm = _paredesImpermSalvasPendente || null;
 
     const nodeIdDestino = areaEditId ? null : (areaNodeIdPendente || selNodeId);
 
@@ -1602,6 +1731,7 @@ const LP = (() => {
       poligonoPontos = []; modo = 'nenhum'; areaPoligonoPendente = null; areaEditId = null;
       areaNodeIdPendente = null;
       rodapeArestasPendente = null; mlRodapePendente = 0; poligonoRodapeSelecionado = [];
+      _paredesImpermSalvasPendente = null;
       await carregar();
       selNode(irParaNode);
     } catch (e) {
@@ -1718,6 +1848,7 @@ const LP = (() => {
     toggleModoCalibrar, toggleModoMedir, cancelarDesenho,
     cancelarCalibracao, confirmarCalibracao,
     finalizarPoligono, editarArea, onToggleImperm, onToggleImpermRodape, aplicarPresetAlturaRodape, onAlturaRodapeInput, fecharModalArea, salvarArea, excluirAreaEmEdicao, moverArea,
+    abrirSelecaoParedesImperm, toggleParedeImperm, editarComprimentoParedeImperm, confirmarParedesImperm,
     filtrarAreas, abrirClonarPavimento, marcarTodosClonar, confirmarClonarPavimento, criarNovoLocalEClonar, filtrarVisaoGeral,
     marcarTodasAreas, desmarcarTodasAreas, atualizarBarraSelecaoAreas, moverOuCopiarSelecionadas, toggleSelecaoArea,
     toggleRodapeEdge, cancelarRodape, confirmarRodape, iniciarEdicaoRodape,

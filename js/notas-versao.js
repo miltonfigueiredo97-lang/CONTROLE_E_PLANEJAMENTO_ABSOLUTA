@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.11.3',
+  versaoAtual: 'V3.11.3.1',
 
   versoes: [
     {
@@ -8569,6 +8569,19 @@ const NotasVersao = {
         "Dá pra criar estaca, mover estaca e ajustar forma no toque. Esses gestos só escutavam mouse, e no celular o navegador não emite o movimento do meio — o arrasto sempre saía com tamanho zero e era descartado calado.",
         "Não precisa mais acertar o pixel exato da estaca: o toque procura a estaca mais próxima num raio de 22px. Estaca desenhada tem 6 a 20px na tela contra cerca de 40px de área do dedo. Estaca sempre ganha do bloco desenhado embaixo dela.",
         "Terminar de arrastar o mapa não marca mais estaca sem querer, e o número do zoom (%) agora atualiza também no Planejamento e no Acompanhamento — antes só no Marcadores."
+      ]
+    },
+    {
+      "versao": "V3.11.3.1",
+      "data": "2026-08-18",
+      "tipo": "melhoria",
+      "titulo": "Levantamento Piso: seleção de quais paredes recebem impermeabilização do rodapé",
+      "itens": [
+        "Novo botão \\\"🧱 Selecionar Paredes\\\" dentro do bloco de impermeabilização do rodapé — abre um popup com um desenho simplificado da área e uma lista numerada das paredes (arestas), pra marcar só as que realmente recebem o tratamento (ex: banheiro com só 2 das 4 paredes impermeabilizadas).",
+        "Cada parede marcada tem o comprimento pré-preenchido com o tamanho real da parede, mas editável pra um trecho parcial (quando não é a parede inteira que recebe o tratamento).",
+        "O total (soma dos comprimentos das paredes marcadas × altura) substitui o cálculo pelo rodapé inteiro da área nos m² de impermeabilização, em todos os lugares (painel do workspace, Visão Geral e breakdown por tipo).",
+        "Compatibilidade: áreas que nunca abriram esse popup continuam usando o rodapé inteiro da área (comportamento da V3.11.1.1), sem precisar re-editar nada.",
+        "Corrigido de passagem: o badge de versão do link \\\"Notas de Versão\\\" na sidebar estava parado em V3.11.2 em todas as páginas — sincronizado com a versão atual."
       ]
     }
   ],

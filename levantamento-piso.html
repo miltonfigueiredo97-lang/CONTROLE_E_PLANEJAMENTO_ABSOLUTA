@@ -6,10 +6,10 @@
   <title>Levantamento de Piso — Controle e Planejamento de Obras</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/base.css?v=V3.11.3">
-  <link rel="stylesheet" href="css/layout.css?v=V3.11.3">
-  <link rel="stylesheet" href="css/tabelas.css?v=V3.11.3">
-  <link rel="stylesheet" href="css/modulos.css?v=V3.11.3">
+  <link rel="stylesheet" href="css/base.css?v=V3.11.3.1">
+  <link rel="stylesheet" href="css/layout.css?v=V3.11.3.1">
+  <link rel="stylesheet" href="css/tabelas.css?v=V3.11.3.1">
+  <link rel="stylesheet" href="css/modulos.css?v=V3.11.3.1">
   <style>
     .lp-toolbar { display:flex; align-items:center; gap:8px; flex-wrap:wrap; background:#fff; border:1px solid #e2e8f0; border-radius:10px; padding:8px 12px; margin-bottom:8px; }
     .lp-toolbar .sep { width:1px; align-self:stretch; background:#e2e8f0; margin:0 4px; }
@@ -123,7 +123,7 @@
       <a href="histograma.html" data-perm="histograma:ver"><span class="nav-icon">📊</span> Histograma</a>
       <a href="admin-permissoes.html" data-perm="admin:ver"><span class="nav-icon">🔑</span> Permissões</a>
       <a href="backup-planejamento.html" data-perm="backupPlanejamento:ver"><span class="nav-icon">🗂️</span> Backup de Planejamentos</a>
-      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V3.11.2</span></a>
+      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V3.11.3.1</span></a>
     </nav>
     <div class="sidebar-user">
       <div class="user-avatar">U</div>
@@ -261,6 +261,10 @@
               <input type="number" name="alturaRodapeImperm" id="lp-input-altura-rodape" class="form-control" step="0.01" min="0" placeholder="metros" oninput="LP.onAlturaRodapeInput()">
             </div>
             <small style="color:var(--cor-texto-muted);display:block;margin-top:4px;" id="lp-imperm-rodape-m2-info"></small>
+            <div style="margin-top:10px;padding-top:10px;border-top:1px dashed #e2e8f0;">
+              <button type="button" class="btn btn-secundario btn-sm" onclick="LP.abrirSelecaoParedesImperm()">🧱 Selecionar Paredes</button>
+              <div style="font-size:.75rem;color:var(--cor-texto-muted);margin-top:6px;" id="lp-paredes-imperm-resumo">Usando o rodapé todo da área (clique em "Selecionar Paredes" pra ajustar)</div>
+            </div>
           </div>
         </div>
         <div class="form-grupo">
@@ -280,6 +284,25 @@
       <button class="btn btn-secundario" onclick="LP.excluirAreaEmEdicao()" id="lp-btn-excluir-area" style="display:none;margin-right:auto;color:#dc2626;">Excluir</button>
       <button class="btn btn-secundario" onclick="LP.fecharModalArea()">Cancelar</button>
       <button class="btn btn-primario" onclick="LP.salvarArea()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Selecionar Paredes (impermeabilização do rodapé) -->
+<div class="modal-overlay" id="modal-lp-paredes-imperm">
+  <div class="modal" style="max-width:440px;">
+    <div class="modal-header">
+      <h3>Selecionar Paredes</h3>
+      <button class="modal-close" onclick="Utils.fecharModal('modal-lp-paredes-imperm')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p class="text-sm" style="color:var(--cor-texto-muted);margin-top:0;">Marque quais paredes recebem a impermeabilização do rodapé. Se for só um trecho da parede, ajuste o comprimento.</p>
+      <div id="lp-paredes-imperm-svg-wrap" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px;margin-bottom:12px;"></div>
+      <div id="lp-paredes-imperm-lista"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-lp-paredes-imperm')">Cancelar</button>
+      <button class="btn btn-primario" onclick="LP.confirmarParedesImperm()">Confirmar</button>
     </div>
   </div>
 </div>
@@ -319,14 +342,14 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
-<script src="js/firebase-config.js?v=V3.11.3"></script>
-<script src="js/auth.js?v=V3.11.3"></script>
-<script src="js/database.js?v=V3.11.3"></script>
-<script src="js/router.js?v=V3.11.3"></script>
-<script src="js/permissions.js?v=V3.11.3"></script>
-<script src="js/audit.js?v=V3.11.3"></script>
-<script src="js/utils.js?v=V3.11.3"></script>
-<script src="js/levantamento-piso.js?v=V3.11.3"></script>
+<script src="js/firebase-config.js?v=V3.11.3.1"></script>
+<script src="js/auth.js?v=V3.11.3.1"></script>
+<script src="js/database.js?v=V3.11.3.1"></script>
+<script src="js/router.js?v=V3.11.3.1"></script>
+<script src="js/permissions.js?v=V3.11.3.1"></script>
+<script src="js/audit.js?v=V3.11.3.1"></script>
+<script src="js/utils.js?v=V3.11.3.1"></script>
+<script src="js/levantamento-piso.js?v=V3.11.3.1"></script>
 <script>document.addEventListener('DOMContentLoaded', () => { LP.init(); });</script>
 </body>
 </html>
