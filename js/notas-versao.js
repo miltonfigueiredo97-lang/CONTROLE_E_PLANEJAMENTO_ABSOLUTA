@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.13.1.4',
+  versaoAtual: 'V3.13.1.5',
 
   versoes: [
     {
@@ -8963,6 +8963,15 @@ const NotasVersao = {
       "itens": [
         "Cada campo agora tem uma legenda em cima (Início Real / Término Real / % Executado / % Previsto) — antes só tinha o placeholder cinza (\"dd/mm/aaaa\"), que sozinho não dizia qual data era qual.",
         "% Previsto (o antigo \"Esperado\") voltou, mas lado a lado com % Executado — compara na hora se tá atrasado ou adiantado sem precisar abrir mais nada. Botão de marcar 100% ficou um ✓ pequeno colado no campo de % Executado."
+      ]
+    },
+    {
+      "versao": "V3.13.1.5",
+      "data": "2026-08-18",
+      "tipo": "melhoria",
+      "titulo": "Medições: botão \"Ocultar 100%\" — esconde quem já está concluído",
+      "itens": [
+        "Novo botão na barra de cima, junto com o filtro de Frente e a busca — liga/desliga (fica marcado ☑ quando ativo, lembra a escolha entre sessões). Some com toda tarefa já em 100% (considerando também o que ainda não foi salvo) e some com o grupo-pai se não sobrar nenhum filho visível — foco só no que falta preencher."
       ]
     }
   ],

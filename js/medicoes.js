@@ -19,6 +19,13 @@ const Medicoes = (() => {
     try{localStorage.setItem('med_filtroFrente',filtroFrente);}catch(e){}
     _render();
   }
+  // Ocultar tarefas já em 100% — foco só no que falta preencher.
+  let ocultarConcluidos=(()=>{try{return localStorage.getItem('med_ocultarConcluidos')==='1';}catch(e){return false;}})();
+  function setOcultarConcluidos(v){
+    ocultarConcluidos=!!v;
+    try{localStorage.setItem('med_ocultarConcluidos',ocultarConcluidos?'1':'0');}catch(e){}
+    _render();
+  }
 
   // ==================== DATAS / HELPERS ====================
   function _d(s){if(!s)return null;if(s.toDate)s=s.toDate();if(s instanceof Date)return new Date(s.getFullYear(),s.getMonth(),s.getDate());
@@ -230,12 +237,13 @@ const Medicoes = (() => {
     const tot=_totais();
     const q=busca.toLowerCase().trim();
     const frenteFiltro=filtroFrente;
-    const temFiltro=!!q||!!frenteFiltro;
-    // Pré-calcula (num único passe) quem bate nos filtros (texto + Frente) e
-    // quais grupos têm ao menos um descendente que bate — grupo sem nenhum
-    // alvo fica oculto. Se tem texto de busca, também abre automaticamente
-    // os ancestrais de cada resultado (senão o resultado fica escondido
-    // dentro de um grupo recolhido e parece que "não achou nada").
+    const temFiltro=!!q||!!frenteFiltro||ocultarConcluidos;
+    // Pré-calcula (num único passe) quem bate nos filtros (texto + Frente +
+    // ocultar concluídos) e quais grupos têm ao menos um descendente que
+    // bate — grupo sem nenhum alvo fica oculto. Se tem texto de busca,
+    // também abre automaticamente os ancestrais de cada resultado (senão o
+    // resultado fica escondido dentro de um grupo recolhido e parece que
+    // "não achou nada").
     let gruposComAlvo=null, leavesVisiveis=null;
     if(temFiltro){
       gruposComAlvo=new Set();leavesVisiveis=new Set();
@@ -246,7 +254,8 @@ const Medicoes = (() => {
         if(!leafSet.has(t.id)){pilha[niv]=t.id;continue;}
         const okQ=!q||(t.nome||'').toLowerCase().includes(q);
         const okF=!frenteFiltro||t.frenteServico===frenteFiltro;
-        if(okQ&&okF){
+        const okC=!ocultarConcluidos||_progAtual(t)<100;
+        if(okQ&&okF&&okC){
           leavesVisiveis.add(t.id);
           for(const gid of pilha){if(gid){gruposComAlvo.add(gid);if(q)colapsados.delete(gid);}}
         }
@@ -328,6 +337,7 @@ const Medicoes = (() => {
       <span class="med-chip">${tot.total.toFixed(2)}% <small>Total</small></span>
       <span class="med-chip" style="background:${tot.medicao>0?'#ecfdf5':'#f1f5f9'};">${tot.medicao.toFixed(2)}% <small>Medição</small></span>
       <span class="med-chip" style="background:#fffbeb;">${tot.esp.toFixed(2)}% <small>Esperado hoje</small></span>
+      <button class="btn btn-sm ${ocultarConcluidos?'btn-primario':'btn-outline'}" onclick="Medicoes.setOcultarConcluidos(${!ocultarConcluidos})" title="Esconder tarefas já em 100%">${ocultarConcluidos?'☑':'☐'} Ocultar 100%</button>
       <div class="med-spacer" style="flex:1;"></div>
       <select class="form-control" style="max-width:180px;font-size:.8rem;" onchange="Medicoes.setFiltroFrente(this.value)">
         <option value="">Todas as Frentes</option>
@@ -612,7 +622,7 @@ const Medicoes = (() => {
     catch(e){console.error(e);Utils.toast('Erro.','erro');}
   }
 
-  return{init,carregar,novaMedicao,voltar,toggleGrupo,expandirTudo,recolherTudo,setBusca,setFiltroFrente,descartarItem,
+  return{init,carregar,novaMedicao,voltar,toggleGrupo,expandirTudo,recolherTudo,setBusca,setFiltroFrente,setOcultarConcluidos,descartarItem,
     setCampo,removerFoto,fotoSelecionada,
     salvarMedicao,verMedicao,excluirMedicao};
 })();
