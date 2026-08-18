@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.11.4',
+  versaoAtual: 'V3.11.4.1',
 
   versoes: [
     {
@@ -8592,6 +8592,17 @@ const NotasVersao = {
       "itens": [
         "Levantamento de Terraplanagem, Controle de Terraplanagem e relatório PDF (todos) — tirados os cards separados de \"volume banco\" e \"volume com empolamento\" pra terra, estacas e fundação superficial. Agora cada um vira UM card só: o valor final (já empolado) em destaque, e a taxa aplicada (ex: \"+30% empolamento\") em texto pequeno embaixo.",
         "Menos cards na tela, mesma informação — só o banco (base de cálculo) deixou de ter card próprio, mas continua calculado por dentro."
+      ]
+    },
+    {
+      "versao": "V3.11.4.1",
+      "data": "2026-08-18",
+      "tipo": "melhoria",
+      "titulo": "Levantamento Piso: popup \\\"Selecionar Paredes\\\" ganhou o desenho real da planta de fundo",
+      "itens": [
+        "O desenho esquemático do popup de \\\"🧱 Selecionar Paredes\\\" (impermeabilização do rodapé) agora mostra atrás um recorte de verdade da planta baixa daquela região — não é mais só o contorno genérico, é a página do PDF ampliada e cortada em torno da área.",
+        "As paredes numeradas ficam desenhadas por cima do recorte real, alinhadas com as paredes de verdade do projeto — muito mais fácil de reconhecer qual é qual num banheiro com 4+ paredes parecidas.",
+        "Enquanto a planta carrega, o popup mostra o desenho esquemático como estava antes; ela troca pro fundo real assim que termina de carregar, sem travar a tela."
       ]
     }
   ],

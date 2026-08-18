@@ -73,6 +73,9 @@ const LP = (() => {
   let _paredesImpermPoligono = null;      // polígono usado no popup em progresso
   let _paredesImpermPendente = null;      // [{incluida, comprimentoTotal, comprimento}] por aresta — em edição no popup
   let _paredesImpermSalvasPendente = null; // resultado confirmado, aguardando salvarArea() gravar em data.paredesImperm
+  let _paredesImpermBBox = null;          // {bx0,by0,bw,bh} — bounding box (c/ margem) usado pra alinhar fundo+desenho
+  let _paredesImpermFundoDataURL = null;  // recorte da planta real de fundo, carregado assíncrono
+  let _paredesImpermLoadToken = 0;        // evita corrida se o popup for reaberto rápido
                                                // (não só no DOM) pra não se perder se a árvore
                                                // redesenhar por qualquer motivo (ex: clique errado)
   let _destacarTimer = null;
@@ -1596,22 +1599,26 @@ const LP = (() => {
   // ══════════════════════════════════════════
   // POPUP: Selecionar Paredes (impermeabilização do rodapé) — permite escolher
   // quais arestas da área participam e, se for só um trecho, editar o comprimento.
+  // Mostra o recorte real da planta de fundo (mesma origem do canvas principal)
+  // pra o usuário se localizar pelas paredes de verdade, não só um desenho genérico.
   // ══════════════════════════════════════════
   function abrirSelecaoParedesImperm() {
-    let poligono, escala, rodapeAtual, existente;
+    let poligono, escala, rodapeAtual, existente, node;
     if (areaEditId) {
       const a = areas.find(x => x.id === areaEditId);
       if (!a || !a.poligono) { Utils.toast('Esta área não tem polígono desenhado — não é possível selecionar paredes.', 'alerta'); return; }
       poligono = a.poligono;
       const r = _acharNode(a.nodeId);
-      escala = r ? (r.node.escalaMetrosPorPonto || 0) : 0;
+      node = r ? r.node : null;
+      escala = node ? (node.escalaMetrosPorPonto || 0) : 0;
       rodapeAtual = a.rodapeArestas;
       existente = _paredesImpermSalvasPendente || a.paredesImperm;
     } else {
       if (!areaPoligonoPendente) { Utils.toast('Desenhe a área primeiro.', 'alerta'); return; }
       poligono = areaPoligonoPendente;
       const r = _acharNode(areaNodeIdPendente || selNodeId);
-      escala = r ? (r.node.escalaMetrosPorPonto || 0) : 0;
+      node = r ? r.node : null;
+      escala = node ? (node.escalaMetrosPorPonto || 0) : 0;
       rodapeAtual = rodapeArestasPendente;
       existente = _paredesImpermSalvasPendente;
     }
@@ -1626,33 +1633,91 @@ const LP = (() => {
         comprimento: (salvo && salvo.comprimento != null) ? Math.min(salvo.comprimento, compTotal) : compTotal,
       };
     });
+    _paredesImpermBBox = _calcularBBoxComMargem(poligono);
+    _paredesImpermFundoDataURL = null; // limpa o fundo antigo — recarrega abaixo
     _renderParedesImpermPopup();
     Utils.abrirModal('modal-lp-paredes-imperm');
+    if (node && node.plantaId) _carregarFundoParedesImperm(node);
   }
 
-  // Normaliza os pontos do polígono (coordenadas do PDF) pra caber num viewBox pequeno e "bonitinho"
-  function _normalizarPontosSVG(poligono, w, h, pad) {
+  function _calcularBBoxComMargem(poligono) {
     const xs = poligono.map(p => p.x), ys = poligono.map(p => p.y);
     const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys);
-    const bw = (maxX - minX) || 1, bh = (maxY - minY) || 1;
-    const escala = Math.min((w - 2 * pad) / bw, (h - 2 * pad) / bh);
-    return poligono.map(p => ({ x: pad + (p.x - minX) * escala, y: pad + (p.y - minY) * escala }));
+    const margem = Math.max(maxX - minX, maxY - minY, 1) * 0.18; // folga pra dar contexto das paredes vizinhas
+    return { bx0: minX - margem, by0: minY - margem, bw: (maxX - minX) + margem * 2, bh: (maxY - minY) + margem * 2 };
+  }
+
+  // Carrega a página do PDF da planta e recorta só a região da área (com margem),
+  // numa instância própria do pdf.js — não usa/interfere no canvas principal do workspace.
+  async function _carregarFundoParedesImperm(node) {
+    const meuToken = ++_paredesImpermLoadToken;
+    try {
+      const pl = _plantaPorId(node.plantaId);
+      if (!pl) return;
+      await _garantirPdfjs();
+      const doc = await _carregarPdfDoc(pl.downloadURL);
+      if (meuToken !== _paredesImpermLoadToken) return;
+      const page = await doc.getPage(node.pagina);
+      if (meuToken !== _paredesImpermLoadToken) return;
+      const viewportBase = page.getViewport({ scale: 1 });
+      const bbox = _paredesImpermBBox;
+      const bx0 = Math.max(0, bbox.bx0), by0 = Math.max(0, bbox.by0);
+      const bx1 = Math.min(viewportBase.width, bbox.bx0 + bbox.bw), by1 = Math.min(viewportBase.height, bbox.by0 + bbox.bh);
+      const bw = bx1 - bx0, bh = by1 - by0;
+      if (bw <= 0 || bh <= 0) return;
+
+      const escalaRender = Math.min(4, 900 / bw);
+      const viewport = page.getViewport({ scale: escalaRender });
+      const canvasFull = document.createElement('canvas');
+      canvasFull.width = viewport.width; canvasFull.height = viewport.height;
+      await page.render({ canvasContext: canvasFull.getContext('2d'), viewport }).promise;
+      if (meuToken !== _paredesImpermLoadToken) return;
+
+      const sx = bx0 * escalaRender, sy = by0 * escalaRender, sw = bw * escalaRender, sh = bh * escalaRender;
+      const canvasCrop = document.createElement('canvas');
+      canvasCrop.width = sw; canvasCrop.height = sh;
+      canvasCrop.getContext('2d').drawImage(canvasFull, sx, sy, sw, sh, 0, 0, sw, sh);
+
+      _paredesImpermFundoDataURL = canvasCrop.toDataURL('image/png');
+      if (meuToken === _paredesImpermLoadToken) _renderParedesImpermPopup();
+    } catch (e) {
+      console.error('Erro ao carregar fundo da planta (popup paredes):', e);
+      // silencioso — o popup continua funcional com o desenho esquemático, só sem a planta de fundo
+    }
+  }
+
+  // Converte um ponto em coordenadas-PDF pra coordenadas do viewBox do popup,
+  // usando o MESMO bbox (c/ margem) usado pra recortar o fundo — garante alinhamento.
+  function _pontoParaSVGImperm(p, W, H, PAD) {
+    const bbox = _paredesImpermBBox;
+    const escala = Math.min((W - 2 * PAD) / bbox.bw, (H - 2 * PAD) / bbox.bh);
+    return { x: PAD + (p.x - bbox.bx0) * escala, y: PAD + (p.y - bbox.by0) * escala };
   }
 
   function _renderParedesImpermPopup() {
     const arr = _paredesImpermPendente;
+    const bbox = _paredesImpermBBox;
     const W = 300, H = 200, PAD = 26;
-    const norm = _normalizarPontosSVG(_paredesImpermPoligono, W, H, PAD);
-    let svg = `<svg viewBox="0 0 ${W} ${H}" style="width:100%;max-height:200px;display:block;">`;
-    svg += `<polygon points="${norm.map(p => p.x + ',' + p.y).join(' ')}" fill="#e2e8f0" opacity="0.35"/>`;
+    const escala = Math.min((W - 2 * PAD) / bbox.bw, (H - 2 * PAD) / bbox.bh);
+    const norm = _paredesImpermPoligono.map(p => _pontoParaSVGImperm(p, W, H, PAD));
+
+    let svg = `<svg viewBox="0 0 ${W} ${H}" style="width:100%;max-height:220px;display:block;">`;
+    if (_paredesImpermFundoDataURL) {
+      svg += `<image href="${_paredesImpermFundoDataURL}" x="${PAD}" y="${PAD}" width="${(bbox.bw * escala).toFixed(1)}" height="${(bbox.bh * escala).toFixed(1)}" preserveAspectRatio="none"/>`;
+      svg += `<polygon points="${norm.map(p => p.x + ',' + p.y).join(' ')}" fill="none"/>`;
+    } else {
+      svg += `<polygon points="${norm.map(p => p.x + ',' + p.y).join(' ')}" fill="#e2e8f0" opacity="0.35"/>`;
+      svg += `<text x="${W / 2}" y="${H - 8}" text-anchor="middle" font-size="9" fill="#94a3b8">Carregando desenho do projeto...</text>`;
+    }
     norm.forEach((p1, i) => {
       const p2 = norm[(i + 1) % norm.length];
       const inc = arr[i].incluida;
       const mx = (p1.x + p2.x) / 2, my = (p1.y + p2.y) / 2;
-      const cor = inc ? '#7c3aed' : '#cbd5e1';
-      svg += `<line x1="${p1.x.toFixed(1)}" y1="${p1.y.toFixed(1)}" x2="${p2.x.toFixed(1)}" y2="${p2.y.toFixed(1)}" stroke="${cor}" stroke-width="${inc ? 6 : 4}" stroke-linecap="round" style="cursor:pointer;" onclick="LP.toggleParedeImperm(${i})"/>`;
-      svg += `<circle cx="${mx.toFixed(1)}" cy="${my.toFixed(1)}" r="9" fill="#fff" stroke="${cor}" stroke-width="1.5" style="cursor:pointer;" onclick="LP.toggleParedeImperm(${i})"/>`;
-      svg += `<text x="${mx.toFixed(1)}" y="${(my + 3).toFixed(1)}" text-anchor="middle" font-size="9" font-weight="700" fill="${cor}" style="pointer-events:none;">${i + 1}</text>`;
+      const cor = inc ? '#7c3aed' : (_paredesImpermFundoDataURL ? '#ffffff' : '#cbd5e1');
+      const contorno = inc ? 'none' : (_paredesImpermFundoDataURL ? '#334155' : 'none');
+      svg += `<line x1="${p1.x.toFixed(1)}" y1="${p1.y.toFixed(1)}" x2="${p2.x.toFixed(1)}" y2="${p2.y.toFixed(1)}" stroke="${cor}" stroke-width="${inc ? 6 : 4}" stroke-opacity="${inc ? 0.85 : 0.9}" stroke-linecap="round" style="cursor:pointer;" onclick="LP.toggleParedeImperm(${i})"/>`;
+      svg += `<circle cx="${mx.toFixed(1)}" cy="${my.toFixed(1)}" r="9" fill="#fff" stroke="${inc ? '#7c3aed' : '#64748b'}" stroke-width="1.5" style="cursor:pointer;" onclick="LP.toggleParedeImperm(${i})"/>`;
+      svg += `<text x="${mx.toFixed(1)}" y="${(my + 3).toFixed(1)}" text-anchor="middle" font-size="9" font-weight="700" fill="${inc ? '#7c3aed' : '#475569'}" style="pointer-events:none;">${i + 1}</text>`;
     });
     svg += `</svg>`;
     document.getElementById('lp-paredes-imperm-svg-wrap').innerHTML = svg;
