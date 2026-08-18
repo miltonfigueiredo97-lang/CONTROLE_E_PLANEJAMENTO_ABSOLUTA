@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.11.4.15',
+  versaoAtual: 'V3.11.4.16',
 
   versoes: [
     {
@@ -8753,6 +8753,16 @@ const NotasVersao = {
       "titulo": "Levantamento Piso: parede ficava grossa demais no zoom e tampava o número",
       "itens": [
         "Popup \"Selecionar Paredes\": a V3.11.4.12 corrigiu o tamanho dos números pra não crescer com o zoom, mas a linha da própria parede continuava engordando — em zoom alto (700%+) virava uma barra enorme que cobria o número por cima. Agora a espessura da linha também é recalculada a cada zoom pra ficar constante na tela, igual já acontecia com os números."
+      ]
+    },
+    {
+      "versao": "V3.11.4.16",
+      "data": "2026-08-18",
+      "tipo": "correcao",
+      "titulo": "Levantamento Piso: zoom da roda do mouse não ancorava no cursor (a tela \"fugia\")",
+      "itens": [
+        "Popup \"Selecionar Paredes\": o zoom pela roda do mouse sempre ampliava a partir do CENTRO do desenho, não de onde o mouse estava — então dar zoom num canto fazia o conteúdo \"escapar\" pro lado errado, precisando reajustar o pan toda hora atrás do que se queria ver.",
+        "Corrigido: agora o zoom ancora exatamente no ponto onde o mouse está — o que estava embaixo do cursor continua embaixo do cursor depois do zoom, igual o Google Maps/Figma. Os botões ➖/➕ continuam ancorando no centro (não tem cursor pra seguir nesse caso)."
       ]
     }
   ],

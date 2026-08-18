@@ -1745,7 +1745,10 @@ const LP = (() => {
     document.addEventListener('wheel', e => {
       if (!dentroDoWrap(e.target)) return;
       e.preventDefault();
-      zoomParedesImperm(e.deltaY < 0 ? 0.25 : -0.25);
+      const wrap = document.getElementById('lp-paredes-imperm-svg-wrap');
+      const rect = wrap.getBoundingClientRect();
+      const ancora = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+      zoomParedesImperm(e.deltaY < 0 ? 0.5 : -0.5, ancora);
     }, { passive: false });
   }
 
@@ -1822,8 +1825,25 @@ const LP = (() => {
     svg.style.transform = `translate(${v.tx}px, ${v.ty}px) scale(${v.scale})`;
   }
 
-  function zoomParedesImperm(delta) {
-    const novo = Math.min(10, Math.max(1, _paredesImpermView.scale + delta));
+  // pontoAncora (opcional): {x,y} em pixels relativos ao canto superior-esquerdo do wrap — se vier,
+  // o zoom ancora exatamente nesse ponto (o que está embaixo do mouse fica no mesmo lugar da tela).
+  // Sem ele (botões ➖/➕), ancora no centro, como antes.
+  function zoomParedesImperm(delta, pontoAncora) {
+    const wrap = document.getElementById('lp-paredes-imperm-svg-wrap');
+    const scaleAntigo = _paredesImpermView.scale;
+    const novo = Math.min(10, Math.max(1, scaleAntigo + delta));
+    if (novo === scaleAntigo) return;
+
+    if (wrap && pontoAncora) {
+      const ox = wrap.clientWidth / 2, oy = wrap.clientHeight / 2;
+      // ponto local (na "foto" sem zoom) que está embaixo do mouse ANTES de mudar a escala
+      const lx = ox + (pontoAncora.x - ox - _paredesImpermView.tx) / scaleAntigo;
+      const ly = oy + (pontoAncora.y - oy - _paredesImpermView.ty) / scaleAntigo;
+      // recalcula o pan pra esse MESMO ponto local continuar embaixo do mouse na escala nova
+      _paredesImpermView.tx = pontoAncora.x - ox - novo * (lx - ox);
+      _paredesImpermView.ty = pontoAncora.y - oy - novo * (ly - oy);
+    }
+
     _paredesImpermView.scale = novo;
     if (novo === 1) { _paredesImpermView.tx = 0; _paredesImpermView.ty = 0; } // volta ao normal = centraliza de novo
     _construirEAplicarSvgImperm(); // regera (não só re-transforma) pra recalcular o tamanho constante dos números
