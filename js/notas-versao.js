@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.11.2',
+  versaoAtual: 'V3.11.3',
 
   versoes: [
     {
@@ -8555,6 +8555,20 @@ const NotasVersao = {
       "itens": [
         "A sessão paralela criou a view real de \"Fundações\" no Controle de Estacas e Fundações (peças tipo Fundação com subtipo diferente de Estacas — blocos, baldrames, etc.). O card \"Vol. Fundação Superficial\" (Levantamento, Controle de Terraplanagem e relatório PDF), que antes mostrava sempre \"—\" como placeholder, agora soma esse volume de verdade automaticamente.",
         "Testado: peças de Fundação com subtipo Estacas somam separado das com outros subtipos (Bloco, Baldrame, etc.) — confirmado que a separação bate certo e não mistura com peças de Estrutura."
+      ]
+    },
+    {
+      "versao": "V3.11.3",
+      "data": "2026-08-18",
+      "tipo": "correcao",
+      "titulo": "Controle de Estacas: mapa utilizável no celular e no tablet",
+      "itens": [
+        "A tela não fica mais azul ao tocar numa estaca. A V3.10.4 já tinha tratado a seleção de texto e o menu do iOS, mas faltava o realce de toque do Android (-webkit-tap-highlight-color): tocar num elemento com clique faz o navegador pintar um retângulo azul do TAMANHO DO ELEMENTO, e o elemento clicável ali é o mapa inteiro. Faltava também proteger o container que rola o mapa, e não só a imagem. Vale nas 3 abas: Marcadores, Planejamento e Acompanhamento.",
+        "O zoom de dois dedos agora cresce NO PONTO onde você pinçou. Antes o mapa era redesenhado com a posição de rolagem antiga, que aponta pra outro lugar da planta depois que ela muda de tamanho, e a vista fugia pro canto superior esquerdo. Vale também pro Ctrl+roda (ancora no cursor) e pros botões + e − (ancoram no centro do que está na tela).",
+        "O pinch não trava mais no primeiro movimento. Ele redesenhava o mapa a cada quadro, e trocar o desenho no meio do gesto desliga os eventos de toque — o gesto morria. Agora o mapa só é redesenhado quando você tira os dedos.",
+        "Dá pra criar estaca, mover estaca e ajustar forma no toque. Esses gestos só escutavam mouse, e no celular o navegador não emite o movimento do meio — o arrasto sempre saía com tamanho zero e era descartado calado.",
+        "Não precisa mais acertar o pixel exato da estaca: o toque procura a estaca mais próxima num raio de 22px. Estaca desenhada tem 6 a 20px na tela contra cerca de 40px de área do dedo. Estaca sempre ganha do bloco desenhado embaixo dela.",
+        "Terminar de arrastar o mapa não marca mais estaca sem querer, e o número do zoom (%) agora atualiza também no Planejamento e no Acompanhamento — antes só no Marcadores."
       ]
     }
   ],

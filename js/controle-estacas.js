@@ -50,6 +50,7 @@ const ControleEstacas = (() => {
   let modo = null;      // null | 'circulo' | 'poligono' (modo de adicionar)
   let poligonoPontos = [];
   let _arrastouMarcadorAgora = false; // true logo depois de arrastar uma estaca — suprime o 'click' que abriria o vínculo
+  let _arrastandoMarcador = false;    // arrasto de estaca EM CURSO — impede o pan de 1 dedo de arrastar o mapa junto
   let editandoFormaId = null; // marcador em ajuste de forma (mover/redimensionar)
   let marcadorVincularId = null;
   let imagemCachePranchaId = null, imagemCacheBase64 = null;
@@ -331,8 +332,7 @@ const ControleEstacas = (() => {
     // adianta nesse caminho (não acha nada pra preservar). Isso cobre
     // qualquer ação que recarregue tudo (excluir marcador, vincular, etc.)
     // — não só zoom/girar, que já chamavam renderMapa() direto.
-    const scrollAntigo = document.querySelector('#ce-mapa-host .est-map-scroll');
-    const scrollPos = scrollAntigo ? { left: scrollAntigo.scrollLeft, top: scrollAntigo.scrollTop } : null;
+    const reporScroll = _preservarScroll('#ce-mapa-host');
     const marcadoresView = marcadores.filter(m => m.tipo === tipoMarcadorDaView());
     const total = marcadoresView.length;
     const vinculados = marcadoresView.filter(m => m.pecaId).length;
@@ -387,8 +387,7 @@ const ControleEstacas = (() => {
       </div>`}
     `;
     await renderMapa();
-    const scrollNovo = document.querySelector('#ce-mapa-host .est-map-scroll');
-    if (scrollNovo && scrollPos) { scrollNovo.scrollLeft = scrollPos.left; scrollNovo.scrollTop = scrollPos.top; }
+    reporScroll();
     renderTabela();
     Permissions.aplicarNaTela();
   }
@@ -411,14 +410,74 @@ const ControleEstacas = (() => {
     modo = null; poligonoPontos = []; editandoFormaId = null;
     renderizar();
   }
-  function zoomAjustar(delta) {
-    zoomE = Math.min(4, Math.max(0.25, +(zoomE + delta).toFixed(2)));
-    const lbl = document.getElementById('ce-zoom-label');
-    if (lbl) lbl.textContent = Math.round(zoomE * 100) + '%';
-    if (abaPrincipal === 'planejamento') renderMapaPlanejamento();
-    else if (abaPrincipal === 'acompanhamento') renderMapaAcompanhamento();
-    else renderMapa();
+  // ── Qual mapa está na tela agora (as 3 abas usam o mesmo componente) ──
+  function _stageIdDaAba() {
+    if (abaPrincipal === 'planejamento') return 'ce-plan-stage';
+    if (abaPrincipal === 'acompanhamento') return 'ce-acomp-stage';
+    return 'ce-stage';
   }
+  function _hostDaAba() {
+    if (abaPrincipal === 'planejamento') return '#ce-plan-mapa-host';
+    if (abaPrincipal === 'acompanhamento') return '#ce-acomp-mapa-host';
+    return '#ce-mapa-host';
+  }
+
+  // Ponto da tela que o próximo re-render deve manter FIXO ao mudar o zoom.
+  // {x, y} em px relativos à borda visível do container de scroll.
+  let _ancoraZoom = null;
+
+  function _ancoraDe(ponto, zoomAntigo) {
+    const el = document.querySelector(_hostDaAba() + ' .est-map-scroll');
+    if (!el) return null;
+    // Sem ponto informado (botões +/− e atalhos): ancora no CENTRO do que
+    // está visível. Antes ancorava implicitamente na origem do stage, então o
+    // zoom pelos botões também jogava a vista pro canto superior esquerdo.
+    if (ponto) return { x: ponto.x, y: ponto.y, zoomAntigo };
+    return { x: el.clientWidth / 2, y: el.clientHeight / 2, zoomAntigo };
+  }
+
+  // Captura o scroll antes de trocar o innerHTML do mapa e devolve a função
+  // que o repõe depois. Quando o zoom mudou, o valor antigo NÃO serve (aponta
+  // pra outro ponto da imagem, que agora tem outro tamanho) — aí recalcula com
+  // EC.zoomAncorado pra manter fixo o ponto de _ancoraZoom.
+  function _preservarScroll(hostSel) {
+    const anc = _ancoraZoom; _ancoraZoom = null;
+    const el = document.querySelector(hostSel + ' .est-map-scroll');
+    if (!el) return () => {};
+    const pos = { left: el.scrollLeft, top: el.scrollTop };
+    return () => {
+      const novo = document.querySelector(hostSel + ' .est-map-scroll');
+      if (!novo) return;
+      if (!anc) { novo.scrollLeft = pos.left; novo.scrollTop = pos.top; return; }
+      const r = EC.zoomAncorado({
+        scrollLeft: pos.left, scrollTop: pos.top,
+        anchorX: anc.x, anchorY: anc.y,
+        zoomAntigo: anc.zoomAntigo, zoomNovo: zoomE,
+        maxLeft: novo.scrollWidth - novo.clientWidth,
+        maxTop: novo.scrollHeight - novo.clientHeight,
+      });
+      novo.scrollLeft = r.left; novo.scrollTop = r.top;
+    };
+  }
+
+  // ancora: {x,y} em px relativos à borda visível do mapa (dedo/cursor).
+  // Omitido → centro da vista.
+  function zoomAjustar(delta, ancora) {
+    const zoomAntes = zoomE;
+    zoomE = Math.min(4, Math.max(0.25, +(zoomE + delta).toFixed(2)));
+    if (zoomE === zoomAntes) return; // já no limite — não re-renderiza à toa
+    _ancoraZoom = _ancoraDe(ancora, zoomAntes);
+    _atualizarLabelZoom();
+    _rerenderMapaDaAba();
+  }
+
+  // O label do zoom existe nas 3 abas (Marcadores tem id, Planejamento e
+  // Acompanhamento têm a classe). Antes só o id era atualizado, então durante
+  // o pinch nas duas abas que o usuário mais usa o número ficava congelado.
+  function _atualizarLabelZoomTexto(texto) {
+    document.querySelectorAll('#ce-zoom-label, .ce-zoom-label').forEach(el => { el.textContent = texto; });
+  }
+  function _atualizarLabelZoom() { _atualizarLabelZoomTexto(Math.round(zoomE * 100) + '%'); }
 
   // ══════════════════════════════════════════
   // ABA: PLANEJAMENTO — usa a MESMA prancha da aba Marcadores (sem seletor
@@ -469,8 +528,7 @@ const ControleEstacas = (() => {
   async function _renderAbaPlanejamento() {
     const el = document.getElementById('ce-aba-body');
     if (!el) return;
-    const scrollAntigo = document.querySelector('#ce-plan-mapa-host .est-map-scroll');
-    const scrollPos = scrollAntigo ? { left: scrollAntigo.scrollLeft, top: scrollAntigo.scrollTop } : null;
+    const reporScroll = _preservarScroll('#ce-plan-mapa-host');
     el.innerHTML = `
       <div class="cc-panel">
         <div style="display:flex;justify-content:flex-end;margin-bottom:${painelMinimizado ? '0' : '4px'};">
@@ -491,7 +549,7 @@ const ControleEstacas = (() => {
           <button class="btn btn-secundario btn-sm" onclick="CE.girarPrancha()">⟳ Girar 90°</button>
           <span style="display:flex;gap:2px;align-items:center;margin-left:auto;">
             <button class="btn btn-secundario btn-sm" onclick="CE.zoomAjustar(-0.25)">−</button>
-            <span class="text-sm text-muted" style="width:48px;text-align:center;">${Math.round(zoomE * 100)}%</span>
+            <span class="text-sm text-muted ce-zoom-label" style="width:48px;text-align:center;">${Math.round(zoomE * 100)}%</span>
             <button class="btn btn-secundario btn-sm" onclick="CE.zoomAjustar(0.25)">+</button>
           </span>
         </div>`}
@@ -509,8 +567,7 @@ const ControleEstacas = (() => {
     _renderCardsConcretagem();
     Permissions.aplicarNaTela();
     await renderMapaPlanejamento();
-    const scrollNovo = document.querySelector('#ce-plan-mapa-host .est-map-scroll');
-    if (scrollNovo && scrollPos) { scrollNovo.scrollLeft = scrollPos.left; scrollNovo.scrollTop = scrollPos.top; }
+    reporScroll();
   }
 
   function _renderCardsConcretagem() {
@@ -658,11 +715,9 @@ const ControleEstacas = (() => {
     const imagem = await _obterImagemPrancha(pr.id);
     if (!imagem) { host.innerHTML = `<div class="cc-empty">Esta prancha ainda não tem PDF/imagem — importe na aba Marcadores.</div>`; return; }
     const lista = marcadoresDaPranchaView(pr.id).filter(m => m.pecaId); // só marcadores já vinculados podem ser planejados
-    const scrollAntigo = document.querySelector('#ce-plan-mapa-host .est-map-scroll');
-    const scrollPos = scrollAntigo ? { left: scrollAntigo.scrollLeft, top: scrollAntigo.scrollTop } : null;
+    const reporScroll = _preservarScroll('#ce-plan-mapa-host');
     host.innerHTML = EC.stageHTML(pr, imagem, lista, statusMarcador, { interativo: true, zoom: zoomE, stageId: 'ce-plan-stage', maxHeight: _alturaMapa() });
-    const scrollNovo = document.querySelector('#ce-plan-mapa-host .est-map-scroll');
-    if (scrollNovo && scrollPos) { scrollNovo.scrollLeft = scrollPos.left; scrollNovo.scrollTop = scrollPos.top; }
+    reporScroll();
     _desenharNumerosConcretagem('ce-plan-stage', lista);
     _ligarEventosToggle('ce-plan-stage', lista, m => planFocoConcretagemId ? _atribuirRapidoFoco(m) : abrirAtribuirConcretagem(m));
   }
@@ -805,8 +860,7 @@ const ControleEstacas = (() => {
   async function _renderAbaAcompanhamento() {
     const el = document.getElementById('ce-aba-body');
     if (!el) return;
-    const scrollAntigo = document.querySelector('#ce-acomp-mapa-host .est-map-scroll');
-    const scrollPos = scrollAntigo ? { left: scrollAntigo.scrollLeft, top: scrollAntigo.scrollTop } : null;
+    const reporScroll = _preservarScroll('#ce-acomp-mapa-host');
     // Só concretagens com ao menos 1 peça planejada fazem sentido aqui
     const concsComPlano = [...concretagens].filter(c => _pecaConcDaConcretagem(c.id).length > 0).sort((a, b) => (a.numero || 0) - (b.numero || 0));
     const listaPecas = acompConcretagemId ? _pecasPlanejadas(acompConcretagemId) : [];
@@ -841,7 +895,7 @@ const ControleEstacas = (() => {
           ${_legendaGrupos()}
           <div style="display:flex;gap:2px;align-items:center;justify-content:flex-end;margin:6px 0;">
             <button class="btn btn-secundario btn-sm" onclick="CE.zoomAjustar(-0.25)">−</button>
-            <span class="text-sm text-muted" style="width:48px;text-align:center;">${Math.round(zoomE * 100)}%</span>
+            <span class="text-sm text-muted ce-zoom-label" style="width:48px;text-align:center;">${Math.round(zoomE * 100)}%</span>
             <button class="btn btn-secundario btn-sm" onclick="CE.zoomAjustar(0.25)">+</button>
           </div>
         ` : ''}` }
@@ -896,8 +950,7 @@ const ControleEstacas = (() => {
     `;
     Permissions.aplicarNaTela();
     if (acompConcretagemId) await renderMapaAcompanhamento();
-    const scrollNovo = document.querySelector('#ce-acomp-mapa-host .est-map-scroll');
-    if (scrollNovo && scrollPos) { scrollNovo.scrollLeft = scrollPos.left; scrollNovo.scrollTop = scrollPos.top; }
+    reporScroll();
   }
 
   async function renderMapaAcompanhamento() {
@@ -919,11 +972,9 @@ const ControleEstacas = (() => {
       const c = _concretagemDaPeca(m.pecaId);
       return !c || (c.numero || 0) <= numeroSel;
     });
-    const scrollAntigo = document.querySelector('#ce-acomp-mapa-host .est-map-scroll');
-    const scrollPos = scrollAntigo ? { left: scrollAntigo.scrollLeft, top: scrollAntigo.scrollTop } : null;
+    const reporScroll = _preservarScroll('#ce-acomp-mapa-host');
     host.innerHTML = EC.stageHTML(pr, imagem, lista, statusMarcador, { interativo: true, zoom: zoomE, stageId: 'ce-acomp-stage', maxHeight: _alturaMapa() });
-    const scrollNovo = document.querySelector('#ce-acomp-mapa-host .est-map-scroll');
-    if (scrollNovo && scrollPos) { scrollNovo.scrollLeft = scrollPos.left; scrollNovo.scrollTop = scrollPos.top; }
+    reporScroll();
     // Nº da concretagem em cima de cada marcador — pra saber de qual dia é
     // cada estaca (ex: ver que aquela verde ali é da concretagem 1, não da 2).
     _desenharNumerosConcretagem('ce-acomp-stage', lista);
@@ -1502,15 +1553,80 @@ const ControleEstacas = (() => {
   // (incluir/remover da concretagem) e no Acompanhamento (marcar/desmarcar real).
   // Ctrl+roda: zoom · Ctrl+arrastar: pan — igual em Marcadores, Planejamento
   // e Acompanhamento (mesmo stage, "stageId" muda só o id do elemento).
+  // Qual dispositivo tocou por último — a folga do hit-test depende disso
+  // (dedo precisa de tolerância, mouse é preciso).
+  let _ultimoPointerType = 'mouse';
+  // Momento do último pan/pinch. O 'click' que o navegador dispara logo depois
+  // de arrastar o mapa precisa ser engolido, senão terminar um pan marcava uma
+  // estaca sem querer. É timestamp e não flag de propósito: o pinch de 2 dedos
+  // NÃO gera click nenhum, então uma flag ficaria pendurada e engoliria o
+  // próximo toque de verdade. Com janela de tempo, ela se limpa sozinha.
+  let _fimDeGesto = 0;
+  const JANELA_GESTO_MS = 350;
+
+  function _tolToquePx() { return _ultimoPointerType === 'mouse' ? 6 : EC.TOL_TOQUE_PX; }
+
+  // Marcador que o usuário quis acertar. No dedo vai direto pela proximidade
+  // (EC.marcadorMaisProximo já faz a estaca ganhar do bloco embaixo dela). No
+  // mouse tenta primeiro o hit-test nativo, que é exato e respeita o
+  // empilhamento, e só cai na proximidade com folga pequena.
+  function _marcadorNoEvento(ev, stage, lista) {
+    // Acertou em cheio uma ESTACA (.est-marcador só existe pra círculo):
+    // respeita a mira. Inclusive quando ela não vale nesta tela — ex: estaca
+    // que não está planejada nesta concretagem. Aí o certo é não acontecer
+    // nada, e não desviar pra vizinha por proximidade, que confundiria.
+    const direto = ev.target && ev.target.closest && ev.target.closest('.est-marcador');
+    if (direto) return (lista || []).find(x => x.id === direto.dataset.id) || null;
+    // Caiu no fundo ou em cima de um polígono (bloco/sapata): aí sim vale a
+    // proximidade — estar "dentro" de um bloco enorme não quer dizer que era
+    // nele que o usuário mirou, e a estaca desenhada por cima tem prioridade.
+    return EC.marcadorMaisProximo(lista, EC.posRelativa(ev, stage), stage.getBoundingClientRect(), _tolToquePx());
+  }
+
+  // Aplica um zoom absoluto guardando a âncora pro próximo render. Se já havia
+  // uma âncora pendente (vários frames antes do render sair), preserva o
+  // zoomAntigo dela — que é o zoom com que o DOM na tela foi desenhado.
+  function _aplicarZoom(zoomNovo, ancora) {
+    const z = Math.min(4, Math.max(0.25, +(+zoomNovo || 1).toFixed(2)));
+    if (z === zoomE) return false;
+    const zoomAntes = zoomE;
+    zoomE = z;
+    const anc = _ancoraDe(ancora, zoomAntes);
+    if (_ancoraZoom && anc) { _ancoraZoom.x = anc.x; _ancoraZoom.y = anc.y; }
+    else if (!_ancoraZoom) _ancoraZoom = anc;
+    _atualizarLabelZoom();
+    return true;
+  }
+
   function _ligarPanZoom(stageId) {
     const stage = document.getElementById(stageId);
     if (!stage) return;
     const scrollEl = stage.parentElement;
+    // Rede de segurança: se o mapa re-renderizou no meio de um arrasto (um
+    // snapshot do Firestore chegando, por exemplo), os listeners do gesto
+    // foram embora junto com o DOM antigo e o pointerup nunca vai rodar. Sem
+    // isso a flag ficava presa em true e o pan de 1 dedo morria de vez.
+    _arrastandoMarcador = false;
+
+    // Ponto em px relativo à borda VISÍVEL do mapa — é o formato que
+    // EC.zoomAncorado espera como âncora.
+    const ancoraDoPonto = (clientX, clientY) => {
+      const r = scrollEl.getBoundingClientRect();
+      return { x: clientX - r.left, y: clientY - r.top };
+    };
+
+    stage.addEventListener('pointerdown', ev => { _ultimoPointerType = ev.pointerType || 'mouse'; }, true);
+
+    // Ctrl+roda: zoom ANCORADO NO CURSOR (antes crescia a partir da origem
+    // do stage, então o ponto de interesse fugia da tela).
     scrollEl.addEventListener('wheel', ev => {
       if (!ev.ctrlKey) return;
       ev.preventDefault();
-      zoomAjustar(ev.deltaY < 0 ? 0.15 : -0.15);
+      _ultimoPointerType = 'mouse';
+      zoomAjustar(ev.deltaY < 0 ? 0.15 : -0.15, ancoraDoPonto(ev.clientX, ev.clientY));
     }, { passive: false });
+
+    // Ctrl+arrastar com mouse: pan
     stage.addEventListener('mousedown', ev => {
       if (!ev.ctrlKey) return;
       ev.preventDefault();
@@ -1527,55 +1643,125 @@ const ControleEstacas = (() => {
       document.addEventListener('mouseup', soltar);
     });
 
-    // Toque (tablet/celular): 2 dedos sempre faz pinch-zoom (nunca conflita
-    // com nada de 1 toque). 1 dedo arrasta o mapa (pan) só quando NÃO está
-    // criando/editando nada — nesses modos o toque continua se comportando
-    // como o mouse normal (arrastar pra definir tamanho/mover marcador).
-    let toque1 = null, pinchDist0 = null, zoomIni = null;
-    const emModoLivre = () => !modo && !editandoFormaId;
+    // ── Toque (tablet/celular) ──
+    // 2 dedos: pinch-zoom. 1 dedo: arrasta o mapa (pan), só quando NÃO está
+    // criando/editando nada.
+    //
+    // O pinch NÃO re-renderiza a cada frame. Antes re-renderizava, e isso
+    // matava o próprio gesto: trocar o innerHTML destrói o elemento que
+    // recebeu o touchstart, e os eventos de toque ficam presos ao alvo
+    // original — os touchmove seguintes iam pra um nó já fora do DOM, sem
+    // ancestral até o document. Resultado: o pinch dava um passo e travava.
+    // Agora o gesto é puro CSS transform (não mexe no DOM, não faz reflow) com
+    // transform-origin no ponto médio dos dedos — o mapa cresce visualmente
+    // debaixo do dedo — e o zoom real é confirmado uma única vez no touchend.
+    let toque1 = null, pinchDist0 = null, zoomIni = null, ancoraPinch = null, escalaPinch = 1;
+
+    const limparPinch = () => {
+      stage.style.transform = '';
+      stage.style.transformOrigin = '';
+      pinchDist0 = null; ancoraPinch = null; escalaPinch = 1;
+    };
+
     stage.addEventListener('touchstart', ev => {
       if (ev.touches.length === 2) {
         ev.preventDefault();
         toque1 = null;
+        _ultimoPointerType = 'touch';
         const [t1, t2] = ev.touches;
-        pinchDist0 = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+        const midX = (t1.clientX + t2.clientX) / 2, midY = (t1.clientY + t2.clientY) / 2;
+        pinchDist0 = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY) || 1;
         zoomIni = zoomE;
-      } else if (ev.touches.length === 1 && emModoLivre() && !ev.target.closest('.est-marcador, .est-poligono-hit')) {
+        escalaPinch = 1;
+        ancoraPinch = ancoraDoPonto(midX, midY);
+        // origem do transform em coordenadas do PRÓPRIO stage
+        const rs = stage.getBoundingClientRect();
+        stage.style.transformOrigin = `${(midX - rs.left).toFixed(1)}px ${(midY - rs.top).toFixed(1)}px`;
+      } else if (ev.touches.length === 1 && !modo && !editandoFormaId && !_arrastandoMarcador) {
         const t = ev.touches[0];
         toque1 = { x: t.clientX, y: t.clientY, sl: scrollEl.scrollLeft, st: scrollEl.scrollTop, moveu: false };
       }
     }, { passive: false });
+
     stage.addEventListener('touchmove', ev => {
       if (ev.touches.length === 2 && pinchDist0) {
         ev.preventDefault();
         const [t1, t2] = ev.touches;
         const dist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
-        zoomE = Math.min(4, Math.max(0.25, +(zoomIni * (dist / pinchDist0)).toFixed(2)));
-        const lbl = document.getElementById('ce-zoom-label');
-        if (lbl) lbl.textContent = Math.round(zoomE * 100) + '%';
-        if (!_pinchRaf) _pinchRaf = requestAnimationFrame(() => { _pinchRaf = null; _rerenderMapaDaAba(); });
+        // Limita a escala visual ao que o zoom real vai aceitar (0.25..4),
+        // pra não mostrar um tamanho que "volta" ao soltar o dedo.
+        const alvo = Math.min(4, Math.max(0.25, zoomIni * (dist / pinchDist0)));
+        escalaPinch = alvo / zoomIni;
+        stage.style.transform = `scale(${escalaPinch.toFixed(4)})`;
+        _atualizarLabelZoomTexto(Math.round(alvo * 100) + '%');
+        _fimDeGesto = Date.now();
       } else if (ev.touches.length === 1 && toque1) {
         const t = ev.touches[0];
         const dx = t.clientX - toque1.x, dy = t.clientY - toque1.y;
-        if (!toque1.moveu && Math.hypot(dx, dy) < 8) return; // ainda pode ser um toque/tap — não rouba o clique
+        if (!toque1.moveu && Math.hypot(dx, dy) < 8) return; // ainda pode ser um tap — não rouba o clique
         toque1.moveu = true;
+        _fimDeGesto = Date.now(); // foi pan: o click seguinte não marca estaca
         ev.preventDefault();
         scrollEl.scrollLeft = toque1.sl - dx;
         scrollEl.scrollTop = toque1.st - dy;
       }
     }, { passive: false });
-    stage.addEventListener('touchend', ev => {
-      if (ev.touches.length < 2) pinchDist0 = null;
+
+    const fimToque = ev => {
+      if (toque1 && toque1.moveu) _fimDeGesto = Date.now(); // pan acabou agora
+      if (ev.touches.length < 2 && pinchDist0) {
+        const zoomFinal = zoomIni * escalaPinch;
+        const anc = ancoraPinch;
+        _fimDeGesto = Date.now();
+        limparPinch();
+        // Confirma o zoom de verdade uma única vez, ancorado no ponto onde os
+        // dedos estavam — aí sim vale re-renderizar (os marcadores precisam
+        // ser redesenhados no tamanho novo, não só escalados).
+        if (_aplicarZoom(zoomFinal, anc)) _rerenderMapaDaAba();
+        else _atualizarLabelZoom();
+      }
       if (ev.touches.length < 1) toque1 = null;
+    };
+    stage.addEventListener('touchend', fimToque);
+    stage.addEventListener('touchcancel', fimToque);
+  }
+
+  // Arrasto de um "handle" (bolinha de ajuste de forma / vértice de polígono)
+  // com Pointer Events — mesmo caminho pro mouse, pro dedo e pra caneta.
+  // Antes era mousedown/mousemove/mouseup, e no celular o navegador nunca
+  // emite o mousemove do meio: os pontos de ajuste simplesmente não se moviam.
+  // setPointerCapture segura o gesto mesmo quando o dedo sai de cima da bolinha
+  // (que tem só 14px — sair dela no meio do arrasto é a regra, não a exceção).
+  function _arrastarHandle(el, aoMover, aoSoltar) {
+    el.addEventListener('pointerdown', ev => {
+      if (!ev.isPrimary) return;
+      ev.preventDefault(); ev.stopPropagation();
+      _arrastandoMarcador = true; // segura o pan de 1 dedo enquanto ajusta
+      try { el.setPointerCapture(ev.pointerId); } catch (e) { /* sem captura: segue sem */ }
+      const mover = mv => { if (mv.pointerId === ev.pointerId) aoMover(mv); };
+      const soltar = up => {
+        if (up.pointerId !== ev.pointerId) return;
+        el.removeEventListener('pointermove', mover);
+        el.removeEventListener('pointerup', soltar);
+        el.removeEventListener('pointercancel', soltar);
+        try { el.releasePointerCapture(ev.pointerId); } catch (e) { /* já liberado */ }
+        _arrastandoMarcador = false;
+        if (aoSoltar) aoSoltar(up);
+      };
+      el.addEventListener('pointermove', mover);
+      el.addEventListener('pointerup', soltar);
+      el.addEventListener('pointercancel', soltar);
     });
   }
 
-  let _pinchRaf = null;
   function _rerenderMapaDaAba() {
     if (abaPrincipal === 'planejamento') renderMapaPlanejamento();
     else if (abaPrincipal === 'acompanhamento') renderMapaAcompanhamento();
     else renderMapa();
   }
+
+  // Engole o 'click' sintético que vem logo depois de um pan/pinch.
+  function _cliqueDeGesto() { return (Date.now() - _fimDeGesto) < JANELA_GESTO_MS; }
 
   function _ligarEventosToggle(stageId, lista, toggleFn) {
     const stage = document.getElementById(stageId);
@@ -1584,9 +1770,8 @@ const ControleEstacas = (() => {
     stage.style.cursor = 'pointer';
     stage.addEventListener('click', ev => {
       if (ev.ctrlKey) return;
-      const alvo = ev.target.closest('.est-marcador, .est-poligono-hit');
-      if (!alvo) return;
-      const m = lista.find(x => x.id === alvo.dataset.id);
+      if (_cliqueDeGesto()) return;
+      const m = _marcadorNoEvento(ev, stage, lista);
       if (m) toggleFn(m);
     });
   }
@@ -1675,8 +1860,7 @@ const ControleEstacas = (() => {
       return;
     }
     const lista = marcadoresDaPranchaView(pr.id);
-    const scrollAnterior = document.querySelector('#ce-mapa-host .est-map-scroll');
-    const scrollPos = scrollAnterior ? { left: scrollAnterior.scrollLeft, top: scrollAnterior.scrollTop } : null;
+    const reporScroll = _preservarScroll('#ce-mapa-host');
     const html = EC.stageHTML(pr, imagem, lista, statusMarcador, { interativo: true, zoom: zoomE, stageId: 'ce-stage', maxHeight: _alturaMapa() });
     host.innerHTML = `
       ${html}
@@ -1684,8 +1868,7 @@ const ControleEstacas = (() => {
       ${modo === 'poligono' ? `<div class="cc-empty" style="margin-top:8px;">Clique nos vértices da fundação (${poligonoPontos.length} ponto${poligonoPontos.length !== 1 ? 's' : ''}). <button class="btn btn-secundario btn-sm" ${poligonoPontos.length ? '' : 'disabled'} onclick="CE.desfazerPontoPoligono()">↩ Desfazer ponto</button> <button class="btn btn-primario btn-sm" ${poligonoPontos.length >= 3 ? '' : 'disabled'} onclick="CE.concluirPoligono()">✓ Concluir</button> <button class="btn btn-secundario btn-sm" onclick="CE.cancelarModo()">Cancelar</button></div>` : ''}
       ${editandoFormaId ? `<div class="cc-empty" style="margin-top:8px;">Ajustando forma — arraste os pontos. <button class="btn btn-primario btn-sm" onclick="CE.concluirAjusteForma()">✓ Concluir ajuste</button> <button class="btn btn-secundario btn-sm" onclick="CE.cancelarAjusteForma()">Cancelar</button></div>` : ''}
     `;
-    const novoScroll = document.querySelector('#ce-mapa-host .est-map-scroll');
-    if (novoScroll && scrollPos) { novoScroll.scrollLeft = scrollPos.left; novoScroll.scrollTop = scrollPos.top; }
+    reporScroll();
     if (modo === 'poligono') _desenharPoligonoEmCriacao();
     if (editandoFormaId) _desenharHandlesEdicao();
     _ligarEventosMapa();
@@ -1708,11 +1891,18 @@ const ControleEstacas = (() => {
 
     if (modo === 'circulo') {
       stage.style.cursor = 'crosshair';
-      stage.addEventListener('mousedown', ev => {
-        if (ev.ctrlKey) return;
-        const alvo = ev.target.closest('.est-marcador, .est-poligono-hit');
+      // Pointer Events em vez de mousedown/mousemove/mouseup: no celular o
+      // navegador sintetiza um único par mousedown/mouseup, sem mousemove no
+      // meio, então o raio saía sempre 0 e o marcador era descartado em
+      // silêncio pelo limiar de 3px — não dava pra criar estaca no toque.
+      // setPointerCapture mantém os eventos vindo pro stage mesmo quando o
+      // dedo sai de cima dele durante o arrasto.
+      stage.addEventListener('pointerdown', ev => {
+        if (ev.ctrlKey || !ev.isPrimary) return;
+        const alvo = ev.target.closest && ev.target.closest('.est-marcador, .est-poligono-hit');
         if (alvo) return; // não inicia criação em cima de marcador existente
         ev.preventDefault();
+        try { stage.setPointerCapture(ev.pointerId); } catch (e) { /* navegador sem captura: segue sem */ }
         const centro = EC.posRelativa(ev, stage);
         const cont = _overlayContainer('ce-preview-overlay');
         cont.innerHTML = '';
@@ -1720,15 +1910,20 @@ const ControleEstacas = (() => {
         preview.style.cssText = `position:absolute;left:${(centro.x * 100).toFixed(3)}%;top:${(centro.y * 100).toFixed(3)}%;width:0;height:0;transform:translate(-50%,-50%);border-radius:50%;border:2px dashed #1e293b;background:rgba(59,130,246,.25);z-index:6;`;
         cont.appendChild(preview);
         const mover = mv => {
+          if (mv.pointerId !== ev.pointerId) return;
           const raio = EC.raioFracao(centro, EC.posRelativa(mv, stage), stage);
           const diam = raio * 2 * (stage.offsetWidth || 1);
           preview.style.width = diam.toFixed(1) + 'px';
           preview.style.height = diam.toFixed(1) + 'px';
         };
         const soltar = async up => {
-          document.removeEventListener('mousemove', mover);
-          document.removeEventListener('mouseup', soltar);
+          if (up.pointerId !== ev.pointerId) return;
+          stage.removeEventListener('pointermove', mover);
+          stage.removeEventListener('pointerup', soltar);
+          stage.removeEventListener('pointercancel', soltar);
+          try { stage.releasePointerCapture(ev.pointerId); } catch (e) { /* já liberado */ }
           cont.innerHTML = '';
+          if (up.type === 'pointercancel') return;
           const raio = EC.raioFracao(centro, EC.posRelativa(up, stage), stage);
           const raioPx = raio * (stage.offsetWidth || 1);
           // Limiar em PIXELS DE TELA (não fração da imagem) — com zoom alto,
@@ -1738,8 +1933,9 @@ const ControleEstacas = (() => {
           if (raioPx < 3) return; // arrasto minúsculo, ignora (evita clique acidental)
           await _criarMarcadorCirculo(centro.x, centro.y, raio);
         };
-        document.addEventListener('mousemove', mover);
-        document.addEventListener('mouseup', soltar);
+        stage.addEventListener('pointermove', mover);
+        stage.addEventListener('pointerup', soltar);
+        stage.addEventListener('pointercancel', soltar);
       });
       return;
     }
@@ -1748,6 +1944,7 @@ const ControleEstacas = (() => {
       stage.style.cursor = 'crosshair';
       stage.addEventListener('click', ev => {
         if (ev.ctrlKey) return;
+        if (_cliqueDeGesto()) return; // acabou de dar pinch: não crava vértice
         poligonoPontos.push(EC.posRelativa(ev, stage));
         _atualizarToolbarPoligono();
         _desenharPoligonoEmCriacao();
@@ -1758,28 +1955,48 @@ const ControleEstacas = (() => {
     // Modo normal: segurar e arrastar uma estaca já move ela direto (sem
     // precisar abrir o popup e clicar em "Ajustar forma" antes) — clique
     // rápido, sem arrastar, continua abrindo o vínculo como sempre.
-    stage.addEventListener('mousedown', ev => {
-      if (ev.ctrlKey) return;
-      const marcador = ev.target.closest('.est-marcador');
+    stage.addEventListener('pointerdown', ev => {
+      if (ev.ctrlKey || !ev.isPrimary) return;
+      const marcador = ev.target.closest && ev.target.closest('.est-marcador');
       if (!marcador) return; // arraste direto só pra círculo (estaca) por ora
       const m = marcadores.find(x => x.id === marcador.dataset.id);
       if (!m || m.tipo !== 'circulo') return;
+      // Avisa o pan de 1 dedo pra não arrastar o mapa junto. O touchstart do
+      // pan é disparado DEPOIS do pointerdown, então essa flag já está de pé
+      // quando ele roda.
+      _arrastandoMarcador = true;
+      try { stage.setPointerCapture(ev.pointerId); } catch (e) { /* sem captura: segue sem */ }
       const inicioX = ev.clientX, inicioY = ev.clientY;
       const orig = { cx: m.cx, cy: m.cy };
       let arrastou = false;
+      // Dedo tem tremor natural: 4px disparava arrasto num toque que era só
+      // um toque. No touch o limiar é maior, no mouse continua fino.
+      const limiar = _ultimoPointerType === 'mouse' ? 4 : 10;
       const mover = mv => {
-        if (!arrastou && Math.hypot(mv.clientX - inicioX, mv.clientY - inicioY) < 4) return;
+        if (mv.pointerId !== ev.pointerId) return;
+        if (!arrastou && Math.hypot(mv.clientX - inicioX, mv.clientY - inicioY) < limiar) return;
         arrastou = true;
+        mv.preventDefault();
         const p = EC.posRelativa(mv, stage);
         m.cx = p.x; m.cy = p.y;
         marcador.style.left = (p.x * 100).toFixed(3) + '%';
         marcador.style.top = (p.y * 100).toFixed(3) + '%';
       };
-      const soltar = async () => {
-        document.removeEventListener('mousemove', mover);
-        document.removeEventListener('mouseup', soltar);
-        if (!arrastou) return; // foi um clique normal — deixa o listener de 'click' abaixo abrir o vínculo
+      const soltar = async up => {
+        if (up.pointerId !== ev.pointerId) return;
+        stage.removeEventListener('pointermove', mover);
+        stage.removeEventListener('pointerup', soltar);
+        stage.removeEventListener('pointercancel', soltar);
+        try { stage.releasePointerCapture(ev.pointerId); } catch (e) { /* já liberado */ }
+        _arrastandoMarcador = false;
+        if (!arrastou) return; // foi um toque normal — o listener de 'click' abaixo abre o vínculo
         _arrastouMarcadorAgora = true;
+        if (up.type === 'pointercancel') { // gesto abortado: devolve pra posição original
+          m.cx = orig.cx; m.cy = orig.cy;
+          marcador.style.left = (orig.cx * 100).toFixed(3) + '%';
+          marcador.style.top = (orig.cy * 100).toFixed(3) + '%';
+          return;
+        }
         try {
           await Database.atualizar(obraId, COL_MARCADORES, m.id, { cx: m.cx, cy: m.cy });
         } catch (e) {
@@ -1789,16 +2006,21 @@ const ControleEstacas = (() => {
           Utils.toast('Erro ao salvar posição: ' + e.message, 'erro');
         }
       };
-      document.addEventListener('mousemove', mover);
-      document.addEventListener('mouseup', soltar);
+      stage.addEventListener('pointermove', mover);
+      stage.addEventListener('pointerup', soltar);
+      stage.addEventListener('pointercancel', soltar);
     });
 
     // Modo normal: clicar num marcador abre o vínculo
     stage.addEventListener('click', ev => {
       if (ev.ctrlKey) return;
       if (_arrastouMarcadorAgora) { _arrastouMarcadorAgora = false; return; } // acabou de arrastar — não abre popup
-      const marcador = ev.target.closest('.est-marcador, .est-poligono-hit');
-      if (marcador) abrirVincular(marcador.dataset.id);
+      if (_cliqueDeGesto()) return; // acabou de dar pan/pinch — não abre popup
+      // Só os marcadores DESTA prancha: a busca por proximidade acharia
+      // marcador de outra prancha (a lista global tem todas).
+      const pr = pranchaAtiva();
+      const m = _marcadorNoEvento(ev, stage, pr ? marcadoresDaPranchaView(pr.id) : []);
+      if (m) abrirVincular(m.id);
     });
   }
 
@@ -1830,18 +2052,9 @@ const ControleEstacas = (() => {
       const dot = document.createElement('div');
       dot.style.cssText = `position:absolute;left:${(p.x * 100).toFixed(3)}%;top:${(p.y * 100).toFixed(3)}%;width:14px;height:14px;margin:-7px;border-radius:50%;background:#2563eb;border:2px solid #fff;box-shadow:0 0 0 1px #2563eb,0 1px 4px rgba(0,0,0,.4);z-index:10;cursor:move;pointer-events:auto;`;
       dot.title = 'Arraste pra ajustar este vértice';
-      dot.addEventListener('mousedown', ev => {
-        ev.preventDefault(); ev.stopPropagation();
-        const mover = mv => {
-          poligonoPontos[i] = EC.posRelativa(mv, stage);
-          _desenharPoligonoEmCriacao();
-        };
-        const soltar = () => {
-          document.removeEventListener('mousemove', mover);
-          document.removeEventListener('mouseup', soltar);
-        };
-        document.addEventListener('mousemove', mover);
-        document.addEventListener('mouseup', soltar);
+      _arrastarHandle(dot, mv => {
+        poligonoPontos[i] = EC.posRelativa(mv, stage);
+        _desenharPoligonoEmCriacao();
       });
       cont.appendChild(dot);
     });
@@ -1926,13 +2139,7 @@ const ControleEstacas = (() => {
       const centro = document.createElement('div');
       centro.style.cssText = `position:absolute;left:${(m.cx * 100).toFixed(3)}%;top:${(m.cy * 100).toFixed(3)}%;width:14px;height:14px;margin:-7px;border-radius:50%;background:#2563eb;border:2px solid #fff;box-shadow:0 0 0 1px #2563eb;cursor:move;z-index:11;pointer-events:auto;`;
       centro.title = 'Arraste pra mover';
-      centro.addEventListener('mousedown', ev => {
-        ev.preventDefault(); ev.stopPropagation();
-        const mover = mv => { const p = EC.posRelativa(mv, stage); m.cx = p.x; m.cy = p.y; _desenharHandlesEdicaoLeve(m); };
-        const soltar = () => { document.removeEventListener('mousemove', mover); document.removeEventListener('mouseup', soltar); };
-        document.addEventListener('mousemove', mover);
-        document.addEventListener('mouseup', soltar);
-      });
+      _arrastarHandle(centro, mv => { const p = EC.posRelativa(mv, stage); m.cx = p.x; m.cy = p.y; _desenharHandlesEdicaoLeve(m); });
       cont.appendChild(centro);
 
       const w = stage.getBoundingClientRect().width || 1;
@@ -1940,16 +2147,10 @@ const ControleEstacas = (() => {
       const borda = document.createElement('div');
       borda.style.cssText = `position:absolute;left:${(bordaX * 100).toFixed(3)}%;top:${(m.cy * 100).toFixed(3)}%;width:14px;height:14px;margin:-7px;border-radius:50%;background:#f59e0b;border:2px solid #fff;box-shadow:0 0 0 1px #f59e0b;cursor:ew-resize;z-index:11;pointer-events:auto;`;
       borda.title = 'Arraste pra redimensionar';
-      borda.addEventListener('mousedown', ev => {
-        ev.preventDefault(); ev.stopPropagation();
-        const mover = mv => {
-          const p = EC.posRelativa(mv, stage);
-          m.raio = Math.max(0.004, EC.raioFracao({ x: m.cx, y: m.cy }, p, stage));
-          _desenharHandlesEdicaoLeve(m);
-        };
-        const soltar = () => { document.removeEventListener('mousemove', mover); document.removeEventListener('mouseup', soltar); };
-        document.addEventListener('mousemove', mover);
-        document.addEventListener('mouseup', soltar);
+      _arrastarHandle(borda, mv => {
+        const p = EC.posRelativa(mv, stage);
+        m.raio = Math.max(0.004, EC.raioFracao({ x: m.cx, y: m.cy }, p, stage));
+        _desenharHandlesEdicaoLeve(m);
       });
       cont.appendChild(borda);
 
@@ -1967,13 +2168,7 @@ const ControleEstacas = (() => {
       const dot = document.createElement('div');
       dot.style.cssText = `position:absolute;left:${(p.x * 100).toFixed(3)}%;top:${(p.y * 100).toFixed(3)}%;width:14px;height:14px;margin:-7px;border-radius:50%;background:#2563eb;border:2px solid #fff;box-shadow:0 0 0 1px #2563eb;cursor:move;z-index:11;pointer-events:auto;`;
       dot.title = 'Arraste pra ajustar este vértice';
-      dot.addEventListener('mousedown', ev => {
-        ev.preventDefault(); ev.stopPropagation();
-        const mover = mv => { m.pontos[i] = EC.posRelativa(mv, stage); _desenharHandlesEdicaoLeve(m); };
-        const soltar = () => { document.removeEventListener('mousemove', mover); document.removeEventListener('mouseup', soltar); };
-        document.addEventListener('mousemove', mover);
-        document.addEventListener('mouseup', soltar);
-      });
+      _arrastarHandle(dot, mv => { m.pontos[i] = EC.posRelativa(mv, stage); _desenharHandlesEdicaoLeve(m); });
       cont.appendChild(dot);
     });
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');

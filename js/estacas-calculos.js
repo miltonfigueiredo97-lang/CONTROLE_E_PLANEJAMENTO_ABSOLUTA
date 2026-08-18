@@ -108,8 +108,22 @@ const EstacasCalculos = (() => {
       ? `<img src="${imagemBase64}" style="width:100%;height:100%;display:block;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;pointer-events:none;" draggable="false">`
       : `<div style="width:100%;height:100%;background:repeating-linear-gradient(45deg,#f1f5f9,#f1f5f9 10px,#e2e8f0 10px,#e2e8f0 20px);"></div>`;
     const maxH = opts.mini ? (opts.maxHeight || 240) : (opts.maxHeight || 600);
-    return `<div class="est-map-scroll" style="overflow:${opts.mini ? 'hidden' : 'auto'};max-height:${maxH}px;border:1px solid #e2e8f0;border-radius:8px;background:#fff;">
-      <div id="${opts.stageId || 'est-stage'}" class="est-map-stage" style="position:relative;width:${w}px;height:${h}px;touch-action:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;">
+    // "Toco na estaca e a tela fica azul selecionando a imagem toda."
+    // A V3.10.4 já tinha posto user-select/-webkit-touch-callout na <img> e no
+    // stage, e mesmo assim continuou acontecendo. Faltavam duas coisas:
+    //   1) -webkit-tap-highlight-color — a mais provável de ser a causa real.
+    //      No Android, tocar num elemento COM handler de clique faz o navegador
+    //      pintar um retângulo azul translúcido do tamanho do elemento inteiro.
+    //      O stage tem cursor:pointer e listener de clique, então o realce cobre
+    //      a planta toda. user-select:none não mexe nisso.
+    //   2) o container de scroll ficou de fora — uma seleção iniciada nele
+    //      varre por cima do mapa mesmo com o stage protegido.
+    // overscroll-behavior:contain evita que arrastar o mapa até o fim vire
+    // pull-to-refresh e recarregue a página no meio do lançamento.
+    const semSelecao = 'user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;';
+    return `<div class="est-map-scroll" style="overflow:${opts.mini ? 'hidden' : 'auto'};max-height:${maxH}px;border:1px solid #e2e8f0;border-radius:8px;background:#fff;overscroll-behavior:contain;${semSelecao}">
+      <div id="${opts.stageId || 'est-stage'}" class="est-map-stage" style="position:relative;width:${w}px;height:${h}px;touch-action:none;${semSelecao}">
+
         ${bg}${poligonos}${circulos}
       </div>
     </div>`;
@@ -147,6 +161,101 @@ const EstacasCalculos = (() => {
   // (é fração da LARGURA, que muda de valor quando W e H trocam de lugar).
   // ══════════════════════════════════════════
   function rotacionarPontoCW(p) { return { x: 1 - p.y, y: p.x }; }
+
+  // ══════════════════════════════════════════
+  // ZOOM ANCORADO (pinch, roda do mouse e botões +/−)
+  // O mapa é um <div> de W*zoom × H*zoom dentro de um container
+  // overflow:auto. Mudar o zoom e devolver o MESMO scrollLeft/scrollTop de
+  // antes faz o conteúdo "fugir" pro canto superior esquerdo, porque aquele
+  // scroll aponta pra outro ponto da imagem depois que ela mudou de tamanho —
+  // era a causa do "o zoom não sai aonde eu clico".
+  // O ponto que está embaixo do dedo fica a (scroll + âncora) px da origem do
+  // stage; depois do zoom essa distância vira × k, e queremos que ele continue
+  // exatamente a "âncora" px da borda visível:
+  //     scrollNovo = (scroll + âncora) * (zoomNovo / zoomAntigo) − âncora
+  // anchorX/anchorY são px relativos à BORDA VISÍVEL do container
+  // (ev.clientX − containerRect.left), não à imagem.
+  // ══════════════════════════════════════════
+  function zoomAncorado(o) {
+    o = o || {};
+    const zAnt = num(o.zoomAntigo) || 1;
+    const k = zAnt ? (num(o.zoomNovo) || 1) / zAnt : 1;
+    const calc = (scroll, ancora, max) => {
+      let v = (num(scroll) + num(ancora)) * k - num(ancora);
+      if (!isFinite(v)) v = 0;
+      v = Math.max(0, v);
+      if (max !== undefined && max !== null && isFinite(num(max))) v = Math.min(v, Math.max(0, num(max)));
+      return Math.round(v);
+    };
+    return {
+      left: calc(o.scrollLeft, o.anchorX, o.maxLeft),
+      top: calc(o.scrollTop, o.anchorY, o.maxTop),
+    };
+  }
+
+  // ══════════════════════════════════════════
+  // HIT-TEST POR PROXIMIDADE (toque de dedo)
+  // O hit-test do navegador (ev.target) exige acertar o pixel exato, e uma
+  // estaca desenhada tem 6–20px na tela contra ~40px de área de contato de um
+  // dedo. No celular o toque quase sempre caía na imagem de fundo (que é
+  // pointer-events:none) e nada acontecia. Aqui a busca é por PROXIMIDADE em
+  // px de tela:
+  //   - círculo: pega se o dedo cair dentro do raio OU dentro da tolerância
+  //   - polígono: pega se cair dentro dele, ou até "tol" px da borda
+  // Círculo (estaca) sempre ganha de polígono (bloco/sapata), porque a estaca
+  // é desenhada EM CIMA do bloco — tocar na estaca não pode abrir o bloco.
+  // ══════════════════════════════════════════
+  const TOL_TOQUE_PX = 22; // ~metade da área de contato de um dedo adulto
+
+  function _pontoEmPoligono(p, pontos) {
+    let dentro = false;
+    for (let i = 0, j = pontos.length - 1; i < pontos.length; j = i++) {
+      const xi = pontos[i].x, yi = pontos[i].y, xj = pontos[j].x, yj = pontos[j].y;
+      if (((yi > p.y) !== (yj > p.y)) && (p.x < (xj - xi) * (p.y - yi) / (yj - yi) + xi)) dentro = !dentro;
+    }
+    return dentro;
+  }
+
+  // Distância do ponto ao segmento, medida em px DE TELA — converter antes de
+  // medir é obrigatório: em imagem não-quadrada, medir em fração distorce.
+  function _distPxSegmento(p, a, b, W, H) {
+    const px = p.x * W, py = p.y * H;
+    const ax = a.x * W, ay = a.y * H, bx = b.x * W, by = b.y * H;
+    const dx = bx - ax, dy = by - ay;
+    const len2 = dx * dx + dy * dy;
+    let t = len2 ? ((px - ax) * dx + (py - ay) * dy) / len2 : 0;
+    t = Math.max(0, Math.min(1, t));
+    return Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
+  }
+
+  function marcadorMaisProximo(lista, pontoFrac, stageRect, tolPx) {
+    const rect = stageRect || {};
+    const W = num(rect.width), H = num(rect.height);
+    if (!W || !H || !pontoFrac) return null;
+    const tol = (tolPx === undefined || tolPx === null) ? TOL_TOQUE_PX : num(tolPx);
+    let melhor = null;
+    (lista || []).forEach(m => {
+      let dist = Infinity, prio = 1; // 0 = círculo (ganha), 1 = polígono
+      if (m.tipo === 'circulo') {
+        prio = 0;
+        const dx = (pontoFrac.x - num(m.cx)) * W, dy = (pontoFrac.y - num(m.cy)) * H;
+        const d = Math.hypot(dx, dy);
+        if (d <= Math.max(num(m.raio) * W, tol)) dist = d;
+      } else if (m.pontos && m.pontos.length >= 3) {
+        if (_pontoEmPoligono(pontoFrac, m.pontos)) dist = 0;
+        else {
+          let d = Infinity;
+          for (let i = 0, j = m.pontos.length - 1; i < m.pontos.length; j = i++)
+            d = Math.min(d, _distPxSegmento(pontoFrac, m.pontos[j], m.pontos[i], W, H));
+          if (d <= tol) dist = d;
+        }
+      }
+      if (dist === Infinity) return;
+      if (!melhor || prio < melhor.prio || (prio === melhor.prio && dist < melhor.dist))
+        melhor = { m, dist, prio };
+    });
+    return melhor ? melhor.m : null;
+  }
 
   // ══════════════════════════════════════════
   // Compactar imagem (canvas) — usado ao processar PDF/foto no upload,
@@ -237,6 +346,7 @@ const EstacasCalculos = (() => {
     sincronizarVinculosPlanejamento,
     chaveGrupoEstaca, mapaCoresGrupoEstaca,
     rotacionarPontoCW,
+    zoomAncorado, marcadorMaisProximo, TOL_TOQUE_PX,
   };
 })();
 
