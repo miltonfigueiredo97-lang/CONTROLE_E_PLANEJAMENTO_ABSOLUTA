@@ -21,6 +21,8 @@ const ControleTerraplanagem = (() => {
   let entregas = [];
   let config = { taxaEmpolamento: 0.3, capacidadeGrande: 15.6, capacidadePequena: 10, tiposCaminhao: [{ nome: 'Grande', capacidade: 15.6 }, { nome: 'Pequeno', capacidade: 10 }], valorViagemTerra: 0, valorViagemEntulho: 0 };
   let secoes = { horizontal: [], vertical: [] };
+  let volumeTotalEstacas = 0; // vem do Controle de Estacas (concretoPecas), pra somar no total geral da obra
+  let volumeFundacaoSuperficial = 0; // TODO: ainda não existe módulo próprio — 0 por enquanto, já deixa no esquema pra plugar depois
   let fBusca = '';
   let abaRel = 'viagens'; // 'viagens' | 'porDia' | 'porCaminhao'
 
@@ -58,6 +60,12 @@ const ControleTerraplanagem = (() => {
       caminhoes = cs; entregas = es;
       await carregarConfig();
       await carregarSecoes();
+      // Volume das estacas (Controle de Estacas) — mesma lógica do Levantamento,
+      // pra entrar no Volume Total de Retirada de Terra desta tela também.
+      try {
+        const todasPecas = await Database.listar(obraId, 'concretoPecas', null);
+        volumeTotalEstacas = (todasPecas || []).filter(p => p.tipo === 'Fundação' && p.subTipo === 'Estacas').reduce((s, p) => s + (TC.num(p.volume) || 0), 0);
+      } catch (e) { volumeTotalEstacas = 0; }
       renderizar();
     } catch (e) {
       console.error(e);
@@ -137,11 +145,16 @@ const ControleTerraplanagem = (() => {
     return Object.values(grupos).sort((a, b) => b.volume - a.volume);
   }
 
+  function _capacidadeMedia() {
+    const tipos = config.tiposCaminhao || [];
+    const validos = tipos.map(t => TC.num(t.capacidade)).filter(c => c > 0);
+    return validos.length ? validos.reduce((s, c) => s + c, 0) / validos.length : 0;
+  }
   function kpisGerais() {
     const volH = TC.calcVolumeTotalSecoes(secoes.horizontal || []);
     const volV = TC.calcVolumeTotalSecoes(secoes.vertical || []);
     const volMedio = TC.calcVolumeMedio(volH, volV);
-    const volEmpolado = TC.calcVolumeComEmpolamento(volMedio, config.taxaEmpolamento);
+    const volEmpolado = TC.calcVolumeComEmpolamento(volMedio, config.taxaEmpolamento); // terra prevista (empolada)
     const volRemovido = entregas.reduce((s, e) => s + TC.num(e.volume), 0);
     // Só TERRA compara com o previsto — entulho é demolição, não terraplanagem.
     const volTerra = entregas.filter(e => _classMat(e.material) === 'TERRA').reduce((s, e) => s + TC.num(e.volume), 0);
@@ -149,7 +162,35 @@ const ControleTerraplanagem = (() => {
     // Sem volume previsto (Levantamento ainda não feito/cadastrado) não é "0% concluído"
     // — é "sem previsão pra comparar". Lançar viagens/planilha nunca depende disso.
     const pct = volEmpolado > 0 ? Math.min(100, (volTerra / volEmpolado) * 100) : null;
-    return { volEmpolado, volRemovido, volTerra, volEntulho, pct };
+
+    // Volume total de retirada da OBRA (terra + estacas + fundação superficial,
+    // todos já empolados) — combina o corte de terra com o que sai em caminhão
+    // vindo de outras frentes (Fundação → Estacas do Controle de Estacas; e no
+    // futuro Fundação Superficial, que ainda não tem módulo próprio).
+    const volEstacasEmpolado = TC.calcVolumeComEmpolamento(volumeTotalEstacas, config.taxaEmpolamento);
+    const volFundacaoSuperficialEmpolado = TC.calcVolumeComEmpolamento(volumeFundacaoSuperficial, config.taxaEmpolamento);
+    const volTotalRetirada = volEmpolado + volEstacasEmpolado + volFundacaoSuperficialEmpolado;
+    const volExecutado = volTerra; // execução real registrada (viagens de terra)
+    const volFaltando = volTotalRetirada > 0 ? Math.max(0, volTotalRetirada - volExecutado) : null;
+
+    // Viagens: atual (registradas) x total estimado (volume total ÷ capacidade média dos caminhões).
+    const capacidadeMedia = _capacidadeMedia();
+    const viagensAtual = entregas.length;
+    const viagensTotalEstimado = (volTotalRetirada > 0 && capacidadeMedia > 0) ? Math.ceil(volTotalRetirada / capacidadeMedia) : null;
+    const viagensFaltando = viagensTotalEstimado != null ? Math.max(0, viagensTotalEstimado - viagensAtual) : null;
+
+    // Valor: gasto (real, já pago) x faltando (estimado pela média por viagem já paga).
+    const custoTotal = _custoTotal();
+    const custoMedioPorViagem = viagensAtual > 0 ? custoTotal / viagensAtual : TC.num(config.valorViagemTerra);
+    const valorFaltando = viagensFaltando != null ? viagensFaltando * custoMedioPorViagem : null;
+
+    return {
+      volEmpolado, volRemovido, volTerra, volEntulho, pct,
+      volumeTotalEstacas, volEstacasEmpolado, volumeFundacaoSuperficial, volFundacaoSuperficialEmpolado,
+      volTotalRetirada, volExecutado, volFaltando,
+      capacidadeMedia, viagensAtual, viagensTotalEstimado, viagensFaltando,
+      custoTotal, custoMedioPorViagem, valorFaltando,
+    };
   }
 
   // ══════════════════════════════════════════
@@ -174,12 +215,19 @@ const ControleTerraplanagem = (() => {
         </div>
       </div>
 
-      <div class="cc-kpiGrid" style="grid-template-columns:repeat(5,1fr);">
-        <div class="cc-kpi cc-kpiOrange"><div class="cc-kpiIcon">📦</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Terra Prevista (a remover)</div><div class="cc-kpiValue">${k.volEmpolado > 0 ? TC.fmt1(k.volEmpolado) + '<span class="cc-kpiUnit">m³</span>' : '—'}</div>${k.volEmpolado > 0 ? '' : '<div class="cc-kpiSub">Sem Levantamento cadastrado ainda</div>'}</div></div>
-        <div class="cc-kpi cc-kpiGreen"><div class="cc-kpiIcon">🟤</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Terra Removida</div><div class="cc-kpiValue">${TC.fmt1(k.volTerra)}<span class="cc-kpiUnit">m³</span></div>${k.pct !== null ? `<div class="cc-kpiSub">${TC.fmt1(k.pct)}% da terraplanagem</div>` : ''}</div></div>
-        <div class="cc-kpi"><div class="cc-kpiIcon">🧱</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Entulho Removido (demolição)</div><div class="cc-kpiValue">${TC.fmt1(k.volEntulho)}<span class="cc-kpiUnit">m³</span></div><div class="cc-kpiSub">não entra na terraplanagem</div></div></div>
-        <div class="cc-kpi cc-kpiBlue"><div class="cc-kpiIcon">💰</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Valor Gasto</div><div class="cc-kpiValue" style="font-size:1.15rem;">${_fRS(_custoTotal())}</div></div></div>
-        <div class="cc-kpi cc-kpiPurple"><div class="cc-kpiIcon">📋</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Viagens Registradas</div><div class="cc-kpiValue">${entregas.length}</div></div></div>
+      <div class="cc-kpiGrid" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr));">
+        <div class="cc-kpi cc-kpiPurple"><div class="cc-kpiIcon">🚚</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Viagens Atual / Total</div><div class="cc-kpiValue">${k.viagensAtual}${k.viagensTotalEstimado != null ? ` / ${k.viagensTotalEstimado}` : ''}</div>${k.viagensTotalEstimado != null ? `<div class="cc-kpiSub">estimado pelo volume total ÷ capacidade média</div>` : '<div class="cc-kpiSub">sem previsão pra estimar o total</div>'}</div></div>
+        <div class="cc-kpi cc-kpiGreen"><div class="cc-kpiIcon">🏗️</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Volume Total a Retirar</div><div class="cc-kpiValue">${k.volTotalRetirada > 0 ? TC.fmt1(k.volTotalRetirada) + '<span class="cc-kpiUnit">m³</span>' : '—'}</div><div class="cc-kpiSub">terra + estacas + fundação, empolados</div></div></div>
+        <div class="cc-kpi cc-kpiOrange"><div class="cc-kpiIcon">🟤</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Volume Executado</div><div class="cc-kpiValue">${TC.fmt1(k.volExecutado)}<span class="cc-kpiUnit">m³</span></div>${k.pct !== null ? `<div class="cc-kpiSub">${TC.fmt1(k.pct)}% da terraplanagem</div>` : ''}</div></div>
+        <div class="cc-kpi"><div class="cc-kpiIcon">⏳</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Volume Faltando</div><div class="cc-kpiValue">${k.volFaltando != null ? TC.fmt1(k.volFaltando) + '<span class="cc-kpiUnit">m³</span>' : '—'}</div></div></div>
+        <div class="cc-kpi cc-kpiBlue"><div class="cc-kpiIcon">💰</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Valor Gasto</div><div class="cc-kpiValue" style="font-size:1.15rem;">${_fRS(k.custoTotal)}</div></div></div>
+        <div class="cc-kpi"><div class="cc-kpiIcon">💸</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Valor Faltando (estimado)</div><div class="cc-kpiValue" style="font-size:1.15rem;">${k.valorFaltando != null ? _fRS(k.valorFaltando) : '—'}</div></div></div>
+      </div>
+      <div class="cc-kpiGrid" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr));margin-top:8px;">
+        <div class="cc-kpi cc-kpiOrange"><div class="cc-kpiIcon">📦</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Volume de Terra (previsto)</div><div class="cc-kpiValue">${k.volEmpolado > 0 ? TC.fmt1(k.volEmpolado) + '<span class="cc-kpiUnit">m³</span>' : '—'}</div>${k.volEmpolado > 0 ? '' : '<div class="cc-kpiSub">Sem Levantamento cadastrado ainda</div>'}</div></div>
+        <div class="cc-kpi"><div class="cc-kpiIcon">🧱</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Volume de Entulho</div><div class="cc-kpiValue">${TC.fmt1(k.volEntulho)}<span class="cc-kpiUnit">m³</span></div><div class="cc-kpiSub">não entra na terraplanagem</div></div></div>
+        <div class="cc-kpi"><div class="cc-kpiIcon">🔩</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Volume Fundação Profunda</div><div class="cc-kpiValue">${k.volEstacasEmpolado > 0 ? TC.fmt1(k.volEstacasEmpolado) + '<span class="cc-kpiUnit">m³</span>' : '—'}</div><div class="cc-kpiSub">Controle de Estacas, empolado</div></div></div>
+        <div class="cc-kpi"><div class="cc-kpiIcon">🧊</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Volume Fundação Superficial</div><div class="cc-kpiValue">${k.volFundacaoSuperficialEmpolado > 0 ? TC.fmt1(k.volFundacaoSuperficialEmpolado) + '<span class="cc-kpiUnit">m³</span>' : '—'}</div><div class="cc-kpiSub">ainda sem módulo próprio</div></div></div>
       </div>
 
       <div class="cc-panel">
@@ -759,7 +807,10 @@ const ControleTerraplanagem = (() => {
     // Relatório extraído pro módulo compartilhado js/terraplanagem-relatorio.js
     // (TerraRel) — mesma fonte usada pelo botão do Dashboard.
     const k = kpisGerais();
-    TerraRel.abrir({ obraNome, entregas, caminhoes, config, volEmpolado: k.volEmpolado });
+    TerraRel.abrir({
+      obraNome, entregas, caminhoes, config, volEmpolado: k.volEmpolado,
+      volumeTotalEstacas, volumeFundacaoSuperficial, capacidadeMedia: k.capacidadeMedia,
+    });
   }
 
   // ══════════════════════════════════════════

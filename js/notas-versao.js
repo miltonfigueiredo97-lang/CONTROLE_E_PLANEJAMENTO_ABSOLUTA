@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.10.7',
+  versaoAtual: 'V3.11.0',
 
   versoes: [
     {
@@ -8510,6 +8510,18 @@ const NotasVersao = {
       "itens": [
         "Trocado o feio prompt() nativo do navegador por um popup próprio, com campo de cota, e três botões: 💾 Salvar, 📍 Mover e 🗑️ Excluir.",
         "\\\"Mover\\\": clica no botão, o popup fecha e o cursor vira mira — o próximo clique no mapa reposiciona esse ponto pra lá (sem precisar apagar e marcar de novo)."
+      ]
+    },
+    {
+      "versao": "V3.11.0",
+      "data": "2026-08-17",
+      "tipo": "funcionalidade",
+      "titulo": "Controle de Terraplanagem: Viagens Atual/Total, Volume Total a Retirar (terra+estacas+fundação), Executado, Faltando e Valor Faltando",
+      "itens": [
+        "Novos KPIs na tela e no relatório PDF (Controle de Terraplanagem e botão do Dashboard, mesma fonte pros dois): \"Viagens Atual/Total\" (total estimado pelo volume total ÷ capacidade média dos caminhões cadastrados), \"Volume Total a Retirar\" (terra prevista + estacas do Controle de Estacas + fundação superficial, todos empolados), \"Volume Executado\", \"Volume Faltando\", \"Valor Faltando\" (viagens que faltam × custo médio já pago por viagem).",
+        "\"Volume Fundação Superficial\" já aparece no esquema (card mostrando \"—\" por enquanto) — quando esse módulo existir, só precisa plugar a fonte de dados, a conta e a tela já estão prontas.",
+        "Relatório de período agora mostra dois blocos: \"Resumo geral da obra\" (esses novos KPIs, sempre em relação a TUDO, não só o período escolhido) e depois os dados do período em si (como já era).",
+        "Testado com números simulados: volume total 4.160 m³ (3.000 terra + 200 estacas, empolados 30%), 250 viagens já feitas — bateu 325 viagens totais estimadas, 75 faltando, R$ 26.250 faltando (pela média já paga de R$ 350/viagem)."
       ]
     }
   ],

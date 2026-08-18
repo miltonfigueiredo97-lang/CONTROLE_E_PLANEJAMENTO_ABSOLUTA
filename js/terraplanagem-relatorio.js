@@ -83,6 +83,37 @@ const TerraRel = (() => {
     gerar(); // já gera com o período completo — 1 clique a menos
   }
 
+  // Métricas GLOBAIS da obra (não dependem do período escolhido no relatório —
+  // "quanto falta" é sempre em relação a TUDO, não só ao intervalo de datas).
+  function _calcularGlobal() {
+    const todasEntregas = _ctx.entregas || [];
+    const volEmpolado = TC().num(_ctx.volEmpolado); // terra prevista, já empolada
+    const volumeTotalEstacas = TC().num(_ctx.volumeTotalEstacas);
+    const volumeFundacaoSuperficial = TC().num(_ctx.volumeFundacaoSuperficial);
+    const taxa = TC().num(_ctx.config?.taxaEmpolamento ?? 0.3);
+    const volEstacasEmpolado = TC().calcVolumeComEmpolamento(volumeTotalEstacas, taxa);
+    const volFundacaoSuperficialEmpolado = TC().calcVolumeComEmpolamento(volumeFundacaoSuperficial, taxa);
+    const volTotalRetirada = volEmpolado + volEstacasEmpolado + volFundacaoSuperficialEmpolado;
+    const volExecutado = todasEntregas.filter(e => _classMat(e.material) === 'TERRA').reduce((s, e) => s + TC().num(e.volume), 0);
+    const volFaltando = volTotalRetirada > 0 ? Math.max(0, volTotalRetirada - volExecutado) : null;
+
+    const capacidadeMedia = TC().num(_ctx.capacidadeMedia);
+    const viagensAtual = todasEntregas.length;
+    const viagensTotalEstimado = (volTotalRetirada > 0 && capacidadeMedia > 0) ? Math.ceil(volTotalRetirada / capacidadeMedia) : null;
+    const viagensFaltando = viagensTotalEstimado != null ? Math.max(0, viagensTotalEstimado - viagensAtual) : null;
+
+    const custoTotalGlobal = todasEntregas.reduce((s, e) => s + _valorViagem(e), 0);
+    const custoMedioPorViagem = viagensAtual > 0 ? custoTotalGlobal / viagensAtual : TC().num(_ctx.config?.valorViagemTerra);
+    const valorFaltando = viagensFaltando != null ? viagensFaltando * custoMedioPorViagem : null;
+
+    return {
+      volEmpolado, volumeTotalEstacas, volEstacasEmpolado, volumeFundacaoSuperficial, volFundacaoSuperficialEmpolado,
+      volTotalRetirada, volExecutado, volFaltando,
+      capacidadeMedia, viagensAtual, viagensTotalEstimado, viagensFaltando,
+      custoTotalGlobal, custoMedioPorViagem, valorFaltando,
+    };
+  }
+
   function _calcular(inicio, fim) {
     const lista = (_ctx.entregas || []).filter(e => e.data && e.data >= inicio && e.data <= fim)
       .sort((a, b) => (a.data || '').localeCompare(b.data || ''));
@@ -116,6 +147,7 @@ const TerraRel = (() => {
       if (!inicio || !fim || inicio > fim) { Utils.toast('Informe um período válido (início antes do fim).', 'alerta'); return; }
       if (!TC()) { Utils.toast('Motor de cálculo de Terraplanagem não carregou — recarregue a página (Ctrl+Shift+R).', 'erro'); return; }
       _rel = _calcular(inicio, fim);
+      _rel.global = _calcularGlobal();
       _renderPreview();
     } catch (e) {
       console.error('TerraRel.gerar:', e);
@@ -126,9 +158,27 @@ const TerraRel = (() => {
   function _renderPreview() {
     const el = document.getElementById('terra-rel-preview');
     if (!el || !_rel) return;
-    const r = _rel;
+    const r = _rel, g = _rel.global || {};
+    const kpi = (icone, label, valor, sub) => `<div style="border:1px solid #e5e5e5;border-radius:10px;padding:8px 10px;display:flex;gap:8px;align-items:center;"><span style="font-size:1.1rem;">${icone}</span><div><div style="font-size:.62rem;color:#888;text-transform:uppercase;">${label}</div><div style="font-weight:800;font-family:var(--font-mono,monospace);">${valor}</div>${sub ? `<div style="font-size:.6rem;color:#aaa;">${sub}</div>` : ''}</div></div>`;
+
+    const resumoGlobal = `
+      <div style="font-size:.72rem;font-weight:800;color:#888;text-transform:uppercase;margin-bottom:6px;">Resumo geral da obra (todo o histórico, não só o período)</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-bottom:8px;">
+        ${kpi('🚚', 'Viagens atual/total', `${g.viagensAtual ?? 0}${g.viagensTotalEstimado != null ? ` / ${g.viagensTotalEstimado}` : ''}`)}
+        ${kpi('🏗️', 'Volume total a retirar', g.volTotalRetirada > 0 ? TC().fmt1(g.volTotalRetirada) + ' m³' : '—', 'terra+estacas+fundação, empolados')}
+        ${kpi('🟤', 'Volume executado', TC().fmt1(g.volExecutado || 0) + ' m³')}
+        ${kpi('⏳', 'Volume faltando', g.volFaltando != null ? TC().fmt1(g.volFaltando) + ' m³' : '—')}
+        ${kpi('💰', 'Valor gasto', _fRS(g.custoTotalGlobal || 0))}
+        ${kpi('💸', 'Valor faltando (estimado)', g.valorFaltando != null ? _fRS(g.valorFaltando) : '—')}
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-bottom:14px;">
+        ${kpi('📦', 'Vol. terra (previsto)', g.volEmpolado > 0 ? TC().fmt1(g.volEmpolado) + ' m³' : '—')}
+        ${kpi('🔩', 'Vol. fundação profunda', g.volEstacasEmpolado > 0 ? TC().fmt1(g.volEstacasEmpolado) + ' m³' : '—', 'Controle de Estacas')}
+        ${kpi('🧊', 'Vol. fundação superficial', g.volFundacaoSuperficialEmpolado > 0 ? TC().fmt1(g.volFundacaoSuperficialEmpolado) + ' m³' : '—', 'ainda sem módulo próprio')}
+      </div>`;
+
     if (!r.lista.length) {
-      el.innerHTML = '<div style="font-size:.82rem;color:#888;padding:12px 0;">Nenhuma viagem registrada nesse período.</div>';
+      el.innerHTML = resumoGlobal + '<div style="font-size:.82rem;color:#888;padding:12px 0;border-top:1px solid #eee;">Nenhuma viagem registrada nesse período (o resumo geral acima é de toda a obra).</div>';
       return;
     }
     const maxVol = Math.max(...r.dias.map(d => d.volume), 1);
@@ -142,8 +192,8 @@ const TerraRel = (() => {
       return `<rect x="${x}" y="${chartH - h}" width="${barW}" height="${Math.max(1, h)}" fill="var(--cor-primaria,#f5c800)" rx="1.5"><title>${_esc(d.data)}: ${TC().fmt1(d.volume)} m³ · ${_fRS(d.custo)}</title></rect>`;
     }).join('');
     const linhaCusto = r.dias.length > 1 && r.totalCusto > 0 ? `<polyline points="${r.dias.map((d, i) => `${(i * (barW + 4) + barW / 2).toFixed(1)},${(chartH - (d.custoAcum / maxCusto) * chartH).toFixed(1)}`).join(' ')}" fill="none" stroke="#16a34a" stroke-width="2.5"/>` : '';
-    const kpi = (icone, label, valor) => `<div style="border:1px solid #e5e5e5;border-radius:10px;padding:8px 10px;display:flex;gap:8px;align-items:center;"><span style="font-size:1.1rem;">${icone}</span><div><div style="font-size:.62rem;color:#888;text-transform:uppercase;">${label}</div><div style="font-weight:800;font-family:var(--font-mono,monospace);">${valor}</div></div></div>`;
-    el.innerHTML = `
+    el.innerHTML = resumoGlobal + `
+      <div style="font-size:.72rem;font-weight:800;color:#888;text-transform:uppercase;margin-bottom:6px;border-top:1px solid #eee;padding-top:10px;">Neste período (${_fBR(r.inicio)} a ${_fBR(r.fim)})</div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-bottom:12px;">
         ${kpi('📋', 'Viagens', r.totalViagens)}
         ${kpi('🟤', 'Terra', TC().fmt1(r.volTerra) + ' m³')}
@@ -171,6 +221,7 @@ const TerraRel = (() => {
     const doc = new jsPDF({ unit: 'mm', format: 'a4' });
     const PW = doc.internal.pageSize.getWidth();
     const r = _rel;
+    const g = _rel.global || {};
     const volEmpolado = TC().num(_ctx.volEmpolado);
 
     doc.setFillColor(13, 13, 13); doc.rect(0, 0, PW, 26, 'F');
@@ -182,6 +233,38 @@ const TerraRel = (() => {
     doc.setTextColor(200);
     doc.text(`Gerado em ${new Date().toLocaleString('pt-BR')} · Absoluta Engenharia`, 12, 23);
     let y = 34;
+
+    // ── Resumo geral da obra (todo o histórico, não só o período) ──
+    doc.setTextColor(13, 13, 13); doc.setFontSize(10); doc.setFont(undefined, 'bold');
+    doc.text('Resumo geral da obra', 12, y);
+    y += 6;
+    const _linhaCards = (cards, altura) => {
+      const gap = 4, cw = (PW - 24 - gap * (cards.length - 1)) / cards.length;
+      cards.forEach((card, i) => {
+        const x = 12 + i * (cw + gap);
+        doc.setFillColor(250, 250, 250); doc.setDrawColor(229, 229, 229);
+        doc.roundedRect(x, y, cw, altura, 1.8, 1.8, 'FD');
+        doc.setTextColor(13, 13, 13); doc.setFontSize(card.menor ? 9 : 12.5); doc.setFont(undefined, 'bold');
+        doc.text(card.v, x + cw / 2, y + 7.5, { align: 'center' });
+        doc.setTextColor(120); doc.setFontSize(5.3); doc.setFont(undefined, 'normal');
+        doc.text(card.l, x + cw / 2, y + 12.8, { align: 'center' });
+      });
+      y += altura + 4;
+    };
+    _linhaCards([
+      { v: `${g.viagensAtual ?? 0}${g.viagensTotalEstimado != null ? ` / ${g.viagensTotalEstimado}` : ''}`, l: 'VIAGENS ATUAL / TOTAL', menor: true },
+      { v: g.volTotalRetirada > 0 ? TC().fmt1(g.volTotalRetirada) : '—', l: 'VOL. TOTAL A RETIRAR (M³)' },
+      { v: TC().fmt1(g.volExecutado || 0), l: 'VOL. EXECUTADO (M³)' },
+      { v: g.volFaltando != null ? TC().fmt1(g.volFaltando) : '—', l: 'VOL. FALTANDO (M³)' },
+      { v: _fRS(g.custoTotalGlobal || 0), l: 'VALOR GASTO', menor: true },
+      { v: g.valorFaltando != null ? _fRS(g.valorFaltando) : '—', l: 'VALOR FALTANDO', menor: true },
+    ], 17);
+    _linhaCards([
+      { v: g.volEmpolado > 0 ? TC().fmt1(g.volEmpolado) : '—', l: 'VOL. TERRA (PREVISTO, M³)' },
+      { v: g.volEstacasEmpolado > 0 ? TC().fmt1(g.volEstacasEmpolado) : '—', l: 'VOL. FUNDAÇÃO PROFUNDA (M³)' },
+      { v: g.volFundacaoSuperficialEmpolado > 0 ? TC().fmt1(g.volFundacaoSuperficialEmpolado) : '—', l: 'VOL. FUNDAÇÃO SUPERFICIAL (M³)' },
+    ], 15);
+    y += 4;
 
     doc.setTextColor(13, 13, 13); doc.setFontSize(10); doc.setFont(undefined, 'bold');
     doc.text(`Período: ${_fBR(r.inicio)} a ${_fBR(r.fim)}`, 12, y);
