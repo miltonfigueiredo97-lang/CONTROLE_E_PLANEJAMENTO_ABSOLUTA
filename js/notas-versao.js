@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.11.4.6',
+  versaoAtual: 'V3.11.4.7',
 
   versoes: [
     {
@@ -8659,6 +8659,17 @@ const NotasVersao = {
         "Alturas múltiplas: agora dá pra configurar mais de uma altura de rodapé impermeabilizado (ex: 1,20m no box + 0,40m no resto do banheiro) com o botão \"+ Altura\", e cada trecho de cada parede escolhe qual altura usar num seletor próprio.",
         "O total de m² soma cada trecho pelo seu comprimento × a altura escolhida pra ele — não é mais uma altura única pra tudo.",
         "Compatibilidade: áreas configuradas nas versões anteriores (uma altura só, sem trechos) continuam calculando igual; ao abrir \"Selecionar Paredes\" nelas, a configuração antiga é convertida automaticamente pra uma altura única editável, sem perder nada."
+      ]
+    },
+    {
+      "versao": "V3.11.4.7",
+      "data": "2026-08-18",
+      "tipo": "melhoria",
+      "titulo": "Levantamento Piso: aviso quando a divisão da parede não fecha o total",
+      "itens": [
+        "Popup \"Selecionar Paredes\": ao dividir uma parede em trechos, se a soma dos comprimentos não bater com o total da parede, aparece um aviso vermelho na hora (ex: \"Faltam 0,43 m pra completar a parede\") — sem esperar salvar pra descobrir que a conta não fechou.",
+        "O card da parede fica destacado (borda e fundo avermelhados) enquanto a divisão estiver incorreta.",
+        "Ao confirmar com alguma parede ainda divergente, um aviso avisa quais paredes precisam de atenção — a seleção é salva mesmo assim, o aviso é só pra não passar batido."
       ]
     }
   ],

@@ -1887,8 +1887,12 @@ const LP = (() => {
       `<option value="${h.id}" ${h.id === selecionadaId ? 'selected' : ''}>${fmt2(h.valor)} m</option>`
     ).join('');
 
-    document.getElementById('lp-paredes-imperm-lista').innerHTML = arr.map((w, i) => `
-      <div style="border:1px solid #e2e8f0;border-radius:6px;padding:8px;margin-bottom:8px;">
+    document.getElementById('lp-paredes-imperm-lista').innerHTML = arr.map((w, i) => {
+      const soma = w.partes.reduce((s, p) => s + (p.comprimento || 0), 0);
+      const diff = w.comprimentoTotal - soma;
+      const divergente = w.partes.length > 1 && Math.abs(diff) > 0.01;
+      return `
+      <div style="border:1px solid ${divergente ? '#fca5a5' : '#e2e8f0'};background:${divergente ? '#fef2f2' : '#fff'};border-radius:6px;padding:8px;margin-bottom:8px;">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:${w.partes.length ? '6px' : '0'};">
           <strong style="flex:1;font-size:.85rem;">Parede ${i + 1} <span style="color:var(--cor-texto-muted);font-size:.75rem;font-weight:400;">(${fmt2(w.comprimentoTotal)} m no total)</span></strong>
           ${w.partes.length ? `<button type="button" class="btn btn-secundario btn-sm" style="padding:3px 8px;font-size:.72rem;white-space:nowrap;" onclick="LP.dividirParedeImperm(${i})">🔀 Dividir</button>` : ''}
@@ -1906,11 +1910,22 @@ const LP = (() => {
             </div>
           `).join('')
         }
+        ${divergente ? `
+          <div style="margin-top:6px;font-size:.74rem;color:#dc2626;display:flex;align-items:center;gap:4px;">
+            ⚠️ ${diff > 0
+              ? `Faltam ${fmt2(diff)} m pra completar a parede (soma dos trechos: ${fmt2(soma)} m de ${fmt2(w.comprimentoTotal)} m)`
+              : `Os trechos somam ${fmt2(soma)} m — ${fmt2(-diff)} m a mais que o total da parede (${fmt2(w.comprimentoTotal)} m)`}
+          </div>` : ''}
       </div>
-    `).join('');
+    `;
+    }).join('');
   }
 
   function confirmarParedesImperm() {
+    const paredesDivergentes = _paredesImpermPendente
+      .map((w, i) => ({ i, soma: w.partes.reduce((s, p) => s + (p.comprimento || 0), 0), total: w.comprimentoTotal }))
+      .filter(w => _paredesImpermPendente[w.i].partes.length > 1 && Math.abs(w.total - w.soma) > 0.01);
+
     _paredesImpermSalvasPendente = {
       alturas: _impermAlturasPendente.map(h => ({ id: h.id, valor: h.valor })),
       paredes: _paredesImpermPendente.map(w => ({
@@ -1919,6 +1934,11 @@ const LP = (() => {
     };
     Utils.fecharModal('modal-lp-paredes-imperm');
     _atualizarInfoImpermRodape();
+
+    if (paredesDivergentes.length) {
+      const lista = paredesDivergentes.map(w => `Parede ${w.i + 1}`).join(', ');
+      Utils.toast(`Salvo, mas a divisão de ${lista} não fecha o total da parede (confira os trechos).`, 'alerta');
+    }
   }
 
   function fecharModalArea() {
