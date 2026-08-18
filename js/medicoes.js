@@ -113,7 +113,9 @@ const Medicoes = (() => {
       .med-tree{background:#fff;border:1px solid #e2e8f0;border-radius:10px;overflow:auto;}
       .med-node{display:flex;align-items:center;gap:8px;padding:7px 12px;border-bottom:1px solid #f8fafc;font-size:.82rem;}
       .med-node:hover{background:#fefce8;}
-      .med-node .tog{width:18px;cursor:pointer;color:#64748b;font-weight:700;text-align:center;user-select:none;}
+      .med-node .tog{width:26px;height:26px;min-width:26px;cursor:pointer;color:#1e293b;font-weight:800;font-size:1rem;text-align:center;user-select:none;display:flex;align-items:center;justify-content:center;background:#e2e8f0;border-radius:7px;flex-shrink:0;}
+      .med-node .tog:hover{background:#cbd5e1;}
+      .med-node.busca-match{background:#fef9c3;}
       .med-node .nm{font-weight:600;}
       .med-node .sub{font-size:.66rem;color:#94a3b8;}
       .med-node .sp{flex:1;}
@@ -123,6 +125,11 @@ const Medicoes = (() => {
       .med-tbl{border-collapse:collapse;width:100%;font-size:.8rem;background:#fff;}
       .med-tbl th{background:#f8fafc;padding:8px 10px;text-align:left;font-size:.72rem;color:#475569;border-bottom:2px solid #e2e8f0;}
       .med-tbl td{padding:8px 10px;border-bottom:1px solid #f1f5f9;}
+      @media (max-width:640px){
+        .med-top select, .med-top input.form-control{max-width:none !important;flex:1 1 100%;}
+        .med-node .tog{width:32px;height:32px;font-size:1.1rem;}
+        .med-node{padding:10px 10px;}
+      }
     </style>
     <div class="med-top">
       <button class="btn btn-primario" data-perm="medicoes:criar" onclick="Medicoes.novaMedicao()">＋ Nova Medição</button>
@@ -148,7 +155,17 @@ const Medicoes = (() => {
   function novaMedicao(){
     if(!Permissions.pode('medicoes','criar')){Utils.toast('Sem permissão para criar medição.','erro');return;}
     if(!sorted.length){Utils.toast('Nenhuma tarefa no planejamento.','alerta');return;}
-    pend={};busca='';colapsados=new Set();view='nova';_render();
+    pend={};busca='';view='nova';
+    // Começa tudo RECOLHIDO (só os grupos de topo) — abrir tudo de cara faz
+    // rolar telas e telas antes de achar o que quer; melhor ir abrindo só
+    // o que precisa.
+    colapsados=new Set();
+    for(let i=0;i<sorted.length;i++){
+      const t=sorted[i],niv=t.nivel||0,nxt=sorted[i+1];
+      const isLeaf=!nxt||(nxt.nivel||0)<=niv;
+      if(!isLeaf)colapsados.add(t.id);
+    }
+    _render();
   }
   function voltar(){
     if(Object.keys(pend).length&&!Utils.confirmar('Descartar os lançamentos não salvos desta medição?'))return;
@@ -159,30 +176,38 @@ const Medicoes = (() => {
     const tot=_totais();
     const q=busca.toLowerCase().trim();
     const frenteFiltro=filtroFrente;
-    // Pré-calcula quais grupos têm ao menos uma folha da Frente filtrada —
-    // grupo sem nenhum descendente da equipe selecionada fica oculto.
-    let gruposComAlvo=null;
-    if(frenteFiltro){
-      gruposComAlvo=new Set();
+    const temFiltro=!!q||!!frenteFiltro;
+    // Pré-calcula (num único passe) quem bate nos filtros (texto + Frente) e
+    // quais grupos têm ao menos um descendente que bate — grupo sem nenhum
+    // alvo fica oculto. Se tem texto de busca, também abre automaticamente
+    // os ancestrais de cada resultado (senão o resultado fica escondido
+    // dentro de um grupo recolhido e parece que "não achou nada").
+    let gruposComAlvo=null, leavesVisiveis=null;
+    if(temFiltro){
+      gruposComAlvo=new Set();leavesVisiveis=new Set();
       const pilha=[];
       for(let i=0;i<sorted.length;i++){
         const t=sorted[i],niv=t.nivel||0;
         pilha.length=niv;
         if(!leafSet.has(t.id)){pilha[niv]=t.id;continue;}
-        if(t.frenteServico===frenteFiltro){for(const gid of pilha)if(gid)gruposComAlvo.add(gid);}
+        const okQ=!q||(t.nome||'').toLowerCase().includes(q);
+        const okF=!frenteFiltro||t.frenteServico===frenteFiltro;
+        if(okQ&&okF){
+          leavesVisiveis.add(t.id);
+          for(const gid of pilha){if(gid){gruposComAlvo.add(gid);if(q)colapsados.delete(gid);}}
+        }
       }
     }
     let rows='';
     let skipLevel=-1;
+    let primeiroMatchId=null;
     for(let i=0;i<sorted.length;i++){
       const t=sorted[i];const niv=t.nivel||0;
       if(skipLevel>=0){if(niv>skipLevel)continue;skipLevel=-1;}
       const isLeaf=leafSet.has(t.id);
-      if(q&&isLeaf&&!(t.nome||'').toLowerCase().includes(q))continue;
-      if(frenteFiltro&&isLeaf&&t.frenteServico!==frenteFiltro)continue;
+      if(isLeaf&&temFiltro&&!leavesVisiveis.has(t.id))continue;
       if(!isLeaf){
-        if(q)continue; // na busca, mostra só folhas
-        if(frenteFiltro&&!gruposComAlvo.has(t.id))continue; // grupo sem nenhuma tarefa da frente selecionada
+        if(temFiltro&&!gruposComAlvo.has(t.id))continue; // grupo sem nenhum alvo (texto e/ou Frente filtrada)
         const col=colapsados.has(t.id);
         if(col)skipLevel=niv;
         const a=_aggGrupo(i);
@@ -194,10 +219,11 @@ const Medicoes = (() => {
         </div>`;
         continue;
       }
+      if(q&&!primeiroMatchId)primeiroMatchId=t.id;
       const p=pend[t.id];
       const prog=_progAtual(t);
       const esp=_espAt(t,_hoje());
-      rows+=`<div class="med-node leaf ${p?'sel':''}" style="padding-left:${12+niv*16}px;">
+      rows+=`<div class="med-node leaf ${p?'sel':''} ${q&&t.id===primeiroMatchId?'busca-match':''}" id="med-row-${t.id}" style="padding-left:${12+niv*16}px;">
         <span class="tog" style="cursor:pointer;" onclick="Medicoes.abrirMedicao('${t.id}')" title="Lançar medição">✏️</span>
         <div style="cursor:pointer;" onclick="Medicoes.abrirMedicao('${t.id}')">
           <div class="nm">${_esc(t.nome)}${t.frenteServico?` <span style="background:${Utils.corFrente(t.frenteServico)};color:#fff;font-size:.58rem;font-weight:700;padding:1px 6px;border-radius:7px;">${t.frenteServico}</span>`:''}</div>
@@ -224,12 +250,16 @@ const Medicoes = (() => {
         <option value="">Todas as Frentes</option>
         ${Utils.FRENTES_SERVICO.map(f=>`<option value="${f}" ${f===frenteFiltro?'selected':''}>${f}</option>`).join('')}
       </select>
-      <input class="form-control" style="max-width:260px;font-size:.8rem;" placeholder="Busca por Nome" value="${_esc(busca)}" oninput="Medicoes.setBusca(this.value)">
+      <input id="med-busca" class="form-control" style="max-width:260px;font-size:.8rem;" placeholder="Busca por Nome" value="${_esc(busca)}" oninput="Medicoes.setBusca(this.value)">
     </div>
     <div class="med-tree" style="flex:1;min-height:0;">${rows}</div>`;
     // reinjeta o css da lista se necessário
     if(!document.getElementById('med-css')){
       _renderListaCssOnly();
+    }
+    if(q&&primeiroMatchId){
+      const el=document.getElementById('med-row-'+primeiroMatchId);
+      if(el)el.scrollIntoView({block:'center'});
     }
   }
   function _renderListaCssOnly(){
@@ -240,7 +270,9 @@ const Medicoes = (() => {
       .med-tree{background:#fff;border:1px solid #e2e8f0;border-radius:10px;overflow:auto;}
       .med-node{display:flex;align-items:center;gap:8px;padding:7px 12px;border-bottom:1px solid #f8fafc;font-size:.82rem;}
       .med-node:hover{background:#fefce8;}
-      .med-node .tog{width:18px;cursor:pointer;color:#64748b;font-weight:700;text-align:center;user-select:none;}
+      .med-node .tog{width:26px;height:26px;min-width:26px;cursor:pointer;color:#1e293b;font-weight:800;font-size:1rem;text-align:center;user-select:none;display:flex;align-items:center;justify-content:center;background:#e2e8f0;border-radius:7px;flex-shrink:0;}
+      .med-node .tog:hover{background:#cbd5e1;}
+      .med-node.busca-match{background:#fef9c3;}
       .med-node .nm{font-weight:600;}
       .med-node .sub{font-size:.66rem;color:#94a3b8;}
       .med-node .sp{flex:1;}
@@ -249,7 +281,12 @@ const Medicoes = (() => {
       .med-mod{border:1px solid #f5c800;background:#fffbeb;border-radius:6px;font-size:.64rem;padding:1px 6px;color:#92400e;font-weight:700;}
       .med-tbl{border-collapse:collapse;width:100%;font-size:.8rem;background:#fff;}
       .med-tbl th{background:#f8fafc;padding:8px 10px;text-align:left;font-size:.72rem;color:#475569;border-bottom:2px solid #e2e8f0;}
-      .med-tbl td{padding:8px 10px;border-bottom:1px solid #f1f5f9;}`;
+      .med-tbl td{padding:8px 10px;border-bottom:1px solid #f1f5f9;}
+      @media (max-width:640px){
+        .med-top select, .med-top input.form-control{max-width:none !important;flex:1 1 100%;}
+        .med-node .tog{width:32px;height:32px;font-size:1.1rem;}
+        .med-node{padding:10px 10px;}
+      }`;
     document.head.appendChild(st);
   }
 
@@ -264,7 +301,19 @@ const Medicoes = (() => {
     }
     _render();
   }
-  function setBusca(v){busca=v||'';_render();}
+  function setBusca(v){
+    busca=v||'';
+    const inp=document.getElementById('med-busca');
+    const pos=inp?inp.selectionStart:null;
+    _render();
+    // O _render() reconstrói o innerHTML inteiro (destrói e recria o input)
+    // — sem isso, o campo perde o foco a cada letra digitada e só dava pra
+    // digitar 1 caractere por vez.
+    requestAnimationFrame(()=>{
+      const inp2=document.getElementById('med-busca');
+      if(inp2){inp2.focus();if(pos!=null)inp2.setSelectionRange(pos,pos);}
+    });
+  }
   function descartarItem(id){delete pend[id];_render();}
 
   // ==================== MODAL DE MEDIÇÃO ====================

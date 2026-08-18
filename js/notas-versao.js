@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.12.0.2',
+  versaoAtual: 'V3.12.0.3',
 
   versoes: [
     {
@@ -8800,6 +8800,19 @@ const NotasVersao = {
         "Medições: botões \"Expandir tudo\" / \"Recolher tudo\" na tela de nova medição (o padrão já era abrir tudo de início — os botões só facilitam recolher/abrir em massa quando quiser).",
         "Planejamento: \"Classificar Frentes automaticamente\" agora também preenche o GRUPO-PAI quando todos os filhos concordam numa única Frente (antes só classificava a folha — ex: \"Concretagem\" ficava em branco mesmo com todos os pavimentos dentro já em ESTRUTURA).",
         "Planejamento: novo botão \"Exportar Frentes (revisão)\" — planilha simples com só Código, Atividade, Pai e Frente, pra revisar/corrigir fora do sistema e reimportar depois em \"Importar Correções\" (marcando só \"Frente de Serviço\")."
+      ]
+    },
+    {
+      "versao": "V3.12.0.3",
+      "data": "2026-08-18",
+      "tipo": "melhoria",
+      "titulo": "Medições: ícones maiores/mais visíveis, começa tudo recolhido e busca mantém a árvore",
+      "itens": [
+        "Ícone de abrir/fechar grupo (e o lápis de lançar medição) estava pequeno e apagado — agora é um botão quadrado maior, com fundo e contraste melhor. Ajuda também no toque em celular.",
+        "Nova Medição agora começa com tudo RECOLHIDO (só os grupos de topo) — antes começava tudo aberto, o que virava uma rolagem enorme em obras grandes. Os botões \"Expandir tudo\"/\"Recolher tudo\" continuam disponíveis.",
+        "Busca por Nome: antes escondia todos os grupos e mostrava só as folhas batendo o texto (perdia o contexto de onde a tarefa estava). Agora mantém a árvore, abre automaticamente os grupos-pai até o resultado, destaca e rola até a tarefa mais próxima do que foi digitado.",
+        "Corrigido também: o campo de busca perdia o foco a cada letra digitada (só dava pra digitar 1 caractere por vez) — agora mantém o foco e a posição do cursor entre as digitações.",
+        "Telas estreitas (celular): filtro de Frente e busca ocupam a largura toda em vez de ficarem espremidos, e os botões de toque ficam um pouco maiores."
       ]
     },
   ],
