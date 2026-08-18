@@ -6,10 +6,10 @@
   <title>Medições — Controle e Planejamento de Obras</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/base.css?v=V3.11.4.16">
-  <link rel="stylesheet" href="css/layout.css?v=V3.11.4.16">
-  <link rel="stylesheet" href="css/tabelas.css?v=V3.11.4.16">
-  <link rel="stylesheet" href="css/modulos.css?v=V3.11.4.16">
+  <link rel="stylesheet" href="css/base.css?v=V3.12.0">
+  <link rel="stylesheet" href="css/layout.css?v=V3.12.0">
+  <link rel="stylesheet" href="css/tabelas.css?v=V3.12.0">
+  <link rel="stylesheet" href="css/modulos.css?v=V3.12.0">
 </head>
 <body>
 <div class="app-container">
@@ -46,7 +46,7 @@
       <a href="histograma.html" data-perm="histograma:ver"><span class="nav-icon">📊</span> Histograma</a>
       <a href="admin-permissoes.html" data-perm="admin:ver"><span class="nav-icon">🔑</span> Permissões</a>
       <a href="backup-planejamento.html" data-perm="backupPlanejamento:ver"><span class="nav-icon">🗂️</span> Backup de Planejamentos</a>
-      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V3.11.4.16</span></a>
+      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V3.12.0</span></a>
     </nav>
     <div class="sidebar-user">
       <div class="user-avatar">U</div>
@@ -77,7 +77,7 @@
       <p id="med-modal-periodo" style="font-size:.72rem;color:#94a3b8;margin-bottom:14px;"></p>
       <div class="form-grupo"><label>Progresso *</label>
         <div style="display:flex;gap:6px;align-items:center;">
-          <input type="number" id="med-prog" class="form-control" min="0" max="100" style="flex:1;">
+          <input type="number" id="med-prog" class="form-control" min="0" max="100" style="flex:1;" oninput="Medicoes.progChanged()">
           <button class="btn btn-sm btn-outline" onclick="Medicoes.progDelta(-5)">−</button>
           <button class="btn btn-sm btn-outline" onclick="Medicoes.progDelta(5)">＋</button>
           <button class="btn btn-sm btn-outline" title="Concluir (100%)" onclick="Medicoes.progDelta(100)">＝</button>
@@ -88,6 +88,7 @@
       </div>
       <div class="form-grupo"><label>Fim Real</label>
         <input type="date" id="med-fim" class="form-control">
+        <small id="med-fim-aviso" style="color:#94a3b8;display:none;">Só habilita com 100% de progresso.</small>
       </div>
       <div class="form-grupo"><label>Fotos da medição</label>
         <div id="med-fotos-prev" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;"></div>
@@ -119,14 +120,14 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
-<script src="js/firebase-config.js?v=V3.11.4.16"></script>
-<script src="js/auth.js?v=V3.11.4.16"></script>
-<script src="js/database.js?v=V3.11.4.16"></script>
-<script src="js/router.js?v=V3.11.4.16"></script>
-<script src="js/permissions.js?v=V3.11.4.16"></script>
-<script src="js/audit.js?v=V3.11.4.16"></script>
-<script src="js/utils.js?v=V3.11.4.16"></script>
-<script src="js/medicoes.js?v=V3.11.4.16"></script>
+<script src="js/firebase-config.js?v=V3.12.0"></script>
+<script src="js/auth.js?v=V3.12.0"></script>
+<script src="js/database.js?v=V3.12.0"></script>
+<script src="js/router.js?v=V3.12.0"></script>
+<script src="js/permissions.js?v=V3.12.0"></script>
+<script src="js/audit.js?v=V3.12.0"></script>
+<script src="js/utils.js?v=V3.12.0"></script>
+<script src="js/medicoes.js?v=V3.12.0"></script>
 <script>document.addEventListener('DOMContentLoaded', () => { Medicoes.init(); });</script>
 </body>
 </html>

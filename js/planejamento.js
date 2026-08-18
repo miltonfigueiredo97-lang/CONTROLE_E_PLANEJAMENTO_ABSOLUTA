@@ -78,7 +78,7 @@ const Planejamento = (() => {
       // e em lote com timeout, não uma por uma sem fim (podia travar no meio
       // e deixar o resto sem restaurar de verdade).
       const CAMPOS=['nome','codigo','nivel','ordem','inicioPlanejado','terminoPlanejado','duracao',
-        'percentualEsperado','percentualConcluido','predecessora','responsavel','local','grupo'];
+        'percentualEsperado','percentualConcluido','predecessora','responsavel','local','grupo','frenteServico'];
       const mudou=[];
       for(const t of snap){
         const ant=antes.get(t.id);
@@ -99,13 +99,18 @@ const Planejamento = (() => {
   }
 
   // Colunas: ordem editável, largura editável
-  let colOrdem=['sel','num','status','nivel','codigo','nome','inicio','termino','inicioReal','terminoReal','duracao','percEsp','percConc','predecessora','sucessora','responsavel','local','vinculoEstrutura','grupo','quantidade','equipe','custoMaterial','custoMaoObra','acoes'];
-  let colLarguras={sel:28,num:36,status:34,nivel:42,codigo:70,nome:250,inicio:88,termino:88,duracao:60,percEsp:72,percConc:78,predecessora:80,responsavel:100,local:80,grupo:80,quantidade:110,equipe:60,custoMaterial:100,custoMaoObra:100,acoes:64};
+  let colOrdem=['sel','num','status','nivel','codigo','nome','inicio','termino','inicioReal','terminoReal','duracao','percEsp','percConc','predecessora','sucessora','responsavel','local','vinculoEstrutura','grupo','frente','quantidade','equipe','custoMaterial','custoMaoObra','acoes'];
+  let colLarguras={sel:28,num:36,status:34,nivel:42,codigo:70,nome:250,inicio:88,termino:88,duracao:60,percEsp:72,percConc:78,predecessora:80,responsavel:100,local:80,grupo:80,frente:100,quantidade:110,equipe:60,custoMaterial:100,custoMaoObra:100,acoes:64};
   let colsHidden=new Set();
 
-  const COL_LABELS={sel:'',num:'#',status:'',nivel:'Nível',codigo:'Código',nome:'Tarefa',inicio:'Início',termino:'Término',inicioReal:'Início Real',terminoReal:'Término Real',duracao:'Duração',percEsp:'% Esperado',percConc:'% Concluído',predecessora:'Predecessora',sucessora:'Sucessora',responsavel:'Responsável',local:'Local',vinculoEstrutura:'Local (Pav/Apto)',grupo:'Grupo',quantidade:'Quantidade',equipe:'Equipe',custoMaterial:'Custo Material',custoMaoObra:'Custo M.Obra',acoes:''};
+  // Frente de Serviço: disciplina/equipe responsável pela tarefa (Hidráulica,
+  // Elétrica, Estrutura...) — não confundir com a coluna "Equipe" (nº de
+  // pessoas alocadas, usada no módulo Produção). Lista fixa em Utils.
+  const FRENTES=Utils.FRENTES_SERVICO;
+
+  const COL_LABELS={sel:'',num:'#',status:'',nivel:'Nível',codigo:'Código',nome:'Tarefa',inicio:'Início',termino:'Término',inicioReal:'Início Real',terminoReal:'Término Real',duracao:'Duração',percEsp:'% Esperado',percConc:'% Concluído',predecessora:'Predecessora',sucessora:'Sucessora',responsavel:'Responsável',local:'Local',vinculoEstrutura:'Local (Pav/Apto)',grupo:'Grupo',frente:'Frente',quantidade:'Quantidade',equipe:'Nº Equipe',custoMaterial:'Custo Material',custoMaoObra:'Custo M.Obra',acoes:''};
   const COL_FIXED=new Set(['sel','num','status','nome','acoes']);
-  const COL_EDITABLE=new Set(['codigo','nome','inicio','termino','duracao','percConc','predecessora','responsavel','local','grupo','nivel','equipe','inicioReal','terminoReal']); // percEsp saiu: agora é calculado ao vivo pela data (não editável)
+  const COL_EDITABLE=new Set(['codigo','nome','inicio','termino','duracao','percConc','predecessora','responsavel','local','grupo','frente','nivel','equipe','inicioReal','terminoReal']); // percEsp saiu: agora é calculado ao vivo pela data (não editável)
 
   // ===================== VÍNCULOS COM LEVANTAMENTO =====================
   // Tela separada (não é a visão de Gantt) onde cada tarefa do Planejamento
@@ -1710,6 +1715,8 @@ const Planejamento = (() => {
           cells+=`<div style="${base}color:${vinc?'var(--cor-primaria)':'#555'};font-size:.7rem;justify-content:flex-end;font-family:var(--font-mono);gap:3px;"
             title="${vinc?'Vinculado a '+(LEVANTAMENTO_MODULOS[t.levantamentoModulo]?.label||t.levantamentoModulo):'Manual'}">
             ${vinc?'🔗 ':''}${t.quantidade?_fQtd(t.quantidade)+' '+(t.unidade||''):'—'}</div>`;
+        } else if(cid==='frente'){
+          cells+=`<div style="${base}justify-content:center;cursor:pointer;" ${clickEdit}>${t.frenteServico?`<span style="background:${Utils.corFrente(t.frenteServico)};color:#fff;font-size:.62rem;font-weight:700;padding:2px 7px;border-radius:8px;white-space:nowrap;">${t.frenteServico}</span>`:'<span style="color:#666;font-size:.7rem;">—</span>'}</div>`;
         } else if(cid==='equipe'){
           cells+=`<div style="${base}color:#555;font-size:.7rem;justify-content:center;cursor:pointer;" ${clickEdit}>${t.equipeAlocada?t.equipeAlocada+' 👷':'—'}</div>`;
         } else if(cid==='custoMaterial'){
@@ -1841,22 +1848,27 @@ const Planejamento = (() => {
     const map={codigo:'codigo',nome:'nome',
       inicio:VERSAO_CAMPOS[_versaoData].ini,termino:VERSAO_CAMPOS[_versaoData].fim,
       duracao:'duracao',percEsp:'percentualEsperado',percConc:'percentualConcluido',
-      predecessora:'predecessora',responsavel:'responsavel',local:'local',grupo:'grupo',nivel:'nivel',
+      predecessora:'predecessora',responsavel:'responsavel',local:'local',grupo:'grupo',frente:'frenteServico',nivel:'nivel',
       equipe:'equipeAlocada',inicioReal:'inicioReal',terminoReal:'terminoReal'};
     const field=map[colId]; if(!field)return;
     const val=field==='predecessora'?(t._predDisplay||''):(t[field]||'');
     const isDate=colId==='inicio'||colId==='termino'||colId==='inicioReal'||colId==='terminoReal';
     const isNum=colId==='duracao'||colId==='percEsp'||colId==='percConc'||colId==='nivel'||colId==='equipe';
+    const isSelect=colId==='frente';
 
-    const input=document.createElement('input');
-    input.type=isDate?'date':isNum?'number':'text';
-    input.value=val;
+    const input=document.createElement(isSelect?'select':'input');
+    if(isSelect){
+      input.innerHTML=`<option value="">—</option>${FRENTES.map(f=>`<option value="${f}" ${f===val?'selected':''}>${f}</option>`).join('')}`;
+    }else{
+      input.type=isDate?'date':isNum?'number':'text';
+      input.value=val;
+    }
     input.style.cssText='width:100%;height:100%;border:2px solid var(--cor-primaria);background:#1a1a1a;color:#fff;padding:0 4px;font-size:.78rem;font-family:inherit;outline:none;box-sizing:border-box;border-radius:3px;';
     if(isNum){input.min='0';if(colId==='percEsp'||colId==='percConc')input.max='100';}
     cell.innerHTML='';
     cell.appendChild(input);
     input.focus();
-    if(!isDate)input.select();
+    if(!isDate&&!isSelect)input.select();
 
     _editandoCelula=true; // bloqueia _paintRows de destruir o input
     let saved=false;
@@ -2007,8 +2019,8 @@ const Planejamento = (() => {
       if(ev.key==='Enter'){ev.preventDefault();input.blur();}
       if(ev.key==='Escape'){saved=true;_editandoCelula=false;_paintRows();}
     });
-    // Para spinners de number: salva ao mudar valor
-    if(isNum){
+    // Para spinners de number e o select de Frente: salva ao mudar valor
+    if(isNum||isSelect){
       input.addEventListener('change',()=>{input.blur();});
     }
     }catch(errCel){
@@ -2572,6 +2584,7 @@ const Planejamento = (() => {
     // colocar no array, a ordem alfabética é automática.
     const itens=[
       {rotulo:'Auto-vincular por Nome',grupo:'Ferramentas da Obra',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento._abrirAutoVincular()" title="Detecta o pavimento/apto pelo NOME da tarefa e vincula tudo de uma vez, com prévia pra revisar antes de aplicar">🔗 Auto-vincular por Nome</button>'},
+      {rotulo:'Classificar Frentes automaticamente',grupo:'Ferramentas da Obra',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.autoClassificarFrentes()" title="Sugere a Frente de Serviço (Hidráulica, Elétrica...) pelo nome da tarefa. Só preenche quem está em branco — nunca sobrescreve o que já foi definido manualmente.">👷 Classificar Frentes automaticamente</button>'},
       {rotulo:'Corrigir Níveis Soltos',grupo:'Correções & Recálculos',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento._corrigirNiveisSoltos()" title="Corrige tarefas com nível soltos (invisíveis no Editor de Estrutura)">🌳 Corrigir Níveis Soltos</button>'},
       {rotulo:'Corrigir Ordens',grupo:'Correções & Recálculos',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.corrigirOrdensDuplicadas()" title="Corrige tarefas com número de ordem duplicado">🔧 Corrigir Ordens</button>'},
       {rotulo:'Corrigir Predecessoras (por ID)',grupo:'Correções & Recálculos',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento._migrarPredecessorasParaId()" title="Converte predecessoras antigas (por número de linha) pro formato por ID — imune a reordenação. Roda sozinho ao carregar, use aqui só se quiser confirmar manualmente.">🔗 Corrigir Predecessoras (por ID)</button>'},
@@ -4048,6 +4061,43 @@ const Planejamento = (() => {
       _buildFiltradas();_render();
       Utils.toast(`✅ ${duplicatas} duplicata(s) corrigida(s).`,'sucesso');
     }catch(e){console.error(e);Utils.toast('Erro ao corrigir.','erro');}
+    finally{Utils.esconderLoading();}
+  }
+
+  // ===================== FRENTE DE SERVIÇO (auto-classificação) =====================
+  // Só preenche tarefas SEM frenteServico ainda — nunca sobrescreve o que já
+  // foi definido manualmente (na dúvida, a função de classificação retorna
+  // '' e a tarefa fica de fora da lista pra preencher na mão).
+  async function autoClassificarFrentes(){
+    if(!Permissions.pode('planejamento','editar')){Utils.toast('Sem permissão para editar.','erro');return;}
+    const sorted=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
+    const alvo=[];
+    for(let i=0;i<sorted.length;i++){
+      const t=sorted[i],niv=t.nivel||0;
+      const nxt=sorted[i+1];
+      const isLeaf=!nxt||(nxt.nivel||0)<=niv; // só classifica folha — grupos não têm frente própria
+      if(!isLeaf||t.frenteServico)continue;
+      const sugestao=Utils.classificarFrente(t.nome);
+      if(sugestao)alvo.push({t,sugestao});
+    }
+    if(!alvo.length){Utils.toast('Nenhuma tarefa nova pra classificar (todas já têm Frente ou o nome não deu pra identificar).','alerta');return;}
+    const porFrente={};
+    for(const {sugestao} of alvo)porFrente[sugestao]=(porFrente[sugestao]||0)+1;
+    const resumo=Object.entries(porFrente).map(([f,n])=>`${f}: ${n}`).join('\n');
+    if(!confirm(`Sugestão automática pra ${alvo.length} tarefa(s) sem Frente definida:\n\n${resumo}\n\nAplicar? (só preenche quem está em branco — o que já tinha Frente não muda)`))return;
+    Utils.mostrarLoading('Classificando frentes...');
+    try{
+      _undoPush();
+      const LOTE=30;
+      for(let i=0;i<alvo.length;i+=LOTE){
+        await Promise.all(alvo.slice(i,i+LOTE).map(({t,sugestao})=>{
+          t.frenteServico=sugestao;
+          return Database.atualizar(obraId,COL,t.id,{frenteServico:sugestao}).catch(e=>console.error('Erro classificar frente:',t.id,e));
+        }));
+      }
+      _buildFiltradas();_render();
+      Utils.toast(`✅ ${alvo.length} tarefa(s) classificada(s). Revise a coluna "Frente" e ajuste manualmente o que precisar.`,'sucesso');
+    }catch(e){console.error(e);Utils.toast('Erro ao classificar.','erro');}
     finally{Utils.esconderLoading();}
   }
 
@@ -5616,7 +5666,7 @@ const Planejamento = (() => {
     _rowDragStart,toggleSel,_limparSelecao,_moverSel,_bulkNivel,_bulkDuplicar,_bulkExcluir,
     toggleStatusFiltro,_aplicarStatusFiltro,_abrirFiltroResponsavel,_aplicarFiltroResponsavel,_limparFiltroResponsavel,undo,
     onBusca,limparBusca,_buscaKey,
-    importarExcel,importarBaseCompleta,importarCorrecoes,_executarCorrecoes,_mostrarRevisaoCorrecoes,exportar,exportarExcelBonito,exportarMSProject,abrirImpressao,baixarPDF,exportarPNG,corrigirOrdensDuplicadas,_corrigirNiveisSoltos,_corrigirNivelPeloCodigo,_migrarPredecessorasParaId,_recalcularDatasPais,_recalcularPercTodosPais,_orfasMarcarTodas,_orfasExcluirMarcadas,_gerarPNG,_predPopup,_predSalvar,_predCellClick,_predAddLinha,_predLinhaAtualizar,
+    importarExcel,importarBaseCompleta,importarCorrecoes,_executarCorrecoes,_mostrarRevisaoCorrecoes,exportar,exportarExcelBonito,exportarMSProject,abrirImpressao,baixarPDF,exportarPNG,corrigirOrdensDuplicadas,_corrigirNiveisSoltos,_corrigirNivelPeloCodigo,_migrarPredecessorasParaId,_recalcularDatasPais,_recalcularPercTodosPais,_orfasMarcarTodas,_orfasExcluirMarcadas,_gerarPNG,_predPopup,_predSalvar,_predCellClick,_predAddLinha,_predLinhaAtualizar,autoClassificarFrentes,
     abrirVinculosView,fecharVinculosView,abrirVincularTarefa,abrirVincularAqui,onVincTipoChange,
     onVincNavModulo,onVincNavModuloMetrica,onVincNavMetrica,onVincNavEntrar,onVincNavBreadcrumb,onVincNavVoltar,
     onBuscaEscolhaAlvoVinc,onEscolherAlvoVinc,onTrocarAlvoVinc,

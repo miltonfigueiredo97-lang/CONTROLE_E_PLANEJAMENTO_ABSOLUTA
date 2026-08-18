@@ -11,6 +11,32 @@ const Utils = (() => {
   const parseNum = (v) => { if(typeof v==='number')return v; if(!v)return 0; return parseFloat(String(v).replace(',','.'))||0; };
   const hoje = () => new Date().toISOString().split('T')[0];
 
+  // ---- Frentes de Serviço (equipe/disciplina responsável pela tarefa) ----
+  // Campo: t.frenteServico. Lista fixa — não editar sem avisar quem usa
+  // (Planejamento grava, Medições filtra por aqui).
+  const FRENTES_SERVICO = ['ESTRUTURA','PEDREIROS','ENGENHARIA','HIDRAULICA','ELETRICA','GESSO','PINTURA','AZULEJISTAS'];
+  const FRENTES_COR = {ESTRUTURA:'#64748b',PEDREIROS:'#b45309',ENGENHARIA:'#7c3aed',HIDRAULICA:'#0284c7',
+    ELETRICA:'#ca8a04',GESSO:'#94a3b8',PINTURA:'#db2777',AZULEJISTAS:'#0d9488'};
+  const corFrente = (f) => FRENTES_COR[f] || '#94a3b8';
+  // Heurística por nome da tarefa — usada só como sugestão inicial (auto-
+  // classificação); na dúvida retorna '' pra não chutar errado (ex: tarefas
+  // de incêndio podem ser hidráulica OU elétrica — fica pro humano decidir).
+  function classificarFrente(nome){
+    const n=(nome||'').toLowerCase();
+    const testes=[
+      [/concreto|estrutura|\bforma(s)?\b|armaç|armadura|\blaje\b|\bpilar|\bviga\b|alvenaria estrutural|fundaç|\bsapata\b|bloco estrutural/,'ESTRUTURA'],
+      [/contrapiso|alvenaria de veda|vedaç|contramarco|reboco|chapisco|emboço|emboco|regulariza|assentamento de bloco/,'PEDREIROS'],
+      [/revisão|revisao|checklist|check-list|vistoria|compatibiliz/,'ENGENHARIA'],
+      [/hidráulic|hidraulic|\bágua\b|\bagua\b|esgoto|\bgás\b|\bgas\b|hidrante|sprinkler/,'HIDRAULICA'],
+      [/elétric|eletric|quadro elétrico|quadro eletrico|enfiação|enfiacao|cabeamento|tomada|iluminaç|iluminac/,'ELETRICA'],
+      [/\bgesso\b/,'GESSO'],
+      [/pintura|\bpintar\b|textura|\bverniz\b|\bprimer\b/,'PINTURA'],
+      [/porcelanato|piso cerâmico|piso ceramico|azulejo|revestimento cerâmico|revestimento ceramico|rejunte/,'AZULEJISTAS'],
+    ];
+    for(const [re,label] of testes){if(re.test(n))return label;}
+    return '';
+  }
+
   // ---- Toast ----
   function toast(msg, tipo='info', dur=3500) {
     let box = document.querySelector('.toast-container');
@@ -410,6 +436,7 @@ const Utils = (() => {
     mostrarLoading, esconderLoading, $, $$, limparForm, getFormData, setFormData, debounce,
     initPagina, opcoesTarefaHierarquia, calcularFachadaM2,
     percFamilia, recalcularPercAncestrais, distribuirPercDescendentes, calcularKitAr, formatarDiametroAr,
+    FRENTES_SERVICO, corFrente, classificarFrente,
   };
 })();
 

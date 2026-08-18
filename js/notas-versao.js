@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.11.4.16',
+  versaoAtual: 'V3.12.0',
 
   versoes: [
     {
@@ -8764,7 +8764,20 @@ const NotasVersao = {
         "Popup \"Selecionar Paredes\": o zoom pela roda do mouse sempre ampliava a partir do CENTRO do desenho, não de onde o mouse estava — então dar zoom num canto fazia o conteúdo \"escapar\" pro lado errado, precisando reajustar o pan toda hora atrás do que se queria ver.",
         "Corrigido: agora o zoom ancora exatamente no ponto onde o mouse está — o que estava embaixo do cursor continua embaixo do cursor depois do zoom, igual o Google Maps/Figma. Os botões ➖/➕ continuam ancorando no centro (não tem cursor pra seguir nesse caso)."
       ]
-    }
+    },
+    {
+      "versao": "V3.12.0",
+      "data": "2026-08-18",
+      "tipo": "funcionalidade",
+      "titulo": "Novo campo Frente de Serviço no Planejamento + filtro de equipe em Medições",
+      "itens": [
+        "Planejamento: nova coluna \"Frente\" — classifica cada tarefa por equipe/disciplina (Estrutura, Pedreiros, Engenharia, Hidráulica, Elétrica, Gesso, Pintura, Azulejistas). Edição por dropdown direto na grade. Campo novo (frenteServico) — não confundir com a coluna \"Nº Equipe\" já existente (nº de pessoas alocadas, usada no Produção).",
+        "Ferramentas → \"Classificar Frentes automaticamente\": sugere a Frente pelo nome da tarefa e preenche só quem está em branco (nunca sobrescreve o que já foi definido na mão).",
+        "Medições: filtro por Frente na árvore de lançamento — mostra só as tarefas da equipe selecionada, mantendo os grupos-pai pra dar contexto (mesma visão em árvore de sempre).",
+        "Medições: \"Fim Real\" agora só pode ser preenchido com a tarefa em 100% de progresso — evita registrar término de algo que ainda não acabou.",
+        "Medições: ao lançar Início Real ou Término Real (com 100%), o cronograma ATUAL (Início/Término Planejado) é atualizado junto pra refletir a realidade. A Linha de Base nunca é tocada."
+      ]
+    },
   ],
 
   render(containerId) {

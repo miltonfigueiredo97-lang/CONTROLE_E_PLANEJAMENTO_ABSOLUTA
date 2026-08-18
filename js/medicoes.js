@@ -12,6 +12,14 @@ const Medicoes = (() => {
   let busca='';
   let medEditId=null;         // tarefa aberta no modal
   const COL='tarefas', COLM='medicoes';
+  // Filtro por Frente de Serviço (equipe/disciplina) — cache de sessão,
+  // igual ao filtro de responsável do Planejamento. Não é dado de negócio.
+  let filtroFrente=(()=>{try{return localStorage.getItem('med_filtroFrente')||'';}catch(e){return'';}})();
+  function setFiltroFrente(v){
+    filtroFrente=v||'';
+    try{localStorage.setItem('med_filtroFrente',filtroFrente);}catch(e){}
+    _render();
+  }
 
   // ==================== DATAS / HELPERS ====================
   function _d(s){if(!s)return null;if(s.toDate)s=s.toDate();if(s instanceof Date)return new Date(s.getFullYear(),s.getMonth(),s.getDate());
@@ -143,6 +151,20 @@ const Medicoes = (() => {
   function _renderNova(){
     const tot=_totais();
     const q=busca.toLowerCase().trim();
+    const frenteFiltro=filtroFrente;
+    // Pré-calcula quais grupos têm ao menos uma folha da Frente filtrada —
+    // grupo sem nenhum descendente da equipe selecionada fica oculto.
+    let gruposComAlvo=null;
+    if(frenteFiltro){
+      gruposComAlvo=new Set();
+      const pilha=[];
+      for(let i=0;i<sorted.length;i++){
+        const t=sorted[i],niv=t.nivel||0;
+        pilha.length=niv;
+        if(!leafSet.has(t.id)){pilha[niv]=t.id;continue;}
+        if(t.frenteServico===frenteFiltro){for(const gid of pilha)if(gid)gruposComAlvo.add(gid);}
+      }
+    }
     let rows='';
     let skipLevel=-1;
     for(let i=0;i<sorted.length;i++){
@@ -150,8 +172,10 @@ const Medicoes = (() => {
       if(skipLevel>=0){if(niv>skipLevel)continue;skipLevel=-1;}
       const isLeaf=leafSet.has(t.id);
       if(q&&isLeaf&&!(t.nome||'').toLowerCase().includes(q))continue;
+      if(frenteFiltro&&isLeaf&&t.frenteServico!==frenteFiltro)continue;
       if(!isLeaf){
         if(q)continue; // na busca, mostra só folhas
+        if(frenteFiltro&&!gruposComAlvo.has(t.id))continue; // grupo sem nenhuma tarefa da frente selecionada
         const col=colapsados.has(t.id);
         if(col)skipLevel=niv;
         const a=_aggGrupo(i);
@@ -169,7 +193,7 @@ const Medicoes = (() => {
       rows+=`<div class="med-node leaf ${p?'sel':''}" style="padding-left:${12+niv*16}px;">
         <span class="tog" style="cursor:pointer;" onclick="Medicoes.abrirMedicao('${t.id}')" title="Lançar medição">✏️</span>
         <div style="cursor:pointer;" onclick="Medicoes.abrirMedicao('${t.id}')">
-          <div class="nm">${_esc(t.nome)}</div>
+          <div class="nm">${_esc(t.nome)}${t.frenteServico?` <span style="background:${Utils.corFrente(t.frenteServico)};color:#fff;font-size:.58rem;font-weight:700;padding:1px 6px;border-radius:7px;">${t.frenteServico}</span>`:''}</div>
           <div class="sub">Esperado: ${esp}%&nbsp;&nbsp;Real: ${prog}%${p?` &nbsp;<span class="med-mod">alterado: ${Math.min(100,t.percentualConcluido||0)}% → ${p.progresso}%</span>`:''}</div>
         </div>
         <span class="sp"></span>
@@ -187,6 +211,10 @@ const Medicoes = (() => {
       <span class="med-chip" style="background:${tot.medicao>0?'#ecfdf5':'#f1f5f9'};">${tot.medicao.toFixed(2)}% <small>Medição</small></span>
       <span class="med-chip" style="background:#fffbeb;">${tot.esp.toFixed(2)}% <small>Esperado hoje</small></span>
       <div style="flex:1;"></div>
+      <select class="form-control" style="max-width:180px;font-size:.8rem;" onchange="Medicoes.setFiltroFrente(this.value)">
+        <option value="">Todas as Frentes</option>
+        ${Utils.FRENTES_SERVICO.map(f=>`<option value="${f}" ${f===frenteFiltro?'selected':''}>${f}</option>`).join('')}
+      </select>
       <input class="form-control" style="max-width:260px;font-size:.8rem;" placeholder="Busca por Nome" value="${_esc(busca)}" oninput="Medicoes.setBusca(this.value)">
     </div>
     <div class="med-tree">${rows}</div>`;
@@ -232,11 +260,26 @@ const Medicoes = (() => {
     document.getElementById('med-fim').value=p.terminoReal!=null?p.terminoReal:(t.terminoReal?_iso(_d(t.terminoReal)):'');
     document.getElementById('med-fotos-prev').innerHTML=(p.fotos||[]).map((f,i)=>`<div style="position:relative;"><img src="${f}" style="width:70px;height:70px;object-fit:cover;border-radius:8px;border:1px solid #e2e8f0;"><button onclick="Medicoes.removerFoto(${i})" style="position:absolute;top:-6px;right:-6px;background:#dc2626;color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:10px;cursor:pointer;">✕</button></div>`).join('');
     Utils.abrirModal('modal-medicao');
+    progChanged();
+  }
+  // Fim Real só faz sentido com a tarefa 100% concluída — trava o campo
+  // enquanto não chegar lá (evita gravar um término real de tarefa que
+  // ainda não acabou).
+  function progChanged(){
+    const prog=parseFloat(document.getElementById('med-prog')?.value)||0;
+    const elFim=document.getElementById('med-fim');
+    const aviso=document.getElementById('med-fim-aviso');
+    if(!elFim)return;
+    const completa=prog>=100;
+    elFim.disabled=!completa;
+    if(aviso)aviso.style.display=completa?'none':'block';
+    if(!completa)elFim.value='';
   }
   function progDelta(d){
     const el=document.getElementById('med-prog');
     if(d===100)el.value=100;
     else el.value=Math.min(100,Math.max(0,(parseFloat(el.value)||0)+d));
+    progChanged();
   }
   function removerFoto(i){
     if(!pend[medEditId])return;
@@ -273,7 +316,7 @@ const Medicoes = (() => {
     const t=_t(medEditId);if(!t)return;
     const prog=Math.min(100,Math.max(0,parseFloat(document.getElementById('med-prog').value)||0));
     const ini=document.getElementById('med-ini').value;
-    const fim=document.getElementById('med-fim').value;
+    const fim=prog>=100?document.getElementById('med-fim').value:''; // Fim Real só vale com 100% — trava extra além do disabled do campo
     const fotos=pend[medEditId]?.fotos||[];
     const origProg=Math.min(100,t.percentualConcluido||0);
     const origIni=t.inicioReal?_iso(_d(t.inicioReal)):'';
@@ -312,6 +355,15 @@ const Medicoes = (() => {
         if(ini&&ini!==(t.inicioReal?_iso(_d(t.inicioReal)):''))upd.inicioReal=ini;
         if(fim!==(t.terminoReal?_iso(_d(t.terminoReal)):''))upd.terminoReal=fim;
         if(novo<100&&t.terminoReal&&!p.terminoReal)upd.terminoReal='';
+        // Início/Término Real também empurram o cronograma ATUAL (inicioPlanejado/
+        // terminoPlanejado) pra refletir a realidade — a Linha de Base
+        // (inicioPlanejadoBase/terminoPlanejadoBase) nunca é tocada aqui.
+        if(upd.inicioReal)upd.inicioPlanejado=upd.inicioReal;
+        if(upd.terminoReal){
+          upd.terminoPlanejado=upd.terminoReal;
+          const iniRef=upd.inicioPlanejado||t.inicioPlanejado;
+          if(iniRef)upd.duracao=Math.max(0,Math.ceil((new Date(upd.terminoReal)-new Date(iniRef))/864e5));
+        }
         // fotos → storage
         const urls=[];
         for(let i=0;i<(p.fotos||[]).length;i++){
@@ -361,8 +413,8 @@ const Medicoes = (() => {
     catch(e){console.error(e);Utils.toast('Erro.','erro');}
   }
 
-  return{init,carregar,novaMedicao,voltar,toggleGrupo,setBusca,descartarItem,
-    abrirMedicao,progDelta,removerFoto,fotoSelecionada,confirmarMedicao,
+  return{init,carregar,novaMedicao,voltar,toggleGrupo,setBusca,setFiltroFrente,descartarItem,
+    abrirMedicao,progDelta,progChanged,removerFoto,fotoSelecionada,confirmarMedicao,
     salvarMedicao,verMedicao,excluirMedicao};
 })();
 
