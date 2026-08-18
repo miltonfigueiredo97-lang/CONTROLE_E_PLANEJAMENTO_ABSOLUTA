@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.11.4.2',
+  versaoAtual: 'V3.11.4.3',
 
   versoes: [
     {
@@ -8615,6 +8615,16 @@ const NotasVersao = {
         "Custo agora usa a mesma regra do Controle: valor digitado na viagem OU o valor padrão por viagem do config (antes viagem sem valor contava R$ 0).",
         "KPIs novos do Controle incorporados: Retirada Total Prevista (terra prevista + estacas + fundação superficial, tudo empolado), Faltando (m³), Viagens atual/estimado com quanto falta, Valor gasto × Valor faltando (estimado pela média por viagem).",
         "Gráfico por dia ganhou a série \"Outros/sem material\" (cinza-escuro) — a soma das barras volta a bater com o Volume Removido."
+      ]
+    },
+    {
+      "versao": "V3.11.4.3",
+      "data": "2026-08-18",
+      "tipo": "melhoria",
+      "titulo": "Cards de Terraplanagem do Dashboard na MESMA ordem do Controle",
+      "itens": [
+        "Os cards agora seguem exatamente a organização do Controle de Terraplanagem — linha principal: 🚚 Viagens atual/total, Volume total a retirar, Volume executado (com % da terraplanagem), ⏳ Volume faltando, 💰 Valor gasto e Valor faltando (estimado).",
+        "Linha \"COMPOSIÇÃO\" separada embaixo: Volume de terra (previsto, com % de empolamento), 🧱 Volume de entulho (não entra na terraplanagem), Volume fundação profunda e Volume fundação superficial — com as mesmas legendas explicativas do Controle."
       ]
     }
   ],
