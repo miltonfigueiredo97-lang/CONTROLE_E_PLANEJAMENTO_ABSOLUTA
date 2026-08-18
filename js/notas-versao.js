@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.11.4.9',
+  versaoAtual: 'V3.11.4.10',
 
   versoes: [
     {
@@ -8691,6 +8691,16 @@ const NotasVersao = {
       "itens": [
         "Popup \"Selecionar Paredes\": o desenho no topo agora pinta cada trecho da parede dividida na proporção do seu comprimento, com a cor da altura escolhida pra ele — dá pra ver de relance onde é box (1,20m) e onde é o resto (0,40m), por exemplo.",
         "Se a soma dos trechos não cobre a parede inteira, o pedaço que falta aparece em cinza no desenho — a mesma divergência já avisada em texto agora também aparece visualmente."
+      ]
+    },
+    {
+      "versao": "V3.11.4.10",
+      "data": "2026-08-18",
+      "tipo": "melhoria",
+      "titulo": "Levantamento Piso: zoom e arrastar no desenho do popup Selecionar Paredes",
+      "itens": [
+        "O desenho no topo do popup \"Selecionar Paredes\" agora tem zoom (roda do mouse ou botões ➖/➕) e pan (clique e arraste) — útil quando a área é pequena ou tem muitas paredes próximas.",
+        "Botão do meio mostra o % atual e clica pra voltar a 100% e centralizar de novo."
       ]
     }
   ],

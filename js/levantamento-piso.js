@@ -77,6 +77,10 @@ const LP = (() => {
   let _paredesImpermFundoDataURL = null;  // recorte da planta real de fundo, carregado assíncrono
   let _paredesImpermLoadToken = 0;        // evita corrida se o popup for reaberto rápido
   let _impermAlturasPendente = null;      // [{id, valor}] — alturas configuradas nesta edição do popup (uma parede pode ter partes em alturas diferentes)
+  let _paredesImpermView = { scale: 1, tx: 0, ty: 0 }; // zoom/pan do desenho do popup Selecionar Paredes (CSS transform, não recalcula geometria)
+  let _paredesImpermArrastando = false;
+  let _paredesImpermUltimoXY = { x: 0, y: 0 };
+  let _paredesImpermPanZoomListenersAtivos = false; // liga os listeners de pan/zoom só uma vez (nunca desliga, verifica o alvo em tempo real)
   const _PALETA_ALTURAS = ['#7c3aed', '#0ea5e9', '#16a34a', '#f59e0b', '#dc2626', '#db2777'];
                                                // (não só no DOM) pra não se perder se a árvore
                                                // redesenhar por qualquer motivo (ex: clique errado)
@@ -1695,9 +1699,72 @@ const LP = (() => {
 
     _paredesImpermBBox = _calcularBBoxComMargem(poligono);
     _paredesImpermFundoDataURL = null; // limpa o fundo antigo — recarrega abaixo
+    _paredesImpermView = { scale: 1, tx: 0, ty: 0 };
+    _garantirPanZoomListenersImperm();
     _renderParedesImpermPopup();
     Utils.abrirModal('modal-lp-paredes-imperm');
     if (node && node.plantaId) _carregarFundoParedesImperm(node);
+  }
+
+  // Pan (arrastar) e zoom (roda do mouse/botões) do desenho — CSS transform sobre o <svg>,
+  // não recalcula a geometria. Listeners ligados uma única vez em document (nunca são
+  // desligados), checando a cada evento se o alvo está dentro do wrap atual — assim
+  // sobrevivem tranquilos aos vários re-renders (innerHTML) do popup.
+  function _garantirPanZoomListenersImperm() {
+    if (_paredesImpermPanZoomListenersAtivos) return;
+    _paredesImpermPanZoomListenersAtivos = true;
+
+    const dentroDoWrap = (target) => {
+      const wrap = document.getElementById('lp-paredes-imperm-svg-wrap');
+      return wrap && wrap.contains(target);
+    };
+    const iniciar = (x, y) => { _paredesImpermArrastando = true; _paredesImpermUltimoXY = { x, y }; };
+    const mover = (x, y) => {
+      if (!_paredesImpermArrastando) return;
+      _paredesImpermView.tx += (x - _paredesImpermUltimoXY.x);
+      _paredesImpermView.ty += (y - _paredesImpermUltimoXY.y);
+      _paredesImpermUltimoXY = { x, y };
+      _aplicarTransformSVGImperm();
+    };
+    const parar = () => { _paredesImpermArrastando = false; };
+
+    document.addEventListener('mousedown', e => { if (dentroDoWrap(e.target)) { iniciar(e.clientX, e.clientY); e.preventDefault(); } });
+    document.addEventListener('mousemove', e => mover(e.clientX, e.clientY));
+    document.addEventListener('mouseup', parar);
+    document.addEventListener('touchstart', e => { if (dentroDoWrap(e.target) && e.touches[0]) { const t = e.touches[0]; iniciar(t.clientX, t.clientY); } }, { passive: true });
+    document.addEventListener('touchmove', e => { if (_paredesImpermArrastando && e.touches[0]) { const t = e.touches[0]; mover(t.clientX, t.clientY); } }, { passive: true });
+    document.addEventListener('touchend', parar);
+    document.addEventListener('wheel', e => {
+      if (!dentroDoWrap(e.target)) return;
+      e.preventDefault();
+      zoomParedesImperm(e.deltaY < 0 ? 0.25 : -0.25);
+    }, { passive: false });
+  }
+
+  function _aplicarTransformSVGImperm() {
+    const svg = document.getElementById('lp-paredes-imperm-svg');
+    if (!svg) return;
+    const v = _paredesImpermView;
+    svg.style.transform = `translate(${v.tx}px, ${v.ty}px) scale(${v.scale})`;
+  }
+
+  function zoomParedesImperm(delta) {
+    const novo = Math.min(4, Math.max(1, _paredesImpermView.scale + delta));
+    _paredesImpermView.scale = novo;
+    if (novo === 1) { _paredesImpermView.tx = 0; _paredesImpermView.ty = 0; } // volta ao normal = centraliza de novo
+    _atualizarBotaoZoomImperm();
+    _aplicarTransformSVGImperm();
+  }
+
+  function resetZoomParedesImperm() {
+    _paredesImpermView = { scale: 1, tx: 0, ty: 0 };
+    _atualizarBotaoZoomImperm();
+    _aplicarTransformSVGImperm();
+  }
+
+  function _atualizarBotaoZoomImperm() {
+    const el = document.getElementById('lp-paredes-imperm-zoom-pct');
+    if (el) el.textContent = Math.round(_paredesImpermView.scale * 100) + '%';
   }
 
   function _calcularBBoxComMargem(poligono) {
@@ -1853,7 +1920,7 @@ const LP = (() => {
     const escala = Math.min((W - 2 * PAD) / bbox.bw, (H - 2 * PAD) / bbox.bh);
     const norm = _paredesImpermPoligono.map(p => _pontoParaSVGImperm(p, W, H, PAD));
 
-    let svg = `<svg viewBox="0 0 ${W} ${H}" style="width:100%;max-height:220px;display:block;">`;
+    let svg = `<svg id="lp-paredes-imperm-svg" viewBox="0 0 ${W} ${H}" style="width:100%;height:100%;display:block;transform:translate(${_paredesImpermView.tx}px,${_paredesImpermView.ty}px) scale(${_paredesImpermView.scale});transform-origin:50% 50%;">`;
     if (_paredesImpermFundoDataURL) {
       svg += `<image href="${_paredesImpermFundoDataURL}" x="${PAD}" y="${PAD}" width="${(bbox.bw * escala).toFixed(1)}" height="${(bbox.bh * escala).toFixed(1)}" preserveAspectRatio="none"/>`;
       svg += `<polygon points="${norm.map(p => p.x + ',' + p.y).join(' ')}" fill="none"/>`;
@@ -1897,7 +1964,13 @@ const LP = (() => {
       svg += `<text x="${mx.toFixed(1)}" y="${(my + 3).toFixed(1)}" text-anchor="middle" font-size="9" font-weight="700" fill="${corBadge}" style="pointer-events:none;">${i + 1}${w.partes.length > 1 ? '•' + w.partes.length : ''}</text>`;
     });
     svg += `</svg>`;
-    document.getElementById('lp-paredes-imperm-svg-wrap').innerHTML = svg;
+    const controlesZoom = `
+      <div style="position:absolute;top:6px;right:6px;display:flex;gap:3px;background:rgba(255,255,255,0.92);border-radius:6px;padding:3px;box-shadow:0 1px 4px rgba(0,0,0,0.18);z-index:2;">
+        <button type="button" onclick="LP.zoomParedesImperm(-0.25)" style="border:none;background:#fff;border-radius:4px;width:24px;height:24px;cursor:pointer;font-size:.8rem;">➖</button>
+        <button type="button" onclick="LP.resetZoomParedesImperm()" id="lp-paredes-imperm-zoom-pct" style="border:none;background:#fff;border-radius:4px;padding:0 6px;height:24px;cursor:pointer;font-size:.68rem;font-weight:700;color:var(--cor-texto-muted);white-space:nowrap;">${Math.round(_paredesImpermView.scale * 100)}%</button>
+        <button type="button" onclick="LP.zoomParedesImperm(0.25)" style="border:none;background:#fff;border-radius:4px;width:24px;height:24px;cursor:pointer;font-size:.8rem;">➕</button>
+      </div>`;
+    document.getElementById('lp-paredes-imperm-svg-wrap').innerHTML = controlesZoom + svg;
 
     _renderAlturasImpermChips();
 
@@ -2121,7 +2194,7 @@ const LP = (() => {
     finalizarPoligono, editarArea, onToggleImperm, onToggleImpermRodape, aplicarPresetAlturaRodape, onAlturaRodapeInput, fecharModalArea, salvarArea, excluirAreaEmEdicao, moverArea,
     abrirSelecaoParedesImperm, confirmarParedesImperm,
     incluirParedeImperm, dividirParedeImperm, removerParteImperm, toggleParteImperm, editarComprimentoParteImperm, mudarAlturaParteImperm,
-    adicionarAlturaImperm, removerAlturaImperm,
+    adicionarAlturaImperm, removerAlturaImperm, zoomParedesImperm, resetZoomParedesImperm,
     filtrarAreas, abrirClonarPavimento, marcarTodosClonar, confirmarClonarPavimento, criarNovoLocalEClonar, filtrarVisaoGeral,
     marcarTodasAreas, desmarcarTodasAreas, atualizarBarraSelecaoAreas, moverOuCopiarSelecionadas, toggleSelecaoArea,
     toggleRodapeEdge, cancelarRodape, confirmarRodape, iniciarEdicaoRodape,
