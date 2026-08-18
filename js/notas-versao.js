@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.13.3',
+  versaoAtual: 'V3.13.4',
 
   versoes: [
     {
@@ -9011,6 +9011,20 @@ const NotasVersao = {
         "Ordem de busca completa: Chave → Código → Nome → Nome + Pai. Planilha antiga sem a coluna Chave continua funcionando normalmente pela cascata.",
         "A resolução de predecessora segue a mesma cascata, incluindo o desempate pelo Pai.",
         "O resumo antes de confirmar mostra quantas casaram por cada critério, e as ambíguas que sobrarem dizem o motivo (sem chave, sem código, sem pai) pra saber o que corrigir."
+      ]
+    },
+    {
+      "versao": "V3.13.4",
+      "data": "2026-08-18",
+      "tipo": "correcao",
+      "titulo": "Coluna ID da planilha exportada grudava na LINHA, não na tarefa",
+      "itens": [
+        "Bug real, reproduzido: exportar o cronograma, mover uma tarefa no Editor de Estrutura e exportar de novo dava um ID DIFERENTE pra mesma tarefa — e o ID antigo passava a apontar pra outra. A coluna \"ID\" era `i+1`, a posição na lista, então o número grudava na linha em vez de acompanhar a tarefa.",
+        "Agora a coluna ID traz o identificador real da tarefa: nasce com ela, nunca muda, acompanha ela pra onde for movida e não é reaproveitado quando outra tarefa é excluída. É a coluna que o importador usa pra casar.",
+        "A posição virou uma coluna separada chamada \"Linha\", que existe por um motivo só: a coluna Prececessora referencia esse número. Ela é recalculada a cada exportação de propósito — não use como identificador.",
+        "Isso substitui a coluna \"Chave\" que tinha sido criada na V3.13.3 pro mesmo fim: em vez de duas colunas de identidade, o \"ID\" passou a ser o que o nome sempre prometeu.",
+        "Importante: por dentro o sistema já estava certo. As predecessoras sempre foram gravadas por ID de tarefa (formato `id|tipo|lag`), então mover linha no editor nunca quebrou vínculo nenhum — o número que aparece na tela é só exibição, convertido na hora. O problema era exclusivamente da planilha exportada.",
+        "Planilha antiga (com ID posicional) continua sendo importada normalmente: os números não batem com nenhum ID de tarefa, então a busca cai pra Código → Nome → Nome+Pai como antes, sem risco de casar errado."
       ]
     }
   ],
