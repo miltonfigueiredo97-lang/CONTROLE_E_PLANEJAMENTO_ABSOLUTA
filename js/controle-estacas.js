@@ -45,6 +45,7 @@ const ControleEstacas = (() => {
 
   let abaPrincipal = 'marcadores'; // 'marcadores' | 'planejamento' | 'acompanhamento'
   let pranchaAtivaId = null;
+  let pranchaAtivaPorView = { estacas: null, fundacoes: null }; // cada view lembra sua própria prancha ativa — Estacas e Fundações são projetos (pranchas) independentes
   let view = 'estacas'; // 'estacas' | 'fundacoes'
   let modo = null;      // null | 'circulo' | 'poligono' (modo de adicionar)
   let poligonoPontos = [];
@@ -101,8 +102,7 @@ const ControleEstacas = (() => {
       pranchas = prs; marcadores = ms; pecas = ps; lancamentos = lans;
       concretagens = concs; btsConfig = bts; pecaConc = pcs;
       mapaCoresGrupo = EC.mapaCoresGrupoEstaca(pecas);
-      if (!pranchaAtivaId && pranchas.length) pranchaAtivaId = pranchasOrdenadas()[0].id;
-      if (pranchaAtivaId && !pranchas.some(p => p.id === pranchaAtivaId)) pranchaAtivaId = pranchas[0]?.id || null;
+      _sincronizarPranchaAtiva();
       renderizar();
     } catch (e) {
       console.error(e);
@@ -116,14 +116,37 @@ const ControleEstacas = (() => {
     obraId = Router.getObraId();
     if (!obraId) return;
     pranchaAtivaId = null;
+    pranchaAtivaPorView = { estacas: null, fundacoes: null };
     await carregar();
   }
 
   // ══════════════════════════════════════════
   // HELPERS
   // ══════════════════════════════════════════
-  function pranchasOrdenadas() { return [...pranchas].sort((a, b) => (a.ordem || 0) - (b.ordem || 0)); }
+  // Estacas e Fundações são projetos (pranchas) INDEPENDENTES — cada prancha
+  // tem um `tipo` ('estacas' | 'fundacoes'); pranchas antigas sem o campo
+  // são tratadas como 'estacas' (comportamento de antes desta separação).
+  function pranchasOrdenadas(v) {
+    const tipo = v || view;
+    return pranchas.filter(p => (p.tipo || 'estacas') === tipo).sort((a, b) => (a.ordem || 0) - (b.ordem || 0));
+  }
   function pranchaAtiva() { return pranchas.find(p => p.id === pranchaAtivaId) || null; }
+  // Garante que pranchaAtivaId é válido pra view atual — cai na prancha
+  // guardada daquela view, senão na primeira da lista, senão null. Se
+  // pranchaAtivaId já veio setado de fora (deep-link ?prancha=ID), ajusta a
+  // própria view pra bater com o tipo dessa prancha primeiro.
+  function _sincronizarPranchaAtiva() {
+    if (pranchaAtivaId) {
+      const prLink = pranchas.find(p => p.id === pranchaAtivaId);
+      if (prLink) view = prLink.tipo || 'estacas';
+    }
+    if (pranchaAtivaId) pranchaAtivaPorView[view] = pranchaAtivaId;
+    let idView = pranchaAtivaPorView[view];
+    const listaView = pranchasOrdenadas();
+    if (!idView || !listaView.some(p => p.id === idView)) idView = listaView[0]?.id || null;
+    pranchaAtivaPorView[view] = idView;
+    pranchaAtivaId = idView;
+  }
   function tipoMarcadorDaView() { return view === 'estacas' ? 'circulo' : 'poligono'; }
   function marcadoresDaPranchaView(pranchaId) {
     const tipo = tipoMarcadorDaView();
@@ -371,13 +394,20 @@ const ControleEstacas = (() => {
   }
 
   function onTrocarView(v) {
-    view = v; modo = null; poligonoPontos = []; editandoFormaId = null;
+    pranchaAtivaPorView[view] = pranchaAtivaId; // guarda a prancha da view que está saindo
+    view = v;
+    pranchaAtivaId = pranchaAtivaPorView[v] || null;
+    const listaView = pranchasOrdenadas();
+    if (!pranchaAtivaId || !listaView.some(p => p.id === pranchaAtivaId)) pranchaAtivaId = listaView[0]?.id || null;
+    pranchaAtivaPorView[v] = pranchaAtivaId;
+    modo = null; poligonoPontos = []; editandoFormaId = null;
     if (abaPrincipal === 'planejamento') _renderAbaPlanejamento();
     else if (abaPrincipal === 'acompanhamento') _renderAbaAcompanhamento();
     else renderizar();
   }
   function onTrocarPranchaAtiva() {
     pranchaAtivaId = document.getElementById('ce-prancha-ativa').value || null;
+    pranchaAtivaPorView[view] = pranchaAtivaId;
     modo = null; poligonoPontos = []; editandoFormaId = null;
     renderizar();
   }
@@ -2187,6 +2217,8 @@ const ControleEstacas = (() => {
   function renderPranchas() {
     const el = document.getElementById('ce-pranchas-body');
     if (!el) return;
+    const titulo = document.getElementById('ce-pranchas-titulo');
+    if (titulo) titulo.textContent = view === 'estacas' ? '📄 Pranchas — Projeto de Estacas' : '📄 Pranchas — Projeto de Fundações';
     const lista = pranchasOrdenadas();
     el.innerHTML = `
       <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:flex-end;">
@@ -2225,7 +2257,7 @@ const ControleEstacas = (() => {
     Utils.mostrarLoading();
     try {
       const ordem = pranchas.length ? Math.max(...pranchas.map(p => p.ordem || 0)) + 1 : 1;
-      const id = await Database.criar(obraId, COL_PRANCHAS, { nome, ordem }, EC.genId('prancha'));
+      const id = await Database.criar(obraId, COL_PRANCHAS, { nome, ordem, tipo: view }, EC.genId('prancha'));
       input.value = '';
       if (file) {
         await _processarArquivoPrancha(file, id);
@@ -2234,6 +2266,7 @@ const ControleEstacas = (() => {
       await carregar();
       renderPranchas();
       pranchaAtivaId = id;
+      pranchaAtivaPorView[view] = id;
       if (!file) abrirUploadImagem(id); // não escolheu arquivo ainda agora — abre o upload dedicado na hora
       else Utils.toast('✓ Prancha criada com o PDF/imagem já importado!', 'sucesso');
     } catch (e) {
@@ -2273,6 +2306,7 @@ const ControleEstacas = (() => {
       await Database.batchWrite(ops);
       await db.collection('obras').doc(obraId).collection('config').doc('estacasImagem_' + id).delete().catch(() => {});
       if (pranchaAtivaId === id) pranchaAtivaId = null;
+      Object.keys(pranchaAtivaPorView).forEach(k => { if (pranchaAtivaPorView[k] === id) pranchaAtivaPorView[k] = null; });
       await carregar();
       renderPranchas();
     } catch (e) {

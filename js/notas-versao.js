@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.11.0',
+  versaoAtual: 'V3.11.1',
 
   versoes: [
     {
@@ -8522,6 +8522,17 @@ const NotasVersao = {
         "\"Volume Fundação Superficial\" já aparece no esquema (card mostrando \"—\" por enquanto) — quando esse módulo existir, só precisa plugar a fonte de dados, a conta e a tela já estão prontas.",
         "Relatório de período agora mostra dois blocos: \"Resumo geral da obra\" (esses novos KPIs, sempre em relação a TUDO, não só o período escolhido) e depois os dados do período em si (como já era).",
         "Testado com números simulados: volume total 4.160 m³ (3.000 terra + 200 estacas, empolados 30%), 250 viagens já feitas — bateu 325 viagens totais estimadas, 75 faltando, R$ 26.250 faltando (pela média já paga de R$ 350/viagem)."
+      ]
+    },
+    {
+      "versao": "V3.11.1",
+      "data": "2026-08-18",
+      "tipo": "correcao",
+      "titulo": "Controle de Estacas e Fundações: clicar em Fundações abria o mesmo projeto (prancha) das Estacas",
+      "itens": [
+        "Estacas e Fundações compartilhavam a mesma prancha ativa — trocar de aba não trocava de projeto, só filtrava os marcadores por cima da mesma imagem.",
+        "Agora cada uma tem seu próprio projeto: a prancha ativa é lembrada separadamente por view, e a lista/criação de pranchas (📄 Pranchas) também é filtrada pela view atual.",
+        "Pranchas já existentes continuam valendo como Estacas (comportamento de antes) — pra ter uma prancha de Fundações, é só trocar pra aba Fundações e importar uma nova."
       ]
     }
   ],
