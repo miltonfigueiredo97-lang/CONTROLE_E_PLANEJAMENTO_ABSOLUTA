@@ -3003,7 +3003,7 @@ const Planejamento = (() => {
       modal.innerHTML=`
         <div style="background:#1a1a1a;border:1px solid #333;border-radius:10px;padding:20px;width:480px;max-width:95vw;max-height:85vh;overflow-y:auto;display:flex;flex-direction:column;gap:10px;">
           <div style="font-weight:700;color:var(--cor-primaria);">📥 Importar Correções</div>
-          <div style="font-size:.78rem;color:#888;">Casa cada linha da planilha com a tarefa de MESMO NOME já existente na obra. Posição, nível, estrutura e código NÃO são tocados — só os campos marcados abaixo:</div>
+          <div style="font-size:.78rem;color:#888;">Casa cada linha da planilha com a tarefa de MESMO CÓDIGO já existente na obra (o código não muda nunca). Se a linha não tiver código, cai pro nome. Posição, nível, estrutura e código NÃO são tocados — só os campos marcados abaixo:</div>
           <div id="correcoes-campos" style="display:flex;flex-direction:column;gap:6px;">
             ${CAMPOS_CORRECAO.map(c=>`<label style="display:flex;align-items:center;gap:8px;font-size:.82rem;cursor:pointer;color:#ddd;">
               <input type="checkbox" value="${c.id}" style="width:16px;height:16px;flex-shrink:0;accent-color:var(--cor-primaria);">
@@ -3025,7 +3025,19 @@ const Planejamento = (() => {
     if(!camposMarcados.length){Utils.toast('Marque ao menos 1 campo.','alerta');return;}
     const modal=document.getElementById('correcoes-modal');if(modal)modal.remove();
 
-    // Nome -> lista de tarefas (pra detectar ambiguidade: mais de uma com mesmo nome)
+    // CÓDIGO -> lista de tarefas. O código é a chave de verdade: ele não muda
+    // quando alguém renomeia a tarefa, e é único mesmo quando o nome se repete
+    // em ramos diferentes da obra ("Hall" em 1.3.4.x e em 1.3.6.x). Casar por
+    // nome primeiro fazia dezenas de linhas caírem em "ambígua" à toa.
+    const porCodigo=new Map();
+    for(const t of tarefas){
+      const cod=(t.codigo||'').trim();
+      if(!cod)continue;
+      if(!porCodigo.has(cod))porCodigo.set(cod,[]);
+      porCodigo.get(cod).push(t);
+    }
+    // Nome -> lista de tarefas. Só entra como RESERVA, pra linha sem código na
+    // planilha ou cujo código não existe na obra (tarefa criada à mão depois).
     const porNome=new Map();
     for(const t of tarefas){
       const chave=(t.nome||'').trim().toLowerCase();
@@ -3040,28 +3052,33 @@ const Planejamento = (() => {
     const NUM_FIELDS=new Set(['percentualConcluido','percentualEsperado','custo','receita','duracao']);
     const idxCodigo=ci('codigo');
 
-    let predNaoResolvidas=0;
+    let predNaoResolvidas=0,casadasPorCodigo=0,casadasPorNome=0;
     const naoEncontradasNomes=[],ambiguasNomes=[];
     const updates=[];
     for(let r=1;r<rows.length;r++){
       const row=rows[r];
       const nome=String(row[iN]||'').trim();
       if(!nome)continue;
-      const candidatos=porNome.get(nome.toLowerCase());
-      if(!candidatos||!candidatos.length){naoEncontradasNomes.push(nome);continue;}
+      const codigoLinha=idxCodigo>=0?String(row[idxCodigo]||'').trim():'';
       let t;
-      if(candidatos.length===1){
-        t=candidatos[0];
+      // 1º) pelo CÓDIGO — chave estável, não depende do nome estar igual
+      const porCod=codigoLinha?(porCodigo.get(codigoLinha)||[]):[];
+      if(porCod.length===1){
+        t=porCod[0];casadasPorCodigo++;
+      } else if(porCod.length>1){
+        // Código repetido na obra (não deveria) — desempata pelo nome
+        const mesmoNome=porCod.filter(c=>(c.nome||'').trim().toLowerCase()===nome.toLowerCase());
+        if(mesmoNome.length===1){t=mesmoNome[0];casadasPorCodigo++;}
+        else{ambiguasNomes.push(`${nome} (código ${codigoLinha} repetido na obra)`);continue;}
       } else {
-        // Nome ambíguo (mais de uma tarefa com o mesmo nome) — tenta
-        // desambiguar pelo Código, que geralmente é único mesmo quando o
-        // nome se repete (ex: mesma tarefa duplicada em dois ramos da obra
-        // com códigos diferentes). Só cai em "ambígua" se o código também
-        // não resolver (ex: grupos manuais sem código).
-        const codigoLinha=idxCodigo>=0?String(row[idxCodigo]||'').trim():'';
-        const porCodigo=codigoLinha?candidatos.filter(c=>(c.codigo||'').trim()===codigoLinha):[];
-        if(porCodigo.length===1){t=porCodigo[0];}
-        else{ambiguasNomes.push(nome);continue;}
+        // 2º) RESERVA pelo nome — linha sem código, ou código que não existe
+        // na obra (tarefa criada à mão depois da planilha original).
+        const candidatos=porNome.get(nome.toLowerCase());
+        if(!candidatos||!candidatos.length){
+          naoEncontradasNomes.push(codigoLinha?`${nome} (código ${codigoLinha})`:nome);continue;
+        }
+        if(candidatos.length===1){t=candidatos[0];casadasPorNome++;}
+        else{ambiguasNomes.push(codigoLinha?`${nome} (código ${codigoLinha} não existe na obra)`:nome);continue;}
       }
       const upd={};
       for(const campo of camposMarcados){
@@ -3079,10 +3096,23 @@ const Planejamento = (() => {
             const m=p.match(/^(\d+)\s*(TI|II|TT|IT)?\s*([+-]?\d+)?\s*d{0,2}$/i);
             if(!m)continue;
             const linhaAlvo=rows[parseInt(m[1])]; // rows[0]=cabeçalho, rows[N] = linha de ID/nº N
+            // Mesma regra do casamento principal: CÓDIGO primeiro (estável),
+            // nome só de reserva. Antes só olhava o nome, e toda predecessora
+            // que apontava pra uma tarefa de nome repetido virava "não resolvida".
+            const codAlvo=(linhaAlvo&&idxCodigo>=0)?String(linhaAlvo[idxCodigo]||'').trim():'';
             const nomeAlvo=linhaAlvo?String(linhaAlvo[iN]||'').trim():'';
-            const candAlvo=nomeAlvo?porNome.get(nomeAlvo.toLowerCase()):null;
-            if(candAlvo&&candAlvo.length===1){
-              partes.push({id:candAlvo[0].id,tipo:(m[2]||'TI').toUpperCase(),lag:m[3]||''});
+            let alvo=null;
+            const cAlvo=codAlvo?(porCodigo.get(codAlvo)||[]):[];
+            if(cAlvo.length===1)alvo=cAlvo[0];
+            else if(cAlvo.length>1){
+              const mn=cAlvo.filter(c=>(c.nome||'').trim().toLowerCase()===nomeAlvo.toLowerCase());
+              if(mn.length===1)alvo=mn[0];
+            } else {
+              const candAlvo=nomeAlvo?porNome.get(nomeAlvo.toLowerCase()):null;
+              if(candAlvo&&candAlvo.length===1)alvo=candAlvo[0];
+            }
+            if(alvo){
+              partes.push({id:alvo.id,tipo:(m[2]||'TI').toUpperCase(),lag:m[3]||''});
             } else predNaoResolvidas++;
           }
           upd.predecessora=_predFormat(partes);
@@ -3100,7 +3130,7 @@ const Planejamento = (() => {
       if(Object.keys(upd).length)updates.push({id:t.id,...upd});
     }
 
-    if(!confirm(`${updates.length} tarefa(s) serão atualizadas (${camposMarcados.length} campo(s) cada).\n${naoEncontradasNomes.length} não encontradas (nome não bate com nenhuma tarefa atual).\n${ambiguasNomes.length} ambíguas (mais de uma tarefa com o mesmo nome — puladas por segurança).${predNaoResolvidas?`\n${predNaoResolvidas} predecessora(s) não resolvida(s) (nome ambíguo ou não encontrado).`:''}\n\nConfirmar?`)){_correcoesContexto=null;return;}
+    if(!confirm(`${updates.length} tarefa(s) serão atualizadas (${camposMarcados.length} campo(s) cada).\n  · ${casadasPorCodigo} casadas pelo Código\n  · ${casadasPorNome} casadas pelo Nome (linha sem código, ou código que não existe na obra)\n${naoEncontradasNomes.length} não encontradas (nem código nem nome batem com alguma tarefa atual).\n${ambiguasNomes.length} ambíguas (puladas por segurança).${predNaoResolvidas?`\n${predNaoResolvidas} predecessora(s) não resolvida(s) (nome ambíguo ou não encontrado).`:''}\n\nConfirmar?`)){_correcoesContexto=null;return;}
 
     Utils.mostrarLoading('Aplicando correções...');
     const L=20,TIMEOUT_MS=15000;
@@ -3140,7 +3170,7 @@ const Planejamento = (() => {
       <div style="background:#1a1a1a;border:1px solid #333;border-radius:10px;padding:20px;width:520px;max-width:95vw;max-height:85vh;overflow-y:auto;display:flex;flex-direction:column;">
         <div style="font-weight:700;color:var(--cor-primaria);margin-bottom:12px;">⚠ Itens não aplicados no Importar Correções</div>
         ${secao('Não encontradas','#f59e0b',naoEncontradas,'O nome na planilha não bate com nenhuma tarefa atual — a Cofield deve ter renomeado, ou é uma tarefa que só existe lá. Nada foi alterado nem criado.')}
-        ${secao('Ambíguas','#dc2626',ambiguas,'Mais de uma tarefa sua tem esse mesmo nome — puladas por segurança, pra nunca atualizar a errada.')}
+        ${secao('Ambíguas','#dc2626',ambiguas,'Nem o Código nem o Nome apontaram pra uma única tarefa — puladas por segurança, pra nunca atualizar a errada. Preencher o Código na planilha resolve.')}
         <button class="btn btn-secundario btn-sm" style="align-self:flex-end;margin-top:8px;" onclick="document.getElementById('revisao-correcoes-modal').remove()">Fechar</button>
       </div>`;
     document.body.appendChild(modal);

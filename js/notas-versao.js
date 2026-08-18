@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.13.1.6',
+  versaoAtual: 'V3.13.2',
 
   versoes: [
     {
@@ -8982,6 +8982,20 @@ const NotasVersao = {
       "itens": [
         "Causa raiz (achada reproduzindo a tela localmente, não só pelo print): `#cp-content` é filho de `.content`, que no layout geral é flex-column com uma regra global `.content > div { min-height: 0 }` (feita pro Gantt do Planejamento). Como cada seção do módulo (KPIs, filtros, cada Torre) virava um `<div>` solto direto ali, em obras com muitos itens (aqui, 117) o flexbox espremia CADA seção pra caber no espaço visível — o texto não encolhe junto, então tudo passava a se sobrepor: números dos KPIs cortados, blocos de Torre embaralhados.",
         "Corrigido: todo o conteúdo do módulo agora vive dentro de um único `<div class=\"cc-view\">` (mesmo padrão já usado no Controle de Concreto) — só esse wrapper único fica sujeito à regra do `.content`, e por dentro dele nada mais compete por espaço. Testado renderizando a página real localmente com 117 itens antes e depois da correção."
+      ]
+    },
+    {
+      "versao": "V3.13.2",
+      "data": "2026-08-18",
+      "tipo": "correcao",
+      "titulo": "Importar Correções: casa pelo CÓDIGO da tarefa, não mais pelo nome",
+      "itens": [
+        "O importador procurava a tarefa pelo NOME e só usava o Código como desempate quando o nome estava duplicado. Invertido: agora o Código é a chave principal — ele não muda quando alguém renomeia a tarefa e é único mesmo quando o nome se repete em ramos diferentes da obra. Era o que fazia 16 linhas caírem em \"ambígua\" num import de 2423 tarefas.",
+        "Ganho colateral: tarefa RENOMEADA na obra depois da planilha ter sido gerada agora continua sendo encontrada. Antes ela caía em \"não encontrada\" e ficava de fora silenciosamente.",
+        "Reserva pelo Nome mantida para os casos legítimos: linha sem código na planilha, ou código que ainda não existe na obra (tarefa criada à mão depois). Só cai em \"ambígua\" quando nem o código nem o nome apontam pra uma única tarefa.",
+        "A resolução de PREDECESSORA seguia a mesma regra antiga (só nome) — agora também tenta o Código primeiro, então predecessora que aponta pra tarefa de nome repetido deixa de virar \"não resolvida\".",
+        "O resumo antes de confirmar agora separa quantas casaram pelo Código e quantas pelo Nome, e as listas de revisão mostram o código junto do nome — fica claro o que revisar.",
+        "Segurança preservada: quando há dúvida real (código duplicado na obra com o mesmo nome, ou nome repetido sem código), a linha continua sendo pulada em vez de atualizar a tarefa errada."
       ]
     }
   ],
