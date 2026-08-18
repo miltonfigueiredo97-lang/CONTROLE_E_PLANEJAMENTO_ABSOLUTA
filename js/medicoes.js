@@ -141,23 +141,27 @@ const Medicoes = (() => {
       .btn-icone:hover{background:#fecaca;}
       .med-frente-badge{color:#fff;font-size:.58rem;font-weight:700;padding:1px 6px;border-radius:7px;}
       @media (max-width:1024px){
-        .med-top{gap:8px;}
-        .med-top .btn-sm{padding:10px 14px;font-size:.88rem;}
-        .med-top select, .med-top input.form-control{max-width:none !important;flex:1 1 100%;padding:10px;font-size:.9rem;}
-        .med-chip{font-size:.92rem;padding:9px 14px;}
-        .med-chip small{font-size:.76rem;}
-        .med-node{padding:12px 10px;}
-        .med-node .tog{width:38px;height:38px;font-size:1.25rem;}
-        .med-node .nm{font-size:1rem;}
-        .med-node .sub{font-size:.8rem;}
-        .med-frente-badge{font-size:.7rem;padding:2px 8px;}
-        .med-edit{width:100%;gap:8px;}
-        .med-inp{height:42px;font-size:.9rem;}
-        .med-inp-data{width:auto;flex:1 1 46%;}
-        .med-inp-pct{flex:0 0 66px;font-size:1rem;}
-        .med-btn-100{height:42px;font-size:.8rem;padding:0 12px;}
-        .med-foto-btn{width:42px;height:42px;font-size:1.2rem;}
-        .btn-icone{width:38px;height:38px;font-size:1.05rem;}
+        .med-spacer{display:none;}
+        .med-top{gap:6px;padding:2px 0;}
+        .med-top .btn-sm{padding:8px 10px;font-size:.82rem;flex:1 1 auto;}
+        .med-top select, .med-top input.form-control{max-width:none !important;flex:1 1 47%;padding:9px;font-size:.85rem;}
+        .med-chip{font-size:.82rem;padding:7px 10px;flex:1 1 30%;justify-content:center;text-align:center;}
+        .med-chip small{font-size:.68rem;}
+        .med-node{padding:10px 10px;}
+        .med-node .tog{width:36px;height:36px;font-size:1.2rem;}
+        .med-node .nm{font-size:.98rem;}
+        .med-node .sub{font-size:.78rem;}
+        .med-frente-badge{font-size:.68rem;padding:2px 7px;}
+        /* Início/Término, %/100% e Foto/Descartar pareados em 2 colunas —
+           input type=date tem largura mínima própria que não encolhe bem
+           com flex simples, então usa grid pra garantir 2 por linha sempre. */
+        .med-edit{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%;}
+        .med-inp{height:44px;font-size:.88rem;width:100%;box-sizing:border-box;min-width:0;}
+        .med-inp-data{min-width:0;}
+        .med-inp-pct{width:100%;}
+        .med-btn-100{height:44px;font-size:.85rem;width:100%;}
+        .med-foto-btn{width:44px;height:44px;font-size:1.25rem;justify-self:start;}
+        .btn-icone{width:44px;height:44px;font-size:1.1rem;justify-self:start;}
         .med-foto-thumb img{width:56px;height:56px;}
       }
     </style>
@@ -266,7 +270,6 @@ const Medicoes = (() => {
           <input type="date" class="med-inp med-inp-data" value="${iniVal}" title="Início Real" onchange="Medicoes.setCampo('${t.id}','inicioReal',this.value)">
           <input type="date" class="med-inp med-inp-data" value="${fimVal}" title="Término Real (só com 100%)" ${fimHabilitado?'':'disabled'} onchange="Medicoes.setCampo('${t.id}','terminoReal',this.value)">
           <input type="number" class="med-inp med-inp-pct" min="0" max="100" value="${prog}" title="% concluído" onchange="Medicoes.setCampo('${t.id}','progresso',this.value)">
-          <span style="font-size:.7rem;color:#94a3b8;">%</span>
           <button class="med-btn-100" title="Marcar 100%" onclick="Medicoes.setCampo('${t.id}','progresso',100)">✓100%</button>
           <label class="med-foto-btn" title="Adicionar foto">📷<input type="file" accept="image/*" multiple style="display:none;" onchange="Medicoes.fotoSelecionada('${t.id}',this)"></label>
           ${p?`<button class="btn-icone" title="Descartar alteração" onclick="Medicoes.descartarItem('${t.id}')">✕</button>`:''}
@@ -282,12 +285,12 @@ const Medicoes = (() => {
     <div class="med-top" style="flex-wrap:wrap;flex-shrink:0;">
       <button class="btn btn-sm btn-outline" onclick="Medicoes.voltar()" title="Voltar">←</button>
       <button class="btn btn-sm btn-primario" onclick="Medicoes.salvarMedicao()" title="Salvar medição">💾 Salvar${nPend?` (${nPend})`:''}</button>
-      <button class="btn btn-sm btn-outline" onclick="Medicoes.expandirTudo()" title="Abrir todos os grupos">▾ Expandir tudo</button>
-      <button class="btn btn-sm btn-outline" onclick="Medicoes.recolherTudo()" title="Fechar todos os grupos">▸ Recolher tudo</button>
+      <button class="btn btn-sm btn-outline" onclick="Medicoes.expandirTudo()" title="Abrir todos os grupos">▾ Expandir</button>
+      <button class="btn btn-sm btn-outline" onclick="Medicoes.recolherTudo()" title="Fechar todos os grupos">▸ Recolher</button>
       <span class="med-chip">${tot.total.toFixed(2)}% <small>Total</small></span>
       <span class="med-chip" style="background:${tot.medicao>0?'#ecfdf5':'#f1f5f9'};">${tot.medicao.toFixed(2)}% <small>Medição</small></span>
       <span class="med-chip" style="background:#fffbeb;">${tot.esp.toFixed(2)}% <small>Esperado hoje</small></span>
-      <div style="flex:1;"></div>
+      <div class="med-spacer" style="flex:1;"></div>
       <select class="form-control" style="max-width:180px;font-size:.8rem;" onchange="Medicoes.setFiltroFrente(this.value)">
         <option value="">Todas as Frentes</option>
         ${Utils.FRENTES_SERVICO.map(f=>`<option value="${f}" ${f===frenteFiltro?'selected':''}>${f}</option>`).join('')}
@@ -346,23 +349,27 @@ const Medicoes = (() => {
       .btn-icone:hover{background:#fecaca;}
       .med-frente-badge{color:#fff;font-size:.58rem;font-weight:700;padding:1px 6px;border-radius:7px;}
       @media (max-width:1024px){
-        .med-top{gap:8px;}
-        .med-top .btn-sm{padding:10px 14px;font-size:.88rem;}
-        .med-top select, .med-top input.form-control{max-width:none !important;flex:1 1 100%;padding:10px;font-size:.9rem;}
-        .med-chip{font-size:.92rem;padding:9px 14px;}
-        .med-chip small{font-size:.76rem;}
-        .med-node{padding:12px 10px;}
-        .med-node .tog{width:38px;height:38px;font-size:1.25rem;}
-        .med-node .nm{font-size:1rem;}
-        .med-node .sub{font-size:.8rem;}
-        .med-frente-badge{font-size:.7rem;padding:2px 8px;}
-        .med-edit{width:100%;gap:8px;}
-        .med-inp{height:42px;font-size:.9rem;}
-        .med-inp-data{width:auto;flex:1 1 46%;}
-        .med-inp-pct{flex:0 0 66px;font-size:1rem;}
-        .med-btn-100{height:42px;font-size:.8rem;padding:0 12px;}
-        .med-foto-btn{width:42px;height:42px;font-size:1.2rem;}
-        .btn-icone{width:38px;height:38px;font-size:1.05rem;}
+        .med-spacer{display:none;}
+        .med-top{gap:6px;padding:2px 0;}
+        .med-top .btn-sm{padding:8px 10px;font-size:.82rem;flex:1 1 auto;}
+        .med-top select, .med-top input.form-control{max-width:none !important;flex:1 1 47%;padding:9px;font-size:.85rem;}
+        .med-chip{font-size:.82rem;padding:7px 10px;flex:1 1 30%;justify-content:center;text-align:center;}
+        .med-chip small{font-size:.68rem;}
+        .med-node{padding:10px 10px;}
+        .med-node .tog{width:36px;height:36px;font-size:1.2rem;}
+        .med-node .nm{font-size:.98rem;}
+        .med-node .sub{font-size:.78rem;}
+        .med-frente-badge{font-size:.68rem;padding:2px 7px;}
+        /* Início/Término, %/100% e Foto/Descartar pareados em 2 colunas —
+           input type=date tem largura mínima própria que não encolhe bem
+           com flex simples, então usa grid pra garantir 2 por linha sempre. */
+        .med-edit{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%;}
+        .med-inp{height:44px;font-size:.88rem;width:100%;box-sizing:border-box;min-width:0;}
+        .med-inp-data{min-width:0;}
+        .med-inp-pct{width:100%;}
+        .med-btn-100{height:44px;font-size:.85rem;width:100%;}
+        .med-foto-btn{width:44px;height:44px;font-size:1.25rem;justify-self:start;}
+        .btn-icone{width:44px;height:44px;font-size:1.1rem;justify-self:start;}
         .med-foto-thumb img{width:56px;height:56px;}
       }`;
     document.head.appendChild(st);

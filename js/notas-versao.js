@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.12.0.8',
+  versaoAtual: 'V3.12.0.9',
 
   versoes: [
     {
@@ -8870,6 +8870,16 @@ const NotasVersao = {
         "O botão \"📊 Exportar Planilha\" (Apartamento/Local/Tipo/Dimensões/M²/M² com perda) saiu do Levantamento de Piso e agora mora só no Controle de Porcelanatos.",
         "Corrigido de raiz um bug que fazia a planilha sair incompleta (só um apartamento, faltando o resto): o app usa cache offline do Firestore, e o export podia pegar dados velhos do navegador em vez do servidor. Agora essa página sempre busca do SERVIDOR antes de exportar — e tem um botão \"🔄 Recarregar\" pra forçar isso manualmente também.",
         "O % de perda configurável (padrão 30%) ganhou uma configuração própria deste módulo — herda automaticamente o valor que já estava configurado no Piso, se houver, na primeira vez que abrir."
+      ]
+    },
+    {
+      "versao": "V3.12.0.9",
+      "data": "2026-08-18",
+      "tipo": "melhoria",
+      "titulo": "Medições: distribuição do mobile ajustada — menos espaço perdido, Início/Término lado a lado",
+      "itens": [
+        "Achado o motivo dos campos de Início/Término Real ficarem cada um numa linha inteira sozinho: o input de data tem uma largura mínima própria que não encolhia com o ajuste anterior. Agora usa um grid de 2 colunas garantindo Início+Término numa linha e %+✓100% na outra.",
+        "Barra de cima mais compacta: \"Expandir tudo\"/\"Recolher tudo\" virou só \"Expandir\"/\"Recolher\", os 3 chips (Total/Medição/Esperado) ficam lado a lado numa linha só, e o filtro de Frente + busca compartilham uma linha em vez de uma embaixo da outra — bem menos espaço vazio no topo."
       ]
     }
   ],
