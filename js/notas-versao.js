@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.11.4.5',
+  versaoAtual: 'V3.11.4.6',
 
   versoes: [
     {
@@ -8647,6 +8647,18 @@ const NotasVersao = {
         "O número da concretagem continua sendo um sequencial ÚNICO pra obra inteira (igual sempre foi no Controle de Concreto) — isso não muda. O que mudou foi só a EXIBIÇÃO: o seletor de concretagem do Acompanhamento e os cards de \"Concretagens planejadas\" do Planejamento agora só mostram as que têm ao menos 1 peça da view aberta (Estacas OU Fundações) — uma concretagem 100% de Estacas não aparece mais enquanto se está na aba Fundações, e vice-versa.",
         "Concretagem recém-criada (ainda sem nenhuma peça) continua aparecendo nos dois — só passa a sumir de uma view se ficar cheia só de peças da OUTRA.",
         "Trocar de view (Estacas ⇄ Fundações) solta a concretagem selecionada no Acompanhamento se ela não pertencer mais à lista filtrada, e sempre solta o foco de atribuição rápida do Planejamento — evita ficar preso num estado de uma concretagem que não aparece mais na tela."
+      ]
+    },
+    {
+      "versao": "V3.11.4.6",
+      "data": "2026-08-18",
+      "tipo": "melhoria",
+      "titulo": "Levantamento Piso: dividir a parede em trechos e usar mais de uma altura na impermeabilização",
+      "itens": [
+        "Popup \"Selecionar Paredes\": botão \"🔀 Dividir\" em cada parede — separa a parede em vários trechos (ex: box de 0,75m recebe impermeabilização, o resto não, ou recebe outra altura). Cada trecho tem seu próprio comprimento (editável) e pode ser incluído ou não individualmente.",
+        "Alturas múltiplas: agora dá pra configurar mais de uma altura de rodapé impermeabilizado (ex: 1,20m no box + 0,40m no resto do banheiro) com o botão \"+ Altura\", e cada trecho de cada parede escolhe qual altura usar num seletor próprio.",
+        "O total de m² soma cada trecho pelo seu comprimento × a altura escolhida pra ele — não é mais uma altura única pra tudo.",
+        "Compatibilidade: áreas configuradas nas versões anteriores (uma altura só, sem trechos) continuam calculando igual; ao abrir \"Selecionar Paredes\" nelas, a configuração antiga é convertida automaticamente pra uma altura única editável, sem perder nada."
       ]
     }
   ],
