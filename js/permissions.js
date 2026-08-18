@@ -14,7 +14,7 @@ const Permissions = (() => {
 
     planejamento:        { label: 'Planejamento',                   categoria: 'Produção', acoes: ['ver','criar','editar','excluir','importar','exportar'] },
     levantamentoFachada: { label: 'Levantamento — Fachada',         categoria: 'Produção', acoes: ['ver','criar','editar','excluir','exportar'] },
-    levantamentoPiso:    { label: 'Levantamento — Piso',            categoria: 'Produção', acoes: ['ver','criar','editar','excluir'] },
+    levantamentoPiso:    { label: 'Levantamento — Piso',            categoria: 'Produção', acoes: ['ver','criar','editar','excluir','exportar'] },
     levantamentoTeto:    { label: 'Levantamento — Teto',            categoria: 'Produção', acoes: ['ver','criar','editar','excluir'] },
     levantamentoParedes: { label: 'Levantamento — Paredes',         categoria: 'Produção', acoes: ['ver','criar','editar','excluir'] },
     levantamentoConcreto:{ label: 'Levantamento — Concreto',        categoria: 'Produção', acoes: ['ver','criar','editar','excluir'] },

@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.12.0.5',
+  versaoAtual: 'V3.12.0.6',
 
   versoes: [
     {
@@ -8837,6 +8837,18 @@ const NotasVersao = {
         "Achado o motivo de tudo parecer pequeno: o botão \"✕\" de descartar alteração NUNCA teve estilo em nenhum lugar do sistema — era um botão cru do navegador. Agora tem visual e tamanho de botão de verdade.",
         "Em telas de celular (até 640px): fonte de nome/badge/esperado maior, chips do topo maiores, os campos de Início/Término/% e os botões (✓100%, 📷, ✕, abrir/fechar grupo) todos com altura por volta de 40px — bem mais fácil de tocar.",
         "Botões da barra (Voltar, Salvar, Expandir/Recolher tudo) também maiores no celular."
+      ]
+    },
+    {
+      "versao": "V3.12.0.6",
+      "data": "2026-08-18",
+      "tipo": "melhoria",
+      "titulo": "Levantamento Piso: botão para exportar planilha (Excel) com todas as áreas",
+      "itens": [
+        "Novo \"📊 Exportar Planilha\" no topo do módulo (visível em qualquer local) — gera um .xlsx com uma linha por área medida em toda a obra: Apartamento, Local, Local (Nº Parede ou Piso), Tipo de Piso, Dimensões do Piso, M² e M² com perda.",
+        "\"Apartamento\" vem do nome do local direto onde a área está guardada na árvore. \"Local (Nº Parede ou Piso)\" vem fixo como \"Piso\" neste módulo — pensado pra combinar com uma futura planilha de Paredes/Azulejo usando \"Parede N\" no mesmo formato de chave.",
+        "Tipo de Piso e Dimensões são separados automaticamente do campo \"Tipo de Piso\" seguindo o padrão \"Nome - AxB\" (ex: \"Porcelanato Alta Mountain - 90x90\" vira Tipo=\"Porcelanato Alta Mountain\" e Dimensão=\"90x90\"). Registros antigos sem esse padrão (ex: só \"Porcelanato 1\") saem com a dimensão em branco.",
+        "Novo \"⚙️ Config\" no topo do módulo — define o % de perda usado na coluna \"M² com perda\" da planilha (padrão 30%, editável por obra)."
       ]
     },
   ],
