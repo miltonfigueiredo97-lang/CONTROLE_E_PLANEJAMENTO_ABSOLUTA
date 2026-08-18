@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.12.0.9',
+  versaoAtual: 'V3.12.0.10',
 
   versoes: [
     {
@@ -8880,6 +8880,16 @@ const NotasVersao = {
       "itens": [
         "Achado o motivo dos campos de Início/Término Real ficarem cada um numa linha inteira sozinho: o input de data tem uma largura mínima própria que não encolhia com o ajuste anterior. Agora usa um grid de 2 colunas garantindo Início+Término numa linha e %+✓100% na outra.",
         "Barra de cima mais compacta: \"Expandir tudo\"/\"Recolher tudo\" virou só \"Expandir\"/\"Recolher\", os 3 chips (Total/Medição/Esperado) ficam lado a lado numa linha só, e o filtro de Frente + busca compartilham uma linha em vez de uma embaixo da outra — bem menos espaço vazio no topo."
+      ]
+    },
+    {
+      "versao": "V3.12.0.10",
+      "data": "2026-08-18",
+      "tipo": "melhoria",
+      "titulo": "Medições: cartão de cada tarefa mais compacto no mobile — menos linhas, menos espaço perdido",
+      "itens": [
+        "📷 (foto) e ✕ (descartar) saíram da grade de campos e subiram pra junto do nome da tarefa — sobrava uma linha inteira só pra esses dois ícones. Agora a grade fica só com Início+Término (linha 1) e %+✓100% (linha 2), 2 linhas em vez de 3.",
+        "Espaçamento entre os campos e o padding de cada linha reduzidos — cabe mais tarefa por tela, menos rolagem."
       ]
     }
   ],

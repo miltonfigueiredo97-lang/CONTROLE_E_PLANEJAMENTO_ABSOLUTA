@@ -140,6 +140,7 @@ const Medicoes = (() => {
       .btn-icone{width:28px;height:28px;min-width:28px;border:none;background:#fee2e2;color:#dc2626;border-radius:7px;font-size:.85rem;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
       .btn-icone:hover{background:#fecaca;}
       .med-frente-badge{color:#fff;font-size:.58rem;font-weight:700;padding:1px 6px;border-radius:7px;}
+      .med-acoes-topo{display:flex;gap:6px;align-items:center;order:5;}
       @media (max-width:1024px){
         .med-spacer{display:none;}
         .med-top{gap:6px;padding:2px 0;}
@@ -147,7 +148,8 @@ const Medicoes = (() => {
         .med-top select, .med-top input.form-control{max-width:none !important;flex:1 1 47%;padding:9px;font-size:.85rem;}
         .med-chip{font-size:.82rem;padding:7px 10px;flex:1 1 30%;justify-content:center;text-align:center;}
         .med-chip small{font-size:.68rem;}
-        .med-node{padding:10px 10px;}
+        .med-node{padding:8px 10px;}
+        .med-node.leaf{padding-bottom:9px;}
         .med-node .tog{width:36px;height:36px;font-size:1.2rem;}
         .med-node .nm{font-size:.98rem;}
         .med-node .sub{font-size:.78rem;}
@@ -155,13 +157,14 @@ const Medicoes = (() => {
         /* Início/Término, %/100% e Foto/Descartar pareados em 2 colunas —
            input type=date tem largura mínima própria que não encolhe bem
            com flex simples, então usa grid pra garantir 2 por linha sempre. */
-        .med-edit{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%;}
-        .med-inp{height:44px;font-size:.88rem;width:100%;box-sizing:border-box;min-width:0;}
+        .med-acoes-topo{order:1;margin-left:auto;}
+        .med-edit{order:2;display:grid;grid-template-columns:1fr 1fr;gap:6px;width:100%;margin-top:4px;}
+        .med-inp{height:40px;font-size:.86rem;width:100%;box-sizing:border-box;min-width:0;}
         .med-inp-data{min-width:0;}
         .med-inp-pct{width:100%;}
-        .med-btn-100{height:44px;font-size:.85rem;width:100%;}
-        .med-foto-btn{width:44px;height:44px;font-size:1.25rem;justify-self:start;}
-        .btn-icone{width:44px;height:44px;font-size:1.1rem;justify-self:start;}
+        .med-btn-100{height:40px;font-size:.83rem;width:100%;}
+        .med-foto-btn{width:38px;height:38px;font-size:1.15rem;}
+        .btn-icone{width:38px;height:38px;font-size:1.05rem;}
         .med-foto-thumb img{width:56px;height:56px;}
       }
     </style>
@@ -266,13 +269,15 @@ const Medicoes = (() => {
           <div class="nm">${_esc(t.nome)}${t.frenteServico?` <span class="med-frente-badge" style="background:${Utils.corFrente(t.frenteServico)};">${t.frenteServico}</span>`:''}</div>
           <div class="sub">Esperado: ${esp}%</div>
         </div>
+        <div class="med-acoes-topo">
+          <label class="med-foto-btn" title="Adicionar foto">📷<input type="file" accept="image/*" multiple style="display:none;" onchange="Medicoes.fotoSelecionada('${t.id}',this)"></label>
+          ${p?`<button class="btn-icone" title="Descartar alteração" onclick="Medicoes.descartarItem('${t.id}')">✕</button>`:''}
+        </div>
         <div class="med-edit">
           <input type="date" class="med-inp med-inp-data" value="${iniVal}" title="Início Real" onchange="Medicoes.setCampo('${t.id}','inicioReal',this.value)">
           <input type="date" class="med-inp med-inp-data" value="${fimVal}" title="Término Real (só com 100%)" ${fimHabilitado?'':'disabled'} onchange="Medicoes.setCampo('${t.id}','terminoReal',this.value)">
           <input type="number" class="med-inp med-inp-pct" min="0" max="100" value="${prog}" title="% concluído" onchange="Medicoes.setCampo('${t.id}','progresso',this.value)">
           <button class="med-btn-100" title="Marcar 100%" onclick="Medicoes.setCampo('${t.id}','progresso',100)">✓100%</button>
-          <label class="med-foto-btn" title="Adicionar foto">📷<input type="file" accept="image/*" multiple style="display:none;" onchange="Medicoes.fotoSelecionada('${t.id}',this)"></label>
-          ${p?`<button class="btn-icone" title="Descartar alteração" onclick="Medicoes.descartarItem('${t.id}')">✕</button>`:''}
         </div>
         ${fotos.length?`<div class="med-fotos-row">${fotos.map((f,fi)=>`<div class="med-foto-thumb"><img src="${f}"><button onclick="Medicoes.removerFoto('${t.id}',${fi})">✕</button></div>`).join('')}</div>`:''}
       </div>`;
@@ -348,6 +353,7 @@ const Medicoes = (() => {
       .btn-icone{width:28px;height:28px;min-width:28px;border:none;background:#fee2e2;color:#dc2626;border-radius:7px;font-size:.85rem;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
       .btn-icone:hover{background:#fecaca;}
       .med-frente-badge{color:#fff;font-size:.58rem;font-weight:700;padding:1px 6px;border-radius:7px;}
+      .med-acoes-topo{display:flex;gap:6px;align-items:center;order:5;}
       @media (max-width:1024px){
         .med-spacer{display:none;}
         .med-top{gap:6px;padding:2px 0;}
@@ -355,7 +361,8 @@ const Medicoes = (() => {
         .med-top select, .med-top input.form-control{max-width:none !important;flex:1 1 47%;padding:9px;font-size:.85rem;}
         .med-chip{font-size:.82rem;padding:7px 10px;flex:1 1 30%;justify-content:center;text-align:center;}
         .med-chip small{font-size:.68rem;}
-        .med-node{padding:10px 10px;}
+        .med-node{padding:8px 10px;}
+        .med-node.leaf{padding-bottom:9px;}
         .med-node .tog{width:36px;height:36px;font-size:1.2rem;}
         .med-node .nm{font-size:.98rem;}
         .med-node .sub{font-size:.78rem;}
@@ -363,13 +370,14 @@ const Medicoes = (() => {
         /* Início/Término, %/100% e Foto/Descartar pareados em 2 colunas —
            input type=date tem largura mínima própria que não encolhe bem
            com flex simples, então usa grid pra garantir 2 por linha sempre. */
-        .med-edit{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%;}
-        .med-inp{height:44px;font-size:.88rem;width:100%;box-sizing:border-box;min-width:0;}
+        .med-acoes-topo{order:1;margin-left:auto;}
+        .med-edit{order:2;display:grid;grid-template-columns:1fr 1fr;gap:6px;width:100%;margin-top:4px;}
+        .med-inp{height:40px;font-size:.86rem;width:100%;box-sizing:border-box;min-width:0;}
         .med-inp-data{min-width:0;}
         .med-inp-pct{width:100%;}
-        .med-btn-100{height:44px;font-size:.85rem;width:100%;}
-        .med-foto-btn{width:44px;height:44px;font-size:1.25rem;justify-self:start;}
-        .btn-icone{width:44px;height:44px;font-size:1.1rem;justify-self:start;}
+        .med-btn-100{height:40px;font-size:.83rem;width:100%;}
+        .med-foto-btn{width:38px;height:38px;font-size:1.15rem;}
+        .btn-icone{width:38px;height:38px;font-size:1.05rem;}
         .med-foto-thumb img{width:56px;height:56px;}
       }`;
     document.head.appendChild(st);
