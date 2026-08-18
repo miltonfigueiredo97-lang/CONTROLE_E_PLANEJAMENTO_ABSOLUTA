@@ -1913,14 +1913,35 @@ const LP = (() => {
     return 0.40;
   }
 
-  // Opções do <datalist> compartilhado do campo de altura — presets fixos + qualquer valor
-  // já digitado em outro trecho nesta sessão do popup (reaproveita sem precisar cadastrar antes).
-  function _opcoesAlturasSugeridasHTML() {
-    const presets = [1.20, 0.40, 0.20];
-    const todos = presets.slice();
-    _valoresAlturaEmUso().forEach(v => { if (!todos.some(t => Math.abs(t - v) < 0.001)) todos.push(v); });
-    todos.sort((a, b) => b - a);
-    return todos.map(v => `<option value="${v.toFixed(2)}">`).join('');
+  // Opções do <select> de altura — presets fixos (com nome) + qualquer valor já digitado
+  // em outro trecho nesta sessão do popup (reaproveita sem precisar cadastrar antes), visíveis
+  // de cara ao abrir o dropdown — sem depender do datalist nativo (abre inconsistente entre navegadores).
+  function _opcoesAlturaSelectHTML(valorAtual) {
+    const presets = [{ v: 1.20, l: 'Box' }, { v: 0.40, l: 'Padrão' }, { v: 0.20, l: 'Baixo' }];
+    const vistos = new Set();
+    let html = '';
+    presets.forEach(p => {
+      vistos.add(Math.round(p.v * 100));
+      html += `<option value="${p.v}" ${Math.abs(p.v - valorAtual) < 0.001 ? 'selected' : ''}>${fmt2(p.v)} m (${p.l})</option>`;
+    });
+    _valoresAlturaEmUso().forEach(v => {
+      const chave = Math.round(v * 100);
+      if (vistos.has(chave)) return;
+      vistos.add(chave);
+      html += `<option value="${v}" ${Math.abs(v - valorAtual) < 0.001 ? 'selected' : ''}>${fmt2(v)} m</option>`;
+    });
+    if (!vistos.has(Math.round(valorAtual * 100))) {
+      html += `<option value="${valorAtual}" selected>${fmt2(valorAtual)} m</option>`;
+    }
+    return html;
+  }
+
+  // Alterna entre o <select> de opções e um campo numérico livre pra digitar qualquer valor de altura
+  function alternarAlturaCustomImperm(i, j) {
+    const w = _paredesImpermPendente[i]; if (!w) return;
+    const p = w.partes[j]; if (!p) return;
+    p._digitandoAltura = !p._digitandoAltura;
+    _renderParedesImpermPopup();
   }
 
   // Inclui a parede inteira como um único trecho (parede que ainda não participava)
@@ -1963,6 +1984,36 @@ const LP = (() => {
     _renderParedesImpermPopup();
   }
 
+  // Recalcula e reescreve SÓ o aviso/borda daquela parede (sem re-render da lista inteira) —
+  // dá feedback em tempo real (✅ bate / ⚠️ não bate) enquanto a pessoa digita o comprimento,
+  // sem perder o foco do campo que ela tá editando.
+  function _atualizarDivergenciaParedeImperm(i) {
+    const w = _paredesImpermPendente[i]; if (!w) return;
+    const soma = w.partes.reduce((s, p) => s + (p.comprimento || 0), 0);
+    const diff = w.comprimentoTotal - soma;
+    const divergente = w.partes.length > 1 && Math.abs(diff) > 0.01;
+
+    const card = document.getElementById(`lp-parede-imperm-card-${i}`);
+    if (card) {
+      card.style.borderColor = divergente ? '#fca5a5' : '#e2e8f0';
+      card.style.background = divergente ? '#fef2f2' : '#fff';
+    }
+    const aviso = document.getElementById(`lp-parede-imperm-aviso-${i}`);
+    if (aviso) {
+      if (divergente) {
+        aviso.innerHTML = `⚠️ ${diff > 0
+          ? `Faltam ${fmt2(diff)} m pra completar a parede (soma dos trechos: ${fmt2(soma)} m de ${fmt2(w.comprimentoTotal)} m)`
+          : `Os trechos somam ${fmt2(soma)} m — ${fmt2(-diff)} m a mais que o total da parede (${fmt2(w.comprimentoTotal)} m)`}`;
+        aviso.style.color = '#dc2626';
+      } else if (w.partes.length > 1) {
+        aviso.innerHTML = `✅ A soma dos trechos bate com o total da parede (${fmt2(w.comprimentoTotal)} m).`;
+        aviso.style.color = '#16a34a';
+      } else {
+        aviso.innerHTML = '';
+      }
+    }
+  }
+
   function editarComprimentoParteImperm(i, j, valor) {
     const w = _paredesImpermPendente[i]; if (!w) return;
     const p = w.partes[j]; if (!p) return;
@@ -1970,13 +2021,14 @@ const LP = (() => {
     if (n < 0) n = 0;
     if (n > w.comprimentoTotal) n = w.comprimentoTotal;
     p.comprimento = n;
+    _atualizarDivergenciaParedeImperm(i); // feedback ao vivo, sem re-render da lista (não perde o foco do campo)
   }
 
   function mudarAlturaParteImperm(i, j, valor) {
     const w = _paredesImpermPendente[i]; if (!w) return;
     const p = w.partes[j]; if (!p) return;
     const n = Utils.parseNum(valor);
-    if (n > 0) { p.altura = n; _renderParedesImpermPopup(); } // onchange (não oninput) — dispara só ao terminar de editar, seguro pra re-render completo
+    if (n > 0) { p.altura = n; _renderParedesImpermPopup(); }
   }
 
   function _renderParedesImpermPopup() {
@@ -1984,14 +2036,12 @@ const LP = (() => {
 
     _construirEAplicarSvgImperm();
 
-    const datalistSugestoes = `<datalist id="lp-alturas-imperm-sugestoes">${_opcoesAlturasSugeridasHTML()}</datalist>`;
-
-    document.getElementById('lp-paredes-imperm-lista').innerHTML = datalistSugestoes + arr.map((w, i) => {
+    document.getElementById('lp-paredes-imperm-lista').innerHTML = arr.map((w, i) => {
       const soma = w.partes.reduce((s, p) => s + (p.comprimento || 0), 0);
       const diff = w.comprimentoTotal - soma;
       const divergente = w.partes.length > 1 && Math.abs(diff) > 0.01;
       return `
-      <div style="border:1px solid ${divergente ? '#fca5a5' : '#e2e8f0'};background:${divergente ? '#fef2f2' : '#fff'};border-radius:6px;padding:8px;margin-bottom:8px;">
+      <div id="lp-parede-imperm-card-${i}" style="border:1px solid ${divergente ? '#fca5a5' : '#e2e8f0'};background:${divergente ? '#fef2f2' : '#fff'};border-radius:6px;padding:8px;margin-bottom:8px;">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:${w.partes.length ? '6px' : '0'};">
           <strong style="flex:1;font-size:.85rem;">Parede ${i + 1} <span style="color:var(--cor-texto-muted);font-size:.75rem;font-weight:400;">(${fmt2(w.comprimentoTotal)} m no total)</span></strong>
           ${w.partes.length ? `<button type="button" class="btn btn-secundario btn-sm" style="padding:3px 8px;font-size:.72rem;white-space:nowrap;" onclick="LP.dividirParedeImperm(${i})">🔀 Dividir</button>` : ''}
@@ -2002,20 +2052,25 @@ const LP = (() => {
             <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;${w.partes.length > 1 ? 'margin-left:14px;' : ''}">
               <input type="checkbox" ${p.incluida ? 'checked' : ''} onchange="LP.toggleParteImperm(${i},${j})">
               ${w.partes.length > 1 ? `<span style="font-size:.7rem;color:var(--cor-texto-muted);white-space:nowrap;">Trecho ${j + 1}</span>` : ''}
-              <input type="number" step="0.01" min="0" max="${w.comprimentoTotal.toFixed(2)}" value="${p.comprimento.toFixed(2)}" class="form-control" style="width:60px;padding:4px 6px;" ${p.incluida ? '' : 'disabled'} oninput="LP.editarComprimentoParteImperm(${i},${j},this.value)">
-              <span style="font-size:.72rem;color:var(--cor-texto-muted);">m ·</span>
-              <input type="number" list="lp-alturas-imperm-sugestoes" step="0.01" min="0" value="${p.altura.toFixed(2)}" class="form-control" style="flex:1;padding:4px 6px;" ${p.incluida ? '' : 'disabled'} onchange="LP.mudarAlturaParteImperm(${i},${j},this.value)" placeholder="altura">
-              <span style="font-size:.72rem;color:var(--cor-texto-muted);">m</span>
-              <button type="button" onclick="LP.removerParteImperm(${i},${j})" style="border:none;background:none;color:#dc2626;cursor:pointer;font-size:.9rem;" title="${w.partes.length > 1 ? 'Remover este trecho' : 'Remover esta parede'}">🗑</button>
+              <input type="number" step="0.01" min="0" max="${w.comprimentoTotal.toFixed(2)}" value="${p.comprimento.toFixed(2)}" class="form-control" style="width:58px;padding:4px 6px;" ${p.incluida ? '' : 'disabled'} oninput="LP.editarComprimentoParteImperm(${i},${j},this.value)">
+              <span style="font-size:.7rem;color:var(--cor-texto-muted);">m ·</span>
+              ${p._digitandoAltura
+                ? `<input type="number" step="0.01" min="0" value="${p.altura.toFixed(2)}" class="form-control" style="flex:1;padding:4px 6px;" ${p.incluida ? '' : 'disabled'} onchange="LP.mudarAlturaParteImperm(${i},${j},this.value)" placeholder="altura">`
+                : `<select class="form-control" style="flex:1;padding:4px 6px;" ${p.incluida ? '' : 'disabled'} onchange="LP.mudarAlturaParteImperm(${i},${j},this.value)">${_opcoesAlturaSelectHTML(p.altura)}</select>`
+              }
+              <span style="font-size:.7rem;color:var(--cor-texto-muted);">m</span>
+              <button type="button" onclick="LP.alternarAlturaCustomImperm(${i},${j})" title="${p._digitandoAltura ? 'Escolher da lista' : 'Digitar outro valor'}" style="border:none;background:none;cursor:pointer;font-size:.85rem;padding:2px;flex-shrink:0;">${p._digitandoAltura ? '📋' : '✏️'}</button>
+              <button type="button" onclick="LP.removerParteImperm(${i},${j})" style="border:none;background:none;color:#dc2626;cursor:pointer;font-size:.9rem;flex-shrink:0;" title="${w.partes.length > 1 ? 'Remover este trecho' : 'Remover esta parede'}">🗑</button>
             </div>
           `).join('')
         }
-        ${divergente ? `
-          <div style="margin-top:6px;font-size:.74rem;color:#dc2626;display:flex;align-items:center;gap:4px;">
-            ⚠️ ${diff > 0
-              ? `Faltam ${fmt2(diff)} m pra completar a parede (soma dos trechos: ${fmt2(soma)} m de ${fmt2(w.comprimentoTotal)} m)`
-              : `Os trechos somam ${fmt2(soma)} m — ${fmt2(-diff)} m a mais que o total da parede (${fmt2(w.comprimentoTotal)} m)`}
-          </div>` : ''}
+        <div id="lp-parede-imperm-aviso-${i}" style="margin-top:6px;font-size:.74rem;display:flex;align-items:center;gap:4px;color:${divergente ? '#dc2626' : '#16a34a'};">
+          ${divergente
+            ? `⚠️ ${diff > 0
+                ? `Faltam ${fmt2(diff)} m pra completar a parede (soma dos trechos: ${fmt2(soma)} m de ${fmt2(w.comprimentoTotal)} m)`
+                : `Os trechos somam ${fmt2(soma)} m — ${fmt2(-diff)} m a mais que o total da parede (${fmt2(w.comprimentoTotal)} m)`}`
+            : (w.partes.length > 1 ? `✅ A soma dos trechos bate com o total da parede (${fmt2(w.comprimentoTotal)} m).` : '')}
+        </div>
       </div>
     `;
     }).join('');
@@ -2201,7 +2256,7 @@ const LP = (() => {
     cancelarCalibracao, confirmarCalibracao,
     finalizarPoligono, editarArea, onToggleImperm, onToggleImpermRodape, aplicarPresetAlturaRodape, onAlturaRodapeInput, fecharModalArea, salvarArea, excluirAreaEmEdicao, moverArea,
     abrirSelecaoParedesImperm, confirmarParedesImperm,
-    incluirParedeImperm, dividirParedeImperm, removerParteImperm, toggleParteImperm, editarComprimentoParteImperm, mudarAlturaParteImperm,
+    incluirParedeImperm, dividirParedeImperm, removerParteImperm, toggleParteImperm, editarComprimentoParteImperm, mudarAlturaParteImperm, alternarAlturaCustomImperm,
     zoomParedesImperm, resetZoomParedesImperm,
     filtrarAreas, abrirClonarPavimento, marcarTodosClonar, confirmarClonarPavimento, criarNovoLocalEClonar, filtrarVisaoGeral,
     marcarTodasAreas, desmarcarTodasAreas, atualizarBarraSelecaoAreas, moverOuCopiarSelecionadas, toggleSelecaoArea,

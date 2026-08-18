@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.11.4.13',
+  versaoAtual: 'V3.11.4.14',
 
   versoes: [
     {
@@ -8733,6 +8733,17 @@ const NotasVersao = {
         "Popup \"Selecionar Paredes\": tirada a seção \"Alturas configuradas\" (que exigia cadastrar a altura antes de poder usá-la). Cada trecho de parede agora tem seu próprio campo de altura, com sugestões (Box 1,20m, Padrão 0,40m, Baixo 0,20m + qualquer valor já digitado em outro trecho) e também aceita digitar qualquer valor direto.",
         "Sem etapa extra: divide a parede, escolhe/digita a altura de cada trecho, e já era — sem precisar \"registrar\" a altura antes.",
         "Compatibilidade: áreas configuradas nas versões anteriores (V3.11.4.6 a V3.11.4.12, com o cadastro de alturas) continuam calculando certinho, e a conversão pro novo formato acontece sozinha ao reabrir \"Selecionar Paredes\" nelas."
+      ]
+    },
+    {
+      "versao": "V3.11.4.14",
+      "data": "2026-08-18",
+      "tipo": "correcao",
+      "titulo": "Levantamento Piso: aviso de divergência não atualizava ao digitar + seletor de altura sem opções visíveis",
+      "itens": [
+        "Corrigido: o aviso \"soma dos trechos não bate com o total\" só era calculado no momento em que a parede era dividida — editar o comprimento de um trecho depois disso não recalculava nada, então o aviso ficava desatualizado ou nem aparecia. Agora atualiza em tempo real, a cada dígito, sem perder o foco do campo — e quando bate certinho, mostra confirmação verde (✅) também, não só o erro.",
+        "O campo de altura era um datalist (input com sugestões) — o dropdown de opções abre de forma inconsistente entre navegadores, difícil de descobrir. Trocado por um seletor de verdade: 1,20m (Box), 0,40m (Padrão), 0,20m (Baixo) e qualquer valor já usado em outro trecho, todos visíveis na hora que abre.",
+        "Botão ✏️ ao lado do seletor troca pra um campo numérico livre, pra digitar qualquer altura fora da lista."
       ]
     }
   ],
