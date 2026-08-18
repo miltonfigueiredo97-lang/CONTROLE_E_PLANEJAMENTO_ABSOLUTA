@@ -36,7 +36,7 @@ const Permissions = (() => {
 
     orcamentos:          { label: 'Orçamentos',                     categoria: 'Custos', acoes: ['ver','criar','editar','excluir'] },
     maoDeObra:           { label: 'Mão de Obra',                    categoria: 'Custos', acoes: ['ver','criar','editar','excluir','exportar'] },
-    suprimentos:         { label: 'Suprimentos',                    categoria: 'Custos', acoes: ['ver','criar','editar','excluir'] },
+    suprimentos:         { label: 'Suprimentos',                    categoria: 'Custos', acoes: ['ver','editar'] },
     materiais:           { label: 'Materiais',                      categoria: 'Custos', acoes: ['ver','criar','editar','excluir'] },
 
     relatorios:          { label: 'Relatórios',                     categoria: 'Análise', acoes: ['ver','criar','excluir','exportar'] },
@@ -44,6 +44,7 @@ const Permissions = (() => {
 
     configuracaoObra:    { label: 'Configuração de Obra',           categoria: 'Sistema', acoes: ['ver','editar'] },
     backupPlanejamento:  { label: 'Backup de Planejamentos',        categoria: 'Sistema', acoes: ['ver','excluir'] },
+    diagnostico:         { label: 'Diagnóstico Técnico',            categoria: 'Sistema', acoes: ['ver'] },
     admin:               { label: 'Administração / Permissões',     categoria: 'Sistema', acoes: ['ver','convidar','editar','excluir'] },
   };
 
@@ -86,6 +87,7 @@ const Permissions = (() => {
     'histograma': 'histograma',
     'configuracao-obra': 'configuracaoObra',
     'backup-planejamento': 'backupPlanejamento',
+    'diagnostico': 'diagnostico',
     'admin-permissoes': 'admin',
   };
 

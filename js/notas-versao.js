@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.13.4',
+  versaoAtual: 'V3.13.5',
 
   versoes: [
     {
@@ -9025,6 +9025,18 @@ const NotasVersao = {
         "Isso substitui a coluna \"Chave\" que tinha sido criada na V3.13.3 pro mesmo fim: em vez de duas colunas de identidade, o \"ID\" passou a ser o que o nome sempre prometeu.",
         "Importante: por dentro o sistema já estava certo. As predecessoras sempre foram gravadas por ID de tarefa (formato `id|tipo|lag`), então mover linha no editor nunca quebrou vínculo nenhum — o número que aparece na tela é só exibição, convertido na hora. O problema era exclusivamente da planilha exportada.",
         "Planilha antiga (com ID posicional) continua sendo importada normalmente: os números não batem com nenhum ID de tarefa, então a busca cai pra Código → Nome → Nome+Pai como antes, sem risco de casar errado."
+      ]
+    },
+    {
+      "versao": "V3.13.5",
+      "data": "2026-08-18",
+      "tipo": "correcao",
+      "titulo": "Permissões: Suprimentos sem NENHUMA checagem, e Diagnóstico fora do catálogo",
+      "itens": [
+        "Auditoria completa do sistema de permissões pedida pelo Milton — revisão de cabo a rabo pra achar módulos novos que ficaram sem integrar.",
+        "Suprimentos (725 linhas, o maior módulo criado desde a última auditoria) não tinha absolutamente nenhuma checagem de permissão — nem no catálogo, nem guard nas funções, nem data-perm nos botões. Qualquer usuário ativo conseguia configurar seleção, editar prazos e status de qualquer etapa. Corrigido: módulo adicionado ao catálogo (ver/editar), guard em todas as funções de mutação (seleção, config, edição inline de data/status, overrides), inputs inline desabilitados sem permissão.",
+        "Diagnóstico (ferramenta técnica de debug do sistema) também não estava no catálogo — criado módulo próprio na categoria Sistema, sem nenhuma permissão padrão (precisa ser liberado manualmente, é uma ferramenta sensível).",
+        "Controle — Estacas e Controle — Porcelanatos já estavam com enforcement completo (aplicado corretamente em sessão anterior) — confirmado na auditoria, sem necessidade de correção."
       ]
     }
   ],
