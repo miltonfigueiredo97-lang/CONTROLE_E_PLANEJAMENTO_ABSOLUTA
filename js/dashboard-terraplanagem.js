@@ -19,10 +19,14 @@ const DashTerra = (() => {
   }
   function getMostrar() { return _mostrar; }
 
+  // IDÊNTICO ao Controle de Terraplanagem: material vazio/outros NÃO caem
+  // em TERRA (era isso que inflava a terra, o % concluído e o gráfico).
   function _classMat(material) {
-    const m = String(material || '').toLowerCase();
-    if (m.includes('entulho') || m.includes('demoli')) return 'ENTULHO';
-    return 'TERRA';
+    const m = String(material || '').trim().toUpperCase();
+    if (!m) return 'SEM MATERIAL';
+    if (m.includes('TERRA')) return 'TERRA';
+    if (m.includes('ENTULHO')) return 'ENTULHO';
+    return m;
   }
 
   async function render(ctx) {
@@ -85,10 +89,31 @@ const DashTerra = (() => {
 
       const volTerra = entregas.filter(e => _classMat(e.material) === 'TERRA').reduce((s, e) => s + num(e.volume), 0);
       const volEntulho = entregas.filter(e => _classMat(e.material) === 'ENTULHO').reduce((s, e) => s + num(e.volume), 0);
-      const volTotal = volTerra + volEntulho;
-      const custoTotal = entregas.reduce((s, e) => s + num(e.valor), 0);
+      // Removido TOTAL = tudo que saiu de caminhão (qualquer material) —
+      // antes somava só terra+entulho e "outros/sem material" sumiam da conta.
+      const volTotal = entregas.reduce((s, e) => s + num(e.volume), 0);
+      const volOutros = Math.max(0, volTotal - volTerra - volEntulho);
+      // Custo com a MESMA regra do Controle: valor da viagem OU padrão do
+      // config por material (antes viagens sem valor digitado contavam R$ 0).
+      const valorViagem = (e) => {
+        if (num(e.valor) > 0) return num(e.valor);
+        const cm = _classMat(e.material);
+        if (cm === 'TERRA') return num(cfgDoc?.valorViagemTerra);
+        if (cm === 'ENTULHO') return num(cfgDoc?.valorViagemEntulho);
+        return 0;
+      };
+      const custoTotal = entregas.reduce((s, e) => s + valorViagem(e), 0);
       const pct = volEmpolado > 0 ? Math.min(100, (volTerra / volEmpolado) * 100) : null;
-      const saldo = volEmpolado > 0 ? Math.max(0, volEmpolado - volTerra) : null;
+      // Volume Total de Retirada da obra (terra prevista + estacas + fundação
+      // superficial, tudo empolado) e projeções — igual ao Controle.
+      const volEstacasEmpolado = TC ? TC.calcVolumeComEmpolamento(volumeTotalEstacas, cfgDoc?.taxaEmpolamento) : 0;
+      const volFundSupEmpolado = TC ? TC.calcVolumeComEmpolamento(volumeFundacaoSuperficial, cfgDoc?.taxaEmpolamento) : 0;
+      const volTotalRetirada = volEmpolado + volEstacasEmpolado + volFundSupEmpolado;
+      const volFaltando = volTotalRetirada > 0 ? Math.max(0, volTotalRetirada - volTerra) : null;
+      const viagensTotalEstimado = (volTotalRetirada > 0 && capacidadeMedia > 0) ? Math.ceil(volTotalRetirada / capacidadeMedia) : null;
+      const viagensFaltando = viagensTotalEstimado != null ? Math.max(0, viagensTotalEstimado - entregas.length) : null;
+      const custoMedioPorViagem = entregas.length > 0 ? custoTotal / entregas.length : num(cfgDoc?.valorViagemTerra);
+      const valorFaltando = viagensFaltando != null ? viagensFaltando * custoMedioPorViagem : null;
 
       // Por dia: viagens, volume (terra × entulho) e custo.
       const porDia = new Map();
@@ -97,9 +122,11 @@ const DashTerra = (() => {
         if (!porDia.has(d)) porDia.set(d, { viagens: 0, volTerra: 0, volEntulho: 0, custo: 0 });
         const g = porDia.get(d);
         g.viagens++;
-        if (_classMat(e.material) === 'ENTULHO') g.volEntulho += num(e.volume);
-        else g.volTerra += num(e.volume);
-        g.custo += num(e.valor);
+        const cm = _classMat(e.material);
+        if (cm === 'ENTULHO') g.volEntulho += num(e.volume);
+        else if (cm === 'TERRA') g.volTerra += num(e.volume);
+        else g.volOutros = (g.volOutros || 0) + num(e.volume);
+        g.custo += valorViagem(e);
       });
       const dias = [...porDia.entries()].sort((a, b) => a[0].localeCompare(b[0]));
       const diasTrabalhados = dias.filter(([d]) => d !== 'sem-data').length || dias.length;
@@ -107,15 +134,20 @@ const DashTerra = (() => {
 
       el.innerHTML = `
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(125px,1fr));gap:10px;margin-bottom:14px;">
-          ${volEmpolado > 0 ? `<div class="db-metrica-card"><div class="db-metrica-valor">${Utils.formatarNumero(volEmpolado, 0)}</div><div class="db-metrica-label">Volume previsto (m³ empolado)</div></div>` : ''}
+          ${volTotalRetirada > 0 ? `<div class="db-metrica-card"><div class="db-metrica-valor">${Utils.formatarNumero(volTotalRetirada, 0)}</div><div class="db-metrica-label">Retirada total prevista (m³ emp.)</div></div>` : ''}
+          ${volEmpolado > 0 ? `<div class="db-metrica-card"><div class="db-metrica-valor">${Utils.formatarNumero(volEmpolado, 0)}</div><div class="db-metrica-label">Terra prevista (m³ emp.)</div></div>` : ''}
+          ${volEstacasEmpolado > 0 ? `<div class="db-metrica-card"><div class="db-metrica-valor">${Utils.formatarNumero(volEstacasEmpolado, 0)}</div><div class="db-metrica-label">⚓ Estacas (m³ emp.)</div></div>` : ''}
+          ${volFundSupEmpolado > 0 ? `<div class="db-metrica-card"><div class="db-metrica-valor">${Utils.formatarNumero(volFundSupEmpolado, 0)}</div><div class="db-metrica-label">Fundação superficial (m³ emp.)</div></div>` : ''}
           <div class="db-metrica-card"><div class="db-metrica-valor">${Utils.formatarNumero(volTotal, 0)}</div><div class="db-metrica-label">Volume removido (m³)</div></div>
           <div class="db-metrica-card"><div class="db-metrica-valor">${Utils.formatarNumero(volTerra, 0)}</div><div class="db-metrica-label">🟤 Terra (m³)</div></div>
           ${volEntulho > 0 ? `<div class="db-metrica-card"><div class="db-metrica-valor">${Utils.formatarNumero(volEntulho, 0)}</div><div class="db-metrica-label">🧱 Entulho (m³)</div></div>` : ''}
+          ${volOutros > 0 ? `<div class="db-metrica-card"><div class="db-metrica-valor">${Utils.formatarNumero(volOutros, 0)}</div><div class="db-metrica-label">Outros materiais (m³)</div></div>` : ''}
           ${pct != null ? `<div class="db-metrica-card"><div class="db-metrica-valor" style="color:${pct >= 100 ? '#15803d' : '#a16207'};">${Utils.formatarNumero(pct, 1)}%</div><div class="db-metrica-label">Concluído (terra × previsto)</div></div>` : ''}
-          ${saldo != null ? `<div class="db-metrica-card"><div class="db-metrica-valor">${Utils.formatarNumero(saldo, 0)}</div><div class="db-metrica-label">Saldo restante (m³)</div></div>` : ''}
-          <div class="db-metrica-card"><div class="db-metrica-valor">${entregas.length}</div><div class="db-metrica-label">Viagens (caminhões)</div></div>
+          ${volFaltando != null ? `<div class="db-metrica-card"><div class="db-metrica-valor">${Utils.formatarNumero(volFaltando, 0)}</div><div class="db-metrica-label">Faltando (m³ da retirada total)</div></div>` : ''}
+          <div class="db-metrica-card"><div class="db-metrica-valor">${entregas.length}${viagensTotalEstimado != null ? ` <span style="font-size:.7em;color:#888;">/ ${viagensTotalEstimado}</span>` : ''}</div><div class="db-metrica-label">Viagens${viagensFaltando != null ? ` (faltam ~${viagensFaltando})` : ''}</div></div>
           <div class="db-metrica-card"><div class="db-metrica-valor">${Utils.formatarNumero(mediaDia, 0)}</div><div class="db-metrica-label">Média m³/dia</div></div>
-          ${custoTotal > 0 ? `<div class="db-metrica-card"><div class="db-metrica-valor">R$ ${Utils.formatarNumero(custoTotal, 0)}</div><div class="db-metrica-label">Custo total</div></div>` : ''}
+          ${custoTotal > 0 ? `<div class="db-metrica-card"><div class="db-metrica-valor">R$ ${Utils.formatarNumero(custoTotal, 0)}</div><div class="db-metrica-label">Valor gasto</div></div>` : ''}
+          ${valorFaltando != null && valorFaltando > 0 ? `<div class="db-metrica-card"><div class="db-metrica-valor">R$ ${Utils.formatarNumero(valorFaltando, 0)}</div><div class="db-metrica-label">Valor faltando (estimado)</div></div>` : ''}
         </div>
         ${dias.length ? _svgPorDia(dias) : '<div class="db-vazio-inline">Nenhuma viagem lançada ainda no Controle de Terraplanagem.</div>'}
         <div class="text-sm text-muted" style="margin-top:6px;">Dados do <a href="controle-terraplanagem.html" style="color:var(--cor-primaria-dark);font-weight:600;">Controle de Terraplanagem</a> — volume por dia (🟤 terra + 🧱 entulho), com nº de caminhões e custo do dia.</div>`;
@@ -133,22 +165,26 @@ const DashTerra = (() => {
     const padL = 56, padR = 16, padT = 34, padB = 58;
     const W = n * larguraGrupoPx + padL + padR;
     const plotH = H - padT - padB;
-    const maxV = Math.max(1, ...dias.map(([, g]) => g.volTerra + g.volEntulho));
+    const maxV = Math.max(1, ...dias.map(([, g]) => g.volTerra + g.volEntulho + (g.volOutros || 0)));
     const barW = 30;
 
     let faixas = '', bars = '', labels = '';
     dias.forEach(([data, g], i) => {
       const x = padL + i * larguraGrupoPx + (larguraGrupoPx - barW) / 2;
       if (i % 2 === 1) faixas += `<rect x="${(padL + i * larguraGrupoPx).toFixed(1)}" y="${padT}" width="${larguraGrupoPx}" height="${plotH}" fill="#f8f8f8"/>`;
+      const volOutrosDia = g.volOutros || 0;
       const hT = (g.volTerra / maxV) * plotH;
       const hE = (g.volEntulho / maxV) * plotH;
+      const hO = (volOutrosDia / maxV) * plotH;
       const yT = padT + plotH - hT;
       const yE = yT - hE;
+      const yO = yE - hO;
       if (g.volTerra > 0) bars += `<rect x="${x}" y="${yT.toFixed(1)}" width="${barW}" height="${hT.toFixed(1)}" fill="#8b5e34" rx="2"><title>${data} — terra ${Utils.formatarNumero(g.volTerra, 0)} m³</title></rect>`;
       if (g.volEntulho > 0) bars += `<rect x="${x}" y="${yE.toFixed(1)}" width="${barW}" height="${hE.toFixed(1)}" fill="#b0b0b0" rx="2"><title>${data} — entulho ${Utils.formatarNumero(g.volEntulho, 0)} m³</title></rect>`;
+      if (volOutrosDia > 0) bars += `<rect x="${x}" y="${yO.toFixed(1)}" width="${barW}" height="${hO.toFixed(1)}" fill="#5a5a5a" rx="2"><title>${data} — outros ${Utils.formatarNumero(volOutrosDia, 0)} m³</title></rect>`;
       // Volume total + viagens no topo da barra
-      bars += `<text x="${(x + barW / 2).toFixed(1)}" y="${(yE - 14).toFixed(1)}" font-size="10" fill="#333" font-weight="700" text-anchor="middle">${Utils.formatarNumero(g.volTerra + g.volEntulho, 0)} m³</text>`;
-      bars += `<text x="${(x + barW / 2).toFixed(1)}" y="${(yE - 4).toFixed(1)}" font-size="9" fill="#777" text-anchor="middle">🚚${g.viagens}</text>`;
+      bars += `<text x="${(x + barW / 2).toFixed(1)}" y="${(yO - 14).toFixed(1)}" font-size="10" fill="#333" font-weight="700" text-anchor="middle">${Utils.formatarNumero(g.volTerra + g.volEntulho + volOutrosDia, 0)} m³</text>`;
+      bars += `<text x="${(x + barW / 2).toFixed(1)}" y="${(yO - 4).toFixed(1)}" font-size="9" fill="#777" text-anchor="middle">🚚${g.viagens}</text>`;
       // Data + custo embaixo
       const dataBR = data === 'sem-data' ? 'sem data' : data.slice(8, 10) + '/' + data.slice(5, 7);
       labels += `<text x="${(x + barW / 2).toFixed(1)}" y="${(padT + plotH + 14).toFixed(1)}" font-size="10.5" fill="#222" font-weight="600" text-anchor="middle">${dataBR}</text>`;
@@ -169,6 +205,7 @@ const DashTerra = (() => {
       <div class="db-legenda" style="margin-top:6px;">
         <span><i style="background:#8b5e34;"></i> Terra (m³)</span>
         <span><i style="background:#b0b0b0;"></i> Entulho (m³)</span>
+        <span><i style="background:#5a5a5a;"></i> Outros/sem material (m³)</span>
         <span>🚚 nº de caminhões (viagens) do dia</span>
       </div>`;
   }

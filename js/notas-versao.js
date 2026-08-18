@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.11.4.1',
+  versaoAtual: 'V3.11.4.2',
 
   versoes: [
     {
@@ -8603,6 +8603,18 @@ const NotasVersao = {
         "O desenho esquemático do popup de \\\"🧱 Selecionar Paredes\\\" (impermeabilização do rodapé) agora mostra atrás um recorte de verdade da planta baixa daquela região — não é mais só o contorno genérico, é a página do PDF ampliada e cortada em torno da área.",
         "As paredes numeradas ficam desenhadas por cima do recorte real, alinhadas com as paredes de verdade do projeto — muito mais fácil de reconhecer qual é qual num banheiro com 4+ paredes parecidas.",
         "Enquanto a planta carrega, o popup mostra o desenho esquemático como estava antes; ela troca pro fundo real assim que termina de carregar, sem travar a tela."
+      ]
+    },
+    {
+      "versao": "V3.11.4.2",
+      "data": "2026-08-18",
+      "tipo": "correcao",
+      "titulo": "Terraplanagem do Dashboard alinhada aos números do Controle",
+      "itens": [
+        "Volume removido estava errado: viagens de \"outros materiais\" ou sem material preenchido eram classificadas como TERRA — inflando a terra e o % concluído — e ao mesmo tempo ficavam de fora do total. Agora a classificação é IDÊNTICA à do Controle (terra, entulho, outros/sem material) e o Volume Removido soma tudo o que saiu de caminhão.",
+        "Custo agora usa a mesma regra do Controle: valor digitado na viagem OU o valor padrão por viagem do config (antes viagem sem valor contava R$ 0).",
+        "KPIs novos do Controle incorporados: Retirada Total Prevista (terra prevista + estacas + fundação superficial, tudo empolado), Faltando (m³), Viagens atual/estimado com quanto falta, Valor gasto × Valor faltando (estimado pela média por viagem).",
+        "Gráfico por dia ganhou a série \"Outros/sem material\" (cinza-escuro) — a soma das barras volta a bater com o Volume Removido."
       ]
     }
   ],
