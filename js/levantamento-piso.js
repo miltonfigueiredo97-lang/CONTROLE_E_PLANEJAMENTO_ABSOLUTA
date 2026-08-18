@@ -1771,17 +1771,15 @@ const LP = (() => {
     }).join('');
   }
 
-  function aplicarPresetNovaAltura() {
-    const v = document.getElementById('lp-nova-altura-preset').value;
-    if (v) document.getElementById('lp-nova-altura-valor').value = v;
-  }
-
-  function adicionarAlturaImperm() {
-    const valor = Utils.parseNum(document.getElementById('lp-nova-altura-valor').value);
+  // valorFixo: número (clique num preset) ou undefined (lê do campo manual "outra altura")
+  function adicionarAlturaImperm(valorFixo) {
+    const valor = typeof valorFixo === 'number' ? valorFixo : Utils.parseNum(document.getElementById('lp-nova-altura-valor').value);
     if (!valor || valor <= 0) { Utils.toast('Informe um valor de altura válido.', 'alerta'); return; }
+    const jaExiste = _impermAlturasPendente.some(h => Math.abs(h.valor - valor) < 0.001);
+    if (jaExiste) { Utils.toast(`Já tem uma altura de ${fmt2(valor)} m configurada.`, 'alerta'); return; }
     _impermAlturasPendente.push({ id: _uid(), valor });
-    document.getElementById('lp-nova-altura-valor').value = '';
-    document.getElementById('lp-nova-altura-preset').value = '';
+    const input = document.getElementById('lp-nova-altura-valor');
+    if (input) input.value = '';
     _renderParedesImpermPopup();
   }
 
@@ -2103,7 +2101,7 @@ const LP = (() => {
     finalizarPoligono, editarArea, onToggleImperm, onToggleImpermRodape, aplicarPresetAlturaRodape, onAlturaRodapeInput, fecharModalArea, salvarArea, excluirAreaEmEdicao, moverArea,
     abrirSelecaoParedesImperm, confirmarParedesImperm,
     incluirParedeImperm, dividirParedeImperm, removerParteImperm, toggleParteImperm, editarComprimentoParteImperm, mudarAlturaParteImperm,
-    adicionarAlturaImperm, removerAlturaImperm, aplicarPresetNovaAltura,
+    adicionarAlturaImperm, removerAlturaImperm,
     filtrarAreas, abrirClonarPavimento, marcarTodosClonar, confirmarClonarPavimento, criarNovoLocalEClonar, filtrarVisaoGeral,
     marcarTodasAreas, desmarcarTodasAreas, atualizarBarraSelecaoAreas, moverOuCopiarSelecionadas, toggleSelecaoArea,
     toggleRodapeEdge, cancelarRodape, confirmarRodape, iniciarEdicaoRodape,

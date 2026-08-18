@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.11.4.7',
+  versaoAtual: 'V3.11.4.8',
 
   versoes: [
     {
@@ -8670,6 +8670,17 @@ const NotasVersao = {
         "Popup \"Selecionar Paredes\": ao dividir uma parede em trechos, se a soma dos comprimentos não bater com o total da parede, aparece um aviso vermelho na hora (ex: \"Faltam 0,43 m pra completar a parede\") — sem esperar salvar pra descobrir que a conta não fechou.",
         "O card da parede fica destacado (borda e fundo avermelhados) enquanto a divisão estiver incorreta.",
         "Ao confirmar com alguma parede ainda divergente, um aviso avisa quais paredes precisam de atenção — a seleção é salva mesmo assim, o aviso é só pra não passar batido."
+      ]
+    },
+    {
+      "versao": "V3.11.4.8",
+      "data": "2026-08-18",
+      "tipo": "melhoria",
+      "titulo": "Levantamento Piso: simplificado o jeito de adicionar novas alturas de impermeabilização",
+      "itens": [
+        "Popup \"Selecionar Paredes\": o seletor \"Personalizado\" (dropdown) que ficava em cima, perto dos seletores de altura de cada parede, foi trocado por 3 botões diretos — \"+ Box (1,20 m)\", \"+ Padrão (0,40 m)\" e \"+ Baixo (0,20 m)\" — clicou, já adicionou à lista de alturas.",
+        "Campo numérico continua disponível pra alturas fora desses 3 valores comuns (botão \"+ Altura\" ao lado).",
+        "Evita duplicar: tentar adicionar uma altura que já está configurada avisa em vez de criar uma repetida."
       ]
     }
   ],
