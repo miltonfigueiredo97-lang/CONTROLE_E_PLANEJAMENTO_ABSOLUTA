@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.11.4.10',
+  versaoAtual: 'V3.11.4.11',
 
   versoes: [
     {
@@ -8701,6 +8701,16 @@ const NotasVersao = {
       "itens": [
         "O desenho no topo do popup \"Selecionar Paredes\" agora tem zoom (roda do mouse ou botões ➖/➕) e pan (clique e arraste) — útil quando a área é pequena ou tem muitas paredes próximas.",
         "Botão do meio mostra o % atual e clica pra voltar a 100% e centralizar de novo."
+      ]
+    },
+    {
+      "versao": "V3.11.4.11",
+      "data": "2026-08-18",
+      "tipo": "correcao",
+      "titulo": "Levantamento Piso: dava pra incluir uma parede mas não pra remover ela de volta",
+      "itens": [
+        "Popup \"Selecionar Paredes\": o botão 🗑 só aparecia quando a parede tinha mais de 1 trecho (dividida). Uma parede incluída como trecho único não tinha jeito de voltar ao estado \"não incluída\" além de desmarcar o checkbox (que deixa os campos desabilitados mas ainda ocupando espaço na tela).",
+        "Agora o 🗑 aparece em qualquer parede incluída, com trecho único ou dividida — remove e volta pro botão \"+ Incluir esta parede\"."
       ]
     }
   ],

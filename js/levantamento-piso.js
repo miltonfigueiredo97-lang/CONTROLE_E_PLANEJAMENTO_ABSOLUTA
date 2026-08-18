@@ -1997,7 +1997,7 @@ const LP = (() => {
               <input type="number" step="0.01" min="0" max="${w.comprimentoTotal.toFixed(2)}" value="${p.comprimento.toFixed(2)}" class="form-control" style="width:64px;padding:4px 6px;" ${p.incluida ? '' : 'disabled'} oninput="LP.editarComprimentoParteImperm(${i},${j},this.value)">
               <span style="font-size:.72rem;color:var(--cor-texto-muted);">m</span>
               <select class="form-control" style="flex:1;padding:4px 6px;" ${p.incluida ? '' : 'disabled'} onchange="LP.mudarAlturaParteImperm(${i},${j},this.value)">${opcoesAltura(p.alturaId)}</select>
-              ${w.partes.length > 1 ? `<button type="button" onclick="LP.removerParteImperm(${i},${j})" style="border:none;background:none;color:#dc2626;cursor:pointer;font-size:.9rem;" title="Remover este trecho">🗑</button>` : ''}
+              <button type="button" onclick="LP.removerParteImperm(${i},${j})" style="border:none;background:none;color:#dc2626;cursor:pointer;font-size:.9rem;" title="${w.partes.length > 1 ? 'Remover este trecho' : 'Remover esta parede'}">🗑</button>
             </div>
           `).join('')
         }
