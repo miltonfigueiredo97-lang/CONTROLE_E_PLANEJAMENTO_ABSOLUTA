@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.13.0',
+  versaoAtual: 'V3.13.1',
 
   versoes: [
     {
@@ -8914,6 +8914,16 @@ const NotasVersao = {
         "Novos KPIs no topo: m² planejado (Piso, Parede e Total), m² executado, % de avanço geral e itens concluídos.",
         "Exportar Planilha ganhou uma segunda aba \"Resumo por Local\" (totais de Piso/Parede/Executado por Torre-Andar-Apto), além da aba Detalhado — que agora também traz Torre, Andar, M² Executado, % Executado e Status.",
         "Nova coleção no Firestore: `porcelanatosExecucoes` (apontamentos). Guard de permissão: apontar execução usa `controlePorcelanatos:criar`, excluir apontamento usa `controlePorcelanatos:excluir` (catálogo já existia)."
+      ]
+    },
+    {
+      "versao": "V3.13.1",
+      "data": "2026-08-18",
+      "tipo": "correcao",
+      "titulo": "Controle de Porcelanatos: Torre/Apto duplicado quando Paredes tinha um nível extra (Cômodo) que o Piso não tem",
+      "itens": [
+        "A árvore de Paredes costuma ter um nível de Cômodo dentro do Apto (ex: Torre → Andar → Apto → Banheiro de Serviço) que a árvore de Piso não tem (a área já fica direto no Apto). O agrupamento antigo pegava \"os 2 últimos níveis\" como Andar+Apto — então em Paredes o Apto caía num nível errado, criando um grupo de Torre paralelo que nunca batia com o do Piso: tudo aparecia duplicado e fora de ordem.",
+        "Corrigido: agora Torre/Andar/Apto são sempre os 3 primeiros níveis da árvore, fixos, não importa quão mais profundo ela vá depois disso. Qualquer nível extra (o Cômodo) não vira mais um agrupamento por conta própria — passa a aparecer junto do nome do Local (ex: \"Banheiro de Serviço · Face C\")."
       ]
     }
   ],

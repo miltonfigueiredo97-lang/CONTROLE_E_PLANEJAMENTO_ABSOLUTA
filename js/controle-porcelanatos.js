@@ -211,12 +211,22 @@ const ControlePorcelanatos = (() => {
   // com o caminho Torre → Andar → Apto de cada árvore.
   // ══════════════════════════════════════════
   function _caminhoTorreAndarApto(path) {
-    // path = [nível0, nível1, ..., nível-do-próprio-node]. Convenção: os 2 últimos
-    // níveis contam como Andar+Apto; tudo antes disso (se houver) vira "Torre"
-    // (se houver mais de 1 nível acima do Andar, junta com " / ").
-    if (path.length >= 3) return { torre: path.slice(0, path.length - 2).join(' / '), andar: path[path.length - 2], apto: path[path.length - 1] };
-    if (path.length === 2) return { torre: '(sem torre)', andar: path[0], apto: path[1] };
-    return { torre: '(sem torre)', andar: '(sem andar)', apto: path[0] || '(local removido)' };
+    // Convenção FIXA de profundidade — nível 0 = Torre, nível 1 = Andar, nível 2 = Apto —
+    // sempre nesses índices, independente de quão mais profunda a árvore for depois disso.
+    // Isso importa porque Piso e Paredes usam árvores INDEPENDENTES e não necessariamente
+    // com a mesma profundidade: em Paredes é comum existir um nível de Cômodo dentro do
+    // Apto (ex: Torre → Andar → Apto → Banheiro de Serviço), enquanto em Piso a área já
+    // fica direto no Apto. Usar "os 2 últimos níveis" (como antes) fazia o Apto de Paredes
+    // cair num nível diferente do de Piso — surgiam dois grupos de Torre que nunca se
+    // encontravam. Qualquer coisa alem da profundidade 2 (o Cômodo) não é um novo nível
+    // de agrupamento: vira só um prefixo no nome do Local do item.
+    if (path.length >= 3) return { torre: path[0], andar: path[1], apto: path[2], subLocal: path.slice(3).join(' / ') };
+    if (path.length === 2) return { torre: '(sem torre)', andar: path[0], apto: path[1], subLocal: '' };
+    return { torre: '(sem torre)', andar: '(sem andar)', apto: path[0] || '(local removido)', subLocal: '' };
+  }
+
+  function _comSubLocal(subLocal, nomeLocal) {
+    return subLocal ? (subLocal + ' · ' + (nomeLocal || '')) : (nomeLocal || '');
   }
 
   function _totalExecutado(itemKey) {
@@ -229,7 +239,7 @@ const ControlePorcelanatos = (() => {
     areasPiso.forEach(a => {
       const r = _acharNode(a.nodeId, arvorePiso);
       const path = r ? r.path : ['(local removido)'];
-      const { torre, andar, apto } = _caminhoTorreAndarApto(path);
+      const { torre, andar, apto, subLocal } = _caminhoTorreAndarApto(path);
       const { tipo, dimensao } = _separarTipoEDimensao(a.tipoPiso);
       const itemKey = 'piso:' + a.id;
       const m2Plan = a.areaM2 || 0;
@@ -238,7 +248,7 @@ const ControlePorcelanatos = (() => {
         itemKey, fonte: 'piso',
         torre, andar, apto,
         groupKey: _norm(torre) + '»' + _norm(andar) + '»' + _norm(apto),
-        local: a.nome || '', localDetalhe: 'Piso',
+        local: _comSubLocal(subLocal, a.nome), localDetalhe: 'Piso',
         tipo, dimensao, m2Plan, m2Exec,
       });
     });
@@ -248,14 +258,14 @@ const ControlePorcelanatos = (() => {
       if (m2Plan <= 0) return; // face sem % de revestimento não entra aqui (é gesso/reboco/pintura)
       const r = _acharNode(p.nodeId, arvoreParedes);
       const path = r ? r.path : ['(local removido)'];
-      const { torre, andar, apto } = _caminhoTorreAndarApto(path);
+      const { torre, andar, apto, subLocal } = _caminhoTorreAndarApto(path);
       const itemKey = 'parede:' + p.id;
       const m2Exec = _totalExecutado(itemKey);
       itens.push({
         itemKey, fonte: 'parede',
         torre, andar, apto,
         groupKey: _norm(torre) + '»' + _norm(andar) + '»' + _norm(apto),
-        local: p.nome || 'Face', localDetalhe: 'Parede',
+        local: _comSubLocal(subLocal, p.nome || 'Face'), localDetalhe: 'Parede',
         tipo: 'Revestimento de Parede', dimensao: '', m2Plan, m2Exec,
       });
     });
