@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.11.4.11',
+  versaoAtual: 'V3.11.4.12',
 
   versoes: [
     {
@@ -8711,6 +8711,17 @@ const NotasVersao = {
       "itens": [
         "Popup \"Selecionar Paredes\": o botão 🗑 só aparecia quando a parede tinha mais de 1 trecho (dividida). Uma parede incluída como trecho único não tinha jeito de voltar ao estado \"não incluída\" além de desmarcar o checkbox (que deixa os campos desabilitados mas ainda ocupando espaço na tela).",
         "Agora o 🗑 aparece em qualquer parede incluída, com trecho único ou dividida — remove e volta pro botão \"+ Incluir esta parede\"."
+      ]
+    },
+    {
+      "versao": "V3.11.4.12",
+      "data": "2026-08-18",
+      "tipo": "correcao",
+      "titulo": "Levantamento Piso: números do desenho ficavam gigantes no zoom + limite de zoom aumentado",
+      "itens": [
+        "Popup \"Selecionar Paredes\": os círculos numerados das paredes cresciam junto com o zoom (viravam bolas enormes e sobrepostas em 400%). Agora o tamanho deles é recalculado a cada zoom pra ficar sempre do mesmo tamanho na tela, só a parede/planta de fundo amplia mesmo.",
+        "Limite de zoom subiu de 400% pra 1000% — útil pra paredes bem pequenas.",
+        "Zoom por clique/roda do mouse agora anda em passos de 50% em vez de 25% (menos cliques pra chegar no nível que precisa)."
       ]
     }
   ],

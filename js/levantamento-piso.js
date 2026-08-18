@@ -1741,6 +1741,70 @@ const LP = (() => {
     }, { passive: false });
   }
 
+  function _construirEAplicarSvgImperm() {
+    const arr = _paredesImpermPendente;
+    const bbox = _paredesImpermBBox;
+    const W = 300, H = 200, PAD = 26;
+    const escala = Math.min((W - 2 * PAD) / bbox.bw, (H - 2 * PAD) / bbox.bh);
+    const norm = _paredesImpermPoligono.map(p => _pontoParaSVGImperm(p, W, H, PAD));
+    const zoom = _paredesImpermView.scale;
+    // números/badges divididos pelo zoom atual: depois que o <svg> inteiro é ampliado via CSS transform,
+    // o tamanho final na tela volta a ficar constante — não cresce junto com a parede (senão vira bola gigante).
+    const badgeR = 9 / zoom, badgeFont = 9 / zoom, badgeStroke = 1.5 / zoom;
+
+    let svg = `<svg id="lp-paredes-imperm-svg" viewBox="0 0 ${W} ${H}" style="width:100%;height:100%;display:block;transform:translate(${_paredesImpermView.tx}px,${_paredesImpermView.ty}px) scale(${zoom});transform-origin:50% 50%;">`;
+    if (_paredesImpermFundoDataURL) {
+      svg += `<image href="${_paredesImpermFundoDataURL}" x="${PAD}" y="${PAD}" width="${(bbox.bw * escala).toFixed(1)}" height="${(bbox.bh * escala).toFixed(1)}" preserveAspectRatio="none"/>`;
+      svg += `<polygon points="${norm.map(p => p.x + ',' + p.y).join(' ')}" fill="none"/>`;
+    } else {
+      svg += `<polygon points="${norm.map(p => p.x + ',' + p.y).join(' ')}" fill="#e2e8f0" opacity="0.35"/>`;
+      svg += `<text x="${W / 2}" y="${H - 8}" text-anchor="middle" font-size="9" fill="#94a3b8">Carregando desenho do projeto...</text>`;
+    }
+    const corNaoIncluida = _paredesImpermFundoDataURL ? '#ffffff' : '#cbd5e1';
+    norm.forEach((p1, i) => {
+      const p2 = norm[(i + 1) % norm.length];
+      const w = arr[i];
+      const incluidas = w.partes.filter(p => p.incluida);
+      const mx = (p1.x + p2.x) / 2, my = (p1.y + p2.y) / 2;
+
+      // desenha a parede em segmentos proporcionais ao comprimento de cada trecho, coloridos pela altura dele —
+      // dá pra VER a divisão (e o trecho excluído/faltante aparece em cinza, sem cor de altura).
+      if (w.comprimentoTotal > 0 && w.partes.length) {
+        let acumulado = 0;
+        w.partes.forEach(p => {
+          const t0 = Math.min(acumulado / w.comprimentoTotal, 1);
+          acumulado += (p.comprimento || 0);
+          const t1 = Math.min(acumulado / w.comprimentoTotal, 1);
+          if (t1 <= t0) return;
+          const q1 = { x: p1.x + (p2.x - p1.x) * t0, y: p1.y + (p2.y - p1.y) * t0 };
+          const q2 = { x: p1.x + (p2.x - p1.x) * t1, y: p1.y + (p2.y - p1.y) * t1 };
+          const corTrecho = p.incluida ? _corAlturaImpermPorId(p.alturaId) : corNaoIncluida;
+          svg += `<line x1="${q1.x.toFixed(1)}" y1="${q1.y.toFixed(1)}" x2="${q2.x.toFixed(1)}" y2="${q2.y.toFixed(1)}" stroke="${corTrecho}" stroke-width="${p.incluida ? 6 : 4}" stroke-opacity="0.95"/>`;
+        });
+        // sobrou pedaço sem trecho nenhum (soma < total) — mostra o "buraco" em cinza, igual ao aviso de divergência
+        if (acumulado < w.comprimentoTotal - 0.001) {
+          const t0 = Math.min(acumulado / w.comprimentoTotal, 1);
+          const q1 = { x: p1.x + (p2.x - p1.x) * t0, y: p1.y + (p2.y - p1.y) * t0 };
+          svg += `<line x1="${q1.x.toFixed(1)}" y1="${q1.y.toFixed(1)}" x2="${p2.x.toFixed(1)}" y2="${p2.y.toFixed(1)}" stroke="${corNaoIncluida}" stroke-width="4" stroke-opacity="0.95"/>`;
+        }
+      } else {
+        svg += `<line x1="${p1.x.toFixed(1)}" y1="${p1.y.toFixed(1)}" x2="${p2.x.toFixed(1)}" y2="${p2.y.toFixed(1)}" stroke="${corNaoIncluida}" stroke-width="4" stroke-opacity="0.9"/>`;
+      }
+
+      const corBadge = incluidas.length ? _corAlturaImpermPorId(incluidas[0].alturaId) : '#64748b';
+      svg += `<circle cx="${mx.toFixed(1)}" cy="${my.toFixed(1)}" r="${badgeR.toFixed(2)}" fill="#fff" stroke="${corBadge}" stroke-width="${badgeStroke.toFixed(2)}"/>`;
+      svg += `<text x="${mx.toFixed(1)}" y="${(my + badgeFont / 3).toFixed(1)}" text-anchor="middle" font-size="${badgeFont.toFixed(2)}" font-weight="700" fill="${corBadge}" style="pointer-events:none;">${i + 1}${w.partes.length > 1 ? '•' + w.partes.length : ''}</text>`;
+    });
+    svg += `</svg>`;
+    const controlesZoom = `
+      <div style="position:absolute;top:6px;right:6px;display:flex;gap:3px;background:rgba(255,255,255,0.92);border-radius:6px;padding:3px;box-shadow:0 1px 4px rgba(0,0,0,0.18);z-index:2;">
+        <button type="button" onclick="LP.zoomParedesImperm(-0.5)" style="border:none;background:#fff;border-radius:4px;width:24px;height:24px;cursor:pointer;font-size:.8rem;">➖</button>
+        <button type="button" onclick="LP.resetZoomParedesImperm()" id="lp-paredes-imperm-zoom-pct" style="border:none;background:#fff;border-radius:4px;padding:0 6px;height:24px;cursor:pointer;font-size:.68rem;font-weight:700;color:var(--cor-texto-muted);white-space:nowrap;">${Math.round(zoom * 100)}%</button>
+        <button type="button" onclick="LP.zoomParedesImperm(0.5)" style="border:none;background:#fff;border-radius:4px;width:24px;height:24px;cursor:pointer;font-size:.8rem;">➕</button>
+      </div>`;
+    document.getElementById('lp-paredes-imperm-svg-wrap').innerHTML = controlesZoom + svg;
+  }
+
   function _aplicarTransformSVGImperm() {
     const svg = document.getElementById('lp-paredes-imperm-svg');
     if (!svg) return;
@@ -1749,22 +1813,15 @@ const LP = (() => {
   }
 
   function zoomParedesImperm(delta) {
-    const novo = Math.min(4, Math.max(1, _paredesImpermView.scale + delta));
+    const novo = Math.min(10, Math.max(1, _paredesImpermView.scale + delta));
     _paredesImpermView.scale = novo;
     if (novo === 1) { _paredesImpermView.tx = 0; _paredesImpermView.ty = 0; } // volta ao normal = centraliza de novo
-    _atualizarBotaoZoomImperm();
-    _aplicarTransformSVGImperm();
+    _construirEAplicarSvgImperm(); // regera (não só re-transforma) pra recalcular o tamanho constante dos números
   }
 
   function resetZoomParedesImperm() {
     _paredesImpermView = { scale: 1, tx: 0, ty: 0 };
-    _atualizarBotaoZoomImperm();
-    _aplicarTransformSVGImperm();
-  }
-
-  function _atualizarBotaoZoomImperm() {
-    const el = document.getElementById('lp-paredes-imperm-zoom-pct');
-    if (el) el.textContent = Math.round(_paredesImpermView.scale * 100) + '%';
+    _construirEAplicarSvgImperm();
   }
 
   function _calcularBBoxComMargem(poligono) {
@@ -1915,63 +1972,8 @@ const LP = (() => {
 
   function _renderParedesImpermPopup() {
     const arr = _paredesImpermPendente;
-    const bbox = _paredesImpermBBox;
-    const W = 300, H = 200, PAD = 26;
-    const escala = Math.min((W - 2 * PAD) / bbox.bw, (H - 2 * PAD) / bbox.bh);
-    const norm = _paredesImpermPoligono.map(p => _pontoParaSVGImperm(p, W, H, PAD));
 
-    let svg = `<svg id="lp-paredes-imperm-svg" viewBox="0 0 ${W} ${H}" style="width:100%;height:100%;display:block;transform:translate(${_paredesImpermView.tx}px,${_paredesImpermView.ty}px) scale(${_paredesImpermView.scale});transform-origin:50% 50%;">`;
-    if (_paredesImpermFundoDataURL) {
-      svg += `<image href="${_paredesImpermFundoDataURL}" x="${PAD}" y="${PAD}" width="${(bbox.bw * escala).toFixed(1)}" height="${(bbox.bh * escala).toFixed(1)}" preserveAspectRatio="none"/>`;
-      svg += `<polygon points="${norm.map(p => p.x + ',' + p.y).join(' ')}" fill="none"/>`;
-    } else {
-      svg += `<polygon points="${norm.map(p => p.x + ',' + p.y).join(' ')}" fill="#e2e8f0" opacity="0.35"/>`;
-      svg += `<text x="${W / 2}" y="${H - 8}" text-anchor="middle" font-size="9" fill="#94a3b8">Carregando desenho do projeto...</text>`;
-    }
-    const corNaoIncluida = _paredesImpermFundoDataURL ? '#ffffff' : '#cbd5e1';
-    norm.forEach((p1, i) => {
-      const p2 = norm[(i + 1) % norm.length];
-      const w = arr[i];
-      const incluidas = w.partes.filter(p => p.incluida);
-      const mx = (p1.x + p2.x) / 2, my = (p1.y + p2.y) / 2;
-
-      // desenha a parede em segmentos proporcionais ao comprimento de cada trecho, coloridos pela altura dele —
-      // dá pra VER a divisão (e o trecho excluído/faltante aparece em cinza, sem cor de altura).
-      if (w.comprimentoTotal > 0 && w.partes.length) {
-        let acumulado = 0;
-        w.partes.forEach(p => {
-          const t0 = Math.min(acumulado / w.comprimentoTotal, 1);
-          acumulado += (p.comprimento || 0);
-          const t1 = Math.min(acumulado / w.comprimentoTotal, 1);
-          if (t1 <= t0) return;
-          const q1 = { x: p1.x + (p2.x - p1.x) * t0, y: p1.y + (p2.y - p1.y) * t0 };
-          const q2 = { x: p1.x + (p2.x - p1.x) * t1, y: p1.y + (p2.y - p1.y) * t1 };
-          const corTrecho = p.incluida ? _corAlturaImpermPorId(p.alturaId) : corNaoIncluida;
-          svg += `<line x1="${q1.x.toFixed(1)}" y1="${q1.y.toFixed(1)}" x2="${q2.x.toFixed(1)}" y2="${q2.y.toFixed(1)}" stroke="${corTrecho}" stroke-width="${p.incluida ? 6 : 4}" stroke-opacity="0.95"/>`;
-        });
-        // sobrou pedaço sem trecho nenhum (soma < total) — mostra o "buraco" em cinza, igual ao aviso de divergência
-        if (acumulado < w.comprimentoTotal - 0.001) {
-          const t0 = Math.min(acumulado / w.comprimentoTotal, 1);
-          const q1 = { x: p1.x + (p2.x - p1.x) * t0, y: p1.y + (p2.y - p1.y) * t0 };
-          svg += `<line x1="${q1.x.toFixed(1)}" y1="${q1.y.toFixed(1)}" x2="${p2.x.toFixed(1)}" y2="${p2.y.toFixed(1)}" stroke="${corNaoIncluida}" stroke-width="4" stroke-opacity="0.95"/>`;
-        }
-      } else {
-        svg += `<line x1="${p1.x.toFixed(1)}" y1="${p1.y.toFixed(1)}" x2="${p2.x.toFixed(1)}" y2="${p2.y.toFixed(1)}" stroke="${corNaoIncluida}" stroke-width="4" stroke-opacity="0.9"/>`;
-      }
-
-      const corBadge = incluidas.length ? _corAlturaImpermPorId(incluidas[0].alturaId) : '#64748b';
-      svg += `<circle cx="${mx.toFixed(1)}" cy="${my.toFixed(1)}" r="9" fill="#fff" stroke="${corBadge}" stroke-width="1.5"/>`;
-      svg += `<text x="${mx.toFixed(1)}" y="${(my + 3).toFixed(1)}" text-anchor="middle" font-size="9" font-weight="700" fill="${corBadge}" style="pointer-events:none;">${i + 1}${w.partes.length > 1 ? '•' + w.partes.length : ''}</text>`;
-    });
-    svg += `</svg>`;
-    const controlesZoom = `
-      <div style="position:absolute;top:6px;right:6px;display:flex;gap:3px;background:rgba(255,255,255,0.92);border-radius:6px;padding:3px;box-shadow:0 1px 4px rgba(0,0,0,0.18);z-index:2;">
-        <button type="button" onclick="LP.zoomParedesImperm(-0.25)" style="border:none;background:#fff;border-radius:4px;width:24px;height:24px;cursor:pointer;font-size:.8rem;">➖</button>
-        <button type="button" onclick="LP.resetZoomParedesImperm()" id="lp-paredes-imperm-zoom-pct" style="border:none;background:#fff;border-radius:4px;padding:0 6px;height:24px;cursor:pointer;font-size:.68rem;font-weight:700;color:var(--cor-texto-muted);white-space:nowrap;">${Math.round(_paredesImpermView.scale * 100)}%</button>
-        <button type="button" onclick="LP.zoomParedesImperm(0.25)" style="border:none;background:#fff;border-radius:4px;width:24px;height:24px;cursor:pointer;font-size:.8rem;">➕</button>
-      </div>`;
-    document.getElementById('lp-paredes-imperm-svg-wrap').innerHTML = controlesZoom + svg;
-
+    _construirEAplicarSvgImperm();
     _renderAlturasImpermChips();
 
     const opcoesAltura = (selecionadaId) => _impermAlturasPendente.map(h =>
