@@ -8850,7 +8850,7 @@ const NotasVersao = {
         "Tipo de Piso e Dimensões são separados automaticamente do campo \"Tipo de Piso\" seguindo o padrão \"Nome - AxB\" (ex: \"Porcelanato Alta Mountain - 90x90\" vira Tipo=\"Porcelanato Alta Mountain\" e Dimensão=\"90x90\"). Registros antigos sem esse padrão (ex: só \"Porcelanato 1\") saem com a dimensão em branco.",
         "Novo \"⚙️ Config\" no topo do módulo — define o % de perda usado na coluna \"M² com perda\" da planilha (padrão 30%, editável por obra)."
       ]
-    },
+    }
   ],
 
   render(containerId) {
