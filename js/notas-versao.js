@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.12.0',
+  versaoAtual: 'V3.12.0.1',
 
   versoes: [
     {
@@ -8776,6 +8776,18 @@ const NotasVersao = {
         "Medições: filtro por Frente na árvore de lançamento — mostra só as tarefas da equipe selecionada, mantendo os grupos-pai pra dar contexto (mesma visão em árvore de sempre).",
         "Medições: \"Fim Real\" agora só pode ser preenchido com a tarefa em 100% de progresso — evita registrar término de algo que ainda não acabou.",
         "Medições: ao lançar Início Real ou Término Real (com 100%), o cronograma ATUAL (Início/Término Planejado) é atualizado junto pra refletir a realidade. A Linha de Base nunca é tocada."
+      ]
+    },
+    {
+      "versao": "V3.12.0.1",
+      "data": "2026-08-18",
+      "tipo": "melhoria",
+      "titulo": "Frente de Serviço: completa cobertura em formulário, exportações e importações",
+      "itens": [
+        "Modal \"Nova/Editar Tarefa\": campo Frente de Serviço agora também disponível ali (antes só dava pra editar direto na grade do Planejamento).",
+        "Exportar Excel (simples e formatado): coluna Frente incluída.",
+        "Importar / Importar Base Completa: reconhece coluna \"Frente\" (ou \"Equipe\") na planilha.",
+        "Importar Correções: Frente de Serviço adicionada como campo que pode ser corrigido em massa por Nome, junto com os demais."
       ]
     },
   ],

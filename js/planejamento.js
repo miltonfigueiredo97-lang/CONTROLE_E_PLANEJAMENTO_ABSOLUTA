@@ -2759,7 +2759,7 @@ const Planejamento = (() => {
     document.getElementById('modal-tarefa-titulo').textContent='Editar Tarefa';
     const f=document.getElementById('form-tarefa');f.reset();
     ['codigo','nome','tipo','nivel','ordem','inicioPlanejado','terminoPlanejado','duracao',
-      'percentualEsperado','percentualConcluido','tarefaPai','grupo','local',
+      'percentualEsperado','percentualConcluido','tarefaPai','grupo','local','frenteServico',
       'custo','receita','responsavel','inicioPlanejadoBase','terminoPlanejadoBase',
       'inicioDesafio','terminoDesafio','observacoes','quantidade','unidade'].forEach(k=>{
       const el=f.querySelector(`[name="${k}"]`);if(el&&t[k]!=null)el.value=t[k];
@@ -2800,6 +2800,7 @@ const Planejamento = (() => {
       ordem:ordemCandidata,inicioPlanejado:ini||'',terminoPlanejado:ter||'',duracao:dur,
       percentualEsperado:parseFloat(g('percentualEsperado'))||0,percentualConcluido:parseFloat(g('percentualConcluido'))||0,
       predecessora:_predTextoParaCanon(g('predecessora')||''),tarefaPai:g('tarefaPai')||'',grupo:g('grupo')||'',local:g('local')||'',
+      frenteServico:g('frenteServico')||'',
       custo:parseFloat(g('custo'))||0,receita:parseFloat(g('receita'))||0,responsavel:g('responsavel')||'',
       quantidade:parseFloat(g('quantidade'))||0,unidade:g('unidade')||'',
       inicioPlanejadoBase:g('inicioPlanejadoBase')||'',terminoPlanejadoBase:g('terminoPlanejadoBase')||'',
@@ -2882,7 +2883,7 @@ const Planejamento = (() => {
       percEsp:['esperado','% esperado'],percConc:['concluido','% concluido','% complete'],
       pred:['predecessora','predecessor','prececessora'],pai:['tarefa pai','parent'],grupo:['grupo','group'],
       local:['local','location'],custo:['custo','cost'],receita:['receita','revenue'],
-      resp:['responsavel','responsible','resource'],iniB:['inicio linha de base'],terB:['termino linha de base'],
+      resp:['responsavel','responsible','resource'],frente:['frente','frente de servico','equipe'],iniB:['inicio linha de base'],terB:['termino linha de base'],
       iniD:['inicio desafio'],terD:['termino desafio'],iniReal:['inicio real'],terReal:['termino real']};
       for(const al of(a[n]||[])){const i=hdrs.indexOf(al);if(i>=0)return i;}return-1;};
     const iN=ci('nome');
@@ -2927,7 +2928,7 @@ const Planejamento = (() => {
           percentualConcluido:_pN(row[ci('percConc')]),
           tarefaPai:String(row[ci('pai')]||'').trim(),grupo:String(row[ci('grupo')]||'').trim(),
           local:String(row[ci('local')]||'').trim(),custo:_pN(row[ci('custo')]),receita:_pN(row[ci('receita')]),
-          responsavel:String(row[ci('resp')]||'').trim(),inicioPlanejadoBase:_pd(row[ci('iniB')]),
+          responsavel:String(row[ci('resp')]||'').trim(),frenteServico:String(row[ci('frente')]||'').trim().toUpperCase(),inicioPlanejadoBase:_pd(row[ci('iniB')]),
           terminoPlanejadoBase:_pd(row[ci('terB')]),inicioDesafio:_pd(row[ci('iniD')]),
           terminoDesafio:_pd(row[ci('terD')]),obraId});
       }
@@ -2981,6 +2982,7 @@ const Planejamento = (() => {
     {id:'terminoPlanejado',label:'Término Planejado',col:'termino'},
     {id:'duracao',label:'Duração',col:'duracao'},
     {id:'responsavel',label:'Responsável',col:'resp'},
+    {id:'frenteServico',label:'Frente de Serviço',col:'frente'},
     {id:'predecessora',label:'Predecessora',col:'pred'},
     {id:'custo',label:'Custo',col:'custo'},
     {id:'receita',label:'Receita',col:'receita'},
@@ -3031,7 +3033,7 @@ const Planejamento = (() => {
       porNome.get(chave).push(t);
     }
     const COL_MAP={inicioReal:'iniReal',terminoReal:'terReal',percentualConcluido:'percConc',percentualEsperado:'percEsp',
-      inicioPlanejado:'inicio',terminoPlanejado:'termino',duracao:'duracao',responsavel:'resp',predecessora:'pred',
+      inicioPlanejado:'inicio',terminoPlanejado:'termino',duracao:'duracao',responsavel:'resp',frenteServico:'frente',predecessora:'pred',
       custo:'custo',receita:'receita'};
     const DATE_FIELDS=new Set(['inicioReal','terminoReal','inicioPlanejado','terminoPlanejado']);
     const NUM_FIELDS=new Set(['percentualConcluido','percentualEsperado','custo','receita','duracao']);
@@ -3162,7 +3164,7 @@ const Planejamento = (() => {
         percEsp:['esperado','% esperado'],percConc:['concluido','% concluido','% complete'],
         pred:['predecessora','predecessor','prececessora'],pai:['tarefa pai','parent'],grupo:['grupo','group'],
         local:['local','location'],custo:['custo','cost'],receita:['receita','revenue'],
-        resp:['responsavel','responsible','resource'],iniB:['inicio linha de base'],terB:['termino linha de base'],
+        resp:['responsavel','responsible','resource'],frente:['frente','frente de servico','equipe'],iniB:['inicio linha de base'],terB:['termino linha de base'],
         iniD:['inicio desafio'],terD:['termino desafio']};
         for(const al of(a[n]||[])){const i=hdrs.indexOf(al);if(i>=0)return i;}return-1;};
       const iN=ci('nome');if(iN<0){Utils.toast('Coluna Nome não encontrada.','erro');return;}
@@ -3193,7 +3195,7 @@ const Planejamento = (() => {
           percentualConcluido:_pN(row[ci('percConc')]),
           tarefaPai:String(row[ci('pai')]||'').trim(),grupo:String(row[ci('grupo')]||'').trim(),
           local:String(row[ci('local')]||'').trim(),custo:_pN(row[ci('custo')]),receita:_pN(row[ci('receita')]),
-          responsavel:String(row[ci('resp')]||'').trim(),inicioPlanejadoBase:_pd(row[ci('iniB')]),
+          responsavel:String(row[ci('resp')]||'').trim(),frenteServico:String(row[ci('frente')]||'').trim().toUpperCase(),inicioPlanejadoBase:_pd(row[ci('iniB')]),
           terminoPlanejadoBase:_pd(row[ci('terB')]),inicioDesafio:_pd(row[ci('iniD')]),
           terminoDesafio:_pd(row[ci('terD')]),obraId});
       }
@@ -4107,17 +4109,17 @@ const Planejamento = (() => {
     try{Utils.mostrarLoading('Gerando...');
       if(typeof XLSX==='undefined')await _ls('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');
       const H=['ID','Código','Nível','Nome','Duração','Início','Término','% Esperado','% Concluído',
-        'Prececessora','Tarefa Pai','Grupo','Local','Custo','Receita','Responsável',
+        'Prececessora','Tarefa Pai','Grupo','Local','Frente','Custo','Receita','Responsável',
         'Inicio Linha de Base','Termino Linha de Base','Inicio Desafio','Termino Desafio'];
       const sorted=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
       const rows=sorted.map((t,i)=>[i+1,t.codigo||'',t.nivel||0,'  '.repeat(t.nivel||0)+(t.nome||''),
         t.duracao?t.duracao+'d':'',_fBR(t.inicioPlanejado),_fBR(t.terminoPlanejado),
         _percEsp(t),t.percentualConcluido||0,t._predDisplay||'',t.tarefaPai||'',
-        t.grupo||'',t.local||'',t.custo||0,t.receita||0,t.responsavel||'',
+        t.grupo||'',t.local||'',t.frenteServico||'',t.custo||0,t.receita||0,t.responsavel||'',
         _fBR(t.inicioPlanejadoBase),_fBR(t.terminoPlanejadoBase),_fBR(t.inicioDesafio),_fBR(t.terminoDesafio)]);
       const ws=XLSX.utils.aoa_to_sheet([H,...rows]);
       ws['!cols']=[{wch:6},{wch:10},{wch:7},{wch:45},{wch:8},{wch:13},{wch:13},{wch:11},{wch:11},
-        {wch:13},{wch:20},{wch:18},{wch:15},{wch:10},{wch:10},{wch:18},{wch:22},{wch:22},{wch:15},{wch:15}];
+        {wch:13},{wch:20},{wch:18},{wch:15},{wch:12},{wch:10},{wch:10},{wch:18},{wch:22},{wch:22},{wch:15},{wch:15}];
       const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Cronograma');
       const obra=Router.getObra();
       XLSX.writeFile(wb,`cronograma_${(obra?.nome||'obra').replace(/[^a-z0-9]/gi,'_')}.xlsx`);
@@ -4410,13 +4412,13 @@ const Planejamento = (() => {
       }
       const X=window.XLSX; // xlsx-js-style substitui o global com API compatível
       const sorted=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
-      const H=['#','Nome','Duração','Início','Término','% Esp.','% Conc.','Predecessora','Responsável','Início Real','Término Real'];
+      const H=['#','Nome','Duração','Início','Término','% Esp.','% Conc.','Predecessora','Responsável','Frente','Início Real','Término Real'];
       const rows=sorted.map((t,i)=>[i+1,'    '.repeat(t.nivel||0)+(t.nome||''),
         t.duracao?t.duracao+'d':'',_fBR(t.inicioPlanejado),_fBR(t.terminoPlanejado),
         _percEsp(t)+'%',(t.percentualConcluido||0)+'%',t._predDisplay||'',
-        t.responsavel||'',_fBR(t.inicioReal),_fBR(t.terminoReal)]);
+        t.responsavel||'',t.frenteServico||'',_fBR(t.inicioReal),_fBR(t.terminoReal)]);
       const ws=X.utils.aoa_to_sheet([H,...rows]);
-      ws['!cols']=[{wch:5},{wch:55},{wch:8},{wch:11},{wch:11},{wch:8},{wch:8},{wch:14},{wch:16},{wch:11},{wch:11}];
+      ws['!cols']=[{wch:5},{wch:55},{wch:8},{wch:11},{wch:11},{wch:8},{wch:8},{wch:14},{wch:16},{wch:12},{wch:11},{wch:11}];
       ws['!freeze']={xSplit:0,ySplit:1};
       ws['!autofilter']={ref:X.utils.encode_range({s:{r:0,c:0},e:{r:rows.length,c:H.length-1}})};
 
