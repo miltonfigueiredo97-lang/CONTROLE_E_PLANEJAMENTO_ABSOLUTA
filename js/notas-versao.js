@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.12.0.7',
+  versaoAtual: 'V3.12.0.8',
 
   versoes: [
     {
@@ -8860,6 +8860,18 @@ const NotasVersao = {
         "O ajuste mobile só entrava em ≤640px, mas o celular testado cai numa faixa maior (a mesma em que o sistema já troca a sidebar pelo menu ☰, ≤1024px) — por isso nada parecia ter mudado. Alinhado o breakpoint da Medições com esse mesmo limite (≤1024px) usado no resto do sistema."
       ]
     },
+    {
+      "versao": "V3.12.0.8",
+      "data": "2026-08-18",
+      "tipo": "funcionalidade",
+      "titulo": "Novo módulo: Controle de Porcelanatos (base) — exportador de planilha movido pra lá",
+      "itens": [
+        "Novo em 🏗️ Controle: \"🧱 Controle de Porcelanatos\" — hoje traz o Levantamento de Piso (áreas, tipo, dimensões, m²); a ideia é juntar Piso + Paredes (azulejo) num controle só, com a mesma planilha de exportação. Marcado como \"Em desenvolvimento\".",
+        "O botão \"📊 Exportar Planilha\" (Apartamento/Local/Tipo/Dimensões/M²/M² com perda) saiu do Levantamento de Piso e agora mora só no Controle de Porcelanatos.",
+        "Corrigido de raiz um bug que fazia a planilha sair incompleta (só um apartamento, faltando o resto): o app usa cache offline do Firestore, e o export podia pegar dados velhos do navegador em vez do servidor. Agora essa página sempre busca do SERVIDOR antes de exportar — e tem um botão \"🔄 Recarregar\" pra forçar isso manualmente também.",
+        "O % de perda configurável (padrão 30%) ganhou uma configuração própria deste módulo — herda automaticamente o valor que já estava configurado no Piso, se houver, na primeira vez que abrir."
+      ]
+    }
   ],
 
   render(containerId) {

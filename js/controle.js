@@ -57,6 +57,13 @@ const Controle = (() => {
             <div class="mt-1"><span class="badge badge-sucesso">Disponível</span></div>
           </div>
         </div>
+        <div class="card obra-card" data-perm="controlePorcelanatos:ver" onclick="Router.navegar('controle-porcelanatos.html')">
+          <div class="card-body">
+            <div class="obra-nome">🧱 Controle de Porcelanatos</div>
+            <div class="obra-info text-sm">Junta Piso e Paredes (azulejo) num só lugar — tipos, dimensões, m² e planilha de exportação.</div>
+            <div class="mt-1"><span class="badge badge-alerta">Em desenvolvimento</span></div>
+          </div>
+        </div>
       </div>
     `;
     Permissions.aplicarNaTela();

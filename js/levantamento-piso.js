@@ -34,7 +34,6 @@ const LP = (() => {
   let arvore = [];      // [{id,nome,filhos:[...], plantaId, pagina, escalaMetrosPorPonto, linhaCalibracao}]
   let plantas = [];     // biblioteca de PDFs enviados (pisoPlantas)
   let areas = [];        // todas as áreas medidas (pisoAreas)
-  let pisoConfig = { percentualPerda: 30 }; // % de perda aplicado no "M² com perda" da planilha exportada — editável em ⚙️ Configurações
   let openNodes = new Set();
   let selNodeId = null;  // null = Visão Geral
   let treeColapsada = false;
@@ -133,7 +132,6 @@ const LP = (() => {
         Database.listar(obraId, COL_AREAS, null).catch(() => []),
       ]);
       arvore = (cfgSnap.exists && Array.isArray(cfgSnap.data().arvore)) ? cfgSnap.data().arvore : [];
-      pisoConfig.percentualPerda = (cfgSnap.exists && typeof cfgSnap.data().percentualPerda === 'number') ? cfgSnap.data().percentualPerda : 30;
       plantas = lp; areas = ar;
       if (!_openNodesInicializado) {
         _todosNodeIds(arvore).forEach(id => openNodes.add(id));
@@ -154,49 +152,11 @@ const LP = (() => {
   }
 
   // ══════════════════════════════════════════
-  // CONFIGURAÇÃO — % de perda usado no "M² com perda" da planilha exportada
-  // ══════════════════════════════════════════
-  function abrirConfigPiso() {
-    if (!Permissions.pode('levantamentoPiso', 'editar')) { Utils.toast('Sem permissão para editar configurações.', 'alerta'); return; }
-    document.getElementById('lp-config-percentual-perda').value = pisoConfig.percentualPerda;
-    Utils.abrirModal('modal-lp-config');
-  }
-
-  async function salvarConfigPiso() {
-    if (!Permissions.pode('levantamentoPiso', 'editar')) { Utils.toast('Sem permissão para editar configurações.', 'alerta'); return; }
-    const valor = Utils.parseNum(document.getElementById('lp-config-percentual-perda').value);
-    if (valor < 0 || valor > 100) { Utils.toast('Informe um percentual entre 0 e 100.', 'alerta'); return; }
-    try {
-      Utils.mostrarLoading('Salvando configuração...');
-      await db.collection('obras').doc(obraId).collection('config').doc(CONFIG_DOC).set({ percentualPerda: valor }, { merge: true });
-      pisoConfig.percentualPerda = valor;
-      Utils.fecharModal('modal-lp-config');
-      Utils.toast('Configuração salva!', 'sucesso');
-      renderizar();
-    } catch (e) {
-      console.error('Erro ao salvar configuração de piso:', e);
-      Utils.toast('Erro ao salvar: ' + e.message, 'erro');
-    } finally {
-      Utils.esconderLoading();
-    }
-  }
-
-  // ══════════════════════════════════════════
   // HELPERS GERAIS
   // ══════════════════════════════════════════
   function esc(s) { return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
   function _uid() { return 'n' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
   function fmt2(n) { return (n || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
-
-  // Convenção esperada no campo "Tipo de Piso": "Nome do Piso - AxB" (ex: "Porcelanato Alta Mountain - 90x90").
-  // Separa nome limpo (pra coluna Tipo) e dimensão (pra coluna Dimensões) na exportação.
-  // Registros antigos sem esse padrão (ex: só "Porcelanato 1") voltam com dimensão vazia — não tem como adivinhar.
-  function _separarTipoEDimensao(tipoPiso) {
-    const texto = String(tipoPiso || '').trim();
-    const m = texto.match(/^(.*?)\s*-\s*([\d]+(?:[.,]\d+)?\s*[xX]\s*[\d]+(?:[.,]\d+)?)\s*$/);
-    if (m) return { tipo: m[1].trim(), dimensao: m[2].replace(/\s+/g, '') };
-    return { tipo: texto, dimensao: '' };
-  }
 
   // M² de impermeabilização de UMA área: área toda (se marcado) + rodapé impermeabilizado (se marcado).
   // impermAreaToda !== false -> default true, compat com áreas antigas gravadas antes deste campo existir.
@@ -239,64 +199,6 @@ const LP = (() => {
   function num(v) { const n = parseFloat(String(v).replace(',', '.')); return isNaN(n) ? 0 : n; }
 
   function _ls(src) { return new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = rej; document.head.appendChild(s); }); }
-
-  // ══════════════════════════════════════════
-  // EXPORTAR PLANILHA (XLSX) — uma linha por área, com colunas pensadas pra
-  // linkar/combinar com planilhas de outros programas ou outros levantamentos
-  // (Apartamento + Local + Local-detalhe formam a "chave" de cruzamento).
-  // ══════════════════════════════════════════
-  async function exportarPlanilhaPiso() {
-    if (!Permissions.pode('levantamentoPiso', 'exportar')) { Utils.toast('Sem permissão para exportar.', 'alerta'); return; }
-    if (!areas.length) { Utils.toast('Nenhuma área medida ainda.', 'alerta'); return; }
-    try {
-      Utils.mostrarLoading('Gerando planilha...');
-      if (typeof XLSX === 'undefined') await _ls('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');
-
-      const obra = Router.getObra();
-      const nomeObra = (obra?.nome || 'Obra sem nome').toUpperCase();
-      const dataExp = new Date().toLocaleDateString('pt-BR');
-      const perda = pisoConfig.percentualPerda || 0;
-
-      const H = ['Apartamento', 'Local', 'Local (Nº Parede ou Piso)', 'Tipo de Piso', 'Dimensões do Piso', 'M²', `M² com perda de ${perda}%`];
-      const rows = areas.map(a => {
-        const r = _acharNode(a.nodeId);
-        const apartamento = r ? r.node.nome : '(local removido)';
-        const { tipo, dimensao } = _separarTipoEDimensao(a.tipoPiso);
-        const m2 = a.areaM2 || 0;
-        const m2ComPerda = m2 * (1 + perda / 100);
-        return [apartamento, a.nome || '', 'Piso', tipo, dimensao, m2, m2ComPerda];
-      });
-      rows.sort((a, b) => String(a[0]).localeCompare(String(b[0]), 'pt-BR') || String(a[1]).localeCompare(String(b[1]), 'pt-BR'));
-
-      const totalM2 = rows.reduce((s, r) => s + (r[5] || 0), 0);
-      const totalM2Perda = rows.reduce((s, r) => s + (r[6] || 0), 0);
-      rows.push(['', '', '', '', 'TOTAL GERAL', totalM2, totalM2Perda]);
-
-      const ncols = H.length;
-      const aoa = [[nomeObra], ['Levantamento de Piso — Exportado em ' + dataExp], [], H, ...rows];
-      const ws = XLSX.utils.aoa_to_sheet(aoa);
-      ws['!merges'] = [
-        { s: { r: 0, c: 0 }, e: { r: 0, c: ncols - 1 } },
-        { s: { r: 1, c: 0 }, e: { r: 1, c: ncols - 1 } },
-      ];
-      ws['!rows'] = [{ hpx: 34 }, { hpx: 20 }, { hpx: 8 }];
-      if (ws['A1']) ws['A1'].s = { font: { bold: true, sz: 20 }, alignment: { horizontal: 'center', vertical: 'center' } };
-      if (ws['A2']) ws['A2'].s = { font: { bold: true, sz: 12, color: { rgb: '8a6d00' } }, alignment: { horizontal: 'center' } };
-      ws['!cols'] = [{ wch: 22 }, { wch: 22 }, { wch: 22 }, { wch: 26 }, { wch: 16 }, { wch: 12 }, { wch: 18 }];
-
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, 'Levantamento Piso');
-      const nomeArquivo = `levantamento_piso_${(obra?.nome || 'obra').replace(/[^a-z0-9]/gi, '_')}.xlsx`;
-      XLSX.writeFile(wb, nomeArquivo, { cellStyles: true });
-      Utils.toast('Planilha exportada!', 'sucesso');
-    } catch (e) {
-      console.error('Erro ao exportar planilha de piso:', e);
-      Utils.toast('Erro ao exportar: ' + e.message, 'erro');
-    } finally {
-      Utils.esconderLoading();
-    }
-  }
-
 
   async function _garantirPdfjs() {
     if (typeof pdfjsLib !== 'undefined') return;
@@ -377,10 +279,7 @@ const LP = (() => {
     const el = document.getElementById('lp-content');
     const actions = document.getElementById('lp-header-actions');
     if (!el) return;
-    if (actions) actions.innerHTML = `
-      <button class="btn btn-secundario btn-sm" data-perm="levantamentoPiso:editar" onclick="LP.abrirConfigPiso()" title="Configurar % de perda usado na planilha">⚙️ Config</button>
-      <button class="btn btn-primario btn-sm" data-perm="levantamentoPiso:exportar" onclick="LP.exportarPlanilhaPiso()">📊 Exportar Planilha</button>
-    `;
+    if (actions) actions.innerHTML = '';
     const nodeAtual = selNodeId ? _acharNode(selNodeId) : null;
     const emWorkspace = !!(nodeAtual && nodeAtual.node.plantaId);
     el.innerHTML = `
@@ -2377,7 +2276,6 @@ const LP = (() => {
     abrirModalPlanta, enviarPlanta, excluirPlanta, vincularPlantaExistente, trocarPlanta,
     toggleModoCalibrar, toggleModoMedir, cancelarDesenho,
     cancelarCalibracao, confirmarCalibracao,
-    exportarPlanilhaPiso, abrirConfigPiso, salvarConfigPiso,
     finalizarPoligono, editarArea, onToggleImperm, onToggleImpermRodape, aplicarPresetAlturaRodape, onAlturaRodapeInput, fecharModalArea, salvarArea, excluirAreaEmEdicao, moverArea,
     abrirSelecaoParedesImperm, confirmarParedesImperm,
     incluirParedeImperm, dividirParedeImperm, removerParteImperm, toggleParteImperm, editarComprimentoParteImperm, mudarAlturaParteImperm, alternarAlturaCustomImperm,

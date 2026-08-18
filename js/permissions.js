@@ -14,7 +14,7 @@ const Permissions = (() => {
 
     planejamento:        { label: 'Planejamento',                   categoria: 'Produção', acoes: ['ver','criar','editar','excluir','importar','exportar'] },
     levantamentoFachada: { label: 'Levantamento — Fachada',         categoria: 'Produção', acoes: ['ver','criar','editar','excluir','exportar'] },
-    levantamentoPiso:    { label: 'Levantamento — Piso',            categoria: 'Produção', acoes: ['ver','criar','editar','excluir','exportar'] },
+    levantamentoPiso:    { label: 'Levantamento — Piso',            categoria: 'Produção', acoes: ['ver','criar','editar','excluir'] },
     levantamentoTeto:    { label: 'Levantamento — Teto',            categoria: 'Produção', acoes: ['ver','criar','editar','excluir'] },
     levantamentoParedes: { label: 'Levantamento — Paredes',         categoria: 'Produção', acoes: ['ver','criar','editar','excluir'] },
     levantamentoConcreto:{ label: 'Levantamento — Concreto',        categoria: 'Produção', acoes: ['ver','criar','editar','excluir'] },
@@ -26,6 +26,7 @@ const Permissions = (() => {
     controleSolo:        { label: 'Controle — Solo Grampeado',      categoria: 'Produção', acoes: ['ver','criar','editar','excluir'] },
     controleTerra:       { label: 'Controle — Terraplanagem',       categoria: 'Produção', acoes: ['ver','criar','editar','excluir','importar','exportar','limpar'] },
     controleEstacas:     { label: 'Controle — Estacas e Fundações', categoria: 'Produção', acoes: ['ver','criar','editar','excluir'] },
+    controlePorcelanatos:{ label: 'Controle — Porcelanatos',        categoria: 'Produção', acoes: ['ver','criar','editar','excluir','exportar'] },
     producao:            { label: 'Produção',                       categoria: 'Produção', acoes: ['ver','criar','editar','excluir'] },
 
     restricoes:          { label: 'Restrições',                     categoria: 'Gestão', acoes: ['ver','criar','editar','excluir'] },
@@ -71,6 +72,7 @@ const Permissions = (() => {
     'controle-solo-grampeado': 'controleSolo',
     'controle-terraplanagem': 'controleTerra',
     'controle-estacas': 'controleEstacas',
+    'controle-porcelanatos': 'controlePorcelanatos',
     'producao': 'producao',
     'restricoes': 'restricoes',
     'semanal': 'semanal',
@@ -178,7 +180,7 @@ const Permissions = (() => {
   const HUBS = {
     levantamento: ['levantamentoFachada','levantamentoPiso','levantamentoTeto','levantamentoParedes',
                    'levantamentoConcreto','levantamentoAr','levantamentoPintura','levantamentoSolo','levantamentoTerra'],
-    controle: ['controleConcreto','controleSolo','controleTerra','controleEstacas'],
+    controle: ['controleConcreto','controleSolo','controleTerra','controleEstacas','controlePorcelanatos'],
   };
 
   function podeHub(hub) {
