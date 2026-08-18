@@ -1,13 +1,15 @@
 // ============================================
 // Módulo de Permissões
 // Controle de acesso por módulo/ação + acesso por obra
-// V2.58.0
+// Desde V3.14: permissões podem ser configuradas por obra individualmente
+// quando o acesso do usuário é "Restrito" (em vez de um conjunto único
+// valendo pra todas as obras liberadas pra ele).
 // ============================================
 
 const Permissions = (() => {
 
   // Catálogo central de módulos do sistema.
-  // acoes disponíveis: ver, criar, editar, excluir, exportar, importar, convidar
+  // acoes disponíveis: ver, criar, editar, excluir, exportar, importar, convidar, limpar
   const MODULOS = {
     obras:               { label: 'Obras (criar/editar)',            categoria: 'Principal', acoes: ['criar','editar'] },
     dashboard:           { label: 'Dashboard',                      categoria: 'Principal', acoes: ['ver'] },
@@ -47,6 +49,13 @@ const Permissions = (() => {
     diagnostico:         { label: 'Diagnóstico Técnico',            categoria: 'Sistema', acoes: ['ver'] },
     admin:               { label: 'Administração / Permissões',     categoria: 'Sistema', acoes: ['ver','convidar','editar','excluir'] },
   };
+
+  // Módulos GLOBAIS: não pertencem a uma obra específica, então nunca têm
+  // configuração por-obra — um conjunto único vale sempre, independente de
+  // "Todas/Restrito". Todo o resto do catálogo é "obra-escopado": quando o
+  // acesso do usuário é Restrito, cada obra da lista pode ter seu próprio
+  // conjunto de permissões pra esses módulos.
+  const GLOBAL_MODULOS = ['obras', 'admin'];
 
   const ACAO_LABEL = {
     ver: 'Ver', criar: 'Criar', editar: 'Editar', excluir: 'Excluir',
@@ -91,10 +100,13 @@ const Permissions = (() => {
     'admin-permissoes': 'admin',
   };
 
-  let permissoes = {};   // modulos do usuário atual
-  let perfil = null;     // 'admin' | 'usuario'
+  let permissoesGlobais = {};  // módulos GLOBAL_MODULOS (obras, admin) — um conjunto só
+  let permissoesTodas = {};    // módulos obra-escopados, usado quando acessoObras==='todas'
+                                // e também como fallback pra obra restrita sem config própria
+  let permissoesPorObra = {};  // { obraId: {modulos} } — usado quando acessoObras==='restrito'
+  let perfil = null;           // 'admin' | 'usuario'
   let ativo = true;
-  let acessoObras = 'todas'; // 'todas' | [obraId,...]
+  let acessoObras = 'todas';   // 'todas' | [obraId,...]
   let carregado = false;
 
   async function carregar(uid) {
@@ -108,10 +120,16 @@ const Permissions = (() => {
       acessoObras = userDoc?.acessoObras || 'todas';
 
       if (perfil === 'admin') {
-        permissoes = _fullAccess();
+        permissoesGlobais = _fullAccess(GLOBAL_MODULOS);
+        permissoesTodas = _fullAccess(_obraEscopados());
+        permissoesPorObra = {};
       } else {
         const permDoc = await Database.obterRaiz('permissions', uid);
-        permissoes = permDoc?.modulos || {};
+        // Retrocompatibilidade: docs de antes do modelo por-obra só tinham
+        // um `modulos` plano (que misturava tudo, inclusive obras/admin).
+        permissoesGlobais = permDoc?.global || _extrairDoLegado(permDoc?.modulos, GLOBAL_MODULOS);
+        permissoesTodas = permDoc?.modulos || {};
+        permissoesPorObra = permDoc?.porObra || {};
       }
     } catch (e) {
       console.error('Erro ao carregar permissões:', e);
@@ -120,25 +138,59 @@ const Permissions = (() => {
     carregado = true;
   }
 
-  function _resetVazio() {
-    perfil = 'usuario'; ativo = false; acessoObras = 'todas'; permissoes = {};
+  function _extrairDoLegado(modulosPlano, chaves) {
+    const out = {};
+    chaves.forEach(k => { if (modulosPlano?.[k]) out[k] = modulosPlano[k]; });
+    return out;
   }
 
-  function _fullAccess() {
+  function _obraEscopados() {
+    return Object.keys(MODULOS).filter(k => !GLOBAL_MODULOS.includes(k));
+  }
+
+  function _resetVazio() {
+    perfil = 'usuario'; ativo = false; acessoObras = 'todas';
+    permissoesGlobais = {}; permissoesTodas = {}; permissoesPorObra = {};
+  }
+
+  function _fullAccess(chaves) {
     const access = {};
-    Object.entries(MODULOS).forEach(([key, mod]) => {
+    chaves.forEach(key => {
       access[key] = {};
-      mod.acoes.forEach(a => access[key][a] = true);
+      (MODULOS[key]?.acoes || []).forEach(a => access[key][a] = true);
     });
     return access;
   }
 
-  // Template para usuário novo: nada liberado além do Dashboard.
+  // Módulos obra-escopados aplicáveis à obra atualmente selecionada (ou ao
+  // conjunto único, se o acesso do usuário for "Todas as obras"). Se o
+  // acesso é "Restrito" e a obra ativa ainda não tem configuração própria,
+  // cai no conjunto "modulos" (permissoesTodas) como padrão — assim nenhuma
+  // obra fica sem nada só porque ainda não foi configurada individualmente.
+  function _modulosDaObraAtiva() {
+    if (acessoObras === 'todas') return permissoesTodas;
+    const obraId = (typeof Router !== 'undefined' && Router.getObraId) ? Router.getObraId() : null;
+    if (obraId && permissoesPorObra[obraId]) return permissoesPorObra[obraId];
+    return permissoesTodas;
+  }
+
+  // Template para usuário novo: nada liberado além do Dashboard (nos
+  // módulos obra-escopados). Usado tanto no conjunto "Todas" quanto como
+  // ponto de partida ao configurar uma obra nova dentro do "Restrito".
   function templateVazio() {
     const modulos = {};
-    Object.entries(MODULOS).forEach(([key, mod]) => {
+    _obraEscopados().forEach(key => {
       modulos[key] = {};
-      mod.acoes.forEach(a => modulos[key][a] = (key === 'dashboard' && a === 'ver'));
+      (MODULOS[key].acoes || []).forEach(a => modulos[key][a] = (key === 'dashboard' && a === 'ver'));
+    });
+    return modulos;
+  }
+
+  function templateVazioGlobal() {
+    const modulos = {};
+    GLOBAL_MODULOS.forEach(key => {
+      modulos[key] = {};
+      (MODULOS[key].acoes || []).forEach(a => modulos[key][a] = false);
     });
     return modulos;
   }
@@ -146,7 +198,8 @@ const Permissions = (() => {
   function pode(modulo, acao = 'ver') {
     if (perfil === 'admin') return true;
     if (!ativo) return false;
-    return !!(permissoes[modulo] && permissoes[modulo][acao] === true);
+    const modulos = GLOBAL_MODULOS.includes(modulo) ? permissoesGlobais : _modulosDaObraAtiva();
+    return !!(modulos[modulo] && modulos[modulo][acao] === true);
   }
 
   function podeAcessarObra(obraId) {
@@ -161,7 +214,8 @@ const Permissions = (() => {
   function getAcessoObras() { return acessoObras; }
 
   // Gate de página: chamado pelo Utils.initPagina(). Retorna false e já
-  // redireciona se a página atual exigir um módulo que o usuário não tem.
+  // redireciona se a página atual exigir um módulo que o usuário não tem
+  // (considerando a obra ativa, se o módulo for obra-escopado).
   function bloquearPaginaSemAcesso() {
     if (!ativo) {
       Auth.logout();
@@ -178,7 +232,7 @@ const Permissions = (() => {
 
   // Links de menu que são "hub" de vários módulos (o próprio hub não é um
   // módulo com permissão própria — ele deve aparecer se o usuário tiver
-  // "ver" em QUALQUER um dos módulos que ele agrupa).
+  // "ver" em QUALQUER um dos módulos que ele agrupa, na obra ativa).
   const HUBS = {
     levantamento: ['levantamentoFachada','levantamentoPiso','levantamentoTeto','levantamentoParedes',
                    'levantamentoConcreto','levantamentoAr','levantamentoPintura','levantamentoSolo','levantamentoTerra'],
@@ -190,11 +244,12 @@ const Permissions = (() => {
   }
 
   // Esconde qualquer elemento marcado com data-perm="modulo:acao" se o
-  // usuário não tiver a permissão, e data-perm-hub="levantamento|controle"
-  // se ele não tiver "ver" em nenhum módulo daquele grupo. Depois, esconde
-  // os títulos de categoria da sidebar (Gestão, Custos...) que ficaram sem
-  // nenhum link visível embaixo. Chamar depois de renderizar botões
-  // dinâmicos de cada módulo.
+  // usuário não tiver a permissão (na obra ativa, se aplicável), e
+  // data-perm-hub="levantamento|controle" se ele não tiver "ver" em nenhum
+  // módulo daquele grupo. Depois, esconde os títulos de categoria da
+  // sidebar (Gestão, Custos...) que ficaram sem nenhum link visível
+  // embaixo. Chamar depois de renderizar botões dinâmicos de cada módulo,
+  // e de novo sempre que a obra ativa mudar (Router troca a obra).
   function aplicarNaTela(root = document) {
     root.querySelectorAll('[data-perm]').forEach(el => {
       const [modulo, acao] = el.dataset.perm.split(':');
@@ -221,12 +276,17 @@ const Permissions = (() => {
     });
   }
 
-  async function salvarPermissoesUsuario(uid, modulos, acessoObrasNovo) {
-    // set(merge:true) em vez de atualizarRaiz (.update()): usuários criados antes
-    // do V2.58 (ex: admin/chefe originais) ainda não têm doc em permissions/{uid} —
-    // .update() falharia com "No document to update". set+merge cria se não existir.
+  // Grava as permissões de um usuário.
+  // - global: {obras:{...}, admin:{...}} — sempre um conjunto único
+  // - modulos: módulos obra-escopados usados quando acessoObrasNovo==='todas'
+  //   (e como fallback de qualquer obra restrita ainda sem config própria)
+  // - porObra: { [obraId]: modulos } — só relevante quando acessoObrasNovo
+  //   é uma lista (Restrito); obras fora da lista são ignoradas/removidas
+  async function salvarPermissoesUsuario(uid, { global, modulos, porObra }, acessoObrasNovo) {
     await db.collection('permissions').doc(uid).set({
-      modulos,
+      global: global || {},
+      modulos: modulos || {},
+      porObra: porObra || {},
       atualizadoPor: Auth.getUid(),
       atualizadoEm: firebase.firestore.FieldValue.serverTimestamp(),
     }, { merge: true });
@@ -235,12 +295,17 @@ const Permissions = (() => {
       updatedBy: Auth.getUid(),
       updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
     }, { merge: true });
-    if (uid === Auth.getUid()) { permissoes = modulos; acessoObras = acessoObrasNovo; }
+    if (uid === Auth.getUid()) {
+      permissoesGlobais = global || {};
+      permissoesTodas = modulos || {};
+      permissoesPorObra = porObra || {};
+      acessoObras = acessoObrasNovo;
+    }
   }
 
   return {
-    MODULOS, ACAO_LABEL,
+    MODULOS, ACAO_LABEL, GLOBAL_MODULOS,
     carregar, pode, podeHub, podeAcessarObra, isAtivo, isAdminAtual, getAcessoObras,
-    bloquearPaginaSemAcesso, aplicarNaTela, templateVazio, salvarPermissoesUsuario,
+    bloquearPaginaSemAcesso, aplicarNaTela, templateVazio, templateVazioGlobal, salvarPermissoesUsuario,
   };
 })();

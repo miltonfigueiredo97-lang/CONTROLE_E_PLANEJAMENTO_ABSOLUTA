@@ -1,12 +1,20 @@
 // ============================================
 // Módulo: Admin de Permissões
 // Convite de usuários + controle de acesso por módulo/obra
+// Desde V3.14: quando o acesso é "Restrito", cada obra da lista pode ter
+// um conjunto de permissões próprio (abas dentro do modal).
 // ============================================
 
 const AdminPermissoes = (() => {
   let usuarios = [];
   let obras = [];
-  let permissoesPorUid = {}; // cache uid -> modulos
+  let permissoesPorUid = {}; // cache uid -> {global, modulos, porObra} (doc completo)
+
+  // Estado do modal em edição (transitório — só existe com o modal aberto)
+  let _modalPorObra = {};          // {obraId: modulos} das abas já visitadas nesta sessão de edição
+  let _modalModulosFallback = {};  // "modulos" legado — usado quando Todas, e mantido como
+                                    // fallback (sem tocar) quando Restrito
+  let _modalObraAtiva = null;      // obraId da aba visível agora (null = modo "Todas")
 
   async function init() {
     const ok = await Utils.initPagina();
@@ -80,29 +88,32 @@ const AdminPermissoes = (() => {
     </tr>`;
   }
 
-  // ---- Modal ----
+  // ---- Modal: checklist de módulos (obra-escopados) ----
 
-  function _renderChecklist(modulosSelecionados) {
-    const cont = document.getElementById('permissoes-categorias');
-    const categorias = {};
-    Object.entries(Permissions.MODULOS).forEach(([key, mod]) => {
-      (categorias[mod.categoria] = categorias[mod.categoria] || []).push({ key, ...mod });
-    });
-
-    const NUM_COLUNAS = 4;
-
-    const _htmlModulo = (m) => `
+  function _htmlModulo(m) {
+    return `
       <div style="border:1px solid var(--cor-borda-light);border-radius:6px;padding:9px 12px;">
         <div style="font-weight:700;font-size:.82rem;margin-bottom:6px;color:var(--cor-texto);">${m.label}</div>
         <div style="display:grid;grid-template-columns:max-content max-content;gap:7px 20px;justify-content:start;">
           ${m.acoes.map(a => `
             <label class="form-check" style="font-size:.8rem;white-space:nowrap;">
               <input type="checkbox" data-modulo="${m.key}" data-acao="${a}"
-                ${modulosSelecionados?.[m.key]?.[a] ? 'checked' : ''}>
+                ${m._sel?.[m.key]?.[a] ? 'checked' : ''}>
               ${Permissions.ACAO_LABEL[a] || a}
             </label>`).join('')}
         </div>
       </div>`;
+  }
+
+  function _renderChecklist(modulosSelecionados) {
+    const cont = document.getElementById('permissoes-categorias');
+    const categorias = {};
+    Object.entries(Permissions.MODULOS).forEach(([key, mod]) => {
+      if (Permissions.GLOBAL_MODULOS.includes(key)) return; // globais têm seção própria
+      (categorias[mod.categoria] = categorias[mod.categoria] || []).push({ key, ...mod, _sel: modulosSelecionados });
+    });
+
+    const NUM_COLUNAS = 4;
 
     // Um grid único pra tudo: cada módulo é uma célula normal (flui em ordem,
     // esquerda->direita, quebrando linha automaticamente). O título de cada
@@ -113,24 +124,127 @@ const AdminPermissoes = (() => {
     cont.innerHTML = `<div style="display:grid;grid-template-columns:repeat(${NUM_COLUNAS},1fr);gap:18px 24px;">
       ${Object.entries(categorias).map(([categoria, mods]) => `
         <div style="grid-column:1/-1;padding:${categoria === Object.keys(categorias)[0] ? '0' : '14px'} 0 2px;font-size:.98rem;font-weight:800;color:var(--cor-texto);text-transform:uppercase;letter-spacing:.5px;">${categoria}</div>
-        ${mods.map(_htmlModulo).join('')}
+        ${mods.map(m => _htmlModulo(m)).join('')}
       `).join('')}
     </div>`;
   }
+
+  // ---- Modal: checklist de módulos GLOBAIS (Obras, Admin — não dependem de obra) ----
+
+  function _renderGlobais(globalSelecionado) {
+    const cont = document.getElementById('permissoes-globais');
+    const mods = Permissions.GLOBAL_MODULOS.map(key => ({ key, ...Permissions.MODULOS[key] }));
+    cont.innerHTML = `<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px 24px;">
+      ${mods.map(m => `
+        <div style="border:1px solid var(--cor-borda-light);border-radius:6px;padding:9px 12px;">
+          <div style="font-weight:700;font-size:.82rem;margin-bottom:6px;color:var(--cor-texto);">${m.label}</div>
+          <div style="display:grid;grid-template-columns:max-content max-content;gap:7px 20px;justify-content:start;">
+            ${m.acoes.map(a => `
+              <label class="form-check" style="font-size:.8rem;white-space:nowrap;">
+                <input type="checkbox" data-global-modulo="${m.key}" data-global-acao="${a}"
+                  ${globalSelecionado?.[m.key]?.[a] ? 'checked' : ''}>
+                ${Permissions.ACAO_LABEL[a] || a}
+              </label>`).join('')}
+          </div>
+        </div>`).join('')}
+    </div>`;
+  }
+
+  function _coletarModulosGlobaisDoForm() {
+    const modulos = {};
+    document.querySelectorAll('#permissoes-globais input[type="checkbox"]').forEach(chk => {
+      const modulo = chk.dataset.globalModulo, acao = chk.dataset.globalAcao;
+      modulos[modulo] = modulos[modulo] || {};
+      modulos[modulo][acao] = chk.checked;
+    });
+    return modulos;
+  }
+
+  // ---- Modal: acesso por obra + abas de permissão por obra (Restrito) ----
 
   function _renderObrasRestrito(selecionadas) {
     const cont = document.getElementById('lista-obras-restrito');
     const sel = Array.isArray(selecionadas) ? selecionadas : [];
     cont.innerHTML = obras.map(o => `
       <label class="form-check">
-        <input type="checkbox" class="chk-obra-restrita" value="${o.id}" ${sel.includes(o.id) ? 'checked' : ''}>
+        <input type="checkbox" class="chk-obra-restrita" value="${o.id}" ${sel.includes(o.id) ? 'checked' : ''}
+          onchange="AdminPermissoes._onObraRestritaMudou()">
         ${o.nome}
       </label>`).join('') || '<span class="text-muted text-sm">Nenhuma obra cadastrada.</span>';
+  }
+
+  function _obraNome(obraId) {
+    return obras.find(o => o.id === obraId)?.nome || '(obra removida)';
+  }
+
+  function _onObraRestritaMudou() {
+    // Comita a aba visível antes de recalcular a lista de abas (senão perde
+    // o que estava sendo editado quando uma obra é marcada/desmarcada).
+    if (_modalObraAtiva) _modalPorObra[_modalObraAtiva] = _coletarModulosDoForm();
+    _renderAbasObra();
+  }
+
+  function _renderAbasObra() {
+    const idsSelecionados = Array.from(document.querySelectorAll('.chk-obra-restrita:checked')).map(c => c.value);
+    const cont = document.getElementById('abas-obra-restrito');
+
+    if (!idsSelecionados.length) {
+      cont.innerHTML = '<span class="text-sm text-muted">Marque ao menos uma obra acima pra configurar as permissões dela.</span>';
+      _modalObraAtiva = null;
+      _renderChecklist({});
+      return;
+    }
+
+    // Se a aba ativa saiu da lista (obra desmarcada), ou nunca foi definida,
+    // cai pra primeira obra da lista.
+    if (!_modalObraAtiva || !idsSelecionados.includes(_modalObraAtiva)) {
+      _modalObraAtiva = idsSelecionados[0];
+    }
+
+    cont.innerHTML = idsSelecionados.map(id => `
+      <button type="button" class="btn btn-sm ${id === _modalObraAtiva ? 'btn-primario' : 'btn-secundario'}"
+        onclick="AdminPermissoes._trocarAbaObra('${id}')">${_obraNome(id)}</button>
+    `).join('') + `
+      <button type="button" class="btn btn-sm btn-secundario btn-icon" title="Copiar a configuração desta obra pra todas as outras da lista"
+        onclick="AdminPermissoes._copiarAbaParaTodas()" style="margin-left:6px;">📋 Copiar pra todas</button>`;
+
+    _renderChecklist(_modalPorObra[_modalObraAtiva] || Permissions.templateVazio());
+  }
+
+  function _trocarAbaObra(obraId) {
+    if (obraId === _modalObraAtiva) return;
+    if (_modalObraAtiva) _modalPorObra[_modalObraAtiva] = _coletarModulosDoForm();
+    _modalObraAtiva = obraId;
+    _renderAbasObra();
+  }
+
+  function _copiarAbaParaTodas() {
+    if (!_modalObraAtiva) return;
+    const idsSelecionados = Array.from(document.querySelectorAll('.chk-obra-restrita:checked')).map(c => c.value);
+    const atual = _coletarModulosDoForm();
+    _modalPorObra[_modalObraAtiva] = atual;
+    idsSelecionados.forEach(id => { _modalPorObra[id] = JSON.parse(JSON.stringify(atual)); });
+    Utils.toast(`Configuração copiada pra ${idsSelecionados.length} obra(s).`, 'sucesso');
+    _renderAbasObra();
   }
 
   function _toggleObraTipo() {
     const restrito = document.querySelector('input[name="acesso-obra-tipo"]:checked').value === 'restrito';
     document.getElementById('lista-obras-restrito').classList.toggle('hidden', !restrito);
+    document.getElementById('abas-obra-restrito').classList.toggle('hidden', !restrito);
+
+    if (restrito) {
+      _renderAbasObra();
+    } else {
+      // Comita a aba visível (se vinha de Restrito) antes de voltar pro
+      // checklist único — mantém o trabalho já feito na obra ativa como
+      // ponto de partida do conjunto "Todas".
+      if (_modalObraAtiva) {
+        _modalModulosFallback = _coletarModulosDoForm();
+        _modalObraAtiva = null;
+      }
+      _renderChecklist(_modalModulosFallback);
+    }
   }
 
   function abrirConvite() {
@@ -144,9 +258,13 @@ const AdminPermissoes = (() => {
     document.querySelector('input[name="acesso-obra-tipo"][value="todas"]').checked = true;
     document.getElementById('btn-salvar-usuario').textContent = 'Enviar convite';
 
+    _modalPorObra = {};
+    _modalModulosFallback = Permissions.templateVazio();
+    _modalObraAtiva = null;
+
     _renderObrasRestrito([]);
+    _renderGlobais(Permissions.templateVazioGlobal());
     _toggleObraTipo();
-    _renderChecklist(Permissions.templateVazio());
     _bindEventosModal();
     Utils.abrirModal('modal-usuario');
   }
@@ -166,18 +284,20 @@ const AdminPermissoes = (() => {
     document.getElementById('form-usuario-perfil').value = u.perfil || 'usuario';
     document.getElementById('btn-salvar-usuario').textContent = 'Salvar alterações';
 
+    let doc = permissoesPorUid[uid];
+    if (!doc) {
+      doc = await Database.obterRaiz('permissions', uid) || {};
+      permissoesPorUid[uid] = doc;
+    }
+    _modalModulosFallback = doc.modulos || Permissions.templateVazio();
+    _modalPorObra = JSON.parse(JSON.stringify(doc.porObra || {}));
+    _modalObraAtiva = null;
+
     const restrito = Array.isArray(u.acessoObras);
     document.querySelector(`input[name="acesso-obra-tipo"][value="${restrito ? 'restrito' : 'todas'}"]`).checked = true;
     _renderObrasRestrito(restrito ? u.acessoObras : []);
+    _renderGlobais(doc.global || Permissions.templateVazioGlobal());
     _toggleObraTipo();
-
-    let modulos = permissoesPorUid[uid];
-    if (!modulos) {
-      const doc = await Database.obterRaiz('permissions', uid);
-      modulos = doc?.modulos || Permissions.templateVazio();
-      permissoesPorUid[uid] = modulos;
-    }
-    _renderChecklist(modulos);
     _bindEventosModal();
     Utils.abrirModal('modal-usuario');
   }
@@ -209,8 +329,21 @@ const AdminPermissoes = (() => {
     const nome = document.getElementById('form-usuario-nome').value.trim();
     const email = document.getElementById('form-usuario-email').value.trim();
     const perfil = document.getElementById('form-usuario-perfil').value;
-    const modulos = _coletarModulosDoForm();
+    const global = _coletarModulosGlobaisDoForm();
     const acessoObras = _coletarAcessoObras();
+
+    // Monta modulos/porObra a partir do estado atual (comitando a aba
+    // visível agora, se estiver em modo Restrito).
+    let modulos, porObra;
+    if (Array.isArray(acessoObras)) {
+      if (_modalObraAtiva) _modalPorObra[_modalObraAtiva] = _coletarModulosDoForm();
+      porObra = {};
+      acessoObras.forEach(id => { porObra[id] = _modalPorObra[id] || Permissions.templateVazio(); });
+      modulos = _modalModulosFallback; // mantém o fallback antigo intacto
+    } else {
+      modulos = _coletarModulosDoForm();
+      porObra = {};
+    }
 
     const btn = document.getElementById('btn-salvar-usuario');
     btn.disabled = true;
@@ -227,16 +360,16 @@ const AdminPermissoes = (() => {
           await _dispararEmailSenha(email);
         }
 
-        await Permissions.salvarPermissoesUsuario(uid, modulos, acessoObras);
+        await Permissions.salvarPermissoesUsuario(uid, { global, modulos, porObra }, acessoObras);
         if (perfil !== usuarioAtual?.perfil) {
           await Database.atualizarRaiz('users', uid, { perfil });
         }
-        permissoesPorUid[uid] = modulos;
+        permissoesPorUid[uid] = { global, modulos, porObra };
         Utils.toast(emailMudou ? 'E-mail corrigido e convite reenviado!' : 'Permissões atualizadas!', 'sucesso');
       } else {
         // Convite de usuário novo
         if (!nome || !email) { Utils.toast('Informe nome e e-mail.', 'alerta'); btn.disabled = false; return; }
-        await _enviarConvite({ nome, email, perfil, acessoObras, modulos });
+        await _enviarConvite({ nome, email, perfil, acessoObras, global, modulos, porObra });
         Utils.toast('Convite enviado! O usuário vai receber um e-mail para definir a senha.', 'sucesso');
       }
       Utils.fecharModal('modal-usuario');
@@ -274,12 +407,12 @@ const AdminPermissoes = (() => {
     }
   }
 
-  async function _enviarConvite({ nome, email, perfil, acessoObras, modulos }) {
+  async function _enviarConvite({ nome, email, perfil, acessoObras, global, modulos, porObra }) {
     const idToken = await Auth.getUser().getIdToken();
     const resp = await fetch('/api/usuarios', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + idToken },
-      body: JSON.stringify({ action: 'convidar', nome, email, perfil, acessoObras, modulos })
+      body: JSON.stringify({ action: 'convidar', nome, email, perfil, acessoObras, global, modulos, porObra })
     });
     const data = await resp.json();
     if (!resp.ok) throw new Error(data.error || 'Erro ao criar usuário.');
@@ -340,6 +473,7 @@ const AdminPermissoes = (() => {
 
   return {
     init, carregar, abrirConvite, abrirEdicao, salvarUsuario,
+    _onObraRestritaMudou, _trocarAbaObra, _copiarAbaParaTodas,
     reenviarAcesso, alternarAtivo, excluirUsuario
   };
 })();

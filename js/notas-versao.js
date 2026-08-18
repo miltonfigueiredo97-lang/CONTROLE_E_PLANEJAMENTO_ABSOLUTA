@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.13.5',
+  versaoAtual: 'V3.14.0.0',
 
   versoes: [
     {
@@ -9037,6 +9037,21 @@ const NotasVersao = {
         "Suprimentos (725 linhas, o maior módulo criado desde a última auditoria) não tinha absolutamente nenhuma checagem de permissão — nem no catálogo, nem guard nas funções, nem data-perm nos botões. Qualquer usuário ativo conseguia configurar seleção, editar prazos e status de qualquer etapa. Corrigido: módulo adicionado ao catálogo (ver/editar), guard em todas as funções de mutação (seleção, config, edição inline de data/status, overrides), inputs inline desabilitados sem permissão.",
         "Diagnóstico (ferramenta técnica de debug do sistema) também não estava no catálogo — criado módulo próprio na categoria Sistema, sem nenhuma permissão padrão (precisa ser liberado manualmente, é uma ferramenta sensível).",
         "Controle — Estacas e Controle — Porcelanatos já estavam com enforcement completo (aplicado corretamente em sessão anterior) — confirmado na auditoria, sem necessidade de correção."
+      ]
+    },
+    {
+      "versao": "V3.14.0.0",
+      "data": "2026-08-18",
+      "tipo": "funcionalidade",
+      "titulo": "Permissões por obra: cada obra da lista \"Restrito\" pode ter um conjunto de acessos diferente",
+      "itens": [
+        "Motivo: até aqui, um usuário com acesso restrito a algumas obras tinha UM conjunto de permissões só, valendo igual em todas elas — pedido do Milton foi separar \"pode entrar na obra\" de \"pode fazer o quê dentro dela\", já que uma pessoa pode editar Planejamento na Obra A e só poder ver na Obra B.",
+        "Na tela de Permissões, quando o acesso é \"Restrito\", aparece uma aba pra cada obra marcada — trocar de aba salva o que estava sendo configurado e mostra a config da obra seguinte (começa com tudo desmarcado, exceto Dashboard). Botão \"📋 Copiar pra todas\" aplica a config da aba atual em todas as obras da lista de uma vez, pra não ter que repetir manualmente.",
+        "Módulos que não pertencem a uma obra específica (Obras, Administração/Permissões) ganharam seção própria \"Permissões gerais\", sempre visível e sempre um conjunto único — não faz sentido ter \"pode criar obra\" diferente por obra.",
+        "Quando o acesso é \"Todas as obras\", nada muda: um checklist só, igual sempre foi.",
+        "Por dentro: Permissions.pode(modulo,acao) agora consulta a obra ATIVA (a que está selecionada no momento, via Router) pra decidir qual conjunto de permissões usar — funciona automaticamente ao trocar de obra pelo seletor da sidebar, sem precisar recarregar a página, porque a maioria dos módulos já troca de obra sem reload (onObraChanged) e pode() lê a obra ativa em tempo real a cada chamada.",
+        "Retrocompatível: usuários restritos configurados antes desta versão continuam funcionando exatamente como antes (a config antiga vira o \"padrão\" que qualquer obra sem configuração própria usa), até o admin entrar e configurar cada obra individualmente se quiser.",
+        "Aproveitando a rodada, o backend do convite (api/usuarios.js) e o gate de página também foram atualizados pra esse novo formato."
       ]
     }
   ],

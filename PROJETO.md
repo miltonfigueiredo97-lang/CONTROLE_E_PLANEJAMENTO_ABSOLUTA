@@ -159,14 +159,17 @@ js/permissions.js   → controle de acesso por perfil
 | Levantamento Terraplanagem | levantamento-terraplanagem.js | ✅ Completo | `terraEntregas`, `terraCaminhoes` |
 | Controle Concreto | controle-concreto.html | 🔧 Em dev | `concretoPecaConc`, `concretoBTs`, `concretoLancamentos` |
 | Controle Solo | controle-solo-grampeado.html | 🔧 Em dev | — |
+| Controle Estacas e Fundações | controle-estacas.js | ✅ Completo | ver arquivo (módulo grande) |
+| Controle Porcelanatos | controle-porcelanatos.js | ✅ Completo | ver arquivo |
 | Produção | producao.html | 🔧 Em dev | — |
 | Dashboard | dashboard.html | ✅ Completo | lê `tarefas` de outras coleções |
 | Configuração de Obra | configuracao-obra.js | ✅ Completo | `obras/{id}` |
 | Restrições | restricoes.html | 🏗 Stub | — |
 | Orçamentos | orcamentos.html | 🏗 Stub | — |
-| Suprimentos | suprimentos.html | 🏗 Stub | — |
+| Suprimentos | suprimentos.js | ✅ Completo | `suprimentos`, `config` (seleção/prazos) |
 | Histograma | histograma.html | 🏗 Stub | — |
 | Admin Permissões | admin-permissoes.js | ✅ Completo | `users`, `permissions` |
+| Diagnóstico Técnico | diagnostico.js | ✅ Completo | leitura — ferramenta de debug, acesso só via Dashboard |
 
 ---
 
@@ -260,39 +263,50 @@ obras/{obraId}/
 
 ---
 
-## 6.1 MÓDULO DE USUÁRIOS E PERMISSÕES (desde V2.58.0)
+## 6.1 MÓDULO DE USUÁRIOS E PERMISSÕES (desde V2.58.0, permissões por obra desde V3.14.0.0)
 
 ### Dados
 ```
 users/{uid}       → { nome, email, perfil:'admin'|'usuario', ativo:bool,
                        status:'convidado'|'ativo'|'desativado',
                        acessoObras:'todas'|[obraId,...] }
-permissions/{uid} → { modulos: { <moduloKey>: {ver,criar,editar,excluir,exportar,importar} } }
+permissions/{uid} → {
+  global:  { obras:{criar,editar}, admin:{ver,convidar,editar,excluir} },  // NÃO depende de obra
+  modulos: { <moduloKey>: {ver,criar,editar,excluir,exportar,importar,...} }, // usado quando acessoObras==='todas', e como FALLBACK de qualquer obra restrita ainda sem config própria
+  porObra: { [obraId]: { <moduloKey>: {...} } }  // usado quando acessoObras==='restrito' — cada obra da lista pode ter permissões diferentes
+}
 ```
 - `perfil:'admin'` = acesso total, ignora `permissions`.
-- Catálogo de módulos e ações fica em `js/permissions.js` → `Permissions.MODULOS` (fonte única — a tela de admin gera os checkboxes a partir daqui).
+- Catálogo de módulos e ações fica em `js/permissions.js` → `Permissions.MODULOS` (fonte única — a tela de admin gera os checkboxes a partir daqui). `Permissions.GLOBAL_MODULOS` (`['obras','admin']`) lista os que NÃO são obra-escopados.
+- `Permissions.pode(modulo, acao)` decide sozinho onde olhar: se o módulo é global, olha `permissoesGlobais`; senão olha a config da OBRA ATIVA (`Router.getObraId()`) — usa `porObra[obraAtiva]` se existir, senão cai no `modulos` (fallback). Isso funciona automaticamente ao trocar de obra pelo seletor da sidebar, sem precisar recarregar nada — a maioria dos módulos troca de obra via `onObraChanged()` (sem reload de página) e `pode()` já lê a obra ativa em tempo real a cada chamada.
 - `Permissions.PAGINA_MODULO` mapeia nome do arquivo HTML → chave do módulo, usado no gate de página. `obras.html`, `login.html`, hubs (`levantamento.html`, `controle.html`) e `notas-versao.html` são propositalmente omitidos (sempre acessíveis a qualquer usuário ativo).
+
+### Tela de admin (`admin-permissoes.html` / `js/admin-permissoes.js`)
+- Seção "Permissões gerais" (Obras, Admin) sempre visível, um conjunto único — não depende de Todas/Restrito.
+- Quando "Restrito": abaixo da lista de obras aparecem ABAS (uma por obra marcada). Trocar de aba comita o checklist visível em memória (`_modalPorObra[obraId]`) antes de mostrar o da obra seguinte. Botão "📋 Copiar pra todas" aplica a config da aba atual em todas as obras marcadas (reduz o trabalho de configurar uma por uma).
+- Quando "Todas": um único checklist (`_modalModulosFallback`), igual ao comportamento anterior à V3.14.
+- Ao salvar: comita a aba visível, monta `porObra` só com as obras marcadas (obra desmarcada é removida do documento), e nunca sobrescreve o `modulos` (fallback) quando o modo é Restrito.
 
 ### Convite de usuário (sem provedor de e-mail externo)
 1. Admin preenche formulário em `admin-permissoes.html` → `js/admin-permissoes.js` chama `POST /api/usuarios` `{action:'convidar', ...}`.
-2. `api/usuarios.js` (Firebase Admin SDK) cria o usuário no Firebase Auth com senha temporária aleatória, `ativo:false`, `status:'convidado'`, e grava `permissions/{uid}`.
-3. Front-end chama `auth.sendPasswordResetEmail(email, {url:.../definir-senha.html})` — o e-mail é disparado **pelo próprio Firebase**, sem SendGrid/Resend.
-4. Usuário abre `definir-senha.html`, define a senha (`confirmPasswordReset` + login automático), o próprio front marca `ativo:true`.
-- **Exige env var `FIREBASE_SERVICE_ACCOUNT_KEY` na Vercel** (JSON da service account do Firebase) — sem ela, `/api/usuarios` falha. Ação manual do Milton — não repetir automaticamente em outra sessão sem confirmar se já foi configurada.
+2. `api/usuarios.js` (Firebase Admin SDK) cria o usuário no Firebase Auth com senha temporária aleatória, `ativo:false`, `status:'convidado'`, e grava `permissions/{uid}` com os três campos (`global`, `modulos`, `porObra`).
+3. Front-end chama `auth.sendPasswordResetEmail(email, {url:.../definir-senha.html})` — o e-mail é disparado **pelo próprio Firebase**, sem SendGrid/Resend. Se o domínio não estiver em Authorized Domains, cai num fallback pro link padrão do Firebase (com aviso na tela).
+4. Usuário abre `definir-senha.html`, define a senha (`confirmPasswordReset` + login automático), o próprio front marca `ativo:true` (com `.set(merge:true)`, nunca `.update()` — usuários pré-V2.58 não tinham doc em `permissions/{uid}`).
+- **Exige env var `FIREBASE_SERVICE_ACCOUNT_KEY` na Vercel** (JSON da service account do Firebase) — sem ela, `/api/usuarios` falha. Já configurada.
 
 ### Enforcement
 - `Utils.initPagina()` chama `Permissions.carregar(uid)` → `Permissions.bloquearPaginaSemAcesso()` antes de renderizar qualquer coisa.
-- Toda função de mutação (criar/editar/excluir/importar/exportar) de todos os módulos com CRUD real checa `Permissions.pode(modulo,acao)` antes de gravar no Firestore — Planejamento, Materiais, Mão de Obra, Diário, Semanal, Medições, Relatórios, os 9 Levantamentos, os 3 Controles, Produção, Configuração de Obra, Backup de Planejamentos. Restrições/Orçamentos/Suprimentos/Histograma são stub, sem nada a proteger ainda.
-- Botões usam `data-perm="modulo:acao"` + `Permissions.aplicarNaTela()` para esconder visualmente — **cobertura completa em todos os 26 módulos reais** (não só os de CRUD simples; os de canvas/mapa como Fachada, Solo Grampeado, etc. também já escondem os botões principais de criar/excluir).
-- Links de menu que são **hubs** (agrupam vários módulos — "Levantamentos", "Controle") usam `data-perm-hub="levantamento"` / `data-perm-hub="controle"` em vez de `data-perm`, já que não são um módulo com permissão própria. `Permissions.podeHub(hub)` (mapa `HUBS` em `permissions.js`) checa se o usuário tem "ver" em pelo menos um dos módulos daquele grupo.
-- `Permissions.aplicarNaTela()` também esconde o título de categoria da sidebar (`.sidebar-section-title`) automaticamente quando nenhum link visível sobra embaixo dela — não precisa de `data-perm` no próprio título, é calculado pela ordem dos elementos no DOM.
-- Vários Levantamentos (Piso, Teto, Paredes, Pintura) salvam a árvore de locais num único ponto (`_salvarArvore()`); o guard foi colocado ali, cobrindo todas as ações do Editor de Estrutura de uma vez, em vez de em cada handler de drag&drop separadamente.
+- Toda função de mutação (criar/editar/excluir/importar/exportar) de todos os módulos com CRUD real checa `Permissions.pode(modulo,acao)` antes de gravar no Firestore — Planejamento, Materiais, Mão de Obra, Diário, Semanal, Medições, Relatórios, os 9 Levantamentos, os 5 Controles (Concreto, Solo, Terraplanagem, Estacas, Porcelanatos), Produção, Suprimentos, Configuração de Obra, Backup de Planejamentos. Restrições/Orçamentos/Histograma/Escadinha/Gantt/Linha-de-Balanço são stub, sem nada a proteger ainda.
+- Botões usam `data-perm="modulo:acao"` + `Permissions.aplicarNaTela()` para esconder visualmente — cobertura completa em todos os módulos reais.
+- Links de menu que são **hubs** (agrupam vários módulos — "Levantamentos", "Controle") usam `data-perm-hub="levantamento"` / `data-perm-hub="controle"` em vez de `data-perm`. `Permissions.podeHub(hub)` (mapa `HUBS` em `permissions.js`) checa se o usuário tem "ver" em pelo menos um dos módulos daquele grupo, na obra ativa.
+- `Permissions.aplicarNaTela()` também esconde o título de categoria da sidebar (`.sidebar-section-title`) automaticamente quando nenhum link visível sobra embaixo dela.
+- Vários Levantamentos salvam a árvore de locais num único ponto (`_salvarArvore()`); o guard foi colocado ali, cobrindo todas as ações do Editor de Estrutura de uma vez.
 - Os hubs (`levantamento.html`, `controle.html`) filtram os cards por `data-perm="modulo:ver"`.
-- `Database.getObras()` continua retornando todas — o filtro por `acessoObras` é feito na camada de chamada (`Router.popularSeletorObras`, `Obras.carregar`), não dentro do Database.
+- `Database.getObras()` continua retornando todas — o filtro por `acessoObras` é feito na camada de chamada (`Router.popularSeletorObras`, `Obras.carregar`).
 
 ### Pendente
-- Alguns botões secundários dentro de popups de canvas (ex: editar posição de um ponto já colocado no mapa) ainda não têm `data-perm` individual — a ação em si já é recusada via guard funcional, só o botão pode aparecer nesses casos específicos e mais internos.
-- Regras de segurança do Firestore ainda são as de desenvolvimento (`allow read, write: if request.auth != null` — ver README). Com dados de permissão agora no Firestore, vale endurecer isso; não foi feito nesta rodada.
+- Auditoria de permissões é um trabalho contínuo: sempre que um módulo novo grande for criado, checar se `Permissions.MODULOS`/`PAGINA_MODULO` foram atualizados e se as funções de mutação têm guard — já aconteceu duas vezes (Suprimentos, e antes disso outros) de um módulo novo nascer sem nenhuma checagem.
+- Regras de segurança do Firestore ainda são as de desenvolvimento (`allow read, write: if request.auth != null` — ver README). Não foi endurecido ainda.
 
 
 ---

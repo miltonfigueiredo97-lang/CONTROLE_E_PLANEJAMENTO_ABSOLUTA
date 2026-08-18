@@ -48,7 +48,7 @@ module.exports = async function handler(req, res) {
     const { action } = req.body || {};
 
     if (action === 'convidar') {
-      const { nome, email, perfil = 'usuario', acessoObras = 'todas', modulos = {} } = req.body;
+      const { nome, email, perfil = 'usuario', acessoObras = 'todas', global = {}, modulos = {}, porObra = {} } = req.body;
       if (!nome || !email) {
         res.status(400).json({ error: 'Nome e e-mail são obrigatórios.' });
         return;
@@ -70,7 +70,7 @@ module.exports = async function handler(req, res) {
         criadoEm: now,
       });
       await admin.firestore().collection('permissions').doc(userRecord.uid).set({
-        modulos,
+        global, modulos, porObra,
         atualizadoPor: adminUid,
         atualizadoEm: now,
       });

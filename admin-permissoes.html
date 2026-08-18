@@ -6,10 +6,10 @@
   <title>Permissões — Controle e Planejamento de Obras</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/base.css?v=V3.13.5">
-  <link rel="stylesheet" href="css/layout.css?v=V3.13.5">
-  <link rel="stylesheet" href="css/tabelas.css?v=V3.13.5">
-  <link rel="stylesheet" href="css/modulos.css?v=V3.13.5">
+  <link rel="stylesheet" href="css/base.css?v=V3.14.0">
+  <link rel="stylesheet" href="css/layout.css?v=V3.14.0">
+  <link rel="stylesheet" href="css/tabelas.css?v=V3.14.0">
+  <link rel="stylesheet" href="css/modulos.css?v=V3.14.0">
 </head>
 <body>
 <div class="app-container">
@@ -46,7 +46,7 @@
       <a href="histograma.html" data-perm="histograma:ver"><span class="nav-icon">📊</span> Histograma</a>
       <a href="admin-permissoes.html" data-perm="admin:ver"><span class="nav-icon">🔑</span> Permissões</a>
       <a href="backup-planejamento.html" data-perm="backupPlanejamento:ver"><span class="nav-icon">🗂️</span> Backup de Planejamentos</a>
-      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V3.13.5</span></a>
+      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V3.14.0.0</span></a>
     </nav>
     <div class="sidebar-user">
       <div class="user-avatar">U</div>
@@ -91,8 +91,14 @@
             <div id="lista-obras-restrito" class="hidden" style="display:flex;flex-direction:column;gap:4px;max-height:120px;overflow-y:auto;border:1.5px solid var(--cor-borda-light);border-radius:8px;padding:8px 10px;"></div>
           </div>
 
+          <div class="form-grupo">
+            <label style="display:block;margin-bottom:6px;">Permissões gerais <span class="text-sm text-muted">(não dependem de obra)</span></label>
+            <div id="permissoes-globais"></div>
+          </div>
+
           <div id="bloco-permissoes">
-            <label style="display:block;margin-bottom:6px;">Permissões específicas</label>
+            <label style="display:block;margin-bottom:6px;">Permissões por módulo</label>
+            <div id="abas-obra-restrito" class="hidden" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:12px;padding-bottom:10px;border-bottom:1.5px solid var(--cor-borda-light);"></div>
             <div id="permissoes-categorias"></div>
           </div>
         </div>
@@ -108,14 +114,14 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
-<script src="js/firebase-config.js?v=V3.13.5"></script>
-<script src="js/auth.js?v=V3.13.5"></script>
-<script src="js/database.js?v=V3.13.5"></script>
-<script src="js/router.js?v=V3.13.5"></script>
-<script src="js/permissions.js?v=V3.13.5"></script>
-<script src="js/audit.js?v=V3.13.5"></script>
-<script src="js/utils.js?v=V3.13.5"></script>
-<script src="js/admin-permissoes.js?v=V3.13.5"></script>
+<script src="js/firebase-config.js?v=V3.14.0"></script>
+<script src="js/auth.js?v=V3.14.0"></script>
+<script src="js/database.js?v=V3.14.0"></script>
+<script src="js/router.js?v=V3.14.0"></script>
+<script src="js/permissions.js?v=V3.14.0"></script>
+<script src="js/audit.js?v=V3.14.0"></script>
+<script src="js/utils.js?v=V3.14.0"></script>
+<script src="js/admin-permissoes.js?v=V3.14.0"></script>
 <script>document.addEventListener('DOMContentLoaded', () => { AdminPermissoes.init(); });</script>
 </body>
 </html>
