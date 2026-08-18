@@ -76,7 +76,6 @@ const LP = (() => {
   let _paredesImpermBBox = null;          // {bx0,by0,bw,bh} — bounding box (c/ margem) usado pra alinhar fundo+desenho
   let _paredesImpermFundoDataURL = null;  // recorte da planta real de fundo, carregado assíncrono
   let _paredesImpermLoadToken = 0;        // evita corrida se o popup for reaberto rápido
-  let _impermAlturasPendente = null;      // [{id, valor}] — alturas configuradas nesta edição do popup (uma parede pode ter partes em alturas diferentes)
   let _paredesImpermView = { scale: 1, tx: 0, ty: 0 }; // zoom/pan do desenho do popup Selecionar Paredes (CSS transform, não recalcula geometria)
   let _paredesImpermArrastando = false;
   let _paredesImpermUltimoXY = { x: 0, y: 0 };
@@ -162,20 +161,23 @@ const LP = (() => {
   // M² de impermeabilização de UMA área: área toda (se marcado) + rodapé impermeabilizado (se marcado).
   // impermAreaToda !== false -> default true, compat com áreas antigas gravadas antes deste campo existir.
   // Rodapé, em ordem de prioridade:
-  //  1) a.paredesImperm no formato RICO ({alturas:[{id,valor}], paredes:[{partes:[{comprimento,alturaId,incluida}]}]})
-  //     — cada trecho de parede pode ter sua própria altura (ex: box 1,20m + resto 0,40m).
+  //  1) a.paredesImperm no formato RICO ({paredes:[{partes:[{comprimento,altura,incluida}]}]})
+  //     — cada trecho de parede tem seu PRÓPRIO valor de altura (ex: box 1,20m + resto 0,40m).
+  //     Compat: trechos gravados nas versões V3.11.4.6~12 usavam `alturaId` + array `alturas` separado — se
+  //     `altura` não vier direto no trecho, procura o valor por `alturaId` nesse array antigo.
   //  2) a.paredesImperm no formato ANTIGO (array simples [{incluida,comprimento}]) × a.alturaRodapeImperm (V3.11.1.1/V3.11.3.1).
   //  3) fallback bem antigo: a.mlRodape (rodapé de acabamento, sem seleção própria) × a.alturaRodapeImperm.
   function _m2RodapeImperm(a) {
     const pi = a.paredesImperm;
-    if (pi && !Array.isArray(pi) && Array.isArray(pi.alturas) && Array.isArray(pi.paredes)) {
+    if (pi && !Array.isArray(pi) && Array.isArray(pi.paredes)) {
       const alturaPorId = {};
-      pi.alturas.forEach(h => { alturaPorId[h.id] = h.valor || 0; });
+      if (Array.isArray(pi.alturas)) pi.alturas.forEach(h => { alturaPorId[h.id] = h.valor || 0; });
       let m2 = 0;
       pi.paredes.forEach(parede => {
         (parede && parede.partes || []).forEach(parte => {
           if (!parte.incluida) return;
-          m2 += (parte.comprimento || 0) * (alturaPorId[parte.alturaId] || 0);
+          const altura = (typeof parte.altura === 'number') ? parte.altura : (alturaPorId[parte.alturaId] || 0);
+          m2 += (parte.comprimento || 0) * altura;
         });
       });
       return m2;
@@ -1593,7 +1595,7 @@ const LP = (() => {
     if (el) el.textContent = document.getElementById('lp-area-m2-display').value;
   }
 
-  function _formatoRicoParedesImperm(x) { return x && !Array.isArray(x) && Array.isArray(x.alturas) && Array.isArray(x.paredes); }
+  function _formatoRicoParedesImperm(x) { return x && !Array.isArray(x) && Array.isArray(x.paredes); }
 
   function _atualizarInfoImpermRodape() {
     const info = document.getElementById('lp-imperm-rodape-m2-info');
@@ -1621,11 +1623,14 @@ const LP = (() => {
     if (!el) return;
     if (_formatoRicoParedesImperm(_paredesImpermSalvasPendente)) {
       const paredes = _paredesImpermSalvasPendente.paredes || [];
-      const alturas = _paredesImpermSalvasPendente.alturas || [];
       let trechos = 0, tot = 0;
-      paredes.forEach(pw => (pw.partes || []).forEach(pt => { trechos++; tot += (pt.comprimento || 0); }));
+      const alturasDistintas = [];
+      paredes.forEach(pw => (pw.partes || []).forEach(pt => {
+        trechos++; tot += (pt.comprimento || 0);
+        if (typeof pt.altura === 'number' && !alturasDistintas.some(v => Math.abs(v - pt.altura) < 0.001)) alturasDistintas.push(pt.altura);
+      }));
       const paredesComAlgo = paredes.filter(pw => (pw.partes || []).length).length;
-      el.textContent = `${paredesComAlgo} de ${paredes.length} parede(s) — ${trechos} trecho(s) — ${alturas.length} altura${alturas.length !== 1 ? 's' : ''} — ${fmt2(tot)} m`;
+      el.textContent = `${paredesComAlgo} de ${paredes.length} parede(s) — ${trechos} trecho(s) — ${alturasDistintas.length} altura${alturasDistintas.length !== 1 ? 's' : ''} — ${fmt2(tot)} m`;
     } else if (Array.isArray(_paredesImpermSalvasPendente)) {
       const inc = _paredesImpermSalvasPendente.filter(e => e && e.incluida).length;
       const tot = _paredesImpermSalvasPendente.filter(e => e && e.incluida).reduce((s, e) => s + (e.comprimento || 0), 0);
@@ -1672,27 +1677,30 @@ const LP = (() => {
     const salvo = _paredesImpermSalvasPendente || (a && a.paredesImperm) || null;
 
     if (_formatoRicoParedesImperm(salvo)) {
-      _impermAlturasPendente = salvo.alturas.map(h => ({ id: h.id, valor: h.valor }));
+      // compat: trechos salvos nas V3.11.4.6~12 usavam alturaId + array "alturas" separado — traduz pro valor direto
+      const alturaPorId = {};
+      if (Array.isArray(salvo.alturas)) salvo.alturas.forEach(h => { alturaPorId[h.id] = h.valor; });
       _paredesImpermPendente = comprimentosTotais.map((compTotal, i) => {
         const w = salvo.paredes[i];
         const partes = (w && Array.isArray(w.partes)) ? w.partes.map(p => ({
-          id: p.id || _uid(), comprimento: Math.min(p.comprimento || 0, compTotal), alturaId: p.alturaId, incluida: true,
+          id: p.id || _uid(),
+          comprimento: Math.min(p.comprimento || 0, compTotal),
+          altura: (typeof p.altura === 'number') ? p.altura : (alturaPorId[p.alturaId] || 0.40),
+          incluida: true,
         })) : [];
         return { comprimentoTotal: compTotal, partes };
       });
     } else {
       // migração do formato antigo (array simples [{incluida,comprimento}]) ou do zero
       const antigoArray = Array.isArray(salvo) ? salvo : null;
-      const alturaSimples = Utils.parseNum(document.getElementById('lp-input-altura-rodape').value) || (a ? a.alturaRodapeImperm : 0) || 1.20;
-      const alturaId = _uid();
-      _impermAlturasPendente = [{ id: alturaId, valor: alturaSimples }];
+      const alturaSimples = Utils.parseNum(document.getElementById('lp-input-altura-rodape').value) || (a ? a.alturaRodapeImperm : 0) || 0.40;
       _paredesImpermPendente = comprimentosTotais.map((compTotal, i) => {
         const antigo = antigoArray && antigoArray[i];
         const incluida = antigo ? !!antigo.incluida : !!(rodapeAtual && rodapeAtual[i]);
         const comprimento = (antigo && antigo.comprimento != null) ? Math.min(antigo.comprimento, compTotal) : compTotal;
         return {
           comprimentoTotal: compTotal,
-          partes: incluida ? [{ id: _uid(), comprimento, alturaId, incluida: true }] : [],
+          partes: incluida ? [{ id: _uid(), comprimento, altura: alturaSimples, incluida: true }] : [],
         };
       });
     }
@@ -1778,7 +1786,7 @@ const LP = (() => {
           if (t1 <= t0) return;
           const q1 = { x: p1.x + (p2.x - p1.x) * t0, y: p1.y + (p2.y - p1.y) * t0 };
           const q2 = { x: p1.x + (p2.x - p1.x) * t1, y: p1.y + (p2.y - p1.y) * t1 };
-          const corTrecho = p.incluida ? _corAlturaImpermPorId(p.alturaId) : corNaoIncluida;
+          const corTrecho = p.incluida ? _corAlturaImpermPorValor(p.altura) : corNaoIncluida;
           svg += `<line x1="${q1.x.toFixed(1)}" y1="${q1.y.toFixed(1)}" x2="${q2.x.toFixed(1)}" y2="${q2.y.toFixed(1)}" stroke="${corTrecho}" stroke-width="${p.incluida ? 6 : 4}" stroke-opacity="0.95"/>`;
         });
         // sobrou pedaço sem trecho nenhum (soma < total) — mostra o "buraco" em cinza, igual ao aviso de divergência
@@ -1791,7 +1799,7 @@ const LP = (() => {
         svg += `<line x1="${p1.x.toFixed(1)}" y1="${p1.y.toFixed(1)}" x2="${p2.x.toFixed(1)}" y2="${p2.y.toFixed(1)}" stroke="${corNaoIncluida}" stroke-width="4" stroke-opacity="0.9"/>`;
       }
 
-      const corBadge = incluidas.length ? _corAlturaImpermPorId(incluidas[0].alturaId) : '#64748b';
+      const corBadge = incluidas.length ? _corAlturaImpermPorValor(incluidas[0].altura) : '#64748b';
       svg += `<circle cx="${mx.toFixed(1)}" cy="${my.toFixed(1)}" r="${badgeR.toFixed(2)}" fill="#fff" stroke="${corBadge}" stroke-width="${badgeStroke.toFixed(2)}"/>`;
       svg += `<text x="${mx.toFixed(1)}" y="${(my + badgeFont / 3).toFixed(1)}" text-anchor="middle" font-size="${badgeFont.toFixed(2)}" font-weight="700" fill="${corBadge}" style="pointer-events:none;">${i + 1}${w.partes.length > 1 ? '•' + w.partes.length : ''}</text>`;
     });
@@ -1878,47 +1886,47 @@ const LP = (() => {
     return { x: PAD + (p.x - bbox.bx0) * escala, y: PAD + (p.y - bbox.by0) * escala };
   }
 
-  function _corAlturaImpermPorId(alturaId) {
-    const idx = _impermAlturasPendente.findIndex(h => h.id === alturaId);
+  // Cor pra uma altura, baseada na posição dela entre os valores distintos em uso agora no popup
+  // (maior pra menor) — dá cor estável sem precisar de um cadastro/lista separada.
+  function _valoresAlturaEmUso() {
+    const valores = [];
+    _paredesImpermPendente.forEach(w => w.partes.forEach(p => {
+      if (typeof p.altura === 'number' && !valores.some(v => Math.abs(v - p.altura) < 0.001)) valores.push(p.altura);
+    }));
+    return valores.sort((a, b) => b - a);
+  }
+
+  function _corAlturaImpermPorValor(valor) {
+    const valores = _valoresAlturaEmUso();
+    const idx = valores.findIndex(v => Math.abs(v - valor) < 0.001);
     return _PALETA_ALTURAS[idx >= 0 ? idx % _PALETA_ALTURAS.length : 0];
   }
 
-  function _renderAlturasImpermChips() {
-    const wrap = document.getElementById('lp-alturas-imperm-chips');
-    if (!wrap) return;
-    wrap.innerHTML = _impermAlturasPendente.map((h, idx) => {
-      const cor = _PALETA_ALTURAS[idx % _PALETA_ALTURAS.length];
-      return `<span style="background:${cor}22;border:1px solid ${cor};color:${cor};padding:3px 10px;border-radius:100px;font-size:.75rem;font-weight:700;display:inline-flex;align-items:center;gap:6px;">
-        ${fmt2(h.valor)} m
-        ${_impermAlturasPendente.length > 1 ? `<span style="cursor:pointer;font-weight:900;" onclick="LP.removerAlturaImperm('${h.id}')" title="Remover esta altura">×</span>` : ''}
-      </span>`;
-    }).join('');
+  // Sugestão de altura pra um trecho novo: repete a última altura usada em qualquer parede
+  // já configurada nesta sessão do popup (economiza redigitar o mesmo valor toda hora); sem nenhuma
+  // ainda configurada, cai no valor padrão de rodapé (0,40 m).
+  function _alturaPadraoSugerida() {
+    for (let i = _paredesImpermPendente.length - 1; i >= 0; i--) {
+      const partes = _paredesImpermPendente[i].partes;
+      if (partes.length) return partes[partes.length - 1].altura;
+    }
+    return 0.40;
   }
 
-  // valorFixo: número (clique num preset) ou undefined (lê do campo manual "outra altura")
-  function adicionarAlturaImperm(valorFixo) {
-    const valor = typeof valorFixo === 'number' ? valorFixo : Utils.parseNum(document.getElementById('lp-nova-altura-valor').value);
-    if (!valor || valor <= 0) { Utils.toast('Informe um valor de altura válido.', 'alerta'); return; }
-    const jaExiste = _impermAlturasPendente.some(h => Math.abs(h.valor - valor) < 0.001);
-    if (jaExiste) { Utils.toast(`Já tem uma altura de ${fmt2(valor)} m configurada.`, 'alerta'); return; }
-    _impermAlturasPendente.push({ id: _uid(), valor });
-    const input = document.getElementById('lp-nova-altura-valor');
-    if (input) input.value = '';
-    _renderParedesImpermPopup();
-  }
-
-  function removerAlturaImperm(alturaId) {
-    if (_impermAlturasPendente.length <= 1) { Utils.toast('Precisa ficar com pelo menos uma altura.', 'alerta'); return; }
-    _impermAlturasPendente = _impermAlturasPendente.filter(h => h.id !== alturaId);
-    const alturaSubstituta = _impermAlturasPendente[0].id;
-    _paredesImpermPendente.forEach(w => w.partes.forEach(p => { if (p.alturaId === alturaId) p.alturaId = alturaSubstituta; }));
-    _renderParedesImpermPopup();
+  // Opções do <datalist> compartilhado do campo de altura — presets fixos + qualquer valor
+  // já digitado em outro trecho nesta sessão do popup (reaproveita sem precisar cadastrar antes).
+  function _opcoesAlturasSugeridasHTML() {
+    const presets = [1.20, 0.40, 0.20];
+    const todos = presets.slice();
+    _valoresAlturaEmUso().forEach(v => { if (!todos.some(t => Math.abs(t - v) < 0.001)) todos.push(v); });
+    todos.sort((a, b) => b - a);
+    return todos.map(v => `<option value="${v.toFixed(2)}">`).join('');
   }
 
   // Inclui a parede inteira como um único trecho (parede que ainda não participava)
   function incluirParedeImperm(i) {
     const w = _paredesImpermPendente[i]; if (!w) return;
-    w.partes = [{ id: _uid(), comprimento: w.comprimentoTotal, alturaId: _impermAlturasPendente[0].id, incluida: true }];
+    w.partes = [{ id: _uid(), comprimento: w.comprimentoTotal, altura: _alturaPadraoSugerida(), incluida: true }];
     _renderParedesImpermPopup();
   }
 
@@ -1926,18 +1934,18 @@ const LP = (() => {
   function dividirParedeImperm(i) {
     const w = _paredesImpermPendente[i]; if (!w) return;
     if (!w.partes.length) {
-      const alturaId = _impermAlturasPendente[0].id;
+      const altura = _alturaPadraoSugerida();
       const meio = w.comprimentoTotal / 2;
       w.partes = [
-        { id: _uid(), comprimento: meio, alturaId, incluida: true },
-        { id: _uid(), comprimento: meio, alturaId, incluida: true },
+        { id: _uid(), comprimento: meio, altura, incluida: true },
+        { id: _uid(), comprimento: meio, altura, incluida: true },
       ];
     } else {
       const n = w.partes.length + 1;
-      const alturaUltima = w.partes[w.partes.length - 1].alturaId;
+      const alturaUltima = w.partes[w.partes.length - 1].altura;
       const cada = w.comprimentoTotal / n;
       w.partes.forEach(p => { p.comprimento = cada; });
-      w.partes.push({ id: _uid(), comprimento: cada, alturaId: alturaUltima, incluida: true });
+      w.partes.push({ id: _uid(), comprimento: cada, altura: alturaUltima, incluida: true });
     }
     _renderParedesImpermPopup();
   }
@@ -1964,23 +1972,21 @@ const LP = (() => {
     p.comprimento = n;
   }
 
-  function mudarAlturaParteImperm(i, j, alturaId) {
+  function mudarAlturaParteImperm(i, j, valor) {
     const w = _paredesImpermPendente[i]; if (!w) return;
     const p = w.partes[j]; if (!p) return;
-    p.alturaId = alturaId;
+    const n = Utils.parseNum(valor);
+    if (n > 0) { p.altura = n; _renderParedesImpermPopup(); } // onchange (não oninput) — dispara só ao terminar de editar, seguro pra re-render completo
   }
 
   function _renderParedesImpermPopup() {
     const arr = _paredesImpermPendente;
 
     _construirEAplicarSvgImperm();
-    _renderAlturasImpermChips();
 
-    const opcoesAltura = (selecionadaId) => _impermAlturasPendente.map(h =>
-      `<option value="${h.id}" ${h.id === selecionadaId ? 'selected' : ''}>${fmt2(h.valor)} m</option>`
-    ).join('');
+    const datalistSugestoes = `<datalist id="lp-alturas-imperm-sugestoes">${_opcoesAlturasSugeridasHTML()}</datalist>`;
 
-    document.getElementById('lp-paredes-imperm-lista').innerHTML = arr.map((w, i) => {
+    document.getElementById('lp-paredes-imperm-lista').innerHTML = datalistSugestoes + arr.map((w, i) => {
       const soma = w.partes.reduce((s, p) => s + (p.comprimento || 0), 0);
       const diff = w.comprimentoTotal - soma;
       const divergente = w.partes.length > 1 && Math.abs(diff) > 0.01;
@@ -1996,9 +2002,10 @@ const LP = (() => {
             <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;${w.partes.length > 1 ? 'margin-left:14px;' : ''}">
               <input type="checkbox" ${p.incluida ? 'checked' : ''} onchange="LP.toggleParteImperm(${i},${j})">
               ${w.partes.length > 1 ? `<span style="font-size:.7rem;color:var(--cor-texto-muted);white-space:nowrap;">Trecho ${j + 1}</span>` : ''}
-              <input type="number" step="0.01" min="0" max="${w.comprimentoTotal.toFixed(2)}" value="${p.comprimento.toFixed(2)}" class="form-control" style="width:64px;padding:4px 6px;" ${p.incluida ? '' : 'disabled'} oninput="LP.editarComprimentoParteImperm(${i},${j},this.value)">
+              <input type="number" step="0.01" min="0" max="${w.comprimentoTotal.toFixed(2)}" value="${p.comprimento.toFixed(2)}" class="form-control" style="width:60px;padding:4px 6px;" ${p.incluida ? '' : 'disabled'} oninput="LP.editarComprimentoParteImperm(${i},${j},this.value)">
+              <span style="font-size:.72rem;color:var(--cor-texto-muted);">m ·</span>
+              <input type="number" list="lp-alturas-imperm-sugestoes" step="0.01" min="0" value="${p.altura.toFixed(2)}" class="form-control" style="flex:1;padding:4px 6px;" ${p.incluida ? '' : 'disabled'} onchange="LP.mudarAlturaParteImperm(${i},${j},this.value)" placeholder="altura">
               <span style="font-size:.72rem;color:var(--cor-texto-muted);">m</span>
-              <select class="form-control" style="flex:1;padding:4px 6px;" ${p.incluida ? '' : 'disabled'} onchange="LP.mudarAlturaParteImperm(${i},${j},this.value)">${opcoesAltura(p.alturaId)}</select>
               <button type="button" onclick="LP.removerParteImperm(${i},${j})" style="border:none;background:none;color:#dc2626;cursor:pointer;font-size:.9rem;" title="${w.partes.length > 1 ? 'Remover este trecho' : 'Remover esta parede'}">🗑</button>
             </div>
           `).join('')
@@ -2020,9 +2027,8 @@ const LP = (() => {
       .filter(w => _paredesImpermPendente[w.i].partes.length > 1 && Math.abs(w.total - w.soma) > 0.01);
 
     _paredesImpermSalvasPendente = {
-      alturas: _impermAlturasPendente.map(h => ({ id: h.id, valor: h.valor })),
       paredes: _paredesImpermPendente.map(w => ({
-        partes: w.partes.filter(p => p.incluida).map(p => ({ id: p.id, comprimento: p.comprimento, alturaId: p.alturaId, incluida: true })),
+        partes: w.partes.filter(p => p.incluida).map(p => ({ id: p.id, comprimento: p.comprimento, altura: p.altura, incluida: true })),
       })),
     };
     Utils.fecharModal('modal-lp-paredes-imperm');
@@ -2196,7 +2202,7 @@ const LP = (() => {
     finalizarPoligono, editarArea, onToggleImperm, onToggleImpermRodape, aplicarPresetAlturaRodape, onAlturaRodapeInput, fecharModalArea, salvarArea, excluirAreaEmEdicao, moverArea,
     abrirSelecaoParedesImperm, confirmarParedesImperm,
     incluirParedeImperm, dividirParedeImperm, removerParteImperm, toggleParteImperm, editarComprimentoParteImperm, mudarAlturaParteImperm,
-    adicionarAlturaImperm, removerAlturaImperm, zoomParedesImperm, resetZoomParedesImperm,
+    zoomParedesImperm, resetZoomParedesImperm,
     filtrarAreas, abrirClonarPavimento, marcarTodosClonar, confirmarClonarPavimento, criarNovoLocalEClonar, filtrarVisaoGeral,
     marcarTodasAreas, desmarcarTodasAreas, atualizarBarraSelecaoAreas, moverOuCopiarSelecionadas, toggleSelecaoArea,
     toggleRodapeEdge, cancelarRodape, confirmarRodape, iniciarEdicaoRodape,

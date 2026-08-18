@@ -6,10 +6,10 @@
   <title>Levantamento de Piso — Controle e Planejamento de Obras</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/base.css?v=V3.11.4.12">
-  <link rel="stylesheet" href="css/layout.css?v=V3.11.4.12">
-  <link rel="stylesheet" href="css/tabelas.css?v=V3.11.4.12">
-  <link rel="stylesheet" href="css/modulos.css?v=V3.11.4.12">
+  <link rel="stylesheet" href="css/base.css?v=V3.11.4.13">
+  <link rel="stylesheet" href="css/layout.css?v=V3.11.4.13">
+  <link rel="stylesheet" href="css/tabelas.css?v=V3.11.4.13">
+  <link rel="stylesheet" href="css/modulos.css?v=V3.11.4.13">
   <style>
     .lp-toolbar { display:flex; align-items:center; gap:8px; flex-wrap:wrap; background:#fff; border:1px solid #e2e8f0; border-radius:10px; padding:8px 12px; margin-bottom:8px; }
     .lp-toolbar .sep { width:1px; align-self:stretch; background:#e2e8f0; margin:0 4px; }
@@ -123,7 +123,7 @@
       <a href="histograma.html" data-perm="histograma:ver"><span class="nav-icon">📊</span> Histograma</a>
       <a href="admin-permissoes.html" data-perm="admin:ver"><span class="nav-icon">🔑</span> Permissões</a>
       <a href="backup-planejamento.html" data-perm="backupPlanejamento:ver"><span class="nav-icon">🗂️</span> Backup de Planejamentos</a>
-      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V3.11.4.12</span></a>
+      <a href="notas-versao.html"><span class="nav-icon">📋</span> Notas de Versão <span class="nav-version">V3.11.4.13</span></a>
     </nav>
     <div class="sidebar-user">
       <div class="user-avatar">U</div>
@@ -296,23 +296,9 @@
       <button class="modal-close" onclick="Utils.fecharModal('modal-lp-paredes-imperm')">&times;</button>
     </div>
     <div class="modal-body">
-      <p class="text-sm" style="color:var(--cor-texto-muted);margin-top:0;">Marque quais paredes recebem a impermeabilização. Use "🔀 Dividir" quando só um trecho da parede recebe o tratamento, e configure alturas diferentes se precisar (ex: box 1,20m + resto 0,40m).</p>
+      <p class="text-sm" style="color:var(--cor-texto-muted);margin-top:0;">Marque quais paredes recebem a impermeabilização. Use "🔀 Dividir" quando só um trecho da parede recebe o tratamento — cada trecho tem sua própria altura (escolha um valor comum ou digite outro).</p>
       <div id="lp-paredes-imperm-svg-wrap" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:0;margin-bottom:12px;position:relative;overflow:hidden;height:220px;cursor:grab;"></div>
       <p class="text-sm" style="color:var(--cor-texto-muted);margin:0 0 12px;font-size:.72rem;">🔍 Roda do mouse ou botões pra zoom · arraste pra mover</p>
-
-      <div style="margin-bottom:12px;">
-        <label style="font-size:.78rem;font-weight:700;display:block;margin-bottom:6px;">Alturas configuradas</label>
-        <div id="lp-alturas-imperm-chips" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;"></div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px;">
-          <button type="button" class="btn btn-secundario btn-sm" onclick="LP.adicionarAlturaImperm(1.20)">+ Box (1,20 m)</button>
-          <button type="button" class="btn btn-secundario btn-sm" onclick="LP.adicionarAlturaImperm(0.40)">+ Padrão (0,40 m)</button>
-          <button type="button" class="btn btn-secundario btn-sm" onclick="LP.adicionarAlturaImperm(0.20)">+ Baixo (0,20 m)</button>
-        </div>
-        <div style="display:flex;gap:8px;">
-          <input type="number" id="lp-nova-altura-valor" class="form-control" step="0.01" min="0" placeholder="outra altura (m)" style="max-width:130px;">
-          <button type="button" class="btn btn-secundario btn-sm" onclick="LP.adicionarAlturaImperm()" style="white-space:nowrap;">+ Altura</button>
-        </div>
-      </div>
 
       <div id="lp-paredes-imperm-lista"></div>
     </div>
@@ -358,14 +344,14 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
-<script src="js/firebase-config.js?v=V3.11.4.12"></script>
-<script src="js/auth.js?v=V3.11.4.12"></script>
-<script src="js/database.js?v=V3.11.4.12"></script>
-<script src="js/router.js?v=V3.11.4.12"></script>
-<script src="js/permissions.js?v=V3.11.4.12"></script>
-<script src="js/audit.js?v=V3.11.4.12"></script>
-<script src="js/utils.js?v=V3.11.4.12"></script>
-<script src="js/levantamento-piso.js?v=V3.11.4.12"></script>
+<script src="js/firebase-config.js?v=V3.11.4.13"></script>
+<script src="js/auth.js?v=V3.11.4.13"></script>
+<script src="js/database.js?v=V3.11.4.13"></script>
+<script src="js/router.js?v=V3.11.4.13"></script>
+<script src="js/permissions.js?v=V3.11.4.13"></script>
+<script src="js/audit.js?v=V3.11.4.13"></script>
+<script src="js/utils.js?v=V3.11.4.13"></script>
+<script src="js/levantamento-piso.js?v=V3.11.4.13"></script>
 <script>document.addEventListener('DOMContentLoaded', () => { LP.init(); });</script>
 </body>
 </html>

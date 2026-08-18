@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.11.4.12',
+  versaoAtual: 'V3.11.4.13',
 
   versoes: [
     {
@@ -8722,6 +8722,17 @@ const NotasVersao = {
         "Popup \"Selecionar Paredes\": os círculos numerados das paredes cresciam junto com o zoom (viravam bolas enormes e sobrepostas em 400%). Agora o tamanho deles é recalculado a cada zoom pra ficar sempre do mesmo tamanho na tela, só a parede/planta de fundo amplia mesmo.",
         "Limite de zoom subiu de 400% pra 1000% — útil pra paredes bem pequenas.",
         "Zoom por clique/roda do mouse agora anda em passos de 50% em vez de 25% (menos cliques pra chegar no nível que precisa)."
+      ]
+    },
+    {
+      "versao": "V3.11.4.13",
+      "data": "2026-08-18",
+      "tipo": "melhoria",
+      "titulo": "Levantamento Piso: removido o cadastro separado de alturas — agora é direto em cada trecho",
+      "itens": [
+        "Popup \"Selecionar Paredes\": tirada a seção \"Alturas configuradas\" (que exigia cadastrar a altura antes de poder usá-la). Cada trecho de parede agora tem seu próprio campo de altura, com sugestões (Box 1,20m, Padrão 0,40m, Baixo 0,20m + qualquer valor já digitado em outro trecho) e também aceita digitar qualquer valor direto.",
+        "Sem etapa extra: divide a parede, escolhe/digita a altura de cada trecho, e já era — sem precisar \"registrar\" a altura antes.",
+        "Compatibilidade: áreas configuradas nas versões anteriores (V3.11.4.6 a V3.11.4.12, com o cadastro de alturas) continuam calculando certinho, e a conversão pro novo formato acontece sozinha ao reabrir \"Selecionar Paredes\" nelas."
       ]
     }
   ],
