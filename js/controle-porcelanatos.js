@@ -247,7 +247,6 @@ const ControlePorcelanatos = (() => {
       itens.push({
         itemKey, fonte: 'piso',
         torre, andar, apto,
-        groupKey: _norm(torre) + '»' + _norm(andar) + '»' + _norm(apto),
         local: _comSubLocal(subLocal, a.nome), localDetalhe: 'Piso',
         tipo, dimensao, m2Plan, m2Exec,
       });
@@ -264,10 +263,29 @@ const ControlePorcelanatos = (() => {
       itens.push({
         itemKey, fonte: 'parede',
         torre, andar, apto,
-        groupKey: _norm(torre) + '»' + _norm(andar) + '»' + _norm(apto),
         local: _comSubLocal(subLocal, p.nome || 'Face'), localDetalhe: 'Parede',
         tipo: 'Revestimento de Parede', dimensao: '', m2Plan, m2Exec,
       });
+    });
+
+    // Canonização — Piso e Paredes vêm de árvores INDEPENDENTES: é comum o mesmo
+    // local estar escrito com maiúscula/minúscula ou espaço diferente em cada uma
+    // (ex: "Torre" vs "torre ", "AP 1" vs "ap 1"). Sem isso, o agrupamento abaixo
+    // (que compara string crua) tratava como locais diferentes e duplicava tudo.
+    // Aqui, o primeiro nome visto pra cada combinação normalizada "vence" e todo
+    // item equivalente passa a usar EXATAMENTE esse mesmo texto.
+    const torreCanon = new Map(), andarCanon = new Map(), aptoCanon = new Map();
+    function _canon(mapa, chave, valorBruto) {
+      if (!mapa.has(chave)) mapa.set(chave, valorBruto);
+      return mapa.get(chave);
+    }
+    itens.forEach(it => {
+      const kTorre = _norm(it.torre);
+      it.torre = _canon(torreCanon, kTorre, it.torre);
+      const kAndar = kTorre + '»' + _norm(it.andar);
+      it.andar = _canon(andarCanon, kAndar, it.andar);
+      const kApto = kAndar + '»' + _norm(it.apto);
+      it.apto = _canon(aptoCanon, kApto, it.apto);
     });
 
     itens.forEach(it => {

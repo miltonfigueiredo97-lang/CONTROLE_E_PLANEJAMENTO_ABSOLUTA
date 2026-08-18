@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.13.1.1',
+  versaoAtual: 'V3.13.1.2',
 
   versoes: [
     {
@@ -8933,6 +8933,16 @@ const NotasVersao = {
       "titulo": "Medições: card da tarefa no mobile cortado pro essencial — nome, Início, Término e %, só isso",
       "itens": [
         "Tirado (só no mobile) o badge de Frente e o texto \"Esperado: X%\" do card de cada tarefa — informação redundante com o filtro já selecionado no topo, e o pedido original era só nome + Início + Término + % pra preencher rápido, sem mais nada. No desktop continuam aparecendo."
+      ]
+    },
+    {
+      "versao": "V3.13.1.2",
+      "data": "2026-08-18",
+      "tipo": "correcao",
+      "titulo": "Controle de Porcelanatos: Torre/Andar/Apto ainda duplicava quando o nome vinha escrito diferente em Piso e Paredes",
+      "itens": [
+        "A correção anterior (profundidade fixa) resolveu o caso de a árvore de Paredes ter um nível de Cômodo extra, mas não resolvia se o mesmo local estivesse escrito com maiúscula/minúscula ou espaço diferente nas duas árvores (ex: \"Torre\" no Piso vs \"torre \" nas Paredes) — o agrupamento comparava o texto cru, então continuava tratando como dois locais diferentes.",
+        "Corrigido: agora Torre, Andar e Apto passam por uma normalização (ignora maiúscula/minúscula e espaços) antes de agrupar — o primeiro nome visto em cada combinação \"vence\" e todo item equivalente passa a usar esse mesmo texto. Continua sem solução automática só se o nome for genuinamente diferente por escrito (ex: \"AP 1\" numa árvore e \"Apto 01\" na outra) — nesse caso o texto precisa ficar igual em ambos os levantamentos."
       ]
     }
   ],
