@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.11.4.8',
+  versaoAtual: 'V3.11.4.9',
 
   versoes: [
     {
@@ -8681,6 +8681,16 @@ const NotasVersao = {
         "Popup \"Selecionar Paredes\": o seletor \"Personalizado\" (dropdown) que ficava em cima, perto dos seletores de altura de cada parede, foi trocado por 3 botões diretos — \"+ Box (1,20 m)\", \"+ Padrão (0,40 m)\" e \"+ Baixo (0,20 m)\" — clicou, já adicionou à lista de alturas.",
         "Campo numérico continua disponível pra alturas fora desses 3 valores comuns (botão \"+ Altura\" ao lado).",
         "Evita duplicar: tentar adicionar uma altura que já está configurada avisa em vez de criar uma repetida."
+      ]
+    },
+    {
+      "versao": "V3.11.4.9",
+      "data": "2026-08-18",
+      "tipo": "melhoria",
+      "titulo": "Levantamento Piso: desenho da parede dividida agora mostra a cor de cada trecho",
+      "itens": [
+        "Popup \"Selecionar Paredes\": o desenho no topo agora pinta cada trecho da parede dividida na proporção do seu comprimento, com a cor da altura escolhida pra ele — dá pra ver de relance onde é box (1,20m) e onde é o resto (0,40m), por exemplo.",
+        "Se a soma dos trechos não cobre a parede inteira, o pedaço que falta aparece em cinza no desenho — a mesma divergência já avisada em texto agora também aparece visualmente."
       ]
     }
   ],

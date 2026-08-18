@@ -1861,20 +1861,40 @@ const LP = (() => {
       svg += `<polygon points="${norm.map(p => p.x + ',' + p.y).join(' ')}" fill="#e2e8f0" opacity="0.35"/>`;
       svg += `<text x="${W / 2}" y="${H - 8}" text-anchor="middle" font-size="9" fill="#94a3b8">Carregando desenho do projeto...</text>`;
     }
+    const corNaoIncluida = _paredesImpermFundoDataURL ? '#ffffff' : '#cbd5e1';
     norm.forEach((p1, i) => {
       const p2 = norm[(i + 1) % norm.length];
       const w = arr[i];
       const incluidas = w.partes.filter(p => p.incluida);
       const mx = (p1.x + p2.x) / 2, my = (p1.y + p2.y) / 2;
-      let cor;
-      if (!incluidas.length) cor = (_paredesImpermFundoDataURL ? '#ffffff' : '#cbd5e1');
-      else {
-        const alturasUsadas = new Set(incluidas.map(p => p.alturaId));
-        cor = alturasUsadas.size === 1 ? _corAlturaImpermPorId(incluidas[0].alturaId) : '#334155'; // mista de alturas = tom neutro
+
+      // desenha a parede em segmentos proporcionais ao comprimento de cada trecho, coloridos pela altura dele —
+      // dá pra VER a divisão (e o trecho excluído/faltante aparece em cinza, sem cor de altura).
+      if (w.comprimentoTotal > 0 && w.partes.length) {
+        let acumulado = 0;
+        w.partes.forEach(p => {
+          const t0 = Math.min(acumulado / w.comprimentoTotal, 1);
+          acumulado += (p.comprimento || 0);
+          const t1 = Math.min(acumulado / w.comprimentoTotal, 1);
+          if (t1 <= t0) return;
+          const q1 = { x: p1.x + (p2.x - p1.x) * t0, y: p1.y + (p2.y - p1.y) * t0 };
+          const q2 = { x: p1.x + (p2.x - p1.x) * t1, y: p1.y + (p2.y - p1.y) * t1 };
+          const corTrecho = p.incluida ? _corAlturaImpermPorId(p.alturaId) : corNaoIncluida;
+          svg += `<line x1="${q1.x.toFixed(1)}" y1="${q1.y.toFixed(1)}" x2="${q2.x.toFixed(1)}" y2="${q2.y.toFixed(1)}" stroke="${corTrecho}" stroke-width="${p.incluida ? 6 : 4}" stroke-opacity="0.95"/>`;
+        });
+        // sobrou pedaço sem trecho nenhum (soma < total) — mostra o "buraco" em cinza, igual ao aviso de divergência
+        if (acumulado < w.comprimentoTotal - 0.001) {
+          const t0 = Math.min(acumulado / w.comprimentoTotal, 1);
+          const q1 = { x: p1.x + (p2.x - p1.x) * t0, y: p1.y + (p2.y - p1.y) * t0 };
+          svg += `<line x1="${q1.x.toFixed(1)}" y1="${q1.y.toFixed(1)}" x2="${p2.x.toFixed(1)}" y2="${p2.y.toFixed(1)}" stroke="${corNaoIncluida}" stroke-width="4" stroke-opacity="0.95"/>`;
+        }
+      } else {
+        svg += `<line x1="${p1.x.toFixed(1)}" y1="${p1.y.toFixed(1)}" x2="${p2.x.toFixed(1)}" y2="${p2.y.toFixed(1)}" stroke="${corNaoIncluida}" stroke-width="4" stroke-opacity="0.9"/>`;
       }
-      svg += `<line x1="${p1.x.toFixed(1)}" y1="${p1.y.toFixed(1)}" x2="${p2.x.toFixed(1)}" y2="${p2.y.toFixed(1)}" stroke="${cor}" stroke-width="${incluidas.length ? 6 : 4}" stroke-opacity="0.9" stroke-linecap="round"/>`;
-      svg += `<circle cx="${mx.toFixed(1)}" cy="${my.toFixed(1)}" r="9" fill="#fff" stroke="${incluidas.length ? cor : '#64748b'}" stroke-width="1.5"/>`;
-      svg += `<text x="${mx.toFixed(1)}" y="${(my + 3).toFixed(1)}" text-anchor="middle" font-size="9" font-weight="700" fill="${incluidas.length ? cor : '#475569'}" style="pointer-events:none;">${i + 1}${w.partes.length > 1 ? '•' + w.partes.length : ''}</text>`;
+
+      const corBadge = incluidas.length ? _corAlturaImpermPorId(incluidas[0].alturaId) : '#64748b';
+      svg += `<circle cx="${mx.toFixed(1)}" cy="${my.toFixed(1)}" r="9" fill="#fff" stroke="${corBadge}" stroke-width="1.5"/>`;
+      svg += `<text x="${mx.toFixed(1)}" y="${(my + 3).toFixed(1)}" text-anchor="middle" font-size="9" font-weight="700" fill="${corBadge}" style="pointer-events:none;">${i + 1}${w.partes.length > 1 ? '•' + w.partes.length : ''}</text>`;
     });
     svg += `</svg>`;
     document.getElementById('lp-paredes-imperm-svg-wrap').innerHTML = svg;
