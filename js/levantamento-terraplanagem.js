@@ -201,16 +201,12 @@ const LevantamentoTerraplanagem = (() => {
         </div>
       </div>
 
-      <div class="cc-kpiGrid" style="grid-template-columns:repeat(3,1fr);">
-        <div class="cc-kpi"><div class="cc-kpiIcon">📐</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Vol. Médio (banco)</div><div class="cc-kpiValue">${TC.fmt1(k.volMedio)}<span class="cc-kpiUnit">m³</span></div><div class="cc-kpiSub">Horiz: ${TC.fmt1(k.volH)} · Vert: ${TC.fmt1(k.volV)}</div></div></div>
-        <div class="cc-kpi cc-kpiOrange"><div class="cc-kpiIcon">📦</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Vol. c/ Empolamento (terra, a remover)</div><div class="cc-kpiValue">${TC.fmt1(k.volEmpolado)}<span class="cc-kpiUnit">m³</span></div><div class="cc-kpiSub">taxa ${TC.fmt1(config.taxaEmpolamento * 100)}%</div></div></div>
-        <div class="cc-kpi cc-kpiBlue"><div class="cc-kpiIcon">🚚</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Caminhões cadastrados</div><div class="cc-kpiValue">${caminhoes.length}</div></div></div>
-      </div>
-      <div class="cc-kpiGrid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));margin-top:8px;">
-        <div class="cc-kpi"><div class="cc-kpiIcon">🔩</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Vol. Estacas (banco)</div><div class="cc-kpiValue">${TC.fmt1(k.volumeTotalEstacas)}<span class="cc-kpiUnit">m³</span></div><div class="cc-kpiSub">do Controle de Estacas</div></div></div>
-        <div class="cc-kpi cc-kpiOrange"><div class="cc-kpiIcon">🔩</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Vol. Estacas c/ Empolamento</div><div class="cc-kpiValue">${TC.fmt1(k.volEstacasEmpolado)}<span class="cc-kpiUnit">m³</span></div><div class="cc-kpiSub">taxa ${TC.fmt1(config.taxaEmpolamento * 100)}%</div></div></div>
-        <div class="cc-kpi"><div class="cc-kpiIcon">🧊</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Vol. Fundação Superficial</div><div class="cc-kpiValue">${k.volFundacaoSuperficialEmpolado > 0 ? TC.fmt1(k.volFundacaoSuperficialEmpolado) + '<span class="cc-kpiUnit">m³</span>' : '—'}</div><div class="cc-kpiSub">Controle de Fundações</div></div></div>
+      <div class="cc-kpiGrid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));">
+        <div class="cc-kpi cc-kpiOrange"><div class="cc-kpiIcon">📦</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Vol. Terra (a remover)</div><div class="cc-kpiValue">${TC.fmt1(k.volEmpolado)}<span class="cc-kpiUnit">m³</span></div><div class="cc-kpiSub">banco ${TC.fmt1(k.volMedio)} m³ · +${TC.fmt1(config.taxaEmpolamento * 100)}% empolamento</div></div></div>
+        <div class="cc-kpi"><div class="cc-kpiIcon">🔩</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Vol. Estacas</div><div class="cc-kpiValue">${TC.fmt1(k.volEstacasEmpolado)}<span class="cc-kpiUnit">m³</span></div><div class="cc-kpiSub">banco ${TC.fmt1(k.volumeTotalEstacas)} m³ · +${TC.fmt1(config.taxaEmpolamento * 100)}% empolamento</div></div></div>
+        <div class="cc-kpi"><div class="cc-kpiIcon">🧊</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Vol. Fundação Superficial</div><div class="cc-kpiValue">${k.volFundacaoSuperficialEmpolado > 0 ? TC.fmt1(k.volFundacaoSuperficialEmpolado) + '<span class="cc-kpiUnit">m³</span>' : '—'}</div><div class="cc-kpiSub">${k.volumeFundacaoSuperficial > 0 ? `banco ${TC.fmt1(k.volumeFundacaoSuperficial)} m³ · +${TC.fmt1(config.taxaEmpolamento * 100)}% empolamento` : 'Controle de Fundações'}</div></div></div>
         <div class="cc-kpi cc-kpiGreen"><div class="cc-kpiIcon">🏗️</div><div class="cc-kpiBody"><div class="cc-kpiLabel">VOLUME TOTAL DA OBRA</div><div class="cc-kpiValue">${TC.fmt1(k.volTotalGeral)}<span class="cc-kpiUnit">m³</span></div><div class="cc-kpiSub">terra + estacas + fundação, empolados</div></div></div>
+        <div class="cc-kpi cc-kpiBlue"><div class="cc-kpiIcon">🚚</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Caminhões cadastrados</div><div class="cc-kpiValue">${caminhoes.length}</div></div></div>
       </div>
       <p class="text-sm text-muted mt-1">Volume de estacas e de fundação superficial somados do <b>Controle de Estacas e Fundações</b> automaticamente (soma o campo Volume de todas as peças Fundação — estacas separado dos outros subtipos). Sempre mostrados separados, mas incluídos no Volume Total da Obra e no relatório PDF.</p>
 
@@ -1804,13 +1800,11 @@ const LevantamentoTerraplanagem = (() => {
     doc.text(`Gerado em ${new Date().toLocaleString('pt-BR')} · Absoluta Engenharia`, 12, 23);
     let y = 34;
 
-    // Cards de volume
+    // Cards de volume — só o valor final (com empolamento), taxa no rótulo
     const cards = [
       { v: TC.fmt1(k.volH), l: 'VOL. HORIZONTAL (M³)' },
       { v: TC.fmt1(k.volV), l: 'VOL. VERTICAL (M³)' },
-      { v: TC.fmt1(k.volMedio), l: 'VOL. MÉDIO BANCO (M³)' },
-      { v: TC.fmt1(config.taxaEmpolamento * 100) + '%', l: 'EMPOLAMENTO' },
-      { v: TC.fmt1(k.volEmpolado), l: 'TERRA A REMOVER (M³)' },
+      { v: TC.fmt1(k.volEmpolado), l: `TERRA A REMOVER (M³) · +${TC.fmt1(config.taxaEmpolamento * 100)}%` },
     ];
     const gap = 4, cw = (PW - 24 - gap * (cards.length - 1)) / cards.length, ch = 17;
     cards.forEach((card, i) => {
@@ -1826,9 +1820,8 @@ const LevantamentoTerraplanagem = (() => {
 
     // Cards de estacas + fundação superficial + total geral (separado do corte de terra, somado no total)
     const cardsEstacas = [
-      { v: TC.fmt1(k.volumeTotalEstacas), l: 'VOL. ESTACAS BANCO (M³)' },
-      { v: TC.fmt1(k.volEstacasEmpolado), l: 'ESTACAS C/ EMPOLAMENTO (M³)' },
-      { v: k.volFundacaoSuperficialEmpolado > 0 ? TC.fmt1(k.volFundacaoSuperficialEmpolado) : '—', l: 'FUNDAÇÃO SUPERFICIAL (M³)' },
+      { v: TC.fmt1(k.volEstacasEmpolado), l: `ESTACAS (M³) · +${TC.fmt1(config.taxaEmpolamento * 100)}%` },
+      { v: k.volFundacaoSuperficialEmpolado > 0 ? TC.fmt1(k.volFundacaoSuperficialEmpolado) : '—', l: `FUNDAÇÃO SUPERFICIAL (M³) · +${TC.fmt1(config.taxaEmpolamento * 100)}%` },
       { v: TC.fmt1(k.volTotalGeral), l: 'VOLUME TOTAL DA OBRA (M³)' },
     ];
     const gap2 = 4, cw2 = (PW - 24 - gap2 * (cardsEstacas.length - 1)) / cardsEstacas.length;

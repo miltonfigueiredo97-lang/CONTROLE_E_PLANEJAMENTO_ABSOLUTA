@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.11.3.1',
+  versaoAtual: 'V3.11.4',
 
   versoes: [
     {
@@ -8582,6 +8582,16 @@ const NotasVersao = {
         "O total (soma dos comprimentos das paredes marcadas × altura) substitui o cálculo pelo rodapé inteiro da área nos m² de impermeabilização, em todos os lugares (painel do workspace, Visão Geral e breakdown por tipo).",
         "Compatibilidade: áreas que nunca abriram esse popup continuam usando o rodapé inteiro da área (comportamento da V3.11.1.1), sem precisar re-editar nada.",
         "Corrigido de passagem: o badge de versão do link \\\"Notas de Versão\\\" na sidebar estava parado em V3.11.2 em todas as páginas — sincronizado com a versão atual."
+      ]
+    },
+    {
+      "versao": "V3.11.4",
+      "data": "2026-08-17",
+      "tipo": "melhoria",
+      "titulo": "Menos cards de volume: só o valor final (com empolamento), taxa em texto pequeno embaixo",
+      "itens": [
+        "Levantamento de Terraplanagem, Controle de Terraplanagem e relatório PDF (todos) — tirados os cards separados de \"volume banco\" e \"volume com empolamento\" pra terra, estacas e fundação superficial. Agora cada um vira UM card só: o valor final (já empolado) em destaque, e a taxa aplicada (ex: \"+30% empolamento\") em texto pequeno embaixo.",
+        "Menos cards na tela, mesma informação — só o banco (base de cálculo) deixou de ter card próprio, mas continua calculado por dentro."
       ]
     }
   ],
