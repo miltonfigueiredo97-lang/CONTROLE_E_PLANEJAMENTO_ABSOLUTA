@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.11.4.3',
+  versaoAtual: 'V3.11.4.4',
 
   versoes: [
     {
@@ -8625,6 +8625,17 @@ const NotasVersao = {
       "itens": [
         "Os cards agora seguem exatamente a organização do Controle de Terraplanagem — linha principal: 🚚 Viagens atual/total, Volume total a retirar, Volume executado (com % da terraplanagem), ⏳ Volume faltando, 💰 Valor gasto e Valor faltando (estimado).",
         "Linha \"COMPOSIÇÃO\" separada embaixo: Volume de terra (previsto, com % de empolamento), 🧱 Volume de entulho (não entra na terraplanagem), Volume fundação profunda e Volume fundação superficial — com as mesmas legendas explicativas do Controle."
+      ]
+    },
+    {
+      "versao": "V3.11.4.4",
+      "data": "2026-08-18",
+      "tipo": "melhoria",
+      "titulo": "Controle de Fundações: painel de visão geral corrigido (estava sempre mostrando Estacas) + novo fluxo \"Lançar BT\" no Acompanhamento",
+      "itens": [
+        "Correção: o painel \"visão geral da obra\" no fim do Acompanhamento (total, volume executado, % da obra, tabela por grupo) ficava sempre travado nos números de Estacas, mesmo com a aba Fundações aberta. Agora acompanha a view atual — título, ícone e agrupamento (por diâmetro nas Estacas, por tipo de fundação nas Fundações) mudam junto.",
+        "Mesma correção nos blocos \"Executado/Faltando\" de cada concretagem: fundação sem diâmetro não cai mais tudo junto em \"sem diâmetro\" — agrupa por tipo (Bloco, Sapata, Radier etc.).",
+        "Novo, só na aba Fundações: dentro de \"🚚 BTs nesta concretagem\", cada BT ganhou um botão \"🧱 Lançar\" — abre a lista de fundações planejadas pra dizer quanto (%) cada uma recebeu DAQUELA BT (fluxo BT→peças, igual ao Controle de Concreto), em vez do fluxo peça→BTs usado nas Estacas. Grava nos mesmos lançamentos — o mapa continua colorindo verde/parcial normalmente. Estacas não muda nada."
       ]
     }
   ],

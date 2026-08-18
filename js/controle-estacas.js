@@ -509,7 +509,7 @@ const ControleEstacas = (() => {
   function _resumoDiamDeLista(listaPecas) {
     const grupos = {};
     listaPecas.forEach(p => {
-      const chave = p.diametro ? `⌀${EC.num(p.diametro)}cm${p.comprimento ? ' × ' + EC.num(p.comprimento) + 'm' : ''}` : 'sem diâmetro';
+      const chave = p.diametro ? `⌀${EC.num(p.diametro)}cm${p.comprimento ? ' × ' + EC.num(p.comprimento) + 'm' : ''}` : (p.subTipo || 'sem tipo');
       if (!grupos[chave]) grupos[chave] = { qtd: 0, volume: 0 };
       grupos[chave].qtd++;
       grupos[chave].volume += p.volume || 0;
@@ -840,14 +840,15 @@ const ControleEstacas = (() => {
   function _pecaExecutada(p) { return ConcretoCalculos.pctConcretado(p, lancamentos) >= 100; }
 
   // Resumo de toda a obra (não só a concretagem selecionada) — total de
-  // estacas por diâmetro, % feita de cada tipo, e % geral da obra.
-  function _resumoObraEstacas() {
-    const todas = pecas.filter(p => p.tipo === 'Fundação' && p.subTipo === 'Estacas');
+  // peças da view atual (por diâmetro se Estacas, por tipo se Fundações),
+  // % feita de cada grupo, e % geral da obra NAQUELA view.
+  function _resumoObraView() {
+    const todas = pecasElegiveis();
     const grupos = new Map();
     let volTotal = 0, volFeito = 0;
     todas.forEach(p => {
       const pct = ConcretoCalculos.pctConcretado(p, lancamentos);
-      const chave = p.diametro ? `⌀${EC.num(p.diametro)}cm${p.comprimento ? ' × ' + EC.num(p.comprimento) + 'm' : ''}` : 'sem diâmetro';
+      const chave = p.diametro ? `⌀${EC.num(p.diametro)}cm${p.comprimento ? ' × ' + EC.num(p.comprimento) + 'm' : ''}` : (p.subTipo || 'sem tipo');
       if (!grupos.has(chave)) grupos.set(chave, { qtd: 0, qtdFeita: 0, volume: 0, volumeFeito: 0 });
       const g = grupos.get(chave);
       g.qtd++; g.volume += p.volume || 0; g.volumeFeito += (p.volume || 0) * (pct / 100);
@@ -866,7 +867,7 @@ const ControleEstacas = (() => {
     const listaPecas = acompConcretagemId ? _pecasPlanejadas(acompConcretagemId) : [];
     const executadas = listaPecas.filter(_pecaExecutada);
     const pendentes = listaPecas.filter(p => !_pecaExecutada(p));
-    const resumoObra = _resumoObraEstacas();
+    const resumoObra = _resumoObraView();
     const resumoVol = acompConcretagemId ? _resumoVolumesConcretagem(acompConcretagemId) : null;
     const qtdBTs = acompConcretagemId ? _btsDaConcretagem(acompConcretagemId).length : 0;
     el.innerHTML = `
@@ -914,11 +915,11 @@ const ControleEstacas = (() => {
           </div>
           <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;">
             <div style="flex:1;min-width:220px;">
-              <div class="text-sm" style="font-weight:700;margin-bottom:6px;">✅ Executado por diâmetro (concretagem)</div>
+              <div class="text-sm" style="font-weight:700;margin-bottom:6px;">✅ Executado ${view === 'estacas' ? 'por diâmetro' : 'por tipo'} (concretagem)</div>
               ${_resumoDiamHTML(_resumoDiamDeLista(executadas))}
             </div>
             <div style="flex:1;min-width:220px;">
-              <div class="text-sm" style="font-weight:700;margin-bottom:6px;">⏳ Faltando por diâmetro (concretagem)</div>
+              <div class="text-sm" style="font-weight:700;margin-bottom:6px;">⏳ Faltando ${view === 'estacas' ? 'por diâmetro' : 'por tipo'} (concretagem)</div>
               ${_resumoDiamHTML(_resumoDiamDeLista(pendentes))}
             </div>
           </div>
@@ -926,16 +927,16 @@ const ControleEstacas = (() => {
       </div>
       ${painelMinimizado ? '' : `
       <div class="cc-panel">
-        <div class="cc-panelTitle">📊 Estacas da obra — visão geral</div>
+        <div class="cc-panelTitle">📊 ${view === 'estacas' ? 'Estacas' : 'Fundações'} da obra — visão geral</div>
         <div class="cc-kpiGrid" style="grid-template-columns:repeat(3,1fr);margin-bottom:14px;">
-          <div class="cc-kpi"><div class="cc-kpiIcon">⚫</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Total de estacas</div><div class="cc-kpiValue">${resumoObra.qtdTotal}</div></div></div>
+          <div class="cc-kpi"><div class="cc-kpiIcon">${view === 'estacas' ? '⚫' : '⬛'}</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Total de ${view === 'estacas' ? 'estacas' : 'fundações'}</div><div class="cc-kpiValue">${resumoObra.qtdTotal}</div></div></div>
           <div class="cc-kpi cc-kpiGreen"><div class="cc-kpiIcon">✅</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Volume executado</div><div class="cc-kpiValue">${EC.fmt1(resumoObra.volFeito)}<span class="cc-kpiUnit">/ ${EC.fmt1(resumoObra.volTotal)} m³</span></div></div></div>
           <div class="cc-kpi cc-kpiOrange"><div class="cc-kpiIcon">📈</div><div class="cc-kpiBody"><div class="cc-kpiLabel">% da obra executada</div><div class="cc-kpiValue">${EC.fmt1(resumoObra.pctObra)}<span class="cc-kpiUnit">%</span></div></div></div>
         </div>
         ${resumoObra.grupos.length ? `
           <div class="cc-tableWrap">
             <table class="cc-table">
-              <thead><tr><th>Diâmetro</th><th class="col-num">Qtd. feita/total</th><th class="col-num">Volume feito/total</th><th class="col-num">% do tipo</th></tr></thead>
+              <thead><tr><th>${view === 'estacas' ? 'Diâmetro' : 'Tipo'}</th><th class="col-num">Qtd. feita/total</th><th class="col-num">Volume feito/total</th><th class="col-num">% do tipo</th></tr></thead>
               <tbody>
                 ${resumoObra.grupos.sort((a, b) => a[0].localeCompare(b[0], 'pt-BR', { numeric: true })).map(([d, g]) => `<tr>
                   <td style="font-weight:600;">${esc(d)}</td>
@@ -945,7 +946,7 @@ const ControleEstacas = (() => {
                 </tr>`).join('')}
               </tbody>
             </table>
-          </div>` : '<div class="cc-empty">Nenhuma estaca cadastrada ainda.</div>'}
+          </div>` : `<div class="cc-empty">Nenhuma ${view === 'estacas' ? 'estaca' : 'fundação'} cadastrada ainda.</div>`}
       </div>` }
     `;
     Permissions.aplicarNaTela();
@@ -1369,6 +1370,7 @@ const ControleEstacas = (() => {
           const duplicada = numerosDuplicados.includes(b.numero);
           return `<span style="display:inline-flex;align-items:center;gap:4px;border:1px solid ${duplicada ? 'var(--cv-red,#ef4444)' : jafoi ? '#16a34a' : 'var(--cv-border,#e2e8f0)'};${duplicada ? 'background:rgba(239,68,68,.06);' : ''}border-radius:8px;padding:4px 4px 4px 10px;font-size:.82rem;">
             BT-${b.numero} · ${EC.fmt1(b.volumePrevisto)}m³${jafoi ? ' ✓' : ''}
+            ${view === 'fundacoes' ? `<button class="btn ${bt && bt.btId === b.id && bt.modo === 'lancar' ? 'btn-primario' : 'btn-secundario'} btn-sm" style="padding:2px 6px;" onclick="CE.abrirLancarBTFund('${b.id}')" title="Lançar peças concretadas por esta BT">🧱 Lançar</button>` : ''}
             <button class="btn btn-secundario btn-sm" style="padding:2px 6px;" onclick="CE.abrirEditarMetaBT('${b.id}')" title="Editar BT">✎</button>
             <button class="btn btn-secundario btn-sm" style="padding:2px 6px;color:var(--cv-red,#ef4444);" onclick="CE.excluirBTEstacas('${b.id}')" title="Excluir BT">🗑</button>
           </span>`;
@@ -1412,8 +1414,200 @@ const ControleEstacas = (() => {
           </div>
         </div>`;
     }
+
+    if (bt && bt.modo === 'lancar') {
+      html += _htmlLancarBTFund();
+    }
     el.innerHTML = html;
     Permissions.aplicarNaTela();
+  }
+
+  // ══════════════════════════════════════════
+  // LANÇAR POR BT (Fundações) — inverso do fluxo de Estacas: em vez de abrir
+  // a peça e escolher quais BTs contribuíram nela, aqui se escolhe a BT e
+  // diz quanto (%) de CADA peça planejada ela concretou — mesmo modelo do
+  // Controle de Concreto (que já lança sempre por BT). Grava nos MESMOS
+  // concretoLancamentos — o mapa colore verde/parcial pelo mesmo cálculo de
+  // sempre (ConcretoCalculos.pctConcretado), então o resultado visual é
+  // idêntico ao do fluxo por-peça das Estacas.
+  // ══════════════════════════════════════════
+  // Peças planejadas nesta concretagem, restritas ao tipo da view atual —
+  // uma concretagem pode em tese ter peças de Estacas e de Fundações
+  // juntas; aqui só interessam as da view aberta agora.
+  function _pecasPlanejadasView(concId) {
+    return _pecasPlanejadas(concId).filter(p => view === 'estacas' ? p.subTipo === 'Estacas' : p.subTipo !== 'Estacas');
+  }
+
+  function abrirLancarBTFund(btId) {
+    if (!Permissions.pode('controleEstacas', 'criar') && !Permissions.pode('controleEstacas', 'editar')) { Utils.toast('Sem permissão.', 'erro'); return; }
+    const lansBT = lancamentos.filter(l => l.btConfigId === btId);
+    const linhas = lansBT.length ? lansBT.map(l => {
+      const p = pecas.find(x => x.id === l.pecaId);
+      const volConc = p ? _volumeConcPeca(p, acompConcretagemId) : 0;
+      const pct = volConc > 0 ? (l.volume / volConc) * 100 : 0;
+      return { pecaId: l.pecaId, pct: String(Math.round(pct * 100) / 100) };
+    }) : [{ pecaId: '', pct: '' }];
+    bt = { concId: acompConcretagemId, btId, modo: 'lancar', linhas, busca: '', esconderCompletas: false };
+    _renderModalBTs();
+  }
+
+  function _btFundVolLinha(l) {
+    const p = pecas.find(x => x.id === l.pecaId);
+    const pct = EC.num((l.pct || '').replace(',', '.'));
+    if (!p || !pct) return 0;
+    return (pct / 100) * _volumeConcPeca(p, bt.concId);
+  }
+  // % da peça já lançado por OUTRAS BTs nesta concretagem (exclui a BT que está sendo editada agora)
+  function _btFundPctJaLancada(pecaId) {
+    const p = pecas.find(x => x.id === pecaId);
+    if (!p) return 0;
+    const volConc = _volumeConcPeca(p, bt.concId);
+    if (volConc <= 0) return 0;
+    const jaLan = lancamentos.filter(l => l.pecaId === pecaId && l.btConfigId !== bt.btId && l.concretagemId === bt.concId).reduce((s, l) => s + (l.volume || 0), 0);
+    return (jaLan / volConc) * 100;
+  }
+  function _btFundExcessoLinha(l) {
+    if (!l.pecaId || !l.pct) return 0;
+    const p = pecas.find(x => x.id === l.pecaId);
+    if (!p) return 0;
+    const volConc = _volumeConcPeca(p, bt.concId);
+    const jaLan = lancamentos.filter(x => x.pecaId === l.pecaId && x.btConfigId !== bt.btId && x.concretagemId === bt.concId).reduce((s, x) => s + (x.volume || 0), 0);
+    const volEsta = (EC.num((l.pct || '').replace(',', '.')) / 100) * volConc;
+    return Math.max(0, jaLan + volEsta - volConc);
+  }
+  function btFundBusca(v) { bt.busca = v; _atualizarSelectsPecaFund(); }
+  function btFundEsconderCompletas(v) { bt.esconderCompletas = v; _renderModalBTs(); }
+  // Atualiza só as options dos <select> de peça (preserva foco no campo de busca)
+  function _atualizarSelectsPecaFund() {
+    const lista = _pecasPlanejadasView(bt.concId);
+    const busca = (bt.busca || '').toLowerCase();
+    document.querySelectorAll('#ce-bt-fund-linhas .ce-bt-fund-linha select').forEach((sel, i) => {
+      const atual = bt.linhas[i]?.pecaId || '';
+      const opts = lista.filter(p => {
+        if (busca && !p.nome.toLowerCase().includes(busca)) return false;
+        if (bt.esconderCompletas && p.id !== atual && _btFundPctJaLancada(p.id) >= 99.995) return false;
+        return true;
+      });
+      sel.innerHTML = `<option value="">— peça —</option>` + opts.map(p => {
+        const ja = _btFundPctJaLancada(p.id);
+        return `<option value="${p.id}" ${atual === p.id ? 'selected' : ''}>${esc(p.nome)} (${esc(p.andar)})${ja > 0.01 ? ` · ${EC.fmt1(ja)}% lançada` : ''}</option>`;
+      }).join('');
+    });
+  }
+  function btFundAddLinha() { bt.linhas.push({ pecaId: '', pct: '' }); _renderModalBTs(); }
+  function btFundRemLinha(i) { bt.linhas.splice(i, 1); _renderModalBTs(); }
+  function btFundUpdLinha(i, campo, valor) {
+    bt.linhas[i][campo] = valor;
+    if (campo === 'pecaId') { _renderModalBTs(); return; }
+    const l = bt.linhas[i];
+    const vol = _btFundVolLinha(l), exc = _btFundExcessoLinha(l);
+    const volEl = document.getElementById('ce-bt-fund-vol-' + i);
+    if (volEl) { volEl.textContent = `${EC.fmt1(vol)} m³${exc > 0.001 ? ' ⚠' : ''}`; volEl.style.color = exc > 0.001 ? 'var(--cv-red,#ef4444)' : ''; }
+    const bSel = btsConfig.find(x => x.id === bt.btId);
+    const totalUsado = bt.linhas.reduce((s, x) => s + _btFundVolLinha(x), 0);
+    const totalEl = document.getElementById('ce-bt-fund-total');
+    const sobEl = document.getElementById('ce-bt-fund-sobra');
+    if (totalEl) totalEl.textContent = EC.fmt1(totalUsado) + ' m³';
+    if (sobEl) sobEl.textContent = EC.fmt1(Math.max(0, (bSel?.volumePrevisto || 0) - totalUsado)) + ' m³';
+    const excBox = document.getElementById('ce-bt-fund-excesso');
+    if (excBox) excBox.style.display = bt.linhas.some(x => _btFundExcessoLinha(x) > 0.001) ? 'block' : 'none';
+  }
+
+  function _htmlLancarBTFund() {
+    const bSel = btsConfig.find(x => x.id === bt.btId);
+    if (!bSel) return '';
+    const lista = _pecasPlanejadasView(bt.concId);
+    const totalUsado = bt.linhas.reduce((s, l) => s + _btFundVolLinha(l), 0);
+    const sobEstimada = Math.max(0, (bSel.volumePrevisto || 0) - totalUsado);
+    const temExcesso = bt.linhas.some(l => _btFundExcessoLinha(l) > 0.001);
+    const opcoesPeca = sel => {
+      const busca = (bt.busca || '').toLowerCase();
+      const opts = lista.filter(p => {
+        if (busca && !p.nome.toLowerCase().includes(busca)) return false;
+        if (bt.esconderCompletas && p.id !== sel && _btFundPctJaLancada(p.id) >= 99.995) return false;
+        return true;
+      });
+      return `<option value="">— peça —</option>` + opts.map(p => {
+        const ja = _btFundPctJaLancada(p.id);
+        return `<option value="${p.id}" ${sel === p.id ? 'selected' : ''}>${esc(p.nome)} (${esc(p.andar)})${ja > 0.01 ? ` · ${EC.fmt1(ja)}% lançada` : ''}</option>`;
+      }).join('');
+    };
+    if (!lista.length) {
+      return `<div class="cc-empty" style="margin-top:10px;">Nenhuma fundação planejada nesta concretagem ainda — vá em Planejamento primeiro.</div>`;
+    }
+    return `
+      <hr style="border:none;border-top:1px solid var(--cv-border,#e2e8f0);margin:14px 0;">
+      <div style="font-weight:700;font-size:.88rem;margin-bottom:10px;">🧱 Lançando BT-${bSel.numero} <span style="font-family:var(--font-mono,monospace);font-weight:400;font-size:.75rem;color:var(--cv-text3,#94a3b8);">previsto ${EC.fmt1(bSel.volumePrevisto)} m³</span></div>
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap;">
+        <input type="text" class="form-control" style="flex:1;min-width:160px;" placeholder="🔍 Filtrar peças por nome..." value="${esc(bt.busca)}" oninput="CE.btFundBusca(this.value)">
+        <label class="text-sm text-muted" style="display:flex;align-items:center;gap:5px;cursor:pointer;white-space:nowrap;">
+          <input type="checkbox" ${bt.esconderCompletas ? 'checked' : ''} onchange="CE.btFundEsconderCompletas(this.checked)"> Esconder 100% lançadas
+        </label>
+      </div>
+      <div id="ce-bt-fund-linhas">
+        ${bt.linhas.map((l, i) => {
+          const vol = _btFundVolLinha(l), exc = _btFundExcessoLinha(l);
+          return `
+            <div style="display:grid;grid-template-columns:1fr 80px 90px auto;gap:8px;margin-bottom:6px;align-items:center;" class="ce-bt-fund-linha">
+              <select class="form-control" onchange="CE.btFundUpdLinha(${i}, 'pecaId', this.value)">${opcoesPeca(l.pecaId)}</select>
+              <input type="text" inputmode="decimal" class="form-control" placeholder="%" value="${esc(l.pct)}" oninput="CE.btFundUpdLinha(${i}, 'pct', this.value)">
+              <span id="ce-bt-fund-vol-${i}" style="font-family:var(--font-mono,monospace);font-size:.78rem;color:${exc > 0.001 ? 'var(--cv-red,#ef4444)' : ''};text-align:right;">${EC.fmt1(vol)} m³${exc > 0.001 ? ' ⚠' : ''}</span>
+              <button class="btn btn-secundario btn-sm" style="color:var(--cv-red,#ef4444);" onclick="CE.btFundRemLinha(${i})" ${bt.linhas.length <= 1 ? 'disabled' : ''}>✕</button>
+            </div>`;
+        }).join('')}
+      </div>
+      <button class="btn btn-secundario btn-sm" onclick="CE.btFundAddLinha()">+ Peça</button>
+      <div id="ce-bt-fund-excesso" style="display:${temExcesso ? 'block' : 'none'};background:rgba(239,68,68,.08);border:1px solid var(--cv-red,#ef4444);color:#991b1b;border-radius:8px;padding:8px 12px;font-size:.78rem;margin-top:8px;">
+        ⚠️ Uma ou mais peças ultrapassam 100% do volume nesta concretagem (considerando outras BTs).
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;background:var(--cv-surface2,#f8fafc);border:1px solid var(--cv-border,#e2e8f0);border-radius:8px;padding:10px 14px;margin-top:10px;font-family:var(--font-mono,monospace);font-size:.82rem;flex-wrap:wrap;gap:6px;">
+        <span>Total usado: <b id="ce-bt-fund-total">${EC.fmt1(totalUsado)} m³</b></span>
+        <span>Sobra estimada: <b id="ce-bt-fund-sobra">${EC.fmt1(sobEstimada)} m³</b></span>
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:14px;">
+        <button class="btn btn-secundario btn-sm" onclick="CE.fecharPainelBT()">Cancelar</button>
+        <button class="btn btn-primario btn-sm" onclick="CE.salvarLancarBTFund()">✓ Salvar lançamento</button>
+      </div>`;
+  }
+
+  async function salvarLancarBTFund() {
+    if (!Permissions.pode('controleEstacas', 'criar') && !Permissions.pode('controleEstacas', 'editar')) { Utils.toast('Sem permissão.', 'erro'); return; }
+    const linhasVal = bt.linhas.filter(l => l.pecaId && EC.num((l.pct || '').replace(',', '.')) > 0);
+    if (!linhasVal.length) { Utils.toast('Adicione ao menos uma peça com % maior que zero.', 'alerta'); return; }
+    const bSel = btsConfig.find(x => x.id === bt.btId);
+    if (!bSel) return;
+    Utils.mostrarLoading();
+    try {
+      const meta = _metaBT(bt.btId);
+      const ops = [];
+      // Regrava do zero os lançamentos DESTA BT — modelo "BT é a fonte da
+      // verdade de onde ela foi usada", igual ao Controle de Concreto.
+      lancamentos.filter(l => l.btConfigId === bt.btId).forEach(l => ops.push({ type: 'delete', ref: Database.ref(obraId, COL_LANS).doc(l.id) }));
+      linhasVal.forEach(l => {
+        const p = pecas.find(x => x.id === l.pecaId);
+        if (!p) return;
+        const volConc = _volumeConcPeca(p, bt.concId);
+        const pct = EC.num((l.pct || '').replace(',', '.'));
+        const volume = +((pct / 100) * volConc).toFixed(4);
+        const pctPeca = volConc > 0 ? +((volume / volConc) * 100).toFixed(2) : 0;
+        ops.push({
+          type: 'set', ref: Database.ref(obraId, COL_LANS).doc(EC.genId('lan')),
+          data: { btConfigId: bt.btId, concretagemId: bt.concId, pecaId: p.id, pct: pctPeca, volume,
+            hora: meta.hora, sobraCaminhao: EC.num(meta.sobra), perdaObra: EC.num(meta.perda), perdaCocho: EC.num(meta.perdaCocho), obraId },
+        });
+      });
+      if (ops.length) await Database.batchWrite(ops);
+      await carregar();
+      await EstacasCalculos.sincronizarVinculosPlanejamento(obraId).catch(e => console.error('Sync Planejamento:', e));
+      bt = null;
+      _renderAbaAcompanhamento();
+      _renderModalBTs();
+      Utils.toast(`✓ BT-${bSel.numero} lançada!`, 'sucesso');
+    } catch (e) {
+      Utils.toast('Erro ao salvar: ' + e.message, 'erro');
+    } finally {
+      Utils.esconderLoading();
+    }
   }
 
   // ── Popup de lançar por estaca — aberto ao clicar no marcador no mapa ──
@@ -2603,6 +2797,7 @@ const ControleEstacas = (() => {
     abrirNovaBT, fecharPainelBT, criarBTEstacas, abrirEditarMetaBT, salvarMetaBT, excluirBTEstacas,
     abrirModalBTs, abrirEstacaModal, btAddLinhaPeca, btRemLinhaPeca, btUpdLinhaPeca, salvarEstacaAcomp, toggleMostrarBTsCompletas,
     toggleMetaInline, salvarMetaBTInline,
+    abrirLancarBTFund, btFundBusca, btFundEsconderCompletas, btFundAddLinha, btFundRemLinha, btFundUpdLinha, salvarLancarBTFund,
   };
 })();
 
