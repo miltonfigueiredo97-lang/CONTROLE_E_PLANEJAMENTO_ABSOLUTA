@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.10.6',
+  versaoAtual: 'V3.10.7',
 
   versoes: [
     {
@@ -8500,6 +8500,16 @@ const NotasVersao = {
       "itens": [
         "A lógica de \"clicar num ponto existente edita/remove ele\" só rodava quando a ferramenta \\\"📍 Marcar Cota\\\" estava ativa — clicando sem nenhuma ferramenta selecionada (o normal ao só querer corrigir um valor), o clique não fazia nada.",
         "Corrigido: agora funciona igual COM ou SEM ferramenta ativa — clique num ponto marcado sempre abre o editor (apagar o valor e confirmar remove o ponto)."
+      ]
+    },
+    {
+      "versao": "V3.10.7",
+      "data": "2026-08-17",
+      "tipo": "melhoria",
+      "titulo": "Editor de ponto de cota: popup de verdade (nada de prompt() do navegador) com Salvar/Mover/Excluir",
+      "itens": [
+        "Trocado o feio prompt() nativo do navegador por um popup próprio, com campo de cota, e três botões: 💾 Salvar, 📍 Mover e 🗑️ Excluir.",
+        "\\\"Mover\\\": clica no botão, o popup fecha e o cursor vira mira — o próximo clique no mapa reposiciona esse ponto pra lá (sem precisar apagar e marcar de novo)."
       ]
     }
   ],

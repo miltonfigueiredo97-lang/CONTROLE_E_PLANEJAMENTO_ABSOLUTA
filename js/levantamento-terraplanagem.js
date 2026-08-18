@@ -343,7 +343,7 @@ const LevantamentoTerraplanagem = (() => {
         </div>
         <div id="tp-projeto-mapa" style="border:1px solid var(--cv-border);border-radius:6px;overflow:hidden;position:relative;height:55vh;min-height:380px;background:#111;touch-action:none;display:flex;align-items:center;justify-content:center;">
           <div id="tp-projeto-zoomwrap" style="transform-origin:center center;position:relative;max-width:100%;max-height:100%;aspect-ratio:${config.imgW || 1} / ${config.imgH || 1};">
-            <img id="tp-img-projeto" src="${imagemProjetoCache}" style="width:100%;height:100%;display:block;user-select:none;cursor:${ferramenta ? 'crosshair' : 'default'};" draggable="false">
+            <img id="tp-img-projeto" src="${imagemProjetoCache}" style="width:100%;height:100%;display:block;user-select:none;cursor:${(ferramenta || pontoMovendoId) ? 'crosshair' : 'default'};" draggable="false">
             ${calibPontoTemp ? `<div style="position:absolute;left:${(calibPontoTemp.x * 100).toFixed(3)}%;top:${(calibPontoTemp.y * 100).toFixed(3)}%;transform:translate(-50%,-50%) scale(${(1 / projZoom).toFixed(4)});width:12px;height:12px;border-radius:50%;background:#ef4444;box-shadow:0 0 0 2px #fff;pointer-events:none;"></div>` : ''}
             <svg viewBox="0 0 100 100" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;">
               ${areas.map((a, ai) => `<polygon points="${a.pontos.map(p => `${(p.x * 100).toFixed(3)},${(p.y * 100).toFixed(3)}`).join(' ')}" fill="${_corSecao(ai)}" fill-opacity="0.18" stroke="${_corSecao(ai)}" stroke-width="0.35" vector-effect="non-scaling-stroke"/>`).join('')}
@@ -441,20 +441,65 @@ const LevantamentoTerraplanagem = (() => {
     };
   }
 
+  let pontoEditandoId = null; // id do ponto de cota aberto no modal de edição
+  let pontoMovendoId = null;  // id do ponto em modo "mover" — próximo clique no mapa reposiciona ele
+
   function _editarOuRemoverPontoCota(ponto) {
-    const novoValor = prompt('Editar cota deste ponto (apague o texto e confirme pra REMOVER o ponto):', ponto.cota);
-    if (novoValor === null) return;
-    if (novoValor.trim() === '') {
-      config.pontosCota = (config.pontosCota || []).filter(pc => pc.id !== ponto.id);
-    } else {
-      ponto.cota = TC.num(novoValor);
-    }
+    pontoEditandoId = ponto.id;
+    renderEditarPonto();
+    Utils.abrirModal('modal-tp-editarponto');
+  }
+  function fecharEditarPonto() { pontoEditandoId = null; Utils.fecharModal('modal-tp-editarponto'); }
+  function renderEditarPonto() {
+    const el = document.getElementById('tp-editarponto-body');
+    const ponto = (config.pontosCota || []).find(p => p.id === pontoEditandoId);
+    if (!el || !ponto) return;
+    el.innerHTML = `
+      <label class="form-label">Cota deste ponto</label>
+      <input type="text" inputmode="decimal" class="form-control" id="tp-editarponto-input" value="${esc(ponto.cota)}" style="font-size:1.1rem;margin-bottom:14px;">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-primario" style="flex:1;" onclick="TP_UI.salvarEdicaoPonto()">💾 Salvar</button>
+        <button class="btn btn-secundario" onclick="TP_UI.iniciarMoverPonto()">📍 Mover</button>
+        <button class="btn btn-secundario" style="color:var(--cv-red);" onclick="TP_UI.excluirPontoCota()">🗑️ Excluir</button>
+      </div>
+    `;
+    setTimeout(() => document.getElementById('tp-editarponto-input')?.focus(), 50);
+  }
+  function salvarEdicaoPonto() {
+    const ponto = (config.pontosCota || []).find(p => p.id === pontoEditandoId);
+    const input = document.getElementById('tp-editarponto-input');
+    if (!ponto || !input) return;
+    ponto.cota = TC.num(input.value);
     salvarConfig().catch(() => {});
+    fecharEditarPonto();
+    renderSecoes();
+  }
+  async function excluirPontoCota() {
+    const ok = await Utils.confirmar('Excluir este ponto de cota?');
+    if (!ok) return;
+    config.pontosCota = (config.pontosCota || []).filter(pc => pc.id !== pontoEditandoId);
+    salvarConfig().catch(() => {});
+    fecharEditarPonto();
+    renderSecoes();
+  }
+  function iniciarMoverPonto() {
+    pontoMovendoId = pontoEditandoId;
+    fecharEditarPonto();
+    Utils.toast('Clique no mapa onde quer mover este ponto.', 'info');
     renderSecoes();
   }
 
   function _tocarProjeto(evt, img) {
     const p = TC.posRelativa(evt, img);
+    // Modo "mover" ativo — o próximo clique no mapa reposiciona o ponto
+    // escolhido no popup, em vez de qualquer outra ação normal.
+    if (pontoMovendoId) {
+      const ponto = (config.pontosCota || []).find(pc => pc.id === pontoMovendoId);
+      if (ponto) { ponto.x = p.x; ponto.y = p.y; salvarConfig().catch(() => {}); Utils.toast('✓ Ponto movido!', 'sucesso'); }
+      pontoMovendoId = null;
+      renderSecoes();
+      return;
+    }
     if (calibrando) {
       if (!calibPontoTemp) { calibPontoTemp = p; renderSecoes(); return; }
       const distStr = prompt('Distância real entre os dois pontos clicados (metros):');
@@ -544,12 +589,7 @@ const LevantamentoTerraplanagem = (() => {
 
   function editarPontoCota(pontoId) {
     const p = (config.pontosCota || []).find(x => x.id === pontoId);
-    if (!p) return;
-    const novo = prompt('Nova cota deste ponto:', p.cota);
-    if (novo === null) return;
-    p.cota = TC.num(novo);
-    salvarConfig().catch(() => {});
-    renderSecoes();
+    if (p) _editarOuRemoverPontoCota(p);
   }
   async function removerPontoCota(pontoId) {
     const ok = await Utils.confirmar('Remover este ponto de cota?');
@@ -1923,6 +1963,7 @@ const LevantamentoTerraplanagem = (() => {
     escolherImagemProjeto, processarImagemProjeto, calibrarProjeto,
     setFerramenta, concluirArea, cancelarArea, removerArea, atualizarCotaArea, gerarSecoes,
     togglePontosCota, editarPontoCota, removerPontoCota,
+    fecharEditarPonto, salvarEdicaoPonto, excluirPontoCota, iniciarMoverPonto,
     abrirConfig, salvarConfigBtn, aplicarPresetEmpolamento,
     adicionarTipoCaminhao, atualizarTipoCaminhao, removerTipoCaminhao,
     abrirCaminhoes, salvarCaminhao, excluirCaminhao,
