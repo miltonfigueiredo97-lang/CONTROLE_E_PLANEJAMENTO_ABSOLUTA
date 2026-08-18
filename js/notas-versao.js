@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.11.4.4',
+  versaoAtual: 'V3.11.4.5',
 
   versoes: [
     {
@@ -8636,6 +8636,17 @@ const NotasVersao = {
         "Correção: o painel \"visão geral da obra\" no fim do Acompanhamento (total, volume executado, % da obra, tabela por grupo) ficava sempre travado nos números de Estacas, mesmo com a aba Fundações aberta. Agora acompanha a view atual — título, ícone e agrupamento (por diâmetro nas Estacas, por tipo de fundação nas Fundações) mudam junto.",
         "Mesma correção nos blocos \"Executado/Faltando\" de cada concretagem: fundação sem diâmetro não cai mais tudo junto em \"sem diâmetro\" — agrupa por tipo (Bloco, Sapata, Radier etc.).",
         "Novo, só na aba Fundações: dentro de \"🚚 BTs nesta concretagem\", cada BT ganhou um botão \"🧱 Lançar\" — abre a lista de fundações planejadas pra dizer quanto (%) cada uma recebeu DAQUELA BT (fluxo BT→peças, igual ao Controle de Concreto), em vez do fluxo peça→BTs usado nas Estacas. Grava nos mesmos lançamentos — o mapa continua colorindo verde/parcial normalmente. Estacas não muda nada."
+      ]
+    },
+    {
+      "versao": "V3.11.4.5",
+      "data": "2026-08-18",
+      "tipo": "melhoria",
+      "titulo": "Controle de Estacas e Fundações: listas de concretagem não misturam mais os números das duas views",
+      "itens": [
+        "O número da concretagem continua sendo um sequencial ÚNICO pra obra inteira (igual sempre foi no Controle de Concreto) — isso não muda. O que mudou foi só a EXIBIÇÃO: o seletor de concretagem do Acompanhamento e os cards de \"Concretagens planejadas\" do Planejamento agora só mostram as que têm ao menos 1 peça da view aberta (Estacas OU Fundações) — uma concretagem 100% de Estacas não aparece mais enquanto se está na aba Fundações, e vice-versa.",
+        "Concretagem recém-criada (ainda sem nenhuma peça) continua aparecendo nos dois — só passa a sumir de uma view se ficar cheia só de peças da OUTRA.",
+        "Trocar de view (Estacas ⇄ Fundações) solta a concretagem selecionada no Acompanhamento se ela não pertencer mais à lista filtrada, e sempre solta o foco de atribuição rápida do Planejamento — evita ficar preso num estado de uma concretagem que não aparece mais na tela."
       ]
     }
   ],

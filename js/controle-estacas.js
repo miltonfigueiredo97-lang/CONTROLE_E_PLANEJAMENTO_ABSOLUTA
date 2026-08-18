@@ -400,6 +400,11 @@ const ControleEstacas = (() => {
     if (!pranchaAtivaId || !listaView.some(p => p.id === pranchaAtivaId)) pranchaAtivaId = listaView[0]?.id || null;
     pranchaAtivaPorView[v] = pranchaAtivaId;
     modo = null; poligonoPontos = []; editandoFormaId = null;
+    // A concretagem selecionada no Acompanhamento pode não pertencer mais à
+    // view nova (lista agora filtrada por tipo de peça) — solta a seleção
+    // pra não ficar mostrando dado de uma concretagem que nem aparece na lista.
+    if (acompConcretagemId && !_concretagemTemPecaDaView(acompConcretagemId)) acompConcretagemId = null;
+    planFocoConcretagemId = null; // foco de "atribuição rápida" do Planejamento — sempre solta ao trocar view
     if (abaPrincipal === 'planejamento') _renderAbaPlanejamento();
     else if (abaPrincipal === 'acompanhamento') _renderAbaAcompanhamento();
     else renderizar();
@@ -491,6 +496,16 @@ const ControleEstacas = (() => {
   function _concLabel(c) { return `Concretagem Nº ${c.numero}${c.data ? ' — ' + c.data : ''}`; }
   function _proximoNumeroConc() { return concretagens.length ? Math.max(...concretagens.map(c => c.numero || 0)) + 1 : 1; }
   function _pecaConcDaConcretagem(concretagemId) { return pecaConc.filter(pc => pc.concretagemId === concretagemId); }
+  // Uma concretagem "pertence" à view atual se tiver pelo menos 1 peça
+  // planejada do tipo certo (Estacas OU Fundações). Os números continuam
+  // num sequencial ÚNICO pra obra inteira (igual ao Controle de Concreto)
+  // — isso aqui é só filtro de EXIBIÇÃO, pra não misturar as listas na tela.
+  function _concretagemTemPecaDaView(concId) {
+    return _pecaConcDaConcretagem(concId).some(pc => {
+      const p = pecas.find(x => x.id === pc.pecaId);
+      return p && (view === 'estacas' ? p.subTipo === 'Estacas' : p.subTipo !== 'Estacas');
+    });
+  }
   function _pecasPlanejadas(concretagemId) {
     const ids = new Set(_pecaConcDaConcretagem(concretagemId).map(pc => pc.pecaId));
     return pecas.filter(p => ids.has(p.id));
@@ -573,7 +588,10 @@ const ControleEstacas = (() => {
   function _renderCardsConcretagem() {
     const el = document.getElementById('ce-plan-cards-body');
     if (!el) return;
-    const concsOrd = [...concretagens].sort((a, b) => (a.numero || 0) - (b.numero || 0));
+    // Mostra concretagens com peça da view atual, MAIS as recém-criadas sem
+    // nenhuma peça ainda (senão o card some assim que é criado, antes de
+    // clicar na 1ª peça) — só esconde as que já são 100% da OUTRA view.
+    const concsOrd = [...concretagens].filter(c => !_pecaConcDaConcretagem(c.id).length || _concretagemTemPecaDaView(c.id)).sort((a, b) => (a.numero || 0) - (b.numero || 0));
     el.innerHTML = `
       ${novaConcPlanAberta ? `
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;padding:10px;border:1px dashed var(--cv-border,#e2e8f0);border-radius:8px;margin-bottom:12px;">
@@ -863,7 +881,7 @@ const ControleEstacas = (() => {
     if (!el) return;
     const reporScroll = _preservarScroll('#ce-acomp-mapa-host');
     // Só concretagens com ao menos 1 peça planejada fazem sentido aqui
-    const concsComPlano = [...concretagens].filter(c => _pecaConcDaConcretagem(c.id).length > 0).sort((a, b) => (a.numero || 0) - (b.numero || 0));
+    const concsComPlano = [...concretagens].filter(c => _concretagemTemPecaDaView(c.id)).sort((a, b) => (a.numero || 0) - (b.numero || 0));
     const listaPecas = acompConcretagemId ? _pecasPlanejadas(acompConcretagemId) : [];
     const executadas = listaPecas.filter(_pecaExecutada);
     const pendentes = listaPecas.filter(p => !_pecaExecutada(p));
