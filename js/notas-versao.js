@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.12.0.3',
+  versaoAtual: 'V3.12.0.4',
 
   versoes: [
     {
@@ -8813,6 +8813,19 @@ const NotasVersao = {
         "Busca por Nome: antes escondia todos os grupos e mostrava só as folhas batendo o texto (perdia o contexto de onde a tarefa estava). Agora mantém a árvore, abre automaticamente os grupos-pai até o resultado, destaca e rola até a tarefa mais próxima do que foi digitado.",
         "Corrigido também: o campo de busca perdia o foco a cada letra digitada (só dava pra digitar 1 caractere por vez) — agora mantém o foco e a posição do cursor entre as digitações.",
         "Telas estreitas (celular): filtro de Frente e busca ocupam a largura toda em vez de ficarem espremidos, e os botões de toque ficam um pouco maiores."
+      ]
+    },
+    {
+      "versao": "V3.12.0.4",
+      "data": "2026-08-18",
+      "tipo": "melhoria",
+      "titulo": "Medições: fim do popup — Início/Término Real e % direto na linha",
+      "itens": [
+        "Removido o modal \"Lançar Medição\" (lápis → popup → editar). Agora Início Real, Término Real e % ficam direto na linha, editáveis na hora — sem clique extra, sem popup.",
+        "Botão rápido \"✓100%\" pra marcar conclusão com um toque.",
+        "% validado: se digitar mais de 100, avisa e ajusta pra 100. Término Real só aceita com a tarefa em 100% (senão avisa e não salva).",
+        "Fotos da medição continuam disponíveis (ícone 📷 na própria linha), sem precisar do popup.",
+        "Corrigido: cada edição (%, data, foto) disparava um re-render que jogava a lista de volta pro topo — agora mantém a posição de rolagem."
       ]
     },
   ],

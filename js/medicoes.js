@@ -10,7 +10,6 @@ const Medicoes = (() => {
   let pend={};                // taskId -> {progresso, inicioReal, terminoReal, fotos:[dataUrl]}
   let colapsados=new Set();   // ids de grupos recolhidos
   let busca='';
-  let medEditId=null;         // tarefa aberta no modal
   const COL='tarefas', COLM='medicoes';
   // Filtro por Frente de Serviço (equipe/disciplina) — cache de sessão,
   // igual ao filtro de responsável do Planejamento. Não é dado de negócio.
@@ -122,6 +121,19 @@ const Medicoes = (() => {
       .med-node.leaf .nm{font-weight:500;}
       .med-node.sel{background:#ecfdf5;}
       .med-mod{border:1px solid #f5c800;background:#fffbeb;border-radius:6px;font-size:.64rem;padding:1px 6px;color:#92400e;font-weight:700;}
+      .med-edit{display:flex;gap:6px;align-items:center;flex-wrap:wrap;flex:1 1 auto;padding-top:2px;}
+      .med-inp{border:1px solid #cbd5e1;border-radius:6px;padding:5px 6px;font-size:.75rem;font-family:inherit;background:#fff;height:30px;box-sizing:border-box;}
+      .med-inp:disabled{background:#f1f5f9;color:#94a3b8;}
+      .med-inp-pct{width:52px;text-align:center;font-weight:700;}
+      .med-inp-data{width:122px;}
+      .med-btn-100{border:1px solid #16a34a;color:#16a34a;background:#f0fdf4;border-radius:6px;padding:0 8px;height:30px;font-size:.68rem;font-weight:700;cursor:pointer;white-space:nowrap;}
+      .med-btn-100:hover{background:#dcfce7;}
+      .med-foto-btn{display:flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:6px;background:#f1f5f9;cursor:pointer;font-size:.95rem;flex-shrink:0;}
+      .med-foto-btn:hover{background:#e2e8f0;}
+      .med-fotos-row{display:flex;gap:6px;flex-wrap:wrap;padding:2px 12px 8px 12px;width:100%;}
+      .med-foto-thumb{position:relative;}
+      .med-foto-thumb img{width:48px;height:48px;object-fit:cover;border-radius:6px;border:1px solid #e2e8f0;}
+      .med-foto-thumb button{position:absolute;top:-6px;right:-6px;background:#dc2626;color:#fff;border:none;border-radius:50%;width:16px;height:16px;font-size:9px;cursor:pointer;}
       .med-tbl{border-collapse:collapse;width:100%;font-size:.8rem;background:#fff;}
       .med-tbl th{background:#f8fafc;padding:8px 10px;text-align:left;font-size:.72rem;color:#475569;border-bottom:2px solid #e2e8f0;}
       .med-tbl td{padding:8px 10px;border-bottom:1px solid #f1f5f9;}
@@ -129,6 +141,9 @@ const Medicoes = (() => {
         .med-top select, .med-top input.form-control{max-width:none !important;flex:1 1 100%;}
         .med-node .tog{width:32px;height:32px;font-size:1.1rem;}
         .med-node{padding:10px 10px;}
+        .med-inp-data{width:auto;flex:1 1 100px;}
+        .med-inp,.med-btn-100,.med-foto-btn{height:34px;}
+        .med-edit{width:100%;}
       }
     </style>
     <div class="med-top">
@@ -223,18 +238,30 @@ const Medicoes = (() => {
       const p=pend[t.id];
       const prog=_progAtual(t);
       const esp=_espAt(t,_hoje());
-      rows+=`<div class="med-node leaf ${p?'sel':''} ${q&&t.id===primeiroMatchId?'busca-match':''}" id="med-row-${t.id}" style="padding-left:${12+niv*16}px;">
-        <span class="tog" style="cursor:pointer;" onclick="Medicoes.abrirMedicao('${t.id}')" title="Lançar medição">✏️</span>
-        <div style="cursor:pointer;" onclick="Medicoes.abrirMedicao('${t.id}')">
+      const iniVal=p?.inicioReal!=null?p.inicioReal:(t.inicioReal?_iso(_d(t.inicioReal)):'');
+      const fimVal=p?.terminoReal!=null?p.terminoReal:(t.terminoReal?_iso(_d(t.terminoReal)):'');
+      const fimHabilitado=prog>=100;
+      const fotos=p?.fotos||[];
+      rows+=`<div class="med-node leaf ${p?'sel':''} ${q&&t.id===primeiroMatchId?'busca-match':''}" id="med-row-${t.id}" style="padding-left:${12+niv*16}px;flex-wrap:wrap;align-items:flex-start;">
+        <div style="flex:1 1 180px;min-width:0;padding-top:3px;">
           <div class="nm">${_esc(t.nome)}${t.frenteServico?` <span style="background:${Utils.corFrente(t.frenteServico)};color:#fff;font-size:.58rem;font-weight:700;padding:1px 6px;border-radius:7px;">${t.frenteServico}</span>`:''}</div>
-          <div class="sub">Esperado: ${esp}%&nbsp;&nbsp;Real: ${prog}%${p?` &nbsp;<span class="med-mod">alterado: ${Math.min(100,t.percentualConcluido||0)}% → ${p.progresso}%</span>`:''}</div>
+          <div class="sub">Esperado: ${esp}%</div>
         </div>
-        <span class="sp"></span>
-        ${p?`<button class="btn-icone" title="Descartar alteração" onclick="event.stopPropagation();Medicoes.descartarItem('${t.id}')">✕</button>`:''}
+        <div class="med-edit">
+          <input type="date" class="med-inp med-inp-data" value="${iniVal}" title="Início Real" onchange="Medicoes.setCampo('${t.id}','inicioReal',this.value)">
+          <input type="date" class="med-inp med-inp-data" value="${fimVal}" title="Término Real (só com 100%)" ${fimHabilitado?'':'disabled'} onchange="Medicoes.setCampo('${t.id}','terminoReal',this.value)">
+          <input type="number" class="med-inp med-inp-pct" min="0" max="100" value="${prog}" title="% concluído" onchange="Medicoes.setCampo('${t.id}','progresso',this.value)">
+          <span style="font-size:.7rem;color:#94a3b8;">%</span>
+          <button class="med-btn-100" title="Marcar 100%" onclick="Medicoes.setCampo('${t.id}','progresso',100)">✓100%</button>
+          <label class="med-foto-btn" title="Adicionar foto">📷<input type="file" accept="image/*" multiple style="display:none;" onchange="Medicoes.fotoSelecionada('${t.id}',this)"></label>
+          ${p?`<button class="btn-icone" title="Descartar alteração" onclick="Medicoes.descartarItem('${t.id}')">✕</button>`:''}
+        </div>
+        ${fotos.length?`<div class="med-fotos-row">${fotos.map((f,fi)=>`<div class="med-foto-thumb"><img src="${f}"><button onclick="Medicoes.removerFoto('${t.id}',${fi})">✕</button></div>`).join('')}</div>`:''}
       </div>`;
     }
     if(!rows)rows='<p style="padding:20px;color:#94a3b8;font-size:.85rem;">Nenhuma tarefa encontrada.</p>';
     const nPend=Object.keys(pend).length;
+    const scrollAntes=document.querySelector('.med-tree')?.scrollTop||0;
     _el().innerHTML=`
     <style id="med-css2"></style>
     <div class="med-top" style="flex-wrap:wrap;flex-shrink:0;">
@@ -260,6 +287,11 @@ const Medicoes = (() => {
     if(q&&primeiroMatchId){
       const el=document.getElementById('med-row-'+primeiroMatchId);
       if(el)el.scrollIntoView({block:'center'});
+    } else {
+      // preserva a posição de rolagem — sem isso, cada edição (que dispara
+      // _render()) chutava a lista de volta pro topo.
+      const treeEl=document.querySelector('.med-tree');
+      if(treeEl)treeEl.scrollTop=scrollAntes;
     }
   }
   function _renderListaCssOnly(){
@@ -279,6 +311,19 @@ const Medicoes = (() => {
       .med-node.leaf .nm{font-weight:500;}
       .med-node.sel{background:#ecfdf5;}
       .med-mod{border:1px solid #f5c800;background:#fffbeb;border-radius:6px;font-size:.64rem;padding:1px 6px;color:#92400e;font-weight:700;}
+      .med-edit{display:flex;gap:6px;align-items:center;flex-wrap:wrap;flex:1 1 auto;padding-top:2px;}
+      .med-inp{border:1px solid #cbd5e1;border-radius:6px;padding:5px 6px;font-size:.75rem;font-family:inherit;background:#fff;height:30px;box-sizing:border-box;}
+      .med-inp:disabled{background:#f1f5f9;color:#94a3b8;}
+      .med-inp-pct{width:52px;text-align:center;font-weight:700;}
+      .med-inp-data{width:122px;}
+      .med-btn-100{border:1px solid #16a34a;color:#16a34a;background:#f0fdf4;border-radius:6px;padding:0 8px;height:30px;font-size:.68rem;font-weight:700;cursor:pointer;white-space:nowrap;}
+      .med-btn-100:hover{background:#dcfce7;}
+      .med-foto-btn{display:flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:6px;background:#f1f5f9;cursor:pointer;font-size:.95rem;flex-shrink:0;}
+      .med-foto-btn:hover{background:#e2e8f0;}
+      .med-fotos-row{display:flex;gap:6px;flex-wrap:wrap;padding:2px 12px 8px 12px;width:100%;}
+      .med-foto-thumb{position:relative;}
+      .med-foto-thumb img{width:48px;height:48px;object-fit:cover;border-radius:6px;border:1px solid #e2e8f0;}
+      .med-foto-thumb button{position:absolute;top:-6px;right:-6px;background:#dc2626;color:#fff;border:none;border-radius:50%;width:16px;height:16px;font-size:9px;cursor:pointer;}
       .med-tbl{border-collapse:collapse;width:100%;font-size:.8rem;background:#fff;}
       .med-tbl th{background:#f8fafc;padding:8px 10px;text-align:left;font-size:.72rem;color:#475569;border-bottom:2px solid #e2e8f0;}
       .med-tbl td{padding:8px 10px;border-bottom:1px solid #f1f5f9;}
@@ -286,6 +331,9 @@ const Medicoes = (() => {
         .med-top select, .med-top input.form-control{max-width:none !important;flex:1 1 100%;}
         .med-node .tog{width:32px;height:32px;font-size:1.1rem;}
         .med-node{padding:10px 10px;}
+        .med-inp-data{width:auto;flex:1 1 100px;}
+        .med-inp,.med-btn-100,.med-foto-btn{height:34px;}
+        .med-edit{width:100%;}
       }`;
     document.head.appendChild(st);
   }
@@ -316,54 +364,59 @@ const Medicoes = (() => {
   }
   function descartarItem(id){delete pend[id];_render();}
 
-  // ==================== MODAL DE MEDIÇÃO ====================
-  function abrirMedicao(id){
+  // ==================== EDIÇÃO INLINE (sem popup) ====================
+  // Início Real, Término Real e % direto na linha — sem clicar em lápis
+  // pra abrir modal. Fim Real só habilita/aceita com 100% de progresso.
+  function _syncPend(id){
     const t=_t(id);if(!t)return;
-    medEditId=id;
-    const p=pend[id]||{};
-    document.getElementById('med-modal-nome').textContent=t.nome||'';
-    document.getElementById('med-modal-periodo').textContent=`${_fmt(t.inicioPlanejado)} — ${_fmt(t.terminoPlanejado)}`;
-    document.getElementById('med-prog').value=p.progresso!=null?p.progresso:(t.percentualConcluido||0);
-    document.getElementById('med-ini').value=p.inicioReal!=null?p.inicioReal:(t.inicioReal?_iso(_d(t.inicioReal)):'');
-    document.getElementById('med-fim').value=p.terminoReal!=null?p.terminoReal:(t.terminoReal?_iso(_d(t.terminoReal)):'');
-    document.getElementById('med-fotos-prev').innerHTML=(p.fotos||[]).map((f,i)=>`<div style="position:relative;"><img src="${f}" style="width:70px;height:70px;object-fit:cover;border-radius:8px;border:1px solid #e2e8f0;"><button onclick="Medicoes.removerFoto(${i})" style="position:absolute;top:-6px;right:-6px;background:#dc2626;color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:10px;cursor:pointer;">✕</button></div>`).join('');
-    Utils.abrirModal('modal-medicao');
-    progChanged();
+    const p=pend[id];if(!p)return;
+    const origProg=Math.min(100,t.percentualConcluido||0);
+    const origIni=t.inicioReal?_iso(_d(t.inicioReal)):'';
+    const origFim=t.terminoReal?_iso(_d(t.terminoReal)):'';
+    const progIgual=p.progresso==null||p.progresso===origProg;
+    const iniIgual=p.inicioReal==null||p.inicioReal===origIni;
+    const fimIgual=p.terminoReal==null||p.terminoReal===origFim;
+    if(progIgual&&iniIgual&&fimIgual&&!(p.fotos&&p.fotos.length))delete pend[id];
   }
-  // Fim Real só faz sentido com a tarefa 100% concluída — trava o campo
-  // enquanto não chegar lá (evita gravar um término real de tarefa que
-  // ainda não acabou).
-  function progChanged(){
-    const prog=parseFloat(document.getElementById('med-prog')?.value)||0;
-    const elFim=document.getElementById('med-fim');
-    const aviso=document.getElementById('med-fim-aviso');
-    if(!elFim)return;
-    const completa=prog>=100;
-    elFim.disabled=!completa;
-    if(aviso)aviso.style.display=completa?'none':'block';
-    if(!completa)elFim.value='';
+  function setCampo(id,campo,valor){
+    const t=_t(id);if(!t)return;
+    if(!pend[id])pend[id]={};
+    if(campo==='progresso'){
+      let v=parseFloat(valor);
+      if(isNaN(v))v=0;
+      if(v>100){Utils.toast('Não existe mais que 100%. Ajustado pra 100%.','alerta');v=100;}
+      if(v<0)v=0;
+      pend[id].progresso=v;
+      // Caiu abaixo de 100 → Término Real deixa de fazer sentido, some.
+      if(v<100)pend[id].terminoReal='';
+    } else if(campo==='inicioReal'){
+      pend[id].inicioReal=valor||'';
+    } else if(campo==='terminoReal'){
+      const progEfetivo=pend[id].progresso!=null?pend[id].progresso:Math.min(100,t.percentualConcluido||0);
+      if(valor&&progEfetivo<100){Utils.toast('Término Real só com a tarefa em 100% de progresso.','erro');_render();return;}
+      pend[id].terminoReal=valor||'';
+    }
+    _syncPend(id);
+    _render();
   }
-  function progDelta(d){
-    const el=document.getElementById('med-prog');
-    if(d===100)el.value=100;
-    else el.value=Math.min(100,Math.max(0,(parseFloat(el.value)||0)+d));
-    progChanged();
+  function removerFoto(id,i){
+    if(!pend[id]?.fotos)return;
+    pend[id].fotos.splice(i,1);
+    _syncPend(id);
+    _render();
   }
-  function removerFoto(i){
-    if(!pend[medEditId])return;
-    pend[medEditId].fotos.splice(i,1);
-    abrirMedicao(medEditId);
-  }
-  async function fotoSelecionada(input){
+  async function fotoSelecionada(id,input){
     const files=[...(input.files||[])];input.value='';
     if(!files.length)return;
-    if(!pend[medEditId])pend[medEditId]={fotos:[]};
-    if(!pend[medEditId].fotos)pend[medEditId].fotos=[];
+    if(!pend[id])pend[id]={};
+    if(!pend[id].fotos)pend[id].fotos=[];
+    Utils.mostrarLoading('Processando foto...');
     for(const f of files){
-      try{const dataUrl=await _comprimir(f);pend[medEditId].fotos.push(dataUrl);}
+      try{const dataUrl=await _comprimir(f);pend[id].fotos.push(dataUrl);}
       catch(e){console.error(e);Utils.toast('Erro ao processar foto.','erro');}
     }
-    abrirMedicao(medEditId);
+    Utils.esconderLoading();
+    _render();
   }
   function _comprimir(file){
     return new Promise((res,rej)=>{
@@ -379,23 +432,6 @@ const Medicoes = (() => {
         img.onerror=rej;img.src=r.result;};
       r.onerror=rej;r.readAsDataURL(file);
     });
-  }
-  function confirmarMedicao(){
-    const t=_t(medEditId);if(!t)return;
-    const prog=Math.min(100,Math.max(0,parseFloat(document.getElementById('med-prog').value)||0));
-    const ini=document.getElementById('med-ini').value;
-    const fim=prog>=100?document.getElementById('med-fim').value:''; // Fim Real só vale com 100% — trava extra além do disabled do campo
-    const fotos=pend[medEditId]?.fotos||[];
-    const origProg=Math.min(100,t.percentualConcluido||0);
-    const origIni=t.inicioReal?_iso(_d(t.inicioReal)):'';
-    const origFim=t.terminoReal?_iso(_d(t.terminoReal)):'';
-    if(prog===origProg&&ini===origIni&&fim===origFim&&!fotos.length){
-      delete pend[medEditId];
-    }else{
-      pend[medEditId]={progresso:prog,inicioReal:ini,terminoReal:fim,fotos};
-    }
-    Utils.fecharModal('modal-medicao');
-    medEditId=null;_render();
   }
 
   // ==================== SALVAR MEDIÇÃO ====================
@@ -482,7 +518,7 @@ const Medicoes = (() => {
   }
 
   return{init,carregar,novaMedicao,voltar,toggleGrupo,expandirTudo,recolherTudo,setBusca,setFiltroFrente,descartarItem,
-    abrirMedicao,progDelta,progChanged,removerFoto,fotoSelecionada,confirmarMedicao,
+    setCampo,removerFoto,fotoSelecionada,
     salvarMedicao,verMedicao,excluirMedicao};
 })();
 
