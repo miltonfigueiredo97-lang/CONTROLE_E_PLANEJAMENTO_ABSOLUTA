@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.12.0.6',
+  versaoAtual: 'V3.12.0.7',
 
   versoes: [
     {
@@ -8850,7 +8850,16 @@ const NotasVersao = {
         "Tipo de Piso e Dimensões são separados automaticamente do campo \"Tipo de Piso\" seguindo o padrão \"Nome - AxB\" (ex: \"Porcelanato Alta Mountain - 90x90\" vira Tipo=\"Porcelanato Alta Mountain\" e Dimensão=\"90x90\"). Registros antigos sem esse padrão (ex: só \"Porcelanato 1\") saem com a dimensão em branco.",
         "Novo \"⚙️ Config\" no topo do módulo — define o % de perda usado na coluna \"M² com perda\" da planilha (padrão 30%, editável por obra)."
       ]
-    }
+    },
+    {
+      "versao": "V3.12.0.7",
+      "data": "2026-08-18",
+      "tipo": "correcao",
+      "titulo": "Medições: breakpoint mobile estava estreito demais e nunca disparava no celular real",
+      "itens": [
+        "O ajuste mobile só entrava em ≤640px, mas o celular testado cai numa faixa maior (a mesma em que o sistema já troca a sidebar pelo menu ☰, ≤1024px) — por isso nada parecia ter mudado. Alinhado o breakpoint da Medições com esse mesmo limite (≤1024px) usado no resto do sistema."
+      ]
+    },
   ],
 
   render(containerId) {

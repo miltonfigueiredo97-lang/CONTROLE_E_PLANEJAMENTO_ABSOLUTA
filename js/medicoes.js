@@ -140,7 +140,7 @@ const Medicoes = (() => {
       .btn-icone{width:28px;height:28px;min-width:28px;border:none;background:#fee2e2;color:#dc2626;border-radius:7px;font-size:.85rem;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
       .btn-icone:hover{background:#fecaca;}
       .med-frente-badge{color:#fff;font-size:.58rem;font-weight:700;padding:1px 6px;border-radius:7px;}
-      @media (max-width:640px){
+      @media (max-width:1024px){
         .med-top{gap:8px;}
         .med-top .btn-sm{padding:10px 14px;font-size:.88rem;}
         .med-top select, .med-top input.form-control{max-width:none !important;flex:1 1 100%;padding:10px;font-size:.9rem;}
@@ -345,7 +345,7 @@ const Medicoes = (() => {
       .btn-icone{width:28px;height:28px;min-width:28px;border:none;background:#fee2e2;color:#dc2626;border-radius:7px;font-size:.85rem;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
       .btn-icone:hover{background:#fecaca;}
       .med-frente-badge{color:#fff;font-size:.58rem;font-weight:700;padding:1px 6px;border-radius:7px;}
-      @media (max-width:640px){
+      @media (max-width:1024px){
         .med-top{gap:8px;}
         .med-top .btn-sm{padding:10px 14px;font-size:.88rem;}
         .med-top select, .med-top input.form-control{max-width:none !important;flex:1 1 100%;padding:10px;font-size:.9rem;}
