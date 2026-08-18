@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.13.1',
+  versaoAtual: 'V3.13.1.1',
 
   versoes: [
     {
@@ -8924,6 +8924,15 @@ const NotasVersao = {
       "itens": [
         "A árvore de Paredes costuma ter um nível de Cômodo dentro do Apto (ex: Torre → Andar → Apto → Banheiro de Serviço) que a árvore de Piso não tem (a área já fica direto no Apto). O agrupamento antigo pegava \"os 2 últimos níveis\" como Andar+Apto — então em Paredes o Apto caía num nível errado, criando um grupo de Torre paralelo que nunca batia com o do Piso: tudo aparecia duplicado e fora de ordem.",
         "Corrigido: agora Torre/Andar/Apto são sempre os 3 primeiros níveis da árvore, fixos, não importa quão mais profundo ela vá depois disso. Qualquer nível extra (o Cômodo) não vira mais um agrupamento por conta própria — passa a aparecer junto do nome do Local (ex: \"Banheiro de Serviço · Face C\")."
+      ]
+    },
+    {
+      "versao": "V3.13.1.1",
+      "data": "2026-08-18",
+      "tipo": "melhoria",
+      "titulo": "Medições: card da tarefa no mobile cortado pro essencial — nome, Início, Término e %, só isso",
+      "itens": [
+        "Tirado (só no mobile) o badge de Frente e o texto \"Esperado: X%\" do card de cada tarefa — informação redundante com o filtro já selecionado no topo, e o pedido original era só nome + Início + Término + % pra preencher rápido, sem mais nada. No desktop continuam aparecendo."
       ]
     }
   ],
