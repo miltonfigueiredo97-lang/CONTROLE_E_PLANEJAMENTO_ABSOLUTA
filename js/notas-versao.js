@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.12.0.10',
+  versaoAtual: 'V3.12.0.11',
 
   versoes: [
     {
@@ -8890,6 +8890,16 @@ const NotasVersao = {
       "itens": [
         "📷 (foto) e ✕ (descartar) saíram da grade de campos e subiram pra junto do nome da tarefa — sobrava uma linha inteira só pra esses dois ícones. Agora a grade fica só com Início+Término (linha 1) e %+✓100% (linha 2), 2 linhas em vez de 3.",
         "Espaçamento entre os campos e o padding de cada linha reduzidos — cabe mais tarefa por tela, menos rolagem."
+      ]
+    },
+    {
+      "versao": "V3.12.0.11",
+      "data": "2026-08-18",
+      "tipo": "correcao",
+      "titulo": "Medições: foto/descartar ficaram sozinhos numa linha vazia — corrigido de vez",
+      "itens": [
+        "A tentativa anterior de subir 📷/✕ pra junto do nome não funcionou: o bloco do nome crescia e empurrava os ícones pra uma linha nova, sozinha e praticamente vazia — pior que antes. Causa: nome e ícones eram itens soltos no mesmo flex container, sem nada garantindo que ficassem na mesma linha.",
+        "Corrigido de raiz: nome+badge e os ícones (📷/✕) agora vivem dentro do mesmo bloco dedicado (linha do cabeçalho) — ficam sempre um do lado do outro, o texto do nome quebra por dentro sem empurrar os ícones pra lugar nenhum."
       ]
     }
   ],

@@ -140,7 +140,8 @@ const Medicoes = (() => {
       .btn-icone{width:28px;height:28px;min-width:28px;border:none;background:#fee2e2;color:#dc2626;border-radius:7px;font-size:.85rem;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
       .btn-icone:hover{background:#fecaca;}
       .med-frente-badge{color:#fff;font-size:.58rem;font-weight:700;padding:1px 6px;border-radius:7px;}
-      .med-acoes-topo{display:flex;gap:6px;align-items:center;order:5;}
+      .med-header-row{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex:1 1 220px;min-width:0;}
+      .med-acoes-topo{display:flex;gap:6px;align-items:center;flex-shrink:0;}
       @media (max-width:1024px){
         .med-spacer{display:none;}
         .med-top{gap:6px;padding:2px 0;}
@@ -157,8 +158,8 @@ const Medicoes = (() => {
         /* Início/Término, %/100% e Foto/Descartar pareados em 2 colunas —
            input type=date tem largura mínima própria que não encolhe bem
            com flex simples, então usa grid pra garantir 2 por linha sempre. */
-        .med-acoes-topo{order:1;margin-left:auto;}
-        .med-edit{order:2;display:grid;grid-template-columns:1fr 1fr;gap:6px;width:100%;margin-top:4px;}
+        .med-header-row{flex:1 1 100%;width:100%;}
+        .med-edit{display:grid;grid-template-columns:1fr 1fr;gap:6px;width:100%;margin-top:6px;}
         .med-inp{height:40px;font-size:.86rem;width:100%;box-sizing:border-box;min-width:0;}
         .med-inp-data{min-width:0;}
         .med-inp-pct{width:100%;}
@@ -265,13 +266,15 @@ const Medicoes = (() => {
       const fimHabilitado=prog>=100;
       const fotos=p?.fotos||[];
       rows+=`<div class="med-node leaf ${p?'sel':''} ${q&&t.id===primeiroMatchId?'busca-match':''}" id="med-row-${t.id}" style="padding-left:${12+niv*16}px;flex-wrap:wrap;align-items:flex-start;">
-        <div style="flex:1 1 180px;min-width:0;padding-top:3px;">
-          <div class="nm">${_esc(t.nome)}${t.frenteServico?` <span class="med-frente-badge" style="background:${Utils.corFrente(t.frenteServico)};">${t.frenteServico}</span>`:''}</div>
-          <div class="sub">Esperado: ${esp}%</div>
-        </div>
-        <div class="med-acoes-topo">
-          <label class="med-foto-btn" title="Adicionar foto">📷<input type="file" accept="image/*" multiple style="display:none;" onchange="Medicoes.fotoSelecionada('${t.id}',this)"></label>
-          ${p?`<button class="btn-icone" title="Descartar alteração" onclick="Medicoes.descartarItem('${t.id}')">✕</button>`:''}
+        <div class="med-header-row">
+          <div style="flex:1;min-width:0;padding-top:3px;">
+            <div class="nm">${_esc(t.nome)}${t.frenteServico?` <span class="med-frente-badge" style="background:${Utils.corFrente(t.frenteServico)};">${t.frenteServico}</span>`:''}</div>
+            <div class="sub">Esperado: ${esp}%</div>
+          </div>
+          <div class="med-acoes-topo">
+            <label class="med-foto-btn" title="Adicionar foto">📷<input type="file" accept="image/*" multiple style="display:none;" onchange="Medicoes.fotoSelecionada('${t.id}',this)"></label>
+            ${p?`<button class="btn-icone" title="Descartar alteração" onclick="Medicoes.descartarItem('${t.id}')">✕</button>`:''}
+          </div>
         </div>
         <div class="med-edit">
           <input type="date" class="med-inp med-inp-data" value="${iniVal}" title="Início Real" onchange="Medicoes.setCampo('${t.id}','inicioReal',this.value)">
@@ -353,7 +356,8 @@ const Medicoes = (() => {
       .btn-icone{width:28px;height:28px;min-width:28px;border:none;background:#fee2e2;color:#dc2626;border-radius:7px;font-size:.85rem;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
       .btn-icone:hover{background:#fecaca;}
       .med-frente-badge{color:#fff;font-size:.58rem;font-weight:700;padding:1px 6px;border-radius:7px;}
-      .med-acoes-topo{display:flex;gap:6px;align-items:center;order:5;}
+      .med-header-row{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex:1 1 220px;min-width:0;}
+      .med-acoes-topo{display:flex;gap:6px;align-items:center;flex-shrink:0;}
       @media (max-width:1024px){
         .med-spacer{display:none;}
         .med-top{gap:6px;padding:2px 0;}
@@ -370,8 +374,8 @@ const Medicoes = (() => {
         /* Início/Término, %/100% e Foto/Descartar pareados em 2 colunas —
            input type=date tem largura mínima própria que não encolhe bem
            com flex simples, então usa grid pra garantir 2 por linha sempre. */
-        .med-acoes-topo{order:1;margin-left:auto;}
-        .med-edit{order:2;display:grid;grid-template-columns:1fr 1fr;gap:6px;width:100%;margin-top:4px;}
+        .med-header-row{flex:1 1 100%;width:100%;}
+        .med-edit{display:grid;grid-template-columns:1fr 1fr;gap:6px;width:100%;margin-top:6px;}
         .med-inp{height:40px;font-size:.86rem;width:100%;box-sizing:border-box;min-width:0;}
         .med-inp-data{min-width:0;}
         .med-inp-pct{width:100%;}
