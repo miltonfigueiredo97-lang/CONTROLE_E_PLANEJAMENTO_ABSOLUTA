@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.11.1',
+  versaoAtual: 'V3.11.1.1',
 
   versoes: [
     {
@@ -8533,6 +8533,18 @@ const NotasVersao = {
         "Estacas e Fundações compartilhavam a mesma prancha ativa — trocar de aba não trocava de projeto, só filtrava os marcadores por cima da mesma imagem.",
         "Agora cada uma tem seu próprio projeto: a prancha ativa é lembrada separadamente por view, e a lista/criação de pranchas (📄 Pranchas) também é filtrada pela view atual.",
         "Pranchas já existentes continuam valendo como Estacas (comportamento de antes) — pra ter uma prancha de Fundações, é só trocar pra aba Fundações e importar uma nova."
+      ]
+    },
+    {
+      "versao": "V3.11.1.1",
+      "data": "2026-08-18",
+      "tipo": "melhoria",
+      "titulo": "Levantamento Piso: impermeabilização agora considera o rodapé separadamente da área",
+      "itens": [
+        "Ao marcar \\\"Considerar impermeabilização nesta área\\\", o popup ganhou dois novos controles: \\\"Considerar a área toda como impermeabilizada\\\" (m² da área) e \\\"Considerar o rodapé como impermeabilizado\\\" (ml × altura).",
+        "Altura do rodapé impermeabilizado com presets rápidos (Box 1,20m · Padrão 0,40m · Baixo 0,20m) e campo numérico livre pra digitar qualquer valor.",
+        "O m² de rodapé impermeabilizado (ml do rodapé selecionado × altura informada) agora soma no total de M² de Impermeabilização em todos os lugares: painel do workspace, Visão Geral e breakdown por tipo.",
+        "Compatibilidade com áreas já lançadas antes desta versão: continuam contando a área toda como impermeabilizada (comportamento antigo), sem precisar re-editar nada."
       ]
     }
   ],

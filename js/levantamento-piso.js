@@ -144,6 +144,16 @@ const LP = (() => {
   function esc(s) { return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
   function _uid() { return 'n' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
   function fmt2(n) { return (n || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+
+  // M² de impermeabilização de UMA área: área toda (se marcado) + rodapé impermeabilizado (ml × altura, se marcado).
+  // impermAreaToda !== false -> default true, compat com áreas antigas gravadas antes deste campo existir.
+  function _m2Imperm(a) {
+    if (!a.impermeabilizacao) return 0;
+    let m2 = 0;
+    if (a.impermAreaToda !== false) m2 += (a.areaM2 || 0);
+    if (a.impermRodape) m2 += (a.mlRodape || 0) * (a.alturaRodapeImperm || 0);
+    return m2;
+  }
   function num(v) { const n = parseFloat(String(v).replace(',', '.')); return isNaN(n) ? 0 : n; }
 
   function _ls(src) { return new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = rej; document.head.appendChild(s); }); }
@@ -496,7 +506,7 @@ const LP = (() => {
     const totalAreas = areasFiltradas.length;
     const totalPiso = areasFiltradas.reduce((s, a) => s + (a.areaM2 || 0), 0);
     const totalContrapiso = areasFiltradas.reduce((s, a) => s + (a.tipoContrapiso ? (a.areaM2 || 0) : 0), 0);
-    const totalImperm = areasFiltradas.reduce((s, a) => s + (a.impermeabilizacao ? (a.areaM2 || 0) : 0), 0);
+    const totalImperm = areasFiltradas.reduce((s, a) => s + _m2Imperm(a), 0);
     const totalRodape = areasFiltradas.reduce((s, a) => s + (a.mlRodape || 0), 0);
     const nodesComVinculo = _contarNodesComVinculo(arvore);
 
@@ -505,7 +515,7 @@ const LP = (() => {
     const porTipoContrapiso = {};
     areasFiltradas.forEach(a => { if (!a.tipoContrapiso) return; porTipoContrapiso[a.tipoContrapiso] = (porTipoContrapiso[a.tipoContrapiso] || 0) + (a.areaM2 || 0); });
     const porTipoImperm = {};
-    areasFiltradas.forEach(a => { if (!a.impermeabilizacao) return; const k = a.tipoImpermeabilizacao || '(tipo não informado)'; porTipoImperm[k] = (porTipoImperm[k] || 0) + (a.areaM2 || 0); });
+    areasFiltradas.forEach(a => { if (!a.impermeabilizacao) return; const k = a.tipoImpermeabilizacao || '(tipo não informado)'; porTipoImperm[k] = (porTipoImperm[k] || 0) + _m2Imperm(a); });
 
     const barras = (obj, cor) => {
       const entries = Object.entries(obj).sort((a, b) => b[1] - a[1]);
@@ -740,7 +750,7 @@ const LP = (() => {
     const areasN = _areasDoNode(node.id).sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
     const totalPiso = areasN.reduce((s, a) => s + (a.areaM2 || 0), 0);
     const totalContrapiso = areasN.reduce((s, a) => s + (a.tipoContrapiso ? (a.areaM2 || 0) : 0), 0);
-    const totalImperm = areasN.reduce((s, a) => s + (a.impermeabilizacao ? (a.areaM2 || 0) : 0), 0);
+    const totalImperm = areasN.reduce((s, a) => s + _m2Imperm(a), 0);
     const totalRodape = areasN.reduce((s, a) => s + (a.mlRodape || 0), 0);
     const pl = _plantaPorId(node.plantaId);
 
@@ -798,7 +808,7 @@ const LP = (() => {
                 <div class="nome"><span>${esc(a.nome)}</span><span class="m2">${fmt2(a.areaM2)} m²</span></div>
                 <div class="meta">
                   ${a.tipoPiso ? `Piso: ${esc(a.tipoPiso)}` : 'Piso: —'}${a.tipoContrapiso ? ` · Contrapiso: ${esc(a.tipoContrapiso)}` : ''}
-                  ${a.impermeabilizacao ? ` · 💧 Impermeabilizado${a.tipoImpermeabilizacao ? ' (' + esc(a.tipoImpermeabilizacao) + ')' : ''}` : ''}
+                  ${a.impermeabilizacao ? ` · 💧 Impermeabilizado${a.tipoImpermeabilizacao ? ' (' + esc(a.tipoImpermeabilizacao) + ')' : ''} — ${fmt2(_m2Imperm(a))} m²${a.impermRodape ? ` (inclui rodapé ${fmt2(a.alturaRodapeImperm || 0)}m)` : ''}` : ''}
                   ${a.mlRodape ? ` · 🦶 ${fmt2(a.mlRodape)}m rodapé` : ''}
                 </div>
               </div>
@@ -1279,6 +1289,11 @@ const LP = (() => {
     document.getElementById('lp-area-m2-display').value = fmt2(areaM2Pendente);
     document.getElementById('lp-area-ml-rodape-display').value = fmt2(mlRodapePendente) + ' m';
     document.getElementById('lp-campo-imperm-tipo').style.display = 'none';
+    document.getElementById('lp-check-imperm-area-toda').checked = true;
+    document.getElementById('lp-campo-imperm-rodape-altura').style.display = 'none';
+    document.getElementById('lp-select-altura-rodape-preset').value = '';
+    _atualizarLabelImpermAreaToda();
+    _atualizarInfoImpermRodape();
     document.getElementById('lp-btn-excluir-area').style.display = 'none';
     document.getElementById('lp-btn-editar-rodape').style.display = 'none';
     document.getElementById('lp-campo-mover').style.display = 'none';
@@ -1321,10 +1336,19 @@ const LP = (() => {
     areaEditId = id;
     areaPoligonoPendente = null;
     document.getElementById('lp-area-titulo').textContent = 'Editar Área';
-    Utils.setFormData('form-lp-area', a);
+    // impermAreaToda!==false: compat com áreas gravadas antes deste campo existir (comportamento antigo = área toda contava)
+    const dadosForm = Object.assign({}, a, {
+      impermAreaToda: a.impermeabilizacao ? (a.impermAreaToda !== false) : false,
+      impermRodape: !!a.impermRodape,
+    });
+    Utils.setFormData('form-lp-area', dadosForm);
     document.getElementById('lp-area-m2-display').value = fmt2(a.areaM2);
     document.getElementById('lp-area-ml-rodape-display').value = fmt2(a.mlRodape || 0) + ' m';
     document.getElementById('lp-campo-imperm-tipo').style.display = a.impermeabilizacao ? '' : 'none';
+    document.getElementById('lp-campo-imperm-rodape-altura').style.display = a.impermRodape ? '' : 'none';
+    document.getElementById('lp-select-altura-rodape-preset').value = '';
+    _atualizarLabelImpermAreaToda();
+    _atualizarInfoImpermRodape();
     document.getElementById('lp-btn-excluir-area').style.display = '';
     document.getElementById('lp-btn-editar-rodape').style.display = '';
     document.getElementById('lp-btn-editar-rodape').setAttribute('onclick', `LP.iniciarEdicaoRodape('${id}')`);
@@ -1499,6 +1523,42 @@ const LP = (() => {
 
   function onToggleImperm(chk) {
     document.getElementById('lp-campo-imperm-tipo').style.display = chk.checked ? '' : 'none';
+    if (chk.checked) {
+      document.getElementById('lp-check-imperm-area-toda').checked = true;
+      _atualizarLabelImpermAreaToda();
+      _atualizarInfoImpermRodape();
+    }
+  }
+
+  function onToggleImpermRodape(chk) {
+    document.getElementById('lp-campo-imperm-rodape-altura').style.display = chk.checked ? '' : 'none';
+    if (chk.checked) _atualizarInfoImpermRodape();
+  }
+
+  function aplicarPresetAlturaRodape() {
+    const v = document.getElementById('lp-select-altura-rodape-preset').value;
+    if (v) document.getElementById('lp-input-altura-rodape').value = v;
+    _atualizarInfoImpermRodape();
+  }
+
+  function onAlturaRodapeInput() {
+    document.getElementById('lp-select-altura-rodape-preset').value = '';
+    _atualizarInfoImpermRodape();
+  }
+
+  function _atualizarLabelImpermAreaToda() {
+    const el = document.getElementById('lp-imperm-area-toda-valor');
+    if (el) el.textContent = document.getElementById('lp-area-m2-display').value;
+  }
+
+  function _atualizarInfoImpermRodape() {
+    const ml = Utils.parseNum(document.getElementById('lp-area-ml-rodape-display').value);
+    const altura = Utils.parseNum(document.getElementById('lp-input-altura-rodape').value);
+    const info = document.getElementById('lp-imperm-rodape-m2-info');
+    if (!info) return;
+    info.textContent = ml > 0
+      ? `= ${fmt2(ml)}m × ${fmt2(altura)}m = ${fmt2(ml * altura)} m² de impermeabilização`
+      : 'Nenhum rodapé selecionado nesta área ainda.';
   }
 
   function fecharModalArea() {
@@ -1514,7 +1574,13 @@ const LP = (() => {
     if(!Permissions.pode('levantamentoPiso','criar')&&!Permissions.pode('levantamentoPiso','editar')){Utils.toast('Sem permissão.','erro');return;}
     const data = Utils.getFormData('form-lp-area');
     if (!data.nome) { Utils.toast('Informe o nome da área.', 'alerta'); return; }
-    if (!data.impermeabilizacao) data.tipoImpermeabilizacao = '';
+    if (!data.impermeabilizacao) {
+      data.tipoImpermeabilizacao = '';
+      data.impermAreaToda = false;
+      data.impermRodape = false;
+      data.alturaRodapeImperm = 0;
+    }
+    if (!data.impermRodape) data.alturaRodapeImperm = 0;
 
     const nodeIdDestino = areaEditId ? null : (areaNodeIdPendente || selNodeId);
 
@@ -1651,7 +1717,7 @@ const LP = (() => {
     abrirModalPlanta, enviarPlanta, excluirPlanta, vincularPlantaExistente, trocarPlanta,
     toggleModoCalibrar, toggleModoMedir, cancelarDesenho,
     cancelarCalibracao, confirmarCalibracao,
-    finalizarPoligono, editarArea, onToggleImperm, fecharModalArea, salvarArea, excluirAreaEmEdicao, moverArea,
+    finalizarPoligono, editarArea, onToggleImperm, onToggleImpermRodape, aplicarPresetAlturaRodape, onAlturaRodapeInput, fecharModalArea, salvarArea, excluirAreaEmEdicao, moverArea,
     filtrarAreas, abrirClonarPavimento, marcarTodosClonar, confirmarClonarPavimento, criarNovoLocalEClonar, filtrarVisaoGeral,
     marcarTodasAreas, desmarcarTodasAreas, atualizarBarraSelecaoAreas, moverOuCopiarSelecionadas, toggleSelecaoArea,
     toggleRodapeEdge, cancelarRodape, confirmarRodape, iniciarEdicaoRodape,
