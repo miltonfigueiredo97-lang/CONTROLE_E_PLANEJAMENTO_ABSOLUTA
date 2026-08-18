@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.13.1.2',
+  versaoAtual: 'V3.13.1.3',
 
   versoes: [
     {
@@ -8943,6 +8943,16 @@ const NotasVersao = {
       "itens": [
         "A correção anterior (profundidade fixa) resolveu o caso de a árvore de Paredes ter um nível de Cômodo extra, mas não resolvia se o mesmo local estivesse escrito com maiúscula/minúscula ou espaço diferente nas duas árvores (ex: \"Torre\" no Piso vs \"torre \" nas Paredes) — o agrupamento comparava o texto cru, então continuava tratando como dois locais diferentes.",
         "Corrigido: agora Torre, Andar e Apto passam por uma normalização (ignora maiúscula/minúscula e espaços) antes de agrupar — o primeiro nome visto em cada combinação \"vence\" e todo item equivalente passa a usar esse mesmo texto. Continua sem solução automática só se o nome for genuinamente diferente por escrito (ex: \"AP 1\" numa árvore e \"Apto 01\" na outra) — nesse caso o texto precisa ficar igual em ambos os levantamentos."
+      ]
+    },
+    {
+      "versao": "V3.13.1.3",
+      "data": "2026-08-18",
+      "tipo": "correcao",
+      "titulo": "Medições: achado o motivo real do card mobile parecer sempre igual — recuo de hierarquia comendo a tela",
+      "itens": [
+        "O padding-left que empurra a linha pra direita conforme a profundidade na árvore (nível×16px) foi pensado pra desktop — no celular, uma tarefa em nível 4-5 perdia 70-90px de tela só de recuo vazio à esquerda, sobrando pouca largura pros campos, que ficavam espremidos à direita. Isso é o que causava a sensação de \"nada mudou\": a poda de badge/esperado ajudou um pouco, mas o recuo continuava comendo a maior parte da tela.",
+        "Corrigido: no mobile, o recuo trava no máximo em 2 níveis (16px), não importa quão mais profunda a tarefa esteja na árvore — sobra muito mais largura pra Início/Término/%."
       ]
     }
   ],
