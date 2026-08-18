@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.13.1.5',
+  versaoAtual: 'V3.13.1.6',
 
   versoes: [
     {
@@ -8972,6 +8972,16 @@ const NotasVersao = {
       "titulo": "Medições: botão \"Ocultar 100%\" — esconde quem já está concluído",
       "itens": [
         "Novo botão na barra de cima, junto com o filtro de Frente e a busca — liga/desliga (fica marcado ☑ quando ativo, lembra a escolha entre sessões). Some com toda tarefa já em 100% (considerando também o que ainda não foi salvo) e some com o grupo-pai se não sobrar nenhum filho visível — foco só no que falta preencher."
+      ]
+    },
+    {
+      "versao": "V3.13.1.6",
+      "data": "2026-08-18",
+      "tipo": "correcao",
+      "titulo": "Controle de Porcelanatos: KPIs sem número e tudo sobreposto em obras com muitos itens",
+      "itens": [
+        "Causa raiz (achada reproduzindo a tela localmente, não só pelo print): `#cp-content` é filho de `.content`, que no layout geral é flex-column com uma regra global `.content > div { min-height: 0 }` (feita pro Gantt do Planejamento). Como cada seção do módulo (KPIs, filtros, cada Torre) virava um `<div>` solto direto ali, em obras com muitos itens (aqui, 117) o flexbox espremia CADA seção pra caber no espaço visível — o texto não encolhe junto, então tudo passava a se sobrepor: números dos KPIs cortados, blocos de Torre embaralhados.",
+        "Corrigido: todo o conteúdo do módulo agora vive dentro de um único `<div class=\"cc-view\">` (mesmo padrão já usado no Controle de Concreto) — só esse wrapper único fica sujeito à regra do `.content`, e por dentro dele nada mais compete por espaço. Testado renderizando a página real localmente com 117 itens antes e depois da correção."
       ]
     }
   ],

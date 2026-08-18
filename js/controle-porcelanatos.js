@@ -356,8 +356,10 @@ const ControlePorcelanatos = (() => {
 
     if (!itensCache.length) {
       el.innerHTML = `
+        <div class="cc-view">
         <div class="page-header"><div><h2>🧱 Controle de Porcelanatos</h2></div></div>
         <div class="estado-vazio"><div class="icone">🧱</div><p>Nenhuma área de piso ou face de revestimento de parede encontrada ainda. Meça alguma coisa no Levantamento de Piso ou de Paredes primeiro.</p></div>
+        </div>
       `;
       Permissions.aplicarNaTela();
       return;
@@ -375,7 +377,16 @@ const ControlePorcelanatos = (() => {
 
     const grupos = _agrupar(itens);
 
+    // IMPORTANTE: tudo abaixo vive dentro de UM ÚNICO wrapper (.cc-view).
+    // #cp-content é filho de `.content` (flex-column + `.content > div{min-height:0}`
+    // global, pensado pro Gantt do Planejamento). Se cada seção (kpis, filtros, cada
+    // Torre) fosse um <div> direto solto aqui, o flexbox espremia CADA UMA na hora de
+    // sobrar pouco espaço (obra com muitos itens) — e como o conteúdo real (texto)
+    // não encolhe, tudo passava a se sobrepor visualmente. Com um wrapper só, é ele
+    // que "encolhe" (sem problema, o scroll do `.content` mede o conteúdo real, não
+    // a altura encolhida da caixa) e as seções internas nunca competem entre si.
     el.innerHTML = `
+      <div class="cc-view">
       <div class="page-header">
         <div>
           <h2>🧱 Controle de Porcelanatos</h2>
@@ -426,6 +437,7 @@ const ControlePorcelanatos = (() => {
       </div>
 
       ${!itens.length ? `<div class="estado-vazio"><div class="icone">🔍</div><p>Nenhum item bate com os filtros atuais.</p></div>` : grupos.map(_renderTorre).join('')}
+      </div>
     `;
     Permissions.aplicarNaTela();
   }
