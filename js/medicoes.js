@@ -111,6 +111,7 @@ const Medicoes = (() => {
       .med-chip small{font-weight:500;color:#94a3b8;font-size:.66rem;}
       .med-tree{background:#fff;border:1px solid #e2e8f0;border-radius:10px;overflow:auto;}
       .med-node{display:flex;align-items:center;gap:8px;padding:7px 12px;border-bottom:1px solid #f8fafc;font-size:.82rem;}
+      .med-node{padding-left:calc(12px + var(--niv,0) * 16px);}
       .med-node:hover{background:#fefce8;}
       .med-node .tog{width:26px;height:26px;min-width:26px;cursor:pointer;color:#1e293b;font-weight:800;font-size:1rem;text-align:center;user-select:none;display:flex;align-items:center;justify-content:center;background:#e2e8f0;border-radius:7px;flex-shrink:0;}
       .med-node .tog:hover{background:#cbd5e1;}
@@ -144,6 +145,9 @@ const Medicoes = (() => {
       .med-acoes-topo{display:flex;gap:6px;align-items:center;flex-shrink:0;}
       @media (max-width:1024px){
         .med-spacer{display:none;}
+        /* Recuo de hierarquia (nivel*16px) come a largura toda no celular —
+           trava num recuo pequeno e fixo, não importa a profundidade real. */
+        .med-node{padding-left:calc(8px + min(var(--niv,0),2) * 8px) !important;}
         .med-top{gap:6px;padding:2px 0;}
         .med-top .btn-sm{padding:8px 10px;font-size:.82rem;flex:1 1 auto;}
         .med-top select, .med-top input.form-control{max-width:none !important;flex:1 1 47%;padding:9px;font-size:.85rem;}
@@ -254,7 +258,7 @@ const Medicoes = (() => {
         const col=colapsados.has(t.id);
         if(col)skipLevel=niv;
         const a=_aggGrupo(i);
-        rows+=`<div class="med-node" style="padding-left:${12+niv*16}px;background:${niv===0?'#e2e8f0':niv===1?'#eef2f7':'#f8fafc'};">
+        rows+=`<div class="med-node" style="--niv:${niv};background:${niv===0?'#e2e8f0':niv===1?'#eef2f7':'#f8fafc'};">
           <span class="tog" onclick="Medicoes.toggleGrupo('${t.id}')">${col?'＋':'－'}</span>
           <div><div class="nm">${_esc(t.nome)}</div>
           <div class="sub">Esperado: ${a.esp.toFixed(0)}%&nbsp;&nbsp;Real: ${a.real.toFixed(0)}%</div></div>
@@ -270,7 +274,7 @@ const Medicoes = (() => {
       const fimVal=p?.terminoReal!=null?p.terminoReal:(t.terminoReal?_iso(_d(t.terminoReal)):'');
       const fimHabilitado=prog>=100;
       const fotos=p?.fotos||[];
-      rows+=`<div class="med-node leaf ${p?'sel':''} ${q&&t.id===primeiroMatchId?'busca-match':''}" id="med-row-${t.id}" style="padding-left:${12+niv*16}px;flex-wrap:wrap;align-items:flex-start;">
+      rows+=`<div class="med-node leaf ${p?'sel':''} ${q&&t.id===primeiroMatchId?'busca-match':''}" id="med-row-${t.id}" style="--niv:${niv};flex-wrap:wrap;align-items:flex-start;">
         <div class="med-header-row">
           <div style="flex:1;min-width:0;padding-top:3px;">
             <div class="nm">${_esc(t.nome)}${t.frenteServico?` <span class="med-frente-badge" style="background:${Utils.corFrente(t.frenteServico)};">${t.frenteServico}</span>`:''}</div>
@@ -332,6 +336,7 @@ const Medicoes = (() => {
       .med-chip small{font-weight:500;color:#94a3b8;font-size:.66rem;}
       .med-tree{background:#fff;border:1px solid #e2e8f0;border-radius:10px;overflow:auto;}
       .med-node{display:flex;align-items:center;gap:8px;padding:7px 12px;border-bottom:1px solid #f8fafc;font-size:.82rem;}
+      .med-node{padding-left:calc(12px + var(--niv,0) * 16px);}
       .med-node:hover{background:#fefce8;}
       .med-node .tog{width:26px;height:26px;min-width:26px;cursor:pointer;color:#1e293b;font-weight:800;font-size:1rem;text-align:center;user-select:none;display:flex;align-items:center;justify-content:center;background:#e2e8f0;border-radius:7px;flex-shrink:0;}
       .med-node .tog:hover{background:#cbd5e1;}
@@ -365,6 +370,9 @@ const Medicoes = (() => {
       .med-acoes-topo{display:flex;gap:6px;align-items:center;flex-shrink:0;}
       @media (max-width:1024px){
         .med-spacer{display:none;}
+        /* Recuo de hierarquia (nivel*16px) come a largura toda no celular —
+           trava num recuo pequeno e fixo, não importa a profundidade real. */
+        .med-node{padding-left:calc(8px + min(var(--niv,0),2) * 8px) !important;}
         .med-top{gap:6px;padding:2px 0;}
         .med-top .btn-sm{padding:8px 10px;font-size:.82rem;flex:1 1 auto;}
         .med-top select, .med-top input.form-control{max-width:none !important;flex:1 1 47%;padding:9px;font-size:.85rem;}
