@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.12.0.11',
+  versaoAtual: 'V3.13.0',
 
   versoes: [
     {
@@ -8900,6 +8900,20 @@ const NotasVersao = {
       "itens": [
         "A tentativa anterior de subir 📷/✕ pra junto do nome não funcionou: o bloco do nome crescia e empurrava os ícones pra uma linha nova, sozinha e praticamente vazia — pior que antes. Causa: nome e ícones eram itens soltos no mesmo flex container, sem nada garantindo que ficassem na mesma linha.",
         "Corrigido de raiz: nome+badge e os ícones (📷/✕) agora vivem dentro do mesmo bloco dedicado (linha do cabeçalho) — ficam sempre um do lado do outro, o texto do nome quebra por dentro sem empurrar os ícones pra lugar nenhum."
+      ]
+    },
+    {
+      "versao": "V3.13.0",
+      "data": "2026-08-18",
+      "tipo": "funcionalidade",
+      "titulo": "Controle de Porcelanatos: junta Piso + Paredes, agrupa por Torre/Andar/Apto e ganha controle de execução",
+      "itens": [
+        "Agora traz também o Levantamento de Paredes — só a fatia de \"Revestimento de Parede\" (porcelanato/cerâmica) de cada face, no mesmo m² equivalente já usado lá (respeitando desconto de vãos e Metro Linear). Gesso, reboco e pintura continuam de fora — não são porcelanato.",
+        "Tudo agrupado visualmente por Torre → Andar → Apartamento (colapsável por torre), com filtros de Torre, Andar, Status e busca. Como Piso e Paredes têm árvores de local separadas, o cruzamento é feito pelo nome do caminho — se o mesmo apto estiver escrito diferente nos dois levantamentos, aparece em dois grupos.",
+        "Novo controle de execução: apontamento diário de m² aplicado por item (data, m², observação), com histórico completo e exclusão de lançamentos. Status automático — Pendente / Em andamento / Concluído — com aviso quando o executado passa do planejado.",
+        "Novos KPIs no topo: m² planejado (Piso, Parede e Total), m² executado, % de avanço geral e itens concluídos.",
+        "Exportar Planilha ganhou uma segunda aba \"Resumo por Local\" (totais de Piso/Parede/Executado por Torre-Andar-Apto), além da aba Detalhado — que agora também traz Torre, Andar, M² Executado, % Executado e Status.",
+        "Nova coleção no Firestore: `porcelanatosExecucoes` (apontamentos). Guard de permissão: apontar execução usa `controlePorcelanatos:criar`, excluir apontamento usa `controlePorcelanatos:excluir` (catálogo já existia)."
       ]
     }
   ],
