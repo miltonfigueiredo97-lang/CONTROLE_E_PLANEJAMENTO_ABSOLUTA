@@ -159,6 +159,11 @@ const Medicoes = (() => {
            input type=date tem largura mínima própria que não encolhe bem
            com flex simples, então usa grid pra garantir 2 por linha sempre. */
         .med-header-row{flex:1 1 100%;width:100%;}
+        /* Card mínimo no mobile: só nome + Início/Término/% — sem badge de
+           Frente (já dá pra ver no filtro de cima) nem texto de Esperado. */
+        .med-frente-badge{display:none;}
+        .med-leaf-esp{display:none;}
+        .med-node.leaf{padding-bottom:8px;}
         .med-edit{display:grid;grid-template-columns:1fr 1fr;gap:6px;width:100%;margin-top:6px;}
         .med-inp{height:40px;font-size:.86rem;width:100%;box-sizing:border-box;min-width:0;}
         .med-inp-data{min-width:0;}
@@ -269,7 +274,7 @@ const Medicoes = (() => {
         <div class="med-header-row">
           <div style="flex:1;min-width:0;padding-top:3px;">
             <div class="nm">${_esc(t.nome)}${t.frenteServico?` <span class="med-frente-badge" style="background:${Utils.corFrente(t.frenteServico)};">${t.frenteServico}</span>`:''}</div>
-            <div class="sub">Esperado: ${esp}%</div>
+            <div class="sub med-leaf-esp">Esperado: ${esp}%</div>
           </div>
           <div class="med-acoes-topo">
             <label class="med-foto-btn" title="Adicionar foto">📷<input type="file" accept="image/*" multiple style="display:none;" onchange="Medicoes.fotoSelecionada('${t.id}',this)"></label>
@@ -375,6 +380,11 @@ const Medicoes = (() => {
            input type=date tem largura mínima própria que não encolhe bem
            com flex simples, então usa grid pra garantir 2 por linha sempre. */
         .med-header-row{flex:1 1 100%;width:100%;}
+        /* Card mínimo no mobile: só nome + Início/Término/% — sem badge de
+           Frente (já dá pra ver no filtro de cima) nem texto de Esperado. */
+        .med-frente-badge{display:none;}
+        .med-leaf-esp{display:none;}
+        .med-node.leaf{padding-bottom:8px;}
         .med-edit{display:grid;grid-template-columns:1fr 1fr;gap:6px;width:100%;margin-top:6px;}
         .med-inp{height:40px;font-size:.86rem;width:100%;box-sizing:border-box;min-width:0;}
         .med-inp-data{min-width:0;}
