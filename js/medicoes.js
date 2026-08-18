@@ -127,7 +127,12 @@ const Medicoes = (() => {
       .med-inp:disabled{background:#f1f5f9;color:#94a3b8;}
       .med-inp-pct{width:52px;text-align:center;font-weight:700;}
       .med-inp-data{width:122px;}
-      .med-btn-100{border:1px solid #16a34a;color:#16a34a;background:#f0fdf4;border-radius:6px;padding:0 8px;height:30px;font-size:.68rem;font-weight:700;cursor:pointer;white-space:nowrap;}
+      .med-btn-100{border:1px solid #16a34a;color:#16a34a;background:#f0fdf4;border-radius:6px;width:34px;height:30px;font-size:.85rem;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;}
+      .med-campo{display:flex;flex-direction:column;gap:3px;min-width:0;}
+      .med-campo label{font-size:.62rem;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:.02em;}
+      .med-pct-linha{display:flex;gap:5px;}
+      .med-pct-linha .med-inp-pct{flex:1;min-width:0;}
+      .med-previsto{display:flex;align-items:center;height:30px;padding:0 10px;border:1px solid #e2e8f0;background:#f8fafc;border-radius:6px;font-weight:700;color:#64748b;font-size:.85rem;}
       .med-btn-100:hover{background:#dcfce7;}
       .med-foto-btn{display:flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:6px;background:#f1f5f9;cursor:pointer;font-size:.95rem;flex-shrink:0;}
       .med-foto-btn:hover{background:#e2e8f0;}
@@ -171,8 +176,10 @@ const Medicoes = (() => {
         .med-edit{display:grid;grid-template-columns:1fr 1fr;gap:6px;width:100%;margin-top:6px;}
         .med-inp{height:40px;font-size:.86rem;width:100%;box-sizing:border-box;min-width:0;}
         .med-inp-data{min-width:0;}
-        .med-inp-pct{width:100%;}
-        .med-btn-100{height:40px;font-size:.83rem;width:100%;}
+        .med-inp-pct{width:100%;flex:1;min-width:0;}
+        .med-btn-100{height:40px;font-size:1rem;width:40px;flex-shrink:0;}
+        .med-campo label{font-size:.64rem;}
+        .med-previsto{height:40px;font-size:.9rem;}
         .med-foto-btn{width:38px;height:38px;font-size:1.15rem;}
         .btn-icone{width:38px;height:38px;font-size:1.05rem;}
         .med-foto-thumb img{width:56px;height:56px;}
@@ -278,7 +285,6 @@ const Medicoes = (() => {
         <div class="med-header-row">
           <div style="flex:1;min-width:0;padding-top:3px;">
             <div class="nm">${_esc(t.nome)}${t.frenteServico?` <span class="med-frente-badge" style="background:${Utils.corFrente(t.frenteServico)};">${t.frenteServico}</span>`:''}</div>
-            <div class="sub med-leaf-esp">Esperado: ${esp}%</div>
           </div>
           <div class="med-acoes-topo">
             <label class="med-foto-btn" title="Adicionar foto">📷<input type="file" accept="image/*" multiple style="display:none;" onchange="Medicoes.fotoSelecionada('${t.id}',this)"></label>
@@ -286,10 +292,25 @@ const Medicoes = (() => {
           </div>
         </div>
         <div class="med-edit">
-          <input type="date" class="med-inp med-inp-data" value="${iniVal}" title="Início Real" onchange="Medicoes.setCampo('${t.id}','inicioReal',this.value)">
-          <input type="date" class="med-inp med-inp-data" value="${fimVal}" title="Término Real (só com 100%)" ${fimHabilitado?'':'disabled'} onchange="Medicoes.setCampo('${t.id}','terminoReal',this.value)">
-          <input type="number" class="med-inp med-inp-pct" min="0" max="100" value="${prog}" title="% concluído" onchange="Medicoes.setCampo('${t.id}','progresso',this.value)">
-          <button class="med-btn-100" title="Marcar 100%" onclick="Medicoes.setCampo('${t.id}','progresso',100)">✓100%</button>
+          <div class="med-campo">
+            <label>Início Real</label>
+            <input type="date" class="med-inp med-inp-data" value="${iniVal}" onchange="Medicoes.setCampo('${t.id}','inicioReal',this.value)">
+          </div>
+          <div class="med-campo">
+            <label>Término Real</label>
+            <input type="date" class="med-inp med-inp-data" value="${fimVal}" title="Só habilita com 100% de progresso" ${fimHabilitado?'':'disabled'} onchange="Medicoes.setCampo('${t.id}','terminoReal',this.value)">
+          </div>
+          <div class="med-campo">
+            <label>% Executado</label>
+            <div class="med-pct-linha">
+              <input type="number" class="med-inp med-inp-pct" min="0" max="100" value="${prog}" onchange="Medicoes.setCampo('${t.id}','progresso',this.value)">
+              <button class="med-btn-100" title="Marcar 100%" onclick="Medicoes.setCampo('${t.id}','progresso',100)">✓</button>
+            </div>
+          </div>
+          <div class="med-campo">
+            <label>% Previsto</label>
+            <div class="med-previsto">${esp}%</div>
+          </div>
         </div>
         ${fotos.length?`<div class="med-fotos-row">${fotos.map((f,fi)=>`<div class="med-foto-thumb"><img src="${f}"><button onclick="Medicoes.removerFoto('${t.id}',${fi})">✕</button></div>`).join('')}</div>`:''}
       </div>`;
@@ -352,7 +373,12 @@ const Medicoes = (() => {
       .med-inp:disabled{background:#f1f5f9;color:#94a3b8;}
       .med-inp-pct{width:52px;text-align:center;font-weight:700;}
       .med-inp-data{width:122px;}
-      .med-btn-100{border:1px solid #16a34a;color:#16a34a;background:#f0fdf4;border-radius:6px;padding:0 8px;height:30px;font-size:.68rem;font-weight:700;cursor:pointer;white-space:nowrap;}
+      .med-btn-100{border:1px solid #16a34a;color:#16a34a;background:#f0fdf4;border-radius:6px;width:34px;height:30px;font-size:.85rem;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;}
+      .med-campo{display:flex;flex-direction:column;gap:3px;min-width:0;}
+      .med-campo label{font-size:.62rem;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:.02em;}
+      .med-pct-linha{display:flex;gap:5px;}
+      .med-pct-linha .med-inp-pct{flex:1;min-width:0;}
+      .med-previsto{display:flex;align-items:center;height:30px;padding:0 10px;border:1px solid #e2e8f0;background:#f8fafc;border-radius:6px;font-weight:700;color:#64748b;font-size:.85rem;}
       .med-btn-100:hover{background:#dcfce7;}
       .med-foto-btn{display:flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:6px;background:#f1f5f9;cursor:pointer;font-size:.95rem;flex-shrink:0;}
       .med-foto-btn:hover{background:#e2e8f0;}
@@ -396,8 +422,10 @@ const Medicoes = (() => {
         .med-edit{display:grid;grid-template-columns:1fr 1fr;gap:6px;width:100%;margin-top:6px;}
         .med-inp{height:40px;font-size:.86rem;width:100%;box-sizing:border-box;min-width:0;}
         .med-inp-data{min-width:0;}
-        .med-inp-pct{width:100%;}
-        .med-btn-100{height:40px;font-size:.83rem;width:100%;}
+        .med-inp-pct{width:100%;flex:1;min-width:0;}
+        .med-btn-100{height:40px;font-size:1rem;width:40px;flex-shrink:0;}
+        .med-campo label{font-size:.64rem;}
+        .med-previsto{height:40px;font-size:.9rem;}
         .med-foto-btn{width:38px;height:38px;font-size:1.15rem;}
         .btn-icone{width:38px;height:38px;font-size:1.05rem;}
         .med-foto-thumb img{width:56px;height:56px;}

@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.13.1.3',
+  versaoAtual: 'V3.13.1.4',
 
   versoes: [
     {
@@ -8953,6 +8953,16 @@ const NotasVersao = {
       "itens": [
         "O padding-left que empurra a linha pra direita conforme a profundidade na árvore (nível×16px) foi pensado pra desktop — no celular, uma tarefa em nível 4-5 perdia 70-90px de tela só de recuo vazio à esquerda, sobrando pouca largura pros campos, que ficavam espremidos à direita. Isso é o que causava a sensação de \"nada mudou\": a poda de badge/esperado ajudou um pouco, mas o recuo continuava comendo a maior parte da tela.",
         "Corrigido: no mobile, o recuo trava no máximo em 2 níveis (16px), não importa quão mais profunda a tarefa esteja na árvore — sobra muito mais largura pra Início/Término/%."
+      ]
+    },
+    {
+      "versao": "V3.13.1.4",
+      "data": "2026-08-18",
+      "tipo": "melhoria",
+      "titulo": "Medições: campos com legenda visível + % Executado ao lado do % Previsto",
+      "itens": [
+        "Cada campo agora tem uma legenda em cima (Início Real / Término Real / % Executado / % Previsto) — antes só tinha o placeholder cinza (\"dd/mm/aaaa\"), que sozinho não dizia qual data era qual.",
+        "% Previsto (o antigo \"Esperado\") voltou, mas lado a lado com % Executado — compara na hora se tá atrasado ou adiantado sem precisar abrir mais nada. Botão de marcar 100% ficou um ✓ pequeno colado no campo de % Executado."
       ]
     }
   ],
