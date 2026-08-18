@@ -71,14 +71,17 @@ const DashTerra = (() => {
         const volV = TC.calcVolumeTotalSecoes(secDoc.vertical || []);
         volEmpolado = TC.calcVolumeComEmpolamento(TC.calcVolumeMedio(volH, volV), taxa);
       }
-      // Volume de estacas (Controle de Estacas) e capacidade média dos
-      // caminhões — pro relatório aberto daqui já trazer o resumo geral também.
-      const volumeTotalEstacas = (pecas || []).filter(p => p.tipo === 'Fundação' && p.subTipo === 'Estacas').reduce((s, p) => s + num(p.volume), 0);
+      // Volume de estacas e fundação superficial (Controle de Estacas e
+      // Fundações) e capacidade média dos caminhões — pro relatório aberto
+      // daqui já trazer o resumo geral também.
+      const pecasFundacao = (pecas || []).filter(p => p.tipo === 'Fundação');
+      const volumeTotalEstacas = pecasFundacao.filter(p => p.subTipo === 'Estacas').reduce((s, p) => s + num(p.volume), 0);
+      const volumeFundacaoSuperficial = pecasFundacao.filter(p => p.subTipo && p.subTipo !== 'Estacas').reduce((s, p) => s + num(p.volume), 0);
       const tipos = (cfgDoc?.tiposCaminhao || []).map(t => num(t.capacidade)).filter(c => c > 0);
       const capacidadeMedia = tipos.length ? tipos.reduce((s, c) => s + c, 0) / tipos.length : 0;
 
       // Cache pro relatório de período (TerraRel) — gerado sem sair da tela.
-      _cacheRel = { obraNome: ctx.obra?.nome || '', entregas, caminhoes, config: cfgDoc || {}, volEmpolado, volumeTotalEstacas, volumeFundacaoSuperficial: 0, capacidadeMedia };
+      _cacheRel = { obraNome: ctx.obra?.nome || '', entregas, caminhoes, config: cfgDoc || {}, volEmpolado, volumeTotalEstacas, volumeFundacaoSuperficial, capacidadeMedia };
 
       const volTerra = entregas.filter(e => _classMat(e.material) === 'TERRA').reduce((s, e) => s + num(e.volume), 0);
       const volEntulho = entregas.filter(e => _classMat(e.material) === 'ENTULHO').reduce((s, e) => s + num(e.volume), 0);

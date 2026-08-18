@@ -22,7 +22,7 @@ const ControleTerraplanagem = (() => {
   let config = { taxaEmpolamento: 0.3, capacidadeGrande: 15.6, capacidadePequena: 10, tiposCaminhao: [{ nome: 'Grande', capacidade: 15.6 }, { nome: 'Pequeno', capacidade: 10 }], valorViagemTerra: 0, valorViagemEntulho: 0 };
   let secoes = { horizontal: [], vertical: [] };
   let volumeTotalEstacas = 0; // vem do Controle de Estacas (concretoPecas), pra somar no total geral da obra
-  let volumeFundacaoSuperficial = 0; // TODO: ainda não existe módulo próprio — 0 por enquanto, já deixa no esquema pra plugar depois
+  let volumeFundacaoSuperficial = 0; // vem do Controle de Estacas e Fundações (concretoPecas, subTipo != 'Estacas')
   let fBusca = '';
   let abaRel = 'viagens'; // 'viagens' | 'porDia' | 'porCaminhao'
 
@@ -60,12 +60,14 @@ const ControleTerraplanagem = (() => {
       caminhoes = cs; entregas = es;
       await carregarConfig();
       await carregarSecoes();
-      // Volume das estacas (Controle de Estacas) — mesma lógica do Levantamento,
-      // pra entrar no Volume Total de Retirada de Terra desta tela também.
+      // Volume das estacas E fundação superficial (Controle de Estacas e
+      // Fundações) — pra entrar no Volume Total de Retirada de Terra desta tela também.
       try {
         const todasPecas = await Database.listar(obraId, 'concretoPecas', null);
-        volumeTotalEstacas = (todasPecas || []).filter(p => p.tipo === 'Fundação' && p.subTipo === 'Estacas').reduce((s, p) => s + (TC.num(p.volume) || 0), 0);
-      } catch (e) { volumeTotalEstacas = 0; }
+        const pecasFundacao = (todasPecas || []).filter(p => p.tipo === 'Fundação');
+        volumeTotalEstacas = pecasFundacao.filter(p => p.subTipo === 'Estacas').reduce((s, p) => s + (TC.num(p.volume) || 0), 0);
+        volumeFundacaoSuperficial = pecasFundacao.filter(p => p.subTipo && p.subTipo !== 'Estacas').reduce((s, p) => s + (TC.num(p.volume) || 0), 0);
+      } catch (e) { volumeTotalEstacas = 0; volumeFundacaoSuperficial = 0; }
       renderizar();
     } catch (e) {
       console.error(e);
@@ -227,7 +229,7 @@ const ControleTerraplanagem = (() => {
         <div class="cc-kpi cc-kpiOrange"><div class="cc-kpiIcon">📦</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Volume de Terra (previsto)</div><div class="cc-kpiValue">${k.volEmpolado > 0 ? TC.fmt1(k.volEmpolado) + '<span class="cc-kpiUnit">m³</span>' : '—'}</div>${k.volEmpolado > 0 ? '' : '<div class="cc-kpiSub">Sem Levantamento cadastrado ainda</div>'}</div></div>
         <div class="cc-kpi"><div class="cc-kpiIcon">🧱</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Volume de Entulho</div><div class="cc-kpiValue">${TC.fmt1(k.volEntulho)}<span class="cc-kpiUnit">m³</span></div><div class="cc-kpiSub">não entra na terraplanagem</div></div></div>
         <div class="cc-kpi"><div class="cc-kpiIcon">🔩</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Volume Fundação Profunda</div><div class="cc-kpiValue">${k.volEstacasEmpolado > 0 ? TC.fmt1(k.volEstacasEmpolado) + '<span class="cc-kpiUnit">m³</span>' : '—'}</div><div class="cc-kpiSub">Controle de Estacas, empolado</div></div></div>
-        <div class="cc-kpi"><div class="cc-kpiIcon">🧊</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Volume Fundação Superficial</div><div class="cc-kpiValue">${k.volFundacaoSuperficialEmpolado > 0 ? TC.fmt1(k.volFundacaoSuperficialEmpolado) + '<span class="cc-kpiUnit">m³</span>' : '—'}</div><div class="cc-kpiSub">ainda sem módulo próprio</div></div></div>
+        <div class="cc-kpi"><div class="cc-kpiIcon">🧊</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Volume Fundação Superficial</div><div class="cc-kpiValue">${k.volFundacaoSuperficialEmpolado > 0 ? TC.fmt1(k.volFundacaoSuperficialEmpolado) + '<span class="cc-kpiUnit">m³</span>' : '—'}</div><div class="cc-kpiSub">Controle de Fundações</div></div></div>
       </div>
 
       <div class="cc-panel">

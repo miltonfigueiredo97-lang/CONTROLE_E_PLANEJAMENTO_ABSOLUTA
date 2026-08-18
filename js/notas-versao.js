@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.11.1.1',
+  versaoAtual: 'V3.11.2',
 
   versoes: [
     {
@@ -8545,6 +8545,16 @@ const NotasVersao = {
         "Altura do rodapé impermeabilizado com presets rápidos (Box 1,20m · Padrão 0,40m · Baixo 0,20m) e campo numérico livre pra digitar qualquer valor.",
         "O m² de rodapé impermeabilizado (ml do rodapé selecionado × altura informada) agora soma no total de M² de Impermeabilização em todos os lugares: painel do workspace, Visão Geral e breakdown por tipo.",
         "Compatibilidade com áreas já lançadas antes desta versão: continuam contando a área toda como impermeabilizada (comportamento antigo), sem precisar re-editar nada."
+      ]
+    },
+    {
+      "versao": "V3.11.2",
+      "data": "2026-08-17",
+      "tipo": "correcao",
+      "titulo": "Volume Fundação Superficial: dado real (Controle de Estacas e Fundações), não mais placeholder",
+      "itens": [
+        "A sessão paralela criou a view real de \"Fundações\" no Controle de Estacas e Fundações (peças tipo Fundação com subtipo diferente de Estacas — blocos, baldrames, etc.). O card \"Vol. Fundação Superficial\" (Levantamento, Controle de Terraplanagem e relatório PDF), que antes mostrava sempre \"—\" como placeholder, agora soma esse volume de verdade automaticamente.",
+        "Testado: peças de Fundação com subtipo Estacas somam separado das com outros subtipos (Bloco, Baldrame, etc.) — confirmado que a separação bate certo e não mistura com peças de Estrutura."
       ]
     }
   ],

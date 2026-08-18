@@ -26,6 +26,7 @@ const LevantamentoTerraplanagem = (() => {
   let obraId = null;
   let caminhoes = [];
   let volumeTotalEstacas = 0; // vem do Controle de Estacas (concretoPecas), pra somar no total geral da obra
+  let volumeFundacaoSuperficial = 0; // vem do Controle de Estacas e Fundações (concretoPecas, subTipo != 'Estacas')
   let config = {
     taxaEmpolamento: 0.3, capacidadeGrande: 15.6, capacidadePequena: 10, cotaReferencia: '',
     tiposCaminhao: [{ nome: 'Grande', capacidade: 15.6 }, { nome: 'Pequeno', capacidade: 10 }],
@@ -73,12 +74,15 @@ const LevantamentoTerraplanagem = (() => {
       caminhoes = await Database.listar(obraId, COL_CAMINHOES, null);
       await carregarConfig();
       await carregarSecoes();
-      // Volume das estacas (Controle de Estacas) — soma aparte, pra entrar
-      // no volume total da obra sem se misturar com o corte de terra em si.
+      // Volume das estacas E fundação superficial (Controle de Estacas e
+      // Fundações) — soma aparte, pra entrar no volume total da obra sem se
+      // misturar com o corte de terra em si.
       try {
         const todasPecas = await Database.listar(obraId, 'concretoPecas', null);
-        volumeTotalEstacas = (todasPecas || []).filter(p => p.tipo === 'Fundação' && p.subTipo === 'Estacas').reduce((s, p) => s + (TC.num(p.volume) || 0), 0);
-      } catch (e) { volumeTotalEstacas = 0; }
+        const pecasFundacao = (todasPecas || []).filter(p => p.tipo === 'Fundação');
+        volumeTotalEstacas = pecasFundacao.filter(p => p.subTipo === 'Estacas').reduce((s, p) => s + (TC.num(p.volume) || 0), 0);
+        volumeFundacaoSuperficial = pecasFundacao.filter(p => p.subTipo && p.subTipo !== 'Estacas').reduce((s, p) => s + (TC.num(p.volume) || 0), 0);
+      } catch (e) { volumeTotalEstacas = 0; volumeFundacaoSuperficial = 0; }
       imagemProjetoCache = null; // força buscar de novo (troca de obra, etc.)
       renderizar();
       if (config.modoLevantamento === 'pontos') _garantirImagemProjetoCarregada();
@@ -150,8 +154,9 @@ const LevantamentoTerraplanagem = (() => {
     const volMedio = TC.calcVolumeMedio(volH, volV);
     const volEmpolado = TC.calcVolumeComEmpolamento(volMedio, config.taxaEmpolamento);
     const volEstacasEmpolado = TC.calcVolumeComEmpolamento(volumeTotalEstacas, config.taxaEmpolamento);
-    const volTotalGeral = volEmpolado + volEstacasEmpolado;
-    return { volH, volV, volMedio, volEmpolado, volumeTotalEstacas, volEstacasEmpolado, volTotalGeral };
+    const volFundacaoSuperficialEmpolado = TC.calcVolumeComEmpolamento(volumeFundacaoSuperficial, config.taxaEmpolamento);
+    const volTotalGeral = volEmpolado + volEstacasEmpolado + volFundacaoSuperficialEmpolado;
+    return { volH, volV, volMedio, volEmpolado, volumeTotalEstacas, volEstacasEmpolado, volumeFundacaoSuperficial, volFundacaoSuperficialEmpolado, volTotalGeral };
   }
 
   function recalcArea(s) {
@@ -201,12 +206,13 @@ const LevantamentoTerraplanagem = (() => {
         <div class="cc-kpi cc-kpiOrange"><div class="cc-kpiIcon">📦</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Vol. c/ Empolamento (terra, a remover)</div><div class="cc-kpiValue">${TC.fmt1(k.volEmpolado)}<span class="cc-kpiUnit">m³</span></div><div class="cc-kpiSub">taxa ${TC.fmt1(config.taxaEmpolamento * 100)}%</div></div></div>
         <div class="cc-kpi cc-kpiBlue"><div class="cc-kpiIcon">🚚</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Caminhões cadastrados</div><div class="cc-kpiValue">${caminhoes.length}</div></div></div>
       </div>
-      <div class="cc-kpiGrid" style="grid-template-columns:repeat(3,1fr);margin-top:8px;">
+      <div class="cc-kpiGrid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));margin-top:8px;">
         <div class="cc-kpi"><div class="cc-kpiIcon">🔩</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Vol. Estacas (banco)</div><div class="cc-kpiValue">${TC.fmt1(k.volumeTotalEstacas)}<span class="cc-kpiUnit">m³</span></div><div class="cc-kpiSub">do Controle de Estacas</div></div></div>
         <div class="cc-kpi cc-kpiOrange"><div class="cc-kpiIcon">🔩</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Vol. Estacas c/ Empolamento</div><div class="cc-kpiValue">${TC.fmt1(k.volEstacasEmpolado)}<span class="cc-kpiUnit">m³</span></div><div class="cc-kpiSub">taxa ${TC.fmt1(config.taxaEmpolamento * 100)}%</div></div></div>
-        <div class="cc-kpi cc-kpiGreen"><div class="cc-kpiIcon">🏗️</div><div class="cc-kpiBody"><div class="cc-kpiLabel">VOLUME TOTAL DA OBRA</div><div class="cc-kpiValue">${TC.fmt1(k.volTotalGeral)}<span class="cc-kpiUnit">m³</span></div><div class="cc-kpiSub">terra + estacas, empolados</div></div></div>
+        <div class="cc-kpi"><div class="cc-kpiIcon">🧊</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Vol. Fundação Superficial</div><div class="cc-kpiValue">${k.volFundacaoSuperficialEmpolado > 0 ? TC.fmt1(k.volFundacaoSuperficialEmpolado) + '<span class="cc-kpiUnit">m³</span>' : '—'}</div><div class="cc-kpiSub">Controle de Fundações</div></div></div>
+        <div class="cc-kpi cc-kpiGreen"><div class="cc-kpiIcon">🏗️</div><div class="cc-kpiBody"><div class="cc-kpiLabel">VOLUME TOTAL DA OBRA</div><div class="cc-kpiValue">${TC.fmt1(k.volTotalGeral)}<span class="cc-kpiUnit">m³</span></div><div class="cc-kpiSub">terra + estacas + fundação, empolados</div></div></div>
       </div>
-      <p class="text-sm text-muted mt-1">Volume de estacas somado do <b>Controle de Estacas</b> automaticamente (soma o campo Volume de todas as peças Fundação → Estacas). Sempre mostrado separado, mas incluído no Volume Total da Obra e no relatório PDF.</p>
+      <p class="text-sm text-muted mt-1">Volume de estacas e de fundação superficial somados do <b>Controle de Estacas e Fundações</b> automaticamente (soma o campo Volume de todas as peças Fundação — estacas separado dos outros subtipos). Sempre mostrados separados, mas incluídos no Volume Total da Obra e no relatório PDF.</p>
 
       <div class="cc-panel">
         <div class="cc-panelTitle">📐 Calculadora de Corte de Terra <span style="font-family:var(--cv-mono);font-size:10px;color:var(--cv-text3);font-weight:400;text-transform:none;letter-spacing:0;">método das seções transversais</span></div>
@@ -1818,10 +1824,11 @@ const LevantamentoTerraplanagem = (() => {
     });
     y += ch + 4;
 
-    // Cards de estacas + total geral (separado do corte de terra, somado no total)
+    // Cards de estacas + fundação superficial + total geral (separado do corte de terra, somado no total)
     const cardsEstacas = [
       { v: TC.fmt1(k.volumeTotalEstacas), l: 'VOL. ESTACAS BANCO (M³)' },
       { v: TC.fmt1(k.volEstacasEmpolado), l: 'ESTACAS C/ EMPOLAMENTO (M³)' },
+      { v: k.volFundacaoSuperficialEmpolado > 0 ? TC.fmt1(k.volFundacaoSuperficialEmpolado) : '—', l: 'FUNDAÇÃO SUPERFICIAL (M³)' },
       { v: TC.fmt1(k.volTotalGeral), l: 'VOLUME TOTAL DA OBRA (M³)' },
     ];
     const gap2 = 4, cw2 = (PW - 24 - gap2 * (cardsEstacas.length - 1)) / cardsEstacas.length;

@@ -174,7 +174,7 @@ const TerraRel = (() => {
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-bottom:14px;">
         ${kpi('📦', 'Vol. terra (previsto)', g.volEmpolado > 0 ? TC().fmt1(g.volEmpolado) + ' m³' : '—')}
         ${kpi('🔩', 'Vol. fundação profunda', g.volEstacasEmpolado > 0 ? TC().fmt1(g.volEstacasEmpolado) + ' m³' : '—', 'Controle de Estacas')}
-        ${kpi('🧊', 'Vol. fundação superficial', g.volFundacaoSuperficialEmpolado > 0 ? TC().fmt1(g.volFundacaoSuperficialEmpolado) + ' m³' : '—', 'ainda sem módulo próprio')}
+        ${kpi('🧊', 'Vol. fundação superficial', g.volFundacaoSuperficialEmpolado > 0 ? TC().fmt1(g.volFundacaoSuperficialEmpolado) + ' m³' : '—', 'Controle de Fundações')}
       </div>`;
 
     if (!r.lista.length) {
