@@ -441,6 +441,18 @@ const LevantamentoTerraplanagem = (() => {
     };
   }
 
+  function _editarOuRemoverPontoCota(ponto) {
+    const novoValor = prompt('Editar cota deste ponto (apague o texto e confirme pra REMOVER o ponto):', ponto.cota);
+    if (novoValor === null) return;
+    if (novoValor.trim() === '') {
+      config.pontosCota = (config.pontosCota || []).filter(pc => pc.id !== ponto.id);
+    } else {
+      ponto.cota = TC.num(novoValor);
+    }
+    salvarConfig().catch(() => {});
+    renderSecoes();
+  }
+
   function _tocarProjeto(evt, img) {
     const p = TC.posRelativa(evt, img);
     if (calibrando) {
@@ -470,18 +482,7 @@ const LevantamentoTerraplanagem = (() => {
       // Clicar num ponto JÁ marcado edita ele (em vez de criar um novo por
       // cima) — procura o ponto mais próximo dentro de 1m de tolerância.
       const pontoExistente = _pontoCotaProximo(p, 1.0);
-      if (pontoExistente) {
-        const novoValor = prompt('Editar cota deste ponto (apague o texto e confirme pra REMOVER o ponto):', pontoExistente.cota);
-        if (novoValor === null) return;
-        if (novoValor.trim() === '') {
-          config.pontosCota = (config.pontosCota || []).filter(pc => pc.id !== pontoExistente.id);
-        } else {
-          pontoExistente.cota = TC.num(novoValor);
-        }
-        salvarConfig().catch(() => {});
-        renderSecoes();
-        return;
-      }
+      if (pontoExistente) { _editarOuRemoverPontoCota(pontoExistente); return; }
       const area = _areaQueContem(p);
       if (!area) { Utils.toast('Clique dentro de uma área já desenhada.', 'alerta'); return; }
       const cotaStr = prompt('Cota (elevação) do terreno neste ponto:');
@@ -490,7 +491,13 @@ const LevantamentoTerraplanagem = (() => {
       config.pontosCota.push({ id: TC.genId('pc'), x: p.x, y: p.y, cota: TC.num(cotaStr), areaId: area.id });
       salvarConfig().catch(() => {});
       renderSecoes();
+      return;
     }
+    // Nenhuma ferramenta ativa — mesmo assim, clicar num ponto já marcado
+    // abre o editor dele, sem precisar ativar "Marcar Cota" só pra corrigir
+    // ou remover um ponto que já existe.
+    const pontoExistente = _pontoCotaProximo(p, 1.0);
+    if (pontoExistente) _editarOuRemoverPontoCota(pontoExistente);
   }
 
   // ══════════════════════════════════════════
