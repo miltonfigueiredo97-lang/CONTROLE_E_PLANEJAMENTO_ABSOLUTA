@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.12.0.4',
+  versaoAtual: 'V3.12.0.5',
 
   versoes: [
     {
@@ -8826,6 +8826,17 @@ const NotasVersao = {
         "% validado: se digitar mais de 100, avisa e ajusta pra 100. Término Real só aceita com a tarefa em 100% (senão avisa e não salva).",
         "Fotos da medição continuam disponíveis (ícone 📷 na própria linha), sem precisar do popup.",
         "Corrigido: cada edição (%, data, foto) disparava um re-render que jogava a lista de volta pro topo — agora mantém a posição de rolagem."
+      ]
+    },
+    {
+      "versao": "V3.12.0.5",
+      "data": "2026-08-18",
+      "tipo": "correcao",
+      "titulo": "Medições: mobile de verdade agora — fontes e toques bem maiores, botão de descartar que nunca tinha estilo",
+      "itens": [
+        "Achado o motivo de tudo parecer pequeno: o botão \"✕\" de descartar alteração NUNCA teve estilo em nenhum lugar do sistema — era um botão cru do navegador. Agora tem visual e tamanho de botão de verdade.",
+        "Em telas de celular (até 640px): fonte de nome/badge/esperado maior, chips do topo maiores, os campos de Início/Término/% e os botões (✓100%, 📷, ✕, abrir/fechar grupo) todos com altura por volta de 40px — bem mais fácil de tocar.",
+        "Botões da barra (Voltar, Salvar, Expandir/Recolher tudo) também maiores no celular."
       ]
     },
   ],

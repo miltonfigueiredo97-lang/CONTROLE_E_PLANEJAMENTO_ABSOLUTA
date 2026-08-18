@@ -137,13 +137,28 @@ const Medicoes = (() => {
       .med-tbl{border-collapse:collapse;width:100%;font-size:.8rem;background:#fff;}
       .med-tbl th{background:#f8fafc;padding:8px 10px;text-align:left;font-size:.72rem;color:#475569;border-bottom:2px solid #e2e8f0;}
       .med-tbl td{padding:8px 10px;border-bottom:1px solid #f1f5f9;}
+      .btn-icone{width:28px;height:28px;min-width:28px;border:none;background:#fee2e2;color:#dc2626;border-radius:7px;font-size:.85rem;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+      .btn-icone:hover{background:#fecaca;}
+      .med-frente-badge{color:#fff;font-size:.58rem;font-weight:700;padding:1px 6px;border-radius:7px;}
       @media (max-width:640px){
-        .med-top select, .med-top input.form-control{max-width:none !important;flex:1 1 100%;}
-        .med-node .tog{width:32px;height:32px;font-size:1.1rem;}
-        .med-node{padding:10px 10px;}
-        .med-inp-data{width:auto;flex:1 1 100px;}
-        .med-inp,.med-btn-100,.med-foto-btn{height:34px;}
-        .med-edit{width:100%;}
+        .med-top{gap:8px;}
+        .med-top .btn-sm{padding:10px 14px;font-size:.88rem;}
+        .med-top select, .med-top input.form-control{max-width:none !important;flex:1 1 100%;padding:10px;font-size:.9rem;}
+        .med-chip{font-size:.92rem;padding:9px 14px;}
+        .med-chip small{font-size:.76rem;}
+        .med-node{padding:12px 10px;}
+        .med-node .tog{width:38px;height:38px;font-size:1.25rem;}
+        .med-node .nm{font-size:1rem;}
+        .med-node .sub{font-size:.8rem;}
+        .med-frente-badge{font-size:.7rem;padding:2px 8px;}
+        .med-edit{width:100%;gap:8px;}
+        .med-inp{height:42px;font-size:.9rem;}
+        .med-inp-data{width:auto;flex:1 1 46%;}
+        .med-inp-pct{flex:0 0 66px;font-size:1rem;}
+        .med-btn-100{height:42px;font-size:.8rem;padding:0 12px;}
+        .med-foto-btn{width:42px;height:42px;font-size:1.2rem;}
+        .btn-icone{width:38px;height:38px;font-size:1.05rem;}
+        .med-foto-thumb img{width:56px;height:56px;}
       }
     </style>
     <div class="med-top">
@@ -244,7 +259,7 @@ const Medicoes = (() => {
       const fotos=p?.fotos||[];
       rows+=`<div class="med-node leaf ${p?'sel':''} ${q&&t.id===primeiroMatchId?'busca-match':''}" id="med-row-${t.id}" style="padding-left:${12+niv*16}px;flex-wrap:wrap;align-items:flex-start;">
         <div style="flex:1 1 180px;min-width:0;padding-top:3px;">
-          <div class="nm">${_esc(t.nome)}${t.frenteServico?` <span style="background:${Utils.corFrente(t.frenteServico)};color:#fff;font-size:.58rem;font-weight:700;padding:1px 6px;border-radius:7px;">${t.frenteServico}</span>`:''}</div>
+          <div class="nm">${_esc(t.nome)}${t.frenteServico?` <span class="med-frente-badge" style="background:${Utils.corFrente(t.frenteServico)};">${t.frenteServico}</span>`:''}</div>
           <div class="sub">Esperado: ${esp}%</div>
         </div>
         <div class="med-edit">
@@ -327,13 +342,28 @@ const Medicoes = (() => {
       .med-tbl{border-collapse:collapse;width:100%;font-size:.8rem;background:#fff;}
       .med-tbl th{background:#f8fafc;padding:8px 10px;text-align:left;font-size:.72rem;color:#475569;border-bottom:2px solid #e2e8f0;}
       .med-tbl td{padding:8px 10px;border-bottom:1px solid #f1f5f9;}
+      .btn-icone{width:28px;height:28px;min-width:28px;border:none;background:#fee2e2;color:#dc2626;border-radius:7px;font-size:.85rem;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+      .btn-icone:hover{background:#fecaca;}
+      .med-frente-badge{color:#fff;font-size:.58rem;font-weight:700;padding:1px 6px;border-radius:7px;}
       @media (max-width:640px){
-        .med-top select, .med-top input.form-control{max-width:none !important;flex:1 1 100%;}
-        .med-node .tog{width:32px;height:32px;font-size:1.1rem;}
-        .med-node{padding:10px 10px;}
-        .med-inp-data{width:auto;flex:1 1 100px;}
-        .med-inp,.med-btn-100,.med-foto-btn{height:34px;}
-        .med-edit{width:100%;}
+        .med-top{gap:8px;}
+        .med-top .btn-sm{padding:10px 14px;font-size:.88rem;}
+        .med-top select, .med-top input.form-control{max-width:none !important;flex:1 1 100%;padding:10px;font-size:.9rem;}
+        .med-chip{font-size:.92rem;padding:9px 14px;}
+        .med-chip small{font-size:.76rem;}
+        .med-node{padding:12px 10px;}
+        .med-node .tog{width:38px;height:38px;font-size:1.25rem;}
+        .med-node .nm{font-size:1rem;}
+        .med-node .sub{font-size:.8rem;}
+        .med-frente-badge{font-size:.7rem;padding:2px 8px;}
+        .med-edit{width:100%;gap:8px;}
+        .med-inp{height:42px;font-size:.9rem;}
+        .med-inp-data{width:auto;flex:1 1 46%;}
+        .med-inp-pct{flex:0 0 66px;font-size:1rem;}
+        .med-btn-100{height:42px;font-size:.8rem;padding:0 12px;}
+        .med-foto-btn{width:42px;height:42px;font-size:1.2rem;}
+        .btn-icone{width:38px;height:38px;font-size:1.05rem;}
+        .med-foto-thumb img{width:56px;height:56px;}
       }`;
     document.head.appendChild(st);
   }
