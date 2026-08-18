@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.11.4.14',
+  versaoAtual: 'V3.11.4.15',
 
   versoes: [
     {
@@ -8744,6 +8744,15 @@ const NotasVersao = {
         "Corrigido: o aviso \"soma dos trechos não bate com o total\" só era calculado no momento em que a parede era dividida — editar o comprimento de um trecho depois disso não recalculava nada, então o aviso ficava desatualizado ou nem aparecia. Agora atualiza em tempo real, a cada dígito, sem perder o foco do campo — e quando bate certinho, mostra confirmação verde (✅) também, não só o erro.",
         "O campo de altura era um datalist (input com sugestões) — o dropdown de opções abre de forma inconsistente entre navegadores, difícil de descobrir. Trocado por um seletor de verdade: 1,20m (Box), 0,40m (Padrão), 0,20m (Baixo) e qualquer valor já usado em outro trecho, todos visíveis na hora que abre.",
         "Botão ✏️ ao lado do seletor troca pra um campo numérico livre, pra digitar qualquer altura fora da lista."
+      ]
+    },
+    {
+      "versao": "V3.11.4.15",
+      "data": "2026-08-18",
+      "tipo": "correcao",
+      "titulo": "Levantamento Piso: parede ficava grossa demais no zoom e tampava o número",
+      "itens": [
+        "Popup \"Selecionar Paredes\": a V3.11.4.12 corrigiu o tamanho dos números pra não crescer com o zoom, mas a linha da própria parede continuava engordando — em zoom alto (700%+) virava uma barra enorme que cobria o número por cima. Agora a espessura da linha também é recalculada a cada zoom pra ficar constante na tela, igual já acontecia com os números."
       ]
     }
   ],

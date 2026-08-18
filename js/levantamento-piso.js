@@ -1756,9 +1756,11 @@ const LP = (() => {
     const escala = Math.min((W - 2 * PAD) / bbox.bw, (H - 2 * PAD) / bbox.bh);
     const norm = _paredesImpermPoligono.map(p => _pontoParaSVGImperm(p, W, H, PAD));
     const zoom = _paredesImpermView.scale;
-    // números/badges divididos pelo zoom atual: depois que o <svg> inteiro é ampliado via CSS transform,
-    // o tamanho final na tela volta a ficar constante — não cresce junto com a parede (senão vira bola gigante).
+    // números/badges E a espessura da linha da parede divididos pelo zoom atual: depois que o <svg>
+    // inteiro é ampliado via CSS transform, o tamanho final na tela volta a ficar constante — a parede
+    // não vira uma barra gigante grossa que tampa o número (o problema antes só tratava os badges).
     const badgeR = 9 / zoom, badgeFont = 9 / zoom, badgeStroke = 1.5 / zoom;
+    const linhaGrossa = 6 / zoom, linhaFina = 4 / zoom;
 
     let svg = `<svg id="lp-paredes-imperm-svg" viewBox="0 0 ${W} ${H}" style="width:100%;height:100%;display:block;transform:translate(${_paredesImpermView.tx}px,${_paredesImpermView.ty}px) scale(${zoom});transform-origin:50% 50%;">`;
     if (_paredesImpermFundoDataURL) {
@@ -1787,16 +1789,16 @@ const LP = (() => {
           const q1 = { x: p1.x + (p2.x - p1.x) * t0, y: p1.y + (p2.y - p1.y) * t0 };
           const q2 = { x: p1.x + (p2.x - p1.x) * t1, y: p1.y + (p2.y - p1.y) * t1 };
           const corTrecho = p.incluida ? _corAlturaImpermPorValor(p.altura) : corNaoIncluida;
-          svg += `<line x1="${q1.x.toFixed(1)}" y1="${q1.y.toFixed(1)}" x2="${q2.x.toFixed(1)}" y2="${q2.y.toFixed(1)}" stroke="${corTrecho}" stroke-width="${p.incluida ? 6 : 4}" stroke-opacity="0.95"/>`;
+          svg += `<line x1="${q1.x.toFixed(1)}" y1="${q1.y.toFixed(1)}" x2="${q2.x.toFixed(1)}" y2="${q2.y.toFixed(1)}" stroke="${corTrecho}" stroke-width="${(p.incluida ? linhaGrossa : linhaFina).toFixed(2)}" stroke-opacity="0.95"/>`;
         });
         // sobrou pedaço sem trecho nenhum (soma < total) — mostra o "buraco" em cinza, igual ao aviso de divergência
         if (acumulado < w.comprimentoTotal - 0.001) {
           const t0 = Math.min(acumulado / w.comprimentoTotal, 1);
           const q1 = { x: p1.x + (p2.x - p1.x) * t0, y: p1.y + (p2.y - p1.y) * t0 };
-          svg += `<line x1="${q1.x.toFixed(1)}" y1="${q1.y.toFixed(1)}" x2="${p2.x.toFixed(1)}" y2="${p2.y.toFixed(1)}" stroke="${corNaoIncluida}" stroke-width="4" stroke-opacity="0.95"/>`;
+          svg += `<line x1="${q1.x.toFixed(1)}" y1="${q1.y.toFixed(1)}" x2="${p2.x.toFixed(1)}" y2="${p2.y.toFixed(1)}" stroke="${corNaoIncluida}" stroke-width="${linhaFina.toFixed(2)}" stroke-opacity="0.95"/>`;
         }
       } else {
-        svg += `<line x1="${p1.x.toFixed(1)}" y1="${p1.y.toFixed(1)}" x2="${p2.x.toFixed(1)}" y2="${p2.y.toFixed(1)}" stroke="${corNaoIncluida}" stroke-width="4" stroke-opacity="0.9"/>`;
+        svg += `<line x1="${p1.x.toFixed(1)}" y1="${p1.y.toFixed(1)}" x2="${p2.x.toFixed(1)}" y2="${p2.y.toFixed(1)}" stroke="${corNaoIncluida}" stroke-width="${linhaFina.toFixed(2)}" stroke-opacity="0.9"/>`;
       }
 
       const corBadge = incluidas.length ? _corAlturaImpermPorValor(incluidas[0].altura) : '#64748b';
