@@ -49,7 +49,14 @@ const Medicoes = (() => {
     if(!obraId){_el().innerHTML='<div class="estado-vazio"><div class="icone">📏</div><p>Selecione uma obra.</p></div>';return;}
     await carregar();
   }
-  function _el(){return document.getElementById('modulo-content')||document.body;}
+  function _el(){
+    const el=document.getElementById('modulo-content')||document.body;
+    // Preenche 100% da altura disponível (mesmo padrão do Planejamento) —
+    // sem isso a árvore fica com altura fixa/curta e sobra área cinza vazia
+    // embaixo em telas maiores, em vez de usar o espaço todo.
+    el.style.cssText='display:flex;flex-direction:column;min-height:0;height:100%;';
+    return el;
+  }
 
   async function carregar(){
     try{
@@ -103,7 +110,7 @@ const Medicoes = (() => {
       .med-top{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
       .med-chip{display:inline-flex;align-items:baseline;gap:4px;background:#f1f5f9;border-radius:8px;padding:6px 12px;font-size:.8rem;font-weight:700;}
       .med-chip small{font-weight:500;color:#94a3b8;font-size:.66rem;}
-      .med-tree{background:#fff;border:1px solid #e2e8f0;border-radius:10px;overflow:auto;max-height:calc(100vh - 230px);}
+      .med-tree{background:#fff;border:1px solid #e2e8f0;border-radius:10px;overflow:auto;}
       .med-node{display:flex;align-items:center;gap:8px;padding:7px 12px;border-bottom:1px solid #f8fafc;font-size:.82rem;}
       .med-node:hover{background:#fefce8;}
       .med-node .tog{width:18px;cursor:pointer;color:#64748b;font-weight:700;text-align:center;user-select:none;}
@@ -204,9 +211,11 @@ const Medicoes = (() => {
     const nPend=Object.keys(pend).length;
     _el().innerHTML=`
     <style id="med-css2"></style>
-    <div class="med-top" style="flex-wrap:wrap;">
+    <div class="med-top" style="flex-wrap:wrap;flex-shrink:0;">
       <button class="btn btn-sm btn-outline" onclick="Medicoes.voltar()" title="Voltar">←</button>
       <button class="btn btn-sm btn-primario" onclick="Medicoes.salvarMedicao()" title="Salvar medição">💾 Salvar${nPend?` (${nPend})`:''}</button>
+      <button class="btn btn-sm btn-outline" onclick="Medicoes.expandirTudo()" title="Abrir todos os grupos">▾ Expandir tudo</button>
+      <button class="btn btn-sm btn-outline" onclick="Medicoes.recolherTudo()" title="Fechar todos os grupos">▸ Recolher tudo</button>
       <span class="med-chip">${tot.total.toFixed(2)}% <small>Total</small></span>
       <span class="med-chip" style="background:${tot.medicao>0?'#ecfdf5':'#f1f5f9'};">${tot.medicao.toFixed(2)}% <small>Medição</small></span>
       <span class="med-chip" style="background:#fffbeb;">${tot.esp.toFixed(2)}% <small>Esperado hoje</small></span>
@@ -217,7 +226,7 @@ const Medicoes = (() => {
       </select>
       <input class="form-control" style="max-width:260px;font-size:.8rem;" placeholder="Busca por Nome" value="${_esc(busca)}" oninput="Medicoes.setBusca(this.value)">
     </div>
-    <div class="med-tree">${rows}</div>`;
+    <div class="med-tree" style="flex:1;min-height:0;">${rows}</div>`;
     // reinjeta o css da lista se necessário
     if(!document.getElementById('med-css')){
       _renderListaCssOnly();
@@ -228,7 +237,7 @@ const Medicoes = (() => {
     st.textContent=`.med-top{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
       .med-chip{display:inline-flex;align-items:baseline;gap:4px;background:#f1f5f9;border-radius:8px;padding:6px 12px;font-size:.8rem;font-weight:700;}
       .med-chip small{font-weight:500;color:#94a3b8;font-size:.66rem;}
-      .med-tree{background:#fff;border:1px solid #e2e8f0;border-radius:10px;overflow:auto;max-height:calc(100vh - 230px);}
+      .med-tree{background:#fff;border:1px solid #e2e8f0;border-radius:10px;overflow:auto;}
       .med-node{display:flex;align-items:center;gap:8px;padding:7px 12px;border-bottom:1px solid #f8fafc;font-size:.82rem;}
       .med-node:hover{background:#fefce8;}
       .med-node .tog{width:18px;cursor:pointer;color:#64748b;font-weight:700;text-align:center;user-select:none;}
@@ -245,6 +254,16 @@ const Medicoes = (() => {
   }
 
   function toggleGrupo(id){if(colapsados.has(id))colapsados.delete(id);else colapsados.add(id);_render();}
+  function expandirTudo(){colapsados=new Set();_render();}
+  function recolherTudo(){
+    colapsados=new Set();
+    for(let i=0;i<sorted.length;i++){
+      const t=sorted[i],niv=t.nivel||0,nxt=sorted[i+1];
+      const isLeaf=!nxt||(nxt.nivel||0)<=niv;
+      if(!isLeaf)colapsados.add(t.id);
+    }
+    _render();
+  }
   function setBusca(v){busca=v||'';_render();}
   function descartarItem(id){delete pend[id];_render();}
 
@@ -413,7 +432,7 @@ const Medicoes = (() => {
     catch(e){console.error(e);Utils.toast('Erro.','erro');}
   }
 
-  return{init,carregar,novaMedicao,voltar,toggleGrupo,setBusca,setFiltroFrente,descartarItem,
+  return{init,carregar,novaMedicao,voltar,toggleGrupo,expandirTudo,recolherTudo,setBusca,setFiltroFrente,descartarItem,
     abrirMedicao,progDelta,progChanged,removerFoto,fotoSelecionada,confirmarMedicao,
     salvarMedicao,verMedicao,excluirMedicao};
 })();

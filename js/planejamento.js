@@ -2590,6 +2590,7 @@ const Planejamento = (() => {
       {rotulo:'Corrigir Predecessoras (por ID)',grupo:'Correções & Recálculos',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento._migrarPredecessorasParaId()" title="Converte predecessoras antigas (por número de linha) pro formato por ID — imune a reordenação. Roda sozinho ao carregar, use aqui só se quiser confirmar manualmente.">🔗 Corrigir Predecessoras (por ID)</button>'},
       {rotulo:'Estrutura da Obra',grupo:'Ferramentas da Obra',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento._abrirEstruturaObra()" title="Cadastra Torre → Pavimento → Apto, pra vincular tarefas a um local">🏢 Estrutura da Obra</button>'},
       {rotulo:'Exportar Excel (simples)',grupo:'Importar & Exportar',html:'<button class="btn btn-secundario btn-sm" data-perm="planejamento:exportar" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.exportar()" title="Planilha crua com todas as colunas — boa pra reimportar/tratar dados">📤 Exportar Excel (simples)</button>'},
+      {rotulo:'Exportar Frentes (revisão)',grupo:'Importar & Exportar',html:'<button class="btn btn-secundario btn-sm" data-perm="planejamento:exportar" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.exportarFrentes()" title="Planilha simples (Código, Atividade, Pai, Frente) pra revisar/corrigir a Frente de Serviço fora do sistema e reimportar depois em Importar Correções">👷 Exportar Frentes (revisão)</button>'},
       {rotulo:'Exportar Excel (formatado)',grupo:'Importar & Exportar',html:'<button class="btn btn-secundario btn-sm" data-perm="planejamento:exportar" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.exportarExcelBonito()" title="Planilha estilizada: grupos coloridos por nível, indentação, cabeçalho fixo com filtro — pronta pra apresentar/imprimir">🎨 Exportar Excel (formatado)</button>'},
       {rotulo:'Exportar MS Project',grupo:'Importar & Exportar',html:'<button class="btn btn-secundario btn-sm" data-perm="planejamento:exportar" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.exportarMSProject()" title="XML no formato do MS Project (hierarquia, datas, duração, % e predecessoras) — abre direto no Project">📊 Exportar MS Project (.xml)</button>'},
       {rotulo:'Baixar PDF',grupo:'Importar & Exportar',html:'<button class="btn btn-secundario btn-sm" data-perm="planejamento:exportar" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.baixarPDF()" title="Baixa o arquivo .pdf direto (sem passar pela impressão) — mesmo visual bonito, A4 paisagem">📄 Baixar PDF</button>'},
@@ -2878,7 +2879,7 @@ const Planejamento = (() => {
     const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
     if(rows.length<2)throw new Error('Planilha vazia.');
     const hdrs=rows[0].map(h=>String(h||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' '));
-    const ci=n=>{const a={id:['id'],codigo:['codigo','code'],nivel:['nivel','nível','level'],nome:['nome','name','tarefa'],duracao:['duracao','duration'],
+    const ci=n=>{const a={id:['id'],codigo:['codigo','code'],nivel:['nivel','nível','level'],nome:['nome','name','tarefa','atividade'],duracao:['duracao','duration'],
       inicio:['inicio','start','inicio planejado'],termino:['termino','finish','fim','termino planejado'],
       percEsp:['esperado','% esperado'],percConc:['concluido','% concluido','% complete'],
       pred:['predecessora','predecessor','prececessora'],pai:['tarefa pai','parent'],grupo:['grupo','group'],
@@ -3159,7 +3160,7 @@ const Planejamento = (() => {
       const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
       if(rows.length<2){Utils.toast('Planilha vazia.','alerta');return;}
       const hdrs=rows[0].map(h=>String(h||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' '));
-      const ci=n=>{const a={id:['id'],codigo:['codigo','code'],nivel:['nivel','nível','level'],nome:['nome','name','tarefa'],duracao:['duracao','duration'],
+      const ci=n=>{const a={id:['id'],codigo:['codigo','code'],nivel:['nivel','nível','level'],nome:['nome','name','tarefa','atividade'],duracao:['duracao','duration'],
         inicio:['inicio','start','inicio planejado'],termino:['termino','finish','fim','termino planejado'],
         percEsp:['esperado','% esperado'],percConc:['concluido','% concluido','% complete'],
         pred:['predecessora','predecessor','prececessora'],pai:['tarefa pai','parent'],grupo:['grupo','group'],
@@ -4070,23 +4071,45 @@ const Planejamento = (() => {
   // Só preenche tarefas SEM frenteServico ainda — nunca sobrescreve o que já
   // foi definido manualmente (na dúvida, a função de classificação retorna
   // '' e a tarefa fica de fora da lista pra preencher na mão).
+  // Grupos (pais) não têm nome classificável por palavra-chave — em vez
+  // disso, herdam a Frente das folhas descendentes QUANDO TODAS concordam
+  // numa só (senão fica em branco, pra não chutar errado num grupo misto).
   async function autoClassificarFrentes(){
     if(!Permissions.pode('planejamento','editar')){Utils.toast('Sem permissão para editar.','erro');return;}
     const sorted=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
-    const alvo=[];
+    const alvoLeaf=[];
+    const freqPorGrupo=new Map(); // id do grupo -> {FRENTE:contagem} das folhas descendentes (qualquer nível)
+    const pilha=[];                // freq object de cada grupo aberto, indexado por nível
     for(let i=0;i<sorted.length;i++){
       const t=sorted[i],niv=t.nivel||0;
+      pilha.length=niv;
       const nxt=sorted[i+1];
-      const isLeaf=!nxt||(nxt.nivel||0)<=niv; // só classifica folha — grupos não têm frente própria
-      if(!isLeaf||t.frenteServico)continue;
-      const sugestao=Utils.classificarFrente(t.nome);
-      if(sugestao)alvo.push({t,sugestao});
+      const isLeaf=!nxt||(nxt.nivel||0)<=niv;
+      if(!isLeaf){
+        const freq={};
+        freqPorGrupo.set(t.id,freq);
+        pilha[niv]=freq;
+        continue;
+      }
+      let efetiva=t.frenteServico||'';
+      if(!efetiva){
+        const sug=Utils.classificarFrente(t.nome);
+        if(sug){efetiva=sug;alvoLeaf.push({t,sugestao:sug});}
+      }
+      if(efetiva){for(const freq of pilha){if(freq)freq[efetiva]=(freq[efetiva]||0)+1;}}
     }
-    if(!alvo.length){Utils.toast('Nenhuma tarefa nova pra classificar (todas já têm Frente ou o nome não deu pra identificar).','alerta');return;}
+    const alvoGrupo=[];
+    for(const t of sorted){
+      if(t.frenteServico||!freqPorGrupo.has(t.id))continue;
+      const chaves=Object.keys(freqPorGrupo.get(t.id));
+      if(chaves.length===1)alvoGrupo.push({t,sugestao:chaves[0]});
+    }
+    const alvo=[...alvoLeaf,...alvoGrupo];
+    if(!alvo.length){Utils.toast('Nenhuma tarefa nova pra classificar (todas já têm Frente ou não deu pra identificar).','alerta');return;}
     const porFrente={};
     for(const {sugestao} of alvo)porFrente[sugestao]=(porFrente[sugestao]||0)+1;
     const resumo=Object.entries(porFrente).map(([f,n])=>`${f}: ${n}`).join('\n');
-    if(!confirm(`Sugestão automática pra ${alvo.length} tarefa(s) sem Frente definida:\n\n${resumo}\n\nAplicar? (só preenche quem está em branco — o que já tinha Frente não muda)`))return;
+    if(!confirm(`Sugestão automática pra ${alvo.length} tarefa(s) sem Frente definida (${alvoLeaf.length} folha(s) pelo nome + ${alvoGrupo.length} grupo(s) que herdam dos filhos):\n\n${resumo}\n\nAplicar? (só preenche quem está em branco — o que já tinha Frente não muda)`))return;
     Utils.mostrarLoading('Classificando frentes...');
     try{
       _undoPush();
@@ -4098,9 +4121,37 @@ const Planejamento = (() => {
         }));
       }
       _buildFiltradas();_render();
-      Utils.toast(`✅ ${alvo.length} tarefa(s) classificada(s). Revise a coluna "Frente" e ajuste manualmente o que precisar.`,'sucesso');
+      Utils.toast(`✅ ${alvo.length} tarefa(s) classificada(s) (${alvoGrupo.length} grupo(s) herdaram dos filhos). Revise a coluna "Frente" e ajuste manualmente o que precisar.`,'sucesso');
     }catch(e){console.error(e);Utils.toast('Erro ao classificar.','erro');}
     finally{Utils.esconderLoading();}
+  }
+
+  // ===================== EXPORTAR FRENTES (planilha lean pra revisão manual) =====================
+  // Só 4 colunas — Código, Atividade, Pai e Frente — pensada pra mandar
+  // pra fora do sistema, revisar/corrigir a Frente numa planilha simples
+  // (sem se afogar nas outras 20 colunas do Exportar normal) e reimportar
+  // depois em "Importar Correções" marcando só "Frente de Serviço".
+  async function exportarFrentes(){
+    if(!Permissions.pode('planejamento','exportar')){Utils.toast('Sem permissão para exportar.','erro');return;}
+    try{Utils.mostrarLoading('Gerando...');
+      if(typeof XLSX==='undefined')await _ls('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');
+      const sorted=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
+      const H=['Código','Atividade','Pai','Frente'];
+      const pilhaNomes=[];
+      const rows=sorted.map(t=>{
+        const niv=t.nivel||0;
+        pilhaNomes.length=niv;
+        const pai=niv>0?(pilhaNomes[niv-1]||''):'';
+        pilhaNomes[niv]=t.nome||'';
+        return [t.codigo||'','  '.repeat(niv)+(t.nome||''),pai,t.frenteServico||''];
+      });
+      const ws=XLSX.utils.aoa_to_sheet([H,...rows]);
+      ws['!cols']=[{wch:12},{wch:55},{wch:40},{wch:14}];
+      const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Frentes');
+      const obra=Router.getObra();
+      XLSX.writeFile(wb,`frentes_${(obra?.nome||'obra').replace(/[^a-z0-9]/gi,'_')}.xlsx`);
+      Utils.toast('Exportado! Depois de corrigir a coluna Frente, reimporte em "Importar Correções" marcando só "Frente de Serviço".','sucesso',6000);
+    }catch(e){Utils.toast('Erro: '+e.message,'erro');}finally{Utils.esconderLoading();}
   }
 
   // ===================== EXPORTAR =====================
@@ -5668,7 +5719,7 @@ const Planejamento = (() => {
     _rowDragStart,toggleSel,_limparSelecao,_moverSel,_bulkNivel,_bulkDuplicar,_bulkExcluir,
     toggleStatusFiltro,_aplicarStatusFiltro,_abrirFiltroResponsavel,_aplicarFiltroResponsavel,_limparFiltroResponsavel,undo,
     onBusca,limparBusca,_buscaKey,
-    importarExcel,importarBaseCompleta,importarCorrecoes,_executarCorrecoes,_mostrarRevisaoCorrecoes,exportar,exportarExcelBonito,exportarMSProject,abrirImpressao,baixarPDF,exportarPNG,corrigirOrdensDuplicadas,_corrigirNiveisSoltos,_corrigirNivelPeloCodigo,_migrarPredecessorasParaId,_recalcularDatasPais,_recalcularPercTodosPais,_orfasMarcarTodas,_orfasExcluirMarcadas,_gerarPNG,_predPopup,_predSalvar,_predCellClick,_predAddLinha,_predLinhaAtualizar,autoClassificarFrentes,
+    importarExcel,importarBaseCompleta,importarCorrecoes,_executarCorrecoes,_mostrarRevisaoCorrecoes,exportar,exportarFrentes,exportarExcelBonito,exportarMSProject,abrirImpressao,baixarPDF,exportarPNG,corrigirOrdensDuplicadas,_corrigirNiveisSoltos,_corrigirNivelPeloCodigo,_migrarPredecessorasParaId,_recalcularDatasPais,_recalcularPercTodosPais,_orfasMarcarTodas,_orfasExcluirMarcadas,_gerarPNG,_predPopup,_predSalvar,_predCellClick,_predAddLinha,_predLinhaAtualizar,autoClassificarFrentes,
     abrirVinculosView,fecharVinculosView,abrirVincularTarefa,abrirVincularAqui,onVincTipoChange,
     onVincNavModulo,onVincNavModuloMetrica,onVincNavMetrica,onVincNavEntrar,onVincNavBreadcrumb,onVincNavVoltar,
     onBuscaEscolhaAlvoVinc,onEscolherAlvoVinc,onTrocarAlvoVinc,

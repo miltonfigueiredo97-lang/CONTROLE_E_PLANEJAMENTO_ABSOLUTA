@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.12.0.1',
+  versaoAtual: 'V3.12.0.2',
 
   versoes: [
     {
@@ -8788,6 +8788,18 @@ const NotasVersao = {
         "Exportar Excel (simples e formatado): coluna Frente incluída.",
         "Importar / Importar Base Completa: reconhece coluna \"Frente\" (ou \"Equipe\") na planilha.",
         "Importar Correções: Frente de Serviço adicionada como campo que pode ser corrigido em massa por Nome, junto com os demais."
+      ]
+    },
+    {
+      "versao": "V3.12.0.2",
+      "data": "2026-08-18",
+      "tipo": "correcao",
+      "titulo": "Medições: árvore não ocupava a tela toda + Frente automática não subia pro grupo-pai",
+      "itens": [
+        "Medições: a árvore de lançamento tinha uma altura fixa que deixava área cinza vazia embaixo em telas maiores — agora ocupa exatamente o espaço disponível, igual ao Planejamento.",
+        "Medições: botões \"Expandir tudo\" / \"Recolher tudo\" na tela de nova medição (o padrão já era abrir tudo de início — os botões só facilitam recolher/abrir em massa quando quiser).",
+        "Planejamento: \"Classificar Frentes automaticamente\" agora também preenche o GRUPO-PAI quando todos os filhos concordam numa única Frente (antes só classificava a folha — ex: \"Concretagem\" ficava em branco mesmo com todos os pavimentos dentro já em ESTRUTURA).",
+        "Planejamento: novo botão \"Exportar Frentes (revisão)\" — planilha simples com só Código, Atividade, Pai e Frente, pra revisar/corrigir fora do sistema e reimportar depois em \"Importar Correções\" (marcando só \"Frente de Serviço\")."
       ]
     },
   ],
