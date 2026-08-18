@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.13.2',
+  versaoAtual: 'V3.13.3',
 
   versoes: [
     {
@@ -8996,6 +8996,21 @@ const NotasVersao = {
         "A resolução de PREDECESSORA seguia a mesma regra antiga (só nome) — agora também tenta o Código primeiro, então predecessora que aponta pra tarefa de nome repetido deixa de virar \"não resolvida\".",
         "O resumo antes de confirmar agora separa quantas casaram pelo Código e quantas pelo Nome, e as listas de revisão mostram o código junto do nome — fica claro o que revisar.",
         "Segurança preservada: quando há dúvida real (código duplicado na obra com o mesmo nome, ou nome repetido sem código), a linha continua sendo pulada em vez de atualizar a tarefa errada."
+      ]
+    },
+    {
+      "versao": "V3.13.3",
+      "data": "2026-08-18",
+      "tipo": "correcao",
+      "titulo": "Planilhas exportadas ganham a coluna Chave — identificador que nunca muda",
+      "itens": [
+        "Motivo: nenhuma coluna da planilha servia como identidade fixa. A coluna \"ID\" era só a POSIÇÃO na lista (1, 2, 3...), recalculada a cada exportação — some uma tarefa e tudo renumera. E o \"Código\" (1.3.6) muda quando a estrutura muda, além de 39 tarefas da obra simplesmente não terem código nenhum.",
+        "Agora as exportações (Cronograma e Frentes) trazem a coluna Chave, que é o identificador real da tarefa: nasce com ela, nunca muda, não depende do nome nem da posição, e não é reaproveitado quando outra tarefa é excluída. NÃO apague nem edite essa coluna na planilha.",
+        "O importador passa a casar pela Chave antes de tudo. Com ela presente não há mais o que adivinhar: mesmo tarefa renomeada, movida de lugar ou sem código é encontrada na hora.",
+        "Também corrigido o caso que ainda sobrava: grupos como \"Apartamentos\", \"Hall\" e \"Escadaria\" se repetem sob pais diferentes (Hidráulica, Elétrica, Gesso, Contrapiso, Pintura) e não têm código — o código nunca ia desempatar. Agora o Pai desempata, e o importador finalmente lê a coluna \"Pai\" (antes só reconhecia o cabeçalho \"Tarefa Pai\", então a coluna era ignorada em silêncio).",
+        "Ordem de busca completa: Chave → Código → Nome → Nome + Pai. Planilha antiga sem a coluna Chave continua funcionando normalmente pela cascata.",
+        "A resolução de predecessora segue a mesma cascata, incluindo o desempate pelo Pai.",
+        "O resumo antes de confirmar mostra quantas casaram por cada critério, e as ambíguas que sobrarem dizem o motivo (sem chave, sem código, sem pai) pra saber o que corrigir."
       ]
     }
   ],

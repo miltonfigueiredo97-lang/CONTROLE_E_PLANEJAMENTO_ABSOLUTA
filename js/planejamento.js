@@ -2879,10 +2879,10 @@ const Planejamento = (() => {
     const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
     if(rows.length<2)throw new Error('Planilha vazia.');
     const hdrs=rows[0].map(h=>String(h||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' '));
-    const ci=n=>{const a={id:['id'],codigo:['codigo','code'],nivel:['nivel','nível','level'],nome:['nome','name','tarefa','atividade'],duracao:['duracao','duration'],
+    const ci=n=>{const a={chave:['chave','id fixo','uid'],id:['id'],codigo:['codigo','code'],nivel:['nivel','nível','level'],nome:['nome','name','tarefa','atividade'],duracao:['duracao','duration'],
       inicio:['inicio','start','inicio planejado'],termino:['termino','finish','fim','termino planejado'],
       percEsp:['esperado','% esperado'],percConc:['concluido','% concluido','% complete'],
-      pred:['predecessora','predecessor','prececessora'],pai:['tarefa pai','parent'],grupo:['grupo','group'],
+      pred:['predecessora','predecessor','prececessora'],pai:['pai','tarefa pai','parent'],grupo:['grupo','group'],
       local:['local','location'],custo:['custo','cost'],receita:['receita','revenue'],
       resp:['responsavel','responsible','resource'],frente:['frente','frente de servico','equipe'],iniB:['inicio linha de base'],terB:['termino linha de base'],
       iniD:['inicio desafio'],terD:['termino desafio'],iniReal:['inicio real'],terReal:['termino real']};
@@ -3003,7 +3003,7 @@ const Planejamento = (() => {
       modal.innerHTML=`
         <div style="background:#1a1a1a;border:1px solid #333;border-radius:10px;padding:20px;width:480px;max-width:95vw;max-height:85vh;overflow-y:auto;display:flex;flex-direction:column;gap:10px;">
           <div style="font-weight:700;color:var(--cor-primaria);">📥 Importar Correções</div>
-          <div style="font-size:.78rem;color:#888;">Casa cada linha da planilha com a tarefa de MESMO CÓDIGO já existente na obra (o código não muda nunca). Se a linha não tiver código, cai pro nome. Posição, nível, estrutura e código NÃO são tocados — só os campos marcados abaixo:</div>
+          <div style="font-size:.78rem;color:#888;">Casa cada linha pela coluna <b>Chave</b> (identificador fixo da tarefa — nunca muda, nem se outras forem excluídas). Sem Chave, tenta Código, depois Nome, depois Nome+Pai. Posição, nível, estrutura e código NÃO são tocados — só os campos marcados abaixo:</div>
           <div id="correcoes-campos" style="display:flex;flex-direction:column;gap:6px;">
             ${CAMPOS_CORRECAO.map(c=>`<label style="display:flex;align-items:center;gap:8px;font-size:.82rem;cursor:pointer;color:#ddd;">
               <input type="checkbox" value="${c.id}" style="width:16px;height:16px;flex-shrink:0;accent-color:var(--cor-primaria);">
@@ -3045,6 +3045,24 @@ const Planejamento = (() => {
       if(!porNome.has(chave))porNome.set(chave,[]);
       porNome.get(chave).push(t);
     }
+    // Nome do PAI de cada tarefa. A hierarquia aqui é implícita: ordena por
+    // 'ordem' e o pai é a tarefa anterior mais próxima com nível 1 acima —
+    // mesmo critério que o editor de árvore usa (_arvFilhos).
+    // Serve pra desempatar grupos que se repetem sob pais diferentes e que
+    // NÃO têm código na planilha: "Apartamentos", "Hall" e "Escadaria"
+    // aparecem sob Hidráulica, Elétrica, Gesso, Contrapiso, Pintura... e sem
+    // isso ficavam todas de fora do import como "ambíguas".
+    const paiNomeDe=new Map();
+    {
+      const ordenadas=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
+      const pilha=[];
+      for(const t of ordenadas){
+        const n=t.nivel||0;
+        while(pilha.length&&(pilha[pilha.length-1].nivel||0)>=n)pilha.pop();
+        paiNomeDe.set(t.id,pilha.length?(pilha[pilha.length-1].nome||'').trim().toLowerCase():'');
+        pilha.push(t);
+      }
+    }
     const COL_MAP={inicioReal:'iniReal',terminoReal:'terReal',percentualConcluido:'percConc',percentualEsperado:'percEsp',
       inicioPlanejado:'inicio',terminoPlanejado:'termino',duracao:'duracao',responsavel:'resp',frenteServico:'frente',predecessora:'pred',
       custo:'custo',receita:'receita'};
@@ -3052,7 +3070,9 @@ const Planejamento = (() => {
     const NUM_FIELDS=new Set(['percentualConcluido','percentualEsperado','custo','receita','duracao']);
     const idxCodigo=ci('codigo');
 
-    let predNaoResolvidas=0,casadasPorCodigo=0,casadasPorNome=0;
+    const idxPai=ci('pai'),idxChave=ci('chave');
+    const porId=new Map(tarefas.map(t=>[t.id,t]));
+    let predNaoResolvidas=0,casadasPorChave=0,casadasPorCodigo=0,casadasPorNome=0,casadasPorPai=0;
     const naoEncontradasNomes=[],ambiguasNomes=[];
     const updates=[];
     for(let r=1;r<rows.length;r++){
@@ -3061,6 +3081,14 @@ const Planejamento = (() => {
       if(!nome)continue;
       const codigoLinha=idxCodigo>=0?String(row[idxCodigo]||'').trim():'';
       let t;
+      // 0º) pela CHAVE — o id da tarefa. É o único identificador que nunca
+      // muda: não depende do nome, nem da posição, nem da estrutura, e não é
+      // reaproveitado quando outra tarefa é excluída. Toda linha exportada
+      // tem uma. Quando ela está presente, acabou — não precisa adivinhar.
+      const chaveLinha=idxChave>=0?String(row[idxChave]||'').trim():'';
+      if(chaveLinha&&porId.has(chaveLinha)){
+        t=porId.get(chaveLinha);casadasPorChave++;
+      } else {
       // 1º) pelo CÓDIGO — chave estável, não depende do nome estar igual
       const porCod=codigoLinha?(porCodigo.get(codigoLinha)||[]):[];
       if(porCod.length===1){
@@ -3078,7 +3106,16 @@ const Planejamento = (() => {
           naoEncontradasNomes.push(codigoLinha?`${nome} (código ${codigoLinha})`:nome);continue;
         }
         if(candidatos.length===1){t=candidatos[0];casadasPorNome++;}
-        else{ambiguasNomes.push(codigoLinha?`${nome} (código ${codigoLinha} não existe na obra)`:nome);continue;}
+        else{
+          // 3º) o PAI desempata. Grupos como "Apartamentos"/"Hall"/"Escadaria"
+          // se repetem sob pais diferentes e vêm SEM código na planilha — o
+          // código nunca ia resolver, e todas caíam fora do import.
+          const paiLinha=idxPai>=0?String(row[idxPai]||'').trim().toLowerCase():'';
+          const porPai=paiLinha?candidatos.filter(c=>(paiNomeDe.get(c.id)||'')===paiLinha):[];
+          if(porPai.length===1){t=porPai[0];casadasPorPai++;}
+          else{ambiguasNomes.push(`${nome}${codigoLinha?` (código ${codigoLinha} não existe na obra)`:''}${paiLinha?` [pai: ${row[idxPai]}]`:' [sem Chave, sem código e sem pai na planilha]'}`);continue;}
+        }
+      }
       }
       const upd={};
       for(const campo of camposMarcados){
@@ -3099,9 +3136,12 @@ const Planejamento = (() => {
             // Mesma regra do casamento principal: CÓDIGO primeiro (estável),
             // nome só de reserva. Antes só olhava o nome, e toda predecessora
             // que apontava pra uma tarefa de nome repetido virava "não resolvida".
+            const chvAlvo=(linhaAlvo&&idxChave>=0)?String(linhaAlvo[idxChave]||'').trim():'';
             const codAlvo=(linhaAlvo&&idxCodigo>=0)?String(linhaAlvo[idxCodigo]||'').trim():'';
             const nomeAlvo=linhaAlvo?String(linhaAlvo[iN]||'').trim():'';
             let alvo=null;
+            if(chvAlvo&&porId.has(chvAlvo))alvo=porId.get(chvAlvo);
+            else{
             const cAlvo=codAlvo?(porCodigo.get(codAlvo)||[]):[];
             if(cAlvo.length===1)alvo=cAlvo[0];
             else if(cAlvo.length>1){
@@ -3110,6 +3150,12 @@ const Planejamento = (() => {
             } else {
               const candAlvo=nomeAlvo?porNome.get(nomeAlvo.toLowerCase()):null;
               if(candAlvo&&candAlvo.length===1)alvo=candAlvo[0];
+              else if(candAlvo&&candAlvo.length>1&&idxPai>=0){
+                const paiAlvo=String(linhaAlvo[idxPai]||'').trim().toLowerCase();
+                const pp=paiAlvo?candAlvo.filter(c=>(paiNomeDe.get(c.id)||'')===paiAlvo):[];
+                if(pp.length===1)alvo=pp[0];
+              }
+            }
             }
             if(alvo){
               partes.push({id:alvo.id,tipo:(m[2]||'TI').toUpperCase(),lag:m[3]||''});
@@ -3130,7 +3176,7 @@ const Planejamento = (() => {
       if(Object.keys(upd).length)updates.push({id:t.id,...upd});
     }
 
-    if(!confirm(`${updates.length} tarefa(s) serão atualizadas (${camposMarcados.length} campo(s) cada).\n  · ${casadasPorCodigo} casadas pelo Código\n  · ${casadasPorNome} casadas pelo Nome (linha sem código, ou código que não existe na obra)\n${naoEncontradasNomes.length} não encontradas (nem código nem nome batem com alguma tarefa atual).\n${ambiguasNomes.length} ambíguas (puladas por segurança).${predNaoResolvidas?`\n${predNaoResolvidas} predecessora(s) não resolvida(s) (nome ambíguo ou não encontrado).`:''}\n\nConfirmar?`)){_correcoesContexto=null;return;}
+    if(!confirm(`${updates.length} tarefa(s) serão atualizadas (${camposMarcados.length} campo(s) cada).\n  · ${casadasPorChave} casadas pela Chave (identificador fixo)\n  · ${casadasPorCodigo} casadas pelo Código\n  · ${casadasPorNome} casadas pelo Nome (linha sem chave/código)\n  · ${casadasPorPai} casadas pelo Nome + Pai (nome repetido, desempatado pela hierarquia)\n${naoEncontradasNomes.length} não encontradas (nem código nem nome batem com alguma tarefa atual).\n${ambiguasNomes.length} ambíguas (puladas por segurança).${predNaoResolvidas?`\n${predNaoResolvidas} predecessora(s) não resolvida(s) (nome ambíguo ou não encontrado).`:''}\n\nConfirmar?`)){_correcoesContexto=null;return;}
 
     Utils.mostrarLoading('Aplicando correções...');
     const L=20,TIMEOUT_MS=15000;
@@ -3190,10 +3236,10 @@ const Planejamento = (() => {
       const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
       if(rows.length<2){Utils.toast('Planilha vazia.','alerta');return;}
       const hdrs=rows[0].map(h=>String(h||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' '));
-      const ci=n=>{const a={id:['id'],codigo:['codigo','code'],nivel:['nivel','nível','level'],nome:['nome','name','tarefa','atividade'],duracao:['duracao','duration'],
+      const ci=n=>{const a={chave:['chave','id fixo','uid'],id:['id'],codigo:['codigo','code'],nivel:['nivel','nível','level'],nome:['nome','name','tarefa','atividade'],duracao:['duracao','duration'],
         inicio:['inicio','start','inicio planejado'],termino:['termino','finish','fim','termino planejado'],
         percEsp:['esperado','% esperado'],percConc:['concluido','% concluido','% complete'],
-        pred:['predecessora','predecessor','prececessora'],pai:['tarefa pai','parent'],grupo:['grupo','group'],
+        pred:['predecessora','predecessor','prececessora'],pai:['pai','tarefa pai','parent'],grupo:['grupo','group'],
         local:['local','location'],custo:['custo','cost'],receita:['receita','revenue'],
         resp:['responsavel','responsible','resource'],frente:['frente','frente de servico','equipe'],iniB:['inicio linha de base'],terB:['termino linha de base'],
         iniD:['inicio desafio'],terD:['termino desafio']};
@@ -4166,17 +4212,22 @@ const Planejamento = (() => {
     try{Utils.mostrarLoading('Gerando...');
       if(typeof XLSX==='undefined')await _ls('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');
       const sorted=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
-      const H=['Código','Atividade','Pai','Frente'];
+      // "Chave" é o id real da tarefa: nasce com ela, nunca muda e nunca é
+      // reaproveitado, mesmo que outras linhas sejam excluídas ou reordenadas.
+      // É por ela que o import casa. O "Código" (WBS 1.3.6) muda quando a
+      // estrutura muda, e 39 tarefas nem têm código — não serve de chave.
+      // NÃO APAGUE nem edite essa coluna na planilha.
+      const H=['Chave','Código','Atividade','Pai','Frente'];
       const pilhaNomes=[];
       const rows=sorted.map(t=>{
         const niv=t.nivel||0;
         pilhaNomes.length=niv;
         const pai=niv>0?(pilhaNomes[niv-1]||''):'';
         pilhaNomes[niv]=t.nome||'';
-        return [t.codigo||'','  '.repeat(niv)+(t.nome||''),pai,t.frenteServico||''];
+        return [t.id||'',t.codigo||'','  '.repeat(niv)+(t.nome||''),pai,t.frenteServico||''];
       });
       const ws=XLSX.utils.aoa_to_sheet([H,...rows]);
-      ws['!cols']=[{wch:12},{wch:55},{wch:40},{wch:14}];
+      ws['!cols']=[{wch:24},{wch:12},{wch:55},{wch:40},{wch:14}];
       const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Frentes');
       const obra=Router.getObra();
       XLSX.writeFile(wb,`frentes_${(obra?.nome||'obra').replace(/[^a-z0-9]/gi,'_')}.xlsx`);
@@ -4189,17 +4240,22 @@ const Planejamento = (() => {
     if(!Permissions.pode('planejamento','exportar')){Utils.toast('Sem permissão para exportar.','erro');return;}
     try{Utils.mostrarLoading('Gerando...');
       if(typeof XLSX==='undefined')await _ls('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');
-      const H=['ID','Código','Nível','Nome','Duração','Início','Término','% Esperado','% Concluído',
+      // "ID" continua sendo a POSIÇÃO na lista (1..N) porque a coluna
+      // Predecessora referencia esse número — mexer nisso quebraria o import
+      // de predecessoras. A identidade de verdade vai na coluna "Chave":
+      // é o id da tarefa, nasce com ela, nunca muda e nunca é reaproveitado,
+      // mesmo que outras linhas sejam excluídas ou reordenadas.
+      const H=['Chave','ID','Código','Nível','Nome','Duração','Início','Término','% Esperado','% Concluído',
         'Prececessora','Tarefa Pai','Grupo','Local','Frente','Custo','Receita','Responsável',
         'Inicio Linha de Base','Termino Linha de Base','Inicio Desafio','Termino Desafio'];
       const sorted=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
-      const rows=sorted.map((t,i)=>[i+1,t.codigo||'',t.nivel||0,'  '.repeat(t.nivel||0)+(t.nome||''),
+      const rows=sorted.map((t,i)=>[t.id||'',i+1,t.codigo||'',t.nivel||0,'  '.repeat(t.nivel||0)+(t.nome||''),
         t.duracao?t.duracao+'d':'',_fBR(t.inicioPlanejado),_fBR(t.terminoPlanejado),
         _percEsp(t),t.percentualConcluido||0,t._predDisplay||'',t.tarefaPai||'',
         t.grupo||'',t.local||'',t.frenteServico||'',t.custo||0,t.receita||0,t.responsavel||'',
         _fBR(t.inicioPlanejadoBase),_fBR(t.terminoPlanejadoBase),_fBR(t.inicioDesafio),_fBR(t.terminoDesafio)]);
       const ws=XLSX.utils.aoa_to_sheet([H,...rows]);
-      ws['!cols']=[{wch:6},{wch:10},{wch:7},{wch:45},{wch:8},{wch:13},{wch:13},{wch:11},{wch:11},
+      ws['!cols']=[{wch:24},{wch:6},{wch:10},{wch:7},{wch:45},{wch:8},{wch:13},{wch:13},{wch:11},{wch:11},
         {wch:13},{wch:20},{wch:18},{wch:15},{wch:12},{wch:10},{wch:10},{wch:18},{wch:22},{wch:22},{wch:15},{wch:15}];
       const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Cronograma');
       const obra=Router.getObra();
