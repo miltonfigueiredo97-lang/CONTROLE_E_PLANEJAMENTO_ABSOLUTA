@@ -3,6 +3,9 @@
 // Recebe um PDF (nota digitada ou manuscrita, exportada do Samsung
 // Notes) e devolve uma lista de tarefas objetivas para o To Do List
 // (módulo "Tarefas do Sistema"), em vez de um relatório de obra.
+// Cada tarefa vem com título, descrição (sempre preenchida) e,
+// quando fizer sentido, projeto e categoria — reaproveitando as
+// categorias já existentes no sistema sempre que possível.
 //
 // Mesma estratégia de fallback de gerar-relatorio.js:
 // 1º Gemini (gratuito) — GEMINI_API_KEY
@@ -20,16 +23,25 @@ exatamente este schema:
 
 {
   "tarefas": [
-    { "texto": "descrição curta, objetiva e reescrita da tarefa (comece com verbo no infinitivo quando fizer sentido)",
-      "projeto": "nome do projeto/obra/assunto se ficar claro na nota, ou null" }
+    {
+      "titulo": "título curto e objetivo da tarefa (comece com verbo no infinitivo quando fizer sentido)",
+      "descricao": "descrição com o detalhe da tarefa — NUNCA pode ficar vazia; se a nota não tiver detalhe extra além do próprio título, escreva uma frase breve explicando o contexto ou o que precisa ser feito",
+      "projeto": "nome do projeto/obra/sistema se ficar claro na nota, ou null",
+      "categoria": "nome de uma categoria pra essa tarefa, ou null se nenhuma fizer sentido"
+    }
   ]
 }
 
 Regras importantes:
 - Cada item da nota que descreva algo a fazer/resolver/verificar/lançar deve virar UMA tarefa separada.
 - Não invente tarefas que não estão na nota. Se a nota inteira for só UMA tarefa, devolva um array com um item só.
-- Reescreva de forma limpa e curta (corrija erros óbvios de digitação/leitura), preservando o sentido original.
+- Reescreva de forma limpa (corrija erros óbvios de digitação/leitura), preservando o sentido original.
 - Se algum trecho manuscrito for ilegível, ignore só aquele trecho (não crie uma tarefa vaga tipo "[ilegível]").
+- Categoria: você vai receber, na mensagem do usuário, a lista de categorias já cadastradas no sistema.
+  SEMPRE prefira reaproveitar uma categoria existente que se encaixe — copie o nome EXATAMENTE como está
+  na lista fornecida. Só proponha um nome novo (curto, 1 a 3 palavras) se nenhuma categoria existente
+  fizer sentido pra essa tarefa. Se nem uma existente nem uma nova fizer sentido, use null — não force
+  uma categoria genérica só para preencher o campo.
 - Se não houver nenhuma tarefa identificável, devolva { "tarefas": [] }.`;
 
 function _limparJson(txt) {
@@ -42,12 +54,20 @@ function _fetchComTimeout(url, options, timeoutMs) {
   return fetch(url, { ...options, signal: controller.signal }).finally(() => clearTimeout(timer));
 }
 
+function _textoUsuario(categoriasExistentes) {
+  const lista = Array.isArray(categoriasExistentes) && categoriasExistentes.length
+    ? categoriasExistentes.join(', ')
+    : 'nenhuma cadastrada ainda';
+  return `Categorias já existentes no sistema (reaproveite o nome exatamente igual quando fizer sentido): ${lista}.\n\n` +
+    'Extraia desta nota a lista de tarefas para o To Do List, seguindo estritamente o schema JSON pedido nas instruções.';
+}
+
 // ---- Gemini ----
-async function _chamarGemini(pdfBase64, mediaType) {
+async function _chamarGemini(pdfBase64, mediaType, categoriasExistentes) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error('GEMINI_API_KEY não configurada.');
 
-  const userText = 'Extraia desta nota a lista de tarefas para o To Do List, seguindo estritamente o schema JSON pedido nas instruções.';
+  const userText = _textoUsuario(categoriasExistentes);
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`;
 
   const resp = await _fetchComTimeout(url, {
@@ -81,11 +101,11 @@ async function _chamarGemini(pdfBase64, mediaType) {
 }
 
 // ---- Anthropic ----
-async function _chamarAnthropic(pdfBase64, mediaType) {
+async function _chamarAnthropic(pdfBase64, mediaType, categoriasExistentes) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error('ANTHROPIC_API_KEY não configurada.');
 
-  const userText = 'Extraia desta nota a lista de tarefas para o To Do List, seguindo estritamente o schema JSON pedido no sistema.';
+  const userText = _textoUsuario(categoriasExistentes);
 
   const resp = await _fetchComTimeout('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -96,7 +116,7 @@ async function _chamarAnthropic(pdfBase64, mediaType) {
     },
     body: JSON.stringify({
       model: ANTHROPIC_MODEL,
-      max_tokens: 2000,
+      max_tokens: 2500,
       system: SYSTEM_PROMPT,
       messages: [{
         role: 'user',
@@ -127,7 +147,7 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    const { pdfBase64, mediaType } = req.body || {};
+    const { pdfBase64, mediaType, categoriasExistentes } = req.body || {};
     if (!pdfBase64) {
       res.status(400).json({ ok: false, error: 'Nenhum PDF foi enviado.' });
       return;
@@ -138,7 +158,7 @@ module.exports = async function handler(req, res) {
     let erroGemini = null;
 
     try {
-      conteudo = await _chamarGemini(pdfBase64, mediaType);
+      conteudo = await _chamarGemini(pdfBase64, mediaType, categoriasExistentes);
       provedor = 'gemini';
     } catch (e) {
       erroGemini = e.message || String(e);
@@ -147,7 +167,7 @@ module.exports = async function handler(req, res) {
 
     if (!conteudo) {
       try {
-        conteudo = await _chamarAnthropic(pdfBase64, mediaType);
+        conteudo = await _chamarAnthropic(pdfBase64, mediaType, categoriasExistentes);
         provedor = 'anthropic';
       } catch (e2) {
         console.error('Anthropic (fallback) também falhou:', e2.message || e2);

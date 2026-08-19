@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.16.0.15',
+  versaoAtual: 'V3.17.0.0',
 
   versoes: [
     {
@@ -9288,6 +9288,18 @@ const NotasVersao = {
       "itens": [
         "Motivo (Milton): a descrição não devia ser opcional (\"+ adicionar descrição\") — tirado o botão de mostrar/escoltar, o campo Descrição agora aparece sempre, tanto pra criar quanto pra editar, e é obrigatório em ambos (não salva sem preencher).",
         "O microfone 🎤 mudou de lugar: antes ficava ao lado do Título e ditava nele; agora fica ao lado da Descrição e dita nela — combina mais com o uso real (título é curto e digitado rápido, descrição é o texto mais longo que vale a pena falar)."
+      ]
+    },
+    {
+      "versao": "V3.17.0.0",
+      "data": "2026-08-19",
+      "tipo": "funcionalidade",
+      "titulo": "PDF → Tarefa: a IA agora gera Título, Descrição e Categoria (não só título solto)",
+      "itens": [
+        "Motivo (Milton): compartilhar o PDF escrito à mão só criava o título — faltava a IA já organizar em Título + Descrição (agora obrigatória em todo lugar) e, quando fizer sentido, uma Categoria.",
+        "Categoria: antes de chamar a IA, o sistema busca as categorias já cadastradas em Tarefas do Sistema e manda a lista pra IA — ela é instruída a REAPROVEITAR uma existente sempre que se encaixar, e só criar uma nova (curta, 1 a 3 palavras) se nenhuma servir. Categoria nova vem com cor automática, igual as criadas manualmente.",
+        "Se a tarefa não tiver uma categoria clara, a IA deixa em branco — não força uma categoria genérica só pra preencher o campo.",
+        "Descrição nunca vem vazia (a IA foi instruída a nunca deixar em branco, mesmo que a nota não tenha detalhe extra) — consistente com a regra de descrição obrigatória da V3.16.0.15."
       ]
     }
   ],

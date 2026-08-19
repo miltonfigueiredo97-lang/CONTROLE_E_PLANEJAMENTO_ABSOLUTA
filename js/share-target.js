@@ -40,6 +40,15 @@ const ShareTarget = (() => {
     if (el) el.style.display = 'flex';
   }
 
+  // Paleta simples só pra colorir categoria nova criada automaticamente
+  // pela IA (mesmo espírito da paleta de todo.js, sem duplicar o arquivo).
+  const CORES_CATEGORIA = ['#F5C800', '#2563eb', '#16a34a', '#7c3aed', '#d97706', '#dc2626', '#0891b2', '#db2777', '#059669', '#4f46e5', '#ea580c', '#64748b'];
+  function _corParaCategoria(nome) {
+    let hash = 0;
+    for (let i = 0; i < nome.length; i++) hash = (hash * 31 + nome.charCodeAt(i)) >>> 0;
+    return CORES_CATEGORIA[hash % CORES_CATEGORIA.length];
+  }
+
   function _abrirDB() {
     return new Promise((resolve, reject) => {
       const req = indexedDB.open('absoluta-share', 1);
@@ -172,19 +181,23 @@ const ShareTarget = (() => {
     try {
       _icone('✅');
       _titulo('Recebendo tarefa(s)...');
-      _status('A IA está lendo a nota...');
+      _status('Verificando categorias existentes...');
       const pdfBase64 = await _blobParaBase64(registro.blob);
 
+      const categoriasAtuais = await Database.listarRaiz('todoCategorias').catch(() => []);
+      const nomesCategorias = categoriasAtuais.map((c) => c.nome);
+
+      _status('A IA está lendo a nota...');
       const resp = await fetch('/api/extrair-tarefas', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pdfBase64, mediaType: 'application/pdf' }),
+        body: JSON.stringify({ pdfBase64, mediaType: 'application/pdf', categoriasExistentes: nomesCategorias }),
       });
       const resultado = await resp.json();
       if (!resultado.ok) throw new Error(resultado.error || 'Erro ao extrair tarefas.');
 
-      const tarefas = (resultado.data && resultado.data.tarefas) || [];
-      if (tarefas.length === 0) {
+      const itens = (resultado.data && resultado.data.tarefas) || [];
+      if (itens.length === 0) {
         _falhar('A IA não encontrou nenhuma tarefa nessa nota.');
         return;
       }
@@ -192,12 +205,29 @@ const ShareTarget = (() => {
       _status('Salvando tarefa(s)...');
       const existentes = await Database.listarRaiz('tarefasSistema', 'ordem', 'desc');
       let ordem = existentes.length ? (existentes[0].ordem || 0) + 1 : 1;
-      for (const t of tarefas) {
-        if (!t.texto) continue;
+      const categoriasLocais = categoriasAtuais.slice();
+
+      for (const item of itens) {
+        if (!item.titulo) continue;
+
+        let categoriaFinal = '';
+        if (item.categoria) {
+          const jaExiste = categoriasLocais.find((c) => c.nome.toLowerCase() === item.categoria.toLowerCase());
+          if (jaExiste) {
+            categoriaFinal = jaExiste.nome;
+          } else {
+            const cor = _corParaCategoria(item.categoria);
+            const idCat = await Database.criarRaiz('todoCategorias', { nome: item.categoria, cor, importancia: 3 });
+            categoriasLocais.push({ id: idCat, nome: item.categoria, cor, importancia: 3 });
+            categoriaFinal = item.categoria;
+          }
+        }
+
         await Database.criarRaiz('tarefasSistema', {
-          texto: t.texto,
-          projeto: t.projeto || '',
-          categoria: '',
+          texto: item.titulo,
+          descricao: item.descricao || '',
+          projeto: item.projeto || '',
+          categoria: categoriaFinal,
           dependencia: '',
           concluida: false,
           ordem,
@@ -209,8 +239,8 @@ const ShareTarget = (() => {
       _apagarArquivo(shareId);
 
       _icone('✅');
-      _titulo(tarefas.length === 1 ? 'Tarefa criada!' : `${tarefas.length} tarefas criadas!`);
-      _status('Já entraram no To Do List, organizadas pela IA.');
+      _titulo(itens.length === 1 ? 'Tarefa criada!' : `${itens.length} tarefas criadas!`);
+      _status('Já entraram no To Do List, com título, descrição e categoria organizados pela IA.');
       _mostrarAcoes('todo.html', 'Ver em Tarefas do Sistema');
     } catch (e) {
       console.error(e);
