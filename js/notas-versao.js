@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.9',
+  versaoAtual: 'V3.19.10',
 
   versoes: [
     {
@@ -9523,6 +9523,17 @@ const NotasVersao = {
         "Removido o campo \"apelidos\" da Estrutura da Obra (Milton achou feio e não precisa).",
         "No lugar: reconhecimento por PADRÃO — entende \"1SS\", \"1ºSS\", \"1º SUB\", \"1ºSUBSOLO\", \"1º SUBSOLO\", \"SS1\" (e o formato real dos dados, sigla antes do número tipo \"SS2\") como a MESMA coisa (Subsolo). E \"1º ANDAR\", \"1º PAVIMENTO\", \"1º AND\", \"1º PAV\" como a mesma coisa (Pavimento). Não precisa cadastrar nenhuma dessas variações — o sistema já entende.",
         "Funciona comparando SIGNIFICADO (número + se é subsolo ou pavimento) em vez de comparar texto — por isso cobre qualquer abreviação nova que apareça, não só as que alguém lembrou de cadastrar."
+      ]
+    },
+    {
+      "versao": "V3.19.10",
+      "data": "2026-08-19",
+      "tipo": "correcao",
+      "titulo": "Gerar Grupos: mais dois padrões reconhecidos (T° Int/Ext = Térreo, Reserv. = Reservatório) — 1871 → 2156 de 2198",
+      "itens": [
+        "Testado com os nomes reais das 2198 tarefas antes de publicar (não só os exemplos passados): \"T° Int.\"/\"T° Ext.\" é a abreviação de Térreo usada em toda tarefa de área comum (Festas/Copa, Academia, Brinquedoteca etc.) — sem isso nenhuma delas casava com o pavimento Térreo cadastrado. \"Reserv.\" é Reservatório truncado.",
+        "Resultado no teste: reconhecimento subiu de 1871 para 2156 de 2198 (98%).",
+        "Os 42 que ainda ficam de fora não são bug — são tarefas de zonas que a Estrutura da Obra não tem cadastrada ainda: Muro Divisa (Frontal/Fundos/LD/LE), Cobertura (Tampa) e itens de logística/equipamento sem andar (Mini Grua, Cremalheira, Elevadores, Entrada de Energia Definitiva) — cadastrando essas zonas como pavimento/local também cobre."
       ]
     }
   ],

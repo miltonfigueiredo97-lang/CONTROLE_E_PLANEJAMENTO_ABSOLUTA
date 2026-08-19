@@ -4037,8 +4037,18 @@ const Planejamento = (() => {
     const subgrupo=(mPav&&mFinal)?(parseInt(mPav[1])*10+parseInt(mFinal[1])):null;
     return{grupo:grupoNome,subgrupo};
   }
+  // Expande abreviações que só fazem sentido dentro de nome de tarefa (não
+  // são "número+tipo" como Pavimento/Subsolo, são casos isolados de sigla):
+  // "T° Int."/"T° Ext." = Térreo (Interno/Externo) — usado em toda tarefa de
+  // área comum. "Reserv." = Reservatório truncado. Sem isso, nenhuma tarefa
+  // de área comum casava com o pavimento "Térreo" cadastrado.
+  function _expandirAbreviacoes(textoNorm){
+    return textoNorm
+      .replace(/(?:^|[\s-])t\s*o?\s*(int|ext)\b/g,' terreo ')
+      .replace(/\breserv\.?\b/g,'reservatorio');
+  }
   function _detectarGrupoPorNome(nomeTarefa,estrutura){
-    const nome=_normTexto(nomeTarefa);
+    const nome=_expandirAbreviacoes(_normTexto(nomeTarefa));
     const pavimentos=[];
     (estrutura.torres||[]).forEach(torre=>(torre.pavimentos||[]).forEach(pav=>pavimentos.push(pav)));
     // 1º) match ESTRUTURAL por número+tipo — cobre qualquer jeito de
@@ -4063,6 +4073,7 @@ const Planejamento = (() => {
     if(!melhor)return null;
     return _finalizarMatchGrupo(melhor,nomeTarefa);
   }
+
 
   let _gerarGruposLista=null; // estado vivo da prévia (permite editar e propagar)
   let _gerarGruposPavimentos=null; // lista fechada de nomes de pavimento (Estrutura da Obra) — só se escolhe daqui, nunca digita livre
