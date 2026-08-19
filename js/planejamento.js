@@ -4052,6 +4052,17 @@ const Planejamento = (() => {
       .replace(/\bmuro\s*divisa\b/g,'terreo')
       .replace(/\bcobertura\b/g,'reservatorio');
   }
+  // Variações de singular/plural do nome do pavimento — "Elevadores" (como
+  // Milton cadastrou) não aparece dentro de "Montagem Elevador 01" (a tarefa
+  // usa singular) porque a palavra maior nunca é substring da menor. Gera
+  // candidatos tirando "es"/"s" do final (regra comum de plural em PT-BR:
+  // elevador→elevadores, muro→muros) pra testar os dois lados.
+  function _candidatosSingular(s){
+    const out=[s];
+    if(s.length>5&&/es$/.test(s))out.push(s.slice(0,-2));
+    if(s.length>4&&/s$/.test(s))out.push(s.slice(0,-1));
+    return[...new Set(out)];
+  }
   function _detectarGrupoPorNome(nomeTarefa,estrutura){
     const nome=_expandirAbreviacoes(_normTexto(nomeTarefa));
     const pavimentos=[];
@@ -4067,13 +4078,17 @@ const Planejamento = (() => {
         }
       }
     }
-    // 2º) sem número (Térreo, Ático, Reservatório, Fachada etc.) — o nome
-    // do pavimento cadastrado precisa aparecer dentro do nome da tarefa,
-    // igual antes. Pega o match mais longo (mais específico).
+    // 2º) sem número (Térreo, Ático, Reservatório, Elevadores, Fachada etc.)
+    // — o nome do pavimento (ou uma variação de singular/plural dele)
+    // precisa aparecer dentro do nome da tarefa. Pega o match mais longo
+    // (mais específico).
     let melhor=null,melhorLen=0;
     for(const pav of pavimentos){
       const nPav=_normTexto(pav.nome);
-      if(nPav.length>=3&&nome.includes(nPav)&&nPav.length>melhorLen){melhor=pav.nome;melhorLen=nPav.length;}
+      if(nPav.length<3)continue;
+      for(const cand of _candidatosSingular(nPav)){
+        if(nome.includes(cand)&&nPav.length>melhorLen){melhor=pav.nome;melhorLen=nPav.length;break;}
+      }
     }
     if(!melhor)return null;
     return _finalizarMatchGrupo(melhor,nomeTarefa);

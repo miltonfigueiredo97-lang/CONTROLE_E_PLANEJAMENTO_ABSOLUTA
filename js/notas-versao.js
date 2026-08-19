@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.11',
+  versaoAtual: 'V3.19.12',
 
   versoes: [
     {
@@ -9545,6 +9545,16 @@ const NotasVersao = {
         "Regra do Milton: Muro Divisa é sempre Térreo, e Cobertura (Tampa) é sempre Reservatório — cadastrado direto no reconhecimento (2177 de 2198 casam com um pavimento real agora).",
         "As tarefas que realmente não têm andar (Mini Grua, Cremalheira, Elevadores, Entrada de Energia Definitiva, Vistoria Cliente, Fundação...) agora aparecem na prévia também — marcadas como \"— Sem Vínculo —\" em vez de simplesmente desaparecer da lista sem explicação. Pode confirmar assim ou trocar pra um pavimento real se achar que deveria ter um.",
         "Lista da prévia agora vem ordenada pela ordem dos pavimentos na Estrutura da Obra (tudo do 1º Pavimento junto, depois 2º, etc.) em vez da ordem solta da tarefa — mais fácil de revisar bloco por bloco."
+      ]
+    },
+    {
+      "versao": "V3.19.12",
+      "data": "2026-08-19",
+      "tipo": "correcao",
+      "titulo": "Gerar Grupos não reconhecia pavimento novo cadastrado no plural quando a tarefa usa singular (ex: \"Elevadores\" x \"Elevador 01\")",
+      "itens": [
+        "Bug real (Milton pegou): cadastrou o pavimento \"Elevadores\" (plural) na Estrutura da Obra, mas as tarefas dizem \"Elevador 01\", \"Elevador 1\" etc (singular) — palavra maior (plural) nunca é substring da menor (singular), então nunca batia. Cadastrar não bastava, o Gerar Grupos continuava sem achar.",
+        "Corrigido: ao comparar, agora também testa o pavimento sem o \"s\" ou \"es\" do final (regra comum de plural em PT-BR) — \"Elevadores\" passa a reconhecer \"Elevador\" dentro do nome da tarefa. Vale pra qualquer pavimento novo cadastrado, não só Elevadores."
       ]
     }
   ],
