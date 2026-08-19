@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.14.0.2',
+  versaoAtual: 'V3.15.0.0',
 
   versoes: [
     {
@@ -9084,6 +9084,18 @@ const NotasVersao = {
         "Controles: Estacas (14 — BT, BT de fundação, concretagem, pranchas, marcadores, metas, vínculo), Concreto (4), Solo (4), Terraplanagem (4, com valores/custos isolado), Porcelanatos (5). Produção (2).",
         "Todos os guards do código e os data-perm dos botões foram migrados junto — validado por script que confere se cada chave usada existe de fato no catálogo (zero inconsistências).",
         "Ações destrutivas ou sensíveis ficaram deliberadamente isoladas em caixinhas próprias, pra dar pra liberar o trabalho do dia a dia sem liberar \"limpar base\" ou \"editar valores/custos\"."
+      ]
+    },
+    {
+      "versao": "V3.15.0.0",
+      "data": "2026-08-19",
+      "tipo": "funcionalidade",
+      "titulo": "Compartilhar PDF do Samsung Notes agora pode virar Tarefa, não só Relatório",
+      "itens": [
+        "Motivo (Milton): o compartilhamento de PDF (Samsung Notes → Absoluta) só tinha um destino, Relatório de Obra. Agora, ao compartilhar, aparece uma tela de escolha: \"📄 É um Relatório de Obra\" ou \"✅ São Tarefa(s) — To Do List\".",
+        "Escolhendo Tarefa: uma nova IA (api/extrair-tarefas, mesmo fallback Gemini → Anthropic do Relatório) lê a nota e identifica cada item como uma tarefa separada, já reescrita de forma curta e objetiva, com projeto quando ficar claro na nota. Cada uma entra direto na coleção tarefasSistema (módulo Tarefas do Sistema/To Do List).",
+        "Se a nota tiver várias tarefas escritas juntas, todas são criadas de uma vez, em sequência, na ordem em que aparecem.",
+        "Fluxo de Relatório continua idêntico a antes — só ganhou uma tela de escolha na frente."
       ]
     }
   ],

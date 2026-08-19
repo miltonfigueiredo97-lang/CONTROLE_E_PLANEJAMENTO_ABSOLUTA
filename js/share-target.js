@@ -1,7 +1,8 @@
 // ============================================
 // ShareTarget — recebe o PDF compartilhado (ex: Samsung Notes)
-// via PWA share_target, processa com a IA e salva como relatório
-// pendente (sem obra atribuída ainda).
+// via PWA share_target. Antes de processar, pergunta o destino
+// (Relatório de obra OU Tarefa do To Do List) e processa com a IA
+// de acordo com a escolha.
 // ============================================
 const ShareTarget = (() => {
   function _status(msg) {
@@ -16,14 +17,27 @@ const ShareTarget = (() => {
     const el = document.getElementById('share-icone');
     if (el) el.textContent = ic;
   }
-  function _mostrarAcoes() {
+  function _mostrarAcoes(href, label) {
     const el = document.getElementById('share-acoes');
-    if (el) el.style.display = 'block';
+    if (!el) return;
+    if (href) {
+      const link = el.querySelector('a');
+      if (link) { link.href = href; link.textContent = label || link.textContent; }
+    }
+    el.style.display = 'block';
   }
   function _falhar(msg) {
     _icone('⚠');
     _titulo('Não deu certo');
     _status(msg);
+  }
+  function _esconderEscolha() {
+    const el = document.getElementById('share-escolha');
+    if (el) el.style.display = 'none';
+  }
+  function _mostrarEscolha() {
+    const el = document.getElementById('share-escolha');
+    if (el) el.style.display = 'flex';
   }
 
   function _abrirDB() {
@@ -91,6 +105,26 @@ const ShareTarget = (() => {
         return;
       }
 
+      _icone('📋');
+      _titulo('O que é essa nota?');
+      _status('Escolha pra onde mandar esse PDF.');
+      _mostrarEscolha();
+
+      const btnRelatorio = document.getElementById('share-btn-relatorio');
+      const btnTarefa = document.getElementById('share-btn-tarefa');
+      if (btnRelatorio) btnRelatorio.onclick = () => _processarRelatorio(shareId, registro);
+      if (btnTarefa) btnTarefa.onclick = () => _processarTarefas(shareId, registro);
+    } catch (e) {
+      console.error(e);
+      _falhar(e.message || 'Erro ao localizar o arquivo compartilhado.');
+    }
+  }
+
+  async function _processarRelatorio(shareId, registro) {
+    _esconderEscolha();
+    try {
+      _icone('📥');
+      _titulo('Recebendo relatório...');
       _status('A IA está lendo a nota...');
       const pdfBase64 = await _blobParaBase64(registro.blob);
 
@@ -126,10 +160,61 @@ const ShareTarget = (() => {
       _icone('✅');
       _titulo('Relatório recebido!');
       _status('Já foi organizado pela IA. Agora é só atribuir a uma obra.');
-      _mostrarAcoes();
+      _mostrarAcoes('relatorios.html?aba=pendentes', 'Ver em Relatórios → Pendentes');
     } catch (e) {
       console.error(e);
       _falhar(e.message || 'Erro ao processar o relatório.');
+    }
+  }
+
+  async function _processarTarefas(shareId, registro) {
+    _esconderEscolha();
+    try {
+      _icone('✅');
+      _titulo('Recebendo tarefa(s)...');
+      _status('A IA está lendo a nota...');
+      const pdfBase64 = await _blobParaBase64(registro.blob);
+
+      const resp = await fetch('/api/extrair-tarefas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pdfBase64, mediaType: 'application/pdf' }),
+      });
+      const resultado = await resp.json();
+      if (!resultado.ok) throw new Error(resultado.error || 'Erro ao extrair tarefas.');
+
+      const tarefas = (resultado.data && resultado.data.tarefas) || [];
+      if (tarefas.length === 0) {
+        _falhar('A IA não encontrou nenhuma tarefa nessa nota.');
+        return;
+      }
+
+      _status('Salvando tarefa(s)...');
+      const existentes = await Database.listarRaiz('tarefasSistema', 'ordem', 'desc');
+      let ordem = existentes.length ? (existentes[0].ordem || 0) + 1 : 1;
+      for (const t of tarefas) {
+        if (!t.texto) continue;
+        await Database.criarRaiz('tarefasSistema', {
+          texto: t.texto,
+          projeto: t.projeto || '',
+          categoria: '',
+          dependencia: '',
+          concluida: false,
+          ordem,
+          importancia: 3,
+        });
+        ordem++;
+      }
+
+      _apagarArquivo(shareId);
+
+      _icone('✅');
+      _titulo(tarefas.length === 1 ? 'Tarefa criada!' : `${tarefas.length} tarefas criadas!`);
+      _status('Já entraram no To Do List, organizadas pela IA.');
+      _mostrarAcoes('todo.html', 'Ver em Tarefas do Sistema');
+    } catch (e) {
+      console.error(e);
+      _falhar(e.message || 'Erro ao processar as tarefas.');
     }
   }
 
