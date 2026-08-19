@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.14.0.1',
+  versaoAtual: 'V3.14.0.2',
 
   versoes: [
     {
@@ -9067,6 +9067,23 @@ const NotasVersao = {
         "Os guards no código foram migrados junto — não é só visual: o botão de exportar PNG agora checa \"exportar:png\" de verdade, e não mais \"exportar\" genérico.",
         "Compatibilidade: módulo/ação ainda sem sub-itens mapeados continua funcionando exatamente como antes (uma caixinha só). Quem já tinha \"editar\" marcado continua com tudo liberado — o grupo marcado sempre libera tudo abaixo dele.",
         "Próxima rodada: mapear as sub-ações dos 9 Levantamentos e dos 5 Controles, que hoje ainda usam as ações grossas."
+      ]
+    },
+    {
+      "versao": "V3.14.0.2",
+      "data": "2026-08-18",
+      "tipo": "melhoria",
+      "titulo": "Sub-permissões: mapeamento concluído — 207 permissões individuais em 24 módulos",
+      "itens": [
+        "Completado o que faltava da rodada anterior: os 9 Levantamentos, os 5 Controles e Produção agora também têm granularidade por botão, saindo de 60 pra 207 sub-permissões no total.",
+        "Levantamento Fachada (20): criar fachada/balancim/peça separados, duplicar, copiar de outra vista, conferir peça, mover entre balancins, editar mapa e caixas, vãos e frisos, config de cálculo, exportar CSV e vista.",
+        "Levantamento Piso (17) e Teto (11): criar local/área/planta, editar área, rodapé, tabica, impermeabilização, calibrar escala, reorganizar árvore, mover/copiar áreas, excluir área/local/planta separados.",
+        "Levantamento Paredes (16): alvenaria e acabamento como itens distintos, vãos, pintura, conferir, mover peça, estrutura, config.",
+        "Levantamento Concreto (17): peça, importação em lote, concretagem, itens do levantamento, ordenação, config, e \"limpar base de peças\" isolado (ação destrutiva que merece caixinha própria).",
+        "Levantamento Ar Condicionado (13), Pintura (8), Solo Grampeado (13, incluindo calibração de mapa e medição de área separadas), Terraplanagem (13, com seções, projeto/calibração e PDF).",
+        "Controles: Estacas (14 — BT, BT de fundação, concretagem, pranchas, marcadores, metas, vínculo), Concreto (4), Solo (4), Terraplanagem (4, com valores/custos isolado), Porcelanatos (5). Produção (2).",
+        "Todos os guards do código e os data-perm dos botões foram migrados junto — validado por script que confere se cada chave usada existe de fato no catálogo (zero inconsistências).",
+        "Ações destrutivas ou sensíveis ficaram deliberadamente isoladas em caixinhas próprias, pra dar pra liberar o trabalho do dia a dia sem liberar \"limpar base\" ou \"editar valores/custos\"."
       ]
     }
   ],

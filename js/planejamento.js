@@ -2590,11 +2590,11 @@ const Planejamento = (() => {
       {rotulo:'Corrigir Predecessoras (por ID)',grupo:'Correções & Recálculos',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento._migrarPredecessorasParaId()" title="Converte predecessoras antigas (por número de linha) pro formato por ID — imune a reordenação. Roda sozinho ao carregar, use aqui só se quiser confirmar manualmente.">🔗 Corrigir Predecessoras (por ID)</button>'},
       {rotulo:'Estrutura da Obra',grupo:'Ferramentas da Obra',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento._abrirEstruturaObra()" title="Cadastra Torre → Pavimento → Apto, pra vincular tarefas a um local">🏢 Estrutura da Obra</button>'},
       {rotulo:'Exportar Excel (simples)',grupo:'Importar & Exportar',html:'<button class="btn btn-secundario btn-sm" data-perm="planejamento:exportar:excel" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.exportar()" title="Planilha crua com todas as colunas — boa pra reimportar/tratar dados">📤 Exportar Excel (simples)</button>'},
-      {rotulo:'Exportar Frentes (revisão)',grupo:'Importar & Exportar',html:'<button class="btn btn-secundario btn-sm" data-perm="planejamento:exportar" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.exportarFrentes()" title="Planilha simples (Código, Atividade, Pai, Frente) pra revisar/corrigir a Frente de Serviço fora do sistema e reimportar depois em Importar Correções">👷 Exportar Frentes (revisão)</button>'},
-      {rotulo:'Exportar Excel (formatado)',grupo:'Importar & Exportar',html:'<button class="btn btn-secundario btn-sm" data-perm="planejamento:exportar" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.exportarExcelBonito()" title="Planilha estilizada: grupos coloridos por nível, indentação, cabeçalho fixo com filtro — pronta pra apresentar/imprimir">🎨 Exportar Excel (formatado)</button>'},
-      {rotulo:'Exportar MS Project',grupo:'Importar & Exportar',html:'<button class="btn btn-secundario btn-sm" data-perm="planejamento:exportar" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.exportarMSProject()" title="XML no formato do MS Project (hierarquia, datas, duração, % e predecessoras) — abre direto no Project">📊 Exportar MS Project (.xml)</button>'},
-      {rotulo:'Baixar PDF',grupo:'Importar & Exportar',html:'<button class="btn btn-secundario btn-sm" data-perm="planejamento:exportar" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.baixarPDF()" title="Baixa o arquivo .pdf direto (sem passar pela impressão) — mesmo visual bonito, A4 paisagem">📄 Baixar PDF</button>'},
-      {rotulo:'Imprimir / PDF',grupo:'Importar & Exportar',html:'<button class="btn btn-secundario btn-sm" data-perm="planejamento:exportar" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.abrirImpressao()" title="Abre a visão bonita em página branca pronta pra imprimir ou salvar em PDF (cabeçalho repete em cada página)">🖨 Imprimir / PDF</button>'},
+      {rotulo:'Exportar Frentes (revisão)',grupo:'Importar & Exportar',html:'<button class="btn btn-secundario btn-sm" data-perm="planejamento:exportar:frentes" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.exportarFrentes()" title="Planilha simples (Código, Atividade, Pai, Frente) pra revisar/corrigir a Frente de Serviço fora do sistema e reimportar depois em Importar Correções">👷 Exportar Frentes (revisão)</button>'},
+      {rotulo:'Exportar Excel (formatado)',grupo:'Importar & Exportar',html:'<button class="btn btn-secundario btn-sm" data-perm="planejamento:exportar:excel" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.exportarExcelBonito()" title="Planilha estilizada: grupos coloridos por nível, indentação, cabeçalho fixo com filtro — pronta pra apresentar/imprimir">🎨 Exportar Excel (formatado)</button>'},
+      {rotulo:'Exportar MS Project',grupo:'Importar & Exportar',html:'<button class="btn btn-secundario btn-sm" data-perm="planejamento:exportar:msproject" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.exportarMSProject()" title="XML no formato do MS Project (hierarquia, datas, duração, % e predecessoras) — abre direto no Project">📊 Exportar MS Project (.xml)</button>'},
+      {rotulo:'Baixar PDF',grupo:'Importar & Exportar',html:'<button class="btn btn-secundario btn-sm" data-perm="planejamento:exportar:pdf" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.baixarPDF()" title="Baixa o arquivo .pdf direto (sem passar pela impressão) — mesmo visual bonito, A4 paisagem">📄 Baixar PDF</button>'},
+      {rotulo:'Imprimir / PDF',grupo:'Importar & Exportar',html:'<button class="btn btn-secundario btn-sm" data-perm="planejamento:exportar:pdf" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.abrirImpressao()" title="Abre a visão bonita em página branca pronta pra imprimir ou salvar em PDF (cabeçalho repete em cada página)">🖨 Imprimir / PDF</button>'},
       {rotulo:'Histórico de Alterações',grupo:'Ferramentas da Obra',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento._abrirHistoricoAlteracoes()" title="Lista todas as trocas de predecessora/% feitas com motivo registrado">📋 Histórico de Alterações</button>'},
       {rotulo:'Importar',grupo:'Importar & Exportar',html:'<label class="btn btn-secundario btn-sm" style="cursor:pointer;font-size:.75rem;display:block;text-align:left;" title="Cria/atualiza por Código, nunca apaga (comportamento atual, mais seguro)">📥 Importar<input type="file" accept=".xlsx,.xls" style="display:none" onchange="Planejamento.importarExcel(event)"></label>'},
       {rotulo:'Importar Base Completa',grupo:'Importar & Exportar',html:'<label class="btn btn-secundario btn-sm" style="cursor:pointer;font-size:.75rem;display:block;text-align:left;color:#f87171;" title="Apaga TUDO e recria do zero — só pra substituir a base inteira">📥 Importar Base Completa (apaga tudo)<input type="file" accept=".xlsx,.xls" style="display:none" onchange="Planejamento.importarBaseCompleta(event)"></label>'},
@@ -4208,7 +4208,7 @@ const Planejamento = (() => {
   // (sem se afogar nas outras 20 colunas do Exportar normal) e reimportar
   // depois em "Importar Correções" marcando só "Frente de Serviço".
   async function exportarFrentes(){
-    if(!Permissions.pode('planejamento','exportar:excel')){Utils.toast('Sem permissão para exportar.','erro');return;}
+    if(!Permissions.pode('planejamento','exportar:frentes')){Utils.toast('Sem permissão para exportar.','erro');return;}
     try{Utils.mostrarLoading('Gerando...');
       if(typeof XLSX==='undefined')await _ls('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');
       const sorted=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
@@ -4544,7 +4544,7 @@ const Planejamento = (() => {
   // cabeçalho escuro, grupos com cor por nível, indentação, bordas, filtro e
   // linha de cabeçalho congelada — pronto pra ler e imprimir direto do Excel.
   async function exportarExcelBonito(){
-    if(!Permissions.pode('planejamento','exportar')){Utils.toast('Sem permissão para exportar.','erro');return;}
+    if(!Permissions.pode('planejamento','exportar:excel')){Utils.toast('Sem permissão para exportar.','erro');return;}
     try{Utils.mostrarLoading('Gerando Excel formatado...');
       if(typeof XLSXStyle==='undefined'&&!window._xlsxStyleLoaded){
         await _ls('https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js');
@@ -4594,7 +4594,7 @@ const Planejamento = (() => {
   // Project (Arquivo > Abrir), com hierarquia (OutlineLevel), datas, duração,
   // % e predecessoras (tipo TI/II/TT/IT + defasagem).
   function exportarMSProject(){
-    if(!Permissions.pode('planejamento','exportar')){Utils.toast('Sem permissão para exportar.','erro');return;}
+    if(!Permissions.pode('planejamento','exportar:msproject')){Utils.toast('Sem permissão para exportar.','erro');return;}
     try{Utils.mostrarLoading('Gerando XML do MS Project...');
       const sorted=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
       const idNum=new Map(sorted.map((t,i)=>[t.id,i+1]));
@@ -4639,7 +4639,7 @@ const Planejamento = (() => {
   // impressão) — mesmo visual da impressão: A4 paisagem, cabeçalho escuro
   // repetido em cada página, grupos coloridos por nível, indentação.
   async function baixarPDF(){
-    if(!Permissions.pode('planejamento','exportar')){Utils.toast('Sem permissão para exportar.','erro');return;}
+    if(!Permissions.pode('planejamento','exportar:pdf')){Utils.toast('Sem permissão para exportar.','erro');return;}
     try{Utils.mostrarLoading('Gerando PDF...');
       if(!window.jspdf){
         await _ls('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
@@ -4680,7 +4680,7 @@ const Planejamento = (() => {
   }
 
   function abrirImpressao(){
-    if(!Permissions.pode('planejamento','exportar')){Utils.toast('Sem permissão para exportar.','erro');return;}
+    if(!Permissions.pode('planejamento','exportar:pdf')){Utils.toast('Sem permissão para exportar.','erro');return;}
     const sorted=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
     const temFilho=sorted.map((t,i)=>i+1<sorted.length&&(sorted[i+1].nivel||0)>(t.nivel||0));
     const CORES_NIVEL=['#F5C800','#FDE68A','#FEF3C7','#F3F4F6'];

@@ -450,7 +450,7 @@ const LevantamentoSoloGrampeado = (() => {
   }
 
   async function salvarMedicaoArea() {
-    if(!Permissions.pode('levantamentoSolo','criar')&&!Permissions.pode('levantamentoSolo','editar')){Utils.toast('Sem permissão.','erro');return;}
+    if(!Permissions.pode('levantamentoSolo','editar:medicaoArea')){Utils.toast('Sem permissão.','erro');return;}
     const vistaId = document.getElementById('sg-medir-vistaid').value;
     const pontos = JSON.parse(document.getElementById('sg-medir-pontos').value || '[]');
     const m2 = SG.num(document.getElementById('sg-medir-valor').value);
@@ -564,7 +564,7 @@ const LevantamentoSoloGrampeado = (() => {
   // clicar num ponto que não é à direita, entende que começou uma
   // nova linha e pergunta o número inicial dela antes de continuar.
   async function _criarChumbadorInstantaneo(v, pos) {
-    if(!Permissions.pode('levantamentoSolo','criar')){Utils.toast('Sem permissão para criar.','erro');return;}
+    if(!Permissions.pode('levantamentoSolo','criar:chumbador')){Utils.toast('Sem permissão para criar.','erro');return;}
     if (!(compPadrao > 0)) { Utils.toast('Informe um "Comp. padrão (ml)" maior que zero antes de clicar.', 'alerta'); return; }
     if (ultimoPontoSeq && pos.x <= ultimoPontoSeq.x) {
       _pontoPendenteNovaLinha = { v, pos };
@@ -637,7 +637,7 @@ const LevantamentoSoloGrampeado = (() => {
               <td>${esc(especLabel(e))}</td>
               <td class="col-acoes">
                 <button class="btn btn-secundario btn-sm" onclick="SG_UI.abrirEditarChumbador('${c.id}')">✎</button>
-                <button class="btn btn-secundario btn-sm" data-perm="levantamentoSolo:excluir" style="color:var(--cv-red);" onclick="SG_UI.excluirChumbador('${c.id}')">🗑</button>
+                <button class="btn btn-secundario btn-sm" data-perm="levantamentoSolo:excluir:chumbador" style="color:var(--cv-red);" onclick="SG_UI.excluirChumbador('${c.id}')">🗑</button>
               </td>
             </tr>`;
           }).join('')}
@@ -667,7 +667,7 @@ const LevantamentoSoloGrampeado = (() => {
   }
 
   async function salvarChumbador() {
-    if(!Permissions.pode('levantamentoSolo','criar')&&!Permissions.pode('levantamentoSolo','editar')){Utils.toast('Sem permissão.','erro');return;}
+    if(!Permissions.pode('levantamentoSolo','criar:chumbador')&&!Permissions.pode('levantamentoSolo','editar:chumbador')){Utils.toast('Sem permissão.','erro');return;}
     if (!chumbEditId) return;
     const f = document.getElementById('form-sg-chumbador');
     const numero = f.querySelector('[name=numero]').value.trim();
@@ -692,7 +692,7 @@ const LevantamentoSoloGrampeado = (() => {
   }
 
   async function excluirChumbador(id) {
-    if(!Permissions.pode('levantamentoSolo','excluir')){Utils.toast('Sem permissão para excluir.','erro');return;}
+    if(!Permissions.pode('levantamentoSolo','excluir:chumbador')){Utils.toast('Sem permissão para excluir.','erro');return;}
     const c = chumbadores.find(x => x.id === id);
     if (!c) return false;
     const ok = await Utils.confirmar(`Excluir o chumbador ${c.numero}? Isso também remove o histórico de execução dele em Controle.`);
@@ -717,7 +717,7 @@ const LevantamentoSoloGrampeado = (() => {
   }
 
   async function excluirChumbadorDoModal() {
-    if(!Permissions.pode('levantamentoSolo','excluir')){Utils.toast('Sem permissão para excluir.','erro');return;}
+    if(!Permissions.pode('levantamentoSolo','excluir:chumbador')){Utils.toast('Sem permissão para excluir.','erro');return;}
     if (!chumbEditId) return;
     const excluido = await excluirChumbador(chumbEditId);
     if (excluido) Utils.fecharModal('modal-sg-chumbador');
@@ -734,7 +734,7 @@ const LevantamentoSoloGrampeado = (() => {
   }
 
   async function salvarCalibracao() {
-    if(!Permissions.pode('levantamentoSolo','editar')){Utils.toast('Sem permissão para editar.','erro');return;}
+    if(!Permissions.pode('levantamentoSolo','editar:calibracao')){Utils.toast('Sem permissão para editar.','erro');return;}
     const form = document.getElementById('form-sg-calib');
     const vistaId = form.dataset.vistaId;
     const v = vistas.find(x => x.id === vistaId);
@@ -779,7 +779,7 @@ const LevantamentoSoloGrampeado = (() => {
     Utils.abrirModal('modal-sg-m2');
   }
   async function salvarM2() {
-    if(!Permissions.pode('levantamentoSolo','editar')){Utils.toast('Sem permissão para editar.','erro');return;}
+    if(!Permissions.pode('levantamentoSolo','editar:calibracao')){Utils.toast('Sem permissão para editar.','erro');return;}
     const vistaId = document.getElementById('sg-m2-vistaid').value;
     const m2 = SG.num(document.getElementById('sg-m2-valor').value);
     Utils.mostrarLoading();
@@ -903,7 +903,7 @@ const LevantamentoSoloGrampeado = (() => {
     el.innerHTML = `
       <div style="display:flex;gap:8px;margin-bottom:12px;">
         <input type="text" class="form-control" id="sg-nova-vista-nome" placeholder="Nome da vista (ex: Elevação 1)">
-        <button class="btn btn-primario btn-sm" data-perm="levantamentoSolo:criar" onclick="SG_UI.salvarVista()">+ Adicionar</button>
+        <button class="btn btn-primario btn-sm" data-perm="levantamentoSolo:criar:vista" onclick="SG_UI.salvarVista()">+ Adicionar</button>
       </div>
       ${!vistas.length ? '<div class="cc-empty">Nenhuma vista cadastrada.</div>' : `
       <div class="cc-tableWrap" style="max-height:320px;overflow-y:auto;">
@@ -915,7 +915,7 @@ const LevantamentoSoloGrampeado = (() => {
                 <td>${esc(v.numero)}</td>
                 <td>${esc(v.nome || '—')}</td>
                 <td class="col-num cc-tdMono">${chumbadoresDaVista(v.id).length}</td>
-                <td class="col-acoes"><button class="btn btn-secundario btn-sm" data-perm="levantamentoSolo:excluir" style="color:var(--cv-red);" onclick="SG_UI.excluirVista('${v.id}')">🗑</button></td>
+                <td class="col-acoes"><button class="btn btn-secundario btn-sm" data-perm="levantamentoSolo:excluir:vista" style="color:var(--cv-red);" onclick="SG_UI.excluirVista('${v.id}')">🗑</button></td>
               </tr>`).join('')}
           </tbody>
         </table>
@@ -924,7 +924,7 @@ const LevantamentoSoloGrampeado = (() => {
   }
 
   async function salvarVista() {
-    if(!Permissions.pode('levantamentoSolo','criar')&&!Permissions.pode('levantamentoSolo','editar')){Utils.toast('Sem permissão.','erro');return;}
+    if(!Permissions.pode('levantamentoSolo','criar:vista')&&!Permissions.pode('levantamentoSolo','editar:vista')){Utils.toast('Sem permissão.','erro');return;}
     const nome = document.getElementById('sg-nova-vista-nome').value.trim();
     const proxNumero = vistas.length ? Math.max(...vistas.map(v => v.numero || 0)) + 1 : 1;
     Utils.mostrarLoading();
@@ -942,7 +942,7 @@ const LevantamentoSoloGrampeado = (() => {
   }
 
   async function excluirVista(id) {
-    if(!Permissions.pode('levantamentoSolo','excluir')){Utils.toast('Sem permissão para excluir.','erro');return;}
+    if(!Permissions.pode('levantamentoSolo','excluir:chumbador')){Utils.toast('Sem permissão para excluir.','erro');return;}
     const qtd = chumbadoresDaVista(id).length;
     const ok = await Utils.confirmar(`Excluir esta vista? ${qtd ? `Isso também remove os ${qtd} chumbadores cadastrados nela.` : ''}`);
     if (!ok) return;
@@ -980,12 +980,12 @@ const LevantamentoSoloGrampeado = (() => {
       </select>
       <div style="display:flex;gap:4px;">
         <input type="text" class="form-control" placeholder="Novo material..." id="sg-novo-${campo}" style="font-size:0.78rem;">
-        <button type="button" class="btn btn-secundario btn-sm" data-perm="levantamentoSolo:criar" onclick="SG_UI.criarMaterialInline('${campo}')">+ Criar</button>
+        <button type="button" class="btn btn-secundario btn-sm" data-perm="levantamentoSolo:criar:material" onclick="SG_UI.criarMaterialInline('${campo}')">+ Criar</button>
       </div>`;
   }
 
   async function criarMaterialInline(campo) {
-    if(!Permissions.pode('levantamentoSolo','criar')){Utils.toast('Sem permissão para criar.','erro');return;}
+    if(!Permissions.pode('levantamentoSolo','criar:material')){Utils.toast('Sem permissão para criar.','erro');return;}
     const input = document.getElementById(`sg-novo-${campo}`);
     const nome = input.value.trim();
     if (!nome) { Utils.toast('Digite o nome do material.', 'alerta'); return; }
@@ -1024,7 +1024,7 @@ const LevantamentoSoloGrampeado = (() => {
         </div>
         <div class="form-grupo"><label>Volume de calda injetada (m³ por ml de chumbador)</label><input type="number" step="0.001" class="form-control" id="sg-espec-volume" value="${editando?.volumeConcretoPorMl ?? ''}" placeholder="0"></div>
         <div style="display:flex;gap:8px;">
-          <button class="btn btn-primario btn-sm" data-perm="levantamentoSolo:criar" onclick="SG_UI.salvarEspecificacao()">${editando ? 'Salvar alterações' : '+ Adicionar especificação'}</button>
+          <button class="btn btn-primario btn-sm" data-perm="levantamentoSolo:criar:especificacao" onclick="SG_UI.salvarEspecificacao()">${editando ? 'Salvar alterações' : '+ Adicionar especificação'}</button>
           ${editando ? `<button class="btn btn-secundario btn-sm" onclick="SG_UI.cancelarEdicaoEspec()">Cancelar</button>` : ''}
         </div>
       </div>
@@ -1042,7 +1042,7 @@ const LevantamentoSoloGrampeado = (() => {
                 <td>${esc(biblioteca.find(m => m.id === e.materialCimentoId)?.nome || '—')}</td>
                 <td class="col-acoes">
                   <button class="btn btn-secundario btn-sm" onclick="SG_UI.editarEspecificacao('${e.id}')">✎</button>
-                  <button class="btn btn-secundario btn-sm" data-perm="levantamentoSolo:excluir" style="color:var(--cv-red);" onclick="SG_UI.excluirEspecificacao('${e.id}')">🗑</button>
+                  <button class="btn btn-secundario btn-sm" data-perm="levantamentoSolo:excluir:especificacao" style="color:var(--cv-red);" onclick="SG_UI.excluirEspecificacao('${e.id}')">🗑</button>
                 </td>
               </tr>`).join('')}
           </tbody>
@@ -1055,7 +1055,7 @@ const LevantamentoSoloGrampeado = (() => {
   function cancelarEdicaoEspec() { especEditId = null; renderEspecificacoes(); }
 
   async function salvarEspecificacao() {
-    if(!Permissions.pode('levantamentoSolo','criar')&&!Permissions.pode('levantamentoSolo','editar')){Utils.toast('Sem permissão.','erro');return;}
+    if(!Permissions.pode('levantamentoSolo','criar:especificacao')&&!Permissions.pode('levantamentoSolo','editar:especificacao')){Utils.toast('Sem permissão.','erro');return;}
     const nome = document.getElementById('sg-espec-nome').value.trim();
     if (!nome) { Utils.toast('Informe o nome da especificação.', 'alerta'); return; }
     const getSel = campo => document.querySelector(`select.sg-mat-select[data-campo="${campo}"]`)?.value || '';
@@ -1088,7 +1088,7 @@ const LevantamentoSoloGrampeado = (() => {
   }
 
   async function excluirEspecificacao(id) {
-    if(!Permissions.pode('levantamentoSolo','excluir')){Utils.toast('Sem permissão para excluir.','erro');return;}
+    if(!Permissions.pode('levantamentoSolo','excluir:chumbador')){Utils.toast('Sem permissão para excluir.','erro');return;}
     const emUso = chumbadores.filter(c => c.especId === id).length;
     const ok = await Utils.confirmar(`Excluir esta especificação?${emUso ? ` ${emUso} chumbador(es) usam ela — ficarão sem especificação.` : ''}`);
     if (!ok) return;

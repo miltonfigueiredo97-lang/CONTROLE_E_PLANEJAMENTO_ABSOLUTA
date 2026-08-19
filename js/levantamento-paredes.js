@@ -98,7 +98,7 @@ const LevantamentoParedes = (() => {
   }
 
   async function _salvarArvore() {
-    if(!Permissions.pode('levantamentoParedes','criar')&&!Permissions.pode('levantamentoParedes','editar'))return;
+    if(!Permissions.pode('levantamentoParedes','criar:local')&&!Permissions.pode('levantamentoParedes','editar:estrutura'))return;
     await db.collection('obras').doc(obraId).collection('config').doc(CONFIG_DOC).set({ arvore }, { merge: true });
   }
 
@@ -399,7 +399,7 @@ const LevantamentoParedes = (() => {
             <h3>Locais</h3>
             <div style="display:flex;gap:6px;">
               <button class="btn btn-secundario btn-sm" onclick="LP.abrirConfig()" title="Configurações de cálculo (vãos e Metro Linear)">⚙️</button>
-              <button class="btn btn-secundario btn-sm" data-perm="levantamentoParedes:criar" onclick="LP.novoNode(null)">+ Local</button>
+              <button class="btn btn-secundario btn-sm" data-perm="levantamentoParedes:criar:local" onclick="LP.novoNode(null)">+ Local</button>
             </div>
           </div>
           <div class="ar-tree-body">${_renderArvore()}</div>
@@ -429,7 +429,7 @@ const LevantamentoParedes = (() => {
         <button class="tree-edit-btn" onclick="event.stopPropagation();LP.renomearNode('${n.id}')" title="Renomear">✎</button>
         <button class="tree-clone-btn" onclick="event.stopPropagation();LP.abrirClonarNode('${n.id}')" title="Clonar peças de outro local para este">⧉</button>
         <button class="tree-clone-btn" onclick="event.stopPropagation();LP.duplicarNode('${n.id}')" title="Duplicar este local (cria uma cópia nova)">📋</button>
-        <button class="tree-del-btn" data-perm="levantamentoParedes:excluir" onclick="event.stopPropagation();LP.excluirNode('${n.id}')" title="Excluir">✕</button>
+        <button class="tree-del-btn" data-perm="levantamentoParedes:excluir:local" onclick="event.stopPropagation();LP.excluirNode('${n.id}')" title="Excluir">✕</button>
       </div>`;
       if (aberto) {
         h += `<div class="tree-children">`;
@@ -552,7 +552,7 @@ const LevantamentoParedes = (() => {
           <span class="subtitulo">${listaSubtree.length} parede(s) no total${temFilhos ? ` (${listaDireta.length} direta[s] neste local)` : ''} · ${fmt2(tSub.areaLiquida)} m²</span></div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <button class="btn btn-secundario btn-sm" onclick="LP.abrirClonarNode('${selNodeId}')" title="Clonar peças de outro local para este">⧉ Clonar de Outro Local</button>
-          <button class="btn btn-secundario btn-sm" data-perm="levantamentoParedes:criar" onclick="LP.duplicarNode('${selNodeId}')" title="Duplicar este local (cria uma cópia nova)">📋 Duplicar Local</button>
+          <button class="btn btn-secundario btn-sm" data-perm="levantamentoParedes:criar:duplicar" onclick="LP.duplicarNode('${selNodeId}')" title="Duplicar este local (cria uma cópia nova)">📋 Duplicar Local</button>
           <button class="btn btn-primario btn-sm" onclick="LP.novaAlvenaria()">+ Nova Parede</button>
         </div>
       </div>
@@ -613,7 +613,7 @@ const LevantamentoParedes = (() => {
           <span class="subtitulo">${listaSubtree.length} face(s) no total${temFilhos ? ` (${listaDireta.length} direta[s] neste local)` : ''} · ${fmt2(tSub.areaLiquida)} m²</span></div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <button class="btn btn-secundario btn-sm" onclick="LP.abrirClonarNode('${selNodeId}')" title="Clonar peças de outro local para este">⧉ Clonar de Outro Local</button>
-          <button class="btn btn-secundario btn-sm" data-perm="levantamentoParedes:criar" onclick="LP.duplicarNode('${selNodeId}')" title="Duplicar este local (cria uma cópia nova)">📋 Duplicar Local</button>
+          <button class="btn btn-secundario btn-sm" data-perm="levantamentoParedes:criar:duplicar" onclick="LP.duplicarNode('${selNodeId}')" title="Duplicar este local (cria uma cópia nova)">📋 Duplicar Local</button>
           <button class="btn btn-primario btn-sm" onclick="LP.novaAcabamento()">+ Nova Face</button>
         </div>
       </div>
@@ -673,9 +673,9 @@ const LevantamentoParedes = (() => {
       <td style="white-space:nowrap;">
         <button class="btn btn-secundario btn-sm" onclick="LP.editarAlvenaria('${p.id}')" title="Editar">✎</button>
         <button class="btn btn-sm btn-icon" onclick="LP.abrirMoverPeca('${p.id}')" title="Mover para outro local">⇄</button>
-        <button class="btn btn-sm btn-icon" data-perm="levantamentoParedes:criar" onclick="LP.duplicarPeca('${p.id}')" title="Duplicar">⧉</button>
+        <button class="btn btn-sm btn-icon" data-perm="levantamentoParedes:criar:duplicar" onclick="LP.duplicarPeca('${p.id}')" title="Duplicar">⧉</button>
         <button class="btn btn-sm btn-icon" onclick="LP.conferirPeca('${p.id}')" title="${p.conferido ? 'Desmarcar conferência' : 'Marcar como conferida'}">${p.conferido ? '↩' : '✓'}</button>
-        <button class="btn btn-perigo btn-sm btn-icon" data-perm="levantamentoParedes:excluir" onclick="LP.excluirPeca('${p.id}')" title="Excluir">✕</button>
+        <button class="btn btn-perigo btn-sm btn-icon" data-perm="levantamentoParedes:excluir:peca" onclick="LP.excluirPeca('${p.id}')" title="Excluir">✕</button>
       </td>
     </tr>`;
   }
@@ -699,9 +699,9 @@ const LevantamentoParedes = (() => {
       <td style="white-space:nowrap;">
         <button class="btn btn-secundario btn-sm" onclick="LP.editarAcabamento('${p.id}')" title="Editar">✎</button>
         <button class="btn btn-sm btn-icon" onclick="LP.abrirMoverPeca('${p.id}')" title="Mover para outro local">⇄</button>
-        <button class="btn btn-sm btn-icon" data-perm="levantamentoParedes:criar" onclick="LP.duplicarPeca('${p.id}')" title="Duplicar">⧉</button>
+        <button class="btn btn-sm btn-icon" data-perm="levantamentoParedes:criar:duplicar" onclick="LP.duplicarPeca('${p.id}')" title="Duplicar">⧉</button>
         <button class="btn btn-sm btn-icon" onclick="LP.conferirPeca('${p.id}')" title="${p.conferido ? 'Desmarcar conferência' : 'Marcar como conferida'}">${p.conferido ? '↩' : '✓'}</button>
-        <button class="btn btn-perigo btn-sm btn-icon" data-perm="levantamentoParedes:excluir" onclick="LP.excluirPeca('${p.id}')" title="Excluir">✕</button>
+        <button class="btn btn-perigo btn-sm btn-icon" data-perm="levantamentoParedes:excluir:peca" onclick="LP.excluirPeca('${p.id}')" title="Excluir">✕</button>
       </td>
     </tr>`;
   }
@@ -736,7 +736,7 @@ const LevantamentoParedes = (() => {
   }
 
   async function salvarNode() {
-    if(!Permissions.pode('levantamentoParedes','criar')&&!Permissions.pode('levantamentoParedes','editar')){Utils.toast('Sem permissão.','erro');return;}
+    if(!Permissions.pode('levantamentoParedes','criar:local')&&!Permissions.pode('levantamentoParedes','editar:estrutura')){Utils.toast('Sem permissão.','erro');return;}
     const nome = document.getElementById('lp-node-nome').value.trim();
     if (!nome) { Utils.toast('Informe um nome.', 'alerta'); return; }
     if (nodeModo === 'renomear') {
@@ -763,7 +763,7 @@ const LevantamentoParedes = (() => {
   }
 
   async function excluirNode(id) {
-    if(!Permissions.pode('levantamentoParedes','excluir')){Utils.toast('Sem permissão para excluir.','erro');return;}
+    if(!Permissions.pode('levantamentoParedes','excluir:local')){Utils.toast('Sem permissão para excluir.','erro');return;}
     const r = _acharNode(id); if (!r) return;
     const ids = _idsComDescendentes(r.node);
     const nAlv = pecasAlvenaria.filter(p => ids.includes(p.nodeId)).length;
@@ -807,7 +807,7 @@ const LevantamentoParedes = (() => {
   }
 
   async function duplicarNode(nodeId) {
-    if(!Permissions.pode('levantamentoParedes','criar')){Utils.toast('Sem permissão para criar.','erro');return;}
+    if(!Permissions.pode('levantamentoParedes','criar:duplicar')){Utils.toast('Sem permissão para criar.','erro');return;}
     const r = _acharNode(nodeId); if (!r) return;
     const ok = await Utils.confirmar(`Duplicar "${r.node.nome}" com todos os sublocais, alvenaria e acabamento, como "${r.node.nome} (cópia)"?`);
     if (!ok) return;
@@ -905,7 +905,7 @@ const LevantamentoParedes = (() => {
   // Operam sobre a coleção da aba ativa no momento do clique.
   // ══════════════════════════════════════════
   async function duplicarPeca(id) {
-    if(!Permissions.pode('levantamentoParedes','criar')){Utils.toast('Sem permissão para criar.','erro');return;}
+    if(!Permissions.pode('levantamentoParedes','criar:duplicar')){Utils.toast('Sem permissão para criar.','erro');return;}
     const arr = _pecasAtual();
     const p = arr.find(x => x.id === id); if (!p) return;
     Utils.mostrarLoading();
@@ -964,7 +964,7 @@ const LevantamentoParedes = (() => {
   }
 
   async function excluirPeca(id) {
-    if(!Permissions.pode('levantamentoParedes','excluir')){Utils.toast('Sem permissão para excluir.','erro');return;}
+    if(!Permissions.pode('levantamentoParedes','excluir:local')){Utils.toast('Sem permissão para excluir.','erro');return;}
     const ok = await Utils.confirmar('Excluir este lançamento?');
     if (!ok) return;
     Utils.mostrarLoading();
@@ -1104,7 +1104,7 @@ const LevantamentoParedes = (() => {
   }
 
   async function salvarAlvenaria(continuar) {
-    if(!Permissions.pode('levantamentoParedes','criar')&&!Permissions.pode('levantamentoParedes','editar')){Utils.toast('Sem permissão.','erro');return;}
+    if(!Permissions.pode('levantamentoParedes','criar:local')&&!Permissions.pode('levantamentoParedes','editar:estrutura')){Utils.toast('Sem permissão.','erro');return;}
     if (!num(pecaForm.comprimento) || !num(pecaForm.altura)) {
       Utils.toast('Informe comprimento e altura da parede.', 'alerta'); return;
     }
@@ -1359,7 +1359,7 @@ const LevantamentoParedes = (() => {
   }
 
   async function salvarAcabamento(continuar) {
-    if(!Permissions.pode('levantamentoParedes','criar')&&!Permissions.pode('levantamentoParedes','editar')){Utils.toast('Sem permissão.','erro');return;}
+    if(!Permissions.pode('levantamentoParedes','criar:local')&&!Permissions.pode('levantamentoParedes','editar:estrutura')){Utils.toast('Sem permissão.','erro');return;}
     if (!num(pecaForm.comprimento) || !num(pecaForm.altura)) {
       Utils.toast('Informe comprimento e altura da face.', 'alerta'); return;
     }
@@ -1435,7 +1435,7 @@ const LevantamentoParedes = (() => {
   }
   function onChangeCfgVao(sel) { _toggleCfgVao(sel.value); }
   async function salvarConfig() {
-    if(!Permissions.pode('levantamentoParedes','editar')){Utils.toast('Sem permissão para editar.','erro');return;}
+    if(!Permissions.pode('levantamentoParedes','editar:config')){Utils.toast('Sem permissão para editar.','erro');return;}
     const cfg = {
       vao_modo: document.getElementById('lp-cfg-vao-modo').value || 'desconto_total',
       vao_limite_x: num(document.getElementById('lp-cfg-vao-limite').value) || 1.5,

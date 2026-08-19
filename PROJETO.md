@@ -315,8 +315,8 @@ permissions/{uid} → {
 - **UI:** grupo com subs ganha botão "▸ detalhar" que expande os itens; marcar o grupo desabilita os individuais (mas não apaga o que estava marcado neles).
 - **Ao criar sub-ação nova:** adicionar em `SUBACOES`, migrar o guard no módulo (`pode(m,'grupo:sub')`) e o `data-perm` do botão. Há um script de validação no histórico desta sessão que confere se todo `data-perm`/`pode()` aponta pra ação/sub existente — vale reexecutar depois de mexer nisso.
 
-Mapeado até agora (60 subs): Planejamento (24), Diário, Materiais, Mão de Obra, Medições, Semanal, Suprimentos, Relatórios, Configuração de Obra.
-**Ainda em ações grossas:** os 9 Levantamentos e os 5 Controles.
+Mapeado (207 subs em 24 módulos): todos os módulos reais do sistema — Planejamento, os 9 Levantamentos, os 5 Controles, Produção, Diário, Materiais, Mão de Obra, Medições, Semanal, Suprimentos, Relatórios, Configuração de Obra.
+Sobram ~7 guards em ação grossa, todos intencionais (checagens genéricas de readonly do tipo "pode fazer alguma coisa aqui").
 
 ### Pendente
 - Auditoria de permissões é um trabalho contínuo: sempre que um módulo novo grande for criado, checar se `Permissions.MODULOS`/`PAGINA_MODULO` foram atualizados e se as funções de mutação têm guard — já aconteceu duas vezes (Suprimentos, e antes disso outros) de um módulo novo nascer sem nenhuma checagem.

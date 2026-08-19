@@ -146,7 +146,7 @@ const LT = (() => {
   }
 
   async function _salvarArvore() {
-    if(!Permissions.pode('levantamentoTeto','criar')&&!Permissions.pode('levantamentoTeto','editar'))return;
+    if(!Permissions.pode('levantamentoTeto','criar:local')&&!Permissions.pode('levantamentoTeto','editar:estrutura'))return;
     await db.collection('obras').doc(obraId).collection('config').doc(CONFIG_DOC).set({ arvore }, { merge: true });
   }
 
@@ -264,7 +264,7 @@ const LT = (() => {
             <div style="display:flex;gap:6px;">
               <button class="btn btn-secundario btn-sm" onclick="LT.marcarTodasAreas(true)" title="Selecionar todas as áreas visíveis (pra mover/copiar em lote)">☑</button>
               <button class="btn btn-secundario btn-sm" onclick="LT.toggleArvore()" title="Recolher árvore">⏴</button>
-              <button class="btn btn-primario btn-sm" data-perm="levantamentoTeto:criar" onclick="LT.novoNode(null)">+ Local</button>
+              <button class="btn btn-primario btn-sm" data-perm="levantamentoTeto:criar:local" onclick="LT.novoNode(null)">+ Local</button>
             </div>
           </div>
           <div id="lt-bulk-areas-bar" style="display:none;flex-direction:column;gap:6px;background:rgba(37,99,235,0.18);border-bottom:1px solid rgba(191,219,254,0.25);padding:8px 10px;">
@@ -356,7 +356,7 @@ const LT = (() => {
         ${nAreas ? `<span class="tree-badge">${nAreas}</span>` : ''}
         ${n.plantaId ? `<button class="tree-clone-btn" onclick="event.stopPropagation();LT.abrirClonarPavimento('${n.id}')" title="Clonar/Multiplicar as áreas deste local para outros">⧉</button>` : ''}
         <button class="tree-edit-btn" onclick="event.stopPropagation();LT.renomearNode('${n.id}')" title="Renomear">✎</button>
-        <button class="tree-del-btn" data-perm="levantamentoTeto:excluir" onclick="event.stopPropagation();LT.excluirNode('${n.id}')" title="Excluir">✕</button>
+        <button class="tree-del-btn" data-perm="levantamentoTeto:excluir:local" onclick="event.stopPropagation();LT.excluirNode('${n.id}')" title="Excluir">✕</button>
       </div>`;
       if (aberto) {
         // Áreas medidas diretamente neste local — atrás do mesmo collapse do nó
@@ -452,7 +452,7 @@ const LT = (() => {
   }
 
   async function excluirNode(id) {
-    if(!Permissions.pode('levantamentoTeto','excluir')){Utils.toast('Sem permissão para excluir.','erro');return;}
+    if(!Permissions.pode('levantamentoTeto','excluir:local')){Utils.toast('Sem permissão para excluir.','erro');return;}
     const r = _acharNode(id); if (!r) return;
     const ids = _idsComDescendentes(r.node);
     const areasParaExcluir = areas.filter(a => ids.includes(a.nodeId));
@@ -701,7 +701,7 @@ const LT = (() => {
   }
 
   async function excluirPlanta(id) {
-    if(!Permissions.pode('levantamentoTeto','excluir')){Utils.toast('Sem permissão para excluir.','erro');return;}
+    if(!Permissions.pode('levantamentoTeto','excluir:local')){Utils.toast('Sem permissão para excluir.','erro');return;}
     const pl = plantas.find(p => p.id === id); if (!pl) return;
     const nodesLigados = _contarNodesUsandoPlanta(arvore, id);
     if (nodesLigados > 0) {
@@ -1459,7 +1459,7 @@ const LT = (() => {
   // as áreas pra ele — resolve o caso de querer "duplicar" um local inteiro
   // como um novo local irmão, em vez de só copiar pra um local já existente.
   async function criarNovoLocalEClonar() {
-    if(!Permissions.pode('levantamentoTeto','criar')){Utils.toast('Sem permissão para criar.','erro');return;}
+    if(!Permissions.pode('levantamentoTeto','criar:area')){Utils.toast('Sem permissão para criar.','erro');return;}
     const nomeInput = document.getElementById('lt-clonar-novo-nome');
     const nome = nomeInput.value.trim();
     if (!nome) { Utils.toast('Digite o nome do novo local.', 'alerta'); return; }
@@ -1623,7 +1623,7 @@ const LT = (() => {
   }
 
   async function salvarArea() {
-    if(!Permissions.pode('levantamentoTeto','criar')&&!Permissions.pode('levantamentoTeto','editar')){Utils.toast('Sem permissão.','erro');return;}
+    if(!Permissions.pode('levantamentoTeto','criar:area')&&!Permissions.pode('levantamentoTeto','editar:area')){Utils.toast('Sem permissão.','erro');return;}
     const data = Utils.getFormData('form-lt-area');
     if (!data.nome) { Utils.toast('Informe o nome da área.', 'alerta'); return; }
 
@@ -1670,7 +1670,7 @@ const LT = (() => {
   }
 
   async function excluirAreaEmEdicao() {
-    if(!Permissions.pode('levantamentoTeto','excluir')){Utils.toast('Sem permissão para excluir.','erro');return;}
+    if(!Permissions.pode('levantamentoTeto','excluir:local')){Utils.toast('Sem permissão para excluir.','erro');return;}
     if (!areaEditId) return;
     if (!Utils.confirmar('Excluir esta área?')) return;
     Utils.mostrarLoading('Excluindo...');

@@ -147,7 +147,7 @@ const LP = (() => {
   }
 
   async function _salvarArvore() {
-    if(!Permissions.pode('levantamentoPiso','criar')&&!Permissions.pode('levantamentoPiso','editar'))return;
+    if(!Permissions.pode('levantamentoPiso','criar:local')&&!Permissions.pode('levantamentoPiso','editar:estrutura'))return;
     await db.collection('obras').doc(obraId).collection('config').doc(CONFIG_DOC).set({ arvore }, { merge: true });
   }
 
@@ -298,7 +298,7 @@ const LP = (() => {
             <div style="display:flex;gap:6px;">
               <button class="btn btn-secundario btn-sm" onclick="LP.marcarTodasAreas(true)" title="Selecionar todas as áreas visíveis (pra mover/copiar em lote)">☑</button>
               <button class="btn btn-secundario btn-sm" onclick="LP.toggleArvore()" title="Recolher árvore">⏴</button>
-              <button class="btn btn-primario btn-sm" data-perm="levantamentoPiso:criar" onclick="LP.novoNode(null)">+ Local</button>
+              <button class="btn btn-primario btn-sm" data-perm="levantamentoPiso:criar:local" onclick="LP.novoNode(null)">+ Local</button>
             </div>
           </div>
           <div id="lp-bulk-areas-bar" style="display:none;flex-direction:column;gap:6px;background:rgba(37,99,235,0.18);border-bottom:1px solid rgba(191,219,254,0.25);padding:8px 10px;">
@@ -386,7 +386,7 @@ const LP = (() => {
         ${nAreas ? `<span class="tree-badge">${nAreas}</span>` : ''}
         ${n.plantaId ? `<button class="tree-clone-btn" onclick="event.stopPropagation();LP.abrirClonarPavimento('${n.id}')" title="Clonar/Multiplicar as áreas deste local para outros">⧉</button>` : ''}
         <button class="tree-edit-btn" onclick="event.stopPropagation();LP.renomearNode('${n.id}')" title="Renomear">✎</button>
-        <button class="tree-del-btn" data-perm="levantamentoPiso:excluir" onclick="event.stopPropagation();LP.excluirNode('${n.id}')" title="Excluir">✕</button>
+        <button class="tree-del-btn" data-perm="levantamentoPiso:excluir:local" onclick="event.stopPropagation();LP.excluirNode('${n.id}')" title="Excluir">✕</button>
       </div>`;
       if (aberto) {
         // Áreas medidas diretamente neste local — atrás do mesmo collapse do nó
@@ -482,7 +482,7 @@ const LP = (() => {
   }
 
   async function excluirNode(id) {
-    if(!Permissions.pode('levantamentoPiso','excluir')){Utils.toast('Sem permissão para excluir.','erro');return;}
+    if(!Permissions.pode('levantamentoPiso','excluir:local')){Utils.toast('Sem permissão para excluir.','erro');return;}
     const r = _acharNode(id); if (!r) return;
     const ids = _idsComDescendentes(r.node);
     const areasParaExcluir = areas.filter(a => ids.includes(a.nodeId));
@@ -627,7 +627,7 @@ const LP = (() => {
       ${plantas.length === 0 ? `<div class="estado-vazio" style="padding:16px;"><p class="text-sm">Nenhuma planta enviada ainda.</p></div>` : plantas.map(pl => `
         <div class="lp-planta-lib-item">
           <span>${esc(pl.nome)} <span style="color:var(--cor-texto-muted);">· ${pl.numPaginas || 1} página(s)</span></span>
-          <button class="btn btn-secundario btn-sm" data-perm="levantamentoPiso:excluir" onclick="LP.excluirPlanta('${pl.id}')" title="Excluir planta">✕</button>
+          <button class="btn btn-secundario btn-sm" data-perm="levantamentoPiso:excluir:planta" onclick="LP.excluirPlanta('${pl.id}')" title="Excluir planta">✕</button>
         </div>
       `).join('')}
     `;
@@ -719,7 +719,7 @@ const LP = (() => {
   }
 
   async function excluirPlanta(id) {
-    if(!Permissions.pode('levantamentoPiso','excluir')){Utils.toast('Sem permissão para excluir.','erro');return;}
+    if(!Permissions.pode('levantamentoPiso','excluir:local')){Utils.toast('Sem permissão para excluir.','erro');return;}
     const pl = plantas.find(p => p.id === id); if (!pl) return;
     const nodesLigados = _contarNodesUsandoPlanta(arvore, id);
     if (nodesLigados > 0) {
@@ -1463,7 +1463,7 @@ const LP = (() => {
   // as áreas pra ele — resolve o caso de querer "duplicar" um local inteiro
   // como um novo local irmão, em vez de só copiar pra um local já existente.
   async function criarNovoLocalEClonar() {
-    if(!Permissions.pode('levantamentoPiso','criar')){Utils.toast('Sem permissão para criar.','erro');return;}
+    if(!Permissions.pode('levantamentoPiso','criar:clonar')){Utils.toast('Sem permissão para criar.','erro');return;}
     const nomeInput = document.getElementById('lp-clonar-novo-nome');
     const nome = nomeInput.value.trim();
     if (!nome) { Utils.toast('Digite o nome do novo local.', 'alerta'); return; }
@@ -2128,7 +2128,7 @@ const LP = (() => {
   }
 
   async function salvarArea() {
-    if(!Permissions.pode('levantamentoPiso','criar')&&!Permissions.pode('levantamentoPiso','editar')){Utils.toast('Sem permissão.','erro');return;}
+    if(!Permissions.pode('levantamentoPiso','criar:area')&&!Permissions.pode('levantamentoPiso','editar:area')){Utils.toast('Sem permissão.','erro');return;}
     const data = Utils.getFormData('form-lp-area');
     if (!data.nome) { Utils.toast('Informe o nome da área.', 'alerta'); return; }
     if (!data.impermeabilizacao) {
@@ -2172,7 +2172,7 @@ const LP = (() => {
   }
 
   async function excluirAreaEmEdicao() {
-    if(!Permissions.pode('levantamentoPiso','excluir')){Utils.toast('Sem permissão para excluir.','erro');return;}
+    if(!Permissions.pode('levantamentoPiso','excluir:local')){Utils.toast('Sem permissão para excluir.','erro');return;}
     if (!areaEditId) return;
     if (!Utils.confirmar('Excluir esta área?')) return;
     Utils.mostrarLoading('Excluindo...');

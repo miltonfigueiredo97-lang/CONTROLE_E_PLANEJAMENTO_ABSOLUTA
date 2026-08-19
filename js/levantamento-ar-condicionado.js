@@ -91,7 +91,7 @@ const LevantamentoAr = (() => {
   function _uid() { return 'a' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
 
   async function _salvarAreas() {
-    if(!Permissions.pode('levantamentoAr','criar')&&!Permissions.pode('levantamentoAr','editar'))return;
+    if(!Permissions.pode('levantamentoAr','criar:local')&&!Permissions.pode('levantamentoAr','editar:estrutura'))return;
     await db.collection('obras').doc(obraId).collection('config').doc(CONFIG_AREAS_DOC).set({ areas }, { merge: true });
   }
 
@@ -144,7 +144,7 @@ const LevantamentoAr = (() => {
         <div class="ar-tree">
           <div class="ar-tree-header">
             <h3>Locais da Obra</h3>
-            <button class="btn btn-secundario btn-sm" data-perm="levantamentoAr:criar" onclick="LevantamentoAr.novaArea()">+ Local</button>
+            <button class="btn btn-secundario btn-sm" data-perm="levantamentoAr:criar:local" onclick="LevantamentoAr.novaArea()">+ Local</button>
           </div>
           <div class="ar-tree-body">${_renderArvore()}</div>
         </div>
@@ -176,7 +176,7 @@ const LevantamentoAr = (() => {
       <button class="tree-edit-btn" onclick="event.stopPropagation();LevantamentoAr.novoSublocal('${n.id}')" title="Adicionar sublocal aqui dentro" style="color:var(--cor-primaria-dark);font-weight:900;">+</button>
       <button class="tree-edit-btn" onclick="event.stopPropagation();LevantamentoAr.duplicarNo('${n.id}')" title="Duplicar (com sublocais)">⧉</button>
       <button class="tree-edit-btn" onclick="event.stopPropagation();LevantamentoAr.renomearNo('${n.id}')" title="Renomear">✎</button>
-      <button class="tree-del-btn" data-perm="levantamentoAr:excluir" onclick="event.stopPropagation();LevantamentoAr.excluirNo('${n.id}')" title="Excluir">✕</button>
+      <button class="tree-del-btn" data-perm="levantamentoAr:excluir:local" onclick="event.stopPropagation();LevantamentoAr.excluirNo('${n.id}')" title="Excluir">✕</button>
     </div>`;
     if (aberto && temFilhos) {
       h += `<div class="tree-children">`;
@@ -204,8 +204,8 @@ const LevantamentoAr = (() => {
         <div><h2 style="font-size:1.1rem;">${caminho}</h2>
           <span class="subtitulo">${listaItens.length} item(ns) avulso(s) · ${listaMaquinas.length} máquina(s)</span></div>
         <div style="display:flex;gap:6px;">
-          <button class="btn btn-secundario btn-sm" data-perm="levantamentoAr:criar" onclick="LevantamentoAr.novoItem()">+ Item avulso</button>
-          <button class="btn btn-primario btn-sm" data-perm="levantamentoAr:criar" onclick="LevantamentoAr.novaMaquinaLancamento()">+ Máquina</button>
+          <button class="btn btn-secundario btn-sm" data-perm="levantamentoAr:criar:item" onclick="LevantamentoAr.novoItem()">+ Item avulso</button>
+          <button class="btn btn-primario btn-sm" data-perm="levantamentoAr:criar:maquina" onclick="LevantamentoAr.novaMaquinaLancamento()">+ Máquina</button>
         </div>
       </div>
 
@@ -216,7 +216,7 @@ const LevantamentoAr = (() => {
         <div style="margin-top:8px;">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
             <h3 style="font-size:0.9rem;margin:0;">Resumo consolidado (${no.nome} + sublocais)</h3>
-            <button class="btn btn-secundario btn-sm" data-perm="levantamentoAr:exportar" onclick="LevantamentoAr.exportarResumo('local')">📤 Exportar CSV</button>
+            <button class="btn btn-secundario btn-sm" data-perm="levantamentoAr:exportar:csv" onclick="LevantamentoAr.exportarResumo('local')">📤 Exportar CSV</button>
           </div>
           ${_renderTabelaResumo(_agregarSubarvore(sel.localId))}
         </div>` : ''}
@@ -239,7 +239,7 @@ const LevantamentoAr = (() => {
             <td class="text-sm text-muted">${it.observacoes || '—'}</td>
             <td class="col-acoes">
               <button class="btn btn-secundario btn-sm" onclick="LevantamentoAr.editarItem('${it.id}')">✎</button>
-              <button class="btn btn-perigo btn-sm btn-icon" data-perm="levantamentoAr:excluir" onclick="LevantamentoAr.excluirItem('${it.id}')">✕</button>
+              <button class="btn btn-perigo btn-sm btn-icon" data-perm="levantamentoAr:excluir:item" onclick="LevantamentoAr.excluirItem('${it.id}')">✕</button>
             </td></tr>`;
         }).join('')}</tbody></table></div>`;
   }
@@ -261,7 +261,7 @@ const LevantamentoAr = (() => {
             <td class="col-num" style="font-family:var(--font-mono);font-weight:700;">${kit ? Utils.formatarNumero(kit.mlTotal) : '—'} m</td>
             <td class="col-acoes">
               <button class="btn btn-secundario btn-sm" onclick="event.stopPropagation();LevantamentoAr.editarMaquinaLancamento('${doc.id}')">✎</button>
-              <button class="btn btn-perigo btn-sm btn-icon" data-perm="levantamentoAr:excluir" onclick="event.stopPropagation();LevantamentoAr.excluirMaquinaLancamento('${doc.id}')">✕</button>
+              <button class="btn btn-perigo btn-sm btn-icon" data-perm="levantamentoAr:excluir:maquina" onclick="event.stopPropagation();LevantamentoAr.excluirMaquinaLancamento('${doc.id}')">✕</button>
             </td></tr>`;
           if (aberto && kit) {
             linhas += `<tr><td colspan="5" style="background:var(--cor-fundo);padding:10px 16px;">
@@ -306,7 +306,7 @@ const LevantamentoAr = (() => {
       <div class="page-header">
         <div><h2 style="font-size:1.1rem;">Resumo Geral — Todos os Locais</h2>
           <span class="subtitulo">Consolidado por material (itens avulsos + máquinas calculadas)</span></div>
-        <button class="btn btn-primario btn-sm" data-perm="levantamentoAr:exportar" onclick="LevantamentoAr.exportarResumo('geral')">📤 Exportar para Compras (CSV)</button>
+        <button class="btn btn-primario btn-sm" data-perm="levantamentoAr:exportar:csv" onclick="LevantamentoAr.exportarResumo('geral')">📤 Exportar para Compras (CSV)</button>
       </div>
       ${_renderTabelaResumo(mapa)}
       ${porLocal.length ? `
@@ -381,7 +381,7 @@ const LevantamentoAr = (() => {
 
   // ===================== EXPORTAR PARA COMPRAS (CSV) =====================
   function exportarResumo(escopo) {
-    if(!Permissions.pode('levantamentoAr','exportar')){Utils.toast('Sem permissão para exportar.','erro');return;}
+    if(!Permissions.pode('levantamentoAr','exportar:csv')){Utils.toast('Sem permissão para exportar.','erro');return;}
     let mapa, nomeArquivo, tituloLocal;
     if (escopo === 'local' && sel.localId) {
       const no = _encontrarNo(sel.localId);
@@ -444,7 +444,7 @@ const LevantamentoAr = (() => {
     try { await _salvarAreas(); renderizar(); } catch (e) { Utils.toast('Erro ao salvar.', 'erro'); }
   }
   async function excluirNo(id) {
-    if(!Permissions.pode('levantamentoAr','excluir')){Utils.toast('Sem permissão para excluir.','erro');return;}
+    if(!Permissions.pode('levantamentoAr','excluir:local')){Utils.toast('Sem permissão para excluir.','erro');return;}
     const idsAfetados = new Set(_descendentesIds(id));
     const nItens = itens.filter(it => idsAfetados.has(_localDoItem(it))).length;
     const nMaq = maquinasLanc.filter(m => idsAfetados.has(m.localId)).length;
@@ -467,7 +467,7 @@ const LevantamentoAr = (() => {
     return { id: _uid(), nome: n.nome, filhos: (n.filhos || []).map(_clonarNo) };
   }
   async function duplicarNo(id) {
-    if(!Permissions.pode('levantamentoAr','criar')){Utils.toast('Sem permissão para criar.','erro');return;}
+    if(!Permissions.pode('levantamentoAr','criar:duplicar')){Utils.toast('Sem permissão para criar.','erro');return;}
     const listaPai = _encontrarPaiLista(id) || areas;
     const idx = listaPai.findIndex(n => n.id === id);
     if (idx < 0) return;
@@ -614,7 +614,7 @@ const LevantamentoAr = (() => {
       <div class="form-grupo"><label>Observações</label><textarea id="ar-obs" class="form-control" rows="2">${it?.observacoes || ''}</textarea></div>`;
   }
   async function salvarItem() {
-    if(!Permissions.pode('levantamentoAr','criar')&&!Permissions.pode('levantamentoAr','editar')){Utils.toast('Sem permissão.','erro');return;}
+    if(!Permissions.pode('levantamentoAr','criar:item')&&!Permissions.pode('levantamentoAr','editar:item')){Utils.toast('Sem permissão.','erro');return;}
     if (!sel.localId) { Utils.toast('Selecione um local.', 'alerta'); return; }
     const quantidade = parseFloat(document.getElementById('ar-qtd')?.value) || 0;
     if (!quantidade) { Utils.toast('Informe a quantidade.', 'alerta'); return; }
@@ -645,7 +645,7 @@ const LevantamentoAr = (() => {
     } catch (e) { console.error(e); Utils.toast('Erro ao salvar item.', 'erro'); }
   }
   async function excluirItem(id) {
-    if(!Permissions.pode('levantamentoAr','excluir')){Utils.toast('Sem permissão para excluir.','erro');return;}
+    if(!Permissions.pode('levantamentoAr','excluir:local')){Utils.toast('Sem permissão para excluir.','erro');return;}
     if (!Utils.confirmar('Remover este item do levantamento?')) return;
     try { await Database.deletar(obraId, COL_ITENS, id); Utils.toast('Removido.', 'sucesso'); await carregar(); }
     catch (e) { Utils.toast('Erro.', 'erro'); }
@@ -681,7 +681,7 @@ const LevantamentoAr = (() => {
     Utils.abrirModal('modal-armaq-lancamento');
   }
   async function excluirMaquinaLancamento(id) {
-    if(!Permissions.pode('levantamentoAr','excluir')){Utils.toast('Sem permissão para excluir.','erro');return;}
+    if(!Permissions.pode('levantamentoAr','excluir:local')){Utils.toast('Sem permissão para excluir.','erro');return;}
     if (!Utils.confirmar('Remover esta máquina do levantamento?')) return;
     try { await Database.deletar(obraId, COL_MAQUINAS, id); Utils.toast('Removida.', 'sucesso'); await carregar(); }
     catch (e) { Utils.toast('Erro.', 'erro'); }
@@ -791,7 +791,7 @@ const LevantamentoAr = (() => {
     if (p) p.innerHTML = _renderPreviewMaquina(_obterMaquinaConfig(maqDraft.modeloTipo, maqDraft.maquinaConfigId));
   }
   async function salvarMaquinaLancamento() {
-    if(!Permissions.pode('levantamentoAr','criar')&&!Permissions.pode('levantamentoAr','editar')){Utils.toast('Sem permissão.','erro');return;}
+    if(!Permissions.pode('levantamentoAr','criar:item')&&!Permissions.pode('levantamentoAr','editar:item')){Utils.toast('Sem permissão.','erro');return;}
     if (!sel.localId) { Utils.toast('Selecione um local.', 'alerta'); return; }
     if (!maqDraft.maquinaConfigId) { Utils.toast('Selecione uma máquina configurada.', 'alerta'); return; }
     const mlBase = parseFloat(maqDraft.mlBase) || 0;

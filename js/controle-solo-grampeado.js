@@ -248,7 +248,7 @@ const ControleSoloGrampeado = (() => {
             <td>${a.etapa === 'acabamento' ? 'Acabamento' : 'Projeção'}</td>
             <td class="col-num cc-tdMono">${SG.fmt1(a.m2)}</td>
             <td class="cc-tdMono">${esc(a.data)}</td>
-            <td class="col-acoes"><button class="btn btn-secundario btn-sm" data-perm="controleSolo:excluir" style="color:var(--cv-red);" onclick="SGC_UI.excluirArea('${a.id}')">🗑</button></td>
+            <td class="col-acoes"><button class="btn btn-secundario btn-sm" data-perm="controleSolo:excluir:areaExecutada" style="color:var(--cv-red);" onclick="SGC_UI.excluirArea('${a.id}')">🗑</button></td>
           </tr>`).join('')}
         </tbody>
       </table>
@@ -323,7 +323,7 @@ const ControleSoloGrampeado = (() => {
   }
 
   async function _salvarAreaMarcada(v, rect) {
-    if(!Permissions.pode('controleSolo','criar')&&!Permissions.pode('controleSolo','editar'))return;
+    if(!Permissions.pode('controleSolo','criar:areaExecutada'))return;
     const m2 = SG.calcM2Retangulo(rect, v);
     Utils.mostrarLoading();
     try {
@@ -339,7 +339,7 @@ const ControleSoloGrampeado = (() => {
   }
 
   async function excluirArea(id) {
-    if(!Permissions.pode('controleSolo','excluir')){Utils.toast('Sem permissão para excluir.','erro');return;}
+    if(!Permissions.pode('controleSolo','excluir:areaExecutada')){Utils.toast('Sem permissão para excluir.','erro');return;}
     const ok = await Utils.confirmar('Excluir esta marcação de área?');
     if (!ok) return;
     Utils.mostrarLoading();
@@ -369,7 +369,7 @@ const ControleSoloGrampeado = (() => {
   }
 
   async function salvarEtapasChumbador() {
-    if(!Permissions.pode('controleSolo','editar')){Utils.toast('Sem permissão para editar.','erro');return;}
+    if(!Permissions.pode('controleSolo','editar:metaDiaria')){Utils.toast('Sem permissão para editar.','erro');return;}
     if (!chumbAtivoId) return;
     const chb = chumbadores.find(x => x.id === chumbAtivoId);
     const existente = execDoChumbador(chumbAtivoId);
@@ -498,7 +498,7 @@ const ControleSoloGrampeado = (() => {
   }
 
   async function salvarMetaDiaria() {
-    if(!Permissions.pode('controleSolo','editar')){Utils.toast('Sem permissão para editar.','erro');return;}
+    if(!Permissions.pode('controleSolo','editar:metaDiaria')){Utils.toast('Sem permissão para editar.','erro');return;}
     const vistaId = document.getElementById('sgc-meta-vistaid').value;
     const metaDiariaChumbadores = SG.num(document.getElementById('sgc-meta-chumb').value);
     const metaDiariaM2 = SG.num(document.getElementById('sgc-meta-m2').value);

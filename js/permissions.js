@@ -179,6 +179,270 @@ const Permissions = (() => {
         { key: 'dadosObra',label: 'Dados gerais / cálculo da obra' },
       ],
     },
+
+    // ---------------- LEVANTAMENTOS ----------------
+
+    levantamentoFachada: {
+      criar: [
+        { key: 'fachada',   label: 'Criar fachada' },
+        { key: 'balancim',  label: 'Criar balancim' },
+        { key: 'peca',      label: 'Criar peça' },
+        { key: 'duplicar',  label: 'Duplicar balancim/peça' },
+        { key: 'copiarVista', label: 'Copiar de outra vista' },
+      ],
+      editar: [
+        { key: 'entidade',  label: 'Editar fachada/balancim/vista' },
+        { key: 'peca',      label: 'Editar peça' },
+        { key: 'conferir',  label: 'Conferir peça (marcar como conferida)' },
+        { key: 'mover',     label: 'Mover peça entre balancins' },
+        { key: 'mapa',      label: 'Editar mapa/imagem e caixas' },
+        { key: 'vaos',      label: 'Editar vãos e frisos' },
+        { key: 'config',    label: 'Configuração de cálculo (vãos/ML)' },
+      ],
+      excluir: [
+        { key: 'entidade',  label: 'Excluir fachada/balancim/vista' },
+        { key: 'peca',      label: 'Excluir peça' },
+        { key: 'mapa',      label: 'Limpar mapa' },
+      ],
+      exportar: [
+        { key: 'csv',       label: 'Exportar CSV' },
+        { key: 'vista',     label: 'Exportar vista' },
+      ],
+    },
+
+    levantamentoPiso: {
+      criar: [
+        { key: 'local',     label: 'Criar local na árvore' },
+        { key: 'area',      label: 'Demarcar área na planta' },
+        { key: 'clonar',    label: 'Clonar local/pavimento' },
+        { key: 'planta',    label: 'Enviar/vincular planta' },
+      ],
+      editar: [
+        { key: 'area',      label: 'Editar área' },
+        { key: 'rodape',    label: 'Editar rodapé' },
+        { key: 'imperm',    label: 'Editar impermeabilização (paredes)' },
+        { key: 'estrutura', label: 'Reorganizar árvore de locais' },
+        { key: 'mover',     label: 'Mover/copiar áreas selecionadas' },
+        { key: 'calibrar',  label: 'Calibrar escala da planta' },
+        { key: 'config',    label: 'Configuração de cálculo' },
+      ],
+      excluir: [
+        { key: 'area',      label: 'Excluir área' },
+        { key: 'local',     label: 'Excluir local da árvore' },
+        { key: 'planta',    label: 'Excluir planta' },
+      ],
+    },
+
+    levantamentoTeto: {
+      criar: [
+        { key: 'local',     label: 'Criar local na árvore' },
+        { key: 'area',      label: 'Demarcar área na planta' },
+        { key: 'planta',    label: 'Enviar/vincular planta' },
+      ],
+      editar: [
+        { key: 'area',      label: 'Editar área' },
+        { key: 'tabica',    label: 'Editar tabica' },
+        { key: 'pintura',   label: 'Editar itens de pintura' },
+        { key: 'estrutura', label: 'Reorganizar árvore de locais' },
+        { key: 'mover',     label: 'Mover/copiar áreas selecionadas' },
+      ],
+      excluir: [
+        { key: 'area',      label: 'Excluir área' },
+        { key: 'local',     label: 'Excluir local da árvore' },
+        { key: 'planta',    label: 'Excluir planta' },
+      ],
+    },
+
+    levantamentoParedes: {
+      criar: [
+        { key: 'local',      label: 'Criar local na árvore' },
+        { key: 'alvenaria',  label: 'Criar peça de alvenaria' },
+        { key: 'acabamento', label: 'Criar peça de acabamento' },
+        { key: 'duplicar',   label: 'Duplicar local/peça' },
+      ],
+      editar: [
+        { key: 'alvenaria',  label: 'Editar alvenaria' },
+        { key: 'acabamento', label: 'Editar acabamento' },
+        { key: 'vaos',       label: 'Editar vãos' },
+        { key: 'pintura',    label: 'Editar itens de pintura' },
+        { key: 'conferir',   label: 'Conferir peça' },
+        { key: 'mover',      label: 'Mover peça entre locais' },
+        { key: 'estrutura',  label: 'Reorganizar árvore de locais' },
+        { key: 'config',     label: 'Configuração de cálculo (vãos/ML)' },
+      ],
+      excluir: [
+        { key: 'peca',       label: 'Excluir peça' },
+        { key: 'local',      label: 'Excluir local da árvore' },
+      ],
+    },
+
+    levantamentoConcreto: {
+      criar: [
+        { key: 'peca',        label: 'Criar peça' },
+        { key: 'importar',    label: 'Importar peças em lote' },
+        { key: 'concretagem', label: 'Criar concretagem' },
+        { key: 'levantamento',label: 'Adicionar item no levantamento' },
+      ],
+      editar: [
+        { key: 'peca',        label: 'Editar peça' },
+        { key: 'concretagem', label: 'Editar concretagem (BTs, andares)' },
+        { key: 'levantamento',label: 'Editar itens do levantamento' },
+        { key: 'ordenar',     label: 'Ordenar/reorganizar peças' },
+        { key: 'config',      label: 'Configuração de peças' },
+      ],
+      excluir: [
+        { key: 'peca',        label: 'Excluir peça' },
+        { key: 'concretagem', label: 'Excluir concretagem' },
+        { key: 'levantamento',label: 'Remover item do levantamento' },
+        { key: 'limparBase',  label: 'Limpar base de peças (tudo)' },
+      ],
+    },
+
+    levantamentoAr: {
+      criar: [
+        { key: 'local',    label: 'Criar local/sublocal' },
+        { key: 'maquina',  label: 'Lançar máquina' },
+        { key: 'item',     label: 'Adicionar item avulso' },
+        { key: 'material', label: 'Criar material inline' },
+        { key: 'duplicar', label: 'Duplicar local' },
+      ],
+      editar: [
+        { key: 'item',     label: 'Editar item' },
+        { key: 'maquina',  label: 'Editar máquina lançada' },
+        { key: 'estrutura',label: 'Renomear/reorganizar locais' },
+      ],
+      excluir: [
+        { key: 'item',     label: 'Excluir item' },
+        { key: 'maquina',  label: 'Excluir máquina lançada' },
+        { key: 'local',    label: 'Excluir local' },
+      ],
+      exportar: [
+        { key: 'csv',      label: 'Exportar CSV (local/compras)' },
+      ],
+    },
+
+    levantamentoPintura: {
+      criar: [
+        { key: 'local',   label: 'Criar local na árvore' },
+        { key: 'vinculo', label: 'Vincular áreas de pintura' },
+        { key: 'massa',   label: 'Lançar massa' },
+      ],
+      editar: [
+        { key: 'pintura',   label: 'Editar pintura' },
+        { key: 'massa',     label: 'Editar massa' },
+        { key: 'estrutura', label: 'Reorganizar árvore de locais' },
+      ],
+      excluir: [
+        { key: 'local',   label: 'Excluir local da árvore' },
+        { key: 'item',    label: 'Remover item de pintura/massa' },
+      ],
+    },
+
+    levantamentoSolo: {
+      criar: [
+        { key: 'vista',        label: 'Criar vista' },
+        { key: 'chumbador',    label: 'Lançar chumbador no mapa' },
+        { key: 'especificacao',label: 'Criar especificação de material' },
+        { key: 'material',     label: 'Criar material inline' },
+      ],
+      editar: [
+        { key: 'chumbador',    label: 'Editar chumbador' },
+        { key: 'vista',        label: 'Editar vista e imagem' },
+        { key: 'calibracao',   label: 'Calibrar escala do mapa' },
+        { key: 'm2',           label: 'Editar m² da vista' },
+        { key: 'medicaoArea',  label: 'Medir área no mapa' },
+        { key: 'especificacao',label: 'Editar especificação' },
+      ],
+      excluir: [
+        { key: 'chumbador',    label: 'Excluir chumbador' },
+        { key: 'vista',        label: 'Excluir vista' },
+        { key: 'especificacao',label: 'Excluir especificação' },
+      ],
+    },
+
+    levantamentoTerra: {
+      criar: [
+        { key: 'secoes',      label: 'Gerar seções transversais' },
+        { key: 'caminhao',    label: 'Cadastrar tipo de caminhão' },
+        { key: 'area',        label: 'Demarcar área no projeto' },
+      ],
+      editar: [
+        { key: 'secoes',      label: 'Editar seções/cotas' },
+        { key: 'projeto',     label: 'Imagem e calibração do projeto' },
+        { key: 'config',      label: 'Configuração (capacidades, empolamento)' },
+        { key: 'pontos',      label: 'Mover/editar pontos de cota' },
+      ],
+      excluir: [
+        { key: 'caminhao',    label: 'Excluir tipo de caminhão' },
+        { key: 'area',        label: 'Remover área' },
+        { key: 'ponto',       label: 'Excluir ponto de cota' },
+      ],
+      exportar: [
+        { key: 'pdf',         label: 'Baixar/compartilhar PDF' },
+      ],
+    },
+
+    // ---------------- CONTROLES ----------------
+
+    controleConcreto: {
+      criar:   [ { key: 'bt',   label: 'Lançar BT (boletim de transporte)' },
+                 { key: 'pdf',  label: 'Anexar PDF da concretagem' } ],
+      editar:  [ { key: 'bt',   label: 'Editar BT lançado' } ],
+      excluir: [ { key: 'bt',   label: 'Excluir BT' } ],
+      exportar:[ { key: 'csv',  label: 'Exportar CSV' } ],
+    },
+
+    controleSolo: {
+      criar:   [ { key: 'areaExecutada', label: 'Marcar área executada no mapa' } ],
+      editar:  [ { key: 'etapas',        label: 'Marcar etapas do chumbador' },
+                 { key: 'metaDiaria',    label: 'Definir meta diária' } ],
+      excluir: [ { key: 'areaExecutada', label: 'Excluir área executada' } ],
+    },
+
+    controleTerra: {
+      criar:   [ { key: 'entrega', label: 'Registrar viagem/entrega' } ],
+      editar:  [ { key: 'entrega', label: 'Editar viagem' },
+                 { key: 'valores', label: 'Editar valores/custos' } ],
+      excluir: [ { key: 'entrega', label: 'Excluir viagem' } ],
+    },
+
+    controleEstacas: {
+      criar: [
+        { key: 'bt',          label: 'Criar BT de estacas' },
+        { key: 'btFund',      label: 'Lançar BT de fundação' },
+        { key: 'concretagem', label: 'Criar concretagem na planta' },
+        { key: 'prancha',     label: 'Adicionar prancha' },
+        { key: 'marcador',    label: 'Marcar estaca na prancha' },
+      ],
+      editar: [
+        { key: 'bt',          label: 'Editar BT' },
+        { key: 'concretagem', label: 'Editar/atribuir concretagem' },
+        { key: 'meta',        label: 'Editar meta de BT' },
+        { key: 'prancha',     label: 'Renomear/girar/ajustar prancha' },
+        { key: 'marcador',    label: 'Mover/ajustar marcadores' },
+        { key: 'vinculo',     label: 'Vincular ao planejamento' },
+      ],
+      excluir: [
+        { key: 'bt',          label: 'Excluir BT' },
+        { key: 'prancha',     label: 'Excluir prancha' },
+        { key: 'marcador',    label: 'Excluir marcador' },
+      ],
+    },
+
+    controlePorcelanatos: {
+      criar:   [ { key: 'execucao', label: 'Lançar execução' } ],
+      editar:  [ { key: 'execucao', label: 'Editar execução' },
+                 { key: 'config',   label: 'Configuração do módulo' } ],
+      excluir: [ { key: 'apontamento', label: 'Excluir apontamento' } ],
+      exportar:[ { key: 'planilha', label: 'Exportar planilha' } ],
+    },
+
+    producao: {
+      editar: [
+        { key: 'quantidade', label: 'Editar quantidade' },
+        { key: 'equipe',     label: 'Editar equipe alocada' },
+      ],
+    },
   };
 
   function subsDe(modulo, acao) {

@@ -839,7 +839,7 @@ const ControleConcreto = (() => {
           <div class="form-grupo" style="margin-bottom:0;"><label>Hora</label><input type="time" class="form-control" value="${esc(bt.hora)}" oninput="CCON.btUpd('hora', this.value)"></div>
         </div>
         <div style="display:flex;justify-content:flex-end;margin-top:14px;">
-          <button class="btn btn-primario" data-perm="controleConcreto:criar" onclick="CCON.btSalvar()">${bt.modo === 'editar' ? '✓ Salvar Alterações' : '✓ Lançar BT'}</button>
+          <button class="btn btn-primario" data-perm="controleConcreto:criar:bt" onclick="CCON.btSalvar()">${bt.modo === 'editar' ? '✓ Salvar Alterações' : '✓ Lançar BT'}</button>
         </div>`;
     }
 
@@ -895,7 +895,7 @@ const ControleConcreto = (() => {
   }
 
   async function btSalvar() {
-    if(!Permissions.pode('controleConcreto','criar')&&!Permissions.pode('controleConcreto','editar')){Utils.toast('Sem permissão.','erro');return;}
+    if(!Permissions.pode('controleConcreto','criar:bt')&&!Permissions.pode('controleConcreto','editar:bt')){Utils.toast('Sem permissão.','erro');return;}
     if (!bt.concId || !bt.btId) { Utils.toast('Selecione concretagem e BT.', 'alerta'); return; }
     const linhasVal = bt.linhas.filter(l => l.pecaId && parseFloat(l.pct) > 0);
     if (!linhasVal.length) { Utils.toast('Adicione ao menos uma peça com % maior que zero.', 'alerta'); return; }

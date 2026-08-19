@@ -347,8 +347,8 @@ const ControlePorcelanatos = (() => {
     const actions = document.getElementById('cp-header-actions');
     if (actions) actions.innerHTML = `
       <button class="btn btn-secundario btn-sm" onclick="ControlePorcelanatos.recarregar()" title="Buscar de novo do servidor (ignora cache local)">🔄 Recarregar</button>
-      <button class="btn btn-secundario btn-sm" data-perm="controlePorcelanatos:editar" onclick="ControlePorcelanatos.abrirConfig()" title="Configurar % de perda usado na planilha">⚙️ Config</button>
-      <button class="btn btn-primario btn-sm" data-perm="controlePorcelanatos:exportar" onclick="ControlePorcelanatos.exportarPlanilha()">📊 Exportar Planilha</button>
+      <button class="btn btn-secundario btn-sm" data-perm="controlePorcelanatos:editar:config" onclick="ControlePorcelanatos.abrirConfig()" title="Configurar % de perda usado na planilha">⚙️ Config</button>
+      <button class="btn btn-primario btn-sm" data-perm="controlePorcelanatos:exportar:planilha" onclick="ControlePorcelanatos.exportarPlanilha()">📊 Exportar Planilha</button>
     `;
 
     const el = document.getElementById('cp-content');
@@ -510,7 +510,7 @@ const ControlePorcelanatos = (() => {
                   <td class="col-num">${fmt1(it.pct)}%</td>
                   <td><span class="cc-badge ${it.status.cls}">${it.status.icone} ${it.status.label}</span></td>
                   <td style="white-space:nowrap;">
-                    <button class="btn btn-secundario btn-sm" data-perm="controlePorcelanatos:criar" title="Apontar execução" onclick="ControlePorcelanatos.abrirExecucao(${esc(JSON.stringify(it.itemKey))})">📝</button>
+                    <button class="btn btn-secundario btn-sm" data-perm="controlePorcelanatos:criar:execucao" title="Apontar execução" onclick="ControlePorcelanatos.abrirExecucao(${esc(JSON.stringify(it.itemKey))})">📝</button>
                     <button class="btn btn-secundario btn-sm" title="Histórico de apontamentos" onclick="ControlePorcelanatos.abrirHistorico(${esc(JSON.stringify(it.itemKey))})">🗒️</button>
                   </td>
                 </tr>
@@ -536,13 +536,13 @@ const ControlePorcelanatos = (() => {
   // CONFIGURAÇÃO — % de perda
   // ══════════════════════════════════════════
   function abrirConfig() {
-    if (!Permissions.pode('controlePorcelanatos', 'editar')) { Utils.toast('Sem permissão para editar configurações.', 'alerta'); return; }
+    if (!Permissions.pode('controlePorcelanatos', 'editar:config')) { Utils.toast('Sem permissão para editar configurações.', 'alerta'); return; }
     document.getElementById('cp-config-percentual-perda').value = config.percentualPerda;
     Utils.abrirModal('modal-cp-config');
   }
 
   async function salvarConfig() {
-    if (!Permissions.pode('controlePorcelanatos', 'editar')) { Utils.toast('Sem permissão para editar configurações.', 'alerta'); return; }
+    if (!Permissions.pode('controlePorcelanatos', 'editar:config')) { Utils.toast('Sem permissão para editar configurações.', 'alerta'); return; }
     const valor = Utils.parseNum(document.getElementById('cp-config-percentual-perda').value);
     if (valor < 0 || valor > 100) { Utils.toast('Informe um percentual entre 0 e 100.', 'alerta'); return; }
     try {
@@ -565,7 +565,7 @@ const ControlePorcelanatos = (() => {
   // EXECUÇÃO — apontamento diário de m² aplicado, por item
   // ══════════════════════════════════════════
   function abrirExecucao(itemKey) {
-    if (!Permissions.pode('controlePorcelanatos', 'criar')) { Utils.toast('Sem permissão para apontar execução.', 'alerta'); return; }
+    if (!Permissions.pode('controlePorcelanatos', 'criar:execucao')) { Utils.toast('Sem permissão para apontar execução.', 'alerta'); return; }
     const it = itensCache.find(i => i.itemKey === itemKey);
     if (!it) { Utils.toast('Item não encontrado (pode ter sido excluído no levantamento de origem).', 'alerta'); return; }
     execForm = { itemKey, data: Utils.hoje(), m2: '', obs: '' };
@@ -585,7 +585,7 @@ const ControlePorcelanatos = (() => {
   }
 
   async function salvarExecucao() {
-    if (!Permissions.pode('controlePorcelanatos', 'criar')) { Utils.toast('Sem permissão para apontar execução.', 'alerta'); return; }
+    if (!Permissions.pode('controlePorcelanatos', 'criar:execucao')) { Utils.toast('Sem permissão para apontar execução.', 'alerta'); return; }
     if (!execForm) return;
     const data = document.getElementById('cp-exec-data').value;
     const m2 = Utils.parseNum(document.getElementById('cp-exec-m2').value);
@@ -631,7 +631,7 @@ const ControlePorcelanatos = (() => {
               <td>${e.data ? new Date(e.data + 'T00:00:00').toLocaleDateString('pt-BR') : '—'}</td>
               <td class="col-num cc-tdMono">${fmt2(e.m2)}</td>
               <td>${esc(e.obs || '')}</td>
-              <td><button class="btn btn-secundario btn-sm" data-perm="controlePorcelanatos:excluir" onclick="ControlePorcelanatos.excluirApontamento('${e.id}')">🗑️</button></td>
+              <td><button class="btn btn-secundario btn-sm" data-perm="controlePorcelanatos:excluir:apontamento" onclick="ControlePorcelanatos.excluirApontamento('${e.id}')">🗑️</button></td>
             </tr>
           `).join('')}
         </tbody>
@@ -641,7 +641,7 @@ const ControlePorcelanatos = (() => {
   }
 
   async function excluirApontamento(id) {
-    if (!Permissions.pode('controlePorcelanatos', 'excluir')) { Utils.toast('Sem permissão para excluir.', 'alerta'); return; }
+    if (!Permissions.pode('controlePorcelanatos', 'excluir:apontamento')) { Utils.toast('Sem permissão para excluir.', 'alerta'); return; }
     if (!Utils.confirmar('Excluir este apontamento de execução?')) return;
     try {
       Utils.mostrarLoading('Excluindo...');
@@ -664,7 +664,7 @@ const ControlePorcelanatos = (() => {
   // Sempre busca do servidor de novo antes de exportar.
   // ══════════════════════════════════════════
   async function exportarPlanilha() {
-    if (!Permissions.pode('controlePorcelanatos', 'exportar')) { Utils.toast('Sem permissão para exportar.', 'alerta'); return; }
+    if (!Permissions.pode('controlePorcelanatos', 'exportar:planilha')) { Utils.toast('Sem permissão para exportar.', 'alerta'); return; }
     try {
       Utils.mostrarLoading('Buscando dados atualizados e gerando planilha...');
       await _carregarTudo();

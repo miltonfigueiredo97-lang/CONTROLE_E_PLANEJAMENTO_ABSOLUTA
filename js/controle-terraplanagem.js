@@ -212,7 +212,7 @@ const ControleTerraplanagem = (() => {
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <a class="btn btn-secundario btn-sm" href="levantamento-terraplanagem.html">🚚 Levantamento Terraplanagem</a>
-          <button class="btn btn-secundario btn-sm" data-perm="controleTerra:editar" onclick="TPC_UI.abrirValores()">💰 Valores</button>
+          <button class="btn btn-secundario btn-sm" data-perm="controleTerra:editar:valores" onclick="TPC_UI.abrirValores()">💰 Valores</button>
           <button class="btn btn-primario btn-sm" onclick="TPC_UI.abrirEntrega()">+ Registrar Viagem</button>
         </div>
       </div>
@@ -446,13 +446,13 @@ const ControleTerraplanagem = (() => {
         <div class="form-grupo"><label>Volume (m³)</label><input type="text" inputmode="decimal" id="tpc-ent-volume" class="form-control" placeholder="15.6"></div>
       </div>
       <div class="form-grupo"><label>Valor da viagem (R$) <span id="tpc-ent-valor-hint" style="font-weight:400;color:var(--cv-text3);"></span></label><input type="text" inputmode="decimal" id="tpc-ent-valor" class="form-control" placeholder="${config.valorViagemTerra > 0 || config.valorViagemEntulho > 0 ? `terra ${_fRS(config.valorViagemTerra)} · entulho ${_fRS(config.valorViagemEntulho)}` : 'ex: 350'}" oninput="TPC_UI.marcarValorManual()"></div>
-      <button class="btn btn-primario" data-perm="controleTerra:criar" onclick="TPC_UI.salvarEntrega()">+ Registrar Viagem</button>
+      <button class="btn btn-primario" data-perm="controleTerra:criar:entrega" onclick="TPC_UI.salvarEntrega()">+ Registrar Viagem</button>
     `;
   }
 
   // ── Valores padrão por material (R$/viagem — terra e entulho têm preços diferentes) ──
   function abrirValores() {
-    if (!Permissions.pode('controleTerra', 'editar')) { Utils.toast('Sem permissão.', 'erro'); return; }
+    if (!Permissions.pode('controleTerra', 'editar:valores')) { Utils.toast('Sem permissão.', 'erro'); return; }
     const el = document.getElementById('tpc-valores-body');
     if (!el) return;
     el.innerHTML = `
@@ -466,7 +466,7 @@ const ControleTerraplanagem = (() => {
     Utils.abrirModal('modal-tpc-valores');
   }
   async function salvarValores() {
-    if (!Permissions.pode('controleTerra', 'editar')) { Utils.toast('Sem permissão.', 'erro'); return; }
+    if (!Permissions.pode('controleTerra', 'editar:valores')) { Utils.toast('Sem permissão.', 'erro'); return; }
     config.valorViagemTerra = TC.num(document.getElementById('tpc-val-terra').value);
     config.valorViagemEntulho = TC.num(document.getElementById('tpc-val-entulho').value);
     Utils.mostrarLoading();
@@ -520,7 +520,7 @@ const ControleTerraplanagem = (() => {
     }
   }
   async function salvarEntrega() {
-    if(!Permissions.pode('controleTerra','criar')&&!Permissions.pode('controleTerra','editar')){Utils.toast('Sem permissão.','erro');return;}
+    if(!Permissions.pode('controleTerra','criar:entrega')&&!Permissions.pode('controleTerra','editar:entrega')){Utils.toast('Sem permissão.','erro');return;}
     const nCanhoto = document.getElementById('tpc-ent-canhoto').value.trim();
     const data = document.getElementById('tpc-ent-data').value;
     const placaSel = document.getElementById('tpc-ent-placa').value;
@@ -543,7 +543,7 @@ const ControleTerraplanagem = (() => {
     }
   }
   async function excluirEntrega(id) {
-    if(!Permissions.pode('controleTerra','excluir')){Utils.toast('Sem permissão para excluir.','erro');return;}
+    if(!Permissions.pode('controleTerra','excluir:entrega')){Utils.toast('Sem permissão para excluir.','erro');return;}
     const ok = await Utils.confirmar('Excluir este registro de viagem?');
     if (!ok) return;
     Utils.mostrarLoading();
@@ -778,7 +778,7 @@ const ControleTerraplanagem = (() => {
               <td class="col-num cc-tdMono">${_fRS(_valorViagem(e))}</td>
               <td class="col-num cc-tdMono">${TC.fmt1(acum)}</td>
               <td class="col-num cc-tdAccent" style="font-weight:700;">${TC.fmt1(pctAcum)}%</td>
-              <td class="col-acoes"><button class="btn btn-secundario btn-sm" data-perm="controleTerra:excluir" style="color:var(--cv-red);" onclick="TPC_UI.excluirEntrega('${e.id}')">🗑</button></td>
+              <td class="col-acoes"><button class="btn btn-secundario btn-sm" data-perm="controleTerra:excluir:entrega" style="color:var(--cv-red);" onclick="TPC_UI.excluirEntrega('${e.id}')">🗑</button></td>
             </tr>`;
           }).join('')}
         </tbody>

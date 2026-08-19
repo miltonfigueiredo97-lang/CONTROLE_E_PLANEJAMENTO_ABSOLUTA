@@ -109,7 +109,7 @@ const LevantamentoConcreto = (() => {
   }
 
   async function salvarLevantamentoLocal() {
-    if(!Permissions.pode('levantamentoConcreto','criar')&&!Permissions.pode('levantamentoConcreto','editar'))return;
+    if(!Permissions.pode('levantamentoConcreto','criar:levantamento')&&!Permissions.pode('levantamentoConcreto','editar:levantamento'))return;
     try {
       await db.collection('obras').doc(obraId).collection('config').doc(_LEV_DOC).set({ itens: levantamento }, { merge: false });
     } catch(e) { console.error('Erro ao salvar levantamento concreto:', e); }
@@ -163,9 +163,9 @@ const LevantamentoConcreto = (() => {
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <button class="btn btn-secundario btn-sm" onclick="LC.abrirCalculadora()">📐 Calculadora</button>
           <button class="btn btn-secundario btn-sm" onclick="LC.abrirLevantamento()">📋 Levantamento${levantamento.length ? ` <span class="cc-badge cc-badgePartial" style="margin-left:4px;">${levantamento.length}</span>` : ''}</button>
-          <button class="btn btn-secundario btn-sm" data-perm="levantamentoConcreto:criar" onclick="LC.abrirImportar()">⊞ Importar Lote</button>
+          <button class="btn btn-secundario btn-sm" data-perm="levantamentoConcreto:criar:importar" onclick="LC.abrirImportar()">⊞ Importar Lote</button>
           <button class="btn btn-dark btn-sm" onclick="LC.abrirConcretagens()">◈ Concretagens</button>
-          <button class="btn btn-primario btn-sm" data-perm="levantamentoConcreto:criar" onclick="LC.abrirNovaPeca()">+ Nova Peça</button>
+          <button class="btn btn-primario btn-sm" data-perm="levantamentoConcreto:criar:peca" onclick="LC.abrirNovaPeca()">+ Nova Peça</button>
           <button class="btn btn-secundario btn-sm" style="color:var(--cv-red,#ef4444);" onclick="LC.limparBasePecas()">🗑 Limpar Base</button>
         </div>
       </div>
@@ -329,7 +329,7 @@ const LevantamentoConcreto = (() => {
               <td class="col-centro"><span class="cc-badge ${badge}">${CC.fmt1(pct)}%</span></td>
               <td class="col-acoes">
                 <button class="btn btn-secundario btn-sm" onclick="LC.abrirEditarPeca('${p.id}')">✎</button>
-                <button class="btn btn-secundario btn-sm" data-perm="levantamentoConcreto:excluir" style="color:var(--cv-red);" onclick="LC.excluirPeca('${p.id}')">🗑</button>
+                <button class="btn btn-secundario btn-sm" data-perm="levantamentoConcreto:excluir:peca" style="color:var(--cv-red);" onclick="LC.excluirPeca('${p.id}')">🗑</button>
               </td>
             </tr>`;
     }).join('');
@@ -368,7 +368,7 @@ const LevantamentoConcreto = (() => {
               <td class="col-num cc-tdMono">${CC.fmt4(volBts)}</td>
               <td class="col-acoes">
                 <button class="btn btn-secundario btn-sm" onclick="LC.editarConcretagem('${c.id}')">✎</button>
-                <button class="btn btn-secundario btn-sm" data-perm="levantamentoConcreto:excluir" style="color:var(--cv-red);" onclick="LC.excluirConcretagem('${c.id}')">🗑</button>
+                <button class="btn btn-secundario btn-sm" data-perm="levantamentoConcreto:excluir:concretagem" style="color:var(--cv-red);" onclick="LC.excluirConcretagem('${c.id}')">🗑</button>
               </td>
             </tr>`;
           }).join('')}
@@ -1316,7 +1316,7 @@ const LevantamentoConcreto = (() => {
   }
 
   async function salvarPeca(continuar) {
-    if(!Permissions.pode('levantamentoConcreto','criar')&&!Permissions.pode('levantamentoConcreto','editar')){Utils.toast('Sem permissão.','erro');return;}
+    if(!Permissions.pode('levantamentoConcreto','criar:peca')&&!Permissions.pode('levantamentoConcreto','editar:peca')){Utils.toast('Sem permissão.','erro');return;}
     const f = document.getElementById('form-lc-peca');
     const nome = f.querySelector('[name=nome]').value.trim();
     const tipo = f.querySelector('[name=tipo]').value;
@@ -1357,7 +1357,7 @@ const LevantamentoConcreto = (() => {
   }
 
   async function excluirPeca(id) {
-    if(!Permissions.pode('levantamentoConcreto','excluir')){Utils.toast('Sem permissão para excluir.','erro');return;}
+    if(!Permissions.pode('levantamentoConcreto','excluir:peca')){Utils.toast('Sem permissão para excluir.','erro');return;}
     const p = pecas.find(x => x.id === id);
     if (!p) return;
     const ok = await Utils.confirmar(`Excluir "${p.nome}"? Os vínculos com concretagens também serão removidos.`);
@@ -1405,7 +1405,7 @@ const LevantamentoConcreto = (() => {
 
   // Grava peças em lote (batches de 400)
   async function salvarPecasLote(itens) {
-    if(!Permissions.pode('levantamentoConcreto','criar')){Utils.toast('Sem permissão para criar.','erro');return;}
+    if(!Permissions.pode('levantamentoConcreto','criar:importar')){Utils.toast('Sem permissão para importar.','erro');return;}
     for (let i = 0; i < itens.length; i += 400) {
       const chunk = itens.slice(i, i + 400);
       const ops = chunk.map(item => {
@@ -1425,7 +1425,7 @@ const LevantamentoConcreto = (() => {
   // IMPORTAÇÃO EM LOTE
   // ══════════════════════════════════════════
   function abrirImportar() {
-    if(!Permissions.pode('levantamentoConcreto','criar')){Utils.toast('Sem permissão para importar.','erro');return;}
+    if(!Permissions.pode('levantamentoConcreto','criar:importar')){Utils.toast('Sem permissão para importar.','erro');return;}
     previewImport = [];
     document.getElementById('lc-import-texto').value = '';
     document.getElementById('lc-import-preview').innerHTML = '';
@@ -1510,7 +1510,7 @@ const LevantamentoConcreto = (() => {
 
   let importando = false;
   async function salvarImport() {
-    if(!Permissions.pode('levantamentoConcreto','criar')){Utils.toast('Sem permissão para criar.','erro');return;}
+    if(!Permissions.pode('levantamentoConcreto','criar:importar')){Utils.toast('Sem permissão para importar.','erro');return;}
     if (!previewImport.length || importando) return;
     importando = true;
     const btn = document.getElementById('lc-import-btn');
@@ -1579,7 +1579,7 @@ const LevantamentoConcreto = (() => {
   function cwSetConcSel(v) { cw.concSel = v; }
 
   async function excluirConcretagem(id) {
-    if(!Permissions.pode('levantamentoConcreto','excluir')){Utils.toast('Sem permissão para excluir.','erro');return;}
+    if(!Permissions.pode('levantamentoConcreto','excluir:peca')){Utils.toast('Sem permissão para excluir.','erro');return;}
     const c = concretagens.find(x => x.id === id);
     if (!c) return;
     const ok = await Utils.confirmar(`Excluir Concretagem Nº${c.numero}? Isso removerá peças vinculadas, BTs configuradas e lançamentos desta concretagem.`);
@@ -1607,7 +1607,7 @@ const LevantamentoConcreto = (() => {
   }
 
   async function cwExcluirSelecionada() {
-    if(!Permissions.pode('levantamentoConcreto','excluir')){Utils.toast('Sem permissão para excluir.','erro');return;}
+    if(!Permissions.pode('levantamentoConcreto','excluir:peca')){Utils.toast('Sem permissão para excluir.','erro');return;}
     if (!cw.concSel) { Utils.toast('Selecione uma concretagem para excluir.', 'alerta'); return; }
     await excluirConcretagem(cw.concSel);
   }
@@ -1762,7 +1762,7 @@ const LevantamentoConcreto = (() => {
       </div>` : ''}
       <div style="display:flex;justify-content:space-between;margin-top:14px;">
         <button class="btn btn-secundario" onclick="LC.cwSetStep(3)">← Voltar</button>
-        <button class="btn btn-primario" data-perm="levantamentoConcreto:criar" onclick="LC.cwSalvar()">✓ Salvar Concretagem</button>
+        <button class="btn btn-primario" data-perm="levantamentoConcreto:criar:concretagem" onclick="LC.cwSalvar()">✓ Salvar Concretagem</button>
       </div>`;
   }
 
@@ -1904,7 +1904,7 @@ const LevantamentoConcreto = (() => {
   }
 
   async function cwSalvar() {
-    if(!Permissions.pode('levantamentoConcreto','criar')&&!Permissions.pode('levantamentoConcreto','editar')){Utils.toast('Sem permissão.','erro');return;}
+    if(!Permissions.pode('levantamentoConcreto','criar:peca')&&!Permissions.pode('levantamentoConcreto','editar:peca')){Utils.toast('Sem permissão.','erro');return;}
     if (!cw.numero || !cw.data) { Utils.toast('Preencha número e data.', 'alerta'); return; }
     if (!cw.vinculos.length) { Utils.toast('Vincule ao menos 1 peça.', 'alerta'); return; }
     Utils.mostrarLoading();
@@ -2041,7 +2041,7 @@ const LevantamentoConcreto = (() => {
   function cfgDragEnd() { cfgDragIdx = null; renderConfig(); }
 
   async function cfgSalvar() {
-    if(!Permissions.pode('levantamentoConcreto','editar')){Utils.toast('Sem permissão para editar.','erro');return;}
+    if(!Permissions.pode('levantamentoConcreto','editar:config')){Utils.toast('Sem permissão para editar.','erro');return;}
     const daBase = [...new Set(pecas.map(p => p.andar))];
     const andaresCustm = cfgOrdem.filter(a => !daBase.includes(a));
     Utils.mostrarLoading();

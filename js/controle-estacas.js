@@ -206,7 +206,7 @@ const ControleEstacas = (() => {
         <div class="page-header">
           <div><h2>🔵 Controle de Estacas e Fundações</h2><span class="subtitulo">Marque estacas e fundações sobre o projeto e acompanhe a concretagem</span></div>
         </div>
-        <div class="cc-empty">📐<br>Nenhuma prancha (PDF/planta do projeto) importada ainda.<br><button class="btn btn-primario btn-sm" style="margin-top:10px;" data-perm="controleEstacas:criar" onclick="CE.abrirPranchas()">⊞ Importar Prancha</button></div>
+        <div class="cc-empty">📐<br>Nenhuma prancha (PDF/planta do projeto) importada ainda.<br><button class="btn btn-primario btn-sm" style="margin-top:10px;" data-perm="controleEstacas:criar:prancha" onclick="CE.abrirPranchas()">⊞ Importar Prancha</button></div>
         </div>`;
       Permissions.aplicarNaTela();
       return;
@@ -368,9 +368,9 @@ const ControleEstacas = (() => {
           <select class="form-control" id="ce-prancha-ativa" style="max-width:240px;" onchange="CE.onTrocarPranchaAtiva()">
             ${pranchasOrdenadas().map(p => `<option value="${p.id}" ${p.id === pranchaAtivaId ? 'selected' : ''}>${esc(p.nome || 'Prancha')}</option>`).join('')}
           </select>
-          <button id="ce-btn-circulo" class="btn ${modo === 'circulo' ? 'btn-primario' : 'btn-secundario'} btn-sm" data-perm="controleEstacas:criar" style="${view !== 'estacas' ? 'display:none;' : ''}" onclick="CE.iniciarAdicionarCirculo()">◯ Adicionar Estaca</button>
-          <button id="ce-btn-poligono" class="btn ${modo === 'poligono' ? 'btn-primario' : 'btn-secundario'} btn-sm" data-perm="controleEstacas:criar" style="${view !== 'fundacoes' ? 'display:none;' : ''}" onclick="CE.iniciarAdicionarPoligono()">▱ Adicionar Fundação</button>
-          <button class="btn btn-secundario btn-sm" data-perm="controleEstacas:editar" onclick="CE.girarPrancha()">⟳ Girar 90°</button>
+          <button id="ce-btn-circulo" class="btn ${modo === 'circulo' ? 'btn-primario' : 'btn-secundario'} btn-sm" data-perm="controleEstacas:criar:marcador" style="${view !== 'estacas' ? 'display:none;' : ''}" onclick="CE.iniciarAdicionarCirculo()">◯ Adicionar Estaca</button>
+          <button id="ce-btn-poligono" class="btn ${modo === 'poligono' ? 'btn-primario' : 'btn-secundario'} btn-sm" data-perm="controleEstacas:criar:marcador" style="${view !== 'fundacoes' ? 'display:none;' : ''}" onclick="CE.iniciarAdicionarPoligono()">▱ Adicionar Fundação</button>
+          <button class="btn btn-secundario btn-sm" data-perm="controleEstacas:editar:prancha" onclick="CE.girarPrancha()">⟳ Girar 90°</button>
           <span style="display:flex;gap:2px;align-items:center;margin-left:auto;">
             <button class="btn btn-secundario btn-sm" onclick="CE.zoomAjustar(-0.25)">−</button>
             <span class="text-sm text-muted" id="ce-zoom-label" style="width:48px;text-align:center;">${Math.round(zoomE * 100)}%</span>
@@ -643,7 +643,7 @@ const ControleEstacas = (() => {
   }
 
   async function salvarEdicaoConc(id) {
-    if (!Permissions.pode('controleEstacas', 'editar')) { Utils.toast('Sem permissão para editar.', 'erro'); return; }
+    if (!Permissions.pode('controleEstacas', 'editar:concretagem')) { Utils.toast('Sem permissão para editar.', 'erro'); return; }
     const numero = parseInt(document.getElementById(`ce-edit-conc-num-${id}`).value) || 0;
     const data = document.getElementById(`ce-edit-conc-data-${id}`).value || '';
     const descricao = (document.getElementById(`ce-edit-conc-desc-${id}`).value || '').trim();
@@ -671,7 +671,7 @@ const ControleEstacas = (() => {
   }
 
   async function criarConcretagemPlan() {
-    if (!Permissions.pode('controleEstacas', 'criar')) { Utils.toast('Sem permissão para criar.', 'erro'); return; }
+    if (!Permissions.pode('controleEstacas', 'criar:concretagem')) { Utils.toast('Sem permissão para criar.', 'erro'); return; }
     const numero = parseInt(document.getElementById('ce-nova-conc-plan-num').value) || _proximoNumeroConc();
     const data = document.getElementById('ce-nova-conc-plan-data').value || new Date().toISOString().slice(0, 10);
     const descricao = (document.getElementById('ce-nova-conc-plan-desc').value || '').trim();
@@ -704,7 +704,7 @@ const ControleEstacas = (() => {
   // com atualização local (sem recarregar tudo) pra não perder scroll/zoom
   // no meio de uma sequência de cliques.
   async function _atribuirRapidoFoco(m) {
-    if (!Permissions.pode('controleEstacas', 'editar') && !Permissions.pode('controleEstacas', 'criar')) { Utils.toast('Sem permissão.', 'erro'); return; }
+    if (!Permissions.pode('controleEstacas', 'editar:concretagem') && !Permissions.pode('controleEstacas', 'criar:concretagem')) { Utils.toast('Sem permissão.', 'erro'); return; }
     const concId = planFocoConcretagemId;
     const existente = pecaConc.find(pc => pc.pecaId === m.pecaId);
     try {
@@ -801,7 +801,7 @@ const ControleEstacas = (() => {
     atribuirConcretagemNumero(numero, data);
   }
   async function atribuirConcretagemNumero(numero, dataNova) {
-    if (!Permissions.pode('controleEstacas', 'editar') && !Permissions.pode('controleEstacas', 'criar')) { Utils.toast('Sem permissão.', 'erro'); return; }
+    if (!Permissions.pode('controleEstacas', 'editar:concretagem') && !Permissions.pode('controleEstacas', 'criar:concretagem')) { Utils.toast('Sem permissão.', 'erro'); return; }
     const m = marcadores.find(x => x.id === atribuirMarcadorId);
     if (!m) return;
     Utils.mostrarLoading();
@@ -1027,14 +1027,14 @@ const ControleEstacas = (() => {
   }
 
   function abrirNovaBT() {
-    if (!Permissions.pode('controleEstacas', 'criar')) { Utils.toast('Sem permissão para criar.', 'erro'); return; }
+    if (!Permissions.pode('controleEstacas', 'criar:bt')) { Utils.toast('Sem permissão para criar.', 'erro'); return; }
     bt = { concId: acompConcretagemId, btId: '', modo: 'nova-meta', numeroForm: _proximoNumeroBT(acompConcretagemId) };
     _renderModalBTs();
   }
   function fecharPainelBT() { bt = null; _renderModalBTs(); }
 
   async function criarBTEstacas() {
-    if (!Permissions.pode('controleEstacas', 'criar')) { Utils.toast('Sem permissão para criar.', 'erro'); return; }
+    if (!Permissions.pode('controleEstacas', 'criar:bt')) { Utils.toast('Sem permissão para criar.', 'erro'); return; }
     const numero = parseInt(document.getElementById('ce-bt-numero-novo').value) || _proximoNumeroBT(bt.concId);
     const volumePrevisto = EC.num((document.getElementById('ce-bt-volume-novo').value || '').replace(',', '.'));
     if (!volumePrevisto) { Utils.toast('Informe o volume previsto da BT.', 'alerta'); return; }
@@ -1058,7 +1058,7 @@ const ControleEstacas = (() => {
   }
 
   function abrirEditarMetaBT(id) {
-    if (!Permissions.pode('controleEstacas', 'editar')) { Utils.toast('Sem permissão para editar.', 'erro'); return; }
+    if (!Permissions.pode('controleEstacas', 'editar:meta')) { Utils.toast('Sem permissão para editar.', 'erro'); return; }
     const b = btsConfig.find(x => x.id === id);
     if (!b) return;
     const meta = _metaBT(id);
@@ -1067,7 +1067,7 @@ const ControleEstacas = (() => {
   }
 
   async function salvarMetaBT() {
-    if (!Permissions.pode('controleEstacas', 'editar')) { Utils.toast('Sem permissão para editar.', 'erro'); return; }
+    if (!Permissions.pode('controleEstacas', 'editar:meta')) { Utils.toast('Sem permissão para editar.', 'erro'); return; }
     const numero = parseInt(document.getElementById('ce-bt-numero-edit').value) || bt.numeroForm;
     const volumePrevisto = EC.num((document.getElementById('ce-bt-volume-edit').value || '').replace(',', '.'));
     const nf = (document.getElementById('ce-bt-nf-edit')?.value || '').trim();
@@ -1103,7 +1103,7 @@ const ControleEstacas = (() => {
   }
 
   async function excluirBTEstacas(idPre) {
-    if (!Permissions.pode('controleEstacas', 'excluir')) { Utils.toast('Sem permissão para excluir.', 'erro'); return; }
+    if (!Permissions.pode('controleEstacas', 'excluir:bt')) { Utils.toast('Sem permissão para excluir.', 'erro'); return; }
     const btId = idPre || (bt && bt.btId);
     if (!btId) return;
     const bSel = btsConfig.find(x => x.id === btId);
@@ -1150,7 +1150,7 @@ const ControleEstacas = (() => {
   // estaca — sem fechar/perder o que já foi digitado nas linhas. Propaga
   // pra todos os lançamentos já feitos com essa BT (é do caminhão inteiro).
   async function salvarMetaBTInline(btId) {
-    if (!Permissions.pode('controleEstacas', 'editar')) { Utils.toast('Sem permissão para editar.', 'erro'); return; }
+    if (!Permissions.pode('controleEstacas', 'editar:meta')) { Utils.toast('Sem permissão para editar.', 'erro'); return; }
     const sobra = (document.getElementById('ce-meta-sobra-' + btId)?.value || '').trim();
     const perda = (document.getElementById('ce-meta-perda-' + btId)?.value || '').trim();
     const perdaCocho = (document.getElementById('ce-meta-cocho-' + btId)?.value || '').trim();
@@ -1312,7 +1312,7 @@ const ControleEstacas = (() => {
   function toggleMostrarBTsCompletas(v) { mostrarBTsCompletas = v; _renderLancarEstacaBody(); }
 
   async function salvarEstacaAcomp() {
-    if (!Permissions.pode('controleEstacas', 'editar') && !Permissions.pode('controleEstacas', 'criar')) { Utils.toast('Sem permissão.', 'erro'); return; }
+    if (!Permissions.pode('controleEstacas', 'editar:bt') && !Permissions.pode('controleEstacas', 'criar:bt')) { Utils.toast('Sem permissão.', 'erro'); return; }
     if (!estacaAtual || !estacaAtual.pecaId) return;
     const p = pecas.find(x => x.id === estacaAtual.pecaId);
     if (!p) return;
@@ -1393,7 +1393,7 @@ const ControleEstacas = (() => {
             <button class="btn btn-secundario btn-sm" style="padding:2px 6px;color:var(--cv-red,#ef4444);" onclick="CE.excluirBTEstacas('${b.id}')" title="Excluir BT">🗑</button>
           </span>`;
         }).join('')}
-        <button class="btn btn-secundario btn-sm" data-perm="controleEstacas:criar" onclick="CE.abrirNovaBT()">+ Nova BT</button>
+        <button class="btn btn-secundario btn-sm" data-perm="controleEstacas:criar:bt" onclick="CE.abrirNovaBT()">+ Nova BT</button>
       </div>`;
 
     if (bt && bt.modo === 'nova-meta') {
@@ -1457,7 +1457,7 @@ const ControleEstacas = (() => {
   }
 
   function abrirLancarBTFund(btId) {
-    if (!Permissions.pode('controleEstacas', 'criar') && !Permissions.pode('controleEstacas', 'editar')) { Utils.toast('Sem permissão.', 'erro'); return; }
+    if (!Permissions.pode('controleEstacas', 'criar:btFund') && !Permissions.pode('controleEstacas', 'editar:bt')) { Utils.toast('Sem permissão.', 'erro'); return; }
     const lansBT = lancamentos.filter(l => l.btConfigId === btId);
     const linhas = lansBT.length ? lansBT.map(l => {
       const p = pecas.find(x => x.id === l.pecaId);
@@ -1589,7 +1589,7 @@ const ControleEstacas = (() => {
   }
 
   async function salvarLancarBTFund() {
-    if (!Permissions.pode('controleEstacas', 'criar') && !Permissions.pode('controleEstacas', 'editar')) { Utils.toast('Sem permissão.', 'erro'); return; }
+    if (!Permissions.pode('controleEstacas', 'criar:btFund') && !Permissions.pode('controleEstacas', 'editar:bt')) { Utils.toast('Sem permissão.', 'erro'); return; }
     const linhasVal = bt.linhas.filter(l => l.pecaId && EC.num((l.pct || '').replace(',', '.')) > 0);
     if (!linhasVal.length) { Utils.toast('Adicione ao menos uma peça com % maior que zero.', 'alerta'); return; }
     const bSel = btsConfig.find(x => x.id === bt.btId);
@@ -1678,7 +1678,7 @@ const ControleEstacas = (() => {
     const qtdCompletas = btsConc.filter(b => !idsUsados.has(b.id) && _pctBTAlocadaOutrasPecas(b.id, estacaAtual.pecaId) >= 99.99).length;
     el.innerHTML = `
       <div class="text-sm text-muted" style="margin-bottom:10px;">Precisa de ${EC.fmt1(volNecessario)} m³ · recebido até agora ${EC.fmt1(totalRecebido)} m³ (${EC.fmt1(volNecessario > 0 ? totalRecebido / volNecessario * 100 : 0)}%)</div>
-      ${!btsConc.length ? `<div class="cc-empty">Nenhuma BT criada ainda nesta concretagem. <button class="btn btn-secundario btn-sm" data-perm="controleEstacas:criar" onclick="Utils.fecharModal('modal-ce-lancar-estaca');CE.abrirModalBTs();CE.abrirNovaBT();">+ Criar BT</button></div>` : `
+      ${!btsConc.length ? `<div class="cc-empty">Nenhuma BT criada ainda nesta concretagem. <button class="btn btn-secundario btn-sm" data-perm="controleEstacas:criar:bt" onclick="Utils.fecharModal('modal-ce-lancar-estaca');CE.abrirModalBTs();CE.abrirNovaBT();">+ Criar BT</button></div>` : `
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:4px;">
           <label class="text-sm text-muted" style="margin:0;">Quais BTs concretaram esta peça, e quanto % de CADA BT foi usado aqui</label>
           ${qtdCompletas > 0 ? `<label class="text-sm" style="display:flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap;"><input type="checkbox" ${mostrarBTsCompletas ? 'checked' : ''} onchange="CE.toggleMostrarBTsCompletas(this.checked)"> Mostrar ${qtdCompletas} BT${qtdCompletas !== 1 ? 's' : ''} 100% usada${qtdCompletas !== 1 ? 's' : ''}</label>` : ''}
@@ -2007,7 +2007,7 @@ const ControleEstacas = (() => {
   // na posição certa. Assim fica "fixo no sentido escolhido" (não é um
   // toggle de exibição, é uma correção permanente da prancha).
   async function girarPrancha() {
-    if (!Permissions.pode('controleEstacas', 'editar')) { Utils.toast('Sem permissão para editar.', 'erro'); return; }
+    if (!Permissions.pode('controleEstacas', 'editar:prancha')) { Utils.toast('Sem permissão para editar.', 'erro'); return; }
     const pr = pranchaAtiva();
     if (!pr) { Utils.toast('Nenhuma prancha selecionada.', 'erro'); return; }
     const imagem = await _obterImagemPrancha(pr.id);
@@ -2273,13 +2273,13 @@ const ControleEstacas = (() => {
   }
 
   async function iniciarAdicionarCirculo() {
-    if (!Permissions.pode('controleEstacas', 'criar')) { Utils.toast('Sem permissão para criar.', 'erro'); return; }
+    if (!Permissions.pode('controleEstacas', 'criar:marcador')) { Utils.toast('Sem permissão para criar.', 'erro'); return; }
     modo = 'circulo'; editandoFormaId = null;
     await renderMapa();
     _atualizarBotoesModo();
   }
   async function iniciarAdicionarPoligono() {
-    if (!Permissions.pode('controleEstacas', 'criar')) { Utils.toast('Sem permissão para criar.', 'erro'); return; }
+    if (!Permissions.pode('controleEstacas', 'criar:marcador')) { Utils.toast('Sem permissão para criar.', 'erro'); return; }
     modo = 'poligono'; poligonoPontos = []; editandoFormaId = null;
     await renderMapa();
     _atualizarBotoesModo();
@@ -2296,7 +2296,7 @@ const ControleEstacas = (() => {
   }
 
   async function _criarMarcadorCirculo(cx, cy, raio) {
-    if (!Permissions.pode('controleEstacas', 'criar')) { Utils.toast('Sem permissão para criar.', 'erro'); return; }
+    if (!Permissions.pode('controleEstacas', 'criar:marcador')) { Utils.toast('Sem permissão para criar.', 'erro'); return; }
     Utils.mostrarLoading();
     try {
       const id = await Database.criar(obraId, COL_MARCADORES, { pranchaId: pranchaAtivaId, tipo: 'circulo', cx, cy, raio, pecaId: '' }, EC.genId('em'));
@@ -2312,7 +2312,7 @@ const ControleEstacas = (() => {
 
   async function concluirPoligono() {
     if (poligonoPontos.length < 3) return;
-    if (!Permissions.pode('controleEstacas', 'criar')) { Utils.toast('Sem permissão para criar.', 'erro'); return; }
+    if (!Permissions.pode('controleEstacas', 'criar:marcador')) { Utils.toast('Sem permissão para criar.', 'erro'); return; }
     Utils.mostrarLoading();
     try {
       const pontos = [...poligonoPontos];
@@ -2331,7 +2331,7 @@ const ControleEstacas = (() => {
   // AJUSTE DE FORMA (mover/redimensionar círculo · arrastar vértices do polígono)
   // ══════════════════════════════════════════
   function iniciarAjusteForma(id) {
-    if (!Permissions.pode('controleEstacas', 'editar')) { Utils.toast('Sem permissão para editar.', 'erro'); return; }
+    if (!Permissions.pode('controleEstacas', 'editar:marcador')) { Utils.toast('Sem permissão para editar.', 'erro'); return; }
     editandoFormaId = id;
     modo = null;
     Utils.fecharTodosModais();
@@ -2473,8 +2473,8 @@ const ControleEstacas = (() => {
       </div>
       <div class="cc-empty" style="margin-top:4px;">Status atual: <b>${esc(st.label)}</b></div>
       <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;">
-        <button class="btn btn-secundario btn-sm" data-perm="controleEstacas:editar" onclick="CE.iniciarAjusteForma('${m.id}')">✎ Ajustar forma</button>
-        <button class="btn btn-secundario btn-sm" style="color:var(--cv-red,#ef4444);" data-perm="controleEstacas:excluir" onclick="CE.excluirMarcador('${m.id}')">🗑 Excluir marcador</button>
+        <button class="btn btn-secundario btn-sm" data-perm="controleEstacas:editar:marcador" onclick="CE.iniciarAjusteForma('${m.id}')">✎ Ajustar forma</button>
+        <button class="btn btn-secundario btn-sm" style="color:var(--cv-red,#ef4444);" data-perm="controleEstacas:excluir:marcador" onclick="CE.excluirMarcador('${m.id}')">🗑 Excluir marcador</button>
       </div>
     `;
     Permissions.aplicarNaTela(document.getElementById('modal-ce-vincular'));
@@ -2531,7 +2531,7 @@ const ControleEstacas = (() => {
   }
 
   async function salvarVinculo(continuar) {
-    if (!Permissions.pode('controleEstacas', 'editar') && !Permissions.pode('controleEstacas', 'criar')) { Utils.toast('Sem permissão.', 'erro'); return; }
+    if (!Permissions.pode('controleEstacas', 'editar:vinculo') && !Permissions.pode('controleEstacas', 'criar:concretagem')) { Utils.toast('Sem permissão.', 'erro'); return; }
     const m = marcadores.find(x => x.id === marcadorVincularId);
     if (!m) return;
     const pecaId = document.getElementById('ce-vincular-peca').value || '';
@@ -2562,7 +2562,7 @@ const ControleEstacas = (() => {
   }
 
   async function excluirMarcador(id) {
-    if (!Permissions.pode('controleEstacas', 'excluir')) { Utils.toast('Sem permissão para excluir.', 'erro'); return; }
+    if (!Permissions.pode('controleEstacas', 'excluir:marcador')) { Utils.toast('Sem permissão para excluir.', 'erro'); return; }
     const ok = await Utils.confirmar('Excluir este marcador? O vínculo com a peça do levantamento também é removido (a peça em si não é afetada).');
     if (!ok) return;
     Utils.mostrarLoading();
@@ -2603,7 +2603,7 @@ const ControleEstacas = (() => {
               <td><span style="display:inline-flex;align-items:center;gap:5px;"><span style="width:9px;height:9px;border-radius:50%;background:${cor};display:inline-block;"></span>${esc(EC.statusLabel(st.pct))}</span></td>
               <td class="col-acoes">
                 <button class="btn btn-secundario btn-sm" onclick="CE.abrirVincular('${m.id}')">🔗</button>
-                <button class="btn btn-secundario btn-sm" data-perm="controleEstacas:excluir" style="color:var(--cv-red);" onclick="CE.excluirMarcador('${m.id}')">🗑</button>
+                <button class="btn btn-secundario btn-sm" data-perm="controleEstacas:excluir:marcador" style="color:var(--cv-red);" onclick="CE.excluirMarcador('${m.id}')">🗑</button>
               </td>
             </tr>`;
           }).join('')}
@@ -2637,7 +2637,7 @@ const ControleEstacas = (() => {
           <label class="text-sm text-muted" style="display:block;margin-bottom:4px;">PDF ou imagem (opcional agora)</label>
           <input type="file" id="ce-nova-prancha-arquivo" accept=".pdf,image/*" class="form-control">
         </div>
-        <button class="btn btn-primario btn-sm" data-perm="controleEstacas:criar" onclick="CE.novaPrancha()">+ Adicionar</button>
+        <button class="btn btn-primario btn-sm" data-perm="controleEstacas:criar:prancha" onclick="CE.novaPrancha()">+ Adicionar</button>
       </div>
       ${!lista.length ? '<div class="cc-empty">Nenhuma prancha cadastrada ainda. Dê um nome e já escolha o PDF/imagem acima — os dois num passo só.</div>' :
       lista.map(p => `
@@ -2646,16 +2646,16 @@ const ControleEstacas = (() => {
             <div style="font-weight:600;">${esc(p.nome || 'Prancha')}</div>
             <div class="text-sm text-muted">${p.imgWidthPx ? `${p.imgWidthPx}×${p.imgHeightPx}px` : 'sem PDF/imagem ainda'}</div>
           </div>
-          <button class="btn btn-secundario btn-sm" data-perm="controleEstacas:editar" onclick="CE.abrirUploadImagem('${p.id}')">⊞ ${p.imgWidthPx ? 'Trocar PDF/Imagem' : 'Importar PDF/Imagem'}</button>
-          <button class="btn btn-secundario btn-sm" data-perm="controleEstacas:editar" onclick="CE.renomearPrancha('${p.id}')">✎</button>
-          <button class="btn btn-secundario btn-sm" style="color:var(--cv-red,#ef4444);" data-perm="controleEstacas:excluir" onclick="CE.excluirPrancha('${p.id}')">🗑</button>
+          <button class="btn btn-secundario btn-sm" data-perm="controleEstacas:editar:prancha" onclick="CE.abrirUploadImagem('${p.id}')">⊞ ${p.imgWidthPx ? 'Trocar PDF/Imagem' : 'Importar PDF/Imagem'}</button>
+          <button class="btn btn-secundario btn-sm" data-perm="controleEstacas:editar:prancha" onclick="CE.renomearPrancha('${p.id}')">✎</button>
+          <button class="btn btn-secundario btn-sm" style="color:var(--cv-red,#ef4444);" data-perm="controleEstacas:excluir:prancha" onclick="CE.excluirPrancha('${p.id}')">🗑</button>
         </div>`).join('')}
     `;
     Permissions.aplicarNaTela(document.getElementById('modal-ce-pranchas'));
   }
 
   async function novaPrancha() {
-    if (!Permissions.pode('controleEstacas', 'criar')) { Utils.toast('Sem permissão para criar.', 'erro'); return; }
+    if (!Permissions.pode('controleEstacas', 'criar:prancha')) { Utils.toast('Sem permissão para criar.', 'erro'); return; }
     const input = document.getElementById('ce-nova-prancha');
     const fileInput = document.getElementById('ce-nova-prancha-arquivo');
     const nome = input.value.trim();
@@ -2684,7 +2684,7 @@ const ControleEstacas = (() => {
   }
 
   async function renomearPrancha(id) {
-    if (!Permissions.pode('controleEstacas', 'editar')) { Utils.toast('Sem permissão para editar.', 'erro'); return; }
+    if (!Permissions.pode('controleEstacas', 'editar:prancha')) { Utils.toast('Sem permissão para editar.', 'erro'); return; }
     const p = pranchas.find(x => x.id === id);
     if (!p) return;
     const novoNome = prompt('Novo nome da prancha:', p.nome || '');
@@ -2702,7 +2702,7 @@ const ControleEstacas = (() => {
   }
 
   async function excluirPrancha(id) {
-    if (!Permissions.pode('controleEstacas', 'excluir')) { Utils.toast('Sem permissão para excluir.', 'erro'); return; }
+    if (!Permissions.pode('controleEstacas', 'excluir:prancha')) { Utils.toast('Sem permissão para excluir.', 'erro'); return; }
     const qtdMarcadores = marcadores.filter(m => m.pranchaId === id).length;
     const ok = await Utils.confirmar(`Excluir esta prancha${qtdMarcadores ? ` e seus ${qtdMarcadores} marcador(es)` : ''}? Não afeta as peças do Levantamento de Concreto.`);
     if (!ok) return;

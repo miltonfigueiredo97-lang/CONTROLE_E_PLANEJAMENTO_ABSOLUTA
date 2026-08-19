@@ -121,7 +121,7 @@ const LevantamentoTerraplanagem = (() => {
     await db.collection('obras').doc(obraId).collection('config').doc(DOC_CONFIG).set(config, { merge: true });
   }
   async function salvarSecoes() {
-    if(!Permissions.pode('levantamentoTerra','criar')&&!Permissions.pode('levantamentoTerra','editar'))return;
+    if(!Permissions.pode('levantamentoTerra','criar:secoes')&&!Permissions.pode('levantamentoTerra','editar:secoes'))return;
     await db.collection('obras').doc(obraId).collection('config').doc(DOC_SECOES).set(secoes, { merge: false });
   }
 
@@ -1156,7 +1156,7 @@ const LevantamentoTerraplanagem = (() => {
       <p class="text-sm text-muted" style="margin-top:-6px;">Precisa de outro tipo? Cadastra em <a href="#" onclick="event.preventDefault();Utils.fecharModal('modal-tp-caminhoes');TP_UI.abrirConfig();">⚙️ Config</a>.</p>
       <div class="form-row" style="align-items:end;">
         <div class="form-grupo"><label>Empresa</label><input type="text" id="tp-cam-empresa" class="form-control" placeholder="Locaterh"></div>
-        <button class="btn btn-primario btn-sm" data-perm="levantamentoTerra:criar" style="height:38px;" onclick="TP_UI.salvarCaminhao()">+ Adicionar</button>
+        <button class="btn btn-primario btn-sm" data-perm="levantamentoTerra:criar:caminhao" style="height:38px;" onclick="TP_UI.salvarCaminhao()">+ Adicionar</button>
       </div>
       <div class="cc-divider"></div>
       ${!caminhoes.length ? `<div class="cc-empty">Nenhum caminhão cadastrado.</div>` : `
@@ -1169,7 +1169,7 @@ const LevantamentoTerraplanagem = (() => {
                 <td class="cc-tdMono" style="font-weight:700;">${esc(c.placa)}</td>
                 <td>${esc(c.tamanho)}</td>
                 <td>${esc(c.empresa || '—')}</td>
-                <td class="col-acoes"><button class="btn btn-secundario btn-sm" data-perm="levantamentoTerra:excluir" style="color:var(--cv-red);" onclick="TP_UI.excluirCaminhao('${c.id}')">🗑</button></td>
+                <td class="col-acoes"><button class="btn btn-secundario btn-sm" data-perm="levantamentoTerra:excluir:caminhao" style="color:var(--cv-red);" onclick="TP_UI.excluirCaminhao('${c.id}')">🗑</button></td>
               </tr>`).join('')}
           </tbody>
         </table>
@@ -1177,7 +1177,7 @@ const LevantamentoTerraplanagem = (() => {
     Permissions.aplicarNaTela();
   }
   async function salvarCaminhao() {
-    if(!Permissions.pode('levantamentoTerra','criar')&&!Permissions.pode('levantamentoTerra','editar')){Utils.toast('Sem permissão.','erro');return;}
+    if(!Permissions.pode('levantamentoTerra','criar:caminhao')){Utils.toast('Sem permissão.','erro');return;}
     const placa = document.getElementById('tp-cam-placa').value.trim().toUpperCase();
     const tamanho = document.getElementById('tp-cam-tamanho').value;
     const empresa = document.getElementById('tp-cam-empresa').value.trim();
@@ -1195,7 +1195,7 @@ const LevantamentoTerraplanagem = (() => {
     }
   }
   async function excluirCaminhao(id) {
-    if(!Permissions.pode('levantamentoTerra','excluir')){Utils.toast('Sem permissão para excluir.','erro');return;}
+    if(!Permissions.pode('levantamentoTerra','excluir:caminhao')){Utils.toast('Sem permissão para excluir.','erro');return;}
     const ok = await Utils.confirmar('Excluir este caminhão?');
     if (!ok) return;
     Utils.mostrarLoading();
