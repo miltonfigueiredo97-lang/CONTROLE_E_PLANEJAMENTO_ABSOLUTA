@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.16.0.3',
+  versaoAtual: 'V3.16.0.4',
 
   versoes: [
     {
@@ -9147,6 +9147,19 @@ const NotasVersao = {
         "Interação das setas: passar o mouse escurece/destaca a seta; clicar deixa ela marcada em dourado e mostra o número + nome da predecessora. Clicar de novo desmarca.",
         "Predecessora fora da visão atual (filtrada pela Visão Organizacional, busca ou outro filtro) simplesmente não desenha seta — sem erro, sem seta apontando pro nada.",
         "Desempenho cuidado: as setas são desenhadas só perto da janela visível (mesma lógica do virtual scroll da tabela) — obra com 2.400 tarefas não pesa."
+      ]
+    },
+    {
+      "versao": "V3.16.0.4",
+      "data": "2026-08-19",
+      "tipo": "correcao",
+      "titulo": "Tarefas do Sistema: Agenda corrigida (mesma tarefa em vários horários) + visual de caderno de verdade + voz com permissão explícita",
+      "itens": [
+        "Bug real (Milton reportou): a Agenda não deixava colocar a MESMA tarefa em mais de um horário — porque o horário ficava salvo dentro da própria tarefa (um único campo), então escolher ela de novo só movia a alocação, nunca duplicava.",
+        "Corrigido pela raiz: criada a coleção tarefasAgenda, separada da tarefa — cada alocação é seu próprio registro (tarefaId + data + horário). Agora a mesma tarefa pode estar em quantos horários você quiser, no mesmo dia ou em dias diferentes. Cada horário tem seu próprio campo \"+ escolher/adicionar outra\".",
+        "Agenda com visual novo de caderno de planejamento: fundo cor de papel, linha vermelha de margem, linhas pontilhadas separando os horários, fonte cursiva na data — saiu do estilo \"sistema\" chapado de antes.",
+        "Página do módulo desinchada mais um passo: o card preto de progresso saiu de cena — virou uma linha de texto discreta embaixo do título + uma barrinha fina, sem caixa separada tomando espaço.",
+        "Botão de voz: agora pede a permissão do microfone explicitamente antes de gravar (em alguns Android com o app instalado como PWA, o navegador não mostra esse prompt sozinho) e cada erro (permissão negada, sem microfone, sem rede, silêncio) aparece com uma mensagem específica em vez de simplesmente não fazer nada."
       ]
     }
   ],

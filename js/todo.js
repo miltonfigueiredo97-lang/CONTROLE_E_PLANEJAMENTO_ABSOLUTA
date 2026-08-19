@@ -1,20 +1,24 @@
 // ============================================
 // Módulo: Tarefas do Sistema (To Do List)
 // Coleções raiz (não vinculadas a obra):
-//   tarefasSistema   { texto, projeto, categoria, dependencia, concluida, ordem, importancia,
-//                       dataAgendada, horarioAgendado, updatedAtMs }
+//   tarefasSistema   { texto, projeto, categoria, dependencia, concluida, ordem, importancia, updatedAtMs }
 //   todoProjetos     { nome, importancia }
 //   todoCategorias   { nome, cor, importancia }
+//   tarefasAgenda    { tarefaId, data ('YYYY-MM-DD'), horario ('HH:MM') } — alocações da Agenda,
+//                       desacopladas da tarefa em si: a MESMA tarefa pode ter várias alocações
+//                       (horários/dias diferentes) ao mesmo tempo.
 // Acesso oculto do menu lateral — só quem tem o link direto (todo.html) chega aqui.
 // ============================================
 const Todo = (() => {
   const COL = 'tarefasSistema';
   const COL_PROJ = 'todoProjetos';
   const COL_CAT = 'todoCategorias';
+  const COL_AGENDA = 'tarefasAgenda';
 
   let tarefas = [];
   let projetos = [];   // [{id, nome, importancia}]
   let categorias = []; // [{id, nome, cor, importancia}]
+  let agendaAlocacoes = []; // [{id, tarefaId, data, horario}]
 
   let filtroProjeto = '';
   let filtrosCategoria = new Set(); // multi-select — vazio = todas
@@ -121,10 +125,11 @@ const Todo = (() => {
   }
 
   async function carregarTudo() {
-    [tarefas, projetos, categorias] = await Promise.all([
+    [tarefas, projetos, categorias, agendaAlocacoes] = await Promise.all([
       Database.listarRaiz(COL, 'ordem', 'asc'),
       Database.listarRaiz(COL_PROJ).catch(() => []),
-      Database.listarRaiz(COL_CAT).catch(() => [])
+      Database.listarRaiz(COL_CAT).catch(() => []),
+      Database.listarRaiz(COL_AGENDA).catch(() => [])
     ]);
   }
 
@@ -186,18 +191,10 @@ const Todo = (() => {
     const style = document.createElement('style');
     style.id = 'todo-styles';
     style.textContent = `
+      @import url('https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&display=swap');
       .todo-topo { display:flex; gap:18px; align-items:stretch; flex-wrap:wrap; margin-bottom:16px; }
-      .todo-progresso-card {
-        flex:0 0 auto; min-width:170px; background:var(--cor-dark-900); border-radius:var(--borda-radius-lg);
-        padding:10px 16px; color:#fff; display:flex; flex-direction:column; justify-content:center; gap:6px;
-      }
-      .todo-progresso-topo { display:flex; justify-content:space-between; align-items:baseline; gap:10px; }
-      .todo-progresso-numero { font-size:16px; font-weight:800; letter-spacing:-.3px; }
-      .todo-progresso-numero span { font-size:12px; font-weight:600; color:#bbb; }
-      .todo-progresso-pct { font-size:13px; font-weight:700; color:var(--cor-primaria); }
-      .todo-progresso-track { height:5px; border-radius:999px; background:rgba(255,255,255,.12); overflow:hidden; }
+      .todo-progresso-track { height:4px; border-radius:999px; background:var(--cor-borda-light); overflow:hidden; margin:2px 0 14px; }
       .todo-progresso-fill { height:100%; border-radius:999px; background:linear-gradient(90deg,var(--cor-primaria-dark),var(--cor-primaria)); transition:width .5s cubic-bezier(.4,0,.2,1); }
-      .todo-progresso-legenda { font-size:11px; color:#999; }
 
       .todo-addbar {
         flex:1; min-width:360px; display:flex; flex-direction:column; gap:12px; background:#fff;
@@ -382,30 +379,48 @@ const Todo = (() => {
         .todo-addbar-submit { width:100%; height:38px; }
       }
 
-      /* Agenda */
-      .todo-modal-agenda { max-width:520px; }
-      .agenda-nav { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:14px 18px; border-bottom:1.5px solid var(--cor-borda-light); }
-      .agenda-nav-label { font-size:14px; font-weight:800; text-transform:capitalize; text-align:center; flex:1; }
-      .agenda-nav-btn { width:30px; height:30px; border-radius:8px; border:1.5px solid var(--cor-borda-light); background:#fff; cursor:pointer; font-size:14px; color:var(--cor-texto-secundario); flex-shrink:0; }
-      .agenda-nav-btn:hover { border-color:var(--cor-dark-900); color:var(--cor-texto); }
-      .agenda-nav-hoje { font-size:11px; font-weight:700; padding:5px 10px; border-radius:999px; border:1.5px solid var(--cor-borda-light); background:#fff; cursor:pointer; color:var(--cor-texto-secundario); flex-shrink:0; }
-      .agenda-nav-hoje:hover { border-color:var(--cor-primaria); color:var(--cor-texto); }
-      .agenda-lista { max-height:60vh; overflow-y:auto; padding:6px 0; }
-      .agenda-slot { display:flex; align-items:center; gap:12px; padding:8px 18px; border-bottom:1px solid var(--cor-borda-light); }
-      .agenda-slot:last-child { border-bottom:none; }
-      .agenda-slot-hora { width:52px; flex-shrink:0; font-size:11.5px; font-weight:700; color:var(--cor-texto-muted); line-height:1.3; font-family:var(--font-mono, monospace); }
-      .agenda-slot-corpo { flex:1; min-width:0; display:flex; align-items:center; gap:8px; }
-      .agenda-slot-select {
-        width:100%; border:1.5px dashed var(--cor-borda); border-radius:8px; padding:7px 10px; font-size:13px;
-        font-family:var(--font-principal); color:var(--cor-texto-muted); background:var(--cor-fundo); cursor:pointer; outline:none;
+      /* Agenda — visual de caderno de planejamento */
+      .modal.todo-modal-agenda {
+        max-width:480px; background:#fdf8ec; border-top:none;
+        background-image: linear-gradient(90deg, transparent 38px, #e8c9c9 38px, #e8c9c9 40px, transparent 40px);
       }
-      .agenda-slot-select:focus { border-color:var(--cor-primaria); }
-      .agenda-slot-tarefa { flex:1; min-width:0; display:flex; align-items:center; gap:9px; background:var(--cor-fundo); border-radius:8px; padding:6px 10px; border-left:3px solid var(--cor-primaria); }
-      .agenda-slot-tarefa.concluida { opacity:.5; }
-      .agenda-slot-tarefa.concluida .agenda-slot-texto { text-decoration:line-through; }
-      .agenda-slot-texto { flex:1; min-width:0; font-size:13px; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-      .agenda-slot-x { border:none; background:none; cursor:pointer; color:var(--cor-texto-muted); font-size:13px; padding:2px 5px; flex-shrink:0; }
-      .agenda-slot-x:hover { color:var(--cor-perigo); }
+      .agenda-nav {
+        display:flex; align-items:center; justify-content:space-between; gap:10px; padding:18px 20px 14px 46px;
+      }
+      .agenda-nav-data { display:flex; flex-direction:column; align-items:center; gap:3px; flex:1; }
+      .agenda-nav-label { font-family:'Kalam', cursive; font-size:22px; font-weight:700; color:#3a3226; text-align:center; line-height:1.1; }
+      .agenda-nav-hoje-tag { font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.5px; color:#a3734f; background:#f3e3c9; border-radius:999px; padding:2px 9px; }
+      .agenda-nav-hoje { font-size:11px; font-weight:700; color:#a3734f; background:none; border:none; cursor:pointer; text-decoration:underline; }
+      .agenda-nav-btn {
+        width:28px; height:28px; border-radius:50%; border:1.5px solid #d8c9a8; background:#fff; cursor:pointer;
+        font-size:15px; color:#8a7757; flex-shrink:0; display:flex; align-items:center; justify-content:center;
+      }
+      .agenda-nav-btn:hover { border-color:#a3734f; color:#3a3226; }
+      .agenda-lista { max-height:60vh; overflow-y:auto; padding:2px 20px 20px 46px; }
+      .agenda-linha {
+        display:flex; align-items:flex-start; gap:12px; min-height:34px; padding:5px 0;
+        border-bottom:1px dashed #d8c9a8; position:relative;
+      }
+      .agenda-linha:last-child { border-bottom:none; }
+      .agenda-hora {
+        width:44px; flex-shrink:0; font-family:'Kalam', cursive; font-size:14px; font-weight:700; color:#a3734f;
+        line-height:1.4; margin-top:1px;
+      }
+      .agenda-corpo { flex:1; min-width:0; display:flex; flex-direction:column; gap:5px; }
+      .agenda-select {
+        width:100%; border:none; border-bottom:1px dotted #c9b896; border-radius:0; padding:3px 2px; font-size:13px;
+        font-family:'Kalam', cursive; color:#a3734f; background:transparent; cursor:pointer; outline:none;
+      }
+      .agenda-select:focus { border-bottom-color:#a3734f; }
+      .agenda-tarefa {
+        display:flex; align-items:center; gap:8px; background:#fff8e7; border-radius:6px; padding:5px 9px;
+        box-shadow:0 1px 2px rgba(0,0,0,.06); border-left:3px solid #d4a373;
+      }
+      .agenda-tarefa.concluida { opacity:.5; background:transparent; box-shadow:none; }
+      .agenda-tarefa.concluida .agenda-tarefa-texto { text-decoration:line-through; }
+      .agenda-tarefa-texto { flex:1; min-width:0; font-size:13.5px; font-weight:600; color:#3a3226; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+      .agenda-x { border:none; background:none; cursor:pointer; color:#c9b896; font-size:14px; padding:2px 5px; flex-shrink:0; }
+      .agenda-x:hover { color:#b91c1c; }
     `;
     document.head.appendChild(style);
   }
@@ -477,20 +492,15 @@ const Todo = (() => {
 
     container.innerHTML = `
       <div class="page-header">
-        <div><h2>Tarefas do Sistema</h2><span class="subtitulo">Organização e roadmap do sistema — acesso restrito</span></div>
+        <div>
+          <h2>Tarefas do Sistema</h2>
+          <span class="subtitulo">${concluidas.length}/${totalFiltrado} concluídas (${pct}%) · ${pendentes.length} pendente${pendentes.length === 1 ? '' : 's'}${temFiltroAtivo ? ' filtrado' : ''}</span>
+        </div>
         <button type="button" class="btn btn-secundario" id="todo-abrir-agenda">🗓️ Agendar</button>
       </div>
+      <div class="todo-progresso-track"><div class="todo-progresso-fill" style="width:${pct}%"></div></div>
 
       <div class="todo-topo">
-        <div class="todo-progresso-card">
-          <div class="todo-progresso-topo">
-            <span class="todo-progresso-numero">${concluidas.length}<span>/${totalFiltrado}</span></span>
-            <span class="todo-progresso-pct">${pct}%</span>
-          </div>
-          <div class="todo-progresso-track"><div class="todo-progresso-fill" style="width:${pct}%"></div></div>
-          <div class="todo-progresso-legenda">${pendentes.length} pendente${pendentes.length === 1 ? '' : 's'}${temFiltroAtivo ? ' (filtrado)' : ''}</div>
-        </div>
-
         <form id="form-nova-tarefa" class="todo-addbar">
           <div class="todo-addbar-texto-row">
             <input type="text" id="todo-texto" class="todo-addbar-texto" placeholder="O que precisa ser feito?" required>
@@ -687,26 +697,56 @@ const Todo = (() => {
 
   // ============================================
   // Tarefa por voz — Web Speech API (nativa do navegador/Android).
-  // Qualidade de reconhecimento depende do dispositivo, não do sistema.
+  // Pede permissão de microfone explicitamente antes de iniciar (em
+  // PWA instalado, o navegador às vezes não mostra o prompt automático),
+  // e traduz os erros do reconhecimento em vez de um "não funcionou" mudo.
   // ============================================
   function _wireMicButton() {
     const btn = document.getElementById('todo-mic-btn');
     if (!btn) return;
     const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!window.isSecureContext) {
+      btn.title = 'Reconhecimento de voz só funciona em conexão segura (https).';
+      btn.addEventListener('click', () => Utils.toast('Essa página precisa estar em https para usar o microfone.', 'alerta'));
+      return;
+    }
     if (!SpeechRec) {
       btn.title = 'Reconhecimento de voz não suportado neste navegador.';
       btn.addEventListener('click', () => Utils.toast('Reconhecimento de voz não suportado neste navegador.', 'alerta'));
       return;
     }
-    btn.addEventListener('click', () => {
+    const ERROS = {
+      'not-allowed': 'Permissão de microfone negada. Vá em Configurações do site e libere o microfone.',
+      'service-not-allowed': 'Permissão de microfone negada. Vá em Configurações do site e libere o microfone.',
+      'no-speech': 'Não captei nenhuma fala. Tente falar logo após tocar o microfone.',
+      'audio-capture': 'Nenhum microfone encontrado neste dispositivo.',
+      'network': 'Sem conexão com o serviço de voz. Verifique a internet e tente de novo.',
+      'aborted': null, // cancelamento manual, não é erro
+    };
+    btn.addEventListener('click', async () => {
       if (reconhecimentoVoz) { reconhecimentoVoz.stop(); return; }
+      // Pede a permissão de microfone explicitamente primeiro — em alguns
+      // Android com o site instalado como app, o SpeechRecognition sozinho
+      // não dispara o prompt de permissão corretamente.
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        stream.getTracks().forEach(tr => tr.stop());
+      } catch (permErr) {
+        console.error('Permissão de microfone:', permErr);
+        Utils.toast('Permissão de microfone negada ou indisponível. Verifique as permissões do site.', 'alerta');
+        return;
+      }
       const input = document.getElementById('todo-texto');
       const rec = new SpeechRec();
       rec.lang = 'pt-BR';
       rec.interimResults = false;
       rec.maxAlternatives = 1;
       rec.onstart = () => { btn.classList.add('gravando'); btn.textContent = '🔴'; };
-      rec.onerror = () => { Utils.toast('Não consegui entender. Tente de novo.', 'alerta'); };
+      rec.onerror = (e) => {
+        console.error('SpeechRecognition erro:', e.error);
+        const msg = Object.prototype.hasOwnProperty.call(ERROS, e.error) ? ERROS[e.error] : `Erro no reconhecimento de voz (${e.error}).`;
+        if (msg) Utils.toast(msg, 'alerta');
+      };
       rec.onresult = (e) => {
         const texto = e.results[0][0].transcript;
         const atual = input.value.trim();
@@ -820,9 +860,10 @@ const Todo = (() => {
   }
 
   // ============================================
-  // Agenda do dia — grade de horários (30min, 07:00–18:00).
-  // Clicar num horário vazio escolhe uma tarefa pendente pra
-  // alocar nele; tarefa já alocada mostra ali com check e "×".
+  // Agenda do dia — grade de horários (30min, 07:00–18:00), estilo
+  // caderno de planejamento. Alocações vivem em tarefasAgenda,
+  // desacopladas da tarefa — a MESMA tarefa pode ocupar vários
+  // horários (do mesmo dia ou de dias diferentes) ao mesmo tempo.
   // ============================================
   function _hojeStr(offsetDias) {
     const d = new Date();
@@ -847,15 +888,14 @@ const Todo = (() => {
   function _formatarDataAgenda(dataStr) {
     const [y, m, d] = dataStr.split('-').map(Number);
     const dt = new Date(y, m - 1, d);
-    let label = dt.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit' });
+    let label = dt.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' });
     label = label.charAt(0).toUpperCase() + label.slice(1);
-    if (dataStr === _hojeStr()) label += ' (hoje)';
     return label;
   }
 
   function abrirModalAgenda() {
     if (!agendaDataAtual) agendaDataAtual = _hojeStr();
-    abrirOverlay('<div id="agenda-conteudo"></div>', 'todo-modal-agenda');
+    abrirOverlay('<div id="agenda-conteudo" class="agenda-papel"></div>', 'todo-modal-agenda');
     _renderizarAgenda();
   }
 
@@ -864,39 +904,42 @@ const Todo = (() => {
     if (!el) return;
     const slots = _gerarSlots();
     const dataStr = agendaDataAtual;
+    const ehHoje = dataStr === _hojeStr();
     const pendentes = tarefas.filter(t => !t.concluida)
       .sort((a, b) => (a.importancia ?? 3) - (b.importancia ?? 3) || (a.ordem || 0) - (b.ordem || 0));
 
     el.innerHTML = `
       <div class="agenda-nav">
-        <button type="button" class="agenda-nav-btn" id="agenda-dia-anterior">‹</button>
-        <div>
+        <button type="button" class="agenda-nav-btn" id="agenda-dia-anterior" title="Dia anterior">‹</button>
+        <div class="agenda-nav-data">
           <div class="agenda-nav-label">${esc(_formatarDataAgenda(dataStr))}</div>
+          ${ehHoje ? `<span class="agenda-nav-hoje-tag">hoje</span>` : `<button type="button" class="agenda-nav-hoje" id="agenda-ir-hoje">ir pra hoje</button>`}
         </div>
-        <button type="button" class="agenda-nav-hoje" id="agenda-ir-hoje">Hoje</button>
-        <button type="button" class="agenda-nav-btn" id="agenda-dia-seguinte">›</button>
+        <button type="button" class="agenda-nav-btn" id="agenda-dia-seguinte" title="Dia seguinte">›</button>
       </div>
       <div class="agenda-lista">
         ${slots.map(s => {
-          const t = tarefas.find(x => x.dataAgendada === dataStr && x.horarioAgendado === s.inicio);
+          const alocsSlot = agendaAlocacoes.filter(a => a.data === dataStr && a.horario === s.inicio);
           return `
-            <div class="agenda-slot">
-              <div class="agenda-slot-hora">${s.inicio}<br>${s.fim}</div>
-              <div class="agenda-slot-corpo">
-                ${t ? `
-                  <div class="agenda-slot-tarefa ${t.concluida ? 'concluida' : ''}">
-                    <div class="todo-check ${t.concluida ? 'marcado' : ''}" style="width:18px;height:18px;flex-shrink:0;" data-agenda-check="${t.id}">
-                      <svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="white" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                    </div>
-                    <span class="agenda-slot-texto" title="${esc(t.texto)}">${esc(t.texto)}</span>
-                    <button type="button" class="agenda-slot-x" title="Remover deste horário" data-agenda-remover="${t.id}">×</button>
-                  </div>
-                ` : `
-                  <select class="agenda-slot-select" data-agenda-slot="${s.inicio}">
-                    <option value="">+ Escolher tarefa</option>
-                    ${pendentes.map(p => `<option value="${p.id}">${esc(p.projeto ? `[${p.projeto}] ` : '')}${esc(p.texto)}</option>`).join('')}
-                  </select>
-                `}
+            <div class="agenda-linha">
+              <div class="agenda-hora">${s.inicio}</div>
+              <div class="agenda-corpo">
+                ${alocsSlot.map(a => {
+                  const t = tarefas.find(x => x.id === a.tarefaId);
+                  if (!t) return '';
+                  return `
+                    <div class="agenda-tarefa ${t.concluida ? 'concluida' : ''}">
+                      <div class="todo-check" style="width:17px;height:17px;flex-shrink:0;" data-agenda-check="${t.id}">
+                        <svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="white" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                      </div>
+                      <span class="agenda-tarefa-texto" title="${esc(t.texto)}">${esc(t.texto)}</span>
+                      <button type="button" class="agenda-x" title="Remover deste horário" data-agenda-remover="${a.id}">×</button>
+                    </div>`;
+                }).join('')}
+                <select class="agenda-select" data-agenda-slot="${s.inicio}">
+                  <option value="">${alocsSlot.length ? '+ adicionar outra' : '+ escolher tarefa'}</option>
+                  ${pendentes.map(p => `<option value="${p.id}">${esc(p.projeto ? `[${p.projeto}] ` : '')}${esc(p.texto)}</option>`).join('')}
+                </select>
               </div>
             </div>`;
         }).join('')}
@@ -904,7 +947,8 @@ const Todo = (() => {
 
     document.getElementById('agenda-dia-anterior').onclick = () => { agendaDataAtual = _diaOffset(dataStr, -1); _renderizarAgenda(); };
     document.getElementById('agenda-dia-seguinte').onclick = () => { agendaDataAtual = _diaOffset(dataStr, 1); _renderizarAgenda(); };
-    document.getElementById('agenda-ir-hoje').onclick = () => { agendaDataAtual = _hojeStr(); _renderizarAgenda(); };
+    const btnHoje = document.getElementById('agenda-ir-hoje');
+    if (btnHoje) btnHoje.onclick = () => { agendaDataAtual = _hojeStr(); _renderizarAgenda(); };
     el.querySelectorAll('[data-agenda-slot]').forEach(sel => {
       sel.onchange = async (e) => {
         const taskId = e.target.value;
@@ -917,6 +961,7 @@ const Todo = (() => {
       btn.onclick = async () => { await _removerDoSlot(btn.dataset.agendaRemover); };
     });
     el.querySelectorAll('[data-agenda-check]').forEach(chk => {
+      chk.classList.toggle('marcado', tarefas.find(t => t.id === chk.dataset.agendaCheck)?.concluida);
       chk.onclick = async () => { await alternarStatus(chk.dataset.agendaCheck); _renderizarAgenda(); };
     });
   }
@@ -929,16 +974,14 @@ const Todo = (() => {
   }
 
   async function _atribuirTarefaSlot(taskId, dataStr, slot) {
-    await Database.atualizarRaiz(COL, taskId, { dataAgendada: dataStr, horarioAgendado: slot });
-    const t = tarefas.find(x => x.id === taskId);
-    if (t) { t.dataAgendada = dataStr; t.horarioAgendado = slot; }
+    const id = await Database.criarRaiz(COL_AGENDA, { tarefaId: taskId, data: dataStr, horario: slot });
+    agendaAlocacoes.push({ id, tarefaId: taskId, data: dataStr, horario: slot });
     _renderizarAgenda();
   }
 
-  async function _removerDoSlot(taskId) {
-    await Database.atualizarRaiz(COL, taskId, { dataAgendada: '', horarioAgendado: '' });
-    const t = tarefas.find(x => x.id === taskId);
-    if (t) { t.dataAgendada = ''; t.horarioAgendado = ''; }
+  async function _removerDoSlot(alocacaoId) {
+    await Database.deletarRaiz(COL_AGENDA, alocacaoId);
+    agendaAlocacoes = agendaAlocacoes.filter(a => a.id !== alocacaoId);
     _renderizarAgenda();
   }
 
