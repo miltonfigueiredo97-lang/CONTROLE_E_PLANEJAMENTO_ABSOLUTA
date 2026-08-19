@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.16.0.14',
+  versaoAtual: 'V3.16.0.15',
 
   versoes: [
     {
@@ -9278,6 +9278,16 @@ const NotasVersao = {
       "itens": [
         "Agenda: de 680px pra até 960px de largura (quase a tela toda em monitor comum) e mais altura de sobra pra lista de horários.",
         "Detalhe/Editar tarefa e Nova/Editar categoria: de 480px pra 640px."
+      ]
+    },
+    {
+      "versao": "V3.16.0.15",
+      "data": "2026-08-19",
+      "tipo": "melhoria",
+      "titulo": "Descrição virou obrigatória e a voz agora dita a descrição, não o título",
+      "itens": [
+        "Motivo (Milton): a descrição não devia ser opcional (\"+ adicionar descrição\") — tirado o botão de mostrar/escoltar, o campo Descrição agora aparece sempre, tanto pra criar quanto pra editar, e é obrigatório em ambos (não salva sem preencher).",
+        "O microfone 🎤 mudou de lugar: antes ficava ao lado do Título e ditava nele; agora fica ao lado da Descrição e dita nela — combina mais com o uso real (título é curto e digitado rápido, descrição é o texto mais longo que vale a pena falar)."
       ]
     }
   ],

@@ -248,12 +248,7 @@ const Todo = (() => {
         font-family:var(--font-principal); padding:2px;
       }
       .todo-addbar-texto::placeholder { color:var(--cor-texto-muted); font-weight:500; }
-      .todo-addbar-texto-row { display:flex; align-items:center; gap:8px; }
-      .todo-addbar-desc-toggle {
-        border:none; background:none; padding:2px 0; font-size:11.5px; font-weight:600; color:var(--cor-texto-muted);
-        cursor:pointer; text-align:left; width:fit-content;
-      }
-      .todo-addbar-desc-toggle:hover { color:var(--cor-texto-secundario); }
+      .todo-addbar-descricao-row { display:flex; align-items:flex-start; gap:8px; }
       .todo-addbar-descricao {
         width:100%; border:1.5px solid var(--cor-borda-light); border-radius:8px; padding:8px 10px; font-size:13px;
         font-family:var(--font-principal); color:var(--cor-texto); resize:vertical; outline:none; box-sizing:border-box; min-height:44px;
@@ -261,7 +256,7 @@ const Todo = (() => {
       .todo-addbar-descricao:focus { border-color:var(--cor-primaria); }
       .todo-mic-btn {
         width:30px; height:30px; border-radius:50%; border:1.5px solid var(--cor-borda-light); background:var(--cor-fundo);
-        cursor:pointer; font-size:14px; flex-shrink:0; display:flex; align-items:center; justify-content:center; transition:.15s;
+        cursor:pointer; font-size:14px; flex-shrink:0; display:flex; align-items:center; justify-content:center; transition:.15s; margin-top:2px;
       }
       .todo-mic-btn:hover { border-color:var(--cor-primaria); }
       .todo-mic-btn.gravando { background:#fee2e2; border-color:#dc2626; animation:todo-mic-pulse 1.2s infinite; }
@@ -590,15 +585,12 @@ const Todo = (() => {
 
       <div class="todo-topo">
         <form id="form-nova-tarefa" class="todo-addbar">
-          <div class="todo-addbar-texto-row">
-            <input type="text" id="todo-texto" class="todo-addbar-texto" placeholder="Título da tarefa" required>
-            <button type="button" class="todo-mic-btn" id="todo-mic-btn" title="Adicionar por voz">🎤</button>
+          <input type="text" id="todo-texto" class="todo-addbar-texto" placeholder="Título da tarefa" required>
+          <div class="todo-addbar-descricao-row">
+            <textarea id="todo-descricao" class="todo-addbar-descricao" placeholder="Descrição (obrigatória) — detalhes, contexto, o que for preciso" rows="2" required></textarea>
+            <button type="button" class="todo-mic-btn" id="todo-mic-btn" title="Ditar a descrição por voz">🎤</button>
           </div>
           <div class="todo-mic-erro" id="todo-mic-erro" style="display:none;"></div>
-          <div id="todo-descricao-wrap" style="display:none;">
-            <textarea id="todo-descricao" class="todo-addbar-descricao" placeholder="Descrição (detalhes, contexto, o que for preciso)" rows="2"></textarea>
-          </div>
-          <button type="button" class="todo-addbar-desc-toggle" id="todo-addbar-desc-toggle">+ adicionar descrição</button>
           <div class="todo-addbar-linha2">
             <div class="todo-addbar-campo">
               <label>Projeto</label>
@@ -729,14 +721,8 @@ const Todo = (() => {
       const categoria = document.getElementById('todo-categoria').value;
       const importancia = parseInt(document.getElementById('todo-importancia').value, 10) || 3;
       if (!texto) return;
+      if (!descricao) { Utils.toast('Descrição é obrigatória.', 'alerta'); document.getElementById('todo-descricao').focus(); return; }
       await adicionar(texto, projeto, categoria, importancia, descricao);
-    });
-    document.getElementById('todo-addbar-desc-toggle').addEventListener('click', () => {
-      const wrap = document.getElementById('todo-descricao-wrap');
-      const aberto = wrap.style.display !== 'none';
-      wrap.style.display = aberto ? 'none' : 'block';
-      document.getElementById('todo-addbar-desc-toggle').textContent = aberto ? '+ adicionar descrição' : '− remover descrição';
-      if (!aberto) document.getElementById('todo-descricao').focus();
     });
     document.getElementById('todo-addbar-nova-categoria').addEventListener('click', () => {
       abrirCriarCategoriaRapida();
@@ -850,7 +836,7 @@ const Todo = (() => {
         _mostrarErroVoz(`${permErr.name || 'Erro'} ao pedir microfone: ${permErr.message || permErr}`);
         return;
       }
-      const input = document.getElementById('todo-texto');
+      const input = document.getElementById('todo-descricao');
       const rec = new SpeechRec();
       rec.lang = 'pt-BR';
       rec.interimResults = false;
@@ -1416,7 +1402,7 @@ const Todo = (() => {
           <input type="text" id="ed-texto" class="form-control" value="${esc(t.texto)}">
         </div>
         <div class="todo-form-grupo">
-          <label>Descrição</label>
+          <label>Descrição <span style="color:var(--cor-perigo);">*</span></label>
           <textarea id="ed-descricao" class="form-control" rows="3" placeholder="Detalhes, contexto, o que for preciso...">${esc(t.descricao || '')}</textarea>
         </div>
         <div class="todo-form-grupo">
@@ -1537,6 +1523,7 @@ const Todo = (() => {
       const texto = document.getElementById('ed-texto').value.trim();
       if (!texto) { Utils.toast('O nome da tarefa não pode ficar em branco.', 'alerta'); return; }
       const descricao = document.getElementById('ed-descricao').value.trim();
+      if (!descricao) { Utils.toast('Descrição é obrigatória.', 'alerta'); document.getElementById('ed-descricao').focus(); return; }
       const projeto = document.getElementById('ed-projeto').value.trim();
       const categoria = document.getElementById('ed-categoria').value;
       const dependencia = document.getElementById('ed-dependencia').value.trim();
