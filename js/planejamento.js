@@ -4033,7 +4033,12 @@ const Planejamento = (() => {
   }
   function _finalizarMatchGrupo(grupoNome,nomeTarefa){
     const mPav=grupoNome.match(/^(\d+)[°º]\s*Pavimento$/i);
-    const mFinal=String(nomeTarefa).match(/Final\s*0*(\d+)\s*$/i);
+    // "Final NN" e "ap. NN"/"apto NN"/"apartamento NN" são a MESMA coisa pra
+    // efeito de Subgrupo (regra do Milton) — trades diferentes descrevem a
+    // mesma unidade/torre de formas diferentes, mas o número identifica a
+    // mesma coisa. Ex: "Concretagem Laje Piso: 5° Pavimento - ap. 01" conta
+    // igual "Rede Frigorígena: 5° Pavimento - Final 01".
+    const mFinal=String(nomeTarefa).match(/(?:Final|ap\.?|apto\.?|apartamento)\s*0*(\d+)\s*$/i);
     const subgrupo=(mPav&&mFinal)?(parseInt(mPav[1])*10+parseInt(mFinal[1])):null;
     return{grupo:grupoNome,subgrupo};
   }
@@ -4221,7 +4226,7 @@ const Planejamento = (() => {
         // então some (mais seguro que manter um número que não corresponde
         // mais ao grupo escolhido).
         const mPav=novoValor.match(/^(\d+)[°º]\s*Pavimento$/i);
-        const mFinal=String(p.nome).match(/Final\s*0*(\d+)\s*$/i);
+        const mFinal=String(p.nome).match(/(?:Final|ap\.?|apto\.?|apartamento)\s*0*(\d+)\s*$/i);
         p.subgrupoProposto=(mPav&&mFinal)?(parseInt(mPav[1])*10+parseInt(mFinal[1])):null;
         n++;
       }

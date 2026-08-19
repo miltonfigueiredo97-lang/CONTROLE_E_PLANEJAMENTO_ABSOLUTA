@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.12',
+  versaoAtual: 'V3.19.13',
 
   versoes: [
     {
@@ -9555,6 +9555,16 @@ const NotasVersao = {
       "itens": [
         "Bug real (Milton pegou): cadastrou o pavimento \"Elevadores\" (plural) na Estrutura da Obra, mas as tarefas dizem \"Elevador 01\", \"Elevador 1\" etc (singular) — palavra maior (plural) nunca é substring da menor (singular), então nunca batia. Cadastrar não bastava, o Gerar Grupos continuava sem achar.",
         "Corrigido: ao comparar, agora também testa o pavimento sem o \"s\" ou \"es\" do final (regra comum de plural em PT-BR) — \"Elevadores\" passa a reconhecer \"Elevador\" dentro do nome da tarefa. Vale pra qualquer pavimento novo cadastrado, não só Elevadores."
+      ]
+    },
+    {
+      "versao": "V3.19.13",
+      "data": "2026-08-19",
+      "tipo": "melhoria",
+      "titulo": "Subgrupo passa a entender \"ap. NN\" como a mesma coisa que \"Final NN\" (regra do Milton)",
+      "itens": [
+        "Confirmado com dados reais: \"Concretagem Laje Piso: 5° Pavimento - ap. 01\" e \"Rede Frigorígena: 5° Pavimento - Final 01\" são a mesma unidade/torre — só trades diferentes descrevendo do jeito próprio deles (\"ap.\" vs \"Final\").",
+        "Subgrupo agora reconhece Final NN, ap. NN, apto NN e apartamento NN como equivalentes — todas geram o mesmo cálculo (andar×10+NN). Não muda nada em quem já tinha \"Final\", só passa a calcular pra quem tinha \"ap.\" e antes ficava sem Subgrupo."
       ]
     }
   ],
