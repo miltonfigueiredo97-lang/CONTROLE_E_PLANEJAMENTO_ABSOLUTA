@@ -402,7 +402,7 @@ const Todo = (() => {
       .todo-vazio .icone { font-size:34px; margin-bottom:10px; }
 
       /* Modal de edição / gerenciamento */
-      .todo-modal { max-width:480px; }
+      .todo-modal { max-width:640px; }
       .todo-form-grupo { margin-bottom:14px; }
       .todo-form-grupo label { display:block; font-size:12px; font-weight:700; color:var(--cor-texto-secundario); text-transform:uppercase; letter-spacing:.4px; margin-bottom:6px; }
       .todo-swatch-grid { display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
@@ -438,7 +438,7 @@ const Todo = (() => {
       }
 
       /* Agenda — visual limpo, mesma linguagem do resto do app */
-      .modal.todo-modal-agenda { max-width:680px; }
+      .modal.todo-modal-agenda { max-width:min(960px, 94vw); max-height:92vh; }
       .agenda-nav {
         display:flex; align-items:center; justify-content:space-between; gap:10px; padding:18px 22px 14px;
         border-bottom:1.5px solid var(--cor-borda-light);
@@ -452,7 +452,7 @@ const Todo = (() => {
         font-size:16px; color:var(--cor-texto-secundario); flex-shrink:0; display:flex; align-items:center; justify-content:center;
       }
       .agenda-nav-btn:hover { border-color:var(--cor-dark-900); color:var(--cor-texto); }
-      .agenda-lista { max-height:65vh; overflow-y:auto; padding:6px 10px; }
+      .agenda-lista { max-height:76vh; overflow-y:auto; padding:6px 10px; }
       .agenda-linha {
         display:flex; align-items:flex-start; gap:14px; min-height:36px; padding:8px 10px;
         border-bottom:1px solid var(--cor-borda-light);

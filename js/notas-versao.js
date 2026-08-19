@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.16.0.13',
+  versaoAtual: 'V3.16.0.14',
 
   versoes: [
     {
@@ -9268,6 +9268,16 @@ const NotasVersao = {
         "Adicionada uma migração automática que roda ao abrir o módulo: toda tarefa sem descrição, com texto longo (>40 caracteres) e que segue o padrão \"Ação: detalhes\" ou \"Ação — detalhes\" (é como quase toda tarefa já foi escrita), divide sozinha — título fica com a ação, descrição fica com o resto.",
         "Guarda de segurança: se o que sobra depois do separador for muito curto (uma palavra só, tipo \"Esgoto\" em \"Levantamento de material hidráulico por apartamento: Esgoto\"), NÃO divide — mantém tudo junto no título, porque nesse caso a palavra depois dos dois pontos é o identificador da tarefa, não uma descrição de verdade.",
         "Roda direto no Firestore (não é só efeito visual) — migra pra todo mundo que usa o sistema, não só em quem abriu primeiro."
+      ]
+    },
+    {
+      "versao": "V3.16.0.14",
+      "data": "2026-08-19",
+      "tipo": "melhoria",
+      "titulo": "Pop-ups do Tarefas do Sistema bem maiores",
+      "itens": [
+        "Agenda: de 680px pra até 960px de largura (quase a tela toda em monitor comum) e mais altura de sobra pra lista de horários.",
+        "Detalhe/Editar tarefa e Nova/Editar categoria: de 480px pra 640px."
       ]
     }
   ],
