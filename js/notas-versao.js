@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.5',
+  versaoAtual: 'V3.19.6',
 
   versoes: [
     {
@@ -9401,6 +9401,17 @@ const NotasVersao = {
         "A versão anterior escondia peças de outras concretagens — não era isso. O mapa (Planejamento e Acompanhamento) volta a mostrar TODAS as peças, de qualquer concretagem, com a cor real de cada uma (verde/parcial/pendente).",
         "O que muda por padrão agora é só o NÚMERO no marcador: mostra o número só das peças da concretagem que você tem selecionada/em foco no momento — sem misturar 1, 2, 3, 4 todos juntos e confundir qual é qual.",
         "Novo botão \\\"🔢 Mostrar números de todas\\\" — clique pra ligar/desligar, exatamente como pedido: opcional, não travado."
+      ]
+    },
+    {
+      "versao": "V3.19.6",
+      "data": "2026-08-19",
+      "tipo": "correcao",
+      "titulo": "Controle de Estacas: botão de números não fazia sentido no Planejamento — removido de lá",
+      "itens": [
+        "No Planejamento, o botão \\\"Mostrar números de todas\\\" não tinha efeito na maior parte do tempo: sem nenhuma concretagem em foco (📌), o mapa já mostrava todos os números de qualquer forma — o botão parecia travado/inútil.",
+        "Removido o botão do Planejamento. Agora o próprio foco (clicar num card de concretagem pra selecioná-la) já funciona como o seletor: sem foco, mostra o número de todas; com uma concretagem em foco, mostra só o número dela. Sem clique extra, sem botão redundante.",
+        "O botão \\\"🔢 Mostrar números de todas\\\" continua igual no Acompanhamento, onde faz sentido — ali sempre tem uma concretagem selecionada (é obrigatório), então o botão é o jeito de escolher entre ver só a dela ou ver todas juntas."
       ]
     }
   ],

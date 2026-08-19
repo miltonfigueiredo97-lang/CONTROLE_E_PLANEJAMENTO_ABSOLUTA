@@ -558,12 +558,11 @@ const ControleEstacas = (() => {
             <button class="aba-btn ${view === 'estacas' ? 'ativo' : ''}" onclick="CE.onTrocarView('estacas')">⚫ Estacas</button>
             <button class="aba-btn ${view === 'fundacoes' ? 'ativo' : ''}" onclick="CE.onTrocarView('fundacoes')">⬛ Fundações</button>
           </div>
-          <span class="text-sm text-muted">nº no marcador = concretagem já atribuída · sem número = ainda não planejada</span>
+          <span class="text-sm text-muted">nº no marcador = concretagem já atribuída · sem número = ainda não planejada · com uma concretagem em foco (📌), mostra só o número dela</span>
         </div>
         ${_legendaGrupos()}
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0;align-items:center;">
           <button class="btn btn-secundario btn-sm" onclick="CE.girarPrancha()">⟳ Girar 90°</button>
-          <button class="btn ${mostrarTodosNumeros ? 'btn-primario' : 'btn-secundario'} btn-sm" onclick="CE.toggleMostrarTodosNumeros()">🔢 ${mostrarTodosNumeros ? 'Mostrando números de todas' : 'Mostrar números de todas'}</button>
           <span style="display:flex;gap:2px;align-items:center;margin-left:auto;">
             <button class="btn btn-secundario btn-sm" onclick="CE.zoomAjustar(-0.25)">−</button>
             <span class="text-sm text-muted ce-zoom-label" style="width:48px;text-align:center;">${Math.round(zoomE * 100)}%</span>
@@ -738,7 +737,7 @@ const ControleEstacas = (() => {
     const reporScroll = _preservarScroll('#ce-plan-mapa-host');
     host.innerHTML = EC.stageHTML(pr, imagem, lista, statusMarcador, { interativo: true, zoom: zoomE, stageId: 'ce-plan-stage', maxHeight: _alturaMapa() });
     reporScroll();
-    _desenharNumerosConcretagem('ce-plan-stage', lista, planFocoConcretagemId);
+    _desenharNumerosConcretagem('ce-plan-stage', lista, planFocoConcretagemId, false);
     _ligarEventosToggle('ce-plan-stage', lista, m => planFocoConcretagemId ? _atribuirRapidoFoco(m) : abrirAtribuirConcretagem(m));
   }
 
@@ -747,7 +746,7 @@ const ControleEstacas = (() => {
   // não poluir com número de todo mundo; "Mostrar números de todas" (botão)
   // exibe todas de uma vez. Sem nenhuma concretagem atual definida, mostra
   // todas (não tem o que restringir).
-  function _desenharNumerosConcretagem(stageId, lista, concretagemAtualId) {
+  function _desenharNumerosConcretagem(stageId, lista, concretagemAtualId, forcarTodas) {
     const stage = document.getElementById(stageId);
     if (!stage) return;
     const cont = document.createElement('div');
@@ -755,7 +754,7 @@ const ControleEstacas = (() => {
     lista.forEach(m => {
       const c = _concretagemDaPeca(m.pecaId);
       if (!c) return;
-      if (!mostrarTodosNumeros && concretagemAtualId && c.id !== concretagemAtualId) return;
+      if (!forcarTodas && concretagemAtualId && c.id !== concretagemAtualId) return;
       const centro = m.tipo === 'circulo' ? { x: m.cx, y: m.cy } : _centroide(m.pontos);
       if (!centro) return;
       const bolha = document.createElement('div');
@@ -1003,7 +1002,7 @@ const ControleEstacas = (() => {
     const reporScroll = _preservarScroll('#ce-acomp-mapa-host');
     host.innerHTML = EC.stageHTML(pr, imagem, lista, statusMarcador, { interativo: true, zoom: zoomE, stageId: 'ce-acomp-stage', maxHeight: _alturaMapa() });
     reporScroll();
-    _desenharNumerosConcretagem('ce-acomp-stage', lista, acompConcretagemId);
+    _desenharNumerosConcretagem('ce-acomp-stage', lista, acompConcretagemId, mostrarTodosNumeros);
     // Anel amarelo só nas peças planejadas AINDA PENDENTES desta concretagem
     // — uma vez 100% (verde sólido), o anel some.
     _desenharDestaques('ce-acomp-stage', lista.filter(m => idsPlanejados.has(m.pecaId)), m => {
