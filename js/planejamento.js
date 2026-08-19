@@ -4025,6 +4025,7 @@ const Planejamento = (() => {
   }
 
   let _gerarGruposLista=null; // estado vivo da prévia (permite editar e propagar)
+  let _gerarGruposPavimentos=null; // lista fechada de nomes de pavimento (Estrutura da Obra) — só se escolhe daqui, nunca digita livre
 
   async function _abrirGerarGrupos(){
     await _carregarEstruturaObra();
@@ -4042,6 +4043,11 @@ const Planejamento = (() => {
       return;
     }
     const mudam=propostas.filter(p=>p.tarefa.grupo!==p.match.grupo||(p.tarefa.subgrupo||null)!==(p.match.subgrupo||null));
+    // Lista fechada de pavimentos cadastrados — o valor proposto só pode ser
+    // TROCADO por um desses, nunca digitado livre. Texto livre geraria grupo
+    // parecido mas diferente (typo, acento, maiúscula) e criaria "mais um"
+    // em vez de casar com o que já existe na Estrutura da Obra.
+    _gerarGruposPavimentos=[...new Set((est.torres||[]).flatMap(t=>(t.pavimentos||[]).map(p=>p.nome)))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
     _gerarGruposLista=mudam.map(p=>({
       tarefaId:p.tarefa.id,nome:p.tarefa.nome,
       grupoAntigo:p.tarefa.grupo||'',subgrupoAntigo:p.tarefa.subgrupo||null,
@@ -4057,7 +4063,7 @@ const Planejamento = (() => {
           <div style="font-weight:700;color:var(--cor-primaria);">⚡ Gerar Grupos — Prévia</div>
           <span style="cursor:pointer;color:#888;font-size:1.1rem;" onclick="document.getElementById('gerargrupos-modal').remove()">✕</span>
         </div>
-        <div style="font-size:.72rem;color:#888;margin-bottom:10px;">${propostas.length} de ${folhas.length} tarefas reconhecidas pelos pavimentos cadastrados na Estrutura da Obra. <b>${mudam.length}</b> vão realmente mudar Grupo (as demais já estão iguais). Pode editar o valor proposto (coluna da direita) — muda esse E todos os outros que tinham a mesma proposta.</div>
+        <div style="font-size:.72rem;color:#888;margin-bottom:10px;">${propostas.length} de ${folhas.length} tarefas reconhecidas pelos pavimentos cadastrados na Estrutura da Obra. <b>${mudam.length}</b> vão realmente mudar Grupo (as demais já estão iguais). Pra corrigir, escolhe outro pavimento já cadastrado na lista (coluna da direita) — muda esse E todos os outros que tinham a mesma proposta.</div>
         <div id="gerargrupos-lista" style="display:flex;flex-direction:column;gap:2px;max-height:50vh;overflow-y:auto;border:1px solid #292929;border-radius:6px;padding:6px;"></div>
         <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px;">
           <button class="btn btn-secundario btn-sm" onclick="document.getElementById('gerargrupos-modal').remove()">Cancelar</button>
@@ -4070,41 +4076,39 @@ const Planejamento = (() => {
 
   function _renderGerarGruposLista(){
     const el=document.getElementById('gerargrupos-lista');if(!el)return;
-    // Layout em 2 linhas (não um flex-row único) — numa tela estreita (celular)
-    // um flex-row com checkbox+nome+valor antigo+seta+input de 150px+subgrupo
-    // não cabe: os elementos se espremem e o toque fica ambíguo (parece que
-    // clica no checkbox quando na verdade não deu pra alcançar o input).
-    // Aqui a 1ª linha é só checkbox+nome (espaço garantido), a 2ª linha é o
-    // "de → para" sozinha, com o input podendo quebrar/crescer à vontade.
-    el.innerHTML=_gerarGruposLista.map((p,i)=>`
-      <div style="display:flex;flex-direction:column;gap:5px;padding:8px 4px;border-bottom:1px solid #232323;">
-        <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;">
-          <input type="checkbox" data-idx="${i}" ${p.marcado?'checked':''} onchange="Planejamento._gerarGruposToggle(${i},this.checked)" style="margin-top:2px;flex-shrink:0;width:16px;height:16px;">
-          <span style="flex:1;color:#ddd;font-size:.78rem;line-height:1.3;">${_esc(p.nome)}</span>
-        </label>
-        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding-left:24px;">
-          <span style="color:#666;font-size:.72rem;white-space:nowrap;">${_esc(p.grupoAntigo||'—')}${p.subgrupoAntigo?' / '+p.subgrupoAntigo:''}</span>
-          <span style="color:#555;flex-shrink:0;">→</span>
-          <input value="${_esc(p.grupoProposto)}" onchange="Planejamento._gerarGruposEditarValor(${i},this.value)"
-            style="flex:1;min-width:130px;background:#111;border:1px solid #444;border-radius:5px;color:var(--cor-primaria);font-weight:600;font-size:.8rem;padding:6px 8px;text-transform:uppercase;">
-          ${p.subgrupoProposto?`<span style="color:var(--cor-primaria);font-size:.72rem;flex-shrink:0;">/ ${p.subgrupoProposto}</span>`:''}
-        </div>
-      </div>`).join('');
+    const opcoes=_gerarGruposPavimentos||[];
+    el.innerHTML=_gerarGruposLista.map((p,i)=>{
+      // Se o valor atual (por algum motivo) não estiver na lista cadastrada,
+      // inclui ele mesmo como opção extra — nunca perde o que já tinha.
+      const lista=opcoes.includes(p.grupoProposto)?opcoes:[p.grupoProposto,...opcoes];
+      return `
+      <div style="display:flex;align-items:center;gap:8px;font-size:.76rem;padding:4px 4px;border-bottom:1px solid #232323;">
+        <input type="checkbox" data-idx="${i}" ${p.marcado?'checked':''} onchange="Planejamento._gerarGruposToggle(${i},this.checked)">
+        <span style="flex:1;color:#ddd;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${_esc(p.nome)}</span>
+        <span style="color:#666;white-space:nowrap;">${_esc(p.grupoAntigo||'—')}${p.subgrupoAntigo?' / '+p.subgrupoAntigo:''}</span>
+        <span style="color:#555;">→</span>
+        <select onchange="Planejamento._gerarGruposEditarValor(${i},this.value)"
+          style="width:150px;background:#111;border:1px solid #333;border-radius:4px;color:var(--cor-primaria);font-weight:600;font-size:.76rem;padding:3px 4px;">
+          ${lista.map(nomePav=>`<option value="${_esc(nomePav)}" ${nomePav===p.grupoProposto?'selected':''}>${_esc(nomePav)}</option>`).join('')}
+        </select>
+        ${p.subgrupoProposto?`<span style="color:var(--cor-primaria);font-size:.72rem;">/ ${p.subgrupoProposto}</span>`:''}
+      </div>`;
+    }).join('');
   }
 
   function _gerarGruposToggle(idx,checked){
     if(_gerarGruposLista&&_gerarGruposLista[idx])_gerarGruposLista[idx].marcado=checked;
   }
 
-  // Editar o valor proposto de UMA linha propaga pra TODAS as linhas que
-  // tinham a mesma proposta antes da edição — evita ter que corrigir uma
-  // por uma quando o mesmo engano de match se repete várias vezes na lista
-  // (ex: "Reservatório" devia ter sido "SS2" em todas as linhas daquele bloco).
+  // Escolher outro pavimento (dropdown, sempre um valor já cadastrado) numa
+  // linha propaga pra TODAS as linhas que tinham a mesma proposta antes da
+  // troca — evita ter que corrigir uma por uma quando o mesmo engano de
+  // match se repete várias vezes na lista (ex: "Reservatório" devia ter
+  // sido "SS2" em todas as linhas daquele bloco).
   function _gerarGruposEditarValor(idx,novoValor){
     if(!_gerarGruposLista||!_gerarGruposLista[idx])return;
     const valorAntigo=_gerarGruposLista[idx].grupoProposto;
-    novoValor=(novoValor||'').trim();
-    if(!novoValor)return;
+    if(!novoValor||novoValor===valorAntigo)return;
     let n=0;
     for(const p of _gerarGruposLista){
       if(p.grupoProposto===valorAntigo){

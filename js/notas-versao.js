@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.7.2',
+  versaoAtual: 'V3.19.7.3',
 
   versoes: [
     {
@@ -9470,6 +9470,16 @@ const NotasVersao = {
       "itens": [
         "Cada linha tinha checkbox + nome + valor antigo + seta + input de editar (150px fixo) + subgrupo tudo numa linha só, sem quebra — numa tela estreita isso espreme tudo e o toque fica ambíguo (difícil saber se vai marcar o checkbox ou editar o valor).",
         "Reorganizado em 2 linhas por tarefa: checkbox+nome numa (clicar em qualquer parte do nome já marca/desmarca — não precisa mais acertar o quadradinho pequeno), e \"de → para\" numa linha própria embaixo, com o campo de editar podendo crescer/quebrar à vontade."
+      ]
+    },
+    {
+      "versao": "V3.19.7.3",
+      "data": "2026-08-19",
+      "tipo": "correcao",
+      "titulo": "Gerar Grupos: volta pro layout de 1 linha (Milton preferiu) + valor proposto agora é lista fechada, não texto livre",
+      "itens": [
+        "Layout de 2 linhas da versão anterior piorou a leitura (o problema não era falta de espaço — Milton usa desktop). Voltou pro layout compacto de 1 linha por tarefa.",
+        "Mudança de verdade: o campo de corrigir o valor proposto era um texto livre — dava pra digitar qualquer coisa (typo, acento diferente, maiúscula/minúscula) e criar um Grupo parecido mas diferente do pavimento que já existe na Estrutura da Obra, em vez de casar com ele. Agora é uma lista (dropdown) com só os pavimentos já cadastrados — só dá pra escolher um que já existe, nunca inventar um novo ali."
       ]
     }
   ],
