@@ -201,3 +201,11 @@ th.db-subtotal-col { font-size: 0.68rem; line-height: 1.15; }
 
 /* Sub-legenda dos cards de métrica (padrão do Controle de Terraplanagem) */
 .db-metrica-sub { font-size: 0.62rem; color: var(--cor-texto-muted); margin-top: 3px; line-height: 1.35; }
+
+/* ---- Frentes v2: filtros + linhas de categoria + total do detalhe ---- */
+.db-fr-filtros { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; align-items: center; }
+.db-fr-filtro { max-width: 175px; font-size: 0.74rem; padding: 4px 8px; }
+.db-fr-catrow td { background: var(--cor-primaria-ultra-light); border-bottom: 1px solid var(--cor-borda-light); }
+.db-fr-catnome { font-weight: 800; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.4px; color: var(--cor-primaria-dark); padding: 5px 12px !important; }
+.db-fr-subnome { padding-left: 22px !important; font-weight: 500; }
+.db-fr-det-total { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 10px; padding: 10px 12px; background: var(--cor-primaria-ultra-light); border-radius: 8px; }
