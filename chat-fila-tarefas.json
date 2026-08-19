@@ -1,0 +1,10 @@
+[
+  {
+    "id": "chat_controle_alvenaria_estrutural_v1",
+    "texto": "Controle de Alvenaria Estrutural — trazer a planilha pra dentro do sistema",
+    "descricao": "Hoje isso é feito numa planilha separada. Levar pro módulo Controle, seguindo essa lógica: 1) Cadastrar as paredes de um projeto/obra (ex: projeto do Marcos). 2) Em cada parede, importar quais blocos ela tem — o sistema calcula o metro quadrado (m²) daquela parede automaticamente a partir dos blocos importados. 3) Todo dia, lançar no projeto quanto por cento (%) foi executado em cada parede naquele dia. A partir desses lançamentos diários, o sistema precisa calcular: volume diário de produção de alvenaria estrutural, volume total produzido, previsão de dias restantes, dias efetivamente trabalhados, m² por pedreiro, m² por dia, e previsão de data final da obra baseada no m² total da alvenaria estrutural. Objetivo: substituir de vez a planilha manual por essa tela dentro do sistema.",
+    "projeto": "Sistema Absoluta",
+    "categoria": "Controle",
+    "checklist": []
+  }
+]

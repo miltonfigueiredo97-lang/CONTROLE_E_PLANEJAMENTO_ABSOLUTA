@@ -33,7 +33,7 @@ const Todo = (() => {
   let agendaFiltroPicker = ''; // texto de busca dentro do seletor de tarefa da Agenda
   let agendaPickerProjeto = null; // projeto escolhido na navegação hierárquica do seletor (null = nível raiz)
   let agendaPickerCategoria = null; // categoria escolhida dentro do projeto ('__todas__'/'__sem__'/nome, ou null)
-  let reconhecimentoVoz = null; // instância ativa do SpeechRecognition, ou null se parado
+  let agendaEsconderPassadas = localStorage.getItem('agenda_esconder_passadas') === '1'; // esconder horários já passados (só quando o dia exibido é hoje)
 
   const PALETA_PROJETO = ['#2563eb', '#16a34a', '#7c3aed', '#d97706', '#0891b2', '#dc2626', '#db2777'];
   const SWATCHES = [
@@ -126,7 +126,78 @@ const Todo = (() => {
     await seedInicial();
     await reconciliarProjetosAusentes();
     await _migrarTitulosAntigos();
+    await _processarFilaChat();
     renderizar();
+  }
+
+  // ============================================
+  // Fila de tarefas via chat — Milton fala a tarefa (título, descrição,
+  // categoria, checklist) pro Claude no chat; o Claude escreve num JSON
+  // estático no repositório (chat-fila-tarefas.json) e dá push. Na
+  // próxima vez que este módulo abre, cada item da fila é inserido no
+  // Firestore automaticamente. Cada item tem um "id" próprio e é gravado
+  // com esse MESMO id como customId da tarefa — assim, se a fila for
+  // recarregada de novo (ou nunca for limpa), o item já existente é
+  // ignorado (dedupe por id), sem duplicar. Não precisa de nenhuma ação
+  // manual pra "limpar" a fila depois de processada.
+  // ============================================
+  function _corParaCategoriaFila(nome) {
+    let hash = 0;
+    for (let i = 0; i < nome.length; i++) hash = (hash * 31 + nome.charCodeAt(i)) >>> 0;
+    return SWATCHES[hash % SWATCHES.length];
+  }
+
+  async function _processarFilaChat() {
+    let fila;
+    try {
+      const resp = await fetch('/chat-fila-tarefas.json', { cache: 'no-store' });
+      if (!resp.ok) return;
+      fila = await resp.json();
+    } catch (e) { return; } // arquivo não existe ainda ou erro de rede — silencioso, não é crítico
+
+    if (!Array.isArray(fila) || fila.length === 0) return;
+
+    let novasCriadas = 0;
+    for (const item of fila) {
+      if (!item.id || !item.texto) continue;
+      if (tarefas.some(t => t.id === item.id)) continue; // já processado antes, ignora
+
+      let categoriaFinal = '';
+      if (item.categoria) {
+        const jaExiste = categorias.find(c => c.nome.toLowerCase() === item.categoria.toLowerCase());
+        if (jaExiste) {
+          categoriaFinal = jaExiste.nome;
+        } else {
+          const cor = _corParaCategoriaFila(item.categoria);
+          const idCat = await Database.criarRaiz(COL_CAT, { nome: item.categoria, cor, importancia: 3 });
+          categorias.push({ id: idCat, nome: item.categoria, cor, importancia: 3 });
+          categoriaFinal = item.categoria;
+        }
+      }
+      if (item.projeto && !projetos.some(p => p.nome === item.projeto)) {
+        const idProj = await Database.criarRaiz(COL_PROJ, { nome: item.projeto, importancia: 3 });
+        projetos.push({ id: idProj, nome: item.projeto, importancia: 3 });
+      }
+
+      const maxOrdem = tarefas.reduce((m, t) => Math.max(m, t.ordem || 0), 0);
+      const dados = {
+        texto: item.texto,
+        descricao: item.descricao || '',
+        projeto: item.projeto || '',
+        categoria: categoriaFinal,
+        dependencia: '',
+        concluida: false,
+        ordem: maxOrdem + 1,
+        importancia: item.importancia || 3,
+        checklist: item.checklist || [],
+      };
+      await Database.criarRaiz(COL, dados, item.id);
+      tarefas.push({ id: item.id, ...dados });
+      novasCriadas++;
+    }
+    if (novasCriadas > 0) {
+      Utils.toast(`${novasCriadas} tarefa${novasCriadas === 1 ? '' : 's'} do chat adicionada${novasCriadas === 1 ? '' : 's'}.`, 'sucesso');
+    }
   }
 
   // ============================================
@@ -248,26 +319,29 @@ const Todo = (() => {
         font-family:var(--font-principal); padding:2px;
       }
       .todo-addbar-texto::placeholder { color:var(--cor-texto-muted); font-weight:500; }
-      .todo-addbar-descricao-row { display:flex; align-items:flex-start; gap:8px; }
       .todo-addbar-descricao {
         width:100%; border:1.5px solid var(--cor-borda-light); border-radius:8px; padding:8px 10px; font-size:13px;
         font-family:var(--font-principal); color:var(--cor-texto); resize:vertical; outline:none; box-sizing:border-box; min-height:44px;
       }
       .todo-addbar-descricao:focus { border-color:var(--cor-primaria); }
-      .todo-mic-btn {
-        width:30px; height:30px; border-radius:50%; border:1.5px solid var(--cor-borda-light); background:var(--cor-fundo);
-        cursor:pointer; font-size:14px; flex-shrink:0; display:flex; align-items:center; justify-content:center; transition:.15s; margin-top:2px;
-      }
-      .todo-mic-btn:hover { border-color:var(--cor-primaria); }
-      .todo-mic-btn.gravando { background:#fee2e2; border-color:#dc2626; animation:todo-mic-pulse 1.2s infinite; }
-      @keyframes todo-mic-pulse { 0%{box-shadow:0 0 0 0 rgba(220,38,38,.35);} 70%{box-shadow:0 0 0 9px rgba(220,38,38,0);} 100%{box-shadow:0 0 0 0 rgba(220,38,38,0);} }
-      .todo-mic-erro {
-        margin-top:2px; padding:8px 10px; border-radius:8px; font-size:12px; font-weight:600; line-height:1.4; word-break:break-word;
-      }
-      .todo-mic-erro.status-info { background:#eff6ff; border:1.5px solid #93c5fd; color:#1e40af; }
-      .todo-mic-erro.status-erro { background:#fee2e2; border:1.5px solid #fca5a5; color:#991b1b; }
-      .todo-mic-erro code { background:rgba(0,0,0,.06); padding:1px 5px; border-radius:4px; font-size:11px; }
       .todo-addbar-linha2 { display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap; border-top:1.5px solid var(--cor-borda-light); padding-top:12px; }
+      .todo-addbar-checklist { border-top:1.5px solid var(--cor-borda-light); padding-top:10px; margin-top:2px; }
+      .todo-addbar-checklist-titulo { font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.4px; color:var(--cor-texto-muted); margin-bottom:7px; }
+      .todo-checklist-item-row { display:flex; align-items:center; gap:7px; margin-bottom:6px; }
+      .todo-checklist-item-check { width:15px; height:15px; flex-shrink:0; cursor:pointer; accent-color:var(--cor-primaria); }
+      .todo-checklist-item-input {
+        flex:1; border:1.5px solid var(--cor-borda-light); border-radius:6px; padding:6px 9px; font-size:12.5px;
+        font-family:var(--font-principal); outline:none; color:var(--cor-texto);
+      }
+      .todo-checklist-item-input:focus { border-color:var(--cor-primaria); }
+      .todo-checklist-item-remover { border:none; background:none; cursor:pointer; color:var(--cor-texto-muted); font-size:15px; padding:2px 5px; flex-shrink:0; }
+      .todo-checklist-item-remover:hover { color:var(--cor-perigo); }
+      .todo-checklist-add-btn { border:none; background:none; font-size:11.5px; font-weight:600; color:var(--cor-texto-muted); cursor:pointer; padding:2px 0; }
+      .todo-checklist-add-btn:hover { color:var(--cor-texto-secundario); }
+      .todo-checklist-badge {
+        font-size:10.5px; font-weight:700; background:var(--cor-neutro-bg); color:#4b5563; border-radius:999px;
+        padding:2px 8px; display:inline-flex; align-items:center; gap:4px;
+      }
       .todo-addbar-campo { display:flex; flex-direction:column; gap:5px; flex:1; min-width:110px; }
       .todo-addbar-campo label { font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.4px; color:var(--cor-texto-muted); }
       .todo-addbar-campo input, .todo-addbar-campo select {
@@ -367,6 +441,10 @@ const Todo = (() => {
       .todo-item.concluida .todo-texto { text-decoration:line-through; color:var(--cor-texto-muted); }
       .todo-detalhe-titulo { font-size:17px; font-weight:700; color:var(--cor-texto); line-height:1.4; margin-bottom:10px; }
       .todo-detalhe-descricao { font-size:14px; color:var(--cor-texto-secundario); line-height:1.6; white-space:pre-wrap; }
+      .todo-detalhe-checklist-titulo { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.4px; color:var(--cor-texto-muted); margin:16px 0 8px; }
+      .todo-detalhe-checklist { display:flex; flex-direction:column; gap:7px; }
+      .todo-detalhe-checklist-item { display:flex; align-items:center; gap:9px; cursor:pointer; font-size:13.5px; color:var(--cor-texto); }
+      .todo-detalhe-checklist-item.concluido { text-decoration:line-through; color:var(--cor-texto-muted); }
       .todo-metatags { display:flex; gap:6px; flex-wrap:wrap; margin-top:6px; }
       .todo-tag { font-size:10.5px; font-weight:700; padding:2px 8px; border-radius:999px; display:inline-flex; align-items:center; gap:4px; }
       .todo-tag-cat { color:#fff; }
@@ -443,6 +521,12 @@ const Todo = (() => {
       .agenda-nav-label { font-size:16px; font-weight:800; color:var(--cor-texto); text-align:center; line-height:1.2; }
       .agenda-nav-hoje-tag { font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.5px; color:var(--cor-dark-900); background:var(--cor-primaria); border-radius:999px; padding:2px 9px; }
       .agenda-nav-hoje { font-size:11.5px; font-weight:700; color:var(--cor-texto-secundario); background:none; border:none; cursor:pointer; text-decoration:underline; }
+      .agenda-toggle-passadas-row { display:flex; justify-content:center; padding:8px 0; border-bottom:1px solid var(--cor-borda-light); }
+      .agenda-toggle-passadas {
+        font-size:11.5px; font-weight:700; color:var(--cor-texto-secundario); background:var(--cor-fundo); border:1.5px solid var(--cor-borda-light);
+        border-radius:999px; padding:5px 14px; cursor:pointer;
+      }
+      .agenda-toggle-passadas:hover { border-color:var(--cor-primaria); color:var(--cor-texto); }
       .agenda-nav-btn {
         width:30px; height:30px; border-radius:50%; border:1.5px solid var(--cor-borda-light); background:#fff; cursor:pointer;
         font-size:16px; color:var(--cor-texto-secundario); flex-shrink:0; display:flex; align-items:center; justify-content:center;
@@ -495,6 +579,8 @@ const Todo = (() => {
       .agenda-picker-item-proj { font-size:10px; font-weight:700; color:var(--cor-texto-secundario); background:var(--cor-fundo); border:1px solid var(--cor-borda-light); border-radius:4px; padding:2px 7px; flex-shrink:0; white-space:nowrap; }
       .agenda-picker-item-cat { font-size:10px; font-weight:700; color:#fff; border-radius:4px; padding:2px 7px; flex-shrink:0; white-space:nowrap; }
       .agenda-picker-item-texto { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+      .agenda-picker-item-sub { margin-left:20px; background:var(--cor-fundo); border-style:dashed; }
+      .agenda-picker-item-sub .agenda-picker-item-texto { font-size:12.5px; color:var(--cor-texto-secundario); }
       .agenda-picker-nivel-item {
         display:flex; align-items:center; justify-content:space-between; gap:8px; padding:11px 13px; border-radius:9px;
         cursor:pointer; font-size:13.5px; font-weight:600; color:var(--cor-texto); background:#fff;
@@ -587,11 +673,12 @@ const Todo = (() => {
       <div class="todo-topo">
         <form id="form-nova-tarefa" class="todo-addbar">
           <input type="text" id="todo-texto" class="todo-addbar-texto" placeholder="Título da tarefa" required>
-          <div class="todo-addbar-descricao-row">
-            <textarea id="todo-descricao" class="todo-addbar-descricao" placeholder="Descrição (obrigatória) — detalhes, contexto, o que for preciso" rows="2" required></textarea>
-            <button type="button" class="todo-mic-btn" id="todo-mic-btn" title="Ditar a descrição por voz">🎤</button>
+          <textarea id="todo-descricao" class="todo-addbar-descricao" placeholder="Descrição (obrigatória) — detalhes, contexto, o que for preciso" rows="2" required></textarea>
+          <div class="todo-addbar-checklist">
+            <div class="todo-addbar-checklist-titulo">Checklist (opcional)</div>
+            <div id="todo-checklist-itens"></div>
+            <button type="button" class="todo-checklist-add-btn" id="todo-checklist-add">+ adicionar item</button>
           </div>
-          <div class="todo-mic-erro" id="todo-mic-erro" style="display:none;"></div>
           <div class="todo-addbar-linha2">
             <div class="todo-addbar-campo">
               <label>Projeto</label>
@@ -723,7 +810,11 @@ const Todo = (() => {
       const importancia = parseInt(document.getElementById('todo-importancia').value, 10) || 3;
       if (!texto) return;
       if (!descricao) { Utils.toast('Descrição é obrigatória.', 'alerta'); document.getElementById('todo-descricao').focus(); return; }
-      await adicionar(texto, projeto, categoria, importancia, descricao);
+      const checklist = [...document.querySelectorAll('#todo-checklist-itens .todo-checklist-item-input')]
+        .map(inp => inp.value.trim())
+        .filter(Boolean)
+        .map(txt => ({ id: _novoIdChecklist(), texto: txt, concluido: false }));
+      await adicionar(texto, projeto, categoria, importancia, descricao, checklist);
     });
     document.getElementById('todo-addbar-nova-categoria').addEventListener('click', () => {
       abrirCriarCategoriaRapida();
@@ -780,116 +871,8 @@ const Todo = (() => {
     document.getElementById('todo-filtros-nova-categoria').addEventListener('click', () => {
       abrirCriarCategoriaRapida();
     });
-    _wireMicButton();
-  }
-
-  // ============================================
-  // Tarefa por voz — Web Speech API (nativa do navegador/Android).
-  // Mostra o erro técnico real de forma PERSISTENTE na tela (não só
-  // um toast que passa rápido), pra dar pra fotografar/copiar e
-  // descobrir a causa real em vez de só "não funciona".
-  // ============================================
-  function _mostrarErroVoz(msg) {
-    const el = document.getElementById('todo-mic-erro');
-    if (!el) { console.error('Erro de voz:', msg); return; }
-    el.className = 'todo-mic-erro status-erro';
-    el.innerHTML = `⚠ ${esc(msg)}`;
-    el.style.display = 'block';
-  }
-  function _statusVoz(msg) {
-    const el = document.getElementById('todo-mic-erro');
-    if (!el) { console.log('Status voz:', msg); return; }
-    el.className = 'todo-mic-erro status-info';
-    el.innerHTML = `🎤 ${esc(msg)}`;
-    el.style.display = 'block';
-  }
-  function _limparErroVoz() {
-    const el = document.getElementById('todo-mic-erro');
-    if (el) el.style.display = 'none';
-  }
-
-  function _wireMicButton() {
-    const btn = document.getElementById('todo-mic-btn');
-    if (!btn) return;
-    _limparErroVoz();
-    const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!window.isSecureContext) {
-      _mostrarErroVoz('Página não está em conexão segura (https) — o navegador bloqueia o microfone.');
-      btn.addEventListener('click', () => _mostrarErroVoz('Página não está em conexão segura (https) — o navegador bloqueia o microfone.'));
-      return;
-    }
-    if (!SpeechRec) {
-      _mostrarErroVoz(`Este navegador não tem reconhecimento de voz (SpeechRecognition ausente). User-agent: ${navigator.userAgent}`);
-      btn.addEventListener('click', () => _mostrarErroVoz(`Este navegador não tem reconhecimento de voz (SpeechRecognition ausente). User-agent: ${navigator.userAgent}`));
-      return;
-    }
-    const ERROS = {
-      'not-allowed': 'Permissão de microfone negada. Vá em Configurações do site (cadeado na barra de endereço) e libere o microfone.',
-      'service-not-allowed': 'Permissão de microfone negada pelo navegador.',
-      'no-speech': 'Não captei nenhuma fala. Tente falar logo após tocar o microfone.',
-      'audio-capture': 'Nenhum microfone encontrado neste dispositivo.',
-      'network': 'Sem conexão com o serviço de voz do Google. Verifique a internet.',
-      'aborted': null, // cancelamento manual, não é erro
-    };
-    btn.addEventListener('click', async () => {
-      if (reconhecimentoVoz) { reconhecimentoVoz.stop(); return; }
-
-      _statusVoz('Passo 1/4 — pedindo permissão do microfone... (se aparecer um aviso do navegador no topo da tela, toque em "Permitir")');
-      // Watchdog: se em 12s a permissão não resolver (nem liberar nem negar),
-      // é sinal de que o prompt do navegador não está aparecendo/sendo notado.
-      let travou = false;
-      const watchdog = setTimeout(() => {
-        travou = true;
-        _mostrarErroVoz('Ficou mais de 12s esperando a permissão do microfone, sem resposta do navegador. Isso indica que o aviso de permissão não apareceu ou não foi respondido. Procure um ícone de microfone/cadeado na barra de endereço, ou nas Configurações do site libere o Microfone manualmente e tente de novo.');
-      }, 12000);
-
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        clearTimeout(watchdog);
-        _mostrarErroVoz('navigator.mediaDevices.getUserMedia não existe neste contexto (comum em app instalado/WebView antigo). Tente abrir o site direto no Chrome, fora do atalho instalado, pra testar.');
-        return;
-      }
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        clearTimeout(watchdog);
-        if (travou) return; // já mostrou o erro do watchdog, não continua
-        stream.getTracks().forEach(tr => tr.stop());
-      } catch (permErr) {
-        clearTimeout(watchdog);
-        if (travou) return;
-        _mostrarErroVoz(`${permErr.name || 'Erro'} ao pedir microfone: ${permErr.message || permErr}`);
-        return;
-      }
-
-      _statusVoz('Passo 2/4 — permissão concedida. Iniciando reconhecimento...');
-      const input = document.getElementById('todo-descricao');
-      const rec = new SpeechRec();
-      rec.lang = 'pt-BR';
-      rec.interimResults = false;
-      rec.maxAlternatives = 1;
-      rec.onstart = () => {
-        btn.classList.add('gravando');
-        btn.textContent = '🔴';
-        _statusVoz('Passo 3/4 — gravando! Fale agora...');
-      };
-      rec.onerror = (e) => {
-        const msg = Object.prototype.hasOwnProperty.call(ERROS, e.error) ? ERROS[e.error] : `Erro no reconhecimento de voz: ${e.error}`;
-        if (msg) _mostrarErroVoz(msg); else _limparErroVoz();
-      };
-      rec.onresult = (e) => {
-        const texto = e.results[0][0].transcript;
-        const atual = input.value.trim();
-        input.value = atual ? `${atual} ${texto}` : texto;
-        input.focus();
-        _statusVoz(`Passo 4/4 — reconhecido: "${texto}"`);
-      };
-      rec.onend = () => { btn.classList.remove('gravando'); btn.textContent = '🎤'; reconhecimentoVoz = null; };
-      try {
-        reconhecimentoVoz = rec;
-        rec.start();
-      } catch (startErr) {
-        _mostrarErroVoz(`Erro ao iniciar: ${startErr.name || ''} ${startErr.message || startErr}`);
-        reconhecimentoVoz = null;
-      }
+    document.getElementById('todo-checklist-add').addEventListener('click', () => {
+      _adicionarLinhaChecklist(document.getElementById('todo-checklist-itens'));
     });
   }
 
@@ -910,6 +893,10 @@ const Todo = (() => {
     if (cat) tags.push(`<span class="todo-tag todo-tag-cat" style="background:${esc(cat.cor)}">${esc(cat.nome)}</span>`);
     if (t.dependencia) tags.push(`<span class="todo-tag todo-tag-dep">⛓ ${esc(t.dependencia)}</span>`);
     if (!concluida && imp !== 3) tags.push(`<span class="todo-tag todo-tag-imp${imp}">${IMPORTANCIA_LABEL[imp]}</span>`);
+    if (Array.isArray(t.checklist) && t.checklist.length) {
+      const feitos = t.checklist.filter(i => i.concluido).length;
+      tags.push(`<span class="todo-checklist-badge">☑ ${feitos}/${t.checklist.length}</span>`);
+    }
     return `
       <div class="todo-item ${concluida ? 'concluida' : ''}" style="border-left-color:${cor};">
         <div class="todo-check ${concluida ? 'marcado' : ''}" onclick="Todo.alternarStatus('${t.id}')">${check}</div>
@@ -928,17 +915,41 @@ const Todo = (() => {
       </div>`;
   }
 
-  async function adicionar(texto, projeto, categoria, importancia, descricao) {
+  function _novoIdChecklist() {
+    return 'chk_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
+  }
+
+  // Cria uma linha de item de checklist vazia (sem data-id — entra
+  // como item novo no momento de salvar). Usada tanto no formulário
+  // de criação quanto no modal de editar.
+  function _adicionarLinhaChecklist(container) {
+    const row = document.createElement('div');
+    row.className = 'todo-checklist-item-row';
+    row.innerHTML = `<input type="checkbox" class="todo-checklist-item-check">
+                      <input type="text" class="todo-checklist-item-input" placeholder="Item do checklist...">
+                      <button type="button" class="todo-checklist-item-remover" title="Remover">×</button>`;
+    row.querySelector('.todo-checklist-item-remover').onclick = () => row.remove();
+    container.appendChild(row);
+    row.querySelector('.todo-checklist-item-input').focus();
+  }
+
+  function _scrollTopoLista() {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    document.getElementById('modulo-content')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  async function adicionar(texto, projeto, categoria, importancia, descricao, checklist) {
     if (projeto && !projetos.some(p => p.nome === projeto)) {
       const id = await Database.criarRaiz(COL_PROJ, { nome: projeto, importancia: 3 });
       projetos.push({ id, nome: projeto, importancia: 3 });
     }
     const maxOrdem = tarefas.reduce((m, t) => Math.max(m, t.ordem || 0), 0);
-    const dados = { texto, descricao: descricao || '', projeto: projeto || '', categoria: categoria || '', dependencia: '', concluida: false, ordem: maxOrdem + 1, importancia: importancia || 3 };
+    const dados = { texto, descricao: descricao || '', projeto: projeto || '', categoria: categoria || '', dependencia: '', concluida: false, ordem: maxOrdem + 1, importancia: importancia || 3, checklist: checklist || [] };
     const id = await Database.criarRaiz(COL, dados);
     tarefas.push({ id, ...dados });
     Utils.toast('Tarefa adicionada.', 'sucesso');
     renderizar();
+    _scrollTopoLista();
   }
 
   async function alternarStatus(id) {
@@ -947,6 +958,18 @@ const Todo = (() => {
     t.concluida = !t.concluida;
     t.updatedAtMs = Date.now();
     await Database.atualizarRaiz(COL, id, { concluida: t.concluida });
+    renderizar();
+  }
+
+  // Marca/desmarca um item do checklist de uma tarefa. Regrava o array
+  // inteiro (Firestore não faz update parcial por índice de array).
+  async function alternarChecklistItem(tarefaId, itemId) {
+    const t = tarefas.find(x => x.id === tarefaId);
+    if (!t || !Array.isArray(t.checklist)) return;
+    const item = t.checklist.find(i => i.id === itemId);
+    if (!item) return;
+    item.concluido = !item.concluido;
+    await Database.atualizarRaiz(COL, tarefaId, { checklist: t.checklist });
     renderizar();
   }
 
@@ -1019,6 +1042,7 @@ const Todo = (() => {
     const t = tarefas.find(x => x.id === id);
     if (!t) return;
     const cat = t.categoria ? categorias.find(c => c.nome === t.categoria) : null;
+    const checklist = Array.isArray(t.checklist) ? t.checklist : [];
     const html = `
       <div class="modal-header"><h3>Detalhe da tarefa</h3></div>
       <div class="modal-body">
@@ -1030,6 +1054,18 @@ const Todo = (() => {
             ${t.dependencia ? `<span class="todo-tag todo-tag-dep">⛓ ${esc(t.dependencia)}</span>` : ''}
           </div>` : ''}
         <div class="todo-detalhe-descricao">${t.descricao ? esc(t.descricao).replace(/\n/g, '<br>') : '<span class="text-sm text-muted">Sem descrição.</span>'}</div>
+        ${checklist.length ? `
+          <div class="todo-detalhe-checklist-titulo">Checklist</div>
+          <div class="todo-detalhe-checklist">
+            ${checklist.map(item => `
+              <div class="todo-detalhe-checklist-item ${item.concluido ? 'concluido' : ''}" data-detalhe-check-item="${item.id}">
+                <div class="todo-check ${item.concluido ? 'marcado' : ''}" style="width:16px;height:16px;flex-shrink:0;">
+                  <svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="white" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </div>
+                <span>${esc(item.texto)}</span>
+              </div>`).join('')}
+          </div>
+        ` : ''}
       </div>
       <div class="modal-footer" style="justify-content:space-between;">
         <button type="button" class="btn btn-secundario" id="det-fechar">Fechar</button>
@@ -1038,6 +1074,9 @@ const Todo = (() => {
     abrirOverlaySecundario(html, 'todo-modal');
     document.getElementById('det-fechar').onclick = fecharOverlaySecundario;
     document.getElementById('det-editar').onclick = () => { fecharOverlaySecundario(); abrirModalEditar(id); };
+    document.querySelectorAll('[data-detalhe-check-item]').forEach(el => {
+      el.onclick = async () => { await alternarChecklistItem(id, el.dataset.detalheCheckItem); abrirDetalheTarefa(id); };
+    });
   }
 
   // ============================================
@@ -1158,13 +1197,19 @@ const Todo = (() => {
     if (lista.length === 0) return `<div class="agenda-picker-vazio">Nenhuma tarefa encontrada.</div>`;
     return lista.map(p => {
       const cat = p.categoria ? categorias.find(c => c.nome === p.categoria) : null;
-      return `
+      const itensChecklistPendentes = (Array.isArray(p.checklist) ? p.checklist : []).filter(i => !i.concluido);
+      const linhaTarefaHtml = `
       <div class="agenda-picker-item" data-agenda-escolher="${p.id}">
         <span class="agenda-picker-dot" style="background:${p.projeto ? corProjeto(p.projeto) : '#9ca3af'}"></span>
         ${p.projeto ? `<span class="agenda-picker-item-proj">${esc(p.projeto)}</span>` : ''}
         ${cat ? `<span class="agenda-picker-item-cat" style="background:${esc(cat.cor)}">${esc(cat.nome)}</span>` : ''}
         <span class="agenda-picker-item-texto">${esc(p.texto)}</span>
       </div>`;
+      const linhasChecklistHtml = itensChecklistPendentes.map(item => `
+      <div class="agenda-picker-item agenda-picker-item-sub" data-agenda-escolher="${p.id}::${item.id}">
+        <span class="agenda-picker-item-texto">↳ ${esc(item.texto)}</span>
+      </div>`).join('');
+      return linhaTarefaHtml + linhasChecklistHtml;
     }).join('');
   }
 
@@ -1190,7 +1235,8 @@ const Todo = (() => {
         agendaFiltroPicker = '';
         agendaPickerProjeto = null;
         agendaPickerCategoria = null;
-        await _atribuirTarefaSlot(item.dataset.agendaEscolher, dataStr, slot);
+        const [tarefaId, itemId] = item.dataset.agendaEscolher.split('::');
+        await _atribuirTarefaSlot(tarefaId, dataStr, slot, itemId || null);
       };
     });
   }
@@ -1198,9 +1244,13 @@ const Todo = (() => {
   function _renderizarAgenda() {
     const el = document.getElementById('agenda-conteudo');
     if (!el) return;
-    const slots = _gerarSlots();
     const dataStr = agendaDataAtual;
     const ehHoje = dataStr === _hojeStr();
+    const agora = new Date();
+    const horaAgora = `${String(agora.getHours()).padStart(2, '0')}:${String(agora.getMinutes()).padStart(2, '0')}`;
+    const todosSlots = _gerarSlots();
+    const slots = (agendaEsconderPassadas && ehHoje) ? todosSlots.filter(s => s.fim > horaAgora) : todosSlots;
+    const qtdEscondidos = todosSlots.length - slots.length;
     const pendentes = tarefas.filter(t => !t.concluida)
       .sort((a, b) => (a.importancia ?? 3) - (b.importancia ?? 3) || (a.ordem || 0) - (b.ordem || 0));
 
@@ -1213,6 +1263,13 @@ const Todo = (() => {
         </div>
         <button type="button" class="agenda-nav-btn" id="agenda-dia-seguinte" title="Dia seguinte">›</button>
       </div>
+      ${ehHoje ? `
+        <div class="agenda-toggle-passadas-row">
+          <button type="button" class="agenda-toggle-passadas" id="agenda-toggle-passadas">
+            ${agendaEsconderPassadas ? `👁 mostrar horários passados${qtdEscondidos ? ` (${qtdEscondidos})` : ''}` : '🕐 esconder horários que já passaram'}
+          </button>
+        </div>
+      ` : ''}
       <div class="agenda-lista">
         ${slots.map(s => {
           const alocsSlot = agendaAlocacoes.filter(a => a.data === dataStr && a.horario === s.inicio);
@@ -1225,12 +1282,16 @@ const Todo = (() => {
                   ${alocsSlot.map(a => {
                     const t = tarefas.find(x => x.id === a.tarefaId);
                     if (!t) return '';
+                    const item = a.itemId ? (Array.isArray(t.checklist) ? t.checklist.find(i => i.id === a.itemId) : null) : null;
+                    if (a.itemId && !item) return ''; // item do checklist foi removido depois de agendado
+                    const label = item ? item.texto : t.texto;
+                    const concluidoAloc = item ? !!item.concluido : !!t.concluida;
                     return `
-                      <div class="agenda-tarefa ${t.concluida ? 'concluida' : ''}">
-                        <div class="todo-check" style="width:16px;height:16px;flex-shrink:0;" data-agenda-check="${t.id}">
+                      <div class="agenda-tarefa ${concluidoAloc ? 'concluida' : ''}">
+                        <div class="todo-check" style="width:16px;height:16px;flex-shrink:0;" data-agenda-check="${t.id}" data-agenda-check-item="${a.itemId || ''}">
                           <svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="white" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
                         </div>
-                        <span class="agenda-tarefa-texto" data-agenda-detalhe="${t.id}" title="Ver detalhe">${esc(t.texto)}</span>
+                        <span class="agenda-tarefa-texto" data-agenda-detalhe="${t.id}" title="Ver detalhe">${item ? '↳ ' : ''}${esc(label)}</span>
                         <button type="button" class="agenda-x" title="Remover deste horário" data-agenda-remover="${a.id}">×</button>
                       </div>`;
                   }).join('')}
@@ -1252,6 +1313,12 @@ const Todo = (() => {
     document.getElementById('agenda-dia-seguinte').onclick = () => { agendaDataAtual = _diaOffset(dataStr, 1); agendaSlotAberto = null; _renderizarAgenda(); };
     const btnHoje = document.getElementById('agenda-ir-hoje');
     if (btnHoje) btnHoje.onclick = () => { agendaDataAtual = _hojeStr(); agendaSlotAberto = null; _renderizarAgenda(); };
+    const btnTogglePassadas = document.getElementById('agenda-toggle-passadas');
+    if (btnTogglePassadas) btnTogglePassadas.onclick = () => {
+      agendaEsconderPassadas = !agendaEsconderPassadas;
+      localStorage.setItem('agenda_esconder_passadas', agendaEsconderPassadas ? '1' : '0');
+      _renderizarAgenda();
+    };
     el.querySelectorAll('[data-agenda-abrir]').forEach(btn => {
       btn.onclick = () => {
         agendaSlotAberto = btn.dataset.agendaAbrir;
@@ -1282,8 +1349,15 @@ const Todo = (() => {
       btn.onclick = async () => { await _removerDoSlot(btn.dataset.agendaRemover); };
     });
     el.querySelectorAll('[data-agenda-check]').forEach(chk => {
-      chk.classList.toggle('marcado', tarefas.find(t => t.id === chk.dataset.agendaCheck)?.concluida);
-      chk.onclick = async () => { await alternarStatus(chk.dataset.agendaCheck); _renderizarAgenda(); };
+      const tarefaId = chk.dataset.agendaCheck;
+      const itemId = chk.dataset.agendaCheckItem;
+      const t = tarefas.find(x => x.id === tarefaId);
+      const item = (itemId && t && Array.isArray(t.checklist)) ? t.checklist.find(i => i.id === itemId) : null;
+      chk.classList.toggle('marcado', item ? !!item.concluido : !!t?.concluida);
+      chk.onclick = async () => {
+        if (itemId) { await alternarChecklistItem(tarefaId, itemId); } else { await alternarStatus(tarefaId); }
+        _renderizarAgenda();
+      };
     });
     el.querySelectorAll('[data-agenda-detalhe]').forEach(span => {
       span.onclick = () => abrirDetalheTarefa(span.dataset.agendaDetalhe);
@@ -1297,9 +1371,10 @@ const Todo = (() => {
     return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
   }
 
-  async function _atribuirTarefaSlot(taskId, dataStr, slot) {
-    const id = await Database.criarRaiz(COL_AGENDA, { tarefaId: taskId, data: dataStr, horario: slot });
-    agendaAlocacoes.push({ id, tarefaId: taskId, data: dataStr, horario: slot });
+  async function _atribuirTarefaSlot(taskId, dataStr, slot, itemId) {
+    const dados = { tarefaId: taskId, data: dataStr, horario: slot, itemId: itemId || '' };
+    const id = await Database.criarRaiz(COL_AGENDA, dados);
+    agendaAlocacoes.push({ id, ...dados });
     _renderizarAgenda();
   }
 
@@ -1436,6 +1511,18 @@ const Todo = (() => {
           <textarea id="ed-descricao" class="form-control" rows="3" placeholder="Detalhes, contexto, o que for preciso...">${esc(t.descricao || '')}</textarea>
         </div>
         <div class="todo-form-grupo">
+          <label>Checklist (opcional)</label>
+          <div id="ed-checklist-itens">
+            ${(Array.isArray(t.checklist) ? t.checklist : []).map(item => `
+              <div class="todo-checklist-item-row" data-id="${esc(item.id)}">
+                <input type="checkbox" class="todo-checklist-item-check" ${item.concluido ? 'checked' : ''}>
+                <input type="text" class="todo-checklist-item-input" value="${esc(item.texto)}">
+                <button type="button" class="todo-checklist-item-remover" title="Remover">×</button>
+              </div>`).join('')}
+          </div>
+          <button type="button" class="todo-checklist-add-btn" id="ed-checklist-add">+ adicionar item</button>
+        </div>
+        <div class="todo-form-grupo">
           <label>Projeto</label>
           <input type="text" id="ed-projeto" class="form-control" list="ed-projetos-lista" value="${esc(t.projeto || '')}" placeholder="Sem projeto">
           <datalist id="ed-projetos-lista">${projetos.map(p => `<option value="${esc(p.nome)}">`).join('')}</datalist>
@@ -1485,6 +1572,13 @@ const Todo = (() => {
         </div>
       </div>`;
     abrirOverlay(html, 'todo-modal');
+
+    document.querySelectorAll('#ed-checklist-itens .todo-checklist-item-remover').forEach(btn => {
+      btn.onclick = () => btn.closest('.todo-checklist-item-row').remove();
+    });
+    document.getElementById('ed-checklist-add').addEventListener('click', () => {
+      _adicionarLinhaChecklist(document.getElementById('ed-checklist-itens'));
+    });
 
     document.getElementById('ed-nova-categoria-link').addEventListener('click', (e) => {
       e.preventDefault();
@@ -1558,18 +1652,30 @@ const Todo = (() => {
       const categoria = document.getElementById('ed-categoria').value;
       const dependencia = document.getElementById('ed-dependencia').value.trim();
       const importancia = parseInt(document.getElementById('ed-importancia').value, 10) || 3;
+      const checklist = [...document.querySelectorAll('#ed-checklist-itens .todo-checklist-item-row')]
+        .map(row => {
+          const txt = row.querySelector('.todo-checklist-item-input').value.trim();
+          if (!txt) return null;
+          return {
+            id: row.dataset.id || _novoIdChecklist(),
+            texto: txt,
+            concluido: row.querySelector('.todo-checklist-item-check').checked,
+          };
+        })
+        .filter(Boolean);
 
       if (projeto && !projetos.some(p => p.nome === projeto)) {
         const idProj = await Database.criarRaiz(COL_PROJ, { nome: projeto, importancia: 3 });
         projetos.push({ id: idProj, nome: projeto, importancia: 3 });
       }
 
-      const dados = { texto, descricao, projeto: projeto || '', categoria, dependencia, importancia };
+      const dados = { texto, descricao, projeto: projeto || '', categoria, dependencia, importancia, checklist };
       await Database.atualizarRaiz(COL, id, dados);
       Object.assign(t, dados);
       fecharOverlay();
       Utils.toast('Tarefa atualizada.', 'sucesso');
       renderizar();
+      _scrollTopoLista();
     });
   }
 

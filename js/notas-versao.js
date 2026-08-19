@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.17.0.1',
+  versaoAtual: 'V3.18.0.0',
 
   versoes: [
     {
@@ -9312,6 +9312,19 @@ const NotasVersao = {
         "A caixa embaixo da Descrição agora mostra o passo atual em azul (Passo 1: pedindo permissão → Passo 2: permissão OK, iniciando → Passo 3: gravando, fale agora → Passo 4: texto reconhecido), e só fica vermelha quando um erro de fato acontece.",
         "Adicionado um \"vigia\" de 12 segundos: se a permissão do microfone não for respondida (nem liberada nem negada) nesse tempo, aparece um aviso específico dizendo que o prompt de permissão do navegador provavelmente não apareceu ou não foi notado — em vez de ficar parado pra sempre sem nada na tela.",
         "Com isso, na próxima tentativa a caixa vai mostrar em qual passo exatamente trava — essa informação (print da caixa, mesmo que ainda seja só \"Passo 1\" parado) é o que falta pra eu conseguir corrigir a causa raiz de vez."
+      ]
+    },
+    {
+      "versao": "V3.18.0.0",
+      "data": "2026-08-19",
+      "tipo": "funcionalidade",
+      "titulo": "Voz removida (era instável) — substituída por fila de tarefas via chat; Checklist dentro da tarefa; esconder horários passados na Agenda",
+      "itens": [
+        "Voz removida do sistema: depois de várias tentativas de correção sem sucesso reproduzível, Milton decidiu tirar o botão de microfone do Tarefas do Sistema — botão, caixa de erro/status e toda a lógica de reconhecimento de voz foram removidos.",
+        "Fila de tarefas via chat (substituindo a voz): Milton pode pedir pro Claude, direto na conversa, pra criar uma tarefa — o Claude escreve num arquivo (chat-fila-tarefas.json) com título, descrição, categoria e checklist, e publica. Na próxima vez que o Tarefas do Sistema abrir, cada item da fila entra automaticamente no Firestore — sem duplicar mesmo se a página for recarregada várias vezes (cada item tem um ID próprio; se já existe, é ignorado).",
+        "Checklist dentro da tarefa: cada tarefa pode ter uma lista de itens marcáveis (opcional, mas sempre disponível na criação e edição). Lista principal mostra o progresso (\"☑ 2/5\"), o pop-up de detalhe mostra os itens com checkbox clicável, e cada item do checklist pode ser agendado num horário PRÓPRIO na Agenda, separado do horário da tarefa principal.",
+        "Agenda: novo botão pra esconder os horários que já passaram no dia de hoje (mostra só o que falta), com opção de reverter e ver tudo — preferência salva no navegador.",
+        "Voltar pro topo: depois de adicionar ou editar uma tarefa, a tela rola de volta pro topo automaticamente, pra sempre ver o resultado sem precisar procurar na lista."
       ]
     }
   ],
