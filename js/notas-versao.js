@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.16.0.5',
+  versaoAtual: 'V3.16.0.6',
 
   versoes: [
     {
@@ -9173,6 +9173,18 @@ const NotasVersao = {
         "Setas de predecessora redesenhadas pra não passar por cima das barras: agora saem do fim da predecessora, correm pelo VÃO entre as linhas (na divisória, onde não tem barra) e só descem na coluna estreita logo antes do início da tarefa — Gantt limpo, igual MS Project.",
         "Segurança na visão filtrada: arrastar pra reordenar fica bloqueado (com aviso) enquanto a máscara está ativa — as linhas vizinhas na tela não são as vizinhas reais da estrutura, mover ali bagunçaria a base original. Edição de células, %, datas e predecessoras continuam liberadas (gravam por ID, sem risco).",
         "Sobre as cores no Gantt: a cor da barra é o STATUS da tarefa (azul = no prazo ainda não concluída, amarelo = em andamento, verde = concluída, vermelho = atrasada) — se tudo aparece azul na visão filtrada é porque todas aquelas tarefas estão no mesmo status, não é defeito da visão."
+      ]
+    },
+    {
+      "versao": "V3.16.0.6",
+      "data": "2026-08-19",
+      "tipo": "melhoria",
+      "titulo": "Toolbar do Planejamento reorganizada — trocar entre Linha de Base/Desafio/Atual não bagunça mais os botões",
+      "itens": [
+        "Antes, trocar a versão de datas fazia aparecer/sumir o botão \"Copiar datas\" NO MEIO da fila — tudo depois dele pulava de lugar, botões quebravam pra segunda linha de forma diferente a cada clique, sobrava espaço em branco. Uma bagunça.",
+        "Agora são duas linhas com papel fixo: em cima as AÇÕES (⚙ Ferramentas · 🌳 Editor de Estrutura · 🗂 Visão Organizacional · ＋ Tarefa — sempre os mesmos, sempre no mesmo lugar) e embaixo a VISUALIZAÇÃO (versão de datas · zoom Dia→Ano · Gantt · Setas de Predecessora).",
+        "Os botões que aparecem só às vezes (📋 Copiar datas, ＋ Colunas) agora entram sempre no FIM da linha de visualização — quando aparecem, nada existente muda de lugar.",
+        "\"Setas de Predecessora\" ficou sempre visível (esmaecido quando o Gantt está escondido, com dica) — antes sumia e voltava junto com o Gantt, deslocando os vizinhos."
       ]
     }
   ],

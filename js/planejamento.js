@@ -593,28 +593,31 @@ const Planejamento = (() => {
 
     c.style.cssText='display:flex;flex-direction:column;min-height:0;height:100%;';
     c.innerHTML=`
-      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:6px;">
         <div style="display:flex;gap:6px;align-items:center;">
           <h2 style="margin:0;font-size:1.1rem;color:var(--cor-primaria);">📊 Planejamento</h2>
           <span style="font-size:.75rem;color:#555;">${filtradas.length} tarefas</span>
         </div>
+        <!-- Linha de AÇÕES (fixa — nunca muda de composição, nada pula de lugar) -->
         <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center;">
-          <span style="display:inline-flex;flex-shrink:0;border:1.5px solid #333;border-radius:8px;overflow:hidden;font-size:.7rem;font-weight:700;" title="Qual versão de datas ver/editar nas colunas Início e Término">
-            ${['base','desafio','atual'].map(v=>`<button onclick="Planejamento.setVersaoData('${v}')" style="border:none;padding:4px 10px;cursor:pointer;${_versaoData===v?'background:var(--cor-primaria);color:#000;':'background:#111;color:#888;'}">${VERSAO_LABEL[v]}</button>`).join('')}
-          </span>
-          ${_versaoData!=='atual'?`<button class="btn btn-secundario btn-sm" onclick="Planejamento.copiarDatasDeAtual()" style="font-size:.7rem;" title="Preenche as datas de ${VERSAO_LABEL[_versaoData]} copiando de Atual em todas as tarefas que ainda não têm valor">📋 Copiar datas de Atual → ${VERSAO_LABEL[_versaoData]}</button>`:''}
-          <span style="color:#333;margin:0 4px;">|</span>
-          ${['dia','semana','mes','trimestre','ano'].map(z=>`<button class="btn btn-sm ${zoomGantt===z?'btn-primario':'btn-secundario'}" onclick="Planejamento.setZoom('${z}')" style="font-size:.7rem;padding:2px 8px;">${z.charAt(0).toUpperCase()+z.slice(1)}</button>`).join('')}
-          <span style="color:#333;margin:0 4px;">|</span>
           <button class="btn btn-secundario btn-sm" onclick="Planejamento._toggleMenuFerramentas()" style="font-size:.72rem;">⚙ Ferramentas</button>
-          <button class="btn btn-secundario btn-sm" onclick="Planejamento.toggleGantt()" id="btn-tg" style="font-size:.72rem;">${ganttVisible?'◀ Esconder Gantt':'▶ Mostrar Gantt'}</button>
-          ${colsHidden.size?`<button class="btn btn-secundario btn-sm" onclick="Planejamento.showColsMenu()" style="font-size:.72rem;">＋ Colunas (${colsHidden.size})</button>`:''}
-          <span style="color:#333;margin:0 4px;">|</span>
           <button class="btn ${modoView==='arvore'?'btn-primario':'btn-secundario'} btn-sm" data-perm="planejamento:editar:estrutura" onclick="Planejamento.toggleArvoreEditor()" style="font-size:.72rem;">🌳 Editor de Estrutura</button>
           <button class="btn btn-sm ${_visaoOrgIds?'btn-primario':'btn-secundario'}" onclick="event.stopPropagation();Planejamento._menuVisaoOrg()" style="font-size:.72rem;" title="Família de visões-máscara: Gantt filtrado por linhas, só os pais por nível, e mais no futuro">🗂 Visão Organizacional${_visaoOrgIds?` (${_visaoOrgIds.size})`:''}</button>
-          ${ganttVisible?`<button class="btn btn-sm ${_setasPred?'btn-primario':'btn-secundario'}" onclick="Planejamento.toggleSetasPred()" style="font-size:.72rem;" title="Desenha no Gantt a seta da predecessora até cada tarefa (estilo MS Project) — passe o mouse pra destacar, clique pra marcar e ver o nome">${_setasPred?'☑':'☐'} Setas de Predecessora</button>`:''}
           <button class="btn btn-primario btn-sm" data-perm="planejamento:criar:tarefa" onclick="Planejamento.inserirTarefa()" style="font-size:.72rem;">＋ Tarefa</button>
         </div>
+      </div>
+      <!-- Linha de VISUALIZAÇÃO (ordem fixa; botões condicionais SEMPRE no fim, pra nada pular de lugar) -->
+      <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center;margin-bottom:6px;">
+        <span style="display:inline-flex;flex-shrink:0;border:1.5px solid #333;border-radius:8px;overflow:hidden;font-size:.7rem;font-weight:700;" title="Qual versão de datas ver/editar nas colunas Início e Término">
+          ${['base','desafio','atual'].map(v=>`<button onclick="Planejamento.setVersaoData('${v}')" style="border:none;padding:4px 10px;cursor:pointer;${_versaoData===v?'background:var(--cor-primaria);color:#000;':'background:#111;color:#888;'}">${VERSAO_LABEL[v]}</button>`).join('')}
+        </span>
+        <span style="color:#333;margin:0 4px;">|</span>
+        ${['dia','semana','mes','trimestre','ano'].map(z=>`<button class="btn btn-sm ${zoomGantt===z?'btn-primario':'btn-secundario'}" onclick="Planejamento.setZoom('${z}')" style="font-size:.7rem;padding:2px 8px;">${z.charAt(0).toUpperCase()+z.slice(1)}</button>`).join('')}
+        <span style="color:#333;margin:0 4px;">|</span>
+        <button class="btn btn-secundario btn-sm" onclick="Planejamento.toggleGantt()" id="btn-tg" style="font-size:.72rem;">${ganttVisible?'◀ Esconder Gantt':'▶ Mostrar Gantt'}</button>
+        <button class="btn btn-sm ${_setasPred&&ganttVisible?'btn-primario':'btn-secundario'}" onclick="Planejamento.toggleSetasPred()" style="font-size:.72rem;${ganttVisible?'':'opacity:.45;'}" title="${ganttVisible?'Desenha no Gantt a seta da predecessora até cada tarefa (estilo MS Project) — passe o mouse pra destacar, clique pra marcar e ver o nome':'Mostre o Gantt pra usar as setas'}">${_setasPred?'☑':'☐'} Setas de Predecessora</button>
+        ${_versaoData!=='atual'?`<button class="btn btn-secundario btn-sm" onclick="Planejamento.copiarDatasDeAtual()" style="font-size:.7rem;" title="Preenche as datas de ${VERSAO_LABEL[_versaoData]} copiando de Atual em todas as tarefas que ainda não têm valor">📋 Copiar datas de Atual → ${VERSAO_LABEL[_versaoData]}</button>`:''}
+        ${colsHidden.size?`<button class="btn btn-secundario btn-sm" onclick="Planejamento.showColsMenu()" style="font-size:.72rem;">＋ Colunas (${colsHidden.size})</button>`:''}
       </div>
       <div style="font-size:.68rem;color:#444;margin-bottom:4px;">Ctrl++ inserir · Ctrl+- excluir · clique na célula para editar · clique direito no header para esconder coluna · Ctrl+botão direito+arrastar para reordenar</div>
       <div style="position:relative;margin-bottom:6px;display:flex;align-items:center;gap:6px;">
