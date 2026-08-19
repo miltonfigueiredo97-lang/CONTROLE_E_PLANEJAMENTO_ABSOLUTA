@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.0.0',
+  versaoAtual: 'V3.19.0.1',
 
   versoes: [
     {
@@ -9337,6 +9337,16 @@ const NotasVersao = {
         "Nova visão \"🏷 Agrupador de Categoria\" no menu Visão Organizacional: reorganiza a exibição das tarefas por Categoria > Subcategoria (ex: Alvenaria > Vedação, Gesso > Forro) em vez da estrutura do cronograma — é só uma máscara de visão, não altera dados reais. Clique numa tarefa abre a edição normal.",
         "Tarefa sem Categoria aparece agrupada em \"⚠ Sem Categoria\" dentro dessa visão — nunca some, sempre visível pra revisão.",
         "Removidos os botões \"Só os Pais — até nível N\" do menu Visão Organizacional (substituídos pelo Agrupador de Categoria, mais útil no dia a dia)."
+      ]
+    },
+    {
+      "versao": "V3.19.0.1",
+      "data": "2026-08-19",
+      "tipo": "melhoria",
+      "titulo": "Barra do Gantt: passar o mouse mostra a data de início/término",
+      "itens": [
+        "Tooltip (passar o mouse) nas barras do Gantt agora mostra nome + início + término da tarefa, além do %. Antes só mostrava nome e %.",
+        "Corrigido de brinde: as barras desenhadas durante a repintura rápida (edição de célula/scroll) não tinham tooltip nenhum — agora têm, igual às barras do desenho completo."
       ]
     }
   ],

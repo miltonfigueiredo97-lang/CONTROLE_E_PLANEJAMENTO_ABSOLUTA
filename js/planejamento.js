@@ -1780,9 +1780,9 @@ const Planejamento = (() => {
         const by=y+5, bh=20;
         const cor={em_dia:'#2563eb',em_andamento:'#ca8a04',concluido:'#15803d',alerta:'#c2410c',atrasado:'#dc2626'}[st2]||'#333';
         if(isG){
-          bH+=`<div style="position:absolute;left:${bx}px;top:${by+8}px;width:${bw}px;height:5px;background:var(--cor-primaria);border-radius:1px;"></div>`;
+          bH+=`<div style="position:absolute;left:${bx}px;top:${by+8}px;width:${bw}px;height:5px;background:var(--cor-primaria);border-radius:1px;" title="${t.nome} — ${_fd(t.inicioPlanejado)} a ${_fd(t.terminoPlanejado)}"></div>`;
         } else {
-          bH+=`<div style="position:absolute;left:${bx}px;top:${by}px;width:${bw}px;height:${bh}px;background:${cor};border-radius:3px;overflow:hidden;" title="${t.nome} ${perc}%">
+          bH+=`<div style="position:absolute;left:${bx}px;top:${by}px;width:${bw}px;height:${bh}px;background:${cor};border-radius:3px;overflow:hidden;" title="${t.nome} — ${_fd(t.inicioPlanejado)} a ${_fd(t.terminoPlanejado)} — ${perc}%">
             <div style="height:100%;width:${perc}%;background:rgba(255,255,255,.25);"></div>
             ${bw>50?`<span style="position:absolute;left:4px;top:4px;font-size:.58rem;color:rgba(255,255,255,.85);white-space:nowrap;overflow:hidden;max-width:${bw-8}px;">${t.nome}</span>`:''}
           </div>`;
@@ -1829,8 +1829,8 @@ const Planejamento = (() => {
         const bw=Math.max(4,Math.round((fim-ini)/864e5*lpd));
         const by=y+5,bh=20;
         const cor={em_dia:'#2563eb',em_andamento:'#ca8a04',concluido:'#15803d',alerta:'#c2410c',atrasado:'#dc2626'}[st2]||'#333';
-        if(isG){bH+=`<div style="position:absolute;left:${bx}px;top:${by+8}px;width:${bw}px;height:5px;background:var(--cor-primaria);border-radius:1px;"></div>`;}
-        else{bH+=`<div style="position:absolute;left:${bx}px;top:${by}px;width:${bw}px;height:${bh}px;background:${cor};border-radius:3px;overflow:hidden;"><div style="height:100%;width:${perc}%;background:rgba(255,255,255,.25);"></div></div>`;}
+        if(isG){bH+=`<div style="position:absolute;left:${bx}px;top:${by+8}px;width:${bw}px;height:5px;background:var(--cor-primaria);border-radius:1px;" title="${t.nome} — ${_fd(t.inicioPlanejado)} a ${_fd(t.terminoPlanejado)}"></div>`;}
+        else{bH+=`<div style="position:absolute;left:${bx}px;top:${by}px;width:${bw}px;height:${bh}px;background:${cor};border-radius:3px;overflow:hidden;" title="${t.nome} — ${_fd(t.inicioPlanejado)} a ${_fd(t.terminoPlanejado)} — ${perc}%"><div style="height:100%;width:${perc}%;background:rgba(255,255,255,.25);"></div></div>`;}
       }
       }catch(errLinha){console.error('Erro ao renderizar barra Gantt',i,t?.id,errLinha);}
     }
