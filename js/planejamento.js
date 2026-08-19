@@ -4042,10 +4042,15 @@ const Planejamento = (() => {
   // "T° Int."/"T° Ext." = Térreo (Interno/Externo) — usado em toda tarefa de
   // área comum. "Reserv." = Reservatório truncado. Sem isso, nenhuma tarefa
   // de área comum casava com o pavimento "Térreo" cadastrado.
+  // "Muro Divisa" = sempre Térreo (regra do Milton) e "Cobertura" = sempre
+  // Reservatório (regra do Milton) — não são abreviação de escrita, são
+  // decisão de negócio de qual grupo essas zonas pertencem.
   function _expandirAbreviacoes(textoNorm){
     return textoNorm
       .replace(/(?:^|[\s-])t\s*o?\s*(int|ext)\b/g,' terreo ')
-      .replace(/\breserv\.?\b/g,'reservatorio');
+      .replace(/\breserv\.?\b/g,'reservatorio')
+      .replace(/\bmuro\s*divisa\b/g,'terreo')
+      .replace(/\bcobertura\b/g,'reservatorio');
   }
   function _detectarGrupoPorNome(nomeTarefa,estrutura){
     const nome=_expandirAbreviacoes(_normTexto(nomeTarefa));
@@ -4078,6 +4083,8 @@ const Planejamento = (() => {
   let _gerarGruposLista=null; // estado vivo da prévia (permite editar e propagar)
   let _gerarGruposPavimentos=null; // lista fechada de nomes de pavimento (Estrutura da Obra) — só se escolhe daqui, nunca digita livre
 
+  const SEM_VINCULO='— Sem Vínculo —';
+
   async function _abrirGerarGrupos(){
     await _carregarEstruturaObra();
     const est=_estruturaObraCache;
@@ -4088,16 +4095,21 @@ const Planejamento = (() => {
     }
     const sorted=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
     const folhas=sorted.filter(t=>!_arvFilhos(t,sorted).length);
-    const propostas=folhas.map(t=>({tarefa:t,match:_detectarGrupoPorNome(t.nome,est)})).filter(p=>p.match);
-    if(!propostas.length){
-      Utils.toast('Nenhuma tarefa teve o nome de um pavimento cadastrado reconhecido dentro do próprio nome.','alerta');
+    // TODA tarefa entra na lista, mesmo sem match — quem não bate em nenhum
+    // pavimento (logística/equipamento sem andar: Mini Grua, Cremalheira,
+    // Elevadores...) aparece marcada como "Sem Vínculo" em vez de simplesmente
+    // desaparecer da prévia. Assim dá pra ver TUDO e decidir, em vez de ficar
+    // se perguntando por que uma tarefa não apareceu.
+    const propostas=folhas.map(t=>({tarefa:t,match:_detectarGrupoPorNome(t.nome,est)||{grupo:SEM_VINCULO,subgrupo:null}}));
+    const mudam=propostas.filter(p=>p.tarefa.grupo!==p.match.grupo||(p.tarefa.subgrupo||null)!==(p.match.subgrupo||null));
+    if(!mudam.length){
+      Utils.toast('Nada pra mudar — todas as tarefas já estão com o Grupo/Subgrupo certo (ou já marcadas como Sem Vínculo).','alerta');
       return;
     }
-    const mudam=propostas.filter(p=>p.tarefa.grupo!==p.match.grupo||(p.tarefa.subgrupo||null)!==(p.match.subgrupo||null));
     // Lista fechada de pavimentos cadastrados — o valor proposto só pode ser
-    // TROCADO por um desses, nunca digitado livre. Texto livre geraria grupo
-    // parecido mas diferente (typo, acento, maiúscula) e criaria "mais um"
-    // em vez de casar com o que já existe na Estrutura da Obra.
+    // TROCADO por um desses (ou "Sem Vínculo"), nunca digitado livre. Texto
+    // livre geraria grupo parecido mas diferente (typo, acento, maiúscula) e
+    // criaria "mais um" em vez de casar com o que já existe.
     // Ordem = a mesma que já está na Estrutura da Obra (campo "ordem" de cada
     // pavimento, arrumado por Milton lá) — NUNCA re-ordenar por texto: string
     // sort põe "10º Pavimento" antes de "1º Pavimento" (compara caractere por
@@ -4111,12 +4123,21 @@ const Planejamento = (() => {
         if(p.nome&&!vistoPav.has(p.nome)){vistoPav.add(p.nome);_gerarGruposPavimentos.push(p.nome);}
       }
     }
+    _gerarGruposPavimentos.push(SEM_VINCULO);
+    // Ordem da lista = ordem do pavimento PROPOSTO (mesma ordem da Estrutura
+    // da Obra) — assim dá pra ver tudo do 1º Pavimento junto, depois tudo do
+    // 2º Pavimento junto, e assim por diante, em vez da ordem solta da tarefa.
+    const posicaoPav=new Map(_gerarGruposPavimentos.map((nome,i)=>[nome,i]));
     _gerarGruposLista=mudam.map(p=>({
       tarefaId:p.tarefa.id,nome:p.tarefa.nome,
       grupoAntigo:p.tarefa.grupo||'',subgrupoAntigo:p.tarefa.subgrupo||null,
       grupoProposto:p.match.grupo,subgrupoProposto:p.match.subgrupo||null,
       marcado:true
-    }));
+    })).sort((a,b)=>{
+      const pa=posicaoPav.get(a.grupoProposto)??999,pb=posicaoPav.get(b.grupoProposto)??999;
+      if(pa!==pb)return pa-pb;
+      return (a.subgrupoProposto||0)-(b.subgrupoProposto||0);
+    });
     let pop=document.getElementById('gerargrupos-modal');if(pop)pop.remove();
     pop=document.createElement('div');pop.id='gerargrupos-modal';
     pop.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:2000;display:flex;align-items:center;justify-content:center;';
@@ -4126,7 +4147,7 @@ const Planejamento = (() => {
           <div style="font-weight:700;color:var(--cor-primaria);">⚡ Gerar Grupos — Prévia</div>
           <span style="cursor:pointer;color:#888;font-size:1.1rem;" onclick="document.getElementById('gerargrupos-modal').remove()">✕</span>
         </div>
-        <div style="font-size:.72rem;color:#888;margin-bottom:10px;">${propostas.length} de ${folhas.length} tarefas reconhecidas pelos pavimentos cadastrados na Estrutura da Obra. <b>${mudam.length}</b> vão realmente mudar Grupo (as demais já estão iguais). Pra corrigir, escolhe outro pavimento já cadastrado na lista (coluna da direita) — muda esse E todos os outros que tinham a mesma proposta.</div>
+        <div style="font-size:.72rem;color:#888;margin-bottom:10px;">${folhas.length} tarefas no total. <b>${mudam.length}</b> vão mudar Grupo/Subgrupo (as demais já estão certas). Lista ordenada pela ordem dos pavimentos na Estrutura da Obra. Pra corrigir, escolhe outro pavimento (ou "Sem Vínculo") na lista da direita — muda esse E todos os outros que tinham a mesma proposta.</div>
         <div id="gerargrupos-lista" style="display:flex;flex-direction:column;gap:2px;max-height:50vh;overflow-y:auto;border:1px solid #292929;border-radius:6px;padding:6px;"></div>
         <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px;">
           <button class="btn btn-secundario btn-sm" onclick="document.getElementById('gerargrupos-modal').remove()">Cancelar</button>

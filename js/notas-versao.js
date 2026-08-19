@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.10',
+  versaoAtual: 'V3.19.11',
 
   versoes: [
     {
@@ -9534,6 +9534,17 @@ const NotasVersao = {
         "Testado com os nomes reais das 2198 tarefas antes de publicar (não só os exemplos passados): \"T° Int.\"/\"T° Ext.\" é a abreviação de Térreo usada em toda tarefa de área comum (Festas/Copa, Academia, Brinquedoteca etc.) — sem isso nenhuma delas casava com o pavimento Térreo cadastrado. \"Reserv.\" é Reservatório truncado.",
         "Resultado no teste: reconhecimento subiu de 1871 para 2156 de 2198 (98%).",
         "Os 42 que ainda ficam de fora não são bug — são tarefas de zonas que a Estrutura da Obra não tem cadastrada ainda: Muro Divisa (Frontal/Fundos/LD/LE), Cobertura (Tampa) e itens de logística/equipamento sem andar (Mini Grua, Cremalheira, Elevadores, Entrada de Energia Definitiva) — cadastrando essas zonas como pavimento/local também cobre."
+      ]
+    },
+    {
+      "versao": "V3.19.11",
+      "data": "2026-08-19",
+      "tipo": "melhoria",
+      "titulo": "Gerar Grupos: Muro Divisa e Cobertura resolvidos, tarefa sem vínculo aparece marcada (não desaparece), lista ordenada pelo pavimento",
+      "itens": [
+        "Regra do Milton: Muro Divisa é sempre Térreo, e Cobertura (Tampa) é sempre Reservatório — cadastrado direto no reconhecimento (2177 de 2198 casam com um pavimento real agora).",
+        "As tarefas que realmente não têm andar (Mini Grua, Cremalheira, Elevadores, Entrada de Energia Definitiva, Vistoria Cliente, Fundação...) agora aparecem na prévia também — marcadas como \"— Sem Vínculo —\" em vez de simplesmente desaparecer da lista sem explicação. Pode confirmar assim ou trocar pra um pavimento real se achar que deveria ter um.",
+        "Lista da prévia agora vem ordenada pela ordem dos pavimentos na Estrutura da Obra (tudo do 1º Pavimento junto, depois 2º, etc.) em vez da ordem solta da tarefa — mais fácil de revisar bloco por bloco."
       ]
     }
   ],
