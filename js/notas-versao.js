@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.16.0.6',
+  versaoAtual: 'V3.16.0.7',
 
   versoes: [
     {
@@ -9185,6 +9185,18 @@ const NotasVersao = {
         "Agora são duas linhas com papel fixo: em cima as AÇÕES (⚙ Ferramentas · 🌳 Editor de Estrutura · 🗂 Visão Organizacional · ＋ Tarefa — sempre os mesmos, sempre no mesmo lugar) e embaixo a VISUALIZAÇÃO (versão de datas · zoom Dia→Ano · Gantt · Setas de Predecessora).",
         "Os botões que aparecem só às vezes (📋 Copiar datas, ＋ Colunas) agora entram sempre no FIM da linha de visualização — quando aparecem, nada existente muda de lugar.",
         "\"Setas de Predecessora\" ficou sempre visível (esmaecido quando o Gantt está escondido, com dica) — antes sumia e voltava junto com o Gantt, deslocando os vizinhos."
+      ]
+    },
+    {
+      "versao": "V3.16.0.7",
+      "data": "2026-08-19",
+      "tipo": "correcao",
+      "titulo": "Agenda: o seletor de horário virou dropdown nativo feio — trocado por um seletor próprio, no estilo caderno",
+      "itens": [
+        "Bug real (Milton reportou com print): o campo \"+ escolher tarefa\" de cada horário era um <select> nativo do navegador — que abre como uma lista genérica cinza/azul do sistema, sem estilo nenhum, cobrindo a tela e destoando completamente do visual de caderno.",
+        "Trocado por um seletor construído do zero: clicar em \"+ escolher tarefa\" abre, no próprio lugar, uma caixa com busca e a lista de tarefas pendentes já no estilo papel do módulo — sem nada nativo do navegador.",
+        "Dá pra digitar pra filtrar a lista (por texto da tarefa ou nome do projeto) quando tiver muita tarefa pendente.",
+        "Continua permitindo a mesma tarefa em vários horários (corrigido na V3.16.0.4) — isso não mudou, só a caixa de escolha ficou decente."
       ]
     }
   ],

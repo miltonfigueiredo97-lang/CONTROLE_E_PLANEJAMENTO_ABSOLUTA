@@ -29,6 +29,8 @@ const Todo = (() => {
   let editandoCategoriaId = null;
   let editandoProjetoId = null;
   let agendaDataAtual = null; // 'YYYY-MM-DD' — dia exibido na Agenda
+  let agendaSlotAberto = null; // horário (HH:MM) com o seletor de tarefa aberto no momento, ou null
+  let agendaFiltroPicker = ''; // texto de busca dentro do seletor de tarefa da Agenda
   let reconhecimentoVoz = null; // instância ativa do SpeechRecognition, ou null se parado
 
   const PALETA_PROJETO = ['#2563eb', '#16a34a', '#7c3aed', '#d97706', '#0891b2', '#dc2626', '#db2777'];
@@ -407,11 +409,27 @@ const Todo = (() => {
         line-height:1.4; margin-top:1px;
       }
       .agenda-corpo { flex:1; min-width:0; display:flex; flex-direction:column; gap:5px; }
-      .agenda-select {
-        width:100%; border:none; border-bottom:1px dotted #c9b896; border-radius:0; padding:3px 2px; font-size:13px;
-        font-family:'Kalam', cursive; color:#a3734f; background:transparent; cursor:pointer; outline:none;
+      .agenda-add-btn {
+        border:none; background:none; text-align:left; padding:4px 2px; font-size:13px; width:100%;
+        font-family:'Kalam', cursive; color:#a3734f; cursor:pointer; border-bottom:1px dotted #c9b896;
       }
-      .agenda-select:focus { border-bottom-color:#a3734f; }
+      .agenda-add-btn:hover { color:#7a5636; }
+      .agenda-picker { background:#fffdf5; border:1.5px solid #d8c9a8; border-radius:8px; padding:8px; box-sizing:border-box; }
+      .agenda-picker-busca {
+        width:100%; border:1px solid #d8c9a8; border-radius:6px; padding:6px 9px; font-size:12.5px;
+        font-family:var(--font-principal); outline:none; margin-bottom:6px; box-sizing:border-box; color:#3a3226;
+      }
+      .agenda-picker-busca:focus { border-color:#a3734f; }
+      .agenda-picker-lista { max-height:150px; overflow-y:auto; display:flex; flex-direction:column; gap:2px; }
+      .agenda-picker-item {
+        padding:6px 8px; border-radius:6px; cursor:pointer; font-size:12.5px; font-family:var(--font-principal);
+        color:#3a3226; display:flex; gap:6px; align-items:baseline;
+      }
+      .agenda-picker-item:hover { background:#f3e3c9; }
+      .agenda-picker-item-proj { font-size:9.5px; font-weight:700; color:#a3734f; background:#f3e3c9; border-radius:4px; padding:1px 5px; flex-shrink:0; white-space:nowrap; }
+      .agenda-picker-item-texto { flex:1; min-width:0; }
+      .agenda-picker-vazio { font-size:12px; color:#9c8a6a; padding:8px 4px; font-style:italic; }
+      .agenda-picker-cancelar { margin-top:6px; border:none; background:none; font-size:11px; color:#9c8a6a; cursor:pointer; text-decoration:underline; padding:0; }
       .agenda-tarefa {
         display:flex; align-items:center; gap:8px; background:#fff8e7; border-radius:6px; padding:5px 9px;
         box-shadow:0 1px 2px rgba(0,0,0,.06); border-left:3px solid #d4a373;
@@ -895,8 +913,32 @@ const Todo = (() => {
 
   function abrirModalAgenda() {
     if (!agendaDataAtual) agendaDataAtual = _hojeStr();
+    agendaSlotAberto = null;
+    agendaFiltroPicker = '';
     abrirOverlay('<div id="agenda-conteudo" class="agenda-papel"></div>', 'todo-modal-agenda');
     _renderizarAgenda();
+  }
+
+  function _htmlPickerLista(pendentes, filtro) {
+    const f = (filtro || '').trim().toLowerCase();
+    const filtrados = f ? pendentes.filter(p => `${p.texto} ${p.projeto || ''}`.toLowerCase().includes(f)) : pendentes;
+    if (filtrados.length === 0) return `<div class="agenda-picker-vazio">Nenhuma tarefa pendente encontrada.</div>`;
+    return filtrados.map(p => `
+      <div class="agenda-picker-item" data-agenda-escolher="${p.id}">
+        ${p.projeto ? `<span class="agenda-picker-item-proj">${esc(p.projeto)}</span>` : ''}
+        <span class="agenda-picker-item-texto">${esc(p.texto)}</span>
+      </div>`).join('');
+  }
+
+  function _wirePickerItens(container, dataStr, slot) {
+    if (!container) return;
+    container.querySelectorAll('[data-agenda-escolher]').forEach(item => {
+      item.onclick = async () => {
+        agendaSlotAberto = null;
+        agendaFiltroPicker = '';
+        await _atribuirTarefaSlot(item.dataset.agendaEscolher, dataStr, slot);
+      };
+    });
   }
 
   function _renderizarAgenda() {
@@ -920,6 +962,7 @@ const Todo = (() => {
       <div class="agenda-lista">
         ${slots.map(s => {
           const alocsSlot = agendaAlocacoes.filter(a => a.data === dataStr && a.horario === s.inicio);
+          const pickerAberto = agendaSlotAberto === s.inicio;
           return `
             <div class="agenda-linha">
               <div class="agenda-hora">${s.inicio}</div>
@@ -936,27 +979,44 @@ const Todo = (() => {
                       <button type="button" class="agenda-x" title="Remover deste horário" data-agenda-remover="${a.id}">×</button>
                     </div>`;
                 }).join('')}
-                <select class="agenda-select" data-agenda-slot="${s.inicio}">
-                  <option value="">${alocsSlot.length ? '+ adicionar outra' : '+ escolher tarefa'}</option>
-                  ${pendentes.map(p => `<option value="${p.id}">${esc(p.projeto ? `[${p.projeto}] ` : '')}${esc(p.texto)}</option>`).join('')}
-                </select>
+                ${pickerAberto ? `
+                  <div class="agenda-picker">
+                    <input type="text" class="agenda-picker-busca" id="agenda-picker-busca" placeholder="Buscar tarefa..." value="${esc(agendaFiltroPicker)}">
+                    <div class="agenda-picker-lista" id="agenda-picker-lista">${_htmlPickerLista(pendentes, agendaFiltroPicker)}</div>
+                    <button type="button" class="agenda-picker-cancelar" data-agenda-fechar-picker>Cancelar</button>
+                  </div>
+                ` : `
+                  <button type="button" class="agenda-add-btn" data-agenda-abrir="${s.inicio}">+ ${alocsSlot.length ? 'adicionar outra' : 'escolher tarefa'}</button>
+                `}
               </div>
             </div>`;
         }).join('')}
       </div>`;
 
-    document.getElementById('agenda-dia-anterior').onclick = () => { agendaDataAtual = _diaOffset(dataStr, -1); _renderizarAgenda(); };
-    document.getElementById('agenda-dia-seguinte').onclick = () => { agendaDataAtual = _diaOffset(dataStr, 1); _renderizarAgenda(); };
+    document.getElementById('agenda-dia-anterior').onclick = () => { agendaDataAtual = _diaOffset(dataStr, -1); agendaSlotAberto = null; _renderizarAgenda(); };
+    document.getElementById('agenda-dia-seguinte').onclick = () => { agendaDataAtual = _diaOffset(dataStr, 1); agendaSlotAberto = null; _renderizarAgenda(); };
     const btnHoje = document.getElementById('agenda-ir-hoje');
-    if (btnHoje) btnHoje.onclick = () => { agendaDataAtual = _hojeStr(); _renderizarAgenda(); };
-    el.querySelectorAll('[data-agenda-slot]').forEach(sel => {
-      sel.onchange = async (e) => {
-        const taskId = e.target.value;
-        const slot = e.target.dataset.agendaSlot;
-        if (!taskId) return;
-        await _atribuirTarefaSlot(taskId, dataStr, slot);
-      };
+    if (btnHoje) btnHoje.onclick = () => { agendaDataAtual = _hojeStr(); agendaSlotAberto = null; _renderizarAgenda(); };
+    el.querySelectorAll('[data-agenda-abrir]').forEach(btn => {
+      btn.onclick = () => { agendaSlotAberto = btn.dataset.agendaAbrir; agendaFiltroPicker = ''; _renderizarAgenda(); };
     });
+    const btnFecharPicker = el.querySelector('[data-agenda-fechar-picker]');
+    if (btnFecharPicker) btnFecharPicker.onclick = () => { agendaSlotAberto = null; _renderizarAgenda(); };
+    const buscaPicker = document.getElementById('agenda-picker-busca');
+    if (buscaPicker) {
+      buscaPicker.focus();
+      buscaPicker.value = agendaFiltroPicker;
+      buscaPicker.selectionStart = buscaPicker.selectionEnd = buscaPicker.value.length;
+      buscaPicker.addEventListener('input', (e) => {
+        agendaFiltroPicker = e.target.value;
+        const lista = document.getElementById('agenda-picker-lista');
+        if (lista) {
+          lista.innerHTML = _htmlPickerLista(pendentes, agendaFiltroPicker);
+          _wirePickerItens(lista, dataStr, agendaSlotAberto);
+        }
+      });
+      _wirePickerItens(document.getElementById('agenda-picker-lista'), dataStr, agendaSlotAberto);
+    }
     el.querySelectorAll('[data-agenda-remover]').forEach(btn => {
       btn.onclick = async () => { await _removerDoSlot(btn.dataset.agendaRemover); };
     });
