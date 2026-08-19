@@ -23,6 +23,13 @@ const Planejamento = (() => {
     base:{ini:'inicioPlanejadoBase',fim:'terminoPlanejadoBase'},
     desafio:{ini:'inicioDesafio',fim:'terminoDesafio'}};
   const VERSAO_LABEL={atual:'Atual',base:'Linha de Base',desafio:'Desafio'};
+  // Datas na versão ATUALMENTE selecionada (_versaoData) — usar SEMPRE que for
+  // posicionar algo no Gantt (barra, seta de predecessora, limites de zoom).
+  // Antes o Gantt ficava hardcoded em inicioPlanejado/terminoPlanejado (só a
+  // versão "Atual") mesmo quando a tabela estava mostrando Base ou Desafio —
+  // a barra aparecia numa data diferente da que a própria linha exibia.
+  const _vIni=t=>t[VERSAO_CAMPOS[_versaoData].ini];
+  const _vFim=t=>t[VERSAO_CAMPOS[_versaoData].fim];
   // Início Real / Término Real são preenchidos normalmente por Diário de
   // Obra/Medições/Semanal — travados aqui por padrão pra não editar por
   // engano. Liberar aqui é só pra correção em massa pontual (ex: atualizar
@@ -1594,7 +1601,7 @@ const Planejamento = (() => {
 
     const totalH=tf.length*ROW_H;
     const hoje=new Date();
-    const datas=tf.flatMap(t=>[t.inicioPlanejado,t.terminoPlanejado].filter(Boolean).map(d=>new Date(d)));
+    const datas=tf.flatMap(t=>[_vIni(t),_vFim(t)].filter(Boolean).map(d=>new Date(d)));
     const dMin=datas.length?new Date(Math.min(...datas)):new Date(hoje.getTime()-30*864e5);
     const dMax=datas.length?new Date(Math.max(...datas)):new Date(hoje.getTime()+60*864e5);
     dMin.setDate(dMin.getDate()-5);dMax.setDate(dMax.getDate()+10);
@@ -1666,7 +1673,7 @@ const Planejamento = (() => {
     }
 
     const hoje=new Date();
-    const datas=filtradas.flatMap(t=>[t.inicioPlanejado,t.terminoPlanejado].filter(Boolean).map(d=>new Date(d)));
+    const datas=filtradas.flatMap(t=>[_vIni(t),_vFim(t)].filter(Boolean).map(d=>new Date(d)));
     const dMin=datas.length?new Date(Math.min(...datas)):new Date(hoje.getTime()-30*864e5);
     dMin.setDate(dMin.getDate()-5);
     const lpd={dia:32,semana:8,mes:3,trimestre:1.2,ano:0.4}[zoomGantt]||3;
@@ -1774,15 +1781,15 @@ const Planejamento = (() => {
         onpointerdown="Planejamento._rowDragStart(event,${i})" oncontextmenu="if(event.ctrlKey)event.preventDefault();">${cells}</div>`;
 
       // Barra Gantt
-      if(ganttVisible&&t.inicioPlanejado&&t.terminoPlanejado){
-        const bx=Math.round((new Date(t.inicioPlanejado)-dMin)/864e5*lpd);
-        const bw=Math.max(4,Math.round((new Date(t.terminoPlanejado)-new Date(t.inicioPlanejado))/864e5*lpd));
+      if(ganttVisible&&_vIni(t)&&_vFim(t)){
+        const bx=Math.round((new Date(_vIni(t))-dMin)/864e5*lpd);
+        const bw=Math.max(4,Math.round((new Date(_vFim(t))-new Date(_vIni(t)))/864e5*lpd));
         const by=y+5, bh=20;
         const cor={em_dia:'#2563eb',em_andamento:'#ca8a04',concluido:'#15803d',alerta:'#c2410c',atrasado:'#dc2626'}[st2]||'#333';
         if(isG){
-          bH+=`<div style="position:absolute;left:${bx}px;top:${by+8}px;width:${bw}px;height:5px;background:var(--cor-primaria);border-radius:1px;" title="${t.nome} — ${_fd(t.inicioPlanejado)} a ${_fd(t.terminoPlanejado)}"></div>`;
+          bH+=`<div style="position:absolute;left:${bx}px;top:${by+8}px;width:${bw}px;height:5px;background:var(--cor-primaria);border-radius:1px;" title="${t.nome} — ${_fd(_vIni(t))} a ${_fd(_vFim(t))}"></div>`;
         } else {
-          bH+=`<div style="position:absolute;left:${bx}px;top:${by}px;width:${bw}px;height:${bh}px;background:${cor};border-radius:3px;overflow:hidden;" title="${t.nome} — ${_fd(t.inicioPlanejado)} a ${_fd(t.terminoPlanejado)} — ${perc}%">
+          bH+=`<div style="position:absolute;left:${bx}px;top:${by}px;width:${bw}px;height:${bh}px;background:${cor};border-radius:3px;overflow:hidden;" title="${t.nome} — ${_fd(_vIni(t))} a ${_fd(_vFim(t))} — ${perc}%">
             <div style="height:100%;width:${perc}%;background:rgba(255,255,255,.25);"></div>
             ${bw>50?`<span style="position:absolute;left:4px;top:4px;font-size:.58rem;color:rgba(255,255,255,.85);white-space:nowrap;overflow:hidden;max-width:${bw-8}px;">${t.nome}</span>`:''}
           </div>`;
@@ -1813,7 +1820,7 @@ const Planejamento = (() => {
   // tabela esquerda (onde pode haver um input aberto em edição).
   function _paintGanttOnly(s,e,visCols){
     const hoje=new Date();
-    const datas=filtradas.flatMap(t=>[t.inicioPlanejado,t.terminoPlanejado].filter(Boolean).map(d=>new Date(d)));
+    const datas=filtradas.flatMap(t=>[_vIni(t),_vFim(t)].filter(Boolean).map(d=>new Date(d)));
     const dMin=datas.length?new Date(Math.min(...datas)):new Date(hoje.getTime()-30*864e5);
     dMin.setDate(dMin.getDate()-5);
     const lpd={dia:32,semana:8,mes:3,trimestre:1.2,ano:0.4}[zoomGantt]||3;
@@ -1823,14 +1830,14 @@ const Planejamento = (() => {
       try{
       const perc=_perc(t), isG=t.tipo==='grupo', st2=_status(t);
       bH+=`<div style="position:absolute;left:0;top:${y}px;width:100%;height:${ROW_H}px;border-bottom:1px solid #1a1a1a;"></div>`;
-      if(ganttVisible&&t.inicioPlanejado&&t.terminoPlanejado){
-        const ini=new Date(t.inicioPlanejado),fim=new Date(t.terminoPlanejado);
+      if(ganttVisible&&_vIni(t)&&_vFim(t)){
+        const ini=new Date(_vIni(t)),fim=new Date(_vFim(t));
         const bx=Math.round((ini-dMin)/864e5*lpd);
         const bw=Math.max(4,Math.round((fim-ini)/864e5*lpd));
         const by=y+5,bh=20;
         const cor={em_dia:'#2563eb',em_andamento:'#ca8a04',concluido:'#15803d',alerta:'#c2410c',atrasado:'#dc2626'}[st2]||'#333';
-        if(isG){bH+=`<div style="position:absolute;left:${bx}px;top:${by+8}px;width:${bw}px;height:5px;background:var(--cor-primaria);border-radius:1px;" title="${t.nome} — ${_fd(t.inicioPlanejado)} a ${_fd(t.terminoPlanejado)}"></div>`;}
-        else{bH+=`<div style="position:absolute;left:${bx}px;top:${by}px;width:${bw}px;height:${bh}px;background:${cor};border-radius:3px;overflow:hidden;" title="${t.nome} — ${_fd(t.inicioPlanejado)} a ${_fd(t.terminoPlanejado)} — ${perc}%"><div style="height:100%;width:${perc}%;background:rgba(255,255,255,.25);"></div></div>`;}
+        if(isG){bH+=`<div style="position:absolute;left:${bx}px;top:${by+8}px;width:${bw}px;height:5px;background:var(--cor-primaria);border-radius:1px;" title="${t.nome} — ${_fd(_vIni(t))} a ${_fd(_vFim(t))}"></div>`;}
+        else{bH+=`<div style="position:absolute;left:${bx}px;top:${by}px;width:${bw}px;height:${bh}px;background:${cor};border-radius:3px;overflow:hidden;" title="${t.nome} — ${_fd(_vIni(t))} a ${_fd(_vFim(t))} — ${perc}%"><div style="height:100%;width:${perc}%;background:rgba(255,255,255,.25);"></div></div>`;}
       }
       }catch(errLinha){console.error('Erro ao renderizar barra Gantt',i,t?.id,errLinha);}
     }
@@ -2527,8 +2534,8 @@ const Planejamento = (() => {
         onclick="Planejamento.editarTarefa('${t.id}')" title="Clique para abrir/editar esta tarefa">
         <span style="width:7px;height:7px;border-radius:50%;background:${corBadge(t)};flex-shrink:0;"></span>
         <span style="flex:1;color:#ccc;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${_esc(t.nome||'')}</span>
-        <span style="font-size:.68rem;color:#666;font-family:var(--font-mono);min-width:64px;text-align:right;">${_fd(t.inicioPlanejado)}</span>
-        <span style="font-size:.68rem;color:#666;font-family:var(--font-mono);min-width:64px;text-align:right;">${_fd(t.terminoPlanejado)}</span>
+        <span style="font-size:.68rem;color:#666;font-family:var(--font-mono);min-width:64px;text-align:right;">${_fd(_vIni(t))}</span>
+        <span style="font-size:.68rem;color:#666;font-family:var(--font-mono);min-width:64px;text-align:right;">${_fd(_vFim(t))}</span>
         <span style="font-size:.7rem;font-weight:700;min-width:38px;text-align:right;color:${_perc(t)>=100?'#4ade80':'#60a5fa'};">${_perc(t)}%</span>
         <span style="font-size:.68rem;color:#555;min-width:90px;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${_esc(t.responsavel||'')}</span>
       </div>`;
@@ -2607,16 +2614,16 @@ const Planejamento = (() => {
     let paths='';
     for(let i=Math.max(0,s-MARGEM);i<Math.min(filtradas.length,e+MARGEM);i++){
       const t=filtradas[i];
-      if(!t.predecessora||!t.inicioPlanejado)continue;
-      const tx=Math.round((new Date(t.inicioPlanejado)-dMin)/864e5*lpd);
+      if(!t.predecessora||!_vIni(t))continue;
+      const tx=Math.round((new Date(_vIni(t))-dMin)/864e5*lpd);
       const ty=i*ROW_H+15;
       for(const p of _predParse(t.predecessora)){
         const pi=idxDe.get(p.id);
         if(pi===undefined)continue; // predecessora fora da visão atual — sem seta
         const pred=filtradas[pi];
-        if(!pred.terminoPlanejado)continue;
-        const pIni=pred.inicioPlanejado?new Date(pred.inicioPlanejado):null;
-        const pFim=new Date(pred.terminoPlanejado);
+        if(!_vFim(pred))continue;
+        const pIni=_vIni(pred)?new Date(_vIni(pred)):null;
+        const pFim=new Date(_vFim(pred));
         const px0=pIni?Math.round((pIni-dMin)/864e5*lpd):0;
         const pw=Math.max(4,Math.round((pFim-(pIni||pFim))/864e5*lpd));
         const px=px0+pw; // fim da barra da predecessora
@@ -4722,8 +4729,8 @@ const Planejamento = (() => {
               const ind=(t.nivel||0)*14;
               cells+=`<div style="${base}padding-left:${ind+4}px;"><span style="color:${isG?'var(--cor-primaria)':'#ccc'};font-weight:${isG?700:400};overflow:hidden;text-overflow:ellipsis;">${t.nome||''}</span></div>`;
             }
-            else if(cid==='inicio')cells+=`<div style="${base}color:#666;font-size:.7rem;justify-content:center;">${_fd(t.inicioPlanejado)}</div>`;
-            else if(cid==='termino')cells+=`<div style="${base}color:#666;font-size:.7rem;justify-content:center;">${_fd(t.terminoPlanejado)}</div>`;
+            else if(cid==='inicio')cells+=`<div style="${base}color:#666;font-size:.7rem;justify-content:center;">${_fd(_vIni(t))}</div>`;
+            else if(cid==='termino')cells+=`<div style="${base}color:#666;font-size:.7rem;justify-content:center;">${_fd(_vFim(t))}</div>`;
             else if(cid==='inicioReal')cells+=`<div style="${base}color:#888;font-size:.7rem;justify-content:center;" title="Preenchido via Diário de Obra, Medições ou Semanal">${_fd(t.inicioReal)}</div>`;
             else if(cid==='terminoReal')cells+=`<div style="${base}color:#888;font-size:.7rem;justify-content:center;" title="Preenchido via Diário de Obra, Medições ou Semanal">${_fd(t.terminoReal)}</div>`;
             else if(cid==='duracao')cells+=`<div style="${base}color:#666;font-size:.7rem;justify-content:center;">${t.duracao||'—'}</div>`;
@@ -4743,8 +4750,8 @@ const Planejamento = (() => {
           rowsHtml+=`<div style="position:absolute;top:${yLocal}px;left:0;right:0;height:${ROW_H}px;display:flex;align-items:center;border-bottom:1px solid #1a1a1a;background:${i%2?'rgba(255,255,255,.015)':''};">${cells}</div>`;
 
           barsHtml+=`<div style="position:absolute;left:0;top:${yLocal}px;width:100%;height:${ROW_H}px;border-bottom:1px solid #1a1a1a;background:${i%2?'rgba(255,255,255,.015)':''};"></div>`;
-          if(t.inicioPlanejado&&t.terminoPlanejado){
-            const ti=new Date(t.inicioPlanejado), tf2=new Date(t.terminoPlanejado);
+          if(_vIni(t)&&_vFim(t)){
+            const ti=new Date(_vIni(t)), tf2=new Date(_vFim(t));
             if(tf2>=dMin&&ti<=dMax){
               const bx=Math.round((ti-dMin)/864e5*lpd);
               const bw=Math.max(4,Math.round((tf2-ti)/864e5*lpd));

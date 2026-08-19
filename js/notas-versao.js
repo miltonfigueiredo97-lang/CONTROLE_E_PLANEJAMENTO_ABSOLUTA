@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.0.1',
+  versaoAtual: 'V3.19.1',
 
   versoes: [
     {
@@ -9347,6 +9347,17 @@ const NotasVersao = {
       "itens": [
         "Tooltip (passar o mouse) nas barras do Gantt agora mostra nome + início + término da tarefa, além do %. Antes só mostrava nome e %.",
         "Corrigido de brinde: as barras desenhadas durante a repintura rápida (edição de célula/scroll) não tinham tooltip nenhum — agora têm, igual às barras do desenho completo."
+      ]
+    },
+    {
+      "versao": "V3.19.1",
+      "data": "2026-08-19",
+      "tipo": "correcao",
+      "titulo": "Gantt (barra, setas de predecessora e PNG) estava sempre na versão \"Atual\" mesmo com Base/Desafio selecionado na tabela",
+      "itens": [
+        "Bug real: a coluna Início/Término da tabela respeita o seletor Atual/Linha de Base/Desafio, mas a BARRA do Gantt ficava hardcoded em Atual (inicioPlanejado/terminoPlanejado) sempre — resultado: tabela mostrando uma data (ex: Desafio, 02/06) e a barra desenhada em outra (Atual, pode ter sido lá pra setembro). Parecia \"data errada\", mas eram duas versões diferentes sendo misturadas na mesma tela.",
+        "Corrigido: barra do Gantt, setas de predecessora, limites do zoom (dMin/dMax) e exportação PNG agora seguem a mesma versão selecionada no seletor Atual/Base/Desafio — sempre a mesma data que a tabela mostra.",
+        "Agrupador de Categoria também corrigido (tinha o mesmo hardcode)."
       ]
     }
   ],
