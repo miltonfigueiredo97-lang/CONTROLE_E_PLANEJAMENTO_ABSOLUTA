@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.6',
+  versaoAtual: 'V3.19.6.1',
 
   versoes: [
     {
@@ -9412,6 +9412,18 @@ const NotasVersao = {
         "No Planejamento, o botão \\\"Mostrar números de todas\\\" não tinha efeito na maior parte do tempo: sem nenhuma concretagem em foco (📌), o mapa já mostrava todos os números de qualquer forma — o botão parecia travado/inútil.",
         "Removido o botão do Planejamento. Agora o próprio foco (clicar num card de concretagem pra selecioná-la) já funciona como o seletor: sem foco, mostra o número de todas; com uma concretagem em foco, mostra só o número dela. Sem clique extra, sem botão redundante.",
         "O botão \\\"🔢 Mostrar números de todas\\\" continua igual no Acompanhamento, onde faz sentido — ali sempre tem uma concretagem selecionada (é obrigatório), então o botão é o jeito de escolher entre ver só a dela ou ver todas juntas."
+      ]
+    },
+    {
+      "versao": "V3.19.6.1",
+      "data": "2026-08-19",
+      "tipo": "melhoria",
+      "titulo": "Planejamento: nova coluna Subgrupo (combina Andar + Final num código único)",
+      "itens": [
+        "Nova coluna \"Subgrupo\", ao lado de \"Grupo\": quando a tarefa tem um andar (Grupo = \"N° Pavimento\") E faz parte de uma frente paralela (\"- Final NN\" no nome), Subgrupo = andar×10 + número do Final. Ex: 1° Pavimento Final 01 → 11 · 1° Pavimento Final 02 → 12 · 7° Pavimento Final 02 → 72.",
+        "Fica em branco quando não há esse cruzamento: Térreo/SS1/SS2/Ático e áreas comuns (não têm Final), e andares sem separação por Final.",
+        "Objetivo: cruzar Categoria/Subcategoria (o quê) com Grupo/Subgrupo (onde/qual frente) — base pra uma futura visão de atividade por andar.",
+        "Editável na tabela igual Grupo, entra no Importar Correções e na Exportação Excel (simples)."
       ]
     }
   ],

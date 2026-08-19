@@ -114,7 +114,7 @@ const Planejamento = (() => {
   }
 
   // Colunas: ordem editável, largura editável
-  let colOrdem=['sel','num','status','nivel','codigo','nome','inicio','termino','inicioReal','terminoReal','duracao','percEsp','percConc','predecessora','sucessora','responsavel','local','vinculoEstrutura','grupo','frente','categoria','subcategoria','quantidade','equipe','custoMaterial','custoMaoObra','acoes'];
+  let colOrdem=['sel','num','status','nivel','codigo','nome','inicio','termino','inicioReal','terminoReal','duracao','percEsp','percConc','predecessora','sucessora','responsavel','local','vinculoEstrutura','grupo','subgrupo','frente','categoria','subcategoria','quantidade','equipe','custoMaterial','custoMaoObra','acoes'];
   let colLarguras={sel:28,num:36,status:34,nivel:42,codigo:70,nome:250,inicio:88,termino:88,duracao:60,percEsp:72,percConc:78,predecessora:80,responsavel:100,local:80,grupo:80,frente:100,quantidade:110,equipe:60,custoMaterial:100,custoMaoObra:100,acoes:64};
   let colsHidden=new Set();
 
@@ -123,7 +123,7 @@ const Planejamento = (() => {
   // pessoas alocadas, usada no módulo Produção). Lista fixa em Utils.
   const FRENTES=Utils.FRENTES_SERVICO;
 
-  const COL_LABELS={sel:'',num:'#',status:'',nivel:'Nível',codigo:'Código',nome:'Tarefa',inicio:'Início',termino:'Término',inicioReal:'Início Real',terminoReal:'Término Real',duracao:'Duração',percEsp:'% Esperado',percConc:'% Concluído',predecessora:'Predecessora',sucessora:'Sucessora',responsavel:'Responsável',local:'Local',vinculoEstrutura:'Local (Pav/Apto)',grupo:'Grupo',frente:'Frente',categoria:'Categoria',subcategoria:'Subcategoria',quantidade:'Quantidade',equipe:'Nº Equipe',custoMaterial:'Custo Material',custoMaoObra:'Custo M.Obra',acoes:''};
+  const COL_LABELS={sel:'',num:'#',status:'',nivel:'Nível',codigo:'Código',nome:'Tarefa',inicio:'Início',termino:'Término',inicioReal:'Início Real',terminoReal:'Término Real',duracao:'Duração',percEsp:'% Esperado',percConc:'% Concluído',predecessora:'Predecessora',sucessora:'Sucessora',responsavel:'Responsável',local:'Local',vinculoEstrutura:'Local (Pav/Apto)',grupo:'Grupo',subgrupo:'Subgrupo',frente:'Frente',categoria:'Categoria',subcategoria:'Subcategoria',quantidade:'Quantidade',equipe:'Nº Equipe',custoMaterial:'Custo Material',custoMaoObra:'Custo M.Obra',acoes:''};
   const COL_FIXED=new Set(['sel','num','status','nome','acoes']);
   const COL_EDITABLE=new Set(['codigo','nome','inicio','termino','duracao','percConc','predecessora','responsavel','local','grupo','frente','nivel','equipe','inicioReal','terminoReal']); // percEsp saiu: agora é calculado ao vivo pela data (não editável)
 
@@ -1747,6 +1747,8 @@ const Planejamento = (() => {
           cells+=`<div style="${base}color:${resumo?'#888':'#3a3a3a'};font-size:.7rem;cursor:pointer;${resumo&&resumo.includes('⚠')?'color:#dc2626;':''}" onclick="Planejamento._abrirVinculoPavimento(${i})" title="Clique pra vincular a um pavimento/apto">${resumo||'—'}</div>`;
         } else if(cid==='grupo'){
           cells+=`<div style="${base}color:#555;font-size:.7rem;cursor:pointer;" ${clickEdit}>${t.grupo||'—'}</div>`;
+        } else if(cid==='subgrupo'){
+          cells+=`<div style="${base}color:${t.subgrupo?'#ccc':'#555'};font-size:.7rem;cursor:pointer;font-family:var(--font-mono);" ${clickEdit} title="Combina andar + Final (ex: 1° Pav. Final 02 = 12) — em branco quando não há Final (térreo/subsolo/áreas comuns)">${t.subgrupo||'—'}</div>`;
         } else if(cid==='categoria'){
           cells+=`<div style="${base}color:${t.categoria?'#ccc':'#555'};font-size:.7rem;cursor:pointer;" ${clickEdit} title="Preenchido via Importar Correções (planilha categorizada) ou editado aqui">${t.categoria||'—'}</div>`;
         } else if(cid==='subcategoria'){
@@ -1890,7 +1892,7 @@ const Planejamento = (() => {
       inicio:VERSAO_CAMPOS[_versaoData].ini,termino:VERSAO_CAMPOS[_versaoData].fim,
       duracao:'duracao',percEsp:'percentualEsperado',percConc:'percentualConcluido',
       predecessora:'predecessora',responsavel:'responsavel',local:'local',grupo:'grupo',frente:'frenteServico',nivel:'nivel',
-      categoria:'categoria',subcategoria:'subcategoria',
+      categoria:'categoria',subcategoria:'subcategoria',subgrupo:'subgrupo',
       equipe:'equipeAlocada',inicioReal:'inicioReal',terminoReal:'terminoReal'};
     const field=map[colId]; if(!field)return;
     const val=field==='predecessora'?(t._predDisplay||''):(t[field]||'');
@@ -3235,7 +3237,7 @@ const Planejamento = (() => {
       local:['local','location'],custo:['custo','cost'],receita:['receita','revenue'],
       resp:['responsavel','responsible','resource'],frente:['frente','frente de servico','equipe'],iniB:['inicio linha de base'],terB:['termino linha de base'],
       iniD:['inicio desafio'],terD:['termino desafio'],iniReal:['inicio real'],terReal:['termino real'],
-      categoria:['categoria'],subcategoria:['subcategoria']};
+      categoria:['categoria'],subcategoria:['subcategoria'],subgrupo:['subgrupo']};
       for(const al of(a[n]||[])){const i=hdrs.indexOf(al);if(i>=0)return i;}return-1;};
     const iN=ci('nome');
     if(iN<0)throw new Error('Coluna Nome não encontrada.');
@@ -3339,6 +3341,7 @@ const Planejamento = (() => {
     {id:'receita',label:'Receita',col:'receita'},
     {id:'categoria',label:'Categoria',col:'categoria'},
     {id:'subcategoria',label:'Subcategoria',col:'subcategoria'},
+    {id:'subgrupo',label:'Subgrupo',col:'subgrupo'},
   ];
   let _correcoesContexto=null;
   async function importarCorrecoes(event){
@@ -3417,7 +3420,7 @@ const Planejamento = (() => {
     }
     const COL_MAP={inicioReal:'iniReal',terminoReal:'terReal',percentualConcluido:'percConc',percentualEsperado:'percEsp',
       inicioPlanejado:'inicio',terminoPlanejado:'termino',duracao:'duracao',responsavel:'resp',frenteServico:'frente',predecessora:'pred',
-      custo:'custo',receita:'receita',categoria:'categoria',subcategoria:'subcategoria'};
+      custo:'custo',receita:'receita',categoria:'categoria',subcategoria:'subcategoria',subgrupo:'subgrupo'};
     const DATE_FIELDS=new Set(['inicioReal','terminoReal','inicioPlanejado','terminoPlanejado']);
     const NUM_FIELDS=new Set(['percentualConcluido','percentualEsperado','custo','receita','duracao']);
     const idxCodigo=ci('codigo');
@@ -4601,17 +4604,17 @@ const Planejamento = (() => {
       // Prececessora referencia esse número. Ela é recalculada a cada
       // exportação de propósito — NÃO use como identificador.
       const H=['ID','Linha','Código','Nível','Nome','Duração','Início','Término','% Esperado','% Concluído',
-        'Prececessora','Tarefa Pai','Grupo','Local','Frente','Categoria','Subcategoria','Custo','Receita','Responsável',
+        'Prececessora','Tarefa Pai','Grupo','Subgrupo','Local','Frente','Categoria','Subcategoria','Custo','Receita','Responsável',
         'Inicio Linha de Base','Termino Linha de Base','Inicio Desafio','Termino Desafio'];
       const sorted=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
       const rows=sorted.map((t,i)=>[t.id||'',i+1,t.codigo||'',t.nivel||0,'  '.repeat(t.nivel||0)+(t.nome||''),
         t.duracao?t.duracao+'d':'',_fBR(t.inicioPlanejado),_fBR(t.terminoPlanejado),
         _percEsp(t),t.percentualConcluido||0,t._predDisplay||'',t.tarefaPai||'',
-        t.grupo||'',t.local||'',t.frenteServico||'',t.categoria||'',t.subcategoria||'',t.custo||0,t.receita||0,t.responsavel||'',
+        t.grupo||'',t.subgrupo||'',t.local||'',t.frenteServico||'',t.categoria||'',t.subcategoria||'',t.custo||0,t.receita||0,t.responsavel||'',
         _fBR(t.inicioPlanejadoBase),_fBR(t.terminoPlanejadoBase),_fBR(t.inicioDesafio),_fBR(t.terminoDesafio)]);
       const ws=XLSX.utils.aoa_to_sheet([H,...rows]);
       ws['!cols']=[{wch:24},{wch:6},{wch:10},{wch:7},{wch:45},{wch:8},{wch:13},{wch:13},{wch:11},{wch:11},
-        {wch:13},{wch:20},{wch:18},{wch:15},{wch:12},{wch:18},{wch:22},{wch:10},{wch:10},{wch:18},{wch:22},{wch:22},{wch:15},{wch:15}];
+        {wch:13},{wch:20},{wch:18},{wch:10},{wch:15},{wch:12},{wch:18},{wch:22},{wch:10},{wch:10},{wch:18},{wch:22},{wch:22},{wch:15},{wch:15}];
       const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Cronograma');
       const obra=Router.getObra();
       XLSX.writeFile(wb,`cronograma_${(obra?.nome||'obra').replace(/[^a-z0-9]/gi,'_')}.xlsx`);
@@ -4747,6 +4750,7 @@ const Planejamento = (() => {
             else if(cid==='local')cells+=`<div style="${base}color:#555;font-size:.7rem;">${t.local||'—'}</div>`;
             else if(cid==='vinculoEstrutura')cells+=`<div style="${base}color:#888;font-size:.7rem;">${_resumoVinculo(t.vinculoEstrutura)||'—'}</div>`;
             else if(cid==='grupo')cells+=`<div style="${base}color:#555;font-size:.7rem;">${t.grupo||'—'}</div>`;
+            else if(cid==='subgrupo')cells+=`<div style="${base}color:#555;font-size:.7rem;">${t.subgrupo||'—'}</div>`;
             else if(cid==='categoria')cells+=`<div style="${base}color:#555;font-size:.7rem;">${t.categoria||'—'}</div>`;
             else if(cid==='subcategoria')cells+=`<div style="${base}color:#555;font-size:.7rem;">${t.subcategoria||'—'}</div>`;
             else if(cid==='quantidade'){const vinc=t.fonteQuantidade==='levantamento';cells+=`<div style="${base}color:${vinc?'var(--cor-primaria)':'#555'};font-size:.7rem;justify-content:flex-end;">${vinc?'🔗 ':''}${t.quantidade?_fQtd(t.quantidade)+' '+(t.unidade||''):'—'}</div>`;}
