@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.16.0.0',
+  versaoAtual: 'V3.16.0.1',
 
   versoes: [
     {
@@ -9109,6 +9109,17 @@ const NotasVersao = {
         "Clicar num horário vazio abre a lista de tarefas pendentes pra escolher qual alocar ali. Horário ocupado mostra a tarefa com check (concluir direto dali) e um × pra remover do horário.",
         "Navegação entre dias (‹ Hoje ›) — cada tarefa é salva com dataAgendada e horarioAgendado, então a grade de qualquer dia (passado ou futuro) sempre mostra o que foi alocado nele.",
         "Uma tarefa só pode estar em um horário por vez — escolher ela em outro horário move a alocação."
+      ]
+    },
+    {
+      "versao": "V3.16.0.1",
+      "data": "2026-08-19",
+      "tipo": "melhoria",
+      "titulo": "Tarefas do Sistema: adicionar tarefa por voz",
+      "itens": [
+        "Botão de microfone 🎤 ao lado do campo \"O que precisa ser feito?\". Clica, fala, o texto reconhecido entra no campo — só falta escolher projeto/categoria/importância e Adicionar (ou já mandar direto, se preferir).",
+        "Usa o reconhecimento de voz nativo do navegador (Web Speech API), em português do Brasil. Qualidade depende do microfone/Android do aparelho, não é algo que o sistema controla.",
+        "Se o navegador não suportar reconhecimento de voz, avisa por um toast em vez de travar."
       ]
     }
   ],

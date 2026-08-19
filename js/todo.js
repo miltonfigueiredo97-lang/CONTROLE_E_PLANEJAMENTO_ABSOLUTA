@@ -24,6 +24,7 @@ const Todo = (() => {
   let editandoCategoriaId = null;
   let editandoProjetoId = null;
   let agendaDataAtual = null; // 'YYYY-MM-DD' — dia exibido na Agenda
+  let reconhecimentoVoz = null; // instância ativa do SpeechRecognition, ou null se parado
 
   const PALETA_PROJETO = ['#2563eb', '#16a34a', '#7c3aed', '#d97706', '#0891b2', '#dc2626', '#db2777'];
   const SWATCHES = ['#F5C800', '#2563eb', '#16a34a', '#7c3aed', '#d97706', '#dc2626', '#0891b2', '#db2777', '#059669', '#4f46e5', '#ea580c', '#64748b'];
@@ -141,6 +142,14 @@ const Todo = (() => {
         font-family:var(--font-principal); padding:2px;
       }
       .todo-addbar-texto::placeholder { color:var(--cor-texto-muted); font-weight:500; }
+      .todo-addbar-texto-row { display:flex; align-items:center; gap:8px; }
+      .todo-mic-btn {
+        width:30px; height:30px; border-radius:50%; border:1.5px solid var(--cor-borda-light); background:var(--cor-fundo);
+        cursor:pointer; font-size:14px; flex-shrink:0; display:flex; align-items:center; justify-content:center; transition:.15s;
+      }
+      .todo-mic-btn:hover { border-color:var(--cor-primaria); }
+      .todo-mic-btn.gravando { background:#fee2e2; border-color:#dc2626; animation:todo-mic-pulse 1.2s infinite; }
+      @keyframes todo-mic-pulse { 0%{box-shadow:0 0 0 0 rgba(220,38,38,.35);} 70%{box-shadow:0 0 0 9px rgba(220,38,38,0);} 100%{box-shadow:0 0 0 0 rgba(220,38,38,0);} }
       .todo-addbar-linha2 { display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap; border-top:1.5px solid var(--cor-borda-light); padding-top:12px; }
       .todo-addbar-campo { display:flex; flex-direction:column; gap:5px; flex:1; min-width:110px; }
       .todo-addbar-campo label { font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.4px; color:var(--cor-texto-muted); }
@@ -386,7 +395,10 @@ const Todo = (() => {
         </div>
 
         <form id="form-nova-tarefa" class="todo-addbar">
-          <input type="text" id="todo-texto" class="todo-addbar-texto" placeholder="O que precisa ser feito?" required>
+          <div class="todo-addbar-texto-row">
+            <input type="text" id="todo-texto" class="todo-addbar-texto" placeholder="O que precisa ser feito?" required>
+            <button type="button" class="todo-mic-btn" id="todo-mic-btn" title="Adicionar por voz">🎤</button>
+          </div>
           <div class="todo-addbar-linha2">
             <div class="todo-addbar-campo">
               <label>Projeto</label>
@@ -536,6 +548,41 @@ const Todo = (() => {
     });
     document.getElementById('todo-abrir-gerenciar').addEventListener('click', abrirModalGerenciar);
     document.getElementById('todo-abrir-agenda').addEventListener('click', abrirModalAgenda);
+    _wireMicButton();
+  }
+
+  // ============================================
+  // Tarefa por voz — Web Speech API (nativa do navegador/Android).
+  // Qualidade de reconhecimento depende do dispositivo, não do sistema.
+  // ============================================
+  function _wireMicButton() {
+    const btn = document.getElementById('todo-mic-btn');
+    if (!btn) return;
+    const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRec) {
+      btn.title = 'Reconhecimento de voz não suportado neste navegador.';
+      btn.addEventListener('click', () => Utils.toast('Reconhecimento de voz não suportado neste navegador.', 'alerta'));
+      return;
+    }
+    btn.addEventListener('click', () => {
+      if (reconhecimentoVoz) { reconhecimentoVoz.stop(); return; }
+      const input = document.getElementById('todo-texto');
+      const rec = new SpeechRec();
+      rec.lang = 'pt-BR';
+      rec.interimResults = false;
+      rec.maxAlternatives = 1;
+      rec.onstart = () => { btn.classList.add('gravando'); btn.textContent = '🔴'; };
+      rec.onerror = () => { Utils.toast('Não consegui entender. Tente de novo.', 'alerta'); };
+      rec.onresult = (e) => {
+        const texto = e.results[0][0].transcript;
+        const atual = input.value.trim();
+        input.value = atual ? `${atual} ${texto}` : texto;
+        input.focus();
+      };
+      rec.onend = () => { btn.classList.remove('gravando'); btn.textContent = '🎤'; reconhecimentoVoz = null; };
+      reconhecimentoVoz = rec;
+      rec.start();
+    });
   }
 
   function projetosOrdenadosPorImportancia() {
