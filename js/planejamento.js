@@ -127,7 +127,7 @@ const Planejamento = (() => {
   // o MESMO m² real, e o custo (Material/Mão de Obra) que já lê a
   // quantidade da tarefa funciona automaticamente, sem precisar vincular
   // Materiais/Mão de Obra direto ao levantamento.
-  let modoView='gantt'; // 'gantt' | 'vinculos' | 'arvore'
+  let modoView='gantt'; // 'gantt' | 'vinculos' | 'arvore' | 'categoria'
   let levFachadas=[];
   let _vincAlvoId=null, _vincModulo='fachada', _vincMetrica='m2semML';
   // _vincNodeId: nó selecionado na árvore do levantamento (para piso/teto/paredes/etc.)
@@ -588,6 +588,7 @@ const Planejamento = (() => {
   function _renderConteudo(){
     if(modoView==='vinculos'){_renderVinculosView();return;}
     if(modoView==='arvore'){_renderArvoreEditor();return;}
+    if(modoView==='categoria'){_renderCategoriaView();return;}
     const c=_el();
     const visCols=colOrdem.filter(id=>!colsHidden.has(id));
 
@@ -2369,37 +2370,20 @@ const Planejamento = (() => {
     }catch(e){}
   }
   // Menu da Visão Organizacional — família de "máscaras" de visão. Hoje:
-  // (1) Gantt Filtrado (escolher linhas uma a uma) e (2) Só os Pais até o
-  // nível N (esconde os filhos, mostra só a estrutura). Mais visões entram
-  // aqui no futuro.
+  // (1) Gantt Filtrado (escolher linhas) e (2) Agrupador de Categoria
+  // (reorganiza por Categoria > Subcategoria, sem alterar código/ordem real).
   function _menuVisaoOrg(){
     let pop=document.getElementById('visorg-menu');if(pop){pop.remove();return;}
     pop=document.createElement('div');pop.id='visorg-menu';
     pop.style.cssText='position:fixed;top:90px;right:20px;background:#1a1a1a;border:1px solid #333;border-radius:8px;padding:8px;z-index:1000;min-width:230px;box-shadow:0 8px 32px rgba(0,0,0,.5);display:flex;flex-direction:column;gap:4px;';
-    const nivMax=Math.max(...tarefas.map(t=>t.nivel||0),0);
-    let botoesNivel='';
-    for(let n=0;n<=Math.min(nivMax-1,4);n++){
-      botoesNivel+=`<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento._visaoOrgPorNivel(${n})" title="Mostra só as tarefas até o nível ${n} — os filhos abaixo somem (bom pra visão executiva)">👪 Só os Pais — até nível ${n}</button>`;
-    }
     pop.innerHTML=`
       <div style="font-size:.62rem;color:#666;text-transform:uppercase;letter-spacing:.6px;padding:4px 4px 2px;font-weight:700;">Visões</div>
       <button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="document.getElementById('visorg-menu').remove();Planejamento._abrirVisaoOrg()" title="Escolha linha a linha o que aparece (tabela + Gantt idênticos, só filtrados)">📊 Gantt Filtrado (escolher linhas)</button>
-      ${botoesNivel}
+      <button class="btn ${modoView==='categoria'?'btn-primario':'btn-secundario'} btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="document.getElementById('visorg-menu').remove();Planejamento.toggleCategoriaView()" title="Reorganiza as tarefas por Categoria > Subcategoria (Alvenaria, Gesso, Hidráulica...) em vez da estrutura do cronograma — não altera código, ordem nem estrutura real">🏷 Agrupador de Categoria</button>
       ${_visaoOrgIds?'<button class="btn btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;background:#dc2626;color:#fff;" onclick="Planejamento._visaoOrgLimpar();document.getElementById(\'visorg-menu\')?.remove()">✕ Limpar visão (mostrar tudo)</button>':''}
     `;
     document.body.appendChild(pop);
     setTimeout(()=>document.addEventListener('click',function h(e){if(!pop.contains(e.target)&&!e.target.closest('[onclick*="_menuVisaoOrg"]')){pop.remove();document.removeEventListener('click',h);}},false),50);
-  }
-  // Visão "Só os Pais": mostra tudo até o nível N, esconde o que está abaixo.
-  function _visaoOrgPorNivel(n){
-    const ids=tarefas.filter(t=>(t.nivel||0)<=n).map(t=>t.id);
-    document.getElementById('visorg-menu')?.remove();
-    if(!ids.length){Utils.toast('Nenhuma tarefa até esse nível.','alerta');return;}
-    _visaoOrgIds=new Set(ids);
-    _visaoOrgAncOk=false;
-    try{localStorage.setItem(_visaoOrgChaveLS(),JSON.stringify(ids));}catch(e){}
-    _buildFiltradas();_render();requestAnimationFrame(()=>_paintRows());
-    Utils.toast(`Visão "Só os Pais até nível ${n}": ${ids.length} linha(s).`,'sucesso');
   }
 
   function _abrirVisaoOrg(){
@@ -2477,6 +2461,131 @@ const Planejamento = (() => {
     try{localStorage.removeItem(_visaoOrgChaveLS());}catch(e){}
     const pop=document.getElementById('visorg-modal');if(pop)pop.remove();
     _buildFiltradas();_render();requestAnimationFrame(()=>_paintRows());
+  }
+
+  // ===================== AGRUPADOR DE CATEGORIA =====================
+  // View independente (mesmo padrão do Editor de Estrutura): NÃO toca em
+  // ordem/nível/código real — só reorganiza a EXIBIÇÃO em Categoria >
+  // Subcategoria > Tarefas. Categoria/Subcategoria vêm do "Importar
+  // Correções" (planilha categorizada, casada por ID). Tarefa sem Categoria
+  // cai no grupo "Sem Categoria" — nunca some da visão.
+  let _catAbertos=new Set();      // categorias expandidas
+  let _subcatAbertos=new Set();   // chaves "categoria|||subcategoria" expandidas
+  const SEM_CATEGORIA='Sem Categoria';
+
+  function toggleCategoriaView(){
+    modoView=modoView==='categoria'?'gantt':'categoria';
+    _render();
+  }
+  function _catToggle(chave){
+    if(_catAbertos.has(chave))_catAbertos.delete(chave);else _catAbertos.add(chave);
+    _renderCategoriaView();
+  }
+  function _subcatToggle(chave){
+    if(_subcatAbertos.has(chave))_subcatAbertos.delete(chave);else _subcatAbertos.add(chave);
+    _renderCategoriaView();
+  }
+  function _catExpandirTudo(v){
+    const sorted=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
+    if(v){
+      for(const t of sorted){
+        if(_arvTemFilhos(t,sorted))continue; // só folhas entram no agrupamento
+        const cat=t.categoria||SEM_CATEGORIA;
+        _catAbertos.add(cat);
+        _subcatAbertos.add(cat+'|||'+(t.subcategoria||'—'));
+      }
+    } else { _catAbertos.clear(); _subcatAbertos.clear(); }
+    _renderCategoriaView();
+  }
+
+  function _renderCategoriaView(){
+    const c=_el();
+    const sorted=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
+    // Só folhas entram no agrupamento — tarefas de estrutura/grupo (que têm
+    // filhos) não são trabalho em si, não fazem sentido numa Categoria.
+    const folhas=sorted.filter(t=>!_arvTemFilhos(t,sorted));
+
+    // Monta árvore Categoria -> Subcategoria -> [tarefas]
+    const porCat=new Map();
+    for(const t of folhas){
+      const cat=t.categoria||SEM_CATEGORIA;
+      const sub=t.categoria?(t.subcategoria||'—'):SEM_CATEGORIA;
+      if(!porCat.has(cat))porCat.set(cat,new Map());
+      const porSub=porCat.get(cat);
+      if(!porSub.has(sub))porSub.set(sub,[]);
+      porSub.get(sub).push(t);
+    }
+    const categorias=[...porCat.keys()].sort((a,b)=>{
+      if(a===SEM_CATEGORIA)return 1;if(b===SEM_CATEGORIA)return-1;
+      return a.localeCompare(b,'pt-BR');
+    });
+
+    const corBadge=t=>STATUS_INFO[_status(t)]?.cor||'#666';
+    const linhaTarefa=t=>`
+      <div style="display:flex;align-items:center;gap:8px;padding:4px 8px 4px 54px;border-bottom:1px solid #1c1c1c;cursor:pointer;font-size:.78rem;"
+        onmouseenter="this.style.background='rgba(255,255,255,.04)'" onmouseleave="this.style.background='transparent'"
+        onclick="Planejamento.editarTarefa('${t.id}')" title="Clique para abrir/editar esta tarefa">
+        <span style="width:7px;height:7px;border-radius:50%;background:${corBadge(t)};flex-shrink:0;"></span>
+        <span style="flex:1;color:#ccc;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${_esc(t.nome||'')}</span>
+        <span style="font-size:.68rem;color:#666;font-family:var(--font-mono);min-width:64px;text-align:right;">${_fd(t.inicioPlanejado)}</span>
+        <span style="font-size:.68rem;color:#666;font-family:var(--font-mono);min-width:64px;text-align:right;">${_fd(t.terminoPlanejado)}</span>
+        <span style="font-size:.7rem;font-weight:700;min-width:38px;text-align:right;color:${_perc(t)>=100?'#4ade80':'#60a5fa'};">${_perc(t)}%</span>
+        <span style="font-size:.68rem;color:#555;min-width:90px;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${_esc(t.responsavel||'')}</span>
+      </div>`;
+
+    const blocoSub=(cat,sub,lista)=>{
+      const chaveSub=cat+'|||'+sub;
+      const abertoSub=_subcatAbertos.has(chaveSub);
+      const media=Math.round(lista.reduce((s,t)=>s+_perc(t),0)/lista.length);
+      return `
+      <div>
+        <div style="display:flex;align-items:center;gap:8px;padding:5px 8px 5px 30px;cursor:pointer;background:rgba(255,255,255,.02);border-bottom:1px solid #1c1c1c;"
+          onclick="Planejamento._subcatToggle('${_esc(chaveSub).replace(/'/g,"\\'")}')">
+          <span style="width:14px;text-align:center;font-size:.68rem;color:#666;">${abertoSub?'▼':'▶'}</span>
+          <span style="flex:1;font-size:.78rem;font-weight:600;color:#bbb;">${_esc(sub)}</span>
+          <span style="font-size:.65rem;color:#555;">${lista.length} tarefa${lista.length!==1?'s':''}</span>
+          <span style="font-size:.72rem;font-weight:700;min-width:38px;text-align:right;color:${media>=100?'#4ade80':'#60a5fa'};">${media}%</span>
+        </div>
+        ${abertoSub?lista.map(linhaTarefa).join(''):''}
+      </div>`;
+    };
+
+    const blocoCat=cat=>{
+      const porSub=porCat.get(cat);
+      const subcats=[...porSub.keys()].sort((a,b)=>a.localeCompare(b,'pt-BR'));
+      const todasTarefas=[...porSub.values()].flat();
+      const aberto=_catAbertos.has(cat);
+      const media=Math.round(todasTarefas.reduce((s,t)=>s+_perc(t),0)/todasTarefas.length);
+      const semCat=cat===SEM_CATEGORIA;
+      return `
+      <div style="border:1px solid #262626;border-radius:8px;margin-bottom:8px;overflow:hidden;">
+        <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;cursor:pointer;background:${semCat?'rgba(220,38,38,.08)':'rgba(245,200,0,.05)'};"
+          onclick="Planejamento._catToggle('${_esc(cat).replace(/'/g,"\\'")}')">
+          <span style="width:16px;text-align:center;font-size:.75rem;color:#888;">${aberto?'▼':'▶'}</span>
+          <span style="flex:1;font-size:.88rem;font-weight:700;color:${semCat?'#f87171':'var(--cor-primaria)'};">${semCat?'⚠ ':'🏷 '}${_esc(cat)}</span>
+          <span style="font-size:.68rem;color:#666;">${subcats.length} subcategoria${subcats.length!==1?'s':''} · ${todasTarefas.length} tarefa${todasTarefas.length!==1?'s':''}</span>
+          <span style="font-size:.8rem;font-weight:800;min-width:42px;text-align:right;color:${media>=100?'#4ade80':'#60a5fa'};">${media}%</span>
+        </div>
+        ${aberto?subcats.map(sub=>blocoSub(cat,sub,porSub.get(sub))).join(''):''}
+      </div>`;
+    };
+
+    c.style.cssText='display:flex;flex-direction:column;min-height:0;height:100%;';
+    c.innerHTML=`
+      <div style="display:flex;gap:8px;align-items:baseline;margin-bottom:8px;">
+        <h2 style="margin:0;font-size:1.1rem;color:var(--cor-primaria);">🏷 Agrupador de Categoria</h2>
+        <span style="font-size:.75rem;color:#555;">${folhas.length} tarefas em ${categorias.length} categoria${categorias.length!==1?'s':''}</span>
+      </div>
+      <div style="font-size:.72rem;color:#888;margin-bottom:10px;">Máscara de visão: mostra as mesmas tarefas do Planejamento agrupadas por Categoria/Subcategoria (preenchidas via Importar Correções). Não altera ordem, código nem estrutura real. Clique numa tarefa para abrir/editar.</div>
+      <div style="display:flex;gap:6px;margin-bottom:10px;">
+        <button class="btn btn-secundario btn-sm" style="font-size:.72rem;" onclick="Planejamento._catExpandirTudo(true)">Expandir tudo</button>
+        <button class="btn btn-secundario btn-sm" style="font-size:.72rem;" onclick="Planejamento._catExpandirTudo(false)">Recolher tudo</button>
+        <span style="flex:1;"></span>
+        <button class="btn btn-secundario btn-sm" style="font-size:.72rem;" onclick="Planejamento.toggleCategoriaView()">← Voltar ao Gantt</button>
+      </div>
+      <div style="flex:1;overflow-y:auto;padding-right:4px;">
+        ${categorias.length?categorias.map(blocoCat).join(''):'<div style="color:#555;font-size:.82rem;padding:20px;text-align:center;">Nenhuma tarefa cadastrada ainda.</div>'}
+      </div>`;
   }
 
   // ===================== SETAS DE PREDECESSORA NO GANTT =====================
@@ -3113,7 +3222,8 @@ const Planejamento = (() => {
       pred:['predecessora','predecessor','prececessora'],pai:['pai','tarefa pai','parent'],grupo:['grupo','group'],
       local:['local','location'],custo:['custo','cost'],receita:['receita','revenue'],
       resp:['responsavel','responsible','resource'],frente:['frente','frente de servico','equipe'],iniB:['inicio linha de base'],terB:['termino linha de base'],
-      iniD:['inicio desafio'],terD:['termino desafio'],iniReal:['inicio real'],terReal:['termino real']};
+      iniD:['inicio desafio'],terD:['termino desafio'],iniReal:['inicio real'],terReal:['termino real'],
+      categoria:['categoria'],subcategoria:['subcategoria']};
       for(const al of(a[n]||[])){const i=hdrs.indexOf(al);if(i>=0)return i;}return-1;};
     const iN=ci('nome');
     if(iN<0)throw new Error('Coluna Nome não encontrada.');
@@ -3215,6 +3325,8 @@ const Planejamento = (() => {
     {id:'predecessora',label:'Predecessora',col:'pred'},
     {id:'custo',label:'Custo',col:'custo'},
     {id:'receita',label:'Receita',col:'receita'},
+    {id:'categoria',label:'Categoria',col:'categoria'},
+    {id:'subcategoria',label:'Subcategoria',col:'subcategoria'},
   ];
   let _correcoesContexto=null;
   async function importarCorrecoes(event){
@@ -3293,7 +3405,7 @@ const Planejamento = (() => {
     }
     const COL_MAP={inicioReal:'iniReal',terminoReal:'terReal',percentualConcluido:'percConc',percentualEsperado:'percEsp',
       inicioPlanejado:'inicio',terminoPlanejado:'termino',duracao:'duracao',responsavel:'resp',frenteServico:'frente',predecessora:'pred',
-      custo:'custo',receita:'receita'};
+      custo:'custo',receita:'receita',categoria:'categoria',subcategoria:'subcategoria'};
     const DATE_FIELDS=new Set(['inicioReal','terminoReal','inicioPlanejado','terminoPlanejado']);
     const NUM_FIELDS=new Set(['percentualConcluido','percentualEsperado','custo','receita','duracao']);
     const idxCodigo=ci('codigo');
@@ -6035,7 +6147,8 @@ const Planejamento = (() => {
     _colResizeStart,moveColLeft,moveColRight,_hideCol,_divStart,_sync,_editCell,_esqDragStart,
     _rowDragStart,toggleSel,_limparSelecao,_moverSel,_bulkNivel,_bulkDuplicar,_bulkExcluir,
     toggleStatusFiltro,_aplicarStatusFiltro,_abrirFiltroResponsavel,_aplicarFiltroResponsavel,_limparFiltroResponsavel,
-    _abrirVisaoOrg,_menuVisaoOrg,_visaoOrgPorNivel,_visaoOrgFiltrarLista,_visaoOrgToggleBloco,_visaoOrgAplicar,_visaoOrgLimpar,toggleSetasPred,_setaClicada,undo,
+    _abrirVisaoOrg,_menuVisaoOrg,_visaoOrgFiltrarLista,_visaoOrgToggleBloco,_visaoOrgAplicar,_visaoOrgLimpar,toggleSetasPred,_setaClicada,undo,
+    toggleCategoriaView,_catToggle,_subcatToggle,_catExpandirTudo,
     onBusca,limparBusca,_buscaKey,
     importarExcel,importarBaseCompleta,importarCorrecoes,_executarCorrecoes,_mostrarRevisaoCorrecoes,exportar,exportarFrentes,exportarExcelBonito,exportarMSProject,abrirImpressao,baixarPDF,exportarPNG,corrigirOrdensDuplicadas,_corrigirNiveisSoltos,_corrigirNivelPeloCodigo,_migrarPredecessorasParaId,_recalcularDatasPais,_recalcularPercTodosPais,_orfasMarcarTodas,_orfasExcluirMarcadas,_gerarPNG,_predPopup,_predSalvar,_predCellClick,_predAddLinha,_predLinhaAtualizar,autoClassificarFrentes,
     abrirVinculosView,fecharVinculosView,abrirVincularTarefa,abrirVincularAqui,onVincTipoChange,

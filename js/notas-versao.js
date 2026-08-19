@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.18.0.0',
+  versaoAtual: 'V3.19.0.0',
 
   versoes: [
     {
@@ -9325,6 +9325,18 @@ const NotasVersao = {
         "Checklist dentro da tarefa: cada tarefa pode ter uma lista de itens marcáveis (opcional, mas sempre disponível na criação e edição). Lista principal mostra o progresso (\"☑ 2/5\"), o pop-up de detalhe mostra os itens com checkbox clicável, e cada item do checklist pode ser agendado num horário PRÓPRIO na Agenda, separado do horário da tarefa principal.",
         "Agenda: novo botão pra esconder os horários que já passaram no dia de hoje (mostra só o que falta), com opção de reverter e ver tudo — preferência salva no navegador.",
         "Voltar pro topo: depois de adicionar ou editar uma tarefa, a tela rola de volta pro topo automaticamente, pra sempre ver o resultado sem precisar procurar na lista."
+      ]
+    },
+    {
+      "versao": "V3.19.0.0",
+      "data": "2026-08-19",
+      "tipo": "funcionalidade",
+      "titulo": "Categoria/Subcategoria no Planejamento: importação via planilha + nova visão Agrupador de Categoria",
+      "itens": [
+        "Importar Correções (Planejamento) agora também aceita Categoria e Subcategoria — casa por ID igual aos outros campos, permitindo trazer a classificação feita fora do sistema (ex: planilha categorizada) direto pras tarefas, sem tocar em ordem, código ou estrutura.",
+        "Nova visão \"🏷 Agrupador de Categoria\" no menu Visão Organizacional: reorganiza a exibição das tarefas por Categoria > Subcategoria (ex: Alvenaria > Vedação, Gesso > Forro) em vez da estrutura do cronograma — é só uma máscara de visão, não altera dados reais. Clique numa tarefa abre a edição normal.",
+        "Tarefa sem Categoria aparece agrupada em \"⚠ Sem Categoria\" dentro dessa visão — nunca some, sempre visível pra revisão.",
+        "Removidos os botões \"Só os Pais — até nível N\" do menu Visão Organizacional (substituídos pelo Agrupador de Categoria, mais útil no dia a dia)."
       ]
     }
   ],
