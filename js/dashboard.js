@@ -206,11 +206,6 @@ const Dashboard = (() => {
             <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
               <span class="text-sm text-muted" id="db-atualizado-em"></span>
               <button class="btn btn-secundario btn-sm" onclick="Dashboard.atualizar()" title="Recarregar dados do Planejamento agora">↻ Atualizar</button>
-              <div class="aba-toggle" id="db-painel-toggle">
-                <button class="aba-btn ativo" data-v="pavimento" onclick="DashFrentes.setModo('pavimento')">Por Pavimento</button>
-                <button class="aba-btn" data-v="apartamento" onclick="DashFrentes.setModo('apartamento')">Por Apartamento</button>
-              </div>
-              <button class="btn btn-secundario btn-sm" onclick="DashFrentes.abrirConfig()">⚙️ Configurar</button>
             </div>
           </div>
           <div id="db-frentes"></div>

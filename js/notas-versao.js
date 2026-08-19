@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.14',
+  versaoAtual: 'V3.19.13.2',
 
   versoes: [
     {
@@ -9568,7 +9568,20 @@ const NotasVersao = {
       ]
     },
     {
-      "versao": "V3.19.14",
+      "versao": "V3.19.13.1",
+      "data": "2026-08-18",
+      "tipo": "melhoria",
+      "titulo": "Andamento por Frente REESCRITO: matriz Categoria × Grupo do Planejamento",
+      "itens": [
+        "O sistema antigo (vínculo por local/pavimento + configuração de frentes) foi APOSENTADO. A visão agora nasce direto dos campos do Planejamento, sem configurar nada: linhas = Categoria › Subcategoria, colunas = Grupo › Subgrupo.",
+        "Cada célula cruza a categoria com o grupo e mostra a % executada dali (média ponderada pela duração quando há mais de uma tarefa). Verde/amarelo/vermelho por faixa, ✓ quando 100%.",
+        "Filtros em cima da tabela: Categoria, Subcategoria, Grupo, Subgrupo, Nº Equipe e busca livre — escolher um grupo/categoria filtra também as opções dependentes.",
+        "Clique no quadradinho: lista das tarefas daquele cruzamento com data de início, fim e % de cada uma, e o TOTAL embaixo — quantidade, período (início mais cedo → fim mais tardio) e % média do conjunto.",
+        "Coluna \"Geral\" no fim de cada linha com o consolidado da categoria/subcategoria em todos os grupos."
+      ]
+    },
+    {
+      "versao": "V3.19.13.2",
       "data": "2026-08-19",
       "tipo": "melhoria",
       "titulo": "Gerar Grupos: cabeçalho de seção por pavimento, filtro de busca e Subgrupo sempre visível na prévia",
