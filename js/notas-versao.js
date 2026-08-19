@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.13.2',
+  versaoAtual: 'V3.19.13.3',
 
   versoes: [
     {
@@ -9589,6 +9589,18 @@ const NotasVersao = {
         "A lista já vinha ordenada por pavimento, mas sem separação visual — agora cada bloco tem um cabeçalho \"▸ NOME DO PAVIMENTO (Nº tarefas)\", então dá pra ver de cara onde um grupo termina e o outro começa, em vez de vasculhar linha por linha.",
         "Novo campo de busca no topo da prévia — filtra por pavimento proposto ou por nome da tarefa (ex: digitar \"2 subsolo\" mostra só esse bloco).",
         "Subgrupo agora aparece sempre como uma coluna própria (mostra o número ou \"—\"), não só quando existe — fica fácil auditar se calculou certo em vez de precisar adivinhar pela ausência."
+      ]
+    },
+    {
+      "versao": "V3.19.13.3",
+      "data": "2026-08-18",
+      "tipo": "melhoria",
+      "titulo": "Frentes: ordem por data de execução, mobile arrumado e filtro de equipe sempre à mão",
+      "itens": [
+        "As linhas (categorias e subcategorias) agora saem ORDENADAS PELA DATA DE EXECUÇÃO — o conjunto que começa antes no cronograma aparece primeiro, em vez de ordem alfabética.",
+        "Cabeçalho bugado corrigido: a linha dos grupos tem altura travada, então a segunda linha (subgrupos) não sobrepõe mais ao rolar — era o que quebrava principalmente no celular.",
+        "Mobile: filtros ocupam a largura da tela (busca em linha própria), células e cabeçalhos compactos, nome da categoria quebra linha e a tabela rola com o dedo com altura limitada.",
+        "O seletor de Nº Equipe agora aparece SEMPRE — se nenhuma tarefa tem equipe preenchida no Planejamento, ele mostra o aviso em vez de sumir (a busca 🔎 continua sempre visível ao lado)."
       ]
     }
   ],

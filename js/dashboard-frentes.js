@@ -78,7 +78,9 @@ const DashFrentes = (() => {
         ${subcategorias.length ? sel('subcategoria', 'Subcategoria', subcategorias, f.subcategoria) : ''}
         ${sel('grupo', 'Grupo', grupos, f.grupo)}
         ${subgrupos.length ? sel('subgrupo', 'Subgrupo', subgrupos, f.subgrupo) : ''}
-        ${equipes.length ? sel('equipe', 'Nº Equipe', equipes, f.equipe) : ''}
+        ${equipes.length
+          ? sel('equipe', 'Nº Equipe', equipes, f.equipe)
+          : '<select class="form-control db-fr-filtro" disabled title="Preencha a coluna Nº Equipe no Planejamento pra filtrar por equipe"><option>Equipe: nenhuma preenchida</option></select>'}
         <input type="text" class="form-control db-fr-filtro" style="min-width:150px;" placeholder="🔎 Buscar..." value="${DashCore.esc(f.busca)}" oninput="DashFrentes.setBusca(this.value)">
         ${temFiltro ? '<button class="btn btn-secundario btn-sm" onclick="DashFrentes.limparFiltros()">✕ Limpar</button>' : ''}
       </div>`;
@@ -98,18 +100,29 @@ const DashFrentes = (() => {
       sgs.forEach(sg => colunas.push({ grupo: g, subgrupo: sg }));
     });
 
-    // LINHAS: Categoria › Subcategoria (subcategoria vazia = linha da própria categoria)
+    // LINHAS: Categoria › Subcategoria, ORDENADAS PELA DATA DE EXECUÇÃO —
+    // o conjunto que começa antes no cronograma aparece primeiro (empate:
+    // ordem alfabética).
     const catsMap = new Map();
+    const minInicio = new Map(); // chave cat|||sub -> timestamp do início mais cedo
+    const minInicioCat = new Map();
     tarefas.forEach(t => {
       const c = _v(t.categoria), sc = _v(t.subcategoria);
       if (!catsMap.has(c)) catsMap.set(c, new Set());
       catsMap.get(c).add(sc);
+      const ini = t.inicioPlanejado ? new Date(t.inicioPlanejado).getTime() : Infinity;
+      const k = c + '|||' + sc;
+      if (ini < (minInicio.get(k) ?? Infinity)) minInicio.set(k, ini);
+      if (ini < (minInicioCat.get(c) ?? Infinity)) minInicioCat.set(c, ini);
     });
     const linhas = [];
-    [...catsMap.keys()].sort(_ordena).forEach(c => {
-      const scs = [...catsMap.get(c)].sort(_ordena);
-      scs.forEach(sc => linhas.push({ categoria: c, subcategoria: sc }));
-    });
+    [...catsMap.keys()]
+      .sort((a, b) => (minInicioCat.get(a) ?? Infinity) - (minInicioCat.get(b) ?? Infinity) || _ordena(a, b))
+      .forEach(c => {
+        [...catsMap.get(c)]
+          .sort((a, b) => (minInicio.get(c + '|||' + a) ?? Infinity) - (minInicio.get(c + '|||' + b) ?? Infinity) || _ordena(a, b))
+          .forEach(sc => linhas.push({ categoria: c, subcategoria: sc }));
+      });
 
     // CÉLULAS
     const celulas = linhas.map(l => colunas.map(col => {

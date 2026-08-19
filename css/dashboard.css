@@ -89,9 +89,9 @@
 .db-fr-tabela { border-collapse: separate; border-spacing: 0; width: 100%; font-size: 0.78rem; }
 
 .db-fr-tabela thead th { position: sticky; top: 0; z-index: 3; background: var(--cor-dark-900); color: #fff; font-weight: 600; }
-.db-fr-htorre th { padding: 6px 10px; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.6px; color: var(--cor-primaria); border-bottom: 1px solid var(--cor-dark-600); text-align: center; }
-.db-fr-hcol th { padding: 7px 8px; text-align: center; min-width: 66px; border-bottom: 2px solid var(--cor-primaria); }
-.db-fr-htorre + .db-fr-hcol th { top: 27px; } /* segunda linha sticky abaixo da primeira */
+.db-fr-htorre th { height: 28px; padding: 0 10px; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.6px; color: var(--cor-primaria); border-bottom: 1px solid var(--cor-dark-600); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
+.db-fr-hcol th { padding: 6px 8px; text-align: center; min-width: 66px; border-bottom: 2px solid var(--cor-primaria); }
+.db-fr-htorre + .db-fr-hcol th { top: 28px; } /* altura da 1ª linha é travada em 28px — sem bug de sobreposição */
 .db-fr-hcol-main { font-weight: 700; font-size: 0.75rem; white-space: nowrap; }
 .db-fr-hcol-sub { font-weight: 400; font-size: 0.64rem; color: rgba(255,255,255,0.55); white-space: nowrap; }
 .db-fr-hgeral { min-width: 58px; }
@@ -209,3 +209,21 @@ th.db-subtotal-col { font-size: 0.68rem; line-height: 1.15; }
 .db-fr-catnome { font-weight: 800; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.4px; color: var(--cor-primaria-dark); padding: 5px 12px !important; }
 .db-fr-subnome { padding-left: 22px !important; font-weight: 500; }
 .db-fr-det-total { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 10px; padding: 10px 12px; background: var(--cor-primaria-ultra-light); border-radius: 8px; }
+
+
+/* ---- Frentes: mobile ---- */
+@media (max-width: 700px) {
+  .db-fr-filtros { gap: 5px; }
+  .db-fr-filtro { flex: 1 1 46%; max-width: none; min-width: 0; font-size: 0.72rem; }
+  .db-fr-filtros input.db-fr-filtro { flex: 1 1 100%; }
+  .db-fr-scroll { max-height: 65vh; -webkit-overflow-scrolling: touch; }
+  .db-fr-hcol th { min-width: 52px; padding: 5px 4px; }
+  .db-fr-hcol-main { font-size: 0.66rem; }
+  .db-fr-htorre th { height: 24px; font-size: 0.6rem; padding: 0 6px; }
+  .db-fr-htorre + .db-fr-hcol th { top: 24px; }
+  .db-fr-nome { max-width: 130px; padding: 6px 8px; font-size: 0.72rem; white-space: normal; line-height: 1.25; }
+  .db-fr-cel { min-width: 50px; padding: 5px 4px 4px; }
+  .db-fr-cel-pct { font-size: 0.72rem; }
+  .db-fr-geral { min-width: 46px; font-size: 0.72rem; }
+  .db-fr-rodape { font-size: 0.66rem; }
+}
