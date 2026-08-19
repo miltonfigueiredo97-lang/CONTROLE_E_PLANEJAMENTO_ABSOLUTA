@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.7.1',
+  versaoAtual: 'V3.19.7.2',
 
   versoes: [
     {
@@ -9460,6 +9460,16 @@ const NotasVersao = {
         "Motivo (Milton): o match automático por nome às vezes escolhe o pavimento errado quando duas palavras aparecem juntas no nome da tarefa (ex: \"Reservatório - SS2\" — o sistema pegava \"Reservatório\" por ser a palavra mais longa, mas a tarefa é do SS2 mesmo).",
         "Na prévia do \"⚡ Gerar Grupos\", o valor proposto (antes só texto) agora é um campo editável. Mudar um já aplica a MESMA mudança em todas as outras linhas que tinham a mesma proposta — não precisa corrigir uma por uma quando o mesmo engano se repete.",
         "Subgrupo recalcula automaticamente ao editar: se o novo valor não for do tipo \"Nº Pavimento\", o subgrupo daquela linha some (não tem como calcular andar×Final sem um andar)."
+      ]
+    },
+    {
+      "versao": "V3.19.7.2",
+      "data": "2026-08-19",
+      "tipo": "correcao",
+      "titulo": "Gerar Grupos: linha da prévia num flex-row só não cabia em tela de celular — input de editar ficava difícil de acertar",
+      "itens": [
+        "Cada linha tinha checkbox + nome + valor antigo + seta + input de editar (150px fixo) + subgrupo tudo numa linha só, sem quebra — numa tela estreita isso espreme tudo e o toque fica ambíguo (difícil saber se vai marcar o checkbox ou editar o valor).",
+        "Reorganizado em 2 linhas por tarefa: checkbox+nome numa (clicar em qualquer parte do nome já marca/desmarca — não precisa mais acertar o quadradinho pequeno), e \"de → para\" numa linha própria embaixo, com o campo de editar podendo crescer/quebrar à vontade."
       ]
     }
   ],

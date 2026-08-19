@@ -4070,15 +4070,25 @@ const Planejamento = (() => {
 
   function _renderGerarGruposLista(){
     const el=document.getElementById('gerargrupos-lista');if(!el)return;
+    // Layout em 2 linhas (não um flex-row único) — numa tela estreita (celular)
+    // um flex-row com checkbox+nome+valor antigo+seta+input de 150px+subgrupo
+    // não cabe: os elementos se espremem e o toque fica ambíguo (parece que
+    // clica no checkbox quando na verdade não deu pra alcançar o input).
+    // Aqui a 1ª linha é só checkbox+nome (espaço garantido), a 2ª linha é o
+    // "de → para" sozinha, com o input podendo quebrar/crescer à vontade.
     el.innerHTML=_gerarGruposLista.map((p,i)=>`
-      <div style="display:flex;align-items:center;gap:8px;font-size:.76rem;padding:4px 4px;border-bottom:1px solid #232323;">
-        <input type="checkbox" data-idx="${i}" ${p.marcado?'checked':''} onchange="Planejamento._gerarGruposToggle(${i},this.checked)">
-        <span style="flex:1;color:#ddd;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${_esc(p.nome)}</span>
-        <span style="color:#666;white-space:nowrap;">${_esc(p.grupoAntigo||'—')}${p.subgrupoAntigo?' / '+p.subgrupoAntigo:''}</span>
-        <span style="color:#555;">→</span>
-        <input value="${_esc(p.grupoProposto)}" onchange="Planejamento._gerarGruposEditarValor(${i},this.value)"
-          style="width:150px;background:#111;border:1px solid #333;border-radius:4px;color:var(--cor-primaria);font-weight:600;font-size:.76rem;padding:3px 6px;text-transform:uppercase;">
-        ${p.subgrupoProposto?`<span style="color:var(--cor-primaria);font-size:.72rem;">/ ${p.subgrupoProposto}</span>`:''}
+      <div style="display:flex;flex-direction:column;gap:5px;padding:8px 4px;border-bottom:1px solid #232323;">
+        <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;">
+          <input type="checkbox" data-idx="${i}" ${p.marcado?'checked':''} onchange="Planejamento._gerarGruposToggle(${i},this.checked)" style="margin-top:2px;flex-shrink:0;width:16px;height:16px;">
+          <span style="flex:1;color:#ddd;font-size:.78rem;line-height:1.3;">${_esc(p.nome)}</span>
+        </label>
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding-left:24px;">
+          <span style="color:#666;font-size:.72rem;white-space:nowrap;">${_esc(p.grupoAntigo||'—')}${p.subgrupoAntigo?' / '+p.subgrupoAntigo:''}</span>
+          <span style="color:#555;flex-shrink:0;">→</span>
+          <input value="${_esc(p.grupoProposto)}" onchange="Planejamento._gerarGruposEditarValor(${i},this.value)"
+            style="flex:1;min-width:130px;background:#111;border:1px solid #444;border-radius:5px;color:var(--cor-primaria);font-weight:600;font-size:.8rem;padding:6px 8px;text-transform:uppercase;">
+          ${p.subgrupoProposto?`<span style="color:var(--cor-primaria);font-size:.72rem;flex-shrink:0;">/ ${p.subgrupoProposto}</span>`:''}
+        </div>
       </div>`).join('');
   }
 
