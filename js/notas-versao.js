@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.16.0.9',
+  versaoAtual: 'V3.16.0.10',
 
   versoes: [
     {
@@ -9219,6 +9219,16 @@ const NotasVersao = {
         "Criada uma caixa de erro vermelha fixa embaixo do campo de texto — não é mais um toast que passa rápido, ela fica na tela até a próxima tentativa. Mostra a causa técnica exata: falta de HTTPS, SpeechRecognition ausente (com o user-agent do navegador), permissão negada, sem microfone, sem internet, ou o erro puro que o navegador devolveu.",
         "Também cobre o caso de o próprio navigator.mediaDevices não existir (comum em WebView antigo/app instalado) — nesse caso avisa pra tentar abrir o site direto no Chrome, fora do atalho instalado, pra isolar se o problema é do PWA.",
         "Com essa mensagem na tela, a próxima tentativa vai mostrar exatamente qual é o problema real — o que faltava pra corrigir de vez em vez de ficar tentando adivinhar."
+      ]
+    },
+    {
+      "versao": "V3.16.0.10",
+      "data": "2026-08-19",
+      "tipo": "correcao",
+      "titulo": "Toolbar do Planejamento: botão \"Copiar Datas\" que sobrava sozinho numa linha à parte foi tirado da barra e movido pra dentro de ⚙ Ferramentas",
+      "itens": [
+        "Esse botão só aparece quando a versão de datas não é \"Atual\" — e quando aparecia, ficava sobrando na quebra de linha, sozinho, deslocado do resto (a causa do visual torto reclamado). Removido da barra principal.",
+        "Agora fica dentro de ⚙ Ferramentas → Correções & Recálculos, com o mesmo nome e função — só aparece no menu quando faz sentido (fora da versão Atual), sem nunca mais deslocar nada na toolbar."
       ]
     }
   ],
