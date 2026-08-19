@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.16.0.4',
+  versaoAtual: 'V3.16.0.5',
 
   versoes: [
     {
@@ -9160,6 +9160,19 @@ const NotasVersao = {
         "Agenda com visual novo de caderno de planejamento: fundo cor de papel, linha vermelha de margem, linhas pontilhadas separando os horários, fonte cursiva na data — saiu do estilo \"sistema\" chapado de antes.",
         "Página do módulo desinchada mais um passo: o card preto de progresso saiu de cena — virou uma linha de texto discreta embaixo do título + uma barrinha fina, sem caixa separada tomando espaço.",
         "Botão de voz: agora pede a permissão do microfone explicitamente antes de gravar (em alguns Android com o app instalado como PWA, o navegador não mostra esse prompt sozinho) e cada erro (permissão negada, sem microfone, sem rede, silêncio) aparece com uma mensagem específica em vez de simplesmente não fazer nada."
+      ]
+    },
+    {
+      "versao": "V3.16.0.5",
+      "data": "2026-08-19",
+      "tipo": "melhoria",
+      "titulo": "Visão Organizacional virou menu de visões (+ Só os Pais por nível); setas de predecessora não cortam mais as barras; recolher grupo na visão filtrada não some mais com tudo",
+      "itens": [
+        "O botão 🗂 Visão Organizacional agora abre um MENU de visões (é uma família que vai crescer): \"📊 Gantt Filtrado\" (escolher linha a linha, como já era) e \"👪 Só os Pais — até nível N\" (mostra a estrutura até o nível escolhido e esconde os filhos — visão executiva rápida). \"✕ Limpar visão\" volta ao normal.",
+        "BUG corrigido: com a visão filtrada ativa, clicar na setinha de recolher dos grupos fazia TUDO sumir (0 tarefas) sem ter como reabrir. Causa: a máscara podia não incluir os pais das linhas escolhidas — recolher um pai invisível escondia os filhos e não sobrava linha nenhuma. Agora a máscara SEMPRE inclui automaticamente os ancestrais das linhas escolhidas: o caminho hierárquico aparece, e recolher/expandir funciona normal.",
+        "Setas de predecessora redesenhadas pra não passar por cima das barras: agora saem do fim da predecessora, correm pelo VÃO entre as linhas (na divisória, onde não tem barra) e só descem na coluna estreita logo antes do início da tarefa — Gantt limpo, igual MS Project.",
+        "Segurança na visão filtrada: arrastar pra reordenar fica bloqueado (com aviso) enquanto a máscara está ativa — as linhas vizinhas na tela não são as vizinhas reais da estrutura, mover ali bagunçaria a base original. Edição de células, %, datas e predecessoras continuam liberadas (gravam por ID, sem risco).",
+        "Sobre as cores no Gantt: a cor da barra é o STATUS da tarefa (azul = no prazo ainda não concluída, amarelo = em andamento, verde = concluída, vermelho = atrasada) — se tudo aparece azul na visão filtrada é porque todas aquelas tarefas estão no mesmo status, não é defeito da visão."
       ]
     }
   ],
