@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.16.0.1',
+  versaoAtual: 'V3.16.0.2',
 
   versoes: [
     {
@@ -9120,6 +9120,20 @@ const NotasVersao = {
         "Botão de microfone 🎤 ao lado do campo \"O que precisa ser feito?\". Clica, fala, o texto reconhecido entra no campo — só falta escolher projeto/categoria/importância e Adicionar (ou já mandar direto, se preferir).",
         "Usa o reconhecimento de voz nativo do navegador (Web Speech API), em português do Brasil. Qualidade depende do microfone/Android do aparelho, não é algo que o sistema controla.",
         "Se o navegador não suportar reconhecimento de voz, avisa por um toast em vez de travar."
+      ]
+    },
+    {
+      "versao": "V3.16.0.2",
+      "data": "2026-08-19",
+      "tipo": "melhoria",
+      "titulo": "Tarefas do Sistema: redesign — menos poluído, categoria multi-select, cor livre",
+      "itens": [
+        "Motivo (Milton): a tela estava \"muito cheia de informação\" — card de progresso gigante, filtros de projeto e categoria sempre abertos e espalhados, cor de categoria muito limitada.",
+        "Card de progresso ficou compacto (uma faixa fina, não mais um bloco preto grande).",
+        "Filtros de projeto/categoria/dependência saíram do topo fixo e foram pra um painel \"🔍 Filtros\" que abre/fecha, com contador de quantos filtros estão ativos e botão \"Limpar filtros\".",
+        "Categoria virou multi-select no filtro — dá pra marcar mais de uma categoria ao mesmo tempo pra ver as tarefas que batem com qualquer uma delas (antes só dava pra escolher uma).",
+        "Botão \"+ Nova categoria\" ficou visível direto dentro do painel de Filtros, não só escondido dentro do Gerenciar.",
+        "Paleta de cor de categoria saiu de ~12 opções fixas pra 36 cores curadas + um seletor de cor livre (🎨, ilimitado) — vale pra criar categoria rápida, editar categoria e pro Gerenciar, nos mesmos lugares de sempre."
       ]
     }
   ],

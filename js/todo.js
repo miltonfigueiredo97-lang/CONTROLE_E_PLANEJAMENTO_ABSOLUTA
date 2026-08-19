@@ -17,20 +17,88 @@ const Todo = (() => {
   let categorias = []; // [{id, nome, cor, importancia}]
 
   let filtroProjeto = '';
-  let filtroCategoria = '';
+  let filtrosCategoria = new Set(); // multi-select — vazio = todas
   let filtroDependencia = '';
   let busca = '';
   let mostrarConcluidas = false;
+  let filtrosPainelAberto = false;
   let editandoCategoriaId = null;
   let editandoProjetoId = null;
   let agendaDataAtual = null; // 'YYYY-MM-DD' — dia exibido na Agenda
   let reconhecimentoVoz = null; // instância ativa do SpeechRecognition, ou null se parado
 
   const PALETA_PROJETO = ['#2563eb', '#16a34a', '#7c3aed', '#d97706', '#0891b2', '#dc2626', '#db2777'];
-  const SWATCHES = ['#F5C800', '#2563eb', '#16a34a', '#7c3aed', '#d97706', '#dc2626', '#0891b2', '#db2777', '#059669', '#4f46e5', '#ea580c', '#64748b'];
+  const SWATCHES = [
+    '#F5C800', '#eab308', '#facc15', '#f59e0b', '#d97706', '#ea580c', '#f97316', '#fb923c',
+    '#dc2626', '#ef4444', '#f43f5e', '#db2777', '#ec4899', '#d946ef', '#c026d3', '#a855f7',
+    '#7c3aed', '#8b5cf6', '#6366f1', '#4f46e5', '#2563eb', '#3b82f6', '#0ea5e9', '#0891b2',
+    '#06b6d4', '#14b8a6', '#059669', '#16a34a', '#22c55e', '#65a30d', '#84cc16', '#64748b',
+    '#475569', '#334155', '#78716c', '#57534e',
+  ];
   const IMPORTANCIA_LABEL = { 1: '🔴 Urgente', 2: '🟠 Alta', 3: '🟡 Média', 4: '⚪ Baixa' };
 
   function esc(s) { return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+  // ============================================
+  // Grade de cores reutilizável: paleta curada + cor livre
+  // (input type=color, unlimitada) — usada em todo lugar que
+  // escolhe cor de categoria.
+  // ============================================
+  function _swatchGridHtml(gridId, corAtual) {
+    const corNorm = (corAtual || '').toLowerCase();
+    const naPaleta = SWATCHES.some(c => c.toLowerCase() === corNorm);
+    const corCustomAtual = (corAtual && !naPaleta) ? corAtual : '#888888';
+    return `
+      <div class="todo-swatch-grid" id="${gridId}">
+        ${SWATCHES.map(c => `<div class="todo-swatch ${c.toLowerCase() === corNorm ? 'selecionado' : ''}" style="background:${c}" data-cor="${c}"></div>`).join('')}
+        <label class="todo-swatch-custom ${(corAtual && !naPaleta) ? 'selecionado' : ''}" id="${gridId}-custom" title="Cor personalizada" style="${(corAtual && !naPaleta) ? `background:${esc(corAtual)};` : ''}">
+          <input type="color" value="${esc(corCustomAtual)}">🎨
+        </label>
+      </div>`;
+  }
+
+  function _wireSwatchGrid(gridId, onEscolher) {
+    const grid = document.getElementById(gridId);
+    if (!grid) return;
+    const custom = document.getElementById(`${gridId}-custom`);
+    const input = custom ? custom.querySelector('input[type=color]') : null;
+    grid.querySelectorAll('.todo-swatch').forEach(sw => {
+      sw.addEventListener('click', () => {
+        grid.querySelectorAll('.todo-swatch').forEach(s => s.classList.remove('selecionado'));
+        if (custom) { custom.classList.remove('selecionado'); custom.style.background = ''; }
+        sw.classList.add('selecionado');
+        onEscolher(sw.dataset.cor);
+      });
+    });
+    if (input && custom) {
+      input.addEventListener('input', () => {
+        grid.querySelectorAll('.todo-swatch').forEach(s => s.classList.remove('selecionado'));
+        custom.classList.add('selecionado');
+        custom.style.background = input.value;
+        onEscolher(input.value);
+      });
+    }
+  }
+
+  // Re-marca a seleção quando o alvo muda dinamicamente (ex: trocar
+  // qual categoria está sendo editada num formulário já aberto).
+  function _marcarSwatchGrid(gridId, cor) {
+    const grid = document.getElementById(gridId);
+    if (!grid) return;
+    const corNorm = (cor || '').toLowerCase();
+    const custom = document.getElementById(`${gridId}-custom`);
+    let achou = false;
+    grid.querySelectorAll('.todo-swatch').forEach(sw => {
+      const bate = sw.dataset.cor.toLowerCase() === corNorm;
+      sw.classList.toggle('selecionado', bate);
+      if (bate) achou = true;
+    });
+    if (custom) {
+      custom.classList.toggle('selecionado', !achou && !!cor);
+      custom.style.background = (!achou && cor) ? cor : '';
+      if (!achou && cor) custom.querySelector('input').value = cor;
+    }
+  }
 
   function corProjeto(nome) {
     if (!nome) return '#9ca3af';
@@ -120,19 +188,19 @@ const Todo = (() => {
     style.textContent = `
       .todo-topo { display:flex; gap:18px; align-items:stretch; flex-wrap:wrap; margin-bottom:16px; }
       .todo-progresso-card {
-        flex:1; min-width:260px; background:var(--cor-dark-900); border-radius:var(--borda-radius-lg);
-        padding:18px 22px; color:#fff; display:flex; flex-direction:column; justify-content:center; gap:10px;
+        flex:0 0 auto; min-width:170px; background:var(--cor-dark-900); border-radius:var(--borda-radius-lg);
+        padding:10px 16px; color:#fff; display:flex; flex-direction:column; justify-content:center; gap:6px;
       }
-      .todo-progresso-topo { display:flex; justify-content:space-between; align-items:baseline; }
-      .todo-progresso-numero { font-size:26px; font-weight:800; letter-spacing:-.5px; }
-      .todo-progresso-numero span { font-size:14px; font-weight:600; color:#bbb; margin-left:4px; }
+      .todo-progresso-topo { display:flex; justify-content:space-between; align-items:baseline; gap:10px; }
+      .todo-progresso-numero { font-size:16px; font-weight:800; letter-spacing:-.3px; }
+      .todo-progresso-numero span { font-size:12px; font-weight:600; color:#bbb; }
       .todo-progresso-pct { font-size:13px; font-weight:700; color:var(--cor-primaria); }
-      .todo-progresso-track { height:8px; border-radius:999px; background:rgba(255,255,255,.12); overflow:hidden; }
+      .todo-progresso-track { height:5px; border-radius:999px; background:rgba(255,255,255,.12); overflow:hidden; }
       .todo-progresso-fill { height:100%; border-radius:999px; background:linear-gradient(90deg,var(--cor-primaria-dark),var(--cor-primaria)); transition:width .5s cubic-bezier(.4,0,.2,1); }
-      .todo-progresso-legenda { font-size:12px; color:#999; }
+      .todo-progresso-legenda { font-size:11px; color:#999; }
 
       .todo-addbar {
-        flex:2; min-width:360px; display:flex; flex-direction:column; gap:12px; background:#fff;
+        flex:1; min-width:360px; display:flex; flex-direction:column; gap:12px; background:#fff;
         border:1.5px solid var(--cor-borda); border-radius:var(--borda-radius-lg); padding:16px;
         box-shadow:0 1px 2px rgba(0,0,0,.03);
       }
@@ -178,8 +246,25 @@ const Todo = (() => {
       }
       .todo-searchbar input:focus { border-color:var(--cor-primaria); box-shadow:0 0 0 3px var(--cor-primaria-light); }
 
-      .todo-filtros-row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:10px; }
-      .todo-filtros-row:last-of-type { margin-bottom:18px; }
+      .todo-filtros-bar { display:flex; gap:8px; align-items:center; margin-bottom:10px; }
+      .todo-filtros-toggle {
+        display:flex; align-items:center; gap:7px; padding:7px 14px; border-radius:999px; font-size:12.5px; font-weight:700;
+        border:1.5px solid var(--cor-borda); background:#fff; cursor:pointer; color:var(--cor-texto-secundario); transition:.15s;
+      }
+      .todo-filtros-toggle:hover { border-color:var(--cor-dark-900); color:var(--cor-texto); }
+      .todo-filtros-toggle.aberto { border-color:var(--cor-dark-900); color:var(--cor-texto); background:var(--cor-fundo); }
+      .todo-filtros-toggle .seta { font-size:10px; transition:.2s; }
+      .todo-filtros-toggle.aberto .seta { transform:rotate(180deg); }
+      .todo-filtros-badge { background:var(--cor-primaria); color:#000; border-radius:999px; padding:1px 7px; font-size:11px; font-weight:800; }
+      .todo-filtros-limpar { border:none; background:none; cursor:pointer; color:var(--cor-texto-muted); font-size:12px; font-weight:600; text-decoration:underline; }
+      .todo-filtros-limpar:hover { color:var(--cor-perigo); }
+      .todo-filtros-painel {
+        display:flex; flex-direction:column; gap:14px; background:var(--cor-fundo); border:1.5px solid var(--cor-borda-light);
+        border-radius:var(--borda-radius-lg); padding:14px 16px; margin-bottom:14px;
+      }
+      .todo-filtros-secao-titulo { font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.4px; color:var(--cor-texto-muted); margin-bottom:7px; }
+      .todo-filtros-hint { text-transform:none; font-weight:500; letter-spacing:0; color:var(--cor-texto-muted); font-size:11px; }
+      .todo-filtros-chips { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
       .todo-chip {
         padding:6px 14px; border-radius:999px; font-size:12.5px; font-weight:600; border:1.5px solid var(--cor-borda);
         background:#fff; cursor:pointer; color:var(--cor-texto-secundario); display:inline-flex; align-items:center;
@@ -190,6 +275,8 @@ const Todo = (() => {
       .todo-chip-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
       .todo-chip-count { background:rgba(0,0,0,.07); border-radius:999px; padding:1px 7px; font-size:11px; font-weight:700; }
       .todo-chip.ativo .todo-chip-count { background:rgba(255,255,255,.2); }
+      .todo-chip-add { border-style:dashed; color:var(--cor-texto-secundario); background:transparent; }
+      .todo-chip-add:hover { border-color:var(--cor-primaria); border-style:solid; color:var(--cor-texto); }
       .todo-select-filtro {
         padding:6px 12px; border-radius:999px; font-size:12.5px; font-weight:600; border:1.5px solid var(--cor-borda);
         background:#fff; color:var(--cor-texto-secundario); cursor:pointer; max-width:220px;
@@ -267,6 +354,13 @@ const Todo = (() => {
       .todo-swatch { width:26px; height:26px; border-radius:50%; cursor:pointer; border:2px solid transparent; transition:.15s; }
       .todo-swatch:hover { transform:scale(1.15); }
       .todo-swatch.selecionado { border-color:var(--cor-dark-900); box-shadow:0 0 0 2px #fff, 0 0 0 4px var(--cor-dark-900); }
+      .todo-swatch-custom {
+        width:26px; height:26px; border-radius:50%; cursor:pointer; border:2px dashed var(--cor-borda); flex-shrink:0;
+        display:flex; align-items:center; justify-content:center; font-size:11px; position:relative; overflow:hidden; background:#fff; transition:.15s;
+      }
+      .todo-swatch-custom:hover { transform:scale(1.15); }
+      .todo-swatch-custom.selecionado { border-color:var(--cor-dark-900); border-style:solid; box-shadow:0 0 0 2px #fff, 0 0 0 4px var(--cor-dark-900); }
+      .todo-swatch-custom input[type=color] { position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%; }
       .todo-cat-nova-form { display:none; gap:8px; align-items:flex-end; margin-top:10px; padding:12px; background:var(--cor-fundo); border-radius:8px; flex-wrap:wrap; }
       .todo-cat-nova-form.aberto { display:flex; }
       .todo-manage-lista { display:flex; flex-direction:column; gap:6px; max-height:220px; overflow-y:auto; margin-bottom:10px; }
@@ -332,7 +426,7 @@ const Todo = (() => {
 
     const passaFiltro = (t) => {
       if (filtroProjeto && t.projeto !== filtroProjeto) return false;
-      if (filtroCategoria && t.categoria !== filtroCategoria) return false;
+      if (filtrosCategoria.size > 0 && !filtrosCategoria.has(t.categoria)) return false;
       if (filtroDependencia && t.dependencia !== filtroDependencia) return false;
       if (buscaLower) {
         const alvo = `${t.texto} ${t.projeto || ''} ${t.categoria || ''} ${t.dependencia || ''}`.toLowerCase();
@@ -340,6 +434,9 @@ const Todo = (() => {
       }
       return true;
     };
+
+    const temFiltroAtivo = !!(filtroProjeto || filtrosCategoria.size > 0 || filtroDependencia || buscaLower);
+    const contagemFiltrosAtivos = (filtroProjeto ? 1 : 0) + (filtrosCategoria.size > 0 ? 1 : 0) + (filtroDependencia ? 1 : 0);
 
     const pendentes = pendentesTodas.filter(passaFiltro);
     const concluidas = concluidasTodas.filter(passaFiltro)
@@ -387,11 +484,11 @@ const Todo = (() => {
       <div class="todo-topo">
         <div class="todo-progresso-card">
           <div class="todo-progresso-topo">
-            <div class="todo-progresso-numero">${concluidas.length}<span>/ ${totalFiltrado} concluídas</span></div>
-            <div class="todo-progresso-pct">${pct}%</div>
+            <span class="todo-progresso-numero">${concluidas.length}<span>/${totalFiltrado}</span></span>
+            <span class="todo-progresso-pct">${pct}%</span>
           </div>
           <div class="todo-progresso-track"><div class="todo-progresso-fill" style="width:${pct}%"></div></div>
-          <div class="todo-progresso-legenda">${pendentes.length} tarefa${pendentes.length === 1 ? '' : 's'} pendente${pendentes.length === 1 ? '' : 's'}${(filtroProjeto || filtroCategoria || filtroDependencia || buscaLower) ? ' com os filtros atuais' : ''}</div>
+          <div class="todo-progresso-legenda">${pendentes.length} pendente${pendentes.length === 1 ? '' : 's'}${temFiltroAtivo ? ' (filtrado)' : ''}</div>
         </div>
 
         <form id="form-nova-tarefa" class="todo-addbar">
@@ -433,42 +530,63 @@ const Todo = (() => {
         <input type="text" id="todo-busca" placeholder="Buscar tarefa, projeto, categoria ou dependência..." value="${esc(busca)}">
       </div>
 
-      <div class="todo-filtros-row">
-        <div class="todo-chip ${!filtroProjeto ? 'ativo' : ''}" data-tipo="projeto" data-valor="">
-          Todos os projetos <span class="todo-chip-count">${pendentesTodas.length}</span>
-        </div>
-        ${projetosOrdenadosPorImportancia().map(p => `
-          <div class="todo-chip ${filtroProjeto === p.nome ? 'ativo' : ''}" data-tipo="projeto" data-valor="${esc(p.nome)}">
-            <span class="todo-chip-dot" style="background:${corProjeto(p.nome)}"></span>
-            ${esc(p.nome)}
-            <span class="todo-chip-count">${pendentesTodas.filter(t => t.projeto === p.nome).length}</span>
-          </div>
-        `).join('')}
+      <div class="todo-filtros-bar">
+        <button type="button" class="todo-filtros-toggle ${filtrosPainelAberto ? 'aberto' : ''}" id="todo-filtros-toggle">
+          🔍 Filtros ${contagemFiltrosAtivos > 0 ? `<span class="todo-filtros-badge">${contagemFiltrosAtivos}</span>` : ''}
+          <span class="seta">▾</span>
+        </button>
+        ${contagemFiltrosAtivos > 0 ? `<button type="button" class="todo-filtros-limpar" id="todo-filtros-limpar">Limpar filtros</button>` : ''}
         <button type="button" class="todo-gear-btn" id="todo-abrir-gerenciar" title="Gerenciar projetos e categorias">⚙</button>
       </div>
 
-      <div class="todo-filtros-row">
-        <div class="todo-chip ${!filtroCategoria ? 'ativo' : ''}" data-tipo="categoria" data-valor="">
-          Todas as categorias
-        </div>
-        ${categoriasOrdenadasPorImportancia().map(c => `
-          <div class="todo-chip ${filtroCategoria === c.nome ? 'ativo' : ''}" data-tipo="categoria" data-valor="${esc(c.nome)}">
-            <span class="todo-chip-dot" style="background:${esc(c.cor)}"></span>
-            ${esc(c.nome)}
-            <span class="todo-chip-count">${pendentesTodas.filter(t => t.categoria === c.nome).length}</span>
+      <div class="todo-filtros-painel" id="todo-filtros-painel" style="display:${filtrosPainelAberto ? 'flex' : 'none'};">
+        <div class="todo-filtros-secao">
+          <div class="todo-filtros-secao-titulo">Projeto</div>
+          <div class="todo-filtros-chips">
+            <div class="todo-chip ${!filtroProjeto ? 'ativo' : ''}" data-tipo="projeto" data-valor="">
+              Todos <span class="todo-chip-count">${pendentesTodas.length}</span>
+            </div>
+            ${projetosOrdenadosPorImportancia().map(p => `
+              <div class="todo-chip ${filtroProjeto === p.nome ? 'ativo' : ''}" data-tipo="projeto" data-valor="${esc(p.nome)}">
+                <span class="todo-chip-dot" style="background:${corProjeto(p.nome)}"></span>
+                ${esc(p.nome)}
+                <span class="todo-chip-count">${pendentesTodas.filter(t => t.projeto === p.nome).length}</span>
+              </div>
+            `).join('')}
           </div>
-        `).join('')}
+        </div>
+
+        <div class="todo-filtros-secao">
+          <div class="todo-filtros-secao-titulo">Categoria <span class="todo-filtros-hint">pode escolher mais de uma</span></div>
+          <div class="todo-filtros-chips">
+            <div class="todo-chip ${filtrosCategoria.size === 0 ? 'ativo' : ''}" data-tipo="categoria" data-valor="">
+              Todas
+            </div>
+            ${categoriasOrdenadasPorImportancia().map(c => `
+              <div class="todo-chip ${filtrosCategoria.has(c.nome) ? 'ativo' : ''}" data-tipo="categoria" data-valor="${esc(c.nome)}">
+                <span class="todo-chip-dot" style="background:${esc(c.cor)}"></span>
+                ${esc(c.nome)}
+                <span class="todo-chip-count">${pendentesTodas.filter(t => t.categoria === c.nome).length}</span>
+              </div>
+            `).join('')}
+            <button type="button" class="todo-chip todo-chip-add" id="todo-filtros-nova-categoria">+ Nova categoria</button>
+          </div>
+        </div>
+
         ${dependencias.length > 0 ? `
-          <select id="todo-filtro-dependencia" class="todo-select-filtro">
-            <option value="">Todas as dependências</option>
-            ${dependencias.map(d => `<option value="${esc(d)}" ${filtroDependencia === d ? 'selected' : ''}>⛓ ${esc(d)}</option>`).join('')}
-          </select>
+          <div class="todo-filtros-secao">
+            <div class="todo-filtros-secao-titulo">Dependência</div>
+            <select id="todo-filtro-dependencia" class="todo-select-filtro">
+              <option value="">Todas as dependências</option>
+              ${dependencias.map(d => `<option value="${esc(d)}" ${filtroDependencia === d ? 'selected' : ''}>⛓ ${esc(d)}</option>`).join('')}
+            </select>
+          </div>
         ` : ''}
       </div>
 
       <div id="todo-grupos">
         ${pendentes.length === 0
-          ? `<div class="todo-vazio"><div class="icone">✅</div><p>${(filtroProjeto || filtroCategoria || filtroDependencia || buscaLower) ? 'Nenhuma tarefa encontrada com esses filtros.' : 'Nenhuma tarefa pendente. Tudo em dia!'}</p></div>`
+          ? `<div class="todo-vazio"><div class="icone">✅</div><p>${temFiltroAtivo ? 'Nenhuma tarefa encontrada com esses filtros.' : 'Nenhuma tarefa pendente. Tudo em dia!'}</p></div>`
           : chavesOrdenadas.map(chave => {
               const itens = ordenarGrupo(grupos.get(chave));
               const nomeGrupo = chave || 'Sem projeto';
@@ -535,8 +653,12 @@ const Todo = (() => {
     container.querySelectorAll('.todo-chip[data-tipo]').forEach(chip => {
       chip.addEventListener('click', () => {
         const tipo = chip.dataset.tipo, valor = chip.dataset.valor;
-        if (tipo === 'projeto') filtroProjeto = valor;
-        if (tipo === 'categoria') filtroCategoria = valor;
+        if (tipo === 'projeto') { filtroProjeto = valor; }
+        if (tipo === 'categoria') {
+          if (!valor) { filtrosCategoria.clear(); }
+          else if (filtrosCategoria.has(valor)) { filtrosCategoria.delete(valor); }
+          else { filtrosCategoria.add(valor); }
+        }
         renderizar();
       });
     });
@@ -548,6 +670,18 @@ const Todo = (() => {
     });
     document.getElementById('todo-abrir-gerenciar').addEventListener('click', abrirModalGerenciar);
     document.getElementById('todo-abrir-agenda').addEventListener('click', abrirModalAgenda);
+    document.getElementById('todo-filtros-toggle').addEventListener('click', () => {
+      filtrosPainelAberto = !filtrosPainelAberto;
+      renderizar();
+    });
+    const btnLimparFiltros = document.getElementById('todo-filtros-limpar');
+    if (btnLimparFiltros) btnLimparFiltros.addEventListener('click', () => {
+      filtroProjeto = ''; filtrosCategoria.clear(); filtroDependencia = ''; busca = '';
+      renderizar();
+    });
+    document.getElementById('todo-filtros-nova-categoria').addEventListener('click', () => {
+      abrirCriarCategoriaRapida();
+    });
     _wireMicButton();
   }
 
@@ -823,9 +957,7 @@ const Todo = (() => {
         </div>
         <div class="todo-form-grupo">
           <label>Cor</label>
-          <div class="todo-swatch-grid" id="rc-swatches">
-            ${SWATCHES.map((c, i) => `<div class="todo-swatch ${i === 0 ? 'selecionado' : ''}" style="background:${c}" data-cor="${c}"></div>`).join('')}
-          </div>
+          ${_swatchGridHtml('rc-swatches', SWATCHES[0])}
         </div>
       </div>
       <div class="modal-footer" style="justify-content:flex-end;">
@@ -836,13 +968,7 @@ const Todo = (() => {
     document.getElementById('rc-nome').focus();
 
     let corSelecionada = SWATCHES[0];
-    document.querySelectorAll('#rc-swatches .todo-swatch').forEach(sw => {
-      sw.addEventListener('click', () => {
-        document.querySelectorAll('#rc-swatches .todo-swatch').forEach(s => s.classList.remove('selecionado'));
-        sw.classList.add('selecionado');
-        corSelecionada = sw.dataset.cor;
-      });
-    });
+    _wireSwatchGrid('rc-swatches', (cor) => { corSelecionada = cor; });
     document.getElementById('rc-cancelar').addEventListener('click', fecharOverlay);
     document.getElementById('rc-salvar').addEventListener('click', async () => {
       const nome = document.getElementById('rc-nome').value.trim();
@@ -880,9 +1006,7 @@ const Todo = (() => {
         </div>
         <div class="todo-form-grupo">
           <label>Cor</label>
-          <div class="todo-swatch-grid" id="rc-swatches">
-            ${SWATCHES.map(c => `<div class="todo-swatch ${c.toLowerCase() === cat.cor.toLowerCase() ? 'selecionado' : ''}" style="background:${c}" data-cor="${c}"></div>`).join('')}
-          </div>
+          ${_swatchGridHtml('rc-swatches', cat.cor)}
         </div>
       </div>
       <div class="modal-footer" style="justify-content:space-between;">
@@ -897,13 +1021,7 @@ const Todo = (() => {
     document.getElementById('rc-nome').select();
 
     let corSelecionada = cat.cor;
-    document.querySelectorAll('#rc-swatches .todo-swatch').forEach(sw => {
-      sw.addEventListener('click', () => {
-        document.querySelectorAll('#rc-swatches .todo-swatch').forEach(s => s.classList.remove('selecionado'));
-        sw.classList.add('selecionado');
-        corSelecionada = sw.dataset.cor;
-      });
-    });
+    _wireSwatchGrid('rc-swatches', (cor) => { corSelecionada = cor; });
     document.getElementById('rc-cancelar').addEventListener('click', fecharOverlay);
     document.getElementById('rc-excluir').addEventListener('click', async () => {
       if (!confirm(`Excluir a categoria "${cat.nome}"? Tarefas que usam ela continuam existindo, só perdem essa referência.`)) return;
@@ -964,18 +1082,14 @@ const Todo = (() => {
           <div class="todo-cat-nova-form" id="ed-cat-nova-form">
             <div style="flex:1; min-width:140px;">
               <input type="text" id="ed-cat-nome" class="form-control" placeholder="Nome da categoria">
-              <div class="todo-swatch-grid" id="ed-cat-swatches">
-                ${SWATCHES.map((c, i) => `<div class="todo-swatch ${i === 0 ? 'selecionado' : ''}" style="background:${c}" data-cor="${c}"></div>`).join('')}
-              </div>
+              ${_swatchGridHtml('ed-cat-swatches', SWATCHES[0])}
             </div>
             <button type="button" class="btn btn-secundario btn-sm" id="ed-cat-salvar">Salvar categoria</button>
           </div>
           <div class="todo-cat-nova-form" id="ed-cat-editar-form">
             <div style="flex:1; min-width:140px;">
               <input type="text" id="ed-cat-edit-nome" class="form-control" placeholder="Nome da categoria">
-              <div class="todo-swatch-grid" id="ed-cat-edit-swatches">
-                ${SWATCHES.map(c => `<div class="todo-swatch" style="background:${c}" data-cor="${c}"></div>`).join('')}
-              </div>
+              ${_swatchGridHtml('ed-cat-edit-swatches', null)}
             </div>
             <button type="button" class="btn btn-secundario btn-sm" id="ed-cat-edit-salvar">Salvar edição</button>
           </div>
@@ -1007,13 +1121,7 @@ const Todo = (() => {
       document.getElementById('ed-cat-nova-form').classList.toggle('aberto');
     });
     let corSelecionada = SWATCHES[0];
-    document.querySelectorAll('#ed-cat-swatches .todo-swatch').forEach(sw => {
-      sw.addEventListener('click', () => {
-        document.querySelectorAll('#ed-cat-swatches .todo-swatch').forEach(s => s.classList.remove('selecionado'));
-        sw.classList.add('selecionado');
-        corSelecionada = sw.dataset.cor;
-      });
-    });
+    _wireSwatchGrid('ed-cat-swatches', (cor) => { corSelecionada = cor; });
     document.getElementById('ed-cat-salvar').addEventListener('click', async () => {
       const nome = document.getElementById('ed-cat-nome').value.trim();
       if (!nome) { Utils.toast('Dê um nome pra categoria.', 'alerta'); return; }
@@ -1038,18 +1146,10 @@ const Todo = (() => {
       form.classList.toggle('aberto');
       if (!form.classList.contains('aberto')) return;
       document.getElementById('ed-cat-edit-nome').value = catAlvo.nome;
-      document.querySelectorAll('#ed-cat-edit-swatches .todo-swatch').forEach(sw => {
-        sw.classList.toggle('selecionado', sw.dataset.cor.toLowerCase() === catAlvo.cor.toLowerCase());
-      });
+      _marcarSwatchGrid('ed-cat-edit-swatches', catAlvo.cor);
     });
     let corEdicaoCategoriaModal = null;
-    document.querySelectorAll('#ed-cat-edit-swatches .todo-swatch').forEach(sw => {
-      sw.addEventListener('click', () => {
-        document.querySelectorAll('#ed-cat-edit-swatches .todo-swatch').forEach(s => s.classList.remove('selecionado'));
-        sw.classList.add('selecionado');
-        corEdicaoCategoriaModal = sw.dataset.cor;
-      });
-    });
+    _wireSwatchGrid('ed-cat-edit-swatches', (cor) => { corEdicaoCategoriaModal = cor; });
     document.getElementById('ed-cat-edit-salvar').addEventListener('click', async () => {
       const nomeAtual = document.getElementById('ed-categoria').value;
       const catAlvo = categorias.find(c => c.nome === nomeAtual);
@@ -1123,9 +1223,7 @@ const Todo = (() => {
         <div class="todo-manage-lista" id="mg-lista-categorias">${renderListaCategorias()}</div>
         <div class="todo-form-grupo" style="margin-bottom:6px;">
           <input type="text" id="mg-nova-categoria" class="form-control" placeholder="Nova categoria...">
-          <div class="todo-swatch-grid" id="mg-cat-swatches">
-            ${SWATCHES.map((c, i) => `<div class="todo-swatch ${i === 0 ? 'selecionado' : ''}" style="background:${c}" data-cor="${c}"></div>`).join('')}
-          </div>
+          ${_swatchGridHtml('mg-cat-swatches', SWATCHES[0])}
         </div>
         <div class="todo-manage-add">
           <select id="mg-nova-categoria-imp" class="form-control" style="max-width:130px;">
@@ -1171,9 +1269,7 @@ const Todo = (() => {
         return `
           <div class="todo-manage-item todo-manage-item-editando" style="flex-direction:column; align-items:stretch; gap:8px;">
             <input type="text" id="mg-cat-edit-nome" class="form-control" value="${esc(c.nome)}">
-            <div class="todo-swatch-grid" id="mg-cat-edit-swatches">
-              ${SWATCHES.map(cor => `<div class="todo-swatch ${cor.toLowerCase() === c.cor.toLowerCase() ? 'selecionado' : ''}" style="background:${cor}" data-cor="${cor}"></div>`).join('')}
-            </div>
+            ${_swatchGridHtml('mg-cat-edit-swatches', c.cor)}
             <div style="display:flex; gap:6px; justify-content:flex-end;">
               <button class="btn btn-secundario btn-sm" id="mg-cat-edit-cancelar">Cancelar</button>
               <button class="btn btn-primario btn-sm" id="mg-cat-edit-salvar">Salvar</button>
@@ -1198,13 +1294,7 @@ const Todo = (() => {
     religarListasGerenciar();
 
     let corSelecionadaMg = SWATCHES[0];
-    document.querySelectorAll('#mg-cat-swatches .todo-swatch').forEach(sw => {
-      sw.addEventListener('click', () => {
-        document.querySelectorAll('#mg-cat-swatches .todo-swatch').forEach(s => s.classList.remove('selecionado'));
-        sw.classList.add('selecionado');
-        corSelecionadaMg = sw.dataset.cor;
-      });
-    });
+    _wireSwatchGrid('mg-cat-swatches', (cor) => { corSelecionadaMg = cor; });
 
     document.getElementById('mg-add-projeto').addEventListener('click', async () => {
       const nome = document.getElementById('mg-novo-projeto').value.trim();
@@ -1313,19 +1403,8 @@ const Todo = (() => {
     }
 
     // Formulário de edição inline — Categoria (nome + cor)
-    const catSwatches = document.getElementById('mg-cat-edit-swatches');
     let corEdicaoCategoria = null;
-    if (catSwatches) {
-      const jaSelecionado = catSwatches.querySelector('.todo-swatch.selecionado');
-      corEdicaoCategoria = jaSelecionado ? jaSelecionado.dataset.cor : SWATCHES[0];
-      catSwatches.querySelectorAll('.todo-swatch').forEach(sw => {
-        sw.onclick = () => {
-          catSwatches.querySelectorAll('.todo-swatch').forEach(s => s.classList.remove('selecionado'));
-          sw.classList.add('selecionado');
-          corEdicaoCategoria = sw.dataset.cor;
-        };
-      });
-    }
+    _wireSwatchGrid('mg-cat-edit-swatches', (cor) => { corEdicaoCategoria = cor; });
     const btnCatSalvar = document.getElementById('mg-cat-edit-salvar');
     if (btnCatSalvar) {
       btnCatSalvar.onclick = async () => {
