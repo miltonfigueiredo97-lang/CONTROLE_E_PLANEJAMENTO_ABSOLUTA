@@ -262,9 +262,10 @@ const Todo = (() => {
       .todo-mic-btn.gravando { background:#fee2e2; border-color:#dc2626; animation:todo-mic-pulse 1.2s infinite; }
       @keyframes todo-mic-pulse { 0%{box-shadow:0 0 0 0 rgba(220,38,38,.35);} 70%{box-shadow:0 0 0 9px rgba(220,38,38,0);} 100%{box-shadow:0 0 0 0 rgba(220,38,38,0);} }
       .todo-mic-erro {
-        margin-top:2px; padding:8px 10px; border-radius:8px; background:#fee2e2; border:1.5px solid #fca5a5;
-        color:#991b1b; font-size:12px; font-weight:600; line-height:1.4; word-break:break-word;
+        margin-top:2px; padding:8px 10px; border-radius:8px; font-size:12px; font-weight:600; line-height:1.4; word-break:break-word;
       }
+      .todo-mic-erro.status-info { background:#eff6ff; border:1.5px solid #93c5fd; color:#1e40af; }
+      .todo-mic-erro.status-erro { background:#fee2e2; border:1.5px solid #fca5a5; color:#991b1b; }
       .todo-mic-erro code { background:rgba(0,0,0,.06); padding:1px 5px; border-radius:4px; font-size:11px; }
       .todo-addbar-linha2 { display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap; border-top:1.5px solid var(--cor-borda-light); padding-top:12px; }
       .todo-addbar-campo { display:flex; flex-direction:column; gap:5px; flex:1; min-width:110px; }
@@ -791,6 +792,14 @@ const Todo = (() => {
   function _mostrarErroVoz(msg) {
     const el = document.getElementById('todo-mic-erro');
     if (!el) { console.error('Erro de voz:', msg); return; }
+    el.className = 'todo-mic-erro status-erro';
+    el.innerHTML = `⚠ ${esc(msg)}`;
+    el.style.display = 'block';
+  }
+  function _statusVoz(msg) {
+    const el = document.getElementById('todo-mic-erro');
+    if (!el) { console.log('Status voz:', msg); return; }
+    el.className = 'todo-mic-erro status-info';
     el.innerHTML = `🎤 ${esc(msg)}`;
     el.style.display = 'block';
   }
@@ -823,34 +832,55 @@ const Todo = (() => {
       'aborted': null, // cancelamento manual, não é erro
     };
     btn.addEventListener('click', async () => {
-      _limparErroVoz();
       if (reconhecimentoVoz) { reconhecimentoVoz.stop(); return; }
+
+      _statusVoz('Passo 1/4 — pedindo permissão do microfone... (se aparecer um aviso do navegador no topo da tela, toque em "Permitir")');
+      // Watchdog: se em 12s a permissão não resolver (nem liberar nem negar),
+      // é sinal de que o prompt do navegador não está aparecendo/sendo notado.
+      let travou = false;
+      const watchdog = setTimeout(() => {
+        travou = true;
+        _mostrarErroVoz('Ficou mais de 12s esperando a permissão do microfone, sem resposta do navegador. Isso indica que o aviso de permissão não apareceu ou não foi respondido. Procure um ícone de microfone/cadeado na barra de endereço, ou nas Configurações do site libere o Microfone manualmente e tente de novo.');
+      }, 12000);
+
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        clearTimeout(watchdog);
         _mostrarErroVoz('navigator.mediaDevices.getUserMedia não existe neste contexto (comum em app instalado/WebView antigo). Tente abrir o site direto no Chrome, fora do atalho instalado, pra testar.');
         return;
       }
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        clearTimeout(watchdog);
+        if (travou) return; // já mostrou o erro do watchdog, não continua
         stream.getTracks().forEach(tr => tr.stop());
       } catch (permErr) {
+        clearTimeout(watchdog);
+        if (travou) return;
         _mostrarErroVoz(`${permErr.name || 'Erro'} ao pedir microfone: ${permErr.message || permErr}`);
         return;
       }
+
+      _statusVoz('Passo 2/4 — permissão concedida. Iniciando reconhecimento...');
       const input = document.getElementById('todo-descricao');
       const rec = new SpeechRec();
       rec.lang = 'pt-BR';
       rec.interimResults = false;
       rec.maxAlternatives = 1;
-      rec.onstart = () => { btn.classList.add('gravando'); btn.textContent = '🔴'; };
+      rec.onstart = () => {
+        btn.classList.add('gravando');
+        btn.textContent = '🔴';
+        _statusVoz('Passo 3/4 — gravando! Fale agora...');
+      };
       rec.onerror = (e) => {
         const msg = Object.prototype.hasOwnProperty.call(ERROS, e.error) ? ERROS[e.error] : `Erro no reconhecimento de voz: ${e.error}`;
-        if (msg) _mostrarErroVoz(msg);
+        if (msg) _mostrarErroVoz(msg); else _limparErroVoz();
       };
       rec.onresult = (e) => {
         const texto = e.results[0][0].transcript;
         const atual = input.value.trim();
         input.value = atual ? `${atual} ${texto}` : texto;
         input.focus();
+        _statusVoz(`Passo 4/4 — reconhecido: "${texto}"`);
       };
       rec.onend = () => { btn.classList.remove('gravando'); btn.textContent = '🎤'; reconhecimentoVoz = null; };
       try {

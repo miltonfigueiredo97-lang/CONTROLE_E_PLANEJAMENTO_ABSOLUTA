@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.17.0.0',
+  versaoAtual: 'V3.17.0.1',
 
   versoes: [
     {
@@ -9300,6 +9300,18 @@ const NotasVersao = {
         "Categoria: antes de chamar a IA, o sistema busca as categorias já cadastradas em Tarefas do Sistema e manda a lista pra IA — ela é instruída a REAPROVEITAR uma existente sempre que se encaixar, e só criar uma nova (curta, 1 a 3 palavras) se nenhuma servir. Categoria nova vem com cor automática, igual as criadas manualmente.",
         "Se a tarefa não tiver uma categoria clara, a IA deixa em branco — não força uma categoria genérica só pra preencher o campo.",
         "Descrição nunca vem vazia (a IA foi instruída a nunca deixar em branco, mesmo que a nota não tenha detalhe extra) — consistente com a regra de descrição obrigatória da V3.16.0.15."
+      ]
+    },
+    {
+      "versao": "V3.17.0.1",
+      "data": "2026-08-19",
+      "tipo": "melhoria",
+      "titulo": "Voz: caixa de status agora mostra CADA passo (não só erro final) — pra achar onde trava quando \"não aparece nada\"",
+      "itens": [
+        "Milton reportou que a voz \"não funciona e não aparece nada\" — ou seja, nem o erro que a versão anterior mostrava. Isso indica que o processo trava ANTES de qualquer erro acontecer (provavelmente esperando a permissão do microfone).",
+        "A caixa embaixo da Descrição agora mostra o passo atual em azul (Passo 1: pedindo permissão → Passo 2: permissão OK, iniciando → Passo 3: gravando, fale agora → Passo 4: texto reconhecido), e só fica vermelha quando um erro de fato acontece.",
+        "Adicionado um \"vigia\" de 12 segundos: se a permissão do microfone não for respondida (nem liberada nem negada) nesse tempo, aparece um aviso específico dizendo que o prompt de permissão do navegador provavelmente não apareceu ou não foi notado — em vez de ficar parado pra sempre sem nada na tela.",
+        "Com isso, na próxima tentativa a caixa vai mostrar em qual passo exatamente trava — essa informação (print da caixa, mesmo que ainda seja só \"Passo 1\" parado) é o que falta pra eu conseguir corrigir a causa raiz de vez."
       ]
     }
   ],
