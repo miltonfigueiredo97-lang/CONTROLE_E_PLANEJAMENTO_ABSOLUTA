@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.7',
+  versaoAtual: 'V3.19.7.1',
 
   versoes: [
     {
@@ -9449,6 +9449,17 @@ const NotasVersao = {
         "Importar Correções mostra logo no topo do modal de qual obra a planilha saiu (verde se é a mesma de agora, vermelho se é outra).",
         "Se for de outra obra, tanto Importar Correções quanto Importar Base Completa avisam com os nomes das duas obras ANTES de deixar continuar — dá pra cancelar e trocar de obra primeiro.",
         "Planilhas exportadas antes dessa versão não têm esse metadado — continuam funcionando igual, sem aviso (não tem como saber a origem delas)."
+      ]
+    },
+    {
+      "versao": "V3.19.7.1",
+      "data": "2026-08-19",
+      "tipo": "melhoria",
+      "titulo": "Gerar Grupos: valor proposto agora é editável na prévia, e edita em lote",
+      "itens": [
+        "Motivo (Milton): o match automático por nome às vezes escolhe o pavimento errado quando duas palavras aparecem juntas no nome da tarefa (ex: \"Reservatório - SS2\" — o sistema pegava \"Reservatório\" por ser a palavra mais longa, mas a tarefa é do SS2 mesmo).",
+        "Na prévia do \"⚡ Gerar Grupos\", o valor proposto (antes só texto) agora é um campo editável. Mudar um já aplica a MESMA mudança em todas as outras linhas que tinham a mesma proposta — não precisa corrigir uma por uma quando o mesmo engano se repete.",
+        "Subgrupo recalcula automaticamente ao editar: se o novo valor não for do tipo \"Nº Pavimento\", o subgrupo daquela linha some (não tem como calcular andar×Final sem um andar)."
       ]
     }
   ],

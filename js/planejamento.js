@@ -4024,6 +4024,8 @@ const Planejamento = (() => {
     return {grupo:melhor,subgrupo};
   }
 
+  let _gerarGruposLista=null; // estado vivo da prévia (permite editar e propagar)
+
   async function _abrirGerarGrupos(){
     await _carregarEstruturaObra();
     const est=_estruturaObraCache;
@@ -4040,54 +4042,95 @@ const Planejamento = (() => {
       return;
     }
     const mudam=propostas.filter(p=>p.tarefa.grupo!==p.match.grupo||(p.tarefa.subgrupo||null)!==(p.match.subgrupo||null));
+    _gerarGruposLista=mudam.map(p=>({
+      tarefaId:p.tarefa.id,nome:p.tarefa.nome,
+      grupoAntigo:p.tarefa.grupo||'',subgrupoAntigo:p.tarefa.subgrupo||null,
+      grupoProposto:p.match.grupo,subgrupoProposto:p.match.subgrupo||null,
+      marcado:true
+    }));
     let pop=document.getElementById('gerargrupos-modal');if(pop)pop.remove();
     pop=document.createElement('div');pop.id='gerargrupos-modal';
     pop.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:2000;display:flex;align-items:center;justify-content:center;';
     pop.innerHTML=`
-      <div style="background:#1a1a1a;border:1px solid #333;border-radius:10px;padding:20px;width:680px;max-width:95vw;max-height:85vh;overflow-y:auto;display:flex;flex-direction:column;">
+      <div style="background:#1a1a1a;border:1px solid #333;border-radius:10px;padding:20px;width:720px;max-width:95vw;max-height:85vh;overflow-y:auto;display:flex;flex-direction:column;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
           <div style="font-weight:700;color:var(--cor-primaria);">⚡ Gerar Grupos — Prévia</div>
           <span style="cursor:pointer;color:#888;font-size:1.1rem;" onclick="document.getElementById('gerargrupos-modal').remove()">✕</span>
         </div>
-        <div style="font-size:.72rem;color:#888;margin-bottom:10px;">${propostas.length} de ${folhas.length} tarefas reconhecidas pelos pavimentos cadastrados na Estrutura da Obra. <b>${mudam.length}</b> vão realmente mudar Grupo/Subgrupo (as demais já estão iguais). Desmarque o que estiver errado.</div>
-        <div id="gerargrupos-lista" style="display:flex;flex-direction:column;gap:2px;max-height:50vh;overflow-y:auto;border:1px solid #292929;border-radius:6px;padding:6px;">
-          ${mudam.map((p,i)=>`
-            <label style="display:flex;align-items:center;gap:8px;font-size:.76rem;padding:4px 4px;border-bottom:1px solid #232323;cursor:pointer;">
-              <input type="checkbox" data-idx="${i}" checked>
-              <span style="flex:1;color:#ddd;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${_esc(p.tarefa.nome)}</span>
-              <span style="color:#666;white-space:nowrap;">${_esc(p.tarefa.grupo||'—')}${p.tarefa.subgrupo?' / '+p.tarefa.subgrupo:''}</span>
-              <span style="color:#555;">→</span>
-              <span style="color:var(--cor-primaria);white-space:nowrap;font-weight:600;">${_esc(p.match.grupo)}${p.match.subgrupo?' / '+p.match.subgrupo:''}</span>
-            </label>`).join('')}
-        </div>
+        <div style="font-size:.72rem;color:#888;margin-bottom:10px;">${propostas.length} de ${folhas.length} tarefas reconhecidas pelos pavimentos cadastrados na Estrutura da Obra. <b>${mudam.length}</b> vão realmente mudar Grupo (as demais já estão iguais). Pode editar o valor proposto (coluna da direita) — muda esse E todos os outros que tinham a mesma proposta.</div>
+        <div id="gerargrupos-lista" style="display:flex;flex-direction:column;gap:2px;max-height:50vh;overflow-y:auto;border:1px solid #292929;border-radius:6px;padding:6px;"></div>
         <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px;">
           <button class="btn btn-secundario btn-sm" onclick="document.getElementById('gerargrupos-modal').remove()">Cancelar</button>
           <button class="btn btn-primario btn-sm" onclick="Planejamento._aplicarGerarGrupos()">Aplicar Selecionados</button>
         </div>
       </div>`;
     document.body.appendChild(pop);
-    pop.dataset.propostas=JSON.stringify(mudam.map(p=>({tarefaId:p.tarefa.id,match:p.match})));
+    _renderGerarGruposLista();
+  }
+
+  function _renderGerarGruposLista(){
+    const el=document.getElementById('gerargrupos-lista');if(!el)return;
+    el.innerHTML=_gerarGruposLista.map((p,i)=>`
+      <div style="display:flex;align-items:center;gap:8px;font-size:.76rem;padding:4px 4px;border-bottom:1px solid #232323;">
+        <input type="checkbox" data-idx="${i}" ${p.marcado?'checked':''} onchange="Planejamento._gerarGruposToggle(${i},this.checked)">
+        <span style="flex:1;color:#ddd;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${_esc(p.nome)}</span>
+        <span style="color:#666;white-space:nowrap;">${_esc(p.grupoAntigo||'—')}${p.subgrupoAntigo?' / '+p.subgrupoAntigo:''}</span>
+        <span style="color:#555;">→</span>
+        <input value="${_esc(p.grupoProposto)}" onchange="Planejamento._gerarGruposEditarValor(${i},this.value)"
+          style="width:150px;background:#111;border:1px solid #333;border-radius:4px;color:var(--cor-primaria);font-weight:600;font-size:.76rem;padding:3px 6px;text-transform:uppercase;">
+        ${p.subgrupoProposto?`<span style="color:var(--cor-primaria);font-size:.72rem;">/ ${p.subgrupoProposto}</span>`:''}
+      </div>`).join('');
+  }
+
+  function _gerarGruposToggle(idx,checked){
+    if(_gerarGruposLista&&_gerarGruposLista[idx])_gerarGruposLista[idx].marcado=checked;
+  }
+
+  // Editar o valor proposto de UMA linha propaga pra TODAS as linhas que
+  // tinham a mesma proposta antes da edição — evita ter que corrigir uma
+  // por uma quando o mesmo engano de match se repete várias vezes na lista
+  // (ex: "Reservatório" devia ter sido "SS2" em todas as linhas daquele bloco).
+  function _gerarGruposEditarValor(idx,novoValor){
+    if(!_gerarGruposLista||!_gerarGruposLista[idx])return;
+    const valorAntigo=_gerarGruposLista[idx].grupoProposto;
+    novoValor=(novoValor||'').trim();
+    if(!novoValor)return;
+    let n=0;
+    for(const p of _gerarGruposLista){
+      if(p.grupoProposto===valorAntigo){
+        p.grupoProposto=novoValor;
+        // Subgrupo só faz sentido pra pavimento numerado ("Nº Pavimento") —
+        // se o novo valor não bate esse padrão, não tem como recalcular,
+        // então some (mais seguro que manter um número que não corresponde
+        // mais ao grupo escolhido).
+        const mPav=novoValor.match(/^(\d+)°\s*Pavimento$/i);
+        const mFinal=String(p.nome).match(/Final\s*0*(\d+)\s*$/i);
+        p.subgrupoProposto=(mPav&&mFinal)?(parseInt(mPav[1])*10+parseInt(mFinal[1])):null;
+        n++;
+      }
+    }
+    _renderGerarGruposLista();
+    if(n>1)Utils.toast(`Aplicado a ${n} linha(s) que tinham a mesma proposta "${valorAntigo}".`,'sucesso');
   }
 
   async function _aplicarGerarGrupos(){
-    const pop=document.getElementById('gerargrupos-modal');if(!pop)return;
-    const propostas=JSON.parse(pop.dataset.propostas||'[]');
-    const marcados=[...pop.querySelectorAll('input[type="checkbox"]:checked')].map(cb=>parseInt(cb.dataset.idx));
-    const selecionadas=propostas.filter((_,i)=>marcados.includes(i));
+    const pop=document.getElementById('gerargrupos-modal');if(!pop||!_gerarGruposLista)return;
+    const selecionadas=_gerarGruposLista.filter(p=>p.marcado);
     if(!selecionadas.length){pop.remove();return;}
     Utils.mostrarLoading(`Gerando grupos em ${selecionadas.length} tarefa(s)...`);
     try{
       const L=30;
       for(let i=0;i<selecionadas.length;i+=L){
         await Promise.all(selecionadas.slice(i,i+L).map(async p=>{
-          const upd={grupo:p.match.grupo};
-          if(p.match.subgrupo)upd.subgrupo=p.match.subgrupo;
+          const upd={grupo:p.grupoProposto};
+          if(p.subgrupoProposto)upd.subgrupo=p.subgrupoProposto;
           await Database.atualizar(obraId,COL,p.tarefaId,upd).catch(e=>console.error('Erro gerar grupo:',p.tarefaId,e));
           const t=tarefas.find(x=>x.id===p.tarefaId);
           if(t){t.grupo=upd.grupo;if(upd.subgrupo)t.subgrupo=upd.subgrupo;}
         }));
       }
       pop.remove();
+      _gerarGruposLista=null;
       Utils.toast(`${selecionadas.length} tarefa(s) com Grupo/Subgrupo atualizado(s).`,'sucesso');
       _buildFiltradas();_render();
     }catch(e){console.error(e);Utils.toast('Erro ao gerar grupos.','erro');}
@@ -6293,7 +6336,7 @@ const Planejamento = (() => {
     selectIdx,toggleRecolher,recuarNivel,avancarNivel,
     toggleGantt,toggleLiberarEdicaoReal,hideCol,showColsMenu,_showCol,_showAll,_toggleMenuFerramentas,
     _abrirEstruturaObra,_addTorre,_addPavimento,_addApartamento,_duplicarPavimento,_editarNomeEst,_removerNoEst,
-    _abrirAutoVincular,_aplicarAutoVincular,_abrirGerarGrupos,_aplicarGerarGrupos,
+    _abrirAutoVincular,_aplicarAutoVincular,_abrirGerarGrupos,_aplicarGerarGrupos,_gerarGruposToggle,_gerarGruposEditarValor,
     _abrirVinculoPavimento,_salvarVinculoPavimento,_vinclocTogglePav,_vinclocToggleApto,
     _abrirAtualizarPredecessora,_predlogAtualizarBotao,_salvarAtualizacaoPredecessora,_abrirHistoricoAlteracoes,_filtrarHistorico,
     toggleArvoreEditor,_arvToggle,_arvExpandirTudo,_arvIniciarEdit,_arvCancelarEdit,_arvSalvarNome,
