@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.4',
+  versaoAtual: 'V3.19.5',
 
   versoes: [
     {
@@ -9390,6 +9390,17 @@ const NotasVersao = {
       "itens": [
         "Acompanhamento voltou a mostrar só as peças marcadas/atribuídas à concretagem selecionada — removida a lógica de mostrar também as concretagens anteriores (número menor) que tinha entrado numa rodada passada.",
         "Planejamento ganhou o mesmo comportamento: com uma concretagem em foco (📌), o mapa mostra só as peças ainda sem concretagem + as já atribuídas a ELA — escondendo as que já pertencem a outras concretagens. Sem nenhuma foco, continua mostrando tudo com o número de cada uma."
+      ]
+    },
+    {
+      "versao": "V3.19.5",
+      "data": "2026-08-19",
+      "tipo": "correcao",
+      "titulo": "Controle de Estacas: entendi errado — mapa volta a mostrar TUDO, número da concretagem vira botão opcional",
+      "itens": [
+        "A versão anterior escondia peças de outras concretagens — não era isso. O mapa (Planejamento e Acompanhamento) volta a mostrar TODAS as peças, de qualquer concretagem, com a cor real de cada uma (verde/parcial/pendente).",
+        "O que muda por padrão agora é só o NÚMERO no marcador: mostra o número só das peças da concretagem que você tem selecionada/em foco no momento — sem misturar 1, 2, 3, 4 todos juntos e confundir qual é qual.",
+        "Novo botão \\\"🔢 Mostrar números de todas\\\" — clique pra ligar/desligar, exatamente como pedido: opcional, não travado."
       ]
     }
   ],

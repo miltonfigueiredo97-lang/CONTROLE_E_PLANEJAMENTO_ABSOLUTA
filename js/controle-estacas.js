@@ -58,6 +58,7 @@ const ControleEstacas = (() => {
   let pdfjsCarregado = false;
   let acompConcretagemId = null;  // concretagem ativa na aba Acompanhamento
   let planFocoConcretagemId = null; // concretagem selecionada no Planejamento — clique na peça já atribui direto
+  let mostrarTodosNumeros = false; // por padrão, número no marcador só da concretagem atual (foco/selecionada) — botão liga/desliga
   let concEditandoId = null; // card de concretagem com o mini-form de editar número/data/descrição aberto
   let novaConcPlanAberta = false;   // form de "+ Nova concretagem" aberto no Planejamento
   let telaCheiaAtiva = false;
@@ -562,6 +563,7 @@ const ControleEstacas = (() => {
         ${_legendaGrupos()}
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0;align-items:center;">
           <button class="btn btn-secundario btn-sm" onclick="CE.girarPrancha()">⟳ Girar 90°</button>
+          <button class="btn ${mostrarTodosNumeros ? 'btn-primario' : 'btn-secundario'} btn-sm" onclick="CE.toggleMostrarTodosNumeros()">🔢 ${mostrarTodosNumeros ? 'Mostrando números de todas' : 'Mostrar números de todas'}</button>
           <span style="display:flex;gap:2px;align-items:center;margin-left:auto;">
             <button class="btn btn-secundario btn-sm" onclick="CE.zoomAjustar(-0.25)">−</button>
             <span class="text-sm text-muted ce-zoom-label" style="width:48px;text-align:center;">${Math.round(zoomE * 100)}%</span>
@@ -732,21 +734,20 @@ const ControleEstacas = (() => {
     if (!pr) { host.innerHTML = `<div class="cc-empty">Nenhuma prancha ainda — vá na aba Marcadores e importe o projeto.</div>`; return; }
     const imagem = await _obterImagemPrancha(pr.id);
     if (!imagem) { host.innerHTML = `<div class="cc-empty">Esta prancha ainda não tem PDF/imagem — importe na aba Marcadores.</div>`; return; }
-    const lista = marcadoresDaPranchaView(pr.id).filter(m => {
-      if (!m.pecaId) return false; // só marcadores já vinculados podem ser planejados
-      if (!planFocoConcretagemId) return true; // sem foco, mostra tudo (com o número de cada uma)
-      const c = _concretagemDaPeca(m.pecaId);
-      return !c || c.id === planFocoConcretagemId; // com foco: só as sem concretagem ainda + as dessa mesma
-    });
+    const lista = marcadoresDaPranchaView(pr.id).filter(m => m.pecaId); // só marcadores já vinculados podem ser planejados — mostra TODAS, de qualquer concretagem
     const reporScroll = _preservarScroll('#ce-plan-mapa-host');
     host.innerHTML = EC.stageHTML(pr, imagem, lista, statusMarcador, { interativo: true, zoom: zoomE, stageId: 'ce-plan-stage', maxHeight: _alturaMapa() });
     reporScroll();
-    _desenharNumerosConcretagem('ce-plan-stage', lista);
+    _desenharNumerosConcretagem('ce-plan-stage', lista, planFocoConcretagemId);
     _ligarEventosToggle('ce-plan-stage', lista, m => planFocoConcretagemId ? _atribuirRapidoFoco(m) : abrirAtribuirConcretagem(m));
   }
 
-  // Escreve o número da concretagem (se já atribuída) em cima de cada marcador
-  function _desenharNumerosConcretagem(stageId, lista) {
+  // Escreve o número da concretagem (se já atribuída) em cima de cada
+  // marcador — por padrão só na concretagem ATUAL (foco/selecionada), pra
+  // não poluir com número de todo mundo; "Mostrar números de todas" (botão)
+  // exibe todas de uma vez. Sem nenhuma concretagem atual definida, mostra
+  // todas (não tem o que restringir).
+  function _desenharNumerosConcretagem(stageId, lista, concretagemAtualId) {
     const stage = document.getElementById(stageId);
     if (!stage) return;
     const cont = document.createElement('div');
@@ -754,6 +755,7 @@ const ControleEstacas = (() => {
     lista.forEach(m => {
       const c = _concretagemDaPeca(m.pecaId);
       if (!c) return;
+      if (!mostrarTodosNumeros && concretagemAtualId && c.id !== concretagemAtualId) return;
       const centro = m.tipo === 'circulo' ? { x: m.cx, y: m.cy } : _centroide(m.pontos);
       if (!centro) return;
       const bolha = document.createElement('div');
@@ -762,6 +764,11 @@ const ControleEstacas = (() => {
       cont.appendChild(bolha);
     });
     stage.appendChild(cont);
+  }
+
+  function toggleMostrarTodosNumeros() {
+    mostrarTodosNumeros = !mostrarTodosNumeros;
+    _renderAbaAtual();
   }
 
   // ── Popup de atribuir concretagem (clique numa peça na aba Planejamento) ──
@@ -917,10 +924,13 @@ const ControleEstacas = (() => {
             <span class="text-sm text-muted">🟢 concretado · 🟠 parcial · 🟡 anel = planejada, ainda pendente · nº no marcador = concretagem dela</span>
           </div>
           ${_legendaGrupos()}
-          <div style="display:flex;gap:2px;align-items:center;justify-content:flex-end;margin:6px 0;">
+          <div style="display:flex;gap:8px;align-items:center;justify-content:flex-end;margin:6px 0;flex-wrap:wrap;">
+            <button class="btn ${mostrarTodosNumeros ? 'btn-primario' : 'btn-secundario'} btn-sm" onclick="CE.toggleMostrarTodosNumeros()">🔢 ${mostrarTodosNumeros ? 'Mostrando números de todas' : 'Mostrar números de todas'}</button>
+            <span style="display:flex;gap:2px;align-items:center;">
             <button class="btn btn-secundario btn-sm" onclick="CE.zoomAjustar(-0.25)">−</button>
             <span class="text-sm text-muted ce-zoom-label" style="width:48px;text-align:center;">${Math.round(zoomE * 100)}%</span>
             <button class="btn btn-secundario btn-sm" onclick="CE.zoomAjustar(0.25)">+</button>
+            </span>
           </div>
         ` : ''}` }
         ${!painelMinimizado && !acompConcretagemId ? '<div class="cc-empty">Selecione uma concretagem planejada.</div>' : ''}
@@ -985,21 +995,25 @@ const ControleEstacas = (() => {
     const imagem = await _obterImagemPrancha(pr.id);
     if (!imagem) { host.innerHTML = `<div class="cc-empty">Esta prancha ainda não tem PDF/imagem.</div>`; return; }
     const idsPlanejados = new Set(_pecaConcDaConcretagem(acompConcretagemId).map(pc => pc.pecaId));
-    // Só mostra as peças marcadas/atribuídas a ESSA concretagem — isolado,
-    // sem misturar com as de outras (nem anteriores, nem futuras).
-    const lista = marcadoresDaPranchaView(pr.id).filter(m => m.pecaId && idsPlanejados.has(m.pecaId));
+    // Mostra TODAS as peças vinculadas — visão geral de tudo que já foi
+    // feito, de qualquer concretagem. O que fica restrito à concretagem
+    // selecionada é o número no marcador (por padrão) e a interação
+    // (clicar só abre lançar pras peças desta concretagem).
+    const lista = marcadoresDaPranchaView(pr.id).filter(m => m.pecaId);
     const reporScroll = _preservarScroll('#ce-acomp-mapa-host');
     host.innerHTML = EC.stageHTML(pr, imagem, lista, statusMarcador, { interativo: true, zoom: zoomE, stageId: 'ce-acomp-stage', maxHeight: _alturaMapa() });
     reporScroll();
-    // Anel amarelo só nas peças AINDA PENDENTES — uma vez 100% (verde sólido),
-    // o anel some, pra ficar visualmente claro que terminou.
-    _desenharDestaques('ce-acomp-stage', lista, m => {
+    _desenharNumerosConcretagem('ce-acomp-stage', lista, acompConcretagemId);
+    // Anel amarelo só nas peças planejadas AINDA PENDENTES desta concretagem
+    // — uma vez 100% (verde sólido), o anel some.
+    _desenharDestaques('ce-acomp-stage', lista.filter(m => idsPlanejados.has(m.pecaId)), m => {
       const p = pecas.find(x => x.id === m.pecaId);
       return !p || !_pecaExecutada(p);
     });
-    // Clicar em qualquer peça mostrada (todas são desta concretagem) abre o
-    // popup de lançar.
-    _ligarEventosToggle('ce-acomp-stage', lista, m => abrirEstacaModal(m.pecaId));
+    // Clicar numa peça planejada nesta concretagem abre o popup de lançar
+    // (fora dela, nada acontece — não faz sentido lançar o que não tá
+    // programado nesta concretagem específica).
+    _ligarEventosToggle('ce-acomp-stage', lista.filter(m => idsPlanejados.has(m.pecaId)), m => abrirEstacaModal(m.pecaId));
   }
 
   // ══════════════════════════════════════════
@@ -2797,7 +2811,7 @@ const ControleEstacas = (() => {
   }
 
   return {
-    init, recarregar, renderizar, setAbaPrincipal, alternarTelaCheia, toggleMinimizarPainel,
+    init, recarregar, renderizar, setAbaPrincipal, alternarTelaCheia, toggleMinimizarPainel, toggleMostrarTodosNumeros,
     onTrocarView, onTrocarPranchaAtiva, zoomAjustar, girarPrancha,
     iniciarAdicionarCirculo, iniciarAdicionarPoligono, cancelarModo, desfazerPontoPoligono, concluirPoligono,
     iniciarAjusteForma, concluirAjusteForma, cancelarAjusteForma,
