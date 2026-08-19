@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.1',
+  versaoAtual: 'V3.19.2',
 
   versoes: [
     {
@@ -9358,6 +9358,16 @@ const NotasVersao = {
         "Bug real: a coluna Início/Término da tabela respeita o seletor Atual/Linha de Base/Desafio, mas a BARRA do Gantt ficava hardcoded em Atual (inicioPlanejado/terminoPlanejado) sempre — resultado: tabela mostrando uma data (ex: Desafio, 02/06) e a barra desenhada em outra (Atual, pode ter sido lá pra setembro). Parecia \"data errada\", mas eram duas versões diferentes sendo misturadas na mesma tela.",
         "Corrigido: barra do Gantt, setas de predecessora, limites do zoom (dMin/dMax) e exportação PNG agora seguem a mesma versão selecionada no seletor Atual/Base/Desafio — sempre a mesma data que a tabela mostra.",
         "Agrupador de Categoria também corrigido (tinha o mesmo hardcode)."
+      ]
+    },
+    {
+      "versao": "V3.19.2",
+      "data": "2026-08-19",
+      "tipo": "melhoria",
+      "titulo": "Agenda: criar tarefa nova direto de dentro do seletor de horário (sem precisar voltar pro formulário principal)",
+      "itens": [
+        "Motivo (Milton): quando ele queria agendar uma tarefa que ainda não existia na lista, tinha que fechar a Agenda, ir criar a tarefa no formulário principal, voltar pra Agenda e só então agendar — três passos pra uma coisa só.",
+        "Agora, dentro do seletor de tarefa (o mesmo que abre ao clicar no \"+\" de um horário), tem um link \"+ Não existe ainda? Criar tarefa nova\". Clicar nele abre um mini formulário ali mesmo (Título + Descrição, ambos obrigatórios) — ao criar, a tarefa já nasce E fica agendada naquele horário, sem sair da Agenda."
       ]
     }
   ],
