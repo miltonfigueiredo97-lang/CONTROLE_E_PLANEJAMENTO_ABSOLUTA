@@ -4112,18 +4112,22 @@ const Planejamento = (() => {
     if(_gerarGruposLista&&_gerarGruposLista[idx])_gerarGruposLista[idx].marcado=checked;
   }
 
-  // Escolher outro pavimento (dropdown, sempre um valor já cadastrado) numa
-  // linha propaga pra TODAS as linhas que tinham a mesma proposta antes da
-  // troca — evita ter que corrigir uma por uma quando o mesmo engano de
-  // match se repete várias vezes na lista (ex: "Reservatório" devia ter
-  // sido "SS2" em todas as linhas daquele bloco).
+  // Escolher outro pavimento (dropdown) numa linha propaga pra outras linhas
+  // que tinham o MESMO ANTES *e* a MESMA proposta errada — as duas coisas
+  // juntas, não só a proposta. Só a proposta não bastava: "Reservatório -
+  // SS2" e "Reservatório Superior" são coisas DIFERENTES (uma é SS2, a
+  // outra é o reservatório de cima) mas as duas bateram na mesma proposta
+  // errada "RESERVATÓRIO" — corrigir uma arrastava a outra por engano,
+  // porque só olhava a proposta. Agora só propaga pra quem tinha o MESMO
+  // valor anterior também, então grupos diferentes nunca se misturam.
   function _gerarGruposEditarValor(idx,novoValor){
     if(!_gerarGruposLista||!_gerarGruposLista[idx])return;
-    const valorAntigo=_gerarGruposLista[idx].grupoProposto;
-    if(!novoValor||novoValor===valorAntigo)return;
+    const alvo=_gerarGruposLista[idx];
+    const antigoRef=alvo.grupoAntigo,propostaRef=alvo.grupoProposto;
+    if(!novoValor||novoValor===propostaRef)return;
     let n=0;
     for(const p of _gerarGruposLista){
-      if(p.grupoProposto===valorAntigo){
+      if(p.grupoAntigo===antigoRef&&p.grupoProposto===propostaRef){
         p.grupoProposto=novoValor;
         // Subgrupo só faz sentido pra pavimento numerado ("Nº Pavimento") —
         // se o novo valor não bate esse padrão, não tem como recalcular,
@@ -4136,7 +4140,7 @@ const Planejamento = (() => {
       }
     }
     _renderGerarGruposLista();
-    if(n>1)Utils.toast(`Aplicado a ${n} linha(s) que tinham a mesma proposta "${valorAntigo}".`,'sucesso');
+    if(n>1)Utils.toast(`Aplicado a ${n} linha(s) que tinham "${antigoRef||'(vazio)'}" → "${propostaRef}".`,'sucesso');
   }
 
   async function _aplicarGerarGrupos(){

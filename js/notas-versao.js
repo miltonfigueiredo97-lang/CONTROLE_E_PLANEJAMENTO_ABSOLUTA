@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.7.4',
+  versaoAtual: 'V3.19.7.5',
 
   versoes: [
     {
@@ -9490,6 +9490,16 @@ const NotasVersao = {
       "itens": [
         "Bug: a lista era ordenada por texto (localeCompare), e string compara caractere por caractere — \"1\" < \"1º\" < \"10º\", então 10º a 16º Pavimento apareciam ANTES de 1º Pavimento.",
         "Corrigido pra usar a mesma ordem que já existe na Estrutura da Obra (campo interno \"ordem\" de cada pavimento, a ordem que Milton arruma lá) — nunca mais re-ordenar por texto."
+      ]
+    },
+    {
+      "versao": "V3.19.7.5",
+      "data": "2026-08-19",
+      "tipo": "correcao",
+      "titulo": "Gerar Grupos: corrigir uma proposta errada arrastava OUTRO grupo diferente que caiu na mesma proposta por coincidência",
+      "itens": [
+        "Bug real (Milton pegou): \"Reservatório - SS2\" e \"Reservatório Superior\" são locais DIFERENTES, mas os dois bateram na mesma proposta errada \"RESERVATÓRIO\". A propagação olhava só a proposta — corrigir um pra SS2 ia arrastar o outro (Reservatório Superior) pra SS2 também, que está errado.",
+        "Agora a propagação exige bater o valor ANTERIOR também, não só a proposta — só muda junto quem tinha exatamente o mesmo \"de\" E o mesmo \"para\" errado. Grupos diferentes que colidiram na mesma proposta por coincidência não se misturam mais."
       ]
     }
   ],
