@@ -6,5 +6,45 @@
     "projeto": "Sistema Absoluta",
     "categoria": "Controle",
     "checklist": []
+  },
+  {
+    "id": "chat_planejamento_visao_por_nome_v1",
+    "texto": "Importar planilha do Planejamento com nomes corretos + gerar Visão por Nome",
+    "descricao": "Importar a planilha do planejamento garantindo que os nomes das tarefas venham corretos. A partir dela, gerar a \"Visão por Nome\" do Planejamento. Com essa visão funcionando, atualizar os indicadores de Andamentos, Próximas atividades e Previstos (tela principal/Dashboard) usando esse sistema de visão como base.",
+    "projeto": "Sistema Absoluta",
+    "categoria": "Planejamento",
+    "checklist": []
+  },
+  {
+    "id": "chat_calculo_consumo_material_mao_de_obra_v1",
+    "texto": "Deixar pronto o cálculo de consumo de material e mão de obra",
+    "descricao": "Finalizar e deixar funcional o sistema de cálculo de consumo de material e de mão de obra. Precisa estar integrado com o Planejamento.",
+    "projeto": "Sistema Absoluta",
+    "categoria": "Planejamento",
+    "checklist": []
+  },
+  {
+    "id": "chat_validar_indicadores_gabriel_v1",
+    "texto": "Validar com Gabriel o formato dos indicadores",
+    "descricao": "Confirmar com o Gabriel se o formato dos indicadores que ele pediu está correto do jeito que foi implementado, e mostrar pra ele que está tudo funcionando de fato.",
+    "projeto": "Sistema Absoluta",
+    "categoria": "",
+    "checklist": []
+  },
+  {
+    "id": "chat_importar_epi_estoques_v1",
+    "texto": "Importar controle de EPI pra dentro dos Estoques",
+    "descricao": "Trazer o controle de EPI (Equipamento de Proteção Individual) pra dentro do módulo de estoque/suprimentos já existente no sistema.",
+    "projeto": "Sistema Absoluta",
+    "categoria": "Suprimentos",
+    "checklist": []
+  },
+  {
+    "id": "chat_pendencia_escritorio_v1",
+    "texto": "Ir ao escritório — pendência (revisar, transcrição ficou incompleta)",
+    "descricao": "Item vindo de uma mensagem por voz que ficou cortada/confusa nessa parte: \"ainda não fui no escritório do senhor, [ter] justificativa pra não ter ido ainda\". Não ficou claro de qual escritório/pessoa se trata. Editar esta tarefa com os detalhes certos.",
+    "projeto": "",
+    "categoria": "",
+    "checklist": []
   }
 ]
