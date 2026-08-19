@@ -217,6 +217,11 @@ const Todo = (() => {
       .todo-mic-btn:hover { border-color:var(--cor-primaria); }
       .todo-mic-btn.gravando { background:#fee2e2; border-color:#dc2626; animation:todo-mic-pulse 1.2s infinite; }
       @keyframes todo-mic-pulse { 0%{box-shadow:0 0 0 0 rgba(220,38,38,.35);} 70%{box-shadow:0 0 0 9px rgba(220,38,38,0);} 100%{box-shadow:0 0 0 0 rgba(220,38,38,0);} }
+      .todo-mic-erro {
+        margin-top:2px; padding:8px 10px; border-radius:8px; background:#fee2e2; border:1.5px solid #fca5a5;
+        color:#991b1b; font-size:12px; font-weight:600; line-height:1.4; word-break:break-word;
+      }
+      .todo-mic-erro code { background:rgba(0,0,0,.06); padding:1px 5px; border-radius:4px; font-size:11px; }
       .todo-addbar-linha2 { display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap; border-top:1.5px solid var(--cor-borda-light); padding-top:12px; }
       .todo-addbar-campo { display:flex; flex-direction:column; gap:5px; flex:1; min-width:110px; }
       .todo-addbar-campo label { font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.4px; color:var(--cor-texto-muted); }
@@ -524,6 +529,7 @@ const Todo = (() => {
             <input type="text" id="todo-texto" class="todo-addbar-texto" placeholder="O que precisa ser feito?" required>
             <button type="button" class="todo-mic-btn" id="todo-mic-btn" title="Adicionar por voz">🎤</button>
           </div>
+          <div class="todo-mic-erro" id="todo-mic-erro" style="display:none;"></div>
           <div class="todo-addbar-linha2">
             <div class="todo-addbar-campo">
               <label>Projeto</label>
@@ -715,43 +721,56 @@ const Todo = (() => {
 
   // ============================================
   // Tarefa por voz — Web Speech API (nativa do navegador/Android).
-  // Pede permissão de microfone explicitamente antes de iniciar (em
-  // PWA instalado, o navegador às vezes não mostra o prompt automático),
-  // e traduz os erros do reconhecimento em vez de um "não funcionou" mudo.
+  // Mostra o erro técnico real de forma PERSISTENTE na tela (não só
+  // um toast que passa rápido), pra dar pra fotografar/copiar e
+  // descobrir a causa real em vez de só "não funciona".
   // ============================================
+  function _mostrarErroVoz(msg) {
+    const el = document.getElementById('todo-mic-erro');
+    if (!el) { console.error('Erro de voz:', msg); return; }
+    el.innerHTML = `🎤 ${esc(msg)}`;
+    el.style.display = 'block';
+  }
+  function _limparErroVoz() {
+    const el = document.getElementById('todo-mic-erro');
+    if (el) el.style.display = 'none';
+  }
+
   function _wireMicButton() {
     const btn = document.getElementById('todo-mic-btn');
     if (!btn) return;
+    _limparErroVoz();
     const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!window.isSecureContext) {
-      btn.title = 'Reconhecimento de voz só funciona em conexão segura (https).';
-      btn.addEventListener('click', () => Utils.toast('Essa página precisa estar em https para usar o microfone.', 'alerta'));
+      _mostrarErroVoz('Página não está em conexão segura (https) — o navegador bloqueia o microfone.');
+      btn.addEventListener('click', () => _mostrarErroVoz('Página não está em conexão segura (https) — o navegador bloqueia o microfone.'));
       return;
     }
     if (!SpeechRec) {
-      btn.title = 'Reconhecimento de voz não suportado neste navegador.';
-      btn.addEventListener('click', () => Utils.toast('Reconhecimento de voz não suportado neste navegador.', 'alerta'));
+      _mostrarErroVoz(`Este navegador não tem reconhecimento de voz (SpeechRecognition ausente). User-agent: ${navigator.userAgent}`);
+      btn.addEventListener('click', () => _mostrarErroVoz(`Este navegador não tem reconhecimento de voz (SpeechRecognition ausente). User-agent: ${navigator.userAgent}`));
       return;
     }
     const ERROS = {
-      'not-allowed': 'Permissão de microfone negada. Vá em Configurações do site e libere o microfone.',
-      'service-not-allowed': 'Permissão de microfone negada. Vá em Configurações do site e libere o microfone.',
+      'not-allowed': 'Permissão de microfone negada. Vá em Configurações do site (cadeado na barra de endereço) e libere o microfone.',
+      'service-not-allowed': 'Permissão de microfone negada pelo navegador.',
       'no-speech': 'Não captei nenhuma fala. Tente falar logo após tocar o microfone.',
       'audio-capture': 'Nenhum microfone encontrado neste dispositivo.',
-      'network': 'Sem conexão com o serviço de voz. Verifique a internet e tente de novo.',
+      'network': 'Sem conexão com o serviço de voz do Google. Verifique a internet.',
       'aborted': null, // cancelamento manual, não é erro
     };
     btn.addEventListener('click', async () => {
+      _limparErroVoz();
       if (reconhecimentoVoz) { reconhecimentoVoz.stop(); return; }
-      // Pede a permissão de microfone explicitamente primeiro — em alguns
-      // Android com o site instalado como app, o SpeechRecognition sozinho
-      // não dispara o prompt de permissão corretamente.
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        _mostrarErroVoz('navigator.mediaDevices.getUserMedia não existe neste contexto (comum em app instalado/WebView antigo). Tente abrir o site direto no Chrome, fora do atalho instalado, pra testar.');
+        return;
+      }
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         stream.getTracks().forEach(tr => tr.stop());
       } catch (permErr) {
-        console.error('Permissão de microfone:', permErr);
-        Utils.toast('Permissão de microfone negada ou indisponível. Verifique as permissões do site.', 'alerta');
+        _mostrarErroVoz(`${permErr.name || 'Erro'} ao pedir microfone: ${permErr.message || permErr}`);
         return;
       }
       const input = document.getElementById('todo-texto');
@@ -761,9 +780,8 @@ const Todo = (() => {
       rec.maxAlternatives = 1;
       rec.onstart = () => { btn.classList.add('gravando'); btn.textContent = '🔴'; };
       rec.onerror = (e) => {
-        console.error('SpeechRecognition erro:', e.error);
-        const msg = Object.prototype.hasOwnProperty.call(ERROS, e.error) ? ERROS[e.error] : `Erro no reconhecimento de voz (${e.error}).`;
-        if (msg) Utils.toast(msg, 'alerta');
+        const msg = Object.prototype.hasOwnProperty.call(ERROS, e.error) ? ERROS[e.error] : `Erro no reconhecimento de voz: ${e.error}`;
+        if (msg) _mostrarErroVoz(msg);
       };
       rec.onresult = (e) => {
         const texto = e.results[0][0].transcript;
@@ -772,8 +790,13 @@ const Todo = (() => {
         input.focus();
       };
       rec.onend = () => { btn.classList.remove('gravando'); btn.textContent = '🎤'; reconhecimentoVoz = null; };
-      reconhecimentoVoz = rec;
-      rec.start();
+      try {
+        reconhecimentoVoz = rec;
+        rec.start();
+      } catch (startErr) {
+        _mostrarErroVoz(`Erro ao iniciar: ${startErr.name || ''} ${startErr.message || startErr}`);
+        reconhecimentoVoz = null;
+      }
     });
   }
 

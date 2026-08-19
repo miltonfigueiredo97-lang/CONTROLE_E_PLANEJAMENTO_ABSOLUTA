@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.16.0.8',
+  versaoAtual: 'V3.16.0.9',
 
   versoes: [
     {
@@ -9207,6 +9207,18 @@ const NotasVersao = {
       "itens": [
         "A tentativa anterior separava os botões em duas linhas com alinhamentos diferentes (uma \"space-between\" empurrando pra ponta direita, outra à esquerda) — resultado: visual desalinhado, gente de um lado, coisa do outro, sem nexo.",
         "Refeito do zero como UMA linha só de toolbar, tudo alinhado à esquerda, na ordem: versão de datas → zoom → Gantt/Setas → Ferramentas/Editor/Visão Organizacional → ＋ Tarefa → botões que só aparecem às vezes. Quebra pra segunda linha naturalmente quando não cabe, sem nenhum bloco \"flutuando\" separado."
+      ]
+    },
+    {
+      "versao": "V3.16.0.9",
+      "data": "2026-08-19",
+      "tipo": "correcao",
+      "titulo": "Voz no Tarefas do Sistema: erro real agora aparece na tela (fixo, não some) em vez de simplesmente \"não funcionar\"",
+      "itens": [
+        "Sem acesso a um celular real pra reproduzir o problema, e sem log nenhum aparecendo, ficou impossível saber POR ONDE a voz estava falhando (permissão? navegador sem suporte? erro de rede do Google?).",
+        "Criada uma caixa de erro vermelha fixa embaixo do campo de texto — não é mais um toast que passa rápido, ela fica na tela até a próxima tentativa. Mostra a causa técnica exata: falta de HTTPS, SpeechRecognition ausente (com o user-agent do navegador), permissão negada, sem microfone, sem internet, ou o erro puro que o navegador devolveu.",
+        "Também cobre o caso de o próprio navigator.mediaDevices não existir (comum em WebView antigo/app instalado) — nesse caso avisa pra tentar abrir o site direto no Chrome, fora do atalho instalado, pra isolar se o problema é do PWA.",
+        "Com essa mensagem na tela, a próxima tentativa vai mostrar exatamente qual é o problema real — o que faltava pra corrigir de vez em vez de ficar tentando adivinhar."
       ]
     }
   ],
