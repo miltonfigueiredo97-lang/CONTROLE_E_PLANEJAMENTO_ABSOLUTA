@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.3',
+  versaoAtual: 'V3.19.4',
 
   versoes: [
     {
@@ -9380,6 +9380,16 @@ const NotasVersao = {
         "Categoria e Subcategoria agora são colunas normais da tabela (clique pra editar direto, igual Grupo/Local) — aparecem por padrão, pode escondê-las como qualquer coluna.",
         "Exportação Excel (simples) agora inclui Categoria e Subcategoria.",
         "Se a importação da planilha categorizada nunca foi feita, isso ainda precisa ser feito uma vez em Importar Correções (marcando Categoria e Subcategoria) — usando a planilha que já tem essas duas colunas preenchidas, não qualquer exportação nova do sistema (essas saem em branco até a importação ser feita)."
+      ]
+    },
+    {
+      "versao": "V3.19.4",
+      "data": "2026-08-19",
+      "tipo": "melhoria",
+      "titulo": "Controle de Estacas: Planejamento e Acompanhamento voltam a mostrar só as estacas da concretagem selecionada (isolado)",
+      "itens": [
+        "Acompanhamento voltou a mostrar só as peças marcadas/atribuídas à concretagem selecionada — removida a lógica de mostrar também as concretagens anteriores (número menor) que tinha entrado numa rodada passada.",
+        "Planejamento ganhou o mesmo comportamento: com uma concretagem em foco (📌), o mapa mostra só as peças ainda sem concretagem + as já atribuídas a ELA — escondendo as que já pertencem a outras concretagens. Sem nenhuma foco, continua mostrando tudo com o número de cada uma."
       ]
     }
   ],

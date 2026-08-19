@@ -732,7 +732,12 @@ const ControleEstacas = (() => {
     if (!pr) { host.innerHTML = `<div class="cc-empty">Nenhuma prancha ainda — vá na aba Marcadores e importe o projeto.</div>`; return; }
     const imagem = await _obterImagemPrancha(pr.id);
     if (!imagem) { host.innerHTML = `<div class="cc-empty">Esta prancha ainda não tem PDF/imagem — importe na aba Marcadores.</div>`; return; }
-    const lista = marcadoresDaPranchaView(pr.id).filter(m => m.pecaId); // só marcadores já vinculados podem ser planejados
+    const lista = marcadoresDaPranchaView(pr.id).filter(m => {
+      if (!m.pecaId) return false; // só marcadores já vinculados podem ser planejados
+      if (!planFocoConcretagemId) return true; // sem foco, mostra tudo (com o número de cada uma)
+      const c = _concretagemDaPeca(m.pecaId);
+      return !c || c.id === planFocoConcretagemId; // com foco: só as sem concretagem ainda + as dessa mesma
+    });
     const reporScroll = _preservarScroll('#ce-plan-mapa-host');
     host.innerHTML = EC.stageHTML(pr, imagem, lista, statusMarcador, { interativo: true, zoom: zoomE, stageId: 'ce-plan-stage', maxHeight: _alturaMapa() });
     reporScroll();
@@ -980,32 +985,21 @@ const ControleEstacas = (() => {
     const imagem = await _obterImagemPrancha(pr.id);
     if (!imagem) { host.innerHTML = `<div class="cc-empty">Esta prancha ainda não tem PDF/imagem.</div>`; return; }
     const idsPlanejados = new Set(_pecaConcDaConcretagem(acompConcretagemId).map(pc => pc.pecaId));
-    // Só mostra peças da concretagem selecionada + das ANTERIORES (por número) —
-    // nunca as de concretagens futuras, senão todas as concretagens mostram o
-    // mesmo mapa preenchido e confunde qual foi feito em qual dia. Peça sem
-    // concretagem nenhuma continua aparecendo normal (não é passado nem futuro).
-    const concSel = concretagens.find(c => c.id === acompConcretagemId);
-    const numeroSel = concSel ? (concSel.numero || 0) : Infinity;
-    const lista = marcadoresDaPranchaView(pr.id).filter(m => {
-      if (!m.pecaId) return false;
-      const c = _concretagemDaPeca(m.pecaId);
-      return !c || (c.numero || 0) <= numeroSel;
-    });
+    // Só mostra as peças marcadas/atribuídas a ESSA concretagem — isolado,
+    // sem misturar com as de outras (nem anteriores, nem futuras).
+    const lista = marcadoresDaPranchaView(pr.id).filter(m => m.pecaId && idsPlanejados.has(m.pecaId));
     const reporScroll = _preservarScroll('#ce-acomp-mapa-host');
     host.innerHTML = EC.stageHTML(pr, imagem, lista, statusMarcador, { interativo: true, zoom: zoomE, stageId: 'ce-acomp-stage', maxHeight: _alturaMapa() });
     reporScroll();
-    // Nº da concretagem em cima de cada marcador — pra saber de qual dia é
-    // cada estaca (ex: ver que aquela verde ali é da concretagem 1, não da 2).
-    _desenharNumerosConcretagem('ce-acomp-stage', lista);
-    // Anel amarelo só nas peças planejadas AINDA PENDENTES — uma vez 100%
-    // (verde sólido), o anel some, pra ficar visualmente claro que terminou.
-    _desenharDestaques('ce-acomp-stage', lista.filter(m => idsPlanejados.has(m.pecaId)), m => {
+    // Anel amarelo só nas peças AINDA PENDENTES — uma vez 100% (verde sólido),
+    // o anel some, pra ficar visualmente claro que terminou.
+    _desenharDestaques('ce-acomp-stage', lista, m => {
       const p = pecas.find(x => x.id === m.pecaId);
       return !p || !_pecaExecutada(p);
     });
-    // Clicar numa peça planejada nesta concretagem abre o popup de lançar
-    // (por fora dela, nada acontece — não faz sentido lançar o que não tá programado aqui).
-    _ligarEventosToggle('ce-acomp-stage', lista.filter(m => idsPlanejados.has(m.pecaId)), m => abrirEstacaModal(m.pecaId));
+    // Clicar em qualquer peça mostrada (todas são desta concretagem) abre o
+    // popup de lançar.
+    _ligarEventosToggle('ce-acomp-stage', lista, m => abrirEstacaModal(m.pecaId));
   }
 
   // ══════════════════════════════════════════
