@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.16.0.7',
+  versaoAtual: 'V3.16.0.8',
 
   versoes: [
     {
@@ -9197,6 +9197,16 @@ const NotasVersao = {
         "Trocado por um seletor construído do zero: clicar em \"+ escolher tarefa\" abre, no próprio lugar, uma caixa com busca e a lista de tarefas pendentes já no estilo papel do módulo — sem nada nativo do navegador.",
         "Dá pra digitar pra filtrar a lista (por texto da tarefa ou nome do projeto) quando tiver muita tarefa pendente.",
         "Continua permitindo a mesma tarefa em vários horários (corrigido na V3.16.0.4) — isso não mudou, só a caixa de escolha ficou decente."
+      ]
+    },
+    {
+      "versao": "V3.16.0.8",
+      "data": "2026-08-19",
+      "tipo": "correcao",
+      "titulo": "Toolbar do Planejamento: a reorganização da V3.16.0.6 deixou tudo torto (ação jogada pra direita, visualização pra esquerda) — refeita como um bloco único",
+      "itens": [
+        "A tentativa anterior separava os botões em duas linhas com alinhamentos diferentes (uma \"space-between\" empurrando pra ponta direita, outra à esquerda) — resultado: visual desalinhado, gente de um lado, coisa do outro, sem nexo.",
+        "Refeito do zero como UMA linha só de toolbar, tudo alinhado à esquerda, na ordem: versão de datas → zoom → Gantt/Setas → Ferramentas/Editor/Visão Organizacional → ＋ Tarefa → botões que só aparecem às vezes. Quebra pra segunda linha naturalmente quando não cabe, sem nenhum bloco \"flutuando\" separado."
       ]
     }
   ],
