@@ -4047,7 +4047,19 @@ const Planejamento = (() => {
     // TROCADO por um desses, nunca digitado livre. Texto livre geraria grupo
     // parecido mas diferente (typo, acento, maiúscula) e criaria "mais um"
     // em vez de casar com o que já existe na Estrutura da Obra.
-    _gerarGruposPavimentos=[...new Set((est.torres||[]).flatMap(t=>(t.pavimentos||[]).map(p=>p.nome)))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
+    // Ordem = a mesma que já está na Estrutura da Obra (campo "ordem" de cada
+    // pavimento, arrumado por Milton lá) — NUNCA re-ordenar por texto: string
+    // sort põe "10º Pavimento" antes de "1º Pavimento" (compara caractere por
+    // caractere, "1" < "10"), o que fica fora de ordem construtiva.
+    const torresOrdenadas=[...(est.torres||[])].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
+    const vistoPav=new Set();
+    _gerarGruposPavimentos=[];
+    for(const t of torresOrdenadas){
+      const pavsOrdenados=[...(t.pavimentos||[])].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
+      for(const p of pavsOrdenados){
+        if(p.nome&&!vistoPav.has(p.nome)){vistoPav.add(p.nome);_gerarGruposPavimentos.push(p.nome);}
+      }
+    }
     _gerarGruposLista=mudam.map(p=>({
       tarefaId:p.tarefa.id,nome:p.tarefa.nome,
       grupoAntigo:p.tarefa.grupo||'',subgrupoAntigo:p.tarefa.subgrupo||null,

@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.7.3',
+  versaoAtual: 'V3.19.7.4',
 
   versoes: [
     {
@@ -9480,6 +9480,16 @@ const NotasVersao = {
       "itens": [
         "Layout de 2 linhas da versão anterior piorou a leitura (o problema não era falta de espaço — Milton usa desktop). Voltou pro layout compacto de 1 linha por tarefa.",
         "Mudança de verdade: o campo de corrigir o valor proposto era um texto livre — dava pra digitar qualquer coisa (typo, acento diferente, maiúscula/minúscula) e criar um Grupo parecido mas diferente do pavimento que já existe na Estrutura da Obra, em vez de casar com ele. Agora é uma lista (dropdown) com só os pavimentos já cadastrados — só dá pra escolher um que já existe, nunca inventar um novo ali."
+      ]
+    },
+    {
+      "versao": "V3.19.7.4",
+      "data": "2026-08-19",
+      "tipo": "correcao",
+      "titulo": "Gerar Grupos: dropdown de pavimentos estava fora de ordem (10º antes de 1º)",
+      "itens": [
+        "Bug: a lista era ordenada por texto (localeCompare), e string compara caractere por caractere — \"1\" < \"1º\" < \"10º\", então 10º a 16º Pavimento apareciam ANTES de 1º Pavimento.",
+        "Corrigido pra usar a mesma ordem que já existe na Estrutura da Obra (campo interno \"ordem\" de cada pavimento, a ordem que Milton arruma lá) — nunca mais re-ordenar por texto."
       ]
     }
   ],
