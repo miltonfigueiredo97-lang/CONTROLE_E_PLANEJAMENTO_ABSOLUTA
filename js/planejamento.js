@@ -3229,6 +3229,19 @@ const Planejamento = (() => {
     const ws=wb.Sheets[wb.SheetNames[0]];
     const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
     if(rows.length<2)throw new Error('Planilha vazia.');
+    // Metadados de origem (aba oculta "_obra", gravada por exportar()) — usados
+    // pra avisar ANTES de importar se a planilha é de uma obra diferente da
+    // selecionada agora. Planilhas exportadas antes dessa versão não têm essa
+    // aba — nesse caso obraArquivo fica null e não bloqueia nada (comportamento
+    // antigo preservado).
+    let obraArquivoId=null,obraArquivoNome=null;
+    if(wb.Sheets['_obra']){
+      const infoRows=XLSX.utils.sheet_to_json(wb.Sheets['_obra'],{header:1,defval:''});
+      for(const linha of infoRows){
+        if(linha[0]==='obraId')obraArquivoId=String(linha[1]||'')||null;
+        if(linha[0]==='obraNome')obraArquivoNome=String(linha[1]||'')||null;
+      }
+    }
     const hdrs=rows[0].map(h=>String(h||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' '));
     const ci=n=>{const a={chave:['id','chave','id fixo','uid'],linha:['linha'],codigo:['codigo','code'],nivel:['nivel','nível','level'],nome:['nome','name','tarefa','atividade'],duracao:['duracao','duration'],
       inicio:['inicio','start','inicio planejado'],termino:['termino','finish','fim','termino planejado'],
@@ -3241,7 +3254,17 @@ const Planejamento = (() => {
       for(const al of(a[n]||[])){const i=hdrs.indexOf(al);if(i>=0)return i;}return-1;};
     const iN=ci('nome');
     if(iN<0)throw new Error('Coluna Nome não encontrada.');
-    return {rows,ci,iN};
+    return {rows,ci,iN,obraArquivoId,obraArquivoNome};
+  }
+
+  // Compara a obra gravada no arquivo (se houver) com a obra selecionada
+  // agora. Retorna true = pode continuar, false = usuário cancelou. Sem
+  // metadado no arquivo (planilha antiga) sempre deixa passar, sem perguntar.
+  function _confirmarObraArquivo(ctx){
+    if(!ctx.obraArquivoId)return true; // planilha sem metadado — comportamento de sempre
+    if(ctx.obraArquivoId===obraId)return true; // mesma obra, tudo certo
+    const obraAtual=Router.getObra();
+    return confirm(`⚠ ATENÇÃO — planilha de outra obra!\n\nEssa planilha foi exportada da obra "${ctx.obraArquivoNome||ctx.obraArquivoId}".\nA obra selecionada agora é "${obraAtual?.nome||obraId}".\n\nOs IDs não vão bater com nada aqui (0 casadas pelo ID) e o import vai tentar casar só por Código/Nome — arriscado.\n\nTem certeza que quer continuar mesmo assim?`);
   }
 
   // ===================== IMPORTAR BASE COMPLETA (substitui tudo) =====================
@@ -3257,7 +3280,11 @@ const Planejamento = (() => {
     if(!confirm(`Confirme de novo: apagar ${qtdAtual} tarefas e substituir por uma base nova a partir de "${file.name}"?`))return;
     try{
       Utils.mostrarLoading('Lendo...');
-      const {rows,ci,iN}=await _lerPlanilhaImport(file);
+      const ctxBase=await _lerPlanilhaImport(file);
+      Utils.esconderLoading();
+      if(!_confirmarObraArquivo(ctxBase))return; // planilha de outra obra — cancela ANTES de apagar qualquer coisa
+      const {rows,ci,iN}=ctxBase;
+      Utils.mostrarLoading('Apagando...');
       const L=20,TIMEOUT_MS=15000;
       const comTimeout=p=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),TIMEOUT_MS))]);
       const idsAntigos=tarefas.map(t=>t.id);
@@ -3351,6 +3378,7 @@ const Planejamento = (() => {
       Utils.mostrarLoading('Lendo...');
       const ctx=await _lerPlanilhaImport(file);
       Utils.esconderLoading();
+      if(!_confirmarObraArquivo(ctx))return; // usuário cancelou — planilha de outra obra
       _correcoesContexto=ctx;
       let modal=document.getElementById('correcoes-modal');if(modal)modal.remove();
       modal=document.createElement('div');modal.id='correcoes-modal';
@@ -3358,6 +3386,7 @@ const Planejamento = (() => {
       modal.innerHTML=`
         <div style="background:#1a1a1a;border:1px solid #333;border-radius:10px;padding:20px;width:480px;max-width:95vw;max-height:85vh;overflow-y:auto;display:flex;flex-direction:column;gap:10px;">
           <div style="font-weight:700;color:var(--cor-primaria);">📥 Importar Correções</div>
+          ${ctx.obraArquivoNome?`<div style="font-size:.7rem;color:${ctx.obraArquivoId===obraId?'#4ade80':'#f87171'};">📄 Planilha exportada da obra: <b>${_esc(ctx.obraArquivoNome)}</b>${ctx.obraArquivoId===obraId?' ✓ (mesma obra atual)':' ⚠ (DIFERENTE da obra atual!)'}</div>`:''}
           <div style="font-size:.78rem;color:#888;">Casa cada linha pela coluna <b>ID</b> — o identificador fixo da tarefa: nunca muda, acompanha ela se for movida e não é reaproveitado se outra for excluída. Sem ID, tenta Código, depois Nome, depois Nome+Pai. Posição, nível, estrutura e código NÃO são tocados — só os campos marcados abaixo:</div>
           <div id="correcoes-campos" style="display:flex;flex-direction:column;gap:6px;">
             ${CAMPOS_CORRECAO.map(c=>`<label style="display:flex;align-items:center;gap:8px;font-size:.82rem;cursor:pointer;color:#ddd;">
@@ -4687,6 +4716,8 @@ const Planejamento = (() => {
       ws['!cols']=[{wch:24},{wch:12},{wch:55},{wch:40},{wch:14}];
       const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Frentes');
       const obra=Router.getObra();
+      const wsObra=XLSX.utils.aoa_to_sheet([['obraId',obraId],['obraNome',obra?.nome||'']]);
+      XLSX.utils.book_append_sheet(wb,wsObra,'_obra');
       XLSX.writeFile(wb,`frentes_${(obra?.nome||'obra').replace(/[^a-z0-9]/gi,'_')}.xlsx`);
       Utils.toast('Exportado! Depois de corrigir a coluna Frente, reimporte em "Importar Correções" marcando só "Frente de Serviço".','sucesso',6000);
     }catch(e){Utils.toast('Erro: '+e.message,'erro');}finally{Utils.esconderLoading();}
@@ -4719,6 +4750,12 @@ const Planejamento = (() => {
         {wch:13},{wch:20},{wch:18},{wch:10},{wch:15},{wch:12},{wch:18},{wch:22},{wch:10},{wch:10},{wch:18},{wch:22},{wch:22},{wch:15},{wch:15}];
       const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Cronograma');
       const obra=Router.getObra();
+      // Aba oculta com a obra de origem — o Importar Correções/Base Completa
+      // lê isso e avisa ANTES de aplicar se a planilha for de outra obra
+      // (esse mesmo erro já aconteceu: 0 casadas pelo ID porque a obra
+      // selecionada no momento do import era outra).
+      const wsObra=XLSX.utils.aoa_to_sheet([['obraId',obraId],['obraNome',obra?.nome||'']]);
+      XLSX.utils.book_append_sheet(wb,wsObra,'_obra');
       XLSX.writeFile(wb,`cronograma_${(obra?.nome||'obra').replace(/[^a-z0-9]/gi,'_')}.xlsx`);
       Utils.toast('Exportado!','sucesso');
     }catch(e){Utils.toast('Erro: '+e.message,'erro');}finally{Utils.esconderLoading();}

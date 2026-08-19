@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.6.2',
+  versaoAtual: 'V3.19.7',
 
   versoes: [
     {
@@ -9436,6 +9436,19 @@ const NotasVersao = {
         "Cadastra-se os pavimentos uma vez em 🏢 Estrutura da Obra (ex: 2º Subsolo, 1º Subsolo, Térreo, 1º...16º Pavimento, Ático, Reservatório, Fachada) e clica em \"⚡ Gerar Grupos\": o sistema compara o nome de cada pavimento com o nome de cada tarefa (mesmo mecanismo do Auto-vincular por Nome) e propõe Grupo = pavimento reconhecido.",
         "Subgrupo é calculado automaticamente só quando o pavimento é do tipo \"Nº Pavimento\" E a tarefa tem \"- Final NN\" no nome: Subgrupo = andar×10 + número do Final (1º Pavimento Final 02 = 12, 16º Pavimento Final 01 = 161). Fora disso fica em branco.",
         "Sempre mostra prévia (o que muda de X para Y) antes de aplicar — nunca escreve direto, e só lista o que realmente vai mudar."
+      ]
+    },
+    {
+      "versao": "V3.19.7",
+      "data": "2026-08-19",
+      "tipo": "correcao",
+      "titulo": "Importar Correções/Base Completa agora avisa se a planilha é de outra obra (causou 0 casadas pelo ID hoje)",
+      "itens": [
+        "Causa raiz de um erro real: Milton importou uma planilha certa numa obra errada (selecionada por engano) — 0 tarefas casaram pelo ID porque os IDs pertencem a outra obra, e o import tentou casar só por Código/Nome (arriscado, muita coisa não achada).",
+        "Exportar Excel (simples) e Exportar Frentes agora gravam a obra de origem dentro do próprio arquivo (aba oculta \"_obra\", ID + nome).",
+        "Importar Correções mostra logo no topo do modal de qual obra a planilha saiu (verde se é a mesma de agora, vermelho se é outra).",
+        "Se for de outra obra, tanto Importar Correções quanto Importar Base Completa avisam com os nomes das duas obras ANTES de deixar continuar — dá pra cancelar e trocar de obra primeiro.",
+        "Planilhas exportadas antes dessa versão não têm esse metadado — continuam funcionando igual, sem aviso (não tem como saber a origem delas)."
       ]
     }
   ],
