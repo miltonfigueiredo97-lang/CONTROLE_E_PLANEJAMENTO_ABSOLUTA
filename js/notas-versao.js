@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.1',
+  versaoAtual: 'V3.19.2',
 
   versoes: [
     {
@@ -9358,6 +9358,18 @@ const NotasVersao = {
         "Bug real: a coluna Início/Término da tabela respeita o seletor Atual/Linha de Base/Desafio, mas a BARRA do Gantt ficava hardcoded em Atual (inicioPlanejado/terminoPlanejado) sempre — resultado: tabela mostrando uma data (ex: Desafio, 02/06) e a barra desenhada em outra (Atual, pode ter sido lá pra setembro). Parecia \"data errada\", mas eram duas versões diferentes sendo misturadas na mesma tela.",
         "Corrigido: barra do Gantt, setas de predecessora, limites do zoom (dMin/dMax) e exportação PNG agora seguem a mesma versão selecionada no seletor Atual/Base/Desafio — sempre a mesma data que a tabela mostra.",
         "Agrupador de Categoria também corrigido (tinha o mesmo hardcode)."
+      ]
+    },
+    {
+      "versao": "V3.19.2",
+      "data": "2026-08-19",
+      "tipo": "correcao",
+      "titulo": "Categoria/Subcategoria: faltava aparecer na tabela e na Exportação Excel (só existiam na importação e no Agrupador)",
+      "itens": [
+        "Gap real: quando criamos Categoria/Subcategoria, só entraram no Importar Correções e no Agrupador de Categoria — não tinham coluna na tabela do Planejamento nem na Exportação Excel (simples). Resultado: mesmo importando certo, não tinha como VER nem RE-EXPORTAR o dado em nenhum outro lugar do sistema.",
+        "Categoria e Subcategoria agora são colunas normais da tabela (clique pra editar direto, igual Grupo/Local) — aparecem por padrão, pode escondê-las como qualquer coluna.",
+        "Exportação Excel (simples) agora inclui Categoria e Subcategoria.",
+        "Se a importação da planilha categorizada nunca foi feita, isso ainda precisa ser feito uma vez em Importar Correções (marcando Categoria e Subcategoria) — usando a planilha que já tem essas duas colunas preenchidas, não qualquer exportação nova do sistema (essas saem em branco até a importação ser feita)."
       ]
     }
   ],
