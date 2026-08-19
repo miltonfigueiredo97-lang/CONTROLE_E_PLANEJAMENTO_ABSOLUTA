@@ -583,8 +583,8 @@ const Planejamento = (() => {
           <button class="btn btn-secundario btn-sm" onclick="Planejamento.toggleGantt()" id="btn-tg" style="font-size:.72rem;">${ganttVisible?'◀ Esconder Gantt':'▶ Mostrar Gantt'}</button>
           ${colsHidden.size?`<button class="btn btn-secundario btn-sm" onclick="Planejamento.showColsMenu()" style="font-size:.72rem;">＋ Colunas (${colsHidden.size})</button>`:''}
           <span style="color:#333;margin:0 4px;">|</span>
-          <button class="btn ${modoView==='arvore'?'btn-primario':'btn-secundario'} btn-sm" data-perm="planejamento:editar" onclick="Planejamento.toggleArvoreEditor()" style="font-size:.72rem;">🌳 Editor de Estrutura</button>
-          <button class="btn btn-primario btn-sm" data-perm="planejamento:criar" onclick="Planejamento.inserirTarefa()" style="font-size:.72rem;">＋ Tarefa</button>
+          <button class="btn ${modoView==='arvore'?'btn-primario':'btn-secundario'} btn-sm" data-perm="planejamento:editar:estrutura" onclick="Planejamento.toggleArvoreEditor()" style="font-size:.72rem;">🌳 Editor de Estrutura</button>
+          <button class="btn btn-primario btn-sm" data-perm="planejamento:criar:tarefa" onclick="Planejamento.inserirTarefa()" style="font-size:.72rem;">＋ Tarefa</button>
         </div>
       </div>
       <div style="font-size:.68rem;color:#444;margin-bottom:4px;">Ctrl++ inserir · Ctrl+- excluir · clique na célula para editar · clique direito no header para esconder coluna · Ctrl+botão direito+arrastar para reordenar</div>
@@ -1837,7 +1837,7 @@ const Planejamento = (() => {
 
   function _editCell(e, idx, colId){
     e.stopPropagation();
-    if(!Permissions.pode('planejamento','editar'))return;
+    if(!Permissions.pode('planejamento','editar:celula'))return;
     if(_esqDragMoved)return;
     const t=filtradas[idx]; if(!t)return;
     selectedIdx=idx;
@@ -2193,7 +2193,7 @@ const Planejamento = (() => {
       <button class="btn btn-secundario btn-sm" onclick="Planejamento._bulkNivel(-1)" title="Recuar nível">← Recuar</button>
       <button class="btn btn-secundario btn-sm" onclick="Planejamento._bulkNivel(1)" title="Avançar nível">→ Avançar</button>
       <button class="btn btn-secundario btn-sm" onclick="Planejamento._bulkDuplicar()" title="Duplicar selecionadas">⧉ Duplicar</button>
-      <button class="btn btn-perigo btn-sm" data-perm="planejamento:excluir" onclick="Planejamento._bulkExcluir()" title="Excluir selecionadas">✕ Excluir</button>
+      <button class="btn btn-perigo btn-sm" data-perm="planejamento:excluir:bulk" onclick="Planejamento._bulkExcluir()" title="Excluir selecionadas">✕ Excluir</button>
     </div>`;
   }
   function _atualizarBarraSelecao(){
@@ -2245,7 +2245,7 @@ const Planejamento = (() => {
   }
 
   async function _bulkExcluir(){
-    if(!Permissions.pode('planejamento','excluir')){Utils.toast('Sem permissão para excluir tarefas.','erro');return;}
+    if(!Permissions.pode('planejamento','excluir:bulk')){Utils.toast('Sem permissão para excluir em lote.','erro');return;}
     const ids=[...selecionados];
     if(!confirm(`Excluir ${ids.length} tarefa(s) selecionada(s)? Esta ação não pode ser desfeita.`))return;
     Utils.mostrarLoading('Excluindo...');
@@ -2589,7 +2589,7 @@ const Planejamento = (() => {
       {rotulo:'Corrigir Ordens',grupo:'Correções & Recálculos',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.corrigirOrdensDuplicadas()" title="Corrige tarefas com número de ordem duplicado">🔧 Corrigir Ordens</button>'},
       {rotulo:'Corrigir Predecessoras (por ID)',grupo:'Correções & Recálculos',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento._migrarPredecessorasParaId()" title="Converte predecessoras antigas (por número de linha) pro formato por ID — imune a reordenação. Roda sozinho ao carregar, use aqui só se quiser confirmar manualmente.">🔗 Corrigir Predecessoras (por ID)</button>'},
       {rotulo:'Estrutura da Obra',grupo:'Ferramentas da Obra',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento._abrirEstruturaObra()" title="Cadastra Torre → Pavimento → Apto, pra vincular tarefas a um local">🏢 Estrutura da Obra</button>'},
-      {rotulo:'Exportar Excel (simples)',grupo:'Importar & Exportar',html:'<button class="btn btn-secundario btn-sm" data-perm="planejamento:exportar" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.exportar()" title="Planilha crua com todas as colunas — boa pra reimportar/tratar dados">📤 Exportar Excel (simples)</button>'},
+      {rotulo:'Exportar Excel (simples)',grupo:'Importar & Exportar',html:'<button class="btn btn-secundario btn-sm" data-perm="planejamento:exportar:excel" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.exportar()" title="Planilha crua com todas as colunas — boa pra reimportar/tratar dados">📤 Exportar Excel (simples)</button>'},
       {rotulo:'Exportar Frentes (revisão)',grupo:'Importar & Exportar',html:'<button class="btn btn-secundario btn-sm" data-perm="planejamento:exportar" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.exportarFrentes()" title="Planilha simples (Código, Atividade, Pai, Frente) pra revisar/corrigir a Frente de Serviço fora do sistema e reimportar depois em Importar Correções">👷 Exportar Frentes (revisão)</button>'},
       {rotulo:'Exportar Excel (formatado)',grupo:'Importar & Exportar',html:'<button class="btn btn-secundario btn-sm" data-perm="planejamento:exportar" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.exportarExcelBonito()" title="Planilha estilizada: grupos coloridos por nível, indentação, cabeçalho fixo com filtro — pronta pra apresentar/imprimir">🎨 Exportar Excel (formatado)</button>'},
       {rotulo:'Exportar MS Project',grupo:'Importar & Exportar',html:'<button class="btn btn-secundario btn-sm" data-perm="planejamento:exportar" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.exportarMSProject()" title="XML no formato do MS Project (hierarquia, datas, duração, % e predecessoras) — abre direto no Project">📊 Exportar MS Project (.xml)</button>'},
@@ -2608,7 +2608,7 @@ const Planejamento = (() => {
       // código (Planejamento._corrigirNivelPeloCodigo()) só pra emergência, mas
       // não deve ser clicada por engano no dia a dia.
       {rotulo:_liberarEdicaoReal?'Edição de Real Liberada':'Liberar Edição de Real',grupo:'Ferramentas da Obra',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;'+(_liberarEdicaoReal?'background:#dc2626;color:#fff;':'')+'" onclick="Planejamento.toggleLiberarEdicaoReal()" title="Início/Término Real normalmente só são preenchidos via Diário/Medições/Semanal. Libere aqui só pra correção manual pontual.">'+(_liberarEdicaoReal?'🔓 Edição de Real Liberada':'🔒 Liberar Edição de Real')+'</button>'},
-      {rotulo:'PNG',grupo:'Importar & Exportar',html:'<button class="btn btn-secundario btn-sm" data-perm="planejamento:exportar" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.exportarPNG()">🖼 PNG</button>'},
+      {rotulo:'PNG',grupo:'Importar & Exportar',html:'<button class="btn btn-secundario btn-sm" data-perm="planejamento:exportar:png" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.exportarPNG()">🖼 PNG</button>'},
       {rotulo:'Recalcular % dos Pais',grupo:'Correções & Recálculos',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento._recalcularPercTodosPais()" title="Recalcula o % de toda tarefa-pai a partir dos filhos diretos (nível por nível, igual MS Project)">📊 Recalcular % dos Pais</button>'},
       {rotulo:'Recalcular Datas dos Pais',grupo:'Correções & Recálculos',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento._recalcularDatasPais()" title="Recalcula início/término das tarefas-pai a partir dos filhos">📐 Recalcular Datas dos Pais</button>'},
       {rotulo:'Ver por Responsável',grupo:'Ferramentas da Obra',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;'+(_filtroResponsavel?'background:var(--cor-primaria);color:#000;':'')+'" onclick="Planejamento._abrirFiltroResponsavel()" title="Filtra a grid por responsável/especialidade">👷 '+(_filtroResponsavel?_esc(_filtroResponsavel):'Ver por Responsável')+'</button>'},
@@ -2724,7 +2724,7 @@ const Planejamento = (() => {
   function selectIdx(i){if(_esqDragMoved)return;selectedIdx=i;_paintRows();}
 
   function inserirTarefa(){
-    if(!Permissions.pode('planejamento','criar')){Utils.toast('Sem permissão para criar tarefas.','erro');return;}
+    if(!Permissions.pode('planejamento','criar:tarefa')){Utils.toast('Sem permissão para criar tarefas.','erro');return;}
     editandoId=null;
     document.getElementById('modal-tarefa-titulo').textContent='Nova Tarefa';
     document.getElementById('form-tarefa').reset();
@@ -2754,7 +2754,7 @@ const Planejamento = (() => {
   }
 
   function editarTarefa(id){
-    if(!Permissions.pode('planejamento','editar')){Utils.toast('Sem permissão para editar tarefas.','erro');return;}
+    if(!Permissions.pode('planejamento','editar:celula')){Utils.toast('Sem permissão para editar tarefas.','erro');return;}
     const t=tarefas.find(x=>x.id===id);if(!t)return;
     editandoId=id;
     document.getElementById('modal-tarefa-titulo').textContent='Editar Tarefa';
@@ -2780,7 +2780,7 @@ const Planejamento = (() => {
   }
 
   async function salvarTarefa(){
-    if(!Permissions.pode('planejamento',editandoId?'editar':'criar')){Utils.toast('Sem permissão.','erro');return;}
+    if(!Permissions.pode('planejamento',editandoId?'editar:celula':'criar:tarefa')){Utils.toast('Sem permissão.','erro');return;}
     const f=document.getElementById('form-tarefa');
     const g=n=>f.querySelector(`[name="${n}"]`)?.value;
     const nome=g('nome')?.trim();if(!nome){Utils.toast('Nome obrigatório.','alerta');return;}
@@ -2859,7 +2859,7 @@ const Planejamento = (() => {
   }
 
   async function excluirTarefa(id){
-    if(!Permissions.pode('planejamento','excluir')){Utils.toast('Sem permissão para excluir tarefas.','erro');return;}
+    if(!Permissions.pode('planejamento','excluir:tarefa')){Utils.toast('Sem permissão para excluir tarefas.','erro');return;}
     const t=tarefas.find(x=>x.id===id);if(!confirm(`Excluir "${t?.nome}"?`))return;
     try{
       const numAntes=_capturarNumAntes();
@@ -2899,7 +2899,7 @@ const Planejamento = (() => {
   // ou reconciliar de vez com um cronograma totalmente reestruturado).
   async function importarBaseCompleta(event){
     const file=event.target.files[0];if(!file)return;event.target.value='';
-    if(!Permissions.pode('planejamento','importar')){Utils.toast('Sem permissão para importar.','erro');return;}
+    if(!Permissions.pode('planejamento','importar:baseCompleta')){Utils.toast('Sem permissão para importar base completa.','erro');return;}
     const qtdAtual=tarefas.length;
     if(!confirm(`⚠️ ATENÇÃO: isso vai APAGAR TODAS as ${qtdAtual} tarefas atuais desta obra e criar tudo do zero a partir da planilha. NÃO pode ser desfeito.\n\nSó use isso se quer substituir a base inteira. Pra atualizar campos específicos sem mexer na estrutura, use "Importar Correções".\n\nTem certeza?`))return;
     if(!confirm(`Confirme de novo: apagar ${qtdAtual} tarefas e substituir por uma base nova a partir de "${file.name}"?`))return;
@@ -2991,7 +2991,7 @@ const Planejamento = (() => {
   let _correcoesContexto=null;
   async function importarCorrecoes(event){
     const file=event.target.files[0];if(!file)return;event.target.value='';
-    if(!Permissions.pode('planejamento','importar')){Utils.toast('Sem permissão para importar.','erro');return;}
+    if(!Permissions.pode('planejamento','importar:correcoes')){Utils.toast('Sem permissão para importar correções.','erro');return;}
     try{
       Utils.mostrarLoading('Lendo...');
       const ctx=await _lerPlanilhaImport(file);
@@ -3225,7 +3225,7 @@ const Planejamento = (() => {
   // ===================== IMPORTAR =====================
   async function importarExcel(event){
     const file=event.target.files[0];if(!file)return;event.target.value='';
-    if(!Permissions.pode('planejamento','importar')){Utils.toast('Sem permissão para importar.','erro');return;}
+    if(!Permissions.pode('planejamento','importar:excel')){Utils.toast('Sem permissão para importar Excel.','erro');return;}
     if(!confirm(`Importar vai criar tarefas novas e ATUALIZAR as que já existem com o mesmo Código (tarefas antigas que não estão mais na planilha NÃO são apagadas). Confirmar?`))return;
     try{
       Utils.mostrarLoading('Lendo...');
@@ -3366,7 +3366,7 @@ const Planejamento = (() => {
     document.querySelectorAll('#orfas-lista input[data-orfa-id]').forEach(cb=>cb.checked=v);
   }
   async function _orfasExcluirMarcadas(){
-    if(!Permissions.pode('planejamento','excluir')){Utils.toast('Sem permissão para excluir tarefas.','erro');return;}
+    if(!Permissions.pode('planejamento','excluir:orfas')){Utils.toast('Sem permissão para excluir órfãs.','erro');return;}
     const ids=[...document.querySelectorAll('#orfas-lista input[data-orfa-id]:checked')].map(cb=>cb.dataset.orfaId);
     if(!ids.length){Utils.toast('Nada marcado.','alerta');return;}
     if(!confirm(`Excluir ${ids.length} tarefa(s)? Não pode ser desfeito.`))return;
@@ -4208,7 +4208,7 @@ const Planejamento = (() => {
   // (sem se afogar nas outras 20 colunas do Exportar normal) e reimportar
   // depois em "Importar Correções" marcando só "Frente de Serviço".
   async function exportarFrentes(){
-    if(!Permissions.pode('planejamento','exportar')){Utils.toast('Sem permissão para exportar.','erro');return;}
+    if(!Permissions.pode('planejamento','exportar:excel')){Utils.toast('Sem permissão para exportar.','erro');return;}
     try{Utils.mostrarLoading('Gerando...');
       if(typeof XLSX==='undefined')await _ls('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');
       const sorted=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
@@ -4237,7 +4237,7 @@ const Planejamento = (() => {
 
   // ===================== EXPORTAR =====================
   async function exportar(){
-    if(!Permissions.pode('planejamento','exportar')){Utils.toast('Sem permissão para exportar.','erro');return;}
+    if(!Permissions.pode('planejamento','exportar:excel')){Utils.toast('Sem permissão para exportar.','erro');return;}
     try{Utils.mostrarLoading('Gerando...');
       if(typeof XLSX==='undefined')await _ls('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');
       // "ID" é o identificador REAL da tarefa: nasce com ela, nunca muda, não
@@ -4269,7 +4269,7 @@ const Planejamento = (() => {
 
   // ===================== EXPORTAR PNG =====================
   function exportarPNG(){
-    if(!Permissions.pode('planejamento','exportar')){Utils.toast('Sem permissão para exportar.','erro');return;}
+    if(!Permissions.pode('planejamento','exportar:png')){Utils.toast('Sem permissão para exportar.','erro');return;}
     // Popup para selecionar intervalo
     let pop=document.getElementById('png-pop');if(pop){pop.remove();return;}
     // Datas do projeto
@@ -5081,7 +5081,7 @@ const Planejamento = (() => {
   let _arvSelAnchor=null;       // âncora do Shift+clique
 
   function toggleArvoreEditor(){
-    if(modoView!=='arvore'&&!Permissions.pode('planejamento','editar')){Utils.toast('Sem permissão para editar a estrutura.','erro');return;}
+    if(modoView!=='arvore'&&!Permissions.pode('planejamento','editar:estrutura')){Utils.toast('Sem permissão para editar a estrutura.','erro');return;}
     modoView=modoView==='arvore'?'gantt':'arvore';
     if(modoView==='arvore'){
       // Expandir raiz por padrão
@@ -5567,7 +5567,7 @@ const Planejamento = (() => {
   async function _arvDrop(e,targetId){
     e.preventDefault();
     e.stopPropagation();
-    if(!Permissions.pode('planejamento','editar'))return;
+    if(!Permissions.pode('planejamento','editar:estrutura'))return;
     const dragId=_arvDragId, dragSel=_arvDragSel, dropId=_arvDropId, dropPos=_arvDropPos;
     _arvDragId=null;_arvDragSel=null;_arvDropId=null;_arvDropPos='inside';
     if(!dragId||dragId===dropId){_render();return;}

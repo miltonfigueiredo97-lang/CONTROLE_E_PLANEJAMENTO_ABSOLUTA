@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.14.0.0',
+  versaoAtual: 'V3.14.0.1',
 
   versoes: [
     {
@@ -9052,6 +9052,21 @@ const NotasVersao = {
         "Por dentro: Permissions.pode(modulo,acao) agora consulta a obra ATIVA (a que está selecionada no momento, via Router) pra decidir qual conjunto de permissões usar — funciona automaticamente ao trocar de obra pelo seletor da sidebar, sem precisar recarregar a página, porque a maioria dos módulos já troca de obra sem reload (onObraChanged) e pode() lê a obra ativa em tempo real a cada chamada.",
         "Retrocompatível: usuários restritos configurados antes desta versão continuam funcionando exatamente como antes (a config antiga vira o \"padrão\" que qualquer obra sem configuração própria usa), até o admin entrar e configurar cada obra individualmente se quiser.",
         "Aproveitando a rodada, o backend do convite (api/usuarios.js) e o gate de página também foram atualizados pra esse novo formato."
+      ]
+    },
+    {
+      "versao": "V3.14.0.1",
+      "data": "2026-08-18",
+      "tipo": "melhoria",
+      "titulo": "Permissões granulares: \"editar\" deixou de ser uma caixinha só — agora dá pra liberar botão por botão",
+      "itens": [
+        "Motivo (Milton): um módulo grande tem 20-30 coisas diferentes que dá pra fazer, então \"editar\" não é UMA permissão — é um conjunto de edições diferentes. Pode ser que a pessoa possa editar uma coisa e outra não.",
+        "Agora cada ação grossa (Ver/Criar/Editar/Excluir/Importar/Exportar) tem um botão \"▸ detalhar\" que abre os itens individuais dentro dela. Dá pra marcar a caixinha do grupo (libera tudo de uma vez) OU abrir e liberar item por item. Ao lado do grupo aparece um resumo (\"tudo\" ou \"3/8\") pra saber de relance o que está liberado sem precisar abrir.",
+        "Marcar o grupo desabilita os itens individuais (não faz sentido escolher um por um se o grupo inteiro já está liberado) — desmarcar devolve o controle fino, sem perder o que já estava configurado.",
+        "60 sub-permissões mapeadas direto do código nesta primeira rodada, nos módulos com mais ações: Planejamento (24 — inserir tarefa, duplicar, editar célula, mover estrutura, predecessoras, vínculos, recálculos, datas reais, frentes, 3 tipos de importação, 5 de exportação, 3 de exclusão), Diário de Obra, Materiais, Mão de Obra, Medições, Semanal (progresso/datas/responsável/omitir/fechamento), Suprimentos (seleção/prazos/data-status/override), Relatórios e Configuração de Obra (etapas/pacotes/locais/equipes separados).",
+        "Os guards no código foram migrados junto — não é só visual: o botão de exportar PNG agora checa \"exportar:png\" de verdade, e não mais \"exportar\" genérico.",
+        "Compatibilidade: módulo/ação ainda sem sub-itens mapeados continua funcionando exatamente como antes (uma caixinha só). Quem já tinha \"editar\" marcado continua com tudo liberado — o grupo marcado sempre libera tudo abaixo dele.",
+        "Próxima rodada: mapear as sub-ações dos 9 Levantamentos e dos 5 Controles, que hoje ainda usam as ações grossas."
       ]
     }
   ],

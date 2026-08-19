@@ -57,6 +57,138 @@ const Permissions = (() => {
   // conjunto de permissões pra esses módulos.
   const GLOBAL_MODULOS = ['obras', 'admin'];
 
+  // ---------------------------------------------------------------
+  // SUB-AÇÕES: granularidade real dentro de cada ação grossa.
+  // "editar" num módulo grande não é UMA coisa — são várias edições
+  // diferentes. Aqui cada ação grossa pode ser destrinchada em itens
+  // individuais, liberáveis um por um.
+  //
+  // Chave de armazenamento: "editar" = grupo inteiro (libera tudo);
+  // "editar:celula" = só aquele item. pode(m,'editar') = true se o grupo
+  // OU qualquer sub estiver liberado; pode(m,'editar:celula') = true se o
+  // grupo OU aquele sub específico estiver liberado.
+  //
+  // Módulo/ação SEM entrada aqui = comportamento antigo (uma caixinha só).
+  // ---------------------------------------------------------------
+  const SUBACOES = {
+    planejamento: {
+      criar: [
+        { key: 'tarefa',       label: 'Inserir tarefa' },
+        { key: 'duplicar',     label: 'Duplicar tarefa/pavimento' },
+        { key: 'estruturaNo',  label: 'Criar nó na estrutura (torre/pavimento/apto)' },
+      ],
+      editar: [
+        { key: 'celula',       label: 'Editar célula na planilha' },
+        { key: 'estrutura',    label: 'Mover/reorganizar estrutura (drag & drop)' },
+        { key: 'predecessora', label: 'Editar predecessoras' },
+        { key: 'nivel',        label: 'Alterar nível/hierarquia em lote' },
+        { key: 'vinculo',      label: 'Vincular/desvincular Levantamento' },
+        { key: 'recalculo',    label: 'Recalcular datas/% e corrigir inconsistências' },
+        { key: 'datasReais',   label: 'Liberar e editar datas reais' },
+        { key: 'frentes',      label: 'Classificar frentes de serviço' },
+      ],
+      excluir: [
+        { key: 'tarefa',       label: 'Excluir tarefa' },
+        { key: 'bulk',         label: 'Excluir várias selecionadas' },
+        { key: 'orfas',        label: 'Excluir tarefas órfãs' },
+      ],
+      importar: [
+        { key: 'baseCompleta', label: 'Importar base completa (substitui tudo)' },
+        { key: 'correcoes',    label: 'Importar correções' },
+        { key: 'excel',        label: 'Importar Excel' },
+      ],
+      exportar: [
+        { key: 'excel',        label: 'Exportar Excel' },
+        { key: 'msproject',    label: 'Exportar MS Project' },
+        { key: 'png',          label: 'Exportar PNG do Gantt' },
+        { key: 'pdf',          label: 'Baixar/imprimir PDF' },
+        { key: 'frentes',      label: 'Exportar frentes' },
+      ],
+    },
+
+    diario: {
+      criar: [
+        { key: 'lancamento',  label: 'Lançar apontamento' },
+        { key: 'avulsa',       label: 'Adicionar tarefa avulsa' },
+        { key: 'pautaRapida',  label: 'Usar pauta rápida (avanço/parado)' },
+      ],
+      editar: [
+        { key: 'lancamento',  label: 'Editar apontamento já lançado' },
+      ],
+      excluir: [
+        { key: 'lancamento',  label: 'Excluir apontamento' },
+        { key: 'avulsa',       label: 'Excluir tarefa avulsa' },
+      ],
+    },
+
+    materiais: {
+      criar:   [ { key: 'material', label: 'Cadastrar material na biblioteca' },
+                 { key: 'vinculo',  label: 'Vincular material a tarefa' } ],
+      editar:  [ { key: 'material', label: 'Editar material da biblioteca' },
+                 { key: 'vinculo',  label: 'Editar vínculo' } ],
+      excluir: [ { key: 'material', label: 'Excluir material da biblioteca' },
+                 { key: 'vinculo',  label: 'Remover vínculo' } ],
+    },
+
+    maoDeObra: {
+      criar:   [ { key: 'equipe',  label: 'Cadastrar mão de obra na biblioteca' },
+                 { key: 'vinculo', label: 'Vincular mão de obra a tarefa' } ],
+      editar:  [ { key: 'equipe',  label: 'Editar mão de obra da biblioteca' },
+                 { key: 'vinculo', label: 'Editar vínculo' } ],
+      excluir: [ { key: 'equipe',  label: 'Excluir mão de obra da biblioteca' },
+                 { key: 'vinculo', label: 'Remover vínculo' } ],
+    },
+
+    medicoes: {
+      criar:   [ { key: 'medicao', label: 'Criar e salvar medição' } ],
+      editar:  [ { key: 'foto',    label: 'Adicionar/remover fotos' } ],
+      excluir: [ { key: 'medicao', label: 'Excluir medição' } ],
+    },
+
+    semanal: {
+      editar: [
+        { key: 'progresso',   label: 'Editar % de progresso' },
+        { key: 'datas',        label: 'Editar datas' },
+        { key: 'responsavel',  label: 'Alterar responsável' },
+        { key: 'omitir',       label: 'Omitir tarefas da semana' },
+        { key: 'fechamento',   label: 'Fechar/reabrir a semana' },
+      ],
+    },
+
+    suprimentos: {
+      editar: [
+        { key: 'selecao',     label: 'Escolher quais tarefas entram' },
+        { key: 'prazos',      label: 'Configurar prazos das etapas' },
+        { key: 'dataStatus',  label: 'Editar data/status de uma etapa' },
+        { key: 'override',    label: 'Definir prazo específico (override)' },
+      ],
+    },
+
+    relatorios: {
+      criar:    [ { key: 'relatorio', label: 'Criar relatório' } ],
+      excluir:  [ { key: 'relatorio', label: 'Excluir relatório' } ],
+      exportar: [ { key: 'pdf',       label: 'Baixar PDF' } ],
+    },
+
+    configuracaoObra: {
+      editar: [
+        { key: 'etapas',   label: 'Etapas' },
+        { key: 'pacotes',  label: 'Pacotes' },
+        { key: 'locais',   label: 'Locais' },
+        { key: 'equipes',  label: 'Equipes' },
+        { key: 'dadosObra',label: 'Dados gerais / cálculo da obra' },
+      ],
+    },
+  };
+
+  function subsDe(modulo, acao) {
+    return SUBACOES[modulo]?.[acao] || null;
+  }
+
+  function temSubs(modulo, acao) {
+    return !!subsDe(modulo, acao);
+  }
+
   const ACAO_LABEL = {
     ver: 'Ver', criar: 'Criar', editar: 'Editar', excluir: 'Excluir',
     exportar: 'Exportar', importar: 'Importar', convidar: 'Convidar usuário',
@@ -157,7 +289,10 @@ const Permissions = (() => {
     const access = {};
     chaves.forEach(key => {
       access[key] = {};
-      (MODULOS[key]?.acoes || []).forEach(a => access[key][a] = true);
+      (MODULOS[key]?.acoes || []).forEach(a => {
+        access[key][a] = true;
+        (subsDe(key, a) || []).forEach(s => { access[key][`${a}:${s.key}`] = true; });
+      });
     });
     return access;
   }
@@ -181,7 +316,10 @@ const Permissions = (() => {
     const modulos = {};
     _obraEscopados().forEach(key => {
       modulos[key] = {};
-      (MODULOS[key].acoes || []).forEach(a => modulos[key][a] = (key === 'dashboard' && a === 'ver'));
+      (MODULOS[key].acoes || []).forEach(a => {
+        modulos[key][a] = (key === 'dashboard' && a === 'ver');
+        (subsDe(key, a) || []).forEach(s => { modulos[key][`${a}:${s.key}`] = false; });
+      });
     });
     return modulos;
   }
@@ -190,16 +328,36 @@ const Permissions = (() => {
     const modulos = {};
     GLOBAL_MODULOS.forEach(key => {
       modulos[key] = {};
-      (MODULOS[key].acoes || []).forEach(a => modulos[key][a] = false);
+      (MODULOS[key].acoes || []).forEach(a => {
+        modulos[key][a] = false;
+        (subsDe(key, a) || []).forEach(s => { modulos[key][`${a}:${s.key}`] = false; });
+      });
     });
     return modulos;
   }
 
+  // Aceita ação grossa ('editar') ou sub-ação ('editar:celula').
+  // - 'editar'        → true se o grupo inteiro estiver liberado OU
+  //                     qualquer sub-item dele estiver (= "pode editar
+  //                     alguma coisa"), o que mantém compatível todo guard
+  //                     antigo que só checava a ação grossa.
+  // - 'editar:celula' → true se o grupo inteiro estiver liberado (grupo
+  //                     libera tudo) OU aquele sub específico estiver.
   function pode(modulo, acao = 'ver') {
     if (perfil === 'admin') return true;
     if (!ativo) return false;
     const modulos = GLOBAL_MODULOS.includes(modulo) ? permissoesGlobais : _modulosDaObraAtiva();
-    return !!(modulos[modulo] && modulos[modulo][acao] === true);
+    const m = modulos[modulo];
+    if (!m) return false;
+
+    const [grupo, sub] = String(acao).split(':');
+    if (m[grupo] === true) return true;          // grupo inteiro liberado
+    if (sub) return m[`${grupo}:${sub}`] === true;
+
+    // Ação grossa sem grupo liberado: vale se algum sub-item estiver.
+    const subs = subsDe(modulo, grupo);
+    if (subs) return subs.some(s => m[`${grupo}:${s.key}`] === true);
+    return false;
   }
 
   function podeAcessarObra(obraId) {
@@ -252,8 +410,12 @@ const Permissions = (() => {
   // e de novo sempre que a obra ativa mudar (Router troca a obra).
   function aplicarNaTela(root = document) {
     root.querySelectorAll('[data-perm]').forEach(el => {
-      const [modulo, acao] = el.dataset.perm.split(':');
-      if (!pode(modulo, acao || 'ver')) el.classList.add('hidden');
+      // Pode ser "modulo:acao" ou "modulo:acao:sub" — só a primeira parte é
+      // o módulo, todo o resto é a ação (com sub-ação, se houver).
+      const partes = el.dataset.perm.split(':');
+      const modulo = partes.shift();
+      const acao = partes.join(':') || 'ver';
+      if (!pode(modulo, acao)) el.classList.add('hidden');
     });
     root.querySelectorAll('[data-perm-hub]').forEach(el => {
       if (!podeHub(el.dataset.permHub)) el.classList.add('hidden');
@@ -304,7 +466,7 @@ const Permissions = (() => {
   }
 
   return {
-    MODULOS, ACAO_LABEL, GLOBAL_MODULOS,
+    MODULOS, ACAO_LABEL, GLOBAL_MODULOS, SUBACOES, subsDe, temSubs,
     carregar, pode, podeHub, podeAcessarObra, isAtivo, isAdminAtual, getAcessoObras,
     bloquearPaginaSemAcesso, aplicarNaTela, templateVazio, templateVazioGlobal, salvarPermissoesUsuario,
   };

@@ -304,6 +304,20 @@ permissions/{uid} → {
 - Os hubs (`levantamento.html`, `controle.html`) filtram os cards por `data-perm="modulo:ver"`.
 - `Database.getObras()` continua retornando todas — o filtro por `acessoObras` é feito na camada de chamada (`Router.popularSeletorObras`, `Obras.carregar`).
 
+### Sub-permissões (granularidade por botão — desde V3.14.0.1)
+`Permissions.SUBACOES[modulo][acaoGrossa]` = array de `{key,label}`. Ex: `SUBACOES.planejamento.editar` tem `celula`, `estrutura`, `predecessora`, `vinculo`, `recalculo`, `datasReais`, `frentes`, `nivel`.
+
+- **Chave de armazenamento:** `"editar"` = grupo inteiro (libera tudo abaixo); `"editar:celula"` = só aquele item.
+- **`pode(m,'editar')`** → true se o grupo estiver marcado OU qualquer sub dele estiver (= "pode editar alguma coisa"). Isso mantém compatível qualquer guard antigo que só checava a ação grossa.
+- **`pode(m,'editar:celula')`** → true se o grupo inteiro estiver marcado OU aquele sub específico estiver.
+- **`data-perm` aceita 3 partes:** `data-perm="planejamento:exportar:png"`. `aplicarNaTela()` faz `shift()` do módulo e junta o resto — não usar destructuring de 2 elementos ali (foi bug já corrigido).
+- **Módulo/ação sem entrada em `SUBACOES`** = comportamento antigo, uma caixinha só. Adicionar granularidade é incremental e retrocompatível.
+- **UI:** grupo com subs ganha botão "▸ detalhar" que expande os itens; marcar o grupo desabilita os individuais (mas não apaga o que estava marcado neles).
+- **Ao criar sub-ação nova:** adicionar em `SUBACOES`, migrar o guard no módulo (`pode(m,'grupo:sub')`) e o `data-perm` do botão. Há um script de validação no histórico desta sessão que confere se todo `data-perm`/`pode()` aponta pra ação/sub existente — vale reexecutar depois de mexer nisso.
+
+Mapeado até agora (60 subs): Planejamento (24), Diário, Materiais, Mão de Obra, Medições, Semanal, Suprimentos, Relatórios, Configuração de Obra.
+**Ainda em ações grossas:** os 9 Levantamentos e os 5 Controles.
+
 ### Pendente
 - Auditoria de permissões é um trabalho contínuo: sempre que um módulo novo grande for criado, checar se `Permissions.MODULOS`/`PAGINA_MODULO` foram atualizados e se as funções de mutação têm guard — já aconteceu duas vezes (Suprimentos, e antes disso outros) de um módulo novo nascer sem nenhuma checagem.
 - Regras de segurança do Firestore ainda são as de desenvolvimento (`allow read, write: if request.auth != null` — ver README). Não foi endurecido ainda.

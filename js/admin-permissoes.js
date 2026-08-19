@@ -90,17 +90,68 @@ const AdminPermissoes = (() => {
 
   // ---- Modal: checklist de módulos (obra-escopados) ----
 
+  function _htmlAcao(m, a, sel) {
+    const marcado = sel?.[m.key]?.[a] === true;
+    const subs = Permissions.subsDe(m.key, a);
+    const label = Permissions.ACAO_LABEL[a] || a;
+
+    if (!subs) {
+      return `<label class="form-check" style="font-size:.8rem;white-space:nowrap;">
+        <input type="checkbox" data-modulo="${m.key}" data-acao="${a}" ${marcado ? 'checked' : ''}>
+        ${label}
+      </label>`;
+    }
+
+    const nSubsOn = subs.filter(s => sel?.[m.key]?.[`${a}:${s.key}`] === true).length;
+    const resumo = marcado ? 'tudo' : (nSubsOn ? `${nSubsOn}/${subs.length}` : '');
+    const idBloco = `subs-${m.key}-${a}`;
+
+    return `<div style="grid-column:1/-1;">
+      <div style="display:flex;align-items:center;gap:6px;">
+        <label class="form-check" style="font-size:.8rem;white-space:nowrap;">
+          <input type="checkbox" data-modulo="${m.key}" data-acao="${a}" ${marcado ? 'checked' : ''}
+            onchange="AdminPermissoes._onGrupoMudou('${m.key}','${a}')">
+          ${label}
+        </label>
+        <button type="button" class="btn btn-sm btn-secundario" style="padding:0 6px;font-size:.68rem;line-height:1.6;"
+          onclick="AdminPermissoes._toggleSubs('${idBloco}',this)">▸ detalhar</button>
+        ${resumo ? `<span class="text-muted" style="font-size:.68rem;">(${resumo})</span>` : ''}
+      </div>
+      <div id="${idBloco}" class="hidden" style="margin:4px 0 6px 20px;padding-left:10px;border-left:2px solid var(--cor-borda-light);display:flex;flex-direction:column;gap:4px;">
+        ${subs.map(s => `
+          <label class="form-check" style="font-size:.75rem;">
+            <input type="checkbox" data-modulo="${m.key}" data-acao="${a}:${s.key}" data-grupo-pai="${a}"
+              ${sel?.[m.key]?.[`${a}:${s.key}`] ? 'checked' : ''} ${marcado ? 'disabled' : ''}>
+            ${s.label}
+          </label>`).join('')}
+      </div>
+    </div>`;
+  }
+
+  // Grupo marcado = libera tudo daquele grupo, então os sub-itens ficam
+  // desabilitados (não faz sentido escolher item a item se o grupo inteiro
+  // já está liberado). Desmarcar o grupo devolve o controle individual.
+  function _onGrupoMudou(moduloKey, acao) {
+    const grupoChk = document.querySelector(`#permissoes-categorias input[data-modulo="${moduloKey}"][data-acao="${acao}"], #permissoes-globais input[data-modulo="${moduloKey}"][data-acao="${acao}"]`);
+    if (!grupoChk) return;
+    const escopo = grupoChk.closest('#permissoes-globais') ? '#permissoes-globais' : '#permissoes-categorias';
+    document.querySelectorAll(`${escopo} input[data-modulo="${moduloKey}"][data-grupo-pai="${acao}"]`)
+      .forEach(chk => { chk.disabled = grupoChk.checked; });
+  }
+
+  function _toggleSubs(idBloco, btn) {
+    const bloco = document.getElementById(idBloco);
+    if (!bloco) return;
+    const escondido = bloco.classList.toggle('hidden');
+    btn.textContent = escondido ? '▸ detalhar' : '▾ ocultar';
+  }
+
   function _htmlModulo(m) {
     return `
       <div style="border:1px solid var(--cor-borda-light);border-radius:6px;padding:9px 12px;">
         <div style="font-weight:700;font-size:.82rem;margin-bottom:6px;color:var(--cor-texto);">${m.label}</div>
         <div style="display:grid;grid-template-columns:max-content max-content;gap:7px 20px;justify-content:start;">
-          ${m.acoes.map(a => `
-            <label class="form-check" style="font-size:.8rem;white-space:nowrap;">
-              <input type="checkbox" data-modulo="${m.key}" data-acao="${a}"
-                ${m._sel?.[m.key]?.[a] ? 'checked' : ''}>
-              ${Permissions.ACAO_LABEL[a] || a}
-            </label>`).join('')}
+          ${m.acoes.map(a => _htmlAcao(m, a, m._sel)).join('')}
         </div>
       </div>`;
   }
@@ -133,27 +184,30 @@ const AdminPermissoes = (() => {
 
   function _renderGlobais(globalSelecionado) {
     const cont = document.getElementById('permissoes-globais');
-    const mods = Permissions.GLOBAL_MODULOS.map(key => ({ key, ...Permissions.MODULOS[key] }));
+    const mods = Permissions.GLOBAL_MODULOS.map(key => ({ key, ...Permissions.MODULOS[key], _sel: globalSelecionado }));
     cont.innerHTML = `<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px 24px;">
       ${mods.map(m => `
         <div style="border:1px solid var(--cor-borda-light);border-radius:6px;padding:9px 12px;">
           <div style="font-weight:700;font-size:.82rem;margin-bottom:6px;color:var(--cor-texto);">${m.label}</div>
           <div style="display:grid;grid-template-columns:max-content max-content;gap:7px 20px;justify-content:start;">
-            ${m.acoes.map(a => `
-              <label class="form-check" style="font-size:.8rem;white-space:nowrap;">
-                <input type="checkbox" data-global-modulo="${m.key}" data-global-acao="${a}"
-                  ${globalSelecionado?.[m.key]?.[a] ? 'checked' : ''}>
-                ${Permissions.ACAO_LABEL[a] || a}
-              </label>`).join('')}
+            ${m.acoes.map(a => _htmlAcao(m, a, globalSelecionado)).join('')}
           </div>
         </div>`).join('')}
     </div>`;
   }
 
   function _coletarModulosGlobaisDoForm() {
+    return _coletarDeContainer('#permissoes-globais');
+  }
+
+  // Coleta os checkboxes de um container. Sub-itens desabilitados (porque o
+  // grupo inteiro está liberado) mantêm o valor que já tinham marcado — não
+  // são zerados só por estarem disabled, senão desmarcar o grupo depois
+  // perderia a configuração fina que o admin tinha feito antes.
+  function _coletarDeContainer(sel) {
     const modulos = {};
-    document.querySelectorAll('#permissoes-globais input[type="checkbox"]').forEach(chk => {
-      const modulo = chk.dataset.globalModulo, acao = chk.dataset.globalAcao;
+    document.querySelectorAll(`${sel} input[type="checkbox"][data-modulo]`).forEach(chk => {
+      const { modulo, acao } = chk.dataset;
       modulos[modulo] = modulos[modulo] || {};
       modulos[modulo][acao] = chk.checked;
     });
@@ -309,13 +363,7 @@ const AdminPermissoes = (() => {
   }
 
   function _coletarModulosDoForm() {
-    const modulos = {};
-    document.querySelectorAll('#permissoes-categorias input[type="checkbox"]').forEach(chk => {
-      const { modulo, acao } = chk.dataset;
-      modulos[modulo] = modulos[modulo] || {};
-      modulos[modulo][acao] = chk.checked;
-    });
-    return modulos;
+    return _coletarDeContainer('#permissoes-categorias');
   }
 
   function _coletarAcessoObras() {
@@ -474,6 +522,7 @@ const AdminPermissoes = (() => {
   return {
     init, carregar, abrirConvite, abrirEdicao, salvarUsuario,
     _onObraRestritaMudou, _trocarAbaObra, _copiarAbaParaTodas,
+    _onGrupoMudou, _toggleSubs,
     reenviarAcesso, alternarAtivo, excluirUsuario
   };
 })();

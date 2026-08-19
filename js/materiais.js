@@ -50,9 +50,9 @@ const Materiais = (() => {
         <div class="btn-grupo">
           ${abaAtiva==='biblioteca'
             ?`<button class="btn btn-secundario btn-sm" onclick="Materiais.setAba('vinculos')">← Por Tarefa</button>
-              <button class="btn btn-primario btn-sm" data-perm="materiais:criar" onclick="Materiais.novoMaterialBib()">+ Novo Material</button>`
+              <button class="btn btn-primario btn-sm" data-perm="materiais:criar:material" onclick="Materiais.novoMaterialBib()">+ Novo Material</button>`
             :`<button class="btn btn-secundario btn-sm" onclick="Materiais.setAba('biblioteca')">📚 Biblioteca (${biblioteca.length})</button>
-              <button class="btn btn-primario btn-sm" data-perm="materiais:criar" onclick="Materiais.novoVinculo()">+ Vincular / Criar</button>`}
+              <button class="btn btn-primario btn-sm" data-perm="materiais:criar:vinculo" onclick="Materiais.novoVinculo()">+ Vincular / Criar</button>`}
         </div>
       </div>
       <div id="mat-corpo">${abaAtiva==='biblioteca'?_renderBib():_renderVinculos()}</div>`;
@@ -63,7 +63,7 @@ const Materiais = (() => {
   function _renderBib(){
     if(!biblioteca.length) return `<div class="estado-vazio">
       <div class="icone">📚</div><p>Biblioteca vazia.</p>
-      <button class="btn btn-primario" data-perm="materiais:criar" onclick="Materiais.novoMaterialBib()">+ Cadastrar Material</button></div>`;
+      <button class="btn btn-primario" data-perm="materiais:criar:material" onclick="Materiais.novoMaterialBib()">+ Cadastrar Material</button></div>`;
     return `<div class="tabela-container"><table class="tabela">
       <thead><tr><th>Material</th><th>Tipo</th><th>Fabricante</th><th>Ref.</th>
         <th class="col-num">Unidade</th><th class="col-num">Preço Unit.</th><th class="col-num">Embalagem</th>
@@ -81,8 +81,8 @@ const Materiais = (() => {
           <td class="col-num" style="font-size:0.75rem;color:#888;">${emb}</td>
           <td class="col-num">${usos?`<span class="badge badge-amarelo">${usos}</span>`:'—'}</td>
           <td class="col-acoes">
-            <button class="btn btn-secundario btn-sm" data-perm="materiais:editar" onclick="Materiais.editarMaterialBib('${m.id}')">✎ Editar</button>
-            <button class="btn btn-perigo btn-sm btn-icon" data-perm="materiais:excluir" onclick="Materiais.excluirMaterialBib('${m.id}')">✕</button>
+            <button class="btn btn-secundario btn-sm" data-perm="materiais:editar:material" onclick="Materiais.editarMaterialBib('${m.id}')">✎ Editar</button>
+            <button class="btn btn-perigo btn-sm btn-icon" data-perm="materiais:excluir:material" onclick="Materiais.excluirMaterialBib('${m.id}')">✕</button>
           </td></tr>`;
       }).join('')}</tbody></table></div>`;
   }
@@ -115,7 +115,7 @@ const Materiais = (() => {
 
       ${!vf.length?`<div class="estado-vazio"><div class="icone">🔗</div>
         <p>${filtroTarefa?'Nenhum material vinculado.':'Nenhum vínculo cadastrado.'}</p>
-        <button class="btn btn-primario" data-perm="materiais:criar" onclick="Materiais.novoVinculo()">+ Vincular / Criar material</button></div>`:`
+        <button class="btn btn-primario" data-perm="materiais:criar:vinculo" onclick="Materiais.novoVinculo()">+ Vincular / Criar material</button></div>`:`
       <div style="display:flex;justify-content:flex-end;margin-bottom:8px;">
         <div style="background:var(--cor-dark-800);border-radius:8px;padding:8px 16px;border-left:3px solid var(--cor-primaria);">
           <span style="font-size:0.75rem;color:#888;">Custo total (materiais):</span>
@@ -148,8 +148,8 @@ const Materiais = (() => {
             <td class="col-num" style="color:#888;font-family:var(--font-mono);">${totalEmb}</td>
             <td class="col-num" style="font-weight:700;color:var(--cor-primaria);font-family:var(--font-mono);">${custo?'R$ '+_fNum(custo):'—'}</td>
             <td class="col-acoes">
-              <button class="btn btn-secundario btn-sm" data-perm="materiais:editar" onclick="Materiais.editarVinculo('${v.id}')">✎</button>
-              <button class="btn btn-perigo btn-sm btn-icon" data-perm="materiais:excluir" onclick="Materiais.excluirVinculo('${v.id}')">✕</button>
+              <button class="btn btn-secundario btn-sm" data-perm="materiais:editar:vinculo" onclick="Materiais.editarVinculo('${v.id}')">✎</button>
+              <button class="btn btn-perigo btn-sm btn-icon" data-perm="materiais:excluir:vinculo" onclick="Materiais.excluirVinculo('${v.id}')">✕</button>
             </td></tr>`;
         }).join('')}</tbody></table></div>`}`;
   }
@@ -352,7 +352,7 @@ const Materiais = (() => {
 
   // ====== CRUD BIBLIOTECA ======
   function novoMaterialBib(){
-    if(!Permissions.pode('materiais','criar')){Utils.toast('Sem permissão para criar material.','erro');return;}
+    if(!Permissions.pode('materiais','criar:material')){Utils.toast('Sem permissão para criar material.','erro');return;}
     editandoBiblId=null;
     document.getElementById('modal-bib-titulo').textContent='Novo Material na Biblioteca';
     document.getElementById('form-material-bib').reset();
@@ -360,7 +360,7 @@ const Materiais = (() => {
   }
 
   function editarMaterialBib(id){
-    if(!Permissions.pode('materiais','editar')){Utils.toast('Sem permissão para editar material.','erro');return;}
+    if(!Permissions.pode('materiais','editar:material')){Utils.toast('Sem permissão para editar material.','erro');return;}
     const m=biblioteca.find(x=>x.id===id);
     if(!m){Utils.toast('Material não encontrado.','erro');return;}
     editandoBiblId=id;
@@ -382,7 +382,7 @@ const Materiais = (() => {
   }
 
   async function salvarMaterialBib(){
-    if(!Permissions.pode('materiais',editandoBiblId?'editar':'criar')){Utils.toast('Sem permissão.','erro');return;}
+    if(!Permissions.pode('materiais',editandoBiblId?'editar:material':'criar:material')){Utils.toast('Sem permissão.','erro');return;}
     const f=document.getElementById('form-material-bib');
     const nome=f.querySelector('[name="nome"]').value.trim();
     if(!nome){Utils.toast('Informe o nome.','alerta');return;}
@@ -408,7 +408,7 @@ const Materiais = (() => {
   }
 
   async function excluirMaterialBib(id){
-    if(!Permissions.pode('materiais','excluir')){Utils.toast('Sem permissão para excluir.','erro');return;}
+    if(!Permissions.pode('materiais','excluir:material')){Utils.toast('Sem permissão para excluir.','erro');return;}
     const usos=vinculos.filter(v=>v.materialId===id).length;
     if(!Utils.confirmar(usos?`Em uso em ${usos} vínculo(s). Excluir mesmo assim?`:'Excluir da biblioteca?'))return;
     try{await Database.deletar(obraId,COL_BIB,id);Utils.toast('Excluído.','sucesso');await carregar();}
@@ -417,7 +417,7 @@ const Materiais = (() => {
 
   // ====== CRUD VÍNCULOS ======
   function novoVinculo(){
-    if(!Permissions.pode('materiais','criar')){Utils.toast('Sem permissão para vincular material.','erro');return;}
+    if(!Permissions.pode('materiais','criar:vinculo')){Utils.toast('Sem permissão para vincular material.','erro');return;}
     editandoVincId=null;_modoVinc='vincular';
     _buscaTarText='';_buscaMatText='';_vincTarSelIds=[];_vincMatSelId='';
     document.getElementById('modal-vinc-titulo').textContent='Adicionar Material à Tarefa';
@@ -425,7 +425,7 @@ const Materiais = (() => {
     Utils.abrirModal('modal-material-vinc');
   }
   function editarVinculo(id){
-    if(!Permissions.pode('materiais','editar')){Utils.toast('Sem permissão para editar vínculo.','erro');return;}
+    if(!Permissions.pode('materiais','editar:vinculo')){Utils.toast('Sem permissão para editar vínculo.','erro');return;}
     const v=vinculos.find(x=>x.id===id);if(!v)return;
     editandoVincId=id;_modoVinc='vincular';
     _vincTarSelIds=_getTarefaIds(v);_vincMatSelId=v.materialId||'';
@@ -644,7 +644,7 @@ const Materiais = (() => {
   }
 
   async function salvarVinculo(){
-    if(!Permissions.pode('materiais',editandoVincId?'editar':'criar')){Utils.toast('Sem permissão.','erro');return;}
+    if(!Permissions.pode('materiais',editandoVincId?'editar:vinculo':'criar:vinculo')){Utils.toast('Sem permissão.','erro');return;}
     const tarefaIds=_vincTarSelIds.slice();
     if(!tarefaIds.length){Utils.toast('Busque e selecione ao menos uma tarefa.','alerta');return;}
     const consumoPrevisto=parseFloat(document.getElementById('vinc-cp')?.value)||0;
@@ -692,7 +692,7 @@ const Materiais = (() => {
   }
 
   async function excluirVinculo(id){
-    if(!Permissions.pode('materiais','excluir')){Utils.toast('Sem permissão para excluir.','erro');return;}
+    if(!Permissions.pode('materiais','excluir:vinculo')){Utils.toast('Sem permissão para excluir.','erro');return;}
     if(!Utils.confirmar('Remover este vínculo?'))return;
     try{await Database.deletar(obraId,COL_VIN,id);Utils.toast('Removido.','sucesso');await carregar();}
     catch(e){Utils.toast('Erro.','erro');}

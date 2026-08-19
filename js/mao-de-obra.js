@@ -53,9 +53,9 @@ const MaoDeObra = (() => {
           <button class="btn btn-secundario btn-sm" data-perm="maoDeObra:exportar" onclick="MaoDeObra.exportar()">📤 Exportar</button>
           ${abaAtiva==='biblioteca'
             ?`<button class="btn btn-secundario btn-sm" onclick="MaoDeObra.setAba('vinculos')">← Por Tarefa</button>
-              <button class="btn btn-primario btn-sm" data-perm="maoDeObra:criar" onclick="MaoDeObra.novaMaoDeObraBib()">+ Nova Mão de Obra</button>`
+              <button class="btn btn-primario btn-sm" data-perm="maoDeObra:criar:equipe" onclick="MaoDeObra.novaMaoDeObraBib()">+ Nova Mão de Obra</button>`
             :`<button class="btn btn-secundario btn-sm" onclick="MaoDeObra.setAba('biblioteca')">👷 Biblioteca (${biblioteca.length})</button>
-              <button class="btn btn-primario btn-sm" data-perm="maoDeObra:criar" onclick="MaoDeObra.novoVinculo()">+ Adicionar Nova Mão de Obra</button>`}
+              <button class="btn btn-primario btn-sm" data-perm="maoDeObra:criar:vinculo" onclick="MaoDeObra.novoVinculo()">+ Adicionar Nova Mão de Obra</button>`}
         </div>
       </div>
       <div id="mdo-corpo">${abaAtiva==='biblioteca'?_renderBib():_renderVinculos()}</div>`;
@@ -66,7 +66,7 @@ const MaoDeObra = (() => {
   function _renderBib(){
     if(!biblioteca.length) return `<div class="estado-vazio">
       <div class="icone">👷</div><p>Biblioteca vazia.</p>
-      <button class="btn btn-primario" data-perm="maoDeObra:criar" onclick="MaoDeObra.novaMaoDeObraBib()">+ Cadastrar Mão de Obra</button></div>`;
+      <button class="btn btn-primario" data-perm="maoDeObra:criar:equipe" onclick="MaoDeObra.novaMaoDeObraBib()">+ Cadastrar Mão de Obra</button></div>`;
     return `<div class="tabela-container"><table class="tabela">
       <thead><tr><th>Mão de Obra</th><th>Categoria</th>
         <th class="col-num">Vínculos</th><th class="col-acoes">Ações</th></tr></thead>
@@ -77,8 +77,8 @@ const MaoDeObra = (() => {
           <td>${m.categoria||'—'}</td>
           <td class="col-num">${usos?`<span class="badge badge-amarelo">${usos}</span>`:'—'}</td>
           <td class="col-acoes">
-            <button class="btn btn-secundario btn-sm" data-perm="maoDeObra:editar" onclick="MaoDeObra.editarMaoDeObraBib('${m.id}')">✎ Editar</button>
-            <button class="btn btn-perigo btn-sm btn-icon" data-perm="maoDeObra:excluir" onclick="MaoDeObra.excluirMaoDeObraBib('${m.id}')">✕</button>
+            <button class="btn btn-secundario btn-sm" data-perm="maoDeObra:editar:equipe" onclick="MaoDeObra.editarMaoDeObraBib('${m.id}')">✎ Editar</button>
+            <button class="btn btn-perigo btn-sm btn-icon" data-perm="maoDeObra:excluir:equipe" onclick="MaoDeObra.excluirMaoDeObraBib('${m.id}')">✕</button>
           </td></tr>`;
       }).join('')}</tbody></table></div>`;
   }
@@ -117,7 +117,7 @@ const MaoDeObra = (() => {
 
       ${!vf.length?`<div class="estado-vazio"><div class="icone">🔗</div>
         <p>${filtroTarefa?'Nenhuma mão de obra vinculada.':'Nenhum vínculo cadastrado.'}</p>
-        <button class="btn btn-primario" data-perm="maoDeObra:criar" onclick="MaoDeObra.novoVinculo()">+ Adicionar Nova Mão de Obra</button></div>`:`
+        <button class="btn btn-primario" data-perm="maoDeObra:criar:vinculo" onclick="MaoDeObra.novoVinculo()">+ Adicionar Nova Mão de Obra</button></div>`:`
       <div class="tabela-container"><table class="tabela tabela-compacta">
         <thead><tr><th>Mão de Obra</th><th>Categoria</th><th>Serviço</th>
           <th class="col-num">Valor Unit.</th><th class="col-num">Quantidade</th>
@@ -135,8 +135,8 @@ const MaoDeObra = (() => {
             <td class="col-num" style="font-family:var(--font-mono);">${ti?_fNum(ti.quantidade)+' '+ti.unidade:'—'}</td>
             <td class="col-num" style="font-weight:700;color:var(--cor-primaria);font-family:var(--font-mono);">R$ ${_fNum(total)}</td>
             <td class="col-acoes">
-              <button class="btn btn-secundario btn-sm" data-perm="maoDeObra:editar" onclick="MaoDeObra.editarVinculo('${v.id}')">✎</button>
-              <button class="btn btn-perigo btn-sm btn-icon" data-perm="maoDeObra:excluir" onclick="MaoDeObra.excluirVinculo('${v.id}')">✕</button>
+              <button class="btn btn-secundario btn-sm" data-perm="maoDeObra:editar:vinculo" onclick="MaoDeObra.editarVinculo('${v.id}')">✎</button>
+              <button class="btn btn-perigo btn-sm btn-icon" data-perm="maoDeObra:excluir:vinculo" onclick="MaoDeObra.excluirVinculo('${v.id}')">✕</button>
             </td></tr>`;
         }).join('')}</tbody></table></div>`}`;
   }
@@ -230,7 +230,7 @@ const MaoDeObra = (() => {
 
   // ====== CRUD BIBLIOTECA ======
   function novaMaoDeObraBib(){
-    if(!Permissions.pode('maoDeObra','criar')){Utils.toast('Sem permissão para criar.','erro');return;}
+    if(!Permissions.pode('maoDeObra','criar:equipe')){Utils.toast('Sem permissão para criar.','erro');return;}
     editandoBiblId=null;
     document.getElementById('modal-mdo-bib-titulo').textContent='Nova Mão de Obra';
     document.getElementById('form-mdo-bib').reset();
@@ -238,7 +238,7 @@ const MaoDeObra = (() => {
   }
 
   function editarMaoDeObraBib(id){
-    if(!Permissions.pode('maoDeObra','editar')){Utils.toast('Sem permissão para editar.','erro');return;}
+    if(!Permissions.pode('maoDeObra','editar:equipe')){Utils.toast('Sem permissão para editar.','erro');return;}
     const m=biblioteca.find(x=>x.id===id);
     if(!m){Utils.toast('Mão de obra não encontrada.','erro');return;}
     editandoBiblId=id;
@@ -252,7 +252,7 @@ const MaoDeObra = (() => {
   }
 
   async function salvarMaoDeObraBib(){
-    if(!Permissions.pode('maoDeObra',editandoBiblId?'editar':'criar')){Utils.toast('Sem permissão.','erro');return;}
+    if(!Permissions.pode('maoDeObra',editandoBiblId?'editar:equipe':'criar:equipe')){Utils.toast('Sem permissão.','erro');return;}
     const f=document.getElementById('form-mdo-bib');
     const nome=f.querySelector('[name="nome"]').value.trim();
     if(!nome){Utils.toast('Informe o nome.','alerta');return;}
@@ -271,7 +271,7 @@ const MaoDeObra = (() => {
   }
 
   async function excluirMaoDeObraBib(id){
-    if(!Permissions.pode('maoDeObra','excluir')){Utils.toast('Sem permissão para excluir.','erro');return;}
+    if(!Permissions.pode('maoDeObra','excluir:equipe')){Utils.toast('Sem permissão para excluir.','erro');return;}
     const usos=vinculos.filter(v=>v.maoDeObraId===id).length;
     if(!Utils.confirmar(usos?`Em uso em ${usos} vínculo(s). Excluir mesmo assim?`:'Excluir da biblioteca?'))return;
     try{await Database.deletar(obraId,COL_BIB,id);Utils.toast('Excluído.','sucesso');await carregar();}
@@ -280,14 +280,14 @@ const MaoDeObra = (() => {
 
   // ====== CRUD VÍNCULOS ======
   function novoVinculo(){
-    if(!Permissions.pode('maoDeObra','criar')){Utils.toast('Sem permissão para vincular.','erro');return;}
+    if(!Permissions.pode('maoDeObra','criar:vinculo')){Utils.toast('Sem permissão para vincular.','erro');return;}
     editandoVincId=null;_modoVinc='vincular';_buscaTarText='';_vincTarSelIds=[];
     document.getElementById('modal-mdo-vinc-titulo').textContent='Adicionar Nova Mão de Obra';
     _renderVincModal(null);
     Utils.abrirModal('modal-mdo-vinc');
   }
   function editarVinculo(id){
-    if(!Permissions.pode('maoDeObra','editar')){Utils.toast('Sem permissão para editar.','erro');return;}
+    if(!Permissions.pode('maoDeObra','editar:equipe')){Utils.toast('Sem permissão para editar.','erro');return;}
     const v=vinculos.find(x=>x.id===id);if(!v)return;
     editandoVincId=id;_modoVinc='vincular';
     _vincTarSelIds=_getTarefaIds(v);
@@ -412,7 +412,7 @@ const MaoDeObra = (() => {
   }
 
   async function salvarVinculo(){
-    if(!Permissions.pode('maoDeObra',editandoVincId?'editar':'criar')){Utils.toast('Sem permissão.','erro');return;}
+    if(!Permissions.pode('maoDeObra',editandoVincId?'editar:vinculo':'criar:vinculo')){Utils.toast('Sem permissão.','erro');return;}
     const tarefaIds=_vincTarSelIds.slice();
     if(!tarefaIds.length){Utils.toast('Busque e selecione ao menos uma tarefa.','alerta');return;}
     const valor=parseFloat(document.getElementById('mdo-vinc-valor')?.value);
@@ -454,7 +454,7 @@ const MaoDeObra = (() => {
   }
 
   async function excluirVinculo(id){
-    if(!Permissions.pode('maoDeObra','excluir')){Utils.toast('Sem permissão para excluir.','erro');return;}
+    if(!Permissions.pode('maoDeObra','excluir:vinculo')){Utils.toast('Sem permissão para excluir.','erro');return;}
     if(!Utils.confirmar('Remover este vínculo?'))return;
     try{await Database.deletar(obraId,COL_VIN,id);Utils.toast('Removido.','sucesso');await carregar();}
     catch(e){Utils.toast('Erro.','erro');}

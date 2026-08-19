@@ -130,8 +130,8 @@ const Suprimentos = (() => {
     if (!container) return;
     const headerActions = document.getElementById('header-actions');
     if (headerActions) headerActions.innerHTML = `
-      <button class="btn btn-secundario" data-perm="suprimentos:editar" onclick="Suprimentos.abrirSelecao()">☑️ Configurar Suprimentos</button>
-      <button class="btn btn-secundario" data-perm="suprimentos:editar" onclick="Suprimentos.abrirConfig()">⚙️ Prazos das Etapas</button>`;
+      <button class="btn btn-secundario" data-perm="suprimentos:editar:selecao" onclick="Suprimentos.abrirSelecao()">☑️ Configurar Suprimentos</button>
+      <button class="btn btn-secundario" data-perm="suprimentos:editar:prazos" onclick="Suprimentos.abrirConfig()">⚙️ Prazos das Etapas</button>`;
     Permissions.aplicarNaTela();
 
     if (!tarefas.length) {
@@ -230,7 +230,7 @@ const Suprimentos = (() => {
   let _selecaoTemp = null; // {tarefaId: modo} local editado no modal, só vira oficial ao Salvar
 
   function abrirSelecao() {
-    if(!Permissions.pode('suprimentos','editar')){Utils.toast('Sem permissão para editar.','erro');return;}
+    if(!Permissions.pode('suprimentos','editar:selecao')){Utils.toast('Sem permissão para editar.','erro');return;}
     _selecaoTemp = { ...tarefasSelecionadas };
     _reabrirModalSelecao();
     Utils.abrirModal('modal-selecao-suprimentos');
@@ -306,7 +306,7 @@ const Suprimentos = (() => {
   // tarefas que saíram da lista OU viraram 'titulo' (título não tem
   // pipeline), gera pendentes das que entraram em modo 'dados'.
   async function salvarSelecao() {
-    if(!Permissions.pode('suprimentos','editar')){Utils.toast('Sem permissão para editar.','erro');return;}
+    if(!Permissions.pode('suprimentos','editar:selecao')){Utils.toast('Sem permissão para editar.','erro');return;}
     if (!_selecaoTemp) return;
     try {
       Utils.mostrarLoading('Salvando seleção...');
@@ -383,7 +383,7 @@ const Suprimentos = (() => {
 
   function _celulaEtapa(tarefaId, etapaId, e) {
     if (!e) return '<td>—</td><td>—</td>';
-    const _ro = !Permissions.pode('suprimentos', 'editar');
+    const _ro = !Permissions.pode('suprimentos', 'editar:dataStatus');
     const hoje = Utils.hoje();
     const { cor, bg } = _corPrazo(e, hoje);
     const st = STATUS_INFO[e.status] || STATUS_INFO.nao_iniciado;
@@ -438,7 +438,7 @@ const Suprimentos = (() => {
   }
 
   async function onDataInlineChange(tarefaId, etapaId, novaData) {
-    if(!Permissions.pode('suprimentos','editar'))return;
+    if(!Permissions.pode('suprimentos','editar:dataStatus'))return;
     const s = supPorTarefa[tarefaId];
     if (!s || !novaData) return;
     s.etapas[etapaId].data = novaData;
@@ -453,7 +453,7 @@ const Suprimentos = (() => {
   }
 
   async function onStatusInlineChange(tarefaId, etapaId, novoStatus) {
-    if(!Permissions.pode('suprimentos','editar'))return;
+    if(!Permissions.pode('suprimentos','editar:dataStatus'))return;
     const s = supPorTarefa[tarefaId];
     if (!s) return;
     // Ao marcar Concluído, pergunta a data real em que foi concluído —
@@ -502,7 +502,7 @@ const Suprimentos = (() => {
   }
 
   async function _confirmarConclusao(tarefaId, etapaId) {
-    if(!Permissions.pode('suprimentos','editar'))return;
+    if(!Permissions.pode('suprimentos','editar:dataStatus'))return;
     const s = supPorTarefa[tarefaId];
     if (!s) return;
     const dataEscolhida = document.getElementById('sup-input-data-conclusao')?.value;
@@ -522,7 +522,7 @@ const Suprimentos = (() => {
 
   // ---- Config (prazos padrão + override por tarefa) ----
   function abrirConfig() {
-    if(!Permissions.pode('suprimentos','editar')){Utils.toast('Sem permissão para editar.','erro');return;}
+    if(!Permissions.pode('suprimentos','editar:prazos')){Utils.toast('Sem permissão para editar.','erro');return;}
     nivelFixoModal = 0;
     Utils.abrirModal('modal-config-suprimentos');
   }
@@ -638,7 +638,7 @@ const Suprimentos = (() => {
   }
 
   function _editarOverride(tarefaId) {
-    if(!Permissions.pode('suprimentos','editar')){Utils.toast('Sem permissão para editar.','erro');return;}
+    if(!Permissions.pode('suprimentos','editar:override')){Utils.toast('Sem permissão para editar.','erro');return;}
     _overrideAlvoId = tarefaId;
     const t = tarefas.find(x => x.id === tarefaId);
     const atual = overrides[tarefaId] || cfg;
@@ -659,7 +659,7 @@ const Suprimentos = (() => {
   // (se for um grupo/pai). Grava direto em `overrides` local; persiste
   // no Firestore só quando "Salvar e Recalcular Pendentes" for clicado.
   function _confirmarOverride() {
-    if(!Permissions.pode('suprimentos','editar'))return;
+    if(!Permissions.pode('suprimentos','editar:override'))return;
     if (!_overrideAlvoId) return;
     const novoPrazo = {};
     ETAPAS.forEach(e => { novoPrazo[e.cfgKey] = parseInt(document.getElementById(`ov-${e.cfgKey}`)?.value) || 0; });
@@ -673,7 +673,7 @@ const Suprimentos = (() => {
   }
 
   function _removerOverride(tarefaId) {
-    if(!Permissions.pode('suprimentos','editar'))return;
+    if(!Permissions.pode('suprimentos','editar:override'))return;
     const sorted = [...tarefas].sort((a, b) => (a.ordem || 0) - (b.ordem || 0));
     const idx = sorted.findIndex(t => t.id === tarefaId);
     const alvo = sorted[idx];
@@ -683,7 +683,7 @@ const Suprimentos = (() => {
   }
 
   async function salvarConfig() {
-    if(!Permissions.pode('suprimentos','editar')){Utils.toast('Sem permissão para editar.','erro');return;}
+    if(!Permissions.pode('suprimentos','editar:prazos')){Utils.toast('Sem permissão para editar.','erro');return;}
     const novaCfg = {};
     ETAPAS.forEach(e => { novaCfg[e.cfgKey] = parseInt(document.getElementById(`cfg-${e.cfgKey}`)?.value) || 0; });
     try {
