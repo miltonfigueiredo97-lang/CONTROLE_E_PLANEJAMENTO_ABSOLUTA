@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.6.1',
+  versaoAtual: 'V3.19.6.2',
 
   versoes: [
     {
@@ -9424,6 +9424,18 @@ const NotasVersao = {
         "Fica em branco quando não há esse cruzamento: Térreo/SS1/SS2/Ático e áreas comuns (não têm Final), e andares sem separação por Final.",
         "Objetivo: cruzar Categoria/Subcategoria (o quê) com Grupo/Subgrupo (onde/qual frente) — base pra uma futura visão de atividade por andar.",
         "Editável na tabela igual Grupo, entra no Importar Correções e na Exportação Excel (simples)."
+      ]
+    },
+    {
+      "versao": "V3.19.6.2",
+      "data": "2026-08-19",
+      "tipo": "melhoria",
+      "titulo": "Estrutura da Obra: novo botão \"⚡ Gerar Grupos\" — preenche Grupo/Subgrupo de toda a obra automaticamente",
+      "itens": [
+        "Motivo (Milton): Grupo/Subgrupo estavam sendo preenchidos manualmente (planilha) sem uma lista oficial de pavimentos por trás — risco de inconsistência. A Estrutura da Obra (Torre > Pavimento > Apartamento) já existia pra outra finalidade (vincular Local/Pav/Apto) — passou a servir de fonte única também pra Grupo/Subgrupo.",
+        "Cadastra-se os pavimentos uma vez em 🏢 Estrutura da Obra (ex: 2º Subsolo, 1º Subsolo, Térreo, 1º...16º Pavimento, Ático, Reservatório, Fachada) e clica em \"⚡ Gerar Grupos\": o sistema compara o nome de cada pavimento com o nome de cada tarefa (mesmo mecanismo do Auto-vincular por Nome) e propõe Grupo = pavimento reconhecido.",
+        "Subgrupo é calculado automaticamente só quando o pavimento é do tipo \"Nº Pavimento\" E a tarefa tem \"- Final NN\" no nome: Subgrupo = andar×10 + número do Final (1º Pavimento Final 02 = 12, 16º Pavimento Final 01 = 161). Fora disso fica em branco.",
+        "Sempre mostra prévia (o que muda de X para Y) antes de aplicar — nunca escreve direto, e só lista o que realmente vai mudar."
       ]
     }
   ],

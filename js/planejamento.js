@@ -3863,9 +3863,12 @@ const Planejamento = (() => {
           <div style="font-weight:700;color:var(--cor-primaria);">🏢 Estrutura da Obra</div>
           <span style="cursor:pointer;color:#888;font-size:1.1rem;" onclick="document.getElementById('estobra-modal').remove()">✕</span>
         </div>
-        <div style="font-size:.72rem;color:#888;margin-bottom:12px;">Torre → Pavimento → Apartamento/Unidade. Usado só pra vincular tarefas a um local (coluna "Local (Pav/Apto)" da tabela) — não afeta os módulos de Levantamento.</div>
+        <div style="font-size:.72rem;color:#888;margin-bottom:12px;">Torre → Pavimento → Apartamento/Unidade. Usado pra vincular tarefas a um local (coluna "Local (Pav/Apto)") e, com o botão abaixo, pra preencher automaticamente as colunas Grupo/Subgrupo de toda a obra — não afeta os módulos de Levantamento.</div>
         <div id="estobra-body"></div>
-        <button class="btn btn-primario btn-sm" style="align-self:flex-start;margin-top:10px;" onclick="Planejamento._addTorre()">＋ Nova Torre</button>
+        <div style="display:flex;gap:8px;margin-top:10px;">
+          <button class="btn btn-primario btn-sm" onclick="Planejamento._addTorre()">＋ Nova Torre</button>
+          <button class="btn btn-secundario btn-sm" onclick="Planejamento._abrirGerarGrupos()" title="Preenche Grupo/Subgrupo de todas as tarefas comparando o nome delas com os pavimentos cadastrados aqui — mostra prévia antes de aplicar">⚡ Gerar Grupos</button>
+        </div>
       </div>`;
     document.body.appendChild(pop);
     _renderEstruturaObraBody();
@@ -3963,6 +3966,105 @@ const Planejamento = (() => {
     _renderEstruturaObraBody();
     Utils.toast(`Pavimento duplicado (${copia.apartamentos.length} apto(s) copiado(s)) — edite o nome.`,'sucesso');
   }
+
+  // ══════════════════════════════════════════
+  // GERAR GRUPOS — usa a Estrutura da Obra (os pavimentos cadastrados: 2º
+  // Subsolo, 1º Subsolo, Térreo, 1º...16º Pavimento, Ático, Reservatório,
+  // Fachada etc.) como dicionário pra preencher Grupo e Subgrupo de toda
+  // tarefa automaticamente, comparando o NOME do pavimento com o NOME da
+  // tarefa — mesmo mecanismo de match do Auto-vincular por Nome (M1).
+  // Subgrupo só é calculado quando o pavimento bate no padrão "Nº Pavimento"
+  // E a tarefa tem "- Final NN" no nome: Subgrupo = andar×10 + nº do Final
+  // (ex: 1º Pavimento + Final 02 = 12). Fora disso, Subgrupo fica em branco
+  // (Térreo/Subsolo/Ático/Reservatório/Fachada não têm essa combinação).
+  // SEMPRE mostra prévia antes de gravar — nunca aplica direto.
+  // ══════════════════════════════════════════
+  function _detectarGrupoPorNome(nomeTarefa,estrutura){
+    const nome=_normTexto(nomeTarefa);
+    let melhor=null,melhorLen=0;
+    (estrutura.torres||[]).forEach(torre=>{
+      (torre.pavimentos||[]).forEach(pav=>{
+        const nPav=_normTexto(pav.nome);
+        if(nPav.length>=3&&nome.includes(nPav)&&nPav.length>melhorLen){melhor=pav.nome;melhorLen=nPav.length;}
+      });
+    });
+    if(!melhor)return null;
+    const mPav=melhor.match(/^(\d+)°\s*Pavimento$/i);
+    const mFinal=String(nomeTarefa).match(/Final\s*0*(\d+)\s*$/i);
+    const subgrupo=(mPav&&mFinal)?(parseInt(mPav[1])*10+parseInt(mFinal[1])):null;
+    return {grupo:melhor,subgrupo};
+  }
+
+  async function _abrirGerarGrupos(){
+    await _carregarEstruturaObra();
+    const est=_estruturaObraCache;
+    const totalPav=(est.torres||[]).reduce((s,t)=>s+(t.pavimentos||[]).length,0);
+    if(!totalPav){
+      Utils.toast('Cadastre os pavimentos na Estrutura da Obra primeiro (2º Subsolo, Térreo, 1º...16º Pavimento, Ático, Reservatório, Fachada etc.).','alerta');
+      return;
+    }
+    const sorted=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
+    const folhas=sorted.filter(t=>!_arvFilhos(t,sorted).length);
+    const propostas=folhas.map(t=>({tarefa:t,match:_detectarGrupoPorNome(t.nome,est)})).filter(p=>p.match);
+    if(!propostas.length){
+      Utils.toast('Nenhuma tarefa teve o nome de um pavimento cadastrado reconhecido dentro do próprio nome.','alerta');
+      return;
+    }
+    const mudam=propostas.filter(p=>p.tarefa.grupo!==p.match.grupo||(p.tarefa.subgrupo||null)!==(p.match.subgrupo||null));
+    let pop=document.getElementById('gerargrupos-modal');if(pop)pop.remove();
+    pop=document.createElement('div');pop.id='gerargrupos-modal';
+    pop.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:2000;display:flex;align-items:center;justify-content:center;';
+    pop.innerHTML=`
+      <div style="background:#1a1a1a;border:1px solid #333;border-radius:10px;padding:20px;width:680px;max-width:95vw;max-height:85vh;overflow-y:auto;display:flex;flex-direction:column;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+          <div style="font-weight:700;color:var(--cor-primaria);">⚡ Gerar Grupos — Prévia</div>
+          <span style="cursor:pointer;color:#888;font-size:1.1rem;" onclick="document.getElementById('gerargrupos-modal').remove()">✕</span>
+        </div>
+        <div style="font-size:.72rem;color:#888;margin-bottom:10px;">${propostas.length} de ${folhas.length} tarefas reconhecidas pelos pavimentos cadastrados na Estrutura da Obra. <b>${mudam.length}</b> vão realmente mudar Grupo/Subgrupo (as demais já estão iguais). Desmarque o que estiver errado.</div>
+        <div id="gerargrupos-lista" style="display:flex;flex-direction:column;gap:2px;max-height:50vh;overflow-y:auto;border:1px solid #292929;border-radius:6px;padding:6px;">
+          ${mudam.map((p,i)=>`
+            <label style="display:flex;align-items:center;gap:8px;font-size:.76rem;padding:4px 4px;border-bottom:1px solid #232323;cursor:pointer;">
+              <input type="checkbox" data-idx="${i}" checked>
+              <span style="flex:1;color:#ddd;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${_esc(p.tarefa.nome)}</span>
+              <span style="color:#666;white-space:nowrap;">${_esc(p.tarefa.grupo||'—')}${p.tarefa.subgrupo?' / '+p.tarefa.subgrupo:''}</span>
+              <span style="color:#555;">→</span>
+              <span style="color:var(--cor-primaria);white-space:nowrap;font-weight:600;">${_esc(p.match.grupo)}${p.match.subgrupo?' / '+p.match.subgrupo:''}</span>
+            </label>`).join('')}
+        </div>
+        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px;">
+          <button class="btn btn-secundario btn-sm" onclick="document.getElementById('gerargrupos-modal').remove()">Cancelar</button>
+          <button class="btn btn-primario btn-sm" onclick="Planejamento._aplicarGerarGrupos()">Aplicar Selecionados</button>
+        </div>
+      </div>`;
+    document.body.appendChild(pop);
+    pop.dataset.propostas=JSON.stringify(mudam.map(p=>({tarefaId:p.tarefa.id,match:p.match})));
+  }
+
+  async function _aplicarGerarGrupos(){
+    const pop=document.getElementById('gerargrupos-modal');if(!pop)return;
+    const propostas=JSON.parse(pop.dataset.propostas||'[]');
+    const marcados=[...pop.querySelectorAll('input[type="checkbox"]:checked')].map(cb=>parseInt(cb.dataset.idx));
+    const selecionadas=propostas.filter((_,i)=>marcados.includes(i));
+    if(!selecionadas.length){pop.remove();return;}
+    Utils.mostrarLoading(`Gerando grupos em ${selecionadas.length} tarefa(s)...`);
+    try{
+      const L=30;
+      for(let i=0;i<selecionadas.length;i+=L){
+        await Promise.all(selecionadas.slice(i,i+L).map(async p=>{
+          const upd={grupo:p.match.grupo};
+          if(p.match.subgrupo)upd.subgrupo=p.match.subgrupo;
+          await Database.atualizar(obraId,COL,p.tarefaId,upd).catch(e=>console.error('Erro gerar grupo:',p.tarefaId,e));
+          const t=tarefas.find(x=>x.id===p.tarefaId);
+          if(t){t.grupo=upd.grupo;if(upd.subgrupo)t.subgrupo=upd.subgrupo;}
+        }));
+      }
+      pop.remove();
+      Utils.toast(`${selecionadas.length} tarefa(s) com Grupo/Subgrupo atualizado(s).`,'sucesso');
+      _buildFiltradas();_render();
+    }catch(e){console.error(e);Utils.toast('Erro ao gerar grupos.','erro');}
+    finally{Utils.esconderLoading();}
+  }
+
   // Verifica se algum id (torre/pavimento/apto) ainda está referenciado por
   // alguma tarefa antes de excluir — não apaga silenciosamente vínculo.
   function _contarTarefasVinculadas(tipo,id){
@@ -6154,7 +6256,7 @@ const Planejamento = (() => {
     selectIdx,toggleRecolher,recuarNivel,avancarNivel,
     toggleGantt,toggleLiberarEdicaoReal,hideCol,showColsMenu,_showCol,_showAll,_toggleMenuFerramentas,
     _abrirEstruturaObra,_addTorre,_addPavimento,_addApartamento,_duplicarPavimento,_editarNomeEst,_removerNoEst,
-    _abrirAutoVincular,_aplicarAutoVincular,
+    _abrirAutoVincular,_aplicarAutoVincular,_abrirGerarGrupos,_aplicarGerarGrupos,
     _abrirVinculoPavimento,_salvarVinculoPavimento,_vinclocTogglePav,_vinclocToggleApto,
     _abrirAtualizarPredecessora,_predlogAtualizarBotao,_salvarAtualizacaoPredecessora,_abrirHistoricoAlteracoes,_filtrarHistorico,
     toggleArvoreEditor,_arvToggle,_arvExpandirTudo,_arvIniciarEdit,_arvCancelarEdit,_arvSalvarNome,
