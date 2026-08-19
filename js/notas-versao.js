@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.2',
+  versaoAtual: 'V3.19.3',
 
   versoes: [
     {
@@ -9362,6 +9362,16 @@ const NotasVersao = {
     },
     {
       "versao": "V3.19.2",
+      "data": "2026-08-19",
+      "tipo": "melhoria",
+      "titulo": "Agenda: criar tarefa nova direto de dentro do seletor de horário (sem precisar voltar pro formulário principal)",
+      "itens": [
+        "Motivo (Milton): quando ele queria agendar uma tarefa que ainda não existia na lista, tinha que fechar a Agenda, ir criar a tarefa no formulário principal, voltar pra Agenda e só então agendar — três passos pra uma coisa só.",
+        "Agora, dentro do seletor de tarefa (o mesmo que abre ao clicar no \"+\" de um horário), tem um link \"+ Não existe ainda? Criar tarefa nova\". Clicar nele abre um mini formulário ali mesmo (Título + Descrição, ambos obrigatórios) — ao criar, a tarefa já nasce E fica agendada naquele horário, sem sair da Agenda."
+      ]
+    },
+    {
+      "versao": "V3.19.3",
       "data": "2026-08-19",
       "tipo": "correcao",
       "titulo": "Categoria/Subcategoria: faltava aparecer na tabela e na Exportação Excel (só existiam na importação e no Agrupador)",
