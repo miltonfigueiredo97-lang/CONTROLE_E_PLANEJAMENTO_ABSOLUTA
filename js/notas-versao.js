@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.16.0.12',
+  versaoAtual: 'V3.16.0.13',
 
   versoes: [
     {
@@ -9256,6 +9256,18 @@ const NotasVersao = {
         "O botão \"+\" de adicionar outra tarefa no horário estava aparecendo ABAIXO das tarefas já alocadas, alinhado à esquerda — o pedido era na DIREITA, na mesma linha. Corrigido: o \"+\" agora é um elemento da própria linha do horário (não fica mais dentro do bloco de tarefas), sempre no canto direito.",
         "Categorias e sistemas no seletor agora mostram a bolinha de cor (igual usada no resto do sistema) — cada nível (projeto, categoria, tarefa) tem sua cor visível, não só texto puro.",
         "Visual \"lista antiga\" dos níveis do seletor (Sistema/Categoria) e da lista de tarefas: virou cartão — fundo branco, borda, espaçamento entre itens, sombra leve no hover — em vez de linhas coladas que só mudavam de cor ao passar o mouse."
+      ]
+    },
+    {
+      "versao": "V3.16.0.13",
+      "data": "2026-08-19",
+      "tipo": "correcao",
+      "titulo": "Título/Descrição: tarefas antigas migradas automaticamente (V3.16.0.11 só valia pra tarefa nova)",
+      "itens": [
+        "Motivo (Milton): o campo Descrição só existia pra tarefa criada dali pra frente — as que já estavam cadastradas continuaram com tudo junto no título, do jeito que sempre foi.",
+        "Adicionada uma migração automática que roda ao abrir o módulo: toda tarefa sem descrição, com texto longo (>40 caracteres) e que segue o padrão \"Ação: detalhes\" ou \"Ação — detalhes\" (é como quase toda tarefa já foi escrita), divide sozinha — título fica com a ação, descrição fica com o resto.",
+        "Guarda de segurança: se o que sobra depois do separador for muito curto (uma palavra só, tipo \"Esgoto\" em \"Levantamento de material hidráulico por apartamento: Esgoto\"), NÃO divide — mantém tudo junto no título, porque nesse caso a palavra depois dos dois pontos é o identificador da tarefa, não uma descrição de verdade.",
+        "Roda direto no Firestore (não é só efeito visual) — migra pra todo mundo que usa o sistema, não só em quem abriu primeiro."
       ]
     }
   ],

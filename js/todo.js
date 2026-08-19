@@ -125,7 +125,45 @@ const Todo = (() => {
     await carregarTudo();
     await seedInicial();
     await reconciliarProjetosAusentes();
+    await _migrarTitulosAntigos();
     renderizar();
+  }
+
+  // ============================================
+  // Migração: tarefas antigas tinham só "texto" (tudo junto, sem
+  // Título/Descrição separados). Quando o texto segue o padrão
+  // "Ação: detalhes" ou "Ação — detalhes" (convenção já usada em
+  // quase todas as tarefas existentes), divide automaticamente:
+  // título = a ação, descrição = o resto. Roda pra qualquer tarefa
+  // sem descrição ainda — não precisa de flag, é auto-suficiente
+  // (tarefa já migrada tem descricao preenchida e não entra de novo).
+  // ============================================
+  function _dividirTituloDescricao(texto) {
+    const idxColon = texto.indexOf(': ');
+    const idxDash = texto.indexOf(' — ');
+    let idx = -1, tamanhoSeparador = 0;
+    if (idxColon !== -1 && (idxDash === -1 || idxColon < idxDash)) { idx = idxColon; tamanhoSeparador = 2; }
+    else if (idxDash !== -1) { idx = idxDash; tamanhoSeparador = 3; }
+    if (idx < 8) return null; // sem separador claro, ou separador logo no início (não dá um título útil)
+    const titulo = texto.slice(0, idx).trim();
+    const descricao = texto.slice(idx + tamanhoSeparador).trim();
+    if (!titulo || !descricao) return null;
+    // Se o que sobra depois do separador for muito curto (ex: só uma palavra,
+    // "Esgoto"), provavelmente é o identificador da tarefa, não uma descrição
+    // de verdade — nesse caso é melhor manter tudo junto no título.
+    if (descricao.length < 15 || descricao.split(/\s+/).length <= 2) return null;
+    return { titulo, descricao };
+  }
+
+  async function _migrarTitulosAntigos() {
+    const candidatas = tarefas.filter(t => !t.descricao && t.texto && t.texto.length > 40);
+    for (const t of candidatas) {
+      const partes = _dividirTituloDescricao(t.texto);
+      if (!partes) continue;
+      await Database.atualizarRaiz(COL, t.id, { texto: partes.titulo, descricao: partes.descricao });
+      t.texto = partes.titulo;
+      t.descricao = partes.descricao;
+    }
   }
 
   async function carregarTudo() {
