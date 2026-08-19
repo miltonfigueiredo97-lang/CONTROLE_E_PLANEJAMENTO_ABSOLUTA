@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.16.0.2',
+  versaoAtual: 'V3.16.0.3',
 
   versoes: [
     {
@@ -9134,6 +9134,19 @@ const NotasVersao = {
         "Categoria virou multi-select no filtro — dá pra marcar mais de uma categoria ao mesmo tempo pra ver as tarefas que batem com qualquer uma delas (antes só dava pra escolher uma).",
         "Botão \"+ Nova categoria\" ficou visível direto dentro do painel de Filtros, não só escondido dentro do Gerenciar.",
         "Paleta de cor de categoria saiu de ~12 opções fixas pra 36 cores curadas + um seletor de cor livre (🎨, ilimitado) — vale pra criar categoria rápida, editar categoria e pro Gerenciar, nos mesmos lugares de sempre."
+      ]
+    },
+    {
+      "versao": "V3.16.0.3",
+      "data": "2026-08-19",
+      "tipo": "melhoria",
+      "titulo": "Planejamento: Visão Organizacional (Gantt filtrado por linhas escolhidas) + Setas de Predecessora no Gantt (estilo MS Project)",
+      "itens": [
+        "🗂 Visão Organizacional (botão ao lado do Editor de Estrutura): ferramenta de máscara — você marca quais linhas do Planejamento quer ver (com busca; marcar um grupo marca o bloco inteiro dele) e a tela mostra SÓ elas, com tabela + Gantt idênticos e tudo funcionando igual (edição, predecessoras, filtros combinam). Botão fica dourado com a contagem quando ativa; \"Limpar\" volta a mostrar tudo. A máscara fica salva por obra no navegador — primeira visão de uma família que vai crescer.",
+        "☑ Setas de Predecessora (botão na toolbar, só com o Gantt visível): desenha no Gantt o caminho de cada predecessora até a tarefa dela — sai do fim da barra da predecessora, desce/sobe e entra com uma setinha no início da tarefa, igual MS Project.",
+        "Interação das setas: passar o mouse escurece/destaca a seta; clicar deixa ela marcada em dourado e mostra o número + nome da predecessora. Clicar de novo desmarca.",
+        "Predecessora fora da visão atual (filtrada pela Visão Organizacional, busca ou outro filtro) simplesmente não desenha seta — sem erro, sem seta apontando pro nada.",
+        "Desempenho cuidado: as setas são desenhadas só perto da janela visível (mesma lógica do virtual scroll da tabela) — obra com 2.400 tarefas não pesa."
       ]
     }
   ],

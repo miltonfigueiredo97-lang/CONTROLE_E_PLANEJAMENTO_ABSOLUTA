@@ -52,6 +52,13 @@ const Planejamento = (() => {
   // M4: filtro por responsável — cache de sessão (localStorage), não é dado
   // de negócio, não vai pro Firestore. Combina com os demais filtros (AND).
   let _filtroResponsavel=(()=>{try{return localStorage.getItem('planej_filtroResponsavel')||'';}catch(e){return'';}})();
+  // Visão Organizacional: máscara de linhas — quando ativa, a grid+Gantt
+  // mostram SÓ as tarefas escolhidas (mesma tela, mesmo comportamento, só
+  // filtrado). null = desligada. Persistida por obra (cache de sessão de UI).
+  let _visaoOrgIds=null;
+  // Setas de predecessora no Gantt (estilo MS Project) — liga/desliga.
+  let _setasPred=(()=>{try{return localStorage.getItem('planej_setasPred')==='1';}catch(e){return false;}})();
+  let _setaSelecionada=null; // chave "predId>tarefaId" da seta clicada (fica marcada)
   // Busca de tarefa no Gantt
   let _buscaTexto='', _buscaResultados=[], _buscaCursor=-1;
   // Undo stack: últimas 30 snapshots do array tarefas (cópia plana antes de cada ação)
@@ -304,6 +311,7 @@ const Planejamento = (() => {
     obraId=Router.getObraId();
     if(!obraId){_el().innerHTML='<div class="estado-vazio"><div class="icone">📅</div><p>Selecione uma obra.</p></div>';return;}
     document.addEventListener('keydown',_onKey);
+    _visaoOrgCarregarSalva(); // restaura a máscara da Visão Organizacional salva pra esta obra
     _carregarEstruturaObra().then(()=>_paintRows()); // segundo plano — atualiza resumos quando chegar
     await carregar();
   }
@@ -550,6 +558,9 @@ const Planejamento = (() => {
     if(_filtroResponsavel){
       result=result.filter(t=>(t.responsavel||'').trim()===_filtroResponsavel);
     }
+    if(_visaoOrgIds){
+      result=result.filter(t=>_visaoOrgIds.has(t.id));
+    }
     filtradas=result;
   }
 
@@ -584,6 +595,8 @@ const Planejamento = (() => {
           ${colsHidden.size?`<button class="btn btn-secundario btn-sm" onclick="Planejamento.showColsMenu()" style="font-size:.72rem;">＋ Colunas (${colsHidden.size})</button>`:''}
           <span style="color:#333;margin:0 4px;">|</span>
           <button class="btn ${modoView==='arvore'?'btn-primario':'btn-secundario'} btn-sm" data-perm="planejamento:editar:estrutura" onclick="Planejamento.toggleArvoreEditor()" style="font-size:.72rem;">🌳 Editor de Estrutura</button>
+          <button class="btn btn-sm ${_visaoOrgIds?'btn-primario':'btn-secundario'}" onclick="Planejamento._abrirVisaoOrg()" style="font-size:.72rem;" title="Máscara de linhas: escolha quais tarefas aparecem — tabela e Gantt idênticos, só filtrados">🗂 Visão Organizacional${_visaoOrgIds?` (${_visaoOrgIds.size})`:''}</button>
+          ${ganttVisible?`<button class="btn btn-sm ${_setasPred?'btn-primario':'btn-secundario'}" onclick="Planejamento.toggleSetasPred()" style="font-size:.72rem;" title="Desenha no Gantt a seta da predecessora até cada tarefa (estilo MS Project) — passe o mouse pra destacar, clique pra marcar e ver o nome">${_setasPred?'☑':'☐'} Setas de Predecessora</button>`:''}
           <button class="btn btn-primario btn-sm" data-perm="planejamento:criar:tarefa" onclick="Planejamento.inserirTarefa()" style="font-size:.72rem;">＋ Tarefa</button>
         </div>
       </div>
@@ -1771,7 +1784,7 @@ const Planejamento = (() => {
       if(dv){
         const hojeEl=document.getElementById('gantt-hoje');
         const hojeHTML=hojeEl?hojeEl.outerHTML:'';
-        dv.innerHTML=bH+hojeHTML;
+        dv.innerHTML=bH+_setasSvg(s,e,dMin,lpd)+hojeHTML;
       } else {
         console.warn('g-dir-v NÃO ENCONTRADO — Gantt não renderiza barras');
       }
@@ -1804,7 +1817,7 @@ const Planejamento = (() => {
       }
       }catch(errLinha){console.error('Erro ao renderizar barra Gantt',i,t?.id,errLinha);}
     }
-    const ev=document.getElementById('g-dir-v');if(ev)ev.innerHTML=bH;
+    const ev=document.getElementById('g-dir-v');if(ev)ev.innerHTML=bH+_setasSvg(s,e,dMin,lpd);
   }
 
   // Triplo-clique na célula Predecessora abre o popup guiado (já preenchido
@@ -2327,6 +2340,159 @@ const Planejamento = (() => {
     _buildFiltradas();_render();requestAnimationFrame(()=>_paintRows());
   }
   function _limparFiltroResponsavel(){_aplicarFiltroResponsavel('');}
+
+  // ===================== VISÃO ORGANIZACIONAL (máscara de linhas) =====================
+  // Ferramenta de "máscara": escolhe quais linhas do Planejamento aparecem —
+  // a grid e o Gantt continuam idênticos (mesma tela, mesmos recursos), só
+  // que exibindo apenas as tarefas escolhidas. Primeira visão: Gantt filtrado.
+  function _visaoOrgChaveLS(){return 'planej_visaoOrg_'+obraId;}
+  function _visaoOrgCarregarSalva(){
+    try{
+      const raw=localStorage.getItem(_visaoOrgChaveLS());
+      if(raw){const arr=JSON.parse(raw);if(Array.isArray(arr)&&arr.length)_visaoOrgIds=new Set(arr);}
+    }catch(e){}
+  }
+  function _abrirVisaoOrg(){
+    let pop=document.getElementById('visorg-modal');if(pop)pop.remove();
+    pop=document.createElement('div');pop.id='visorg-modal';
+    pop.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:2000;display:flex;align-items:center;justify-content:center;';
+    const sorted=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
+    const marcados=_visaoOrgIds||new Set();
+    pop.innerHTML=`
+      <div style="background:#1a1a1a;border:1px solid #333;border-radius:10px;padding:20px;width:640px;max-width:95vw;max-height:88vh;display:flex;flex-direction:column;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+          <div style="font-weight:700;color:var(--cor-primaria);">🗂 Visão Organizacional — Gantt Filtrado</div>
+          <span style="cursor:pointer;color:#888;font-size:1.1rem;" onclick="document.getElementById('visorg-modal').remove()">✕</span>
+        </div>
+        <div style="font-size:.72rem;color:#888;margin-bottom:10px;">Marque as linhas que quer ver — a tela do Planejamento (tabela + Gantt) mostra só elas, com tudo funcionando igual. Clicar num grupo marca/desmarca o bloco inteiro dele.</div>
+        <input id="visorg-busca" placeholder="🔍 Filtrar por nome/código..." class="form-control" style="font-size:.8rem;margin-bottom:8px;" oninput="Planejamento._visaoOrgFiltrarLista(this.value)">
+        <div id="visorg-lista" style="flex:1;overflow-y:auto;border:1px solid #262626;border-radius:7px;padding:6px;">
+          ${sorted.map(t=>`<label data-visorg-linha data-nome="${_esc((t.nome||'').toLowerCase())}" data-cod="${_esc((t.codigo||'').toLowerCase())}" style="display:flex;align-items:center;gap:7px;padding:2px 4px 2px ${4+(t.nivel||0)*18}px;cursor:pointer;font-size:.78rem;color:#ddd;border-bottom:1px solid #1c1c1c;">
+            <input type="checkbox" data-visorg-id="${t.id}" ${marcados.has(t.id)?'checked':''} onchange="Planejamento._visaoOrgToggleBloco(this)">
+            <span style="${t._numLinha?'':''}color:#666;font-size:.68rem;min-width:28px;">${t._numLinha||''}</span>
+            <span style="${(t.tipo==='grupo'||true)&&sorted.some(x=>false)?'':''}${t.nivel===0?'font-weight:700;color:var(--cor-primaria);':''}">${_esc(t.nome||'')}</span>
+          </label>`).join('')}
+        </div>
+        <div style="display:flex;gap:8px;justify-content:space-between;margin-top:12px;">
+          <div style="display:flex;gap:8px;">
+            <button class="btn btn-secundario btn-sm" onclick="document.querySelectorAll('#visorg-lista input').forEach(c=>c.checked=true)">Marcar tudo</button>
+            <button class="btn btn-secundario btn-sm" onclick="document.querySelectorAll('#visorg-lista input').forEach(c=>c.checked=false)">Desmarcar tudo</button>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button class="btn btn-secundario btn-sm" onclick="Planejamento._visaoOrgLimpar()">Limpar (mostrar tudo)</button>
+            <button class="btn btn-primario btn-sm" onclick="Planejamento._visaoOrgAplicar()">Aplicar</button>
+          </div>
+        </div>
+      </div>`;
+    document.body.appendChild(pop);
+    document.getElementById('visorg-busca')?.focus();
+  }
+  function _visaoOrgFiltrarLista(txt){
+    const q=(txt||'').trim().toLowerCase();
+    document.querySelectorAll('#visorg-lista [data-visorg-linha]').forEach(l=>{
+      l.style.display=(!q||l.dataset.nome.includes(q)||l.dataset.cod.includes(q))?'flex':'none';
+    });
+  }
+  // Marcar/desmarcar um grupo aplica ao bloco inteiro (o grupo + tudo dentro)
+  function _visaoOrgToggleBloco(cb){
+    const id=cb.dataset.visorgId;
+    const sorted=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
+    const idx=sorted.findIndex(t=>t.id===id);
+    if(idx<0)return;
+    const niv=sorted[idx].nivel||0;
+    const idsBloco=[];
+    for(let j=idx+1;j<sorted.length;j++){
+      if((sorted[j].nivel||0)<=niv)break;
+      idsBloco.push(sorted[j].id);
+    }
+    if(!idsBloco.length)return; // folha, nada a propagar
+    const marcar=cb.checked;
+    for(const bid of idsBloco){
+      const el=document.querySelector(`#visorg-lista input[data-visorg-id="${bid}"]`);
+      if(el)el.checked=marcar;
+    }
+  }
+  function _visaoOrgAplicar(){
+    const ids=[...document.querySelectorAll('#visorg-lista input:checked')].map(c=>c.dataset.visorgId);
+    const pop=document.getElementById('visorg-modal');if(pop)pop.remove();
+    if(!ids.length){_visaoOrgLimpar();return;}
+    _visaoOrgIds=new Set(ids);
+    try{localStorage.setItem(_visaoOrgChaveLS(),JSON.stringify(ids));}catch(e){}
+    _buildFiltradas();_render();requestAnimationFrame(()=>_paintRows());
+    Utils.toast(`Visão aplicada: ${ids.length} linha(s).`,'sucesso');
+  }
+  function _visaoOrgLimpar(){
+    _visaoOrgIds=null;
+    try{localStorage.removeItem(_visaoOrgChaveLS());}catch(e){}
+    const pop=document.getElementById('visorg-modal');if(pop)pop.remove();
+    _buildFiltradas();_render();requestAnimationFrame(()=>_paintRows());
+  }
+
+  // ===================== SETAS DE PREDECESSORA NO GANTT =====================
+  function toggleSetasPred(){
+    _setasPred=!_setasPred;
+    try{localStorage.setItem('planej_setasPred',_setasPred?'1':'0');}catch(e){}
+    _setaSelecionada=null;
+    _render();requestAnimationFrame(()=>_paintRows());
+  }
+  // Gera o SVG das setas (estilo MS Project): sai do FIM da barra da
+  // predecessora, desce/sobe até a linha da tarefa e entra no INÍCIO dela
+  // com uma setinha. Hover escurece; clique marca e mostra o nome da
+  // predecessora num rótulo. Só desenha pares perto da janela visível
+  // (virtual scroll) pra não pesar em obra grande.
+  function _setasSvg(s,e,dMin,lpd){
+    if(!_setasPred||!ganttVisible)return'';
+    const idxDe=new Map(filtradas.map((t,i)=>[t.id,i]));
+    const MARGEM=40;
+    let paths='';
+    for(let i=Math.max(0,s-MARGEM);i<Math.min(filtradas.length,e+MARGEM);i++){
+      const t=filtradas[i];
+      if(!t.predecessora||!t.inicioPlanejado)continue;
+      const tx=Math.round((new Date(t.inicioPlanejado)-dMin)/864e5*lpd);
+      const ty=i*ROW_H+15;
+      for(const p of _predParse(t.predecessora)){
+        const pi=idxDe.get(p.id);
+        if(pi===undefined)continue; // predecessora fora da visão atual — sem seta
+        const pred=filtradas[pi];
+        if(!pred.terminoPlanejado)continue;
+        const pIni=pred.inicioPlanejado?new Date(pred.inicioPlanejado):null;
+        const pFim=new Date(pred.terminoPlanejado);
+        const px0=pIni?Math.round((pIni-dMin)/864e5*lpd):0;
+        const pw=Math.max(4,Math.round((pFim-(pIni||pFim))/864e5*lpd));
+        const px=px0+pw; // fim da barra da predecessora
+        const py=pi*ROW_H+15;
+        const chave=p.id+'>'+t.id;
+        const sel=_setaSelecionada===chave;
+        // Cotovelo: sai 7px à direita do fim da pred, vertical até a linha da
+        // tarefa, horizontal até 4px antes do início dela, seta na ponta.
+        const midX=Math.max(px+7,tx-7);
+        const d=`M${px},${py} L${px+7},${py} L${px+7},${ty} L${tx-4},${ty}`;
+        paths+=`<g class="seta-pred${sel?' seta-sel':''}" onclick="event.stopPropagation();Planejamento._setaClicada('${chave}',${pred._numLinha||0},this)" data-nome="${_esc(pred.nome||'')}">
+          <path d="${d}" fill="none"/>
+          <path d="M${tx-4},${ty-4} L${tx},${ty} L${tx-4},${ty+4} Z" class="seta-ponta"/>
+          <title>${pred._numLinha?pred._numLinha+' — ':''}${_esc(pred.nome||'')}</title>
+        </g>`;
+      }
+    }
+    if(!paths)return'';
+    return `<svg style="position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:4;overflow:visible;">
+      <style>
+        .seta-pred path{stroke:#5a5a72;stroke-width:1.3;pointer-events:visibleStroke;cursor:pointer;transition:stroke .1s;}
+        .seta-pred .seta-ponta{fill:#5a5a72;stroke:none;pointer-events:auto;}
+        .seta-pred:hover path{stroke:#a5a5c8;stroke-width:1.8;}
+        .seta-pred:hover .seta-ponta{fill:#a5a5c8;}
+        .seta-sel path{stroke:var(--cor-primaria)!important;stroke-width:2!important;}
+        .seta-sel .seta-ponta{fill:var(--cor-primaria)!important;}
+      </style>${paths}</svg>`;
+  }
+  function _setaClicada(chave,numLinha,el){
+    if(_setaSelecionada===chave){_setaSelecionada=null;_paintRows();return;}
+    _setaSelecionada=chave;
+    const nome=el?.dataset?.nome||'';
+    Utils.toast(`🔗 Predecessora: ${numLinha?numLinha+' — ':''}${nome}`,'sucesso');
+    _paintRows();
+  }
+
 
   // ===================== ARRASTAR LINHA (REORDENAR) =====================
   // Ctrl + botão direito + arrastar move a tarefa (e seus filhos diretos,
@@ -5806,7 +5972,8 @@ const Planejamento = (() => {
     _arvAbrirMover,_arvFecharMover,_arvFiltrarMover,_arvConfirmarMover,
     _colResizeStart,moveColLeft,moveColRight,_hideCol,_divStart,_sync,_editCell,_esqDragStart,
     _rowDragStart,toggleSel,_limparSelecao,_moverSel,_bulkNivel,_bulkDuplicar,_bulkExcluir,
-    toggleStatusFiltro,_aplicarStatusFiltro,_abrirFiltroResponsavel,_aplicarFiltroResponsavel,_limparFiltroResponsavel,undo,
+    toggleStatusFiltro,_aplicarStatusFiltro,_abrirFiltroResponsavel,_aplicarFiltroResponsavel,_limparFiltroResponsavel,
+    _abrirVisaoOrg,_visaoOrgFiltrarLista,_visaoOrgToggleBloco,_visaoOrgAplicar,_visaoOrgLimpar,toggleSetasPred,_setaClicada,undo,
     onBusca,limparBusca,_buscaKey,
     importarExcel,importarBaseCompleta,importarCorrecoes,_executarCorrecoes,_mostrarRevisaoCorrecoes,exportar,exportarFrentes,exportarExcelBonito,exportarMSProject,abrirImpressao,baixarPDF,exportarPNG,corrigirOrdensDuplicadas,_corrigirNiveisSoltos,_corrigirNivelPeloCodigo,_migrarPredecessorasParaId,_recalcularDatasPais,_recalcularPercTodosPais,_orfasMarcarTodas,_orfasExcluirMarcadas,_gerarPNG,_predPopup,_predSalvar,_predCellClick,_predAddLinha,_predLinhaAtualizar,autoClassificarFrentes,
     abrirVinculosView,fecharVinculosView,abrirVincularTarefa,abrirVincularAqui,onVincTipoChange,
