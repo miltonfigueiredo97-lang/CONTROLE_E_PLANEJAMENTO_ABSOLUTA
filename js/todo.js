@@ -424,10 +424,10 @@ const Todo = (() => {
       .agenda-hora { width:100px; flex-shrink:0; font-size:12px; font-weight:700; color:var(--cor-texto-muted); line-height:1.5; margin-top:2px; }
       .agenda-corpo { flex:1; min-width:0; display:flex; flex-direction:column; gap:6px; }
       .agenda-tarefas-lista { display:flex; flex-direction:column; gap:5px; }
-      .agenda-add-row { display:flex; justify-content:flex-start; }
       .agenda-add-icon {
-        width:24px; height:24px; border-radius:50%; border:1.5px dashed var(--cor-borda); background:#fff;
+        width:24px; height:24px; border-radius:50%; border:1.5px dashed var(--cor-borda); background:#fff; flex-shrink:0;
         color:var(--cor-texto-muted); cursor:pointer; font-size:14px; line-height:1; display:flex; align-items:center; justify-content:center;
+        margin-top:1px;
       }
       .agenda-add-icon:hover { border-color:var(--cor-primaria); border-style:solid; color:var(--cor-texto); }
       .agenda-tarefa {
@@ -447,22 +447,27 @@ const Todo = (() => {
         font-family:var(--font-principal); outline:none; margin-bottom:8px; box-sizing:border-box; color:var(--cor-texto); background:#fff;
       }
       .agenda-picker-busca:focus { border-color:var(--cor-primaria); box-shadow:0 0 0 3px var(--cor-primaria-light); }
-      .agenda-picker-breadcrumb { display:flex; gap:5px; align-items:center; font-size:11px; font-weight:700; color:var(--cor-texto-muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:.3px; flex-wrap:wrap; }
-      .agenda-picker-breadcrumb span[data-agenda-picker-voltar] { cursor:pointer; color:var(--cor-texto-secundario); text-decoration:underline; }
-      .agenda-picker-breadcrumb .sep { text-decoration:none !important; cursor:default; color:var(--cor-borda); }
-      .agenda-picker-lista { max-height:220px; overflow-y:auto; display:flex; flex-direction:column; gap:2px; }
+      .agenda-picker-breadcrumb { display:flex; gap:5px; align-items:center; font-size:11px; font-weight:700; color:var(--cor-texto-muted); margin-bottom:8px; text-transform:uppercase; letter-spacing:.3px; flex-wrap:wrap; }
+      .agenda-picker-breadcrumb span[data-agenda-picker-voltar] { cursor:pointer; color:var(--cor-primaria-dark); }
+      .agenda-picker-breadcrumb .sep { cursor:default; color:var(--cor-borda); }
+      .agenda-picker-lista { max-height:240px; overflow-y:auto; display:flex; flex-direction:column; gap:6px; padding:1px; }
+      .agenda-picker-dot { width:9px; height:9px; border-radius:50%; flex-shrink:0; }
       .agenda-picker-item {
-        padding:8px 10px; border-radius:7px; cursor:pointer; font-size:13px; font-family:var(--font-principal);
-        color:var(--cor-texto); display:flex; gap:8px; align-items:baseline;
+        padding:10px 12px; border-radius:9px; cursor:pointer; font-size:13px; font-family:var(--font-principal);
+        color:var(--cor-texto); display:flex; gap:8px; align-items:center; background:#fff;
+        border:1.5px solid var(--cor-borda-light); transition:.12s;
       }
-      .agenda-picker-item:hover { background:#fff; box-shadow:0 1px 3px rgba(0,0,0,.08); }
-      .agenda-picker-item-proj { font-size:10px; font-weight:700; color:var(--cor-texto-secundario); background:#fff; border:1px solid var(--cor-borda-light); border-radius:4px; padding:1px 6px; flex-shrink:0; white-space:nowrap; }
+      .agenda-picker-item:hover { border-color:var(--cor-primaria); box-shadow:0 2px 6px rgba(0,0,0,.07); }
+      .agenda-picker-item-proj { font-size:10px; font-weight:700; color:var(--cor-texto-secundario); background:var(--cor-fundo); border:1px solid var(--cor-borda-light); border-radius:4px; padding:2px 7px; flex-shrink:0; white-space:nowrap; }
+      .agenda-picker-item-cat { font-size:10px; font-weight:700; color:#fff; border-radius:4px; padding:2px 7px; flex-shrink:0; white-space:nowrap; }
       .agenda-picker-item-texto { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
       .agenda-picker-nivel-item {
-        display:flex; align-items:center; justify-content:space-between; gap:8px; padding:9px 11px; border-radius:7px;
-        cursor:pointer; font-size:13.5px; font-weight:600; color:var(--cor-texto);
+        display:flex; align-items:center; justify-content:space-between; gap:8px; padding:11px 13px; border-radius:9px;
+        cursor:pointer; font-size:13.5px; font-weight:600; color:var(--cor-texto); background:#fff;
+        border:1.5px solid var(--cor-borda-light); transition:.12s;
       }
-      .agenda-picker-nivel-item:hover { background:#fff; box-shadow:0 1px 3px rgba(0,0,0,.08); }
+      .agenda-picker-nivel-item:hover { border-color:var(--cor-primaria); box-shadow:0 2px 6px rgba(0,0,0,.07); }
+      .agenda-picker-nivel-nome { display:flex; align-items:center; gap:9px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
       .agenda-picker-nivel-count { font-size:11.5px; font-weight:700; color:var(--cor-texto-muted); flex-shrink:0; }
       .agenda-picker-vazio { font-size:12.5px; color:var(--cor-texto-muted); padding:10px 6px; font-style:italic; }
       .agenda-picker-cancelar { margin-top:8px; border:none; background:none; font-size:12px; color:var(--cor-texto-muted); cursor:pointer; text-decoration:underline; padding:0; }
@@ -1049,7 +1054,7 @@ const Todo = (() => {
       return `<div class="agenda-picker-lista" id="agenda-picker-lista">
         ${nomes.map(nome => `
           <div class="agenda-picker-nivel-item" data-agenda-picker-projeto="${nome === '' ? AGENDA_PROJ_VAZIO : esc(nome)}">
-            <span>${esc(nome || 'Sem projeto')}</span>
+            <span class="agenda-picker-nivel-nome"><span class="agenda-picker-dot" style="background:${corProjeto(nome)}"></span>${esc(nome || 'Sem projeto')}</span>
             <span class="agenda-picker-nivel-count">${pendentes.filter(p => (p.projeto || '') === nome).length} ›</span>
           </div>`).join('')}
       </div>`;
@@ -1062,13 +1067,18 @@ const Todo = (() => {
         ${_htmlBreadcrumb()}
         <div class="agenda-picker-lista" id="agenda-picker-lista">
           <div class="agenda-picker-nivel-item" data-agenda-picker-categoria="${AGENDA_CAT_TODAS}">
-            <span>Todas as tarefas do projeto</span><span class="agenda-picker-nivel-count">${doProjeto.length} ›</span>
+            <span class="agenda-picker-nivel-nome"><span class="agenda-picker-dot" style="background:${corProjeto(projetoReal)}"></span>Todas as tarefas do projeto</span>
+            <span class="agenda-picker-nivel-count">${doProjeto.length} ›</span>
           </div>
-          ${nomesCat.map(nome => `
+          ${nomesCat.map(nome => {
+            const catObj = nome ? categorias.find(c => c.nome === nome) : null;
+            const cor = catObj ? catObj.cor : '#9ca3af';
+            return `
             <div class="agenda-picker-nivel-item" data-agenda-picker-categoria="${nome === '' ? AGENDA_CAT_VAZIA : esc(nome)}">
-              <span>${esc(nome || 'Sem categoria')}</span>
+              <span class="agenda-picker-nivel-nome"><span class="agenda-picker-dot" style="background:${esc(cor)}"></span>${esc(nome || 'Sem categoria')}</span>
               <span class="agenda-picker-nivel-count">${doProjeto.filter(p => (p.categoria || '') === nome).length} ›</span>
-            </div>`).join('')}
+            </div>`;
+          }).join('')}
         </div>`;
     }
     const doProjetoCategoria = pendentes.filter(p => (p.projeto || '') === projetoReal && _agendaCategoriaBate(p.categoria, agendaPickerCategoria));
@@ -1092,11 +1102,16 @@ const Todo = (() => {
 
   function _htmlListaTarefas(lista) {
     if (lista.length === 0) return `<div class="agenda-picker-vazio">Nenhuma tarefa encontrada.</div>`;
-    return lista.map(p => `
+    return lista.map(p => {
+      const cat = p.categoria ? categorias.find(c => c.nome === p.categoria) : null;
+      return `
       <div class="agenda-picker-item" data-agenda-escolher="${p.id}">
+        <span class="agenda-picker-dot" style="background:${p.projeto ? corProjeto(p.projeto) : '#9ca3af'}"></span>
         ${p.projeto ? `<span class="agenda-picker-item-proj">${esc(p.projeto)}</span>` : ''}
+        ${cat ? `<span class="agenda-picker-item-cat" style="background:${esc(cat.cor)}">${esc(cat.nome)}</span>` : ''}
         <span class="agenda-picker-item-texto">${esc(p.texto)}</span>
-      </div>`).join('');
+      </div>`;
+    }).join('');
   }
 
   function _wirePicker(container, pendentes, dataStr, slot) {
@@ -1172,10 +1187,9 @@ const Todo = (() => {
                     <div id="agenda-picker-dinamico">${_htmlPickerConteudo(pendentes)}</div>
                     <button type="button" class="agenda-picker-cancelar" data-agenda-fechar-picker>Cancelar</button>
                   </div>
-                ` : `
-                  <div class="agenda-add-row"><button type="button" class="agenda-add-icon" data-agenda-abrir="${s.inicio}" title="Adicionar tarefa neste horário">+</button></div>
-                `}
+                ` : ''}
               </div>
+              ${!pickerAberto ? `<button type="button" class="agenda-add-icon" data-agenda-abrir="${s.inicio}" title="Adicionar tarefa neste horário">+</button>` : ''}
             </div>`;
         }).join('')}
       </div>`;

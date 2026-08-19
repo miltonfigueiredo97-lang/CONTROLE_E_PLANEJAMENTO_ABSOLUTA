@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.16.0.11',
+  versaoAtual: 'V3.16.0.12',
 
   versoes: [
     {
@@ -9245,6 +9245,17 @@ const NotasVersao = {
         "Seletor de tarefa da Agenda refeito: busca sempre no topo (pula direto pra qualquer tarefa por nome/sistema/categoria) e, sem buscar nada, navegação em 3 níveis — Sistema → Categoria → Tarefa — com contador em cada nível e breadcrumb pra voltar.",
         "Pra adicionar mais de uma tarefa no mesmo horário: um \"+\" pequeno e discreto ao lado das já alocadas, em vez do formulário ficar sempre aberto ocupando espaço.",
         "Corrigido de raiz, na mesma rodada: \"Sem projeto\" e \"Sem categoria\" quebravam a navegação hierárquica (string vazia sendo confundida com \"nada selecionado ainda\") — resolvido com marcadores internos próprios em vez de string vazia."
+      ]
+    },
+    {
+      "versao": "V3.16.0.12",
+      "data": "2026-08-19",
+      "tipo": "correcao",
+      "titulo": "Agenda: \"+\" foi pra baixo em vez da direita, categorias sem cor e lista com cara de lista antiga — três acertos",
+      "itens": [
+        "O botão \"+\" de adicionar outra tarefa no horário estava aparecendo ABAIXO das tarefas já alocadas, alinhado à esquerda — o pedido era na DIREITA, na mesma linha. Corrigido: o \"+\" agora é um elemento da própria linha do horário (não fica mais dentro do bloco de tarefas), sempre no canto direito.",
+        "Categorias e sistemas no seletor agora mostram a bolinha de cor (igual usada no resto do sistema) — cada nível (projeto, categoria, tarefa) tem sua cor visível, não só texto puro.",
+        "Visual \"lista antiga\" dos níveis do seletor (Sistema/Categoria) e da lista de tarefas: virou cartão — fundo branco, borda, espaçamento entre itens, sombra leve no hover — em vez de linhas coladas que só mudavam de cor ao passar o mouse."
       ]
     }
   ],
