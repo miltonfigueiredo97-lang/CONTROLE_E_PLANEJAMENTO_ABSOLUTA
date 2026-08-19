@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.15.0.0',
+  versaoAtual: 'V3.16.0.0',
 
   versoes: [
     {
@@ -9096,6 +9096,19 @@ const NotasVersao = {
         "Escolhendo Tarefa: uma nova IA (api/extrair-tarefas, mesmo fallback Gemini → Anthropic do Relatório) lê a nota e identifica cada item como uma tarefa separada, já reescrita de forma curta e objetiva, com projeto quando ficar claro na nota. Cada uma entra direto na coleção tarefasSistema (módulo Tarefas do Sistema/To Do List).",
         "Se a nota tiver várias tarefas escritas juntas, todas são criadas de uma vez, em sequência, na ordem em que aparecem.",
         "Fluxo de Relatório continua idêntico a antes — só ganhou uma tela de escolha na frente."
+      ]
+    },
+    {
+      "versao": "V3.16.0.0",
+      "data": "2026-08-19",
+      "tipo": "funcionalidade",
+      "titulo": "Tarefas do Sistema: botão Agendar — grade do dia com horários de 30min",
+      "itens": [
+        "Motivo (Milton): faltava um jeito de organizar o dia, tipo agenda de caderno — que horário vai fazer o quê.",
+        "Novo botão \"🗓️ Agendar\" no topo do módulo abre a grade do dia atual, com blocos de 30 minutos das 7h às 18h.",
+        "Clicar num horário vazio abre a lista de tarefas pendentes pra escolher qual alocar ali. Horário ocupado mostra a tarefa com check (concluir direto dali) e um × pra remover do horário.",
+        "Navegação entre dias (‹ Hoje ›) — cada tarefa é salva com dataAgendada e horarioAgendado, então a grade de qualquer dia (passado ou futuro) sempre mostra o que foi alocado nele.",
+        "Uma tarefa só pode estar em um horário por vez — escolher ela em outro horário move a alocação."
       ]
     }
   ],

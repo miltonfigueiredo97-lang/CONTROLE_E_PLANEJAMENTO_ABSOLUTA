@@ -1,7 +1,8 @@
 // ============================================
 // Módulo: Tarefas do Sistema (To Do List)
 // Coleções raiz (não vinculadas a obra):
-//   tarefasSistema   { texto, projeto, categoria, dependencia, concluida, ordem, importancia, updatedAtMs }
+//   tarefasSistema   { texto, projeto, categoria, dependencia, concluida, ordem, importancia,
+//                       dataAgendada, horarioAgendado, updatedAtMs }
 //   todoProjetos     { nome, importancia }
 //   todoCategorias   { nome, cor, importancia }
 // Acesso oculto do menu lateral — só quem tem o link direto (todo.html) chega aqui.
@@ -22,6 +23,7 @@ const Todo = (() => {
   let mostrarConcluidas = false;
   let editandoCategoriaId = null;
   let editandoProjetoId = null;
+  let agendaDataAtual = null; // 'YYYY-MM-DD' — dia exibido na Agenda
 
   const PALETA_PROJETO = ['#2563eb', '#16a34a', '#7c3aed', '#d97706', '#0891b2', '#dc2626', '#db2777'];
   const SWATCHES = ['#F5C800', '#2563eb', '#16a34a', '#7c3aed', '#d97706', '#dc2626', '#0891b2', '#db2777', '#059669', '#4f46e5', '#ea580c', '#64748b'];
@@ -276,6 +278,31 @@ const Todo = (() => {
         .todo-addbar-linha2 { flex-direction:column; align-items:stretch; }
         .todo-addbar-submit { width:100%; height:38px; }
       }
+
+      /* Agenda */
+      .todo-modal-agenda { max-width:520px; }
+      .agenda-nav { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:14px 18px; border-bottom:1.5px solid var(--cor-borda-light); }
+      .agenda-nav-label { font-size:14px; font-weight:800; text-transform:capitalize; text-align:center; flex:1; }
+      .agenda-nav-btn { width:30px; height:30px; border-radius:8px; border:1.5px solid var(--cor-borda-light); background:#fff; cursor:pointer; font-size:14px; color:var(--cor-texto-secundario); flex-shrink:0; }
+      .agenda-nav-btn:hover { border-color:var(--cor-dark-900); color:var(--cor-texto); }
+      .agenda-nav-hoje { font-size:11px; font-weight:700; padding:5px 10px; border-radius:999px; border:1.5px solid var(--cor-borda-light); background:#fff; cursor:pointer; color:var(--cor-texto-secundario); flex-shrink:0; }
+      .agenda-nav-hoje:hover { border-color:var(--cor-primaria); color:var(--cor-texto); }
+      .agenda-lista { max-height:60vh; overflow-y:auto; padding:6px 0; }
+      .agenda-slot { display:flex; align-items:center; gap:12px; padding:8px 18px; border-bottom:1px solid var(--cor-borda-light); }
+      .agenda-slot:last-child { border-bottom:none; }
+      .agenda-slot-hora { width:52px; flex-shrink:0; font-size:11.5px; font-weight:700; color:var(--cor-texto-muted); line-height:1.3; font-family:var(--font-mono, monospace); }
+      .agenda-slot-corpo { flex:1; min-width:0; display:flex; align-items:center; gap:8px; }
+      .agenda-slot-select {
+        width:100%; border:1.5px dashed var(--cor-borda); border-radius:8px; padding:7px 10px; font-size:13px;
+        font-family:var(--font-principal); color:var(--cor-texto-muted); background:var(--cor-fundo); cursor:pointer; outline:none;
+      }
+      .agenda-slot-select:focus { border-color:var(--cor-primaria); }
+      .agenda-slot-tarefa { flex:1; min-width:0; display:flex; align-items:center; gap:9px; background:var(--cor-fundo); border-radius:8px; padding:6px 10px; border-left:3px solid var(--cor-primaria); }
+      .agenda-slot-tarefa.concluida { opacity:.5; }
+      .agenda-slot-tarefa.concluida .agenda-slot-texto { text-decoration:line-through; }
+      .agenda-slot-texto { flex:1; min-width:0; font-size:13px; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+      .agenda-slot-x { border:none; background:none; cursor:pointer; color:var(--cor-texto-muted); font-size:13px; padding:2px 5px; flex-shrink:0; }
+      .agenda-slot-x:hover { color:var(--cor-perigo); }
     `;
     document.head.appendChild(style);
   }
@@ -345,6 +372,7 @@ const Todo = (() => {
     container.innerHTML = `
       <div class="page-header">
         <div><h2>Tarefas do Sistema</h2><span class="subtitulo">Organização e roadmap do sistema — acesso restrito</span></div>
+        <button type="button" class="btn btn-secundario" id="todo-abrir-agenda">🗓️ Agendar</button>
       </div>
 
       <div class="todo-topo">
@@ -507,6 +535,7 @@ const Todo = (() => {
       renderizar();
     });
     document.getElementById('todo-abrir-gerenciar').addEventListener('click', abrirModalGerenciar);
+    document.getElementById('todo-abrir-agenda').addEventListener('click', abrirModalAgenda);
   }
 
   function projetosOrdenadosPorImportancia() {
@@ -607,6 +636,129 @@ const Todo = (() => {
   }
   function fecharOverlay() {
     document.getElementById('todo-overlay')?.remove();
+  }
+
+  // ============================================
+  // Agenda do dia — grade de horários (30min, 07:00–18:00).
+  // Clicar num horário vazio escolhe uma tarefa pendente pra
+  // alocar nele; tarefa já alocada mostra ali com check e "×".
+  // ============================================
+  function _hojeStr(offsetDias) {
+    const d = new Date();
+    d.setDate(d.getDate() + (offsetDias || 0));
+    const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, '0'), dia = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${dia}`;
+  }
+
+  function _gerarSlots() {
+    const slots = [];
+    for (let h = 7; h < 18; h++) {
+      for (const m of [0, 30]) {
+        const inicio = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+        const fimMin = m + 30, fimH = fimMin >= 60 ? h + 1 : h, fimM = fimMin % 60;
+        const fim = `${String(fimH).padStart(2, '0')}:${String(fimM).padStart(2, '0')}`;
+        slots.push({ inicio, fim });
+      }
+    }
+    return slots;
+  }
+
+  function _formatarDataAgenda(dataStr) {
+    const [y, m, d] = dataStr.split('-').map(Number);
+    const dt = new Date(y, m - 1, d);
+    let label = dt.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit' });
+    label = label.charAt(0).toUpperCase() + label.slice(1);
+    if (dataStr === _hojeStr()) label += ' (hoje)';
+    return label;
+  }
+
+  function abrirModalAgenda() {
+    if (!agendaDataAtual) agendaDataAtual = _hojeStr();
+    abrirOverlay('<div id="agenda-conteudo"></div>', 'todo-modal-agenda');
+    _renderizarAgenda();
+  }
+
+  function _renderizarAgenda() {
+    const el = document.getElementById('agenda-conteudo');
+    if (!el) return;
+    const slots = _gerarSlots();
+    const dataStr = agendaDataAtual;
+    const pendentes = tarefas.filter(t => !t.concluida)
+      .sort((a, b) => (a.importancia ?? 3) - (b.importancia ?? 3) || (a.ordem || 0) - (b.ordem || 0));
+
+    el.innerHTML = `
+      <div class="agenda-nav">
+        <button type="button" class="agenda-nav-btn" id="agenda-dia-anterior">‹</button>
+        <div>
+          <div class="agenda-nav-label">${esc(_formatarDataAgenda(dataStr))}</div>
+        </div>
+        <button type="button" class="agenda-nav-hoje" id="agenda-ir-hoje">Hoje</button>
+        <button type="button" class="agenda-nav-btn" id="agenda-dia-seguinte">›</button>
+      </div>
+      <div class="agenda-lista">
+        ${slots.map(s => {
+          const t = tarefas.find(x => x.dataAgendada === dataStr && x.horarioAgendado === s.inicio);
+          return `
+            <div class="agenda-slot">
+              <div class="agenda-slot-hora">${s.inicio}<br>${s.fim}</div>
+              <div class="agenda-slot-corpo">
+                ${t ? `
+                  <div class="agenda-slot-tarefa ${t.concluida ? 'concluida' : ''}">
+                    <div class="todo-check ${t.concluida ? 'marcado' : ''}" style="width:18px;height:18px;flex-shrink:0;" data-agenda-check="${t.id}">
+                      <svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="white" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </div>
+                    <span class="agenda-slot-texto" title="${esc(t.texto)}">${esc(t.texto)}</span>
+                    <button type="button" class="agenda-slot-x" title="Remover deste horário" data-agenda-remover="${t.id}">×</button>
+                  </div>
+                ` : `
+                  <select class="agenda-slot-select" data-agenda-slot="${s.inicio}">
+                    <option value="">+ Escolher tarefa</option>
+                    ${pendentes.map(p => `<option value="${p.id}">${esc(p.projeto ? `[${p.projeto}] ` : '')}${esc(p.texto)}</option>`).join('')}
+                  </select>
+                `}
+              </div>
+            </div>`;
+        }).join('')}
+      </div>`;
+
+    document.getElementById('agenda-dia-anterior').onclick = () => { agendaDataAtual = _diaOffset(dataStr, -1); _renderizarAgenda(); };
+    document.getElementById('agenda-dia-seguinte').onclick = () => { agendaDataAtual = _diaOffset(dataStr, 1); _renderizarAgenda(); };
+    document.getElementById('agenda-ir-hoje').onclick = () => { agendaDataAtual = _hojeStr(); _renderizarAgenda(); };
+    el.querySelectorAll('[data-agenda-slot]').forEach(sel => {
+      sel.onchange = async (e) => {
+        const taskId = e.target.value;
+        const slot = e.target.dataset.agendaSlot;
+        if (!taskId) return;
+        await _atribuirTarefaSlot(taskId, dataStr, slot);
+      };
+    });
+    el.querySelectorAll('[data-agenda-remover]').forEach(btn => {
+      btn.onclick = async () => { await _removerDoSlot(btn.dataset.agendaRemover); };
+    });
+    el.querySelectorAll('[data-agenda-check]').forEach(chk => {
+      chk.onclick = async () => { await alternarStatus(chk.dataset.agendaCheck); _renderizarAgenda(); };
+    });
+  }
+
+  function _diaOffset(dataStr, offset) {
+    const [y, m, d] = dataStr.split('-').map(Number);
+    const dt = new Date(y, m - 1, d);
+    dt.setDate(dt.getDate() + offset);
+    return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+  }
+
+  async function _atribuirTarefaSlot(taskId, dataStr, slot) {
+    await Database.atualizarRaiz(COL, taskId, { dataAgendada: dataStr, horarioAgendado: slot });
+    const t = tarefas.find(x => x.id === taskId);
+    if (t) { t.dataAgendada = dataStr; t.horarioAgendado = slot; }
+    _renderizarAgenda();
+  }
+
+  async function _removerDoSlot(taskId) {
+    await Database.atualizarRaiz(COL, taskId, { dataAgendada: '', horarioAgendado: '' });
+    const t = tarefas.find(x => x.id === taskId);
+    if (t) { t.dataAgendada = ''; t.horarioAgendado = ''; }
+    _renderizarAgenda();
   }
 
   // ============================================
