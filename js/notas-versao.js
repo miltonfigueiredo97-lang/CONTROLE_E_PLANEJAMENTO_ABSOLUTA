@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.8',
+  versaoAtual: 'V3.19.9',
 
   versoes: [
     {
@@ -9512,6 +9512,17 @@ const NotasVersao = {
         "Bug 2: pavimentos como \"1º Subsolo\"/\"2º Subsolo\" não têm esse texto literal dentro do nome das tarefas — a Cofield usa a sigla \"SS1\"/\"SS2\". Sem apelido cadastrado, nunca ia casar (não é erro de digitação, é nomenclatura diferente mesmo).",
         "Novo campo \"apelidos\" em cada pavimento da Estrutura da Obra (embaixo do nome, ex: digitar \"SS1\" no pavimento \"1º Subsolo\") — o reconhecimento passa a testar o nome oficial E os apelidos, mas o Grupo gerado sempre grava o nome oficial (o apelido só ajuda a achar, nunca aparece como valor final).",
         "Ação necessária: abre a Estrutura da Obra e cadastra o apelido de cada pavimento que usa sigla diferente do nome (SS1, SS2 pelo menos) — depois disso o Gerar Grupos deve reconhecer bem mais que 185."
+      ]
+    },
+    {
+      "versao": "V3.19.9",
+      "data": "2026-08-19",
+      "tipo": "correcao",
+      "titulo": "Gerar Grupos: removido campo de apelidos (feio/manual) — reconhecimento agora entende as abreviações direto, sem cadastrar nada",
+      "itens": [
+        "Removido o campo \"apelidos\" da Estrutura da Obra (Milton achou feio e não precisa).",
+        "No lugar: reconhecimento por PADRÃO — entende \"1SS\", \"1ºSS\", \"1º SUB\", \"1ºSUBSOLO\", \"1º SUBSOLO\", \"SS1\" (e o formato real dos dados, sigla antes do número tipo \"SS2\") como a MESMA coisa (Subsolo). E \"1º ANDAR\", \"1º PAVIMENTO\", \"1º AND\", \"1º PAV\" como a mesma coisa (Pavimento). Não precisa cadastrar nenhuma dessas variações — o sistema já entende.",
+        "Funciona comparando SIGNIFICADO (número + se é subsolo ou pavimento) em vez de comparar texto — por isso cobre qualquer abreviação nova que apareça, não só as que alguém lembrou de cadastrar."
       ]
     }
   ],

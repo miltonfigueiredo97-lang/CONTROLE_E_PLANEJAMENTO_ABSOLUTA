@@ -3930,9 +3930,6 @@ const Planejamento = (() => {
                 <span style="cursor:pointer;color:var(--cor-primaria);font-size:.72rem;" onclick="Planejamento._duplicarPavimento('${p.id}')" title="Duplicar este pavimento (com os aptos dele)">📋 duplicar</span>
                 <span style="cursor:pointer;color:#dc2626;font-size:.8rem;" onclick="Planejamento._removerNoEst('pavimento','${p.id}')" title="Excluir pavimento">✕</span>
               </div>
-              <input value="${_esc((p.apelidos||[]).join(', '))}" placeholder="apelidos usados no nome da tarefa (ex: SS1, Subsolo 1) — separados por vírgula"
-                onchange="Planejamento._editarApelidosEst('${p.id}',this.value)"
-                style="width:100%;background:#0d0d0d;border:1px solid #262626;border-radius:4px;color:#888;padding:3px 6px;font-size:.68rem;margin-top:3px;">
               ${aptos.length?`<div style="display:flex;flex-wrap:wrap;gap:4px;margin:4px 0 0 10px;">
                 ${aptos.map(a=>`<span style="display:inline-flex;align-items:center;gap:3px;background:#111;border:1px solid #333;border-radius:100px;padding:2px 4px 2px 8px;font-size:.7rem;color:#ccc;">
                   <input value="${_esc(a.nome||'')}" onchange="Planejamento._editarNomeEst('apartamento','${a.id}',this.value)" style="width:50px;background:transparent;border:none;color:#ccc;font-size:.7rem;padding:0;">
@@ -3957,16 +3954,6 @@ const Planejamento = (() => {
   async function _editarNomeEst(tipo,id,valor){
     const no=_acharNoEst(tipo,id);if(!no)return;
     no.nome=valor.trim();
-    await _salvarEstruturaObra(_estruturaObraCache);
-  }
-  // Apelidos = outros jeitos que o nome desse pavimento aparece dentro do
-  // nome das tarefas (ex: pavimento "1º Subsolo" com apelido "SS1", porque
-  // é assim que a Cofield/tarefa escreve, não por extenso). O Grupo gerado
-  // sempre usa o NOME oficial do pavimento — o apelido só serve pra achar,
-  // nunca aparece como valor final.
-  async function _editarApelidosEst(pavimentoId,valor){
-    const p=_acharNoEst('pavimento',pavimentoId);if(!p)return;
-    p.apelidos=String(valor||'').split(',').map(s=>s.trim()).filter(Boolean);
     await _salvarEstruturaObra(_estruturaObraCache);
   }
   async function _addTorre(){
@@ -4026,26 +4013,55 @@ const Planejamento = (() => {
   // (Térreo/Subsolo/Ático/Reservatório/Fachada não têm essa combinação).
   // SEMPRE mostra prévia antes de gravar — nunca aplica direto.
   // ══════════════════════════════════════════
-  function _detectarGrupoPorNome(nomeTarefa,estrutura){
-    const nome=_normTexto(nomeTarefa);
-    let melhor=null,melhorLen=0;
-    (estrutura.torres||[]).forEach(torre=>{
-      (torre.pavimentos||[]).forEach(pav=>{
-        // Testa o nome oficial do pavimento E cada apelido cadastrado (ex:
-        // pavimento "1º Subsolo" com apelido "SS1") — qualquer um que bater
-        // conta, mas o valor devolvido é SEMPRE o nome oficial (nunca o apelido).
-        const candidatos=[pav.nome,...(pav.apelidos||[])];
-        for(const cand of candidatos){
-          const nCand=_normTexto(cand);
-          if(nCand.length>=2&&nome.includes(nCand)&&nCand.length>melhorLen){melhor=pav.nome;melhorLen=nCand.length;}
-        }
-      });
-    });
-    if(!melhor)return null;
-    const mPav=melhor.match(/^(\d+)[°º]\s*Pavimento$/i);
+  // Reconhece "Nº Pavimento/Subsolo" dentro de um texto já normalizado (ver
+  // _normTexto), aceitando as abreviações comuns — cobre isso tudo como a
+  // MESMA coisa: 1SS · 1ºSS · 1º SUB · 1ºSUBSOLO · 1º SUBSOLO (subsolo) e
+  // 1º ANDAR · 1º PAVIMENTO · 1º AND · 1º PAV (pavimento). Devolve
+  // {tipo,num} ou null — nunca o texto batido, só o significado (número +
+  // se é subsolo ou pavimento), pra comparar estrutura com estrutura em vez
+  // de depender de bater a mesma abreviação nos dois lados.
+  function _parsePavCanonico(textoNorm){
+    let m=textoNorm.match(/(\d+)\s*o?\s*(subsolo|sub|ss)\b/);
+    if(m)return{tipo:'subsolo',num:parseInt(m[1])};
+    m=textoNorm.match(/\b(subsolo|sub|ss)\s*-?\s*(\d+)\b/);
+    if(m)return{tipo:'subsolo',num:parseInt(m[2])};
+    m=textoNorm.match(/(\d+)\s*o?\s*(pavimento|pav|andar|and)\b/);
+    if(m)return{tipo:'pavimento',num:parseInt(m[1])};
+    m=textoNorm.match(/\b(pavimento|pav|andar|and)\s*-?\s*(\d+)\b/);
+    if(m)return{tipo:'pavimento',num:parseInt(m[2])};
+    return null;
+  }
+  function _finalizarMatchGrupo(grupoNome,nomeTarefa){
+    const mPav=grupoNome.match(/^(\d+)[°º]\s*Pavimento$/i);
     const mFinal=String(nomeTarefa).match(/Final\s*0*(\d+)\s*$/i);
     const subgrupo=(mPav&&mFinal)?(parseInt(mPav[1])*10+parseInt(mFinal[1])):null;
-    return {grupo:melhor,subgrupo};
+    return{grupo:grupoNome,subgrupo};
+  }
+  function _detectarGrupoPorNome(nomeTarefa,estrutura){
+    const nome=_normTexto(nomeTarefa);
+    const pavimentos=[];
+    (estrutura.torres||[]).forEach(torre=>(torre.pavimentos||[]).forEach(pav=>pavimentos.push(pav)));
+    // 1º) match ESTRUTURAL por número+tipo — cobre qualquer jeito de
+    // escrever o mesmo andar/subsolo, sem precisar cadastrar variação nenhuma.
+    const canonTarefa=_parsePavCanonico(nome);
+    if(canonTarefa){
+      for(const pav of pavimentos){
+        const canonPav=_parsePavCanonico(_normTexto(pav.nome));
+        if(canonPav&&canonPav.tipo===canonTarefa.tipo&&canonPav.num===canonTarefa.num){
+          return _finalizarMatchGrupo(pav.nome,nomeTarefa);
+        }
+      }
+    }
+    // 2º) sem número (Térreo, Ático, Reservatório, Fachada etc.) — o nome
+    // do pavimento cadastrado precisa aparecer dentro do nome da tarefa,
+    // igual antes. Pega o match mais longo (mais específico).
+    let melhor=null,melhorLen=0;
+    for(const pav of pavimentos){
+      const nPav=_normTexto(pav.nome);
+      if(nPav.length>=3&&nome.includes(nPav)&&nPav.length>melhorLen){melhor=pav.nome;melhorLen=nPav.length;}
+    }
+    if(!melhor)return null;
+    return _finalizarMatchGrupo(melhor,nomeTarefa);
   }
 
   let _gerarGruposLista=null; // estado vivo da prévia (permite editar e propagar)
@@ -6389,7 +6405,7 @@ const Planejamento = (() => {
   return{init,carregar,setZoom,setVersaoData,copiarDatasDeAtual,inserirTarefa,editarTarefa,salvarTarefa,excluirTarefa,
     selectIdx,toggleRecolher,recuarNivel,avancarNivel,
     toggleGantt,toggleLiberarEdicaoReal,hideCol,showColsMenu,_showCol,_showAll,_toggleMenuFerramentas,
-    _abrirEstruturaObra,_addTorre,_addPavimento,_addApartamento,_duplicarPavimento,_editarNomeEst,_editarApelidosEst,_removerNoEst,
+    _abrirEstruturaObra,_addTorre,_addPavimento,_addApartamento,_duplicarPavimento,_editarNomeEst,_removerNoEst,
     _abrirAutoVincular,_aplicarAutoVincular,_abrirGerarGrupos,_aplicarGerarGrupos,_gerarGruposToggle,_gerarGruposEditarValor,
     _abrirVinculoPavimento,_salvarVinculoPavimento,_vinclocTogglePav,_vinclocToggleApto,
     _abrirAtualizarPredecessora,_predlogAtualizarBotao,_salvarAtualizacaoPredecessora,_abrirHistoricoAlteracoes,_filtrarHistorico,
