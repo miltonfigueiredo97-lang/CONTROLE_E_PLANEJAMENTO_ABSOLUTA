@@ -3798,7 +3798,12 @@ const Planejamento = (() => {
   // com esse apto também). SEMPRE mostra prévia pra revisão antes de gravar
   // — nunca aplica direto, pra não sobrescrever vínculo errado em massa.
   // ══════════════════════════════════════════
-  function _normTexto(s){return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[°]/g,'o').trim();}
+  // "º" (indicador ordinal, U+00BA) e "°" (símbolo de grau, U+00B0) são visualmente
+  // idênticos mas são caracteres DIFERENTES — Cofield/tarefas usam um, Estrutura
+  // da Obra pode ter o outro (depende de como foi digitado). Sem tratar os dois
+  // como iguais aqui, "1º Pavimento" cadastrado nunca casava com "1° Pavimento"
+  // no nome da tarefa — foi isso que fez o reconhecimento ficar baixo (185/2198).
+  function _normTexto(s){return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[°º]/g,'o').trim();}
 
   function _detectarVinculoPorNome(nomeTarefa,estrutura){
     const nome=_normTexto(nomeTarefa);
@@ -3925,6 +3930,9 @@ const Planejamento = (() => {
                 <span style="cursor:pointer;color:var(--cor-primaria);font-size:.72rem;" onclick="Planejamento._duplicarPavimento('${p.id}')" title="Duplicar este pavimento (com os aptos dele)">📋 duplicar</span>
                 <span style="cursor:pointer;color:#dc2626;font-size:.8rem;" onclick="Planejamento._removerNoEst('pavimento','${p.id}')" title="Excluir pavimento">✕</span>
               </div>
+              <input value="${_esc((p.apelidos||[]).join(', '))}" placeholder="apelidos usados no nome da tarefa (ex: SS1, Subsolo 1) — separados por vírgula"
+                onchange="Planejamento._editarApelidosEst('${p.id}',this.value)"
+                style="width:100%;background:#0d0d0d;border:1px solid #262626;border-radius:4px;color:#888;padding:3px 6px;font-size:.68rem;margin-top:3px;">
               ${aptos.length?`<div style="display:flex;flex-wrap:wrap;gap:4px;margin:4px 0 0 10px;">
                 ${aptos.map(a=>`<span style="display:inline-flex;align-items:center;gap:3px;background:#111;border:1px solid #333;border-radius:100px;padding:2px 4px 2px 8px;font-size:.7rem;color:#ccc;">
                   <input value="${_esc(a.nome||'')}" onchange="Planejamento._editarNomeEst('apartamento','${a.id}',this.value)" style="width:50px;background:transparent;border:none;color:#ccc;font-size:.7rem;padding:0;">
@@ -3949,6 +3957,16 @@ const Planejamento = (() => {
   async function _editarNomeEst(tipo,id,valor){
     const no=_acharNoEst(tipo,id);if(!no)return;
     no.nome=valor.trim();
+    await _salvarEstruturaObra(_estruturaObraCache);
+  }
+  // Apelidos = outros jeitos que o nome desse pavimento aparece dentro do
+  // nome das tarefas (ex: pavimento "1º Subsolo" com apelido "SS1", porque
+  // é assim que a Cofield/tarefa escreve, não por extenso). O Grupo gerado
+  // sempre usa o NOME oficial do pavimento — o apelido só serve pra achar,
+  // nunca aparece como valor final.
+  async function _editarApelidosEst(pavimentoId,valor){
+    const p=_acharNoEst('pavimento',pavimentoId);if(!p)return;
+    p.apelidos=String(valor||'').split(',').map(s=>s.trim()).filter(Boolean);
     await _salvarEstruturaObra(_estruturaObraCache);
   }
   async function _addTorre(){
@@ -4013,12 +4031,18 @@ const Planejamento = (() => {
     let melhor=null,melhorLen=0;
     (estrutura.torres||[]).forEach(torre=>{
       (torre.pavimentos||[]).forEach(pav=>{
-        const nPav=_normTexto(pav.nome);
-        if(nPav.length>=3&&nome.includes(nPav)&&nPav.length>melhorLen){melhor=pav.nome;melhorLen=nPav.length;}
+        // Testa o nome oficial do pavimento E cada apelido cadastrado (ex:
+        // pavimento "1º Subsolo" com apelido "SS1") — qualquer um que bater
+        // conta, mas o valor devolvido é SEMPRE o nome oficial (nunca o apelido).
+        const candidatos=[pav.nome,...(pav.apelidos||[])];
+        for(const cand of candidatos){
+          const nCand=_normTexto(cand);
+          if(nCand.length>=2&&nome.includes(nCand)&&nCand.length>melhorLen){melhor=pav.nome;melhorLen=nCand.length;}
+        }
       });
     });
     if(!melhor)return null;
-    const mPav=melhor.match(/^(\d+)°\s*Pavimento$/i);
+    const mPav=melhor.match(/^(\d+)[°º]\s*Pavimento$/i);
     const mFinal=String(nomeTarefa).match(/Final\s*0*(\d+)\s*$/i);
     const subgrupo=(mPav&&mFinal)?(parseInt(mPav[1])*10+parseInt(mFinal[1])):null;
     return {grupo:melhor,subgrupo};
@@ -4133,7 +4157,7 @@ const Planejamento = (() => {
         // se o novo valor não bate esse padrão, não tem como recalcular,
         // então some (mais seguro que manter um número que não corresponde
         // mais ao grupo escolhido).
-        const mPav=novoValor.match(/^(\d+)°\s*Pavimento$/i);
+        const mPav=novoValor.match(/^(\d+)[°º]\s*Pavimento$/i);
         const mFinal=String(p.nome).match(/Final\s*0*(\d+)\s*$/i);
         p.subgrupoProposto=(mPav&&mFinal)?(parseInt(mPav[1])*10+parseInt(mFinal[1])):null;
         n++;
@@ -6365,7 +6389,7 @@ const Planejamento = (() => {
   return{init,carregar,setZoom,setVersaoData,copiarDatasDeAtual,inserirTarefa,editarTarefa,salvarTarefa,excluirTarefa,
     selectIdx,toggleRecolher,recuarNivel,avancarNivel,
     toggleGantt,toggleLiberarEdicaoReal,hideCol,showColsMenu,_showCol,_showAll,_toggleMenuFerramentas,
-    _abrirEstruturaObra,_addTorre,_addPavimento,_addApartamento,_duplicarPavimento,_editarNomeEst,_removerNoEst,
+    _abrirEstruturaObra,_addTorre,_addPavimento,_addApartamento,_duplicarPavimento,_editarNomeEst,_editarApelidosEst,_removerNoEst,
     _abrirAutoVincular,_aplicarAutoVincular,_abrirGerarGrupos,_aplicarGerarGrupos,_gerarGruposToggle,_gerarGruposEditarValor,
     _abrirVinculoPavimento,_salvarVinculoPavimento,_vinclocTogglePav,_vinclocToggleApto,
     _abrirAtualizarPredecessora,_predlogAtualizarBotao,_salvarAtualizacaoPredecessora,_abrirHistoricoAlteracoes,_filtrarHistorico,

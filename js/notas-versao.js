@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.7.5',
+  versaoAtual: 'V3.19.8',
 
   versoes: [
     {
@@ -9500,6 +9500,18 @@ const NotasVersao = {
       "itens": [
         "Bug real (Milton pegou): \"Reservatório - SS2\" e \"Reservatório Superior\" são locais DIFERENTES, mas os dois bateram na mesma proposta errada \"RESERVATÓRIO\". A propagação olhava só a proposta — corrigir um pra SS2 ia arrastar o outro (Reservatório Superior) pra SS2 também, que está errado.",
         "Agora a propagação exige bater o valor ANTERIOR também, não só a proposta — só muda junto quem tinha exatamente o mesmo \"de\" E o mesmo \"para\" errado. Grupos diferentes que colidiram na mesma proposta por coincidência não se misturam mais."
+      ]
+    },
+    {
+      "versao": "V3.19.8",
+      "data": "2026-08-19",
+      "tipo": "correcao",
+      "titulo": "Gerar Grupos reconhecia só 185 de 2198 tarefas — dois bugs de digitação/nomenclatura corrigidos",
+      "itens": [
+        "Bug 1 (o principal): \"º\" (indicador ordinal) e \"°\" (símbolo de grau) são visualmente idênticos mas são caracteres Unicode DIFERENTES. Se a Estrutura da Obra foi digitada com um e as tarefas usam o outro, \"1º Pavimento\" nunca casava com \"1° Pavimento\" — isso sozinho explica a maior parte dos 2013 não-reconhecidos (1 a 16 Pavimento são a maioria das tarefas). Corrigido: os dois agora são tratados como iguais.",
+        "Bug 2: pavimentos como \"1º Subsolo\"/\"2º Subsolo\" não têm esse texto literal dentro do nome das tarefas — a Cofield usa a sigla \"SS1\"/\"SS2\". Sem apelido cadastrado, nunca ia casar (não é erro de digitação, é nomenclatura diferente mesmo).",
+        "Novo campo \"apelidos\" em cada pavimento da Estrutura da Obra (embaixo do nome, ex: digitar \"SS1\" no pavimento \"1º Subsolo\") — o reconhecimento passa a testar o nome oficial E os apelidos, mas o Grupo gerado sempre grava o nome oficial (o apelido só ajuda a achar, nunca aparece como valor final).",
+        "Ação necessária: abre a Estrutura da Obra e cadastra o apelido de cada pavimento que usa sigla diferente do nome (SS1, SS2 pelo menos) — depois disso o Gerar Grupos deve reconhecer bem mais que 185."
       ]
     }
   ],
