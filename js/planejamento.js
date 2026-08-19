@@ -4167,7 +4167,9 @@ const Planejamento = (() => {
           <div style="font-weight:700;color:var(--cor-primaria);">⚡ Gerar Grupos — Prévia</div>
           <span style="cursor:pointer;color:#888;font-size:1.1rem;" onclick="document.getElementById('gerargrupos-modal').remove()">✕</span>
         </div>
-        <div style="font-size:.72rem;color:#888;margin-bottom:10px;">${folhas.length} tarefas no total. <b>${mudam.length}</b> vão mudar Grupo/Subgrupo (as demais já estão certas). Lista ordenada pela ordem dos pavimentos na Estrutura da Obra. Pra corrigir, escolhe outro pavimento (ou "Sem Vínculo") na lista da direita — muda esse E todos os outros que tinham a mesma proposta.</div>
+        <div style="font-size:.72rem;color:#888;margin-bottom:10px;">${folhas.length} tarefas no total. <b>${mudam.length}</b> vão mudar Grupo/Subgrupo (as demais já estão certas). Pra corrigir, escolhe outro pavimento (ou "Sem Vínculo") na lista da direita — muda esse E todos os outros que tinham a mesma proposta.</div>
+        <input id="gerargrupos-filtro" placeholder="🔍 Filtrar por pavimento proposto (ex: 2° Subsolo) ou nome da tarefa..." oninput="Planejamento._gerarGruposFiltrar(this.value)"
+          style="width:100%;background:#111;border:1px solid #333;border-radius:6px;color:#ddd;padding:7px 10px;font-size:.8rem;margin-bottom:8px;box-sizing:border-box;">
         <div id="gerargrupos-lista" style="display:flex;flex-direction:column;gap:2px;max-height:50vh;overflow-y:auto;border:1px solid #292929;border-radius:6px;padding:6px;"></div>
         <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px;">
           <button class="btn btn-secundario btn-sm" onclick="document.getElementById('gerargrupos-modal').remove()">Cancelar</button>
@@ -4175,17 +4177,42 @@ const Planejamento = (() => {
         </div>
       </div>`;
     document.body.appendChild(pop);
+    _gerarGruposFiltroTexto='';
+    _renderGerarGruposLista();
+  }
+
+  let _gerarGruposFiltroTexto='';
+  function _gerarGruposFiltrar(texto){
+    _gerarGruposFiltroTexto=(texto||'').trim();
     _renderGerarGruposLista();
   }
 
   function _renderGerarGruposLista(){
     const el=document.getElementById('gerargrupos-lista');if(!el)return;
     const opcoes=_gerarGruposPavimentos||[];
-    el.innerHTML=_gerarGruposLista.map((p,i)=>{
+    const q=_normTexto(_gerarGruposFiltroTexto);
+    // Filtra mantendo o ÍNDICE ORIGINAL (os onclick/onchange referenciam
+    // esse índice em _gerarGruposLista, não a posição na lista filtrada).
+    const visiveis=_gerarGruposLista
+      .map((p,i)=>({p,i}))
+      .filter(({p})=>!q||_normTexto(p.grupoProposto).includes(q)||_normTexto(p.nome).includes(q));
+    if(!visiveis.length){el.innerHTML='<div style="color:#555;font-size:.8rem;padding:14px;text-align:center;">Nenhuma linha bate com o filtro.</div>';return;}
+    const contagem=new Map();
+    for(const {p} of visiveis)contagem.set(p.grupoProposto,(contagem.get(p.grupoProposto)||0)+1);
+    let html='',grupoAnterior=null;
+    for(const {p,i} of visiveis){
+      // Cabeçalho de seção — a lista já vem ordenada por pavimento proposto,
+      // então basta detectar quando o grupo muda pra abrir uma seção nova.
+      // É isso que deixa "ver tudo do meu andar junto" (em vez de precisar
+      // caçar linha por linha) e funciona junto com o filtro de texto acima.
+      if(p.grupoProposto!==grupoAnterior){
+        grupoAnterior=p.grupoProposto;
+        html+=`<div style="font-size:.68rem;font-weight:700;color:var(--cor-primaria);text-transform:uppercase;letter-spacing:.4px;padding:8px 4px 4px;border-top:1px solid #292929;">▸ ${_esc(p.grupoProposto)} (${contagem.get(p.grupoProposto)})</div>`;
+      }
       // Se o valor atual (por algum motivo) não estiver na lista cadastrada,
       // inclui ele mesmo como opção extra — nunca perde o que já tinha.
       const lista=opcoes.includes(p.grupoProposto)?opcoes:[p.grupoProposto,...opcoes];
-      return `
+      html+=`
       <div style="display:flex;align-items:center;gap:8px;font-size:.76rem;padding:4px 4px;border-bottom:1px solid #232323;">
         <input type="checkbox" data-idx="${i}" ${p.marcado?'checked':''} onchange="Planejamento._gerarGruposToggle(${i},this.checked)">
         <span style="flex:1;color:#ddd;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${_esc(p.nome)}</span>
@@ -4195,9 +4222,10 @@ const Planejamento = (() => {
           style="width:150px;background:#111;border:1px solid #333;border-radius:4px;color:var(--cor-primaria);font-weight:600;font-size:.76rem;padding:3px 4px;">
           ${lista.map(nomePav=>`<option value="${_esc(nomePav)}" ${nomePav===p.grupoProposto?'selected':''}>${_esc(nomePav)}</option>`).join('')}
         </select>
-        ${p.subgrupoProposto?`<span style="color:var(--cor-primaria);font-size:.72rem;">/ ${p.subgrupoProposto}</span>`:''}
+        <span style="color:${p.subgrupoProposto?'var(--cor-primaria)':'#444'};font-size:.72rem;min-width:22px;text-align:center;font-family:var(--font-mono);" title="Subgrupo">${p.subgrupoProposto||'—'}</span>
       </div>`;
-    }).join('');
+    }
+    el.innerHTML=html;
   }
 
   function _gerarGruposToggle(idx,checked){
@@ -6458,7 +6486,7 @@ const Planejamento = (() => {
     selectIdx,toggleRecolher,recuarNivel,avancarNivel,
     toggleGantt,toggleLiberarEdicaoReal,hideCol,showColsMenu,_showCol,_showAll,_toggleMenuFerramentas,
     _abrirEstruturaObra,_addTorre,_addPavimento,_addApartamento,_duplicarPavimento,_editarNomeEst,_removerNoEst,
-    _abrirAutoVincular,_aplicarAutoVincular,_abrirGerarGrupos,_aplicarGerarGrupos,_gerarGruposToggle,_gerarGruposEditarValor,
+    _abrirAutoVincular,_aplicarAutoVincular,_abrirGerarGrupos,_aplicarGerarGrupos,_gerarGruposToggle,_gerarGruposEditarValor,_gerarGruposFiltrar,
     _abrirVinculoPavimento,_salvarVinculoPavimento,_vinclocTogglePav,_vinclocToggleApto,
     _abrirAtualizarPredecessora,_predlogAtualizarBotao,_salvarAtualizacaoPredecessora,_abrirHistoricoAlteracoes,_filtrarHistorico,
     toggleArvoreEditor,_arvToggle,_arvExpandirTudo,_arvIniciarEdit,_arvCancelarEdit,_arvSalvarNome,

@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.13',
+  versaoAtual: 'V3.19.14',
 
   versoes: [
     {
@@ -9565,6 +9565,17 @@ const NotasVersao = {
       "itens": [
         "Confirmado com dados reais: \"Concretagem Laje Piso: 5° Pavimento - ap. 01\" e \"Rede Frigorígena: 5° Pavimento - Final 01\" são a mesma unidade/torre — só trades diferentes descrevendo do jeito próprio deles (\"ap.\" vs \"Final\").",
         "Subgrupo agora reconhece Final NN, ap. NN, apto NN e apartamento NN como equivalentes — todas geram o mesmo cálculo (andar×10+NN). Não muda nada em quem já tinha \"Final\", só passa a calcular pra quem tinha \"ap.\" e antes ficava sem Subgrupo."
+      ]
+    },
+    {
+      "versao": "V3.19.14",
+      "data": "2026-08-19",
+      "tipo": "melhoria",
+      "titulo": "Gerar Grupos: cabeçalho de seção por pavimento, filtro de busca e Subgrupo sempre visível na prévia",
+      "itens": [
+        "A lista já vinha ordenada por pavimento, mas sem separação visual — agora cada bloco tem um cabeçalho \"▸ NOME DO PAVIMENTO (Nº tarefas)\", então dá pra ver de cara onde um grupo termina e o outro começa, em vez de vasculhar linha por linha.",
+        "Novo campo de busca no topo da prévia — filtra por pavimento proposto ou por nome da tarefa (ex: digitar \"2 subsolo\" mostra só esse bloco).",
+        "Subgrupo agora aparece sempre como uma coluna própria (mostra o número ou \"—\"), não só quando existe — fica fácil auditar se calculou certo em vez de precisar adivinhar pela ausência."
       ]
     }
   ],
