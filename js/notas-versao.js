@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.16.0.10',
+  versaoAtual: 'V3.16.0.11',
 
   versoes: [
     {
@@ -9229,6 +9229,22 @@ const NotasVersao = {
       "itens": [
         "Esse botão só aparece quando a versão de datas não é \"Atual\" — e quando aparecia, ficava sobrando na quebra de linha, sozinho, deslocado do resto (a causa do visual torto reclamado). Removido da barra principal.",
         "Agora fica dentro de ⚙ Ferramentas → Correções & Recálculos, com o mesmo nome e função — só aparece no menu quando faz sentido (fora da versão Atual), sem nunca mais deslocar nada na toolbar."
+      ]
+    },
+    {
+      "versao": "V3.16.0.11",
+      "data": "2026-08-19",
+      "tipo": "correcao",
+      "titulo": "Tarefas do Sistema: tema \"caderno\" removido, pop-up maior, título+descrição, intervalo de horário e seletor de tarefa hierárquico",
+      "itens": [
+        "Motivo (Milton, bem direto): o tema de caderno ficou feio e mal executado — removido por completo. Agenda agora usa a mesma linguagem visual do resto do sistema (branco/cinza/amarelo, Inter), sem tema temático nenhum.",
+        "Pop-up da Agenda aumentado de 480px pra 680px de largura — item apontado como \"minúsculo\".",
+        "Tarefa agora tem Título (curto) e Descrição (opcional, texto livre) separados, em vez de tudo num campo só que deixava o card da tarefa enorme. Na barra de criação, a descrição fica atrás de um \"+ adicionar descrição\" pra não poluir quando não precisa. No editar, os dois campos aparecem sempre.",
+        "Na lista principal e na Agenda, o título agora corta em 1 linha (…) em vez de estourar o card. Clicar na tarefa abre um pop-up de detalhe (título grande + descrição formatada), com botão Editar dentro.",
+        "Coluna de horário da Agenda agora mostra o intervalo completo (\"07:00 a 07:30\"), não só o horário de início.",
+        "Seletor de tarefa da Agenda refeito: busca sempre no topo (pula direto pra qualquer tarefa por nome/sistema/categoria) e, sem buscar nada, navegação em 3 níveis — Sistema → Categoria → Tarefa — com contador em cada nível e breadcrumb pra voltar.",
+        "Pra adicionar mais de uma tarefa no mesmo horário: um \"+\" pequeno e discreto ao lado das já alocadas, em vez do formulário ficar sempre aberto ocupando espaço.",
+        "Corrigido de raiz, na mesma rodada: \"Sem projeto\" e \"Sem categoria\" quebravam a navegação hierárquica (string vazia sendo confundida com \"nada selecionado ainda\") — resolvido com marcadores internos próprios em vez de string vazia."
       ]
     }
   ],
