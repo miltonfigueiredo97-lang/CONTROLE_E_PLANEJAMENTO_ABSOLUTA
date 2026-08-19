@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.13.3',
+  versaoAtual: 'V3.19.13.4',
 
   versoes: [
     {
@@ -9601,6 +9601,16 @@ const NotasVersao = {
         "Cabeçalho bugado corrigido: a linha dos grupos tem altura travada, então a segunda linha (subgrupos) não sobrepõe mais ao rolar — era o que quebrava principalmente no celular.",
         "Mobile: filtros ocupam a largura da tela (busca em linha própria), células e cabeçalhos compactos, nome da categoria quebra linha e a tabela rola com o dedo com altura limitada.",
         "O seletor de Nº Equipe agora aparece SEMPRE — se nenhuma tarefa tem equipe preenchida no Planejamento, ele mostra o aviso em vez de sumir (a busca 🔎 continua sempre visível ao lado)."
+      ]
+    },
+    {
+      "versao": "V3.19.13.4",
+      "data": "2026-08-19",
+      "tipo": "melhoria",
+      "titulo": "Gerar Grupos: dropdown \"ir direto pro grupo\" além da busca por texto",
+      "itens": [
+        "Novo seletor ao lado da busca — lista todos os pavimentos que aparecem nessa prévia (na ordem da Estrutura da Obra, com a contagem de cada um) e ao escolher um filtra a lista só pra aquele grupo, sem precisar digitar nada.",
+        "Os dois filtros (busca por texto + esse seletor) funcionam juntos — pode combinar."
       ]
     }
   ],

@@ -4168,8 +4168,14 @@ const Planejamento = (() => {
           <span style="cursor:pointer;color:#888;font-size:1.1rem;" onclick="document.getElementById('gerargrupos-modal').remove()">✕</span>
         </div>
         <div style="font-size:.72rem;color:#888;margin-bottom:10px;">${folhas.length} tarefas no total. <b>${mudam.length}</b> vão mudar Grupo/Subgrupo (as demais já estão certas). Pra corrigir, escolhe outro pavimento (ou "Sem Vínculo") na lista da direita — muda esse E todos os outros que tinham a mesma proposta.</div>
-        <input id="gerargrupos-filtro" placeholder="🔍 Filtrar por pavimento proposto (ex: 2° Subsolo) ou nome da tarefa..." oninput="Planejamento._gerarGruposFiltrar(this.value)"
-          style="width:100%;background:#111;border:1px solid #333;border-radius:6px;color:#ddd;padding:7px 10px;font-size:.8rem;margin-bottom:8px;box-sizing:border-box;">
+        <div style="display:flex;gap:6px;margin-bottom:8px;">
+          <input id="gerargrupos-filtro" placeholder="🔍 Buscar por nome da tarefa..." oninput="Planejamento._gerarGruposFiltrar(this.value)"
+            style="flex:1;background:#111;border:1px solid #333;border-radius:6px;color:#ddd;padding:7px 10px;font-size:.8rem;box-sizing:border-box;">
+          <select id="gerargrupos-select-grupo" onchange="Planejamento._gerarGruposIrParaGrupo(this.value)"
+            style="width:200px;background:#111;border:1px solid #333;border-radius:6px;color:var(--cor-primaria);font-weight:600;padding:7px 8px;font-size:.8rem;flex-shrink:0;">
+            <option value="">▸ Ir direto pro grupo...</option>
+          </select>
+        </div>
         <div id="gerargrupos-lista" style="display:flex;flex-direction:column;gap:2px;max-height:50vh;overflow-y:auto;border:1px solid #292929;border-radius:6px;padding:6px;"></div>
         <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px;">
           <button class="btn btn-secundario btn-sm" onclick="document.getElementById('gerargrupos-modal').remove()">Cancelar</button>
@@ -4178,12 +4184,18 @@ const Planejamento = (() => {
       </div>`;
     document.body.appendChild(pop);
     _gerarGruposFiltroTexto='';
+    _gerarGruposFiltroGrupo='';
     _renderGerarGruposLista();
   }
 
   let _gerarGruposFiltroTexto='';
+  let _gerarGruposFiltroGrupo=''; // filtro EXATO — via dropdown "ir direto pro grupo", separado da busca por texto (que é por substring)
   function _gerarGruposFiltrar(texto){
     _gerarGruposFiltroTexto=(texto||'').trim();
+    _renderGerarGruposLista();
+  }
+  function _gerarGruposIrParaGrupo(valor){
+    _gerarGruposFiltroGrupo=valor||'';
     _renderGerarGruposLista();
   }
 
@@ -4195,7 +4207,19 @@ const Planejamento = (() => {
     // esse índice em _gerarGruposLista, não a posição na lista filtrada).
     const visiveis=_gerarGruposLista
       .map((p,i)=>({p,i}))
-      .filter(({p})=>!q||_normTexto(p.grupoProposto).includes(q)||_normTexto(p.nome).includes(q));
+      .filter(({p})=>(!_gerarGruposFiltroGrupo||p.grupoProposto===_gerarGruposFiltroGrupo)
+        &&(!q||_normTexto(p.grupoProposto).includes(q)||_normTexto(p.nome).includes(q)));
+    // Popula o dropdown "ir direto pro grupo" com os grupos que existem NESSA
+    // prévia, na ordem canônica (mesma da Estrutura da Obra) — só uma vez por
+    // abertura (não a cada render), senão perde a seleção atual a cada digitação.
+    const selGrupo=document.getElementById('gerargrupos-select-grupo');
+    if(selGrupo&&selGrupo.options.length<=1){
+      const totaisPorGrupo=new Map();
+      for(const p of _gerarGruposLista)totaisPorGrupo.set(p.grupoProposto,(totaisPorGrupo.get(p.grupoProposto)||0)+1);
+      const gruposNaLista=opcoes.filter(nome=>totaisPorGrupo.has(nome));
+      selGrupo.innerHTML=`<option value="">▸ Ir direto pro grupo...</option>`+
+        gruposNaLista.map(nome=>`<option value="${_esc(nome)}">${_esc(nome)} (${totaisPorGrupo.get(nome)})</option>`).join('');
+    }
     if(!visiveis.length){el.innerHTML='<div style="color:#555;font-size:.8rem;padding:14px;text-align:center;">Nenhuma linha bate com o filtro.</div>';return;}
     const contagem=new Map();
     for(const {p} of visiveis)contagem.set(p.grupoProposto,(contagem.get(p.grupoProposto)||0)+1);
@@ -6486,7 +6510,7 @@ const Planejamento = (() => {
     selectIdx,toggleRecolher,recuarNivel,avancarNivel,
     toggleGantt,toggleLiberarEdicaoReal,hideCol,showColsMenu,_showCol,_showAll,_toggleMenuFerramentas,
     _abrirEstruturaObra,_addTorre,_addPavimento,_addApartamento,_duplicarPavimento,_editarNomeEst,_removerNoEst,
-    _abrirAutoVincular,_aplicarAutoVincular,_abrirGerarGrupos,_aplicarGerarGrupos,_gerarGruposToggle,_gerarGruposEditarValor,_gerarGruposFiltrar,
+    _abrirAutoVincular,_aplicarAutoVincular,_abrirGerarGrupos,_aplicarGerarGrupos,_gerarGruposToggle,_gerarGruposEditarValor,_gerarGruposFiltrar,_gerarGruposIrParaGrupo,
     _abrirVinculoPavimento,_salvarVinculoPavimento,_vinclocTogglePav,_vinclocToggleApto,
     _abrirAtualizarPredecessora,_predlogAtualizarBotao,_salvarAtualizacaoPredecessora,_abrirHistoricoAlteracoes,_filtrarHistorico,
     toggleArvoreEditor,_arvToggle,_arvExpandirTudo,_arvIniciarEdit,_arvCancelarEdit,_arvSalvarNome,
