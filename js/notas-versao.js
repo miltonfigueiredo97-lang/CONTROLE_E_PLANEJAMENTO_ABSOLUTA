@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.13.6',
+  versaoAtual: 'V3.19.13.7',
 
   versoes: [
     {
@@ -9634,6 +9634,17 @@ const NotasVersao = {
         "Divisórias verticais agora aparecem entre as células, com uma linha FORTE separando um grupo do outro (inclusive no cabeçalho, em amarelo).",
         "Linha preta do cabeçalho invadindo a 1ª coluna no scroll lateral: corrigido de verdade — a regra anterior perdia na prioridade do CSS e o canto ficava no mesmo nível dos títulos; agora o canto vence sempre.",
         "Colunas mais compactas: cabem mais grupos na tela de uma vez."
+      ]
+    },
+    {
+      "versao": "V3.19.13.7",
+      "data": "2026-08-18",
+      "tipo": "correcao",
+      "titulo": "Filtros clicáveis no celular, busca sem acento e mobile de Atividades/Suprimentos repaginado",
+      "itens": [
+        "Categoria e Equipe não abriam no toque: os seletores estavam embrulhados numa <label>, e o clique sintético dela abria e fechava o menu na mesma hora no celular. Trocado o embrulho — os três seletores clicam normalmente.",
+        "A BUSCA agora ignora acentos nos dois lados: digitar \"gas\" acha \"Gás\", \"eletrica\" acha \"Elétrica\" — vale pra nome da tarefa, grupo, subgrupo, categoria e subcategoria.",
+        "Mobile de Atividades e Suprimentos repaginado: a régua de níveis não estoura mais o card (vira um trilho com rolagem própria, sem \"atravessar até o infinito\"), a toolbar empilha (título em cima, níveis e horizonte embaixo ocupando a largura), nomes quebram linha e os cards ficaram mais compactos."
       ]
     }
   ],

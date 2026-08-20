@@ -239,3 +239,30 @@ th.db-subtotal-col { font-size: 0.68rem; line-height: 1.15; }
   .db-fr-geral { min-width: 46px; font-size: 0.72rem; }
   .db-fr-rodape { font-size: 0.66rem; }
 }
+
+/* ============================================
+   MOBILE — Atividades / Suprimentos (repaginada)
+   Os pills de nível estouravam o card ("linha que atravessa até o
+   infinito") e a toolbar cortava. Agora: toolbar empilhada, pills num
+   trilho com rolagem própria contida, itens compactos.
+   ============================================ */
+.db-pills { max-width: 100%; }
+@media (max-width: 700px) {
+  .db-sup-toolbar { flex-direction: column; align-items: stretch; gap: 8px; }
+  .db-sup-toolbar > span { font-size: 0.72rem; }
+  .db-sup-toolbar > div { width: 100%; display: flex; flex-wrap: wrap; gap: 6px; }
+  .db-pills { flex: 1 1 100%; overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; padding: 3px; scrollbar-width: none; }
+  .db-pills::-webkit-scrollbar { display: none; }
+  .db-pill { flex-shrink: 0; }
+  .db-sup-toolbar select.form-control { flex: 1; max-width: none !important; }
+  .db-sup-item { gap: 8px; padding: 8px 2px; }
+  .db-sup-nome { font-size: 0.8rem; white-space: normal; line-height: 1.3; }
+  .db-sup-sub { font-size: 0.68rem; }
+  .db-ativ-pct { font-size: 0.76rem; }
+  .db-chip { font-size: 0.64rem; padding: 2px 7px; }
+  .db-ativ-bloco + div { height: 14px; }
+  /* cards do dashboard respiram melhor em tela estreita */
+  .card .card-body { padding: 14px 12px; }
+  .db-metrica-card { padding: 8px 10px; }
+  .db-metrica-valor { font-size: 1rem; }
+}

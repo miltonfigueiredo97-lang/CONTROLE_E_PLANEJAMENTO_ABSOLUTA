@@ -47,11 +47,12 @@ const DashFrentes = (() => {
 
     // Filtros aplicados às tarefas (a matriz é reconstruída do que sobra).
     const f = _filtros;
-    const busca = f.busca.toLowerCase();
+    // Busca SEM acento: "gas" acha "Gás", "eletrica" acha "Elétrica" etc.
+    const busca = DashCore.normalizarChave(f.busca);
     const tarefas = todas.filter(t =>
       (!f.categoria || _v(t.categoria) === f.categoria) &&
       (!f.equipe || String(t.equipeAlocada || '') === f.equipe) &&
-      (!busca || `${t.nome || ''} ${t.categoria || ''} ${t.subcategoria || ''} ${t.grupo || ''} ${t.subgrupo || ''}`.toLowerCase().includes(busca))
+      (!busca || DashCore.normalizarChave(`${t.nome || ''} ${t.categoria || ''} ${t.subcategoria || ''} ${t.grupo || ''} ${t.subgrupo || ''}`).includes(busca))
     );
 
     host.innerHTML = _htmlFiltros(todas) + (tarefas.length
@@ -67,31 +68,31 @@ const DashFrentes = (() => {
     const temFiltro = f.categoria || f.equipe || f.busca;
     return `
       <div class="db-fr-filtros">
-        <label class="db-fr-fgrupo">
+        <div class="db-fr-fgrupo">
           <span>Colunas</span>
           <select class="form-control" onchange="DashFrentes.setVisao(this.value)" ${temSubgrupos ? '' : 'disabled title="Não há subgrupos no Planejamento"'}>
             <option value="grupo" ${_visaoCols === 'grupo' ? 'selected' : ''}>Grupos (resumido)</option>
             <option value="subgrupo" ${_visaoCols === 'subgrupo' ? 'selected' : ''}>Subgrupos (detalhado)</option>
           </select>
-        </label>
-        <label class="db-fr-fgrupo">
+        </div>
+        <div class="db-fr-fgrupo">
           <span>Categoria</span>
           <select class="form-control" onchange="DashFrentes.setFiltro('categoria', this.value)">
             <option value="">Todas</option>
             ${categorias.map(o => `<option value="${DashCore.esc(o)}" ${o === f.categoria ? 'selected' : ''}>${DashCore.esc(o)}</option>`).join('')}
           </select>
-        </label>
-        <label class="db-fr-fgrupo">
+        </div>
+        <div class="db-fr-fgrupo">
           <span>Equipe</span>
           <select class="form-control" onchange="DashFrentes.setFiltro('equipe', this.value)" ${equipes.length ? '' : 'disabled title="Preencha a coluna Nº Equipe no Planejamento"'}>
             <option value="">Todas</option>
             ${equipes.map(o => `<option value="${o}" ${String(o) === f.equipe ? 'selected' : ''}>Equipe ${o}</option>`).join('')}
           </select>
-        </label>
+        </div>
         <label class="db-fr-fgrupo" style="flex:1;min-width:160px;">
           <span>Buscar</span>
           <input type="text" class="form-control" placeholder="🔎 tarefa, grupo, categoria..." value="${DashCore.esc(f.busca)}" oninput="DashFrentes.setBusca(this.value)">
-        </label>
+        </div>
         ${temFiltro ? '<button class="btn btn-secundario btn-sm" style="align-self:end;" onclick="DashFrentes.limparFiltros()">✕ Limpar</button>' : ''}
       </div>`;
   }
