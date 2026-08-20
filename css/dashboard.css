@@ -273,7 +273,7 @@ th.db-subtotal-col { font-size: 0.68rem; line-height: 1.15; }
    vertical (travava a rolagem da página ao passar o dedo no mapa).
    ============================================ */
 .db-minimapa svg, .db-minimapa img, .db-minimapa > div { max-width: 100% !important; height: auto !important; }
-.db-minimapa, .db-minimapa * { touch-action: pan-y !important; } /* dedo no mapa continua rolando a página */
+.db-minimapa, .db-minimapa * { touch-action: auto !important; } /* o engine põe touch-action:none inline no stage — auto!important devolve o scroll da página; o minimapa é só clique */
 @media (max-width: 700px) {
   .db-minimapas { gap: 10px; }
   .db-minimapa { width: 100% !important; max-width: 100%; box-sizing: border-box; overflow: hidden; }

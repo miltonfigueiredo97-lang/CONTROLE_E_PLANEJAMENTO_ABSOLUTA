@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.13.8',
+  versaoAtual: 'V3.19.13.9',
 
   versoes: [
     {
@@ -9655,6 +9655,17 @@ const NotasVersao = {
       "itens": [
         "CAUSA REAL dos seletores que \"não abriam\": o Dashboard se re-renderiza em TEMPO REAL a cada gravação no Firestore — com a obra ativa, o menu do seletor era destruído no instante em que abria. Agora, enquanto um filtro está em uso (aberto/focado), o re-render automático espera o foco sair; as suas escolhas continuam aplicando na hora.",
         "Minimapas de Estacas, Contenção e Fundação no celular: não estouram mais a caixa pela direita (largura contida à tela) e passar o dedo por cima do mapa VOLTA a rolar a página — o mapa não captura mais o gesto vertical."
+      ]
+    },
+    {
+      "versao": "V3.19.13.9",
+      "data": "2026-08-18",
+      "tipo": "correcao",
+      "titulo": "Filtros em DOM fixo (agora abrem SEMPRE) + toque de verdade nos mapas",
+      "itens": [
+        "Seletores de Colunas/Categoria/Equipe: mudança estrutural — os filtros agora vivem num pedaço FIXO da tela que nunca é recriado pelas atualizações em tempo real; só a matriz se redesenha. Não existe mais a corrida entre o toque e o re-render que impedia o menu de abrir. A busca também não perde mais o foco/teclado enquanto digita.",
+        "Minimapas (Estacas/Contenção): o motor do mapa marca o palco com touch-action:none direto no elemento — regra com !important devolve o gesto pro navegador; passar o dedo em cima volta a rolar a página normalmente (o minimapa é só clique pra ampliar).",
+        "Popup da prancha no celular: agora entende toque — 1 dedo ARRASTA O MAPA, pinça com 2 dedos dá ZOOM no ponto, e a página de trás fica travada enquanto o popup está aberto (não rola mais por baixo)."
       ]
     }
   ],

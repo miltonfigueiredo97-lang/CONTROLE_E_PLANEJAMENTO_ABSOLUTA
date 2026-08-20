@@ -29,44 +29,45 @@ const DashFrentes = (() => {
   const _ordena = (a, b) => a.localeCompare(b, 'pt-BR', { numeric: true });
 
   // ---------- Render ----------
-  let _renderPendente = false;
-  let _focoGuardado = false;
-  function render(ctx, forcado) {
+  // Os FILTROS vivem num container próprio e SÓ são recriados quando as
+  // opções mudam (nova categoria/equipe no Planejamento) — snapshot do
+  // Firestore re-renderiza apenas a MATRIZ. Era a recriação dos selects a
+  // cada gravação remota que fazia o menu "não abrir" no celular.
+  let _assinaturaFiltros = '';
+  function render(ctx) {
     _ctx = ctx;
     const host = document.getElementById('db-frentes');
     if (!host) return;
 
-    // PROTEÇÃO DE FOCO: o Dashboard re-renderiza em tempo real a cada
-    // gravação no Firestore — se isso acontece com um seletor ABERTO, o
-    // innerHTML destrói o select e o menu fecha na hora (parecia "não
-    // clicável"). Com um filtro em uso, o re-render espera o foco sair.
-    const ae = document.activeElement;
-    if (!forcado && ae && host.contains(ae) && (ae.tagName === 'SELECT' || ae.tagName === 'INPUT')) {
-      _renderPendente = true;
-      if (!_focoGuardado) {
-        _focoGuardado = true;
-        host.addEventListener('focusout', () => {
-          setTimeout(() => {
-            if (_renderPendente && _ctx && !(document.activeElement && host.contains(document.activeElement) && (document.activeElement.tagName === 'SELECT' || document.activeElement.tagName === 'INPUT'))) {
-              _renderPendente = false;
-              render(_ctx, true);
-            }
-          }, 200);
-        });
-      }
-      return;
+    if (!document.getElementById('db-fr-matriz-host')) {
+      host.innerHTML = '<div id="db-fr-filtros-host"></div><div id="db-fr-matriz-host"></div>';
+      _assinaturaFiltros = '';
     }
-    _renderPendente = false;
 
     // Só tarefas-FOLHA com categoria E grupo entram na matriz.
     const todas = DashCore.folhas(ctx.tarefas).filter(t => _v(t.categoria) && _v(t.grupo));
+    const filtrosHost = document.getElementById('db-fr-filtros-host');
+    const matrizHost = document.getElementById('db-fr-matriz-host');
+
     if (!todas.length) {
-      host.innerHTML = `<div class="db-vazio">
+      filtrosHost.innerHTML = '';
+      _assinaturaFiltros = '';
+      matrizHost.innerHTML = `<div class="db-vazio">
         <div class="db-vazio-icone">🏷️</div>
         <div class="db-vazio-titulo">Nenhuma tarefa com Categoria e Grupo ainda</div>
         <div class="db-vazio-sub">Preencha as colunas <b>Categoria</b> e <b>Grupo</b> no <a href="planejamento.html">Planejamento</a> (ou use o Importar Correções / Gerar Grupos) — a matriz de frentes se monta sozinha a partir delas.</div>
       </div>`;
       return;
+    }
+
+    // Recria os filtros SÓ se as opções mudaram (assinatura).
+    const categorias = [...new Set(todas.map(t => _v(t.categoria)))].sort(_ordena);
+    const equipes = [...new Set(todas.map(t => t.equipeAlocada).filter(v => v != null && v !== '' && v !== 0))].sort((a, b) => a - b);
+    const temSubgrupos = todas.some(t => _v(t.subgrupo));
+    const assinatura = categorias.join('|') + '###' + equipes.join('|') + '###' + temSubgrupos;
+    if (assinatura !== _assinaturaFiltros) {
+      _assinaturaFiltros = assinatura;
+      filtrosHost.innerHTML = _htmlFiltros(categorias, equipes, temSubgrupos);
     }
 
     // Filtros aplicados às tarefas (a matriz é reconstruída do que sobra).
@@ -78,18 +79,19 @@ const DashFrentes = (() => {
       (!f.equipe || String(t.equipeAlocada || '') === f.equipe) &&
       (!busca || DashCore.normalizarChave(`${t.nome || ''} ${t.categoria || ''} ${t.subcategoria || ''} ${t.grupo || ''} ${t.subgrupo || ''}`).includes(busca))
     );
-
-    host.innerHTML = _htmlFiltros(todas) + (tarefas.length
+    matrizHost.innerHTML = tarefas.length
       ? _htmlMatriz(tarefas)
-      : '<div class="db-vazio-inline">Nenhuma tarefa com esses filtros.</div>');
+      : '<div class="db-vazio-inline">Nenhuma tarefa com esses filtros.</div>';
+    _atualizarBotaoLimpar();
   }
 
-  function _htmlFiltros(todas) {
+  function _atualizarBotaoLimpar() {
+    const btn = document.getElementById('db-fr-limpar');
+    if (btn) btn.style.display = (_filtros.categoria || _filtros.equipe || _filtros.busca) ? '' : 'none';
+  }
+
+  function _htmlFiltros(categorias, equipes, temSubgrupos) {
     const f = _filtros;
-    const categorias = [...new Set(todas.map(t => _v(t.categoria)))].sort(_ordena);
-    const equipes = [...new Set(todas.map(t => t.equipeAlocada).filter(v => v != null && v !== '' && v !== 0))].sort((a, b) => a - b);
-    const temSubgrupos = todas.some(t => _v(t.subgrupo));
-    const temFiltro = f.categoria || f.equipe || f.busca;
     return `
       <div class="db-fr-filtros">
         <div class="db-fr-fgrupo">
@@ -113,11 +115,11 @@ const DashFrentes = (() => {
             ${equipes.map(o => `<option value="${o}" ${String(o) === f.equipe ? 'selected' : ''}>Equipe ${o}</option>`).join('')}
           </select>
         </div>
-        <label class="db-fr-fgrupo" style="flex:1;min-width:160px;">
+        <div class="db-fr-fgrupo" style="flex:1;min-width:160px;">
           <span>Buscar</span>
           <input type="text" class="form-control" placeholder="🔎 tarefa, grupo, categoria..." value="${DashCore.esc(f.busca)}" oninput="DashFrentes.setBusca(this.value)">
         </div>
-        ${temFiltro ? '<button class="btn btn-secundario btn-sm" style="align-self:end;" onclick="DashFrentes.limparFiltros()">✕ Limpar</button>' : ''}
+        <button id="db-fr-limpar" class="btn btn-secundario btn-sm" style="align-self:end;display:none;" onclick="DashFrentes.limparFiltros()">✕ Limpar</button>
       </div>`;
   }
 
@@ -247,29 +249,27 @@ const DashFrentes = (() => {
   // ---------- Filtros ----------
   function setFiltro(campo, valor) {
     _filtros[campo] = valor;
-    if (_ctx) render(_ctx, true);
+    if (_ctx) render(_ctx);
   }
   function setVisao(v) {
     _visaoCols = v === 'subgrupo' ? 'subgrupo' : 'grupo';
     localStorage.setItem('db_fr_visao', _visaoCols);
-    if (_ctx) render(_ctx, true);
+    if (_ctx) render(_ctx);
   }
   let _buscaTimer = null;
   function setBusca(texto) {
     clearTimeout(_buscaTimer);
     _buscaTimer = setTimeout(() => {
       _filtros.busca = texto;
-      if (_ctx) {
-        render(_ctx, true);
-        // devolve o foco pro campo de busca depois do re-render
-        const inp = document.querySelector('#db-frentes input[type=text]');
-        if (inp) { inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); }
-      }
-    }, 350);
+      // Só a MATRIZ re-renderiza — o campo de busca não é recriado, o foco
+      // e o teclado do celular ficam onde estão.
+      if (_ctx) render(_ctx);
+    }, 300);
   }
   function limparFiltros() {
     _filtros = { categoria: '', equipe: '', busca: '' };
-    if (_ctx) render(_ctx, true);
+    _assinaturaFiltros = ''; // força recriar os selects zerados
+    if (_ctx) render(_ctx);
   }
 
   // ---------- Detalhe da célula ----------

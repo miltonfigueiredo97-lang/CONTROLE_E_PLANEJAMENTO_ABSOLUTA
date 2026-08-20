@@ -532,6 +532,7 @@ const DashConcreto = (() => {
   function fecharPopup() {
     const overlay = document.getElementById('db-projeto-overlay');
     if (overlay) overlay.remove();
+    document.body.style.overflow = '';
     document.removeEventListener('keydown', _popupTeclaEsc);
   }
   function _popupTeclaEsc(e) { if (e.key === 'Escape') fecharPopup(); }
@@ -543,6 +544,7 @@ const DashConcreto = (() => {
       overlay.id = 'db-projeto-overlay';
       overlay.style.cssText = 'position:fixed;inset:0;z-index:600;background:rgba(15,23,42,.92);display:flex;flex-direction:column;padding:16px;';
       document.body.appendChild(overlay);
+      document.body.style.overflow = 'hidden'; // página de trás não rola com o popup aberto
       document.addEventListener('keydown', _popupTeclaEsc);
     }
     const item = _popupItens[_popupIdx];
@@ -623,6 +625,45 @@ const DashConcreto = (() => {
           if (ev.shiftKey) _popupPan.x -= ev.deltaY;
           else { _popupPan.x -= ev.deltaX; _popupPan.y -= ev.deltaY; }
           _aplicarCamera();
+        }
+      };
+      // ---- TOQUE (celular): 1 dedo arrasta o MAPA, pinça dá zoom no ponto
+      // médio — com preventDefault a página de trás não se move junto.
+      viewport.style.touchAction = 'none';
+      let _tqPan = null, _tqPinch = null;
+      viewport.ontouchstart = (ev) => {
+        if (ev.touches.length === 1) {
+          const t = ev.touches[0];
+          _tqPan = { x: t.clientX, y: t.clientY, panX: _popupPan.x, panY: _popupPan.y };
+          _tqPinch = null;
+        } else if (ev.touches.length === 2) {
+          const [a, b] = ev.touches;
+          _tqPinch = { dist: Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY), zoom: _popupZoom };
+          _tqPan = null;
+        }
+      };
+      viewport.ontouchmove = (ev) => {
+        ev.preventDefault();
+        const r = viewport.getBoundingClientRect();
+        if (ev.touches.length === 1 && _tqPan) {
+          const t = ev.touches[0];
+          _popupPan.x = _tqPan.panX + (t.clientX - _tqPan.x);
+          _popupPan.y = _tqPan.panY + (t.clientY - _tqPan.y);
+          _aplicarCamera();
+        } else if (ev.touches.length === 2 && _tqPinch) {
+          const [a, b] = ev.touches;
+          const dist = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+          const cx = (a.clientX + b.clientX) / 2 - r.left;
+          const cy = (a.clientY + b.clientY) / 2 - r.top;
+          _zoomNoPonto(_tqPinch.zoom * (dist / _tqPinch.dist), cx, cy);
+        }
+      };
+      viewport.ontouchend = (ev) => {
+        if (ev.touches.length === 0) { _tqPan = null; _tqPinch = null; }
+        else if (ev.touches.length === 1) {
+          const t = ev.touches[0];
+          _tqPan = { x: t.clientX, y: t.clientY, panX: _popupPan.x, panY: _popupPan.y };
+          _tqPinch = null;
         }
       };
       viewport.onmousedown = (ev) => {
