@@ -90,20 +90,25 @@
 
 .db-fr-tabela thead th { position: sticky; top: 0; z-index: 3; background: var(--cor-dark-900); color: #fff; font-weight: 600; }
 .db-fr-htorre th { height: 28px; padding: 0 10px; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.6px; color: var(--cor-primaria); border-bottom: 1px solid var(--cor-dark-600); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
-.db-fr-hcol th { padding: 6px 8px; text-align: center; min-width: 66px; border-bottom: 2px solid var(--cor-primaria); }
+.db-fr-hcol th { padding: 6px 6px; text-align: center; min-width: 54px; border-bottom: 2px solid var(--cor-primaria); }
 .db-fr-htorre + .db-fr-hcol th { top: 28px; } /* altura da 1ª linha é travada em 28px — sem bug de sobreposição */
 .db-fr-hcol-main { font-weight: 700; font-size: 0.75rem; white-space: nowrap; }
 .db-fr-hcol-sub { font-weight: 400; font-size: 0.64rem; color: rgba(255,255,255,0.55); white-space: nowrap; }
 .db-fr-hgeral { min-width: 58px; }
 
 .db-fr-sticky { position: sticky; left: 0; z-index: 2; background: #fff; text-align: left !important; }
-/* Canto (header + 1ª coluna): acima de TUDO — sem ele, a linha de grupos
-   "atravessava" a primeira coluna ao arrastar a tabela pro lado. */
-thead .db-fr-sticky { z-index: 6; background: var(--cor-dark-900); }
+/* Canto (header + 1ª coluna): acima de TUDO. A regra antiga (thead
+   .db-fr-sticky) PERDIA na especificidade pra ".db-fr-tabela thead th"
+   (z-index 3) — por isso a linha preta continuava atravessando a 1ª coluna
+   no scroll lateral. Seletor reforçado resolve de vez. */
+.db-fr-tabela thead th.db-fr-sticky { z-index: 6; background: var(--cor-dark-900); left: 0; }
 .db-fr-nome { font-weight: 600; color: var(--cor-texto); padding: 8px 12px; white-space: nowrap; border-bottom: 1px solid var(--cor-borda-light); border-right: 1px solid var(--cor-borda-light); max-width: 240px; overflow: hidden; text-overflow: ellipsis; }
 
-.db-fr-tabela tbody td { border-bottom: 1px solid var(--cor-borda-light); }
-.db-fr-cel { padding: 6px 6px 5px; text-align: center; cursor: pointer; transition: filter var(--transicao); min-width: 62px; }
+.db-fr-tabela tbody td { border-bottom: 1px solid var(--cor-borda-light); border-right: 1px solid var(--cor-borda-light); }
+/* Divisor FORTE no fim de cada grupo — separa visualmente um grupo do outro */
+.db-fr-tabela td.db-fr-fimgrupo, .db-fr-tabela th.db-fr-fimgrupo { border-right: 2px solid var(--cor-dark-600); }
+.db-fr-tabela thead th.db-fr-fimgrupo { border-right: 2px solid var(--cor-primaria); }
+.db-fr-cel { padding: 5px 5px 4px; text-align: center; cursor: pointer; transition: filter var(--transicao); min-width: 50px; }
 .db-fr-cel:hover { filter: brightness(0.96); }
 .db-fr-cel.pausada { opacity: 0.55; }
 .db-fr-cel.pausada .db-fr-cel-pct::after { content: ' ⏸'; font-size: 0.6rem; }
@@ -205,8 +210,10 @@ th.db-subtotal-col { font-size: 0.68rem; line-height: 1.15; }
 .db-metrica-sub { font-size: 0.62rem; color: var(--cor-texto-muted); margin-top: 3px; line-height: 1.35; }
 
 /* ---- Frentes v2: filtros + linhas de categoria + total do detalhe ---- */
-.db-fr-filtros { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; align-items: center; }
-.db-fr-filtro { max-width: 175px; font-size: 0.74rem; padding: 4px 8px; }
+.db-fr-filtros { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; align-items: end; }
+.db-fr-fgrupo { display: flex; flex-direction: column; gap: 3px; min-width: 140px; }
+.db-fr-fgrupo > span { font-size: 0.64rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: var(--cor-texto-muted); }
+.db-fr-fgrupo .form-control { font-size: 0.76rem; padding: 5px 8px; }
 .db-fr-catrow td { background: var(--cor-primaria-ultra-light); border-bottom: 1px solid var(--cor-borda-light); }
 .db-fr-catnome { padding: 5px 0 !important; }
 /* O título fica "grudado" na esquerda visível — o td tem colspan da tabela
@@ -218,9 +225,9 @@ th.db-subtotal-col { font-size: 0.68rem; line-height: 1.15; }
 
 /* ---- Frentes: mobile ---- */
 @media (max-width: 700px) {
-  .db-fr-filtros { gap: 5px; }
-  .db-fr-filtro { flex: 1 1 46%; max-width: none; min-width: 0; font-size: 0.72rem; }
-  .db-fr-filtros input.db-fr-filtro { flex: 1 1 100%; }
+  .db-fr-filtros { gap: 6px; }
+  .db-fr-fgrupo { flex: 1 1 46%; min-width: 0; }
+  .db-fr-filtros .db-fr-fgrupo:last-of-type { flex: 1 1 100%; }
   .db-fr-scroll { max-height: 65vh; -webkit-overflow-scrolling: touch; }
   .db-fr-hcol th { min-width: 52px; padding: 5px 4px; }
   .db-fr-hcol-main { font-size: 0.66rem; }

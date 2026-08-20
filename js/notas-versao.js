@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.13.5',
+  versaoAtual: 'V3.19.13.6',
 
   versoes: [
     {
@@ -9621,6 +9621,19 @@ const NotasVersao = {
       "itens": [
         "Ao arrastar a tabela pro lado, a linha do cabeçalho não \"atravessa\" mais a primeira coluna: o canto (cabeçalho + coluna de categorias) agora fica acima de tudo na pilha.",
         "As linhas escuras de agrupamento (título da categoria) não somem mais na rolagem horizontal: o título fica grudado na esquerda visível e acompanha o arrasto — principal incômodo no celular."
+      ]
+    },
+    {
+      "versao": "V3.19.13.6",
+      "data": "2026-08-18",
+      "tipo": "correcao",
+      "titulo": "Matriz de Frentes: filtros refeitos, divisórias visíveis e canto corrigido de vez",
+      "itens": [
+        "Filtros REFEITOS — agora são 4, cada um com rótulo em cima dizendo o que faz: COLUNAS (Grupos resumido ↔ Subgrupos detalhado, num seletor só), CATEGORIA, EQUIPE e BUSCAR. Os seletores confusos de grupo/subgrupo/subcategoria foram removidos.",
+        "No modo \"Grupos (resumido)\" cada grupo vira UMA coluna (os subgrupos são somados) — dá pra ver vários grupos/apartamentos de uma vez; \"Subgrupos (detalhado)\" abre coluna por coluna.",
+        "Divisórias verticais agora aparecem entre as células, com uma linha FORTE separando um grupo do outro (inclusive no cabeçalho, em amarelo).",
+        "Linha preta do cabeçalho invadindo a 1ª coluna no scroll lateral: corrigido de verdade — a regra anterior perdia na prioridade do CSS e o canto ficava no mesmo nível dos títulos; agora o canto vence sempre.",
+        "Colunas mais compactas: cabem mais grupos na tela de uma vez."
       ]
     }
   ],

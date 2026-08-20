@@ -13,7 +13,10 @@ const DashFrentes = (() => {
   const FAIXAS = { baixo: 30, medio: 70 };
   let _ctx = null;
   let _dados = null; // { linhas, colunas, celulas } do último render (pro detalhe)
-  let _filtros = { grupo: '', subgrupo: '', categoria: '', subcategoria: '', equipe: '', busca: '' };
+  let _filtros = { categoria: '', equipe: '', busca: '' };
+  // Visão das COLUNAS: 'grupo' = uma coluna por grupo (resumido);
+  // 'subgrupo' = abre os subgrupos (detalhado). Persistida por dispositivo.
+  let _visaoCols = localStorage.getItem('db_fr_visao') || 'grupo';
 
   function _tom(pct, concluida) {
     if (concluida || pct >= 100) return { bg: '#e7f6ec', fg: '#15803d', barra: '#16a34a' };
@@ -46,10 +49,7 @@ const DashFrentes = (() => {
     const f = _filtros;
     const busca = f.busca.toLowerCase();
     const tarefas = todas.filter(t =>
-      (!f.grupo || _v(t.grupo) === f.grupo) &&
-      (!f.subgrupo || _v(t.subgrupo) === f.subgrupo) &&
       (!f.categoria || _v(t.categoria) === f.categoria) &&
-      (!f.subcategoria || _v(t.subcategoria) === f.subcategoria) &&
       (!f.equipe || String(t.equipeAlocada || '') === f.equipe) &&
       (!busca || `${t.nome || ''} ${t.categoria || ''} ${t.subcategoria || ''} ${t.grupo || ''} ${t.subgrupo || ''}`.toLowerCase().includes(busca))
     );
@@ -61,43 +61,55 @@ const DashFrentes = (() => {
 
   function _htmlFiltros(todas) {
     const f = _filtros;
-    const grupos = [...new Set(todas.map(t => _v(t.grupo)))].sort(_ordena);
-    const subgrupos = [...new Set(todas.filter(t => !f.grupo || _v(t.grupo) === f.grupo).map(t => _v(t.subgrupo)).filter(Boolean))].sort(_ordena);
     const categorias = [...new Set(todas.map(t => _v(t.categoria)))].sort(_ordena);
-    const subcategorias = [...new Set(todas.filter(t => !f.categoria || _v(t.categoria) === f.categoria).map(t => _v(t.subcategoria)).filter(Boolean))].sort(_ordena);
     const equipes = [...new Set(todas.map(t => t.equipeAlocada).filter(v => v != null && v !== '' && v !== 0))].sort((a, b) => a - b);
-    const sel = (id, label, opcoes, valor) => `
-      <select class="form-control db-fr-filtro" onchange="DashFrentes.setFiltro('${id}', this.value)" title="${label}">
-        <option value="">${label}: todos</option>
-        ${opcoes.map(o => `<option value="${DashCore.esc(o)}" ${String(o) === valor ? 'selected' : ''}>${DashCore.esc(o)}</option>`).join('')}
-      </select>`;
-    const temFiltro = f.grupo || f.subgrupo || f.categoria || f.subcategoria || f.equipe || f.busca;
+    const temSubgrupos = todas.some(t => _v(t.subgrupo));
+    const temFiltro = f.categoria || f.equipe || f.busca;
     return `
       <div class="db-fr-filtros">
-        ${sel('categoria', 'Categoria', categorias, f.categoria)}
-        ${subcategorias.length ? sel('subcategoria', 'Subcategoria', subcategorias, f.subcategoria) : ''}
-        ${sel('grupo', 'Grupo', grupos, f.grupo)}
-        ${subgrupos.length ? sel('subgrupo', 'Subgrupo', subgrupos, f.subgrupo) : ''}
-        ${equipes.length
-          ? sel('equipe', 'Nº Equipe', equipes, f.equipe)
-          : '<select class="form-control db-fr-filtro" disabled title="Preencha a coluna Nº Equipe no Planejamento pra filtrar por equipe"><option>Equipe: nenhuma preenchida</option></select>'}
-        <input type="text" class="form-control db-fr-filtro" style="min-width:150px;" placeholder="🔎 Buscar..." value="${DashCore.esc(f.busca)}" oninput="DashFrentes.setBusca(this.value)">
-        ${temFiltro ? '<button class="btn btn-secundario btn-sm" onclick="DashFrentes.limparFiltros()">✕ Limpar</button>' : ''}
+        <label class="db-fr-fgrupo">
+          <span>Colunas</span>
+          <select class="form-control" onchange="DashFrentes.setVisao(this.value)" ${temSubgrupos ? '' : 'disabled title="Não há subgrupos no Planejamento"'}>
+            <option value="grupo" ${_visaoCols === 'grupo' ? 'selected' : ''}>Grupos (resumido)</option>
+            <option value="subgrupo" ${_visaoCols === 'subgrupo' ? 'selected' : ''}>Subgrupos (detalhado)</option>
+          </select>
+        </label>
+        <label class="db-fr-fgrupo">
+          <span>Categoria</span>
+          <select class="form-control" onchange="DashFrentes.setFiltro('categoria', this.value)">
+            <option value="">Todas</option>
+            ${categorias.map(o => `<option value="${DashCore.esc(o)}" ${o === f.categoria ? 'selected' : ''}>${DashCore.esc(o)}</option>`).join('')}
+          </select>
+        </label>
+        <label class="db-fr-fgrupo">
+          <span>Equipe</span>
+          <select class="form-control" onchange="DashFrentes.setFiltro('equipe', this.value)" ${equipes.length ? '' : 'disabled title="Preencha a coluna Nº Equipe no Planejamento"'}>
+            <option value="">Todas</option>
+            ${equipes.map(o => `<option value="${o}" ${String(o) === f.equipe ? 'selected' : ''}>Equipe ${o}</option>`).join('')}
+          </select>
+        </label>
+        <label class="db-fr-fgrupo" style="flex:1;min-width:160px;">
+          <span>Buscar</span>
+          <input type="text" class="form-control" placeholder="🔎 tarefa, grupo, categoria..." value="${DashCore.esc(f.busca)}" oninput="DashFrentes.setBusca(this.value)">
+        </label>
+        ${temFiltro ? '<button class="btn btn-secundario btn-sm" style="align-self:end;" onclick="DashFrentes.limparFiltros()">✕ Limpar</button>' : ''}
       </div>`;
   }
 
   function _htmlMatriz(tarefas) {
-    // COLUNAS: Grupo › Subgrupo (subgrupo vazio = coluna "geral" do grupo)
+    // COLUNAS conforme o seletor "Colunas": por Grupo (resumido — uma coluna
+    // por grupo somando os subgrupos) ou por Subgrupo (detalhado).
+    const detalhado = _visaoCols === 'subgrupo';
     const gruposMap = new Map();
     tarefas.forEach(t => {
-      const g = _v(t.grupo), sg = _v(t.subgrupo);
+      const g = _v(t.grupo), sg = detalhado ? _v(t.subgrupo) : '';
       if (!gruposMap.has(g)) gruposMap.set(g, new Set());
       gruposMap.get(g).add(sg);
     });
     const colunas = [];
     [...gruposMap.keys()].sort(_ordena).forEach(g => {
       const sgs = [...gruposMap.get(g)].sort(_ordena);
-      sgs.forEach(sg => colunas.push({ grupo: g, subgrupo: sg }));
+      sgs.forEach((sg, i) => colunas.push({ grupo: g, subgrupo: sg, fimGrupo: i === sgs.length - 1 }));
     });
 
     // LINHAS: Categoria › Subcategoria, ORDENADAS PELA DATA DE EXECUÇÃO —
@@ -128,7 +140,7 @@ const DashFrentes = (() => {
     const celulas = linhas.map(l => colunas.map(col => {
       const ts = tarefas.filter(t =>
         _v(t.categoria) === l.categoria && _v(t.subcategoria) === l.subcategoria &&
-        _v(t.grupo) === col.grupo && _v(t.subgrupo) === col.subgrupo);
+        _v(t.grupo) === col.grupo && (!detalhado || _v(t.subgrupo) === col.subgrupo));
       if (!ts.length) return null;
       let sp = 0, sc2 = 0;
       ts.forEach(t => { const p = DashCore.peso(t); sp += p; sc2 += Math.min(100, Number(t.percentualConcluido) || 0) * p; });
@@ -154,7 +166,7 @@ const DashFrentes = (() => {
     const temSubgrupo = colunas.some(c => c.subgrupo);
     const headGrupos = `<tr class="db-fr-htorre"><th class="db-fr-sticky"></th>${gruposHeader.map(g => `<th colspan="${g.span}">${DashCore.esc(g.nome)}</th>`).join('')}<th class="db-fr-hgeral" ${temSubgrupo ? 'rowspan="2"' : ''}>Geral</th></tr>`;
     const headSub = temSubgrupo
-      ? `<tr class="db-fr-hcol"><th class="db-fr-sticky">Categoria</th>${colunas.map(c => `<th><div class="db-fr-hcol-main">${DashCore.esc(c.subgrupo || '—')}</div></th>`).join('')}</tr>`
+      ? `<tr class="db-fr-hcol"><th class="db-fr-sticky">Categoria</th>${colunas.map(c => `<th class="${c.fimGrupo ? 'db-fr-fimgrupo' : ''}"><div class="db-fr-hcol-main">${DashCore.esc(c.subgrupo || '—')}</div></th>`).join('')}</tr>`
       : '';
     // Sem subgrupos: rótulo "Categoria" na própria linha de grupos
     const headSemSub = !temSubgrupo ? headGrupos.replace('<th class="db-fr-sticky"></th>', '<th class="db-fr-sticky">Categoria</th>') : headGrupos;
@@ -172,10 +184,11 @@ const DashFrentes = (() => {
       }
       const rotulo = multiSub ? (l.subcategoria || '(sem subcategoria)') : l.categoria;
       const cels = celulas[li].map((cel, ci) => {
-        if (!cel) return '<td class="db-fr-cel-vazia"></td>';
+        const fimCls = _dados.colunas[ci].fimGrupo ? ' db-fr-fimgrupo' : '';
+        if (!cel) return `<td class="db-fr-cel-vazia${fimCls}"></td>`;
         const pct = Math.round(cel.pct);
         const tom = _tom(pct, pct >= 100);
-        return `<td class="db-fr-cel" style="background:${tom.bg};" onclick="DashFrentes.abrirDetalhe(${li},${ci})" title="${DashCore.esc(rotulo)} × ${DashCore.esc(_dados.colunas[ci].grupo)}${_dados.colunas[ci].subgrupo ? ' › ' + DashCore.esc(_dados.colunas[ci].subgrupo) : ''} — ${pct}% (${cel.tarefas.length} tarefa${cel.tarefas.length > 1 ? 's' : ''})">
+        return `<td class="db-fr-cel${fimCls}" style="background:${tom.bg};" onclick="DashFrentes.abrirDetalhe(${li},${ci})" title="${DashCore.esc(rotulo)} × ${DashCore.esc(_dados.colunas[ci].grupo)}${_dados.colunas[ci].subgrupo ? ' › ' + DashCore.esc(_dados.colunas[ci].subgrupo) : ''} — ${pct}% (${cel.tarefas.length} tarefa${cel.tarefas.length > 1 ? 's' : ''})">
           <div class="db-fr-cel-pct" style="color:${tom.fg};">${pct >= 100 ? '✓' : pct + '%'}</div>
           <div class="db-fr-cel-barra"><i style="width:${Math.min(100, pct)}%;background:${tom.barra};"></i></div>
         </td>`;
@@ -209,8 +222,11 @@ const DashFrentes = (() => {
   // ---------- Filtros ----------
   function setFiltro(campo, valor) {
     _filtros[campo] = valor;
-    if (campo === 'grupo') _filtros.subgrupo = '';
-    if (campo === 'categoria') _filtros.subcategoria = '';
+    if (_ctx) render(_ctx);
+  }
+  function setVisao(v) {
+    _visaoCols = v === 'subgrupo' ? 'subgrupo' : 'grupo';
+    localStorage.setItem('db_fr_visao', _visaoCols);
     if (_ctx) render(_ctx);
   }
   let _buscaTimer = null;
@@ -227,7 +243,7 @@ const DashFrentes = (() => {
     }, 350);
   }
   function limparFiltros() {
-    _filtros = { grupo: '', subgrupo: '', categoria: '', subcategoria: '', equipe: '', busca: '' };
+    _filtros = { categoria: '', equipe: '', busca: '' };
     if (_ctx) render(_ctx);
   }
 
@@ -284,6 +300,6 @@ const DashFrentes = (() => {
     document.body.appendChild(overlay);
   }
 
-  return { render, setFiltro, setBusca, limparFiltros, abrirDetalhe };
+  return { render, setFiltro, setVisao, setBusca, limparFiltros, abrirDetalhe };
 })();
 window.DashFrentes = DashFrentes;
