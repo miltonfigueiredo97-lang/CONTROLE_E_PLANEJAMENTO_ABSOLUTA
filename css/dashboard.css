@@ -97,7 +97,9 @@
 .db-fr-hgeral { min-width: 58px; }
 
 .db-fr-sticky { position: sticky; left: 0; z-index: 2; background: #fff; text-align: left !important; }
-thead .db-fr-sticky { z-index: 4; background: var(--cor-dark-900); }
+/* Canto (header + 1ª coluna): acima de TUDO — sem ele, a linha de grupos
+   "atravessava" a primeira coluna ao arrastar a tabela pro lado. */
+thead .db-fr-sticky { z-index: 6; background: var(--cor-dark-900); }
 .db-fr-nome { font-weight: 600; color: var(--cor-texto); padding: 8px 12px; white-space: nowrap; border-bottom: 1px solid var(--cor-borda-light); border-right: 1px solid var(--cor-borda-light); max-width: 240px; overflow: hidden; text-overflow: ellipsis; }
 
 .db-fr-tabela tbody td { border-bottom: 1px solid var(--cor-borda-light); }
@@ -206,7 +208,10 @@ th.db-subtotal-col { font-size: 0.68rem; line-height: 1.15; }
 .db-fr-filtros { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; align-items: center; }
 .db-fr-filtro { max-width: 175px; font-size: 0.74rem; padding: 4px 8px; }
 .db-fr-catrow td { background: var(--cor-primaria-ultra-light); border-bottom: 1px solid var(--cor-borda-light); }
-.db-fr-catnome { font-weight: 800; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.4px; color: var(--cor-primaria-dark); padding: 5px 12px !important; }
+.db-fr-catnome { padding: 5px 0 !important; }
+/* O título fica "grudado" na esquerda visível — o td tem colspan da tabela
+   inteira, então sticky no td não segura; o span é que acompanha a rolagem. */
+.db-fr-catlabel { position: sticky; left: 12px; display: inline-block; font-weight: 800; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.4px; color: var(--cor-primaria-dark); padding-right: 12px; }
 .db-fr-subnome { padding-left: 22px !important; font-weight: 500; }
 .db-fr-det-total { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 10px; padding: 10px 12px; background: var(--cor-primaria-ultra-light); border-radius: 8px; }
 

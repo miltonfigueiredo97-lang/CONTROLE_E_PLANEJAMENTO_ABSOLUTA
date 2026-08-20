@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.13.4',
+  versaoAtual: 'V3.19.13.5',
 
   versoes: [
     {
@@ -9611,6 +9611,16 @@ const NotasVersao = {
       "itens": [
         "Novo seletor ao lado da busca — lista todos os pavimentos que aparecem nessa prévia (na ordem da Estrutura da Obra, com a contagem de cada um) e ao escolher um filtra a lista só pra aquele grupo, sem precisar digitar nada.",
         "Os dois filtros (busca por texto + esse seletor) funcionam juntos — pode combinar."
+      ]
+    },
+    {
+      "versao": "V3.19.13.5",
+      "data": "2026-08-18",
+      "tipo": "correcao",
+      "titulo": "Matriz de Frentes: rolagem lateral sem atravessar coluna nem sumir título",
+      "itens": [
+        "Ao arrastar a tabela pro lado, a linha do cabeçalho não \"atravessa\" mais a primeira coluna: o canto (cabeçalho + coluna de categorias) agora fica acima de tudo na pilha.",
+        "As linhas escuras de agrupamento (título da categoria) não somem mais na rolagem horizontal: o título fica grudado na esquerda visível e acompanha o arrasto — principal incômodo no celular."
       ]
     }
   ],

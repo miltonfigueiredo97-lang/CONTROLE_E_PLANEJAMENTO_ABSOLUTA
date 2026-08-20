@@ -166,7 +166,7 @@ const DashFrentes = (() => {
       const multiSub = catsMap.get(l.categoria).size > 1 || l.subcategoria;
       if (l.categoria !== catAtual && multiSub) {
         catAtual = l.categoria;
-        corpo += `<tr class="db-fr-catrow"><td class="db-fr-sticky db-fr-catnome" colspan="${colunas.length + 2}">${DashCore.esc(l.categoria)}</td></tr>`;
+        corpo += `<tr class="db-fr-catrow"><td class="db-fr-catnome" colspan="${colunas.length + 2}"><span class="db-fr-catlabel">${DashCore.esc(l.categoria)}</span></td></tr>`;
       } else if (l.categoria !== catAtual) {
         catAtual = l.categoria;
       }
