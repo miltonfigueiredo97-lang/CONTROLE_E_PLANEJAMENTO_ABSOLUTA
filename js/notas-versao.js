@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.13.7',
+  versaoAtual: 'V3.19.13.8',
 
   versoes: [
     {
@@ -9645,6 +9645,16 @@ const NotasVersao = {
         "Categoria e Equipe não abriam no toque: os seletores estavam embrulhados numa <label>, e o clique sintético dela abria e fechava o menu na mesma hora no celular. Trocado o embrulho — os três seletores clicam normalmente.",
         "A BUSCA agora ignora acentos nos dois lados: digitar \"gas\" acha \"Gás\", \"eletrica\" acha \"Elétrica\" — vale pra nome da tarefa, grupo, subgrupo, categoria e subcategoria.",
         "Mobile de Atividades e Suprimentos repaginado: a régua de níveis não estoura mais o card (vira um trilho com rolagem própria, sem \"atravessar até o infinito\"), a toolbar empilha (título em cima, níveis e horizonte embaixo ocupando a largura), nomes quebram linha e os cards ficaram mais compactos."
+      ]
+    },
+    {
+      "versao": "V3.19.13.8",
+      "data": "2026-08-18",
+      "tipo": "correcao",
+      "titulo": "Seletores de Categoria/Equipe corrigidos (causa real) e minimapas domados no mobile",
+      "itens": [
+        "CAUSA REAL dos seletores que \"não abriam\": o Dashboard se re-renderiza em TEMPO REAL a cada gravação no Firestore — com a obra ativa, o menu do seletor era destruído no instante em que abria. Agora, enquanto um filtro está em uso (aberto/focado), o re-render automático espera o foco sair; as suas escolhas continuam aplicando na hora.",
+        "Minimapas de Estacas, Contenção e Fundação no celular: não estouram mais a caixa pela direita (largura contida à tela) e passar o dedo por cima do mapa VOLTA a rolar a página — o mapa não captura mais o gesto vertical."
       ]
     }
   ],

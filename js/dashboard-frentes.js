@@ -29,10 +29,34 @@ const DashFrentes = (() => {
   const _ordena = (a, b) => a.localeCompare(b, 'pt-BR', { numeric: true });
 
   // ---------- Render ----------
-  function render(ctx) {
+  let _renderPendente = false;
+  let _focoGuardado = false;
+  function render(ctx, forcado) {
     _ctx = ctx;
     const host = document.getElementById('db-frentes');
     if (!host) return;
+
+    // PROTEÇÃO DE FOCO: o Dashboard re-renderiza em tempo real a cada
+    // gravação no Firestore — se isso acontece com um seletor ABERTO, o
+    // innerHTML destrói o select e o menu fecha na hora (parecia "não
+    // clicável"). Com um filtro em uso, o re-render espera o foco sair.
+    const ae = document.activeElement;
+    if (!forcado && ae && host.contains(ae) && (ae.tagName === 'SELECT' || ae.tagName === 'INPUT')) {
+      _renderPendente = true;
+      if (!_focoGuardado) {
+        _focoGuardado = true;
+        host.addEventListener('focusout', () => {
+          setTimeout(() => {
+            if (_renderPendente && _ctx && !(document.activeElement && host.contains(document.activeElement) && (document.activeElement.tagName === 'SELECT' || document.activeElement.tagName === 'INPUT'))) {
+              _renderPendente = false;
+              render(_ctx, true);
+            }
+          }, 200);
+        });
+      }
+      return;
+    }
+    _renderPendente = false;
 
     // Só tarefas-FOLHA com categoria E grupo entram na matriz.
     const todas = DashCore.folhas(ctx.tarefas).filter(t => _v(t.categoria) && _v(t.grupo));
@@ -223,12 +247,12 @@ const DashFrentes = (() => {
   // ---------- Filtros ----------
   function setFiltro(campo, valor) {
     _filtros[campo] = valor;
-    if (_ctx) render(_ctx);
+    if (_ctx) render(_ctx, true);
   }
   function setVisao(v) {
     _visaoCols = v === 'subgrupo' ? 'subgrupo' : 'grupo';
     localStorage.setItem('db_fr_visao', _visaoCols);
-    if (_ctx) render(_ctx);
+    if (_ctx) render(_ctx, true);
   }
   let _buscaTimer = null;
   function setBusca(texto) {
@@ -236,7 +260,7 @@ const DashFrentes = (() => {
     _buscaTimer = setTimeout(() => {
       _filtros.busca = texto;
       if (_ctx) {
-        render(_ctx);
+        render(_ctx, true);
         // devolve o foco pro campo de busca depois do re-render
         const inp = document.querySelector('#db-frentes input[type=text]');
         if (inp) { inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); }
@@ -245,7 +269,7 @@ const DashFrentes = (() => {
   }
   function limparFiltros() {
     _filtros = { categoria: '', equipe: '', busca: '' };
-    if (_ctx) render(_ctx);
+    if (_ctx) render(_ctx, true);
   }
 
   // ---------- Detalhe da célula ----------

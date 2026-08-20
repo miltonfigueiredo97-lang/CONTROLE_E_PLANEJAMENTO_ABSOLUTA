@@ -266,3 +266,15 @@ th.db-subtotal-col { font-size: 0.68rem; line-height: 1.15; }
   .db-metrica-card { padding: 8px 10px; }
   .db-metrica-valor { font-size: 1rem; }
 }
+
+/* ============================================
+   MOBILE — Minimapas (Estacas / Contenção / Fundação)
+   Cards com largura fixa estouravam a caixa e o SVG capturava o gesto
+   vertical (travava a rolagem da página ao passar o dedo no mapa).
+   ============================================ */
+.db-minimapa svg, .db-minimapa img, .db-minimapa > div { max-width: 100% !important; height: auto !important; }
+.db-minimapa, .db-minimapa * { touch-action: pan-y !important; } /* dedo no mapa continua rolando a página */
+@media (max-width: 700px) {
+  .db-minimapas { gap: 10px; }
+  .db-minimapa { width: 100% !important; max-width: 100%; box-sizing: border-box; overflow: hidden; }
+}
