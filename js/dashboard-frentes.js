@@ -90,37 +90,79 @@ const DashFrentes = (() => {
     if (btn) btn.style.display = (_filtros.categoria || _filtros.equipe || _filtros.busca) ? '' : 'none';
   }
 
+  let _opcoesFiltros = { categorias: [], equipes: [], temSubgrupos: false };
   function _htmlFiltros(categorias, equipes, temSubgrupos) {
+    _opcoesFiltros = { categorias, equipes, temSubgrupos };
     const f = _filtros;
+    const btn = (campo, rotulo, valorLabel, desabilitado, hint) => `
+      <div class="db-fr-fgrupo">
+        <span>${rotulo}</span>
+        <button type="button" class="db-fr-fbtn" id="db-fr-fbtn-${campo}" ${desabilitado ? `disabled title="${hint}"` : ''} onclick="DashFrentes.abrirMenu('${campo}')">
+          <b>${DashCore.esc(valorLabel)}</b><span class="db-fr-fbtn-seta">▾</span>
+        </button>
+      </div>`;
     return `
       <div class="db-fr-filtros">
-        <div class="db-fr-fgrupo">
-          <span>Colunas</span>
-          <select class="form-control" onchange="DashFrentes.setVisao(this.value)" ${temSubgrupos ? '' : 'disabled title="Não há subgrupos no Planejamento"'}>
-            <option value="grupo" ${_visaoCols === 'grupo' ? 'selected' : ''}>Grupos (resumido)</option>
-            <option value="subgrupo" ${_visaoCols === 'subgrupo' ? 'selected' : ''}>Subgrupos (detalhado)</option>
-          </select>
-        </div>
-        <div class="db-fr-fgrupo">
-          <span>Categoria</span>
-          <select class="form-control" onchange="DashFrentes.setFiltro('categoria', this.value)">
-            <option value="">Todas</option>
-            ${categorias.map(o => `<option value="${DashCore.esc(o)}" ${o === f.categoria ? 'selected' : ''}>${DashCore.esc(o)}</option>`).join('')}
-          </select>
-        </div>
-        <div class="db-fr-fgrupo">
-          <span>Equipe</span>
-          <select class="form-control" onchange="DashFrentes.setFiltro('equipe', this.value)" ${equipes.length ? '' : 'disabled title="Preencha a coluna Nº Equipe no Planejamento"'}>
-            <option value="">Todas</option>
-            ${equipes.map(o => `<option value="${o}" ${String(o) === f.equipe ? 'selected' : ''}>Equipe ${o}</option>`).join('')}
-          </select>
-        </div>
+        ${btn('visao', 'Colunas', _visaoCols === 'subgrupo' ? 'Subgrupos (detalhado)' : 'Grupos (resumido)', !temSubgrupos, 'Não há subgrupos no Planejamento')}
+        ${btn('categoria', 'Categoria', f.categoria || 'Todas')}
+        ${btn('equipe', 'Equipe', f.equipe ? 'Equipe ' + f.equipe : 'Todas', !equipes.length, 'Preencha a coluna Nº Equipe no Planejamento')}
         <div class="db-fr-fgrupo" style="flex:1;min-width:160px;">
           <span>Buscar</span>
           <input type="text" class="form-control" placeholder="🔎 tarefa, grupo, categoria..." value="${DashCore.esc(f.busca)}" oninput="DashFrentes.setBusca(this.value)">
         </div>
         <button id="db-fr-limpar" class="btn btn-secundario btn-sm" style="align-self:end;display:none;" onclick="DashFrentes.limparFiltros()">✕ Limpar</button>
       </div>`;
+  }
+
+  // Painel de opções (overlay) — mesmo mecanismo do detalhe de célula, que
+  // funciona em qualquer aparelho. Nada de <select> nativo.
+  function abrirMenu(campo) {
+    const o = _opcoesFiltros;
+    let titulo = '', opcoes = [];
+    if (campo === 'visao') {
+      titulo = 'Colunas da tabela';
+      opcoes = [
+        { v: 'grupo', label: 'Grupos (resumido)', sel: _visaoCols === 'grupo' },
+        { v: 'subgrupo', label: 'Subgrupos (detalhado)', sel: _visaoCols === 'subgrupo' },
+      ];
+    } else if (campo === 'categoria') {
+      titulo = 'Filtrar por Categoria';
+      opcoes = [{ v: '', label: 'Todas as categorias', sel: !_filtros.categoria }]
+        .concat(o.categorias.map(cat => ({ v: cat, label: cat, sel: _filtros.categoria === cat })));
+    } else if (campo === 'equipe') {
+      titulo = 'Filtrar por Equipe';
+      opcoes = [{ v: '', label: 'Todas as equipes', sel: !_filtros.equipe }]
+        .concat(o.equipes.map(eq => ({ v: String(eq), label: 'Equipe ' + eq, sel: _filtros.equipe === String(eq) })));
+    }
+    let overlay = document.getElementById('db-fr-menu-overlay');
+    if (overlay) overlay.remove();
+    overlay = document.createElement('div');
+    overlay.id = 'db-fr-menu-overlay';
+    overlay.className = 'db-overlay';
+    overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+    overlay.innerHTML = `
+      <div class="db-overlay-card" style="max-width:380px;padding:14px 14px 10px;">
+        <div class="db-overlay-titulo" style="margin-bottom:10px;">${titulo}</div>
+        <div class="db-fr-menu-lista">
+          ${opcoes.map(op => `
+            <div class="db-fr-menu-item ${op.sel ? 'sel' : ''}" onclick="DashFrentes.escolherOpcao('${campo}', '${String(op.v).replace(/'/g, "\\'")}')">
+              ${DashCore.esc(op.label)} ${op.sel ? '<span style="margin-left:auto;">✓</span>' : ''}
+            </div>`).join('')}
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+  }
+  function escolherOpcao(campo, valor) {
+    const overlay = document.getElementById('db-fr-menu-overlay');
+    if (overlay) overlay.remove();
+    if (campo === 'visao') {
+      _visaoCols = valor === 'subgrupo' ? 'subgrupo' : 'grupo';
+      localStorage.setItem('db_fr_visao', _visaoCols);
+    } else {
+      _filtros[campo] = valor;
+    }
+    _assinaturaFiltros = ''; // rótulos dos botões precisam refletir a escolha
+    if (_ctx) render(_ctx);
   }
 
   function _htmlMatriz(tarefas) {
@@ -325,6 +367,6 @@ const DashFrentes = (() => {
     document.body.appendChild(overlay);
   }
 
-  return { render, setFiltro, setVisao, setBusca, limparFiltros, abrirDetalhe };
+  return { render, setFiltro, setVisao, setBusca, limparFiltros, abrirDetalhe, abrirMenu, escolherOpcao };
 })();
 window.DashFrentes = DashFrentes;

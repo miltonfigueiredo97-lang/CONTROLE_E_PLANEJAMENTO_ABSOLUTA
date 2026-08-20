@@ -278,3 +278,14 @@ th.db-subtotal-col { font-size: 0.68rem; line-height: 1.15; }
   .db-minimapas { gap: 10px; }
   .db-minimapa { width: 100% !important; max-width: 100%; box-sizing: border-box; overflow: hidden; }
 }
+
+/* ---- Filtros por botão (sem select nativo) + painel de opções ---- */
+.db-fr-fbtn { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; min-width: 150px; background: #fff; border: 1px solid var(--cor-borda); border-radius: var(--borda-radius); padding: 6px 10px; font-size: 0.76rem; cursor: pointer; font-family: var(--font-principal); color: var(--cor-texto); text-align: left; }
+.db-fr-fbtn:active { background: var(--cor-fundo); }
+.db-fr-fbtn:disabled { opacity: 0.5; cursor: not-allowed; }
+.db-fr-fbtn b { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.db-fr-fbtn-seta { color: var(--cor-texto-muted); font-size: 0.65rem; flex-shrink: 0; }
+.db-fr-menu-lista { display: flex; flex-direction: column; max-height: 60vh; overflow-y: auto; }
+.db-fr-menu-item { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 8px; font-size: 0.85rem; cursor: pointer; }
+.db-fr-menu-item:active, .db-fr-menu-item:hover { background: var(--cor-fundo); }
+.db-fr-menu-item.sel { background: var(--cor-primaria-ultra-light); font-weight: 700; color: var(--cor-primaria-dark); }
