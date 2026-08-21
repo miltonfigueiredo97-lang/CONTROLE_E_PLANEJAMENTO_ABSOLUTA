@@ -4031,6 +4031,27 @@ const Planejamento = (() => {
     if(m)return{tipo:'pavimento',num:parseInt(m[2])};
     return null;
   }
+  // Números de Subgrupo REGISTRADOS de verdade — vêm dos apartamentos que o
+  // Milton já cadastrou em cada pavimento na Estrutura da Obra (ex: pavimento
+  // "1º Pavimento" com apartamentos "AP11"/"AP12" → 11 e 12 são válidos ali).
+  // A fórmula (andar×10+Final) só CALCULA um número; isso aqui é o que
+  // confirma se aquele número é real ou se o cálculo bateu em algo que não
+  // existe (erro de digitação no nome da tarefa, etc.). Validação é POR
+  // PAVIMENTO — se um andar ainda não tem NENHUM apartamento cadastrado,
+  // não dá pra confirmar nem desmentir nada ali, então não reclama à toa.
+  let _gerarGruposSubgruposValidos=null; // Map: nome do pavimento -> Set de números válidos
+  function _construirSubgruposValidos(estrutura){
+    const mapa=new Map();
+    (estrutura.torres||[]).forEach(t=>(t.pavimentos||[]).forEach(p=>{
+      const nums=new Set();
+      (p.apartamentos||[]).forEach(a=>{
+        const m=String(a.nome||'').match(/(\d+)\s*$/);
+        if(m)nums.add(parseInt(m[1]));
+      });
+      if(nums.size)mapa.set(p.nome,nums);
+    }));
+    return mapa;
+  }
   function _finalizarMatchGrupo(grupoNome,nomeTarefa){
     const mPav=grupoNome.match(/^(\d+)[°º]\s*Pavimento$/i);
     // "Final NN" e "ap. NN"/"apto NN"/"apartamento NN" são a MESMA coisa pra
@@ -4040,7 +4061,9 @@ const Planejamento = (() => {
     // igual "Rede Frigorígena: 5° Pavimento - Final 01".
     const mFinal=String(nomeTarefa).match(/(?:Final|ap\.?|apto\.?|apartamento)\s*0*(\d+)\s*$/i);
     const subgrupo=(mPav&&mFinal)?(parseInt(mPav[1])*10+parseInt(mFinal[1])):null;
-    return{grupo:grupoNome,subgrupo};
+    const validosDoPavimento=_gerarGruposSubgruposValidos?.get(grupoNome);
+    const subgrupoValido=(subgrupo==null||!validosDoPavimento)?null:validosDoPavimento.has(subgrupo);
+    return{grupo:grupoNome,subgrupo,subgrupoValido};
   }
   // Expande abreviações que só fazem sentido dentro de nome de tarefa (não
   // são "número+tipo" como Pavimento/Subsolo, são casos isolados de sigla):
@@ -4115,6 +4138,9 @@ const Planejamento = (() => {
     }
     const sorted=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
     const folhas=sorted.filter(t=>!_arvFilhos(t,sorted).length);
+    // Monta a lista de Subgrupos REGISTRADOS (apartamentos cadastrados em
+    // cada pavimento) ANTES de detectar — assim o cálculo já nasce validado.
+    _gerarGruposSubgruposValidos=_construirSubgruposValidos(est);
     // TODA tarefa entra na lista, mesmo sem match — quem não bate em nenhum
     // pavimento (logística/equipamento sem andar: Mini Grua, Cremalheira,
     // Elevadores...) aparece marcada como "Sem Vínculo" em vez de simplesmente
@@ -4152,6 +4178,7 @@ const Planejamento = (() => {
       tarefaId:p.tarefa.id,nome:p.tarefa.nome,
       grupoAntigo:p.tarefa.grupo||'',subgrupoAntigo:p.tarefa.subgrupo||null,
       grupoProposto:p.match.grupo,subgrupoProposto:p.match.subgrupo||null,
+      subgrupoValido:p.match.subgrupoValido??null,
       marcado:true,ordemTarefa:i
     }));
     _gerarGruposOrdemModo='tarefa';
@@ -4247,7 +4274,7 @@ const Planejamento = (() => {
           style="width:150px;background:#111;border:1px solid #333;border-radius:4px;color:var(--cor-primaria);font-weight:600;font-size:.76rem;padding:3px 4px;">
           ${lista.map(nomePav=>`<option value="${_esc(nomePav)}" ${nomePav===p.grupoProposto?'selected':''}>${_esc(nomePav)}</option>`).join('')}
         </select>
-        <span style="color:${p.subgrupoProposto?'var(--cor-primaria)':'#444'};font-size:.72rem;min-width:22px;text-align:center;font-family:var(--font-mono);" title="Subgrupo">${p.subgrupoProposto||'—'}</span>
+        <span style="color:${p.subgrupoProposto?(p.subgrupoValido===false?'#f87171':'var(--cor-primaria)'):'#444'};font-size:.72rem;min-width:22px;text-align:center;font-family:var(--font-mono);" title="${p.subgrupoValido===false?'⚠ Esse número não bate com nenhum apartamento cadastrado nessa torre na Estrutura da Obra — confira':p.subgrupoValido===true?'Confirmado: existe um apartamento com esse número cadastrado':'Subgrupo'}">${p.subgrupoProposto?(p.subgrupoValido===false?'⚠'+p.subgrupoProposto:p.subgrupoProposto):'—'}</span>
       </div>`;
     }
     el.innerHTML=html;
@@ -4284,6 +4311,8 @@ const Planejamento = (() => {
       const mPav=novoValor.match(/^(\d+)[°º]\s*Pavimento$/i);
       const mFinal=String(p.nome).match(/(?:Final|ap\.?|apto\.?|apartamento)\s*0*(\d+)\s*$/i);
       p.subgrupoProposto=(mPav&&mFinal)?(parseInt(mPav[1])*10+parseInt(mFinal[1])):null;
+      const validosDoPavimento=_gerarGruposSubgruposValidos?.get(novoValor);
+      p.subgrupoValido=(p.subgrupoProposto==null||!validosDoPavimento)?null:validosDoPavimento.has(p.subgrupoProposto);
     }
     _renderGerarGruposLista();
     if(alvos.length>1)Utils.toast(`Aplicado a ${alvos.length} linha(s) que tinham "${antigoRef||'(vazio)'}" → "${propostaRef}".`,'sucesso');

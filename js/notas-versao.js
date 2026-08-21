@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.13.18',
+  versaoAtual: 'V3.19.13.19',
 
   versoes: [
     {
@@ -9762,6 +9762,17 @@ const NotasVersao = {
       "itens": [
         "Dentro da tabela do Andamento por Frente, agora dá pra SEGURAR E ARRASTAR com o mouse pra navegar em qualquer direção (cursor vira mãozinha) — como num mapa.",
         "O clique nas células continua normal: movimento menor que 6px conta como clique e abre o detalhe; arrastou de verdade, as células não disparam."
+      ]
+    },
+    {
+      "versao": "V3.19.13.19",
+      "data": "2026-08-19",
+      "tipo": "melhoria",
+      "titulo": "Subgrupo agora é VALIDADO contra os apartamentos cadastrados na Estrutura da Obra (não é mais só a fórmula cega)",
+      "itens": [
+        "Pergunta do Milton: \"como vou saber se o subgrupo calculado está certo?\" — resposta: agora cruza com os apartamentos que ele já cadastrou em cada pavimento (ex: \"1º Pavimento\" com AP11/AP12 → só 11 e 12 são válidos ali).",
+        "Número em vermelho com ⚠ = a fórmula calculou um valor que NÃO existe como apartamento cadastrado naquele pavimento — sinal de que algo pode estar errado (piso errado, digitação no nome da tarefa). Número na cor normal = bateu certinho com um apartamento cadastrado.",
+        "Pavimento que ainda não tem NENHUM apartamento cadastrado não gera aviso nenhum (não dá pra confirmar nem desmentir sem cadastro — fica neutro, não assusta à toa)."
       ]
     }
   ],
