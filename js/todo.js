@@ -38,6 +38,7 @@ const Todo = (() => {
   let agendaTarefasJaAlocadas = new Set(); // ids de tarefas já alocadas (inteiras) no dia exibido — recalculado a cada render
   let agendaItensJaAlocados = new Set(); // chaves "tarefaId::itemId" de itens de checklist já alocados no dia exibido
   let agendaClipboard = null; // { tarefaId, itemId, label } — alocação copiada, pronta pra colar em outro horário
+  let agendaMostrandoAtrasadas = false; // true = seletor está mostrando a lista de "puxar não concluídas de horário anterior"
   let agendaEsconderPassadas = localStorage.getItem('agenda_esconder_passadas') === '1'; // esconder horários já passados (só quando o dia exibido é hoje)
 
   const PALETA_PROJETO = ['#2563eb', '#16a34a', '#7c3aed', '#d97706', '#0891b2', '#dc2626', '#db2777'];
@@ -575,6 +576,12 @@ const Todo = (() => {
         border-radius:8px; padding:8px 12px; font-size:12.5px; font-weight:700; color:var(--cor-dark-900); cursor:pointer; margin-bottom:8px;
       }
       .agenda-picker-colar-btn:hover { background:var(--cor-primaria); }
+      .agenda-picker-atrasadas-btn {
+        width:100%; text-align:left; border:1.5px solid #fca5a5; background:#fef2f2;
+        border-radius:8px; padding:8px 12px; font-size:12.5px; font-weight:700; color:#991b1b; cursor:pointer; margin-bottom:8px;
+      }
+      .agenda-picker-atrasadas-btn:hover { background:#fee2e2; }
+      .agenda-picker-atrasadas-titulo { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.3px; color:#991b1b; margin-bottom:8px; }
 
       .agenda-picker { background:var(--cor-fundo); border:1.5px solid var(--cor-borda-light); border-radius:10px; padding:10px; box-sizing:border-box; }
       .agenda-picker-busca {
@@ -1160,6 +1167,7 @@ const Todo = (() => {
     agendaPickerCategoria = null;
     agendaCriandoNova = false;
     agendaMostrarJaEscolhidas = false;
+    agendaMostrandoAtrasadas = false;
     abrirOverlay('<div id="agenda-conteudo"></div>', 'todo-modal-agenda');
     _renderizarAgenda();
   }
@@ -1232,6 +1240,37 @@ const Todo = (() => {
       partes.push(`<span>${esc(nomeCat)}</span>`);
     }
     return `<div class="agenda-picker-breadcrumb">${partes.join(' <span class="sep">›</span> ')}</div>`;
+  }
+
+  // Alocações do MESMO dia, em horário anterior ao informado, cuja
+  // tarefa/item ainda não foi concluído — candidatas a "puxar pra agora".
+  function _alocacoesAtrasadas(dataStr, horarioLimite) {
+    return agendaAlocacoes
+      .filter(a => a.data === dataStr && a.horario < horarioLimite)
+      .filter(a => {
+        const t = tarefas.find(x => x.id === a.tarefaId);
+        if (!t) return false;
+        if (a.itemId) {
+          const item = (Array.isArray(t.checklist) ? t.checklist : []).find(i => i.id === a.itemId);
+          return !!item && !item.concluido;
+        }
+        return !t.concluida;
+      });
+  }
+
+  function _htmlListaAtrasadas(alocs) {
+    if (alocs.length === 0) return `<div class="agenda-picker-vazio">Nada pendente em horário anterior.</div>`;
+    return alocs.map(a => {
+      const t = tarefas.find(x => x.id === a.tarefaId);
+      if (!t) return '';
+      const item = a.itemId ? (Array.isArray(t.checklist) ? t.checklist.find(i => i.id === a.itemId) : null) : null;
+      const label = item ? item.texto : t.texto;
+      return `
+      <div class="agenda-picker-item" data-agenda-puxar-alocacao="${a.id}">
+        <span class="agenda-picker-item-proj">${esc(a.horario)}</span>
+        <span class="agenda-picker-item-texto">${item ? '↳ ' : ''}${esc(label)}</span>
+      </div>`;
+    }).join('');
   }
 
   function _htmlListaTarefas(lista) {
@@ -1366,6 +1405,7 @@ const Todo = (() => {
         ${slots.map(s => {
           const alocsSlot = agendaAlocacoes.filter(a => a.data === dataStr && a.horario === s.inicio);
           const pickerAberto = agendaSlotAberto === s.inicio;
+          const atrasadasSlot = pickerAberto ? _alocacoesAtrasadas(dataStr, s.inicio) : [];
           return `
             <div class="agenda-linha">
               <div class="agenda-hora">${s.inicio} a ${s.fim}</div>
@@ -1400,9 +1440,16 @@ const Todo = (() => {
                           <button type="button" class="agenda-picker-criar-btn" id="agenda-nova-criar">Criar e agendar aqui</button>
                         </div>
                       </div>
+                    ` : agendaMostrandoAtrasadas ? `
+                      <div class="agenda-picker-atrasadas-titulo">Não concluídas em horários anteriores de hoje:</div>
+                      <div class="agenda-picker-lista">${_htmlListaAtrasadas(atrasadasSlot)}</div>
+                      <button type="button" class="agenda-picker-cancelar" id="agenda-fechar-atrasadas">‹ Voltar pra busca</button>
                     ` : `
                       ${agendaClipboard ? `
                         <button type="button" class="agenda-picker-colar-btn" id="agenda-colar-aqui">📌 Colar aqui: ${esc(agendaClipboard.label)}</button>
+                      ` : ''}
+                      ${atrasadasSlot.length > 0 ? `
+                        <button type="button" class="agenda-picker-atrasadas-btn" id="agenda-abrir-atrasadas">⏪ Puxar ${atrasadasSlot.length} não concluída${atrasadasSlot.length === 1 ? '' : 's'} de horário anterior</button>
                       ` : ''}
                       <input type="text" class="agenda-picker-busca" id="agenda-picker-busca" placeholder="🔍 Buscar tarefa por nome, sistema ou categoria..." value="${esc(agendaFiltroPicker)}">
                       <button type="button" class="agenda-picker-toggle-escolhidas" id="agenda-toggle-ja-escolhidas">
@@ -1420,10 +1467,10 @@ const Todo = (() => {
         }).join('')}
       </div>`;
 
-    document.getElementById('agenda-dia-anterior').onclick = () => { agendaDataAtual = _diaOffset(dataStr, -1); agendaSlotAberto = null; agendaCriandoNova = false; agendaMostrarJaEscolhidas = false; _renderizarAgenda(); };
-    document.getElementById('agenda-dia-seguinte').onclick = () => { agendaDataAtual = _diaOffset(dataStr, 1); agendaSlotAberto = null; agendaCriandoNova = false; agendaMostrarJaEscolhidas = false; _renderizarAgenda(); };
+    document.getElementById('agenda-dia-anterior').onclick = () => { agendaDataAtual = _diaOffset(dataStr, -1); agendaSlotAberto = null; agendaCriandoNova = false; agendaMostrarJaEscolhidas = false; agendaMostrandoAtrasadas = false; _renderizarAgenda(); };
+    document.getElementById('agenda-dia-seguinte').onclick = () => { agendaDataAtual = _diaOffset(dataStr, 1); agendaSlotAberto = null; agendaCriandoNova = false; agendaMostrarJaEscolhidas = false; agendaMostrandoAtrasadas = false; _renderizarAgenda(); };
     const btnHoje = document.getElementById('agenda-ir-hoje');
-    if (btnHoje) btnHoje.onclick = () => { agendaDataAtual = _hojeStr(); agendaSlotAberto = null; agendaCriandoNova = false; agendaMostrarJaEscolhidas = false; _renderizarAgenda(); };
+    if (btnHoje) btnHoje.onclick = () => { agendaDataAtual = _hojeStr(); agendaSlotAberto = null; agendaCriandoNova = false; agendaMostrarJaEscolhidas = false; agendaMostrandoAtrasadas = false; _renderizarAgenda(); };
     const btnTogglePassadas = document.getElementById('agenda-toggle-passadas');
     if (btnTogglePassadas) btnTogglePassadas.onclick = () => {
       agendaEsconderPassadas = !agendaEsconderPassadas;
@@ -1440,16 +1487,24 @@ const Todo = (() => {
         agendaPickerCategoria = null;
         agendaCriandoNova = false;
         agendaMostrarJaEscolhidas = false;
+        agendaMostrandoAtrasadas = false;
         _renderizarAgenda();
       };
     });
     const btnFecharPicker = el.querySelector('[data-agenda-fechar-picker]');
-    if (btnFecharPicker) btnFecharPicker.onclick = () => { agendaSlotAberto = null; agendaCriandoNova = false; agendaMostrarJaEscolhidas = false; _renderizarAgenda(); };
+    if (btnFecharPicker) btnFecharPicker.onclick = () => { agendaSlotAberto = null; agendaCriandoNova = false; agendaMostrarJaEscolhidas = false; agendaMostrandoAtrasadas = false; _renderizarAgenda(); };
     const btnToggleJaEscolhidas = document.getElementById('agenda-toggle-ja-escolhidas');
     if (btnToggleJaEscolhidas) btnToggleJaEscolhidas.onclick = () => {
       agendaMostrarJaEscolhidas = !agendaMostrarJaEscolhidas;
       _renderizarAgenda();
     };
+    const btnAbrirAtrasadas = document.getElementById('agenda-abrir-atrasadas');
+    if (btnAbrirAtrasadas) btnAbrirAtrasadas.onclick = () => { agendaMostrandoAtrasadas = true; _renderizarAgenda(); };
+    const btnFecharAtrasadas = document.getElementById('agenda-fechar-atrasadas');
+    if (btnFecharAtrasadas) btnFecharAtrasadas.onclick = () => { agendaMostrandoAtrasadas = false; _renderizarAgenda(); };
+    el.querySelectorAll('[data-agenda-puxar-alocacao]').forEach(item => {
+      item.onclick = async () => { await _puxarAlocacaoAtrasada(item.dataset.agendaPuxarAlocacao, dataStr, agendaSlotAberto); };
+    });
     const btnAbrirCriarNova = document.getElementById('agenda-abrir-criar-nova');
     if (btnAbrirCriarNova) btnAbrirCriarNova.onclick = () => { agendaCriandoNova = true; _renderizarAgenda(); };
     const btnCancelarNova = document.getElementById('agenda-nova-cancelar');
@@ -1527,6 +1582,18 @@ const Todo = (() => {
     const id = await Database.criarRaiz(COL_AGENDA, dados);
     agendaAlocacoes.push({ id, ...dados });
     if (!semRenderizar) _renderizarAgenda();
+  }
+
+  // Move (não copia) uma alocação de um horário anterior — já passado e
+  // não concluída — pro horário atual. Some do horário velho, some pro novo.
+  async function _puxarAlocacaoAtrasada(alocacaoId, dataStr, novoSlot) {
+    const aloc = agendaAlocacoes.find(a => a.id === alocacaoId);
+    if (!aloc) return;
+    await Database.deletarRaiz(COL_AGENDA, alocacaoId);
+    agendaAlocacoes = agendaAlocacoes.filter(a => a.id !== alocacaoId);
+    agendaMostrandoAtrasadas = false;
+    await _atribuirTarefaSlot(aloc.tarefaId, dataStr, novoSlot, aloc.itemId || null);
+    Utils.toast('Tarefa movida pro horário atual.', 'sucesso');
   }
 
   // "Puxa" pro dia exibido as alocações do dia anterior cuja tarefa/item

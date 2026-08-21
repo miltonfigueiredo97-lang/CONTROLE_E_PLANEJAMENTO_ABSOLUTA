@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.13.26',
+  versaoAtual: 'V3.19.13.27',
 
   versoes: [
     {
@@ -9849,6 +9849,16 @@ const NotasVersao = {
         "Bug real: a linha inteira é arrastável (pra reordenar tarefas), e o campo de edição do nome (aberto com clique duplo) ficava DENTRO dela — arrastar o mouse pra selecionar texto era interpretado como arrastar a linha inteira pra reordenar.",
         "Corrigido: o campo de edição agora tem draggable=\"false\" e cancela a propagação do clique — arrastar dentro dele volta a ser seleção de texto normal, arrastar fora dele continua reordenando a tarefa.",
         "Mesmo ajuste aplicado de brinde na Estrutura da Obra (Torre/Pavimento/Apartamento), que tinha exatamente o mesmo problema depois do drag-and-drop adicionado ali."
+      ]
+    },
+    {
+      "versao": "V3.19.13.27",
+      "data": "2026-08-19",
+      "tipo": "funcionalidade",
+      "titulo": "Agenda: puxar tarefa não concluída de horário anterior do mesmo dia pro horário atual",
+      "itens": [
+        "Motivo (Milton): usando o filtro de esconder horários passados, se sobrou uma tarefa não executada num horário anterior, faltava um jeito rápido de trazer ela pro horário de agora sem procurar tudo de novo na busca normal.",
+        "Quando o horário aberto tem alguma tarefa (ou item de checklist) não concluída em horário anterior do mesmo dia, aparece um botão \"⏪ Puxar N não concluída(s) de horário anterior\" dentro do seletor. Clicando, mostra só essas pendências (com o horário original de cada uma) — escolher uma MOVE ela pro horário atual (sai de onde estava, não duplica)."
       ]
     }
   ],
