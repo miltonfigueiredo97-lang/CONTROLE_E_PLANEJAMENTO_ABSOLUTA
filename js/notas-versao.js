@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.13.15',
+  versaoAtual: 'V3.19.13.16',
 
   versoes: [
     {
@@ -9731,6 +9731,17 @@ const NotasVersao = {
       "itens": [
         "Situação real (Milton pegou): 3 tarefas com \"Cobertura (Tampa)\" propunham todas \"ÁTICO\" — mas na real só a Platibanda é Ático, as outras duas (Instalações Elétricas/SPDA e Impermeabilização Laje) são Reservatório. Corrigir uma arrastava as outras duas por engano, porque o \"antes→depois\" era idêntico nas 3.",
         "Agora, ao trocar um valor que afeta mais de 1 linha, pergunta: OK = muda todas; Cancelar = muda só essa linha, isolando ela sem tocar nas outras. Continua sem perguntar quando só tem 1 linha afetada (não muda o fluxo de quando já funcionava certo)."
+      ]
+    },
+    {
+      "versao": "V3.19.13.16",
+      "data": "2026-08-19",
+      "tipo": "correcao",
+      "titulo": "Gerar Grupos: \"Aplicar Selecionados\" travava sem feedback quando o Firestore não conseguia sincronizar",
+      "itens": [
+        "Causa (Milton pegou pelo console): \"Failed to obtain primary lease\" — erro do Firestore quando tem mais de uma aba/janela do sistema aberta ao mesmo tempo brigando por qual é a \"principal\". A escrita ficava pendurada pra sempre, sem erro nem sucesso, e a tela só girava.",
+        "Corrigido: cada escrita agora tem um limite de 8s — se travar, conta como falha e SEGUE pras próximas em vez de parar tudo. Barra de progresso mostra quantas já foram (\"124/2198...\"). No fim, mensagem específica: quantas salvaram, quantas falharam, e se travou tudo por causa de aba duplicada, avisa isso na cara.",
+        "Ação se acontecer de novo: fechar as outras abas/janelas do sistema, deixar só uma aberta, e rodar Gerar Grupos de novo — ele já vai pegar só quem ainda não foi salvo (não duplica o que já deu certo)."
       ]
     }
   ],

@@ -4290,29 +4290,55 @@ const Planejamento = (() => {
     else if(iguais.length>1)Utils.toast(`Alterado só "${alvo.nome}" — as outras ${iguais.length-1} continuam como estavam.`,'sucesso');
   }
 
+  // Timeout de segurança por escrita — se o Firestore ficar preso (ex: duas
+  // abas do sistema abertas ao mesmo tempo brigando pela "primary lease",
+  // erro que já aconteceu: escrita nunca resolve nem rejeita, trava pra
+  // sempre em silêncio) isso força adiante em vez de ficar girando infinito
+  // sem o usuário saber se travou ou se só está demorando.
+  function _comTimeout(promessa,ms){
+    return Promise.race([
+      promessa,
+      new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),ms))
+    ]);
+  }
+
   async function _aplicarGerarGrupos(){
     const pop=document.getElementById('gerargrupos-modal');if(!pop||!_gerarGruposLista)return;
     const selecionadas=_gerarGruposLista.filter(p=>p.marcado);
     if(!selecionadas.length){pop.remove();return;}
-    Utils.mostrarLoading(`Gerando grupos em ${selecionadas.length} tarefa(s)...`);
-    try{
-      const L=30;
-      for(let i=0;i<selecionadas.length;i+=L){
-        await Promise.all(selecionadas.slice(i,i+L).map(async p=>{
+    pop.remove(); // fecha o modal já — a barra de progresso mostra o andamento
+    let ok=0,falhas=0;
+    Utils.mostrarLoading(`Gerando grupos: 0/${selecionadas.length}...`);
+    const L=30;
+    for(let i=0;i<selecionadas.length;i+=L){
+      const lote=selecionadas.slice(i,i+L);
+      await Promise.all(lote.map(async p=>{
+        try{
           const upd={grupo:p.grupoProposto};
           if(p.subgrupoProposto)upd.subgrupo=p.subgrupoProposto;
-          await Database.atualizar(obraId,COL,p.tarefaId,upd).catch(e=>console.error('Erro gerar grupo:',p.tarefaId,e));
+          await _comTimeout(Database.atualizar(obraId,COL,p.tarefaId,upd),8000);
           const t=tarefas.find(x=>x.id===p.tarefaId);
           if(t){t.grupo=upd.grupo;if(upd.subgrupo)t.subgrupo=upd.subgrupo;}
-        }));
-      }
-      pop.remove();
-      _gerarGruposLista=null;
-      Utils.toast(`${selecionadas.length} tarefa(s) com Grupo/Subgrupo atualizado(s).`,'sucesso');
-      _buildFiltradas();_render();
-    }catch(e){console.error(e);Utils.toast('Erro ao gerar grupos.','erro');}
-    finally{Utils.esconderLoading();}
+          ok++;
+        }catch(e){
+          falhas++;
+          console.error('Erro/timeout gerando grupo:',p.tarefaId,p.nome,e);
+        }
+      }));
+      Utils.mostrarLoading(`Gerando grupos: ${ok+falhas}/${selecionadas.length}${falhas?` (${falhas} falharam)`:''}...`);
+    }
+    Utils.esconderLoading();
+    _gerarGruposLista=null;
+    _buildFiltradas();_render();
+    if(falhas===0){
+      Utils.toast(`${ok} tarefa(s) com Grupo/Subgrupo atualizado(s).`,'sucesso');
+    } else if(ok===0){
+      Utils.toast(`Nenhuma tarefa foi salva — o Firestore travou (ex: outra aba do sistema aberta ao mesmo tempo). Feche as outras abas e tente de novo.`,'erro');
+    } else {
+      Utils.toast(`${ok} salvas, ${falhas} travaram/falharam (veja o console). Rode "Gerar Grupos" de novo pra pegar só as que faltaram.`,'alerta');
+    }
   }
+
 
   // Verifica se algum id (torre/pavimento/apto) ainda está referenciado por
   // alguma tarefa antes de excluir — não apaga silenciosamente vínculo.
