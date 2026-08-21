@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.13.12',
+  versaoAtual: 'V3.19.13.13',
 
   versoes: [
     {
@@ -9699,6 +9699,17 @@ const NotasVersao = {
         "Cada tarefa (e item de checklist) do seletor agora tem um checkbox — dá pra marcar como concluída direto ali, sem precisar fechar o seletor pra ir até a lista principal.",
         "Copiar entre horários: cada tarefa já agendada tem um botão ⧉ — clicar copia ela; abrir o \"+\" de outro horário mostra um botão \"📌 Colar aqui\" que agenda a mesma tarefa (ou item) ali, sem precisar buscar de novo. Trava simples: não deixa colar duplicado no mesmo horário onde já está.",
         "Trazer pendências do dia anterior: quando o dia anterior tem alocações cuja tarefa (ou item) ainda não foi concluída, aparece um botão \"↩️ Trazer N pendências do dia anterior\" — um clique replica todas elas pro dia atual, nos mesmos horários, pulando o que já foi trazido antes (sem duplicar)."
+      ]
+    },
+    {
+      "versao": "V3.19.13.13",
+      "data": "2026-08-19",
+      "tipo": "correcao",
+      "titulo": "Gerar Grupos: era pra ser ordenar a lista, não filtrar pra um grupo só — trocado o dropdown por toggle Tarefa/Alfabética",
+      "itens": [
+        "Entendi errado antes: Milton não queria um seletor pra 'pular' pra um grupo específico — queria poder REORDENAR a lista inteira, ou pela ordem de tarefa (como já vem) ou em ordem alfabética de verdade pelo pavimento proposto.",
+        "Removido o dropdown \"ir direto pro grupo\". No lugar, dois botões (Tarefa / Alfabética) ao lado da busca — trocam a ordem da lista toda instantaneamente, sem perder marcações nem edições feitas.",
+        "Cabeçalho de seção (▸ NOME DO PAVIMENTO) só aparece em modo Alfabética, onde faz sentido (mesmo grupo fica junto) — em ordem de Tarefa ele sumiria e voltaria toda hora, então fica desligado nesse modo."
       ]
     }
   ],

@@ -4144,20 +4144,17 @@ const Planejamento = (() => {
       }
     }
     _gerarGruposPavimentos.push(SEM_VINCULO);
-    // Ordem da lista = ordem do pavimento PROPOSTO (mesma ordem da Estrutura
-    // da Obra) — assim dá pra ver tudo do 1º Pavimento junto, depois tudo do
-    // 2º Pavimento junto, e assim por diante, em vez da ordem solta da tarefa.
-    const posicaoPav=new Map(_gerarGruposPavimentos.map((nome,i)=>[nome,i]));
-    _gerarGruposLista=mudam.map(p=>({
+    // Ordem da lista: guarda a ordem original de tarefa (pra poder voltar
+    // pra ela) e já deixa pronta a canônica-por-pavimento (que é o que
+    // "alfabética de verdade" deveria evitar: string sort põe "10º" antes
+    // de "1º"). O toggle Tarefa/Alfabética decide qual delas mostrar.
+    _gerarGruposLista=mudam.map((p,i)=>({
       tarefaId:p.tarefa.id,nome:p.tarefa.nome,
       grupoAntigo:p.tarefa.grupo||'',subgrupoAntigo:p.tarefa.subgrupo||null,
       grupoProposto:p.match.grupo,subgrupoProposto:p.match.subgrupo||null,
-      marcado:true
-    })).sort((a,b)=>{
-      const pa=posicaoPav.get(a.grupoProposto)??999,pb=posicaoPav.get(b.grupoProposto)??999;
-      if(pa!==pb)return pa-pb;
-      return (a.subgrupoProposto||0)-(b.subgrupoProposto||0);
-    });
+      marcado:true,ordemTarefa:i
+    }));
+    _gerarGruposOrdemModo='tarefa';
     let pop=document.getElementById('gerargrupos-modal');if(pop)pop.remove();
     pop=document.createElement('div');pop.id='gerargrupos-modal';
     pop.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:2000;display:flex;align-items:center;justify-content:center;';
@@ -4168,13 +4165,12 @@ const Planejamento = (() => {
           <span style="cursor:pointer;color:#888;font-size:1.1rem;" onclick="document.getElementById('gerargrupos-modal').remove()">✕</span>
         </div>
         <div style="font-size:.72rem;color:#888;margin-bottom:10px;">${folhas.length} tarefas no total. <b>${mudam.length}</b> vão mudar Grupo/Subgrupo (as demais já estão certas). Pra corrigir, escolhe outro pavimento (ou "Sem Vínculo") na lista da direita — muda esse E todos os outros que tinham a mesma proposta.</div>
-        <div style="display:flex;gap:6px;margin-bottom:8px;">
+        <div style="display:flex;gap:6px;margin-bottom:8px;align-items:center;">
           <input id="gerargrupos-filtro" placeholder="🔍 Buscar por nome da tarefa..." oninput="Planejamento._gerarGruposFiltrar(this.value)"
             style="flex:1;background:#111;border:1px solid #333;border-radius:6px;color:#ddd;padding:7px 10px;font-size:.8rem;box-sizing:border-box;">
-          <select id="gerargrupos-select-grupo" onchange="Planejamento._gerarGruposIrParaGrupo(this.value)"
-            style="width:200px;background:#111;border:1px solid #333;border-radius:6px;color:var(--cor-primaria);font-weight:600;padding:7px 8px;font-size:.8rem;flex-shrink:0;">
-            <option value="">▸ Ir direto pro grupo...</option>
-          </select>
+          <span style="font-size:.68rem;color:#666;white-space:nowrap;">Ordem:</span>
+          <button id="gerargrupos-ordem-tarefa" class="btn btn-primario btn-sm" style="padding:6px 10px;font-size:.72rem;" onclick="Planejamento._gerarGruposOrdenar('tarefa')">Tarefa</button>
+          <button id="gerargrupos-ordem-alfa" class="btn btn-secundario btn-sm" style="padding:6px 10px;font-size:.72rem;" onclick="Planejamento._gerarGruposOrdenar('alfabetica')">Alfabética</button>
         </div>
         <div id="gerargrupos-lista" style="display:flex;flex-direction:column;gap:2px;max-height:50vh;overflow-y:auto;border:1px solid #292929;border-radius:6px;padding:6px;"></div>
         <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px;">
@@ -4184,18 +4180,35 @@ const Planejamento = (() => {
       </div>`;
     document.body.appendChild(pop);
     _gerarGruposFiltroTexto='';
-    _gerarGruposFiltroGrupo='';
     _renderGerarGruposLista();
   }
 
   let _gerarGruposFiltroTexto='';
-  let _gerarGruposFiltroGrupo=''; // filtro EXATO — via dropdown "ir direto pro grupo", separado da busca por texto (que é por substring)
+  let _gerarGruposOrdemModo='tarefa'; // 'tarefa' | 'alfabetica' — só essas duas, escolhidas pelo Milton
   function _gerarGruposFiltrar(texto){
     _gerarGruposFiltroTexto=(texto||'').trim();
     _renderGerarGruposLista();
   }
-  function _gerarGruposIrParaGrupo(valor){
-    _gerarGruposFiltroGrupo=valor||'';
+  function _gerarGruposOrdenar(modo){
+    _gerarGruposOrdemModo=modo;
+    if(modo==='tarefa'){
+      _gerarGruposLista.sort((a,b)=>a.ordemTarefa-b.ordemTarefa);
+    } else {
+      // Alfabética DE VERDADE (localeCompare com numeric:true, senão "10º"
+      // ainda viria antes de "1º" — mas aqui é isso mesmo que foi pedido,
+      // não a ordem da Estrutura da Obra).
+      _gerarGruposLista.sort((a,b)=>{
+        const c=a.grupoProposto.localeCompare(b.grupoProposto,'pt-BR',{numeric:true,sensitivity:'base'});
+        return c!==0?c:(a.subgrupoProposto||0)-(b.subgrupoProposto||0);
+      });
+    }
+    const btnT=document.getElementById('gerargrupos-ordem-tarefa'),btnA=document.getElementById('gerargrupos-ordem-alfa');
+    if(btnT&&btnA){
+      btnT.className='btn btn-sm '+(modo==='tarefa'?'btn-primario':'btn-secundario');
+      btnA.className='btn btn-sm '+(modo==='alfabetica'?'btn-primario':'btn-secundario');
+      btnT.style.cssText='padding:6px 10px;font-size:.72rem;';
+      btnA.style.cssText='padding:6px 10px;font-size:.72rem;';
+    }
     _renderGerarGruposLista();
   }
 
@@ -4207,29 +4220,17 @@ const Planejamento = (() => {
     // esse índice em _gerarGruposLista, não a posição na lista filtrada).
     const visiveis=_gerarGruposLista
       .map((p,i)=>({p,i}))
-      .filter(({p})=>(!_gerarGruposFiltroGrupo||p.grupoProposto===_gerarGruposFiltroGrupo)
-        &&(!q||_normTexto(p.grupoProposto).includes(q)||_normTexto(p.nome).includes(q)));
-    // Popula o dropdown "ir direto pro grupo" com os grupos que existem NESSA
-    // prévia, na ordem canônica (mesma da Estrutura da Obra) — só uma vez por
-    // abertura (não a cada render), senão perde a seleção atual a cada digitação.
-    const selGrupo=document.getElementById('gerargrupos-select-grupo');
-    if(selGrupo&&selGrupo.options.length<=1){
-      const totaisPorGrupo=new Map();
-      for(const p of _gerarGruposLista)totaisPorGrupo.set(p.grupoProposto,(totaisPorGrupo.get(p.grupoProposto)||0)+1);
-      const gruposNaLista=opcoes.filter(nome=>totaisPorGrupo.has(nome));
-      selGrupo.innerHTML=`<option value="">▸ Ir direto pro grupo...</option>`+
-        gruposNaLista.map(nome=>`<option value="${_esc(nome)}">${_esc(nome)} (${totaisPorGrupo.get(nome)})</option>`).join('');
-    }
+      .filter(({p})=>!q||_normTexto(p.grupoProposto).includes(q)||_normTexto(p.nome).includes(q));
     if(!visiveis.length){el.innerHTML='<div style="color:#555;font-size:.8rem;padding:14px;text-align:center;">Nenhuma linha bate com o filtro.</div>';return;}
     const contagem=new Map();
     for(const {p} of visiveis)contagem.set(p.grupoProposto,(contagem.get(p.grupoProposto)||0)+1);
     let html='',grupoAnterior=null;
     for(const {p,i} of visiveis){
-      // Cabeçalho de seção — a lista já vem ordenada por pavimento proposto,
-      // então basta detectar quando o grupo muda pra abrir uma seção nova.
-      // É isso que deixa "ver tudo do meu andar junto" (em vez de precisar
-      // caçar linha por linha) e funciona junto com o filtro de texto acima.
-      if(p.grupoProposto!==grupoAnterior){
+      // Cabeçalho de seção só faz sentido quando itens do mesmo grupo ficam
+      // consecutivos (ordem Alfabética) — em ordem de Tarefa o mesmo grupo
+      // pode voltar a aparecer várias vezes espalhado, e um cabeçalho a
+      // cada volta ficaria poluído em vez de ajudar.
+      if(_gerarGruposOrdemModo==='alfabetica'&&p.grupoProposto!==grupoAnterior){
         grupoAnterior=p.grupoProposto;
         html+=`<div style="font-size:.68rem;font-weight:700;color:var(--cor-primaria);text-transform:uppercase;letter-spacing:.4px;padding:8px 4px 4px;border-top:1px solid #292929;">▸ ${_esc(p.grupoProposto)} (${contagem.get(p.grupoProposto)})</div>`;
       }
@@ -6510,7 +6511,7 @@ const Planejamento = (() => {
     selectIdx,toggleRecolher,recuarNivel,avancarNivel,
     toggleGantt,toggleLiberarEdicaoReal,hideCol,showColsMenu,_showCol,_showAll,_toggleMenuFerramentas,
     _abrirEstruturaObra,_addTorre,_addPavimento,_addApartamento,_duplicarPavimento,_editarNomeEst,_removerNoEst,
-    _abrirAutoVincular,_aplicarAutoVincular,_abrirGerarGrupos,_aplicarGerarGrupos,_gerarGruposToggle,_gerarGruposEditarValor,_gerarGruposFiltrar,_gerarGruposIrParaGrupo,
+    _abrirAutoVincular,_aplicarAutoVincular,_abrirGerarGrupos,_aplicarGerarGrupos,_gerarGruposToggle,_gerarGruposEditarValor,_gerarGruposFiltrar,_gerarGruposOrdenar,
     _abrirVinculoPavimento,_salvarVinculoPavimento,_vinclocTogglePav,_vinclocToggleApto,
     _abrirAtualizarPredecessora,_predlogAtualizarBotao,_salvarAtualizacaoPredecessora,_abrirHistoricoAlteracoes,_filtrarHistorico,
     toggleArvoreEditor,_arvToggle,_arvExpandirTudo,_arvIniciarEdit,_arvCancelarEdit,_arvSalvarNome,
