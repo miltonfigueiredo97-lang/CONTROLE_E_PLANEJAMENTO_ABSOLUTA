@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.30.3',
+  versaoAtual: 'V3.19.30.4',
 
   versoes: [
     {
@@ -10114,6 +10114,18 @@ const NotasVersao = {
       "itens": [
         "O painel 'O que ainda NÃO está pronto' listava tarefas que não refletiam a realidade (anotação manual desatualizada) e o clique trazia versões sem relação com o assunto — removido por decisão do Milton.",
         "O acompanhamento do que falta continua na seção 8 do PROJETO.md, mantida pelas sessões de trabalho."
+      ]
+    },
+    {
+      "versao": "V3.19.30.4",
+      "data": "2026-08-19",
+      "tipo": "correcao",
+      "titulo": "Gerar Grupos não reconhecia Subgrupo com nome descritivo (ex: apartamento \"Fachada Frontal\", \"Lateral Esquerda\") — só entendia número",
+      "itens": [
+        "Bug real (Milton pegou): Subgrupo só era detectado se a tarefa tivesse \"Final NN\"/\"ap. NN\" — um NÚMERO. Ele criou apartamentos com nome descritivo pra Fachada (Frontal, Frontal Esquerda, Lateral Direita...) e nada era reconhecido, porque nunca existe número nesses nomes de tarefa.",
+        "Corrigido: agora testa primeiro se o NOME de algum apartamento cadastrado aparece dentro do nome da tarefa (mesmo mecanismo de match do Grupo, incluindo singular/plural) — pega o mais específico (\"Frontal Esquerda\" não confunde com \"Frontal\"). Só cai pro esquema numérico (Final/ap./Etapa NN + posição) se não achar por nome.",
+        "Subgrupo deixou de ser só número — quando o apartamento tem nome descritivo, o Subgrupo agora é esse nome (\"Frontal\", \"Lateral Esquerda\"...), não precisa mais forçar um número. Testado com os 6 apartamentos de Fachada + todas as variações do exemplo do Milton antes de publicar.",
+        "Isso vale pra QUALQUER apartamento novo criado dali pra frente, em qualquer pavimento/zona — não precisa mais pedir ajuste de código toda vez que cadastrar um subgrupo novo."
       ]
     }
   ],

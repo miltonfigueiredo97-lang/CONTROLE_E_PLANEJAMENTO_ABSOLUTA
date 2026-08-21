@@ -4128,15 +4128,43 @@ const Planejamento = (() => {
   }
   function _finalizarMatchGrupo(pav,nomeTarefa){
     const grupoNome=pav?.nome||pav; // aceita objeto pavimento OU só o nome (ex: "Sem Vínculo", que não tem objeto)
-    // "Final NN" e "ap. NN"/"apto NN"/"apartamento NN" são a MESMA coisa pra
-    // efeito de Subgrupo (regra do Milton) — trades diferentes descrevem a
-    // mesma unidade/torre de formas diferentes, mas o número identifica a
-    // mesma coisa. Ex: "Concretagem Laje Piso: 5° Pavimento - ap. 01" conta
-    // igual "Rede Frigorígena: 5° Pavimento - Final 01".
-    const mFinal=String(nomeTarefa).match(/(?:Final|ap\.?|apto\.?|apartamento)\s*0*(\d+)\s*$/i);
+    const aptos=pav&&pav.apartamentos?[...pav.apartamentos].sort((a,b)=>(a.ordem||0)-(b.ordem||0)):[];
+
+    // 1º) TEXTO — o nome do apartamento aparece dentro do nome da tarefa
+    // (mesmo mecanismo de match do Grupo: substring + singular/plural). Cobre
+    // apartamento com nome descritivo, tipo "Fachada Frontal"/"Fachada Lateral
+    // Esquerda" — não é número nenhum, é o NOME que precisa bater. Sem isso,
+    // criar um apartamento novo com nome não ficava reconhecido nunca, tinha
+    // que pedir pra alguém mexer no código toda vez.
+    if(aptos.length){
+      const nomeNorm=_normTexto(nomeTarefa);
+      let melhorApto=null,melhorLen=0;
+      for(const apto of aptos){
+        const nApto=_normTexto(apto.nome);
+        if(nApto.length<3)continue;
+        for(const cand of _candidatosSingular(nApto)){
+          if(nomeNorm.includes(cand)&&nApto.length>melhorLen){melhorApto=apto;melhorLen=nApto.length;break;}
+        }
+      }
+      if(melhorApto){
+        // Se o nome do apartamento termina em número, usa o número (mantém
+        // compatível com o esquema antigo AP11/AP12). Senão, o Subgrupo é o
+        // próprio nome do apartamento (ex: "Frontal Esquerda") — Subgrupo não
+        // precisa ser número, só precisa vir de algo cadastrado de verdade.
+        const m=String(melhorApto.nome||'').match(/(\d+)\s*$/);
+        return{grupo:grupoNome,subgrupo:m?parseInt(m[1]):melhorApto.nome,subgrupoValido:true};
+      }
+    }
+
+    // 2º) NÚMERO — "Final NN"/"ap. NN"/"apto NN"/"apartamento NN"/"Etapa NN"
+    // são a MESMA coisa pra efeito de Subgrupo (regra do Milton): trades
+    // diferentes descrevem a mesma unidade/torre de formas diferentes, mas o
+    // número identifica a mesma coisa. Usa a POSIÇÃO do apartamento cadastrado
+    // (1º cadastrado = Final/ap./Etapa 01, 2º = 02...), só cai pra fórmula
+    // como último recurso.
+    const mFinal=String(nomeTarefa).match(/(?:Final|ap\.?|apto\.?|apartamento|etapa)\s*0*(\d+)\s*$/i);
     if(!mFinal)return{grupo:grupoNome,subgrupo:null,subgrupoValido:null};
     const indiceFinal=parseInt(mFinal[1]); // "Final 01"->1, "Final 02"->2 (1-based)
-    const aptos=pav&&pav.apartamentos?[...pav.apartamentos].sort((a,b)=>(a.ordem||0)-(b.ordem||0)):[];
     if(aptos.length){
       const apto=aptos[indiceFinal-1]; // 1º cadastrado = Final 01, 2º = Final 02...
       if(apto){
@@ -4144,7 +4172,7 @@ const Planejamento = (() => {
         // Estrutura da Obra. Se o nome não tiver dígito no final (ex: "Torre B"),
         // ainda assim confirma que existe, só não dá pra extrair um número.
         const m=String(apto.nome||'').match(/(\d+)\s*$/);
-        return{grupo:grupoNome,subgrupo:m?parseInt(m[1]):null,subgrupoValido:true};
+        return{grupo:grupoNome,subgrupo:m?parseInt(m[1]):apto.nome,subgrupoValido:true};
       }
       // Esse pavimento TEM apartamentos cadastrados, mas não um pra esse
       // índice (ex: só tem 2 e a tarefa fala em "Final 03") — calcula pela
@@ -4366,7 +4394,11 @@ const Planejamento = (() => {
       // não a ordem da Estrutura da Obra).
       _gerarGruposLista.sort((a,b)=>{
         const c=a.grupoProposto.localeCompare(b.grupoProposto,'pt-BR',{numeric:true,sensitivity:'base'});
-        return c!==0?c:(a.subgrupoProposto||0)-(b.subgrupoProposto||0);
+        if(c!==0)return c;
+        // Subgrupo pode ser número (11,12...) OU texto (ex: "Frontal Esquerda",
+        // apartamento com nome descritivo) — nunca subtrai direto, senão vira
+        // NaN quando é texto.
+        return String(a.subgrupoProposto??'').localeCompare(String(b.subgrupoProposto??''),'pt-BR',{numeric:true,sensitivity:'base'});
       });
     }
     const btnT=document.getElementById('gerargrupos-ordem-tarefa'),btnA=document.getElementById('gerargrupos-ordem-alfa');
@@ -4414,7 +4446,7 @@ const Planejamento = (() => {
           style="width:150px;background:#111;border:1px solid #333;border-radius:4px;color:var(--cor-primaria);font-weight:600;font-size:.76rem;padding:3px 4px;">
           ${lista.map(nomePav=>`<option value="${_esc(nomePav)}" ${nomePav===p.grupoProposto?'selected':''}>${_esc(nomePav)}</option>`).join('')}
         </select>
-        <span style="color:${p.subgrupoProposto?(p.subgrupoValido===false?'#f87171':'var(--cor-primaria)'):'#444'};font-size:.72rem;min-width:22px;text-align:center;font-family:var(--font-mono);" title="${p.subgrupoValido===false?'⚠ Esse número não bate com nenhum apartamento cadastrado nessa torre na Estrutura da Obra — confira':p.subgrupoValido===true?'Confirmado: existe um apartamento com esse número cadastrado':'Subgrupo'}">${p.subgrupoProposto?(p.subgrupoValido===false?'⚠'+p.subgrupoProposto:p.subgrupoProposto):'—'}</span>
+        <span style="color:${p.subgrupoProposto?(p.subgrupoValido===false?'#f87171':'var(--cor-primaria)'):'#444'};font-size:.72rem;min-width:22px;text-align:center;font-family:var(--font-mono);" title="${p.subgrupoValido===false?'⚠ Esse valor não bate com nenhum apartamento cadastrado nesse pavimento na Estrutura da Obra — confira':p.subgrupoValido===true?'Confirmado: existe um apartamento cadastrado com esse valor':'Subgrupo'}">${p.subgrupoProposto?(p.subgrupoValido===false?'⚠'+p.subgrupoProposto:p.subgrupoProposto):'—'}</span>
       </div>`;
     }
     el.innerHTML=html;
