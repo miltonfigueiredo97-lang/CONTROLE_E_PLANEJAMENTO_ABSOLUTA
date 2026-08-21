@@ -121,7 +121,9 @@ const DashCore = (() => {
   function eqLabel(v) { return typeof v === 'number' ? 'Equipe ' + v : String(v); }
   // Cores SÓLIDAS e firmes, texto branco — evitando vermelho, verde, azul e
   // amarelo (cores de status no sistema). Cor estável por equipe.
-  const _EQ_CORES = ['#7c3aed', '#db2777', '#ea580c', '#8b5e34', '#475569', '#a21caf', '#0f172a', '#c2410c'];
+  // Sem QUALQUER tom de vermelho/laranja (leem como alerta): roxos, fúcsia,
+  // rosa, marrom, chumbo e grafite.
+  const _EQ_CORES = ['#7c3aed', '#c026d3', '#db2777', '#8b5e34', '#475569', '#5b21b6', '#1f2937'];
   function eqBadge(v) {
     if (!v) return '';
     const s = eqLabel(v);

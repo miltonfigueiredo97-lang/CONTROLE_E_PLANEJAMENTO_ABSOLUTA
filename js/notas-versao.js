@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.30.10',
+  versaoAtual: 'V3.19.30.11',
 
   versoes: [
     {
@@ -10188,6 +10188,16 @@ const NotasVersao = {
       "itens": [
         "O selo da equipe agora é SÓ O NOME, em caixa alta, fundo de cor sólida e forte com texto branco, bem espaçado do nome da tarefa — sem capacete, sem tom transparente.",
         "Paleta evita vermelho, verde, azul e amarelo (cores que já significam status no sistema): roxo, magenta, laranja queimado, marrom, chumbo, violeta e afins — cor estável por equipe."
+      ]
+    },
+    {
+      "versao": "V3.19.30.11",
+      "data": "2026-08-21",
+      "tipo": "melhoria",
+      "titulo": "Selo de equipe DEPOIS do nome, com respiro, e sem tom avermelhado",
+      "itens": [
+        "O selo da equipe foi pro lugar certo: DEPOIS do nome da tarefa, com espaçamento decente (aproveitando o espaço livre da linha).",
+        "Paleta sem QUALQUER tom de vermelho ou laranja (o \"laranja queimado\" lia como vermelho): roxo, fúcsia, rosa, marrom, chumbo, violeta e grafite — todas sólidas, texto branco."
       ]
     }
   ],

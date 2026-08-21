@@ -142,7 +142,7 @@ const DashAtividades = (() => {
       <div class="db-sup-item" style="padding-left:${indent}px;">
         <span class="db-ativ-dot" style="background:${cfg.dot};"></span>
         <div class="db-sup-info">
-          <div class="db-sup-nome">${DashCore.eqBadge(_eqMap.get(t.id))} ${DashCore.esc(t.nome || 'Sem nome')}</div>
+          <div class="db-sup-nome">${DashCore.esc(t.nome || 'Sem nome')}${DashCore.eqBadge(_eqMap.get(t.id))}</div>
           <div class="db-sup-sub">${t.local ? DashCore.esc(t.local) + ' · ' : ''}${cfg.rotuloData} ${Utils.formatarData(_campoData(chave, t))}</div>
         </div>
         ${chipAtraso}

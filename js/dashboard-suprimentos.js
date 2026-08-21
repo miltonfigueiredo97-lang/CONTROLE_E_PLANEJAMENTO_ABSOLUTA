@@ -109,7 +109,7 @@ const DashSuprimentos = (() => {
       <div class="db-sup-item" style="padding-left:${indent}px;">
         <span class="db-sup-flag">📦</span>
         <div class="db-sup-info">
-          <div class="db-sup-nome">${DashCore.eqBadge(_eqMap.get(t.id))} ${DashCore.esc(t.nome || 'Sem nome')}</div>
+          <div class="db-sup-nome">${DashCore.esc(t.nome || 'Sem nome')}${DashCore.eqBadge(_eqMap.get(t.id))}</div>
           <div class="db-sup-sub">${t.local ? DashCore.esc(t.local) + ' · ' : ''}início ${Utils.formatarData(t.inicioPlanejado)}</div>
         </div>
         <span class="db-chip db-chip-alerta">providenciar</span>
