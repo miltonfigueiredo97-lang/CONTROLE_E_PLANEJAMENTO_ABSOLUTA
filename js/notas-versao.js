@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.13.25',
+  versaoAtual: 'V3.19.13.26',
 
   versoes: [
     {
@@ -9838,6 +9838,17 @@ const NotasVersao = {
         "Pedido do Milton: ele quer verificar/auditar Subgrupos que JÁ foram aplicados antes, mas a prévia só mostrava o que ia MUDAR — se o valor salvo já batia com a detecção (mesmo que por uma execução anterior), a linha nem aparecia, impossível conferir.",
         "Novo toggle \"Só as que vão mudar\" / \"Todas (auditar)\" no topo da prévia. Em \"Todas\", mostra toda tarefa reconhecida, com ✓ verde e opacidade reduzida nas que já estão certas (não vão ser alteradas) — mas o aviso ⚠ de Subgrupo inválido continua aparecendo mesmo nelas, então dá pra achar um Subgrupo errado que ficou salvo por engano numa rodada anterior.",
         "Trocar de modo preserva as edições já feitas na sessão (não perde o que você já corrigiu na tela)."
+      ]
+    },
+    {
+      "versao": "V3.19.13.26",
+      "data": "2026-08-19",
+      "tipo": "correcao",
+      "titulo": "Editor de Estrutura: não dava pra selecionar texto ao renomear uma tarefa — o \"arrastar linha\" tomava conta do clique",
+      "itens": [
+        "Bug real: a linha inteira é arrastável (pra reordenar tarefas), e o campo de edição do nome (aberto com clique duplo) ficava DENTRO dela — arrastar o mouse pra selecionar texto era interpretado como arrastar a linha inteira pra reordenar.",
+        "Corrigido: o campo de edição agora tem draggable=\"false\" e cancela a propagação do clique — arrastar dentro dele volta a ser seleção de texto normal, arrastar fora dele continua reordenando a tarefa.",
+        "Mesmo ajuste aplicado de brinde na Estrutura da Obra (Torre/Pavimento/Apartamento), que tinha exatamente o mesmo problema depois do drag-and-drop adicionado ali."
       ]
     }
   ],
