@@ -289,3 +289,9 @@ th.db-subtotal-col { font-size: 0.68rem; line-height: 1.15; }
 .db-fr-menu-item { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 8px; font-size: 0.85rem; cursor: pointer; }
 .db-fr-menu-item:active, .db-fr-menu-item:hover { background: var(--cor-fundo); }
 .db-fr-menu-item.sel { background: var(--cor-primaria-ultra-light); font-weight: 700; color: var(--cor-primaria-dark); }
+
+/* Drag-to-pan da matriz (desktop): durante o arrasto, células não clicam
+   nem selecionam texto */
+.db-fr-scroll.db-fr-arrastando { user-select: none; }
+.db-fr-scroll.db-fr-arrastando .db-fr-cel { pointer-events: none; }
+.db-fr-scroll { user-select: none; }

@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.13.17',
+  versaoAtual: 'V3.19.13.18',
 
   versoes: [
     {
@@ -9752,6 +9752,16 @@ const NotasVersao = {
       "itens": [
         "Bug de verdade: o modal \"Estrutura da Obra\" tem z-index 2000, mas o spinner global de carregamento (usado em toda a aplicação) tinha z-index 999 — menor. Enquanto a Estrutura da Obra ficava aberta por cima, o \"Gerando grupos: X/2198...\" rodava escondido atrás dela, invisível — parecia que travou, mas estava rodando normal.",
         "Corrigido em dois pontos: (1) z-index do spinner global subiu pra 9999 (sempre por cima de qualquer modal, não só esse caso), e (2) a Estrutura da Obra agora fecha imediatamente ao clicar Aplicar Selecionados, então o progresso fica visível desde o primeiro instante."
+      ]
+    },
+    {
+      "versao": "V3.19.13.18",
+      "data": "2026-08-21",
+      "tipo": "melhoria",
+      "titulo": "Matriz de Frentes: arrastar com o mouse (desktop)",
+      "itens": [
+        "Dentro da tabela do Andamento por Frente, agora dá pra SEGURAR E ARRASTAR com o mouse pra navegar em qualquer direção (cursor vira mãozinha) — como num mapa.",
+        "O clique nas células continua normal: movimento menor que 6px conta como clique e abre o detalhe; arrastou de verdade, as células não disparam."
       ]
     }
   ],

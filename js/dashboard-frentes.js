@@ -108,7 +108,46 @@ const DashFrentes = (() => {
     matrizHost.innerHTML = tarefas.length
       ? _htmlMatriz(tarefas)
       : '<div class="db-vazio-inline">Nenhuma tarefa com esses filtros.</div>';
+    _ligarDragPan();
     _atualizarBotaoLimpar();
+  }
+
+  // Segurar e arrastar com o MOUSE dentro da tabela rola horizontal e
+  // vertical (padrão de mapa). Se o mouse quase não se moveu (<6px), o
+  // mouseup vira o CLIQUE normal da célula — os dois convivem.
+  function _ligarDragPan() {
+    const sc = document.querySelector('#db-fr-matriz-host .db-fr-scroll');
+    if (!sc || sc._dragPanOk) return;
+    sc._dragPanOk = true;
+    sc.style.cursor = 'grab';
+    sc.addEventListener('mousedown', (ev) => {
+      if (ev.button !== 0) return;
+      const startX = ev.clientX, startY = ev.clientY;
+      const startL = sc.scrollLeft, startT = sc.scrollTop;
+      let arrastou = false;
+      const mover = (m) => {
+        const dx = m.clientX - startX, dy = m.clientY - startY;
+        if (!arrastou && Math.hypot(dx, dy) > 6) {
+          arrastou = true;
+          sc.style.cursor = 'grabbing';
+          sc.classList.add('db-fr-arrastando'); // desliga clique das células durante o arrasto
+        }
+        if (arrastou) {
+          m.preventDefault();
+          sc.scrollLeft = startL - dx;
+          sc.scrollTop = startT - dy;
+        }
+      };
+      const soltar = () => {
+        document.removeEventListener('mousemove', mover);
+        document.removeEventListener('mouseup', soltar);
+        sc.style.cursor = 'grab';
+        // pequena folga pro click da célula não disparar após um arrasto
+        setTimeout(() => sc.classList.remove('db-fr-arrastando'), 50);
+      };
+      document.addEventListener('mousemove', mover);
+      document.addEventListener('mouseup', soltar);
+    });
   }
 
   function _atualizarBotaoLimpar() {
