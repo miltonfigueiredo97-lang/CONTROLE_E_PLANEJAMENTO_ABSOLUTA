@@ -4257,35 +4257,37 @@ const Planejamento = (() => {
     if(_gerarGruposLista&&_gerarGruposLista[idx])_gerarGruposLista[idx].marcado=checked;
   }
 
-  // Escolher outro pavimento (dropdown) numa linha propaga pra outras linhas
-  // que tinham o MESMO ANTES *e* a MESMA proposta errada — as duas coisas
-  // juntas, não só a proposta. Só a proposta não bastava: "Reservatório -
-  // SS2" e "Reservatório Superior" são coisas DIFERENTES (uma é SS2, a
-  // outra é o reservatório de cima) mas as duas bateram na mesma proposta
-  // errada "RESERVATÓRIO" — corrigir uma arrastava a outra por engano,
-  // porque só olhava a proposta. Agora só propaga pra quem tinha o MESMO
-  // valor anterior também, então grupos diferentes nunca se misturam.
+  // Escolher outro pavimento (dropdown) numa linha PERGUNTA antes de propagar
+  // quando afeta mais de uma linha — porque o mesmo "antes→depois" nem
+  // sempre é a mesma correção certa em todo lugar (ex: 3 tarefas com
+  // "Cobertura (Tampa)" → "ÁTICO": pode ser que só a Platibanda seja Ático
+  // de verdade e as outras duas sejam Reservatório — aí forçar todas juntas
+  // erra 2 pra acertar 1). "OK" muda todas as N iguais; "Cancelar" muda só
+  // esta linha, isolando ela do grupo sem mexer nas outras.
   function _gerarGruposEditarValor(idx,novoValor){
     if(!_gerarGruposLista||!_gerarGruposLista[idx])return;
     const alvo=_gerarGruposLista[idx];
     const antigoRef=alvo.grupoAntigo,propostaRef=alvo.grupoProposto;
     if(!novoValor||novoValor===propostaRef)return;
-    let n=0;
-    for(const p of _gerarGruposLista){
-      if(p.grupoAntigo===antigoRef&&p.grupoProposto===propostaRef){
-        p.grupoProposto=novoValor;
-        // Subgrupo só faz sentido pra pavimento numerado ("Nº Pavimento") —
-        // se o novo valor não bate esse padrão, não tem como recalcular,
-        // então some (mais seguro que manter um número que não corresponde
-        // mais ao grupo escolhido).
-        const mPav=novoValor.match(/^(\d+)[°º]\s*Pavimento$/i);
-        const mFinal=String(p.nome).match(/(?:Final|ap\.?|apto\.?|apartamento)\s*0*(\d+)\s*$/i);
-        p.subgrupoProposto=(mPav&&mFinal)?(parseInt(mPav[1])*10+parseInt(mFinal[1])):null;
-        n++;
-      }
+    const iguais=_gerarGruposLista.filter(p=>p.grupoAntigo===antigoRef&&p.grupoProposto===propostaRef);
+    let aplicarATodas=true;
+    if(iguais.length>1){
+      aplicarATodas=confirm(`Essa mudança ("${antigoRef||'(vazio)'}" → "${novoValor}") também bate em mais ${iguais.length-1} tarefa(s) com a mesma proposta atual.\n\nOK = muda todas as ${iguais.length}.\nCancelar = muda só esta tarefa (${alvo.nome}), deixa as outras como estão.`);
+    }
+    const alvos=aplicarATodas?iguais:[alvo];
+    for(const p of alvos){
+      p.grupoProposto=novoValor;
+      // Subgrupo só faz sentido pra pavimento numerado ("Nº Pavimento") —
+      // se o novo valor não bate esse padrão, não tem como recalcular,
+      // então some (mais seguro que manter um número que não corresponde
+      // mais ao grupo escolhido).
+      const mPav=novoValor.match(/^(\d+)[°º]\s*Pavimento$/i);
+      const mFinal=String(p.nome).match(/(?:Final|ap\.?|apto\.?|apartamento)\s*0*(\d+)\s*$/i);
+      p.subgrupoProposto=(mPav&&mFinal)?(parseInt(mPav[1])*10+parseInt(mFinal[1])):null;
     }
     _renderGerarGruposLista();
-    if(n>1)Utils.toast(`Aplicado a ${n} linha(s) que tinham "${antigoRef||'(vazio)'}" → "${propostaRef}".`,'sucesso');
+    if(alvos.length>1)Utils.toast(`Aplicado a ${alvos.length} linha(s) que tinham "${antigoRef||'(vazio)'}" → "${propostaRef}".`,'sucesso');
+    else if(iguais.length>1)Utils.toast(`Alterado só "${alvo.nome}" — as outras ${iguais.length-1} continuam como estavam.`,'sucesso');
   }
 
   async function _aplicarGerarGrupos(){

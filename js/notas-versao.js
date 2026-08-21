@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.13.14',
+  versaoAtual: 'V3.19.13.15',
 
   versoes: [
     {
@@ -9721,6 +9721,16 @@ const NotasVersao = {
         "Clique dos filtros reescrito por DELEGAÇÃO na área dos filtros (fase de captura) — funciona mesmo que o conteúdo seja recriado e não depende do onclick de cada botão.",
         "A faixa dos filtros subiu de camada (z-index) — se algum elemento transparente estava por cima roubando o clique, ele não alcança mais.",
         "AUTO-DIAGNÓSTICO embutido: ao abrir o Dashboard, o sistema verifica se existe QUALQUER elemento sobreposto ao botão de Categoria; se houver, mostra um aviso amarelo na tela dizendo o nome exato do invasor (e no console). Se o aviso aparecer, mande o print — é o culpado definitivo."
+      ]
+    },
+    {
+      "versao": "V3.19.13.15",
+      "data": "2026-08-19",
+      "tipo": "melhoria",
+      "titulo": "Gerar Grupos: destrave manual — pergunta antes de propagar quando pode não ser sempre a mesma correção",
+      "itens": [
+        "Situação real (Milton pegou): 3 tarefas com \"Cobertura (Tampa)\" propunham todas \"ÁTICO\" — mas na real só a Platibanda é Ático, as outras duas (Instalações Elétricas/SPDA e Impermeabilização Laje) são Reservatório. Corrigir uma arrastava as outras duas por engano, porque o \"antes→depois\" era idêntico nas 3.",
+        "Agora, ao trocar um valor que afeta mais de 1 linha, pergunta: OK = muda todas; Cancelar = muda só essa linha, isolando ela sem tocar nas outras. Continua sem perguntar quando só tem 1 linha afetada (não muda o fluxo de quando já funcionava certo)."
       ]
     }
   ],
