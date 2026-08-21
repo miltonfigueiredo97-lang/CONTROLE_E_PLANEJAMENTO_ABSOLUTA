@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.30.8',
+  versaoAtual: 'V3.19.30.9',
 
   versoes: [
     {
@@ -10168,6 +10168,16 @@ const NotasVersao = {
         "Selo 👷 de equipe na frente de cada tarefa em Atividades e Suprimentos — colorido, com cor estável por equipe.",
         "Filtro \"👷 Equipe\" também nas listas: Em Execução, Próximas e Suprimentos ganharam o seletor de equipe na barra de cada bloco.",
         "Visão GRUPOS repaginada: tudo ABERTO, sem escadinha — faixa amarela do grupo, subtítulo do subgrupo e as tarefas na sequência ordenadas por data."
+      ]
+    },
+    {
+      "versao": "V3.19.30.9",
+      "data": "2026-08-21",
+      "tipo": "correcao",
+      "titulo": "Equipe AGORA de verdade: o campo certo é frenteServico",
+      "itens": [
+        "Correção honesta: a versão anterior prometeu ler a Frente mas usou o nome de campo errado (t.frente, que não existe) — por isso NADA mudou. A coluna \"Frente\" do Planejamento grava em frenteServico; agora o filtro de equipe, o selo 👷 e a herança mãe→filhas leem esse campo de verdade.",
+        "Vale pra matriz de frentes e pros filtros/selos de Em Execução, Próximas e Suprimentos."
       ]
     }
   ],

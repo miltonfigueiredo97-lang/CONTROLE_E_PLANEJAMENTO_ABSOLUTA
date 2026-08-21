@@ -97,9 +97,10 @@ const DashCore = (() => {
   }
 
   // Equipe EFETIVA de cada tarefa: considera o Nº Equipe (equipeAlocada) OU
-  // o campo FRENTE (nos planejamentos importados do Excel, a coluna "equipe"
-  // cai em frente). Preenchida na tarefa-MÃE, as folhas herdam do ancestral
-  // mais próximo (a própria vence). Retorna número (Nº Equipe) ou texto.
+  // a FRENTE DE SERVIÇO — que o Planejamento grava no campo frenteServico
+  // (t.frente NÃO existe; esse foi o erro da 1ª tentativa). Preenchida na
+  // tarefa-MÃE, as folhas herdam do ancestral mais próximo (a própria
+  // vence). Retorna número (Nº Equipe) ou texto (frente).
   function equipesEfetivas(tarefas) {
     const sorted = [...tarefas].sort((a, b) => (a.ordem || 0) - (b.ordem || 0));
     const mapa = new Map();
@@ -107,7 +108,7 @@ const DashCore = (() => {
     sorted.forEach(t => {
       const n = t.nivel || 0;
       while (pilha.length && pilha[pilha.length - 1].nivel >= n) pilha.pop();
-      const propria = (parseInt(t.equipeAlocada) || 0) || String(t.frente || '').trim() || null;
+      const propria = (parseInt(t.equipeAlocada) || 0) || String(t.frenteServico || '').trim() || null;
       const herdada = pilha.length ? pilha[pilha.length - 1].equipe : null;
       const efetiva = propria || herdada;
       mapa.set(t.id, efetiva || null);
