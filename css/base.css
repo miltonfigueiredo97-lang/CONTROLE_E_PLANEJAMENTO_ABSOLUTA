@@ -231,7 +231,7 @@ textarea.form-control { min-height: 80px; resize: vertical; }
 .spinner { width: 20px; height: 20px; border: 2px solid #e0e0e0; border-top-color: var(--cor-primaria); border-radius: 50%; animation: spin 0.6s linear infinite; }
 .spinner-lg { width: 36px; height: 36px; border-width: 3px; }
 @keyframes spin { to { transform: rotate(360deg); } }
-.loading-overlay { position: fixed; inset: 0; background: rgba(255,255,255,0.85); display: flex; align-items: center; justify-content: center; z-index: 999; flex-direction: column; gap: 12px; }
+.loading-overlay { position: fixed; inset: 0; background: rgba(255,255,255,0.85); display: flex; align-items: center; justify-content: center; z-index: 9999; flex-direction: column; gap: 12px; }
 
 /* ---- Estado vazio ---- */
 .estado-vazio { text-align: center; padding: 48px 24px; color: var(--cor-texto-muted); }

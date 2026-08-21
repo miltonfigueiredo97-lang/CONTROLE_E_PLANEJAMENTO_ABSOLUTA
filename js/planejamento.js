@@ -4306,7 +4306,12 @@ const Planejamento = (() => {
     const pop=document.getElementById('gerargrupos-modal');if(!pop||!_gerarGruposLista)return;
     const selecionadas=_gerarGruposLista.filter(p=>p.marcado);
     if(!selecionadas.length){pop.remove();return;}
-    pop.remove(); // fecha o modal já — a barra de progresso mostra o andamento
+    pop.remove();
+    // Fecha a Estrutura da Obra JÁ (não só no final) — ela tem z-index maior
+    // que o spinner de carregamento, então enquanto ficasse aberta por cima
+    // o "Gerando grupos: X/2198..." ficava escondido atrás dela, dando a
+    // impressão de que travou/não fez nada (foi exatamente o que aconteceu).
+    document.getElementById('estobra-modal')?.remove();
     let ok=0,falhas=0;
     Utils.mostrarLoading(`Gerando grupos: 0/${selecionadas.length}...`);
     const L=30;

@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.13.16',
+  versaoAtual: 'V3.19.13.17',
 
   versoes: [
     {
@@ -9742,6 +9742,16 @@ const NotasVersao = {
         "Causa (Milton pegou pelo console): \"Failed to obtain primary lease\" — erro do Firestore quando tem mais de uma aba/janela do sistema aberta ao mesmo tempo brigando por qual é a \"principal\". A escrita ficava pendurada pra sempre, sem erro nem sucesso, e a tela só girava.",
         "Corrigido: cada escrita agora tem um limite de 8s — se travar, conta como falha e SEGUE pras próximas em vez de parar tudo. Barra de progresso mostra quantas já foram (\"124/2198...\"). No fim, mensagem específica: quantas salvaram, quantas falharam, e se travou tudo por causa de aba duplicada, avisa isso na cara.",
         "Ação se acontecer de novo: fechar as outras abas/janelas do sistema, deixar só uma aberta, e rodar Gerar Grupos de novo — ele já vai pegar só quem ainda não foi salvo (não duplica o que já deu certo)."
+      ]
+    },
+    {
+      "versao": "V3.19.13.17",
+      "data": "2026-08-19",
+      "tipo": "correcao",
+      "titulo": "Achada a causa real de \"Aplicar Selecionados parece travado\": spinner de carregamento escondido atrás da Estrutura da Obra",
+      "itens": [
+        "Bug de verdade: o modal \"Estrutura da Obra\" tem z-index 2000, mas o spinner global de carregamento (usado em toda a aplicação) tinha z-index 999 — menor. Enquanto a Estrutura da Obra ficava aberta por cima, o \"Gerando grupos: X/2198...\" rodava escondido atrás dela, invisível — parecia que travou, mas estava rodando normal.",
+        "Corrigido em dois pontos: (1) z-index do spinner global subiu pra 9999 (sempre por cima de qualquer modal, não só esse caso), e (2) a Estrutura da Obra agora fecha imediatamente ao clicar Aplicar Selecionados, então o progresso fica visível desde o primeiro instante."
       ]
     }
   ],
