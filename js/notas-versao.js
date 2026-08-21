@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.30.9',
+  versaoAtual: 'V3.19.30.10',
 
   versoes: [
     {
@@ -10178,6 +10178,16 @@ const NotasVersao = {
       "itens": [
         "Correção honesta: a versão anterior prometeu ler a Frente mas usou o nome de campo errado (t.frente, que não existe) — por isso NADA mudou. A coluna \"Frente\" do Planejamento grava em frenteServico; agora o filtro de equipe, o selo 👷 e a herança mãe→filhas leem esse campo de verdade.",
         "Vale pra matriz de frentes e pros filtros/selos de Em Execução, Próximas e Suprimentos."
+      ]
+    },
+    {
+      "versao": "V3.19.30.10",
+      "data": "2026-08-21",
+      "tipo": "melhoria",
+      "titulo": "Selo de equipe: cor sólida e firme, sem emoji",
+      "itens": [
+        "O selo da equipe agora é SÓ O NOME, em caixa alta, fundo de cor sólida e forte com texto branco, bem espaçado do nome da tarefa — sem capacete, sem tom transparente.",
+        "Paleta evita vermelho, verde, azul e amarelo (cores que já significam status no sistema): roxo, magenta, laranja queimado, marrom, chumbo, violeta e afins — cor estável por equipe."
       ]
     }
   ],

@@ -119,14 +119,16 @@ const DashCore = (() => {
 
   // Rótulo e selo (badge) de equipe — cor estável por equipe.
   function eqLabel(v) { return typeof v === 'number' ? 'Equipe ' + v : String(v); }
-  const _EQ_CORES = [['#fde68a', '#92600a'], ['#bfdbfe', '#1d4ed8'], ['#bbf7d0', '#15803d'], ['#fecaca', '#b91c1c'], ['#e9d5ff', '#7e22ce'], ['#fed7aa', '#c2410c'], ['#a5f3fc', '#0e7490'], ['#e5e7eb', '#374151']];
+  // Cores SÓLIDAS e firmes, texto branco — evitando vermelho, verde, azul e
+  // amarelo (cores de status no sistema). Cor estável por equipe.
+  const _EQ_CORES = ['#7c3aed', '#db2777', '#ea580c', '#8b5e34', '#475569', '#a21caf', '#0f172a', '#c2410c'];
   function eqBadge(v) {
     if (!v) return '';
     const s = eqLabel(v);
     let h = 0;
     for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
-    const [bg, fg] = _EQ_CORES[h % _EQ_CORES.length];
-    return `<span class="db-eq-badge" style="background:${bg};color:${fg};" title="${esc(s)}">👷 ${esc(typeof v === 'number' ? v : s)}</span>`;
+    const bg = _EQ_CORES[h % _EQ_CORES.length];
+    return `<span class="db-eq-badge" style="background:${bg};color:#fff;" title="${esc(s)}">${esc(typeof v === 'number' ? 'EQ ' + v : s)}</span>`;
   }
 
   return { folhas, filhosDiretos, temFilhos, folhasDescendentes, paiDireto, peso, calcProgresso, esc, normalizarChave, equipesEfetivas, eqLabel, eqBadge };
