@@ -1,33 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.30.2',
-
-  // ATUALIZAR sempre que um módulo mudar de status — é daqui que a página mostra o que falta
-  // ATUALIZAR sempre que um módulo mudar de status ou um trabalho parar no meio:
-  // anotar em 'falta' EXATAMENTE o que ficou por fazer (é a memória do Milton) e em
-  // 'busca' o termo que encontra as versões daquele assunto na timeline (clique do card usa isso).
-  pendencias: [
-    { nome: 'Levantamento Pintura', status: 'em-dev', busca: 'pintura',
-      falta: ['Tela existe mas grava só o básico em pinturaAreas', 'Falta: cálculo de área por demão/tinta, vínculo com o Planejamento (hoje é stub no LEVANTAMENTO_MODULOS)', 'Falta: Editor de Estrutura (árvore Torre→Andar→Apto) igual Piso/Teto'] },
-    { nome: 'Controle Concreto', status: 'em-dev', busca: 'controle concreto',
-      falta: ['Coleções concretoPecaConc/concretoBTs/concretoLancamentos criadas, telas parciais', 'Falta: fechar fluxo de lançamento (BT → peça → volume conferido)', 'Falta: relatório/resumo por concretagem'] },
-    { nome: 'Controle Solo Grampeado', status: 'em-dev', busca: 'controle solo',
-      falta: ['Página controle-solo-grampeado.html criada sobre PDF', 'Falta: fechar o ciclo de execução x medição (hoje só visualiza)'] },
-    { nome: 'Produção', status: 'em-dev', busca: 'produção',
-      falta: ['producao.html parcial', 'Falta: definir com o Milton o que a tela consolida (produção diária por equipe? por frente?) — parado por falta de definição, não de código'] },
-    { nome: 'Restrições', status: 'stub', busca: 'restrições',
-      falta: ['Página vazia — nada foi definido nem começado'] },
-    { nome: 'Orçamentos', status: 'stub', busca: 'orçamentos',
-      falta: ['Página vazia — nada foi definido nem começado'] },
-    { nome: 'Histograma', status: 'stub', busca: 'histograma',
-      falta: ['Página vazia — nada foi definido nem começado'] },
-    { nome: 'Predecessoras — datas automáticas', status: 'atencao', busca: 'predecessoras',
-      falta: ['Cálculo automático de início/fim funciona no caso comum', 'Edge cases conhecidos: cadeias longas com defasagem negativa e mover tarefa com predecessora pra outra família'] },
-    { nome: 'Relatório do Diário de Obra', status: 'atencao', busca: 'diário relatório',
-      falta: ['Relatório sai, mas o formato ainda não foi aprovado como definitivo pelo Milton'] },
-    { nome: 'Regras de segurança do Firestore', status: 'atencao', busca: 'firestore segurança',
-      falta: ['Ainda allow read/write pra qualquer autenticado (regra de dev)', 'Com permissões no Firestore, endurecer as rules — ação de infra, fazer com o Milton'] }
-  ],
+  versaoAtual: 'V3.19.30.3',
 
   versoes: [
     {
@@ -10130,6 +10103,18 @@ const NotasVersao = {
         "Motivo (Milton): editar nome de tarefa é mais rápido no Excel do que um por um no sistema, mas a lista de campos do Importar Correções não tinha \"Nome\" como opção.",
         "Adicionado. Casa pelo ID igual todo o resto (nunca pelo nome que está mudando, então não tem risco de confundir a correção com a busca) — nunca aplica nome vazio por engano."
       ]
+    },
+    {
+      "versao": "V3.19.30.3",
+      "legado": "V3.19.30.3",
+      "status": "fechada",
+      "data": "2026-08-21",
+      "tipo": "melhoria",
+      "titulo": "Painel de pendências removido das Notas de Versão",
+      "itens": [
+        "O painel 'O que ainda NÃO está pronto' listava tarefas que não refletiam a realidade (anotação manual desatualizada) e o clique trazia versões sem relação com o assunto — removido por decisão do Milton.",
+        "O acompanhamento do que falta continua na seção 8 do PROJETO.md, mantida pelas sessões de trabalho."
+      ]
     }
   ],
 
@@ -10175,32 +10160,7 @@ const NotasVersao = {
         </div>
       </div>
 
-      ${this.pendencias && this.pendencias.length ? `
-      <div style="background:#fff;border:1.5px solid var(--cor-borda-light);border-left:5px solid #e0703c;border-radius:12px;padding:14px 18px;margin-bottom:16px;">
-        <div id="nvPendHead" style="display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none;">
-          <span style="font-size:1.05rem;">🚧</span>
-          <span style="font-weight:800;font-size:.9rem;">O que ainda NÃO está pronto</span>
-          <span style="font-size:.7rem;font-weight:800;color:#fff;background:#e0703c;border-radius:100px;padding:2px 9px;">${this.pendencias.length} pendências</span>
-          <span id="nvPendSeta" style="margin-left:auto;color:#bbb;font-size:.8rem;">▼</span>
-        </div>
-        <div id="nvPendBody" style="display:none;margin-top:12px;">
-          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px;">
-            ${this.pendencias.map((p,pi)=>{
-              const cfg = {'em-dev':['🔧 Em desenvolvimento','#5b8dd9'],'stub':['🏗 Não iniciado','#e0703c'],'atencao':['⚠️ Atenção','#c9a400']}[p.status]||['—','#888'];
-              return `<div class="nv-pend" data-busca="${(p.busca||'')}" style="border:1px solid var(--cor-borda-light);border-radius:9px;padding:9px 12px;cursor:pointer;transition:border-color .15s;" title="Clique pra ver todas as versões deste assunto na linha do tempo">
-                <div style="display:flex;align-items:center;gap:6px;">
-                  <div style="font-weight:700;font-size:.8rem;flex:1;">${p.nome}</div>
-                  <span style="font-size:.65rem;color:#bbb;">🔎 histórico</span>
-                </div>
-                <div style="font-size:.68rem;font-weight:800;color:${cfg[1]};margin-top:2px;">${cfg[0]}</div>
-                <ul style="list-style:none;margin:6px 0 0;padding:0;display:flex;flex-direction:column;gap:3px;">
-                  ${(p.falta||[]).map(f=>`<li style="display:flex;gap:5px;font-size:.72rem;color:#777;line-height:1.4;"><span style="color:${cfg[1]};flex-shrink:0;">•</span><span>${f}</span></li>`).join('')}
-                </ul>
-              </div>`;}).join('')}
-          </div>
-          <div style="font-size:.7rem;color:#aaa;margin-top:10px;">Quando um destes for concluído e publicado, ele sai daqui e a versão sobe de frente (B).</div>
-        </div>
-      </div>`:''}
+      
 
       <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center;">
         <input id="nvBusca" type="text" placeholder="🔍 Buscar versão, título ou item..." style="flex:1;min-width:220px;padding:9px 14px;border:1.5px solid var(--cor-borda-light);border-radius:100px;font-size:.85rem;outline:none;" />
@@ -10255,14 +10215,7 @@ const NotasVersao = {
       <div id="nvVazio" style="display:none;text-align:center;padding:50px 0;color:#999;font-size:.9rem;">Nenhuma versão encontrada 🔍</div>`;
 
     // interações
-    const ph = c.querySelector('#nvPendHead');
-    if (ph) ph.addEventListener('click', () => {
-      const b = c.querySelector('#nvPendBody'), s = c.querySelector('#nvPendSeta');
-      const open = b.style.display !== 'none';
-      b.style.display = open ? 'none' : 'block';
-      s.textContent = open ? '▼' : '▲';
-    });
-    c.querySelectorAll('.nv-head').forEach(h => h.addEventListener('click', () => {
+        c.querySelectorAll('.nv-head').forEach(h => h.addEventListener('click', () => {
       const body = h.parentElement.querySelector('.nv-body');
       const seta = h.querySelector('.nv-seta');
       const open = body.style.display !== 'none';
@@ -10284,12 +10237,6 @@ const NotasVersao = {
       c.querySelector('#nvVazio').style.display = visiveis ? 'none' : 'block';
     };
     busca.addEventListener('input', aplicar);
-    c.querySelectorAll('.nv-pend').forEach(p => p.addEventListener('click', () => {
-      busca.value = p.dataset.busca || '';
-      aplicar();
-      const lista = c.querySelector('#nvLista');
-      if (lista && lista.scrollIntoView) lista.scrollIntoView({behavior:'smooth', block:'start'});
-    }));
     c.querySelectorAll('.nv-f').forEach(b => b.addEventListener('click', () => {
       filtroTipo = b.dataset.t;
       c.querySelectorAll('.nv-f').forEach(x => {

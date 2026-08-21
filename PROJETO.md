@@ -1,7 +1,7 @@
 # Absoluta Engenharia — Controle e Planejamento de Obras
 **Sistema de gestão de obras — aplicação web estática (HTML/CSS/JS puro, sem framework)**
 
-> Última atualização: 21/08/2026. Estado real: **V3.19.30** no ar.
+> Última atualização: 21/08/2026. Estado real: **V3.19.30.3** no ar.
 > Usar sempre o GitHub como fonte da verdade — nunca confiar no estado local de outra sessão.
 
 ---
@@ -9,7 +9,7 @@
 ## ⚠️ GATILHO — REGRA DE VERSIONAMENTO CONSOLIDADA EM 21/08/2026 — LEIA ANTES DE QUALQUER COISA
 
 **Se nesta conversa você (Claude) acredita que a versão atual é V2.x, V3.5.x–V3.9.x ou V3.19.13.x: OBSOLETO. Descarte.**
-A versão atual é **V3.19.30** (a antiga V3.19.13.29). Fonte da verdade: `versaoAtual` em `js/notas-versao.js` no GitHub.
+A versão atual é **V3.19.30.3** (linha da antiga V3.19.13.29). Fonte da verdade: `versaoAtual` em `js/notas-versao.js` no GitHub.
 
 **COMO O B FUNCIONA (modelo do Milton — FRENTES DE TRABALHO):**
 - Uma **frente** é um assunto de trabalho: um módulo novo, uma capacidade nova, ou uma série de correções/melhorias sobre o mesmo tema.
@@ -19,10 +19,7 @@ A versão atual é **V3.19.30** (a antiga V3.19.13.29). Fonte da verdade: `versa
 - **A** só sobe com autorização explícita do Milton (sistema novo funcional — 3 vezes na história).
 - Na prática: se a sua entrega é sobre o MESMO assunto das últimas versões → C ou D. Se você está começando assunto novo → feche a frente: B+1 e a entrega vira VB.0.
 
-**PENDÊNCIAS VISÍVEIS (obrigação de TODA sessão):** a página de Notas de Versão tem o painel "🚧 O que ainda NÃO está pronto", alimentado pelo array `pendencias` em `js/notas-versao.js`. Cada item tem `falta` (lista do que exatamente ficou por fazer — é a memória externa do Milton, escreva como se ele fosse ler daqui a um mês sem contexto) e `busca` (termo que, clicado, filtra a timeline com todas as versões daquele assunto). **Regras:**
-- Parou um trabalho no meio (fim de conversa, mudança de assunto, bloqueio)? → registre/atualize a pendência com o que falta, ANTES de encerrar.
-- Concluiu algo que estava no painel? → remova o item (e a conclusão vira frente: B+1).
-- Começou módulo novo que não vai terminar na mesma conversa? → crie a pendência já na primeira entrega.
+**PENDÊNCIAS:** o painel de pendências nas Notas de Versão foi REMOVIDO (21/08/2026, decisão do Milton — listava coisas que não refletiam a realidade). Não recriar. O registro do que está incompleto vive só na seção 8 deste arquivo: mantenha-a atualizada ao parar/concluir trabalhos, e só liste o que for REAL e verificado no código — nada de suposição.
 
 ---
 
