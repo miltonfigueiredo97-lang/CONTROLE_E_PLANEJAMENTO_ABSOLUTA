@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.13.10',
+  versaoAtual: 'V3.19.13.11',
 
   versoes: [
     {
@@ -9676,6 +9676,17 @@ const NotasVersao = {
       "itens": [
         "Depois de várias tentativas em cima do <select> nativo, ele foi ELIMINADO dos filtros: Colunas, Categoria e Equipe agora são botões que abrem um painel de opções em tela — exatamente o mesmo mecanismo do detalhe da célula e do menu Extras, que funcionam em qualquer aparelho.",
         "O botão mostra a escolha atual (ex: \"Categoria: Alvenaria\"), o painel marca a opção ativa com ✓ e rola quando a lista é grande. A busca segue como campo de texto ao lado."
+      ]
+    },
+    {
+      "versao": "V3.19.13.11",
+      "data": "2026-08-19",
+      "tipo": "correcao",
+      "titulo": "Agenda: tarefa já escolhida some do seletor sozinha, e dá pra escolher várias sem reabrir tudo de novo",
+      "itens": [
+        "Bug real (Milton reportou): depois de escolher uma tarefa pra um horário, ela continuava aparecendo no seletor pra escolher de novo — tanto no mesmo horário quanto em outros horários do mesmo dia.",
+        "Corrigido: tarefa (ou item de checklist) já agendado NAQUELE DIA some sozinho do seletor. Tem um link \"👁 mostrar já escolhidas\" pra trazer de volta, pros casos em que a intenção é mesmo repetir a tarefa em outro horário.",
+        "Escolher uma tarefa não fecha mais o seletor — ele continua aberto, do jeito que estava (mesma busca, mesmo lugar na navegação), pra escolher a próxima direto, sem ter que reabrir e renavegar tudo de novo. Um botão \"Fechar\" no final encerra quando terminar."
       ]
     }
   ],

@@ -34,6 +34,9 @@ const Todo = (() => {
   let agendaPickerProjeto = null; // projeto escolhido na navegação hierárquica do seletor (null = nível raiz)
   let agendaPickerCategoria = null; // categoria escolhida dentro do projeto ('__todas__'/'__sem__'/nome, ou null)
   let agendaCriandoNova = false; // true quando o formulário de "criar tarefa nova direto na Agenda" está aberto
+  let agendaMostrarJaEscolhidas = false; // true = mostra no seletor também as tarefas/itens já agendados nesse dia
+  let agendaTarefasJaAlocadas = new Set(); // ids de tarefas já alocadas (inteiras) no dia exibido — recalculado a cada render
+  let agendaItensJaAlocados = new Set(); // chaves "tarefaId::itemId" de itens de checklist já alocados no dia exibido
   let agendaEsconderPassadas = localStorage.getItem('agenda_esconder_passadas') === '1'; // esconder horários já passados (só quando o dia exibido é hoje)
 
   const PALETA_PROJETO = ['#2563eb', '#16a34a', '#7c3aed', '#d97706', '#0891b2', '#dc2626', '#db2777'];
@@ -591,6 +594,11 @@ const Todo = (() => {
       .agenda-picker-nivel-nome { display:flex; align-items:center; gap:9px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
       .agenda-picker-nivel-count { font-size:11.5px; font-weight:700; color:var(--cor-texto-muted); flex-shrink:0; }
       .agenda-picker-vazio { font-size:12.5px; color:var(--cor-texto-muted); padding:10px 6px; font-style:italic; }
+      .agenda-picker-toggle-escolhidas {
+        display:block; width:fit-content; border:none; background:none; font-size:11px; font-weight:600;
+        color:var(--cor-texto-muted); cursor:pointer; padding:0 0 8px; text-decoration:underline;
+      }
+      .agenda-picker-toggle-escolhidas:hover { color:var(--cor-texto-secundario); }
       .agenda-picker-cancelar { margin-top:8px; border:none; background:none; font-size:12px; color:var(--cor-texto-muted); cursor:pointer; text-decoration:underline; padding:0; }
       .agenda-picker-criar-link {
         display:block; width:100%; text-align:left; border:none; background:none; font-size:12px; font-weight:600;
@@ -1138,6 +1146,7 @@ const Todo = (() => {
     agendaPickerProjeto = null;
     agendaPickerCategoria = null;
     agendaCriandoNova = false;
+    agendaMostrarJaEscolhidas = false;
     abrirOverlay('<div id="agenda-conteudo"></div>', 'todo-modal-agenda');
     _renderizarAgenda();
   }
@@ -1216,7 +1225,8 @@ const Todo = (() => {
     if (lista.length === 0) return `<div class="agenda-picker-vazio">Nenhuma tarefa encontrada.</div>`;
     return lista.map(p => {
       const cat = p.categoria ? categorias.find(c => c.nome === p.categoria) : null;
-      const itensChecklistPendentes = (Array.isArray(p.checklist) ? p.checklist : []).filter(i => !i.concluido);
+      const itensChecklistPendentes = (Array.isArray(p.checklist) ? p.checklist : [])
+        .filter(i => !i.concluido && (agendaMostrarJaEscolhidas || !agendaItensJaAlocados.has(`${p.id}::${i.id}`)));
       const linhaTarefaHtml = `
       <div class="agenda-picker-item" data-agenda-escolher="${p.id}">
         <span class="agenda-picker-dot" style="background:${p.projeto ? corProjeto(p.projeto) : '#9ca3af'}"></span>
@@ -1250,10 +1260,9 @@ const Todo = (() => {
     });
     container.querySelectorAll('[data-agenda-escolher]').forEach(item => {
       item.onclick = async () => {
-        agendaSlotAberto = null;
-        agendaFiltroPicker = '';
-        agendaPickerProjeto = null;
-        agendaPickerCategoria = null;
+        // Não fecha nem reseta a navegação — assim dá pra escolher várias
+        // tarefas seguidas pro mesmo horário sem reabrir tudo de novo.
+        // A tarefa escolhida some da lista sozinha (já fica "já alocada").
         const [tarefaId, itemId] = item.dataset.agendaEscolher.split('::');
         await _atribuirTarefaSlot(tarefaId, dataStr, slot, itemId || null);
       };
@@ -1270,8 +1279,17 @@ const Todo = (() => {
     const todosSlots = _gerarSlots();
     const slots = (agendaEsconderPassadas && ehHoje) ? todosSlots.filter(s => s.fim > horaAgora) : todosSlots;
     const qtdEscondidos = todosSlots.length - slots.length;
-    const pendentes = tarefas.filter(t => !t.concluida)
+
+    // Quem já está agendado NESTE dia não deve continuar aparecendo pra
+    // escolher de novo (nem no mesmo horário nem em outro) — a menos que
+    // "mostrar já escolhidas" esteja ligado.
+    const alocacoesHoje = agendaAlocacoes.filter(a => a.data === dataStr);
+    agendaTarefasJaAlocadas = new Set(alocacoesHoje.filter(a => !a.itemId).map(a => a.tarefaId));
+    agendaItensJaAlocados = new Set(alocacoesHoje.filter(a => a.itemId).map(a => `${a.tarefaId}::${a.itemId}`));
+
+    const pendentesTodas = tarefas.filter(t => !t.concluida)
       .sort((a, b) => (a.importancia ?? 3) - (b.importancia ?? 3) || (a.ordem || 0) - (b.ordem || 0));
+    const pendentes = agendaMostrarJaEscolhidas ? pendentesTodas : pendentesTodas.filter(p => !agendaTarefasJaAlocadas.has(p.id));
 
     el.innerHTML = `
       <div class="agenda-nav">
@@ -1328,9 +1346,12 @@ const Todo = (() => {
                       </div>
                     ` : `
                       <input type="text" class="agenda-picker-busca" id="agenda-picker-busca" placeholder="🔍 Buscar tarefa por nome, sistema ou categoria..." value="${esc(agendaFiltroPicker)}">
+                      <button type="button" class="agenda-picker-toggle-escolhidas" id="agenda-toggle-ja-escolhidas">
+                        ${agendaMostrarJaEscolhidas ? '🙈 esconder já escolhidas' : '👁 mostrar já escolhidas'}
+                      </button>
                       <div id="agenda-picker-dinamico">${_htmlPickerConteudo(pendentes)}</div>
                       <button type="button" class="agenda-picker-criar-link" id="agenda-abrir-criar-nova">+ Não existe ainda? Criar tarefa nova</button>
-                      <button type="button" class="agenda-picker-cancelar" data-agenda-fechar-picker>Cancelar</button>
+                      <button type="button" class="agenda-picker-cancelar" data-agenda-fechar-picker>Fechar</button>
                     `}
                   </div>
                 ` : ''}
@@ -1340,10 +1361,10 @@ const Todo = (() => {
         }).join('')}
       </div>`;
 
-    document.getElementById('agenda-dia-anterior').onclick = () => { agendaDataAtual = _diaOffset(dataStr, -1); agendaSlotAberto = null; agendaCriandoNova = false; _renderizarAgenda(); };
-    document.getElementById('agenda-dia-seguinte').onclick = () => { agendaDataAtual = _diaOffset(dataStr, 1); agendaSlotAberto = null; agendaCriandoNova = false; _renderizarAgenda(); };
+    document.getElementById('agenda-dia-anterior').onclick = () => { agendaDataAtual = _diaOffset(dataStr, -1); agendaSlotAberto = null; agendaCriandoNova = false; agendaMostrarJaEscolhidas = false; _renderizarAgenda(); };
+    document.getElementById('agenda-dia-seguinte').onclick = () => { agendaDataAtual = _diaOffset(dataStr, 1); agendaSlotAberto = null; agendaCriandoNova = false; agendaMostrarJaEscolhidas = false; _renderizarAgenda(); };
     const btnHoje = document.getElementById('agenda-ir-hoje');
-    if (btnHoje) btnHoje.onclick = () => { agendaDataAtual = _hojeStr(); agendaSlotAberto = null; agendaCriandoNova = false; _renderizarAgenda(); };
+    if (btnHoje) btnHoje.onclick = () => { agendaDataAtual = _hojeStr(); agendaSlotAberto = null; agendaCriandoNova = false; agendaMostrarJaEscolhidas = false; _renderizarAgenda(); };
     const btnTogglePassadas = document.getElementById('agenda-toggle-passadas');
     if (btnTogglePassadas) btnTogglePassadas.onclick = () => {
       agendaEsconderPassadas = !agendaEsconderPassadas;
@@ -1357,11 +1378,17 @@ const Todo = (() => {
         agendaPickerProjeto = null;
         agendaPickerCategoria = null;
         agendaCriandoNova = false;
+        agendaMostrarJaEscolhidas = false;
         _renderizarAgenda();
       };
     });
     const btnFecharPicker = el.querySelector('[data-agenda-fechar-picker]');
-    if (btnFecharPicker) btnFecharPicker.onclick = () => { agendaSlotAberto = null; agendaCriandoNova = false; _renderizarAgenda(); };
+    if (btnFecharPicker) btnFecharPicker.onclick = () => { agendaSlotAberto = null; agendaCriandoNova = false; agendaMostrarJaEscolhidas = false; _renderizarAgenda(); };
+    const btnToggleJaEscolhidas = document.getElementById('agenda-toggle-ja-escolhidas');
+    if (btnToggleJaEscolhidas) btnToggleJaEscolhidas.onclick = () => {
+      agendaMostrarJaEscolhidas = !agendaMostrarJaEscolhidas;
+      _renderizarAgenda();
+    };
     const btnAbrirCriarNova = document.getElementById('agenda-abrir-criar-nova');
     if (btnAbrirCriarNova) btnAbrirCriarNova.onclick = () => { agendaCriandoNova = true; _renderizarAgenda(); };
     const btnCancelarNova = document.getElementById('agenda-nova-cancelar');
@@ -1429,11 +1456,7 @@ const Todo = (() => {
     const dados = { texto, descricao, projeto: '', categoria: '', dependencia: '', concluida: false, ordem: maxOrdem + 1, importancia: 3, checklist: [] };
     const id = await Database.criarRaiz(COL, dados);
     tarefas.push({ id, ...dados });
-    agendaSlotAberto = null;
-    agendaFiltroPicker = '';
-    agendaPickerProjeto = null;
-    agendaPickerCategoria = null;
-    agendaCriandoNova = false;
+    agendaCriandoNova = false; // volta pro modo de buscar/escolher — seletor continua aberto pra escolher mais
     await _atribuirTarefaSlot(id, dataStr, slot);
     Utils.toast('Tarefa criada e agendada.', 'sucesso');
   }
