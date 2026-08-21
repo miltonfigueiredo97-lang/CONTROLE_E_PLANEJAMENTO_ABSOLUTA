@@ -4031,39 +4031,52 @@ const Planejamento = (() => {
     if(m)return{tipo:'pavimento',num:parseInt(m[2])};
     return null;
   }
-  // Números de Subgrupo REGISTRADOS de verdade — vêm dos apartamentos que o
-  // Milton já cadastrou em cada pavimento na Estrutura da Obra (ex: pavimento
-  // "1º Pavimento" com apartamentos "AP11"/"AP12" → 11 e 12 são válidos ali).
-  // A fórmula (andar×10+Final) só CALCULA um número; isso aqui é o que
-  // confirma se aquele número é real ou se o cálculo bateu em algo que não
-  // existe (erro de digitação no nome da tarefa, etc.). Validação é POR
-  // PAVIMENTO — se um andar ainda não tem NENHUM apartamento cadastrado,
-  // não dá pra confirmar nem desmentir nada ali, então não reclama à toa.
-  let _gerarGruposSubgruposValidos=null; // Map: nome do pavimento -> Set de números válidos
-  function _construirSubgruposValidos(estrutura){
-    const mapa=new Map();
-    (estrutura.torres||[]).forEach(t=>(t.pavimentos||[]).forEach(p=>{
-      const nums=new Set();
-      (p.apartamentos||[]).forEach(a=>{
-        const m=String(a.nome||'').match(/(\d+)\s*$/);
-        if(m)nums.add(parseInt(m[1]));
-      });
-      if(nums.size)mapa.set(p.nome,nums);
-    }));
-    return mapa;
+  // O Subgrupo agora vem DIRETO do apartamento cadastrado na Estrutura da
+  // Obra (por posição: 1º apartamento cadastrado no pavimento = Final/ap 01,
+  // 2º = Final/ap 02...) em vez de calcular por fórmula e só conferir depois.
+  // Isso é o que o Milton pediu: a Estrutura da Obra é a fonte, não uma
+  // conferência de uma conta feita em paralelo — funciona mesmo se algum dia
+  // a numeração dos apartamentos não seguir andar×10+final à risca.
+  function _acharPavimentoPorNome(nomeGrupo,estrutura){
+    for(const t of(estrutura?.torres||[])){
+      const p=(t.pavimentos||[]).find(p=>p.nome===nomeGrupo);
+      if(p)return p;
+    }
+    return null;
   }
-  function _finalizarMatchGrupo(grupoNome,nomeTarefa){
-    const mPav=grupoNome.match(/^(\d+)[°º]\s*Pavimento$/i);
+  function _finalizarMatchGrupo(pav,nomeTarefa){
+    const grupoNome=pav?.nome||pav; // aceita objeto pavimento OU só o nome (ex: "Sem Vínculo", que não tem objeto)
     // "Final NN" e "ap. NN"/"apto NN"/"apartamento NN" são a MESMA coisa pra
     // efeito de Subgrupo (regra do Milton) — trades diferentes descrevem a
     // mesma unidade/torre de formas diferentes, mas o número identifica a
     // mesma coisa. Ex: "Concretagem Laje Piso: 5° Pavimento - ap. 01" conta
     // igual "Rede Frigorígena: 5° Pavimento - Final 01".
     const mFinal=String(nomeTarefa).match(/(?:Final|ap\.?|apto\.?|apartamento)\s*0*(\d+)\s*$/i);
-    const subgrupo=(mPav&&mFinal)?(parseInt(mPav[1])*10+parseInt(mFinal[1])):null;
-    const validosDoPavimento=_gerarGruposSubgruposValidos?.get(grupoNome);
-    const subgrupoValido=(subgrupo==null||!validosDoPavimento)?null:validosDoPavimento.has(subgrupo);
-    return{grupo:grupoNome,subgrupo,subgrupoValido};
+    if(!mFinal)return{grupo:grupoNome,subgrupo:null,subgrupoValido:null};
+    const indiceFinal=parseInt(mFinal[1]); // "Final 01"->1, "Final 02"->2 (1-based)
+    const aptos=pav&&pav.apartamentos?[...pav.apartamentos].sort((a,b)=>(a.ordem||0)-(b.ordem||0)):[];
+    if(aptos.length){
+      const apto=aptos[indiceFinal-1]; // 1º cadastrado = Final 01, 2º = Final 02...
+      if(apto){
+        // Achou o apartamento correspondente — usa o número dele, direto da
+        // Estrutura da Obra. Se o nome não tiver dígito no final (ex: "Torre B"),
+        // ainda assim confirma que existe, só não dá pra extrair um número.
+        const m=String(apto.nome||'').match(/(\d+)\s*$/);
+        return{grupo:grupoNome,subgrupo:m?parseInt(m[1]):null,subgrupoValido:true};
+      }
+      // Esse pavimento TEM apartamentos cadastrados, mas não um pra esse
+      // índice (ex: só tem 2 e a tarefa fala em "Final 03") — calcula pela
+      // fórmula como fallback, mas marca como NÃO validado (avisa na tela).
+      const mPav=grupoNome.match(/^(\d+)[°º]\s*Pavimento$/i);
+      const subgrupo=mPav?parseInt(mPav[1])*10+indiceFinal:null;
+      return{grupo:grupoNome,subgrupo,subgrupoValido:subgrupo!=null?false:null};
+    }
+    // Pavimento sem NENHUM apartamento cadastrado ainda — sem fonte pra
+    // confirmar. Calcula pela fórmula (se for pavimento numerado) mas não
+    // reclama nem confirma, porque não tem cadastro nenhum pra comparar.
+    const mPav=grupoNome.match(/^(\d+)[°º]\s*Pavimento$/i);
+    const subgrupo=mPav?parseInt(mPav[1])*10+indiceFinal:null;
+    return{grupo:grupoNome,subgrupo,subgrupoValido:null};
   }
   // Expande abreviações que só fazem sentido dentro de nome de tarefa (não
   // são "número+tipo" como Pavimento/Subsolo, são casos isolados de sigla):
@@ -4102,7 +4115,7 @@ const Planejamento = (() => {
       for(const pav of pavimentos){
         const canonPav=_parsePavCanonico(_normTexto(pav.nome));
         if(canonPav&&canonPav.tipo===canonTarefa.tipo&&canonPav.num===canonTarefa.num){
-          return _finalizarMatchGrupo(pav.nome,nomeTarefa);
+          return _finalizarMatchGrupo(pav,nomeTarefa);
         }
       }
     }
@@ -4115,7 +4128,7 @@ const Planejamento = (() => {
       const nPav=_normTexto(pav.nome);
       if(nPav.length<3)continue;
       for(const cand of _candidatosSingular(nPav)){
-        if(nome.includes(cand)&&nPav.length>melhorLen){melhor=pav.nome;melhorLen=nPav.length;break;}
+        if(nome.includes(cand)&&nPav.length>melhorLen){melhor=pav;melhorLen=nPav.length;break;}
       }
     }
     if(!melhor)return null;
@@ -4138,9 +4151,6 @@ const Planejamento = (() => {
     }
     const sorted=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
     const folhas=sorted.filter(t=>!_arvFilhos(t,sorted).length);
-    // Monta a lista de Subgrupos REGISTRADOS (apartamentos cadastrados em
-    // cada pavimento) ANTES de detectar — assim o cálculo já nasce validado.
-    _gerarGruposSubgruposValidos=_construirSubgruposValidos(est);
     // TODA tarefa entra na lista, mesmo sem match — quem não bate em nenhum
     // pavimento (logística/equipamento sem andar: Mini Grua, Cremalheira,
     // Elevadores...) aparece marcada como "Sem Vínculo" em vez de simplesmente
@@ -4302,17 +4312,12 @@ const Planejamento = (() => {
       aplicarATodas=confirm(`Essa mudança ("${antigoRef||'(vazio)'}" → "${novoValor}") também bate em mais ${iguais.length-1} tarefa(s) com a mesma proposta atual.\n\nOK = muda todas as ${iguais.length}.\nCancelar = muda só esta tarefa (${alvo.nome}), deixa as outras como estão.`);
     }
     const alvos=aplicarATodas?iguais:[alvo];
+    const pavEscolhido=_acharPavimentoPorNome(novoValor,_estruturaObraCache);
     for(const p of alvos){
       p.grupoProposto=novoValor;
-      // Subgrupo só faz sentido pra pavimento numerado ("Nº Pavimento") —
-      // se o novo valor não bate esse padrão, não tem como recalcular,
-      // então some (mais seguro que manter um número que não corresponde
-      // mais ao grupo escolhido).
-      const mPav=novoValor.match(/^(\d+)[°º]\s*Pavimento$/i);
-      const mFinal=String(p.nome).match(/(?:Final|ap\.?|apto\.?|apartamento)\s*0*(\d+)\s*$/i);
-      p.subgrupoProposto=(mPav&&mFinal)?(parseInt(mPav[1])*10+parseInt(mFinal[1])):null;
-      const validosDoPavimento=_gerarGruposSubgruposValidos?.get(novoValor);
-      p.subgrupoValido=(p.subgrupoProposto==null||!validosDoPavimento)?null:validosDoPavimento.has(p.subgrupoProposto);
+      const r=_finalizarMatchGrupo(pavEscolhido||novoValor,p.nome);
+      p.subgrupoProposto=r.subgrupo;
+      p.subgrupoValido=r.subgrupoValido;
     }
     _renderGerarGruposLista();
     if(alvos.length>1)Utils.toast(`Aplicado a ${alvos.length} linha(s) que tinham "${antigoRef||'(vazio)'}" → "${propostaRef}".`,'sucesso');

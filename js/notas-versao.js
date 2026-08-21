@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.13.20',
+  versaoAtual: 'V3.19.13.21',
 
   versoes: [
     {
@@ -9785,6 +9785,17 @@ const NotasVersao = {
         "Grupos e subgrupos agora seguem a ORDEM DA ESTRUTURA DA OBRA (pavimentos e apartamentos na ordem cadastrada, ex: 2º Subsolo → 1º Subsolo → Térreo → 1º Pavimento...), não mais alfabética.",
         "As colunas se alimentam de TODO o Planejamento: todo grupo/subgrupo que existir lá aparece na matriz (nada de lista fixa de nomes ou quantidade), mesmo que a tarefa ainda não tenha categoria.",
         "Filtro de Equipe passou a enxergar as equipes de todas as tarefas do Planejamento."
+      ]
+    },
+    {
+      "versao": "V3.19.13.21",
+      "data": "2026-08-19",
+      "tipo": "melhoria",
+      "titulo": "Subgrupo agora vem DIRETO do apartamento cadastrado na Estrutura da Obra, não mais de uma fórmula conferida depois",
+      "itens": [
+        "Reforço do Milton: a Estrutura da Obra (Torre > Pavimento > Apartamento) é ONDE ele define Grupo e Subgrupo — o gerador tem que usar ela como fonte, não uma conta em paralelo.",
+        "Mudança de arquitetura: antes calculava andar×10+Final e DEPOIS conferia se batia com algum apartamento cadastrado. Agora faz o inverso — pega o 1º apartamento cadastrado naquele pavimento pra \"Final/ap. 01\", o 2º pra \"Final/ap. 02\" etc, e usa o NÚMERO DELE, direto. Testado com os dados reais da tela (AP11/AP12 no 1º Pavimento): bate certinho.",
+        "Continua com aviso ⚠ quando o pavimento tem apartamentos cadastrados mas não um pra aquele índice (aí sim usa a fórmula como último recurso, avisando), e fica neutro quando o pavimento ainda não tem nenhum apartamento cadastrado."
       ]
     }
   ],
