@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.13.21',
+  versaoAtual: 'V3.19.13.22',
 
   versoes: [
     {
@@ -9796,6 +9796,17 @@ const NotasVersao = {
         "Reforço do Milton: a Estrutura da Obra (Torre > Pavimento > Apartamento) é ONDE ele define Grupo e Subgrupo — o gerador tem que usar ela como fonte, não uma conta em paralelo.",
         "Mudança de arquitetura: antes calculava andar×10+Final e DEPOIS conferia se batia com algum apartamento cadastrado. Agora faz o inverso — pega o 1º apartamento cadastrado naquele pavimento pra \"Final/ap. 01\", o 2º pra \"Final/ap. 02\" etc, e usa o NÚMERO DELE, direto. Testado com os dados reais da tela (AP11/AP12 no 1º Pavimento): bate certinho.",
         "Continua com aviso ⚠ quando o pavimento tem apartamentos cadastrados mas não um pra aquele índice (aí sim usa a fórmula como último recurso, avisando), e fica neutro quando o pavimento ainda não tem nenhum apartamento cadastrado."
+      ]
+    },
+    {
+      "versao": "V3.19.13.22",
+      "data": "2026-08-19",
+      "tipo": "melhoria",
+      "titulo": "Estrutura da Obra: arrastar-e-soltar pra reordenar Torres e Pavimentos",
+      "itens": [
+        "Ícone ⠿ do lado esquerdo de cada torre e cada pavimento — arrasta pra cima/baixo pra reordenar, solta na posição desejada.",
+        "Reordena só dentro do mesmo nível (torre com torre; pavimento com pavimento da MESMA torre) — não move pavimento de uma torre pra outra arrastando.",
+        "Salva automático a cada solta, igual as outras edições da Estrutura da Obra."
       ]
     }
   ],

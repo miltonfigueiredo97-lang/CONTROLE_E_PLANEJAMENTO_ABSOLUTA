@@ -3915,16 +3915,24 @@ const Planejamento = (() => {
     if(!torres.length){el.innerHTML='<div style="color:#555;font-size:.8rem;padding:10px 0;">Nenhuma torre cadastrada ainda.</div>';return;}
     el.innerHTML=torres.map(t=>{
       const pavs=[...(t.pavimentos||[])].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
-      return `<div style="border:1px solid #292929;border-radius:7px;padding:8px;margin-bottom:8px;">
+      return `<div draggable="true" ondragstart="Planejamento._estDragStart(event,'torre','${t.id}')"
+          ondragover="Planejamento._estDragOver(event,'torre','${t.id}')" ondragleave="Planejamento._estDragLeave(event)"
+          ondrop="Planejamento._estDrop(event,'torre','${t.id}')" ondragend="Planejamento._estDragLeave(event)"
+          style="border:1px solid #292929;border-radius:7px;padding:8px;margin-bottom:8px;">
         <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+          <span style="cursor:grab;color:#555;font-size:.9rem;user-select:none;" title="Arraste pra reordenar as torres">⠿</span>
           <input value="${_esc(t.nome||'')}" onchange="Planejamento._editarNomeEst('torre','${t.id}',this.value)" style="flex:1;background:#111;border:1px solid #333;border-radius:4px;color:#fff;padding:4px 6px;font-size:.82rem;font-weight:600;">
           <span style="cursor:pointer;color:#dc2626;font-size:.85rem;" onclick="Planejamento._removerNoEst('torre','${t.id}')" title="Excluir torre">✕</span>
         </div>
         <div style="margin-left:14px;">
           ${pavs.map(p=>{
             const aptos=[...(p.apartamentos||[])].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
-            return `<div style="border-left:2px solid #333;padding:4px 0 4px 10px;margin-bottom:4px;">
+            return `<div draggable="true" ondragstart="event.stopPropagation();Planejamento._estDragStart(event,'pavimento','${p.id}')"
+                ondragover="event.stopPropagation();Planejamento._estDragOver(event,'pavimento','${p.id}')" ondragleave="Planejamento._estDragLeave(event)"
+                ondrop="event.stopPropagation();Planejamento._estDrop(event,'pavimento','${p.id}')" ondragend="Planejamento._estDragLeave(event)"
+                style="border-left:2px solid #333;padding:4px 0 4px 10px;margin-bottom:4px;">
               <div style="display:flex;align-items:center;gap:6px;">
+                <span style="cursor:grab;color:#555;font-size:.85rem;user-select:none;" title="Arraste pra reordenar os pavimentos">⠿</span>
                 <input value="${_esc(p.nome||'')}" onchange="Planejamento._editarNomeEst('pavimento','${p.id}',this.value)" style="flex:1;background:#111;border:1px solid #333;border-radius:4px;color:#ddd;padding:3px 6px;font-size:.78rem;">
                 <span style="cursor:pointer;color:var(--cor-primaria);font-size:.72rem;" onclick="Planejamento._addApartamento('${p.id}')" title="Adicionar apto">＋apto</span>
                 <span style="cursor:pointer;color:var(--cor-primaria);font-size:.72rem;" onclick="Planejamento._duplicarPavimento('${p.id}')" title="Duplicar este pavimento (com os aptos dele)">📋 duplicar</span>
@@ -3942,6 +3950,65 @@ const Planejamento = (() => {
         </div>
       </div>`;
     }).join('');
+  }
+
+  // ══════════ Arrastar-e-soltar pra reordenar Torres e Pavimentos ══════════
+  // Só reordena dentro do MESMO nível (torre com torre, pavimento com
+  // pavimento da mesma torre) — mover pavimento pra outra torre não é
+  // suportado aqui (isso seria "mudar de prédio", faria mais sentido
+  // recriar do que arrastar).
+  let _estDragId=null,_estDragTipo=null;
+  function _estDragStart(e,tipo,id){
+    _estDragId=id;_estDragTipo=tipo;
+    e.dataTransfer.effectAllowed='move';
+    try{e.dataTransfer.setData('text/plain',id);}catch(err){}
+  }
+  function _estDragOver(e,tipo,id){
+    if(tipo!==_estDragTipo||id===_estDragId)return;
+    e.preventDefault();
+    const el=e.currentTarget;
+    const rect=el.getBoundingClientRect();
+    const antes=(e.clientY-rect.top)<rect.height/2;
+    el.style.borderTop=antes?'2px solid var(--cor-primaria)':'';
+    el.style.borderBottom=!antes?'2px solid var(--cor-primaria)':'';
+    el.dataset.dropPos=antes?'antes':'depois';
+  }
+  function _estDragLeave(e){
+    e.currentTarget.style.borderTop='';
+    e.currentTarget.style.borderBottom='';
+  }
+  function _estReordenar(lista,idMovido,idAlvo,posAntes){
+    const idxMovido=lista.findIndex(x=>x.id===idMovido);
+    if(idxMovido<0)return;
+    const[item]=lista.splice(idxMovido,1);
+    let idxAlvo=lista.findIndex(x=>x.id===idAlvo);
+    if(idxAlvo<0)idxAlvo=lista.length;
+    else if(!posAntes)idxAlvo++;
+    lista.splice(idxAlvo,0,item);
+    lista.forEach((x,i)=>{x.ordem=i+1;});
+  }
+  async function _estDrop(e,tipo,idAlvo){
+    e.preventDefault();
+    const el=e.currentTarget;
+    const posAntes=el.dataset.dropPos!=='depois';
+    el.style.borderTop='';el.style.borderBottom='';
+    const idMovido=_estDragId,tipoMovido=_estDragTipo;
+    _estDragId=null;_estDragTipo=null;
+    if(!idMovido||idMovido===idAlvo||tipoMovido!==tipo)return;
+    const est=_estruturaObraCache;if(!est)return;
+    if(tipo==='torre'){
+      _estReordenar(est.torres,idMovido,idAlvo,posAntes);
+    }else if(tipo==='pavimento'){
+      for(const t of est.torres){
+        const pavs=t.pavimentos||[];
+        if(pavs.some(p=>p.id===idMovido)&&pavs.some(p=>p.id===idAlvo)){
+          _estReordenar(pavs,idMovido,idAlvo,posAntes);
+          break;
+        }
+      }
+    }
+    await _salvarEstruturaObra(est);
+    _renderEstruturaObraBody();
   }
 
   function _acharNoEst(tipo,id){
@@ -6578,6 +6645,7 @@ const Planejamento = (() => {
     selectIdx,toggleRecolher,recuarNivel,avancarNivel,
     toggleGantt,toggleLiberarEdicaoReal,hideCol,showColsMenu,_showCol,_showAll,_toggleMenuFerramentas,
     _abrirEstruturaObra,_addTorre,_addPavimento,_addApartamento,_duplicarPavimento,_editarNomeEst,_removerNoEst,
+    _estDragStart,_estDragOver,_estDragLeave,_estDrop,
     _abrirAutoVincular,_aplicarAutoVincular,_abrirGerarGrupos,_aplicarGerarGrupos,_gerarGruposToggle,_gerarGruposEditarValor,_gerarGruposFiltrar,_gerarGruposOrdenar,
     _abrirVinculoPavimento,_salvarVinculoPavimento,_vinclocTogglePav,_vinclocToggleApto,
     _abrirAtualizarPredecessora,_predlogAtualizarBotao,_salvarAtualizacaoPredecessora,_abrirHistoricoAlteracoes,_filtrarHistorico,
