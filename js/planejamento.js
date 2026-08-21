@@ -123,7 +123,7 @@ const Planejamento = (() => {
   // pessoas alocadas, usada no módulo Produção). Lista fixa em Utils.
   const FRENTES=Utils.FRENTES_SERVICO;
 
-  const COL_LABELS={sel:'',num:'#',status:'',nivel:'Nível',codigo:'Código',nome:'Tarefa',inicio:'Início',termino:'Término',inicioReal:'Início Real',terminoReal:'Término Real',duracao:'Duração',percEsp:'% Esperado',percConc:'% Concluído',predecessora:'Predecessora',sucessora:'Sucessora',responsavel:'Responsável',local:'Local',vinculoEstrutura:'Local (Pav/Apto)',grupo:'Grupo',subgrupo:'Subgrupo',frente:'Frente',categoria:'Categoria',subcategoria:'Subcategoria',quantidade:'Quantidade',equipe:'Nº Equipe',custoMaterial:'Custo Material',custoMaoObra:'Custo M.Obra',acoes:''};
+  const COL_LABELS={sel:'',num:'#',status:'',nivel:'Nível',codigo:'Código',nome:'Tarefa',inicio:'Início',termino:'Término',inicioReal:'Início Real',terminoReal:'Término Real',duracao:'Duração',percEsp:'% Esperado',percConc:'% Concluído',predecessora:'Predecessora',sucessora:'Sucessora',responsavel:'Responsável',local:'Local',vinculoEstrutura:'Local (Pav/Sub)',grupo:'Grupo',subgrupo:'Subgrupo',frente:'Frente',categoria:'Categoria',subcategoria:'Subcategoria',quantidade:'Quantidade',equipe:'Nº Equipe',custoMaterial:'Custo Material',custoMaoObra:'Custo M.Obra',acoes:''};
   const COL_FIXED=new Set(['sel','num','status','nome','acoes']);
   const COL_EDITABLE=new Set(['codigo','nome','inicio','termino','duracao','percConc','predecessora','responsavel','local','grupo','frente','nivel','equipe','inicioReal','terminoReal']); // percEsp saiu: agora é calculado ao vivo pela data (não editável)
 
@@ -2938,7 +2938,7 @@ const Planejamento = (() => {
       {rotulo:'Corrigir Níveis Soltos',grupo:'Correções & Recálculos',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento._corrigirNiveisSoltos()" title="Corrige tarefas com nível soltos (invisíveis no Editor de Estrutura)">🌳 Corrigir Níveis Soltos</button>'},
       {rotulo:'Corrigir Ordens',grupo:'Correções & Recálculos',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.corrigirOrdensDuplicadas()" title="Corrige tarefas com número de ordem duplicado">🔧 Corrigir Ordens</button>'},
       {rotulo:'Corrigir Predecessoras (por ID)',grupo:'Correções & Recálculos',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento._migrarPredecessorasParaId()" title="Converte predecessoras antigas (por número de linha) pro formato por ID — imune a reordenação. Roda sozinho ao carregar, use aqui só se quiser confirmar manualmente.">🔗 Corrigir Predecessoras (por ID)</button>'},
-      {rotulo:'Estrutura da Obra',grupo:'Ferramentas da Obra',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento._abrirEstruturaObra()" title="Cadastra Torre → Pavimento → Apto, pra vincular tarefas a um local">🏢 Estrutura da Obra</button>'},
+      {rotulo:'Estrutura da Obra',grupo:'Ferramentas da Obra',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento._abrirEstruturaObra()" title="Cadastra Torre → Pavimento → Subgrupo, pra vincular tarefas a um local">🏢 Estrutura da Obra</button>'},
       {rotulo:'Exportar Excel (simples)',grupo:'Importar & Exportar',html:'<button class="btn btn-secundario btn-sm" data-perm="planejamento:exportar:excel" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.exportar()" title="Planilha crua com todas as colunas — boa pra reimportar/tratar dados">📤 Exportar Excel (simples)</button>'},
       {rotulo:'Exportar Frentes (revisão)',grupo:'Importar & Exportar',html:'<button class="btn btn-secundario btn-sm" data-perm="planejamento:exportar:frentes" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.exportarFrentes()" title="Planilha simples (Código, Atividade, Pai, Frente) pra revisar/corrigir a Frente de Serviço fora do sistema e reimportar depois em Importar Correções">👷 Exportar Frentes (revisão)</button>'},
       {rotulo:'Exportar Excel (formatado)',grupo:'Importar & Exportar',html:'<button class="btn btn-secundario btn-sm" data-perm="planejamento:exportar:excel" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.exportarExcelBonito()" title="Planilha estilizada: grupos coloridos por nível, indentação, cabeçalho fixo com filtro — pronta pra apresentar/imprimir">🎨 Exportar Excel (formatado)</button>'},
@@ -3830,14 +3830,14 @@ const Planejamento = (() => {
     await _carregarEstruturaObra();
     const est=_estruturaObraCache;
     if(!est.torres||!est.torres.length){
-      Utils.toast('Cadastre a Estrutura da Obra (Torre/Pavimento/Apto) primeiro.','alerta');
+      Utils.toast('Cadastre a Estrutura da Obra (Torre/Pavimento/Subgrupo) primeiro.','alerta');
       return;
     }
     const sorted=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
     const folhas=sorted.filter(t=>!_arvFilhos(t,sorted).length);
     const propostas=folhas.map(t=>({tarefa:t,match:_detectarVinculoPorNome(t.nome,est)})).filter(p=>p.match);
     if(!propostas.length){
-      Utils.toast('Nenhuma tarefa teve o nome do pavimento/apto reconhecido. Confira se os nomes cadastrados em Estrutura da Obra aparecem dentro do nome das tarefas.','alerta');
+      Utils.toast('Nenhuma tarefa teve o nome do pavimento/subgrupo reconhecido. Confira se os nomes cadastrados em Estrutura da Obra aparecem dentro do nome das tarefas.','alerta');
       return;
     }
     let pop=document.getElementById('autovinc-modal');if(pop)pop.remove();
@@ -3899,7 +3899,7 @@ const Planejamento = (() => {
           <div style="font-weight:700;color:var(--cor-primaria);">🏢 Estrutura da Obra</div>
           <span style="cursor:pointer;color:#888;font-size:1.1rem;" onclick="document.getElementById('estobra-modal').remove()">✕</span>
         </div>
-        <div style="font-size:.72rem;color:#888;margin-bottom:12px;">Torre → Pavimento → Apartamento/Unidade. Usado pra vincular tarefas a um local (coluna "Local (Pav/Apto)") e, com o botão abaixo, pra preencher automaticamente as colunas Grupo/Subgrupo de toda a obra — não afeta os módulos de Levantamento.</div>
+        <div style="font-size:.72rem;color:#888;margin-bottom:12px;">Torre → Pavimento → Subgrupo. Um subgrupo pode ser um apartamento (ex: "AP11"), um lado de fachada (ex: "Frontal", "Lateral Esquerda") ou qualquer outra divisão — o nome que você der é o que o Gerar Grupos procura dentro do nome das tarefas. Usado pra vincular tarefas a um local (coluna "Local (Pav/Sub)") e, com o botão abaixo, pra preencher automaticamente as colunas Grupo/Subgrupo de toda a obra — não afeta os módulos de Levantamento.</div>
         <div id="estobra-body"></div>
         <div style="display:flex;gap:8px;margin-top:10px;">
           <button class="btn btn-primario btn-sm" onclick="Planejamento._addTorre()">＋ Nova Torre</button>
@@ -3940,7 +3940,7 @@ const Planejamento = (() => {
                 <input value="${_esc(p.nome||'')}" draggable="false" onmousedown="event.stopPropagation()"
                   onfocus="this.closest('[draggable]').draggable=false" onblur="this.closest('[draggable]').draggable=true"
                   onchange="Planejamento._editarNomeEst('pavimento','${p.id}',this.value)" style="flex:1;background:#111;border:1px solid #333;border-radius:4px;color:#ddd;padding:3px 6px;font-size:.78rem;user-select:text;cursor:text;">
-                <span style="cursor:pointer;color:var(--cor-primaria);font-size:.72rem;" onclick="Planejamento._addApartamento('${p.id}')" title="Adicionar apto">＋apto</span>
+                <span style="cursor:pointer;color:var(--cor-primaria);font-size:.72rem;" onclick="Planejamento._addApartamento('${p.id}')" title="Adicionar subgrupo (apartamento, lado de fachada, etc.)">＋subgrupo</span>
                 <span style="cursor:pointer;color:var(--cor-primaria);font-size:.72rem;" onclick="Planejamento._duplicarPavimento('${p.id}')" title="Duplicar este pavimento (com os aptos dele)">📋 duplicar</span>
                 <span style="cursor:pointer;color:#dc2626;font-size:.8rem;" onclick="Planejamento._removerNoEst('pavimento','${p.id}')" title="Excluir pavimento">✕</span>
               </div>
@@ -4080,7 +4080,7 @@ const Planejamento = (() => {
     torreDono.pavimentos.forEach((p,i)=>{p.ordem=i+1;});
     await _salvarEstruturaObra(est);
     _renderEstruturaObraBody();
-    Utils.toast(`Pavimento duplicado (${copia.apartamentos.length} apto(s) copiado(s)) — edite o nome.`,'sucesso');
+    Utils.toast(`Pavimento duplicado (${copia.apartamentos.length} subgrupo(s) copiado(s)) — edite o nome.`,'sucesso');
   }
 
   // ══════════════════════════════════════════
@@ -4595,8 +4595,8 @@ const Planejamento = (() => {
     pop.innerHTML=`
       <div style="background:#1a1a1a;border:1px solid #333;border-radius:10px;padding:20px;width:460px;max-width:95vw;max-height:85vh;overflow-y:auto;display:flex;flex-direction:column;">
         <div style="font-weight:700;color:var(--cor-primaria);margin-bottom:4px;">📍 Local de: ${_esc(t.nome)}</div>
-        <div style="font-size:.7rem;color:#888;margin-bottom:12px;">Marque o pavimento inteiro, ou expanda pra marcar apto(s) específico(s).</div>
-        ${!torres.length?`<div style="color:#888;font-size:.82rem;">Nenhuma estrutura cadastrada ainda. <span style="color:var(--cor-primaria);cursor:pointer;text-decoration:underline;" onclick="document.getElementById('vincloc-modal').remove();Planejamento._abrirEstruturaObra()">Cadastrar Torre/Pavimento/Apto</span></div>`:''}
+        <div style="font-size:.7rem;color:#888;margin-bottom:12px;">Marque o pavimento inteiro, ou expanda pra marcar subgrupo(s) específico(s).</div>
+        ${!torres.length?`<div style="color:#888;font-size:.82rem;">Nenhuma estrutura cadastrada ainda. <span style="color:var(--cor-primaria);cursor:pointer;text-decoration:underline;" onclick="document.getElementById('vincloc-modal').remove();Planejamento._abrirEstruturaObra()">Cadastrar Torre/Pavimento/Subgrupo</span></div>`:''}
         <div id="vincloc-body" style="display:flex;flex-direction:column;gap:8px;">
         ${torres.map(tr=>`<div>
           <div style="font-weight:600;color:#ccc;font-size:.82rem;margin-bottom:4px;">${_esc(tr.nome)}</div>

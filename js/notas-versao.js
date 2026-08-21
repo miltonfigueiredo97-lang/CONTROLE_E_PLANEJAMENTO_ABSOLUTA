@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.30.4',
+  versaoAtual: 'V3.19.30.5',
 
   versoes: [
     {
@@ -10126,6 +10126,16 @@ const NotasVersao = {
         "Corrigido: agora testa primeiro se o NOME de algum apartamento cadastrado aparece dentro do nome da tarefa (mesmo mecanismo de match do Grupo, incluindo singular/plural) — pega o mais específico (\"Frontal Esquerda\" não confunde com \"Frontal\"). Só cai pro esquema numérico (Final/ap./Etapa NN + posição) se não achar por nome.",
         "Subgrupo deixou de ser só número — quando o apartamento tem nome descritivo, o Subgrupo agora é esse nome (\"Frontal\", \"Lateral Esquerda\"...), não precisa mais forçar um número. Testado com os 6 apartamentos de Fachada + todas as variações do exemplo do Milton antes de publicar.",
         "Isso vale pra QUALQUER apartamento novo criado dali pra frente, em qualquer pavimento/zona — não precisa mais pedir ajuste de código toda vez que cadastrar um subgrupo novo."
+      ]
+    },
+    {
+      "versao": "V3.19.30.5",
+      "data": "2026-08-19",
+      "tipo": "melhoria",
+      "titulo": "Estrutura da Obra: \"Apartamento\" virou \"Subgrupo\" em todo texto visível — o nome estava errado",
+      "itens": [
+        "Motivo (Milton): \"Apartamento\" só faz sentido pro caso de andar residencial — pra Fachada (Frontal, Lateral Esquerda...) ou qualquer outra divisão, o nome certo é Subgrupo. Um subgrupo PODE ser um apartamento, mas nem todo subgrupo é apartamento.",
+        "Trocado em todo lugar visível: botão \"+apto\" → \"+subgrupo\", avisos, tooltips e a coluna \"Local (Pav/Apto)\" → \"Local (Pav/Sub)\". Por baixo dos panos o dado continua no mesmo lugar (sem risco de perder o que já foi cadastrado) — só o nome mostrado na tela mudou."
       ]
     }
   ],
