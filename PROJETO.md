@@ -1,29 +1,25 @@
 # Absoluta Engenharia — Controle e Planejamento de Obras
 **Sistema de gestão de obras — aplicação web estática (HTML/CSS/JS puro, sem framework)**
 
-> Última atualização: 21/08/2026. Estado real: **V3.9.37** no ar.
+> Última atualização: 21/08/2026. Estado real: **V3.19.30** no ar.
 > Usar sempre o GitHub como fonte da verdade — nunca confiar no estado local de outra sessão.
 
 ---
 
-## ⚠️ GATILHO — VERSIONAMENTO FOI RE-AUDITADO DE NOVO EM 21/08/2026 — LEIA ANTES DE QUALQUER COISA
+## ⚠️ GATILHO — REGRA DE VERSIONAMENTO CONSOLIDADA EM 21/08/2026 — LEIA ANTES DE QUALQUER COISA
 
-**Se nesta conversa você (Claude) acredita que a versão atual é V2.x, V3.5.x a V3.19.x (ex: V3.19.13.28): esse conhecimento está OBSOLETO. Descarte-o.**
+**Se nesta conversa você (Claude) acredita que a versão atual é V2.x, V3.5.x–V3.9.x ou V3.19.13.x: OBSOLETO. Descarte.**
+A versão atual é **V3.19.30** (a antiga V3.19.13.29). Fonte da verdade: `versaoAtual` em `js/notas-versao.js` no GitHub.
 
-Depois da renumeração de 14/08 (V2.x → regra A.B.C.D), as sessões continuaram INFLANDO o dígito B
-(V3.6 → V3.19 em uma semana, criando até formatos inválidos como V3.12.0.8 com tipo "funcionalidade").
-Em 21/08/2026 TODAS as 607 versões foram re-auditadas e renumeradas. Fatos:
+**COMO O B FUNCIONA (modelo do Milton — FRENTES DE TRABALHO):**
+- Uma **frente** é um assunto de trabalho: um módulo novo, uma capacidade nova, ou uma série de correções/melhorias sobre o mesmo tema.
+- Enquanto a frente está aberta: correção → sobe **C** · melhoria/refinamento/sub-feature → sobe **D**.
+- Quando a frente CONCLUI e o trabalho muda de assunto: **sobe B, zera C e D** — a primeira entrega do assunto novo é a VB.0.
+- Ou seja: B não mede só "módulo novo" — mede **ciclos de trabalho concluídos**. 10 correções de uma coisa + 10 de outra = duas frentes = 2 bumps de B, não C=20.
+- **A** só sobe com autorização explícita do Milton (sistema novo funcional — 3 vezes na história).
+- Na prática: se a sua entrega é sobre o MESMO assunto das últimas versões → C ou D. Se você está começando assunto novo → feche a frente: B+1 e a entrega vira VB.0.
 
-1. A versão atual do sistema é **V3.9.37**. A antiga V3.19.13.28 hoje se chama V3.9.37.
-2. Só existiram **4 marcos B legítimos** desde a V3.5.0.0: Terraplanagem "Marcar no Projeto" (V3.6.0),
-   Relatório PDF + 3D (V3.7.0), módulo Controle de Porcelanatos (V3.8.0), Agenda (V3.9.0).
-   Todo o resto que as sessões chamaram de "feature" era correção (C) ou sub-feature/melhoria (D).
-3. **REGRA DURA A PARTIR DE AGORA: você está PROIBIDO de subir o dígito B (ou A) por conta própria.**
-   Só suba B/A se o Milton autorizar EXPLICITAMENTE naquela conversa ("isso é uma feature nova, sobe o B").
-   Sem autorização, TODA entrega é C (consertou algo quebrado) ou D (qualquer outra coisa: melhoria,
-   refinamento, funcionalidade menor, tela nova dentro de módulo existente, campo novo, botão novo, integração).
-4. Em caso de dúvida, a fonte da verdade é `versaoAtual` em `js/notas-versao.js` no GitHub — não a sua memória de conversa.
-5. O campo `legado` de cada versão guarda o número que ela tinha antes das auditorias (badge "antes: Vx.x" na página).
+**PENDÊNCIAS VISÍVEIS:** a página de Notas de Versão tem o painel "🚧 O que ainda NÃO está pronto", alimentado pelo array `pendencias` em `js/notas-versao.js`. **Sempre que concluir ou iniciar um módulo, ATUALIZE esse array** — é ali que o Milton enxerga o que falta.
 
 ---
 
@@ -64,15 +60,15 @@ git fetch origin && git reset --hard origin/main
 | Casa | Sobe quando | Exemplo real |
 |---|---|---|
 | **A** (Sistema) | Ciclo fechado, sistema novo funcional — SÓ com autorização do Milton | V1 = Base · V2 = Reescrita do Planejamento · V3 = marco Suprimentos |
-| **B** (Feature) | Módulo novo/feature GRANDE — SÓ com autorização do Milton | V3.8 = Porcelanatos · V3.9 = Agenda |
+| **B** (Frente) | Frente de trabalho concluída → assunto novo começa | V3.13 = Porcelanatos · V3.16 = Agenda · V3.19 = Categorias |
 | **C** (Correção) | Correção de bug dentro da feature vigente | V3.5.0 → V3.5.1 |
 | **D** (Sub-feature) | Melhoria/refinamento/funcionalidade menor dentro do que já existe | V3.5.1 → V3.5.1.1 |
 
 **Como classificar:**
-- Consertou algo quebrado → **C**
-- QUALQUER outra coisa (melhoria, refinamento, funcionalidade menor, tela/campo/botão novo dentro de módulo existente) → **D**
-- **B e A: SOMENTE com autorização explícita do Milton na conversa.** Sem autorização = C ou D, sem exceção.
-  Histórico: em 1 semana as sessões inflaram V3.6→V3.19 chamando sub-features de "feature" — por isso a regra virou proibição.
+- Mesma frente/assunto das últimas versões + consertou algo quebrado → **C**
+- Mesma frente/assunto + melhoria/refinamento/funcionalidade menor → **D**
+- Assunto NOVO (frente anterior concluída) → **B+1**, entrega vira VB.0
+- Sistema novo funcional (ciclo inteiro fechado) → **A** — só com autorização explícita do Milton
 
 **Exibição:** o D só aparece quando > 0 (V3.4.23, não V3.4.23.0). Exceção: versões de fechamento de ciclo podem exibir por extenso (V3.5.0.0).
 
@@ -86,7 +82,7 @@ git fetch origin && git reset --hard origin/main
 **Bump de versão — sempre nos dois lugares:**
 ```bash
 # 1. Todos os HTMLs (badge nav-version na sidebar):
-sed -i 's/V3.9.X/V3.9.Y/g' *.html
+sed -i 's/V3.19.X/V3.19.Y/g' *.html
 
 # 2. js/notas-versao.js:
 #   - versaoAtual: 'V3.X.Z'

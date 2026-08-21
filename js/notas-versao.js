@@ -1,6 +1,20 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.9.38',
+  versaoAtual: 'V3.19.30',
+
+  // ATUALIZAR sempre que um módulo mudar de status — é daqui que a página mostra o que falta
+  pendencias: [
+    { nome: 'Levantamento Pintura',      status: 'em-dev',  desc: 'Em desenvolvimento — pinturaAreas parcial' },
+    { nome: 'Controle Concreto',         status: 'em-dev',  desc: 'Parcial — BTs e lançamentos incompletos' },
+    { nome: 'Controle Solo Grampeado',   status: 'em-dev',  desc: 'Parcial' },
+    { nome: 'Produção',                  status: 'em-dev',  desc: 'Parcial' },
+    { nome: 'Restrições',                status: 'stub',    desc: 'Não iniciado (página vazia)' },
+    { nome: 'Orçamentos',                status: 'stub',    desc: 'Não iniciado (página vazia)' },
+    { nome: 'Histograma',                status: 'stub',    desc: 'Não iniciado (página vazia)' },
+    { nome: 'Predecessoras — datas automáticas', status: 'atencao', desc: 'Funciona mas tem edge cases conhecidos' },
+    { nome: 'Relatório do Diário de Obra',       status: 'atencao', desc: 'Formato ainda amadurecendo' },
+    { nome: 'Regras de segurança do Firestore',  status: 'atencao', desc: 'Ainda são as de desenvolvimento' }
+  ],
 
   versoes: [
     {
@@ -8043,7 +8057,7 @@ const NotasVersao = {
       "legado": "V3.7.1.11"
     },
     {
-      "versao": "V3.7.7",
+      "versao": "V3.8.0",
       "data": "2026-08-15",
       "tipo": "correcao",
       "titulo": "Levantamento de Terraplanagem: sistema de cálculo reescrito — áreas + cotas + grade automática de 1,5m",
@@ -8057,7 +8071,7 @@ const NotasVersao = {
       "legado": "V3.8.0"
     },
     {
-      "versao": "V3.7.8",
+      "versao": "V3.8.1",
       "data": "2026-08-16",
       "tipo": "correcao",
       "titulo": "Levantamento de Terraplanagem: corrigido bug real do 3D/volume com mais de uma área + nova tela \"Ver Seções\"",
@@ -8070,7 +8084,7 @@ const NotasVersao = {
       "legado": "V3.8.1"
     },
     {
-      "versao": "V3.7.8.1",
+      "versao": "V3.8.1.1",
       "data": "2026-08-16",
       "tipo": "melhoria",
       "titulo": "Área: mostra a dimensão real (metros) pra diagnosticar área pequena demais ou escala calibrada errada",
@@ -8082,7 +8096,7 @@ const NotasVersao = {
       "legado": "V3.8.1.1"
     },
     {
-      "versao": "V3.7.9",
+      "versao": "V3.8.2",
       "data": "2026-08-16",
       "tipo": "correcao",
       "titulo": "3D: corrigido o formato errado em áreas irregulares (T virando L) + Ver Seções reformulado",
@@ -8095,7 +8109,7 @@ const NotasVersao = {
       "legado": "V3.8.1.2"
     },
     {
-      "versao": "V3.7.10",
+      "versao": "V3.8.3",
       "data": "2026-08-16",
       "tipo": "correcao",
       "titulo": "Nova opção por área: Elevação x Profundidade — resolve as áreas saindo negativas",
@@ -8108,7 +8122,7 @@ const NotasVersao = {
       "legado": "V3.8.2"
     },
     {
-      "versao": "V3.7.10.1",
+      "versao": "V3.8.3.1",
       "data": "2026-08-16",
       "tipo": "melhoria",
       "titulo": "Área: separa \"Caixa\" (bounding box) de \"Área Real\" — deixa claro que não é a mesma coisa",
@@ -8119,7 +8133,7 @@ const NotasVersao = {
       "legado": "V3.8.2.1"
     },
     {
-      "versao": "V3.7.10.2",
+      "versao": "V3.8.3.2",
       "data": "2026-08-17",
       "tipo": "melhoria",
       "titulo": "Dashboard: seletor Extras + gráfico de Terraplanagem",
@@ -8132,7 +8146,7 @@ const NotasVersao = {
       "legado": "V3.8.2.2"
     },
     {
-      "versao": "V3.7.11",
+      "versao": "V3.8.4",
       "data": "2026-08-16",
       "tipo": "correcao",
       "titulo": "Causa raiz de vez do 3D errado: prédio com reentrância cruzava a grade em pedaços separados, e o sistema colava um no outro",
@@ -8144,7 +8158,7 @@ const NotasVersao = {
       "legado": "V3.8.4"
     },
     {
-      "versao": "V3.7.12",
+      "versao": "V3.8.5",
       "data": "2026-08-17",
       "tipo": "correcao",
       "titulo": "Menu Extras não fica mais escondido atrás do conteúdo",
@@ -8154,7 +8168,7 @@ const NotasVersao = {
       "legado": "V3.8.5"
     },
     {
-      "versao": "V3.7.12.1",
+      "versao": "V3.8.5.1",
       "data": "2026-08-17",
       "tipo": "melhoria",
       "titulo": "Controle de Estacas: agora dá pra editar número/data/descrição de uma concretagem já criada",
@@ -8167,7 +8181,7 @@ const NotasVersao = {
       "legado": "V3.8.6"
     },
     {
-      "versao": "V3.7.13",
+      "versao": "V3.8.6",
       "data": "2026-08-17",
       "tipo": "correcao",
       "titulo": "Terraplanagem do Dashboard voltou a funcionar",
@@ -8178,7 +8192,7 @@ const NotasVersao = {
       "legado": "V3.8.7"
     },
     {
-      "versao": "V3.7.13.1",
+      "versao": "V3.8.6.1",
       "data": "2026-08-17",
       "tipo": "melhoria",
       "titulo": "Controle de Estacas: campo de data direto no popup de atribuir à concretagem",
@@ -8189,7 +8203,7 @@ const NotasVersao = {
       "legado": "V3.8.8"
     },
     {
-      "versao": "V3.7.14",
+      "versao": "V3.8.7",
       "data": "2026-08-16",
       "tipo": "correcao",
       "titulo": "3D: causa raiz de vez — agora a vista de cima bate exatamente com a planta",
@@ -8201,7 +8215,7 @@ const NotasVersao = {
       "legado": "V3.8.9"
     },
     {
-      "versao": "V3.7.15",
+      "versao": "V3.8.8",
       "data": "2026-08-16",
       "tipo": "correcao",
       "titulo": "\"Ver Seções\": a linha riscada aparecia fora da planta (desalinhada)",
@@ -8212,7 +8226,7 @@ const NotasVersao = {
       "legado": "V3.8.10"
     },
     {
-      "versao": "V3.7.15.1",
+      "versao": "V3.8.8.1",
       "data": "2026-08-17",
       "tipo": "melhoria",
       "titulo": "Gráfico de Terraplanagem com unidade m³ nos rótulos",
@@ -8222,7 +8236,7 @@ const NotasVersao = {
       "legado": "V3.8.10.1"
     },
     {
-      "versao": "V3.7.15.2",
+      "versao": "V3.8.8.2",
       "data": "2026-08-17",
       "tipo": "melhoria",
       "titulo": "Botão Gerar Relatório de Terraplanagem direto do Dashboard",
@@ -8233,7 +8247,7 @@ const NotasVersao = {
       "legado": "V3.8.10.2"
     },
     {
-      "versao": "V3.7.15.3",
+      "versao": "V3.8.8.3",
       "data": "2026-08-17",
       "tipo": "melhoria",
       "titulo": "Relatório de Terraplanagem gerado DENTRO do Dashboard",
@@ -8245,7 +8259,7 @@ const NotasVersao = {
       "legado": "V3.8.10.3"
     },
     {
-      "versao": "V3.7.16",
+      "versao": "V3.8.9",
       "data": "2026-08-16",
       "tipo": "correcao",
       "titulo": "3D achatado corrigido (escala vertical separada) + removida a coluna \"Caixa\" que confundia",
@@ -8257,7 +8271,7 @@ const NotasVersao = {
       "legado": "V3.8.10.4"
     },
     {
-      "versao": "V3.7.17",
+      "versao": "V3.8.10",
       "data": "2026-08-16",
       "tipo": "correcao",
       "titulo": "Causa raiz REAL da área negativa: recalcArea sobrescrevia o valor certo com o sinal errado a cada render",
@@ -8269,7 +8283,7 @@ const NotasVersao = {
       "legado": "V3.8.11"
     },
     {
-      "versao": "V3.7.18",
+      "versao": "V3.8.11",
       "data": "2026-08-17",
       "tipo": "correcao",
       "titulo": "Gerar Relatório de Terraplanagem não respondia ao clique",
@@ -8281,7 +8295,7 @@ const NotasVersao = {
       "legado": "V3.8.12"
     },
     {
-      "versao": "V3.7.19",
+      "versao": "V3.8.12",
       "data": "2026-08-16",
       "tipo": "correcao",
       "titulo": "3D deformado (\"caixa com torre\") corrigido + comprimento visível em \"Ver Seções\"",
@@ -8293,7 +8307,7 @@ const NotasVersao = {
       "legado": "V3.8.13"
     },
     {
-      "versao": "V3.7.19.1",
+      "versao": "V3.8.12.1",
       "data": "2026-08-17",
       "tipo": "melhoria",
       "titulo": "Relatório de Terraplanagem blindado contra cache antigo",
@@ -8304,7 +8318,7 @@ const NotasVersao = {
       "legado": "V3.8.13.1"
     },
     {
-      "versao": "V3.7.20",
+      "versao": "V3.8.13",
       "data": "2026-08-16",
       "tipo": "correcao",
       "titulo": "Zoom/pan no painel do projeto (pra calibrar com precisão) + 3D simplificado (removidas as paredes que pareciam caixa)",
@@ -8316,7 +8330,7 @@ const NotasVersao = {
       "legado": "V3.8.14"
     },
     {
-      "versao": "V3.7.21",
+      "versao": "V3.8.14",
       "data": "2026-08-16",
       "tipo": "correcao",
       "titulo": "Zoom/pan \"correndo pra longe\" durante arrasto — causa era a transição CSS suave",
@@ -8328,7 +8342,7 @@ const NotasVersao = {
       "legado": "V3.8.14.1"
     },
     {
-      "versao": "V3.7.22",
+      "versao": "V3.8.15",
       "data": "2026-08-16",
       "tipo": "correcao",
       "titulo": "Zoom no scroll agora segue o cursor (antes sempre ampliava a partir do centro)",
@@ -8340,7 +8354,7 @@ const NotasVersao = {
       "legado": "V3.8.14.2"
     },
     {
-      "versao": "V3.7.23",
+      "versao": "V3.8.16",
       "data": "2026-08-16",
       "tipo": "correcao",
       "titulo": "Causa raiz de vez: clicar pra marcar um ponto deixava a imagem \"presa\" no mouse depois",
@@ -8351,7 +8365,7 @@ const NotasVersao = {
       "legado": "V3.8.14.3"
     },
     {
-      "versao": "V3.7.24",
+      "versao": "V3.8.17",
       "data": "2026-08-16",
       "tipo": "correcao",
       "titulo": "Marcadores (calibração, área, cota) não crescem mais junto com o zoom",
@@ -8362,7 +8376,7 @@ const NotasVersao = {
       "legado": "V3.8.14.4"
     },
     {
-      "versao": "V3.7.24.1",
+      "versao": "V3.8.17.1",
       "data": "2026-08-16",
       "tipo": "melhoria",
       "titulo": "Diagnóstico de ponto de cota errado (achar o \"espinho\" isolado no 3D)",
@@ -8374,7 +8388,7 @@ const NotasVersao = {
       "legado": "V3.8.15"
     },
     {
-      "versao": "V3.7.25",
+      "versao": "V3.8.18",
       "data": "2026-08-16",
       "tipo": "correcao",
       "titulo": "3D agora compõe TODAS as áreas juntas na posição real da planta (não mais cada uma isolada)",
@@ -8386,7 +8400,7 @@ const NotasVersao = {
       "legado": "V3.8.16"
     },
     {
-      "versao": "V3.7.25.1",
+      "versao": "V3.9.0",
       "data": "2026-08-16",
       "tipo": "funcionalidade",
       "titulo": "3D reescrito do zero: malha de grade 2D real (X e Y juntos) em vez de esticar seções de uma direção só",
@@ -8400,7 +8414,7 @@ const NotasVersao = {
       "legado": "V3.9.0"
     },
     {
-      "versao": "V3.7.25.2",
+      "versao": "V3.9.0.1",
       "data": "2026-08-16",
       "tipo": "melhoria",
       "titulo": "Paredes sólidas no 3D (fecha o vão entre topo e fundo) + câmera com bem mais liberdade de giro",
@@ -8413,7 +8427,7 @@ const NotasVersao = {
       "legado": "V3.9.1"
     },
     {
-      "versao": "V3.7.26",
+      "versao": "V3.9.1",
       "data": "2026-08-16",
       "tipo": "correcao",
       "titulo": "\"Ver Seções\": lista voltava pro topo a cada clique",
@@ -8424,7 +8438,7 @@ const NotasVersao = {
       "legado": "V3.9.1.1"
     },
     {
-      "versao": "V3.7.27",
+      "versao": "V3.9.2",
       "data": "2026-08-16",
       "tipo": "correcao",
       "titulo": "3D: fecha o \"buraco\" na costura entre áreas vizinhas + área pequena (ex: reservatório) não some mais",
@@ -8435,7 +8449,7 @@ const NotasVersao = {
       "legado": "V3.9.2"
     },
     {
-      "versao": "V3.7.28",
+      "versao": "V3.9.3",
       "data": "2026-08-16",
       "tipo": "correcao",
       "titulo": "3D: tampa sólida embaixo — o volume tava fechado nas laterais mas oco por baixo",
@@ -8446,7 +8460,7 @@ const NotasVersao = {
       "legado": "V3.9.3"
     },
     {
-      "versao": "V3.7.28.1",
+      "versao": "V3.9.3.1",
       "data": "2026-08-16",
       "tipo": "funcionalidade",
       "titulo": "Nova convenção de cota: Relativa ao R.N. (o sinal digitado já é a altura, positivo=acima/negativo=abaixo)",
@@ -8458,7 +8472,7 @@ const NotasVersao = {
       "legado": "V3.9.4"
     },
     {
-      "versao": "V3.7.29",
+      "versao": "V3.9.4",
       "data": "2026-08-16",
       "tipo": "correcao",
       "titulo": "3D: revertido o \"piso global\" — cada área volta a ter o fundo dela mesma (degrau real entre profundidades diferentes)",
@@ -8469,7 +8483,7 @@ const NotasVersao = {
       "legado": "V3.9.5"
     },
     {
-      "versao": "V3.7.30",
+      "versao": "V3.9.5",
       "data": "2026-08-16",
       "tipo": "correcao",
       "titulo": "Removida a confusão de 3 convenções — só existe UM jeito, sempre: sinal relativo ao zero",
@@ -8480,7 +8494,7 @@ const NotasVersao = {
       "legado": "V3.9.6"
     },
     {
-      "versao": "V3.7.31",
+      "versao": "V3.9.6",
       "data": "2026-08-16",
       "tipo": "correcao",
       "titulo": "Corrigido de vez o cálculo: a versão anterior (V3.9.6) tinha um erro sério — cancelava a cota final da conta",
@@ -8491,7 +8505,7 @@ const NotasVersao = {
       "legado": "V3.9.7"
     },
     {
-      "versao": "V3.7.31.1",
+      "versao": "V3.9.6.1",
       "data": "2026-08-16",
       "tipo": "melhoria",
       "titulo": "Perfil lateral (\"Ver Seções\") ganhou a linha de referência Cota 0",
@@ -8501,7 +8515,7 @@ const NotasVersao = {
       "legado": "V3.9.8"
     },
     {
-      "versao": "V3.7.31.2",
+      "versao": "V3.10.0",
       "data": "2026-08-16",
       "tipo": "funcionalidade",
       "titulo": "Seção atravessa direto de uma área pra outra — a cota final agora varia ponto a ponto, sem quebrar a seção",
@@ -8514,7 +8528,7 @@ const NotasVersao = {
       "legado": "V3.10.0"
     },
     {
-      "versao": "V3.7.32",
+      "versao": "V3.10.1",
       "data": "2026-08-16",
       "tipo": "correcao",
       "titulo": "3D também unificado (mesma correção da V3.10.0) — sem buraco/vão entre áreas vizinhas",
@@ -8526,7 +8540,7 @@ const NotasVersao = {
       "legado": "V3.10.1"
     },
     {
-      "versao": "V3.7.33",
+      "versao": "V3.10.2",
       "data": "2026-08-16",
       "tipo": "correcao",
       "titulo": "Tolerância de 30cm na costura entre áreas — corrige junção INCONSISTENTE (algumas seções juntavam, outras não)",
@@ -8537,7 +8551,7 @@ const NotasVersao = {
       "legado": "V3.10.2"
     },
     {
-      "versao": "V3.7.33.1",
+      "versao": "V3.10.2.1",
       "data": "2026-08-16",
       "tipo": "melhoria",
       "titulo": "Clicar num ponto de cota já marcado agora edita ele (em vez de criar um novo por cima)",
@@ -8547,7 +8561,7 @@ const NotasVersao = {
       "legado": "V3.10.3"
     },
     {
-      "versao": "V3.7.34",
+      "versao": "V3.10.3",
       "data": "2026-08-17",
       "tipo": "correcao",
       "titulo": "Controle de Estacas: toque no mobile não seleciona mais a imagem inteira",
@@ -8558,7 +8572,7 @@ const NotasVersao = {
       "legado": "V3.10.4"
     },
     {
-      "versao": "V3.7.34.1",
+      "versao": "V3.10.3.1",
       "data": "2026-08-17",
       "tipo": "funcionalidade",
       "titulo": "Levantamento: terreno interpola global (corrige salto na fronteira entre áreas) + volume das Estacas somado no total + giro do 3D no touch corrigido",
@@ -8570,7 +8584,7 @@ const NotasVersao = {
       "legado": "V3.10.5"
     },
     {
-      "versao": "V3.7.35",
+      "versao": "V3.10.4",
       "data": "2026-08-17",
       "tipo": "correcao",
       "titulo": "Clicar num ponto de cota já marcado não abria o editor (só funcionava com \"Marcar Cota\" ativo)",
@@ -8581,7 +8595,7 @@ const NotasVersao = {
       "legado": "V3.10.6"
     },
     {
-      "versao": "V3.7.35.1",
+      "versao": "V3.10.4.1",
       "data": "2026-08-17",
       "tipo": "melhoria",
       "titulo": "Editor de ponto de cota: popup de verdade (nada de prompt() do navegador) com Salvar/Mover/Excluir",
@@ -8592,7 +8606,7 @@ const NotasVersao = {
       "legado": "V3.10.7"
     },
     {
-      "versao": "V3.7.35.2",
+      "versao": "V3.11.0",
       "data": "2026-08-17",
       "tipo": "funcionalidade",
       "titulo": "Controle de Terraplanagem: Viagens Atual/Total, Volume Total a Retirar (terra+estacas+fundação), Executado, Faltando e Valor Faltando",
@@ -8605,7 +8619,7 @@ const NotasVersao = {
       "legado": "V3.11.0"
     },
     {
-      "versao": "V3.7.36",
+      "versao": "V3.11.1",
       "data": "2026-08-18",
       "tipo": "correcao",
       "titulo": "Controle de Estacas e Fundações: clicar em Fundações abria o mesmo projeto (prancha) das Estacas",
@@ -8617,7 +8631,7 @@ const NotasVersao = {
       "legado": "V3.11.1"
     },
     {
-      "versao": "V3.7.36.1",
+      "versao": "V3.11.1.1",
       "data": "2026-08-18",
       "tipo": "melhoria",
       "titulo": "Levantamento Piso: impermeabilização agora considera o rodapé separadamente da área",
@@ -8630,7 +8644,7 @@ const NotasVersao = {
       "legado": "V3.11.1.1"
     },
     {
-      "versao": "V3.7.37",
+      "versao": "V3.11.2",
       "data": "2026-08-17",
       "tipo": "correcao",
       "titulo": "Volume Fundação Superficial: dado real (Controle de Estacas e Fundações), não mais placeholder",
@@ -8641,7 +8655,7 @@ const NotasVersao = {
       "legado": "V3.11.2"
     },
     {
-      "versao": "V3.7.38",
+      "versao": "V3.11.3",
       "data": "2026-08-18",
       "tipo": "correcao",
       "titulo": "Controle de Estacas: mapa utilizável no celular e no tablet",
@@ -8656,7 +8670,7 @@ const NotasVersao = {
       "legado": "V3.11.3"
     },
     {
-      "versao": "V3.7.38.1",
+      "versao": "V3.11.3.1",
       "data": "2026-08-18",
       "tipo": "melhoria",
       "titulo": "Levantamento Piso: seleção de quais paredes recebem impermeabilização do rodapé",
@@ -8670,7 +8684,7 @@ const NotasVersao = {
       "legado": "V3.11.3.1"
     },
     {
-      "versao": "V3.7.38.2",
+      "versao": "V3.11.3.2",
       "data": "2026-08-17",
       "tipo": "melhoria",
       "titulo": "Menos cards de volume: só o valor final (com empolamento), taxa em texto pequeno embaixo",
@@ -8681,7 +8695,7 @@ const NotasVersao = {
       "legado": "V3.11.4"
     },
     {
-      "versao": "V3.7.38.3",
+      "versao": "V3.11.3.3",
       "data": "2026-08-18",
       "tipo": "melhoria",
       "titulo": "Levantamento Piso: popup \\\"Selecionar Paredes\\\" ganhou o desenho real da planta de fundo",
@@ -8693,7 +8707,7 @@ const NotasVersao = {
       "legado": "V3.11.4.1"
     },
     {
-      "versao": "V3.7.39",
+      "versao": "V3.11.4",
       "data": "2026-08-18",
       "tipo": "correcao",
       "titulo": "Terraplanagem do Dashboard alinhada aos números do Controle",
@@ -8706,7 +8720,7 @@ const NotasVersao = {
       "legado": "V3.11.4.2"
     },
     {
-      "versao": "V3.7.39.1",
+      "versao": "V3.11.4.1",
       "data": "2026-08-18",
       "tipo": "melhoria",
       "titulo": "Cards de Terraplanagem do Dashboard na MESMA ordem do Controle",
@@ -8717,7 +8731,7 @@ const NotasVersao = {
       "legado": "V3.11.4.3"
     },
     {
-      "versao": "V3.7.39.2",
+      "versao": "V3.11.4.2",
       "data": "2026-08-18",
       "tipo": "melhoria",
       "titulo": "Controle de Fundações: painel de visão geral corrigido (estava sempre mostrando Estacas) + novo fluxo \"Lançar BT\" no Acompanhamento",
@@ -8729,7 +8743,7 @@ const NotasVersao = {
       "legado": "V3.11.4.4"
     },
     {
-      "versao": "V3.7.39.3",
+      "versao": "V3.11.4.3",
       "data": "2026-08-18",
       "tipo": "melhoria",
       "titulo": "Controle de Estacas e Fundações: listas de concretagem não misturam mais os números das duas views",
@@ -8741,7 +8755,7 @@ const NotasVersao = {
       "legado": "V3.11.4.5"
     },
     {
-      "versao": "V3.7.39.4",
+      "versao": "V3.11.4.4",
       "data": "2026-08-18",
       "tipo": "melhoria",
       "titulo": "Levantamento Piso: dividir a parede em trechos e usar mais de uma altura na impermeabilização",
@@ -8754,7 +8768,7 @@ const NotasVersao = {
       "legado": "V3.11.4.6"
     },
     {
-      "versao": "V3.7.39.5",
+      "versao": "V3.11.4.5",
       "data": "2026-08-18",
       "tipo": "melhoria",
       "titulo": "Levantamento Piso: aviso quando a divisão da parede não fecha o total",
@@ -8766,7 +8780,7 @@ const NotasVersao = {
       "legado": "V3.11.4.7"
     },
     {
-      "versao": "V3.7.39.6",
+      "versao": "V3.11.4.6",
       "data": "2026-08-18",
       "tipo": "melhoria",
       "titulo": "Levantamento Piso: simplificado o jeito de adicionar novas alturas de impermeabilização",
@@ -8778,7 +8792,7 @@ const NotasVersao = {
       "legado": "V3.11.4.8"
     },
     {
-      "versao": "V3.7.39.7",
+      "versao": "V3.11.4.7",
       "data": "2026-08-18",
       "tipo": "melhoria",
       "titulo": "Levantamento Piso: desenho da parede dividida agora mostra a cor de cada trecho",
@@ -8789,7 +8803,7 @@ const NotasVersao = {
       "legado": "V3.11.4.9"
     },
     {
-      "versao": "V3.7.39.8",
+      "versao": "V3.11.4.8",
       "data": "2026-08-18",
       "tipo": "melhoria",
       "titulo": "Levantamento Piso: zoom e arrastar no desenho do popup Selecionar Paredes",
@@ -8800,7 +8814,7 @@ const NotasVersao = {
       "legado": "V3.11.4.10"
     },
     {
-      "versao": "V3.7.40",
+      "versao": "V3.11.5",
       "data": "2026-08-18",
       "tipo": "correcao",
       "titulo": "Levantamento Piso: dava pra incluir uma parede mas não pra remover ela de volta",
@@ -8811,7 +8825,7 @@ const NotasVersao = {
       "legado": "V3.11.4.11"
     },
     {
-      "versao": "V3.7.41",
+      "versao": "V3.11.6",
       "data": "2026-08-18",
       "tipo": "correcao",
       "titulo": "Levantamento Piso: números do desenho ficavam gigantes no zoom + limite de zoom aumentado",
@@ -8823,7 +8837,7 @@ const NotasVersao = {
       "legado": "V3.11.4.12"
     },
     {
-      "versao": "V3.7.41.1",
+      "versao": "V3.11.6.1",
       "data": "2026-08-18",
       "tipo": "melhoria",
       "titulo": "Levantamento Piso: removido o cadastro separado de alturas — agora é direto em cada trecho",
@@ -8835,7 +8849,7 @@ const NotasVersao = {
       "legado": "V3.11.4.13"
     },
     {
-      "versao": "V3.7.42",
+      "versao": "V3.11.7",
       "data": "2026-08-18",
       "tipo": "correcao",
       "titulo": "Levantamento Piso: aviso de divergência não atualizava ao digitar + seletor de altura sem opções visíveis",
@@ -8847,7 +8861,7 @@ const NotasVersao = {
       "legado": "V3.11.4.14"
     },
     {
-      "versao": "V3.7.43",
+      "versao": "V3.11.8",
       "data": "2026-08-18",
       "tipo": "correcao",
       "titulo": "Levantamento Piso: parede ficava grossa demais no zoom e tampava o número",
@@ -8857,7 +8871,7 @@ const NotasVersao = {
       "legado": "V3.11.4.15"
     },
     {
-      "versao": "V3.7.44",
+      "versao": "V3.11.9",
       "data": "2026-08-18",
       "tipo": "correcao",
       "titulo": "Levantamento Piso: zoom da roda do mouse não ancorava no cursor (a tela \"fugia\")",
@@ -8868,7 +8882,7 @@ const NotasVersao = {
       "legado": "V3.11.4.16"
     },
     {
-      "versao": "V3.7.44.1",
+      "versao": "V3.12.0",
       "data": "2026-08-18",
       "tipo": "funcionalidade",
       "titulo": "Novo campo Frente de Serviço no Planejamento + filtro de equipe em Medições",
@@ -8882,7 +8896,7 @@ const NotasVersao = {
       "legado": "V3.12.0"
     },
     {
-      "versao": "V3.7.44.2",
+      "versao": "V3.12.0.1",
       "data": "2026-08-18",
       "tipo": "melhoria",
       "titulo": "Frente de Serviço: completa cobertura em formulário, exportações e importações",
@@ -8895,7 +8909,7 @@ const NotasVersao = {
       "legado": "V3.12.0.1"
     },
     {
-      "versao": "V3.7.45",
+      "versao": "V3.12.1",
       "data": "2026-08-18",
       "tipo": "correcao",
       "titulo": "Medições: árvore não ocupava a tela toda + Frente automática não subia pro grupo-pai",
@@ -8908,7 +8922,7 @@ const NotasVersao = {
       "legado": "V3.12.0.2"
     },
     {
-      "versao": "V3.7.45.1",
+      "versao": "V3.12.1.1",
       "data": "2026-08-18",
       "tipo": "melhoria",
       "titulo": "Medições: ícones maiores/mais visíveis, começa tudo recolhido e busca mantém a árvore",
@@ -8922,7 +8936,7 @@ const NotasVersao = {
       "legado": "V3.12.0.3"
     },
     {
-      "versao": "V3.7.45.2",
+      "versao": "V3.12.1.2",
       "data": "2026-08-18",
       "tipo": "melhoria",
       "titulo": "Medições: fim do popup — Início/Término Real e % direto na linha",
@@ -8936,7 +8950,7 @@ const NotasVersao = {
       "legado": "V3.12.0.4"
     },
     {
-      "versao": "V3.7.46",
+      "versao": "V3.12.2",
       "data": "2026-08-18",
       "tipo": "correcao",
       "titulo": "Medições: mobile de verdade agora — fontes e toques bem maiores, botão de descartar que nunca tinha estilo",
@@ -8948,7 +8962,7 @@ const NotasVersao = {
       "legado": "V3.12.0.5"
     },
     {
-      "versao": "V3.7.46.1",
+      "versao": "V3.12.2.1",
       "data": "2026-08-18",
       "tipo": "melhoria",
       "titulo": "Levantamento Piso: botão para exportar planilha (Excel) com todas as áreas",
@@ -8961,7 +8975,7 @@ const NotasVersao = {
       "legado": "V3.12.0.6"
     },
     {
-      "versao": "V3.7.47",
+      "versao": "V3.12.3",
       "data": "2026-08-18",
       "tipo": "correcao",
       "titulo": "Medições: breakpoint mobile estava estreito demais e nunca disparava no celular real",
@@ -8971,7 +8985,7 @@ const NotasVersao = {
       "legado": "V3.12.0.7"
     },
     {
-      "versao": "V3.8.0",
+      "versao": "V3.12.3.1",
       "data": "2026-08-18",
       "tipo": "funcionalidade",
       "titulo": "Novo módulo: Controle de Porcelanatos (base) — exportador de planilha movido pra lá",
@@ -8984,7 +8998,7 @@ const NotasVersao = {
       "legado": "V3.12.0.8"
     },
     {
-      "versao": "V3.8.0.1",
+      "versao": "V3.12.3.2",
       "data": "2026-08-18",
       "tipo": "melhoria",
       "titulo": "Medições: distribuição do mobile ajustada — menos espaço perdido, Início/Término lado a lado",
@@ -8995,7 +9009,7 @@ const NotasVersao = {
       "legado": "V3.12.0.9"
     },
     {
-      "versao": "V3.8.0.2",
+      "versao": "V3.12.3.3",
       "data": "2026-08-18",
       "tipo": "melhoria",
       "titulo": "Medições: cartão de cada tarefa mais compacto no mobile — menos linhas, menos espaço perdido",
@@ -9006,7 +9020,7 @@ const NotasVersao = {
       "legado": "V3.12.0.10"
     },
     {
-      "versao": "V3.8.1",
+      "versao": "V3.12.4",
       "data": "2026-08-18",
       "tipo": "correcao",
       "titulo": "Medições: foto/descartar ficaram sozinhos numa linha vazia — corrigido de vez",
@@ -9017,7 +9031,7 @@ const NotasVersao = {
       "legado": "V3.12.0.11"
     },
     {
-      "versao": "V3.8.1.1",
+      "versao": "V3.13.0",
       "data": "2026-08-18",
       "tipo": "funcionalidade",
       "titulo": "Controle de Porcelanatos: junta Piso + Paredes, agrupa por Torre/Andar/Apto e ganha controle de execução",
@@ -9032,7 +9046,7 @@ const NotasVersao = {
       "legado": "V3.13.0"
     },
     {
-      "versao": "V3.8.2",
+      "versao": "V3.13.1",
       "data": "2026-08-18",
       "tipo": "correcao",
       "titulo": "Controle de Porcelanatos: Torre/Apto duplicado quando Paredes tinha um nível extra (Cômodo) que o Piso não tem",
@@ -9043,7 +9057,7 @@ const NotasVersao = {
       "legado": "V3.13.1"
     },
     {
-      "versao": "V3.8.2.1",
+      "versao": "V3.13.1.1",
       "data": "2026-08-18",
       "tipo": "melhoria",
       "titulo": "Medições: card da tarefa no mobile cortado pro essencial — nome, Início, Término e %, só isso",
@@ -9053,7 +9067,7 @@ const NotasVersao = {
       "legado": "V3.13.1.1"
     },
     {
-      "versao": "V3.8.3",
+      "versao": "V3.13.2",
       "data": "2026-08-18",
       "tipo": "correcao",
       "titulo": "Controle de Porcelanatos: Torre/Andar/Apto ainda duplicava quando o nome vinha escrito diferente em Piso e Paredes",
@@ -9064,7 +9078,7 @@ const NotasVersao = {
       "legado": "V3.13.1.2"
     },
     {
-      "versao": "V3.8.4",
+      "versao": "V3.13.3",
       "data": "2026-08-18",
       "tipo": "correcao",
       "titulo": "Medições: achado o motivo real do card mobile parecer sempre igual — recuo de hierarquia comendo a tela",
@@ -9075,7 +9089,7 @@ const NotasVersao = {
       "legado": "V3.13.1.3"
     },
     {
-      "versao": "V3.8.4.1",
+      "versao": "V3.13.3.1",
       "data": "2026-08-18",
       "tipo": "melhoria",
       "titulo": "Medições: campos com legenda visível + % Executado ao lado do % Previsto",
@@ -9086,7 +9100,7 @@ const NotasVersao = {
       "legado": "V3.13.1.4"
     },
     {
-      "versao": "V3.8.4.2",
+      "versao": "V3.13.3.2",
       "data": "2026-08-18",
       "tipo": "melhoria",
       "titulo": "Medições: botão \"Ocultar 100%\" — esconde quem já está concluído",
@@ -9096,7 +9110,7 @@ const NotasVersao = {
       "legado": "V3.13.1.5"
     },
     {
-      "versao": "V3.8.5",
+      "versao": "V3.13.4",
       "data": "2026-08-18",
       "tipo": "correcao",
       "titulo": "Controle de Porcelanatos: KPIs sem número e tudo sobreposto em obras com muitos itens",
@@ -9107,7 +9121,7 @@ const NotasVersao = {
       "legado": "V3.13.1.6"
     },
     {
-      "versao": "V3.8.6",
+      "versao": "V3.13.5",
       "data": "2026-08-18",
       "tipo": "correcao",
       "titulo": "Importar Correções: casa pelo CÓDIGO da tarefa, não mais pelo nome",
@@ -9122,7 +9136,7 @@ const NotasVersao = {
       "legado": "V3.13.2"
     },
     {
-      "versao": "V3.8.7",
+      "versao": "V3.13.6",
       "data": "2026-08-18",
       "tipo": "correcao",
       "titulo": "Planilhas exportadas ganham a coluna Chave — identificador que nunca muda",
@@ -9138,7 +9152,7 @@ const NotasVersao = {
       "legado": "V3.13.3"
     },
     {
-      "versao": "V3.8.8",
+      "versao": "V3.13.7",
       "data": "2026-08-18",
       "tipo": "correcao",
       "titulo": "Coluna ID da planilha exportada grudava na LINHA, não na tarefa",
@@ -9153,7 +9167,7 @@ const NotasVersao = {
       "legado": "V3.13.4"
     },
     {
-      "versao": "V3.8.9",
+      "versao": "V3.13.8",
       "data": "2026-08-18",
       "tipo": "correcao",
       "titulo": "Permissões: Suprimentos sem NENHUMA checagem, e Diagnóstico fora do catálogo",
@@ -9166,7 +9180,7 @@ const NotasVersao = {
       "legado": "V3.13.5"
     },
     {
-      "versao": "V3.8.9.1",
+      "versao": "V3.14.0",
       "data": "2026-08-18",
       "tipo": "funcionalidade",
       "titulo": "Permissões por obra: cada obra da lista \"Restrito\" pode ter um conjunto de acessos diferente",
@@ -9182,7 +9196,7 @@ const NotasVersao = {
       "legado": "V3.14.0.0"
     },
     {
-      "versao": "V3.8.9.2",
+      "versao": "V3.14.0.1",
       "data": "2026-08-18",
       "tipo": "melhoria",
       "titulo": "Permissões granulares: \"editar\" deixou de ser uma caixinha só — agora dá pra liberar botão por botão",
@@ -9198,7 +9212,7 @@ const NotasVersao = {
       "legado": "V3.14.0.1"
     },
     {
-      "versao": "V3.8.9.3",
+      "versao": "V3.14.0.2",
       "data": "2026-08-18",
       "tipo": "melhoria",
       "titulo": "Sub-permissões: mapeamento concluído — 207 permissões individuais em 24 módulos",
@@ -9216,7 +9230,7 @@ const NotasVersao = {
       "legado": "V3.14.0.2"
     },
     {
-      "versao": "V3.8.9.4",
+      "versao": "V3.15.0",
       "data": "2026-08-19",
       "tipo": "funcionalidade",
       "titulo": "Compartilhar PDF do Samsung Notes agora pode virar Tarefa, não só Relatório",
@@ -9229,7 +9243,7 @@ const NotasVersao = {
       "legado": "V3.15.0.0"
     },
     {
-      "versao": "V3.9.0",
+      "versao": "V3.16.0",
       "data": "2026-08-19",
       "tipo": "funcionalidade",
       "titulo": "Tarefas do Sistema: botão Agendar — grade do dia com horários de 30min",
@@ -9243,7 +9257,7 @@ const NotasVersao = {
       "legado": "V3.16.0.0"
     },
     {
-      "versao": "V3.9.0.1",
+      "versao": "V3.16.0.1",
       "data": "2026-08-19",
       "tipo": "melhoria",
       "titulo": "Tarefas do Sistema: adicionar tarefa por voz",
@@ -9255,7 +9269,7 @@ const NotasVersao = {
       "legado": "V3.16.0.1"
     },
     {
-      "versao": "V3.9.0.2",
+      "versao": "V3.16.0.2",
       "data": "2026-08-19",
       "tipo": "melhoria",
       "titulo": "Tarefas do Sistema: redesign — menos poluído, categoria multi-select, cor livre",
@@ -9270,7 +9284,7 @@ const NotasVersao = {
       "legado": "V3.16.0.2"
     },
     {
-      "versao": "V3.9.0.3",
+      "versao": "V3.16.0.3",
       "data": "2026-08-19",
       "tipo": "melhoria",
       "titulo": "Planejamento: Visão Organizacional (Gantt filtrado por linhas escolhidas) + Setas de Predecessora no Gantt (estilo MS Project)",
@@ -9284,7 +9298,7 @@ const NotasVersao = {
       "legado": "V3.16.0.3"
     },
     {
-      "versao": "V3.9.1",
+      "versao": "V3.16.1",
       "data": "2026-08-19",
       "tipo": "correcao",
       "titulo": "Tarefas do Sistema: Agenda corrigida (mesma tarefa em vários horários) + visual de caderno de verdade + voz com permissão explícita",
@@ -9298,7 +9312,7 @@ const NotasVersao = {
       "legado": "V3.16.0.4"
     },
     {
-      "versao": "V3.9.1.1",
+      "versao": "V3.16.1.1",
       "data": "2026-08-19",
       "tipo": "melhoria",
       "titulo": "Visão Organizacional virou menu de visões (+ Só os Pais por nível); setas de predecessora não cortam mais as barras; recolher grupo na visão filtrada não some mais com tudo",
@@ -9312,7 +9326,7 @@ const NotasVersao = {
       "legado": "V3.16.0.5"
     },
     {
-      "versao": "V3.9.1.2",
+      "versao": "V3.16.1.2",
       "data": "2026-08-19",
       "tipo": "melhoria",
       "titulo": "Toolbar do Planejamento reorganizada — trocar entre Linha de Base/Desafio/Atual não bagunça mais os botões",
@@ -9325,7 +9339,7 @@ const NotasVersao = {
       "legado": "V3.16.0.6"
     },
     {
-      "versao": "V3.9.2",
+      "versao": "V3.16.2",
       "data": "2026-08-19",
       "tipo": "correcao",
       "titulo": "Agenda: o seletor de horário virou dropdown nativo feio — trocado por um seletor próprio, no estilo caderno",
@@ -9338,7 +9352,7 @@ const NotasVersao = {
       "legado": "V3.16.0.7"
     },
     {
-      "versao": "V3.9.3",
+      "versao": "V3.16.3",
       "data": "2026-08-19",
       "tipo": "correcao",
       "titulo": "Toolbar do Planejamento: a reorganização da V3.16.0.6 deixou tudo torto (ação jogada pra direita, visualização pra esquerda) — refeita como um bloco único",
@@ -9349,7 +9363,7 @@ const NotasVersao = {
       "legado": "V3.16.0.8"
     },
     {
-      "versao": "V3.9.4",
+      "versao": "V3.16.4",
       "data": "2026-08-19",
       "tipo": "correcao",
       "titulo": "Voz no Tarefas do Sistema: erro real agora aparece na tela (fixo, não some) em vez de simplesmente \"não funcionar\"",
@@ -9362,7 +9376,7 @@ const NotasVersao = {
       "legado": "V3.16.0.9"
     },
     {
-      "versao": "V3.9.5",
+      "versao": "V3.16.5",
       "data": "2026-08-19",
       "tipo": "correcao",
       "titulo": "Toolbar do Planejamento: botão \"Copiar Datas\" que sobrava sozinho numa linha à parte foi tirado da barra e movido pra dentro de ⚙ Ferramentas",
@@ -9373,7 +9387,7 @@ const NotasVersao = {
       "legado": "V3.16.0.10"
     },
     {
-      "versao": "V3.9.6",
+      "versao": "V3.16.6",
       "data": "2026-08-19",
       "tipo": "correcao",
       "titulo": "Tarefas do Sistema: tema \"caderno\" removido, pop-up maior, título+descrição, intervalo de horário e seletor de tarefa hierárquico",
@@ -9390,7 +9404,7 @@ const NotasVersao = {
       "legado": "V3.16.0.11"
     },
     {
-      "versao": "V3.9.7",
+      "versao": "V3.16.7",
       "data": "2026-08-19",
       "tipo": "correcao",
       "titulo": "Agenda: \"+\" foi pra baixo em vez da direita, categorias sem cor e lista com cara de lista antiga — três acertos",
@@ -9402,7 +9416,7 @@ const NotasVersao = {
       "legado": "V3.16.0.12"
     },
     {
-      "versao": "V3.9.8",
+      "versao": "V3.16.8",
       "data": "2026-08-19",
       "tipo": "correcao",
       "titulo": "Título/Descrição: tarefas antigas migradas automaticamente (V3.16.0.11 só valia pra tarefa nova)",
@@ -9415,7 +9429,7 @@ const NotasVersao = {
       "legado": "V3.16.0.13"
     },
     {
-      "versao": "V3.9.8.1",
+      "versao": "V3.16.8.1",
       "data": "2026-08-19",
       "tipo": "melhoria",
       "titulo": "Pop-ups do Tarefas do Sistema bem maiores",
@@ -9426,7 +9440,7 @@ const NotasVersao = {
       "legado": "V3.16.0.14"
     },
     {
-      "versao": "V3.9.8.2",
+      "versao": "V3.16.8.2",
       "data": "2026-08-19",
       "tipo": "melhoria",
       "titulo": "Descrição virou obrigatória e a voz agora dita a descrição, não o título",
@@ -9437,7 +9451,7 @@ const NotasVersao = {
       "legado": "V3.16.0.15"
     },
     {
-      "versao": "V3.9.8.3",
+      "versao": "V3.17.0",
       "data": "2026-08-19",
       "tipo": "funcionalidade",
       "titulo": "PDF → Tarefa: a IA agora gera Título, Descrição e Categoria (não só título solto)",
@@ -9450,7 +9464,7 @@ const NotasVersao = {
       "legado": "V3.17.0.0"
     },
     {
-      "versao": "V3.9.8.4",
+      "versao": "V3.17.0.1",
       "data": "2026-08-19",
       "tipo": "melhoria",
       "titulo": "Voz: caixa de status agora mostra CADA passo (não só erro final) — pra achar onde trava quando \"não aparece nada\"",
@@ -9463,7 +9477,7 @@ const NotasVersao = {
       "legado": "V3.17.0.1"
     },
     {
-      "versao": "V3.9.8.5",
+      "versao": "V3.18.0",
       "data": "2026-08-19",
       "tipo": "funcionalidade",
       "titulo": "Voz removida (era instável) — substituída por fila de tarefas via chat; Checklist dentro da tarefa; esconder horários passados na Agenda",
@@ -9477,7 +9491,7 @@ const NotasVersao = {
       "legado": "V3.18.0.0"
     },
     {
-      "versao": "V3.9.8.6",
+      "versao": "V3.19.0",
       "data": "2026-08-19",
       "tipo": "funcionalidade",
       "titulo": "Categoria/Subcategoria no Planejamento: importação via planilha + nova visão Agrupador de Categoria",
@@ -9490,7 +9504,7 @@ const NotasVersao = {
       "legado": "V3.19.0.0"
     },
     {
-      "versao": "V3.9.8.7",
+      "versao": "V3.19.0.1",
       "data": "2026-08-19",
       "tipo": "melhoria",
       "titulo": "Barra do Gantt: passar o mouse mostra a data de início/término",
@@ -9501,7 +9515,7 @@ const NotasVersao = {
       "legado": "V3.19.0.1"
     },
     {
-      "versao": "V3.9.9",
+      "versao": "V3.19.1",
       "data": "2026-08-19",
       "tipo": "correcao",
       "titulo": "Gantt (barra, setas de predecessora e PNG) estava sempre na versão \"Atual\" mesmo com Base/Desafio selecionado na tabela",
@@ -9513,7 +9527,7 @@ const NotasVersao = {
       "legado": "V3.19.1"
     },
     {
-      "versao": "V3.9.9.1",
+      "versao": "V3.19.1.1",
       "data": "2026-08-19",
       "tipo": "melhoria",
       "titulo": "Agenda: criar tarefa nova direto de dentro do seletor de horário (sem precisar voltar pro formulário principal)",
@@ -9524,7 +9538,7 @@ const NotasVersao = {
       "legado": "V3.19.2"
     },
     {
-      "versao": "V3.9.10",
+      "versao": "V3.19.2",
       "data": "2026-08-19",
       "tipo": "correcao",
       "titulo": "Categoria/Subcategoria: faltava aparecer na tabela e na Exportação Excel (só existiam na importação e no Agrupador)",
@@ -9537,7 +9551,7 @@ const NotasVersao = {
       "legado": "V3.19.3"
     },
     {
-      "versao": "V3.9.10.1",
+      "versao": "V3.19.2.1",
       "data": "2026-08-19",
       "tipo": "melhoria",
       "titulo": "Controle de Estacas: Planejamento e Acompanhamento voltam a mostrar só as estacas da concretagem selecionada (isolado)",
@@ -9548,7 +9562,7 @@ const NotasVersao = {
       "legado": "V3.19.4"
     },
     {
-      "versao": "V3.9.11",
+      "versao": "V3.19.3",
       "data": "2026-08-19",
       "tipo": "correcao",
       "titulo": "Controle de Estacas: entendi errado — mapa volta a mostrar TUDO, número da concretagem vira botão opcional",
@@ -9560,7 +9574,7 @@ const NotasVersao = {
       "legado": "V3.19.5"
     },
     {
-      "versao": "V3.9.12",
+      "versao": "V3.19.4",
       "data": "2026-08-19",
       "tipo": "correcao",
       "titulo": "Controle de Estacas: botão de números não fazia sentido no Planejamento — removido de lá",
@@ -9572,7 +9586,7 @@ const NotasVersao = {
       "legado": "V3.19.6"
     },
     {
-      "versao": "V3.9.12.1",
+      "versao": "V3.19.4.1",
       "data": "2026-08-19",
       "tipo": "melhoria",
       "titulo": "Planejamento: nova coluna Subgrupo (combina Andar + Final num código único)",
@@ -9585,7 +9599,7 @@ const NotasVersao = {
       "legado": "V3.19.6.1"
     },
     {
-      "versao": "V3.9.12.2",
+      "versao": "V3.19.4.2",
       "data": "2026-08-19",
       "tipo": "melhoria",
       "titulo": "Estrutura da Obra: novo botão \"⚡ Gerar Grupos\" — preenche Grupo/Subgrupo de toda a obra automaticamente",
@@ -9598,7 +9612,7 @@ const NotasVersao = {
       "legado": "V3.19.6.2"
     },
     {
-      "versao": "V3.9.13",
+      "versao": "V3.19.5",
       "data": "2026-08-19",
       "tipo": "correcao",
       "titulo": "Importar Correções/Base Completa agora avisa se a planilha é de outra obra (causou 0 casadas pelo ID hoje)",
@@ -9612,7 +9626,7 @@ const NotasVersao = {
       "legado": "V3.19.7"
     },
     {
-      "versao": "V3.9.13.1",
+      "versao": "V3.19.5.1",
       "data": "2026-08-19",
       "tipo": "melhoria",
       "titulo": "Gerar Grupos: valor proposto agora é editável na prévia, e edita em lote",
@@ -9624,7 +9638,7 @@ const NotasVersao = {
       "legado": "V3.19.7.1"
     },
     {
-      "versao": "V3.9.14",
+      "versao": "V3.19.6",
       "data": "2026-08-19",
       "tipo": "correcao",
       "titulo": "Gerar Grupos: linha da prévia num flex-row só não cabia em tela de celular — input de editar ficava difícil de acertar",
@@ -9635,7 +9649,7 @@ const NotasVersao = {
       "legado": "V3.19.7.2"
     },
     {
-      "versao": "V3.9.15",
+      "versao": "V3.19.7",
       "data": "2026-08-19",
       "tipo": "correcao",
       "titulo": "Gerar Grupos: volta pro layout de 1 linha (Milton preferiu) + valor proposto agora é lista fechada, não texto livre",
@@ -9646,7 +9660,7 @@ const NotasVersao = {
       "legado": "V3.19.7.3"
     },
     {
-      "versao": "V3.9.16",
+      "versao": "V3.19.8",
       "data": "2026-08-19",
       "tipo": "correcao",
       "titulo": "Gerar Grupos: dropdown de pavimentos estava fora de ordem (10º antes de 1º)",
@@ -9657,7 +9671,7 @@ const NotasVersao = {
       "legado": "V3.19.7.4"
     },
     {
-      "versao": "V3.9.17",
+      "versao": "V3.19.9",
       "data": "2026-08-19",
       "tipo": "correcao",
       "titulo": "Gerar Grupos: corrigir uma proposta errada arrastava OUTRO grupo diferente que caiu na mesma proposta por coincidência",
@@ -9668,7 +9682,7 @@ const NotasVersao = {
       "legado": "V3.19.7.5"
     },
     {
-      "versao": "V3.9.18",
+      "versao": "V3.19.10",
       "data": "2026-08-19",
       "tipo": "correcao",
       "titulo": "Gerar Grupos reconhecia só 185 de 2198 tarefas — dois bugs de digitação/nomenclatura corrigidos",
@@ -9681,7 +9695,7 @@ const NotasVersao = {
       "legado": "V3.19.8"
     },
     {
-      "versao": "V3.9.19",
+      "versao": "V3.19.11",
       "data": "2026-08-19",
       "tipo": "correcao",
       "titulo": "Gerar Grupos: removido campo de apelidos (feio/manual) — reconhecimento agora entende as abreviações direto, sem cadastrar nada",
@@ -9693,7 +9707,7 @@ const NotasVersao = {
       "legado": "V3.19.9"
     },
     {
-      "versao": "V3.9.20",
+      "versao": "V3.19.12",
       "data": "2026-08-19",
       "tipo": "correcao",
       "titulo": "Gerar Grupos: mais dois padrões reconhecidos (T° Int/Ext = Térreo, Reserv. = Reservatório) — 1871 → 2156 de 2198",
@@ -9705,7 +9719,7 @@ const NotasVersao = {
       "legado": "V3.19.10"
     },
     {
-      "versao": "V3.9.20.1",
+      "versao": "V3.19.12.1",
       "data": "2026-08-19",
       "tipo": "melhoria",
       "titulo": "Gerar Grupos: Muro Divisa e Cobertura resolvidos, tarefa sem vínculo aparece marcada (não desaparece), lista ordenada pelo pavimento",
@@ -9717,7 +9731,7 @@ const NotasVersao = {
       "legado": "V3.19.11"
     },
     {
-      "versao": "V3.9.21",
+      "versao": "V3.19.13",
       "data": "2026-08-19",
       "tipo": "correcao",
       "titulo": "Gerar Grupos não reconhecia pavimento novo cadastrado no plural quando a tarefa usa singular (ex: \"Elevadores\" x \"Elevador 01\")",
@@ -9728,7 +9742,7 @@ const NotasVersao = {
       "legado": "V3.19.12"
     },
     {
-      "versao": "V3.9.21.1",
+      "versao": "V3.19.13.1",
       "data": "2026-08-19",
       "tipo": "melhoria",
       "titulo": "Subgrupo passa a entender \"ap. NN\" como a mesma coisa que \"Final NN\" (regra do Milton)",
@@ -9739,7 +9753,7 @@ const NotasVersao = {
       "legado": "V3.19.13"
     },
     {
-      "versao": "V3.9.21.2",
+      "versao": "V3.19.13.2",
       "data": "2026-08-18",
       "tipo": "melhoria",
       "titulo": "Andamento por Frente REESCRITO: matriz Categoria × Grupo do Planejamento",
@@ -9753,7 +9767,7 @@ const NotasVersao = {
       "legado": "V3.19.13.1"
     },
     {
-      "versao": "V3.9.21.3",
+      "versao": "V3.19.13.3",
       "data": "2026-08-19",
       "tipo": "melhoria",
       "titulo": "Gerar Grupos: cabeçalho de seção por pavimento, filtro de busca e Subgrupo sempre visível na prévia",
@@ -9765,7 +9779,7 @@ const NotasVersao = {
       "legado": "V3.19.13.2"
     },
     {
-      "versao": "V3.9.21.4",
+      "versao": "V3.19.13.4",
       "data": "2026-08-18",
       "tipo": "melhoria",
       "titulo": "Frentes: ordem por data de execução, mobile arrumado e filtro de equipe sempre à mão",
@@ -9778,7 +9792,7 @@ const NotasVersao = {
       "legado": "V3.19.13.3"
     },
     {
-      "versao": "V3.9.21.5",
+      "versao": "V3.19.13.5",
       "data": "2026-08-19",
       "tipo": "melhoria",
       "titulo": "Gerar Grupos: dropdown \"ir direto pro grupo\" além da busca por texto",
@@ -9789,7 +9803,7 @@ const NotasVersao = {
       "legado": "V3.19.13.4"
     },
     {
-      "versao": "V3.9.22",
+      "versao": "V3.19.14",
       "data": "2026-08-18",
       "tipo": "correcao",
       "titulo": "Matriz de Frentes: rolagem lateral sem atravessar coluna nem sumir título",
@@ -9800,7 +9814,7 @@ const NotasVersao = {
       "legado": "V3.19.13.5"
     },
     {
-      "versao": "V3.9.23",
+      "versao": "V3.19.15",
       "data": "2026-08-18",
       "tipo": "correcao",
       "titulo": "Matriz de Frentes: filtros refeitos, divisórias visíveis e canto corrigido de vez",
@@ -9814,7 +9828,7 @@ const NotasVersao = {
       "legado": "V3.19.13.6"
     },
     {
-      "versao": "V3.9.24",
+      "versao": "V3.19.16",
       "data": "2026-08-18",
       "tipo": "correcao",
       "titulo": "Filtros clicáveis no celular, busca sem acento e mobile de Atividades/Suprimentos repaginado",
@@ -9826,7 +9840,7 @@ const NotasVersao = {
       "legado": "V3.19.13.7"
     },
     {
-      "versao": "V3.9.25",
+      "versao": "V3.19.17",
       "data": "2026-08-18",
       "tipo": "correcao",
       "titulo": "Seletores de Categoria/Equipe corrigidos (causa real) e minimapas domados no mobile",
@@ -9837,7 +9851,7 @@ const NotasVersao = {
       "legado": "V3.19.13.8"
     },
     {
-      "versao": "V3.9.26",
+      "versao": "V3.19.18",
       "data": "2026-08-18",
       "tipo": "correcao",
       "titulo": "Filtros em DOM fixo (agora abrem SEMPRE) + toque de verdade nos mapas",
@@ -9849,7 +9863,7 @@ const NotasVersao = {
       "legado": "V3.19.13.9"
     },
     {
-      "versao": "V3.9.27",
+      "versao": "V3.19.19",
       "data": "2026-08-18",
       "tipo": "correcao",
       "titulo": "Filtros da matriz sem select nativo — botão + painel de opções",
@@ -9860,7 +9874,7 @@ const NotasVersao = {
       "legado": "V3.19.13.10"
     },
     {
-      "versao": "V3.9.28",
+      "versao": "V3.19.20",
       "data": "2026-08-19",
       "tipo": "correcao",
       "titulo": "Agenda: tarefa já escolhida some do seletor sozinha, e dá pra escolher várias sem reabrir tudo de novo",
@@ -9872,7 +9886,7 @@ const NotasVersao = {
       "legado": "V3.19.13.11"
     },
     {
-      "versao": "V3.9.28.1",
+      "versao": "V3.19.20.1",
       "data": "2026-08-19",
       "tipo": "funcionalidade",
       "titulo": "Agenda: clique direito mostra descrição, marcar concluído direto no seletor, copiar/colar entre horários, trazer pendências de ontem",
@@ -9885,7 +9899,7 @@ const NotasVersao = {
       "legado": "V3.19.13.12"
     },
     {
-      "versao": "V3.9.29",
+      "versao": "V3.19.21",
       "data": "2026-08-19",
       "tipo": "correcao",
       "titulo": "Gerar Grupos: era pra ser ordenar a lista, não filtrar pra um grupo só — trocado o dropdown por toggle Tarefa/Alfabética",
@@ -9897,7 +9911,7 @@ const NotasVersao = {
       "legado": "V3.19.13.13"
     },
     {
-      "versao": "V3.9.30",
+      "versao": "V3.19.22",
       "data": "2026-08-21",
       "tipo": "correcao",
       "titulo": "Filtros da matriz: clique por delegação, camada elevada e auto-diagnóstico",
@@ -9909,7 +9923,7 @@ const NotasVersao = {
       "legado": "V3.19.13.14"
     },
     {
-      "versao": "V3.9.30.1",
+      "versao": "V3.19.22.1",
       "data": "2026-08-19",
       "tipo": "melhoria",
       "titulo": "Gerar Grupos: destrave manual — pergunta antes de propagar quando pode não ser sempre a mesma correção",
@@ -9920,7 +9934,7 @@ const NotasVersao = {
       "legado": "V3.19.13.15"
     },
     {
-      "versao": "V3.9.31",
+      "versao": "V3.19.23",
       "data": "2026-08-19",
       "tipo": "correcao",
       "titulo": "Gerar Grupos: \"Aplicar Selecionados\" travava sem feedback quando o Firestore não conseguia sincronizar",
@@ -9932,7 +9946,7 @@ const NotasVersao = {
       "legado": "V3.19.13.16"
     },
     {
-      "versao": "V3.9.32",
+      "versao": "V3.19.24",
       "data": "2026-08-19",
       "tipo": "correcao",
       "titulo": "Achada a causa real de \"Aplicar Selecionados parece travado\": spinner de carregamento escondido atrás da Estrutura da Obra",
@@ -9943,7 +9957,7 @@ const NotasVersao = {
       "legado": "V3.19.13.17"
     },
     {
-      "versao": "V3.9.32.1",
+      "versao": "V3.19.24.1",
       "data": "2026-08-21",
       "tipo": "melhoria",
       "titulo": "Matriz de Frentes: arrastar com o mouse (desktop)",
@@ -9954,7 +9968,7 @@ const NotasVersao = {
       "legado": "V3.19.13.18"
     },
     {
-      "versao": "V3.9.32.2",
+      "versao": "V3.19.24.2",
       "data": "2026-08-19",
       "tipo": "melhoria",
       "titulo": "Subgrupo agora é VALIDADO contra os apartamentos cadastrados na Estrutura da Obra (não é mais só a fórmula cega)",
@@ -9966,7 +9980,7 @@ const NotasVersao = {
       "legado": "V3.19.13.19"
     },
     {
-      "versao": "V3.9.33",
+      "versao": "V3.19.25",
       "data": "2026-08-21",
       "tipo": "correcao",
       "titulo": "CULPADO ENCONTRADO: header roubava os cliques dos filtros + ordem pela Estrutura",
@@ -9979,7 +9993,7 @@ const NotasVersao = {
       "legado": "V3.19.13.20"
     },
     {
-      "versao": "V3.9.33.1",
+      "versao": "V3.19.25.1",
       "data": "2026-08-19",
       "tipo": "melhoria",
       "titulo": "Subgrupo agora vem DIRETO do apartamento cadastrado na Estrutura da Obra, não mais de uma fórmula conferida depois",
@@ -9991,7 +10005,7 @@ const NotasVersao = {
       "legado": "V3.19.13.21"
     },
     {
-      "versao": "V3.9.33.2",
+      "versao": "V3.19.25.2",
       "data": "2026-08-19",
       "tipo": "melhoria",
       "titulo": "Estrutura da Obra: arrastar-e-soltar pra reordenar Torres e Pavimentos",
@@ -10003,7 +10017,7 @@ const NotasVersao = {
       "legado": "V3.19.13.22"
     },
     {
-      "versao": "V3.9.34",
+      "versao": "V3.19.26",
       "data": "2026-08-19",
       "tipo": "correcao",
       "titulo": "Estrutura da Obra: campo de nome do apartamento/unidade tinha largura fixa de 50px — cortava nomes maiores tipo \"AL DIREITA\"",
@@ -10014,7 +10028,7 @@ const NotasVersao = {
       "legado": "V3.19.13.23"
     },
     {
-      "versao": "V3.9.35",
+      "versao": "V3.19.27",
       "data": "2026-08-19",
       "tipo": "correcao",
       "titulo": "Gerar Grupos não reconhecia \"Fundações\" ↔ \"Fundação\" — plural irregular do português (-ão vira -ões, não só +s)",
@@ -10025,7 +10039,7 @@ const NotasVersao = {
       "legado": "V3.19.13.24"
     },
     {
-      "versao": "V3.9.35.1",
+      "versao": "V3.19.27.1",
       "data": "2026-08-19",
       "tipo": "melhoria",
       "titulo": "Gerar Grupos ganha modo \"Todas (auditar)\" — ver o que já está correto, não só o que vai mudar",
@@ -10037,7 +10051,7 @@ const NotasVersao = {
       "legado": "V3.19.13.25"
     },
     {
-      "versao": "V3.9.36",
+      "versao": "V3.19.28",
       "data": "2026-08-19",
       "tipo": "correcao",
       "titulo": "Editor de Estrutura: não dava pra selecionar texto ao renomear uma tarefa — o \"arrastar linha\" tomava conta do clique",
@@ -10049,7 +10063,7 @@ const NotasVersao = {
       "legado": "V3.19.13.26"
     },
     {
-      "versao": "V3.9.36.1",
+      "versao": "V3.19.28.1",
       "data": "2026-08-19",
       "tipo": "funcionalidade",
       "titulo": "Agenda: puxar tarefa não concluída de horário anterior do mesmo dia pro horário atual",
@@ -10060,7 +10074,7 @@ const NotasVersao = {
       "legado": "V3.19.13.27"
     },
     {
-      "versao": "V3.9.37",
+      "versao": "V3.19.29",
       "data": "2026-08-19",
       "tipo": "correcao",
       "titulo": "Reforço: draggable=\"false\" no campo sozinho não bastava em todos os navegadores — a linha inteira trava o arrasto durante a edição",
@@ -10071,7 +10085,7 @@ const NotasVersao = {
       "legado": "V3.19.13.28"
     },
     {
-      "versao": "V3.9.38",
+      "versao": "V3.19.30",
       "data": "2026-08-19",
       "tipo": "correcao",
       "titulo": "Achado o bug de verdade: clicar DENTRO do campo de editar nome também fechava a edição, porque o clique subia pra linha e disparava um re-render completo",
@@ -10124,6 +10138,28 @@ const NotasVersao = {
           </div>
         </div>
       </div>
+
+      ${this.pendencias && this.pendencias.length ? `
+      <div style="background:#fff;border:1.5px solid var(--cor-borda-light);border-left:5px solid #e0703c;border-radius:12px;padding:14px 18px;margin-bottom:16px;">
+        <div id="nvPendHead" style="display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none;">
+          <span style="font-size:1.05rem;">🚧</span>
+          <span style="font-weight:800;font-size:.9rem;">O que ainda NÃO está pronto</span>
+          <span style="font-size:.7rem;font-weight:800;color:#fff;background:#e0703c;border-radius:100px;padding:2px 9px;">${this.pendencias.length} pendências</span>
+          <span id="nvPendSeta" style="margin-left:auto;color:#bbb;font-size:.8rem;">▼</span>
+        </div>
+        <div id="nvPendBody" style="display:none;margin-top:12px;">
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px;">
+            ${this.pendencias.map(p=>{
+              const cfg = {'em-dev':['🔧 Em desenvolvimento','#5b8dd9'],'stub':['🏗 Não iniciado','#e0703c'],'atencao':['⚠️ Atenção','#c9a400']}[p.status]||['—','#888'];
+              return `<div style="border:1px solid var(--cor-borda-light);border-radius:9px;padding:9px 12px;">
+                <div style="font-weight:700;font-size:.8rem;">${p.nome}</div>
+                <div style="font-size:.68rem;font-weight:800;color:${cfg[1]};margin-top:2px;">${cfg[0]}</div>
+                <div style="font-size:.72rem;color:#888;margin-top:2px;">${p.desc}</div>
+              </div>`;}).join('')}
+          </div>
+          <div style="font-size:.7rem;color:#aaa;margin-top:10px;">Quando um destes for concluído e publicado, ele sai daqui e a versão sobe de frente (B).</div>
+        </div>
+      </div>`:''}
 
       <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center;">
         <input id="nvBusca" type="text" placeholder="🔍 Buscar versão, título ou item..." style="flex:1;min-width:220px;padding:9px 14px;border:1.5px solid var(--cor-borda-light);border-radius:100px;font-size:.85rem;outline:none;" />
@@ -10178,6 +10214,13 @@ const NotasVersao = {
       <div id="nvVazio" style="display:none;text-align:center;padding:50px 0;color:#999;font-size:.9rem;">Nenhuma versão encontrada 🔍</div>`;
 
     // interações
+    const ph = c.querySelector('#nvPendHead');
+    if (ph) ph.addEventListener('click', () => {
+      const b = c.querySelector('#nvPendBody'), s = c.querySelector('#nvPendSeta');
+      const open = b.style.display !== 'none';
+      b.style.display = open ? 'none' : 'block';
+      s.textContent = open ? '▼' : '▲';
+    });
     c.querySelectorAll('.nv-head').forEach(h => h.addEventListener('click', () => {
       const body = h.parentElement.querySelector('.nv-body');
       const seta = h.querySelector('.nv-seta');
