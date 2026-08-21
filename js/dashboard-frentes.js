@@ -152,7 +152,8 @@ const DashFrentes = (() => {
 
     // Recria os filtros SÓ se as opções mudaram (assinatura).
     const categorias = [...new Set(todas.map(t => _v(t.categoria)))].sort(_ordena);
-    const equipes = [...new Set(folhasTodas.map(t => t._equipeEfetiva).filter(v => v))].sort((a, b) => a - b);
+    const equipes = [...new Set(folhasTodas.map(t => t._equipeEfetiva).filter(v => v))]
+      .sort((a, b) => String(DashCore.eqLabel(a)).localeCompare(String(DashCore.eqLabel(b)), 'pt-BR', { numeric: true }));
     const temSubgrupos = comGrupo.some(t => _v(t.subgrupo));
     const assinatura = categorias.join('|') + '###' + equipes.join('|') + '###' + temSubgrupos;
     if (assinatura !== _assinaturaFiltros) {
@@ -234,7 +235,7 @@ const DashFrentes = (() => {
       <div class="db-fr-filtros">
         ${btn('visao', 'Colunas', _visaoCols === 'subgrupo' ? 'Subgrupos (detalhado)' : 'Grupos (resumido)', !temSubgrupos, 'Não há subgrupos no Planejamento')}
         ${btn('categoria', 'Categoria', f.categoria || 'Todas')}
-        ${btn('equipe', 'Equipe', f.equipe ? 'Equipe ' + f.equipe : 'Todas', !equipes.length, 'Preencha a coluna Nº Equipe no Planejamento')}
+        ${btn('equipe', 'Equipe', f.equipe || 'Todas', !equipes.length, 'Preencha Nº Equipe ou Frente no Planejamento')}
         <div class="db-fr-fgrupo" style="flex:1;min-width:160px;">
           <span>Buscar</span>
           <input type="text" class="form-control" placeholder="🔎 tarefa, grupo, categoria..." value="${DashCore.esc(f.busca)}" oninput="DashFrentes.setBusca(this.value)">
@@ -261,7 +262,7 @@ const DashFrentes = (() => {
     } else if (campo === 'equipe') {
       titulo = 'Filtrar por Equipe';
       opcoes = [{ v: '', label: 'Todas as equipes', sel: !_filtros.equipe }]
-        .concat(o.equipes.map(eq => ({ v: String(eq), label: 'Equipe ' + eq, sel: _filtros.equipe === String(eq) })));
+        .concat(o.equipes.map(eq => ({ v: String(eq), label: DashCore.eqLabel(eq), sel: _filtros.equipe === String(eq) })));
     }
     let overlay = document.getElementById('db-fr-menu-overlay');
     if (overlay) overlay.remove();

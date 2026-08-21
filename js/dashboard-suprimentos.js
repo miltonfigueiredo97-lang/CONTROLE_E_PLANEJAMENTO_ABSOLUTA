@@ -8,6 +8,9 @@
 const DashSuprimentos = (() => {
   let _ctx = null;
   let _visao = localStorage.getItem('db_visao_suprimentos') || 'eap'; // 'eap' | 'grupos'
+  let _fEquipe = '';
+  let _eqMap = new Map();
+  let _equipesDisponiveis = [];
 
   // ---------- Estado/preferências ----------
   function _chaveLS(campo) { return `db_arvore_suprimentos_${campo}`; }
@@ -54,6 +57,7 @@ const DashSuprimentos = (() => {
     return tocada ? 'iniciado' : 'nao_iniciado';
   }
   function _pendenteFiltro(t) {
+    if (_fEquipe && String(_eqMap.get(t.id) || '') !== _fEquipe) return false;
     return _proximaFiltro(t) && !!t.inicioPlanejado && _statusSuprimento(t.id) !== 'iniciado';
   }
   function _dentroHorizonte(data) {
@@ -105,7 +109,7 @@ const DashSuprimentos = (() => {
       <div class="db-sup-item" style="padding-left:${indent}px;">
         <span class="db-sup-flag">📦</span>
         <div class="db-sup-info">
-          <div class="db-sup-nome">${DashCore.esc(t.nome || 'Sem nome')}</div>
+          <div class="db-sup-nome">${DashCore.eqBadge(_eqMap.get(t.id))} ${DashCore.esc(t.nome || 'Sem nome')}</div>
           <div class="db-sup-sub">${t.local ? DashCore.esc(t.local) + ' · ' : ''}início ${Utils.formatarData(t.inicioPlanejado)}</div>
         </div>
         <span class="db-chip db-chip-alerta">providenciar</span>
@@ -155,6 +159,11 @@ const DashSuprimentos = (() => {
             <button class="db-pill ${modoGrupos ? 'ativo' : ''}" onclick="DashSuprimentos.setVisao('grupos')">Grupos</button>
           </div>
           ${modoGrupos ? '' : `<div class="db-pills">${botoesNivel}</div>`}
+          ${_equipesDisponiveis.length ? `
+            <select class="form-control" style="max-width:140px;font-size:.74rem;padding:4px 8px;" onchange="DashSuprimentos.setEquipe(this.value)">
+              <option value="">👷 Todas equipes</option>
+              ${_equipesDisponiveis.map(eq => `<option value="${DashCore.esc(String(eq))}" ${_fEquipe === String(eq) ? 'selected' : ''}>${DashCore.esc(DashCore.eqLabel(eq))}</option>`).join('')}
+            </select>` : ''}
           <select class="form-control" style="max-width:120px;font-size:.74rem;padding:4px 8px;" onchange="DashSuprimentos.setHorizonte(this.value)">
             ${HORIZONTES.map(o => `<option value="${o.dias}" ${_st.horizonteDias === o.dias ? 'selected' : ''}>${o.label}</option>`).join('')}
           </select>
@@ -188,46 +197,22 @@ const DashSuprimentos = (() => {
       if (b === 'Sem grupo') return -1;
       return ordG(a, b);
     });
-    const resumo = (ts) => {
-      let dataMaisProxima = null;
-      ts.forEach(t => {
-        const d = t.inicioPlanejado ? new Date(t.inicioPlanejado) : null;
-        if (d && (!dataMaisProxima || d < dataMaisProxima)) dataMaisProxima = d;
-      });
-      return { qtd: ts.length, dataMaisProxima };
-    };
-    const headerLinha = (id, nome, r, aberto, indent, negrito) => `
-      <div class="db-sup-item db-sup-grupo" style="padding-left:${indent}px;" onclick="DashSuprimentos.toggleNo('${id.replace(/'/g, "\\'")}')">
-        <span class="db-sup-seta">${aberto ? '▾' : '▸'}</span>
-        <div class="db-sup-info">
-          <div class="db-sup-nome" ${negrito ? 'style="font-weight:800;"' : ''}>${DashCore.esc(nome)} <span class="db-sup-qtd">${r.qtd}</span></div>
-          ${aberto ? '' : `<div class="db-sup-sub">${r.dataMaisProxima ? 'início mais próximo ' + Utils.formatarData(r.dataMaisProxima) : 'sem data'}</div>`}
-        </div>
-      </div>`;
 
+    // Tudo ABERTO, plano e limpo — faixa do grupo, subtítulo do subgrupo.
     let html = '';
     grupos.forEach(g => {
       const sub = porGrupo.get(g);
-      const todasDoGrupo = [...sub.values()].flat();
-      const idG = 'g:' + g;
-      const abertoG = _st.abertos.has(idG);
-      html += headerLinha(idG, g, resumo(todasDoGrupo), abertoG, 0, true);
-      if (!abertoG) return;
+      const qtd = [...sub.values()].reduce((s, ts) => s + ts.length, 0);
+      html += `<div class="db-grp-faixa">${DashCore.esc(g)} <span class="db-sup-qtd">${qtd}</span></div>`;
       const sgs = [...sub.keys()].sort((a, b) => {
         if (a === '') return -1;
         if (b === '') return 1;
         return ordS(a, b);
       });
       sgs.forEach(sg => {
-        const ts = sub.get(sg);
-        if (sg === '') {
-          ts.forEach(t => { html += linhaFolha(t, 16); });
-          return;
-        }
-        const idS = 's:' + g + '|' + sg;
-        const abertoS = _st.abertos.has(idS);
-        html += headerLinha(idS, sg, resumo(ts), abertoS, 16, false);
-        if (abertoS) ts.forEach(t => { html += linhaFolha(t, 32); });
+        const ts = sub.get(sg).sort((a, b) => (a.inicioPlanejado || '9999').localeCompare(b.inicioPlanejado || '9999'));
+        if (sg !== '') html += `<div class="db-grp-sub">${DashCore.esc(sg)} <span class="db-sup-qtd">${ts.length}</span></div>`;
+        ts.forEach(t => { html += linhaFolha(t, sg !== '' ? 14 : 4); });
       });
     });
     return html;
@@ -236,6 +221,10 @@ const DashSuprimentos = (() => {
   function setVisao(v) {
     _visao = v === 'grupos' ? 'grupos' : 'eap';
     localStorage.setItem('db_visao_suprimentos', _visao);
+    if (_ctx) render(_ctx);
+  }
+  function setEquipe(v) {
+    _fEquipe = v;
     if (_ctx) render(_ctx);
   }
 
@@ -257,6 +246,6 @@ const DashSuprimentos = (() => {
     if (_ctx) render(_ctx);
   }
 
-  return { render, aplicarPrefsRemotas, setNivel, setHorizonte, setVisao, toggleNo };
+  return { render, aplicarPrefsRemotas, setNivel, setHorizonte, setVisao, setEquipe, toggleNo };
 })();
 window.DashSuprimentos = DashSuprimentos;

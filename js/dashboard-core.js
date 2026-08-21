@@ -96,9 +96,10 @@ const DashCore = (() => {
       .trim();
   }
 
-  // Equipe EFETIVA de cada tarefa: no Planejamento a equipe costuma ser
-  // preenchida na tarefa-MÃE; as folhas herdam a equipe do ancestral mais
-  // próximo que tiver uma (a própria vence se preenchida).
+  // Equipe EFETIVA de cada tarefa: considera o Nº Equipe (equipeAlocada) OU
+  // o campo FRENTE (nos planejamentos importados do Excel, a coluna "equipe"
+  // cai em frente). Preenchida na tarefa-MÃE, as folhas herdam do ancestral
+  // mais próximo (a própria vence). Retorna número (Nº Equipe) ou texto.
   function equipesEfetivas(tarefas) {
     const sorted = [...tarefas].sort((a, b) => (a.ordem || 0) - (b.ordem || 0));
     const mapa = new Map();
@@ -106,8 +107,8 @@ const DashCore = (() => {
     sorted.forEach(t => {
       const n = t.nivel || 0;
       while (pilha.length && pilha[pilha.length - 1].nivel >= n) pilha.pop();
-      const propria = parseInt(t.equipeAlocada) || 0;
-      const herdada = pilha.length ? pilha[pilha.length - 1].equipe : 0;
+      const propria = (parseInt(t.equipeAlocada) || 0) || String(t.frente || '').trim() || null;
+      const herdada = pilha.length ? pilha[pilha.length - 1].equipe : null;
       const efetiva = propria || herdada;
       mapa.set(t.id, efetiva || null);
       pilha.push({ nivel: n, equipe: efetiva });
@@ -115,6 +116,18 @@ const DashCore = (() => {
     return mapa;
   }
 
-  return { folhas, filhosDiretos, temFilhos, folhasDescendentes, paiDireto, peso, calcProgresso, esc, normalizarChave, equipesEfetivas };
+  // Rótulo e selo (badge) de equipe — cor estável por equipe.
+  function eqLabel(v) { return typeof v === 'number' ? 'Equipe ' + v : String(v); }
+  const _EQ_CORES = [['#fde68a', '#92600a'], ['#bfdbfe', '#1d4ed8'], ['#bbf7d0', '#15803d'], ['#fecaca', '#b91c1c'], ['#e9d5ff', '#7e22ce'], ['#fed7aa', '#c2410c'], ['#a5f3fc', '#0e7490'], ['#e5e7eb', '#374151']];
+  function eqBadge(v) {
+    if (!v) return '';
+    const s = eqLabel(v);
+    let h = 0;
+    for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+    const [bg, fg] = _EQ_CORES[h % _EQ_CORES.length];
+    return `<span class="db-eq-badge" style="background:${bg};color:${fg};" title="${esc(s)}">👷 ${esc(typeof v === 'number' ? v : s)}</span>`;
+  }
+
+  return { folhas, filhosDiretos, temFilhos, folhasDescendentes, paiDireto, peso, calcProgresso, esc, normalizarChave, equipesEfetivas, eqLabel, eqBadge };
 })();
 window.DashCore = DashCore;

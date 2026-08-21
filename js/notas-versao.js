@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.30.7',
+  versaoAtual: 'V3.19.30.8',
 
   versoes: [
     {
@@ -10156,6 +10156,18 @@ const NotasVersao = {
       "itens": [
         "O aviso amarelo acusou o overlay de \"Carregando...\" — falso alarme: o teste rodava cedo demais, enquanto a página ainda carregava (o loading fica por cima de propósito nesse momento e some sozinho). Os filtros continuam clicáveis.",
         "O diagnóstico ficou esperto: espera o carregamento terminar, ignora loading/toasts/painéis legítimos e só acusa se o MESMO elemento estiver por cima em duas medições com 3 segundos de intervalo (invasor persistente de verdade)."
+      ]
+    },
+    {
+      "versao": "V3.19.30.8",
+      "data": "2026-08-21",
+      "tipo": "melhoria",
+      "titulo": "Equipe destravada (lê a Frente), selo 👷 nas tarefas e visão Grupos aberta",
+      "itens": [
+        "MOTIVO do filtro de Equipe bloqueado: nenhuma tarefa tinha o Nº Equipe preenchido — no seu Planejamento a equipe vive no campo FRENTE (o importador de Excel manda a coluna \"equipe\" pra lá). O filtro agora lê Nº Equipe OU Frente, com herança da tarefa-mãe pras filhas — destravou.",
+        "Selo 👷 de equipe na frente de cada tarefa em Atividades e Suprimentos — colorido, com cor estável por equipe.",
+        "Filtro \"👷 Equipe\" também nas listas: Em Execução, Próximas e Suprimentos ganharam o seletor de equipe na barra de cada bloco.",
+        "Visão GRUPOS repaginada: tudo ABERTO, sem escadinha — faixa amarela do grupo, subtítulo do subgrupo e as tarefas na sequência ordenadas por data."
       ]
     }
   ],

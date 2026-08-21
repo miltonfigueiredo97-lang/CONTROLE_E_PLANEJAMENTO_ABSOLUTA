@@ -14,6 +14,9 @@ const DashAtividades = (() => {
     ativ_execucao: localStorage.getItem('db_visao_ativ_execucao') || 'eap',
     ativ_proximas: localStorage.getItem('db_visao_ativ_proximas') || 'eap',
   };
+  const _fEquipe = { ativ_execucao: '', ativ_proximas: '' };
+  let _eqMap = new Map();
+  let _equipesDisponiveis = [];
 
   const COLS = {
     ativ_execucao: { titulo: 'Em Execução', dot: '#facc15', usaHorizonte: false, rotuloData: 'prazo' },
@@ -116,7 +119,8 @@ const DashAtividades = (() => {
   function _renderColuna(chave, sorted) {
     const cfg = COLS[chave];
     const st = _st[chave];
-    const statusFiltro = chave === 'ativ_execucao' ? _emExecucaoFiltro : _proximasFiltro;
+    const statusBase = chave === 'ativ_execucao' ? _emExecucaoFiltro : _proximasFiltro;
+    const statusFiltro = (t) => statusBase(t) && (!_fEquipe[chave] || String(_eqMap.get(t.id) || '') === _fEquipe[chave]);
     // O seletor "Nível N" controla a PROFUNDIDADE PRÉ-EXPANDIDA da árvore
     // (tudo acima de N vem aberto) — ele NÃO esconde tarefas. Antes ele
     // filtrava as raízes pra "só tarefas de nível N": com Nível 5 marcado e
@@ -138,7 +142,7 @@ const DashAtividades = (() => {
       <div class="db-sup-item" style="padding-left:${indent}px;">
         <span class="db-ativ-dot" style="background:${cfg.dot};"></span>
         <div class="db-sup-info">
-          <div class="db-sup-nome">${DashCore.esc(t.nome || 'Sem nome')}</div>
+          <div class="db-sup-nome">${DashCore.eqBadge(_eqMap.get(t.id))} ${DashCore.esc(t.nome || 'Sem nome')}</div>
           <div class="db-sup-sub">${t.local ? DashCore.esc(t.local) + ' · ' : ''}${cfg.rotuloData} ${Utils.formatarData(_campoData(chave, t))}</div>
         </div>
         ${chipAtraso}
@@ -194,6 +198,11 @@ const DashAtividades = (() => {
               <button class="db-pill ${modoGrupos ? 'ativo' : ''}" onclick="DashAtividades.setVisao('${chave}','grupos')">Grupos</button>
             </div>
             ${modoGrupos ? '' : `<div class="db-pills">${botoesNivel}</div>`}
+            ${_equipesDisponiveis.length ? `
+              <select class="form-control" style="max-width:140px;font-size:.74rem;padding:4px 8px;" onchange="DashAtividades.setEquipe('${chave}',this.value)">
+                <option value="">👷 Todas equipes</option>
+                ${_equipesDisponiveis.map(eq => `<option value="${DashCore.esc(String(eq))}" ${_fEquipe[chave] === String(eq) ? 'selected' : ''}>${DashCore.esc(DashCore.eqLabel(eq))}</option>`).join('')}
+              </select>` : ''}
             ${cfg.usaHorizonte ? `
               <select class="form-control" style="max-width:120px;font-size:.74rem;padding:4px 8px;" onchange="DashAtividades.setHorizonte('${chave}',this.value)">
                 ${HORIZONTES.map(o => `<option value="${o.dias}" ${st.horizonteDias === o.dias ? 'selected' : ''}>${o.label}</option>`).join('')}
@@ -208,7 +217,6 @@ const DashAtividades = (() => {
   // frentes), listando as folhas com as datas. Se alimenta sozinha do
   // Planejamento — grupos/subgrupos que existirem lá aparecem aqui.
   function _renderPorGrupos(chave, sorted, statusFiltro, linhaFolha) {
-    const st = _st[chave];
     const v = s => String(s || '').trim();
     const folhas = DashCore.folhas(sorted)
       .filter(statusFiltro)
@@ -226,54 +234,28 @@ const DashAtividades = (() => {
       if (!sub.has(sg)) sub.set(sg, []);
       sub.get(sg).push(t);
     });
-
     const grupos = [...porGrupo.keys()].sort((a, b) => {
       if (a === 'Sem grupo') return 1;
       if (b === 'Sem grupo') return -1;
       return ordG(a, b);
     });
 
-    const resumo = (ts) => {
-      let dataMaisProxima = null;
-      ts.forEach(t => {
-        const d = _campoData(chave, t) ? new Date(_campoData(chave, t)) : null;
-        if (d && (!dataMaisProxima || d < dataMaisProxima)) dataMaisProxima = d;
-      });
-      return { qtd: ts.length, dataMaisProxima };
-    };
-    const cfg = COLS[chave];
-    const headerLinha = (id, nome, r, aberto, indent, negrito) => `
-      <div class="db-sup-item db-sup-grupo" style="padding-left:${indent}px;" onclick="DashAtividades.toggleNo('${chave}','${id.replace(/'/g, "\\'")}')">
-        <span class="db-sup-seta">${aberto ? '▾' : '▸'}</span>
-        <div class="db-sup-info">
-          <div class="db-sup-nome" ${negrito ? 'style="font-weight:800;"' : ''}>${DashCore.esc(nome)} <span class="db-sup-qtd">${r.qtd}</span></div>
-          ${aberto ? '' : `<div class="db-sup-sub">${r.dataMaisProxima ? cfg.rotuloData + ' mais próximo ' + Utils.formatarData(r.dataMaisProxima) : 'sem data'}</div>`}
-        </div>
-      </div>`;
-
+    // Tudo ABERTO, plano e limpo: faixa do grupo, subtítulo do subgrupo,
+    // tarefas direto embaixo — sem escadinha nem setas.
     let html = '';
     grupos.forEach(g => {
       const sub = porGrupo.get(g);
-      const todasDoGrupo = [...sub.values()].flat();
-      const idG = 'g:' + g;
-      const abertoG = st.abertos.has(idG);
-      html += headerLinha(idG, g, resumo(todasDoGrupo), abertoG, 0, true);
-      if (!abertoG) return;
+      const qtd = [...sub.values()].reduce((s, ts) => s + ts.length, 0);
+      html += `<div class="db-grp-faixa">${DashCore.esc(g)} <span class="db-sup-qtd">${qtd}</span></div>`;
       const sgs = [...sub.keys()].sort((a, b) => {
         if (a === '') return -1;
         if (b === '') return 1;
         return ordS(a, b);
       });
       sgs.forEach(sg => {
-        const ts = sub.get(sg);
-        if (sg === '') {
-          ts.forEach(t => { html += linhaFolha(t, 16); });
-          return;
-        }
-        const idS = 's:' + g + '|' + sg;
-        const abertoS = st.abertos.has(idS);
-        html += headerLinha(idS, sg, resumo(ts), abertoS, 16, false);
-        if (abertoS) ts.forEach(t => { html += linhaFolha(t, 32); });
+        const ts = sub.get(sg).sort((a, b) => (_campoData(chave, a) || '9999').localeCompare(_campoData(chave, b) || '9999'));
+        if (sg !== '') html += `<div class="db-grp-sub">${DashCore.esc(sg)} <span class="db-sup-qtd">${ts.length}</span></div>`;
+        ts.forEach(t => { html += linhaFolha(t, sg !== '' ? 14 : 4); });
       });
     });
     return html;
@@ -284,12 +266,19 @@ const DashAtividades = (() => {
     localStorage.setItem('db_visao_' + chave, _visao[chave]);
     if (_ctx) render(_ctx);
   }
+  function setEquipe(chave, v) {
+    _fEquipe[chave] = v;
+    if (_ctx) render(_ctx);
+  }
 
   function render(ctx) {
     _ctx = ctx;
     const host = document.getElementById('db-atividades');
     if (!host) return;
     const sorted = [...ctx.tarefas].sort((a, b) => (a.ordem || 0) - (b.ordem || 0));
+    _eqMap = DashCore.equipesEfetivas(sorted);
+    _equipesDisponiveis = [...new Set([..._eqMap.values()].filter(v => v))]
+      .sort((a, b) => String(DashCore.eqLabel(a)).localeCompare(String(DashCore.eqLabel(b)), 'pt-BR', { numeric: true }));
     host.innerHTML = _renderColuna('ativ_execucao', sorted) +
       '<div style="height:18px;"></div>' +
       _renderColuna('ativ_proximas', sorted);
@@ -313,6 +302,6 @@ const DashAtividades = (() => {
     if (_ctx) render(_ctx);
   }
 
-  return { render, aplicarPrefsRemotas, setNivel, setHorizonte, setVisao, toggleNo };
+  return { render, aplicarPrefsRemotas, setNivel, setHorizonte, setVisao, setEquipe, toggleNo };
 })();
 window.DashAtividades = DashAtividades;

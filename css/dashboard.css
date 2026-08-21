@@ -295,3 +295,11 @@ th.db-subtotal-col { font-size: 0.68rem; line-height: 1.15; }
 .db-fr-scroll.db-fr-arrastando { user-select: none; }
 .db-fr-scroll.db-fr-arrastando .db-fr-cel { pointer-events: none; }
 .db-fr-scroll { user-select: none; }
+
+/* ---- Visão Grupos (Atividades/Suprimentos): plana e aberta ---- */
+.db-grp-faixa { background: var(--cor-primaria-ultra-light); color: var(--cor-primaria-dark); font-weight: 800; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.4px; padding: 6px 10px; border-radius: 6px; margin: 10px 0 2px; display: flex; align-items: center; gap: 6px; }
+.db-grp-faixa:first-child { margin-top: 0; }
+.db-grp-sub { font-weight: 700; font-size: 0.76rem; color: var(--cor-texto-secundario); padding: 6px 4px 2px 8px; display: flex; align-items: center; gap: 6px; }
+
+/* Selo de equipe na frente da tarefa */
+.db-eq-badge { display: inline-flex; align-items: center; gap: 3px; border-radius: 100px; padding: 1px 8px; font-size: 0.66rem; font-weight: 800; font-family: var(--font-mono); vertical-align: middle; margin-right: 4px; white-space: nowrap; }
