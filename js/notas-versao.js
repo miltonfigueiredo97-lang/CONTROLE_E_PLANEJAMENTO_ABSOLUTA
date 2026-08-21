@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.13.28',
+  versaoAtual: 'V3.19.13.29',
 
   versoes: [
     {
@@ -9869,6 +9869,16 @@ const NotasVersao = {
       "itens": [
         "A correção anterior (V3.19.13.26) marcava só o CAMPO como não-arrastável, mas o navegador ainda podia iniciar o arrasto da LINHA a partir de dentro dele (Milton viu o \"fantasma\" do arrasto no print, prova de que ainda disparava).",
         "Corrigido de vez: no Editor de Estrutura, a linha inteira fica draggable=false enquanto está em modo de edição (some quando salva/cancela). Na Estrutura da Obra (Torre/Pavimento/Apartamento), o campo trava o arrasto da linha ao ganhar foco e destrava ao perder — funciona em qualquer navegador porque mexe na propriedade da linha diretamente, não só do campo."
+      ]
+    },
+    {
+      "versao": "V3.19.13.29",
+      "data": "2026-08-19",
+      "tipo": "correcao",
+      "titulo": "Achado o bug de verdade: clicar DENTRO do campo de editar nome também fechava a edição, porque o clique subia pra linha e disparava um re-render completo",
+      "itens": [
+        "A linha da árvore tem um onclick que seleciona a tarefa e chama _render() (reconstrói a tela toda) — clicar dentro do campo de texto pra só posicionar o cursor também disparava esse onclick (cliques sobem/\"bubble\" por padrão), destruindo e recriando o campo do zero e perdendo o foco/cursor. Por fora parecia que a edição \"fechava\" sozinha.",
+        "Corrigido: o campo agora segura o clique também (não só o mousedown), então interagir dentro dele nunca mais chega na linha."
       ]
     }
   ],

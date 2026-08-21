@@ -6060,6 +6060,7 @@ const Planejamento = (() => {
           ? `<input id="arv-edit-input" type="text" value="${_esc(t.nome||'')}" draggable="false"
               style="flex:1;background:#1a1a1a;border:1px solid var(--cor-primaria);color:#fff;border-radius:4px;padding:2px 6px;font-size:.82rem;user-select:text;cursor:text;"
               onmousedown="event.stopPropagation()"
+              onclick="event.stopPropagation()"
               onblur="Planejamento._arvSalvarNome('${t.id}',this.value)"
               onkeydown="if(event.key==='Enter')this.blur();if(event.key==='Escape'){Planejamento._arvCancelarEdit();}">`
           : `<span style="flex:1;font-size:.82rem;font-weight:${nv===0?700:nv===1?600:400};
