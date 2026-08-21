@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.30.5',
+  versaoAtual: 'V3.19.30.6',
 
   versoes: [
     {
@@ -10139,7 +10139,7 @@ const NotasVersao = {
       ]
     },
     {
-      "versao": "V3.19.13.21",
+      "versao": "V3.19.30.6",
       "data": "2026-08-21",
       "tipo": "melhoria",
       "titulo": "Visão por Grupos em Atividades/Suprimentos + filtro de Equipe herdando da família",
