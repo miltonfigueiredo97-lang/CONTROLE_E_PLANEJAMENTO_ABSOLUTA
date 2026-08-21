@@ -210,7 +210,7 @@ th.db-subtotal-col { font-size: 0.68rem; line-height: 1.15; }
 .db-metrica-sub { font-size: 0.62rem; color: var(--cor-texto-muted); margin-top: 3px; line-height: 1.35; }
 
 /* ---- Frentes v2: filtros + linhas de categoria + total do detalhe ---- */
-.db-fr-filtros { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; align-items: end; }
+.db-fr-filtros { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; align-items: end; position: relative; z-index: 60; } /* acima de qualquer sticky/vizinho invisível */
 .db-fr-fgrupo { display: flex; flex-direction: column; gap: 3px; min-width: 140px; }
 .db-fr-fgrupo > span { font-size: 0.64rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: var(--cor-texto-muted); }
 .db-fr-fgrupo .form-control { font-size: 0.76rem; padding: 5px 8px; }

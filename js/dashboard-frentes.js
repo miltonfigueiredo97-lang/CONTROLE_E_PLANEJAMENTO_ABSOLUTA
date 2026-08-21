@@ -42,6 +42,32 @@ const DashFrentes = (() => {
     if (!document.getElementById('db-fr-matriz-host')) {
       host.innerHTML = '<div id="db-fr-filtros-host"></div><div id="db-fr-matriz-host"></div>';
       _assinaturaFiltros = '';
+      // DELEGAÇÃO no host (fase de captura): o clique funciona mesmo que o
+      // conteúdo seja recriado, e sem depender de onclick inline.
+      const fh = document.getElementById('db-fr-filtros-host');
+      fh.addEventListener('click', (ev) => {
+        const btn = ev.target.closest('.db-fr-fbtn');
+        if (btn && !btn.disabled && btn.dataset.campo) {
+          ev.preventDefault(); ev.stopPropagation();
+          abrirMenu(btn.dataset.campo);
+        }
+        const limpar = ev.target.closest('#db-fr-limpar');
+        if (limpar) { ev.preventDefault(); limparFiltros(); }
+      }, true);
+      // AUTO-DIAGNÓSTICO: se algo invisível estiver POR CIMA dos filtros,
+      // denuncia no console e num toast (uma vez) — pra caçar o culpado real.
+      setTimeout(() => {
+        const alvo = document.getElementById('db-fr-fbtn-categoria');
+        if (!alvo) return;
+        const r = alvo.getBoundingClientRect();
+        if (!r.width) return;
+        const topo = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+        if (topo && !alvo.contains(topo) && topo !== alvo) {
+          const desc = topo.tagName + (topo.id ? '#' + topo.id : '') + (topo.className ? '.' + String(topo.className).split(' ').join('.') : '');
+          console.error('[Frentes] Elemento POR CIMA do filtro:', desc, topo);
+          Utils.toast('⚠️ Diagnóstico: "' + desc + '" está por cima dos filtros — me mande um print deste aviso.', 'alerta', 9000);
+        }
+      }, 800);
     }
 
     // Só tarefas-FOLHA com categoria E grupo entram na matriz.
@@ -97,7 +123,7 @@ const DashFrentes = (() => {
     const btn = (campo, rotulo, valorLabel, desabilitado, hint) => `
       <div class="db-fr-fgrupo">
         <span>${rotulo}</span>
-        <button type="button" class="db-fr-fbtn" id="db-fr-fbtn-${campo}" ${desabilitado ? `disabled title="${hint}"` : ''} onclick="DashFrentes.abrirMenu('${campo}')">
+        <button type="button" class="db-fr-fbtn" id="db-fr-fbtn-${campo}" data-campo="${campo}" ${desabilitado ? `disabled title="${hint}"` : ''} onclick="DashFrentes.abrirMenu('${campo}')">
           <b>${DashCore.esc(valorLabel)}</b><span class="db-fr-fbtn-seta">▾</span>
         </button>
       </div>`;

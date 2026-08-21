@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.13.13',
+  versaoAtual: 'V3.19.13.14',
 
   versoes: [
     {
@@ -9710,6 +9710,17 @@ const NotasVersao = {
         "Entendi errado antes: Milton não queria um seletor pra 'pular' pra um grupo específico — queria poder REORDENAR a lista inteira, ou pela ordem de tarefa (como já vem) ou em ordem alfabética de verdade pelo pavimento proposto.",
         "Removido o dropdown \"ir direto pro grupo\". No lugar, dois botões (Tarefa / Alfabética) ao lado da busca — trocam a ordem da lista toda instantaneamente, sem perder marcações nem edições feitas.",
         "Cabeçalho de seção (▸ NOME DO PAVIMENTO) só aparece em modo Alfabética, onde faz sentido (mesmo grupo fica junto) — em ordem de Tarefa ele sumiria e voltaria toda hora, então fica desligado nesse modo."
+      ]
+    },
+    {
+      "versao": "V3.19.13.14",
+      "data": "2026-08-21",
+      "tipo": "correcao",
+      "titulo": "Filtros da matriz: clique por delegação, camada elevada e auto-diagnóstico",
+      "itens": [
+        "Clique dos filtros reescrito por DELEGAÇÃO na área dos filtros (fase de captura) — funciona mesmo que o conteúdo seja recriado e não depende do onclick de cada botão.",
+        "A faixa dos filtros subiu de camada (z-index) — se algum elemento transparente estava por cima roubando o clique, ele não alcança mais.",
+        "AUTO-DIAGNÓSTICO embutido: ao abrir o Dashboard, o sistema verifica se existe QUALQUER elemento sobreposto ao botão de Categoria; se houver, mostra um aviso amarelo na tela dizendo o nome exato do invasor (e no console). Se o aviso aparecer, mande o print — é o culpado definitivo."
       ]
     }
   ],
