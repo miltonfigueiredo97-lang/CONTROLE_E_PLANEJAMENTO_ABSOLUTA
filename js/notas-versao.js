@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.30',
+  versaoAtual: 'V3.19.30.1',
 
   // ATUALIZAR sempre que um módulo mudar de status — é daqui que a página mostra o que falta
   pendencias: [
@@ -10094,6 +10094,16 @@ const NotasVersao = {
         "Corrigido: o campo agora segura o clique também (não só o mousedown), então interagir dentro dele nunca mais chega na linha."
       ],
       "legado": "V3.19.13.29"
+    },
+    {
+      "versao": "V3.19.30.1",
+      "data": "2026-08-19",
+      "tipo": "melhoria",
+      "titulo": "Importar Correções ganha o campo Nome — faltava opção pra corrigir nome de tarefa direto pela planilha",
+      "itens": [
+        "Motivo (Milton): editar nome de tarefa é mais rápido no Excel do que um por um no sistema, mas a lista de campos do Importar Correções não tinha \"Nome\" como opção.",
+        "Adicionado. Casa pelo ID igual todo o resto (nunca pelo nome que está mudando, então não tem risco de confundir a correção com a busca) — nunca aplica nome vazio por engano."
+      ]
     }
   ],
 

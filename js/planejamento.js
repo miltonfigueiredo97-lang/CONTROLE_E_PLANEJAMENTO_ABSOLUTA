@@ -3354,6 +3354,7 @@ const Planejamento = (() => {
   // Pensado pro caso: "só quero trazer as datas reais que preenchi numa planilha
   // separada" sem arriscar bagunçar a árvore.
   const CAMPOS_CORRECAO=[
+    {id:'nome',label:'Nome',col:'nome'},
     {id:'inicioReal',label:'Início Real',col:'iniReal'},
     {id:'terminoReal',label:'Término Real',col:'terReal'},
     {id:'percentualConcluido',label:'% Concluído',col:'percConc'},
@@ -3447,7 +3448,7 @@ const Planejamento = (() => {
         pilha.push(t);
       }
     }
-    const COL_MAP={inicioReal:'iniReal',terminoReal:'terReal',percentualConcluido:'percConc',percentualEsperado:'percEsp',
+    const COL_MAP={nome:'nome',inicioReal:'iniReal',terminoReal:'terReal',percentualConcluido:'percConc',percentualEsperado:'percEsp',
       inicioPlanejado:'inicio',terminoPlanejado:'termino',duracao:'duracao',responsavel:'resp',frenteServico:'frente',predecessora:'pred',
       custo:'custo',receita:'receita',categoria:'categoria',subcategoria:'subcategoria',subgrupo:'subgrupo'};
     const DATE_FIELDS=new Set(['inicioReal','terminoReal','inicioPlanejado','terminoPlanejado']);
@@ -3555,6 +3556,7 @@ const Planejamento = (() => {
         else if(campo==='duracao')valor=_pDur(valor);
         else if(NUM_FIELDS.has(campo))valor=_pN(valor);
         else valor=String(valor||'').trim();
+        if(campo==='nome'&&!valor)continue; // nunca apaga o nome por engano (célula vazia na planilha)
         upd[campo]=valor;
       }
       if(Object.keys(upd).length)updates.push({id:t.id,...upd});
