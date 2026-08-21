@@ -8,6 +8,12 @@
 // ============================================
 const DashAtividades = (() => {
   let _ctx = null;
+  // Visão por bloco: 'eap' (árvore por níveis, atual) ou 'grupos'
+  // (agrupado por Grupo › Subgrupo do Planejamento, com as datas).
+  const _visao = {
+    ativ_execucao: localStorage.getItem('db_visao_ativ_execucao') || 'eap',
+    ativ_proximas: localStorage.getItem('db_visao_ativ_proximas') || 'eap',
+  };
 
   const COLS = {
     ativ_execucao: { titulo: 'Em Execução', dot: '#facc15', usaHorizonte: false, rotuloData: 'prazo' },
@@ -167,7 +173,10 @@ const DashAtividades = (() => {
       return html;
     };
 
-    const corpo = renderNivel(raizes, 0) ||
+    const modoGrupos = _visao[chave] === 'grupos';
+    const corpo = (modoGrupos
+      ? _renderPorGrupos(chave, sorted, statusFiltro, linhaFolha)
+      : renderNivel(raizes, 0)) ||
       `<div class="db-vazio-inline">${chave === 'ativ_execucao' ? 'Nenhuma atividade em execução.' : '✅ Nenhuma atividade pendente neste período.'}</div>`;
 
     let botoesNivel = '';
@@ -180,7 +189,11 @@ const DashAtividades = (() => {
         <div class="db-sup-toolbar">
           <span class="db-ativ-col-titulo"><i class="db-ativ-dot" style="background:${cfg.dot};display:inline-block;margin-right:6px;"></i>${cfg.titulo}</span>
           <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
-            <div class="db-pills">${botoesNivel}</div>
+            <div class="db-pills">
+              <button class="db-pill ${!modoGrupos ? 'ativo' : ''}" onclick="DashAtividades.setVisao('${chave}','eap')">EAP</button>
+              <button class="db-pill ${modoGrupos ? 'ativo' : ''}" onclick="DashAtividades.setVisao('${chave}','grupos')">Grupos</button>
+            </div>
+            ${modoGrupos ? '' : `<div class="db-pills">${botoesNivel}</div>`}
             ${cfg.usaHorizonte ? `
               <select class="form-control" style="max-width:120px;font-size:.74rem;padding:4px 8px;" onchange="DashAtividades.setHorizonte('${chave}',this.value)">
                 ${HORIZONTES.map(o => `<option value="${o.dias}" ${st.horizonteDias === o.dias ? 'selected' : ''}>${o.label}</option>`).join('')}
@@ -189,6 +202,87 @@ const DashAtividades = (() => {
         </div>
         <div class="db-sup-lista">${corpo}</div>
       </div>`;
+  }
+
+  // Visão GRUPOS: Grupo › Subgrupo (mesmos campos e ordem da matriz de
+  // frentes), listando as folhas com as datas. Se alimenta sozinha do
+  // Planejamento — grupos/subgrupos que existirem lá aparecem aqui.
+  function _renderPorGrupos(chave, sorted, statusFiltro, linhaFolha) {
+    const st = _st[chave];
+    const v = s => String(s || '').trim();
+    const folhas = DashCore.folhas(sorted)
+      .filter(statusFiltro)
+      .filter(t => _dentroHorizonte(chave, _campoData(chave, t)));
+    if (!folhas.length) return '';
+    const ordG = (window.DashFrentes && DashFrentes.ordGrupo) || ((a, b) => a.localeCompare(b, 'pt-BR', { numeric: true }));
+    const ordS = (window.DashFrentes && DashFrentes.ordSubgrupo) || ordG;
+
+    const porGrupo = new Map();
+    folhas.forEach(t => {
+      const g = v(t.grupo) || 'Sem grupo';
+      const sg = v(t.subgrupo);
+      if (!porGrupo.has(g)) porGrupo.set(g, new Map());
+      const sub = porGrupo.get(g);
+      if (!sub.has(sg)) sub.set(sg, []);
+      sub.get(sg).push(t);
+    });
+
+    const grupos = [...porGrupo.keys()].sort((a, b) => {
+      if (a === 'Sem grupo') return 1;
+      if (b === 'Sem grupo') return -1;
+      return ordG(a, b);
+    });
+
+    const resumo = (ts) => {
+      let dataMaisProxima = null;
+      ts.forEach(t => {
+        const d = _campoData(chave, t) ? new Date(_campoData(chave, t)) : null;
+        if (d && (!dataMaisProxima || d < dataMaisProxima)) dataMaisProxima = d;
+      });
+      return { qtd: ts.length, dataMaisProxima };
+    };
+    const cfg = COLS[chave];
+    const headerLinha = (id, nome, r, aberto, indent, negrito) => `
+      <div class="db-sup-item db-sup-grupo" style="padding-left:${indent}px;" onclick="DashAtividades.toggleNo('${chave}','${id.replace(/'/g, "\\'")}')">
+        <span class="db-sup-seta">${aberto ? '▾' : '▸'}</span>
+        <div class="db-sup-info">
+          <div class="db-sup-nome" ${negrito ? 'style="font-weight:800;"' : ''}>${DashCore.esc(nome)} <span class="db-sup-qtd">${r.qtd}</span></div>
+          ${aberto ? '' : `<div class="db-sup-sub">${r.dataMaisProxima ? cfg.rotuloData + ' mais próximo ' + Utils.formatarData(r.dataMaisProxima) : 'sem data'}</div>`}
+        </div>
+      </div>`;
+
+    let html = '';
+    grupos.forEach(g => {
+      const sub = porGrupo.get(g);
+      const todasDoGrupo = [...sub.values()].flat();
+      const idG = 'g:' + g;
+      const abertoG = st.abertos.has(idG);
+      html += headerLinha(idG, g, resumo(todasDoGrupo), abertoG, 0, true);
+      if (!abertoG) return;
+      const sgs = [...sub.keys()].sort((a, b) => {
+        if (a === '') return -1;
+        if (b === '') return 1;
+        return ordS(a, b);
+      });
+      sgs.forEach(sg => {
+        const ts = sub.get(sg);
+        if (sg === '') {
+          ts.forEach(t => { html += linhaFolha(t, 16); });
+          return;
+        }
+        const idS = 's:' + g + '|' + sg;
+        const abertoS = st.abertos.has(idS);
+        html += headerLinha(idS, sg, resumo(ts), abertoS, 16, false);
+        if (abertoS) ts.forEach(t => { html += linhaFolha(t, 32); });
+      });
+    });
+    return html;
+  }
+
+  function setVisao(chave, v) {
+    _visao[chave] = v === 'grupos' ? 'grupos' : 'eap';
+    localStorage.setItem('db_visao_' + chave, _visao[chave]);
+    if (_ctx) render(_ctx);
   }
 
   function render(ctx) {
@@ -219,6 +313,6 @@ const DashAtividades = (() => {
     if (_ctx) render(_ctx);
   }
 
-  return { render, aplicarPrefsRemotas, setNivel, setHorizonte, toggleNo };
+  return { render, aplicarPrefsRemotas, setNivel, setHorizonte, setVisao, toggleNo };
 })();
 window.DashAtividades = DashAtividades;

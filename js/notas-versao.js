@@ -10137,6 +10137,16 @@ const NotasVersao = {
         "Motivo (Milton): \"Apartamento\" só faz sentido pro caso de andar residencial — pra Fachada (Frontal, Lateral Esquerda...) ou qualquer outra divisão, o nome certo é Subgrupo. Um subgrupo PODE ser um apartamento, mas nem todo subgrupo é apartamento.",
         "Trocado em todo lugar visível: botão \"+apto\" → \"+subgrupo\", avisos, tooltips e a coluna \"Local (Pav/Apto)\" → \"Local (Pav/Sub)\". Por baixo dos panos o dado continua no mesmo lugar (sem risco de perder o que já foi cadastrado) — só o nome mostrado na tela mudou."
       ]
+    },
+    {
+      "versao": "V3.19.13.21",
+      "data": "2026-08-21",
+      "tipo": "melhoria",
+      "titulo": "Visão por Grupos em Atividades/Suprimentos + filtro de Equipe herdando da família",
+      "itens": [
+        "Em Execução, Próximas e Suprimentos ganharam o seletor de visão EAP × GRUPOS: a visão Grupos organiza por Grupo › Subgrupo (mesmos campos e mesma ordem da Estrutura usada na matriz de frentes), expansível, mostrando as datas de cada tarefa e o resumo (quantidade + data mais próxima) em cada grupo. Se alimenta sozinha do Planejamento.",
+        "FILTRO DE EQUIPE consertado (fui olhar como o Planejamento grava): a equipe costuma ser preenchida na tarefa-MÃE, e a matriz só olha as folhas — que ficavam sem equipe, deixando o filtro vazio/sem efeito. Agora as folhas HERDAM a equipe do ancestral mais próximo (a própria vence se preenchida) — o filtro lista e filtra de verdade, e o detalhe da célula mostra a equipe herdada."
+      ]
     }
   ],
 

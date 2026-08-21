@@ -112,6 +112,9 @@ const DashFrentes = (() => {
     }
 
     const folhasTodas = DashCore.folhas(ctx.tarefas);
+    // Equipe herdada da família (preenchida na mãe vale pras filhas).
+    const eqMap = DashCore.equipesEfetivas(ctx.tarefas);
+    folhasTodas.forEach(t => { t._equipeEfetiva = eqMap.get(t.id); });
     // Universo de colunas/filtros: TODAS as folhas com grupo (mesmo sem
     // categoria) — os subgrupos e equipes que existirem no Planejamento
     // sempre aparecem, sem lista fixa de nomes nem de quantidade.
@@ -134,7 +137,7 @@ const DashFrentes = (() => {
 
     // Recria os filtros SÓ se as opções mudaram (assinatura).
     const categorias = [...new Set(todas.map(t => _v(t.categoria)))].sort(_ordena);
-    const equipes = [...new Set(folhasTodas.map(t => t.equipeAlocada).filter(v => v != null && v !== '' && v !== 0))].sort((a, b) => a - b);
+    const equipes = [...new Set(folhasTodas.map(t => t._equipeEfetiva).filter(v => v))].sort((a, b) => a - b);
     const temSubgrupos = comGrupo.some(t => _v(t.subgrupo));
     const assinatura = categorias.join('|') + '###' + equipes.join('|') + '###' + temSubgrupos;
     if (assinatura !== _assinaturaFiltros) {
@@ -148,7 +151,7 @@ const DashFrentes = (() => {
     const busca = DashCore.normalizarChave(f.busca);
     const tarefas = todas.filter(t =>
       (!f.categoria || _v(t.categoria) === f.categoria) &&
-      (!f.equipe || String(t.equipeAlocada || '') === f.equipe) &&
+      (!f.equipe || String(t._equipeEfetiva || '') === f.equipe) &&
       (!busca || DashCore.normalizarChave(`${t.nome || ''} ${t.categoria || ''} ${t.subcategoria || ''} ${t.grupo || ''} ${t.subgrupo || ''}`).includes(busca))
     );
     matrizHost.innerHTML = tarefas.length
@@ -462,7 +465,7 @@ const DashFrentes = (() => {
           return `<div class="db-fr-det-item">
             <div class="db-fr-det-info">
               <div class="db-fr-det-nome">${DashCore.esc(t.nome || 'Sem nome')}</div>
-              <div class="db-fr-det-sub">${Utils.formatarData(t.inicioPlanejado)} → ${Utils.formatarData(t.terminoPlanejado)}${t.equipeAlocada ? ' · equipe ' + t.equipeAlocada : ''}</div>
+              <div class="db-fr-det-sub">${Utils.formatarData(t.inicioPlanejado)} → ${Utils.formatarData(t.terminoPlanejado)}${t._equipeEfetiva ? ' · equipe ' + t._equipeEfetiva : ''}</div>
               <div class="db-fr-cel-barra" style="margin-top:4px;"><i style="width:${Math.min(100, pct)}%;background:${tom.barra};"></i></div>
             </div>
             <div class="db-fr-det-pct" style="color:${tom.fg};">${pct >= 100 ? '✓' : pct + '%'}</div>
@@ -480,6 +483,6 @@ const DashFrentes = (() => {
     document.body.appendChild(overlay);
   }
 
-  return { render, setFiltro, setVisao, setBusca, limparFiltros, abrirDetalhe, abrirMenu, escolherOpcao };
+  return { render, setFiltro, setVisao, setBusca, limparFiltros, abrirDetalhe, abrirMenu, escolherOpcao, ordGrupo: _ordGrupo, ordSubgrupo: _ordSubgrupo };
 })();
 window.DashFrentes = DashFrentes;

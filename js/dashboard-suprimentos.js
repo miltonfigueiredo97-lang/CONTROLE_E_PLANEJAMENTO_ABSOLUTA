@@ -7,6 +7,7 @@
 // ============================================
 const DashSuprimentos = (() => {
   let _ctx = null;
+  let _visao = localStorage.getItem('db_visao_suprimentos') || 'eap'; // 'eap' | 'grupos'
 
   // ---------- Estado/preferências ----------
   function _chaveLS(campo) { return `db_arvore_suprimentos_${campo}`; }
@@ -136,7 +137,8 @@ const DashSuprimentos = (() => {
       return html;
     };
 
-    const corpo = renderNivel(raizes, 0) ||
+    const modoGrupos = _visao === 'grupos';
+    const corpo = (modoGrupos ? _renderPorGrupos(sorted, linhaFolha) : renderNivel(raizes, 0)) ||
       '<div class="db-vazio-inline">✅ Nenhuma próxima atividade sem Suprimentos iniciado neste período.</div>';
 
     let botoesNivel = '';
@@ -148,13 +150,93 @@ const DashSuprimentos = (() => {
       <div class="db-sup-toolbar">
         <span class="text-sm text-muted">Próximas atividades cujo pipeline de Suprimentos ainda não foi iniciado</span>
         <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
-          <div class="db-pills">${botoesNivel}</div>
+          <div class="db-pills">
+            <button class="db-pill ${!modoGrupos ? 'ativo' : ''}" onclick="DashSuprimentos.setVisao('eap')">EAP</button>
+            <button class="db-pill ${modoGrupos ? 'ativo' : ''}" onclick="DashSuprimentos.setVisao('grupos')">Grupos</button>
+          </div>
+          ${modoGrupos ? '' : `<div class="db-pills">${botoesNivel}</div>`}
           <select class="form-control" style="max-width:120px;font-size:.74rem;padding:4px 8px;" onchange="DashSuprimentos.setHorizonte(this.value)">
             ${HORIZONTES.map(o => `<option value="${o.dias}" ${_st.horizonteDias === o.dias ? 'selected' : ''}>${o.label}</option>`).join('')}
           </select>
         </div>
       </div>
       <div class="db-sup-lista">${corpo}</div>`;
+  }
+
+  // Visão GRUPOS: Grupo › Subgrupo (mesmos campos e ordem da matriz de
+  // frentes), listando as pendências com a data de início.
+  function _renderPorGrupos(sorted, linhaFolha) {
+    const v = s => String(s || '').trim();
+    const folhas = DashCore.folhas(sorted)
+      .filter(_pendenteFiltro)
+      .filter(t => _dentroHorizonte(t.inicioPlanejado));
+    if (!folhas.length) return '';
+    const ordG = (window.DashFrentes && DashFrentes.ordGrupo) || ((a, b) => a.localeCompare(b, 'pt-BR', { numeric: true }));
+    const ordS = (window.DashFrentes && DashFrentes.ordSubgrupo) || ordG;
+
+    const porGrupo = new Map();
+    folhas.forEach(t => {
+      const g = v(t.grupo) || 'Sem grupo';
+      const sg = v(t.subgrupo);
+      if (!porGrupo.has(g)) porGrupo.set(g, new Map());
+      const sub = porGrupo.get(g);
+      if (!sub.has(sg)) sub.set(sg, []);
+      sub.get(sg).push(t);
+    });
+    const grupos = [...porGrupo.keys()].sort((a, b) => {
+      if (a === 'Sem grupo') return 1;
+      if (b === 'Sem grupo') return -1;
+      return ordG(a, b);
+    });
+    const resumo = (ts) => {
+      let dataMaisProxima = null;
+      ts.forEach(t => {
+        const d = t.inicioPlanejado ? new Date(t.inicioPlanejado) : null;
+        if (d && (!dataMaisProxima || d < dataMaisProxima)) dataMaisProxima = d;
+      });
+      return { qtd: ts.length, dataMaisProxima };
+    };
+    const headerLinha = (id, nome, r, aberto, indent, negrito) => `
+      <div class="db-sup-item db-sup-grupo" style="padding-left:${indent}px;" onclick="DashSuprimentos.toggleNo('${id.replace(/'/g, "\\'")}')">
+        <span class="db-sup-seta">${aberto ? '▾' : '▸'}</span>
+        <div class="db-sup-info">
+          <div class="db-sup-nome" ${negrito ? 'style="font-weight:800;"' : ''}>${DashCore.esc(nome)} <span class="db-sup-qtd">${r.qtd}</span></div>
+          ${aberto ? '' : `<div class="db-sup-sub">${r.dataMaisProxima ? 'início mais próximo ' + Utils.formatarData(r.dataMaisProxima) : 'sem data'}</div>`}
+        </div>
+      </div>`;
+
+    let html = '';
+    grupos.forEach(g => {
+      const sub = porGrupo.get(g);
+      const todasDoGrupo = [...sub.values()].flat();
+      const idG = 'g:' + g;
+      const abertoG = _st.abertos.has(idG);
+      html += headerLinha(idG, g, resumo(todasDoGrupo), abertoG, 0, true);
+      if (!abertoG) return;
+      const sgs = [...sub.keys()].sort((a, b) => {
+        if (a === '') return -1;
+        if (b === '') return 1;
+        return ordS(a, b);
+      });
+      sgs.forEach(sg => {
+        const ts = sub.get(sg);
+        if (sg === '') {
+          ts.forEach(t => { html += linhaFolha(t, 16); });
+          return;
+        }
+        const idS = 's:' + g + '|' + sg;
+        const abertoS = _st.abertos.has(idS);
+        html += headerLinha(idS, sg, resumo(ts), abertoS, 16, false);
+        if (abertoS) ts.forEach(t => { html += linhaFolha(t, 32); });
+      });
+    });
+    return html;
+  }
+
+  function setVisao(v) {
+    _visao = v === 'grupos' ? 'grupos' : 'eap';
+    localStorage.setItem('db_visao_suprimentos', _visao);
+    if (_ctx) render(_ctx);
   }
 
   function setNivel(nivel) {
@@ -175,6 +257,6 @@ const DashSuprimentos = (() => {
     if (_ctx) render(_ctx);
   }
 
-  return { render, aplicarPrefsRemotas, setNivel, setHorizonte, toggleNo };
+  return { render, aplicarPrefsRemotas, setNivel, setHorizonte, setVisao, toggleNo };
 })();
 window.DashSuprimentos = DashSuprimentos;

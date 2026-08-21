@@ -96,6 +96,25 @@ const DashCore = (() => {
       .trim();
   }
 
-  return { folhas, filhosDiretos, temFilhos, folhasDescendentes, paiDireto, peso, calcProgresso, esc, normalizarChave };
+  // Equipe EFETIVA de cada tarefa: no Planejamento a equipe costuma ser
+  // preenchida na tarefa-MÃE; as folhas herdam a equipe do ancestral mais
+  // próximo que tiver uma (a própria vence se preenchida).
+  function equipesEfetivas(tarefas) {
+    const sorted = [...tarefas].sort((a, b) => (a.ordem || 0) - (b.ordem || 0));
+    const mapa = new Map();
+    const pilha = []; // [{nivel, equipe}]
+    sorted.forEach(t => {
+      const n = t.nivel || 0;
+      while (pilha.length && pilha[pilha.length - 1].nivel >= n) pilha.pop();
+      const propria = parseInt(t.equipeAlocada) || 0;
+      const herdada = pilha.length ? pilha[pilha.length - 1].equipe : 0;
+      const efetiva = propria || herdada;
+      mapa.set(t.id, efetiva || null);
+      pilha.push({ nivel: n, equipe: efetiva });
+    });
+    return mapa;
+  }
+
+  return { folhas, filhosDiretos, temFilhos, folhasDescendentes, paiDireto, peso, calcProgresso, esc, normalizarChave, equipesEfetivas };
 })();
 window.DashCore = DashCore;
