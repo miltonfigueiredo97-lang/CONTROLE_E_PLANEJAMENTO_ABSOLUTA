@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.30.6',
+  versaoAtual: 'V3.19.30.7',
 
   versoes: [
     {
@@ -10146,6 +10146,16 @@ const NotasVersao = {
       "itens": [
         "Em Execução, Próximas e Suprimentos ganharam o seletor de visão EAP × GRUPOS: a visão Grupos organiza por Grupo › Subgrupo (mesmos campos e mesma ordem da Estrutura usada na matriz de frentes), expansível, mostrando as datas de cada tarefa e o resumo (quantidade + data mais próxima) em cada grupo. Se alimenta sozinha do Planejamento.",
         "FILTRO DE EQUIPE consertado (fui olhar como o Planejamento grava): a equipe costuma ser preenchida na tarefa-MÃE, e a matriz só olha as folhas — que ficavam sem equipe, deixando o filtro vazio/sem efeito. Agora as folhas HERDAM a equipe do ancestral mais próximo (a própria vence se preenchida) — o filtro lista e filtra de verdade, e o detalhe da célula mostra a equipe herdada."
+      ]
+    },
+    {
+      "versao": "V3.19.30.7",
+      "data": "2026-08-21",
+      "tipo": "correcao",
+      "titulo": "Auto-diagnóstico dos filtros sem falso alarme",
+      "itens": [
+        "O aviso amarelo acusou o overlay de \"Carregando...\" — falso alarme: o teste rodava cedo demais, enquanto a página ainda carregava (o loading fica por cima de propósito nesse momento e some sozinho). Os filtros continuam clicáveis.",
+        "O diagnóstico ficou esperto: espera o carregamento terminar, ignora loading/toasts/painéis legítimos e só acusa se o MESMO elemento estiver por cima em duas medições com 3 segundos de intervalo (invasor persistente de verdade)."
       ]
     }
   ],

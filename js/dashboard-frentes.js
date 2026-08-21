@@ -95,20 +95,35 @@ const DashFrentes = (() => {
         const limpar = ev.target.closest('#db-fr-limpar');
         if (limpar) { ev.preventDefault(); limparFiltros(); }
       }, true);
-      // AUTO-DIAGNÓSTICO: se algo invisível estiver POR CIMA dos filtros,
-      // denuncia no console e num toast (uma vez) — pra caçar o culpado real.
-      setTimeout(() => {
+      // AUTO-DIAGNÓSTICO: acusa só invasor PERSISTENTE — espera o loading
+      // global sumir e exige o MESMO elemento por cima em 2 medições com 3s
+      // de intervalo (o overlay de "Carregando..." aparecia no teste e era
+      // falso alarme).
+      const _testarSobreposicao = () => {
         const alvo = document.getElementById('db-fr-fbtn-categoria');
-        if (!alvo) return;
+        if (!alvo) return null;
         const r = alvo.getBoundingClientRect();
-        if (!r.width) return;
+        if (!r.width) return null;
         const topo = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
-        if (topo && !alvo.contains(topo) && topo !== alvo) {
-          const desc = topo.tagName + (topo.id ? '#' + topo.id : '') + (topo.className ? '.' + String(topo.className).split(' ').join('.') : '');
-          console.error('[Frentes] Elemento POR CIMA do filtro:', desc, topo);
-          Utils.toast('⚠️ Diagnóstico: "' + desc + '" está por cima dos filtros — me mande um print deste aviso.', 'alerta', 9000);
-        }
-      }, 800);
+        if (!topo || alvo.contains(topo) || topo === alvo) return null;
+        if (topo.closest('.loading-overlay') || topo.closest('.toast-container') || topo.closest('.db-overlay')) return null;
+        return topo;
+      };
+      const _agendarDiag = (tentativa) => setTimeout(() => {
+        const load = document.getElementById('loading-global');
+        if (load && load.style.display !== 'none') { if (tentativa < 10) _agendarDiag(tentativa + 1); return; }
+        const a = _testarSobreposicao();
+        if (!a) return;
+        setTimeout(() => {
+          const b = _testarSobreposicao();
+          if (b && b === a) {
+            const desc = b.tagName + (b.id ? '#' + b.id : '') + (b.className ? '.' + String(b.className).split(' ').join('.') : '');
+            console.error('[Frentes] Elemento POR CIMA do filtro (persistente):', desc, b);
+            Utils.toast('⚠️ Diagnóstico: "' + desc + '" está por cima dos filtros — me mande um print deste aviso.', 'alerta', 9000);
+          }
+        }, 3000);
+      }, 1200);
+      _agendarDiag(0);
     }
 
     const folhasTodas = DashCore.folhas(ctx.tarefas);
