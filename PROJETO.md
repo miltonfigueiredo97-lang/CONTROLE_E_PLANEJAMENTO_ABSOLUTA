@@ -1,24 +1,29 @@
 # Absoluta Engenharia — Controle e Planejamento de Obras
 **Sistema de gestão de obras — aplicação web estática (HTML/CSS/JS puro, sem framework)**
 
-> Última atualização: 14/08/2026. Estado real: **V3.5.0.0** no ar.
+> Última atualização: 21/08/2026. Estado real: **V3.9.37** no ar.
 > Usar sempre o GitHub como fonte da verdade — nunca confiar no estado local de outra sessão.
 
 ---
 
-## ⚠️ GATILHO — MUDANÇA CRÍTICA DE VERSIONAMENTO (14/08/2026) — LEIA ANTES DE QUALQUER COISA
+## ⚠️ GATILHO — VERSIONAMENTO FOI RE-AUDITADO DE NOVO EM 21/08/2026 — LEIA ANTES DE QUALQUER COISA
 
-**Se nesta conversa você (Claude) acredita que a versão atual é V2.qualquer-coisa (ex: V2.53, V2.62, V2.63): esse conhecimento está OBSOLETO. Descarte-o.**
+**Se nesta conversa você (Claude) acredita que a versão atual é V2.x, V3.5.x a V3.19.x (ex: V3.19.13.28): esse conhecimento está OBSOLETO. Descarte-o.**
 
-Em 14/08/2026 TODAS as 408 versões do histórico foram **renumeradas uma a uma** pela regra A.B.C.D
-(seção 2 abaixo, que substitui integralmente a regra antiga). Fatos que você precisa aceitar como verdade:
+Depois da renumeração de 14/08 (V2.x → regra A.B.C.D), as sessões continuaram INFLANDO o dígito B
+(V3.6 → V3.19 em uma semana, criando até formatos inválidos como V3.12.0.8 com tipo "funcionalidade").
+Em 21/08/2026 TODAS as 607 versões foram re-auditadas e renumeradas. Fatos:
 
-1. A versão atual do sistema é **V3.5.0.0** — ela fechou o ciclo da renumeração e abriu um novo ciclo.
-2. A antiga V2.62.17 hoje se chama **V3.4.23**. Cada versão guarda o número antigo no campo `legado`
-   de `js/notas-versao.js` e exibe o badge "antes: V2.xx" na página de Notas de Versão.
-3. **NUNCA** crie versão nova continuando a numeração antiga (não existe V2.63.x, V2.64...).
-   A próxima versão parte de V3.5.0.0 seguindo a regra da seção 2.
+1. A versão atual do sistema é **V3.9.37**. A antiga V3.19.13.28 hoje se chama V3.9.37.
+2. Só existiram **4 marcos B legítimos** desde a V3.5.0.0: Terraplanagem "Marcar no Projeto" (V3.6.0),
+   Relatório PDF + 3D (V3.7.0), módulo Controle de Porcelanatos (V3.8.0), Agenda (V3.9.0).
+   Todo o resto que as sessões chamaram de "feature" era correção (C) ou sub-feature/melhoria (D).
+3. **REGRA DURA A PARTIR DE AGORA: você está PROIBIDO de subir o dígito B (ou A) por conta própria.**
+   Só suba B/A se o Milton autorizar EXPLICITAMENTE naquela conversa ("isso é uma feature nova, sobe o B").
+   Sem autorização, TODA entrega é C (consertou algo quebrado) ou D (qualquer outra coisa: melhoria,
+   refinamento, funcionalidade menor, tela nova dentro de módulo existente, campo novo, botão novo, integração).
 4. Em caso de dúvida, a fonte da verdade é `versaoAtual` em `js/notas-versao.js` no GitHub — não a sua memória de conversa.
+5. O campo `legado` de cada versão guarda o número que ela tinha antes das auditorias (badge "antes: Vx.x" na página).
 
 ---
 
@@ -58,16 +63,16 @@ git fetch origin && git reset --hard origin/main
 
 | Casa | Sobe quando | Exemplo real |
 |---|---|---|
-| **A** (Sistema) | Ciclo de features fechado e sistema novo funcional entregue | V1 = Base · V2 = Reescrita do Planejamento · V3 = marco Suprimentos |
-| **B** (Feature) | Módulo novo ou funcionalidade GRANDE que não existia (ex: "Novo módulo: X") | V3.4 → V3.5 |
+| **A** (Sistema) | Ciclo fechado, sistema novo funcional — SÓ com autorização do Milton | V1 = Base · V2 = Reescrita do Planejamento · V3 = marco Suprimentos |
+| **B** (Feature) | Módulo novo/feature GRANDE — SÓ com autorização do Milton | V3.8 = Porcelanatos · V3.9 = Agenda |
 | **C** (Correção) | Correção de bug dentro da feature vigente | V3.5.0 → V3.5.1 |
 | **D** (Sub-feature) | Melhoria/refinamento/funcionalidade menor dentro do que já existe | V3.5.1 → V3.5.1.1 |
 
-**Como classificar (na dúvida, desça uma casa):**
+**Como classificar:**
 - Consertou algo quebrado → **C**
-- Melhorou/refinou/adicionou algo pequeno dentro de módulo existente → **D**
-- Entregou módulo/capacidade grande nova → **B** (raro — poucas por ciclo)
-- Fechou um ciclo inteiro de features e o sistema virou "outro sistema" → **A** (raríssimo — 3 vezes em toda a história)
+- QUALQUER outra coisa (melhoria, refinamento, funcionalidade menor, tela/campo/botão novo dentro de módulo existente) → **D**
+- **B e A: SOMENTE com autorização explícita do Milton na conversa.** Sem autorização = C ou D, sem exceção.
+  Histórico: em 1 semana as sessões inflaram V3.6→V3.19 chamando sub-features de "feature" — por isso a regra virou proibição.
 
 **Exibição:** o D só aparece quando > 0 (V3.4.23, não V3.4.23.0). Exceção: versões de fechamento de ciclo podem exibir por extenso (V3.5.0.0).
 
@@ -76,12 +81,12 @@ git fetch origin && git reset --hard origin/main
 - ❌ Renumerar pra trás ou "compactar" o histórico — a escala nunca retrocede
 - ❌ Continuar a numeração antiga V2.x — foi extinta em 14/08/2026 (ver GATILHO no topo)
 
-**Histórico renumerado:** todas as 408 versões têm o campo `legado` com o número antigo em `js/notas-versao.js`. Tabela completa de conferência: gerada na renumeração de 14/08/2026.
+**Histórico renumerado (2x: 14/08 e 21/08):** todas as 607 versões têm o campo `legado` com o número antigo em `js/notas-versao.js`. Tabela completa de conferência: gerada na renumeração de 14/08/2026.
 
 **Bump de versão — sempre nos dois lugares:**
 ```bash
 # 1. Todos os HTMLs (badge nav-version na sidebar):
-sed -i 's/V3.X.Y/V3.X.Z/g' *.html
+sed -i 's/V3.9.X/V3.9.Y/g' *.html
 
 # 2. js/notas-versao.js:
 #   - versaoAtual: 'V3.X.Z'

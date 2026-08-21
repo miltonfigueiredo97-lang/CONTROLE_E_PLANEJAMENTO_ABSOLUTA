@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.13.28',
+  versaoAtual: 'V3.9.37',
 
   versoes: [
     {
@@ -7658,7 +7658,8 @@ const NotasVersao = {
         "O arrasto (pan) dentro do popup da prancha estava TRAVADO: o modelo antigo dependia da barra de rolagem do container, mas o zoom por transform não cria rolagem de verdade — então não havia o que arrastar.",
         "Reescrito como câmera de mapa (translate + scale): arrastar com o mouse funciona sempre, em qualquer nível de zoom; Ctrl+scroll dá zoom ancorado no ponto do cursor; scroll normal desliza a prancha (Shift = horizontal); botões −/+ dão zoom no centro.",
         "A prancha abre ajustada pra caber inteira na tela, centralizada."
-      ]
+      ],
+      "legado": "V3.5.1"
     },
     {
       "versao": "V3.5.1.1",
@@ -7672,7 +7673,8 @@ const NotasVersao = {
         "Fecho do relatório: total de dias de concretagem e resumo geral consolidado (sem separar por dia), por tipo e nos números da obra.",
         "⬇ Baixar PDF: gera o arquivo direto (sem diálogo de impressão), com a prancha do projeto preenchida — só as estacas executadas, verde = concluída, amarelo = parcial — seguida do relatório dia a dia e do resumo.",
         "Estaca concretada em mais de um dia aparece em cada dia com o volume daquele dia, e no resumo total é contada uma vez só."
-      ]
+      ],
+      "legado": "V3.5.1.1"
     },
     {
       "versao": "V3.5.1.2",
@@ -7684,10 +7686,11 @@ const NotasVersao = {
         "📱 Copiar p/ WhatsApp: botão que monta o relatório em texto (negritos e marcadores no formato do WhatsApp) e copia — é só colar na conversa.",
         "RESUMO TOTAL do PDF redesenhado: banner preto com período, cards de métricas (estacas, ML, m³ real, m³ calculado, índice de perda colorido), tabela por tipo agora com coluna de perda e zebra.",
         "Prancha do PDF: quando o relatório cobre MAIS DE UM DIA, cada estaca marcada mostra o Nº da concretagem dentro do círculo — dá pra saber qual concretagem executou cada estaca só de olhar."
-      ]
+      ],
+      "legado": "V3.5.1.2"
     },
     {
-      "versao": "V3.5.1.3",
+      "versao": "V3.5.2",
       "data": "2026-08-15",
       "tipo": "correcao",
       "titulo": "Controle de Estacas: índice de perda corrigido — cocho/linha estava contado em dobro",
@@ -7695,10 +7698,11 @@ const NotasVersao = {
         "Bug real: a perda de cocho e linha (que acontece antes de o concreto chegar na peça, normalmente na 1ª BT) entrava DUAS vezes na conta — uma escondida (na diferença bruta entre volume real e projeto) e outra somada de novo por cima — dobrando o índice de perda.",
         "Corrigido: agora desconta o cocho/linha do volume executado real UMA vez, ANTES de comparar com o volume do projeto. Exemplo: projeto 10m³, usado 12m³, cocho 2m³ → usado real 10m³ → perda 0%. Projeto 10m³, usado 15m³, cocho 2m³ → usado real 13m³ → perda 3m³ = 30%.",
         "\"Executado real (BTs)\" agora mostra o volume previsto (nominal) das BTs usadas — igual ao \"Volume Real Concretado\" do Controle de Concreto, pros dois módulos baterem."
-      ]
+      ],
+      "legado": "V3.5.1.3"
     },
     {
-      "versao": "V3.5.1.4",
+      "versao": "V3.5.2.1",
       "data": "2026-08-15",
       "tipo": "melhoria",
       "titulo": "Relatório de Estacas: ordem pelas BTs e perda na fórmula nova do Controle",
@@ -7706,10 +7710,11 @@ const NotasVersao = {
         "Dentro de cada dia (e no consolidado/WhatsApp), as estacas saem na ORDEM DAS BTs (BT1,BT2,BT3 antes de BT3,BT4,BT5) — a sequência real de execução, não a ordem alfabética.",
         "Índice de perda do relatório ALINHADO à fórmula corrigida do Controle de Estacas (V3.5.1.3): cocho/linha é descontado antes de comparar com o projeto (não conta mais em dobro), perda de solo = usado − projeto, somando perda de obra e sobra de caminhão. Como essas perdas são por BT e uma BT pode servir várias estacas, o relatório RATEIA proporcionalmente ao volume que cada estaca tirou da BT — a soma bate com o índice do Controle.",
         "Perda do TOTAL DO DIA, por tipo e do resumo geral também recalculadas nessa mesma base. IMPORTANTE: o relatório não copia o número do Controle — ele aplica a mesma fórmula; se a fórmula mudar de novo no Controle, precisa ser espelhada aqui."
-      ]
+      ],
+      "legado": "V3.5.1.4"
     },
     {
-      "versao": "V3.5.1.5",
+      "versao": "V3.5.2.2",
       "data": "2026-08-15",
       "tipo": "melhoria",
       "titulo": "Controle de Estacas: sobra/perda de cocho e linha direto no popup de lançar por estaca",
@@ -7717,10 +7722,11 @@ const NotasVersao = {
         "Novo botão \"✎ sobra/perda\" em cada linha de BT do popup de lançar por estaca — abre um mini-formulário ali mesmo (sobra caminhão, perda em obra, cocho + linha, hora), sem precisar sair pra outro menu.",
         "Se a BT ainda não tem nenhum lançamento salvo (primeira peça dela), o valor fica guardado e entra automaticamente quando você salvar o lançamento — antes não tinha onde persistir isso.",
         "Botão fica com borda laranja quando a BT já tem alguma sobra/perda cadastrada, pra saber de relance quais já foram preenchidas."
-      ]
+      ],
+      "legado": "V3.5.1.5"
     },
     {
-      "versao": "V3.5.1.6",
+      "versao": "V3.5.3",
       "data": "2026-08-15",
       "tipo": "correcao",
       "titulo": "Controle de Estacas: cocho/linha só na primeira BT, sobra de caminhão só na última",
@@ -7728,30 +7734,33 @@ const NotasVersao = {
         "Corrigido: o mini-form de sobra/perda mostrava Cocho+Linha e Sobra Caminhão em QUALQUER BT — errado, cocho/linha só acontece uma vez (na 1ª BT do dia) e sobra de caminhão só faz sentido na ÚLTIMA (se ela não foi totalmente usada).",
         "Agora: Cocho + Linha só aparece na primeira BT da concretagem (menor número), Sobra Caminhão só na última (maior número). BTs do meio só têm Perda em Obra e Hora — com um aviso explicando.",
         "Primeira/última são calculadas pelo número da BT dentro da concretagem, ordem que reflete a sequência real de chegada dos caminhões."
-      ]
+      ],
+      "legado": "V3.5.1.6"
     },
     {
-      "versao": "V3.5.1.7",
+      "versao": "V3.5.4",
       "data": "2026-08-15",
       "tipo": "correcao",
       "titulo": "Controle de Estacas: botão de sobra/perda some das BTs do meio — só aparece na 1ª e na última",
       "itens": [
         "O botão \"✎ sobra/perda\" ainda aparecia em TODAS as linhas de BT do popup de lançar por estaca, mesmo já só mostrando os campos certos dentro dele — poluía a tela com botão irrelevante em toda BT do meio.",
         "Agora o botão só aparece na linha da BT que é a primeira (mostra \"✎ cocho\") ou a última (mostra \"✎ sobra\") da concretagem inteira. BTs do meio não têm nenhum botão ali — não tem nada de cocho/sobra pra editar mesmo."
-      ]
+      ],
+      "legado": "V3.5.1.7"
     },
     {
-      "versao": "V3.5.1.8",
+      "versao": "V3.5.5",
       "data": "2026-08-15",
       "tipo": "correcao",
       "titulo": "Controle de Estacas: formatação do mini-form de sobra/perda arrumada",
       "itens": [
         "Layout do mini-formulário (dentro do popup de lançar por estaca) estava quebrado: quando só tinha 1 campo na linha (ex: só \\\"Perda em Obra\\\" numa BT do meio, ou o rótulo \\\"Cocho + Linha [m³] (primeira BT)\\\" quebrando em 2 linhas), esticava feio ou desalinhava.",
         "Agora é uma grade fixa de 3 colunas, sempre igual. O texto explicando \\\"é a primeira BT, tem cocho\\\"/\\\"é a última, tem sobra\\\" saiu do rótulo do campo e foi pro texto de cima, sem quebrar linha."
-      ]
+      ],
+      "legado": "V3.5.1.8"
     },
     {
-      "versao": "V3.5.1.9",
+      "versao": "V3.5.6",
       "data": "2026-08-15",
       "tipo": "correcao",
       "titulo": "Controle de Estacas: mapa do Acompanhamento não mostra mais concretagens futuras",
@@ -7759,20 +7768,22 @@ const NotasVersao = {
         "Bug real: o mapa de qualquer concretagem selecionada mostrava TODAS as peças da prancha já concretadas, mesmo as de concretagens FUTURAS — concretagem Nº 1 e Nº 2 mostravam o mapa idêntico, confundindo o que já foi feito de fato até aquele dia.",
         "Corrigido: agora o mapa só mostra peças da concretagem selecionada + das ANTERIORES (por número) — nunca as de concretagens com número maior. Concretagem Nº 1 só mostra suas próprias peças; Nº 2 mostra as da 1 e da 2; Nº 3 mostra 1, 2 e 3.",
         "Cada peça concretada agora exibe um número em cima mostrando de QUAL concretagem ela é — pra não confundir qual estaca foi feita em qual dia."
-      ]
+      ],
+      "legado": "V3.5.1.9"
     },
     {
-      "versao": "V3.5.1.10",
+      "versao": "V3.5.7",
       "data": "2026-08-15",
       "tipo": "correcao",
       "titulo": "Controle de Estacas: BTs fora de ordem e linhas desalinhadas no popup de lançar por estaca",
       "itens": [
         "As linhas de BT apareciam na ordem em que os lançamentos foram salvos no banco (aleatória), não na ordem numérica das BTs — agora sempre ordenadas BT-1, BT-2, BT-3...",
         "A coluna do botão \\\"✎ cocho/sobra\\\" usava largura automática — quando o botão não aparecia (BT do meio), a linha toda encolhia e desalinhava com as outras. Agora a coluna tem largura fixa, alinhado sempre, com ou sem botão."
-      ]
+      ],
+      "legado": "V3.5.1.10"
     },
     {
-      "versao": "V3.5.1.11",
+      "versao": "V3.5.7.1",
       "data": "2026-08-15",
       "tipo": "melhoria",
       "titulo": "Resumo Total do Relatório de Estacas completo e alinhado",
@@ -7780,19 +7791,21 @@ const NotasVersao = {
         "O RESUMO TOTAL agora traz a TABELA DE CADA ESTACA (consolidado com Concretagem Nº, BTs, vol. calculado, vol. real e perda) em TODOS os modos — antes só saía no modo \"Só total\".",
         "Mais dados: cards de Perda em m³, Consumo médio por estaca e Média de estacas/dia; tabela por tipo ganhou colunas de m³ calculado, consumo médio e perda — na prévia e no PDF.",
         "Formatação corrigida no PDF: os títulos das colunas numéricas agora ficam alinhados com os números (à direita/centro) — antes o cabeçalho ficava à esquerda e o valor à direita, parecendo de outra coluna. Vale pras tabelas do dia, por tipo e consolidada."
-      ]
+      ],
+      "legado": "V3.5.1.11"
     },
     {
-      "versao": "V3.5.1.12",
+      "versao": "V3.5.7.2",
       "data": "2026-08-15",
       "tipo": "melhoria",
       "titulo": "Consolidado do relatório: ordem por Concretagem e depois por BT",
       "itens": [
         "Na tabela \"Estacas executadas (consolidado)\" do Resumo Total, as estacas agora saem ordenadas primeiro pelo Nº DA CONCRETAGEM e, dentro dela, pela ordem das BTs — antes a ordem das BTs vinha misturando estacas de concretagens diferentes."
-      ]
+      ],
+      "legado": "V3.5.1.12"
     },
     {
-      "versao": "V3.5.1.13",
+      "versao": "V3.5.7.3",
       "data": "2026-08-15",
       "tipo": "melhoria",
       "titulo": "Controle de Terraplanagem: N° Canhoto, importação de planilha e relatórios por dia/caminhão",
@@ -7800,7 +7813,8 @@ const NotasVersao = {
         "Novo campo N° Canhoto em cada viagem/remoção — aparece no registro manual e na tabela.",
         "Botão \"📥 Importar Planilha\" no Controle de Terraplanagem: lê .xlsx/.xls/.csv com as colunas N Canhoto, Data, Material, Volume e Placa (nome das colunas flexível, ordem não importa). Placas ainda não cadastradas são criadas automaticamente em Caminhões. Linhas com N° Canhoto repetido são puladas (evita duplicar se a planilha for importada de novo).",
         "Painel \"Viagens/Remoções\" ganhou abas: Viagens (lista, como antes), Por Dia (viagens e volume por data) e Por Caminhão (viagens, volume total e média por placa)."
-      ]
+      ],
+      "legado": "V3.5.1.13"
     },
     {
       "versao": "V3.6.0",
@@ -7813,7 +7827,8 @@ const NotasVersao = {
         "Cota de Referência: pode ser definida uma vez em ⚙️ Config (padrão de toda a obra) ou individualmente em cada seção (sobrepõe a padrão). A altura usada no cálculo da área é sempre cota do ponto menos cota de referência.",
         "⚙️ Config ganhou um seletor de preset de Taxa de Empolamento (Material Útil 30%, Argila 40%) — só preenche o campo, que continua editável pra qualquer outro valor.",
         "Seções já cadastradas continuam funcionando normalmente no modo manual — nada muda pra quem não usar o novo modo visual."
-      ]
+      ],
+      "legado": "V3.6.0"
     },
     {
       "versao": "V3.6.1",
@@ -7823,7 +7838,8 @@ const NotasVersao = {
       "itens": [
         "Registrar viagem manual e importar planilha já funcionavam sem nenhum volume previsto cadastrado — mas o card \"Já Removido\" e o cabeçalho da tabela mostravam \"0% concluído\"/\"acumulado 0%\", como se faltasse algo, quando na verdade é só falta de Levantamento pra comparar.",
         "Agora, sem volume previsto: o card \"Volume Previsto\" mostra \"—\" com a nota \"Sem Levantamento cadastrado ainda\", e os dois \"% concluído\" somem — sem nenhum índice de erro ou percentual enganoso. Assim que o Levantamento for cadastrado, os percentuais voltam a aparecer normalmente."
-      ]
+      ],
+      "legado": "V3.6.1"
     },
     {
       "versao": "V3.6.2",
@@ -7835,7 +7851,8 @@ const NotasVersao = {
         "Agora o projeto é inserido e calibrado uma única vez, no topo da Calculadora de Corte de Terra (antes das abas Horizontais/Verticais) — o toggle ✍️ Manual / 🖼️ Marcar no Projeto também é único pra calculadora inteira, não mais por seção.",
         "Cada seção vira uma linha de pontos marcada em cima dessa mesma imagem, com cor própria (bolinha + linha conectando os pontos) — pra marcar pontos numa seção, basta abrir ela na lista (fica destacada como \"seção ativa\") e clicar na imagem do projeto.",
         "Trocar o projeto por uma imagem nova avisa e apaga a escala + pontos de todas as seções (as posições não valem mais na imagem diferente)."
-      ]
+      ],
+      "legado": "V3.6.2"
     },
     {
       "versao": "V3.6.3",
@@ -7847,10 +7864,11 @@ const NotasVersao = {
         "Reconhecimento de coluna ficou mais tolerante (ex: \"PLACA VEICULO\", \"DATA:\") — casa por conter o nome da coluna, não só igualdade exata.",
         "Placa deixou de ser obrigatória pra importar a linha: se a planilha tiver canhoto/data/material/volume mas a placa vier em branco, a viagem entra mesmo assim (sem descartar volume real por causa disso) — só não cadastra caminhão novo nesse caso.",
         "Planilha com mais de uma aba (uma por obra, como no arquivo de teste ZENITH+DOM): pergunta qual aba é da obra atual antes de importar, em vez de pegar a primeira aba sempre — evita importar os dados errados na obra errada. Continua sendo política do usuário separar em arquivos por obra antes de importar; isso é só uma trava de segurança a mais."
-      ]
+      ],
+      "legado": "V3.6.3"
     },
     {
-      "versao": "V3.6.4",
+      "versao": "V3.6.3.1",
       "data": "2026-08-15",
       "tipo": "melhoria",
       "titulo": "Importar Planilha: 3 regras de tolerância a dado faltante",
@@ -7859,7 +7877,8 @@ const NotasVersao = {
         "Linha sem placa continua sendo importada normalmente (regra já existia) — provavelmente esqueceram de anotar o caminhão.",
         "Novo: linha sem volume agora é completada automaticamente, na ordem: 1) volume mais comum já visto pra aquela placa na própria planilha (um caminhão sempre carrega o mesmo volume) 2) se a placa não aparece em nenhuma outra linha com volume, usa a capacidade cadastrada do caminhão (Grande/Pequeno) em \"🚚 Caminhões\". Só fica de fora se não der pra descobrir por nenhuma das duas formas.",
         "O resultado da importação agora mostra quantas linhas tiveram o volume completado (e por qual dos dois jeitos) e quantas foram ignoradas por terem só o canhoto."
-      ]
+      ],
+      "legado": "V3.6.4"
     },
     {
       "versao": "V3.7.0",
@@ -7871,10 +7890,11 @@ const NotasVersao = {
         "PDF pode ser baixado direto (\"💾 Baixar PDF\") ou compartilhado (\"📤 Compartilhar\") — no celular abre o menu nativo de compartilhamento com o PDF já anexado, WhatsApp incluso; no navegador sem esse suporte, baixa o arquivo pra anexar manualmente.",
         "Levantamento de Terraplanagem: botão \"🧊 Ver em 3D\" na Calculadora de Corte de Terra — monta um sólido 3D fazendo o loft entre as seções da direção atual (Horizontais ou Verticais), do jeito que elas já são calculadas (cotas + distâncias + cota de referência), funciona tanto no modo Manual quanto no modo Marcar no Projeto.",
         "O 3D colore a superfície do terreno por profundidade do corte (verde = raso, vermelho = fundo) e mostra a cota de referência como um plano laranja translúcido por baixo — arrasta pra girar, scroll pra zoom."
-      ]
+      ],
+      "legado": "V3.7.0"
     },
     {
-      "versao": "V3.7.1",
+      "versao": "V3.7.0.1",
       "data": "2026-08-15",
       "tipo": "melhoria",
       "titulo": "Limpar Base (Terraplanagem) com permissão dedicada + auditoria de permissões",
@@ -7883,10 +7903,11 @@ const NotasVersao = {
         "Novo botão \"🗑 Limpar Base\" no Levantamento de Terraplanagem: apaga todas as seções (horizontais e verticais), o projeto inserido e a escala calibrada — mesma proteção tripla. Caminhões e configuração de empolamento/capacidades são preservados.",
         "Nova ação \"limpar\" no catálogo de permissões — aparece automaticamente na tela de Administração/Permissões pros dois módulos de Terraplanagem, desligada por padrão pra usuários não-admin.",
         "Auditoria de permissões de tudo criado nas últimas versões: Importar Planilha (controleTerra:importar), Relatório PDF (controleTerra:exportar), Limpar Base (limpar nos dois módulos) — todos com bloqueio funcional (a ação é recusada mesmo forçando pelo console) e botão escondido na tela pra quem não tem a permissão."
-      ]
+      ],
+      "legado": "V3.7.1"
     },
     {
-      "versao": "V3.7.1.1",
+      "versao": "V3.7.0.2",
       "data": "2026-08-15",
       "tipo": "melhoria",
       "titulo": "Controle de Terraplanagem: TERRA separada de ENTULHO (e demais materiais)",
@@ -7896,10 +7917,11 @@ const NotasVersao = {
         "Cards do topo redesenhados: Terra Prevista, Terra Removida (com % da terraplanagem), Entulho Removido (marcado como \\\"não entra na terraplanagem\\\"), Caminhões e Viagens.",
         "Nova aba \\\"Por Material\\\" nas Viagens/Remoções: volume, viagens e % de cada material, com a classificação (terraplanagem × demolição × fora da terraplanagem).",
         "Relatório PDF de período atualizado: cards separados de Terra e Entulho, % Terra × Previsto calculado só com terra, e nova tabela \\\"Volume por material\\\" com a classificação de cada um."
-      ]
+      ],
+      "legado": "V3.7.1.1"
     },
     {
-      "versao": "V3.7.1.2",
+      "versao": "V3.7.1",
       "data": "2026-08-15",
       "tipo": "correcao",
       "titulo": "Controle de Estacas: BT duplicada numa mesma peça + seletor nativo trocado por combobox controlado",
@@ -7907,20 +7929,22 @@ const NotasVersao = {
         "Bug real de dados: era possível a mesma BT aparecer em 2 linhas da mesma peça (de lançamentos antigos duplicados) — ao salvar, isso geraria 2 documentos separados ou quebraria o lançamento em lote. Corrigido em 3 pontos: ao abrir a peça, lançamentos duplicados da mesma BT são mesclados (soma o volume); ao selecionar uma BT já usada noutra linha, é bloqueado com aviso; ao salvar, linhas da mesma BT são somadas antes de gravar (nunca 2 documentos pra mesma peça+BT).",
         "O seletor de BT (era um <select> nativo do navegador) foi trocado por um combobox controlado, digita e filtra — em alguns aparelhos o select nativo abria com a lista cortada/ilegível, sem dar pra ler as opções. Agora é HTML/CSS próprio, com o mesmo comportamento em qualquer tela.",
         "Adicionar uma BT nova (+ BT) já abre o combobox dela direto, sem precisar clicar de novo."
-      ]
+      ],
+      "legado": "V3.7.1.2"
     },
     {
-      "versao": "V3.7.1.3",
+      "versao": "V3.7.2",
       "data": "2026-08-15",
       "tipo": "correcao",
       "titulo": "Controle de Estacas: combobox de BT não abria — bug introduzido na versão anterior",
       "itens": [
         "O combobox novo (V3.7.1.2) tinha um bug sério: ao focar no campo, ele recriava o popup INTEIRO — o que destrói o próprio campo que acabou de receber o foco, fechando tudo na hora. Por isso não abria de jeito nenhum.",
         "Corrigido: agora abrir/fechar a lista só troca a visibilidade dela (a lista de cada linha já existe escondida no DOM) — nunca recria o campo. Testado o fluxo completo: focar abre, digitar filtra, clicar seleciona, sair sem escolher fecha e restaura o valor certo."
-      ]
+      ],
+      "legado": "V3.7.1.3"
     },
     {
-      "versao": "V3.7.1.4",
+      "versao": "V3.7.3",
       "data": "2026-08-15",
       "tipo": "correcao",
       "titulo": "Controle de Estacas: seletor de BT voltou a ser o <select> nativo",
@@ -7928,20 +7952,22 @@ const NotasVersao = {
         "O combobox customizado continuou com problema mesmo após o ajuste — sem conseguir testar ao vivo em tablet, seguir tentando ajustar um componente próprio complexo é arriscado demais.",
         "Voltou pro <select> nativo do navegador — comportamento garantido pela plataforma, mesmo que a lista longa de BTs não fique tão bonita quanto um combobox customizado em alguns aparelhos.",
         "Todas as outras correções desta rodada continuam valendo: BT duplicada mesclada/bloqueada/somada, ordem por número da BT, e alinhamento fixo das colunas."
-      ]
+      ],
+      "legado": "V3.7.1.4"
     },
     {
-      "versao": "V3.7.1.5",
+      "versao": "V3.7.4",
       "data": "2026-08-15",
       "tipo": "correcao",
       "titulo": "Controle de Estacas: achado o bug real — lógica do filtro de BT já usada estava invertida",
       "itens": [
         "Bug de digitação na reversão pro select nativo: a condição que decide se uma BT aparece no seletor estava com o \\\"não\\\" faltando — em vez de esconder BTs já usadas em outra linha da mesma peça, o código fazia o oposto (só mostrava as JÁ usadas), permitindo selecionar a mesma BT duas vezes.",
         "Corrigido — 1 caractere (o `!` que faltava). Agora uma BT já escolhida numa linha desaparece do seletor das outras linhas da mesma peça (a não ser que seja a seleção daquela própria linha)."
-      ]
+      ],
+      "legado": "V3.7.1.5"
     },
     {
-      "versao": "V3.7.1.6",
+      "versao": "V3.7.5",
       "data": "2026-08-15",
       "tipo": "correcao",
       "titulo": "Sistema inteiro: cache-busting em todos os arquivos .js e .css — resolve \"corrigi mas não resolveu\"",
@@ -7949,10 +7975,11 @@ const NotasVersao = {
         "Achada uma causa raiz provável de vários casos de \"corrigi no código mas o usuário continua vendo o bug antigo\": os arquivos js/*.js e css/*.css eram carregados sem nenhum parâmetro de versão (ex: js/controle-estacas.js). O navegador pode cachear esse arquivo agressivamente e continuar servindo a versão ANTIGA mesmo depois do deploy novo — mesmo com o número da versão certo aparecendo na tela (esse texto vem de outro lugar, o script em si ficava desatualizado).",
         "Corrigido em TODOS os 40 arquivos HTML do sistema: agora todo <script src=\"js/...\"> e <link href=\"css/...\"> carrega com ?v=VERSAO (ex: controle-estacas.js?v=V3.7.1.6). Toda vez que a versão muda, o navegador é obrigado a buscar o arquivo de novo.",
         "Não precisa de passo manual extra daqui pra frente: o mesmo comando de bump de versão (sed trocando o número antigo pelo novo em todos os HTMLs) já atualiza o badge E o parâmetro de cache-busting ao mesmo tempo, automaticamente."
-      ]
+      ],
+      "legado": "V3.7.1.6"
     },
     {
-      "versao": "V3.7.1.7",
+      "versao": "V3.7.5.1",
       "data": "2026-08-15",
       "tipo": "melhoria",
       "titulo": "Controle de Terraplanagem: custo por viagem (R$) em tudo",
@@ -7963,10 +7990,11 @@ const NotasVersao = {
         "Relatório PDF: card \"VALOR GASTO\" no resumo, linha verde de custo acumulado por cima do gráfico de volume por dia (com o total em R$ na ponta), colunas Custo e R$ Acumulado na tabela por dia, Valor em cada viagem (com total no rodapé) e Custo por caminhão.",
         "Ordem das tabelas do PDF por importância: Volume por material → Volume por dia → Viagens do período → Volume por caminhão (por último).",
         "Card \"Caminhões\" (contagem de placas distintas) removido da tela, da prévia e do PDF — informação inútil, deu lugar ao Valor Gasto."
-      ]
+      ],
+      "legado": "V3.7.1.7"
     },
     {
-      "versao": "V3.7.1.8",
+      "versao": "V3.7.5.2",
       "data": "2026-08-15",
       "tipo": "melhoria",
       "titulo": "Levantamento de Terraplanagem: Relatório PDF com projeto marcado e 3D dentro",
@@ -7974,10 +8002,11 @@ const NotasVersao = {
         "Novos botões \"📄 Relatório PDF\" e \"📤 Compartilhar\" no Levantamento de Terraplanagem — gera um PDF com todos os dados do levantamento: cards de volume (horizontal, vertical, médio de banco, taxa de empolamento e volume a remover), o PROJETO com todas as seções desenhadas por cima (linhas coloridas, pontos numerados, rótulo S1/S2... — verticais tracejadas pra diferenciar das horizontais) e IMAGENS DO 3D do corte (uma pras seções horizontais, outra pras verticais), com a mesma coloração por profundidade da tela.",
         "O PDF fecha com as tabelas de seções das duas direções: área, comprimento, distância até a próxima e volume entre seções.",
         "\"📤 Compartilhar\" abre o menu nativo do celular com o PDF anexado (WhatsApp incluso); em navegador sem esse suporte, baixa o arquivo pra anexar manualmente."
-      ]
+      ],
+      "legado": "V3.7.1.8"
     },
     {
-      "versao": "V3.7.1.9",
+      "versao": "V3.7.6",
       "data": "2026-08-15",
       "tipo": "correcao",
       "titulo": "Controle de Estacas: achada a causa raiz do \"BT duplicada\" — 2 BTs diferentes com o mesmo número",
@@ -7985,10 +8014,11 @@ const NotasVersao = {
         "Causa raiz real do bug que parecia insistir: era possível criar 2 BTs (documentos diferentes no banco) com o MESMO número — ambas apareciam como \"BT-1\" no seletor, e por serem documentos DIFERENTES, o bloqueio de duplicidade (que comparava só pelo ID interno) não pegava.",
         "Corrigido em 2 pontos: criar uma BT nova ou editar o número de uma já existente agora é bloqueado se o número já pertencer a outra BT da mesma concretagem. Além disso, o seletor de BT do popup de lançar por estaca agora compara também por NÚMERO (não só por ID) — protege contra o dado antigo que já ficou duplicado.",
         "Na tela \"Gerenciar BTs\", números repetidos entre documentos diferentes agora aparecem destacados em vermelho com um aviso — ajuda a achar e limpar manualmente o que já foi criado errado antes desta correção (os lançamentos da BT duplicada precisam ser conferidos e refeitos na BT certa antes de excluir a errada)."
-      ]
+      ],
+      "legado": "V3.7.1.9"
     },
     {
-      "versao": "V3.7.1.10",
+      "versao": "V3.7.6.1",
       "data": "2026-08-15",
       "tipo": "melhoria",
       "titulo": "Relatório PDF de Terraplanagem: acumulados em todas as tabelas",
@@ -7997,10 +8027,11 @@ const NotasVersao = {
         "Viagens do período: novas colunas % Acumulada (do volume) e R$ Acumulado por viagem, além do valor de cada uma — a última linha fecha em 100% e no total gasto.",
         "Volume por material: além do % do volume, agora mostra também o % do custo de cada material (terra × entulho consomem fatias diferentes do dinheiro).",
         "Volume por caminhão: nova coluna % do volume total."
-      ]
+      ],
+      "legado": "V3.7.1.10"
     },
     {
-      "versao": "V3.7.1.11",
+      "versao": "V3.7.6.2",
       "data": "2026-08-15",
       "tipo": "melhoria",
       "titulo": "Registrar Viagem: valor preenchido automaticamente pelo material digitado",
@@ -8008,10 +8039,11 @@ const NotasVersao = {
         "Ao digitar o material no registro manual, o campo \"Valor da viagem (R$)\" já se preenche sozinho com o padrão daquele material (terra puxa o valor de terra, entulho o de entulho — definidos em 💰 Valores), com a indicação \"padrão de terra — pode alterar\".",
         "O campo continua totalmente editável: normalmente é o mesmo valor, mas cada viagem pode ter o seu — assim que você mexe no valor à mão, o preenchimento automático para de sobrescrever o que você digitou.",
         "Com o valor agora gravado explicitamente em cada viagem manual, mudar o padrão depois NÃO altera as viagens já registradas manualmente (só as importadas por planilha, que continuam usando o padrão do material)."
-      ]
+      ],
+      "legado": "V3.7.1.11"
     },
     {
-      "versao": "V3.8.0",
+      "versao": "V3.7.7",
       "data": "2026-08-15",
       "tipo": "correcao",
       "titulo": "Levantamento de Terraplanagem: sistema de cálculo reescrito — áreas + cotas + grade automática de 1,5m",
@@ -8021,10 +8053,11 @@ const NotasVersao = {
         "Pode ter mais de uma área (ex: dois blocos diferentes da obra, cada um com sua própria cota final) — cada área aparece com uma cor própria no projeto, e a lista embaixo mostra/permite editar a cota final e remover.",
         "Tipos de caminhão deixaram de ser fixos (só Grande/Pequeno) — em ⚙️ Config agora dá pra cadastrar quantos tipos precisar, cada um com nome e capacidade próprios (ex: \"Barra Azul\").",
         "Seções geradas pela grade continuam 100% editáveis como texto (cotas, distâncias, cota final) — se precisar corrigir um ponto específico depois de gerar, é só abrir a seção e ajustar direto."
-      ]
+      ],
+      "legado": "V3.8.0"
     },
     {
-      "versao": "V3.8.1",
+      "versao": "V3.7.8",
       "data": "2026-08-16",
       "tipo": "correcao",
       "titulo": "Levantamento de Terraplanagem: corrigido bug real do 3D/volume com mais de uma área + nova tela \"Ver Seções\"",
@@ -8033,10 +8066,11 @@ const NotasVersao = {
         "Corrigido: cada área agora é marcada (areaId) e só é considerada \"vizinha\" de outra seção da MESMA área — a fronteira entre áreas aparece na lista como \"· fim desta área ·\" em vez de uma distância/volume errados. O 3D também passou a desenhar cada área como um sólido independente, lado a lado, nunca conectando o loft entre áreas diferentes.",
         "3D confirmado: topo = cota superior marcada (interpolada), fundo = cota final da área — já estava assim, mas ficava distorcido pelo bug acima.",
         "Nova tela \"👁️ Ver Seções\": mostra a planta com todas as linhas de seção desenhadas (clique numa linha ou na lista pra selecionar) e, embaixo, o perfil lateral 2D da seção escolhida — terreno x cota final, com o trecho em VERDE onde o terreno está acima da referência (corte) e em VERMELHO onde está abaixo. É assim que dá pra ver na hora por que uma área específica saiu negativa: quando o vermelho (terreno abaixo da cota final ali) pesa mais que o verde na seção."
-      ]
+      ],
+      "legado": "V3.8.1"
     },
     {
-      "versao": "V3.8.1.1",
+      "versao": "V3.7.8.1",
       "data": "2026-08-16",
       "tipo": "melhoria",
       "titulo": "Área: mostra a dimensão real (metros) pra diagnosticar área pequena demais ou escala calibrada errada",
@@ -8044,10 +8078,11 @@ const NotasVersao = {
         "Confirmado: o número de seções geradas depende do tamanho da ÁREA que você desenha (dividida em grade de 1,5m) — se a área desenhada for menor que o prédio todo, sai menos seção mesmo, é esperado. Se o prédio é irregular (tipo um P), as seções de fato ficam mais curtas onde não tem prédio, mas continuam cobrindo toda a largura marcada.",
         "Ao concluir uma área agora aparece um aviso com a dimensão REAL dela (largura × altura em metros, calculada pela escala) — compare com uma medida que você já sabe (ex: a cota impressa na própria planta) pra confirmar se a área ficou do tamanho certo ou se a escala foi calibrada errada.",
         "A tabela de áreas (dentro do painel do projeto) também ganhou a coluna \"Dimensões (m)\" com a mesma informação, sempre visível."
-      ]
+      ],
+      "legado": "V3.8.1.1"
     },
     {
-      "versao": "V3.8.1.2",
+      "versao": "V3.7.9",
       "data": "2026-08-16",
       "tipo": "correcao",
       "titulo": "3D: corrigido o formato errado em áreas irregulares (T virando L) + Ver Seções reformulado",
@@ -8056,10 +8091,11 @@ const NotasVersao = {
         "\"👁️ Ver Seções\" reformulado: em vez de mostrar as 30+ linhas juntas (impossível de ler), agora só a seção SELECIONADA aparece riscada (em vermelho) na planta — as outras ficam apagadas.",
         "Mapa da planta bem maior (quase a tela toda) e com zoom/pan: botões ➕/➖/🔄 Resetar, além de dar scroll pra zoom e arrastar pra mover (quando tem zoom aplicado).",
         "Se a seção não tiver posição salva (foi gerada antes desta função existir), agora avisa pra gerar de novo em vez de simplesmente não mostrar nada."
-      ]
+      ],
+      "legado": "V3.8.1.2"
     },
     {
-      "versao": "V3.8.2",
+      "versao": "V3.7.10",
       "data": "2026-08-16",
       "tipo": "correcao",
       "titulo": "Nova opção por área: Elevação x Profundidade — resolve as áreas saindo negativas",
@@ -8068,20 +8104,22 @@ const NotasVersao = {
         "Ao concluir uma área agora pergunta a convenção: Profundidade (nº maior = mais embaixo) ou Elevação (nº maior = mais alto, padrão). Dá pra trocar depois também, direto na tabela de áreas (botão ⬇️ Profundidade / ⬆️ Elevação).",
         "A escolha afeta tudo: cálculo de área/volume da seção, cores do 3D (verde=raso/vermelho=fundo) e do perfil lateral em \"Ver Seções\", e a posição visual — sempre respeitando o que você digitou (os números mostrados na tela continuam exatamente os que você marcou, só a lógica interna de qual é \"mais alto\"/\"mais baixo\" muda).",
         "Testado com o exemplo real (cota final 7,18 profundidade, terreno marcado 4,9): sem a correção dava -9,12 m², com \"Profundidade\" marcado dá +9,12 m² — confere com o esperado (2,28m de altura de escavação × 4m de largura)."
-      ]
+      ],
+      "legado": "V3.8.2"
     },
     {
-      "versao": "V3.8.2.1",
+      "versao": "V3.7.10.1",
       "data": "2026-08-16",
       "tipo": "melhoria",
       "titulo": "Área: separa \"Caixa\" (bounding box) de \"Área Real\" — deixa claro que não é a mesma coisa",
       "itens": [
         "A coluna \"Dimensões (m)\" mostrava largura × altura da CAIXA que envolve o polígono da área — não o formato real dela. Se a área desenhada é irregular (L, T, etc.), a caixa sempre parece maior do que a área de verdade, o que confundia (ex: área com formato de L pequeno mostrando uma caixa de 52m).",
         "Agora a tabela mostra as duas coisas separadas: \"Caixa (m)\" (só referência, largura × altura do retângulo envolvente) e \"Área Real (m²)\" (o tamanho de verdade do polígono desenhado, calculado certo mesmo pra formatos irregulares)."
-      ]
+      ],
+      "legado": "V3.8.2.1"
     },
     {
-      "versao": "V3.8.2.2",
+      "versao": "V3.7.10.2",
       "data": "2026-08-17",
       "tipo": "melhoria",
       "titulo": "Dashboard: seletor Extras + gráfico de Terraplanagem",
@@ -8090,10 +8128,11 @@ const NotasVersao = {
         "Nova seção 🚜 Terraplanagem (ao lado de Fundação e Estrutura): infos rápidas em cards — volume previsto (m³ empolado, das seções do Levantamento), volume removido, terra × entulho, % concluído, saldo restante, nº de viagens (caminhões), média m³/dia e custo total.",
         "Gráfico por dia: barras empilhadas de volume (🟤 terra + 🧱 entulho) com o nº de caminhões do dia em cima e o custo do dia embaixo — mesma pegada visual do gráfico de Fundação e Estrutura.",
         "A seção some sozinha quando a obra não tem terraplanagem lançada, e os dados vêm direto do Controle de Terraplanagem (link no rodapé da seção)."
-      ]
+      ],
+      "legado": "V3.8.2.2"
     },
     {
-      "versao": "V3.8.4",
+      "versao": "V3.7.11",
       "data": "2026-08-16",
       "tipo": "correcao",
       "titulo": "Causa raiz de vez do 3D errado: prédio com reentrância cruzava a grade em pedaços separados, e o sistema colava um no outro",
@@ -8101,19 +8140,21 @@ const NotasVersao = {
         "Prédio com formato L/T/U (não-convexo) faz uma linha da grade (1,5m) cruzar o polígono em MAIS DE UM pedaço separado (ex: um braço de cada lado de um pátio/reentrância). O sistema tratava tudo como um pedaço só, \"colando\" o lado esquerdo ao direito por cima do vazio — aí sim o 3D saía deformado e o volume incluía área que não existe.",
         "Corrigido: cada linha da grade agora é dividida nos pedaços contínuos de verdade, e os pedaços são agrupados em CADEIAS (cada \"braço\" do prédio rastreado de linha em linha, por sobreposição de posição) — cada cadeia vira seu próprio sólido independente no 3D, lado a lado, nunca ligando partes sem relação.",
         "No caminho, achei e corrigi um bug na própria implementação dessa correção (a distância entre linhas da mesma cadeia estava sendo calculada errado depois de juntar tudo num array só, e isso zerava o volume). Testado num prédio simulado em U com pátio no meio: reconhece as 2 cadeias certas e o volume bate com a área real × altura (dentro da margem normal de discretização da grade)."
-      ]
+      ],
+      "legado": "V3.8.4"
     },
     {
-      "versao": "V3.8.5",
+      "versao": "V3.7.12",
       "data": "2026-08-17",
       "tipo": "correcao",
       "titulo": "Menu Extras não fica mais escondido atrás do conteúdo",
       "itens": [
         "O menu do seletor ➕ Extras abria por trás do hero do Dashboard: o cabeçalho da página tinha overflow escondido (cortava o dropdown) e ficava abaixo do conteúdo na pilha. Cabeçalho agora fica acima do conteúdo e o corte de título longo passou pro elemento do título — o menu abre por cima de tudo."
-      ]
+      ],
+      "legado": "V3.8.5"
     },
     {
-      "versao": "V3.8.6",
+      "versao": "V3.7.12.1",
       "data": "2026-08-17",
       "tipo": "melhoria",
       "titulo": "Controle de Estacas: agora dá pra editar número/data/descrição de uma concretagem já criada",
@@ -8122,30 +8163,33 @@ const NotasVersao = {
         "Cada card de concretagem no Planejamento ganhou um botão \\\"✎\\\" — abre um mini-formulário pra corrigir número, data e descrição. Bloqueia se o número escolhido já for de outra concretagem.",
         "O fluxo rápido de criar concretagem pelo popup agora avisa claramente que a data virou \\\"hoje\\\" e que pode ser corrigida pelo ✎ do card, em vez de deixar passar em silêncio.",
         "Concretagem sem data cadastrada aparece com aviso em vermelho \\\"sem data\\\" no card, pra achar fácil as que precisam de correção."
-      ]
+      ],
+      "legado": "V3.8.6"
     },
     {
-      "versao": "V3.8.7",
+      "versao": "V3.7.13",
       "data": "2026-08-17",
       "tipo": "correcao",
       "titulo": "Terraplanagem do Dashboard voltou a funcionar",
       "itens": [
         "Marcar 🚜 Terraplanagem no menu Extras não fazia nada e a marcação se perdia ao recarregar: uma atualização paralela dos scripts do dashboard.html derrubou o arquivo da seção (dashboard-terraplanagem.js) e o motor de cálculo (terraplanagem-calculos.js). Os dois voltaram pra página.",
         "Com a seção ligada e a obra ainda sem viagens/seções lançadas, agora aparece um aviso orientando onde lançar — antes o card sumia em silêncio e parecia que o botão não funcionava."
-      ]
+      ],
+      "legado": "V3.8.7"
     },
     {
-      "versao": "V3.8.8",
+      "versao": "V3.7.13.1",
       "data": "2026-08-17",
       "tipo": "melhoria",
       "titulo": "Controle de Estacas: campo de data direto no popup de atribuir à concretagem",
       "itens": [
         "Popup \"Atribuir à Concretagem\" ganhou um campo de data ao lado do número, na seção \"criar/atribuir um número novo\" — se o número digitado for novo, a concretagem já nasce com essa data (em vez de sempre hoje, precisando editar depois pelo ✎ do card).",
         "A data só é usada quando cria uma concretagem nova; atribuindo a um número já existente, a data dela não muda."
-      ]
+      ],
+      "legado": "V3.8.8"
     },
     {
-      "versao": "V3.8.9",
+      "versao": "V3.7.14",
       "data": "2026-08-16",
       "tipo": "correcao",
       "titulo": "3D: causa raiz de vez — agora a vista de cima bate exatamente com a planta",
@@ -8153,39 +8197,43 @@ const NotasVersao = {
         "Achada a causa raiz definitiva do 3D com formato errado: a posição de cada linha no eixo de profundidade era um ACÚMULO artificial de distâncias entre seções (com gaps inventados nas fronteiras entre cadeias/áreas) — não a posição real dela na planta. Isso desconectava totalmente o 3D da planta.",
         "Corrigido: agora usa a posição REAL (a mesma coordenada da grade de 1,5m) em vez do acúmulo. Testado com um prédio em T simulado: a reconstrução por posição real bate exatamente com o formato esperado (barra larga de um lado, perna estreita do outro, no lugar certo) — visto de cima, o 3D agora é o mesmo formato da planta.",
         "Perfil lateral (\"Ver Seções\") ganhou um resumo numérico embaixo do gráfico: 🟩 Corte (soma só da parte positiva, acima da cota final) · 🟥 Aterro (soma só da parte negativa, abaixo) · Líquido (o resultado final, que pode ser negativo se o aterro pesar mais que o corte naquela seção específica — a área total nunca é \"impossível\", é a soma normal dessas duas partes). Vermelho também ficou bem mais forte no desenho pra não passar batido."
-      ]
+      ],
+      "legado": "V3.8.9"
     },
     {
-      "versao": "V3.8.10",
+      "versao": "V3.7.15",
       "data": "2026-08-16",
       "tipo": "correcao",
       "titulo": "\"Ver Seções\": a linha riscada aparecia fora da planta (desalinhada)",
       "itens": [
         "A imagem da planta em \"Ver Seções\" usava um encaixe que deixa barra preta nas laterais quando a proporção da planta não é igual à da caixa (comum, já que cada projeto tem um formato diferente) — só que o desenho da linha por cima (a seção selecionada, em vermelho) sempre cobria a caixa inteira, incluindo essas barras pretas, então a posição da linha saía toda desalinhada, podendo aparecer fora da planta de verdade.",
         "Corrigido: a caixa agora respeita a proporção real da imagem (sem sobra nem corte), então a linha vermelha sempre cai em cima da planta, na posição certa. O painel \"Marcar no Projeto\" (onde você desenha áreas e marca cotas) não tinha esse problema — lá a imagem sempre ocupava a largura toda sem barra, então clique e desenho já batiam certo."
-      ]
+      ],
+      "legado": "V3.8.10"
     },
     {
-      "versao": "V3.8.10.1",
+      "versao": "V3.7.15.1",
       "data": "2026-08-17",
       "tipo": "melhoria",
       "titulo": "Gráfico de Terraplanagem com unidade m³ nos rótulos",
       "itens": [
         "O número em cima de cada barra do gráfico de Terraplanagem agora mostra a unidade: \"416 m³\" em vez de só \"416\"."
-      ]
+      ],
+      "legado": "V3.8.10.1"
     },
     {
-      "versao": "V3.8.10.2",
+      "versao": "V3.7.15.2",
       "data": "2026-08-17",
       "tipo": "melhoria",
       "titulo": "Botão Gerar Relatório de Terraplanagem direto do Dashboard",
       "itens": [
         "A seção 🚜 Terraplanagem do Dashboard ganhou o botão \"📊 Gerar relatório\" em cima do gráfico: um clique abre o relatório de período do Controle de Terraplanagem já com o modal aberto e as datas preenchidas — sem precisar navegar e procurar o botão lá dentro.",
         "É o MESMO relatório do Controle (uma fonte única de cálculo): prévia com KPIs e gráfico, PDF pra baixar e compartilhar."
-      ]
+      ],
+      "legado": "V3.8.10.2"
     },
     {
-      "versao": "V3.8.10.3",
+      "versao": "V3.7.15.3",
       "data": "2026-08-17",
       "tipo": "melhoria",
       "titulo": "Relatório de Terraplanagem gerado DENTRO do Dashboard",
@@ -8193,10 +8241,11 @@ const NotasVersao = {
         "O botão 📊 Gerar relatório da seção Terraplanagem agora abre o relatório ali mesmo, num painel sobre o Dashboard — sem navegar pro Controle. Já abre com o período completo calculado; é ajustar as datas se quiser, baixar o PDF ou compartilhar.",
         "Por baixo, o relatório virou um módulo compartilhado (js/terraplanagem-relatorio.js) usado pelas duas telas — Controle e Dashboard geram exatamente o mesmo PDF, sem risco de divergência de cálculo.",
         "O botão 📄 Relatório do Controle de Terraplanagem continua funcionando igual, agora apontando pra essa fonte única."
-      ]
+      ],
+      "legado": "V3.8.10.3"
     },
     {
-      "versao": "V3.8.10.4",
+      "versao": "V3.7.16",
       "data": "2026-08-16",
       "tipo": "correcao",
       "titulo": "3D achatado corrigido (escala vertical separada) + removida a coluna \"Caixa\" que confundia",
@@ -8204,10 +8253,11 @@ const NotasVersao = {
         "O 3D usava a MESMA escala pra planta (X/Z, geralmente dezenas de metros) e pra profundidade do corte (Y, geralmente só alguns metros) — como a profundidade é sempre muito menor que o tamanho do prédio, o resultado saía achatado (ex: num prédio de 52m com corte de 3m, a altura na cena ficava com menos de 7 unidades, quase imperceptível).",
         "Agora a escala vertical (profundidade) é calculada separada da horizontal, com exagero visual pra ficar sempre bem visível (30 unidades de cena, independente do tamanho da planta) — a vista de cima continua 100% fiel à planta, só a altura fica exagerada de propósito pra dar pra ver o corte.",
         "Removida a coluna \"Caixa (m)\" da tabela de áreas — só confundia (parecia que a área tinha formato de retângulo). Ficou só \"Área Real (m²)\", que é o que importa."
-      ]
+      ],
+      "legado": "V3.8.10.4"
     },
     {
-      "versao": "V3.8.11",
+      "versao": "V3.7.17",
       "data": "2026-08-16",
       "tipo": "correcao",
       "titulo": "Causa raiz REAL da área negativa: recalcArea sobrescrevia o valor certo com o sinal errado a cada render",
@@ -8215,10 +8265,11 @@ const NotasVersao = {
         "Achado o bug de verdade: \"Gerar Seções\" calculava a área CERTA (respeitando elevação/profundidade), mas toda vez que a tela renderizava de novo — o que acontece o tempo todo, incluindo só de abrir \"Ver Seções\" — uma função interna (recalcArea) recalculava a área SEM aplicar o sinal da convenção, sobrescrevendo o valor certo com a fórmula de elevação sempre. Por isso a área do resumo Corte/Aterro (que tinha sua própria conta, correta) batia positiva, mas o número \"Área\" mostrado em cima saía negativo — os dois deveriam ser iguais e não eram.",
         "Corrigido — recalcArea agora aplica o mesmo sinal de elevação/profundidade que o \"Gerar Seções\" usa. Testado com os números reais (cota final 7,18 profundidade, terreno raso ~4,9): área agora sai positiva e igual ao \"Líquido\" mostrado no resumo Corte/Aterro.",
         "Comprimento da seção também corrigido: a seção sempre parava no último ponto da GRADE de amostragem (de 0,5 em 0,5m), nunca exatamente no limite real da área desenhada — por isso um prédio de 52,04m aparecia com ~51m. Agora a borda de cada seção é ajustada por bisseção até bater com o limite verdadeiro do polígono. Testado: comprimento sai 52,040 exato."
-      ]
+      ],
+      "legado": "V3.8.11"
     },
     {
-      "versao": "V3.8.12",
+      "versao": "V3.7.18",
       "data": "2026-08-17",
       "tipo": "correcao",
       "titulo": "Gerar Relatório de Terraplanagem não respondia ao clique",
@@ -8226,10 +8277,11 @@ const NotasVersao = {
         "O motor de cálculo (terraplanagem-calculos.js) era declarado como const de topo — que NÃO vira window.TerraplanagemCalculos — e o relatório compartilhado buscava por window.*: o clique em Gerar Relatório quebrava em silêncio. O motor agora é exposto explicitamente no window (com fallback duplo no relatório).",
         "De quebra, o card \"Volume previsto\" do gráfico de Terraplanagem do Dashboard, que dependia do mesmo motor, volta a aparecer quando há Levantamento.",
         "O botão Gerar agora tem tratamento de erro visível: se algo falhar, aparece um aviso em vez de nada acontecer."
-      ]
+      ],
+      "legado": "V3.8.12"
     },
     {
-      "versao": "V3.8.13",
+      "versao": "V3.7.19",
       "data": "2026-08-16",
       "tipo": "correcao",
       "titulo": "3D deformado (\"caixa com torre\") corrigido + comprimento visível em \"Ver Seções\"",
@@ -8237,20 +8289,22 @@ const NotasVersao = {
         "O exagero vertical do 3D (adicionado pra corrigir o achatamento) não tinha limite — em seções com corte bem menor que o tamanho do prédio, o exagero ficava tão grande que virava uma distorção tipo \"caixa com torre\" em vez de um terreno. Agora tem um teto: no máximo 4x a escala horizontal, suficiente pra ver o corte sem virar uma caricatura.",
         "Ângulo inicial da câmera também mudou: antes começava quase de lado (~28° de elevação, mostrando principalmente a parede da ponta) — agora começa numa vista aérea 3/4 (~53°), mais parecida com a vista de cima. Continua podendo girar livre com o mouse.",
         "\"Ver Seções\" agora mostra o Comprimento da seção junto com a Área no cabeçalho — pra conferir direto se bate com a medida esperada, sem precisar abrir a seção na lista embaixo."
-      ]
+      ],
+      "legado": "V3.8.13"
     },
     {
-      "versao": "V3.8.13.1",
+      "versao": "V3.7.19.1",
       "data": "2026-08-17",
       "tipo": "melhoria",
       "titulo": "Relatório de Terraplanagem blindado contra cache antigo",
       "itens": [
         "O módulo do relatório agora acessa o motor de cálculo por referência direta (com fallback via window) — o erro \"Cannot read properties of undefined (reading 'num')\", que acontecia em páginas servidas do cache anterior à V3.8.12, não tem mais como ocorrer.",
         "Se o Gerar Relatório não abrir a prévia, faça um hard refresh (Ctrl+Shift+R): o navegador pode estar segurando o dashboard.html antigo."
-      ]
+      ],
+      "legado": "V3.8.13.1"
     },
     {
-      "versao": "V3.8.14",
+      "versao": "V3.7.20",
       "data": "2026-08-16",
       "tipo": "correcao",
       "titulo": "Zoom/pan no painel do projeto (pra calibrar com precisão) + 3D simplificado (removidas as paredes que pareciam caixa)",
@@ -8258,10 +8312,11 @@ const NotasVersao = {
         "Painel \"Marcar no Projeto\" (onde calibra a escala, desenha áreas e marca cotas) ganhou os mesmos controles de zoom/pan do \"Ver Seções\" — dá pra ampliar bem de perto pra calibrar com precisão, clicando exatamente nos dois pontos certos de uma medida conhecida na planta. Arrastar com zoom aplicado dá pan; clique sem arrastar continua marcando o ponto normalmente (as duas ações não se confundem mais).",
         "3D: removidas as \"paredes\" sólidas nas pontas de cada seção — eram elas que, junto com o exagero vertical, davam a impressão de uma caixa/torre em vez de um terreno. Ficou só a superfície do terreno (colorida por profundidade) e o plano de referência translúcido embaixo.",
         "Exagero vertical também reduzido (teto de 2x a escala horizontal, era 4x) — mais conservador, prioriza não distorcer sobre ficar bem alto."
-      ]
+      ],
+      "legado": "V3.8.14"
     },
     {
-      "versao": "V3.8.14.1",
+      "versao": "V3.7.21",
       "data": "2026-08-16",
       "tipo": "correcao",
       "titulo": "Zoom/pan \"correndo pra longe\" durante arrasto — causa era a transição CSS suave",
@@ -8269,10 +8324,11 @@ const NotasVersao = {
         "O zoom/pan (tanto no \"Marcar no Projeto\" quanto no \"Ver Seções\") tinha uma transição suave (0,05s) pra deixar o clique nos botões ➕➖ mais bonito. Só que durante um ARRASTO ou SCROLL contínuo, os eventos chegam mais rápido que essa animação — a tela fica tentando alcançar cada posição nova e nunca chega, dando a impressão de que a imagem \"corre pra longe\" a cada movimento.",
         "Removida a transição — agora o zoom/pan responde 1:1 com o dedo/mouse, sem atraso nem efeito elástico.",
         "De quebra, o arrasto agora captura o ponteiro (setPointerCapture) — continua funcionando direto mesmo se o mouse sair rápido da área da imagem no meio do movimento."
-      ]
+      ],
+      "legado": "V3.8.14.1"
     },
     {
-      "versao": "V3.8.14.2",
+      "versao": "V3.7.22",
       "data": "2026-08-16",
       "tipo": "correcao",
       "titulo": "Zoom no scroll agora segue o cursor (antes sempre ampliava a partir do centro)",
@@ -8280,30 +8336,33 @@ const NotasVersao = {
         "Causa raiz de \"a imagem corre e fica tudo preto\" ao dar zoom com o scroll: o zoom sempre ampliava a partir do CENTRO da imagem, nunca de onde o mouse estava. Se você rolava o scroll olhando pra um canto, o que você queria ver se afastava cada vez mais do centro a cada tick de zoom, até sair da área visível — sobrando só o fundo preto do painel.",
         "Corrigido nos dois lugares (\\\"Marcar no Projeto\\\" e \\\"Ver Seções\\\"): o zoom no scroll agora mantém o ponto exatamente sob o cursor fixo na tela, como no Google Maps — dá pra ficar olhando pra qualquer canto e ir ampliando ali direto, sem sair correndo.",
         "Testado com simulação: 6 zooms consecutivos num ponto bem excêntrico (canto), o ponto ficou travado sob o cursor em todos eles."
-      ]
+      ],
+      "legado": "V3.8.14.2"
     },
     {
-      "versao": "V3.8.14.3",
+      "versao": "V3.7.23",
       "data": "2026-08-16",
       "tipo": "correcao",
       "titulo": "Causa raiz de vez: clicar pra marcar um ponto deixava a imagem \"presa\" no mouse depois",
       "itens": [
         "Achado o bug real do \"clico e a imagem fica travada no mouse, persegue qualquer movimento\": marcar um ponto (cota, canto de área, calibração) recria o painel do projeto do zero — e o código novo de arrastar/zoom não tinha nenhuma trava contra isso. No PRIMEIRO movimento do mouse depois de marcar um ponto (mesmo sem clicar de novo, só passar o mouse), a distância era calculada a partir de um valor zerado por padrão em vez da posição real — dava um número gigante, ativava o \"modo arrastar\" na hora, e a partir daí qualquer movimento (com ou sem o botão apertado) arrastava a planta.",
         "Corrigido: agora só entra em modo de arrastar depois de um clique de verdade NESTA versão do painel (nunca herda estado de antes de marcar um ponto). Também tratado o cancelamento do ponteiro (ex: perder o toque na tela) pra nunca deixar o arrasto \"travado\" ligado."
-      ]
+      ],
+      "legado": "V3.8.14.3"
     },
     {
-      "versao": "V3.8.14.4",
+      "versao": "V3.7.24",
       "data": "2026-08-16",
       "tipo": "correcao",
       "titulo": "Marcadores (calibração, área, cota) não crescem mais junto com o zoom",
       "itens": [
         "Os pontinhos marcados na planta (ponto de calibração, cantos de área, pontos de cota) tinham tamanho fixo em pixels — como eles ficam DENTRO da imagem que é ampliada pelo zoom, na prática cresciam junto: com bastante zoom, um marcador de 14px virava uma bola gigante, cobrindo exatamente o ponto que você precisava enxergar pra calibrar com precisão.",
         "Corrigido: os marcadores agora contra-escalam com o zoom (ficam menores dentro da imagem na mesma proporção que ela é ampliada), então o tamanho deles na TELA fica sempre igual, não importa o quanto você tenha ampliado — dá pra ver exatamente onde o ponto caiu."
-      ]
+      ],
+      "legado": "V3.8.14.4"
     },
     {
-      "versao": "V3.8.15",
+      "versao": "V3.7.24.1",
       "data": "2026-08-16",
       "tipo": "melhoria",
       "titulo": "Diagnóstico de ponto de cota errado (achar o \"espinho\" isolado no 3D)",
@@ -8311,10 +8370,11 @@ const NotasVersao = {
         "O \"prédio com pico\" que aparecia no 3D em meio a um terreno raso normalmente não é bug de renderização — é um ponto de cota digitado errado (ex: 78 em vez de 7,8), que faz a interpolação criar um espinho isolado bem ali, mesmo o resto do terreno estando consistente.",
         "Clique no número de \"Pontos de Cota\" de uma área (na tabela do painel do projeto) agora abre a lista de todos os pontos dela, ordenados por valor, com a mediana calculada — pontos bem diferentes da mediana aparecem destacados em vermelho com ⚠️, prontos pra editar (✎) ou remover (✕) ali mesmo.",
         "Testado com um terreno raso simulado (10 pontos entre 4,4 e 4,9) e um ponto digitado errado (78) — o sistema achou e marcou certinho."
-      ]
+      ],
+      "legado": "V3.8.15"
     },
     {
-      "versao": "V3.8.16",
+      "versao": "V3.7.25",
       "data": "2026-08-16",
       "tipo": "correcao",
       "titulo": "3D agora compõe TODAS as áreas juntas na posição real da planta (não mais cada uma isolada)",
@@ -8322,10 +8382,11 @@ const NotasVersao = {
         "Causa raiz de mais uma versão do \\\"formato errado\\\": quando havia mais de uma área, o 3D desenhava cada uma separada, lado a lado, com um respiro artificial de 3m entre elas — em vez de posicionar cada uma no lugar REAL da planta. Isso desconectava totalmente a composição do terreno verdadeiro.",
         "Corrigido: agora toda seção (de qualquer área) usa a posição REAL dela na planta (mesma escala/calibração) — sem nenhum deslocamento artificial. Se duas áreas são vizinhas de verdade, aparecem vizinhas no 3D; se estão longe uma da outra, aparecem exatamente na distância real. Testado com 2 áreas simuladas adjacentes (1,5m de diferença real) — ficaram nas posições certas, sem gap inventado.",
         "Continua separando em sólidos diferentes só quando NÃO há conexão de verdade (cadeias diferentes, tipo braços separados por uma reentrância) — isso nunca foi o problema, o problema era o respiro artificial entre áreas inteiras."
-      ]
+      ],
+      "legado": "V3.8.16"
     },
     {
-      "versao": "V3.9.0",
+      "versao": "V3.7.25.1",
       "data": "2026-08-16",
       "tipo": "funcionalidade",
       "titulo": "3D reescrito do zero: malha de grade 2D real (X e Y juntos) em vez de esticar seções de uma direção só",
@@ -8335,10 +8396,11 @@ const NotasVersao = {
         "Testado com um \\\"morro\\\" simulado (base 3m + pico 10m no centro, 20x20m): a grade capturou a variação certa nos dois eixos e o volume aproximado bateu bem maior que o de um terreno plano de mesma base, como esperado.",
         "Bônus: botão \\\"🔄 Resetar Câmera\\\" dentro do próprio 3D — se girar demais e a vista ficar confusa (de perfil, por exemplo), um clique volta pro ângulo padrão sem precisar fechar e abrir de novo.",
         "PDF do relatório agora traz só 1 snapshot 3D (a grade completa), não mais um por direção."
-      ]
+      ],
+      "legado": "V3.9.0"
     },
     {
-      "versao": "V3.9.1",
+      "versao": "V3.7.25.2",
       "data": "2026-08-16",
       "tipo": "melhoria",
       "titulo": "Paredes sólidas no 3D (fecha o vão entre topo e fundo) + câmera com bem mais liberdade de giro",
@@ -8347,40 +8409,44 @@ const NotasVersao = {
         "Confirmado: cada área já usa a cota final DELA MESMA no fundo — se duas áreas têm referências diferentes, cada uma aparece na profundidade certa (isso já funcionava, sem bug).",
         "Câmera: giro vertical tinha um limite curto (~74°) que travava antes de chegar perto de olhar de cima — aumentado pra quase 90° nos dois sentidos.",
         "Novo botão \\\"⬇️ Ver de Cima\\\" ao lado do \\\"🔄 Resetar Câmera\\\" — um clique já posiciona a câmera quase direto de cima, pra comparar o formato do 3D com a planta sem precisar arrastar tentando acertar o ângulo."
-      ]
+      ],
+      "legado": "V3.9.1"
     },
     {
-      "versao": "V3.9.1.1",
+      "versao": "V3.7.26",
       "data": "2026-08-16",
       "tipo": "correcao",
       "titulo": "\"Ver Seções\": lista voltava pro topo a cada clique",
       "itens": [
         "Clicar numa seção da lista reconstrói a tela (pra mostrar a seção selecionada) — e isso resetava o scroll da lista pro topo toda vez, obrigando rolar de novo até a seção seguinte quando navegando por várias seções em sequência.",
         "Corrigido: a posição do scroll agora é guardada antes e restaurada depois do clique — a lista fica parada onde estava."
-      ]
+      ],
+      "legado": "V3.9.1.1"
     },
     {
-      "versao": "V3.9.2",
+      "versao": "V3.7.27",
       "data": "2026-08-16",
       "tipo": "correcao",
       "titulo": "3D: fecha o \"buraco\" na costura entre áreas vizinhas + área pequena (ex: reservatório) não some mais",
       "itens": [
         "Causa raiz do buraco entre áreas: cada área esticava a parede só até a PRÓPRIA cota final — se duas áreas vizinhas têm cota final diferente, ou a borda de uma não encosta 100% na da outra (imprecisão normal de clique ao desenhar), sobrava um vão vazio bem na costura. Corrigido: agora as paredes esticam até um piso global (bem abaixo da cota mais funda de TODAS as áreas), garantindo que duas paredes vizinhas sempre se sobrepõem por baixo, sem vão — o fundo (plano de referência) de cada área continua mostrando a profundidade certa dela, só a parede que estica mais.",
         "Causa raiz de área pequena (tipo reservatório) sumindo do 3D: o sistema exigia pelo menos 3 pontos de cota marcados numa área pra gerar qualquer coisa nela — áreas pequenas com só 1 ou 2 pontos marcados ficavam de fora inteiras, aparecendo como um buraco na posição delas. Corrigido: agora 1 ponto já basta (a interpolação funciona matematicamente com qualquer quantidade ≥1)."
-      ]
+      ],
+      "legado": "V3.9.2"
     },
     {
-      "versao": "V3.9.3",
+      "versao": "V3.7.28",
       "data": "2026-08-16",
       "tipo": "correcao",
       "titulo": "3D: tampa sólida embaixo — o volume tava fechado nas laterais mas oco por baixo",
       "itens": [
         "Confirmado: as paredes laterais fechavam até o piso global, mas não tinha nenhuma tampa NAQUELE piso — o objeto ficava como uma caixa sem fundo, oca por dentro.",
         "Adicionada a tampa: mesma forma/contorno do topo (mesmo formato do prédio, inclusive reentrâncias), só achatada lá embaixo no piso global. Agora o volume é sólido de verdade — topo, quatro/mais lados e fundo, todos fechados."
-      ]
+      ],
+      "legado": "V3.9.3"
     },
     {
-      "versao": "V3.9.4",
+      "versao": "V3.7.28.1",
       "data": "2026-08-16",
       "tipo": "funcionalidade",
       "titulo": "Nova convenção de cota: Relativa ao R.N. (o sinal digitado já é a altura, positivo=acima/negativo=abaixo)",
@@ -8388,49 +8454,54 @@ const NotasVersao = {
         "Causa raiz de uma conta errada de verdade: o sistema só tinha \\\"Elevação\\\" e \\\"Profundidade\\\", mas tem projeto que mede diferente — o valor digitado JÁ É a altura com sinal em relação a uma referência (R.N.): positivo quando o ponto está ACIMA da referência (é corte), negativo quando está ABAIXO (é aterro), sempre, não importa o valor da própria referência. Nenhuma das duas opções antigas cobria isso.",
         "Nova convenção \\\"↕️ Relativa ao R.N.\\\": ao concluir uma área, agora pergunta as 3 opções (Profundidade / Relativa / Elevação). Pra áreas já criadas, clicar no botão de convenção na tabela agora CICLA entre as 3.",
         "Testado matematicamente: com a mesma dupla de pontos (+3 e -2, distância 10m), o resultado da área deu EXATAMENTE igual usando R.N.=0 ou R.N.=779,84 como referência — confirma que só o sinal digitado importa, como esperado."
-      ]
+      ],
+      "legado": "V3.9.4"
     },
     {
-      "versao": "V3.9.5",
+      "versao": "V3.7.29",
       "data": "2026-08-16",
       "tipo": "correcao",
       "titulo": "3D: revertido o \"piso global\" — cada área volta a ter o fundo dela mesma (degrau real entre profundidades diferentes)",
       "itens": [
         "A correção anterior (piso único bem lá embaixo, pra fechar um vão entre áreas vizinhas) tinha um efeito colateral errado: nivelava TODAS as áreas na mesma profundidade lá embaixo, mesmo quando cada uma tem sua própria cota final. Se uma área é mais funda que a outra, o fundo TEM que formar um degrau real ali — não faz sentido físico ficar tudo liso.",
         "Revertido: paredes e o fundo (agora sólido, não mais translúcido) voltam a usar a cota final da PRÓPRIA área — cada área com sua profundidade certa, degrau de verdade onde uma é diferente da outra."
-      ]
+      ],
+      "legado": "V3.9.5"
     },
     {
-      "versao": "V3.9.6",
+      "versao": "V3.7.30",
       "data": "2026-08-16",
       "tipo": "correcao",
       "titulo": "Removida a confusão de 3 convenções — só existe UM jeito, sempre: sinal relativo ao zero",
       "itens": [
         "As 3 opções (Elevação/Profundidade/Relativa) eram complexidade desnecessária — na prática o lançamento é sempre o mesmo: cota final é a profundidade de referência (zero), e cada cota do terreno é digitada com sinal em relação a esse zero — positivo = acima (corte), negativo = abaixo (aterro). Sempre assim, sem escolher nada.",
         "Removida a pergunta de convenção ao criar área, removido o botão de trocar na tabela — só sobrou o campo Cota Final, direto. Testado matematicamente: com cotas +2, -1 e +3 (cota final -5), a área bate exatamente com os trapézios calculados a partir dos valores digitados, sem depender do valor da cota final."
-      ]
+      ],
+      "legado": "V3.9.6"
     },
     {
-      "versao": "V3.9.7",
+      "versao": "V3.7.31",
       "data": "2026-08-16",
       "tipo": "correcao",
       "titulo": "Corrigido de vez o cálculo: a versão anterior (V3.9.6) tinha um erro sério — cancelava a cota final da conta",
       "itens": [
         "A simplificação da V3.9.6 tentava fazer a cota digitada já ser a altura direta, mas a fórmula usada CANCELAVA a cota final da conta por engano — o resultado saía sempre igual ao valor bruto do terreno, ignorando totalmente a cota final. Num terreno com valores negativos (comum quando tudo é medido abaixo de uma referência zero), isso fazia TUDO sair aterro (negativo), mesmo terreno claramente mais alto que a cota final.",
         "Corrigido: a altura volta a ser a subtração padrão (cota do terreno MENOS cota final) — que já funciona certo com valores negativos dos dois lados, sem precisar de nenhum ajuste especial. Testado com os números reais (terreno -4,5/-4,9, cota final -7,18): deu +24,80 m² positivo (corte, correto). Testado também o caso inverso (terreno já mais fundo que a cota final): deu negativo (aterro), como devia."
-      ]
+      ],
+      "legado": "V3.9.7"
     },
     {
-      "versao": "V3.9.8",
+      "versao": "V3.7.31.1",
       "data": "2026-08-16",
       "tipo": "melhoria",
       "titulo": "Perfil lateral (\"Ver Seções\") ganhou a linha de referência Cota 0",
       "itens": [
         "O gráfico só mostrava a linha da Cota Final (laranja) — agora mostra também uma linha pontilhada cinza marcando a Cota 0 (o zero de referência), separada da cota final. O gráfico se ajusta pra sempre incluir o zero na área visível, mesmo se ele estiver bem longe do terreno ou da cota final."
-      ]
+      ],
+      "legado": "V3.9.8"
     },
     {
-      "versao": "V3.10.0",
+      "versao": "V3.7.31.2",
       "data": "2026-08-16",
       "tipo": "funcionalidade",
       "titulo": "Seção atravessa direto de uma área pra outra — a cota final agora varia ponto a ponto, sem quebrar a seção",
@@ -8439,10 +8510,11 @@ const NotasVersao = {
         "Reescrita a geração: agora todas as áreas são consideradas JUNTAS numa passada só. Uma linha de grade atravessa direto de uma área pra outra vizinha — só a cota final usada muda no meio (criando o degrau real na conta), a seção continua sendo UMA coisa só, com um comprimento só. A seção só quebra em duas de verdade quando não há NENHUMA área cobrindo aquele trecho (vazio de verdade) ou numa reentrância/pátio.",
         "O gráfico do perfil lateral (\\\"Ver Seções\\\") agora desenha a linha da Cota Final em DEGRAU (não mais uma reta única) — mostra o salto de verdade onde a seção passa de uma área pra outra, e avisa no rótulo quando isso acontece.",
         "Testado com o cenário exato do exemplo (2 áreas adjacentes, cotas finais -7,8 e -10,8): a seção saiu como UMA peça só, cobrindo os ~40m completos sem quebra, com a área já considerando o degrau certo em cada trecho."
-      ]
+      ],
+      "legado": "V3.10.0"
     },
     {
-      "versao": "V3.10.1",
+      "versao": "V3.7.32",
       "data": "2026-08-16",
       "tipo": "correcao",
       "titulo": "3D também unificado (mesma correção da V3.10.0) — sem buraco/vão entre áreas vizinhas",
@@ -8450,39 +8522,43 @@ const NotasVersao = {
         "A V3.10.0 unificou as SEÇÕES (área/volume), mas o 3D continuava construindo a malha por área SEPARADA — duas áreas vizinhas viravam dois sólidos distintos, com parede nos dois lados da fronteira, aparecendo como um vão/buraco ali mesmo sem ter buraco nenhum no projeto.",
         "Aplicada a mesma correção no 3D: agora gera UMA grade de alturas cobrindo todas as áreas juntas — cada célula sabe a qual área pertence (cota final própria, criando o degrau real onde muda), mas a malha é uma peça sólida só. Parede só aparece na borda de verdade (perímetro externo ou reentrância), nunca entre duas áreas que se tocam.",
         "No caminho, achado e corrigido outro bug: os pontos da grade nas bordas EXATAS caíam bem em cima da linha do polígono, onde o teste \\\"dentro ou fora\\\" fica ambíguo — isso sumia a borda inteira (não só a costura entre áreas). Corrigido encolhendo a amostragem por uma margem mínima. Testado: malha 100% completa, 0 células faltando, na simulação das 2 áreas adjacentes."
-      ]
+      ],
+      "legado": "V3.10.1"
     },
     {
-      "versao": "V3.10.2",
+      "versao": "V3.7.33",
       "data": "2026-08-16",
       "tipo": "correcao",
       "titulo": "Tolerância de 30cm na costura entre áreas — corrige junção INCONSISTENTE (algumas seções juntavam, outras não)",
       "itens": [
         "Achada a causa do padrão inconsistente reportado (seções vizinhas, uma junta certo e outra não): se a borda de duas áreas vizinhas não encosta 100% perfeita (poucos centímetros de desvio ao clicar, invisível no zoom normal — quase impossível desenhar pixel-perfeito), o sistema tratava esse vão minúsculo como vazio de verdade — mas só em ALGUMAS posições da grade (as que calhavam de cair bem no vão), enquanto posições vizinhas passavam direto por sorte. Testado com uma simulação de borda levemente torta: reproduziu exatamente esse padrão (uma posição juntando, a próxima não).",
         "Corrigido com uma tolerância de 30cm: se um ponto da grade não cai dentro de nenhuma área, o sistema testa uma pequena vizinhança antes de considerar vazio de verdade — pequenos desvios de clique não quebram mais a seção. Aplicado tanto nas seções quanto no 3D. Testado com a mesma simulação: todas as posições passaram a dar o mesmo resultado (uma peça só, 40m completos)."
-      ]
+      ],
+      "legado": "V3.10.2"
     },
     {
-      "versao": "V3.10.3",
+      "versao": "V3.7.33.1",
       "data": "2026-08-16",
       "tipo": "melhoria",
       "titulo": "Clicar num ponto de cota já marcado agora edita ele (em vez de criar um novo por cima)",
       "itens": [
         "No modo \"📍 Marcar Cota\", clicar perto de um ponto que já existe (dentro de 1m de tolerância) abre a edição do valor dele — apagar o texto e confirmar remove o ponto. Clicar num lugar vazio continua criando um ponto novo normalmente."
-      ]
+      ],
+      "legado": "V3.10.3"
     },
     {
-      "versao": "V3.10.4",
+      "versao": "V3.7.34",
       "data": "2026-08-17",
       "tipo": "correcao",
       "titulo": "Controle de Estacas: toque no mobile não seleciona mais a imagem inteira",
       "itens": [
         "No celular/tablet, tocar numa estaca às vezes acionava o menu nativo de \\\"selecionar/salvar imagem\\\" do navegador (comum no Safari/iOS) em vez de abrir o marcador — faltava a propriedade -webkit-touch-callout:none, que é a que desliga esse menu de toque prolongado (user-select:none sozinho não resolve isso no iOS).",
         "Adicionado -webkit-touch-callout:none e reforçado user-select:none na imagem da prancha e no mapa inteiro (herda pros marcadores) nas 3 abas."
-      ]
+      ],
+      "legado": "V3.10.4"
     },
     {
-      "versao": "V3.10.5",
+      "versao": "V3.7.34.1",
       "data": "2026-08-17",
       "tipo": "funcionalidade",
       "titulo": "Levantamento: terreno interpola global (corrige salto na fronteira entre áreas) + volume das Estacas somado no total + giro do 3D no touch corrigido",
@@ -8490,30 +8566,33 @@ const NotasVersao = {
         "Causa raiz do \"corte reto\" onde muda a área: o TERRENO era interpolado usando só os pontos de cota da própria área — na fronteira, o perfil pulava de um conjunto de pontos pro outro, dando um salto artificial mesmo sem cliff nenhum de verdade no solo. Corrigido: o terreno agora interpola com os pontos de TODAS as áreas juntos (é uma superfície física contínua, sem cliff nenhum só por causa de um limite administrativo) — só a Cota Final (o alvo/referência de projeto) continua variando por área, formando o degrau real só ali onde é pra formar.",
         "Novo: o Volume de Estacas (somado automaticamente do Controle de Estacas — campo Volume de todas as peças Fundação → Estacas) agora aparece separado (banco e com empolamento) e soma no VOLUME TOTAL DA OBRA, junto com o corte de terra. Aparece na tela e no relatório PDF.",
         "3D: no touch (celular/tablet), girar a câmera às vezes movia o fundo da página em vez de girar o 3D — faltava travar o toque (touch-action:none) no container e capturar o ponteiro. Corrigido."
-      ]
+      ],
+      "legado": "V3.10.5"
     },
     {
-      "versao": "V3.10.6",
+      "versao": "V3.7.35",
       "data": "2026-08-17",
       "tipo": "correcao",
       "titulo": "Clicar num ponto de cota já marcado não abria o editor (só funcionava com \"Marcar Cota\" ativo)",
       "itens": [
         "A lógica de \"clicar num ponto existente edita/remove ele\" só rodava quando a ferramenta \\\"📍 Marcar Cota\\\" estava ativa — clicando sem nenhuma ferramenta selecionada (o normal ao só querer corrigir um valor), o clique não fazia nada.",
         "Corrigido: agora funciona igual COM ou SEM ferramenta ativa — clique num ponto marcado sempre abre o editor (apagar o valor e confirmar remove o ponto)."
-      ]
+      ],
+      "legado": "V3.10.6"
     },
     {
-      "versao": "V3.10.7",
+      "versao": "V3.7.35.1",
       "data": "2026-08-17",
       "tipo": "melhoria",
       "titulo": "Editor de ponto de cota: popup de verdade (nada de prompt() do navegador) com Salvar/Mover/Excluir",
       "itens": [
         "Trocado o feio prompt() nativo do navegador por um popup próprio, com campo de cota, e três botões: 💾 Salvar, 📍 Mover e 🗑️ Excluir.",
         "\\\"Mover\\\": clica no botão, o popup fecha e o cursor vira mira — o próximo clique no mapa reposiciona esse ponto pra lá (sem precisar apagar e marcar de novo)."
-      ]
+      ],
+      "legado": "V3.10.7"
     },
     {
-      "versao": "V3.11.0",
+      "versao": "V3.7.35.2",
       "data": "2026-08-17",
       "tipo": "funcionalidade",
       "titulo": "Controle de Terraplanagem: Viagens Atual/Total, Volume Total a Retirar (terra+estacas+fundação), Executado, Faltando e Valor Faltando",
@@ -8522,10 +8601,11 @@ const NotasVersao = {
         "\"Volume Fundação Superficial\" já aparece no esquema (card mostrando \"—\" por enquanto) — quando esse módulo existir, só precisa plugar a fonte de dados, a conta e a tela já estão prontas.",
         "Relatório de período agora mostra dois blocos: \"Resumo geral da obra\" (esses novos KPIs, sempre em relação a TUDO, não só o período escolhido) e depois os dados do período em si (como já era).",
         "Testado com números simulados: volume total 4.160 m³ (3.000 terra + 200 estacas, empolados 30%), 250 viagens já feitas — bateu 325 viagens totais estimadas, 75 faltando, R$ 26.250 faltando (pela média já paga de R$ 350/viagem)."
-      ]
+      ],
+      "legado": "V3.11.0"
     },
     {
-      "versao": "V3.11.1",
+      "versao": "V3.7.36",
       "data": "2026-08-18",
       "tipo": "correcao",
       "titulo": "Controle de Estacas e Fundações: clicar em Fundações abria o mesmo projeto (prancha) das Estacas",
@@ -8533,10 +8613,11 @@ const NotasVersao = {
         "Estacas e Fundações compartilhavam a mesma prancha ativa — trocar de aba não trocava de projeto, só filtrava os marcadores por cima da mesma imagem.",
         "Agora cada uma tem seu próprio projeto: a prancha ativa é lembrada separadamente por view, e a lista/criação de pranchas (📄 Pranchas) também é filtrada pela view atual.",
         "Pranchas já existentes continuam valendo como Estacas (comportamento de antes) — pra ter uma prancha de Fundações, é só trocar pra aba Fundações e importar uma nova."
-      ]
+      ],
+      "legado": "V3.11.1"
     },
     {
-      "versao": "V3.11.1.1",
+      "versao": "V3.7.36.1",
       "data": "2026-08-18",
       "tipo": "melhoria",
       "titulo": "Levantamento Piso: impermeabilização agora considera o rodapé separadamente da área",
@@ -8545,20 +8626,22 @@ const NotasVersao = {
         "Altura do rodapé impermeabilizado com presets rápidos (Box 1,20m · Padrão 0,40m · Baixo 0,20m) e campo numérico livre pra digitar qualquer valor.",
         "O m² de rodapé impermeabilizado (ml do rodapé selecionado × altura informada) agora soma no total de M² de Impermeabilização em todos os lugares: painel do workspace, Visão Geral e breakdown por tipo.",
         "Compatibilidade com áreas já lançadas antes desta versão: continuam contando a área toda como impermeabilizada (comportamento antigo), sem precisar re-editar nada."
-      ]
+      ],
+      "legado": "V3.11.1.1"
     },
     {
-      "versao": "V3.11.2",
+      "versao": "V3.7.37",
       "data": "2026-08-17",
       "tipo": "correcao",
       "titulo": "Volume Fundação Superficial: dado real (Controle de Estacas e Fundações), não mais placeholder",
       "itens": [
         "A sessão paralela criou a view real de \"Fundações\" no Controle de Estacas e Fundações (peças tipo Fundação com subtipo diferente de Estacas — blocos, baldrames, etc.). O card \"Vol. Fundação Superficial\" (Levantamento, Controle de Terraplanagem e relatório PDF), que antes mostrava sempre \"—\" como placeholder, agora soma esse volume de verdade automaticamente.",
         "Testado: peças de Fundação com subtipo Estacas somam separado das com outros subtipos (Bloco, Baldrame, etc.) — confirmado que a separação bate certo e não mistura com peças de Estrutura."
-      ]
+      ],
+      "legado": "V3.11.2"
     },
     {
-      "versao": "V3.11.3",
+      "versao": "V3.7.38",
       "data": "2026-08-18",
       "tipo": "correcao",
       "titulo": "Controle de Estacas: mapa utilizável no celular e no tablet",
@@ -8569,10 +8652,11 @@ const NotasVersao = {
         "Dá pra criar estaca, mover estaca e ajustar forma no toque. Esses gestos só escutavam mouse, e no celular o navegador não emite o movimento do meio — o arrasto sempre saía com tamanho zero e era descartado calado.",
         "Não precisa mais acertar o pixel exato da estaca: o toque procura a estaca mais próxima num raio de 22px. Estaca desenhada tem 6 a 20px na tela contra cerca de 40px de área do dedo. Estaca sempre ganha do bloco desenhado embaixo dela.",
         "Terminar de arrastar o mapa não marca mais estaca sem querer, e o número do zoom (%) agora atualiza também no Planejamento e no Acompanhamento — antes só no Marcadores."
-      ]
+      ],
+      "legado": "V3.11.3"
     },
     {
-      "versao": "V3.11.3.1",
+      "versao": "V3.7.38.1",
       "data": "2026-08-18",
       "tipo": "melhoria",
       "titulo": "Levantamento Piso: seleção de quais paredes recebem impermeabilização do rodapé",
@@ -8582,20 +8666,22 @@ const NotasVersao = {
         "O total (soma dos comprimentos das paredes marcadas × altura) substitui o cálculo pelo rodapé inteiro da área nos m² de impermeabilização, em todos os lugares (painel do workspace, Visão Geral e breakdown por tipo).",
         "Compatibilidade: áreas que nunca abriram esse popup continuam usando o rodapé inteiro da área (comportamento da V3.11.1.1), sem precisar re-editar nada.",
         "Corrigido de passagem: o badge de versão do link \\\"Notas de Versão\\\" na sidebar estava parado em V3.11.2 em todas as páginas — sincronizado com a versão atual."
-      ]
+      ],
+      "legado": "V3.11.3.1"
     },
     {
-      "versao": "V3.11.4",
+      "versao": "V3.7.38.2",
       "data": "2026-08-17",
       "tipo": "melhoria",
       "titulo": "Menos cards de volume: só o valor final (com empolamento), taxa em texto pequeno embaixo",
       "itens": [
         "Levantamento de Terraplanagem, Controle de Terraplanagem e relatório PDF (todos) — tirados os cards separados de \"volume banco\" e \"volume com empolamento\" pra terra, estacas e fundação superficial. Agora cada um vira UM card só: o valor final (já empolado) em destaque, e a taxa aplicada (ex: \"+30% empolamento\") em texto pequeno embaixo.",
         "Menos cards na tela, mesma informação — só o banco (base de cálculo) deixou de ter card próprio, mas continua calculado por dentro."
-      ]
+      ],
+      "legado": "V3.11.4"
     },
     {
-      "versao": "V3.11.4.1",
+      "versao": "V3.7.38.3",
       "data": "2026-08-18",
       "tipo": "melhoria",
       "titulo": "Levantamento Piso: popup \\\"Selecionar Paredes\\\" ganhou o desenho real da planta de fundo",
@@ -8603,10 +8689,11 @@ const NotasVersao = {
         "O desenho esquemático do popup de \\\"🧱 Selecionar Paredes\\\" (impermeabilização do rodapé) agora mostra atrás um recorte de verdade da planta baixa daquela região — não é mais só o contorno genérico, é a página do PDF ampliada e cortada em torno da área.",
         "As paredes numeradas ficam desenhadas por cima do recorte real, alinhadas com as paredes de verdade do projeto — muito mais fácil de reconhecer qual é qual num banheiro com 4+ paredes parecidas.",
         "Enquanto a planta carrega, o popup mostra o desenho esquemático como estava antes; ela troca pro fundo real assim que termina de carregar, sem travar a tela."
-      ]
+      ],
+      "legado": "V3.11.4.1"
     },
     {
-      "versao": "V3.11.4.2",
+      "versao": "V3.7.39",
       "data": "2026-08-18",
       "tipo": "correcao",
       "titulo": "Terraplanagem do Dashboard alinhada aos números do Controle",
@@ -8615,20 +8702,22 @@ const NotasVersao = {
         "Custo agora usa a mesma regra do Controle: valor digitado na viagem OU o valor padrão por viagem do config (antes viagem sem valor contava R$ 0).",
         "KPIs novos do Controle incorporados: Retirada Total Prevista (terra prevista + estacas + fundação superficial, tudo empolado), Faltando (m³), Viagens atual/estimado com quanto falta, Valor gasto × Valor faltando (estimado pela média por viagem).",
         "Gráfico por dia ganhou a série \"Outros/sem material\" (cinza-escuro) — a soma das barras volta a bater com o Volume Removido."
-      ]
+      ],
+      "legado": "V3.11.4.2"
     },
     {
-      "versao": "V3.11.4.3",
+      "versao": "V3.7.39.1",
       "data": "2026-08-18",
       "tipo": "melhoria",
       "titulo": "Cards de Terraplanagem do Dashboard na MESMA ordem do Controle",
       "itens": [
         "Os cards agora seguem exatamente a organização do Controle de Terraplanagem — linha principal: 🚚 Viagens atual/total, Volume total a retirar, Volume executado (com % da terraplanagem), ⏳ Volume faltando, 💰 Valor gasto e Valor faltando (estimado).",
         "Linha \"COMPOSIÇÃO\" separada embaixo: Volume de terra (previsto, com % de empolamento), 🧱 Volume de entulho (não entra na terraplanagem), Volume fundação profunda e Volume fundação superficial — com as mesmas legendas explicativas do Controle."
-      ]
+      ],
+      "legado": "V3.11.4.3"
     },
     {
-      "versao": "V3.11.4.4",
+      "versao": "V3.7.39.2",
       "data": "2026-08-18",
       "tipo": "melhoria",
       "titulo": "Controle de Fundações: painel de visão geral corrigido (estava sempre mostrando Estacas) + novo fluxo \"Lançar BT\" no Acompanhamento",
@@ -8636,10 +8725,11 @@ const NotasVersao = {
         "Correção: o painel \"visão geral da obra\" no fim do Acompanhamento (total, volume executado, % da obra, tabela por grupo) ficava sempre travado nos números de Estacas, mesmo com a aba Fundações aberta. Agora acompanha a view atual — título, ícone e agrupamento (por diâmetro nas Estacas, por tipo de fundação nas Fundações) mudam junto.",
         "Mesma correção nos blocos \"Executado/Faltando\" de cada concretagem: fundação sem diâmetro não cai mais tudo junto em \"sem diâmetro\" — agrupa por tipo (Bloco, Sapata, Radier etc.).",
         "Novo, só na aba Fundações: dentro de \"🚚 BTs nesta concretagem\", cada BT ganhou um botão \"🧱 Lançar\" — abre a lista de fundações planejadas pra dizer quanto (%) cada uma recebeu DAQUELA BT (fluxo BT→peças, igual ao Controle de Concreto), em vez do fluxo peça→BTs usado nas Estacas. Grava nos mesmos lançamentos — o mapa continua colorindo verde/parcial normalmente. Estacas não muda nada."
-      ]
+      ],
+      "legado": "V3.11.4.4"
     },
     {
-      "versao": "V3.11.4.5",
+      "versao": "V3.7.39.3",
       "data": "2026-08-18",
       "tipo": "melhoria",
       "titulo": "Controle de Estacas e Fundações: listas de concretagem não misturam mais os números das duas views",
@@ -8647,10 +8737,11 @@ const NotasVersao = {
         "O número da concretagem continua sendo um sequencial ÚNICO pra obra inteira (igual sempre foi no Controle de Concreto) — isso não muda. O que mudou foi só a EXIBIÇÃO: o seletor de concretagem do Acompanhamento e os cards de \"Concretagens planejadas\" do Planejamento agora só mostram as que têm ao menos 1 peça da view aberta (Estacas OU Fundações) — uma concretagem 100% de Estacas não aparece mais enquanto se está na aba Fundações, e vice-versa.",
         "Concretagem recém-criada (ainda sem nenhuma peça) continua aparecendo nos dois — só passa a sumir de uma view se ficar cheia só de peças da OUTRA.",
         "Trocar de view (Estacas ⇄ Fundações) solta a concretagem selecionada no Acompanhamento se ela não pertencer mais à lista filtrada, e sempre solta o foco de atribuição rápida do Planejamento — evita ficar preso num estado de uma concretagem que não aparece mais na tela."
-      ]
+      ],
+      "legado": "V3.11.4.5"
     },
     {
-      "versao": "V3.11.4.6",
+      "versao": "V3.7.39.4",
       "data": "2026-08-18",
       "tipo": "melhoria",
       "titulo": "Levantamento Piso: dividir a parede em trechos e usar mais de uma altura na impermeabilização",
@@ -8659,10 +8750,11 @@ const NotasVersao = {
         "Alturas múltiplas: agora dá pra configurar mais de uma altura de rodapé impermeabilizado (ex: 1,20m no box + 0,40m no resto do banheiro) com o botão \"+ Altura\", e cada trecho de cada parede escolhe qual altura usar num seletor próprio.",
         "O total de m² soma cada trecho pelo seu comprimento × a altura escolhida pra ele — não é mais uma altura única pra tudo.",
         "Compatibilidade: áreas configuradas nas versões anteriores (uma altura só, sem trechos) continuam calculando igual; ao abrir \"Selecionar Paredes\" nelas, a configuração antiga é convertida automaticamente pra uma altura única editável, sem perder nada."
-      ]
+      ],
+      "legado": "V3.11.4.6"
     },
     {
-      "versao": "V3.11.4.7",
+      "versao": "V3.7.39.5",
       "data": "2026-08-18",
       "tipo": "melhoria",
       "titulo": "Levantamento Piso: aviso quando a divisão da parede não fecha o total",
@@ -8670,10 +8762,11 @@ const NotasVersao = {
         "Popup \"Selecionar Paredes\": ao dividir uma parede em trechos, se a soma dos comprimentos não bater com o total da parede, aparece um aviso vermelho na hora (ex: \"Faltam 0,43 m pra completar a parede\") — sem esperar salvar pra descobrir que a conta não fechou.",
         "O card da parede fica destacado (borda e fundo avermelhados) enquanto a divisão estiver incorreta.",
         "Ao confirmar com alguma parede ainda divergente, um aviso avisa quais paredes precisam de atenção — a seleção é salva mesmo assim, o aviso é só pra não passar batido."
-      ]
+      ],
+      "legado": "V3.11.4.7"
     },
     {
-      "versao": "V3.11.4.8",
+      "versao": "V3.7.39.6",
       "data": "2026-08-18",
       "tipo": "melhoria",
       "titulo": "Levantamento Piso: simplificado o jeito de adicionar novas alturas de impermeabilização",
@@ -8681,40 +8774,44 @@ const NotasVersao = {
         "Popup \"Selecionar Paredes\": o seletor \"Personalizado\" (dropdown) que ficava em cima, perto dos seletores de altura de cada parede, foi trocado por 3 botões diretos — \"+ Box (1,20 m)\", \"+ Padrão (0,40 m)\" e \"+ Baixo (0,20 m)\" — clicou, já adicionou à lista de alturas.",
         "Campo numérico continua disponível pra alturas fora desses 3 valores comuns (botão \"+ Altura\" ao lado).",
         "Evita duplicar: tentar adicionar uma altura que já está configurada avisa em vez de criar uma repetida."
-      ]
+      ],
+      "legado": "V3.11.4.8"
     },
     {
-      "versao": "V3.11.4.9",
+      "versao": "V3.7.39.7",
       "data": "2026-08-18",
       "tipo": "melhoria",
       "titulo": "Levantamento Piso: desenho da parede dividida agora mostra a cor de cada trecho",
       "itens": [
         "Popup \"Selecionar Paredes\": o desenho no topo agora pinta cada trecho da parede dividida na proporção do seu comprimento, com a cor da altura escolhida pra ele — dá pra ver de relance onde é box (1,20m) e onde é o resto (0,40m), por exemplo.",
         "Se a soma dos trechos não cobre a parede inteira, o pedaço que falta aparece em cinza no desenho — a mesma divergência já avisada em texto agora também aparece visualmente."
-      ]
+      ],
+      "legado": "V3.11.4.9"
     },
     {
-      "versao": "V3.11.4.10",
+      "versao": "V3.7.39.8",
       "data": "2026-08-18",
       "tipo": "melhoria",
       "titulo": "Levantamento Piso: zoom e arrastar no desenho do popup Selecionar Paredes",
       "itens": [
         "O desenho no topo do popup \"Selecionar Paredes\" agora tem zoom (roda do mouse ou botões ➖/➕) e pan (clique e arraste) — útil quando a área é pequena ou tem muitas paredes próximas.",
         "Botão do meio mostra o % atual e clica pra voltar a 100% e centralizar de novo."
-      ]
+      ],
+      "legado": "V3.11.4.10"
     },
     {
-      "versao": "V3.11.4.11",
+      "versao": "V3.7.40",
       "data": "2026-08-18",
       "tipo": "correcao",
       "titulo": "Levantamento Piso: dava pra incluir uma parede mas não pra remover ela de volta",
       "itens": [
         "Popup \"Selecionar Paredes\": o botão 🗑 só aparecia quando a parede tinha mais de 1 trecho (dividida). Uma parede incluída como trecho único não tinha jeito de voltar ao estado \"não incluída\" além de desmarcar o checkbox (que deixa os campos desabilitados mas ainda ocupando espaço na tela).",
         "Agora o 🗑 aparece em qualquer parede incluída, com trecho único ou dividida — remove e volta pro botão \"+ Incluir esta parede\"."
-      ]
+      ],
+      "legado": "V3.11.4.11"
     },
     {
-      "versao": "V3.11.4.12",
+      "versao": "V3.7.41",
       "data": "2026-08-18",
       "tipo": "correcao",
       "titulo": "Levantamento Piso: números do desenho ficavam gigantes no zoom + limite de zoom aumentado",
@@ -8722,10 +8819,11 @@ const NotasVersao = {
         "Popup \"Selecionar Paredes\": os círculos numerados das paredes cresciam junto com o zoom (viravam bolas enormes e sobrepostas em 400%). Agora o tamanho deles é recalculado a cada zoom pra ficar sempre do mesmo tamanho na tela, só a parede/planta de fundo amplia mesmo.",
         "Limite de zoom subiu de 400% pra 1000% — útil pra paredes bem pequenas.",
         "Zoom por clique/roda do mouse agora anda em passos de 50% em vez de 25% (menos cliques pra chegar no nível que precisa)."
-      ]
+      ],
+      "legado": "V3.11.4.12"
     },
     {
-      "versao": "V3.11.4.13",
+      "versao": "V3.7.41.1",
       "data": "2026-08-18",
       "tipo": "melhoria",
       "titulo": "Levantamento Piso: removido o cadastro separado de alturas — agora é direto em cada trecho",
@@ -8733,10 +8831,11 @@ const NotasVersao = {
         "Popup \"Selecionar Paredes\": tirada a seção \"Alturas configuradas\" (que exigia cadastrar a altura antes de poder usá-la). Cada trecho de parede agora tem seu próprio campo de altura, com sugestões (Box 1,20m, Padrão 0,40m, Baixo 0,20m + qualquer valor já digitado em outro trecho) e também aceita digitar qualquer valor direto.",
         "Sem etapa extra: divide a parede, escolhe/digita a altura de cada trecho, e já era — sem precisar \"registrar\" a altura antes.",
         "Compatibilidade: áreas configuradas nas versões anteriores (V3.11.4.6 a V3.11.4.12, com o cadastro de alturas) continuam calculando certinho, e a conversão pro novo formato acontece sozinha ao reabrir \"Selecionar Paredes\" nelas."
-      ]
+      ],
+      "legado": "V3.11.4.13"
     },
     {
-      "versao": "V3.11.4.14",
+      "versao": "V3.7.42",
       "data": "2026-08-18",
       "tipo": "correcao",
       "titulo": "Levantamento Piso: aviso de divergência não atualizava ao digitar + seletor de altura sem opções visíveis",
@@ -8744,29 +8843,32 @@ const NotasVersao = {
         "Corrigido: o aviso \"soma dos trechos não bate com o total\" só era calculado no momento em que a parede era dividida — editar o comprimento de um trecho depois disso não recalculava nada, então o aviso ficava desatualizado ou nem aparecia. Agora atualiza em tempo real, a cada dígito, sem perder o foco do campo — e quando bate certinho, mostra confirmação verde (✅) também, não só o erro.",
         "O campo de altura era um datalist (input com sugestões) — o dropdown de opções abre de forma inconsistente entre navegadores, difícil de descobrir. Trocado por um seletor de verdade: 1,20m (Box), 0,40m (Padrão), 0,20m (Baixo) e qualquer valor já usado em outro trecho, todos visíveis na hora que abre.",
         "Botão ✏️ ao lado do seletor troca pra um campo numérico livre, pra digitar qualquer altura fora da lista."
-      ]
+      ],
+      "legado": "V3.11.4.14"
     },
     {
-      "versao": "V3.11.4.15",
+      "versao": "V3.7.43",
       "data": "2026-08-18",
       "tipo": "correcao",
       "titulo": "Levantamento Piso: parede ficava grossa demais no zoom e tampava o número",
       "itens": [
         "Popup \"Selecionar Paredes\": a V3.11.4.12 corrigiu o tamanho dos números pra não crescer com o zoom, mas a linha da própria parede continuava engordando — em zoom alto (700%+) virava uma barra enorme que cobria o número por cima. Agora a espessura da linha também é recalculada a cada zoom pra ficar constante na tela, igual já acontecia com os números."
-      ]
+      ],
+      "legado": "V3.11.4.15"
     },
     {
-      "versao": "V3.11.4.16",
+      "versao": "V3.7.44",
       "data": "2026-08-18",
       "tipo": "correcao",
       "titulo": "Levantamento Piso: zoom da roda do mouse não ancorava no cursor (a tela \"fugia\")",
       "itens": [
         "Popup \"Selecionar Paredes\": o zoom pela roda do mouse sempre ampliava a partir do CENTRO do desenho, não de onde o mouse estava — então dar zoom num canto fazia o conteúdo \"escapar\" pro lado errado, precisando reajustar o pan toda hora atrás do que se queria ver.",
         "Corrigido: agora o zoom ancora exatamente no ponto onde o mouse está — o que estava embaixo do cursor continua embaixo do cursor depois do zoom, igual o Google Maps/Figma. Os botões ➖/➕ continuam ancorando no centro (não tem cursor pra seguir nesse caso)."
-      ]
+      ],
+      "legado": "V3.11.4.16"
     },
     {
-      "versao": "V3.12.0",
+      "versao": "V3.7.44.1",
       "data": "2026-08-18",
       "tipo": "funcionalidade",
       "titulo": "Novo campo Frente de Serviço no Planejamento + filtro de equipe em Medições",
@@ -8776,10 +8878,11 @@ const NotasVersao = {
         "Medições: filtro por Frente na árvore de lançamento — mostra só as tarefas da equipe selecionada, mantendo os grupos-pai pra dar contexto (mesma visão em árvore de sempre).",
         "Medições: \"Fim Real\" agora só pode ser preenchido com a tarefa em 100% de progresso — evita registrar término de algo que ainda não acabou.",
         "Medições: ao lançar Início Real ou Término Real (com 100%), o cronograma ATUAL (Início/Término Planejado) é atualizado junto pra refletir a realidade. A Linha de Base nunca é tocada."
-      ]
+      ],
+      "legado": "V3.12.0"
     },
     {
-      "versao": "V3.12.0.1",
+      "versao": "V3.7.44.2",
       "data": "2026-08-18",
       "tipo": "melhoria",
       "titulo": "Frente de Serviço: completa cobertura em formulário, exportações e importações",
@@ -8788,10 +8891,11 @@ const NotasVersao = {
         "Exportar Excel (simples e formatado): coluna Frente incluída.",
         "Importar / Importar Base Completa: reconhece coluna \"Frente\" (ou \"Equipe\") na planilha.",
         "Importar Correções: Frente de Serviço adicionada como campo que pode ser corrigido em massa por Nome, junto com os demais."
-      ]
+      ],
+      "legado": "V3.12.0.1"
     },
     {
-      "versao": "V3.12.0.2",
+      "versao": "V3.7.45",
       "data": "2026-08-18",
       "tipo": "correcao",
       "titulo": "Medições: árvore não ocupava a tela toda + Frente automática não subia pro grupo-pai",
@@ -8800,10 +8904,11 @@ const NotasVersao = {
         "Medições: botões \"Expandir tudo\" / \"Recolher tudo\" na tela de nova medição (o padrão já era abrir tudo de início — os botões só facilitam recolher/abrir em massa quando quiser).",
         "Planejamento: \"Classificar Frentes automaticamente\" agora também preenche o GRUPO-PAI quando todos os filhos concordam numa única Frente (antes só classificava a folha — ex: \"Concretagem\" ficava em branco mesmo com todos os pavimentos dentro já em ESTRUTURA).",
         "Planejamento: novo botão \"Exportar Frentes (revisão)\" — planilha simples com só Código, Atividade, Pai e Frente, pra revisar/corrigir fora do sistema e reimportar depois em \"Importar Correções\" (marcando só \"Frente de Serviço\")."
-      ]
+      ],
+      "legado": "V3.12.0.2"
     },
     {
-      "versao": "V3.12.0.3",
+      "versao": "V3.7.45.1",
       "data": "2026-08-18",
       "tipo": "melhoria",
       "titulo": "Medições: ícones maiores/mais visíveis, começa tudo recolhido e busca mantém a árvore",
@@ -8813,10 +8918,11 @@ const NotasVersao = {
         "Busca por Nome: antes escondia todos os grupos e mostrava só as folhas batendo o texto (perdia o contexto de onde a tarefa estava). Agora mantém a árvore, abre automaticamente os grupos-pai até o resultado, destaca e rola até a tarefa mais próxima do que foi digitado.",
         "Corrigido também: o campo de busca perdia o foco a cada letra digitada (só dava pra digitar 1 caractere por vez) — agora mantém o foco e a posição do cursor entre as digitações.",
         "Telas estreitas (celular): filtro de Frente e busca ocupam a largura toda em vez de ficarem espremidos, e os botões de toque ficam um pouco maiores."
-      ]
+      ],
+      "legado": "V3.12.0.3"
     },
     {
-      "versao": "V3.12.0.4",
+      "versao": "V3.7.45.2",
       "data": "2026-08-18",
       "tipo": "melhoria",
       "titulo": "Medições: fim do popup — Início/Término Real e % direto na linha",
@@ -8826,10 +8932,11 @@ const NotasVersao = {
         "% validado: se digitar mais de 100, avisa e ajusta pra 100. Término Real só aceita com a tarefa em 100% (senão avisa e não salva).",
         "Fotos da medição continuam disponíveis (ícone 📷 na própria linha), sem precisar do popup.",
         "Corrigido: cada edição (%, data, foto) disparava um re-render que jogava a lista de volta pro topo — agora mantém a posição de rolagem."
-      ]
+      ],
+      "legado": "V3.12.0.4"
     },
     {
-      "versao": "V3.12.0.5",
+      "versao": "V3.7.46",
       "data": "2026-08-18",
       "tipo": "correcao",
       "titulo": "Medições: mobile de verdade agora — fontes e toques bem maiores, botão de descartar que nunca tinha estilo",
@@ -8837,10 +8944,11 @@ const NotasVersao = {
         "Achado o motivo de tudo parecer pequeno: o botão \"✕\" de descartar alteração NUNCA teve estilo em nenhum lugar do sistema — era um botão cru do navegador. Agora tem visual e tamanho de botão de verdade.",
         "Em telas de celular (até 640px): fonte de nome/badge/esperado maior, chips do topo maiores, os campos de Início/Término/% e os botões (✓100%, 📷, ✕, abrir/fechar grupo) todos com altura por volta de 40px — bem mais fácil de tocar.",
         "Botões da barra (Voltar, Salvar, Expandir/Recolher tudo) também maiores no celular."
-      ]
+      ],
+      "legado": "V3.12.0.5"
     },
     {
-      "versao": "V3.12.0.6",
+      "versao": "V3.7.46.1",
       "data": "2026-08-18",
       "tipo": "melhoria",
       "titulo": "Levantamento Piso: botão para exportar planilha (Excel) com todas as áreas",
@@ -8849,19 +8957,21 @@ const NotasVersao = {
         "\"Apartamento\" vem do nome do local direto onde a área está guardada na árvore. \"Local (Nº Parede ou Piso)\" vem fixo como \"Piso\" neste módulo — pensado pra combinar com uma futura planilha de Paredes/Azulejo usando \"Parede N\" no mesmo formato de chave.",
         "Tipo de Piso e Dimensões são separados automaticamente do campo \"Tipo de Piso\" seguindo o padrão \"Nome - AxB\" (ex: \"Porcelanato Alta Mountain - 90x90\" vira Tipo=\"Porcelanato Alta Mountain\" e Dimensão=\"90x90\"). Registros antigos sem esse padrão (ex: só \"Porcelanato 1\") saem com a dimensão em branco.",
         "Novo \"⚙️ Config\" no topo do módulo — define o % de perda usado na coluna \"M² com perda\" da planilha (padrão 30%, editável por obra)."
-      ]
+      ],
+      "legado": "V3.12.0.6"
     },
     {
-      "versao": "V3.12.0.7",
+      "versao": "V3.7.47",
       "data": "2026-08-18",
       "tipo": "correcao",
       "titulo": "Medições: breakpoint mobile estava estreito demais e nunca disparava no celular real",
       "itens": [
         "O ajuste mobile só entrava em ≤640px, mas o celular testado cai numa faixa maior (a mesma em que o sistema já troca a sidebar pelo menu ☰, ≤1024px) — por isso nada parecia ter mudado. Alinhado o breakpoint da Medições com esse mesmo limite (≤1024px) usado no resto do sistema."
-      ]
+      ],
+      "legado": "V3.12.0.7"
     },
     {
-      "versao": "V3.12.0.8",
+      "versao": "V3.8.0",
       "data": "2026-08-18",
       "tipo": "funcionalidade",
       "titulo": "Novo módulo: Controle de Porcelanatos (base) — exportador de planilha movido pra lá",
@@ -8870,40 +8980,44 @@ const NotasVersao = {
         "O botão \"📊 Exportar Planilha\" (Apartamento/Local/Tipo/Dimensões/M²/M² com perda) saiu do Levantamento de Piso e agora mora só no Controle de Porcelanatos.",
         "Corrigido de raiz um bug que fazia a planilha sair incompleta (só um apartamento, faltando o resto): o app usa cache offline do Firestore, e o export podia pegar dados velhos do navegador em vez do servidor. Agora essa página sempre busca do SERVIDOR antes de exportar — e tem um botão \"🔄 Recarregar\" pra forçar isso manualmente também.",
         "O % de perda configurável (padrão 30%) ganhou uma configuração própria deste módulo — herda automaticamente o valor que já estava configurado no Piso, se houver, na primeira vez que abrir."
-      ]
+      ],
+      "legado": "V3.12.0.8"
     },
     {
-      "versao": "V3.12.0.9",
+      "versao": "V3.8.0.1",
       "data": "2026-08-18",
       "tipo": "melhoria",
       "titulo": "Medições: distribuição do mobile ajustada — menos espaço perdido, Início/Término lado a lado",
       "itens": [
         "Achado o motivo dos campos de Início/Término Real ficarem cada um numa linha inteira sozinho: o input de data tem uma largura mínima própria que não encolhia com o ajuste anterior. Agora usa um grid de 2 colunas garantindo Início+Término numa linha e %+✓100% na outra.",
         "Barra de cima mais compacta: \"Expandir tudo\"/\"Recolher tudo\" virou só \"Expandir\"/\"Recolher\", os 3 chips (Total/Medição/Esperado) ficam lado a lado numa linha só, e o filtro de Frente + busca compartilham uma linha em vez de uma embaixo da outra — bem menos espaço vazio no topo."
-      ]
+      ],
+      "legado": "V3.12.0.9"
     },
     {
-      "versao": "V3.12.0.10",
+      "versao": "V3.8.0.2",
       "data": "2026-08-18",
       "tipo": "melhoria",
       "titulo": "Medições: cartão de cada tarefa mais compacto no mobile — menos linhas, menos espaço perdido",
       "itens": [
         "📷 (foto) e ✕ (descartar) saíram da grade de campos e subiram pra junto do nome da tarefa — sobrava uma linha inteira só pra esses dois ícones. Agora a grade fica só com Início+Término (linha 1) e %+✓100% (linha 2), 2 linhas em vez de 3.",
         "Espaçamento entre os campos e o padding de cada linha reduzidos — cabe mais tarefa por tela, menos rolagem."
-      ]
+      ],
+      "legado": "V3.12.0.10"
     },
     {
-      "versao": "V3.12.0.11",
+      "versao": "V3.8.1",
       "data": "2026-08-18",
       "tipo": "correcao",
       "titulo": "Medições: foto/descartar ficaram sozinhos numa linha vazia — corrigido de vez",
       "itens": [
         "A tentativa anterior de subir 📷/✕ pra junto do nome não funcionou: o bloco do nome crescia e empurrava os ícones pra uma linha nova, sozinha e praticamente vazia — pior que antes. Causa: nome e ícones eram itens soltos no mesmo flex container, sem nada garantindo que ficassem na mesma linha.",
         "Corrigido de raiz: nome+badge e os ícones (📷/✕) agora vivem dentro do mesmo bloco dedicado (linha do cabeçalho) — ficam sempre um do lado do outro, o texto do nome quebra por dentro sem empurrar os ícones pra lugar nenhum."
-      ]
+      ],
+      "legado": "V3.12.0.11"
     },
     {
-      "versao": "V3.13.0",
+      "versao": "V3.8.1.1",
       "data": "2026-08-18",
       "tipo": "funcionalidade",
       "titulo": "Controle de Porcelanatos: junta Piso + Paredes, agrupa por Torre/Andar/Apto e ganha controle de execução",
@@ -8914,78 +9028,86 @@ const NotasVersao = {
         "Novos KPIs no topo: m² planejado (Piso, Parede e Total), m² executado, % de avanço geral e itens concluídos.",
         "Exportar Planilha ganhou uma segunda aba \"Resumo por Local\" (totais de Piso/Parede/Executado por Torre-Andar-Apto), além da aba Detalhado — que agora também traz Torre, Andar, M² Executado, % Executado e Status.",
         "Nova coleção no Firestore: `porcelanatosExecucoes` (apontamentos). Guard de permissão: apontar execução usa `controlePorcelanatos:criar`, excluir apontamento usa `controlePorcelanatos:excluir` (catálogo já existia)."
-      ]
+      ],
+      "legado": "V3.13.0"
     },
     {
-      "versao": "V3.13.1",
+      "versao": "V3.8.2",
       "data": "2026-08-18",
       "tipo": "correcao",
       "titulo": "Controle de Porcelanatos: Torre/Apto duplicado quando Paredes tinha um nível extra (Cômodo) que o Piso não tem",
       "itens": [
         "A árvore de Paredes costuma ter um nível de Cômodo dentro do Apto (ex: Torre → Andar → Apto → Banheiro de Serviço) que a árvore de Piso não tem (a área já fica direto no Apto). O agrupamento antigo pegava \"os 2 últimos níveis\" como Andar+Apto — então em Paredes o Apto caía num nível errado, criando um grupo de Torre paralelo que nunca batia com o do Piso: tudo aparecia duplicado e fora de ordem.",
         "Corrigido: agora Torre/Andar/Apto são sempre os 3 primeiros níveis da árvore, fixos, não importa quão mais profundo ela vá depois disso. Qualquer nível extra (o Cômodo) não vira mais um agrupamento por conta própria — passa a aparecer junto do nome do Local (ex: \"Banheiro de Serviço · Face C\")."
-      ]
+      ],
+      "legado": "V3.13.1"
     },
     {
-      "versao": "V3.13.1.1",
+      "versao": "V3.8.2.1",
       "data": "2026-08-18",
       "tipo": "melhoria",
       "titulo": "Medições: card da tarefa no mobile cortado pro essencial — nome, Início, Término e %, só isso",
       "itens": [
         "Tirado (só no mobile) o badge de Frente e o texto \"Esperado: X%\" do card de cada tarefa — informação redundante com o filtro já selecionado no topo, e o pedido original era só nome + Início + Término + % pra preencher rápido, sem mais nada. No desktop continuam aparecendo."
-      ]
+      ],
+      "legado": "V3.13.1.1"
     },
     {
-      "versao": "V3.13.1.2",
+      "versao": "V3.8.3",
       "data": "2026-08-18",
       "tipo": "correcao",
       "titulo": "Controle de Porcelanatos: Torre/Andar/Apto ainda duplicava quando o nome vinha escrito diferente em Piso e Paredes",
       "itens": [
         "A correção anterior (profundidade fixa) resolveu o caso de a árvore de Paredes ter um nível de Cômodo extra, mas não resolvia se o mesmo local estivesse escrito com maiúscula/minúscula ou espaço diferente nas duas árvores (ex: \"Torre\" no Piso vs \"torre \" nas Paredes) — o agrupamento comparava o texto cru, então continuava tratando como dois locais diferentes.",
         "Corrigido: agora Torre, Andar e Apto passam por uma normalização (ignora maiúscula/minúscula e espaços) antes de agrupar — o primeiro nome visto em cada combinação \"vence\" e todo item equivalente passa a usar esse mesmo texto. Continua sem solução automática só se o nome for genuinamente diferente por escrito (ex: \"AP 1\" numa árvore e \"Apto 01\" na outra) — nesse caso o texto precisa ficar igual em ambos os levantamentos."
-      ]
+      ],
+      "legado": "V3.13.1.2"
     },
     {
-      "versao": "V3.13.1.3",
+      "versao": "V3.8.4",
       "data": "2026-08-18",
       "tipo": "correcao",
       "titulo": "Medições: achado o motivo real do card mobile parecer sempre igual — recuo de hierarquia comendo a tela",
       "itens": [
         "O padding-left que empurra a linha pra direita conforme a profundidade na árvore (nível×16px) foi pensado pra desktop — no celular, uma tarefa em nível 4-5 perdia 70-90px de tela só de recuo vazio à esquerda, sobrando pouca largura pros campos, que ficavam espremidos à direita. Isso é o que causava a sensação de \"nada mudou\": a poda de badge/esperado ajudou um pouco, mas o recuo continuava comendo a maior parte da tela.",
         "Corrigido: no mobile, o recuo trava no máximo em 2 níveis (16px), não importa quão mais profunda a tarefa esteja na árvore — sobra muito mais largura pra Início/Término/%."
-      ]
+      ],
+      "legado": "V3.13.1.3"
     },
     {
-      "versao": "V3.13.1.4",
+      "versao": "V3.8.4.1",
       "data": "2026-08-18",
       "tipo": "melhoria",
       "titulo": "Medições: campos com legenda visível + % Executado ao lado do % Previsto",
       "itens": [
         "Cada campo agora tem uma legenda em cima (Início Real / Término Real / % Executado / % Previsto) — antes só tinha o placeholder cinza (\"dd/mm/aaaa\"), que sozinho não dizia qual data era qual.",
         "% Previsto (o antigo \"Esperado\") voltou, mas lado a lado com % Executado — compara na hora se tá atrasado ou adiantado sem precisar abrir mais nada. Botão de marcar 100% ficou um ✓ pequeno colado no campo de % Executado."
-      ]
+      ],
+      "legado": "V3.13.1.4"
     },
     {
-      "versao": "V3.13.1.5",
+      "versao": "V3.8.4.2",
       "data": "2026-08-18",
       "tipo": "melhoria",
       "titulo": "Medições: botão \"Ocultar 100%\" — esconde quem já está concluído",
       "itens": [
         "Novo botão na barra de cima, junto com o filtro de Frente e a busca — liga/desliga (fica marcado ☑ quando ativo, lembra a escolha entre sessões). Some com toda tarefa já em 100% (considerando também o que ainda não foi salvo) e some com o grupo-pai se não sobrar nenhum filho visível — foco só no que falta preencher."
-      ]
+      ],
+      "legado": "V3.13.1.5"
     },
     {
-      "versao": "V3.13.1.6",
+      "versao": "V3.8.5",
       "data": "2026-08-18",
       "tipo": "correcao",
       "titulo": "Controle de Porcelanatos: KPIs sem número e tudo sobreposto em obras com muitos itens",
       "itens": [
         "Causa raiz (achada reproduzindo a tela localmente, não só pelo print): `#cp-content` é filho de `.content`, que no layout geral é flex-column com uma regra global `.content > div { min-height: 0 }` (feita pro Gantt do Planejamento). Como cada seção do módulo (KPIs, filtros, cada Torre) virava um `<div>` solto direto ali, em obras com muitos itens (aqui, 117) o flexbox espremia CADA seção pra caber no espaço visível — o texto não encolhe junto, então tudo passava a se sobrepor: números dos KPIs cortados, blocos de Torre embaralhados.",
         "Corrigido: todo o conteúdo do módulo agora vive dentro de um único `<div class=\"cc-view\">` (mesmo padrão já usado no Controle de Concreto) — só esse wrapper único fica sujeito à regra do `.content`, e por dentro dele nada mais compete por espaço. Testado renderizando a página real localmente com 117 itens antes e depois da correção."
-      ]
+      ],
+      "legado": "V3.13.1.6"
     },
     {
-      "versao": "V3.13.2",
+      "versao": "V3.8.6",
       "data": "2026-08-18",
       "tipo": "correcao",
       "titulo": "Importar Correções: casa pelo CÓDIGO da tarefa, não mais pelo nome",
@@ -8996,10 +9118,11 @@ const NotasVersao = {
         "A resolução de PREDECESSORA seguia a mesma regra antiga (só nome) — agora também tenta o Código primeiro, então predecessora que aponta pra tarefa de nome repetido deixa de virar \"não resolvida\".",
         "O resumo antes de confirmar agora separa quantas casaram pelo Código e quantas pelo Nome, e as listas de revisão mostram o código junto do nome — fica claro o que revisar.",
         "Segurança preservada: quando há dúvida real (código duplicado na obra com o mesmo nome, ou nome repetido sem código), a linha continua sendo pulada em vez de atualizar a tarefa errada."
-      ]
+      ],
+      "legado": "V3.13.2"
     },
     {
-      "versao": "V3.13.3",
+      "versao": "V3.8.7",
       "data": "2026-08-18",
       "tipo": "correcao",
       "titulo": "Planilhas exportadas ganham a coluna Chave — identificador que nunca muda",
@@ -9011,10 +9134,11 @@ const NotasVersao = {
         "Ordem de busca completa: Chave → Código → Nome → Nome + Pai. Planilha antiga sem a coluna Chave continua funcionando normalmente pela cascata.",
         "A resolução de predecessora segue a mesma cascata, incluindo o desempate pelo Pai.",
         "O resumo antes de confirmar mostra quantas casaram por cada critério, e as ambíguas que sobrarem dizem o motivo (sem chave, sem código, sem pai) pra saber o que corrigir."
-      ]
+      ],
+      "legado": "V3.13.3"
     },
     {
-      "versao": "V3.13.4",
+      "versao": "V3.8.8",
       "data": "2026-08-18",
       "tipo": "correcao",
       "titulo": "Coluna ID da planilha exportada grudava na LINHA, não na tarefa",
@@ -9025,10 +9149,11 @@ const NotasVersao = {
         "Isso substitui a coluna \"Chave\" que tinha sido criada na V3.13.3 pro mesmo fim: em vez de duas colunas de identidade, o \"ID\" passou a ser o que o nome sempre prometeu.",
         "Importante: por dentro o sistema já estava certo. As predecessoras sempre foram gravadas por ID de tarefa (formato `id|tipo|lag`), então mover linha no editor nunca quebrou vínculo nenhum — o número que aparece na tela é só exibição, convertido na hora. O problema era exclusivamente da planilha exportada.",
         "Planilha antiga (com ID posicional) continua sendo importada normalmente: os números não batem com nenhum ID de tarefa, então a busca cai pra Código → Nome → Nome+Pai como antes, sem risco de casar errado."
-      ]
+      ],
+      "legado": "V3.13.4"
     },
     {
-      "versao": "V3.13.5",
+      "versao": "V3.8.9",
       "data": "2026-08-18",
       "tipo": "correcao",
       "titulo": "Permissões: Suprimentos sem NENHUMA checagem, e Diagnóstico fora do catálogo",
@@ -9037,10 +9162,11 @@ const NotasVersao = {
         "Suprimentos (725 linhas, o maior módulo criado desde a última auditoria) não tinha absolutamente nenhuma checagem de permissão — nem no catálogo, nem guard nas funções, nem data-perm nos botões. Qualquer usuário ativo conseguia configurar seleção, editar prazos e status de qualquer etapa. Corrigido: módulo adicionado ao catálogo (ver/editar), guard em todas as funções de mutação (seleção, config, edição inline de data/status, overrides), inputs inline desabilitados sem permissão.",
         "Diagnóstico (ferramenta técnica de debug do sistema) também não estava no catálogo — criado módulo próprio na categoria Sistema, sem nenhuma permissão padrão (precisa ser liberado manualmente, é uma ferramenta sensível).",
         "Controle — Estacas e Controle — Porcelanatos já estavam com enforcement completo (aplicado corretamente em sessão anterior) — confirmado na auditoria, sem necessidade de correção."
-      ]
+      ],
+      "legado": "V3.13.5"
     },
     {
-      "versao": "V3.14.0.0",
+      "versao": "V3.8.9.1",
       "data": "2026-08-18",
       "tipo": "funcionalidade",
       "titulo": "Permissões por obra: cada obra da lista \"Restrito\" pode ter um conjunto de acessos diferente",
@@ -9052,10 +9178,11 @@ const NotasVersao = {
         "Por dentro: Permissions.pode(modulo,acao) agora consulta a obra ATIVA (a que está selecionada no momento, via Router) pra decidir qual conjunto de permissões usar — funciona automaticamente ao trocar de obra pelo seletor da sidebar, sem precisar recarregar a página, porque a maioria dos módulos já troca de obra sem reload (onObraChanged) e pode() lê a obra ativa em tempo real a cada chamada.",
         "Retrocompatível: usuários restritos configurados antes desta versão continuam funcionando exatamente como antes (a config antiga vira o \"padrão\" que qualquer obra sem configuração própria usa), até o admin entrar e configurar cada obra individualmente se quiser.",
         "Aproveitando a rodada, o backend do convite (api/usuarios.js) e o gate de página também foram atualizados pra esse novo formato."
-      ]
+      ],
+      "legado": "V3.14.0.0"
     },
     {
-      "versao": "V3.14.0.1",
+      "versao": "V3.8.9.2",
       "data": "2026-08-18",
       "tipo": "melhoria",
       "titulo": "Permissões granulares: \"editar\" deixou de ser uma caixinha só — agora dá pra liberar botão por botão",
@@ -9067,10 +9194,11 @@ const NotasVersao = {
         "Os guards no código foram migrados junto — não é só visual: o botão de exportar PNG agora checa \"exportar:png\" de verdade, e não mais \"exportar\" genérico.",
         "Compatibilidade: módulo/ação ainda sem sub-itens mapeados continua funcionando exatamente como antes (uma caixinha só). Quem já tinha \"editar\" marcado continua com tudo liberado — o grupo marcado sempre libera tudo abaixo dele.",
         "Próxima rodada: mapear as sub-ações dos 9 Levantamentos e dos 5 Controles, que hoje ainda usam as ações grossas."
-      ]
+      ],
+      "legado": "V3.14.0.1"
     },
     {
-      "versao": "V3.14.0.2",
+      "versao": "V3.8.9.3",
       "data": "2026-08-18",
       "tipo": "melhoria",
       "titulo": "Sub-permissões: mapeamento concluído — 207 permissões individuais em 24 módulos",
@@ -9084,10 +9212,11 @@ const NotasVersao = {
         "Controles: Estacas (14 — BT, BT de fundação, concretagem, pranchas, marcadores, metas, vínculo), Concreto (4), Solo (4), Terraplanagem (4, com valores/custos isolado), Porcelanatos (5). Produção (2).",
         "Todos os guards do código e os data-perm dos botões foram migrados junto — validado por script que confere se cada chave usada existe de fato no catálogo (zero inconsistências).",
         "Ações destrutivas ou sensíveis ficaram deliberadamente isoladas em caixinhas próprias, pra dar pra liberar o trabalho do dia a dia sem liberar \"limpar base\" ou \"editar valores/custos\"."
-      ]
+      ],
+      "legado": "V3.14.0.2"
     },
     {
-      "versao": "V3.15.0.0",
+      "versao": "V3.8.9.4",
       "data": "2026-08-19",
       "tipo": "funcionalidade",
       "titulo": "Compartilhar PDF do Samsung Notes agora pode virar Tarefa, não só Relatório",
@@ -9096,10 +9225,11 @@ const NotasVersao = {
         "Escolhendo Tarefa: uma nova IA (api/extrair-tarefas, mesmo fallback Gemini → Anthropic do Relatório) lê a nota e identifica cada item como uma tarefa separada, já reescrita de forma curta e objetiva, com projeto quando ficar claro na nota. Cada uma entra direto na coleção tarefasSistema (módulo Tarefas do Sistema/To Do List).",
         "Se a nota tiver várias tarefas escritas juntas, todas são criadas de uma vez, em sequência, na ordem em que aparecem.",
         "Fluxo de Relatório continua idêntico a antes — só ganhou uma tela de escolha na frente."
-      ]
+      ],
+      "legado": "V3.15.0.0"
     },
     {
-      "versao": "V3.16.0.0",
+      "versao": "V3.9.0",
       "data": "2026-08-19",
       "tipo": "funcionalidade",
       "titulo": "Tarefas do Sistema: botão Agendar — grade do dia com horários de 30min",
@@ -9109,10 +9239,11 @@ const NotasVersao = {
         "Clicar num horário vazio abre a lista de tarefas pendentes pra escolher qual alocar ali. Horário ocupado mostra a tarefa com check (concluir direto dali) e um × pra remover do horário.",
         "Navegação entre dias (‹ Hoje ›) — cada tarefa é salva com dataAgendada e horarioAgendado, então a grade de qualquer dia (passado ou futuro) sempre mostra o que foi alocado nele.",
         "Uma tarefa só pode estar em um horário por vez — escolher ela em outro horário move a alocação."
-      ]
+      ],
+      "legado": "V3.16.0.0"
     },
     {
-      "versao": "V3.16.0.1",
+      "versao": "V3.9.0.1",
       "data": "2026-08-19",
       "tipo": "melhoria",
       "titulo": "Tarefas do Sistema: adicionar tarefa por voz",
@@ -9120,10 +9251,11 @@ const NotasVersao = {
         "Botão de microfone 🎤 ao lado do campo \"O que precisa ser feito?\". Clica, fala, o texto reconhecido entra no campo — só falta escolher projeto/categoria/importância e Adicionar (ou já mandar direto, se preferir).",
         "Usa o reconhecimento de voz nativo do navegador (Web Speech API), em português do Brasil. Qualidade depende do microfone/Android do aparelho, não é algo que o sistema controla.",
         "Se o navegador não suportar reconhecimento de voz, avisa por um toast em vez de travar."
-      ]
+      ],
+      "legado": "V3.16.0.1"
     },
     {
-      "versao": "V3.16.0.2",
+      "versao": "V3.9.0.2",
       "data": "2026-08-19",
       "tipo": "melhoria",
       "titulo": "Tarefas do Sistema: redesign — menos poluído, categoria multi-select, cor livre",
@@ -9134,10 +9266,11 @@ const NotasVersao = {
         "Categoria virou multi-select no filtro — dá pra marcar mais de uma categoria ao mesmo tempo pra ver as tarefas que batem com qualquer uma delas (antes só dava pra escolher uma).",
         "Botão \"+ Nova categoria\" ficou visível direto dentro do painel de Filtros, não só escondido dentro do Gerenciar.",
         "Paleta de cor de categoria saiu de ~12 opções fixas pra 36 cores curadas + um seletor de cor livre (🎨, ilimitado) — vale pra criar categoria rápida, editar categoria e pro Gerenciar, nos mesmos lugares de sempre."
-      ]
+      ],
+      "legado": "V3.16.0.2"
     },
     {
-      "versao": "V3.16.0.3",
+      "versao": "V3.9.0.3",
       "data": "2026-08-19",
       "tipo": "melhoria",
       "titulo": "Planejamento: Visão Organizacional (Gantt filtrado por linhas escolhidas) + Setas de Predecessora no Gantt (estilo MS Project)",
@@ -9147,10 +9280,11 @@ const NotasVersao = {
         "Interação das setas: passar o mouse escurece/destaca a seta; clicar deixa ela marcada em dourado e mostra o número + nome da predecessora. Clicar de novo desmarca.",
         "Predecessora fora da visão atual (filtrada pela Visão Organizacional, busca ou outro filtro) simplesmente não desenha seta — sem erro, sem seta apontando pro nada.",
         "Desempenho cuidado: as setas são desenhadas só perto da janela visível (mesma lógica do virtual scroll da tabela) — obra com 2.400 tarefas não pesa."
-      ]
+      ],
+      "legado": "V3.16.0.3"
     },
     {
-      "versao": "V3.16.0.4",
+      "versao": "V3.9.1",
       "data": "2026-08-19",
       "tipo": "correcao",
       "titulo": "Tarefas do Sistema: Agenda corrigida (mesma tarefa em vários horários) + visual de caderno de verdade + voz com permissão explícita",
@@ -9160,10 +9294,11 @@ const NotasVersao = {
         "Agenda com visual novo de caderno de planejamento: fundo cor de papel, linha vermelha de margem, linhas pontilhadas separando os horários, fonte cursiva na data — saiu do estilo \"sistema\" chapado de antes.",
         "Página do módulo desinchada mais um passo: o card preto de progresso saiu de cena — virou uma linha de texto discreta embaixo do título + uma barrinha fina, sem caixa separada tomando espaço.",
         "Botão de voz: agora pede a permissão do microfone explicitamente antes de gravar (em alguns Android com o app instalado como PWA, o navegador não mostra esse prompt sozinho) e cada erro (permissão negada, sem microfone, sem rede, silêncio) aparece com uma mensagem específica em vez de simplesmente não fazer nada."
-      ]
+      ],
+      "legado": "V3.16.0.4"
     },
     {
-      "versao": "V3.16.0.5",
+      "versao": "V3.9.1.1",
       "data": "2026-08-19",
       "tipo": "melhoria",
       "titulo": "Visão Organizacional virou menu de visões (+ Só os Pais por nível); setas de predecessora não cortam mais as barras; recolher grupo na visão filtrada não some mais com tudo",
@@ -9173,10 +9308,11 @@ const NotasVersao = {
         "Setas de predecessora redesenhadas pra não passar por cima das barras: agora saem do fim da predecessora, correm pelo VÃO entre as linhas (na divisória, onde não tem barra) e só descem na coluna estreita logo antes do início da tarefa — Gantt limpo, igual MS Project.",
         "Segurança na visão filtrada: arrastar pra reordenar fica bloqueado (com aviso) enquanto a máscara está ativa — as linhas vizinhas na tela não são as vizinhas reais da estrutura, mover ali bagunçaria a base original. Edição de células, %, datas e predecessoras continuam liberadas (gravam por ID, sem risco).",
         "Sobre as cores no Gantt: a cor da barra é o STATUS da tarefa (azul = no prazo ainda não concluída, amarelo = em andamento, verde = concluída, vermelho = atrasada) — se tudo aparece azul na visão filtrada é porque todas aquelas tarefas estão no mesmo status, não é defeito da visão."
-      ]
+      ],
+      "legado": "V3.16.0.5"
     },
     {
-      "versao": "V3.16.0.6",
+      "versao": "V3.9.1.2",
       "data": "2026-08-19",
       "tipo": "melhoria",
       "titulo": "Toolbar do Planejamento reorganizada — trocar entre Linha de Base/Desafio/Atual não bagunça mais os botões",
@@ -9185,10 +9321,11 @@ const NotasVersao = {
         "Agora são duas linhas com papel fixo: em cima as AÇÕES (⚙ Ferramentas · 🌳 Editor de Estrutura · 🗂 Visão Organizacional · ＋ Tarefa — sempre os mesmos, sempre no mesmo lugar) e embaixo a VISUALIZAÇÃO (versão de datas · zoom Dia→Ano · Gantt · Setas de Predecessora).",
         "Os botões que aparecem só às vezes (📋 Copiar datas, ＋ Colunas) agora entram sempre no FIM da linha de visualização — quando aparecem, nada existente muda de lugar.",
         "\"Setas de Predecessora\" ficou sempre visível (esmaecido quando o Gantt está escondido, com dica) — antes sumia e voltava junto com o Gantt, deslocando os vizinhos."
-      ]
+      ],
+      "legado": "V3.16.0.6"
     },
     {
-      "versao": "V3.16.0.7",
+      "versao": "V3.9.2",
       "data": "2026-08-19",
       "tipo": "correcao",
       "titulo": "Agenda: o seletor de horário virou dropdown nativo feio — trocado por um seletor próprio, no estilo caderno",
@@ -9197,20 +9334,22 @@ const NotasVersao = {
         "Trocado por um seletor construído do zero: clicar em \"+ escolher tarefa\" abre, no próprio lugar, uma caixa com busca e a lista de tarefas pendentes já no estilo papel do módulo — sem nada nativo do navegador.",
         "Dá pra digitar pra filtrar a lista (por texto da tarefa ou nome do projeto) quando tiver muita tarefa pendente.",
         "Continua permitindo a mesma tarefa em vários horários (corrigido na V3.16.0.4) — isso não mudou, só a caixa de escolha ficou decente."
-      ]
+      ],
+      "legado": "V3.16.0.7"
     },
     {
-      "versao": "V3.16.0.8",
+      "versao": "V3.9.3",
       "data": "2026-08-19",
       "tipo": "correcao",
       "titulo": "Toolbar do Planejamento: a reorganização da V3.16.0.6 deixou tudo torto (ação jogada pra direita, visualização pra esquerda) — refeita como um bloco único",
       "itens": [
         "A tentativa anterior separava os botões em duas linhas com alinhamentos diferentes (uma \"space-between\" empurrando pra ponta direita, outra à esquerda) — resultado: visual desalinhado, gente de um lado, coisa do outro, sem nexo.",
         "Refeito do zero como UMA linha só de toolbar, tudo alinhado à esquerda, na ordem: versão de datas → zoom → Gantt/Setas → Ferramentas/Editor/Visão Organizacional → ＋ Tarefa → botões que só aparecem às vezes. Quebra pra segunda linha naturalmente quando não cabe, sem nenhum bloco \"flutuando\" separado."
-      ]
+      ],
+      "legado": "V3.16.0.8"
     },
     {
-      "versao": "V3.16.0.9",
+      "versao": "V3.9.4",
       "data": "2026-08-19",
       "tipo": "correcao",
       "titulo": "Voz no Tarefas do Sistema: erro real agora aparece na tela (fixo, não some) em vez de simplesmente \"não funcionar\"",
@@ -9219,20 +9358,22 @@ const NotasVersao = {
         "Criada uma caixa de erro vermelha fixa embaixo do campo de texto — não é mais um toast que passa rápido, ela fica na tela até a próxima tentativa. Mostra a causa técnica exata: falta de HTTPS, SpeechRecognition ausente (com o user-agent do navegador), permissão negada, sem microfone, sem internet, ou o erro puro que o navegador devolveu.",
         "Também cobre o caso de o próprio navigator.mediaDevices não existir (comum em WebView antigo/app instalado) — nesse caso avisa pra tentar abrir o site direto no Chrome, fora do atalho instalado, pra isolar se o problema é do PWA.",
         "Com essa mensagem na tela, a próxima tentativa vai mostrar exatamente qual é o problema real — o que faltava pra corrigir de vez em vez de ficar tentando adivinhar."
-      ]
+      ],
+      "legado": "V3.16.0.9"
     },
     {
-      "versao": "V3.16.0.10",
+      "versao": "V3.9.5",
       "data": "2026-08-19",
       "tipo": "correcao",
       "titulo": "Toolbar do Planejamento: botão \"Copiar Datas\" que sobrava sozinho numa linha à parte foi tirado da barra e movido pra dentro de ⚙ Ferramentas",
       "itens": [
         "Esse botão só aparece quando a versão de datas não é \"Atual\" — e quando aparecia, ficava sobrando na quebra de linha, sozinho, deslocado do resto (a causa do visual torto reclamado). Removido da barra principal.",
         "Agora fica dentro de ⚙ Ferramentas → Correções & Recálculos, com o mesmo nome e função — só aparece no menu quando faz sentido (fora da versão Atual), sem nunca mais deslocar nada na toolbar."
-      ]
+      ],
+      "legado": "V3.16.0.10"
     },
     {
-      "versao": "V3.16.0.11",
+      "versao": "V3.9.6",
       "data": "2026-08-19",
       "tipo": "correcao",
       "titulo": "Tarefas do Sistema: tema \"caderno\" removido, pop-up maior, título+descrição, intervalo de horário e seletor de tarefa hierárquico",
@@ -9245,10 +9386,11 @@ const NotasVersao = {
         "Seletor de tarefa da Agenda refeito: busca sempre no topo (pula direto pra qualquer tarefa por nome/sistema/categoria) e, sem buscar nada, navegação em 3 níveis — Sistema → Categoria → Tarefa — com contador em cada nível e breadcrumb pra voltar.",
         "Pra adicionar mais de uma tarefa no mesmo horário: um \"+\" pequeno e discreto ao lado das já alocadas, em vez do formulário ficar sempre aberto ocupando espaço.",
         "Corrigido de raiz, na mesma rodada: \"Sem projeto\" e \"Sem categoria\" quebravam a navegação hierárquica (string vazia sendo confundida com \"nada selecionado ainda\") — resolvido com marcadores internos próprios em vez de string vazia."
-      ]
+      ],
+      "legado": "V3.16.0.11"
     },
     {
-      "versao": "V3.16.0.12",
+      "versao": "V3.9.7",
       "data": "2026-08-19",
       "tipo": "correcao",
       "titulo": "Agenda: \"+\" foi pra baixo em vez da direita, categorias sem cor e lista com cara de lista antiga — três acertos",
@@ -9256,10 +9398,11 @@ const NotasVersao = {
         "O botão \"+\" de adicionar outra tarefa no horário estava aparecendo ABAIXO das tarefas já alocadas, alinhado à esquerda — o pedido era na DIREITA, na mesma linha. Corrigido: o \"+\" agora é um elemento da própria linha do horário (não fica mais dentro do bloco de tarefas), sempre no canto direito.",
         "Categorias e sistemas no seletor agora mostram a bolinha de cor (igual usada no resto do sistema) — cada nível (projeto, categoria, tarefa) tem sua cor visível, não só texto puro.",
         "Visual \"lista antiga\" dos níveis do seletor (Sistema/Categoria) e da lista de tarefas: virou cartão — fundo branco, borda, espaçamento entre itens, sombra leve no hover — em vez de linhas coladas que só mudavam de cor ao passar o mouse."
-      ]
+      ],
+      "legado": "V3.16.0.12"
     },
     {
-      "versao": "V3.16.0.13",
+      "versao": "V3.9.8",
       "data": "2026-08-19",
       "tipo": "correcao",
       "titulo": "Título/Descrição: tarefas antigas migradas automaticamente (V3.16.0.11 só valia pra tarefa nova)",
@@ -9268,30 +9411,33 @@ const NotasVersao = {
         "Adicionada uma migração automática que roda ao abrir o módulo: toda tarefa sem descrição, com texto longo (>40 caracteres) e que segue o padrão \"Ação: detalhes\" ou \"Ação — detalhes\" (é como quase toda tarefa já foi escrita), divide sozinha — título fica com a ação, descrição fica com o resto.",
         "Guarda de segurança: se o que sobra depois do separador for muito curto (uma palavra só, tipo \"Esgoto\" em \"Levantamento de material hidráulico por apartamento: Esgoto\"), NÃO divide — mantém tudo junto no título, porque nesse caso a palavra depois dos dois pontos é o identificador da tarefa, não uma descrição de verdade.",
         "Roda direto no Firestore (não é só efeito visual) — migra pra todo mundo que usa o sistema, não só em quem abriu primeiro."
-      ]
+      ],
+      "legado": "V3.16.0.13"
     },
     {
-      "versao": "V3.16.0.14",
+      "versao": "V3.9.8.1",
       "data": "2026-08-19",
       "tipo": "melhoria",
       "titulo": "Pop-ups do Tarefas do Sistema bem maiores",
       "itens": [
         "Agenda: de 680px pra até 960px de largura (quase a tela toda em monitor comum) e mais altura de sobra pra lista de horários.",
         "Detalhe/Editar tarefa e Nova/Editar categoria: de 480px pra 640px."
-      ]
+      ],
+      "legado": "V3.16.0.14"
     },
     {
-      "versao": "V3.16.0.15",
+      "versao": "V3.9.8.2",
       "data": "2026-08-19",
       "tipo": "melhoria",
       "titulo": "Descrição virou obrigatória e a voz agora dita a descrição, não o título",
       "itens": [
         "Motivo (Milton): a descrição não devia ser opcional (\"+ adicionar descrição\") — tirado o botão de mostrar/escoltar, o campo Descrição agora aparece sempre, tanto pra criar quanto pra editar, e é obrigatório em ambos (não salva sem preencher).",
         "O microfone 🎤 mudou de lugar: antes ficava ao lado do Título e ditava nele; agora fica ao lado da Descrição e dita nela — combina mais com o uso real (título é curto e digitado rápido, descrição é o texto mais longo que vale a pena falar)."
-      ]
+      ],
+      "legado": "V3.16.0.15"
     },
     {
-      "versao": "V3.17.0.0",
+      "versao": "V3.9.8.3",
       "data": "2026-08-19",
       "tipo": "funcionalidade",
       "titulo": "PDF → Tarefa: a IA agora gera Título, Descrição e Categoria (não só título solto)",
@@ -9300,10 +9446,11 @@ const NotasVersao = {
         "Categoria: antes de chamar a IA, o sistema busca as categorias já cadastradas em Tarefas do Sistema e manda a lista pra IA — ela é instruída a REAPROVEITAR uma existente sempre que se encaixar, e só criar uma nova (curta, 1 a 3 palavras) se nenhuma servir. Categoria nova vem com cor automática, igual as criadas manualmente.",
         "Se a tarefa não tiver uma categoria clara, a IA deixa em branco — não força uma categoria genérica só pra preencher o campo.",
         "Descrição nunca vem vazia (a IA foi instruída a nunca deixar em branco, mesmo que a nota não tenha detalhe extra) — consistente com a regra de descrição obrigatória da V3.16.0.15."
-      ]
+      ],
+      "legado": "V3.17.0.0"
     },
     {
-      "versao": "V3.17.0.1",
+      "versao": "V3.9.8.4",
       "data": "2026-08-19",
       "tipo": "melhoria",
       "titulo": "Voz: caixa de status agora mostra CADA passo (não só erro final) — pra achar onde trava quando \"não aparece nada\"",
@@ -9312,10 +9459,11 @@ const NotasVersao = {
         "A caixa embaixo da Descrição agora mostra o passo atual em azul (Passo 1: pedindo permissão → Passo 2: permissão OK, iniciando → Passo 3: gravando, fale agora → Passo 4: texto reconhecido), e só fica vermelha quando um erro de fato acontece.",
         "Adicionado um \"vigia\" de 12 segundos: se a permissão do microfone não for respondida (nem liberada nem negada) nesse tempo, aparece um aviso específico dizendo que o prompt de permissão do navegador provavelmente não apareceu ou não foi notado — em vez de ficar parado pra sempre sem nada na tela.",
         "Com isso, na próxima tentativa a caixa vai mostrar em qual passo exatamente trava — essa informação (print da caixa, mesmo que ainda seja só \"Passo 1\" parado) é o que falta pra eu conseguir corrigir a causa raiz de vez."
-      ]
+      ],
+      "legado": "V3.17.0.1"
     },
     {
-      "versao": "V3.18.0.0",
+      "versao": "V3.9.8.5",
       "data": "2026-08-19",
       "tipo": "funcionalidade",
       "titulo": "Voz removida (era instável) — substituída por fila de tarefas via chat; Checklist dentro da tarefa; esconder horários passados na Agenda",
@@ -9325,10 +9473,11 @@ const NotasVersao = {
         "Checklist dentro da tarefa: cada tarefa pode ter uma lista de itens marcáveis (opcional, mas sempre disponível na criação e edição). Lista principal mostra o progresso (\"☑ 2/5\"), o pop-up de detalhe mostra os itens com checkbox clicável, e cada item do checklist pode ser agendado num horário PRÓPRIO na Agenda, separado do horário da tarefa principal.",
         "Agenda: novo botão pra esconder os horários que já passaram no dia de hoje (mostra só o que falta), com opção de reverter e ver tudo — preferência salva no navegador.",
         "Voltar pro topo: depois de adicionar ou editar uma tarefa, a tela rola de volta pro topo automaticamente, pra sempre ver o resultado sem precisar procurar na lista."
-      ]
+      ],
+      "legado": "V3.18.0.0"
     },
     {
-      "versao": "V3.19.0.0",
+      "versao": "V3.9.8.6",
       "data": "2026-08-19",
       "tipo": "funcionalidade",
       "titulo": "Categoria/Subcategoria no Planejamento: importação via planilha + nova visão Agrupador de Categoria",
@@ -9337,20 +9486,22 @@ const NotasVersao = {
         "Nova visão \"🏷 Agrupador de Categoria\" no menu Visão Organizacional: reorganiza a exibição das tarefas por Categoria > Subcategoria (ex: Alvenaria > Vedação, Gesso > Forro) em vez da estrutura do cronograma — é só uma máscara de visão, não altera dados reais. Clique numa tarefa abre a edição normal.",
         "Tarefa sem Categoria aparece agrupada em \"⚠ Sem Categoria\" dentro dessa visão — nunca some, sempre visível pra revisão.",
         "Removidos os botões \"Só os Pais — até nível N\" do menu Visão Organizacional (substituídos pelo Agrupador de Categoria, mais útil no dia a dia)."
-      ]
+      ],
+      "legado": "V3.19.0.0"
     },
     {
-      "versao": "V3.19.0.1",
+      "versao": "V3.9.8.7",
       "data": "2026-08-19",
       "tipo": "melhoria",
       "titulo": "Barra do Gantt: passar o mouse mostra a data de início/término",
       "itens": [
         "Tooltip (passar o mouse) nas barras do Gantt agora mostra nome + início + término da tarefa, além do %. Antes só mostrava nome e %.",
         "Corrigido de brinde: as barras desenhadas durante a repintura rápida (edição de célula/scroll) não tinham tooltip nenhum — agora têm, igual às barras do desenho completo."
-      ]
+      ],
+      "legado": "V3.19.0.1"
     },
     {
-      "versao": "V3.19.1",
+      "versao": "V3.9.9",
       "data": "2026-08-19",
       "tipo": "correcao",
       "titulo": "Gantt (barra, setas de predecessora e PNG) estava sempre na versão \"Atual\" mesmo com Base/Desafio selecionado na tabela",
@@ -9358,20 +9509,22 @@ const NotasVersao = {
         "Bug real: a coluna Início/Término da tabela respeita o seletor Atual/Linha de Base/Desafio, mas a BARRA do Gantt ficava hardcoded em Atual (inicioPlanejado/terminoPlanejado) sempre — resultado: tabela mostrando uma data (ex: Desafio, 02/06) e a barra desenhada em outra (Atual, pode ter sido lá pra setembro). Parecia \"data errada\", mas eram duas versões diferentes sendo misturadas na mesma tela.",
         "Corrigido: barra do Gantt, setas de predecessora, limites do zoom (dMin/dMax) e exportação PNG agora seguem a mesma versão selecionada no seletor Atual/Base/Desafio — sempre a mesma data que a tabela mostra.",
         "Agrupador de Categoria também corrigido (tinha o mesmo hardcode)."
-      ]
+      ],
+      "legado": "V3.19.1"
     },
     {
-      "versao": "V3.19.2",
+      "versao": "V3.9.9.1",
       "data": "2026-08-19",
       "tipo": "melhoria",
       "titulo": "Agenda: criar tarefa nova direto de dentro do seletor de horário (sem precisar voltar pro formulário principal)",
       "itens": [
         "Motivo (Milton): quando ele queria agendar uma tarefa que ainda não existia na lista, tinha que fechar a Agenda, ir criar a tarefa no formulário principal, voltar pra Agenda e só então agendar — três passos pra uma coisa só.",
         "Agora, dentro do seletor de tarefa (o mesmo que abre ao clicar no \"+\" de um horário), tem um link \"+ Não existe ainda? Criar tarefa nova\". Clicar nele abre um mini formulário ali mesmo (Título + Descrição, ambos obrigatórios) — ao criar, a tarefa já nasce E fica agendada naquele horário, sem sair da Agenda."
-      ]
+      ],
+      "legado": "V3.19.2"
     },
     {
-      "versao": "V3.19.3",
+      "versao": "V3.9.10",
       "data": "2026-08-19",
       "tipo": "correcao",
       "titulo": "Categoria/Subcategoria: faltava aparecer na tabela e na Exportação Excel (só existiam na importação e no Agrupador)",
@@ -9380,20 +9533,22 @@ const NotasVersao = {
         "Categoria e Subcategoria agora são colunas normais da tabela (clique pra editar direto, igual Grupo/Local) — aparecem por padrão, pode escondê-las como qualquer coluna.",
         "Exportação Excel (simples) agora inclui Categoria e Subcategoria.",
         "Se a importação da planilha categorizada nunca foi feita, isso ainda precisa ser feito uma vez em Importar Correções (marcando Categoria e Subcategoria) — usando a planilha que já tem essas duas colunas preenchidas, não qualquer exportação nova do sistema (essas saem em branco até a importação ser feita)."
-      ]
+      ],
+      "legado": "V3.19.3"
     },
     {
-      "versao": "V3.19.4",
+      "versao": "V3.9.10.1",
       "data": "2026-08-19",
       "tipo": "melhoria",
       "titulo": "Controle de Estacas: Planejamento e Acompanhamento voltam a mostrar só as estacas da concretagem selecionada (isolado)",
       "itens": [
         "Acompanhamento voltou a mostrar só as peças marcadas/atribuídas à concretagem selecionada — removida a lógica de mostrar também as concretagens anteriores (número menor) que tinha entrado numa rodada passada.",
         "Planejamento ganhou o mesmo comportamento: com uma concretagem em foco (📌), o mapa mostra só as peças ainda sem concretagem + as já atribuídas a ELA — escondendo as que já pertencem a outras concretagens. Sem nenhuma foco, continua mostrando tudo com o número de cada uma."
-      ]
+      ],
+      "legado": "V3.19.4"
     },
     {
-      "versao": "V3.19.5",
+      "versao": "V3.9.11",
       "data": "2026-08-19",
       "tipo": "correcao",
       "titulo": "Controle de Estacas: entendi errado — mapa volta a mostrar TUDO, número da concretagem vira botão opcional",
@@ -9401,10 +9556,11 @@ const NotasVersao = {
         "A versão anterior escondia peças de outras concretagens — não era isso. O mapa (Planejamento e Acompanhamento) volta a mostrar TODAS as peças, de qualquer concretagem, com a cor real de cada uma (verde/parcial/pendente).",
         "O que muda por padrão agora é só o NÚMERO no marcador: mostra o número só das peças da concretagem que você tem selecionada/em foco no momento — sem misturar 1, 2, 3, 4 todos juntos e confundir qual é qual.",
         "Novo botão \\\"🔢 Mostrar números de todas\\\" — clique pra ligar/desligar, exatamente como pedido: opcional, não travado."
-      ]
+      ],
+      "legado": "V3.19.5"
     },
     {
-      "versao": "V3.19.6",
+      "versao": "V3.9.12",
       "data": "2026-08-19",
       "tipo": "correcao",
       "titulo": "Controle de Estacas: botão de números não fazia sentido no Planejamento — removido de lá",
@@ -9412,10 +9568,11 @@ const NotasVersao = {
         "No Planejamento, o botão \\\"Mostrar números de todas\\\" não tinha efeito na maior parte do tempo: sem nenhuma concretagem em foco (📌), o mapa já mostrava todos os números de qualquer forma — o botão parecia travado/inútil.",
         "Removido o botão do Planejamento. Agora o próprio foco (clicar num card de concretagem pra selecioná-la) já funciona como o seletor: sem foco, mostra o número de todas; com uma concretagem em foco, mostra só o número dela. Sem clique extra, sem botão redundante.",
         "O botão \\\"🔢 Mostrar números de todas\\\" continua igual no Acompanhamento, onde faz sentido — ali sempre tem uma concretagem selecionada (é obrigatório), então o botão é o jeito de escolher entre ver só a dela ou ver todas juntas."
-      ]
+      ],
+      "legado": "V3.19.6"
     },
     {
-      "versao": "V3.19.6.1",
+      "versao": "V3.9.12.1",
       "data": "2026-08-19",
       "tipo": "melhoria",
       "titulo": "Planejamento: nova coluna Subgrupo (combina Andar + Final num código único)",
@@ -9424,10 +9581,11 @@ const NotasVersao = {
         "Fica em branco quando não há esse cruzamento: Térreo/SS1/SS2/Ático e áreas comuns (não têm Final), e andares sem separação por Final.",
         "Objetivo: cruzar Categoria/Subcategoria (o quê) com Grupo/Subgrupo (onde/qual frente) — base pra uma futura visão de atividade por andar.",
         "Editável na tabela igual Grupo, entra no Importar Correções e na Exportação Excel (simples)."
-      ]
+      ],
+      "legado": "V3.19.6.1"
     },
     {
-      "versao": "V3.19.6.2",
+      "versao": "V3.9.12.2",
       "data": "2026-08-19",
       "tipo": "melhoria",
       "titulo": "Estrutura da Obra: novo botão \"⚡ Gerar Grupos\" — preenche Grupo/Subgrupo de toda a obra automaticamente",
@@ -9436,10 +9594,11 @@ const NotasVersao = {
         "Cadastra-se os pavimentos uma vez em 🏢 Estrutura da Obra (ex: 2º Subsolo, 1º Subsolo, Térreo, 1º...16º Pavimento, Ático, Reservatório, Fachada) e clica em \"⚡ Gerar Grupos\": o sistema compara o nome de cada pavimento com o nome de cada tarefa (mesmo mecanismo do Auto-vincular por Nome) e propõe Grupo = pavimento reconhecido.",
         "Subgrupo é calculado automaticamente só quando o pavimento é do tipo \"Nº Pavimento\" E a tarefa tem \"- Final NN\" no nome: Subgrupo = andar×10 + número do Final (1º Pavimento Final 02 = 12, 16º Pavimento Final 01 = 161). Fora disso fica em branco.",
         "Sempre mostra prévia (o que muda de X para Y) antes de aplicar — nunca escreve direto, e só lista o que realmente vai mudar."
-      ]
+      ],
+      "legado": "V3.19.6.2"
     },
     {
-      "versao": "V3.19.7",
+      "versao": "V3.9.13",
       "data": "2026-08-19",
       "tipo": "correcao",
       "titulo": "Importar Correções/Base Completa agora avisa se a planilha é de outra obra (causou 0 casadas pelo ID hoje)",
@@ -9449,10 +9608,11 @@ const NotasVersao = {
         "Importar Correções mostra logo no topo do modal de qual obra a planilha saiu (verde se é a mesma de agora, vermelho se é outra).",
         "Se for de outra obra, tanto Importar Correções quanto Importar Base Completa avisam com os nomes das duas obras ANTES de deixar continuar — dá pra cancelar e trocar de obra primeiro.",
         "Planilhas exportadas antes dessa versão não têm esse metadado — continuam funcionando igual, sem aviso (não tem como saber a origem delas)."
-      ]
+      ],
+      "legado": "V3.19.7"
     },
     {
-      "versao": "V3.19.7.1",
+      "versao": "V3.9.13.1",
       "data": "2026-08-19",
       "tipo": "melhoria",
       "titulo": "Gerar Grupos: valor proposto agora é editável na prévia, e edita em lote",
@@ -9460,50 +9620,55 @@ const NotasVersao = {
         "Motivo (Milton): o match automático por nome às vezes escolhe o pavimento errado quando duas palavras aparecem juntas no nome da tarefa (ex: \"Reservatório - SS2\" — o sistema pegava \"Reservatório\" por ser a palavra mais longa, mas a tarefa é do SS2 mesmo).",
         "Na prévia do \"⚡ Gerar Grupos\", o valor proposto (antes só texto) agora é um campo editável. Mudar um já aplica a MESMA mudança em todas as outras linhas que tinham a mesma proposta — não precisa corrigir uma por uma quando o mesmo engano se repete.",
         "Subgrupo recalcula automaticamente ao editar: se o novo valor não for do tipo \"Nº Pavimento\", o subgrupo daquela linha some (não tem como calcular andar×Final sem um andar)."
-      ]
+      ],
+      "legado": "V3.19.7.1"
     },
     {
-      "versao": "V3.19.7.2",
+      "versao": "V3.9.14",
       "data": "2026-08-19",
       "tipo": "correcao",
       "titulo": "Gerar Grupos: linha da prévia num flex-row só não cabia em tela de celular — input de editar ficava difícil de acertar",
       "itens": [
         "Cada linha tinha checkbox + nome + valor antigo + seta + input de editar (150px fixo) + subgrupo tudo numa linha só, sem quebra — numa tela estreita isso espreme tudo e o toque fica ambíguo (difícil saber se vai marcar o checkbox ou editar o valor).",
         "Reorganizado em 2 linhas por tarefa: checkbox+nome numa (clicar em qualquer parte do nome já marca/desmarca — não precisa mais acertar o quadradinho pequeno), e \"de → para\" numa linha própria embaixo, com o campo de editar podendo crescer/quebrar à vontade."
-      ]
+      ],
+      "legado": "V3.19.7.2"
     },
     {
-      "versao": "V3.19.7.3",
+      "versao": "V3.9.15",
       "data": "2026-08-19",
       "tipo": "correcao",
       "titulo": "Gerar Grupos: volta pro layout de 1 linha (Milton preferiu) + valor proposto agora é lista fechada, não texto livre",
       "itens": [
         "Layout de 2 linhas da versão anterior piorou a leitura (o problema não era falta de espaço — Milton usa desktop). Voltou pro layout compacto de 1 linha por tarefa.",
         "Mudança de verdade: o campo de corrigir o valor proposto era um texto livre — dava pra digitar qualquer coisa (typo, acento diferente, maiúscula/minúscula) e criar um Grupo parecido mas diferente do pavimento que já existe na Estrutura da Obra, em vez de casar com ele. Agora é uma lista (dropdown) com só os pavimentos já cadastrados — só dá pra escolher um que já existe, nunca inventar um novo ali."
-      ]
+      ],
+      "legado": "V3.19.7.3"
     },
     {
-      "versao": "V3.19.7.4",
+      "versao": "V3.9.16",
       "data": "2026-08-19",
       "tipo": "correcao",
       "titulo": "Gerar Grupos: dropdown de pavimentos estava fora de ordem (10º antes de 1º)",
       "itens": [
         "Bug: a lista era ordenada por texto (localeCompare), e string compara caractere por caractere — \"1\" < \"1º\" < \"10º\", então 10º a 16º Pavimento apareciam ANTES de 1º Pavimento.",
         "Corrigido pra usar a mesma ordem que já existe na Estrutura da Obra (campo interno \"ordem\" de cada pavimento, a ordem que Milton arruma lá) — nunca mais re-ordenar por texto."
-      ]
+      ],
+      "legado": "V3.19.7.4"
     },
     {
-      "versao": "V3.19.7.5",
+      "versao": "V3.9.17",
       "data": "2026-08-19",
       "tipo": "correcao",
       "titulo": "Gerar Grupos: corrigir uma proposta errada arrastava OUTRO grupo diferente que caiu na mesma proposta por coincidência",
       "itens": [
         "Bug real (Milton pegou): \"Reservatório - SS2\" e \"Reservatório Superior\" são locais DIFERENTES, mas os dois bateram na mesma proposta errada \"RESERVATÓRIO\". A propagação olhava só a proposta — corrigir um pra SS2 ia arrastar o outro (Reservatório Superior) pra SS2 também, que está errado.",
         "Agora a propagação exige bater o valor ANTERIOR também, não só a proposta — só muda junto quem tinha exatamente o mesmo \"de\" E o mesmo \"para\" errado. Grupos diferentes que colidiram na mesma proposta por coincidência não se misturam mais."
-      ]
+      ],
+      "legado": "V3.19.7.5"
     },
     {
-      "versao": "V3.19.8",
+      "versao": "V3.9.18",
       "data": "2026-08-19",
       "tipo": "correcao",
       "titulo": "Gerar Grupos reconhecia só 185 de 2198 tarefas — dois bugs de digitação/nomenclatura corrigidos",
@@ -9512,10 +9677,11 @@ const NotasVersao = {
         "Bug 2: pavimentos como \"1º Subsolo\"/\"2º Subsolo\" não têm esse texto literal dentro do nome das tarefas — a Cofield usa a sigla \"SS1\"/\"SS2\". Sem apelido cadastrado, nunca ia casar (não é erro de digitação, é nomenclatura diferente mesmo).",
         "Novo campo \"apelidos\" em cada pavimento da Estrutura da Obra (embaixo do nome, ex: digitar \"SS1\" no pavimento \"1º Subsolo\") — o reconhecimento passa a testar o nome oficial E os apelidos, mas o Grupo gerado sempre grava o nome oficial (o apelido só ajuda a achar, nunca aparece como valor final).",
         "Ação necessária: abre a Estrutura da Obra e cadastra o apelido de cada pavimento que usa sigla diferente do nome (SS1, SS2 pelo menos) — depois disso o Gerar Grupos deve reconhecer bem mais que 185."
-      ]
+      ],
+      "legado": "V3.19.8"
     },
     {
-      "versao": "V3.19.9",
+      "versao": "V3.9.19",
       "data": "2026-08-19",
       "tipo": "correcao",
       "titulo": "Gerar Grupos: removido campo de apelidos (feio/manual) — reconhecimento agora entende as abreviações direto, sem cadastrar nada",
@@ -9523,10 +9689,11 @@ const NotasVersao = {
         "Removido o campo \"apelidos\" da Estrutura da Obra (Milton achou feio e não precisa).",
         "No lugar: reconhecimento por PADRÃO — entende \"1SS\", \"1ºSS\", \"1º SUB\", \"1ºSUBSOLO\", \"1º SUBSOLO\", \"SS1\" (e o formato real dos dados, sigla antes do número tipo \"SS2\") como a MESMA coisa (Subsolo). E \"1º ANDAR\", \"1º PAVIMENTO\", \"1º AND\", \"1º PAV\" como a mesma coisa (Pavimento). Não precisa cadastrar nenhuma dessas variações — o sistema já entende.",
         "Funciona comparando SIGNIFICADO (número + se é subsolo ou pavimento) em vez de comparar texto — por isso cobre qualquer abreviação nova que apareça, não só as que alguém lembrou de cadastrar."
-      ]
+      ],
+      "legado": "V3.19.9"
     },
     {
-      "versao": "V3.19.10",
+      "versao": "V3.9.20",
       "data": "2026-08-19",
       "tipo": "correcao",
       "titulo": "Gerar Grupos: mais dois padrões reconhecidos (T° Int/Ext = Térreo, Reserv. = Reservatório) — 1871 → 2156 de 2198",
@@ -9534,10 +9701,11 @@ const NotasVersao = {
         "Testado com os nomes reais das 2198 tarefas antes de publicar (não só os exemplos passados): \"T° Int.\"/\"T° Ext.\" é a abreviação de Térreo usada em toda tarefa de área comum (Festas/Copa, Academia, Brinquedoteca etc.) — sem isso nenhuma delas casava com o pavimento Térreo cadastrado. \"Reserv.\" é Reservatório truncado.",
         "Resultado no teste: reconhecimento subiu de 1871 para 2156 de 2198 (98%).",
         "Os 42 que ainda ficam de fora não são bug — são tarefas de zonas que a Estrutura da Obra não tem cadastrada ainda: Muro Divisa (Frontal/Fundos/LD/LE), Cobertura (Tampa) e itens de logística/equipamento sem andar (Mini Grua, Cremalheira, Elevadores, Entrada de Energia Definitiva) — cadastrando essas zonas como pavimento/local também cobre."
-      ]
+      ],
+      "legado": "V3.19.10"
     },
     {
-      "versao": "V3.19.11",
+      "versao": "V3.9.20.1",
       "data": "2026-08-19",
       "tipo": "melhoria",
       "titulo": "Gerar Grupos: Muro Divisa e Cobertura resolvidos, tarefa sem vínculo aparece marcada (não desaparece), lista ordenada pelo pavimento",
@@ -9545,30 +9713,33 @@ const NotasVersao = {
         "Regra do Milton: Muro Divisa é sempre Térreo, e Cobertura (Tampa) é sempre Reservatório — cadastrado direto no reconhecimento (2177 de 2198 casam com um pavimento real agora).",
         "As tarefas que realmente não têm andar (Mini Grua, Cremalheira, Elevadores, Entrada de Energia Definitiva, Vistoria Cliente, Fundação...) agora aparecem na prévia também — marcadas como \"— Sem Vínculo —\" em vez de simplesmente desaparecer da lista sem explicação. Pode confirmar assim ou trocar pra um pavimento real se achar que deveria ter um.",
         "Lista da prévia agora vem ordenada pela ordem dos pavimentos na Estrutura da Obra (tudo do 1º Pavimento junto, depois 2º, etc.) em vez da ordem solta da tarefa — mais fácil de revisar bloco por bloco."
-      ]
+      ],
+      "legado": "V3.19.11"
     },
     {
-      "versao": "V3.19.12",
+      "versao": "V3.9.21",
       "data": "2026-08-19",
       "tipo": "correcao",
       "titulo": "Gerar Grupos não reconhecia pavimento novo cadastrado no plural quando a tarefa usa singular (ex: \"Elevadores\" x \"Elevador 01\")",
       "itens": [
         "Bug real (Milton pegou): cadastrou o pavimento \"Elevadores\" (plural) na Estrutura da Obra, mas as tarefas dizem \"Elevador 01\", \"Elevador 1\" etc (singular) — palavra maior (plural) nunca é substring da menor (singular), então nunca batia. Cadastrar não bastava, o Gerar Grupos continuava sem achar.",
         "Corrigido: ao comparar, agora também testa o pavimento sem o \"s\" ou \"es\" do final (regra comum de plural em PT-BR) — \"Elevadores\" passa a reconhecer \"Elevador\" dentro do nome da tarefa. Vale pra qualquer pavimento novo cadastrado, não só Elevadores."
-      ]
+      ],
+      "legado": "V3.19.12"
     },
     {
-      "versao": "V3.19.13",
+      "versao": "V3.9.21.1",
       "data": "2026-08-19",
       "tipo": "melhoria",
       "titulo": "Subgrupo passa a entender \"ap. NN\" como a mesma coisa que \"Final NN\" (regra do Milton)",
       "itens": [
         "Confirmado com dados reais: \"Concretagem Laje Piso: 5° Pavimento - ap. 01\" e \"Rede Frigorígena: 5° Pavimento - Final 01\" são a mesma unidade/torre — só trades diferentes descrevendo do jeito próprio deles (\"ap.\" vs \"Final\").",
         "Subgrupo agora reconhece Final NN, ap. NN, apto NN e apartamento NN como equivalentes — todas geram o mesmo cálculo (andar×10+NN). Não muda nada em quem já tinha \"Final\", só passa a calcular pra quem tinha \"ap.\" e antes ficava sem Subgrupo."
-      ]
+      ],
+      "legado": "V3.19.13"
     },
     {
-      "versao": "V3.19.13.1",
+      "versao": "V3.9.21.2",
       "data": "2026-08-18",
       "tipo": "melhoria",
       "titulo": "Andamento por Frente REESCRITO: matriz Categoria × Grupo do Planejamento",
@@ -9578,10 +9749,11 @@ const NotasVersao = {
         "Filtros em cima da tabela: Categoria, Subcategoria, Grupo, Subgrupo, Nº Equipe e busca livre — escolher um grupo/categoria filtra também as opções dependentes.",
         "Clique no quadradinho: lista das tarefas daquele cruzamento com data de início, fim e % de cada uma, e o TOTAL embaixo — quantidade, período (início mais cedo → fim mais tardio) e % média do conjunto.",
         "Coluna \"Geral\" no fim de cada linha com o consolidado da categoria/subcategoria em todos os grupos."
-      ]
+      ],
+      "legado": "V3.19.13.1"
     },
     {
-      "versao": "V3.19.13.2",
+      "versao": "V3.9.21.3",
       "data": "2026-08-19",
       "tipo": "melhoria",
       "titulo": "Gerar Grupos: cabeçalho de seção por pavimento, filtro de busca e Subgrupo sempre visível na prévia",
@@ -9589,10 +9761,11 @@ const NotasVersao = {
         "A lista já vinha ordenada por pavimento, mas sem separação visual — agora cada bloco tem um cabeçalho \"▸ NOME DO PAVIMENTO (Nº tarefas)\", então dá pra ver de cara onde um grupo termina e o outro começa, em vez de vasculhar linha por linha.",
         "Novo campo de busca no topo da prévia — filtra por pavimento proposto ou por nome da tarefa (ex: digitar \"2 subsolo\" mostra só esse bloco).",
         "Subgrupo agora aparece sempre como uma coluna própria (mostra o número ou \"—\"), não só quando existe — fica fácil auditar se calculou certo em vez de precisar adivinhar pela ausência."
-      ]
+      ],
+      "legado": "V3.19.13.2"
     },
     {
-      "versao": "V3.19.13.3",
+      "versao": "V3.9.21.4",
       "data": "2026-08-18",
       "tipo": "melhoria",
       "titulo": "Frentes: ordem por data de execução, mobile arrumado e filtro de equipe sempre à mão",
@@ -9601,30 +9774,33 @@ const NotasVersao = {
         "Cabeçalho bugado corrigido: a linha dos grupos tem altura travada, então a segunda linha (subgrupos) não sobrepõe mais ao rolar — era o que quebrava principalmente no celular.",
         "Mobile: filtros ocupam a largura da tela (busca em linha própria), células e cabeçalhos compactos, nome da categoria quebra linha e a tabela rola com o dedo com altura limitada.",
         "O seletor de Nº Equipe agora aparece SEMPRE — se nenhuma tarefa tem equipe preenchida no Planejamento, ele mostra o aviso em vez de sumir (a busca 🔎 continua sempre visível ao lado)."
-      ]
+      ],
+      "legado": "V3.19.13.3"
     },
     {
-      "versao": "V3.19.13.4",
+      "versao": "V3.9.21.5",
       "data": "2026-08-19",
       "tipo": "melhoria",
       "titulo": "Gerar Grupos: dropdown \"ir direto pro grupo\" além da busca por texto",
       "itens": [
         "Novo seletor ao lado da busca — lista todos os pavimentos que aparecem nessa prévia (na ordem da Estrutura da Obra, com a contagem de cada um) e ao escolher um filtra a lista só pra aquele grupo, sem precisar digitar nada.",
         "Os dois filtros (busca por texto + esse seletor) funcionam juntos — pode combinar."
-      ]
+      ],
+      "legado": "V3.19.13.4"
     },
     {
-      "versao": "V3.19.13.5",
+      "versao": "V3.9.22",
       "data": "2026-08-18",
       "tipo": "correcao",
       "titulo": "Matriz de Frentes: rolagem lateral sem atravessar coluna nem sumir título",
       "itens": [
         "Ao arrastar a tabela pro lado, a linha do cabeçalho não \"atravessa\" mais a primeira coluna: o canto (cabeçalho + coluna de categorias) agora fica acima de tudo na pilha.",
         "As linhas escuras de agrupamento (título da categoria) não somem mais na rolagem horizontal: o título fica grudado na esquerda visível e acompanha o arrasto — principal incômodo no celular."
-      ]
+      ],
+      "legado": "V3.19.13.5"
     },
     {
-      "versao": "V3.19.13.6",
+      "versao": "V3.9.23",
       "data": "2026-08-18",
       "tipo": "correcao",
       "titulo": "Matriz de Frentes: filtros refeitos, divisórias visíveis e canto corrigido de vez",
@@ -9634,10 +9810,11 @@ const NotasVersao = {
         "Divisórias verticais agora aparecem entre as células, com uma linha FORTE separando um grupo do outro (inclusive no cabeçalho, em amarelo).",
         "Linha preta do cabeçalho invadindo a 1ª coluna no scroll lateral: corrigido de verdade — a regra anterior perdia na prioridade do CSS e o canto ficava no mesmo nível dos títulos; agora o canto vence sempre.",
         "Colunas mais compactas: cabem mais grupos na tela de uma vez."
-      ]
+      ],
+      "legado": "V3.19.13.6"
     },
     {
-      "versao": "V3.19.13.7",
+      "versao": "V3.9.24",
       "data": "2026-08-18",
       "tipo": "correcao",
       "titulo": "Filtros clicáveis no celular, busca sem acento e mobile de Atividades/Suprimentos repaginado",
@@ -9645,20 +9822,22 @@ const NotasVersao = {
         "Categoria e Equipe não abriam no toque: os seletores estavam embrulhados numa <label>, e o clique sintético dela abria e fechava o menu na mesma hora no celular. Trocado o embrulho — os três seletores clicam normalmente.",
         "A BUSCA agora ignora acentos nos dois lados: digitar \"gas\" acha \"Gás\", \"eletrica\" acha \"Elétrica\" — vale pra nome da tarefa, grupo, subgrupo, categoria e subcategoria.",
         "Mobile de Atividades e Suprimentos repaginado: a régua de níveis não estoura mais o card (vira um trilho com rolagem própria, sem \"atravessar até o infinito\"), a toolbar empilha (título em cima, níveis e horizonte embaixo ocupando a largura), nomes quebram linha e os cards ficaram mais compactos."
-      ]
+      ],
+      "legado": "V3.19.13.7"
     },
     {
-      "versao": "V3.19.13.8",
+      "versao": "V3.9.25",
       "data": "2026-08-18",
       "tipo": "correcao",
       "titulo": "Seletores de Categoria/Equipe corrigidos (causa real) e minimapas domados no mobile",
       "itens": [
         "CAUSA REAL dos seletores que \"não abriam\": o Dashboard se re-renderiza em TEMPO REAL a cada gravação no Firestore — com a obra ativa, o menu do seletor era destruído no instante em que abria. Agora, enquanto um filtro está em uso (aberto/focado), o re-render automático espera o foco sair; as suas escolhas continuam aplicando na hora.",
         "Minimapas de Estacas, Contenção e Fundação no celular: não estouram mais a caixa pela direita (largura contida à tela) e passar o dedo por cima do mapa VOLTA a rolar a página — o mapa não captura mais o gesto vertical."
-      ]
+      ],
+      "legado": "V3.19.13.8"
     },
     {
-      "versao": "V3.19.13.9",
+      "versao": "V3.9.26",
       "data": "2026-08-18",
       "tipo": "correcao",
       "titulo": "Filtros em DOM fixo (agora abrem SEMPRE) + toque de verdade nos mapas",
@@ -9666,20 +9845,22 @@ const NotasVersao = {
         "Seletores de Colunas/Categoria/Equipe: mudança estrutural — os filtros agora vivem num pedaço FIXO da tela que nunca é recriado pelas atualizações em tempo real; só a matriz se redesenha. Não existe mais a corrida entre o toque e o re-render que impedia o menu de abrir. A busca também não perde mais o foco/teclado enquanto digita.",
         "Minimapas (Estacas/Contenção): o motor do mapa marca o palco com touch-action:none direto no elemento — regra com !important devolve o gesto pro navegador; passar o dedo em cima volta a rolar a página normalmente (o minimapa é só clique pra ampliar).",
         "Popup da prancha no celular: agora entende toque — 1 dedo ARRASTA O MAPA, pinça com 2 dedos dá ZOOM no ponto, e a página de trás fica travada enquanto o popup está aberto (não rola mais por baixo)."
-      ]
+      ],
+      "legado": "V3.19.13.9"
     },
     {
-      "versao": "V3.19.13.10",
+      "versao": "V3.9.27",
       "data": "2026-08-18",
       "tipo": "correcao",
       "titulo": "Filtros da matriz sem select nativo — botão + painel de opções",
       "itens": [
         "Depois de várias tentativas em cima do <select> nativo, ele foi ELIMINADO dos filtros: Colunas, Categoria e Equipe agora são botões que abrem um painel de opções em tela — exatamente o mesmo mecanismo do detalhe da célula e do menu Extras, que funcionam em qualquer aparelho.",
         "O botão mostra a escolha atual (ex: \"Categoria: Alvenaria\"), o painel marca a opção ativa com ✓ e rola quando a lista é grande. A busca segue como campo de texto ao lado."
-      ]
+      ],
+      "legado": "V3.19.13.10"
     },
     {
-      "versao": "V3.19.13.11",
+      "versao": "V3.9.28",
       "data": "2026-08-19",
       "tipo": "correcao",
       "titulo": "Agenda: tarefa já escolhida some do seletor sozinha, e dá pra escolher várias sem reabrir tudo de novo",
@@ -9687,10 +9868,11 @@ const NotasVersao = {
         "Bug real (Milton reportou): depois de escolher uma tarefa pra um horário, ela continuava aparecendo no seletor pra escolher de novo — tanto no mesmo horário quanto em outros horários do mesmo dia.",
         "Corrigido: tarefa (ou item de checklist) já agendado NAQUELE DIA some sozinho do seletor. Tem um link \"👁 mostrar já escolhidas\" pra trazer de volta, pros casos em que a intenção é mesmo repetir a tarefa em outro horário.",
         "Escolher uma tarefa não fecha mais o seletor — ele continua aberto, do jeito que estava (mesma busca, mesmo lugar na navegação), pra escolher a próxima direto, sem ter que reabrir e renavegar tudo de novo. Um botão \"Fechar\" no final encerra quando terminar."
-      ]
+      ],
+      "legado": "V3.19.13.11"
     },
     {
-      "versao": "V3.19.13.12",
+      "versao": "V3.9.28.1",
       "data": "2026-08-19",
       "tipo": "funcionalidade",
       "titulo": "Agenda: clique direito mostra descrição, marcar concluído direto no seletor, copiar/colar entre horários, trazer pendências de ontem",
@@ -9699,10 +9881,11 @@ const NotasVersao = {
         "Cada tarefa (e item de checklist) do seletor agora tem um checkbox — dá pra marcar como concluída direto ali, sem precisar fechar o seletor pra ir até a lista principal.",
         "Copiar entre horários: cada tarefa já agendada tem um botão ⧉ — clicar copia ela; abrir o \"+\" de outro horário mostra um botão \"📌 Colar aqui\" que agenda a mesma tarefa (ou item) ali, sem precisar buscar de novo. Trava simples: não deixa colar duplicado no mesmo horário onde já está.",
         "Trazer pendências do dia anterior: quando o dia anterior tem alocações cuja tarefa (ou item) ainda não foi concluída, aparece um botão \"↩️ Trazer N pendências do dia anterior\" — um clique replica todas elas pro dia atual, nos mesmos horários, pulando o que já foi trazido antes (sem duplicar)."
-      ]
+      ],
+      "legado": "V3.19.13.12"
     },
     {
-      "versao": "V3.19.13.13",
+      "versao": "V3.9.29",
       "data": "2026-08-19",
       "tipo": "correcao",
       "titulo": "Gerar Grupos: era pra ser ordenar a lista, não filtrar pra um grupo só — trocado o dropdown por toggle Tarefa/Alfabética",
@@ -9710,10 +9893,11 @@ const NotasVersao = {
         "Entendi errado antes: Milton não queria um seletor pra 'pular' pra um grupo específico — queria poder REORDENAR a lista inteira, ou pela ordem de tarefa (como já vem) ou em ordem alfabética de verdade pelo pavimento proposto.",
         "Removido o dropdown \"ir direto pro grupo\". No lugar, dois botões (Tarefa / Alfabética) ao lado da busca — trocam a ordem da lista toda instantaneamente, sem perder marcações nem edições feitas.",
         "Cabeçalho de seção (▸ NOME DO PAVIMENTO) só aparece em modo Alfabética, onde faz sentido (mesmo grupo fica junto) — em ordem de Tarefa ele sumiria e voltaria toda hora, então fica desligado nesse modo."
-      ]
+      ],
+      "legado": "V3.19.13.13"
     },
     {
-      "versao": "V3.19.13.14",
+      "versao": "V3.9.30",
       "data": "2026-08-21",
       "tipo": "correcao",
       "titulo": "Filtros da matriz: clique por delegação, camada elevada e auto-diagnóstico",
@@ -9721,20 +9905,22 @@ const NotasVersao = {
         "Clique dos filtros reescrito por DELEGAÇÃO na área dos filtros (fase de captura) — funciona mesmo que o conteúdo seja recriado e não depende do onclick de cada botão.",
         "A faixa dos filtros subiu de camada (z-index) — se algum elemento transparente estava por cima roubando o clique, ele não alcança mais.",
         "AUTO-DIAGNÓSTICO embutido: ao abrir o Dashboard, o sistema verifica se existe QUALQUER elemento sobreposto ao botão de Categoria; se houver, mostra um aviso amarelo na tela dizendo o nome exato do invasor (e no console). Se o aviso aparecer, mande o print — é o culpado definitivo."
-      ]
+      ],
+      "legado": "V3.19.13.14"
     },
     {
-      "versao": "V3.19.13.15",
+      "versao": "V3.9.30.1",
       "data": "2026-08-19",
       "tipo": "melhoria",
       "titulo": "Gerar Grupos: destrave manual — pergunta antes de propagar quando pode não ser sempre a mesma correção",
       "itens": [
         "Situação real (Milton pegou): 3 tarefas com \"Cobertura (Tampa)\" propunham todas \"ÁTICO\" — mas na real só a Platibanda é Ático, as outras duas (Instalações Elétricas/SPDA e Impermeabilização Laje) são Reservatório. Corrigir uma arrastava as outras duas por engano, porque o \"antes→depois\" era idêntico nas 3.",
         "Agora, ao trocar um valor que afeta mais de 1 linha, pergunta: OK = muda todas; Cancelar = muda só essa linha, isolando ela sem tocar nas outras. Continua sem perguntar quando só tem 1 linha afetada (não muda o fluxo de quando já funcionava certo)."
-      ]
+      ],
+      "legado": "V3.19.13.15"
     },
     {
-      "versao": "V3.19.13.16",
+      "versao": "V3.9.31",
       "data": "2026-08-19",
       "tipo": "correcao",
       "titulo": "Gerar Grupos: \"Aplicar Selecionados\" travava sem feedback quando o Firestore não conseguia sincronizar",
@@ -9742,30 +9928,33 @@ const NotasVersao = {
         "Causa (Milton pegou pelo console): \"Failed to obtain primary lease\" — erro do Firestore quando tem mais de uma aba/janela do sistema aberta ao mesmo tempo brigando por qual é a \"principal\". A escrita ficava pendurada pra sempre, sem erro nem sucesso, e a tela só girava.",
         "Corrigido: cada escrita agora tem um limite de 8s — se travar, conta como falha e SEGUE pras próximas em vez de parar tudo. Barra de progresso mostra quantas já foram (\"124/2198...\"). No fim, mensagem específica: quantas salvaram, quantas falharam, e se travou tudo por causa de aba duplicada, avisa isso na cara.",
         "Ação se acontecer de novo: fechar as outras abas/janelas do sistema, deixar só uma aberta, e rodar Gerar Grupos de novo — ele já vai pegar só quem ainda não foi salvo (não duplica o que já deu certo)."
-      ]
+      ],
+      "legado": "V3.19.13.16"
     },
     {
-      "versao": "V3.19.13.17",
+      "versao": "V3.9.32",
       "data": "2026-08-19",
       "tipo": "correcao",
       "titulo": "Achada a causa real de \"Aplicar Selecionados parece travado\": spinner de carregamento escondido atrás da Estrutura da Obra",
       "itens": [
         "Bug de verdade: o modal \"Estrutura da Obra\" tem z-index 2000, mas o spinner global de carregamento (usado em toda a aplicação) tinha z-index 999 — menor. Enquanto a Estrutura da Obra ficava aberta por cima, o \"Gerando grupos: X/2198...\" rodava escondido atrás dela, invisível — parecia que travou, mas estava rodando normal.",
         "Corrigido em dois pontos: (1) z-index do spinner global subiu pra 9999 (sempre por cima de qualquer modal, não só esse caso), e (2) a Estrutura da Obra agora fecha imediatamente ao clicar Aplicar Selecionados, então o progresso fica visível desde o primeiro instante."
-      ]
+      ],
+      "legado": "V3.19.13.17"
     },
     {
-      "versao": "V3.19.13.18",
+      "versao": "V3.9.32.1",
       "data": "2026-08-21",
       "tipo": "melhoria",
       "titulo": "Matriz de Frentes: arrastar com o mouse (desktop)",
       "itens": [
         "Dentro da tabela do Andamento por Frente, agora dá pra SEGURAR E ARRASTAR com o mouse pra navegar em qualquer direção (cursor vira mãozinha) — como num mapa.",
         "O clique nas células continua normal: movimento menor que 6px conta como clique e abre o detalhe; arrastou de verdade, as células não disparam."
-      ]
+      ],
+      "legado": "V3.19.13.18"
     },
     {
-      "versao": "V3.19.13.19",
+      "versao": "V3.9.32.2",
       "data": "2026-08-19",
       "tipo": "melhoria",
       "titulo": "Subgrupo agora é VALIDADO contra os apartamentos cadastrados na Estrutura da Obra (não é mais só a fórmula cega)",
@@ -9773,10 +9962,11 @@ const NotasVersao = {
         "Pergunta do Milton: \"como vou saber se o subgrupo calculado está certo?\" — resposta: agora cruza com os apartamentos que ele já cadastrou em cada pavimento (ex: \"1º Pavimento\" com AP11/AP12 → só 11 e 12 são válidos ali).",
         "Número em vermelho com ⚠ = a fórmula calculou um valor que NÃO existe como apartamento cadastrado naquele pavimento — sinal de que algo pode estar errado (piso errado, digitação no nome da tarefa). Número na cor normal = bateu certinho com um apartamento cadastrado.",
         "Pavimento que ainda não tem NENHUM apartamento cadastrado não gera aviso nenhum (não dá pra confirmar nem desmentir sem cadastro — fica neutro, não assusta à toa)."
-      ]
+      ],
+      "legado": "V3.19.13.19"
     },
     {
-      "versao": "V3.19.13.20",
+      "versao": "V3.9.33",
       "data": "2026-08-21",
       "tipo": "correcao",
       "titulo": "CULPADO ENCONTRADO: header roubava os cliques dos filtros + ordem pela Estrutura",
@@ -9785,10 +9975,11 @@ const NotasVersao = {
         "Grupos e subgrupos agora seguem a ORDEM DA ESTRUTURA DA OBRA (pavimentos e apartamentos na ordem cadastrada, ex: 2º Subsolo → 1º Subsolo → Térreo → 1º Pavimento...), não mais alfabética.",
         "As colunas se alimentam de TODO o Planejamento: todo grupo/subgrupo que existir lá aparece na matriz (nada de lista fixa de nomes ou quantidade), mesmo que a tarefa ainda não tenha categoria.",
         "Filtro de Equipe passou a enxergar as equipes de todas as tarefas do Planejamento."
-      ]
+      ],
+      "legado": "V3.19.13.20"
     },
     {
-      "versao": "V3.19.13.21",
+      "versao": "V3.9.33.1",
       "data": "2026-08-19",
       "tipo": "melhoria",
       "titulo": "Subgrupo agora vem DIRETO do apartamento cadastrado na Estrutura da Obra, não mais de uma fórmula conferida depois",
@@ -9796,10 +9987,11 @@ const NotasVersao = {
         "Reforço do Milton: a Estrutura da Obra (Torre > Pavimento > Apartamento) é ONDE ele define Grupo e Subgrupo — o gerador tem que usar ela como fonte, não uma conta em paralelo.",
         "Mudança de arquitetura: antes calculava andar×10+Final e DEPOIS conferia se batia com algum apartamento cadastrado. Agora faz o inverso — pega o 1º apartamento cadastrado naquele pavimento pra \"Final/ap. 01\", o 2º pra \"Final/ap. 02\" etc, e usa o NÚMERO DELE, direto. Testado com os dados reais da tela (AP11/AP12 no 1º Pavimento): bate certinho.",
         "Continua com aviso ⚠ quando o pavimento tem apartamentos cadastrados mas não um pra aquele índice (aí sim usa a fórmula como último recurso, avisando), e fica neutro quando o pavimento ainda não tem nenhum apartamento cadastrado."
-      ]
+      ],
+      "legado": "V3.19.13.21"
     },
     {
-      "versao": "V3.19.13.22",
+      "versao": "V3.9.33.2",
       "data": "2026-08-19",
       "tipo": "melhoria",
       "titulo": "Estrutura da Obra: arrastar-e-soltar pra reordenar Torres e Pavimentos",
@@ -9807,30 +9999,33 @@ const NotasVersao = {
         "Ícone ⠿ do lado esquerdo de cada torre e cada pavimento — arrasta pra cima/baixo pra reordenar, solta na posição desejada.",
         "Reordena só dentro do mesmo nível (torre com torre; pavimento com pavimento da MESMA torre) — não move pavimento de uma torre pra outra arrastando.",
         "Salva automático a cada solta, igual as outras edições da Estrutura da Obra."
-      ]
+      ],
+      "legado": "V3.19.13.22"
     },
     {
-      "versao": "V3.19.13.23",
+      "versao": "V3.9.34",
       "data": "2026-08-19",
       "tipo": "correcao",
       "titulo": "Estrutura da Obra: campo de nome do apartamento/unidade tinha largura fixa de 50px — cortava nomes maiores tipo \"AL DIREITA\"",
       "itens": [
         "Bug real: o Milton passou a usar nomes descritivos maiores (\"FACHADA I\", \"AL DIREITA\") em vez de só \"AP11\" — mas o campo tinha 50px fixos, cortando o texto e deixando impossível ver o que estava sendo digitado.",
         "Corrigido: o campo agora cresce sozinho conforme o texto (baseado no tamanho do valor, ajusta a cada tecla digitada)."
-      ]
+      ],
+      "legado": "V3.19.13.23"
     },
     {
-      "versao": "V3.19.13.24",
+      "versao": "V3.9.35",
       "data": "2026-08-19",
       "tipo": "correcao",
       "titulo": "Gerar Grupos não reconhecia \"Fundações\" ↔ \"Fundação\" — plural irregular do português (-ão vira -ões, não só +s)",
       "itens": [
         "Bug pego pelo Milton: cadastrou \"FUNDAÇÕES\" na Estrutura da Obra, mas \"Estacas / Blocos / Baldrames - Fundação\" continuava propondo Sem Vínculo. Causa: plural de palavra terminada em \"-ão\" troca a vogal (fundação→fundações, comunicação→comunicações) — minha regra de plural só cobria tirar \"s\"/\"es\" do final, que não serve pra esse caso.",
         "Adicionada a regra específica \"-ões\" → \"-ão\" (geral, vale pra qualquer palavra assim, não só Fundação) — testado contra Fundações, Comunicações e Instalações sem quebrar os casos que já funcionavam (Elevadores, Subsolo etc.)."
-      ]
+      ],
+      "legado": "V3.19.13.24"
     },
     {
-      "versao": "V3.19.13.25",
+      "versao": "V3.9.35.1",
       "data": "2026-08-19",
       "tipo": "melhoria",
       "titulo": "Gerar Grupos ganha modo \"Todas (auditar)\" — ver o que já está correto, não só o que vai mudar",
@@ -9838,10 +10033,11 @@ const NotasVersao = {
         "Pedido do Milton: ele quer verificar/auditar Subgrupos que JÁ foram aplicados antes, mas a prévia só mostrava o que ia MUDAR — se o valor salvo já batia com a detecção (mesmo que por uma execução anterior), a linha nem aparecia, impossível conferir.",
         "Novo toggle \"Só as que vão mudar\" / \"Todas (auditar)\" no topo da prévia. Em \"Todas\", mostra toda tarefa reconhecida, com ✓ verde e opacidade reduzida nas que já estão certas (não vão ser alteradas) — mas o aviso ⚠ de Subgrupo inválido continua aparecendo mesmo nelas, então dá pra achar um Subgrupo errado que ficou salvo por engano numa rodada anterior.",
         "Trocar de modo preserva as edições já feitas na sessão (não perde o que você já corrigiu na tela)."
-      ]
+      ],
+      "legado": "V3.19.13.25"
     },
     {
-      "versao": "V3.19.13.26",
+      "versao": "V3.9.36",
       "data": "2026-08-19",
       "tipo": "correcao",
       "titulo": "Editor de Estrutura: não dava pra selecionar texto ao renomear uma tarefa — o \"arrastar linha\" tomava conta do clique",
@@ -9849,27 +10045,30 @@ const NotasVersao = {
         "Bug real: a linha inteira é arrastável (pra reordenar tarefas), e o campo de edição do nome (aberto com clique duplo) ficava DENTRO dela — arrastar o mouse pra selecionar texto era interpretado como arrastar a linha inteira pra reordenar.",
         "Corrigido: o campo de edição agora tem draggable=\"false\" e cancela a propagação do clique — arrastar dentro dele volta a ser seleção de texto normal, arrastar fora dele continua reordenando a tarefa.",
         "Mesmo ajuste aplicado de brinde na Estrutura da Obra (Torre/Pavimento/Apartamento), que tinha exatamente o mesmo problema depois do drag-and-drop adicionado ali."
-      ]
+      ],
+      "legado": "V3.19.13.26"
     },
     {
-      "versao": "V3.19.13.27",
+      "versao": "V3.9.36.1",
       "data": "2026-08-19",
       "tipo": "funcionalidade",
       "titulo": "Agenda: puxar tarefa não concluída de horário anterior do mesmo dia pro horário atual",
       "itens": [
         "Motivo (Milton): usando o filtro de esconder horários passados, se sobrou uma tarefa não executada num horário anterior, faltava um jeito rápido de trazer ela pro horário de agora sem procurar tudo de novo na busca normal.",
         "Quando o horário aberto tem alguma tarefa (ou item de checklist) não concluída em horário anterior do mesmo dia, aparece um botão \"⏪ Puxar N não concluída(s) de horário anterior\" dentro do seletor. Clicando, mostra só essas pendências (com o horário original de cada uma) — escolher uma MOVE ela pro horário atual (sai de onde estava, não duplica)."
-      ]
+      ],
+      "legado": "V3.19.13.27"
     },
     {
-      "versao": "V3.19.13.28",
+      "versao": "V3.9.37",
       "data": "2026-08-19",
       "tipo": "correcao",
       "titulo": "Reforço: draggable=\"false\" no campo sozinho não bastava em todos os navegadores — a linha inteira trava o arrasto durante a edição",
       "itens": [
         "A correção anterior (V3.19.13.26) marcava só o CAMPO como não-arrastável, mas o navegador ainda podia iniciar o arrasto da LINHA a partir de dentro dele (Milton viu o \"fantasma\" do arrasto no print, prova de que ainda disparava).",
         "Corrigido de vez: no Editor de Estrutura, a linha inteira fica draggable=false enquanto está em modo de edição (some quando salva/cancela). Na Estrutura da Obra (Torre/Pavimento/Apartamento), o campo trava o arrasto da linha ao ganhar foco e destrava ao perder — funciona em qualquer navegador porque mexe na propriedade da linha diretamente, não só do campo."
-      ]
+      ],
+      "legado": "V3.19.13.28"
     }
   ],
 
