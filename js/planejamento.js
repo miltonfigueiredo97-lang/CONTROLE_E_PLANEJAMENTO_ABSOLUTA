@@ -3921,7 +3921,9 @@ const Planejamento = (() => {
           style="border:1px solid #292929;border-radius:7px;padding:8px;margin-bottom:8px;">
         <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
           <span style="cursor:grab;color:#555;font-size:.9rem;user-select:none;" title="Arraste pra reordenar as torres">⠿</span>
-          <input value="${_esc(t.nome||'')}" draggable="false" onmousedown="event.stopPropagation()" onchange="Planejamento._editarNomeEst('torre','${t.id}',this.value)" style="flex:1;background:#111;border:1px solid #333;border-radius:4px;color:#fff;padding:4px 6px;font-size:.82rem;font-weight:600;user-select:text;cursor:text;">
+          <input value="${_esc(t.nome||'')}" draggable="false" onmousedown="event.stopPropagation()"
+            onfocus="this.closest('[draggable]').draggable=false" onblur="this.closest('[draggable]').draggable=true"
+            onchange="Planejamento._editarNomeEst('torre','${t.id}',this.value)" style="flex:1;background:#111;border:1px solid #333;border-radius:4px;color:#fff;padding:4px 6px;font-size:.82rem;font-weight:600;user-select:text;cursor:text;">
           <span style="cursor:pointer;color:#dc2626;font-size:.85rem;" onclick="Planejamento._removerNoEst('torre','${t.id}')" title="Excluir torre">✕</span>
         </div>
         <div style="margin-left:14px;">
@@ -3933,7 +3935,9 @@ const Planejamento = (() => {
                 style="border-left:2px solid #333;padding:4px 0 4px 10px;margin-bottom:4px;">
               <div style="display:flex;align-items:center;gap:6px;">
                 <span style="cursor:grab;color:#555;font-size:.85rem;user-select:none;" title="Arraste pra reordenar os pavimentos">⠿</span>
-                <input value="${_esc(p.nome||'')}" draggable="false" onmousedown="event.stopPropagation()" onchange="Planejamento._editarNomeEst('pavimento','${p.id}',this.value)" style="flex:1;background:#111;border:1px solid #333;border-radius:4px;color:#ddd;padding:3px 6px;font-size:.78rem;user-select:text;cursor:text;">
+                <input value="${_esc(p.nome||'')}" draggable="false" onmousedown="event.stopPropagation()"
+                  onfocus="this.closest('[draggable]').draggable=false" onblur="this.closest('[draggable]').draggable=true"
+                  onchange="Planejamento._editarNomeEst('pavimento','${p.id}',this.value)" style="flex:1;background:#111;border:1px solid #333;border-radius:4px;color:#ddd;padding:3px 6px;font-size:.78rem;user-select:text;cursor:text;">
                 <span style="cursor:pointer;color:var(--cor-primaria);font-size:.72rem;" onclick="Planejamento._addApartamento('${p.id}')" title="Adicionar apto">＋apto</span>
                 <span style="cursor:pointer;color:var(--cor-primaria);font-size:.72rem;" onclick="Planejamento._duplicarPavimento('${p.id}')" title="Duplicar este pavimento (com os aptos dele)">📋 duplicar</span>
                 <span style="cursor:pointer;color:#dc2626;font-size:.8rem;" onclick="Planejamento._removerNoEst('pavimento','${p.id}')" title="Excluir pavimento">✕</span>
@@ -3941,6 +3945,7 @@ const Planejamento = (() => {
               ${aptos.length?`<div style="display:flex;flex-wrap:wrap;gap:4px;margin:4px 0 0 10px;">
                 ${aptos.map(a=>`<span style="display:inline-flex;align-items:center;gap:3px;background:#111;border:1px solid #333;border-radius:100px;padding:2px 4px 2px 8px;font-size:.7rem;color:#ccc;">
                   <input value="${_esc(a.nome||'')}" size="${Math.max(4,String(a.nome||'').length+1)}" draggable="false" onmousedown="event.stopPropagation()"
+                    onfocus="this.closest('[draggable]').draggable=false" onblur="this.closest('[draggable]').draggable=true"
                     oninput="this.size=Math.max(4,this.value.length+1)"
                     onchange="Planejamento._editarNomeEst('apartamento','${a.id}',this.value)"
                     style="background:transparent;border:none;color:#ccc;font-size:.7rem;padding:0;min-width:30px;user-select:text;cursor:text;">
@@ -6025,7 +6030,7 @@ const Planejamento = (() => {
       let html=`<div data-arvid="${t.id}" style="position:relative;">`;
 
       // Linha do nó — indicadores de drag aplicados via DOM em _arvDragOver
-      html+=`<div draggable="true"
+      html+=`<div draggable="${_arvEditId===t.id?'false':'true'}"
         data-arvrow="1"
         onclick="Planejamento._arvRowClick(event,'${t.id}')"
         ondragstart="Planejamento._arvDragStart(event,'${t.id}')"

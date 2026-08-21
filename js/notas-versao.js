@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.13.27',
+  versaoAtual: 'V3.19.13.28',
 
   versoes: [
     {
@@ -9859,6 +9859,16 @@ const NotasVersao = {
       "itens": [
         "Motivo (Milton): usando o filtro de esconder horários passados, se sobrou uma tarefa não executada num horário anterior, faltava um jeito rápido de trazer ela pro horário de agora sem procurar tudo de novo na busca normal.",
         "Quando o horário aberto tem alguma tarefa (ou item de checklist) não concluída em horário anterior do mesmo dia, aparece um botão \"⏪ Puxar N não concluída(s) de horário anterior\" dentro do seletor. Clicando, mostra só essas pendências (com o horário original de cada uma) — escolher uma MOVE ela pro horário atual (sai de onde estava, não duplica)."
+      ]
+    },
+    {
+      "versao": "V3.19.13.28",
+      "data": "2026-08-19",
+      "tipo": "correcao",
+      "titulo": "Reforço: draggable=\"false\" no campo sozinho não bastava em todos os navegadores — a linha inteira trava o arrasto durante a edição",
+      "itens": [
+        "A correção anterior (V3.19.13.26) marcava só o CAMPO como não-arrastável, mas o navegador ainda podia iniciar o arrasto da LINHA a partir de dentro dele (Milton viu o \"fantasma\" do arrasto no print, prova de que ainda disparava).",
+        "Corrigido de vez: no Editor de Estrutura, a linha inteira fica draggable=false enquanto está em modo de edição (some quando salva/cancela). Na Estrutura da Obra (Torre/Pavimento/Apartamento), o campo trava o arrasto da linha ao ganhar foco e destrava ao perder — funciona em qualquer navegador porque mexe na propriedade da linha diretamente, não só do campo."
       ]
     }
   ],
