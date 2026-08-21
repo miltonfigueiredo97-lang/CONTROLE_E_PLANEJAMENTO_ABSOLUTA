@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.13.19',
+  versaoAtual: 'V3.19.13.20',
 
   versoes: [
     {
@@ -9773,6 +9773,18 @@ const NotasVersao = {
         "Pergunta do Milton: \"como vou saber se o subgrupo calculado está certo?\" — resposta: agora cruza com os apartamentos que ele já cadastrou em cada pavimento (ex: \"1º Pavimento\" com AP11/AP12 → só 11 e 12 são válidos ali).",
         "Número em vermelho com ⚠ = a fórmula calculou um valor que NÃO existe como apartamento cadastrado naquele pavimento — sinal de que algo pode estar errado (piso errado, digitação no nome da tarefa). Número na cor normal = bateu certinho com um apartamento cadastrado.",
         "Pavimento que ainda não tem NENHUM apartamento cadastrado não gera aviso nenhum (não dá pra confirmar nem desmentir sem cadastro — fica neutro, não assusta à toa)."
+      ]
+    },
+    {
+      "versao": "V3.19.13.20",
+      "data": "2026-08-21",
+      "tipo": "correcao",
+      "titulo": "CULPADO ENCONTRADO: header roubava os cliques dos filtros + ordem pela Estrutura",
+      "itens": [
+        "O auto-diagnóstico apontou o invasor: o CABEÇALHO da página (barra preta do topo) estava com camada altíssima desde a V3.8.5 (pro menu Extras) e interceptava os cliques do conteúdo — por isso os filtros nunca abriam, em qualquer aparelho. O header voltou pra camada baixa e o menu Extras ganhou camada fixa própria. FILTROS (Colunas, Categoria, Equipe) CLICÁVEIS.",
+        "Grupos e subgrupos agora seguem a ORDEM DA ESTRUTURA DA OBRA (pavimentos e apartamentos na ordem cadastrada, ex: 2º Subsolo → 1º Subsolo → Térreo → 1º Pavimento...), não mais alfabética.",
+        "As colunas se alimentam de TODO o Planejamento: todo grupo/subgrupo que existir lá aparece na matriz (nada de lista fixa de nomes ou quantidade), mesmo que a tarefa ainda não tenha categoria.",
+        "Filtro de Equipe passou a enxergar as equipes de todas as tarefas do Planejamento."
       ]
     }
   ],

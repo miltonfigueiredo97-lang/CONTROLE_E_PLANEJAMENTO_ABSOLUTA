@@ -17,6 +17,46 @@ const DashFrentes = (() => {
   // Visão das COLUNAS: 'grupo' = uma coluna por grupo (resumido);
   // 'subgrupo' = abre os subgrupos (detalhado). Persistida por dispositivo.
   let _visaoCols = localStorage.getItem('db_fr_visao') || 'grupo';
+  let _estrutura = { obraId: null, ordemPav: new Map(), ordemApto: new Map() };
+
+  // Carrega (1x por obra) a ordem OFICIAL da Estrutura da Obra: os grupos
+  // (pavimentos) e subgrupos (apartamentos/finais) seguem essa ordem, não
+  // a alfabética. Ex: 2º Subsolo → 1º Subsolo → Térreo → 1º Pavimento...
+  async function _carregarEstrutura(obraId) {
+    if (_estrutura.obraId === obraId) return;
+    const ordemPav = new Map(), ordemApto = new Map();
+    try {
+      const est = await Database.obter(obraId, 'config', 'estruturaObra');
+      let i = 0, j = 0;
+      [...(est?.torres || [])].sort((a, b) => (a.ordem || 0) - (b.ordem || 0)).forEach(torre => {
+        [...(torre.pavimentos || [])].sort((a, b) => (a.ordem || 0) - (b.ordem || 0)).forEach(pav => {
+          const kp = DashCore.normalizarChave(pav.nome);
+          if (!ordemPav.has(kp)) ordemPav.set(kp, i++);
+          [...(pav.apartamentos || [])].sort((a, b) => (a.ordem || 0) - (b.ordem || 0)).forEach(apto => {
+            const ka = DashCore.normalizarChave(apto.nome);
+            if (!ordemApto.has(ka)) ordemApto.set(ka, j++);
+          });
+        });
+      });
+    } catch (e) { /* sem estrutura: cai na ordem alfabética/numérica */ }
+    _estrutura = { obraId, ordemPav, ordemApto };
+  }
+  function _ordGrupo(a, b) {
+    const ia = _estrutura.ordemPav.get(DashCore.normalizarChave(a));
+    const ib = _estrutura.ordemPav.get(DashCore.normalizarChave(b));
+    if (ia != null && ib != null) return ia - ib;
+    if (ia != null) return -1;
+    if (ib != null) return 1;
+    return _ordena(a, b);
+  }
+  function _ordSubgrupo(a, b) {
+    const ia = _estrutura.ordemApto.get(DashCore.normalizarChave(a));
+    const ib = _estrutura.ordemApto.get(DashCore.normalizarChave(b));
+    if (ia != null && ib != null) return ia - ib;
+    if (ia != null) return -1;
+    if (ib != null) return 1;
+    return _ordena(a, b);
+  }
 
   function _tom(pct, concluida) {
     if (concluida || pct >= 100) return { bg: '#e7f6ec', fg: '#15803d', barra: '#16a34a' };
@@ -34,10 +74,11 @@ const DashFrentes = (() => {
   // Firestore re-renderiza apenas a MATRIZ. Era a recriação dos selects a
   // cada gravação remota que fazia o menu "não abrir" no celular.
   let _assinaturaFiltros = '';
-  function render(ctx) {
+  async function render(ctx) {
     _ctx = ctx;
     const host = document.getElementById('db-frentes');
     if (!host) return;
+    await _carregarEstrutura(ctx.obraId);
 
     if (!document.getElementById('db-fr-matriz-host')) {
       host.innerHTML = '<div id="db-fr-filtros-host"></div><div id="db-fr-matriz-host"></div>';
@@ -70,8 +111,13 @@ const DashFrentes = (() => {
       }, 800);
     }
 
-    // Só tarefas-FOLHA com categoria E grupo entram na matriz.
-    const todas = DashCore.folhas(ctx.tarefas).filter(t => _v(t.categoria) && _v(t.grupo));
+    const folhasTodas = DashCore.folhas(ctx.tarefas);
+    // Universo de colunas/filtros: TODAS as folhas com grupo (mesmo sem
+    // categoria) — os subgrupos e equipes que existirem no Planejamento
+    // sempre aparecem, sem lista fixa de nomes nem de quantidade.
+    const comGrupo = folhasTodas.filter(t => _v(t.grupo));
+    // Na matriz entram as que também têm categoria (é a linha).
+    const todas = comGrupo.filter(t => _v(t.categoria));
     const filtrosHost = document.getElementById('db-fr-filtros-host');
     const matrizHost = document.getElementById('db-fr-matriz-host');
 
@@ -88,8 +134,8 @@ const DashFrentes = (() => {
 
     // Recria os filtros SÓ se as opções mudaram (assinatura).
     const categorias = [...new Set(todas.map(t => _v(t.categoria)))].sort(_ordena);
-    const equipes = [...new Set(todas.map(t => t.equipeAlocada).filter(v => v != null && v !== '' && v !== 0))].sort((a, b) => a - b);
-    const temSubgrupos = todas.some(t => _v(t.subgrupo));
+    const equipes = [...new Set(folhasTodas.map(t => t.equipeAlocada).filter(v => v != null && v !== '' && v !== 0))].sort((a, b) => a - b);
+    const temSubgrupos = comGrupo.some(t => _v(t.subgrupo));
     const assinatura = categorias.join('|') + '###' + equipes.join('|') + '###' + temSubgrupos;
     if (assinatura !== _assinaturaFiltros) {
       _assinaturaFiltros = assinatura;
@@ -106,7 +152,7 @@ const DashFrentes = (() => {
       (!busca || DashCore.normalizarChave(`${t.nome || ''} ${t.categoria || ''} ${t.subcategoria || ''} ${t.grupo || ''} ${t.subgrupo || ''}`).includes(busca))
     );
     matrizHost.innerHTML = tarefas.length
-      ? _htmlMatriz(tarefas)
+      ? _htmlMatriz(tarefas, comGrupo)
       : '<div class="db-vazio-inline">Nenhuma tarefa com esses filtros.</div>';
     _ligarDragPan();
     _atualizarBotaoLimpar();
@@ -230,19 +276,21 @@ const DashFrentes = (() => {
     if (_ctx) render(_ctx);
   }
 
-  function _htmlMatriz(tarefas) {
+  function _htmlMatriz(tarefas, universoColunas) {
     // COLUNAS conforme o seletor "Colunas": por Grupo (resumido — uma coluna
-    // por grupo somando os subgrupos) ou por Subgrupo (detalhado).
+    // por grupo somando os subgrupos) ou por Subgrupo (detalhado). O conjunto
+    // vem de TODO o Planejamento (universoColunas) e a ORDEM segue a
+    // Estrutura da Obra (pavimentos e apartamentos na ordem cadastrada).
     const detalhado = _visaoCols === 'subgrupo';
     const gruposMap = new Map();
-    tarefas.forEach(t => {
+    (universoColunas || tarefas).forEach(t => {
       const g = _v(t.grupo), sg = detalhado ? _v(t.subgrupo) : '';
       if (!gruposMap.has(g)) gruposMap.set(g, new Set());
       gruposMap.get(g).add(sg);
     });
     const colunas = [];
-    [...gruposMap.keys()].sort(_ordena).forEach(g => {
-      const sgs = [...gruposMap.get(g)].sort(_ordena);
+    [...gruposMap.keys()].sort(_ordGrupo).forEach(g => {
+      const sgs = [...gruposMap.get(g)].sort(_ordSubgrupo);
       sgs.forEach((sg, i) => colunas.push({ grupo: g, subgrupo: sg, fimGrupo: i === sgs.length - 1 }));
     });
 

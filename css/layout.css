@@ -104,10 +104,12 @@ html, body { height: 100%; overflow: hidden; margin: 0; padding: 0; }
   padding: 0 20px;
   display: flex; align-items: center; justify-content: space-between; gap: 16px;
   height: 54px;
-  /* overflow:hidden cortava dropdowns do header (ex: seletor Extras do
-     Dashboard) — o clip agora é feito por elemento quando necessário. */
+  /* overflow:hidden cortava dropdowns do header — e z-index alto (500)
+     fazia o header INTERCEPTAR cliques do conteúdo abaixo (filtros do
+     Dashboard inclicáveis). Header fica baixo; o menu Extras é fixed com
+     camada própria (css/dashboard.css). */
   position: relative;
-  z-index: 500;
+  z-index: 10;
 }
 .header-title { display: flex; align-items: center; gap: 12px; min-width: 0; overflow: hidden; }
 .header-title h1 { font-size: 0.95rem; font-weight: 600; color: #fff; white-space: nowrap; }
