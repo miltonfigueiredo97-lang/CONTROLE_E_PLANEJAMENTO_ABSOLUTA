@@ -4231,12 +4231,8 @@ const Planejamento = (() => {
     // Elevadores...) aparece marcada como "Sem Vínculo" em vez de simplesmente
     // desaparecer da prévia. Assim dá pra ver TUDO e decidir, em vez de ficar
     // se perguntando por que uma tarefa não apareceu.
-    const propostas=folhas.map(t=>({tarefa:t,match:_detectarGrupoPorNome(t.nome,est)||{grupo:SEM_VINCULO,subgrupo:null}}));
-    const mudam=propostas.filter(p=>p.tarefa.grupo!==p.match.grupo||(p.tarefa.subgrupo||null)!==(p.match.subgrupo||null));
-    if(!mudam.length){
-      Utils.toast('Nada pra mudar — todas as tarefas já estão com o Grupo/Subgrupo certo (ou já marcadas como Sem Vínculo).','alerta');
-      return;
-    }
+    _gerarGruposTodasPropostas=folhas.map(t=>({tarefa:t,match:_detectarGrupoPorNome(t.nome,est)||{grupo:SEM_VINCULO,subgrupo:null}}));
+    const mudam=_gerarGruposTodasPropostas.filter(p=>p.tarefa.grupo!==p.match.grupo||(p.tarefa.subgrupo||null)!==(p.match.subgrupo||null));
     // Lista fechada de pavimentos cadastrados — o valor proposto só pode ser
     // TROCADO por um desses (ou "Sem Vínculo"), nunca digitado livre. Texto
     // livre geraria grupo parecido mas diferente (typo, acento, maiúscula) e
@@ -4255,17 +4251,11 @@ const Planejamento = (() => {
       }
     }
     _gerarGruposPavimentos.push(SEM_VINCULO);
-    // Ordem da lista: guarda a ordem original de tarefa (pra poder voltar
-    // pra ela) e já deixa pronta a canônica-por-pavimento (que é o que
-    // "alfabética de verdade" deveria evitar: string sort põe "10º" antes
-    // de "1º"). O toggle Tarefa/Alfabética decide qual delas mostrar.
-    _gerarGruposLista=mudam.map((p,i)=>({
-      tarefaId:p.tarefa.id,nome:p.tarefa.nome,
-      grupoAntigo:p.tarefa.grupo||'',subgrupoAntigo:p.tarefa.subgrupo||null,
-      grupoProposto:p.match.grupo,subgrupoProposto:p.match.subgrupo||null,
-      subgrupoValido:p.match.subgrupoValido??null,
-      marcado:true,ordemTarefa:i
-    }));
+    // Se não tem nada pra mudar, abre já em modo "Ver Todas" — senão a
+    // prévia abriria vazia sem explicar por quê. "Ver Todas" serve pra
+    // AUDITAR (Milton pediu): ver o estado de TUDO, inclusive o que já
+    // bate, pra conferir se o Subgrupo validado é mesmo confiável — não só
+    // o que a detecção acha que precisa mudar agora.
     _gerarGruposOrdemModo='tarefa';
     let pop=document.getElementById('gerargrupos-modal');if(pop)pop.remove();
     pop=document.createElement('div');pop.id='gerargrupos-modal';
@@ -4276,7 +4266,12 @@ const Planejamento = (() => {
           <div style="font-weight:700;color:var(--cor-primaria);">⚡ Gerar Grupos — Prévia</div>
           <span style="cursor:pointer;color:#888;font-size:1.1rem;" onclick="document.getElementById('gerargrupos-modal').remove()">✕</span>
         </div>
-        <div style="font-size:.72rem;color:#888;margin-bottom:10px;">${folhas.length} tarefas no total. <b>${mudam.length}</b> vão mudar Grupo/Subgrupo (as demais já estão certas). Pra corrigir, escolhe outro pavimento (ou "Sem Vínculo") na lista da direita — muda esse E todos os outros que tinham a mesma proposta.</div>
+        <div id="gerargrupos-resumo" style="font-size:.72rem;color:#888;margin-bottom:10px;"></div>
+        <div style="display:flex;gap:6px;margin-bottom:6px;align-items:center;">
+          <span style="font-size:.68rem;color:#666;white-space:nowrap;">Ver:</span>
+          <button id="gerargrupos-modo-mudancas" class="btn btn-sm" style="padding:6px 10px;font-size:.72rem;" onclick="Planejamento._gerarGruposMudarModoVisao('mudancas')">Só as que vão mudar</button>
+          <button id="gerargrupos-modo-todas" class="btn btn-sm" style="padding:6px 10px;font-size:.72rem;" onclick="Planejamento._gerarGruposMudarModoVisao('todas')">Todas (auditar)</button>
+        </div>
         <div style="display:flex;gap:6px;margin-bottom:8px;align-items:center;">
           <input id="gerargrupos-filtro" placeholder="🔍 Buscar por nome da tarefa..." oninput="Planejamento._gerarGruposFiltrar(this.value)"
             style="flex:1;background:#111;border:1px solid #333;border-radius:6px;color:#ddd;padding:7px 10px;font-size:.8rem;box-sizing:border-box;">
@@ -4291,7 +4286,55 @@ const Planejamento = (() => {
         </div>
       </div>`;
     document.body.appendChild(pop);
+    // Só agora (com o modal já no DOM) que monta a lista — ela mexe em
+    // elementos como #gerargrupos-resumo que só existem depois do appendChild.
     _gerarGruposFiltroTexto='';
+    _montarGerarGruposLista(mudam.length?'mudancas':'todas');
+    _renderGerarGruposLista();
+  }
+
+  // Monta _gerarGruposLista a partir do modo escolhido. Preserva edições já
+  // feitas nessa sessão (por tarefaId) — trocar de modo não perde o que o
+  // usuário já corrigiu na tela.
+  let _gerarGruposTodasPropostas=null;
+  let _gerarGruposModoVisao='mudancas'; // 'mudancas' | 'todas'
+  function _montarGerarGruposLista(modo){
+    _gerarGruposModoVisao=modo;
+    const antigoPorId=new Map((_gerarGruposLista||[]).map(p=>[p.tarefaId,p]));
+    const base=modo==='todas'
+      ?_gerarGruposTodasPropostas
+      :_gerarGruposTodasPropostas.filter(p=>p.tarefa.grupo!==p.match.grupo||(p.tarefa.subgrupo||null)!==(p.match.subgrupo||null));
+    _gerarGruposLista=base.map((p,i)=>{
+      const jaEditado=antigoPorId.get(p.tarefa.id);
+      const vaiMudar=p.tarefa.grupo!==p.match.grupo||(p.tarefa.subgrupo||null)!==(p.match.subgrupo||null);
+      if(jaEditado)return{...jaEditado,ordemTarefa:i};
+      return{
+        tarefaId:p.tarefa.id,nome:p.tarefa.nome,
+        grupoAntigo:p.tarefa.grupo||'',subgrupoAntigo:p.tarefa.subgrupo||null,
+        grupoProposto:p.match.grupo,subgrupoProposto:p.match.subgrupo||null,
+        subgrupoValido:p.match.subgrupoValido??null,
+        marcado:vaiMudar,jaCorreto:!vaiMudar,ordemTarefa:i
+      };
+    });
+    const resumo=document.getElementById('gerargrupos-resumo');
+    if(resumo){
+      const totalMudam=_gerarGruposTodasPropostas.filter(p=>p.tarefa.grupo!==p.match.grupo||(p.tarefa.subgrupo||null)!==(p.match.subgrupo||null)).length;
+      resumo.textContent=modo==='todas'
+        ?`Mostrando as ${_gerarGruposTodasPropostas.length} tarefas (modo auditoria) — ${totalMudam} vão mudar, ${_gerarGruposTodasPropostas.length-totalMudam} já estão certas. Confere o ⚠ pra achar Subgrupo que não bate com nenhum apartamento cadastrado.`
+        :`${_gerarGruposTodasPropostas.length} tarefas no total. ${totalMudam} vão mudar Grupo/Subgrupo (as demais já estão certas). Escolhe outro pavimento (ou "Sem Vínculo") na lista da direita — muda esse E todos os outros que tinham a mesma proposta.`;
+    }
+    _atualizarBotoesModoVisao();
+  }
+  function _atualizarBotoesModoVisao(){
+    const bM=document.getElementById('gerargrupos-modo-mudancas'),bT=document.getElementById('gerargrupos-modo-todas');
+    if(!bM||!bT)return;
+    bM.className='btn btn-sm '+(_gerarGruposModoVisao==='mudancas'?'btn-primario':'btn-secundario');
+    bT.className='btn btn-sm '+(_gerarGruposModoVisao==='todas'?'btn-primario':'btn-secundario');
+    bM.style.cssText='padding:6px 10px;font-size:.72rem;';
+    bT.style.cssText='padding:6px 10px;font-size:.72rem;';
+  }
+  function _gerarGruposMudarModoVisao(modo){
+    _montarGerarGruposLista(modo);
     _renderGerarGruposLista();
   }
 
@@ -4350,9 +4393,9 @@ const Planejamento = (() => {
       // inclui ele mesmo como opção extra — nunca perde o que já tinha.
       const lista=opcoes.includes(p.grupoProposto)?opcoes:[p.grupoProposto,...opcoes];
       html+=`
-      <div style="display:flex;align-items:center;gap:8px;font-size:.76rem;padding:4px 4px;border-bottom:1px solid #232323;">
+      <div style="display:flex;align-items:center;gap:8px;font-size:.76rem;padding:4px 4px;border-bottom:1px solid #232323;${p.jaCorreto?'opacity:.6;':''}">
         <input type="checkbox" data-idx="${i}" ${p.marcado?'checked':''} onchange="Planejamento._gerarGruposToggle(${i},this.checked)">
-        <span style="flex:1;color:#ddd;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${_esc(p.nome)}</span>
+        <span style="flex:1;color:#ddd;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.jaCorreto?'<span style="color:#4ade80;" title="Já está assim no sistema — nada vai mudar">✓ </span>':''}${_esc(p.nome)}</span>
         <span style="color:#666;white-space:nowrap;">${_esc(p.grupoAntigo||'—')}${p.subgrupoAntigo?' / '+p.subgrupoAntigo:''}</span>
         <span style="color:#555;">→</span>
         <select onchange="Planejamento._gerarGruposEditarValor(${i},this.value)"
@@ -6654,7 +6697,7 @@ const Planejamento = (() => {
     toggleGantt,toggleLiberarEdicaoReal,hideCol,showColsMenu,_showCol,_showAll,_toggleMenuFerramentas,
     _abrirEstruturaObra,_addTorre,_addPavimento,_addApartamento,_duplicarPavimento,_editarNomeEst,_removerNoEst,
     _estDragStart,_estDragOver,_estDragLeave,_estDrop,
-    _abrirAutoVincular,_aplicarAutoVincular,_abrirGerarGrupos,_aplicarGerarGrupos,_gerarGruposToggle,_gerarGruposEditarValor,_gerarGruposFiltrar,_gerarGruposOrdenar,
+    _abrirAutoVincular,_aplicarAutoVincular,_abrirGerarGrupos,_aplicarGerarGrupos,_gerarGruposToggle,_gerarGruposEditarValor,_gerarGruposFiltrar,_gerarGruposOrdenar,_gerarGruposMudarModoVisao,
     _abrirVinculoPavimento,_salvarVinculoPavimento,_vinclocTogglePav,_vinclocToggleApto,
     _abrirAtualizarPredecessora,_predlogAtualizarBotao,_salvarAtualizacaoPredecessora,_abrirHistoricoAlteracoes,_filtrarHistorico,
     toggleArvoreEditor,_arvToggle,_arvExpandirTudo,_arvIniciarEdit,_arvCancelarEdit,_arvSalvarNome,

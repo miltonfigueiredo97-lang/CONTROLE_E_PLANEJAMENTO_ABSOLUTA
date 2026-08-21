@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.13.24',
+  versaoAtual: 'V3.19.13.25',
 
   versoes: [
     {
@@ -9827,6 +9827,17 @@ const NotasVersao = {
       "itens": [
         "Bug pego pelo Milton: cadastrou \"FUNDAÇÕES\" na Estrutura da Obra, mas \"Estacas / Blocos / Baldrames - Fundação\" continuava propondo Sem Vínculo. Causa: plural de palavra terminada em \"-ão\" troca a vogal (fundação→fundações, comunicação→comunicações) — minha regra de plural só cobria tirar \"s\"/\"es\" do final, que não serve pra esse caso.",
         "Adicionada a regra específica \"-ões\" → \"-ão\" (geral, vale pra qualquer palavra assim, não só Fundação) — testado contra Fundações, Comunicações e Instalações sem quebrar os casos que já funcionavam (Elevadores, Subsolo etc.)."
+      ]
+    },
+    {
+      "versao": "V3.19.13.25",
+      "data": "2026-08-19",
+      "tipo": "melhoria",
+      "titulo": "Gerar Grupos ganha modo \"Todas (auditar)\" — ver o que já está correto, não só o que vai mudar",
+      "itens": [
+        "Pedido do Milton: ele quer verificar/auditar Subgrupos que JÁ foram aplicados antes, mas a prévia só mostrava o que ia MUDAR — se o valor salvo já batia com a detecção (mesmo que por uma execução anterior), a linha nem aparecia, impossível conferir.",
+        "Novo toggle \"Só as que vão mudar\" / \"Todas (auditar)\" no topo da prévia. Em \"Todas\", mostra toda tarefa reconhecida, com ✓ verde e opacidade reduzida nas que já estão certas (não vão ser alteradas) — mas o aviso ⚠ de Subgrupo inválido continua aparecendo mesmo nelas, então dá pra achar um Subgrupo errado que ficou salvo por engano numa rodada anterior.",
+        "Trocar de modo preserva as edições já feitas na sessão (não perde o que você já corrigiu na tela)."
       ]
     }
   ],
