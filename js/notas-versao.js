@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.13.11',
+  versaoAtual: 'V3.19.13.12',
 
   versoes: [
     {
@@ -9687,6 +9687,18 @@ const NotasVersao = {
         "Bug real (Milton reportou): depois de escolher uma tarefa pra um horário, ela continuava aparecendo no seletor pra escolher de novo — tanto no mesmo horário quanto em outros horários do mesmo dia.",
         "Corrigido: tarefa (ou item de checklist) já agendado NAQUELE DIA some sozinho do seletor. Tem um link \"👁 mostrar já escolhidas\" pra trazer de volta, pros casos em que a intenção é mesmo repetir a tarefa em outro horário.",
         "Escolher uma tarefa não fecha mais o seletor — ele continua aberto, do jeito que estava (mesma busca, mesmo lugar na navegação), pra escolher a próxima direto, sem ter que reabrir e renavegar tudo de novo. Um botão \"Fechar\" no final encerra quando terminar."
+      ]
+    },
+    {
+      "versao": "V3.19.13.12",
+      "data": "2026-08-19",
+      "tipo": "funcionalidade",
+      "titulo": "Agenda: clique direito mostra descrição, marcar concluído direto no seletor, copiar/colar entre horários, trazer pendências de ontem",
+      "itens": [
+        "Clique com o botão direito numa tarefa do seletor (busca/navegação) abre o detalhe dela (título + descrição), sem precisar escolher/agendar nada — só pra conferir.",
+        "Cada tarefa (e item de checklist) do seletor agora tem um checkbox — dá pra marcar como concluída direto ali, sem precisar fechar o seletor pra ir até a lista principal.",
+        "Copiar entre horários: cada tarefa já agendada tem um botão ⧉ — clicar copia ela; abrir o \"+\" de outro horário mostra um botão \"📌 Colar aqui\" que agenda a mesma tarefa (ou item) ali, sem precisar buscar de novo. Trava simples: não deixa colar duplicado no mesmo horário onde já está.",
+        "Trazer pendências do dia anterior: quando o dia anterior tem alocações cuja tarefa (ou item) ainda não foi concluída, aparece um botão \"↩️ Trazer N pendências do dia anterior\" — um clique replica todas elas pro dia atual, nos mesmos horários, pulando o que já foi trazido antes (sem duplicar)."
       ]
     }
   ],

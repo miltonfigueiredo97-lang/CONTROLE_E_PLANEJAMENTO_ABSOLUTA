@@ -37,6 +37,7 @@ const Todo = (() => {
   let agendaMostrarJaEscolhidas = false; // true = mostra no seletor também as tarefas/itens já agendados nesse dia
   let agendaTarefasJaAlocadas = new Set(); // ids de tarefas já alocadas (inteiras) no dia exibido — recalculado a cada render
   let agendaItensJaAlocados = new Set(); // chaves "tarefaId::itemId" de itens de checklist já alocados no dia exibido
+  let agendaClipboard = null; // { tarefaId, itemId, label } — alocação copiada, pronta pra colar em outro horário
   let agendaEsconderPassadas = localStorage.getItem('agenda_esconder_passadas') === '1'; // esconder horários já passados (só quando o dia exibido é hoje)
 
   const PALETA_PROJETO = ['#2563eb', '#16a34a', '#7c3aed', '#d97706', '#0891b2', '#dc2626', '#db2777'];
@@ -531,6 +532,11 @@ const Todo = (() => {
         border-radius:999px; padding:5px 14px; cursor:pointer;
       }
       .agenda-toggle-passadas:hover { border-color:var(--cor-primaria); color:var(--cor-texto); }
+      .agenda-trazer-pendencias {
+        font-size:11.5px; font-weight:700; color:var(--cor-dark-900); background:var(--cor-primaria-light); border:1.5px solid var(--cor-primaria);
+        border-radius:999px; padding:5px 14px; cursor:pointer;
+      }
+      .agenda-trazer-pendencias:hover { background:var(--cor-primaria); }
       .agenda-nav-btn {
         width:30px; height:30px; border-radius:50%; border:1.5px solid var(--cor-borda-light); background:#fff; cursor:pointer;
         font-size:16px; color:var(--cor-texto-secundario); flex-shrink:0; display:flex; align-items:center; justify-content:center;
@@ -562,6 +568,13 @@ const Todo = (() => {
       .agenda-tarefa-texto:hover { text-decoration:underline; }
       .agenda-x { border:none; background:none; cursor:pointer; color:var(--cor-texto-muted); font-size:15px; padding:2px 5px; flex-shrink:0; }
       .agenda-x:hover { color:var(--cor-perigo); }
+      .agenda-copiar { border:none; background:none; cursor:pointer; color:var(--cor-texto-muted); font-size:13px; padding:2px 4px; flex-shrink:0; }
+      .agenda-copiar:hover { color:var(--cor-primaria-dark); }
+      .agenda-picker-colar-btn {
+        width:100%; text-align:left; border:1.5px dashed var(--cor-primaria); background:var(--cor-primaria-light);
+        border-radius:8px; padding:8px 12px; font-size:12.5px; font-weight:700; color:var(--cor-dark-900); cursor:pointer; margin-bottom:8px;
+      }
+      .agenda-picker-colar-btn:hover { background:var(--cor-primaria); }
 
       .agenda-picker { background:var(--cor-fundo); border:1.5px solid var(--cor-borda-light); border-radius:10px; padding:10px; box-sizing:border-box; }
       .agenda-picker-busca {
@@ -1223,19 +1236,22 @@ const Todo = (() => {
 
   function _htmlListaTarefas(lista) {
     if (lista.length === 0) return `<div class="agenda-picker-vazio">Nenhuma tarefa encontrada.</div>`;
+    const check = `<svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="white" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
     return lista.map(p => {
       const cat = p.categoria ? categorias.find(c => c.nome === p.categoria) : null;
       const itensChecklistPendentes = (Array.isArray(p.checklist) ? p.checklist : [])
         .filter(i => !i.concluido && (agendaMostrarJaEscolhidas || !agendaItensJaAlocados.has(`${p.id}::${i.id}`)));
       const linhaTarefaHtml = `
-      <div class="agenda-picker-item" data-agenda-escolher="${p.id}">
+      <div class="agenda-picker-item" data-agenda-escolher="${p.id}" data-agenda-detalhe-picker="${p.id}">
+        <div class="todo-check" style="width:16px;height:16px;flex-shrink:0;" data-agenda-picker-concluir="${p.id}" title="Marcar como concluída">${check}</div>
         <span class="agenda-picker-dot" style="background:${p.projeto ? corProjeto(p.projeto) : '#9ca3af'}"></span>
         ${p.projeto ? `<span class="agenda-picker-item-proj">${esc(p.projeto)}</span>` : ''}
         ${cat ? `<span class="agenda-picker-item-cat" style="background:${esc(cat.cor)}">${esc(cat.nome)}</span>` : ''}
         <span class="agenda-picker-item-texto">${esc(p.texto)}</span>
       </div>`;
       const linhasChecklistHtml = itensChecklistPendentes.map(item => `
-      <div class="agenda-picker-item agenda-picker-item-sub" data-agenda-escolher="${p.id}::${item.id}">
+      <div class="agenda-picker-item agenda-picker-item-sub" data-agenda-escolher="${p.id}::${item.id}" data-agenda-detalhe-picker="${p.id}">
+        <div class="todo-check" style="width:15px;height:15px;flex-shrink:0;" data-agenda-picker-concluir-item="${p.id}::${item.id}" title="Marcar como concluído">${check}</div>
         <span class="agenda-picker-item-texto">↳ ${esc(item.texto)}</span>
       </div>`).join('');
       return linhaTarefaHtml + linhasChecklistHtml;
@@ -1266,6 +1282,27 @@ const Todo = (() => {
         const [tarefaId, itemId] = item.dataset.agendaEscolher.split('::');
         await _atribuirTarefaSlot(tarefaId, dataStr, slot, itemId || null);
       };
+      // Clique direito: mostra a descrição da tarefa sem escolher/alocar nada.
+      item.oncontextmenu = (e) => {
+        e.preventDefault();
+        const tarefaId = item.dataset.agendaDetalhePicker;
+        if (tarefaId) abrirDetalheTarefa(tarefaId);
+      };
+    });
+    container.querySelectorAll('[data-agenda-picker-concluir]').forEach(chk => {
+      chk.onclick = async (e) => {
+        e.stopPropagation();
+        await alternarStatus(chk.dataset.agendaPickerConcluir);
+        _renderizarAgenda();
+      };
+    });
+    container.querySelectorAll('[data-agenda-picker-concluir-item]').forEach(chk => {
+      chk.onclick = async (e) => {
+        e.stopPropagation();
+        const [tarefaId, itemId] = chk.dataset.agendaPickerConcluirItem.split('::');
+        await alternarChecklistItem(tarefaId, itemId);
+        _renderizarAgenda();
+      };
     });
   }
 
@@ -1287,6 +1324,17 @@ const Todo = (() => {
     agendaTarefasJaAlocadas = new Set(alocacoesHoje.filter(a => !a.itemId).map(a => a.tarefaId));
     agendaItensJaAlocados = new Set(alocacoesHoje.filter(a => a.itemId).map(a => `${a.tarefaId}::${a.itemId}`));
 
+    const diaAnteriorStr = _diaOffset(dataStr, -1);
+    const pendenciasOntem = agendaAlocacoes.filter(a => a.data === diaAnteriorStr).filter(a => {
+      const t = tarefas.find(x => x.id === a.tarefaId);
+      if (!t) return false;
+      if (a.itemId) {
+        const item = (Array.isArray(t.checklist) ? t.checklist : []).find(i => i.id === a.itemId);
+        return item && !item.concluido;
+      }
+      return !t.concluida;
+    });
+
     const pendentesTodas = tarefas.filter(t => !t.concluida)
       .sort((a, b) => (a.importancia ?? 3) - (b.importancia ?? 3) || (a.ordem || 0) - (b.ordem || 0));
     const pendentes = agendaMostrarJaEscolhidas ? pendentesTodas : pendentesTodas.filter(p => !agendaTarefasJaAlocadas.has(p.id));
@@ -1304,6 +1352,13 @@ const Todo = (() => {
         <div class="agenda-toggle-passadas-row">
           <button type="button" class="agenda-toggle-passadas" id="agenda-toggle-passadas">
             ${agendaEsconderPassadas ? `👁 mostrar horários passados${qtdEscondidos ? ` (${qtdEscondidos})` : ''}` : '🕐 esconder horários que já passaram'}
+          </button>
+        </div>
+      ` : ''}
+      ${pendenciasOntem.length > 0 ? `
+        <div class="agenda-toggle-passadas-row">
+          <button type="button" class="agenda-trazer-pendencias" id="agenda-trazer-pendencias">
+            ↩️ Trazer ${pendenciasOntem.length} pendência${pendenciasOntem.length === 1 ? '' : 's'} do dia anterior
           </button>
         </div>
       ` : ''}
@@ -1329,6 +1384,7 @@ const Todo = (() => {
                           <svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="white" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
                         </div>
                         <span class="agenda-tarefa-texto" data-agenda-detalhe="${t.id}" title="Ver detalhe">${item ? '↳ ' : ''}${esc(label)}</span>
+                        <button type="button" class="agenda-copiar" title="Copiar pra outro horário" data-agenda-copiar-tarefa="${t.id}" data-agenda-copiar-item="${a.itemId || ''}" data-agenda-copiar-label="${esc(label)}">⧉</button>
                         <button type="button" class="agenda-x" title="Remover deste horário" data-agenda-remover="${a.id}">×</button>
                       </div>`;
                   }).join('')}
@@ -1345,6 +1401,9 @@ const Todo = (() => {
                         </div>
                       </div>
                     ` : `
+                      ${agendaClipboard ? `
+                        <button type="button" class="agenda-picker-colar-btn" id="agenda-colar-aqui">📌 Colar aqui: ${esc(agendaClipboard.label)}</button>
+                      ` : ''}
                       <input type="text" class="agenda-picker-busca" id="agenda-picker-busca" placeholder="🔍 Buscar tarefa por nome, sistema ou categoria..." value="${esc(agendaFiltroPicker)}">
                       <button type="button" class="agenda-picker-toggle-escolhidas" id="agenda-toggle-ja-escolhidas">
                         ${agendaMostrarJaEscolhidas ? '🙈 esconder já escolhidas' : '👁 mostrar já escolhidas'}
@@ -1371,6 +1430,8 @@ const Todo = (() => {
       localStorage.setItem('agenda_esconder_passadas', agendaEsconderPassadas ? '1' : '0');
       _renderizarAgenda();
     };
+    const btnTrazerPendencias = document.getElementById('agenda-trazer-pendencias');
+    if (btnTrazerPendencias) btnTrazerPendencias.onclick = () => _trazerPendenciasDeOntem();
     el.querySelectorAll('[data-agenda-abrir]').forEach(btn => {
       btn.onclick = () => {
         agendaSlotAberto = btn.dataset.agendaAbrir;
@@ -1419,6 +1480,25 @@ const Todo = (() => {
     el.querySelectorAll('[data-agenda-remover]').forEach(btn => {
       btn.onclick = async () => { await _removerDoSlot(btn.dataset.agendaRemover); };
     });
+    el.querySelectorAll('[data-agenda-copiar-tarefa]').forEach(btn => {
+      btn.onclick = () => {
+        agendaClipboard = {
+          tarefaId: btn.dataset.agendaCopiarTarefa,
+          itemId: btn.dataset.agendaCopiarItem || '',
+          label: btn.dataset.agendaCopiarLabel,
+        };
+        Utils.toast('Copiado — abra o "+" de outro horário e clique em "Colar aqui".', 'sucesso');
+        _renderizarAgenda();
+      };
+    });
+    const btnColarAqui = document.getElementById('agenda-colar-aqui');
+    if (btnColarAqui) btnColarAqui.onclick = async () => {
+      if (!agendaClipboard) return;
+      const jaExisteAqui = agendaAlocacoes.some(a => a.data === dataStr && a.horario === agendaSlotAberto
+        && a.tarefaId === agendaClipboard.tarefaId && (a.itemId || '') === (agendaClipboard.itemId || ''));
+      if (jaExisteAqui) { Utils.toast('Essa tarefa já está nesse horário.', 'alerta'); return; }
+      await _atribuirTarefaSlot(agendaClipboard.tarefaId, dataStr, agendaSlotAberto, agendaClipboard.itemId || null);
+    };
     el.querySelectorAll('[data-agenda-check]').forEach(chk => {
       const tarefaId = chk.dataset.agendaCheck;
       const itemId = chk.dataset.agendaCheckItem;
@@ -1442,11 +1522,40 @@ const Todo = (() => {
     return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
   }
 
-  async function _atribuirTarefaSlot(taskId, dataStr, slot, itemId) {
+  async function _atribuirTarefaSlot(taskId, dataStr, slot, itemId, semRenderizar) {
     const dados = { tarefaId: taskId, data: dataStr, horario: slot, itemId: itemId || '' };
     const id = await Database.criarRaiz(COL_AGENDA, dados);
     agendaAlocacoes.push({ id, ...dados });
+    if (!semRenderizar) _renderizarAgenda();
+  }
+
+  // "Puxa" pro dia exibido as alocações do dia anterior cuja tarefa/item
+  // ainda não foi concluído — pra não perder o que ficou pra trás sem
+  // ter que reagendar tudo na mão de novo.
+  async function _trazerPendenciasDeOntem() {
+    const dataStr = agendaDataAtual;
+    const diaAnteriorStr = _diaOffset(dataStr, -1);
+    const alocacoesOntem = agendaAlocacoes.filter(a => a.data === diaAnteriorStr);
+    let trazidas = 0;
+    for (const a of alocacoesOntem) {
+      const t = tarefas.find(x => x.id === a.tarefaId);
+      if (!t) continue;
+      let pendente;
+      if (a.itemId) {
+        const item = (Array.isArray(t.checklist) ? t.checklist : []).find(i => i.id === a.itemId);
+        pendente = !!item && !item.concluido;
+      } else {
+        pendente = !t.concluida;
+      }
+      if (!pendente) continue;
+      const jaExisteHoje = agendaAlocacoes.some(x => x.data === dataStr && x.horario === a.horario
+        && x.tarefaId === a.tarefaId && (x.itemId || '') === (a.itemId || ''));
+      if (jaExisteHoje) continue;
+      await _atribuirTarefaSlot(a.tarefaId, dataStr, a.horario, a.itemId || null, true);
+      trazidas++;
+    }
     _renderizarAgenda();
+    Utils.toast(trazidas > 0 ? `${trazidas} pendência${trazidas === 1 ? '' : 's'} trazida${trazidas === 1 ? '' : 's'} de ontem.` : 'Nenhuma pendência nova pra trazer.', 'sucesso');
   }
 
   // Cria uma tarefa nova direto da Agenda (pra quando ela ainda não
