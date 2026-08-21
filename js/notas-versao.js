@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.13.22',
+  versaoAtual: 'V3.19.13.23',
 
   versoes: [
     {
@@ -9807,6 +9807,16 @@ const NotasVersao = {
         "Ícone ⠿ do lado esquerdo de cada torre e cada pavimento — arrasta pra cima/baixo pra reordenar, solta na posição desejada.",
         "Reordena só dentro do mesmo nível (torre com torre; pavimento com pavimento da MESMA torre) — não move pavimento de uma torre pra outra arrastando.",
         "Salva automático a cada solta, igual as outras edições da Estrutura da Obra."
+      ]
+    },
+    {
+      "versao": "V3.19.13.23",
+      "data": "2026-08-19",
+      "tipo": "correcao",
+      "titulo": "Estrutura da Obra: campo de nome do apartamento/unidade tinha largura fixa de 50px — cortava nomes maiores tipo \"AL DIREITA\"",
+      "itens": [
+        "Bug real: o Milton passou a usar nomes descritivos maiores (\"FACHADA I\", \"AL DIREITA\") em vez de só \"AP11\" — mas o campo tinha 50px fixos, cortando o texto e deixando impossível ver o que estava sendo digitado.",
+        "Corrigido: o campo agora cresce sozinho conforme o texto (baseado no tamanho do valor, ajusta a cada tecla digitada)."
       ]
     }
   ],

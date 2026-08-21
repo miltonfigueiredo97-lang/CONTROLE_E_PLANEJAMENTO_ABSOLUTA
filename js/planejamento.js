@@ -3940,7 +3940,10 @@ const Planejamento = (() => {
               </div>
               ${aptos.length?`<div style="display:flex;flex-wrap:wrap;gap:4px;margin:4px 0 0 10px;">
                 ${aptos.map(a=>`<span style="display:inline-flex;align-items:center;gap:3px;background:#111;border:1px solid #333;border-radius:100px;padding:2px 4px 2px 8px;font-size:.7rem;color:#ccc;">
-                  <input value="${_esc(a.nome||'')}" onchange="Planejamento._editarNomeEst('apartamento','${a.id}',this.value)" style="width:50px;background:transparent;border:none;color:#ccc;font-size:.7rem;padding:0;">
+                  <input value="${_esc(a.nome||'')}" size="${Math.max(4,String(a.nome||'').length+1)}"
+                    oninput="this.size=Math.max(4,this.value.length+1)"
+                    onchange="Planejamento._editarNomeEst('apartamento','${a.id}',this.value)"
+                    style="background:transparent;border:none;color:#ccc;font-size:.7rem;padding:0;min-width:30px;">
                   <span style="cursor:pointer;color:#dc2626;" onclick="Planejamento._removerNoEst('apartamento','${a.id}')">✕</span>
                 </span>`).join('')}
               </div>`:''}
