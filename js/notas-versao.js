@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.13.23',
+  versaoAtual: 'V3.19.13.24',
 
   versoes: [
     {
@@ -9817,6 +9817,16 @@ const NotasVersao = {
       "itens": [
         "Bug real: o Milton passou a usar nomes descritivos maiores (\"FACHADA I\", \"AL DIREITA\") em vez de só \"AP11\" — mas o campo tinha 50px fixos, cortando o texto e deixando impossível ver o que estava sendo digitado.",
         "Corrigido: o campo agora cresce sozinho conforme o texto (baseado no tamanho do valor, ajusta a cada tecla digitada)."
+      ]
+    },
+    {
+      "versao": "V3.19.13.24",
+      "data": "2026-08-19",
+      "tipo": "correcao",
+      "titulo": "Gerar Grupos não reconhecia \"Fundações\" ↔ \"Fundação\" — plural irregular do português (-ão vira -ões, não só +s)",
+      "itens": [
+        "Bug pego pelo Milton: cadastrou \"FUNDAÇÕES\" na Estrutura da Obra, mas \"Estacas / Blocos / Baldrames - Fundação\" continuava propondo Sem Vínculo. Causa: plural de palavra terminada em \"-ão\" troca a vogal (fundação→fundações, comunicação→comunicações) — minha regra de plural só cobria tirar \"s\"/\"es\" do final, que não serve pra esse caso.",
+        "Adicionada a regra específica \"-ões\" → \"-ão\" (geral, vale pra qualquer palavra assim, não só Fundação) — testado contra Fundações, Comunicações e Instalações sem quebrar os casos que já funcionavam (Elevadores, Subsolo etc.)."
       ]
     }
   ],

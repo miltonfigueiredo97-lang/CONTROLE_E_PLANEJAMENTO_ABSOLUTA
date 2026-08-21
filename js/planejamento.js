@@ -4168,10 +4168,15 @@ const Planejamento = (() => {
   // usa singular) porque a palavra maior nunca é substring da menor. Gera
   // candidatos tirando "es"/"s" do final (regra comum de plural em PT-BR:
   // elevador→elevadores, muro→muros) pra testar os dois lados.
+  // Plural em "-ão" é IRREGULAR — não é só tirar "s"/"es", troca a própria
+  // vogal: fundação→fundações, comunicação→comunicações, instalação→
+  // instalações. Sem essa regra à parte, "Fundações" cadastrado nunca casava
+  // com "Fundação" na tarefa (foi exatamente o que aconteceu).
   function _candidatosSingular(s){
     const out=[s];
     if(s.length>5&&/es$/.test(s))out.push(s.slice(0,-2));
     if(s.length>4&&/s$/.test(s))out.push(s.slice(0,-1));
+    if(s.length>5&&/oes$/.test(s))out.push(s.slice(0,-3)+'ao');
     return[...new Set(out)];
   }
   function _detectarGrupoPorNome(nomeTarefa,estrutura){
