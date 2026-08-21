@@ -1,19 +1,32 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.30.1',
+  versaoAtual: 'V3.19.30.2',
 
   // ATUALIZAR sempre que um módulo mudar de status — é daqui que a página mostra o que falta
+  // ATUALIZAR sempre que um módulo mudar de status ou um trabalho parar no meio:
+  // anotar em 'falta' EXATAMENTE o que ficou por fazer (é a memória do Milton) e em
+  // 'busca' o termo que encontra as versões daquele assunto na timeline (clique do card usa isso).
   pendencias: [
-    { nome: 'Levantamento Pintura',      status: 'em-dev',  desc: 'Em desenvolvimento — pinturaAreas parcial' },
-    { nome: 'Controle Concreto',         status: 'em-dev',  desc: 'Parcial — BTs e lançamentos incompletos' },
-    { nome: 'Controle Solo Grampeado',   status: 'em-dev',  desc: 'Parcial' },
-    { nome: 'Produção',                  status: 'em-dev',  desc: 'Parcial' },
-    { nome: 'Restrições',                status: 'stub',    desc: 'Não iniciado (página vazia)' },
-    { nome: 'Orçamentos',                status: 'stub',    desc: 'Não iniciado (página vazia)' },
-    { nome: 'Histograma',                status: 'stub',    desc: 'Não iniciado (página vazia)' },
-    { nome: 'Predecessoras — datas automáticas', status: 'atencao', desc: 'Funciona mas tem edge cases conhecidos' },
-    { nome: 'Relatório do Diário de Obra',       status: 'atencao', desc: 'Formato ainda amadurecendo' },
-    { nome: 'Regras de segurança do Firestore',  status: 'atencao', desc: 'Ainda são as de desenvolvimento' }
+    { nome: 'Levantamento Pintura', status: 'em-dev', busca: 'pintura',
+      falta: ['Tela existe mas grava só o básico em pinturaAreas', 'Falta: cálculo de área por demão/tinta, vínculo com o Planejamento (hoje é stub no LEVANTAMENTO_MODULOS)', 'Falta: Editor de Estrutura (árvore Torre→Andar→Apto) igual Piso/Teto'] },
+    { nome: 'Controle Concreto', status: 'em-dev', busca: 'controle concreto',
+      falta: ['Coleções concretoPecaConc/concretoBTs/concretoLancamentos criadas, telas parciais', 'Falta: fechar fluxo de lançamento (BT → peça → volume conferido)', 'Falta: relatório/resumo por concretagem'] },
+    { nome: 'Controle Solo Grampeado', status: 'em-dev', busca: 'controle solo',
+      falta: ['Página controle-solo-grampeado.html criada sobre PDF', 'Falta: fechar o ciclo de execução x medição (hoje só visualiza)'] },
+    { nome: 'Produção', status: 'em-dev', busca: 'produção',
+      falta: ['producao.html parcial', 'Falta: definir com o Milton o que a tela consolida (produção diária por equipe? por frente?) — parado por falta de definição, não de código'] },
+    { nome: 'Restrições', status: 'stub', busca: 'restrições',
+      falta: ['Página vazia — nada foi definido nem começado'] },
+    { nome: 'Orçamentos', status: 'stub', busca: 'orçamentos',
+      falta: ['Página vazia — nada foi definido nem começado'] },
+    { nome: 'Histograma', status: 'stub', busca: 'histograma',
+      falta: ['Página vazia — nada foi definido nem começado'] },
+    { nome: 'Predecessoras — datas automáticas', status: 'atencao', busca: 'predecessoras',
+      falta: ['Cálculo automático de início/fim funciona no caso comum', 'Edge cases conhecidos: cadeias longas com defasagem negativa e mover tarefa com predecessora pra outra família'] },
+    { nome: 'Relatório do Diário de Obra', status: 'atencao', busca: 'diário relatório',
+      falta: ['Relatório sai, mas o formato ainda não foi aprovado como definitivo pelo Milton'] },
+    { nome: 'Regras de segurança do Firestore', status: 'atencao', busca: 'firestore segurança',
+      falta: ['Ainda allow read/write pra qualquer autenticado (regra de dev)', 'Com permissões no Firestore, endurecer as rules — ação de infra, fazer com o Milton'] }
   ],
 
   versoes: [
@@ -10097,6 +10110,19 @@ const NotasVersao = {
     },
     {
       "versao": "V3.19.30.1",
+      "legado": "V3.19.30.1",
+      "status": "fechada",
+      "data": "2026-08-21",
+      "tipo": "melhoria",
+      "titulo": "Painel de pendências agora conta O QUE falta e leva pro histórico do assunto",
+      "itens": [
+        "Cada pendência lista exatamente o que ficou por fazer (campo falta) — memória externa: dá pra retomar o trabalho sem depender de lembrar.",
+        "Clicar num card de pendência preenche a busca com o assunto e rola pra timeline — mostra todas as versões que alimentaram aquele trabalho.",
+        "PROJETO.md: toda sessão é obrigada a registrar a pendência (com o que falta) antes de parar um trabalho no meio, e a remover o item quando concluir (conclusão = frente nova, B+1)."
+      ]
+    },
+    {
+      "versao": "V3.19.30.2",
       "data": "2026-08-19",
       "tipo": "melhoria",
       "titulo": "Importar Correções ganha o campo Nome — faltava opção pra corrigir nome de tarefa direto pela planilha",
@@ -10159,12 +10185,17 @@ const NotasVersao = {
         </div>
         <div id="nvPendBody" style="display:none;margin-top:12px;">
           <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px;">
-            ${this.pendencias.map(p=>{
+            ${this.pendencias.map((p,pi)=>{
               const cfg = {'em-dev':['🔧 Em desenvolvimento','#5b8dd9'],'stub':['🏗 Não iniciado','#e0703c'],'atencao':['⚠️ Atenção','#c9a400']}[p.status]||['—','#888'];
-              return `<div style="border:1px solid var(--cor-borda-light);border-radius:9px;padding:9px 12px;">
-                <div style="font-weight:700;font-size:.8rem;">${p.nome}</div>
+              return `<div class="nv-pend" data-busca="${(p.busca||'')}" style="border:1px solid var(--cor-borda-light);border-radius:9px;padding:9px 12px;cursor:pointer;transition:border-color .15s;" title="Clique pra ver todas as versões deste assunto na linha do tempo">
+                <div style="display:flex;align-items:center;gap:6px;">
+                  <div style="font-weight:700;font-size:.8rem;flex:1;">${p.nome}</div>
+                  <span style="font-size:.65rem;color:#bbb;">🔎 histórico</span>
+                </div>
                 <div style="font-size:.68rem;font-weight:800;color:${cfg[1]};margin-top:2px;">${cfg[0]}</div>
-                <div style="font-size:.72rem;color:#888;margin-top:2px;">${p.desc}</div>
+                <ul style="list-style:none;margin:6px 0 0;padding:0;display:flex;flex-direction:column;gap:3px;">
+                  ${(p.falta||[]).map(f=>`<li style="display:flex;gap:5px;font-size:.72rem;color:#777;line-height:1.4;"><span style="color:${cfg[1]};flex-shrink:0;">•</span><span>${f}</span></li>`).join('')}
+                </ul>
               </div>`;}).join('')}
           </div>
           <div style="font-size:.7rem;color:#aaa;margin-top:10px;">Quando um destes for concluído e publicado, ele sai daqui e a versão sobe de frente (B).</div>
@@ -10253,6 +10284,12 @@ const NotasVersao = {
       c.querySelector('#nvVazio').style.display = visiveis ? 'none' : 'block';
     };
     busca.addEventListener('input', aplicar);
+    c.querySelectorAll('.nv-pend').forEach(p => p.addEventListener('click', () => {
+      busca.value = p.dataset.busca || '';
+      aplicar();
+      const lista = c.querySelector('#nvLista');
+      if (lista && lista.scrollIntoView) lista.scrollIntoView({behavior:'smooth', block:'start'});
+    }));
     c.querySelectorAll('.nv-f').forEach(b => b.addEventListener('click', () => {
       filtroTipo = b.dataset.t;
       c.querySelectorAll('.nv-f').forEach(x => {

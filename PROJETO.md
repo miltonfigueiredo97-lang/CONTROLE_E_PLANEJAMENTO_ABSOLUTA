@@ -19,7 +19,10 @@ A versão atual é **V3.19.30** (a antiga V3.19.13.29). Fonte da verdade: `versa
 - **A** só sobe com autorização explícita do Milton (sistema novo funcional — 3 vezes na história).
 - Na prática: se a sua entrega é sobre o MESMO assunto das últimas versões → C ou D. Se você está começando assunto novo → feche a frente: B+1 e a entrega vira VB.0.
 
-**PENDÊNCIAS VISÍVEIS:** a página de Notas de Versão tem o painel "🚧 O que ainda NÃO está pronto", alimentado pelo array `pendencias` em `js/notas-versao.js`. **Sempre que concluir ou iniciar um módulo, ATUALIZE esse array** — é ali que o Milton enxerga o que falta.
+**PENDÊNCIAS VISÍVEIS (obrigação de TODA sessão):** a página de Notas de Versão tem o painel "🚧 O que ainda NÃO está pronto", alimentado pelo array `pendencias` em `js/notas-versao.js`. Cada item tem `falta` (lista do que exatamente ficou por fazer — é a memória externa do Milton, escreva como se ele fosse ler daqui a um mês sem contexto) e `busca` (termo que, clicado, filtra a timeline com todas as versões daquele assunto). **Regras:**
+- Parou um trabalho no meio (fim de conversa, mudança de assunto, bloqueio)? → registre/atualize a pendência com o que falta, ANTES de encerrar.
+- Concluiu algo que estava no painel? → remova o item (e a conclusão vira frente: B+1).
+- Começou módulo novo que não vai terminar na mesma conversa? → crie a pendência já na primeira entrega.
 
 ---
 
