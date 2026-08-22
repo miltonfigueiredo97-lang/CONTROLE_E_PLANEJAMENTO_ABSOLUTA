@@ -146,6 +146,7 @@ const Medicoes = (() => {
       .med-btn-100{border:1px solid #16a34a;color:#16a34a;background:#f0fdf4;border-radius:6px;width:34px;height:30px;font-size:.85rem;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;}
       .med-campo{display:flex;flex-direction:column;gap:3px;min-width:0;}
       .med-campo label{font-size:.62rem;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:.02em;}
+      .med-hint{color:#dc2626;text-transform:none;font-weight:600;letter-spacing:0;}
       .med-pct-linha{display:flex;gap:5px;}
       .med-pct-linha .med-inp-pct{flex:1;min-width:0;}
       .med-previsto{display:flex;align-items:center;height:30px;padding:0 10px;border:1px solid #e2e8f0;background:#f8fafc;border-radius:6px;font-weight:700;color:#64748b;font-size:.85rem;}
@@ -263,7 +264,11 @@ const Medicoes = (() => {
         if(!leafSet.has(t.id)){pilha[niv]=t.id;continue;}
         const okQ=!q||(t.nome||'').toLowerCase().includes(q);
         const okF=!frenteFiltro||t.frenteServico===frenteFiltro;
-        const okC=!ocultarConcluidos||_progAtual(t)<100;
+        // Se a tarefa tem edição pendente nesta sessão, ela NUNCA some pelo
+        // "Ocultar 100%" — senão a tarefa desaparece na sua frente assim que
+        // você termina de digitar 100%, sem chance de revisar/corrigir antes
+        // de salvar (só reaparece pra quem você ainda não mexeu).
+        const okC=!ocultarConcluidos||_progAtual(t)<100||pend[t.id];
         if(okQ&&okF&&okC){
           leavesVisiveis.add(t.id);
           for(const gid of pilha){if(gid){gruposComAlvo.add(gid);if(q)colapsados.delete(gid);}}
@@ -315,8 +320,8 @@ const Medicoes = (() => {
             <input type="date" class="med-inp med-inp-data" value="${iniVal}" onchange="Medicoes.setCampo('${t.id}','inicioReal',this.value)">
           </div>
           <div class="med-campo">
-            <label>Término Real</label>
-            <input type="date" class="med-inp med-inp-data" value="${fimVal}" title="Só habilita com 100% de progresso" ${fimHabilitado?'':'disabled'} onchange="Medicoes.setCampo('${t.id}','terminoReal',this.value)">
+            <label>Término Real${fimHabilitado?'':' <span class="med-hint">(só com 100%)</span>'}</label>
+            <input type="date" class="med-inp med-inp-data" value="${fimVal}" ${fimHabilitado?'':'disabled'} onchange="Medicoes.setCampo('${t.id}','terminoReal',this.value)">
           </div>
           <div class="med-campo">
             <label>% Executado</label>
@@ -341,6 +346,7 @@ const Medicoes = (() => {
     <div class="med-top" style="flex-wrap:wrap;flex-shrink:0;">
       <button class="btn btn-sm btn-outline" onclick="Medicoes.voltar()" title="Voltar">←</button>
       <button class="btn btn-sm btn-primario" onclick="Medicoes.salvarMedicao()" title="Salvar medição">💾 Salvar${nPend?` (${nPend})`:''}</button>
+      ${nPend?`<button class="btn btn-sm btn-outline" style="color:#dc2626;border-color:#fecaca;" onclick="Medicoes.descartarTudo()" title="Descartar todas as alterações não salvas desta medição">🗑 Descartar tudo (${nPend})</button>`:''}
       <button class="btn btn-sm btn-outline" onclick="Medicoes.expandirTudo()" title="Abrir todos os grupos">▾ Expandir</button>
       <button class="btn btn-sm btn-outline" onclick="Medicoes.recolherTudo()" title="Fechar todos os grupos">▸ Recolher</button>
       <span class="med-chip">${tot.total.toFixed(2)}% <small>Total</small></span>
@@ -395,6 +401,7 @@ const Medicoes = (() => {
       .med-btn-100{border:1px solid #16a34a;color:#16a34a;background:#f0fdf4;border-radius:6px;width:34px;height:30px;font-size:.85rem;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;}
       .med-campo{display:flex;flex-direction:column;gap:3px;min-width:0;}
       .med-campo label{font-size:.62rem;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:.02em;}
+      .med-hint{color:#dc2626;text-transform:none;font-weight:600;letter-spacing:0;}
       .med-pct-linha{display:flex;gap:5px;}
       .med-pct-linha .med-inp-pct{flex:1;min-width:0;}
       .med-previsto{display:flex;align-items:center;height:30px;padding:0 10px;border:1px solid #e2e8f0;background:#f8fafc;border-radius:6px;font-weight:700;color:#64748b;font-size:.85rem;}
@@ -485,6 +492,12 @@ const Medicoes = (() => {
     },250);
   }
   function descartarItem(id){delete pend[id];_render();}
+  function descartarTudo(){
+    const n=Object.keys(pend).length;
+    if(!n)return;
+    if(!Utils.confirmar(`Descartar as ${n} alteração(ões) não salva(s) desta medição? Isso não afeta nada que já foi salvo antes.`))return;
+    pend={};_render();
+  }
 
   // ==================== EDIÇÃO INLINE (sem popup) ====================
   // Início Real, Término Real e % direto na linha — sem clicar em lápis
@@ -673,7 +686,7 @@ const Medicoes = (() => {
     catch(e){console.error(e);Utils.toast('Erro.','erro');}
   }
 
-  return{init,carregar,novaMedicao,voltar,toggleGrupo,expandirTudo,recolherTudo,setBusca,setFiltroFrente,setOcultarConcluidos,descartarItem,
+  return{init,carregar,novaMedicao,voltar,toggleGrupo,expandirTudo,recolherTudo,setBusca,setFiltroFrente,setOcultarConcluidos,descartarItem,descartarTudo,
     setCampo,removerFoto,fotoSelecionada,
     salvarMedicao,verMedicao,excluirMedicao};
 })();
