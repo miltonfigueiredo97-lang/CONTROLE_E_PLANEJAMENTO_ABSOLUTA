@@ -36,9 +36,12 @@ const Medicoes = (() => {
   function _hoje(){const n=new Date();return new Date(n.getFullYear(),n.getMonth(),n.getDate());}
   function _esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
   function _t(id){return tarefas.find(x=>x.id===id);}
-  function _peso(t){return Math.max(1,t.duracao||1);}
+  function _peso(t){return t._pesoCache!=null?t._pesoCache:Math.max(1,t.duracao||1);}
 
   function _espAt(t,d){
+    // Se "d" é hoje (o caso de longe mais comum, chamado em todo render),
+    // usa o valor pré-calculado em carregar() — evita reparsear datas.
+    if(t._espCache!=null&&d.getTime()===_hoje().getTime())return t._espCache;
     const i=_d(t.inicioPlanejado),f=_d(t.terminoPlanejado);
     if(!i||!f)return Math.round(t.percentualEsperado||0);
     if(d<i)return 0;if(d>=f)return 100;
@@ -74,6 +77,12 @@ const Medicoes = (() => {
         const nxt=sorted[i+1];
         if(!nxt||((nxt.nivel||0)<=(sorted[i].nivel||0)))leafSet.add(sorted[i].id);
       }
+      // Pré-calcula peso e % esperado hoje UMA VEZ (envolve parsear datas —
+      // repetir isso pra cada tarefa a cada tecla digitada, em obra grande
+      // com milhares de tarefas, era o que travava a digitação/o calendário).
+      // "Hoje" não muda durante a sessão, então o cache vale até recarregar.
+      const hoje=_hoje();
+      for(const t of tarefas){t._pesoCache=_peso(t);t._espCache=_espAt(t,hoje);}
       _render();
     }catch(e){console.error(e);Utils.toast('Erro ao carregar.','erro');}
     finally{Utils.esconderLoading();}
@@ -303,11 +312,11 @@ const Medicoes = (() => {
         <div class="med-edit">
           <div class="med-campo">
             <label>Início Real</label>
-            <input type="date" class="med-inp med-inp-data" value="${iniVal}" onclick="try{this.showPicker&&this.showPicker()}catch(e){}" onchange="Medicoes.setCampo('${t.id}','inicioReal',this.value)">
+            <input type="date" class="med-inp med-inp-data" value="${iniVal}" onchange="Medicoes.setCampo('${t.id}','inicioReal',this.value)">
           </div>
           <div class="med-campo">
             <label>Término Real</label>
-            <input type="date" class="med-inp med-inp-data" value="${fimVal}" title="Só habilita com 100% de progresso" ${fimHabilitado?'':'disabled'} onclick="try{this.showPicker&&this.showPicker()}catch(e){}" onchange="Medicoes.setCampo('${t.id}','terminoReal',this.value)">
+            <input type="date" class="med-inp med-inp-data" value="${fimVal}" title="Só habilita com 100% de progresso" ${fimHabilitado?'':'disabled'} onchange="Medicoes.setCampo('${t.id}','terminoReal',this.value)">
           </div>
           <div class="med-campo">
             <label>% Executado</label>

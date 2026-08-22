@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.30.19',
+  versaoAtual: 'V3.19.30.20',
 
   versoes: [
     {
@@ -10279,6 +10279,17 @@ const NotasVersao = {
       "itens": [
         "Toda vez que uma data era escolhida no calendário ou o % era alterado, a árvore inteira era reconstruída na mesma hora — em obras com muita tarefa, isso rodava junto com o fechamento do calendário e dava a sensação de travamento bem no meio da ação.",
         "Agora a reconstrução espera o navegador terminar de desenhar a ação atual (fechar o calendário, mostrar o valor digitado) antes de rodar — mesmo resultado final, sem o soluço no meio."
+      ]
+    },
+    {
+      "versao": "V3.19.30.20",
+      "data": "2026-08-22",
+      "tipo": "correcao",
+      "titulo": "Medições: achado o gargalo de verdade (parse de data repetido em obra grande) + calendário forçado tirado",
+      "itens": [
+        "O % Esperado de cada tarefa é calculado a partir das datas planejadas (parseando string de data, fazendo conta de dias) — e isso rodava DE NOVO pra cada tarefa em TODO render (a cada tecla na busca, cada % editado, cada data escolhida), inclusive repetido várias vezes pra tarefas dentro de grupos aninhados. Numa obra com milhares de tarefas, isso sozinho já segurava a tela por um bom tempo a cada ação.",
+        "Corrigido: esse cálculo agora roda uma vez só, quando a obra carrega (a \"data de hoje\" não muda durante a sessão) — os renders seguintes só leem o valor já pronto.",
+        "Tirado o clique que forçava abrir o calendário no campo de data — quem preferia digitar direto pelo teclado numérico não conseguia mais. Volta a ser um campo de data normal: digita ou clica no ícone do calendário, como preferir."
       ]
     }
   ],
