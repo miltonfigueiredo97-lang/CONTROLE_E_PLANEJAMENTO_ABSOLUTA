@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.30.23',
+  versaoAtual: 'V3.19.30.24',
 
   versoes: [
     {
@@ -10322,6 +10322,17 @@ const NotasVersao = {
         "Removido o \\\"% médio concretado\\\" da linha de resumo — não deixava claro o que representava (era uma média simples do % de cada marcador).",
         "Métricas de Estacas/Fundação (obra inteira) agora mostram DOIS percentuais separados e explicados: \\\"% executado (por quantidade)\\\" (peças 100% feitas ÷ total) e \\\"% executado (por m³)\\\" (volume feito ÷ volume total) — são diferentes de propósito (uma peça grande pesa mais no volume do que na contagem).",
         "Novos cartões: Dias trabalhados (dias distintos com concretagem lançada), m³/dia (ritmo médio nesses dias) e Previsão de fim (hoje + dias restantes no ritmo atual, ou \\\"Concluído\\\" se já bateu 100%)."
+      ]
+    },
+    {
+      "versao": "V3.19.30.24",
+      "data": "2026-08-22",
+      "tipo": "correcao",
+      "titulo": "Achado o card certo: \"% Médio Concretado\" era no Controle de Estacas, não no Dashboard",
+      "itens": [
+        "A correção anterior mexeu no card certo só que no lugar errado (Dashboard) — o \\\"% MÉDIO CONCRETADO\\\" que o Milton via era o do KPI grid da aba Marcadores dentro do próprio Controle de Estacas, um arquivo e um card totalmente diferentes.",
+        "Agora sim, corrigido no lugar certo: virou \\\"% Executado (por quantidade)\\\" e \\\"% Executado (por m³)\\\" — separados e explicados, igual ao que já tinha sido feito no Dashboard.",
+        "Adicionados também Dias trabalhados, m³/dia (ritmo médio) e Previsão de fim, calculados a partir dos marcadores/peças/lançamentos da view atual (Estacas ou Fundações)."
       ]
     }
   ],

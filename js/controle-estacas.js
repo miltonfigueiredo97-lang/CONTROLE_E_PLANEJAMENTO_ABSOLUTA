@@ -341,7 +341,40 @@ const ControleEstacas = (() => {
       const st = statusMarcador(m);
       return st.pct !== null && st.pct >= 100;
     }).length;
-    const pctMedio = total ? marcadoresView.reduce((s, m) => s + (statusMarcador(m).pct || 0), 0) / total : 0;
+    // % por QUANTIDADE (marcadores 100% feitos / total) e % por VOLUME (m³
+    // feito / m³ total das peças vinculadas) — são contas diferentes (uma
+    // peça grande pesa mais no volume do que na contagem). "% Médio"
+    // (média simples do % de cada marcador) não dizia nada de útil.
+    const pctPorQuantidade = total ? (concluidos / total) * 100 : 0;
+    const pecasView = marcadoresView.filter(m => m.pecaId).map(m => pecas.find(p => p.id === m.pecaId)).filter(Boolean);
+    const idsPecasView = new Set(pecasView.map(p => p.id));
+    const volumeTotalView = pecasView.reduce((s, p) => s + EC.num(p.volume), 0);
+    const volumeFeitoView = pecasView.reduce((s, p) => {
+      const pct = ConcretoCalculos.pctConcretado(p, lancamentos);
+      return s + Math.min(EC.num(p.volume), (pct / 100) * EC.num(p.volume));
+    }, 0);
+    const pctPorVolume = volumeTotalView > 0 ? (volumeFeitoView / volumeTotalView) * 100 : 0;
+    // Dias trabalhados = dias distintos (concretagem.data) com pelo menos 1
+    // lançamento destas peças. m³/dia = ritmo médio. Previsão = hoje + dias
+    // restantes no ritmo atual.
+    const concPorId = new Map(concretagens.map(c => [c.id, c]));
+    const diasComLancamento = new Set();
+    lancamentos.forEach(l => {
+      if (!idsPecasView.has(l.pecaId)) return;
+      const c = concPorId.get(l.concretagemId);
+      if (c && c.data) diasComLancamento.add(c.data);
+    });
+    const diasTrabalhados = diasComLancamento.size;
+    const m3PorDia = diasTrabalhados > 0 ? volumeFeitoView / diasTrabalhados : 0;
+    const volumeFaltandoView = Math.max(0, volumeTotalView - volumeFeitoView);
+    let previsaoTxt = '—';
+    if (m3PorDia > 0 && volumeFaltandoView > 0) {
+      const dataFim = new Date();
+      dataFim.setDate(dataFim.getDate() + Math.ceil(volumeFaltandoView / m3PorDia));
+      previsaoTxt = dataFim.toLocaleDateString('pt-BR');
+    } else if (volumeFaltandoView <= 0 && total > 0) {
+      previsaoTxt = '✅ Concluído';
+    }
 
     el.innerHTML = `
       ${(telaCheiaAtiva || painelMinimizado) ? '' : `
@@ -349,7 +382,11 @@ const ControleEstacas = (() => {
         <div class="cc-kpi"><div class="cc-kpiIcon">${view === 'estacas' ? '⚫' : '⬛'}</div><div class="cc-kpiBody"><div class="cc-kpiLabel">${view === 'estacas' ? 'Estacas' : 'Fundações'} marcadas</div><div class="cc-kpiValue">${total}</div></div></div>
         <div class="cc-kpi cc-kpiBlue"><div class="cc-kpiIcon">🔗</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Vinculadas ao levantamento</div><div class="cc-kpiValue">${vinculados}<span class="cc-kpiUnit">/ ${total}</span></div></div></div>
         <div class="cc-kpi cc-kpiGreen"><div class="cc-kpiIcon">✅</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Concretadas</div><div class="cc-kpiValue">${concluidos}<span class="cc-kpiUnit">/ ${total}</span></div></div></div>
-        <div class="cc-kpi cc-kpiOrange"><div class="cc-kpiIcon">📊</div><div class="cc-kpiBody"><div class="cc-kpiLabel">% Médio Concretado</div><div class="cc-kpiValue">${EC.fmt1(pctMedio)}<span class="cc-kpiUnit">%</span></div></div></div>
+        <div class="cc-kpi cc-kpiOrange"><div class="cc-kpiIcon">📊</div><div class="cc-kpiBody"><div class="cc-kpiLabel">% Executado (por quantidade)</div><div class="cc-kpiValue">${EC.fmt1(pctPorQuantidade)}<span class="cc-kpiUnit">%</span></div></div></div>
+        <div class="cc-kpi cc-kpiOrange"><div class="cc-kpiIcon">📐</div><div class="cc-kpiBody"><div class="cc-kpiLabel">% Executado (por m³)</div><div class="cc-kpiValue">${EC.fmt1(pctPorVolume)}<span class="cc-kpiUnit">%</span></div></div></div>
+        <div class="cc-kpi"><div class="cc-kpiIcon">📅</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Dias trabalhados</div><div class="cc-kpiValue">${diasTrabalhados}</div></div></div>
+        <div class="cc-kpi"><div class="cc-kpiIcon">🚚</div><div class="cc-kpiBody"><div class="cc-kpiLabel">m³/dia (ritmo médio)</div><div class="cc-kpiValue">${EC.fmt1(m3PorDia)}</div></div></div>
+        <div class="cc-kpi"><div class="cc-kpiIcon">🏁</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Previsão de fim</div><div class="cc-kpiValue" style="font-size:1.1rem;">${previsaoTxt}</div></div></div>
       </div>`}
 
       <div class="cc-panel">
