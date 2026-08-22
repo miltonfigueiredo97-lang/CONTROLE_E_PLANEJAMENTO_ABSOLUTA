@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.30.12',
+  versaoAtual: 'V3.19.30.13',
 
   versoes: [
     {
@@ -10209,6 +10209,17 @@ const NotasVersao = {
         "Achado o problema real: o \\\"resumo total\\\" do relatório mostrava números (estacas executadas, m³ real, m³ calculado) só das datas escolhidas no relatório — mas os rótulos não deixavam isso claro, parecendo ser da obra toda. Agora o título e os rótulos deixam explícito: \\\"RESUMO DESTE RELATÓRIO\\\", com aviso de que não é a obra completa.",
         "Nova seção \\\"📊 COMPARAÇÃO COM A OBRA INTEIRA\\\" (na tela, no PDF e no texto de WhatsApp) — usa TODAS as estacas do projeto e TODOS os lançamentos já feitos até hoje, independente de quais datas foram escolhidas: total de estacas, quantas 100% feitas, m³ executado vs m³ total da obra, % geral executada, e a mesma comparação por tipo (Ø × comprimento).",
         "Tabela consolidada (estacas do relatório) ganhou a coluna \\\"% Executado\\\" — percentual individual de cada estaca, calculado por volume real ÷ volume calculado dela."
+      ]
+    },
+    {
+      "versao": "V3.19.30.13",
+      "data": "2026-08-21",
+      "tipo": "correcao",
+      "titulo": "Controle de Estacas: seletor de BT ilegível no celular — reorganizado em 2 linhas",
+      "itens": [
+        "No popup de lançar por estaca, a linha de cada BT era um grid de 5 colunas lado a lado (seletor + % + volume + botão + botão) — no celular, os campos fixos já ocupavam quase toda a largura, sobrando quase nada pro nome da BT selecionada, ficando ilegível.",
+        "Reorganizado em 2 linhas: o seletor de BT agora ocupa a largura toda sozinho (sempre legível, em qualquer tela), e o % + volume + botões ficam numa segunda linha embaixo, com mais espaço cada um.",
+        "Campo de % ganhou uma largura fixa mais compacta (era desproporcionalmente grande) — só precisa caber um número de 1 a 3 dígitos."
       ]
     }
   ],
