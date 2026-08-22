@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.30.21',
+  versaoAtual: 'V3.19.30.22',
 
   versoes: [
     {
@@ -10300,6 +10300,17 @@ const NotasVersao = {
       "itens": [
         "O navegador considera a data \"completa\" assim que qualquer dígito é digitado no ano (preenche o resto com zero por dentro, ex: \"2\" vira \"0002\") — a validação de ano reagia na hora e mostrava erro antes da pessoa terminar de escrever o ano todo, travando a digitação.",
         "Corrigido: agora espera uma pausa de 700ms sem mexer no campo antes de checar de verdade — só reage quando a digitação realmente parou, não a cada dígito."
+      ]
+    },
+    {
+      "versao": "V3.19.30.22",
+      "data": "2026-08-22",
+      "tipo": "melhoria",
+      "titulo": "Relatório de Concretagem de Estacas reorganizado: resumo X/de X no topo, ordem revista",
+      "itens": [
+        "Nova ordem (tela, PDF e WhatsApp): RESUMO DESTE RELATÓRIO (agora em formato X / DE X, comparando com a obra inteira) → Consumo médio por tipo de estaca → Executado por tipo → prancha preenchida (só no PDF) → o que já tinha (dia a dia, consolidado, comparação com a obra).",
+        "Cards do resumo: Estacas (feitas / de total da obra), ML executado (X / de X), m³ calculado (X / de X), Índice de perda — removida a duplicação que existia antes (esses números apareciam soltos aqui e de novo lá embaixo em Comparação com a Obra).",
+        "Novo campo mlTotal no resumo da obra inteira, usado pro ML executado ficar em X/DE X igual aos outros."
       ]
     }
   ],

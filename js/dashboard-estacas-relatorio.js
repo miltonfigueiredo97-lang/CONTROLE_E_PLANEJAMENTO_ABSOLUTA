@@ -135,14 +135,14 @@ const DashEstacasRel = (() => {
       if (!lansPorPeca.has(l.pecaId)) lansPorPeca.set(l.pecaId, []);
       lansPorPeca.get(l.pecaId).push(l);
     });
-    let volTotal = 0, volFeito = 0, qtdFeitas = 0;
+    let volTotal = 0, volFeito = 0, qtdFeitas = 0, mlTotal = 0;
     const porTipo = new Map();
     todasEstacas.forEach(p => {
       const volCalc = _num(p.volume);
       const lans = lansPorPeca.get(p.id) || [];
       const volReal = lans.reduce((s, l) => s + _num(l.volume), 0);
       const volContado = Math.min(volCalc, volReal); // não deixa "passar de 100%" inflar a % geral
-      volTotal += volCalc; volFeito += volContado;
+      volTotal += volCalc; volFeito += volContado; mlTotal += _num(p.comprimento);
       if (volCalc > 0 && volReal >= volCalc * 0.999) qtdFeitas++;
       const tp = _tipoLabel(p);
       if (!porTipo.has(tp)) porTipo.set(tp, { qtd: 0, qtdFeitas: 0, volCalc: 0, volFeito: 0 });
@@ -151,7 +151,7 @@ const DashEstacasRel = (() => {
       if (volCalc > 0 && volReal >= volCalc * 0.999) g.qtdFeitas++;
     });
     return {
-      qtdTotal: todasEstacas.length, qtdFeitas, volTotal, volFeito,
+      qtdTotal: todasEstacas.length, qtdFeitas, volTotal, volFeito, mlTotal,
       pctExecutado: volTotal > 0 ? (volFeito / volTotal) * 100 : 0,
       porTipo: [...porTipo.entries()].sort((a, b) => a[0].localeCompare(b[0], 'pt-BR', { numeric: true })),
     };
@@ -369,34 +369,42 @@ const DashEstacasRel = (() => {
 
     const t = rel.total;
     const ot = rel.obraTotal;
+    const resumoTopoHtml = `
+      <div style="border-radius:8px;overflow:hidden;margin-bottom:16px;">
+        <div style="background:var(--cor-dark-900);color:#fff;padding:10px 14px;">
+          <div style="font-weight:800;font-size:.95rem;color:var(--cor-primaria);">RESUMO DESTE RELATÓRIO</div>
+          <div class="text-sm" style="opacity:.85;">${rel.periodo ? 'Período: ' + _fBR(rel.periodo.de) + (rel.periodo.ate !== rel.periodo.de ? ' a ' + _fBR(rel.periodo.ate) : '') : ''} · ${t.dias} dia${t.dias > 1 ? 's' : ''} selecionado${t.dias > 1 ? 's' : ''} — não é a obra toda</div>
+        </div>
+        <div style="height:3px;background:var(--cor-primaria);"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px;">
+        <div class="db-metrica-card"><div class="db-metrica-valor">${t.qtd} <span style="font-size:.6em;font-weight:600;color:var(--cor-texto-secundario);">/ de ${ot.qtdTotal}</span></div><div class="db-metrica-label">Estacas</div></div>
+        <div class="db-metrica-card"><div class="db-metrica-valor">${_fmt1(t.ml)} <span style="font-size:.6em;font-weight:600;color:var(--cor-texto-secundario);">/ de ${_fmt1(ot.mlTotal)}</span></div><div class="db-metrica-label">ML executado</div></div>
+        <div class="db-metrica-card"><div class="db-metrica-valor">${_fmt2(t.volCalc)} <span style="font-size:.6em;font-weight:600;color:var(--cor-texto-secundario);">/ de ${_fmt2(ot.volTotal)}</span></div><div class="db-metrica-label">m³ calculado</div></div>
+        <div class="db-metrica-card" style="${t.perdaMedia != null && t.perdaMedia > 10 ? 'border-color:#dc2626;' : ''}"><div class="db-metrica-valor" style="color:${t.perdaMedia != null && t.perdaMedia > 10 ? '#dc2626' : '#15803d'};">${t.perdaMedia != null ? _fmt1(t.perdaMedia) + '%' : '—'}</div><div class="db-metrica-label">Índice de perda</div></div>
+      </div>
+      <div style="font-weight:700;font-size:.85rem;margin-bottom:6px;">Consumo médio por tipo de estaca</div>
+      <div style="overflow-x:auto;margin-bottom:14px;">
+        <table class="db-tabela-clean">
+          <thead><tr>
+            <th style="text-align:left;">Tipo (Ø × comprimento)</th><th>Qtd</th><th>ML</th><th>m³ real</th><th>m³ calculado</th><th>Consumo médio (m³)</th><th>Perda</th>
+          </tr></thead>
+          <tbody>
+            ${t.porTipo.map(([tipo, g]) => `<tr>
+              <td style="text-align:left;">${tipo}</td><td>${g.qtd}</td><td>${_fmt1(g.ml)}</td><td>${_fmt2(g.volReal)}</td><td>${_fmt2(g.volCalc)}</td>
+              <td>${g.qtd ? _fmt2(g.volReal / g.qtd) : '—'}</td>
+              <td>${_perdaHtml(g.volCalc > 0 ? (g.perdaVol / g.volCalc) * 100 : null)}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+      <div style="font-weight:700;font-size:.85rem;margin-bottom:6px;">Executado por tipo</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:4px;">
+        ${t.porTipo.map(([tipo, g]) => `<span class="db-chip">${tipo}: <b>${g.qtd}</b> un · ${_fmt1(g.ml)} ml · ${_fmt2(g.volReal)} m³</span>`).join('')}
+      </div>`;
+
     const totalHtml = `
       <div style="border-top:3px solid var(--cor-primaria);margin-top:6px;padding-top:12px;">
-        <div style="font-weight:800;font-size:.95rem;margin-bottom:2px;">RESUMO DESTE RELATÓRIO — ${t.dias} dia${t.dias > 1 ? 's' : ''} de concretagem selecionado${t.dias > 1 ? 's' : ''}</div>
-        <div class="text-sm text-muted" style="margin-bottom:8px;">${rel.periodo ? 'Período: ' + _fBR(rel.periodo.de) + (rel.periodo.ate !== rel.periodo.de ? ' a ' + _fBR(rel.periodo.ate) : '') : ''} — valores abaixo são só das estacas concretadas nas datas escolhidas, não da obra toda.</div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(125px,1fr));gap:10px;margin-bottom:10px;">
-          <div class="db-metrica-card"><div class="db-metrica-valor">${t.qtd}</div><div class="db-metrica-label">Estacas executadas (neste relatório)</div></div>
-          <div class="db-metrica-card"><div class="db-metrica-valor">${_fmt1(t.ml)}</div><div class="db-metrica-label">ML executado</div></div>
-          <div class="db-metrica-card"><div class="db-metrica-valor">${_fmt2(t.m3)}</div><div class="db-metrica-label">m³ real utilizado</div></div>
-          <div class="db-metrica-card"><div class="db-metrica-valor">${_fmt2(t.volCalc)}</div><div class="db-metrica-label">m³ calculado (destas estacas)</div></div>
-          <div class="db-metrica-card"><div class="db-metrica-valor">${_fmt2(t.perdaVol)}</div><div class="db-metrica-label">Perda (m³)</div></div>
-          <div class="db-metrica-card"><div class="db-metrica-valor" style="color:${t.perdaMedia != null && t.perdaMedia > 10 ? '#dc2626' : '#15803d'};">${t.perdaMedia != null ? _fmt1(t.perdaMedia) + '%' : '—'}</div><div class="db-metrica-label">Índice de perda</div></div>
-          <div class="db-metrica-card"><div class="db-metrica-valor">${t.qtd ? _fmt2(t.m3 / t.qtd) : '—'}</div><div class="db-metrica-label">Consumo médio/estaca (m³)</div></div>
-          <div class="db-metrica-card"><div class="db-metrica-valor">${t.dias ? _fmt1(t.qtd / t.dias) : '—'}</div><div class="db-metrica-label">Média estacas/dia</div></div>
-        </div>
-        <div style="overflow-x:auto;margin-bottom:12px;">
-          <table class="db-tabela-clean">
-            <thead><tr>
-              <th style="text-align:left;">Tipo (Ø × comprimento)</th><th>Qtd</th><th>ML</th><th>m³ real</th><th>m³ calculado</th><th>Consumo médio (m³)</th><th>Perda</th>
-            </tr></thead>
-            <tbody>
-              ${t.porTipo.map(([tipo, g]) => `<tr>
-                <td style="text-align:left;">${tipo}</td><td>${g.qtd}</td><td>${_fmt1(g.ml)}</td><td>${_fmt2(g.volReal)}</td><td>${_fmt2(g.volCalc)}</td>
-                <td>${g.qtd ? _fmt2(g.volReal / g.qtd) : '—'}</td>
-                <td>${_perdaHtml(g.volCalc > 0 ? (g.perdaVol / g.volCalc) * 100 : null)}</td>
-              </tr>`).join('')}
-            </tbody>
-          </table>
-        </div>
         <div style="font-weight:700;font-size:.85rem;margin-bottom:6px;">Estacas executadas — consolidado (${t.qtd})</div>
         ${consolidadoHtml}
 
@@ -445,6 +453,7 @@ const DashEstacasRel = (() => {
             <button class="btn btn-secundario btn-sm" onclick="document.getElementById('db-estrel-view').remove()">✕ Fechar</button>
           </div>
         </div>
+        ${resumoTopoHtml}
         ${diasHtml}
         ${totalHtml}
       </div>`;
@@ -457,10 +466,23 @@ const DashEstacasRel = (() => {
     if (!_relatorio) return;
     const rel = _relatorio;
     const t = rel.total;
+    const ot = rel.obraTotal;
     const L = [];
     L.push('*RELATÓRIO DE CONCRETAGEM — ESTACAS*');
     L.push('🏗 ' + (_dados.obraNome || 'Obra'));
     if (rel.periodo) L.push('📅 Período: ' + _fBR(rel.periodo.de) + (rel.periodo.ate !== rel.periodo.de ? ' a ' + _fBR(rel.periodo.ate) : '') + ` (${t.dias} dia${t.dias > 1 ? 's' : ''})`);
+    L.push('');
+    L.push('*RESUMO DESTE RELATÓRIO*');
+    L.push(`🔩 Estacas: ${t.qtd} / de ${ot.qtdTotal}`);
+    L.push(`📏 ML executado: ${_fmt1(t.ml)} / de ${_fmt1(ot.mlTotal)}`);
+    L.push(`📐 m³ calculado: ${_fmt2(t.volCalc)} / de ${_fmt2(ot.volTotal)}`);
+    L.push(`⚠️ Índice de perda: ${t.perdaMedia != null ? _fmt1(t.perdaMedia) + '%' : '—'}`);
+    L.push('');
+    L.push('*Consumo médio por tipo de estaca:*');
+    t.porTipo.forEach(([tipo, g]) => L.push(`• ${tipo}: ${g.qtd ? _fmt2(g.volReal / g.qtd) : '—'} m³/un`));
+    L.push('');
+    L.push('*Executado por tipo:*');
+    t.porTipo.forEach(([tipo, g]) => L.push(`• ${tipo}: ${g.qtd} un · ${_fmt1(g.ml)} ml · ${_fmt2(g.volReal)} m³`));
     L.push('');
     if (!_modoTotal) {
       rel.dias.forEach(d => {
@@ -477,17 +499,6 @@ const DashEstacasRel = (() => {
       });
       L.push('');
     }
-    L.push(`*RESUMO DESTE RELATÓRIO (${t.dias} dia${t.dias > 1 ? 's' : ''})*`);
-    L.push(`🔩 Estacas executadas: ${t.qtd}`);
-    L.push(`📏 ML executado: ${_fmt1(t.ml)}`);
-    L.push(`🧱 m³ real utilizado: ${_fmt2(t.m3)}`);
-    L.push(`📐 m³ calculado: ${_fmt2(t.volCalc)}`);
-    L.push(`⚠️ Índice de perda: ${t.perdaMedia != null ? _fmt1(t.perdaMedia) + '%' : '—'}`);
-    L.push('');
-    L.push('*Por tipo:*');
-    t.porTipo.forEach(([tipo, g]) => L.push(`• ${tipo}: ${g.qtd} un · ${_fmt1(g.ml)} ml · ${_fmt2(g.volReal)} m³`));
-    L.push('');
-    const ot = rel.obraTotal;
     L.push('*📊 COMPARAÇÃO COM A OBRA INTEIRA*');
     L.push(`🔩 Estacas: ${ot.qtdFeitas} feitas / ${ot.qtdTotal} total`);
     L.push(`🧱 m³: ${_fmt2(ot.volFeito)} feito / ${_fmt2(ot.volTotal)} total`);
@@ -525,6 +536,7 @@ const DashEstacasRel = (() => {
       const PW = doc.internal.pageSize.getWidth();
       const rel = _relatorio;
       const t = rel.total;
+      const ot = rel.obraTotal;
       const cinza = [107, 114, 128];
 
       // Capa/cabeçalho
@@ -537,6 +549,77 @@ const DashEstacasRel = (() => {
       doc.setTextColor(200);
       doc.text(`Gerado em ${new Date().toLocaleString('pt-BR')} · Absoluta Engenharia`, 12, 23);
       let y = 34;
+
+      // ===== RESUMO DESTE RELATÓRIO (X / de X — comparação com a obra) =====
+      doc.setFillColor(13, 13, 13);
+      doc.roundedRect(12, y, PW - 24, 14, 2, 2, 'F');
+      doc.setFillColor(245, 200, 0); doc.rect(12, y + 14, PW - 24, 1.2, 'F');
+      doc.setTextColor(245, 200, 0); doc.setFontSize(12); doc.setFont(undefined, 'bold');
+      doc.text('RESUMO DESTE RELATÓRIO', 16, y + 6.5);
+      doc.setTextColor(255); doc.setFontSize(8); doc.setFont(undefined, 'normal');
+      const periodoTxt = rel.periodo ? `Período: ${_fBR(rel.periodo.de)}${rel.periodo.ate !== rel.periodo.de ? ' a ' + _fBR(rel.periodo.ate) : ''}  ·  ${t.dias} dia(s) selecionado(s) — não é a obra toda` : `${t.dias} dia(s) de concretagem`;
+      doc.text(periodoTxt, 16, y + 11.5);
+      y += 20;
+
+      // Cards em formato "X / de X" (comparando com o total da obra)
+      const cards = [
+        { v: `${t.qtd}`, sub: `/ de ${ot.qtdTotal}`, l: 'ESTACAS' },
+        { v: _fmt1(t.ml), sub: `/ de ${_fmt1(ot.mlTotal)}`, l: 'ML EXECUTADO' },
+        { v: _fmt2(t.volCalc), sub: `/ de ${_fmt2(ot.volTotal)}`, l: 'M³ CALCULADO' },
+        { v: t.perdaMedia != null ? _fmt1(t.perdaMedia) + '%' : '—', l: 'ÍNDICE DE PERDA', perda: t.perdaMedia },
+      ];
+      const gap = 4, cw = (PW - 24 - gap * (cards.length - 1)) / cards.length, ch = 17;
+      cards.forEach((card, i) => {
+        const x = 12 + i * (cw + gap);
+        doc.setFillColor(250, 250, 250);
+        doc.setDrawColor(229, 229, 229);
+        doc.roundedRect(x, y, cw, ch, 1.8, 1.8, 'FD');
+        const corV = card.perda != null && card.perda !== undefined
+          ? (card.perda > 10 ? [220, 38, 38] : card.perda > 0 ? [161, 98, 7] : [21, 128, 61])
+          : [13, 13, 13];
+        doc.setTextColor(corV[0], corV[1], corV[2]);
+        doc.setFontSize(13); doc.setFont(undefined, 'bold');
+        doc.text(card.v, x + cw / 2, y + 7.5, { align: 'center' });
+        if (card.sub) { doc.setFontSize(7); doc.setFont(undefined, 'normal'); doc.setTextColor(140); doc.text(card.sub, x + cw / 2, y + 11, { align: 'center' }); }
+        doc.setTextColor(120); doc.setFontSize(5.6); doc.setFont(undefined, 'normal');
+        doc.text(card.l, x + cw / 2, y + 15, { align: 'center' });
+      });
+      y += ch + 6;
+
+      // Consumo médio por tipo de estaca (tabela)
+      doc.setTextColor(13, 13, 13); doc.setFontSize(9.5); doc.setFont(undefined, 'bold');
+      doc.text('Consumo médio por tipo de estaca', 12, y + 3);
+      const alinhaTipo = { 1: 'center', 2: 'right', 3: 'right', 4: 'right', 5: 'right', 6: 'right' };
+      doc.autoTable({
+        startY: y + 5,
+        head: [['Tipo (Ø × comprimento)', 'Qtd', 'ML', 'm³ real', 'm³ calculado', 'Consumo médio (m³)', 'Perda']],
+        body: t.porTipo.map(([tipo, g]) => [tipo, String(g.qtd), _fmt1(g.ml), _fmt2(g.volReal), _fmt2(g.volCalc),
+          g.qtd ? _fmt2(g.volReal / g.qtd) : '—',
+          g.volCalc > 0 ? _fmt1((g.perdaVol / g.volCalc) * 100) + '%' : '—']),
+        margin: { left: 12, right: 12 },
+        styles: { fontSize: 8.5, cellPadding: 2.2 },
+        headStyles: { fillColor: [245, 200, 0], textColor: [13, 13, 13], fontStyle: 'bold' },
+        alternateRowStyles: { fillColor: [250, 250, 250] },
+        columnStyles: { 1: { halign: 'center' }, 2: { halign: 'right' }, 3: { halign: 'right' }, 4: { halign: 'right' }, 5: { halign: 'right' }, 6: { halign: 'right', fontStyle: 'bold' } },
+        didParseCell: (data) => {
+          if (data.section === 'head' && alinhaTipo[data.column.index]) data.cell.styles.halign = alinhaTipo[data.column.index];
+          if (data.section === 'body' && data.column.index === 6 && String(data.cell.raw).includes('%')) {
+            const v = parseFloat(String(data.cell.raw).replace('.', '').replace(',', '.'));
+            if (!isNaN(v)) data.cell.styles.textColor = v > 10 ? [220, 38, 38] : v > 0 ? [161, 98, 7] : [21, 128, 61];
+          }
+        },
+      });
+      y = doc.lastAutoTable.finalY + 7;
+
+      // Executado por tipo (linha de resumo simples)
+      if (y > 260) { doc.addPage(); y = 14; }
+      doc.setTextColor(13, 13, 13); doc.setFontSize(9.5); doc.setFont(undefined, 'bold');
+      doc.text('Executado por tipo', 12, y + 3);
+      doc.setFont(undefined, 'normal'); doc.setFontSize(8); doc.setTextColor(60);
+      const execPorTipoTxt = t.porTipo.map(([tipo, g]) => `${tipo}: ${g.qtd} un · ${_fmt1(g.ml)} ml · ${_fmt2(g.volReal)} m³`).join('     ');
+      const linhasExec = doc.splitTextToSize(execPorTipoTxt, PW - 24);
+      doc.text(linhasExec, 12, y + 8);
+      y += 8 + linhasExec.length * 3.6 + 8;
 
       // Prancha(s) preenchida(s) — só executadas
       y = await _pdfPranchas(doc, y, PW);
@@ -586,74 +669,7 @@ const DashEstacasRel = (() => {
         y = doc.lastAutoTable.finalY + 8;
       }
 
-      // ===== RESUMO TOTAL (redesenhado) =====
-      if (y > 195) { doc.addPage(); y = 14; }
-      // Banner
-      doc.setFillColor(13, 13, 13);
-      doc.roundedRect(12, y, PW - 24, 14, 2, 2, 'F');
-      doc.setFillColor(245, 200, 0); doc.rect(12, y + 14, PW - 24, 1.2, 'F');
-      doc.setTextColor(245, 200, 0); doc.setFontSize(12); doc.setFont(undefined, 'bold');
-      doc.text('RESUMO DESTE RELATÓRIO', 16, y + 6.5);
-      doc.setTextColor(255); doc.setFontSize(8); doc.setFont(undefined, 'normal');
-      const periodoTxt = rel.periodo ? `Período: ${_fBR(rel.periodo.de)}${rel.periodo.ate !== rel.periodo.de ? ' a ' + _fBR(rel.periodo.ate) : ''}  ·  ${t.dias} dia(s) selecionado(s) — não é a obra toda` : `${t.dias} dia(s) de concretagem`;
-      doc.text(periodoTxt, 16, y + 11.5);
-      y += 20;
-
-      // Cards de métricas (desenhados, não tabela)
-      const cards = [
-        { v: String(t.qtd), l: 'ESTACAS' },
-        { v: _fmt1(t.ml), l: 'ML EXECUTADO' },
-        { v: _fmt2(t.m3), l: 'M³ REAL' },
-        { v: _fmt2(t.volCalc), l: 'M³ CALCULADO' },
-        { v: _fmt2(t.perdaVol), l: 'PERDA (M³)', perda: t.perdaMedia },
-        { v: t.perdaMedia != null ? _fmt1(t.perdaMedia) + '%' : '—', l: 'ÍNDICE DE PERDA', perda: t.perdaMedia },
-        { v: t.qtd ? _fmt2(t.m3 / t.qtd) : '—', l: 'CONSUMO MÉDIO (M³)' },
-      ];
-      const gap = 4, cw = (PW - 24 - gap * (cards.length - 1)) / cards.length, ch = 17;
-      cards.forEach((card, i) => {
-        const x = 12 + i * (cw + gap);
-        doc.setFillColor(250, 250, 250);
-        doc.setDrawColor(229, 229, 229);
-        doc.roundedRect(x, y, cw, ch, 1.8, 1.8, 'FD');
-        const corV = card.perda != null && card.perda !== undefined
-          ? (card.perda > 10 ? [220, 38, 38] : card.perda > 0 ? [161, 98, 7] : [21, 128, 61])
-          : [13, 13, 13];
-        doc.setTextColor(corV[0], corV[1], corV[2]);
-        doc.setFontSize(13); doc.setFont(undefined, 'bold');
-        doc.text(card.v, x + cw / 2, y + 8, { align: 'center' });
-        doc.setTextColor(120); doc.setFontSize(5.6); doc.setFont(undefined, 'normal');
-        doc.text(card.l, x + cw / 2, y + 13.5, { align: 'center' });
-      });
-      y += ch + 6;
-
-      // Tabela por tipo (com perda por tipo)
-      doc.setTextColor(13, 13, 13); doc.setFontSize(9.5); doc.setFont(undefined, 'bold');
-      doc.text('Executado por tipo', 12, y + 3);
-      const alinhaTipo = { 1: 'center', 2: 'right', 3: 'right', 4: 'right', 5: 'right', 6: 'right' };
-      doc.autoTable({
-        startY: y + 5,
-        head: [['Tipo (Ø × comprimento)', 'Qtd', 'ML', 'm³ real', 'm³ calculado', 'Consumo médio (m³)', 'Perda']],
-        body: t.porTipo.map(([tipo, g]) => [tipo, String(g.qtd), _fmt1(g.ml), _fmt2(g.volReal), _fmt2(g.volCalc),
-          g.qtd ? _fmt2(g.volReal / g.qtd) : '—',
-          g.volCalc > 0 ? _fmt1((g.perdaVol / g.volCalc) * 100) + '%' : '—']),
-        margin: { left: 12, right: 12 },
-        styles: { fontSize: 8.5, cellPadding: 2.2 },
-        headStyles: { fillColor: [245, 200, 0], textColor: [13, 13, 13], fontStyle: 'bold' },
-        alternateRowStyles: { fillColor: [250, 250, 250] },
-        columnStyles: { 1: { halign: 'center' }, 2: { halign: 'right' }, 3: { halign: 'right' }, 4: { halign: 'right' }, 5: { halign: 'right' }, 6: { halign: 'right', fontStyle: 'bold' } },
-        didParseCell: (data) => {
-          // Cabeçalho alinhado igual à coluna — número descolado do título
-          // dava impressão de "não pertencer" à coluna.
-          if (data.section === 'head' && alinhaTipo[data.column.index]) data.cell.styles.halign = alinhaTipo[data.column.index];
-          if (data.section === 'body' && data.column.index === 6 && String(data.cell.raw).includes('%')) {
-            const v = parseFloat(String(data.cell.raw).replace('.', '').replace(',', '.'));
-            if (!isNaN(v)) data.cell.styles.textColor = v > 10 ? [220, 38, 38] : v > 0 ? [161, 98, 7] : [21, 128, 61];
-          }
-        },
-      });
-      y = doc.lastAutoTable.finalY + 7;
-
-      // Tabela consolidada de todas as estacas — SEMPRE no resumo total.
+      // ===== Tabela consolidada de todas as estacas — SEMPRE no resumo total.
       {
         if (y > 240) { doc.addPage(); y = 14; }
         doc.setTextColor(13, 13, 13); doc.setFontSize(9.5); doc.setFont(undefined, 'bold');
@@ -687,7 +703,6 @@ const DashEstacasRel = (() => {
       }
 
       // ===== COMPARAÇÃO COM A OBRA INTEIRA =====
-      const ot = rel.obraTotal;
       if (y > 220) { doc.addPage(); y = 14; }
       doc.setFillColor(30, 41, 59);
       doc.roundedRect(12, y, PW - 24, 14, 2, 2, 'F');
