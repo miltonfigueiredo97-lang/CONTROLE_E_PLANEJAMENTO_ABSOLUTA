@@ -512,7 +512,11 @@ const Medicoes = (() => {
       pend[id].terminoReal=valor||'';
     }
     _syncPend(id);
-    _render();
+    // requestAnimationFrame: deixa o navegador terminar de fechar o calendário
+    // /mostrar o valor digitado ANTES de reconstruir a árvore (que pode ser
+    // grande) — sem isso, a reconstrução pesada roda junto com o fechamento
+    // do popup e passa a sensação de travamento bem na hora de escolher a data.
+    requestAnimationFrame(_render);
   }
   // Digitar data dígito-por-dígito no input nativo é fácil de errar (ano
   // vira "0002" no meio da digitação) — trava qualquer ano fora de uma
@@ -526,7 +530,7 @@ const Medicoes = (() => {
     if(!pend[id]?.fotos)return;
     pend[id].fotos.splice(i,1);
     _syncPend(id);
-    _render();
+    requestAnimationFrame(_render);
   }
   async function fotoSelecionada(id,input){
     const files=[...(input.files||[])];input.value='';
@@ -539,7 +543,7 @@ const Medicoes = (() => {
       catch(e){console.error(e);Utils.toast('Erro ao processar foto.','erro');}
     }
     Utils.esconderLoading();
-    _render();
+    requestAnimationFrame(_render);
   }
   function _comprimir(file){
     return new Promise((res,rej)=>{

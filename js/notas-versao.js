@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.30.18',
+  versaoAtual: 'V3.19.30.19',
 
   versoes: [
     {
@@ -10269,6 +10269,16 @@ const NotasVersao = {
       "titulo": "Medições: delay ao digitar na busca",
       "itens": [
         "Cada tecla digitada reconstruía a árvore inteira na hora, travando a digitação em obras com muita tarefa. Agora espera uma pausa curta (250ms) depois da última tecla antes de filtrar de verdade — o campo continua respondendo normal enquanto digita."
+      ]
+    },
+    {
+      "versao": "V3.19.30.19",
+      "data": "2026-08-22",
+      "tipo": "correcao",
+      "titulo": "Medições: travada bem na hora de escolher a data/marcar %",
+      "itens": [
+        "Toda vez que uma data era escolhida no calendário ou o % era alterado, a árvore inteira era reconstruída na mesma hora — em obras com muita tarefa, isso rodava junto com o fechamento do calendário e dava a sensação de travamento bem no meio da ação.",
+        "Agora a reconstrução espera o navegador terminar de desenhar a ação atual (fechar o calendário, mostrar o valor digitado) antes de rodar — mesmo resultado final, sem o soluço no meio."
       ]
     }
   ],
