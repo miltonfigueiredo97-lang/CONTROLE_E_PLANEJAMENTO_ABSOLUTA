@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.30.26',
+  versaoAtual: 'V3.19.30.27',
 
   versoes: [
     {
@@ -10354,6 +10354,17 @@ const NotasVersao = {
       "itens": [
         "O % de cada grupo (Esperado/Real mostrado no cabeçalho) era calculado escaneando toda a subárvore dele TODA VEZ que a tela era redesenhada — e o grupo raiz da obra escaneava a obra INTEIRA. Numa obra grande, com vários grupos abertos ao mesmo tempo, isso multiplicava o escaneamento completo várias vezes A CADA tecla digitada, cada % alterado, cada data escolhida — daí a trava de vários segundos (chegando a parecer travado por minutos) mesmo depois das correções anteriores.",
         "Corrigido: agora é um único passe por toda a árvore que calcula o total geral E o agregado de cada grupo ao mesmo tempo (a mesma técnica já usada no filtro de Frente/busca) — não importa quantos grupos estejam abertos, o custo não multiplica mais."
+      ]
+    },
+    {
+      "versao": "V3.19.30.27",
+      "data": "2026-08-22",
+      "tipo": "correcao",
+      "titulo": "Controle de Estacas: indicadores de execução voltam pra Acompanhamento (onde a execução acontece de fato)",
+      "itens": [
+        "Os novos indicadores (% executado, dias trabalhados, m³/dia, previsão de fim) tinham entrado na aba Marcadores — mas Marcadores é só desenho/vínculo, quem registra a execução de verdade é a aba Acompanhamento. Movidos pra lá, dentro do painel \\\"Estacas/Fundações da obra — visão geral\\\", que já existia.",
+        "Marcadores voltou aos 3 KPIs simples de sempre (marcadas, vinculadas, concretadas).",
+        "Corrigido texto pequeno e com pouco contraste no relatório de concretagem (tela e PDF) — o \\\"/ de X\\\" embaixo dos números do resumo estava com fonte minúscula e cor clara demais pra ler bem em tela clara; aumentado e escurecido."
       ]
     }
   ],

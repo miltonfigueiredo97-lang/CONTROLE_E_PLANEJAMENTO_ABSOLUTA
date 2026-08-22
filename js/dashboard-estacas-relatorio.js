@@ -378,9 +378,9 @@ const DashEstacasRel = (() => {
         <div style="height:3px;background:var(--cor-primaria);"></div>
       </div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px;">
-        <div class="db-metrica-card"><div class="db-metrica-valor">${t.qtd} <span style="font-size:.6em;font-weight:600;color:var(--cor-texto-secundario);">/ de ${ot.qtdTotal}</span></div><div class="db-metrica-label">Estacas</div></div>
-        <div class="db-metrica-card"><div class="db-metrica-valor">${_fmt1(t.ml)} <span style="font-size:.6em;font-weight:600;color:var(--cor-texto-secundario);">/ de ${_fmt1(ot.mlTotal)}</span></div><div class="db-metrica-label">ML executado</div></div>
-        <div class="db-metrica-card"><div class="db-metrica-valor">${_fmt2(t.volCalc)} <span style="font-size:.6em;font-weight:600;color:var(--cor-texto-secundario);">/ de ${_fmt2(ot.volTotal)}</span></div><div class="db-metrica-label">m³ calculado</div></div>
+        <div class="db-metrica-card"><div class="db-metrica-valor">${t.qtd} <span style="font-size:.8em;font-weight:700;color:#475569;">/ de ${ot.qtdTotal}</span></div><div class="db-metrica-label">Estacas</div></div>
+        <div class="db-metrica-card"><div class="db-metrica-valor">${_fmt1(t.ml)} <span style="font-size:.8em;font-weight:700;color:#475569;">/ de ${_fmt1(ot.mlTotal)}</span></div><div class="db-metrica-label">ML executado</div></div>
+        <div class="db-metrica-card"><div class="db-metrica-valor">${_fmt2(t.volCalc)} <span style="font-size:.8em;font-weight:700;color:#475569;">/ de ${_fmt2(ot.volTotal)}</span></div><div class="db-metrica-label">m³ calculado</div></div>
         <div class="db-metrica-card" style="${t.perdaMedia != null && t.perdaMedia > 10 ? 'border-color:#dc2626;' : ''}"><div class="db-metrica-valor" style="color:${t.perdaMedia != null && t.perdaMedia > 10 ? '#dc2626' : '#15803d'};">${t.perdaMedia != null ? _fmt1(t.perdaMedia) + '%' : '—'}</div><div class="db-metrica-label">Índice de perda</div></div>
       </div>
       <div style="font-weight:700;font-size:.85rem;margin-bottom:6px;">Consumo médio por tipo de estaca</div>
@@ -580,8 +580,8 @@ const DashEstacasRel = (() => {
         doc.setTextColor(corV[0], corV[1], corV[2]);
         doc.setFontSize(13); doc.setFont(undefined, 'bold');
         doc.text(card.v, x + cw / 2, y + 7.5, { align: 'center' });
-        if (card.sub) { doc.setFontSize(7); doc.setFont(undefined, 'normal'); doc.setTextColor(140); doc.text(card.sub, x + cw / 2, y + 11, { align: 'center' }); }
-        doc.setTextColor(120); doc.setFontSize(5.6); doc.setFont(undefined, 'normal');
+        if (card.sub) { doc.setFontSize(8); doc.setFont(undefined, 'bold'); doc.setTextColor(71, 85, 105); doc.text(card.sub, x + cw / 2, y + 11.5, { align: 'center' }); }
+        doc.setTextColor(90); doc.setFontSize(6.5); doc.setFont(undefined, 'bold');
         doc.text(card.l, x + cw / 2, y + 15, { align: 'center' });
       });
       y += ch + 6;
@@ -730,7 +730,7 @@ const DashEstacasRel = (() => {
         doc.setTextColor(corV[0], corV[1], corV[2]);
         doc.setFontSize(13); doc.setFont(undefined, 'bold');
         doc.text(card.v, x + cwO / 2, y + 8, { align: 'center' });
-        doc.setTextColor(120); doc.setFontSize(5.6); doc.setFont(undefined, 'normal');
+        doc.setTextColor(90); doc.setFontSize(6.5); doc.setFont(undefined, 'bold');
         doc.text(card.l, x + cwO / 2, y + 13.5, { align: 'center' });
       });
       y += chO + 6;
