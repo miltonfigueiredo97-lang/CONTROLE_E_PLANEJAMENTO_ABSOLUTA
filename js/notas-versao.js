@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.30.11',
+  versaoAtual: 'V3.19.30.12',
 
   versoes: [
     {
@@ -10198,6 +10198,17 @@ const NotasVersao = {
       "itens": [
         "O selo da equipe foi pro lugar certo: DEPOIS do nome da tarefa, com espaçamento decente (aproveitando o espaço livre da linha).",
         "Paleta sem QUALQUER tom de vermelho ou laranja (o \"laranja queimado\" lia como vermelho): roxo, fúcsia, rosa, marrom, chumbo, violeta e grafite — todas sólidas, texto branco."
+      ]
+    },
+    {
+      "versao": "V3.19.30.12",
+      "data": "2026-08-21",
+      "tipo": "melhoria",
+      "titulo": "Relatório de Concretagem de Estacas ganha comparação com a obra inteira + % executado por estaca",
+      "itens": [
+        "Achado o problema real: o \\\"resumo total\\\" do relatório mostrava números (estacas executadas, m³ real, m³ calculado) só das datas escolhidas no relatório — mas os rótulos não deixavam isso claro, parecendo ser da obra toda. Agora o título e os rótulos deixam explícito: \\\"RESUMO DESTE RELATÓRIO\\\", com aviso de que não é a obra completa.",
+        "Nova seção \\\"📊 COMPARAÇÃO COM A OBRA INTEIRA\\\" (na tela, no PDF e no texto de WhatsApp) — usa TODAS as estacas do projeto e TODOS os lançamentos já feitos até hoje, independente de quais datas foram escolhidas: total de estacas, quantas 100% feitas, m³ executado vs m³ total da obra, % geral executada, e a mesma comparação por tipo (Ø × comprimento).",
+        "Tabela consolidada (estacas do relatório) ganhou a coluna \\\"% Executado\\\" — percentual individual de cada estaca, calculado por volume real ÷ volume calculado dela."
       ]
     }
   ],
