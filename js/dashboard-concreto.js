@@ -238,7 +238,7 @@ const DashConcreto = (() => {
   // ---------- Estacas e Fundações ----------
   // Calcula as métricas da obra inteira pra um conjunto de peças (estacas OU
   // fundação) — extraído pra função só, reaproveitada nos dois toggles.
-  function _calcularMetricasObra(pecasFiltradas, lancamentos, btsConfig, CC, EC) {
+  function _calcularMetricasObra(pecasFiltradas, lancamentos, btsConfig, CC, EC, concretagens) {
     const idsPecas = new Set(pecasFiltradas.map(p => p.id));
     const lansDoTipo = lancamentos.filter(l => idsPecas.has(l.pecaId));
     const qtdTotal = pecasFiltradas.length;
@@ -262,8 +262,34 @@ const DashConcreto = (() => {
     const perdaTotalObra = perdaBTsRegistrada + perdaSolo;
     const indicePerdaObra = volumePrevistoBTs > 0 ? (perdaTotalObra / volumePrevistoBTs) * 100 : 0;
     const consumoMedioPorPeca = qtdFeitas > 0 ? volumeRealBTs / qtdFeitas : 0;
+    // % por QUANTIDADE (estacas 100% feitas / total) e % por VOLUME (m³ feito / m³ total) —
+    // são coisas DIFERENTES (uma estaca grande pesa mais no volume do que na contagem).
+    const pctPorQuantidade = qtdTotal > 0 ? (qtdFeitas / qtdTotal) * 100 : 0;
     const pctExecutado = volumeTotalProjeto > 0 ? (volumeFeitoProjeto / volumeTotalProjeto) * 100 : 0;
-    return { qtdTotal, qtdFeitas, volumeTotalProjeto, volumeFeitoProjeto, indicePerdaObra, consumoMedioPorPeca, pctExecutado, lansDoTipo };
+
+    // Dias trabalhados = dias distintos (concretagem.data) que tiveram pelo
+    // menos 1 lançamento destas peças. m³/dia = ritmo médio nesses dias.
+    // Previsão de fim = hoje + (volume que falta / m³ por dia).
+    const concPorId = new Map((concretagens || []).map(c => [c.id, c]));
+    const diasComLancamento = new Set();
+    lansDoTipo.forEach(l => {
+      const c = concPorId.get(l.concretagemId);
+      if (c && c.data) diasComLancamento.add(c.data);
+    });
+    const diasTrabalhados = diasComLancamento.size;
+    const m3PorDia = diasTrabalhados > 0 ? volumeFeitoProjeto / diasTrabalhados : 0;
+    const volumeFaltando = Math.max(0, volumeTotalProjeto - volumeFeitoProjeto);
+    let previsaoFim = null;
+    if (m3PorDia > 0 && volumeFaltando > 0) {
+      const diasRestantes = Math.ceil(volumeFaltando / m3PorDia);
+      const dataFim = new Date();
+      dataFim.setDate(dataFim.getDate() + diasRestantes);
+      previsaoFim = dataFim;
+    } else if (volumeFaltando <= 0 && qtdTotal > 0) {
+      previsaoFim = 'concluido';
+    }
+
+    return { qtdTotal, qtdFeitas, volumeTotalProjeto, volumeFeitoProjeto, indicePerdaObra, consumoMedioPorPeca, pctExecutado, pctPorQuantidade, diasTrabalhados, m3PorDia, previsaoFim, lansDoTipo };
   }
 
   // Gera os cartões de KPI + tabela por tipo — usado tanto pra Estacas
@@ -275,15 +301,20 @@ const DashConcreto = (() => {
     // escopo — ReferenceError em runtime que derrubava a seção inteira.
     const EC = window.EstacasCalculos;
     if (!m.qtdTotal) return `<div class="text-sm text-muted">Nenhuma ${unidade} cadastrada ainda.</div>`;
+    const previsaoTxt = m.previsaoFim === 'concluido' ? '✅ Concluído' : m.previsaoFim ? m.previsaoFim.toLocaleDateString('pt-BR') : '—';
     return `
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:14px;">
         <div class="db-metrica-card"><div class="db-metrica-valor">${m.qtdTotal}</div><div class="db-metrica-label">Total de ${unidade}s</div></div>
         <div class="db-metrica-card"><div class="db-metrica-valor">${m.qtdFeitas}</div><div class="db-metrica-label">${unidade[0].toUpperCase() + unidade.slice(1)}s feitas</div></div>
+        <div class="db-metrica-card" style="${m.pctPorQuantidade >= 99.9 ? 'border-color:#15803d;' : ''}"><div class="db-metrica-valor" style="color:${m.pctPorQuantidade >= 99.9 ? '#15803d' : '#a16207'};">${EC.fmt1(m.pctPorQuantidade)}%</div><div class="db-metrica-label">% executado (por quantidade)</div></div>
         <div class="db-metrica-card"><div class="db-metrica-valor">${EC.fmt1(m.volumeTotalProjeto)}</div><div class="db-metrica-label">Volume total (m³)</div></div>
         <div class="db-metrica-card"><div class="db-metrica-valor">${EC.fmt1(m.volumeFeitoProjeto)}</div><div class="db-metrica-label">Volume feito (m³)</div></div>
-        <div class="db-metrica-card" style="${m.pctExecutado >= 99.9 ? 'border-color:#15803d;' : ''}"><div class="db-metrica-valor" style="color:${m.pctExecutado >= 99.9 ? '#15803d' : '#a16207'};">${EC.fmt1(m.pctExecutado)}%</div><div class="db-metrica-label">% executado</div></div>
+        <div class="db-metrica-card" style="${m.pctExecutado >= 99.9 ? 'border-color:#15803d;' : ''}"><div class="db-metrica-valor" style="color:${m.pctExecutado >= 99.9 ? '#15803d' : '#a16207'};">${EC.fmt1(m.pctExecutado)}%</div><div class="db-metrica-label">% executado (por m³)</div></div>
         <div class="db-metrica-card" style="${m.indicePerdaObra > 10 ? 'border-color:#dc2626;' : ''}"><div class="db-metrica-valor" style="${m.indicePerdaObra > 10 ? 'color:#dc2626;' : ''}">${EC.fmt1(m.indicePerdaObra)}%</div><div class="db-metrica-label">Índice de perda médio</div></div>
         <div class="db-metrica-card"><div class="db-metrica-valor">${CC ? CC.fmt2(m.consumoMedioPorPeca) : m.consumoMedioPorPeca.toFixed(2)}</div><div class="db-metrica-label">Consumo médio/${unidade} (m³)</div></div>
+        <div class="db-metrica-card"><div class="db-metrica-valor">${m.diasTrabalhados}</div><div class="db-metrica-label">Dias trabalhados</div></div>
+        <div class="db-metrica-card"><div class="db-metrica-valor">${EC.fmt1(m.m3PorDia)}</div><div class="db-metrica-label">m³/dia (ritmo médio)</div></div>
+        <div class="db-metrica-card"><div class="db-metrica-valor" style="font-size:1.1em;">${previsaoTxt}</div><div class="db-metrica-label">Previsão de fim (no ritmo atual)</div></div>
       </div>
       <div style="overflow-x:auto;">
         <table class="db-tabela-clean">
@@ -328,12 +359,13 @@ const DashConcreto = (() => {
     if (!EC) { host.innerHTML = ''; return; }
     try {
       const obraId = ctx.obraId;
-      const [pranchas, marcadores, pecas, lancamentos, btsConfig] = await Promise.all([
+      const [pranchas, marcadores, pecas, lancamentos, btsConfig, concretagens] = await Promise.all([
         Database.listar(obraId, 'estacasPranchas', null).catch(() => []),
         Database.listar(obraId, 'estacasMarcadores', null).catch(() => []),
         Database.listar(obraId, 'concretoPecas', null).catch(() => []),
         Database.listar(obraId, 'concretoLancamentos', null).catch(() => []),
         Database.listar(obraId, 'concretoBTs', null).catch(() => []),
+        Database.listar(obraId, 'concretoConcretagens', null).catch(() => []),
       ]);
       const pranchasComImagem = pranchas.filter(p => Number(p.imgWidthPx) > 0 && Number(p.imgHeightPx) > 0)
         .sort((a, b) => (a.ordem || 0) - (b.ordem || 0));
@@ -360,10 +392,9 @@ const DashConcreto = (() => {
       const total = marcadores.length;
       const vinculados = marcadores.filter(m => m.pecaId).length;
       const concluidos = marcadores.filter(m => { const s = statusFn(m); return s.pct !== null && s.pct >= 100; }).length;
-      const pctMedio = total ? marcadores.reduce((s, m) => s + (statusFn(m).pct || 0), 0) / total : 0;
 
-      const metricasEstaca = _calcularMetricasObra(pecasEstaca, lancamentos, btsConfig, CC, EC);
-      const metricasFundacao = _calcularMetricasObra(pecasFundacao, lancamentos, btsConfig, CC, EC);
+      const metricasEstaca = _calcularMetricasObra(pecasEstaca, lancamentos, btsConfig, CC, EC, concretagens);
+      const metricasFundacao = _calcularMetricasObra(pecasFundacao, lancamentos, btsConfig, CC, EC, concretagens);
 
       const gruposPorTipoEstaca = new Map();
       pecasEstaca.forEach(p => {
@@ -398,7 +429,7 @@ const DashConcreto = (() => {
           <div class="card-body">
             <div class="db-secao-header"><h3>⚓ Estacas e Fundações</h3></div>
             <div class="text-sm text-muted" style="margin-bottom:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-              <span>${vinculados}/${total} marcadores vinculados · ${concluidos}/${total} concretados · ${EC.fmt1(pctMedio)}% médio · <a href="controle-estacas.html" style="color:var(--cor-primaria-dark);font-weight:600;">abrir controle</a></span>
+              <span>${vinculados}/${total} marcadores vinculados · ${concluidos}/${total} concretados · <a href="controle-estacas.html" style="color:var(--cor-primaria-dark);font-weight:600;">abrir controle</a></span>
               <button class="btn btn-secundario btn-sm" onclick="DashEstacasRel.abrir()">📄 Exportar relatório</button>
             </div>
             <div id="db-estacas-minimapas"></div>

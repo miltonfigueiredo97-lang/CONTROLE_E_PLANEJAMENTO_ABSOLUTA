@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.30.22',
+  versaoAtual: 'V3.19.30.23',
 
   versoes: [
     {
@@ -10311,6 +10311,17 @@ const NotasVersao = {
         "Nova ordem (tela, PDF e WhatsApp): RESUMO DESTE RELATÓRIO (agora em formato X / DE X, comparando com a obra inteira) → Consumo médio por tipo de estaca → Executado por tipo → prancha preenchida (só no PDF) → o que já tinha (dia a dia, consolidado, comparação com a obra).",
         "Cards do resumo: Estacas (feitas / de total da obra), ML executado (X / de X), m³ calculado (X / de X), Índice de perda — removida a duplicação que existia antes (esses números apareciam soltos aqui e de novo lá embaixo em Comparação com a Obra).",
         "Novo campo mlTotal no resumo da obra inteira, usado pro ML executado ficar em X/DE X igual aos outros."
+      ]
+    },
+    {
+      "versao": "V3.19.30.23",
+      "data": "2026-08-22",
+      "tipo": "melhoria",
+      "titulo": "Dashboard: % médio confuso vira % por quantidade + % por m³, e novos indicadores de ritmo",
+      "itens": [
+        "Removido o \\\"% médio concretado\\\" da linha de resumo — não deixava claro o que representava (era uma média simples do % de cada marcador).",
+        "Métricas de Estacas/Fundação (obra inteira) agora mostram DOIS percentuais separados e explicados: \\\"% executado (por quantidade)\\\" (peças 100% feitas ÷ total) e \\\"% executado (por m³)\\\" (volume feito ÷ volume total) — são diferentes de propósito (uma peça grande pesa mais no volume do que na contagem).",
+        "Novos cartões: Dias trabalhados (dias distintos com concretagem lançada), m³/dia (ritmo médio nesses dias) e Previsão de fim (hoje + dias restantes no ritmo atual, ou \\\"Concluído\\\" se já bateu 100%)."
       ]
     }
   ],
