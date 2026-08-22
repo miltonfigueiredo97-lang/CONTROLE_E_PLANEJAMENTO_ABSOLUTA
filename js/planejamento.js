@@ -322,6 +322,9 @@ const Planejamento = (() => {
     _visaoOrgCarregarSalva(); // restaura a máscara da Visão Organizacional salva pra esta obra
     _carregarEstruturaObra().then(()=>_paintRows()); // segundo plano — atualiza resumos quando chegar
     await carregar();
+    // Veio do Dashboard com ?tarefa=ID: rola direto até a tarefa.
+    const tid=new URLSearchParams(location.search).get('tarefa');
+    if(tid)setTimeout(()=>focarTarefaPorId(tid),350);
   }
   function _el(){return document.getElementById('planejamento-content')||document.body;}
 
@@ -5983,6 +5986,36 @@ const Planejamento = (() => {
     } else if(e.key==='Escape'){
       limparBusca();
     }
+  }
+
+  // Foca uma tarefa vinda de fora (ex: clique no Dashboard → ?tarefa=ID):
+  // expande os ancestrais se a família estiver recolhida, seleciona a linha
+  // e centraliza o scroll nela.
+  function focarTarefaPorId(id){
+    const sorted=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
+    const t=sorted.find(x=>x.id===id);
+    if(!t){Utils.toast('Tarefa não encontrada neste cronograma.','alerta');return;}
+    const idx=sorted.indexOf(t);
+    let niv=t.nivel||0,mudou=false;
+    for(let i=idx-1;i>=0&&niv>0;i--){
+      const anc=sorted[i];
+      if((anc.nivel||0)<niv){
+        if(colsRecolhidas.has(anc.id)){colsRecolhidas.delete(anc.id);mudou=true;}
+        niv=anc.nivel||0;
+      }
+    }
+    if(mudou)_buildFiltradas();
+    const i=filtradas.indexOf(t);
+    if(i<0)return;
+    selectedIdx=i;
+    const esqS=document.getElementById('g-esq-s');
+    if(esqS){
+      const y=i*ROW_H;
+      esqS.scrollTop=Math.max(0,y-esqS.clientHeight/2+ROW_H/2);
+      const dirS=document.getElementById('g-dir-s');
+      if(dirS)dirS.scrollTop=esqS.scrollTop;
+    }
+    requestAnimationFrame(()=>_paintRows());
   }
 
   function _pularParaResultado(cursor){

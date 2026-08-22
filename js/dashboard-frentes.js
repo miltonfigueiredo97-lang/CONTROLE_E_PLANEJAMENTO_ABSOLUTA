@@ -478,7 +478,7 @@ const DashFrentes = (() => {
         ${ts.map(t => {
           const pct = Math.round(Number(t.percentualConcluido) || 0);
           const tom = _tom(pct, pct >= 100);
-          return `<div class="db-fr-det-item">
+          return `<div class="db-fr-det-item db-sup-link" onclick="Router.navegar('planejamento.html?tarefa=${t.id}')" title="Abrir no Planejamento">
             <div class="db-fr-det-info">
               <div class="db-fr-det-nome">${DashCore.esc(t.nome || 'Sem nome')}</div>
               <div class="db-fr-det-sub">${Utils.formatarData(t.inicioPlanejado)} → ${Utils.formatarData(t.terminoPlanejado)}${t._equipeEfetiva ? ' · equipe ' + t._equipeEfetiva : ''}</div>

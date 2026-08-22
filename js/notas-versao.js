@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.30.14',
+  versaoAtual: 'V3.19.30.15',
 
   versoes: [
     {
@@ -10231,6 +10231,16 @@ const NotasVersao = {
         "As duas prancha (Estacas Hélice + Fundação Zenith Teste) continuam lado a lado como antes. A tabela de métricas de baixo, que só mostrava Estacas, agora tem um toggle \\\"⚫ Estacas / ⬛ Fundação\\\" pra alternar entre as duas — sem misturar os números das duas disciplinas na mesma tabela.",
         "Nova métrica \\\"% executado\\\" explícita nos dois (Estacas e Fundação): volume feito ÷ volume total do projeto daquela disciplina.",
         "Fundação (peças que não são estaca — sapatas, blocos, vigas baldrame etc.) ganhou a mesma tabela por tipo que Estacas já tinha, agrupando pelo subtipo da peça em vez de Ø × comprimento (que só faz sentido pra estaca)."
+      ]
+    },
+    {
+      "versao": "V3.19.30.15",
+      "data": "2026-08-21",
+      "tipo": "melhoria",
+      "titulo": "Clique na tarefa do Dashboard abre ela no Planejamento",
+      "itens": [
+        "Nas listas de Em Execução, Próximas e Suprimentos (e também na lista do detalhe da célula da matriz de frentes), CLICAR NA TAREFA leva direto pra ela no Planejamento.",
+        "O Planejamento abre com a linha selecionada e centralizada na tela — e se a tarefa estiver dentro de uma família recolhida, os níveis são expandidos automaticamente pra ela aparecer."
       ]
     }
   ],

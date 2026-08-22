@@ -106,7 +106,7 @@ const DashSuprimentos = (() => {
     const max = sorted.reduce((m, t) => Math.max(m, t.nivel || 0), 0);
 
     const linhaFolha = (t, indent) => `
-      <div class="db-sup-item" style="padding-left:${indent}px;">
+      <div class="db-sup-item db-sup-link" style="padding-left:${indent}px;" onclick="Router.navegar('planejamento.html?tarefa=${t.id}')" title="Abrir no Planejamento">
         <span class="db-sup-flag">📦</span>
         <div class="db-sup-info">
           <div class="db-sup-nome">${DashCore.esc(t.nome || 'Sem nome')}${DashCore.eqBadge(_eqMap.get(t.id))}</div>

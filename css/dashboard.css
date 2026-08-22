@@ -303,3 +303,7 @@ th.db-subtotal-col { font-size: 0.68rem; line-height: 1.15; }
 
 /* Selo de equipe na frente da tarefa */
 .db-eq-badge { display: inline-flex; align-items: center; border-radius: 5px; padding: 2px 9px; font-size: 0.64rem; font-weight: 800; font-family: var(--font-mono); letter-spacing: 0.5px; vertical-align: middle; margin-left: 12px; white-space: nowrap; text-transform: uppercase; }
+
+/* Linha de tarefa clicável (leva ao Planejamento) */
+.db-sup-link { cursor: pointer; }
+.db-sup-link:hover { background: var(--cor-fundo); border-radius: 6px; }

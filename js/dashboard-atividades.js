@@ -139,7 +139,7 @@ const DashAtividades = (() => {
         if (new Date(t.inicioPlanejado) < hoje) chipAtraso = '<span class="db-chip" style="background:#fdf0ef;color:#b91c1c;border-color:transparent;font-weight:600;">deveria ter iniciado</span>';
       }
       return `
-      <div class="db-sup-item" style="padding-left:${indent}px;">
+      <div class="db-sup-item db-sup-link" style="padding-left:${indent}px;" onclick="Router.navegar('planejamento.html?tarefa=${t.id}')" title="Abrir no Planejamento">
         <span class="db-ativ-dot" style="background:${cfg.dot};"></span>
         <div class="db-sup-info">
           <div class="db-sup-nome">${DashCore.esc(t.nome || 'Sem nome')}${DashCore.eqBadge(_eqMap.get(t.id))}</div>
