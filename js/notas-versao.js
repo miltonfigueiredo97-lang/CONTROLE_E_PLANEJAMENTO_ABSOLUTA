@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.30.16',
+  versaoAtual: 'V3.19.30.17',
 
   versoes: [
     {
@@ -10250,6 +10250,16 @@ const NotasVersao = {
       "titulo": "Estacas e Fundações de volta ao Dashboard",
       "itens": [
         "A seção ⚓ Estacas e Fundações tinha sumido: o bloco novo de \"Métricas da obra inteira\" (V3.19.30.14) referenciava o motor de cálculo por um nome que não existia dentro daquela função — erro em tempo de execução que derrubava a seção inteira antes de desenhar. Referência corrigida e comportamento validado em teste simulado com dados de estacas + fundação."
+      ]
+    },
+    {
+      "versao": "V3.19.30.17",
+      "data": "2026-08-22",
+      "tipo": "correcao",
+      "titulo": "Medições: não dava pra preencher a data direito (ano virava \"0002\")",
+      "itens": [
+        "Digitar a data dígito por dígito no campo nativo é fácil de errar — cada tecla empurra os dígitos do ano, então parar no meio da digitação deixava algo como \"12/08/0002\" em vez do ano certo.",
+        "Agora tocar/clicar no campo abre direto o calendário nativo pra escolher a data (em vez de digitar), e se mesmo assim entrar um ano fora de uma faixa plausível (2015 até 3 anos à frente), o sistema avisa e não salva."
       ]
     }
   ],
