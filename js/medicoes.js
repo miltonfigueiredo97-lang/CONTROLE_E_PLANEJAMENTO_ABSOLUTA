@@ -89,29 +89,36 @@ const Medicoes = (() => {
   }
 
   // ==================== AGREGAÇÕES ====================
-  // % de um grupo: média ponderada das folhas descendentes
-  function _aggGrupo(idx){
-    const g=sorted[idx],lvl=g.nivel||0;const hoje=_hoje();
-    let sw=0,sr=0,se=0;
-    for(let i=idx+1;i<sorted.length;i++){
-      const t=sorted[i];if((t.nivel||0)<=lvl)break;
-      if(!leafSet.has(t.id))continue;
-      const w=_peso(t);sw+=w;
-      sr+=_progAtual(t)*w;
-      se+=_espAt(t,hoje)*w;
+  // % de cada grupo = média ponderada das folhas descendentes. Antes cada
+  // grupo visível escaneava sua subárvore inteira de novo (o grupo raiz
+  // escaneava a obra TODA) — em obra grande, com vários grupos abertos,
+  // isso multiplicava o custo várias vezes A CADA RENDER (cada tecla, cada
+  // %, cada data). Agora é um único passe por toda a árvore que já calcula
+  // o total geral E o agregado de todo grupo ao mesmo tempo, usando uma
+  // pilha de acumuladores por nível (mesmo truque usado no filtro de
+  // Frente/busca).
+  function _calcularAgregados(){
+    const porGrupo=new Map(); // id do grupo -> {sw,sr,se,srOrig}
+    const pilha=[];
+    const hoje=_hoje();
+    let sw=0,sr=0,se=0,srOrig=0;
+    for(let i=0;i<sorted.length;i++){
+      const t=sorted[i],niv=t.nivel||0;
+      pilha.length=niv;
+      if(!leafSet.has(t.id)){
+        const o={sw:0,sr:0,se:0};
+        porGrupo.set(t.id,o);
+        pilha[niv]=o;
+        continue;
+      }
+      const w=_peso(t),r=_progAtual(t),e=_espAt(t,hoje),rOrig=Math.min(100,t.percentualConcluido||0);
+      sw+=w;sr+=r*w;se+=e*w;srOrig+=rOrig*w;
+      for(const o of pilha){if(o){o.sw+=w;o.sr+=r*w;o.se+=e*w;}}
     }
-    return sw?{real:sr/sw,esp:se/sw}:{real:0,esp:0};
-  }
-  function _totais(){
-    let sw=0,sr=0,srOrig=0;const hoje=_hoje();let se=0;
-    for(const t of sorted){
-      if(!leafSet.has(t.id))continue;
-      const w=_peso(t);sw+=w;
-      sr+=_progAtual(t)*w;
-      srOrig+=Math.min(100,t.percentualConcluido||0)*w;
-      se+=_espAt(t,hoje)*w;
-    }
-    return sw?{total:sr/sw,medicao:(sr-srOrig)/sw,esp:se/sw}:{total:0,medicao:0,esp:0};
+    return{
+      totais:sw?{total:sr/sw,medicao:(sr-srOrig)/sw,esp:se/sw}:{total:0,medicao:0,esp:0},
+      porGrupo,
+    };
   }
 
   // ==================== RENDER ====================
@@ -244,7 +251,7 @@ const Medicoes = (() => {
   }
 
   function _renderNova(){
-    const tot=_totais();
+    const {totais:tot,porGrupo}=_calcularAgregados();
     const q=busca.toLowerCase().trim();
     const frenteFiltro=filtroFrente;
     const temFiltro=!!q||!!frenteFiltro||ocultarConcluidos;
@@ -287,7 +294,8 @@ const Medicoes = (() => {
         if(temFiltro&&!gruposComAlvo.has(t.id))continue; // grupo sem nenhum alvo (texto e/ou Frente filtrada)
         const col=colapsados.has(t.id);
         if(col)skipLevel=niv;
-        const a=_aggGrupo(i);
+        const o=porGrupo.get(t.id);
+        const a=o&&o.sw?{real:o.sr/o.sw,esp:o.se/o.sw}:{real:0,esp:0};
         rows+=`<div class="med-node" style="--niv:${niv};background:${niv===0?'#e2e8f0':niv===1?'#eef2f7':'#f8fafc'};">
           <span class="tog" onclick="Medicoes.toggleGrupo('${t.id}')">${col?'＋':'－'}</span>
           <div><div class="nm">${_esc(t.nome)}</div>

@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.30.25',
+  versaoAtual: 'V3.19.30.26',
 
   versoes: [
     {
@@ -10344,6 +10344,16 @@ const NotasVersao = {
         "Com \"Ocultar 100%\" ligado, a tarefa sumia da lista assim que o % chegava em 100 — inclusive a que a pessoa estava editando NA HORA, sem chance de revisar/corrigir antes de salvar. Corrigido: agora só some quem NÃO tem edição pendente nesta sessão — a que você está mexendo fica visível até você salvar ou descartar.",
         "Novo botão \"🗑 Descartar tudo\" na barra (aparece quando há algo pendente) — descarta todas as alterações não salvas da medição atual sem precisar sair da tela.",
         "Término Real desabilitado (tarefa ainda não em 100%) agora mostra um aviso vermelho \"(só com 100%)\" direto no rótulo do campo — antes só dava pra saber isso passando o mouse em cima (não funciona no celular)."
+      ]
+    },
+    {
+      "versao": "V3.19.30.26",
+      "data": "2026-08-22",
+      "tipo": "correcao",
+      "titulo": "Medições: achado o gargalo GRANDE de verdade — cada grupo aberto reescaneava a árvore inteira, a cada render",
+      "itens": [
+        "O % de cada grupo (Esperado/Real mostrado no cabeçalho) era calculado escaneando toda a subárvore dele TODA VEZ que a tela era redesenhada — e o grupo raiz da obra escaneava a obra INTEIRA. Numa obra grande, com vários grupos abertos ao mesmo tempo, isso multiplicava o escaneamento completo várias vezes A CADA tecla digitada, cada % alterado, cada data escolhida — daí a trava de vários segundos (chegando a parecer travado por minutos) mesmo depois das correções anteriores.",
+        "Corrigido: agora é um único passe por toda a árvore que calcula o total geral E o agregado de cada grupo ao mesmo tempo (a mesma técnica já usada no filtro de Frente/busca) — não importa quantos grupos estejam abertos, o custo não multiplica mais."
       ]
     }
   ],
