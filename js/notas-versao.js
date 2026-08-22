@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.30.20',
+  versaoAtual: 'V3.19.30.21',
 
   versoes: [
     {
@@ -10290,6 +10290,16 @@ const NotasVersao = {
         "O % Esperado de cada tarefa é calculado a partir das datas planejadas (parseando string de data, fazendo conta de dias) — e isso rodava DE NOVO pra cada tarefa em TODO render (a cada tecla na busca, cada % editado, cada data escolhida), inclusive repetido várias vezes pra tarefas dentro de grupos aninhados. Numa obra com milhares de tarefas, isso sozinho já segurava a tela por um bom tempo a cada ação.",
         "Corrigido: esse cálculo agora roda uma vez só, quando a obra carrega (a \"data de hoje\" não muda durante a sessão) — os renders seguintes só leem o valor já pronto.",
         "Tirado o clique que forçava abrir o calendário no campo de data — quem preferia digitar direto pelo teclado numérico não conseguia mais. Volta a ser um campo de data normal: digita ou clica no ícone do calendário, como preferir."
+      ]
+    },
+    {
+      "versao": "V3.19.30.21",
+      "data": "2026-08-22",
+      "tipo": "correcao",
+      "titulo": "Medições: validação de data disparava no MEIO da digitação do ano",
+      "itens": [
+        "O navegador considera a data \"completa\" assim que qualquer dígito é digitado no ano (preenche o resto com zero por dentro, ex: \"2\" vira \"0002\") — a validação de ano reagia na hora e mostrava erro antes da pessoa terminar de escrever o ano todo, travando a digitação.",
+        "Corrigido: agora espera uma pausa de 700ms sem mexer no campo antes de checar de verdade — só reage quando a digitação realmente parou, não a cada dígito."
       ]
     }
   ],

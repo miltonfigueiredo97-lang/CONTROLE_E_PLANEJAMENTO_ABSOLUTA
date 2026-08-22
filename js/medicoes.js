@@ -500,8 +500,20 @@ const Medicoes = (() => {
     const fimIgual=p.terminoReal==null||p.terminoReal===origFim;
     if(progIgual&&iniIgual&&fimIgual&&!(p.fotos&&p.fotos.length))delete pend[id];
   }
+  const _dataTimers={};
   function setCampo(id,campo,valor){
     const t=_t(id);if(!t)return;
+    if(campo==='inicioReal'||campo==='terminoReal'){
+      // O navegador considera a data "completa" assim que QUALQUER dígito é
+      // digitado no ano (preenche o resto com zero por dentro) — validar na
+      // hora dispara erro no meio da digitação, antes da pessoa terminar de
+      // escrever o ano todo. Espera uma pausa (700ms) sem mexer no campo
+      // antes de checar de verdade — só reage quando a digitação realmente parou.
+      const chave=id+'|'+campo;
+      clearTimeout(_dataTimers[chave]);
+      _dataTimers[chave]=setTimeout(()=>_aplicarCampoData(id,campo,valor),700);
+      return;
+    }
     if(!pend[id])pend[id]={};
     if(campo==='progresso'){
       let v=parseFloat(valor);
@@ -511,14 +523,6 @@ const Medicoes = (() => {
       pend[id].progresso=v;
       // Caiu abaixo de 100 → Término Real deixa de fazer sentido, some.
       if(v<100)pend[id].terminoReal='';
-    } else if(campo==='inicioReal'){
-      if(valor&&!_anoValido(valor)){Utils.toast('Data inválida (ano estranho). Toque no ícone do calendário 📅 pra escolher em vez de digitar.','erro');_render();return;}
-      pend[id].inicioReal=valor||'';
-    } else if(campo==='terminoReal'){
-      if(valor&&!_anoValido(valor)){Utils.toast('Data inválida (ano estranho). Toque no ícone do calendário 📅 pra escolher em vez de digitar.','erro');_render();return;}
-      const progEfetivo=pend[id].progresso!=null?pend[id].progresso:Math.min(100,t.percentualConcluido||0);
-      if(valor&&progEfetivo<100){Utils.toast('Término Real só com a tarefa em 100% de progresso.','erro');_render();return;}
-      pend[id].terminoReal=valor||'';
     }
     _syncPend(id);
     // requestAnimationFrame: deixa o navegador terminar de fechar o calendário
@@ -534,6 +538,22 @@ const Medicoes = (() => {
     const ano=parseInt(String(valorISO).split('-')[0],10);
     const anoAtual=new Date().getFullYear();
     return ano>=2015&&ano<=anoAtual+3;
+  }
+  function _aplicarCampoData(id,campo,valor){
+    const t=_t(id);if(!t)return;
+    if(!pend[id])pend[id]={};
+    if(valor&&!_anoValido(valor)){
+      Utils.toast('Ano inválido nessa data — confira e digite de novo (ou toque no 📅).','erro');
+      requestAnimationFrame(_render);
+      return;
+    }
+    if(campo==='terminoReal'){
+      const progEfetivo=pend[id].progresso!=null?pend[id].progresso:Math.min(100,t.percentualConcluido||0);
+      if(valor&&progEfetivo<100){Utils.toast('Término Real só com a tarefa em 100% de progresso.','erro');requestAnimationFrame(_render);return;}
+    }
+    pend[id][campo]=valor||'';
+    _syncPend(id);
+    requestAnimationFrame(_render);
   }
   function removerFoto(id,i){
     if(!pend[id]?.fotos)return;
