@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.30.15',
+  versaoAtual: 'V3.19.30.16',
 
   versoes: [
     {
@@ -10241,6 +10241,15 @@ const NotasVersao = {
       "itens": [
         "Nas listas de Em Execução, Próximas e Suprimentos (e também na lista do detalhe da célula da matriz de frentes), CLICAR NA TAREFA leva direto pra ela no Planejamento.",
         "O Planejamento abre com a linha selecionada e centralizada na tela — e se a tarefa estiver dentro de uma família recolhida, os níveis são expandidos automaticamente pra ela aparecer."
+      ]
+    },
+    {
+      "versao": "V3.19.30.16",
+      "data": "2026-08-21",
+      "tipo": "correcao",
+      "titulo": "Estacas e Fundações de volta ao Dashboard",
+      "itens": [
+        "A seção ⚓ Estacas e Fundações tinha sumido: o bloco novo de \"Métricas da obra inteira\" (V3.19.30.14) referenciava o motor de cálculo por um nome que não existia dentro daquela função — erro em tempo de execução que derrubava a seção inteira antes de desenhar. Referência corrigida e comportamento validado em teste simulado com dados de estacas + fundação."
       ]
     }
   ],

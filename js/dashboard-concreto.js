@@ -270,6 +270,10 @@ const DashConcreto = (() => {
   // quanto pra Fundação (mesmas contas, universo de peças diferente).
   function _htmlMetricasTipo(m, grupos, unidade, colunaTipo) {
     const CC = window.ConcretoCalculos;
+    // EC precisa ser resolvido AQUI: a função era chamada de dentro do
+    // renderEstacas (onde EC existe) mas referenciava EC sem tê-lo no próprio
+    // escopo — ReferenceError em runtime que derrubava a seção inteira.
+    const EC = window.EstacasCalculos;
     if (!m.qtdTotal) return `<div class="text-sm text-muted">Nenhuma ${unidade} cadastrada ainda.</div>`;
     return `
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:14px;">
