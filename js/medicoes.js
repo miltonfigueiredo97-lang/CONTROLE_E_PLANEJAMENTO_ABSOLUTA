@@ -303,11 +303,11 @@ const Medicoes = (() => {
         <div class="med-edit">
           <div class="med-campo">
             <label>Início Real</label>
-            <input type="date" class="med-inp med-inp-data" value="${iniVal}" onchange="Medicoes.setCampo('${t.id}','inicioReal',this.value)">
+            <input type="date" class="med-inp med-inp-data" value="${iniVal}" onclick="try{this.showPicker&&this.showPicker()}catch(e){}" onchange="Medicoes.setCampo('${t.id}','inicioReal',this.value)">
           </div>
           <div class="med-campo">
             <label>Término Real</label>
-            <input type="date" class="med-inp med-inp-data" value="${fimVal}" title="Só habilita com 100% de progresso" ${fimHabilitado?'':'disabled'} onchange="Medicoes.setCampo('${t.id}','terminoReal',this.value)">
+            <input type="date" class="med-inp med-inp-data" value="${fimVal}" title="Só habilita com 100% de progresso" ${fimHabilitado?'':'disabled'} onclick="try{this.showPicker&&this.showPicker()}catch(e){}" onchange="Medicoes.setCampo('${t.id}','terminoReal',this.value)">
           </div>
           <div class="med-campo">
             <label>% Executado</label>
@@ -495,14 +495,24 @@ const Medicoes = (() => {
       // Caiu abaixo de 100 → Término Real deixa de fazer sentido, some.
       if(v<100)pend[id].terminoReal='';
     } else if(campo==='inicioReal'){
+      if(valor&&!_anoValido(valor)){Utils.toast('Data inválida (ano estranho). Toque no ícone do calendário 📅 pra escolher em vez de digitar.','erro');_render();return;}
       pend[id].inicioReal=valor||'';
     } else if(campo==='terminoReal'){
+      if(valor&&!_anoValido(valor)){Utils.toast('Data inválida (ano estranho). Toque no ícone do calendário 📅 pra escolher em vez de digitar.','erro');_render();return;}
       const progEfetivo=pend[id].progresso!=null?pend[id].progresso:Math.min(100,t.percentualConcluido||0);
       if(valor&&progEfetivo<100){Utils.toast('Término Real só com a tarefa em 100% de progresso.','erro');_render();return;}
       pend[id].terminoReal=valor||'';
     }
     _syncPend(id);
     _render();
+  }
+  // Digitar data dígito-por-dígito no input nativo é fácil de errar (ano
+  // vira "0002" no meio da digitação) — trava qualquer ano fora de uma
+  // faixa plausível pra pegar isso antes de salvar.
+  function _anoValido(valorISO){
+    const ano=parseInt(String(valorISO).split('-')[0],10);
+    const anoAtual=new Date().getFullYear();
+    return ano>=2015&&ano<=anoAtual+3;
   }
   function removerFoto(id,i){
     if(!pend[id]?.fotos)return;
