@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.30.24',
+  versaoAtual: 'V3.19.30.25',
 
   versoes: [
     {
@@ -10333,6 +10333,17 @@ const NotasVersao = {
         "A correção anterior mexeu no card certo só que no lugar errado (Dashboard) — o \\\"% MÉDIO CONCRETADO\\\" que o Milton via era o do KPI grid da aba Marcadores dentro do próprio Controle de Estacas, um arquivo e um card totalmente diferentes.",
         "Agora sim, corrigido no lugar certo: virou \\\"% Executado (por quantidade)\\\" e \\\"% Executado (por m³)\\\" — separados e explicados, igual ao que já tinha sido feito no Dashboard.",
         "Adicionados também Dias trabalhados, m³/dia (ritmo médio) e Previsão de fim, calculados a partir dos marcadores/peças/lançamentos da view atual (Estacas ou Fundações)."
+      ]
+    },
+    {
+      "versao": "V3.19.30.25",
+      "data": "2026-08-22",
+      "tipo": "correcao",
+      "titulo": "Medições: tarefa desaparecia na hora de completar 100%, sem chance de revisar",
+      "itens": [
+        "Com \"Ocultar 100%\" ligado, a tarefa sumia da lista assim que o % chegava em 100 — inclusive a que a pessoa estava editando NA HORA, sem chance de revisar/corrigir antes de salvar. Corrigido: agora só some quem NÃO tem edição pendente nesta sessão — a que você está mexendo fica visível até você salvar ou descartar.",
+        "Novo botão \"🗑 Descartar tudo\" na barra (aparece quando há algo pendente) — descarta todas as alterações não salvas da medição atual sem precisar sair da tela.",
+        "Término Real desabilitado (tarefa ainda não em 100%) agora mostra um aviso vermelho \"(só com 100%)\" direto no rótulo do campo — antes só dava pra saber isso passando o mouse em cima (não funciona no celular)."
       ]
     }
   ],
