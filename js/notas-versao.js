@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.30.13',
+  versaoAtual: 'V3.19.30.14',
 
   versoes: [
     {
@@ -10220,6 +10220,17 @@ const NotasVersao = {
         "No popup de lançar por estaca, a linha de cada BT era um grid de 5 colunas lado a lado (seletor + % + volume + botão + botão) — no celular, os campos fixos já ocupavam quase toda a largura, sobrando quase nada pro nome da BT selecionada, ficando ilegível.",
         "Reorganizado em 2 linhas: o seletor de BT agora ocupa a largura toda sozinho (sempre legível, em qualquer tela), e o % + volume + botões ficam numa segunda linha embaixo, com mais espaço cada um.",
         "Campo de % ganhou uma largura fixa mais compacta (era desproporcionalmente grande) — só precisa caber um número de 1 a 3 dígitos."
+      ]
+    },
+    {
+      "versao": "V3.19.30.14",
+      "data": "2026-08-21",
+      "tipo": "melhoria",
+      "titulo": "Dashboard: painel Estacas e Fundações ganha % executado e toggle Estacas/Fundação",
+      "itens": [
+        "As duas prancha (Estacas Hélice + Fundação Zenith Teste) continuam lado a lado como antes. A tabela de métricas de baixo, que só mostrava Estacas, agora tem um toggle \\\"⚫ Estacas / ⬛ Fundação\\\" pra alternar entre as duas — sem misturar os números das duas disciplinas na mesma tabela.",
+        "Nova métrica \\\"% executado\\\" explícita nos dois (Estacas e Fundação): volume feito ÷ volume total do projeto daquela disciplina.",
+        "Fundação (peças que não são estaca — sapatas, blocos, vigas baldrame etc.) ganhou a mesma tabela por tipo que Estacas já tinha, agrupando pelo subtipo da peça em vez de Ø × comprimento (que só faz sentido pra estaca)."
       ]
     }
   ],

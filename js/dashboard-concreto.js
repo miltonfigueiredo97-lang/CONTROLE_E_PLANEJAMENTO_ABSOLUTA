@@ -236,6 +236,86 @@ const DashConcreto = (() => {
   }
 
   // ---------- Estacas e Fundações ----------
+  // Calcula as métricas da obra inteira pra um conjunto de peças (estacas OU
+  // fundação) — extraído pra função só, reaproveitada nos dois toggles.
+  function _calcularMetricasObra(pecasFiltradas, lancamentos, btsConfig, CC, EC) {
+    const idsPecas = new Set(pecasFiltradas.map(p => p.id));
+    const lansDoTipo = lancamentos.filter(l => idsPecas.has(l.pecaId));
+    const qtdTotal = pecasFiltradas.length;
+    const qtdFeitas = pecasFiltradas.filter(p => (CC ? CC.pctConcretado(p, lancamentos) : 0) >= 100).length;
+    const volumeTotalProjeto = pecasFiltradas.reduce((s, p) => s + EC.num(p.volume), 0);
+    const volumeFeitoProjeto = pecasFiltradas.reduce((s, p) => {
+      const pct = CC ? CC.pctConcretado(p, lancamentos) : 0;
+      return s + Math.min(EC.num(p.volume), (pct / 100) * EC.num(p.volume));
+    }, 0);
+    const volumeRealBTs = lansDoTipo.reduce((s, l) => s + EC.num(l.volume), 0);
+    const idsBTsUsadas = new Set(lansDoTipo.map(l => l.btConfigId));
+    let volumePrevistoBTs = 0, perdaBTsRegistrada = 0;
+    idsBTsUsadas.forEach(btId => {
+      const b = btsConfig.find(x => x.id === btId);
+      if (!b) return;
+      volumePrevistoBTs += EC.num(b.volumePrevisto);
+      const lansDaBT = lansDoTipo.filter(l => l.btConfigId === btId);
+      lansDaBT.forEach(l => { perdaBTsRegistrada += EC.num(l.sobraCaminhao) + EC.num(l.perdaObra) + EC.num(l.perdaCocho); });
+    });
+    const perdaSolo = Math.max(0, volumeRealBTs - volumeFeitoProjeto);
+    const perdaTotalObra = perdaBTsRegistrada + perdaSolo;
+    const indicePerdaObra = volumePrevistoBTs > 0 ? (perdaTotalObra / volumePrevistoBTs) * 100 : 0;
+    const consumoMedioPorPeca = qtdFeitas > 0 ? volumeRealBTs / qtdFeitas : 0;
+    const pctExecutado = volumeTotalProjeto > 0 ? (volumeFeitoProjeto / volumeTotalProjeto) * 100 : 0;
+    return { qtdTotal, qtdFeitas, volumeTotalProjeto, volumeFeitoProjeto, indicePerdaObra, consumoMedioPorPeca, pctExecutado, lansDoTipo };
+  }
+
+  // Gera os cartões de KPI + tabela por tipo — usado tanto pra Estacas
+  // quanto pra Fundação (mesmas contas, universo de peças diferente).
+  function _htmlMetricasTipo(m, grupos, unidade, colunaTipo) {
+    const CC = window.ConcretoCalculos;
+    if (!m.qtdTotal) return `<div class="text-sm text-muted">Nenhuma ${unidade} cadastrada ainda.</div>`;
+    return `
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:14px;">
+        <div class="db-metrica-card"><div class="db-metrica-valor">${m.qtdTotal}</div><div class="db-metrica-label">Total de ${unidade}s</div></div>
+        <div class="db-metrica-card"><div class="db-metrica-valor">${m.qtdFeitas}</div><div class="db-metrica-label">${unidade[0].toUpperCase() + unidade.slice(1)}s feitas</div></div>
+        <div class="db-metrica-card"><div class="db-metrica-valor">${EC.fmt1(m.volumeTotalProjeto)}</div><div class="db-metrica-label">Volume total (m³)</div></div>
+        <div class="db-metrica-card"><div class="db-metrica-valor">${EC.fmt1(m.volumeFeitoProjeto)}</div><div class="db-metrica-label">Volume feito (m³)</div></div>
+        <div class="db-metrica-card" style="${m.pctExecutado >= 99.9 ? 'border-color:#15803d;' : ''}"><div class="db-metrica-valor" style="color:${m.pctExecutado >= 99.9 ? '#15803d' : '#a16207'};">${EC.fmt1(m.pctExecutado)}%</div><div class="db-metrica-label">% executado</div></div>
+        <div class="db-metrica-card" style="${m.indicePerdaObra > 10 ? 'border-color:#dc2626;' : ''}"><div class="db-metrica-valor" style="${m.indicePerdaObra > 10 ? 'color:#dc2626;' : ''}">${EC.fmt1(m.indicePerdaObra)}%</div><div class="db-metrica-label">Índice de perda médio</div></div>
+        <div class="db-metrica-card"><div class="db-metrica-valor">${CC ? CC.fmt2(m.consumoMedioPorPeca) : m.consumoMedioPorPeca.toFixed(2)}</div><div class="db-metrica-label">Consumo médio/${unidade} (m³)</div></div>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="db-tabela-clean">
+          <thead><tr>
+            <th style="text-align:left;">${colunaTipo}</th>
+            <th>Qtd</th>
+            <th>Feitas</th>
+            <th>Vol. Projeto (m³)</th>
+            <th>Vol. Real (m³)</th>
+            <th>Consumo médio (m³)</th>
+          </tr></thead>
+          <tbody>
+            ${grupos.map(g => `<tr>
+              <td style="text-align:left;">${DashCore.esc(g.label)}</td>
+              <td>${g.qtd}</td>
+              <td>${g.qtdFeitas}</td>
+              <td>${EC.fmt1(g.volumeProjeto)}</td>
+              <td>${EC.fmt1(g.volumeReal)}</td>
+              <td>${g.qtdFeitas ? (CC ? CC.fmt2(g.volumeReal / g.qtdFeitas) : (g.volumeReal / g.qtdFeitas).toFixed(2)) : '—'}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>`;
+  }
+
+  function toggleMetricaTipo(tipo) {
+    const elEstaca = document.getElementById('db-ef-metricas-estaca');
+    const elFundacao = document.getElementById('db-ef-metricas-fundacao');
+    const tabEstaca = document.getElementById('db-ef-tab-estaca');
+    const tabFundacao = document.getElementById('db-ef-tab-fundacao');
+    if (elEstaca) elEstaca.style.display = tipo === 'estaca' ? '' : 'none';
+    if (elFundacao) elFundacao.style.display = tipo === 'fundacao' ? '' : 'none';
+    if (tabEstaca) tabEstaca.className = `aba-btn ${tipo === 'estaca' ? 'ativo' : ''}`;
+    if (tabFundacao) tabFundacao.className = `aba-btn ${tipo === 'fundacao' ? 'ativo' : ''}`;
+  }
+
   async function renderEstacas(ctx) {
     _ctx = ctx;
     const host = document.getElementById('db-estacas-wrap');
@@ -265,59 +345,49 @@ const DashConcreto = (() => {
         return { pct, label: `${p.nome} — ${EC.statusLabel(pct)}` };
       };
 
-      // Métricas de estacas (obra inteira)
+      // Métricas da obra inteira — estaca E fundação (não-estaca), pro toggle escolher qual mostrar
       const isEstacaPeca = p => p.tipo === 'Fundação' && (p.subTipo === 'Estacas' || (!p.subTipo && EC.num(p.diametro) > 0 && EC.num(p.comprimento) > 0));
       const pecasEstaca = pecas.filter(isEstacaPeca);
-      const idsPecasEstaca = new Set(pecasEstaca.map(p => p.id));
-      const lansEstaca = lancamentos.filter(l => idsPecasEstaca.has(l.pecaId));
+      const pecasFundacao = pecas.filter(p => p.tipo === 'Fundação' && !isEstacaPeca(p));
 
-      // Sem estaca E sem prancha: obra não tem essa disciplina — seção some.
-      if (!pecasEstaca.length && !pranchasComImagem.length) { host.innerHTML = ''; return; }
+      // Sem estaca, sem fundação E sem prancha: obra não tem essa disciplina — seção some.
+      if (!pecasEstaca.length && !pecasFundacao.length && !pranchasComImagem.length) { host.innerHTML = ''; return; }
 
       const total = marcadores.length;
       const vinculados = marcadores.filter(m => m.pecaId).length;
       const concluidos = marcadores.filter(m => { const s = statusFn(m); return s.pct !== null && s.pct >= 100; }).length;
       const pctMedio = total ? marcadores.reduce((s, m) => s + (statusFn(m).pct || 0), 0) / total : 0;
 
-      const qtdTotal = pecasEstaca.length;
-      const qtdFeitas = pecasEstaca.filter(p => (CC ? CC.pctConcretado(p, lancamentos) : 0) >= 100).length;
-      const volumeTotalProjeto = pecasEstaca.reduce((s, p) => s + EC.num(p.volume), 0);
-      const volumeFeitoProjeto = pecasEstaca.reduce((s, p) => {
-        const pct = CC ? CC.pctConcretado(p, lancamentos) : 0;
-        return s + Math.min(EC.num(p.volume), (pct / 100) * EC.num(p.volume));
-      }, 0);
-      const volumeRealBTs = lansEstaca.reduce((s, l) => s + EC.num(l.volume), 0);
-      const idsBTsUsadas = new Set(lansEstaca.map(l => l.btConfigId));
-      let volumePrevistoBTs = 0, perdaBTsRegistrada = 0;
-      idsBTsUsadas.forEach(btId => {
-        const b = btsConfig.find(x => x.id === btId);
-        if (!b) return;
-        volumePrevistoBTs += EC.num(b.volumePrevisto);
-        const lansDaBT = lansEstaca.filter(l => l.btConfigId === btId);
-        lansDaBT.forEach(l => { perdaBTsRegistrada += EC.num(l.sobraCaminhao) + EC.num(l.perdaObra) + EC.num(l.perdaCocho); });
-      });
-      // Perda de solo: volume real (BTs) passando do volume de projeto DAS
-      // PEÇAS JÁ EXECUTADAS — comparar com o projeto inteiro (obra em
-      // andamento) zerava o índice sempre, pois o real ainda é muito menor
-      // que o total da obra. Mesma metodologia do Controle de Estacas, que
-      // faz essa conta por concretagem (lá o universo já é só o executado).
-      const perdaSolo = Math.max(0, volumeRealBTs - volumeFeitoProjeto);
-      const perdaTotalObra = perdaBTsRegistrada + perdaSolo;
-      const indicePerdaObra = volumePrevistoBTs > 0 ? (perdaTotalObra / volumePrevistoBTs) * 100 : 0;
-      const consumoMedioPorEstaca = qtdFeitas > 0 ? volumeRealBTs / qtdFeitas : 0;
+      const metricasEstaca = _calcularMetricasObra(pecasEstaca, lancamentos, btsConfig, CC, EC);
+      const metricasFundacao = _calcularMetricasObra(pecasFundacao, lancamentos, btsConfig, CC, EC);
 
-      const gruposPorTipo = new Map();
+      const gruposPorTipoEstaca = new Map();
       pecasEstaca.forEach(p => {
         const chave = EC.chaveGrupoEstaca(p.diametro, p.comprimento);
-        if (!gruposPorTipo.has(chave)) gruposPorTipo.set(chave, { diametro: EC.num(p.diametro), comprimento: EC.num(p.comprimento), qtd: 0, qtdFeitas: 0, volumeProjeto: 0, volumeReal: 0 });
-        const g = gruposPorTipo.get(chave);
+        if (!gruposPorTipoEstaca.has(chave)) gruposPorTipoEstaca.set(chave, { label: `Ø${EC.fmt1(EC.num(p.diametro))}cm × ${EC.fmt1(EC.num(p.comprimento))}m`, qtd: 0, qtdFeitas: 0, volumeProjeto: 0, volumeReal: 0 });
+        const g = gruposPorTipoEstaca.get(chave);
         g.qtd++;
         const pct = CC ? CC.pctConcretado(p, lancamentos) : 0;
         if (pct >= 100) g.qtdFeitas++;
         g.volumeProjeto += EC.num(p.volume);
         g.volumeReal += lancamentos.filter(l => l.pecaId === p.id).reduce((s, l) => s + EC.num(l.volume), 0);
       });
-      const gruposOrdenados = [...gruposPorTipo.values()].sort((a, b) => (a.diametro - b.diametro) || (a.comprimento - b.comprimento));
+      const gruposEstacaOrdenados = [...gruposPorTipoEstaca.values()].sort((a, b) => a.label.localeCompare(b.label, 'pt-BR', { numeric: true }));
+
+      // Fundação não tem Ø×comprimento — agrupa pelo subTipo dela (Sapata, Bloco, Viga Baldrame etc.), ou "Fundação" se não tiver.
+      const gruposPorTipoFundacao = new Map();
+      pecasFundacao.forEach(p => {
+        const chave = p.subTipo || 'Fundação';
+        if (!gruposPorTipoFundacao.has(chave)) gruposPorTipoFundacao.set(chave, { label: chave, qtd: 0, qtdFeitas: 0, volumeProjeto: 0, volumeReal: 0 });
+        const g = gruposPorTipoFundacao.get(chave);
+        g.qtd++;
+        const pct = CC ? CC.pctConcretado(p, lancamentos) : 0;
+        if (pct >= 100) g.qtdFeitas++;
+        g.volumeProjeto += EC.num(p.volume);
+        g.volumeReal += lancamentos.filter(l => l.pecaId === p.id).reduce((s, l) => s + EC.num(l.volume), 0);
+      });
+      const gruposFundacaoOrdenados = [...gruposPorTipoFundacao.values()].sort((a, b) => a.label.localeCompare(b.label, 'pt-BR', { numeric: true }));
+
 
       host.innerHTML = `
         <div class="card db-row">
@@ -328,38 +398,21 @@ const DashConcreto = (() => {
               <button class="btn btn-secundario btn-sm" onclick="DashEstacasRel.abrir()">📄 Exportar relatório</button>
             </div>
             <div id="db-estacas-minimapas"></div>
-            ${qtdTotal ? `
+            ${(metricasEstaca.qtdTotal || metricasFundacao.qtdTotal) ? `
               <div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--cor-borda-light);">
-                <div class="db-secao-header" style="margin-bottom:8px;"><h4 style="font-size:.85rem;">Métricas de Estacas (obra inteira)</h4></div>
-                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:14px;">
-                  <div class="db-metrica-card"><div class="db-metrica-valor">${qtdTotal}</div><div class="db-metrica-label">Total de estacas</div></div>
-                  <div class="db-metrica-card"><div class="db-metrica-valor">${qtdFeitas}</div><div class="db-metrica-label">Estacas feitas</div></div>
-                  <div class="db-metrica-card"><div class="db-metrica-valor">${EC.fmt1(volumeTotalProjeto)}</div><div class="db-metrica-label">Volume total (m³)</div></div>
-                  <div class="db-metrica-card"><div class="db-metrica-valor">${EC.fmt1(volumeFeitoProjeto)}</div><div class="db-metrica-label">Volume feito (m³)</div></div>
-                  <div class="db-metrica-card" style="${indicePerdaObra > 10 ? 'border-color:#dc2626;' : ''}"><div class="db-metrica-valor" style="${indicePerdaObra > 10 ? 'color:#dc2626;' : ''}">${EC.fmt1(indicePerdaObra)}%</div><div class="db-metrica-label">Índice de perda médio</div></div>
-                  <div class="db-metrica-card"><div class="db-metrica-valor">${CC ? CC.fmt2(consumoMedioPorEstaca) : consumoMedioPorEstaca.toFixed(2)}</div><div class="db-metrica-label">Consumo médio/estaca (m³)</div></div>
+                <div class="db-secao-header" style="margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+                  <h4 style="font-size:.85rem;margin:0;">Métricas da obra inteira</h4>
+                  ${metricasEstaca.qtdTotal && metricasFundacao.qtdTotal ? `
+                    <div class="aba-toggle">
+                      <button class="aba-btn ativo" id="db-ef-tab-estaca" onclick="DashConcreto.toggleMetricaTipo('estaca')">⚫ Estacas</button>
+                      <button class="aba-btn" id="db-ef-tab-fundacao" onclick="DashConcreto.toggleMetricaTipo('fundacao')">⬛ Fundação</button>
+                    </div>` : ''}
                 </div>
-                <div style="overflow-x:auto;">
-                  <table class="db-tabela-clean">
-                    <thead><tr>
-                      <th style="text-align:left;">Tipo (Ø × comprimento)</th>
-                      <th>Qtd</th>
-                      <th>Feitas</th>
-                      <th>Vol. Projeto (m³)</th>
-                      <th>Vol. Real (m³)</th>
-                      <th>Consumo médio (m³)</th>
-                    </tr></thead>
-                    <tbody>
-                      ${gruposOrdenados.map(g => `<tr>
-                        <td style="text-align:left;">Ø${EC.fmt1(g.diametro)}cm × ${EC.fmt1(g.comprimento)}m</td>
-                        <td>${g.qtd}</td>
-                        <td>${g.qtdFeitas}</td>
-                        <td>${EC.fmt1(g.volumeProjeto)}</td>
-                        <td>${EC.fmt1(g.volumeReal)}</td>
-                        <td>${g.qtdFeitas ? (CC ? CC.fmt2(g.volumeReal / g.qtdFeitas) : (g.volumeReal / g.qtdFeitas).toFixed(2)) : '—'}</td>
-                      </tr>`).join('')}
-                    </tbody>
-                  </table>
+                <div id="db-ef-metricas-estaca" style="${metricasEstaca.qtdTotal ? '' : 'display:none;'}">
+                  ${_htmlMetricasTipo(metricasEstaca, gruposEstacaOrdenados, 'estaca', 'Tipo (Ø × comprimento)')}
+                </div>
+                <div id="db-ef-metricas-fundacao" style="${metricasEstaca.qtdTotal && metricasFundacao.qtdTotal ? 'display:none;' : ''}">
+                  ${_htmlMetricasTipo(metricasFundacao, gruposFundacaoOrdenados, 'peça', 'Tipo')}
                 </div>
               </div>` : ''}
           </div>
@@ -692,6 +745,6 @@ const DashConcreto = (() => {
     }
   }
 
-  return { renderToggle, toggleMostrar, setMostrar, extrasToggleMenu, renderFundacaoEstrutura, renderEstacas, abrirPrancha, popupNavegar, popupZoomAjustar, fecharPopup };
+  return { renderToggle, toggleMostrar, setMostrar, extrasToggleMenu, renderFundacaoEstrutura, renderEstacas, abrirPrancha, popupNavegar, popupZoomAjustar, fecharPopup, toggleMetricaTipo };
 })();
 window.DashConcreto = DashConcreto;
