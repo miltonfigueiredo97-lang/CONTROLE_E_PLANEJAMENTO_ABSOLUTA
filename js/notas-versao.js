@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.30.17',
+  versaoAtual: 'V3.19.30.18',
 
   versoes: [
     {
@@ -10260,6 +10260,15 @@ const NotasVersao = {
       "itens": [
         "Digitar a data dígito por dígito no campo nativo é fácil de errar — cada tecla empurra os dígitos do ano, então parar no meio da digitação deixava algo como \"12/08/0002\" em vez do ano certo.",
         "Agora tocar/clicar no campo abre direto o calendário nativo pra escolher a data (em vez de digitar), e se mesmo assim entrar um ano fora de uma faixa plausível (2015 até 3 anos à frente), o sistema avisa e não salva."
+      ]
+    },
+    {
+      "versao": "V3.19.30.18",
+      "data": "2026-08-22",
+      "tipo": "correcao",
+      "titulo": "Medições: delay ao digitar na busca",
+      "itens": [
+        "Cada tecla digitada reconstruía a árvore inteira na hora, travando a digitação em obras com muita tarefa. Agora espera uma pausa curta (250ms) depois da última tecla antes de filtrar de verdade — o campo continua respondendo normal enquanto digita."
       ]
     }
   ],

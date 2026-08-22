@@ -454,18 +454,26 @@ const Medicoes = (() => {
     }
     _render();
   }
+  let _buscaTimer=null;
   function setBusca(v){
     busca=v||'';
-    const inp=document.getElementById('med-busca');
-    const pos=inp?inp.selectionStart:null;
-    _render();
-    // O _render() reconstrói o innerHTML inteiro (destrói e recria o input)
-    // — sem isso, o campo perde o foco a cada letra digitada e só dava pra
-    // digitar 1 caractere por vez.
-    requestAnimationFrame(()=>{
-      const inp2=document.getElementById('med-busca');
-      if(inp2){inp2.focus();if(pos!=null)inp2.setSelectionRange(pos,pos);}
-    });
+    // _render() reconstrói a árvore inteira (pode ser bem grande) — fazer
+    // isso a cada tecla trava a digitação. Espera uma pausa curta (250ms)
+    // depois da última tecla antes de filtrar de verdade; o campo em si
+    // continua respondendo normal (é o navegador que mostra o que foi
+    // digitado, não depende do render).
+    clearTimeout(_buscaTimer);
+    _buscaTimer=setTimeout(()=>{
+      const inp=document.getElementById('med-busca');
+      const pos=inp?inp.selectionStart:null;
+      _render();
+      // O _render() reconstrói o innerHTML inteiro (destrói e recria o
+      // input) — sem isso, o campo perde o foco depois de cada filtragem.
+      requestAnimationFrame(()=>{
+        const inp2=document.getElementById('med-busca');
+        if(inp2){inp2.focus();if(pos!=null)inp2.setSelectionRange(pos,pos);}
+      });
+    },250);
   }
   function descartarItem(id){delete pend[id];_render();}
 
