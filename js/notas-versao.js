@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.30.44',
+  versaoAtual: 'V3.19.30.45',
 
   versoes: [
     {
@@ -10545,6 +10545,16 @@ const NotasVersao = {
       "itens": [
         "Existe uma regra fixa antiga (\"Cobertura\" = sinônimo de Reservatório) — feita numa obra que não tinha um pavimento \"Cobertura\" próprio, só \"Reservatório\". Ela estava rodando pra TODAS as obras, sem checar se a obra atual tinha um \"Cobertura\" cadastrado de verdade.",
         "Corrigido: agora o nome LITERAL da tarefa é testado primeiro contra os pavimentos cadastrados — se você tem um pavimento \"Cobertura\", ele ganha. A regra antiga (Cobertura→Reservatório) só entra como último recurso, pra obra que realmente não tem \"Cobertura\" cadastrado."
+      ]
+    },
+    {
+      "versao": "V3.19.30.45",
+      "data": "2026-08-24",
+      "tipo": "correcao",
+      "titulo": "Medições: filtrar por Frente (sem digitar busca) não abria os grupos até o resultado",
+      "itens": [
+        "O auto-abrir dos grupos até o resultado só disparava quando tinha TEXTO na busca — filtrar só por Frente (ex: HIDRAULICA) ou só \"Ocultar 100%\" deixava tudo do jeito que já estava (geralmente tudo fechado), obrigando abrir pavimento por pavimento na mão pra achar o que já tinha sido filtrado.",
+        "Corrigido: agora qualquer filtro ativo (Frente, Ocultar 100% ou busca por texto) abre automaticamente o caminho até cada resultado — em qualquer modo de visão (Estrutura, Categoria, Grupo)."
       ]
     }
   ],
