@@ -46,5 +46,21 @@
     "projeto": "",
     "categoria": "",
     "checklist": []
+  },
+  {
+    "id": "chat_planejamento_touch_mobile_tablet_v1",
+    "texto": "Planejamento: melhorar touch em tablet/mobile (predecessoras/sucessoras)",
+    "descricao": "Hoje a experiência de toque no Planejamento está muito ruim, principalmente em tablet, na hora de mexer com predecessoras e sucessoras (apertar e segurar, etc.). Precisa: 1) Melhorar as interações de toque (toque longo e afins) pra ficarem confiáveis em tablet. 2) Dar um jeito de ver o NOME da tarefa sucessora (hoje só aparece a referência/código, não o nome), tanto em desktop quanto no toque.",
+    "projeto": "Sistema Absoluta",
+    "categoria": "Planejamento",
+    "checklist": []
+  },
+  {
+    "id": "chat_planejamento_gerador_equipes_v1",
+    "texto": "Planejamento: gerador de equipes automático",
+    "descricao": "Criar um gerador automático de equipes dentro do módulo Planejamento. As obras do usuário já devem vir preenchidas automaticamente nesse gerador, sem precisar selecionar manualmente toda vez.",
+    "projeto": "Sistema Absoluta",
+    "categoria": "Planejamento",
+    "checklist": []
   }
 ]
