@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.30.40',
+  versaoAtual: 'V3.19.30.41',
 
   versoes: [
     {
@@ -10502,6 +10502,16 @@ const NotasVersao = {
       "itens": [
         "Nos modos de visão por Categoria/Grupo, tarefa sem valor preenchido numa dimensão (ex: sem Subgrupo) caía todo mundo junto num grupo \"Sem Subgrupo\" — um monte de tarefa sem relação nenhuma entre si, agrupada só por não terem preenchido o mesmo campo em branco.",
         "Corrigido: agora essa tarefa para naquele nível e aparece direto com o PRÓPRIO nome, sem o grupo genérico no meio. Some \"Sem Subgrupo\"/\"Sem Categoria\" — quem não tem o campo aparece igual a antes de existir esse agrupamento."
+      ]
+    },
+    {
+      "versao": "V3.19.30.41",
+      "data": "2026-08-24",
+      "tipo": "correcao",
+      "titulo": "Estrutura da Obra: arrastar pra selecionar texto dentro do nome de Torre/Pavimento estava puxando a linha inteira",
+      "itens": [
+        "O mecanismo antigo desligava o arrastar da linha só quando o campo de texto ganhava foco (onfocus/onblur) — tinha uma corrida entre esse evento e o gesto de clicar-e-arrastar pra selecionar texto, então às vezes o navegador entendia como \"arrastar a linha\" em vez de \"selecionar o texto\".",
+        "Trocado por um jeito mais direto: a linha começa sempre travada (não arrastável) e SÓ destrava enquanto o dedo/mouse está apertando o ícone \"⠿\" — soltar sem arrastar trava de novo na hora. Selecionar texto dentro do campo nunca mais aciona o arrastar, não importa a velocidade do gesto."
       ]
     }
   ],

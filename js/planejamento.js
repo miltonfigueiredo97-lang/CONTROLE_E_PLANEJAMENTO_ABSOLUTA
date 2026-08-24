@@ -4023,28 +4023,26 @@ const Planejamento = (() => {
     if(!torres.length){el.innerHTML='<div style="color:#555;font-size:.8rem;padding:10px 0;">Nenhuma torre cadastrada ainda.</div>';return;}
     el.innerHTML=torres.map(t=>{
       const pavs=[...(t.pavimentos||[])].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
-      return `<div draggable="true" ondragstart="Planejamento._estDragStart(event,'torre','${t.id}')"
+      return `<div data-drag-row draggable="false" ondragstart="Planejamento._estDragStart(event,'torre','${t.id}')"
           ondragover="Planejamento._estDragOver(event,'torre','${t.id}')" ondragleave="Planejamento._estDragLeave(event)"
-          ondrop="Planejamento._estDrop(event,'torre','${t.id}')" ondragend="Planejamento._estDragLeave(event)"
+          ondrop="Planejamento._estDrop(event,'torre','${t.id}')" ondragend="Planejamento._estDragLeave(event);this.draggable=false"
           style="border:1px solid #292929;border-radius:7px;padding:8px;margin-bottom:8px;">
         <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
-          <span style="cursor:grab;color:#555;font-size:.9rem;user-select:none;" title="Arraste pra reordenar as torres">⠿</span>
-          <input value="${_esc(t.nome||'')}" draggable="false" onmousedown="event.stopPropagation()"
-            onfocus="this.closest('[draggable]').draggable=false" onblur="this.closest('[draggable]').draggable=true"
+          <span style="cursor:grab;color:#555;font-size:.9rem;user-select:none;" title="Arraste pra reordenar as torres" onmousedown="this.closest('[data-drag-row]').draggable=true" onmouseup="this.closest('[data-drag-row]').draggable=false" ontouchstart="this.closest('[data-drag-row]').draggable=true">⠿</span>
+          <input value="${_esc(t.nome||'')}" draggable="false"
             onchange="Planejamento._editarNomeEst('torre','${t.id}',this.value)" style="flex:1;background:#111;border:1px solid #333;border-radius:4px;color:#fff;padding:4px 6px;font-size:.82rem;font-weight:600;user-select:text;cursor:text;">
           <span style="cursor:pointer;color:#dc2626;font-size:.85rem;" onclick="Planejamento._removerNoEst('torre','${t.id}')" title="Excluir torre">✕</span>
         </div>
         <div style="margin-left:14px;">
           ${pavs.map(p=>{
             const aptos=[...(p.apartamentos||[])].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
-            return `<div draggable="true" ondragstart="event.stopPropagation();Planejamento._estDragStart(event,'pavimento','${p.id}')"
+            return `<div data-drag-row draggable="false" ondragstart="event.stopPropagation();Planejamento._estDragStart(event,'pavimento','${p.id}')"
                 ondragover="event.stopPropagation();Planejamento._estDragOver(event,'pavimento','${p.id}')" ondragleave="Planejamento._estDragLeave(event)"
-                ondrop="event.stopPropagation();Planejamento._estDrop(event,'pavimento','${p.id}')" ondragend="Planejamento._estDragLeave(event)"
+                ondrop="event.stopPropagation();Planejamento._estDrop(event,'pavimento','${p.id}')" ondragend="Planejamento._estDragLeave(event);this.draggable=false"
                 style="border-left:2px solid #333;padding:4px 0 4px 10px;margin-bottom:4px;">
               <div style="display:flex;align-items:center;gap:6px;">
-                <span style="cursor:grab;color:#555;font-size:.85rem;user-select:none;" title="Arraste pra reordenar os pavimentos">⠿</span>
-                <input value="${_esc(p.nome||'')}" draggable="false" onmousedown="event.stopPropagation()"
-                  onfocus="this.closest('[draggable]').draggable=false" onblur="this.closest('[draggable]').draggable=true"
+                <span style="cursor:grab;color:#555;font-size:.85rem;user-select:none;" title="Arraste pra reordenar os pavimentos" onmousedown="event.stopPropagation();this.closest('[data-drag-row]').draggable=true" onmouseup="event.stopPropagation();this.closest('[data-drag-row]').draggable=false" ontouchstart="event.stopPropagation();this.closest('[data-drag-row]').draggable=true">⠿</span>
+                <input value="${_esc(p.nome||'')}" draggable="false"
                   onchange="Planejamento._editarNomeEst('pavimento','${p.id}',this.value)" style="flex:1;background:#111;border:1px solid #333;border-radius:4px;color:#ddd;padding:3px 6px;font-size:.78rem;user-select:text;cursor:text;">
                 <span style="cursor:pointer;color:var(--cor-primaria);font-size:.72rem;" onclick="Planejamento._addApartamento('${p.id}')" title="Adicionar subgrupo (apartamento, lado de fachada, etc.)">＋subgrupo</span>
                 <span style="cursor:pointer;color:var(--cor-primaria);font-size:.72rem;" onclick="Planejamento._duplicarPavimento('${p.id}')" title="Duplicar este pavimento (com os aptos dele)">📋 duplicar</span>
@@ -4052,8 +4050,7 @@ const Planejamento = (() => {
               </div>
               ${aptos.length?`<div style="display:flex;flex-wrap:wrap;gap:4px;margin:4px 0 0 10px;">
                 ${aptos.map(a=>`<span style="display:inline-flex;align-items:center;gap:3px;background:#111;border:1px solid #333;border-radius:100px;padding:2px 4px 2px 8px;font-size:.7rem;color:#ccc;">
-                  <input value="${_esc(a.nome||'')}" size="${Math.max(4,String(a.nome||'').length+1)}" draggable="false" onmousedown="event.stopPropagation()"
-                    onfocus="this.closest('[draggable]').draggable=false" onblur="this.closest('[draggable]').draggable=true"
+                  <input value="${_esc(a.nome||'')}" size="${Math.max(4,String(a.nome||'').length+1)}" draggable="false"
                     oninput="this.size=Math.max(4,this.value.length+1)"
                     onchange="Planejamento._editarNomeEst('apartamento','${a.id}',this.value)"
                     style="background:transparent;border:none;color:#ccc;font-size:.7rem;padding:0;min-width:30px;user-select:text;cursor:text;">
@@ -4073,12 +4070,19 @@ const Planejamento = (() => {
   // pavimento da mesma torre) — mover pavimento pra outra torre não é
   // suportado aqui (isso seria "mudar de prédio", faria mais sentido
   // recriar do que arrastar).
+  // O arrastar SÓ liga quando o dedo/mouse aperta o ícone "⠿" — a linha
+  // inteira começa com draggable=false e um mousedown/touchstart no ícone
+  // (e só nele) que liga; ondragend desliga de novo. Isso evita de vez
+  // qualquer corrida de eventos entre foco do campo de texto e o início do
+  // gesto de arrastar (o método antigo, por onfocus/onblur, ainda deixava
+  // passar o caso de clicar-e-arrastar pra selecionar texto sem antes soltar
+  // o botão — a seleção de texto acabava sendo interpretada como arrastar
+  // a linha).
   let _estDragId=null,_estDragTipo=null;
   function _estDragStart(e,tipo,id){
     // Se começou dentro de um campo de texto (editando nome), cancela o
-    // drag da linha/torre — o draggable="false" no input já deveria
-    // bastar, isso aqui é reforço (mesmo ajuste feito no Editor de Estrutura
-    // de tarefas, que tinha esse exato problema).
+    // drag da linha/torre — reforço extra, o draggable=false por padrão já
+    // deveria bastar sozinho.
     if(e.target&&(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA')){e.preventDefault();return;}
     _estDragId=id;_estDragTipo=tipo;
     e.dataTransfer.effectAllowed='move';
