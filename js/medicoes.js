@@ -757,12 +757,14 @@ const Medicoes = (() => {
         // Início/Término Real também empurram o cronograma ATUAL (inicioPlanejado/
         // terminoPlanejado) pra refletir a realidade — a Linha de Base
         // (inicioPlanejadoBase/terminoPlanejadoBase) nunca é tocada aqui.
+        // IMPORTANTE: NUNCA recalcular `duracao` a partir das datas reais —
+        // duracao é o PESO oficial do % (regra do sistema, ver PROJETO.md
+        // 5.1: "peso = duração, NUNCA mudar isso"). Recalcular duracao aqui
+        // já causou um bug real: preencher datas reais iguais (mesmo dia)
+        // zerava a duração da tarefa, fazendo ela quase sumir do peso da
+        // média do grupo e distorcendo o % de todo o pavimento.
         if(upd.inicioReal)upd.inicioPlanejado=upd.inicioReal;
-        if(upd.terminoReal){
-          upd.terminoPlanejado=upd.terminoReal;
-          const iniRef=upd.inicioPlanejado||t.inicioPlanejado;
-          if(iniRef)upd.duracao=Math.max(0,Math.ceil((new Date(upd.terminoReal)-new Date(iniRef))/864e5));
-        }
+        if(upd.terminoReal)upd.terminoPlanejado=upd.terminoReal;
         // fotos → storage
         const urls=[];
         for(let i=0;i<(p.fotos||[]).length;i++){

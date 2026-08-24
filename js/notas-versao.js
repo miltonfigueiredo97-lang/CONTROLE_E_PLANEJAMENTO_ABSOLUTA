@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.30.45',
+  versaoAtual: 'V3.19.30.46',
 
   versoes: [
     {
@@ -10555,6 +10555,17 @@ const NotasVersao = {
       "itens": [
         "O auto-abrir dos grupos até o resultado só disparava quando tinha TEXTO na busca — filtrar só por Frente (ex: HIDRAULICA) ou só \"Ocultar 100%\" deixava tudo do jeito que já estava (geralmente tudo fechado), obrigando abrir pavimento por pavimento na mão pra achar o que já tinha sido filtrado.",
         "Corrigido: agora qualquer filtro ativo (Frente, Ocultar 100% ou busca por texto) abre automaticamente o caminho até cada resultado — em qualquer modo de visão (Estrutura, Categoria, Grupo)."
+      ]
+    },
+    {
+      "versao": "V3.19.30.46",
+      "data": "2026-08-24",
+      "tipo": "correcao",
+      "titulo": "⚠️ Medições: preencher Término Real recalculava a Duração da tarefa, distorcendo o peso do % no grupo/pavimento",
+      "itens": [
+        "Bug sério: ao preencher Término Real, o sistema recalculava a Duração da tarefa com base na diferença entre Início Real e Término Real — só que Duração é o PESO oficial do cálculo de % (regra do sistema, nunca deveria mudar por isso). Preencher datas reais do mesmo dia (comum quando lançado depois, tudo de uma vez) zerava a duração da tarefa, fazendo ela quase sumir do peso da média do grupo/pavimento e puxando o % geral pra um valor errado.",
+        "Corrigido: Início/Término Real continuam atualizando o cronograma Atual (como já era), mas a Duração NUNCA é mais tocada por isso.",
+        "IMPORTANTE — dado que já pode ter sido afetado: qualquer tarefa em que você preencheu Término Real pela Medição enquanto esse bug estava no ar pode ter a Duração errada agora (geralmente menor do que deveria). Vale conferir a coluna Duração no Planejamento das tarefas já medidas e corrigir na mão quem estiver com número estranho — o valor original não tem como ser recuperado automaticamente, já foi sobrescrito."
       ]
     }
   ],
