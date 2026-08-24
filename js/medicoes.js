@@ -236,13 +236,9 @@ const Medicoes = (() => {
     pend={};busca='';view='nova';
     // Começa tudo RECOLHIDO (só os grupos de topo) — abrir tudo de cara faz
     // rolar telas e telas antes de achar o que quer; melhor ir abrindo só
-    // o que precisa.
-    colapsados=new Set();
-    for(let i=0;i<sorted.length;i++){
-      const t=sorted[i],niv=t.nivel||0,nxt=sorted[i+1];
-      const isLeaf=!nxt||(nxt.nivel||0)<=niv;
-      if(!isLeaf)colapsados.add(t.id);
-    }
+    // o que precisa. Vale pra qualquer modo de visão (Estrutura, Categoria,
+    // Grupo — cada um tem seu próprio conjunto de ids de grupo).
+    colapsados=new Set(_todosGruposIds());
     _render();
   }
   function voltar(){
@@ -259,7 +255,9 @@ const Medicoes = (() => {
   function setModoView(v){
     modoView=v||'estrutura';
     try{localStorage.setItem('med_modoView',modoView);}catch(e){}
-    colapsados=new Set(); // trocar de visão com o recolhimento da visão antiga não faz sentido
+    // Troca de visão começa recolhida também — o recolhimento da visão
+    // anterior não faz sentido nesse novo agrupamento (ids diferentes).
+    colapsados=new Set(_todosGruposIds());
     _render();
   }
   const MODOS_VIEW={
@@ -335,16 +333,9 @@ const Medicoes = (() => {
       ${fotos.length?`<div class="med-fotos-row">${fotos.map((f,fi)=>`<div class="med-foto-thumb"><img src="${f}"><button onclick="Medicoes.removerFoto('${t.id}',${fi})">✕</button></div>`).join('')}</div>`:''}
     </div>`;
   }
-  // Monta a árvore virtual (Categoria/Grupo etc.) a partir das folhas já
-  // filtradas. Tarefa SEM valor numa dimensão (ex: sem Subgrupo) não cai
-  // num grupo genérico "Sem Subgrupo" — ela para naquele nível e aparece
-  // direto com o próprio nome (ficaria estranho um monte de tarefa
-  // diferente junto só por não terem preenchido o mesmo campo).
-  function _renderAgrupado(dims,leaves){
-    // Sempre que tem filtro ativo (Frente, busca ou Ocultar 100%), abre
-    // automaticamente o caminho até cada resultado — senão a pessoa filtra
-    // e ainda tem que clicar grupo por grupo pra achar o que já filtrou.
-    const filtroAtivo=!!busca.trim()||!!filtroFrente||ocultarConcluidos;
+  // Monta só a estrutura (sem HTML) — usada tanto pra desenhar quanto pra
+  // saber quais grupos existem (recolher tudo / abrir tudo / estado inicial).
+  function _construirArvoreVirtual(dims,leaves){
     const raiz={filhos:new Map(),leaves:null};
     for(const t of leaves){
       let node=raiz,caminho='';
@@ -354,7 +345,6 @@ const Medicoes = (() => {
         caminho=caminho?caminho+'|||'+valor:valor;
         const id='grp:'+caminho;
         if(!node.filhos.has(valor))node.filhos.set(valor,{filhos:new Map(),leaves:null,id,nome:valor});
-        if(filtroAtivo)colapsados.delete(id);
         node=node.filhos.get(valor);
       }
       if(!node.leaves)node.leaves=[];
@@ -367,6 +357,38 @@ const Medicoes = (() => {
       node.sw=sw;node.sr=sr;node.se=se;return{sw,sr,se};
     }
     agregar(raiz);
+    return raiz;
+  }
+  // Todo id de grupo (em qualquer profundidade) do modo de visão ATUAL —
+  // usado pra recolher tudo / começar recolhido, tanto na Estrutura quanto
+  // nos modos por Categoria/Grupo (que usam ids sintéticos "grp:...").
+  function _todosGruposIds(){
+    const ids=[];
+    if(modoView==='estrutura'){
+      for(let i=0;i<sorted.length;i++){
+        const t=sorted[i],niv=t.nivel||0,nxt=sorted[i+1];
+        if(!nxt||(nxt.nivel||0)<=niv)ids.push(t.id);
+      }
+      return ids;
+    }
+    const raiz=_construirArvoreVirtual(MODOS_VIEW[modoView].dims,_leavesQualificadas());
+    (function coletar(node){
+      for(const filho of node.filhos.values()){ids.push(filho.id);coletar(filho);}
+    })(raiz);
+    return ids;
+  }
+  // Monta a árvore virtual (Categoria/Grupo etc.) a partir das folhas já
+  // filtradas. Tarefa SEM valor numa dimensão (ex: sem Subgrupo) não cai
+  // num grupo genérico "Sem Subgrupo" — ela para naquele nível e aparece
+  // direto com o próprio nome (ficaria estranho um monte de tarefa
+  // diferente junto só por não terem preenchido o mesmo campo).
+  function _renderAgrupado(dims,leaves){
+    // Sempre que tem filtro ativo (Frente, busca ou Ocultar 100%), abre
+    // automaticamente o caminho até cada resultado — senão a pessoa filtra
+    // e ainda tem que clicar grupo por grupo pra achar o que já filtrou.
+    const filtroAtivo=!!busca.trim()||!!filtroFrente||ocultarConcluidos;
+    const raiz=_construirArvoreVirtual(dims,leaves);
+    if(filtroAtivo)(function abrir(node){for(const filho of node.filhos.values()){colapsados.delete(filho.id);abrir(filho);}})(raiz);
     const q=busca.toLowerCase().trim();
     const primeiroMatchId=q&&leaves.length?leaves[0].id:null;
     let rows='';
@@ -588,12 +610,7 @@ const Medicoes = (() => {
   function toggleGrupo(id){if(colapsados.has(id))colapsados.delete(id);else colapsados.add(id);_render();}
   function expandirTudo(){colapsados=new Set();_render();}
   function recolherTudo(){
-    colapsados=new Set();
-    for(let i=0;i<sorted.length;i++){
-      const t=sorted[i],niv=t.nivel||0,nxt=sorted[i+1];
-      const isLeaf=!nxt||(nxt.nivel||0)<=niv;
-      if(!isLeaf)colapsados.add(t.id);
-    }
+    colapsados=new Set(_todosGruposIds());
     _render();
   }
   let _buscaTimer=null;

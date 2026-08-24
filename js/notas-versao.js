@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.30.46',
+  versaoAtual: 'V3.19.30.47',
 
   versoes: [
     {
@@ -10566,6 +10566,16 @@ const NotasVersao = {
         "Bug sério: ao preencher Término Real, o sistema recalculava a Duração da tarefa com base na diferença entre Início Real e Término Real — só que Duração é o PESO oficial do cálculo de % (regra do sistema, nunca deveria mudar por isso). Preencher datas reais do mesmo dia (comum quando lançado depois, tudo de uma vez) zerava a duração da tarefa, fazendo ela quase sumir do peso da média do grupo/pavimento e puxando o % geral pra um valor errado.",
         "Corrigido: Início/Término Real continuam atualizando o cronograma Atual (como já era), mas a Duração NUNCA é mais tocada por isso.",
         "IMPORTANTE — dado que já pode ter sido afetado: qualquer tarefa em que você preencheu Término Real pela Medição enquanto esse bug estava no ar pode ter a Duração errada agora (geralmente menor do que deveria). Vale conferir a coluna Duração no Planejamento das tarefas já medidas e corrigir na mão quem estiver com número estranho — o valor original não tem como ser recuperado automaticamente, já foi sobrescrito."
+      ]
+    },
+    {
+      "versao": "V3.19.30.47",
+      "data": "2026-08-24",
+      "tipo": "correcao",
+      "titulo": "Medições: \"começar recolhido\" só funcionava na Estrutura — nos modos de Categoria/Grupo abria tudo aberto",
+      "itens": [
+        "Os modos de visão por Categoria/Grupo usam ids sintéticos pros grupos (não são tarefas de verdade) — o \"começar recolhido\" e o botão \"Recolher\" só sabiam recolher pelos ids das tarefas da Estrutura, então nesses modos tudo continuava aberto direto.",
+        "Corrigido: \"Nova Medição\", \"Recolher\" e trocar de modo de visão agora recolhem certo em qualquer modo (Estrutura, Categoria, Grupo e as combinações)."
       ]
     }
   ],
