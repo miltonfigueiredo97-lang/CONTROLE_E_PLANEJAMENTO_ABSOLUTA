@@ -550,7 +550,9 @@ const Todo = (() => {
       }
       .agenda-linha:last-child { border-bottom:none; }
       .agenda-linha:hover { background:var(--cor-fundo); border-radius:8px; }
-      .agenda-hora { width:100px; flex-shrink:0; font-size:12px; font-weight:700; color:var(--cor-texto-muted); line-height:1.5; margin-top:2px; }
+      .agenda-hora { width:100px; flex-shrink:0; font-size:12px; font-weight:700; color:var(--cor-texto-muted); line-height:1.5; margin-top:2px; border-radius:6px; padding:2px 4px; margin-left:-4px; }
+      .agenda-hora.clicavel { cursor:pointer; }
+      .agenda-hora.clicavel:hover { background:var(--cor-primaria-light); color:var(--cor-dark-900); }
       .agenda-corpo { flex:1; min-width:0; display:flex; flex-direction:column; gap:6px; }
       .agenda-tarefas-lista { display:flex; flex-direction:column; gap:5px; }
       .agenda-add-icon {
@@ -1366,6 +1368,12 @@ const Todo = (() => {
   function _renderizarAgenda() {
     const el = document.getElementById('agenda-conteudo');
     if (!el) return;
+    // Preserva a posição de rolagem — sem isso, toda vez que algo mudava
+    // (fechar seletor, escolher tarefa, etc.) a lista voltava pro topo.
+    // Só restaura se for o MESMO dia (trocar de dia deve voltar ao topo).
+    const listaAntiga = el.querySelector('.agenda-lista');
+    const diaAntigo = listaAntiga ? listaAntiga.dataset.dia : null;
+    const scrollSalvo = listaAntiga ? listaAntiga.scrollTop : 0;
     const dataStr = agendaDataAtual;
     const ehHoje = dataStr === _hojeStr();
     const agora = new Date();
@@ -1419,14 +1427,14 @@ const Todo = (() => {
           </button>
         </div>
       ` : ''}
-      <div class="agenda-lista">
+      <div class="agenda-lista" data-dia="${dataStr}">
         ${slots.map(s => {
           const alocsSlot = agendaAlocacoes.filter(a => a.data === dataStr && a.horario === s.inicio);
           const pickerAberto = agendaSlotAberto === s.inicio;
           const atrasadasSlot = pickerAberto ? _alocacoesAtrasadas(dataStr, s.inicio) : [];
           return `
             <div class="agenda-linha">
-              <div class="agenda-hora">${s.inicio} a ${s.fim}</div>
+              <div class="agenda-hora ${!pickerAberto ? 'clicavel' : ''}" ${!pickerAberto ? `data-agenda-abrir="${s.inicio}"` : ''}>${s.inicio} a ${s.fim}</div>
               <div class="agenda-corpo">
                 ${alocsSlot.length ? `<div class="agenda-tarefas-lista">
                   ${alocsSlot.map(a => {
@@ -1442,7 +1450,7 @@ const Todo = (() => {
                           <svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="white" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
                         </div>
                         <span class="agenda-tarefa-texto" data-agenda-detalhe="${t.id}" title="Ver detalhe">${item ? '↳ ' : ''}${esc(label)}</span>
-                        <button type="button" class="agenda-copiar" title="Copiar pra outro horário" data-agenda-copiar-tarefa="${t.id}" data-agenda-copiar-item="${a.itemId || ''}" data-agenda-copiar-label="${esc(label)}">⧉</button>
+                        <button type="button" class="agenda-copiar" title="Copiar pra outro horário" data-agenda-copiar-tarefa="${t.id}" data-agenda-copiar-item="${a.itemId || ''}" data-agenda-copiar-label="${esc(label)}">📋</button>
                         <button type="button" class="agenda-x" title="Remover deste horário" data-agenda-remover="${a.id}">×</button>
                       </div>`;
                   }).join('')}
@@ -1485,6 +1493,9 @@ const Todo = (() => {
         }).join('')}
       </div>`;
 
+    const listaNova = el.querySelector('.agenda-lista');
+    if (listaNova && diaAntigo === dataStr) listaNova.scrollTop = scrollSalvo;
+
     document.getElementById('agenda-dia-anterior').onclick = () => { agendaDataAtual = _diaOffset(dataStr, -1); agendaSlotAberto = null; agendaCriandoNova = false; agendaMostrarJaEscolhidas = false; agendaMostrandoAtrasadas = false; _renderizarAgenda(); };
     document.getElementById('agenda-dia-seguinte').onclick = () => { agendaDataAtual = _diaOffset(dataStr, 1); agendaSlotAberto = null; agendaCriandoNova = false; agendaMostrarJaEscolhidas = false; agendaMostrandoAtrasadas = false; _renderizarAgenda(); };
     const btnHoje = document.getElementById('agenda-ir-hoje');
@@ -1511,7 +1522,7 @@ const Todo = (() => {
       // Clique direito no "+": cola direto o que foi copiado, sem abrir o seletor inteiro.
       btn.oncontextmenu = async (e) => {
         e.preventDefault();
-        if (!agendaClipboard) { Utils.toast('Nada copiado ainda — clique no ⧉ de uma tarefa primeiro.', 'alerta'); return; }
+        if (!agendaClipboard) { Utils.toast('Nada copiado ainda — clique no 📋 de uma tarefa primeiro.', 'alerta'); return; }
         const slotAlvo = btn.dataset.agendaAbrir;
         const jaExisteAqui = agendaAlocacoes.some(a => a.data === dataStr && a.horario === slotAlvo
           && a.tarefaId === agendaClipboard.tarefaId && (a.itemId || '') === (agendaClipboard.itemId || ''));
@@ -1564,15 +1575,19 @@ const Todo = (() => {
       btn.onclick = async () => { await _removerDoSlot(btn.dataset.agendaRemover); };
     });
     el.querySelectorAll('[data-agenda-copiar-tarefa]').forEach(btn => {
-      btn.onclick = () => {
+      const copiar = () => {
         agendaClipboard = {
           tarefaId: btn.dataset.agendaCopiarTarefa,
           itemId: btn.dataset.agendaCopiarItem || '',
           label: btn.dataset.agendaCopiarLabel,
         };
-        Utils.toast('Copiado — abra o "+" de outro horário e clique em "Colar aqui".', 'sucesso');
+        Utils.toast('Copiado — o "+" de outro horário fica destacado. Clique nele e depois em "Colar aqui" (ou clique direito nele pra colar direto).', 'sucesso');
         _renderizarAgenda();
       };
+      btn.onclick = copiar;
+      // Clique direito na linha inteira da tarefa também copia — mais fácil de acertar.
+      const linha = btn.closest('.agenda-tarefa');
+      if (linha) linha.oncontextmenu = (e) => { e.preventDefault(); copiar(); };
     });
     const btnColarAqui = document.getElementById('agenda-colar-aqui');
     if (btnColarAqui) btnColarAqui.onclick = async () => {

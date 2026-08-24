@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.30.28',
+  versaoAtual: 'V3.19.30.29',
 
   versoes: [
     {
@@ -10376,6 +10376,17 @@ const NotasVersao = {
         "O \"×\" de remover tarefa do horário estava sendo confundido com \"fechar o seletor\" — e fechar de verdade exigia rolar até o fim e clicar em \"Fechar\". Agora tem um X vermelho fixo no canto do seletor, visível assim que ele abre, só pra fechar.",
         "Cada tarefa do seletor (e cada item de checklist) ganhou um botão ⓘ — toque nele mostra a descrição na hora, sem precisar de clique direito (que não existe em tablet/touch).",
         "Colar ficou direto: com uma tarefa copiada (⧉), o \"+\" do horário de destino fica destacado — clique direito nele cola ali na hora, sem precisar abrir o seletor inteiro pra achar o botão \"Colar aqui\"."
+      ]
+    },
+    {
+      "versao": "V3.19.30.29",
+      "data": "2026-08-22",
+      "tipo": "correcao",
+      "titulo": "Agenda: rolagem não volta mais pro topo sozinha, clicar no horário abre o seletor, ícone de copiar corrigido",
+      "itens": [
+        "Bug real: toda vez que algo mudava na Agenda (fechar seletor, escolher tarefa, marcar concluído), a lista inteira voltava pro topo, perdendo o lugar onde a pessoa estava rolando. Corrigido: a posição de rolagem agora é preservada entre atualizações (só volta ao topo de propósito, ao trocar de dia).",
+        "Clicar em cima do horário (\"14:00 a 14:30\") agora abre o seletor de tarefa, igual clicar no \"+\" — não precisa mais acertar o botãozinho pequeno na ponta.",
+        "O ícone de copiar (⧉) não tinha suporte em todo navegador/fonte e aparecia como uma caixinha vazia, sem funcionar de fato — trocado por 📋, que renderiza em qualquer lugar. Também virou possível copiar com clique direito na linha inteira da tarefa (não só no ícone)."
       ]
     }
   ],
