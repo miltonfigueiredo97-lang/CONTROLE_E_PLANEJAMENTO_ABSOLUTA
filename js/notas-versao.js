@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.30.33',
+  versaoAtual: 'V3.19.30.34',
 
   versoes: [
     {
@@ -10428,6 +10428,17 @@ const NotasVersao = {
       "itens": [
         "Em touch não existe \"passar o mouse por cima\" pra ver a dica (title) — um toque na célula já contava como clique e abria a edição direto, sem dar pra só CONSULTAR qual é a predecessora.",
         "Agora: segurar o dedo ~meio segundo sem soltar/arrastar mostra um balão com o mesmo texto do tooltip do desktop (número + nome da tarefa predecessora). Um toque rápido continua funcionando normal (abre edição, conta pro triplo-toque que abre o popup guiado)."
+      ]
+    },
+    {
+      "versao": "V3.19.30.34",
+      "data": "2026-08-22",
+      "tipo": "melhoria",
+      "titulo": "Medições: modos de visão por Categoria e por Grupo (além da Estrutura)",
+      "itens": [
+        "Novo seletor \"👁\" na barra de cima da Medição — reorganiza as MESMAS tarefas (já filtradas por Frente/busca/Ocultar 100%) de formas diferentes, sem alterar nada no Planejamento: Estrutura do Planejamento (como já era), Categoria/Subcategoria, Grupo/Subgrupo, Grupo/Subgrupo→Categoria e Categoria/Subcategoria→Grupo.",
+        "Usa os campos Categoria, Subcategoria, Grupo e Subgrupo que já existem no Planejamento (preenchidos por lá — Importar Correções, Agrupador de Categoria, etc.). Tarefa sem valor em algum desses campos cai num grupo \"Sem Categoria\"/\"Sem Grupo\" — não some, só fica separada.",
+        "Todos os modos respeitam o filtro de Frente igual — o pedido era exatamente esse, poder olhar a mesma coisa de ângulos diferentes sem perder o filtro de equipe."
       ]
     }
   ],
