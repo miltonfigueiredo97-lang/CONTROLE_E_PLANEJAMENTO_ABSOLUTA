@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.30.30',
+  versaoAtual: 'V3.19.30.31',
 
   versoes: [
     {
@@ -10397,6 +10397,16 @@ const NotasVersao = {
       "itens": [
         "Milton reportou que ainda estava mostrando o menu padrão do navegador (Opera) ao clicar com o botão direito na tarefa ou no horário — o clique direito só tinha sido ligado no botão \"+\" e no rótulo do horário, mas não em cima de uma tarefa já alocada, que ficou sem handler nenhum.",
         "Unificado num lugar só: clique direito em QUALQUER ponto da linha do horário (no rótulo do horário, na área vazia, ou em cima de uma tarefa já lá) cola a tarefa copiada ali — sem precisar acertar um botão pequeno específico."
+      ]
+    },
+    {
+      "versao": "V3.19.30.31",
+      "data": "2026-08-22",
+      "tipo": "correcao",
+      "titulo": "Agenda: tirado o checkbox de \"concluído\" do seletor de tarefa — não faz sentido antes de agendar",
+      "itens": [
+        "Bug de lógica pego pelo Milton: o seletor (busca/navegação pra escolher tarefa) tinha um checkbox de marcar como concluída — mas marcar concluído ali, antes de a tarefa nem ter sido agendada num horário, não fazia sentido nenhum.",
+        "Removido do seletor. O checkbox de concluir continua existindo normalmente nas tarefas que JÁ estão alocadas num horário (onde faz sentido)."
       ]
     }
   ],

@@ -1287,14 +1287,12 @@ const Todo = (() => {
 
   function _htmlListaTarefas(lista) {
     if (lista.length === 0) return `<div class="agenda-picker-vazio">Nenhuma tarefa encontrada.</div>`;
-    const check = `<svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="white" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
     return lista.map(p => {
       const cat = p.categoria ? categorias.find(c => c.nome === p.categoria) : null;
       const itensChecklistPendentes = (Array.isArray(p.checklist) ? p.checklist : [])
         .filter(i => !i.concluido && (agendaMostrarJaEscolhidas || !agendaItensJaAlocados.has(`${p.id}::${i.id}`)));
       const linhaTarefaHtml = `
       <div class="agenda-picker-item" data-agenda-escolher="${p.id}" data-agenda-detalhe-picker="${p.id}">
-        <div class="todo-check" style="width:16px;height:16px;flex-shrink:0;" data-agenda-picker-concluir="${p.id}" title="Marcar como concluída">${check}</div>
         <span class="agenda-picker-dot" style="background:${p.projeto ? corProjeto(p.projeto) : '#9ca3af'}"></span>
         ${p.projeto ? `<span class="agenda-picker-item-proj">${esc(p.projeto)}</span>` : ''}
         ${cat ? `<span class="agenda-picker-item-cat" style="background:${esc(cat.cor)}">${esc(cat.nome)}</span>` : ''}
@@ -1303,7 +1301,6 @@ const Todo = (() => {
       </div>`;
       const linhasChecklistHtml = itensChecklistPendentes.map(item => `
       <div class="agenda-picker-item agenda-picker-item-sub" data-agenda-escolher="${p.id}::${item.id}" data-agenda-detalhe-picker="${p.id}">
-        <div class="todo-check" style="width:15px;height:15px;flex-shrink:0;" data-agenda-picker-concluir-item="${p.id}::${item.id}" title="Marcar como concluído">${check}</div>
         <span class="agenda-picker-item-texto">↳ ${esc(item.texto)}</span>
         <button type="button" class="agenda-picker-info-btn" data-agenda-ver-descricao="${p.id}" title="Ver descrição da tarefa">ⓘ</button>
       </div>`).join('');
@@ -1341,21 +1338,6 @@ const Todo = (() => {
         e.stopPropagation(); // não deixa "vazar" pro clique-direito-de-colar da linha do horário por baixo
         const tarefaId = item.dataset.agendaDetalhePicker;
         if (tarefaId) abrirDetalheTarefa(tarefaId);
-      };
-    });
-    container.querySelectorAll('[data-agenda-picker-concluir]').forEach(chk => {
-      chk.onclick = async (e) => {
-        e.stopPropagation();
-        await alternarStatus(chk.dataset.agendaPickerConcluir);
-        _renderizarAgenda();
-      };
-    });
-    container.querySelectorAll('[data-agenda-picker-concluir-item]').forEach(chk => {
-      chk.onclick = async (e) => {
-        e.stopPropagation();
-        const [tarefaId, itemId] = chk.dataset.agendaPickerConcluirItem.split('::');
-        await alternarChecklistItem(tarefaId, itemId);
-        _renderizarAgenda();
       };
     });
     container.querySelectorAll('[data-agenda-ver-descricao]').forEach(btn => {
