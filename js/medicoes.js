@@ -250,101 +250,191 @@ const Medicoes = (() => {
     pend={};view='lista';_render();
   }
 
-  function _renderNova(){
-    const {totais:tot,porGrupo}=_calcularAgregados();
+  // ==================== MODOS DE VISÃO (Estrutura / Categoria / Grupo) ====================
+  // 'estrutura' = árvore natural do Planejamento (como já era). Os outros
+  // reorganizam as MESMAS tarefas (já filtradas por Frente/busca/Ocultar
+  // 100%) por Grupo/Subgrupo e/ou Categoria/Subcategoria — sem alterar nada
+  // no Planejamento, é só uma forma diferente de olhar pra montar a medição.
+  let modoView=(()=>{try{return localStorage.getItem('med_modoView')||'estrutura';}catch(e){return'estrutura';}})();
+  function setModoView(v){
+    modoView=v||'estrutura';
+    try{localStorage.setItem('med_modoView',modoView);}catch(e){}
+    colapsados=new Set(); // trocar de visão com o recolhimento da visão antiga não faz sentido
+    _render();
+  }
+  const MODOS_VIEW={
+    estrutura:{label:'Estrutura do Planejamento',dims:null},
+    categoria:{label:'Categoria / Subcategoria',dims:[{k:'categoria',lbl:'Sem Categoria'},{k:'subcategoria',lbl:'Sem Subcategoria'}]},
+    grupo:{label:'Grupo / Subgrupo',dims:[{k:'grupo',lbl:'Sem Grupo'},{k:'subgrupo',lbl:'Sem Subgrupo'}]},
+    'grupo-categoria':{label:'Grupo/Subgrupo → Categoria',dims:[{k:'grupo',lbl:'Sem Grupo'},{k:'subgrupo',lbl:'Sem Subgrupo'},{k:'categoria',lbl:'Sem Categoria'},{k:'subcategoria',lbl:'Sem Subcategoria'}]},
+    'categoria-grupo':{label:'Categoria/Subcategoria → Grupo',dims:[{k:'categoria',lbl:'Sem Categoria'},{k:'subcategoria',lbl:'Sem Subcategoria'},{k:'grupo',lbl:'Sem Grupo'},{k:'subgrupo',lbl:'Sem Subgrupo'}]},
+  };
+  // Tarefas (folhas) que passam nos filtros ativos — usado pelos dois modos
+  // de agrupamento (natural e virtual), sempre a mesma regra.
+  function _leavesQualificadas(){
     const q=busca.toLowerCase().trim();
-    const frenteFiltro=filtroFrente;
-    const temFiltro=!!q||!!frenteFiltro||ocultarConcluidos;
-    // Pré-calcula (num único passe) quem bate nos filtros (texto + Frente +
-    // ocultar concluídos) e quais grupos têm ao menos um descendente que
-    // bate — grupo sem nenhum alvo fica oculto. Se tem texto de busca,
-    // também abre automaticamente os ancestrais de cada resultado (senão o
-    // resultado fica escondido dentro de um grupo recolhido e parece que
-    // "não achou nada").
-    let gruposComAlvo=null, leavesVisiveis=null;
-    if(temFiltro){
-      gruposComAlvo=new Set();leavesVisiveis=new Set();
-      const pilha=[];
-      for(let i=0;i<sorted.length;i++){
-        const t=sorted[i],niv=t.nivel||0;
-        pilha.length=niv;
-        if(!leafSet.has(t.id)){pilha[niv]=t.id;continue;}
-        const okQ=!q||(t.nome||'').toLowerCase().includes(q);
-        const okF=!frenteFiltro||t.frenteServico===frenteFiltro;
-        // Se a tarefa tem edição pendente nesta sessão, ela NUNCA some pelo
-        // "Ocultar 100%" — senão a tarefa desaparece na sua frente assim que
-        // você termina de digitar 100%, sem chance de revisar/corrigir antes
-        // de salvar (só reaparece pra quem você ainda não mexeu).
-        const okC=!ocultarConcluidos||_progAtual(t)<100||pend[t.id];
-        if(okQ&&okF&&okC){
-          leavesVisiveis.add(t.id);
-          for(const gid of pilha){if(gid){gruposComAlvo.add(gid);if(q)colapsados.delete(gid);}}
-        }
+    const out=[];
+    for(const t of sorted){
+      if(!leafSet.has(t.id))continue;
+      const okQ=!q||(t.nome||'').toLowerCase().includes(q);
+      const okF=!filtroFrente||t.frenteServico===filtroFrente;
+      const okC=!ocultarConcluidos||_progAtual(t)<100||pend[t.id];
+      if(okQ&&okF&&okC)out.push(t);
+    }
+    return out;
+  }
+  function _htmlLinhaGrupo(id,niv,nome,esp,real){
+    const col=colapsados.has(id);
+    return`<div class="med-node" style="--niv:${niv};background:${niv===0?'#e2e8f0':niv===1?'#eef2f7':'#f8fafc'};">
+      <span class="tog" onclick="Medicoes.toggleGrupo('${id}')">${col?'＋':'－'}</span>
+      <div><div class="nm">${_esc(nome)}</div>
+      <div class="sub">Esperado: ${esp.toFixed(0)}%&nbsp;&nbsp;Real: ${real.toFixed(0)}%</div></div>
+      <span class="sp"></span>
+    </div>`;
+  }
+  function _htmlLinhaFolha(t,destacar,niv){
+    niv=niv||0;
+    const p=pend[t.id];
+    const prog=_progAtual(t);
+    const esp=_espAt(t,_hoje());
+    const iniVal=p?.inicioReal!=null?p.inicioReal:(t.inicioReal?_iso(_d(t.inicioReal)):'');
+    const fimVal=p?.terminoReal!=null?p.terminoReal:(t.terminoReal?_iso(_d(t.terminoReal)):'');
+    const fimHabilitado=prog>=100;
+    const fotos=p?.fotos||[];
+    return`<div class="med-node leaf ${p?'sel':''} ${destacar?'busca-match':''}" id="med-row-${t.id}" style="--niv:${niv};flex-wrap:wrap;align-items:flex-start;">
+      <div class="med-header-row">
+        <div style="flex:1;min-width:0;padding-top:3px;">
+          <div class="nm">${_esc(t.nome)}${t.frenteServico?` <span class="med-frente-badge" style="background:${Utils.corFrente(t.frenteServico)};">${t.frenteServico}</span>`:''}</div>
+        </div>
+        <div class="med-acoes-topo">
+          <label class="med-foto-btn" title="Adicionar foto">📷<input type="file" accept="image/*" multiple style="display:none;" onchange="Medicoes.fotoSelecionada('${t.id}',this)"></label>
+          ${p?`<button class="btn-icone" title="Descartar alteração" onclick="Medicoes.descartarItem('${t.id}')">✕</button>`:''}
+        </div>
+      </div>
+      <div class="med-edit">
+        <div class="med-campo">
+          <label>Início Real</label>
+          <input type="date" class="med-inp med-inp-data" value="${iniVal}" onchange="Medicoes.setCampo('${t.id}','inicioReal',this.value)">
+        </div>
+        <div class="med-campo">
+          <label>Término Real${fimHabilitado?'':' <span class="med-hint">(só com 100%)</span>'}</label>
+          <input type="date" class="med-inp med-inp-data" value="${fimVal}" ${fimHabilitado?'':'disabled'} onchange="Medicoes.setCampo('${t.id}','terminoReal',this.value)">
+        </div>
+        <div class="med-campo">
+          <label>% Executado</label>
+          <div class="med-pct-linha">
+            <input type="number" class="med-inp med-inp-pct" min="0" max="100" value="${prog}" onchange="Medicoes.setCampo('${t.id}','progresso',this.value)">
+            <button class="med-btn-100" title="Marcar 100%" onclick="Medicoes.setCampo('${t.id}','progresso',100)">✓</button>
+          </div>
+        </div>
+        <div class="med-campo">
+          <label>% Previsto</label>
+          <div class="med-previsto">${esp}%</div>
+        </div>
+      </div>
+      ${fotos.length?`<div class="med-fotos-row">${fotos.map((f,fi)=>`<div class="med-foto-thumb"><img src="${f}"><button onclick="Medicoes.removerFoto('${t.id}',${fi})">✕</button></div>`).join('')}</div>`:''}
+    </div>`;
+  }
+  // Monta a árvore virtual (Categoria/Grupo etc.) a partir das folhas já
+  // filtradas — nível 1 e 2 usam os campos indicados em `dims`; folhas sem
+  // valor caem num grupo "Sem X" (não somem, só ficam agrupadas à parte).
+  function _renderAgrupado(dims,leaves){
+    const raiz={filhos:new Map(),leaves:null};
+    for(const t of leaves){
+      let node=raiz,caminho='';
+      for(const dim of dims){
+        const chave=t[dim.k]||dim.lbl;
+        caminho=caminho?caminho+'|||'+chave:chave;
+        if(!node.filhos.has(chave))node.filhos.set(chave,{filhos:new Map(),leaves:null,id:'grp:'+caminho,nome:chave});
+        node=node.filhos.get(chave);
+      }
+      if(!node.leaves)node.leaves=[];
+      node.leaves.push(t);
+    }
+    function agregar(node){
+      if(node.leaves){
+        let sw=0,sr=0,se=0;const hoje=_hoje();
+        for(const t of node.leaves){const w=_peso(t),r=_progAtual(t),e=_espAt(t,hoje);sw+=w;sr+=r*w;se+=e*w;}
+        node.sw=sw;node.sr=sr;node.se=se;return{sw,sr,se};
+      }
+      let sw=0,sr=0,se=0;
+      for(const filho of node.filhos.values()){const r=agregar(filho);sw+=r.sw;sr+=r.sr;se+=r.se;}
+      node.sw=sw;node.sr=sr;node.se=se;return{sw,sr,se};
+    }
+    agregar(raiz);
+    const q=busca.toLowerCase().trim();
+    const primeiroMatchId=q&&leaves.length?leaves[0].id:null;
+    let rows='';
+    function desenhar(node,niv){
+      if(node.leaves){for(const t of node.leaves)rows+=_htmlLinhaFolha(t,q&&t.id===primeiroMatchId,niv);return;}
+      for(const filho of node.filhos.values()){
+        const esp=filho.sw?filho.se/filho.sw:0,real=filho.sw?filho.sr/filho.sw:0;
+        rows+=_htmlLinhaGrupo(filho.id,niv,filho.nome,esp,real);
+        if(!colapsados.has(filho.id))desenhar(filho,niv+1);
       }
     }
+    desenhar(raiz,0);
+    return{rows,primeiroMatchId:q?primeiroMatchId:null};
+  }
+
+  function _renderNova(){
+    const {totais:tot}=_calcularAgregados();
+    const q=busca.toLowerCase().trim();
+    const frenteFiltro=filtroFrente;
     let rows='';
-    let skipLevel=-1;
-    let primeiroMatchId=null;
-    for(let i=0;i<sorted.length;i++){
-      const t=sorted[i];const niv=t.nivel||0;
-      if(skipLevel>=0){if(niv>skipLevel)continue;skipLevel=-1;}
-      const isLeaf=leafSet.has(t.id);
-      if(isLeaf&&temFiltro&&!leavesVisiveis.has(t.id))continue;
-      if(!isLeaf){
-        if(temFiltro&&!gruposComAlvo.has(t.id))continue; // grupo sem nenhum alvo (texto e/ou Frente filtrada)
-        const col=colapsados.has(t.id);
-        if(col)skipLevel=niv;
-        const o=porGrupo.get(t.id);
-        const a=o&&o.sw?{real:o.sr/o.sw,esp:o.se/o.sw}:{real:0,esp:0};
-        rows+=`<div class="med-node" style="--niv:${niv};background:${niv===0?'#e2e8f0':niv===1?'#eef2f7':'#f8fafc'};">
-          <span class="tog" onclick="Medicoes.toggleGrupo('${t.id}')">${col?'＋':'－'}</span>
-          <div><div class="nm">${_esc(t.nome)}</div>
-          <div class="sub">Esperado: ${a.esp.toFixed(0)}%&nbsp;&nbsp;Real: ${a.real.toFixed(0)}%</div></div>
-          <span class="sp"></span>
-        </div>`;
-        continue;
+    if(modoView!=='estrutura'){
+      const dims=MODOS_VIEW[modoView].dims;
+      const leaves=_leavesQualificadas();
+      rows=_renderAgrupado(dims,leaves).rows;
+    }else{
+      // Pré-calcula (num único passe) quem bate nos filtros (texto + Frente +
+      // ocultar concluídos) e quais grupos têm ao menos um descendente que
+      // bate — grupo sem nenhum alvo fica oculto. Se tem texto de busca,
+      // também abre automaticamente os ancestrais de cada resultado (senão o
+      // resultado fica escondido dentro de um grupo recolhido e parece que
+      // "não achou nada").
+      const {porGrupo}=_calcularAgregados();
+      const temFiltro=!!q||!!frenteFiltro||ocultarConcluidos;
+      let gruposComAlvo=null, leavesVisiveis=null;
+      if(temFiltro){
+        gruposComAlvo=new Set();leavesVisiveis=new Set();
+        const pilha=[];
+        for(let i=0;i<sorted.length;i++){
+          const t=sorted[i],niv=t.nivel||0;
+          pilha.length=niv;
+          if(!leafSet.has(t.id)){pilha[niv]=t.id;continue;}
+          const okQ=!q||(t.nome||'').toLowerCase().includes(q);
+          const okF=!frenteFiltro||t.frenteServico===frenteFiltro;
+          // Se a tarefa tem edição pendente nesta sessão, ela NUNCA some pelo
+          // "Ocultar 100%" — senão a tarefa desaparece na sua frente assim que
+          // você termina de digitar 100%, sem chance de revisar/corrigir antes
+          // de salvar (só reaparece pra quem você ainda não mexeu).
+          const okC=!ocultarConcluidos||_progAtual(t)<100||pend[t.id];
+          if(okQ&&okF&&okC){
+            leavesVisiveis.add(t.id);
+            for(const gid of pilha){if(gid){gruposComAlvo.add(gid);if(q)colapsados.delete(gid);}}
+          }
+        }
       }
-      if(q&&!primeiroMatchId)primeiroMatchId=t.id;
-      const p=pend[t.id];
-      const prog=_progAtual(t);
-      const esp=_espAt(t,_hoje());
-      const iniVal=p?.inicioReal!=null?p.inicioReal:(t.inicioReal?_iso(_d(t.inicioReal)):'');
-      const fimVal=p?.terminoReal!=null?p.terminoReal:(t.terminoReal?_iso(_d(t.terminoReal)):'');
-      const fimHabilitado=prog>=100;
-      const fotos=p?.fotos||[];
-      rows+=`<div class="med-node leaf ${p?'sel':''} ${q&&t.id===primeiroMatchId?'busca-match':''}" id="med-row-${t.id}" style="--niv:${niv};flex-wrap:wrap;align-items:flex-start;">
-        <div class="med-header-row">
-          <div style="flex:1;min-width:0;padding-top:3px;">
-            <div class="nm">${_esc(t.nome)}${t.frenteServico?` <span class="med-frente-badge" style="background:${Utils.corFrente(t.frenteServico)};">${t.frenteServico}</span>`:''}</div>
-          </div>
-          <div class="med-acoes-topo">
-            <label class="med-foto-btn" title="Adicionar foto">📷<input type="file" accept="image/*" multiple style="display:none;" onchange="Medicoes.fotoSelecionada('${t.id}',this)"></label>
-            ${p?`<button class="btn-icone" title="Descartar alteração" onclick="Medicoes.descartarItem('${t.id}')">✕</button>`:''}
-          </div>
-        </div>
-        <div class="med-edit">
-          <div class="med-campo">
-            <label>Início Real</label>
-            <input type="date" class="med-inp med-inp-data" value="${iniVal}" onchange="Medicoes.setCampo('${t.id}','inicioReal',this.value)">
-          </div>
-          <div class="med-campo">
-            <label>Término Real${fimHabilitado?'':' <span class="med-hint">(só com 100%)</span>'}</label>
-            <input type="date" class="med-inp med-inp-data" value="${fimVal}" ${fimHabilitado?'':'disabled'} onchange="Medicoes.setCampo('${t.id}','terminoReal',this.value)">
-          </div>
-          <div class="med-campo">
-            <label>% Executado</label>
-            <div class="med-pct-linha">
-              <input type="number" class="med-inp med-inp-pct" min="0" max="100" value="${prog}" onchange="Medicoes.setCampo('${t.id}','progresso',this.value)">
-              <button class="med-btn-100" title="Marcar 100%" onclick="Medicoes.setCampo('${t.id}','progresso',100)">✓</button>
-            </div>
-          </div>
-          <div class="med-campo">
-            <label>% Previsto</label>
-            <div class="med-previsto">${esp}%</div>
-          </div>
-        </div>
-        ${fotos.length?`<div class="med-fotos-row">${fotos.map((f,fi)=>`<div class="med-foto-thumb"><img src="${f}"><button onclick="Medicoes.removerFoto('${t.id}',${fi})">✕</button></div>`).join('')}</div>`:''}
-      </div>`;
+      let skipLevel=-1;
+      let primeiroMatchId=null;
+      for(let i=0;i<sorted.length;i++){
+        const t=sorted[i];const niv=t.nivel||0;
+        if(skipLevel>=0){if(niv>skipLevel)continue;skipLevel=-1;}
+        const isLeaf=leafSet.has(t.id);
+        if(isLeaf&&temFiltro&&!leavesVisiveis.has(t.id))continue;
+        if(!isLeaf){
+          if(temFiltro&&!gruposComAlvo.has(t.id))continue; // grupo sem nenhum alvo (texto e/ou Frente filtrada)
+          const col=colapsados.has(t.id);
+          if(col)skipLevel=niv;
+          const o=porGrupo.get(t.id);
+          const a=o&&o.sw?{real:o.sr/o.sw,esp:o.se/o.sw}:{real:0,esp:0};
+          rows+=_htmlLinhaGrupo(t.id,niv,t.nome,a.esp,a.real);
+          continue;
+        }
+        if(q&&!primeiroMatchId)primeiroMatchId=t.id;
+        rows+=_htmlLinhaFolha(t,q&&t.id===primeiroMatchId,niv);
+      }
     }
     if(!rows)rows='<p style="padding:20px;color:#94a3b8;font-size:.85rem;">Nenhuma tarefa encontrada.</p>';
     const nPend=Object.keys(pend).length;
@@ -361,6 +451,9 @@ const Medicoes = (() => {
       <span class="med-chip" style="background:${tot.medicao>0?'#ecfdf5':'#f1f5f9'};">${tot.medicao.toFixed(2)}% <small>Medição</small></span>
       <span class="med-chip" style="background:#fffbeb;">${tot.esp.toFixed(2)}% <small>Esperado hoje</small></span>
       <button class="btn btn-sm ${ocultarConcluidos?'btn-primario':'btn-outline'}" onclick="Medicoes.setOcultarConcluidos(${!ocultarConcluidos})" title="Esconder tarefas já em 100%">${ocultarConcluidos?'☑':'☐'} Ocultar 100%</button>
+      <select class="form-control" style="max-width:220px;font-size:.8rem;" onchange="Medicoes.setModoView(this.value)" title="Como agrupar as tarefas nesta tela">
+        ${Object.entries(MODOS_VIEW).map(([k,v])=>`<option value="${k}" ${k===modoView?'selected':''}>👁 ${v.label}</option>`).join('')}
+      </select>
       <div class="med-spacer" style="flex:1;"></div>
       <select class="form-control" style="max-width:180px;font-size:.8rem;" onchange="Medicoes.setFiltroFrente(this.value)">
         <option value="">Todas as Frentes</option>
@@ -694,7 +787,7 @@ const Medicoes = (() => {
     catch(e){console.error(e);Utils.toast('Erro.','erro');}
   }
 
-  return{init,carregar,novaMedicao,voltar,toggleGrupo,expandirTudo,recolherTudo,setBusca,setFiltroFrente,setOcultarConcluidos,descartarItem,descartarTudo,
+  return{init,carregar,novaMedicao,voltar,toggleGrupo,expandirTudo,recolherTudo,setBusca,setFiltroFrente,setOcultarConcluidos,setModoView,descartarItem,descartarTudo,
     setCampo,removerFoto,fotoSelecionada,
     salvarMedicao,verMedicao,excluirMedicao};
 })();
