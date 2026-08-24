@@ -4329,10 +4329,42 @@ const Planejamento = (() => {
     if(s.length>5&&/oes$/.test(s))out.push(s.slice(0,-3)+'ao');
     return[...new Set(out)];
   }
-  function _detectarGrupoPorNome(nomeTarefa,estrutura){
+  // Descobre os ancestrais (pais, avós...) de uma tarefa pela posição no
+  // array ordenado — do mais próximo até a raiz. Usado pra achar em qual
+  // TORRE a tarefa está (ex: tarefa dentro de "Torre A > ... > Térreo"),
+  // sem precisar que a tarefa em si mencione o nome da torre.
+  function _ancestraisDe(idx,sorted){
+    const out=[];
+    let nivelAtual=sorted[idx]?.nivel||0;
+    for(let i=idx-1;i>=0;i--){
+      if((sorted[i].nivel||0)<nivelAtual){
+        out.push(sorted[i]);
+        nivelAtual=sorted[i].nivel||0;
+        if(nivelAtual===0)break;
+      }
+    }
+    return out;
+  }
+  function _detectarGrupoPorNome(nomeTarefa,estrutura,ancestraisNomes){
     const nome=_expandirAbreviacoes(_normTexto(nomeTarefa));
-    const pavimentos=[];
-    (estrutura.torres||[]).forEach(torre=>(torre.pavimentos||[]).forEach(pav=>pavimentos.push(pav)));
+    // Se algum ancestral da tarefa (pai, avô...) bate com o nome de UMA
+    // torre cadastrada, restringe a busca de pavimento só aos pavimentos
+    // DAQUELA torre. Sem isso, obra com mais de uma torre e cada uma com o
+    // próprio "Térreo"/"Ático" (nomes repetidos entre prédios) sempre casava
+    // com o primeiro que aparecesse na lista, errando a torre da tarefa.
+    let pavimentos=[];
+    const torres=estrutura.torres||[];
+    if(ancestraisNomes&&ancestraisNomes.length&&torres.length>1){
+      const ancNorm=ancestraisNomes.map(_normTexto);
+      const torreDaTarefa=torres.find(t=>{
+        const nt=_normTexto(t.nome||'');
+        return nt.length>=3&&ancNorm.some(a=>a.includes(nt));
+      });
+      if(torreDaTarefa)pavimentos=[...(torreDaTarefa.pavimentos||[])];
+    }
+    if(!pavimentos.length){
+      torres.forEach(torre=>(torre.pavimentos||[]).forEach(pav=>pavimentos.push(pav)));
+    }
     // 1º) match ESTRUTURAL por número+tipo — cobre qualquer jeito de
     // escrever o mesmo andar/subsolo, sem precisar cadastrar variação nenhuma.
     const canonTarefa=_parsePavCanonico(nome);
@@ -4381,7 +4413,12 @@ const Planejamento = (() => {
     // Elevadores...) aparece marcada como "Sem Vínculo" em vez de simplesmente
     // desaparecer da prévia. Assim dá pra ver TUDO e decidir, em vez de ficar
     // se perguntando por que uma tarefa não apareceu.
-    _gerarGruposTodasPropostas=folhas.map(t=>({tarefa:t,match:_detectarGrupoPorNome(t.nome,est)||{grupo:SEM_VINCULO,subgrupo:null}}));
+    const idxPorId=new Map(sorted.map((t,i)=>[t.id,i]));
+    _gerarGruposTodasPropostas=folhas.map(t=>{
+      const idxReal=idxPorId.get(t.id);
+      const ancestraisNomes=_ancestraisDe(idxReal,sorted).map(a=>a.nome||'');
+      return {tarefa:t,match:_detectarGrupoPorNome(t.nome,est,ancestraisNomes)||{grupo:SEM_VINCULO,subgrupo:null}};
+    });
     const mudam=_gerarGruposTodasPropostas.filter(p=>p.tarefa.grupo!==p.match.grupo||(p.tarefa.subgrupo||null)!==(p.match.subgrupo||null));
     // Lista fechada de pavimentos cadastrados — o valor proposto só pode ser
     // TROCADO por um desses (ou "Sem Vínculo"), nunca digitado livre. Texto

@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.30.41',
+  versaoAtual: 'V3.19.30.42',
 
   versoes: [
     {
@@ -10512,6 +10512,17 @@ const NotasVersao = {
       "itens": [
         "O mecanismo antigo desligava o arrastar da linha só quando o campo de texto ganhava foco (onfocus/onblur) — tinha uma corrida entre esse evento e o gesto de clicar-e-arrastar pra selecionar texto, então às vezes o navegador entendia como \"arrastar a linha\" em vez de \"selecionar o texto\".",
         "Trocado por um jeito mais direto: a linha começa sempre travada (não arrastável) e SÓ destrava enquanto o dedo/mouse está apertando o ícone \"⠿\" — soltar sem arrastar trava de novo na hora. Selecionar texto dentro do campo nunca mais aciona o arrastar, não importa a velocidade do gesto."
+      ]
+    },
+    {
+      "versao": "V3.19.30.42",
+      "data": "2026-08-24",
+      "tipo": "correcao",
+      "titulo": "Gerador de Grupos: obra com mais de uma Torre (cada uma com o próprio \"Térreo\"/\"Ático\"/nome repetido) sempre casava com o pavimento da PRIMEIRA torre, errando a torre da tarefa",
+      "itens": [
+        "Causa: o gerador buscava o pavimento pelo NOME em TODOS os pavimentos de TODAS as torres misturados — se duas torres têm pavimento com o mesmo nome (comum: cada prédio tem seu \"Térreo\"), ele sempre achava o da primeira torre da lista, não importa de qual prédio a tarefa realmente fosse.",
+        "Corrigido: agora ele olha os PAIS da tarefa no Planejamento (a hierarquia real — Torre X > ... > tarefa) pra descobrir de qual torre ela é, e busca o pavimento só dentro dela. Não depende de nenhuma lista fixa nem precisa que a tarefa mencione o nome da torre — funciona com qualquer nome de torre/pavimento/subgrupo que você cadastrar, se adaptando à estrutura de cada obra.",
+        "Obra com uma torre só continua funcionando exatamente como antes (não muda nada nesse caso, que é o mais comum)."
       ]
     }
   ],
