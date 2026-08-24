@@ -383,10 +383,13 @@ const Medicoes = (() => {
   // direto com o próprio nome (ficaria estranho um monte de tarefa
   // diferente junto só por não terem preenchido o mesmo campo).
   function _renderAgrupado(dims,leaves){
-    // Sempre que tem filtro ativo (Frente, busca ou Ocultar 100%), abre
-    // automaticamente o caminho até cada resultado — senão a pessoa filtra
-    // e ainda tem que clicar grupo por grupo pra achar o que já filtrou.
-    const filtroAtivo=!!busca.trim()||!!filtroFrente||ocultarConcluidos;
+    // Auto-abrir só entra com TEXTO na busca — ação deliberada (você
+    // digitou pra achar algo específico). Frente/Ocultar 100% sozinhos NÃO
+    // abrem mais nada: são filtros passivos e ficam LEMBRADOS de sessão
+    // anterior — se eles forçassem abrir tudo, a tela nunca começaria
+    // recolhida de verdade (o filtro de Frente quase sempre já vem marcado
+    // de uma vez anterior).
+    const filtroAtivo=!!busca.trim();
     const raiz=_construirArvoreVirtual(dims,leaves);
     if(filtroAtivo)(function abrir(node){for(const filho of node.filhos.values()){colapsados.delete(filho.id);abrir(filho);}})(raiz);
     const q=busca.toLowerCase().trim();
@@ -448,7 +451,10 @@ const Medicoes = (() => {
           const okC=!ocultarConcluidos||_progAtual(t)<100||pend[t.id];
           if(okQ&&okF&&okC){
             leavesVisiveis.add(t.id);
-            for(const gid of pilha){if(gid){gruposComAlvo.add(gid);colapsados.delete(gid);}}
+            // Auto-abrir só com texto de busca (ação deliberada) — Frente/
+            // Ocultar 100% sozinhos não forçam abrir nada (ver nota acima
+            // de _renderAgrupado, mesmo motivo).
+            for(const gid of pilha){if(gid){gruposComAlvo.add(gid);if(q)colapsados.delete(gid);}}
           }
         }
       }

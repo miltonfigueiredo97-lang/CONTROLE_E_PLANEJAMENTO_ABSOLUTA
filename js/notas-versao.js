@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.30.47',
+  versaoAtual: 'V3.19.30.48',
 
   versoes: [
     {
@@ -10576,6 +10576,16 @@ const NotasVersao = {
       "itens": [
         "Os modos de visão por Categoria/Grupo usam ids sintéticos pros grupos (não são tarefas de verdade) — o \"começar recolhido\" e o botão \"Recolher\" só sabiam recolher pelos ids das tarefas da Estrutura, então nesses modos tudo continuava aberto direto.",
         "Corrigido: \"Nova Medição\", \"Recolher\" e trocar de modo de visão agora recolhem certo em qualquer modo (Estrutura, Categoria, Grupo e as combinações)."
+      ]
+    },
+    {
+      "versao": "V3.19.30.48",
+      "data": "2026-08-24",
+      "tipo": "correcao",
+      "titulo": "Medições: filtro de Frente (lembrado de sessão anterior) forçava abrir tudo, brigando com \"começar recolhido\"",
+      "itens": [
+        "O filtro de Frente fica marcado entre sessões (ex: GESSO já vem selecionado ao abrir de novo) — e o ajuste anterior abria automaticamente TODOS os grupos sempre que tinha Frente ativo, o que na prática é quase sempre. Resultado: a tela nunca começava recolhida de verdade.",
+        "Corrigido: agora só o TEXTO da busca abre automaticamente (é uma ação que você acabou de fazer, faz sentido mostrar o resultado na hora). Frente e Ocultar 100% continuam escondendo quem não interessa, mas não forçam mais abrir nada — o \"começar recolhido\" agora vale de verdade, mesmo com Frente marcada."
       ]
     }
   ],
