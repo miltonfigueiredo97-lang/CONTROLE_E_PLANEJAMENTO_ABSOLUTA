@@ -1738,7 +1738,7 @@ const Planejamento = (() => {
         } else if(cid==='percConc'){
           cells+=`<div style="${base}font-size:.7rem;justify-content:center;color:${perc>=100?'#16a34a':perc>0?'#2563eb':'#555'};cursor:pointer;" ${clickEdit}>${perc}%</div>`;
         } else if(cid==='predecessora'){
-          cells+=`<div style="${base}color:#555;font-size:.7rem;justify-content:center;cursor:pointer;" onclick="Planejamento._predCellClick(event,${i})" title="${_esc(_tooltipPred(t))}">${t._predDisplay||'—'}</div>`;
+          cells+=`<div style="${base}color:#555;font-size:.7rem;justify-content:center;cursor:pointer;" onclick="Planejamento._predCellClick(event,${i})" ontouchstart="Planejamento._predTouchStart(event,${i})" ontouchmove="Planejamento._predTouchCancel()" ontouchend="Planejamento._predTouchEnd(event)" title="${_esc(_tooltipPred(t))}">${t._predDisplay||'—'}</div>`;
         } else if(cid==='sucessora'){
           cells+=`<div style="${base}color:#666;font-size:.7rem;justify-content:center;" title="${_esc(_tooltipSuc(t._sucessoras))||'Calculado automaticamente — quem tem esta tarefa como predecessora'}">${(t._sucessoras&&t._sucessoras.length)?t._sucessoras.join(', '):'—'}</div>`;
         } else if(cid==='responsavel'){
@@ -1851,6 +1851,40 @@ const Planejamento = (() => {
       }catch(errLinha){console.error('Erro ao renderizar barra Gantt',i,t?.id,errLinha);}
     }
     const ev=document.getElementById('g-dir-v');if(ev)ev.innerHTML=bH+_setasSvg(s,e,dMin,lpd);
+  }
+
+  // Toque-e-segure na célula Predecessora (mobile/tablet): em touch não tem
+  // "hover" pra ver o title nativo, e um toque rápido já contava como clique
+  // (abria edição sem querer). Agora: segurar ~450ms sem soltar/arrastar
+  // mostra um balão com o mesmo texto do tooltip; um toque rápido continua
+  // funcionando como antes (clique normal, conta pro triplo-toque).
+  let _predTouchTimer=null,_predTouchLong=false;
+  function _predTouchStart(e,idx){
+    _predTouchLong=false;
+    clearTimeout(_predTouchTimer);
+    const t=filtradas[idx];if(!t)return;
+    const touch=e.touches?.[0];if(!touch)return;
+    const x=touch.clientX,y=touch.clientY;
+    _predTouchTimer=setTimeout(()=>{
+      _predTouchLong=true;
+      _mostrarTooltipTouch(_tooltipPred(t)||'Sem predecessora',x,y);
+    },450);
+  }
+  function _predTouchCancel(){clearTimeout(_predTouchTimer);} // moveu o dedo = rolando, não é toque-e-segure
+  function _predTouchEnd(e){
+    clearTimeout(_predTouchTimer);
+    if(_predTouchLong){
+      e.preventDefault(); // impede o clique fantasma de abrir edição depois de segurar
+      setTimeout(()=>{document.getElementById('pred-touch-tip')?.remove();_predTouchLong=false;},2500);
+    }
+  }
+  function _mostrarTooltipTouch(texto,x,y){
+    document.getElementById('pred-touch-tip')?.remove();
+    const box=document.createElement('div');
+    box.id='pred-touch-tip';
+    box.style.cssText=`position:fixed;left:${Math.min(x,window.innerWidth-220)}px;top:${Math.max(10,y-70)}px;max-width:220px;background:#1a1a1a;border:1px solid var(--cor-primaria);border-radius:7px;padding:8px 10px;font-size:.72rem;color:#ddd;white-space:pre-line;z-index:3000;box-shadow:0 6px 20px rgba(0,0,0,.5);pointer-events:none;`;
+    box.textContent=texto;
+    document.body.appendChild(box);
   }
 
   // Triplo-clique na célula Predecessora abre o popup guiado (já preenchido
@@ -6795,7 +6829,7 @@ const Planejamento = (() => {
     _abrirVisaoOrg,_menuVisaoOrg,_visaoOrgFiltrarLista,_visaoOrgToggleBloco,_visaoOrgAplicar,_visaoOrgLimpar,toggleSetasPred,_setaClicada,undo,
     toggleCategoriaView,_catToggle,_subcatToggle,_catExpandirTudo,
     onBusca,limparBusca,_buscaKey,
-    importarExcel,importarBaseCompleta,importarCorrecoes,_executarCorrecoes,_mostrarRevisaoCorrecoes,exportar,exportarFrentes,exportarExcelBonito,exportarMSProject,abrirImpressao,baixarPDF,exportarPNG,corrigirOrdensDuplicadas,_corrigirNiveisSoltos,_corrigirNivelPeloCodigo,_migrarPredecessorasParaId,_recalcularDatasPais,_recalcularPercTodosPais,_orfasMarcarTodas,_orfasExcluirMarcadas,_gerarPNG,_predPopup,_predSalvar,_predCellClick,_predAddLinha,_predLinhaAtualizar,autoClassificarFrentes,
+    importarExcel,importarBaseCompleta,importarCorrecoes,_executarCorrecoes,_mostrarRevisaoCorrecoes,exportar,exportarFrentes,exportarExcelBonito,exportarMSProject,abrirImpressao,baixarPDF,exportarPNG,corrigirOrdensDuplicadas,_corrigirNiveisSoltos,_corrigirNivelPeloCodigo,_migrarPredecessorasParaId,_recalcularDatasPais,_recalcularPercTodosPais,_orfasMarcarTodas,_orfasExcluirMarcadas,_gerarPNG,_predPopup,_predSalvar,_predCellClick,_predTouchStart,_predTouchCancel,_predTouchEnd,_predAddLinha,_predLinhaAtualizar,autoClassificarFrentes,
     abrirVinculosView,fecharVinculosView,abrirVincularTarefa,abrirVincularAqui,onVincTipoChange,
     onVincNavModulo,onVincNavModuloMetrica,onVincNavMetrica,onVincNavEntrar,onVincNavBreadcrumb,onVincNavVoltar,
     onBuscaEscolhaAlvoVinc,onEscolherAlvoVinc,onTrocarAlvoVinc,

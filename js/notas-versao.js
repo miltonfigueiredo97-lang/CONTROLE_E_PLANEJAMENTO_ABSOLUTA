@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.30.32',
+  versaoAtual: 'V3.19.30.33',
 
   versoes: [
     {
@@ -10418,6 +10418,16 @@ const NotasVersao = {
         "Cada tarefa já alocada num horário ganhou uma alcinha (⠿) — clicar e segurar nela (ou tocar e segurar, no tablet) e arrastar solta a tarefa em outro horário, movendo ela de vez.",
         "Feito com Pointer Events (não o drag-and-drop nativo do HTML5, que funciona mal em touch) — o mesmo código atende mouse, toque e caneta. Enquanto arrasta, mostra um \"balão\" seguindo o dedo/cursor e destaca o horário que vai receber a tarefa.",
         "Trava de segurança: soltar em cima de um horário que já tem essa mesma tarefa (ou item) não duplica, só avisa."
+      ]
+    },
+    {
+      "versao": "V3.19.30.33",
+      "data": "2026-08-22",
+      "tipo": "melhoria",
+      "titulo": "Planejamento: toque-e-segure na célula Predecessora mostra o tooltip (número + nome), pra mobile/tablet",
+      "itens": [
+        "Em touch não existe \"passar o mouse por cima\" pra ver a dica (title) — um toque na célula já contava como clique e abria a edição direto, sem dar pra só CONSULTAR qual é a predecessora.",
+        "Agora: segurar o dedo ~meio segundo sem soltar/arrastar mostra um balão com o mesmo texto do tooltip do desktop (número + nome da tarefa predecessora). Um toque rápido continua funcionando normal (abre edição, conta pro triplo-toque que abre o popup guiado)."
       ]
     }
   ],
