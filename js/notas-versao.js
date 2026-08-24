@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.30.38',
+  versaoAtual: 'V3.19.30.39',
 
   versoes: [
     {
@@ -10482,6 +10482,16 @@ const NotasVersao = {
       "itens": [
         "Sucessora ganhou o mesmo toque-e-segure da Predecessora: segurar o dedo ~meio segundo mostra o balão com número + nome de quem depende desta tarefa, sem abrir nada, sem menu de sistema.",
         "Corrigido: segurar o dedo nessas duas colunas (Predecessora e Sucessora) no Android disparava a seleção de texto NATIVA do navegador (aquela caixinha de \"copiar/selecionar\" por cima) além do balão do sistema — travado com user-select:none nas duas células, então agora só aparece o balão do Planejamento, igual no iOS/desktop."
+      ]
+    },
+    {
+      "versao": "V3.19.30.39",
+      "data": "2026-08-24",
+      "tipo": "correcao",
+      "titulo": "Planejamento: recolher/expandir uma família jogava o scroll HORIZONTAL da tabela de volta pro início — se você estava vendo colunas mais à direita (Duração, %, Predecessora...), perdia a posição",
+      "itens": [
+        "O scroll vertical já era preservado ao recolher um grupo; o horizontal não — cada recolhida/expandida te devolvia pro começo da tabela (colunas Início/Nível), obrigando rolar de novo pra onde estava.",
+        "Corrigido: agora o scroll horizontal também é guardado antes de recolher e restaurado depois, cabeçalho da tabela incluso — fica exatamente onde você estava."
       ]
     }
   ],

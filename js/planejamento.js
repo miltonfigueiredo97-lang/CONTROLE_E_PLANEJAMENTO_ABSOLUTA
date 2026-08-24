@@ -3111,12 +3111,14 @@ const Planejamento = (() => {
     const dirS=document.getElementById('g-dir-s');
     const stE=esqS?esqS.scrollTop:0;
     const stD=dirS?dirS.scrollTop:0;
+    const slE=esqS?esqS.scrollLeft:0; // scroll HORIZONTAL da tabela — _render() também zerava isso
     if(colsRecolhidas.has(id))colsRecolhidas.delete(id);else colsRecolhidas.add(id);
     _buildFiltradas();_render();
     // Restaura a posição de scroll — o _render() reseta para 0
     requestAnimationFrame(()=>{
       const e2=document.getElementById('g-esq-s');const d2=document.getElementById('g-dir-s');
-      if(e2)e2.scrollTop=stE;if(d2)d2.scrollTop=stD;
+      if(e2){e2.scrollTop=stE;e2.scrollLeft=slE;}if(d2)d2.scrollTop=stD;
+      const eh2=document.getElementById('g-esq-hdr');if(eh2)eh2.scrollLeft=slE; // cabeçalho acompanha
     });
   }
 
