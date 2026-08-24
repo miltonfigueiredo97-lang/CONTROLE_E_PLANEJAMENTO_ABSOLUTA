@@ -125,7 +125,7 @@ const Planejamento = (() => {
 
   const COL_LABELS={sel:'',num:'#',status:'',nivel:'Nível',codigo:'Código',nome:'Tarefa',inicio:'Início',termino:'Término',inicioReal:'Início Real',terminoReal:'Término Real',duracao:'Duração',percEsp:'% Esperado',percConc:'% Concluído',predecessora:'Predecessora',sucessora:'Sucessora',responsavel:'Responsável',local:'Local',vinculoEstrutura:'Local (Pav/Sub)',grupo:'Grupo',subgrupo:'Subgrupo',frente:'Frente',categoria:'Categoria',subcategoria:'Subcategoria',quantidade:'Quantidade',equipe:'Nº Equipe',custoMaterial:'Custo Material',custoMaoObra:'Custo M.Obra',acoes:''};
   const COL_FIXED=new Set(['sel','num','status','nome','acoes']);
-  const COL_EDITABLE=new Set(['codigo','nome','inicio','termino','duracao','percConc','predecessora','responsavel','local','grupo','frente','nivel','equipe','inicioReal','terminoReal']); // percEsp saiu: agora é calculado ao vivo pela data (não editável)
+  const COL_EDITABLE=new Set(['codigo','nome','inicio','termino','duracao','percConc','predecessora','responsavel','local','grupo','nivel','equipe','inicioReal','terminoReal']); // percEsp saiu: agora é calculado ao vivo pela data (não editável); frente saiu: agora tem seletor próprio (_abrirFrentePicker)
 
   // ===================== VÍNCULOS COM LEVANTAMENTO =====================
   // Tela separada (não é a visão de Gantt) onde cada tarefa do Planejamento
@@ -1762,7 +1762,7 @@ const Planejamento = (() => {
             title="${vinc?'Vinculado a '+(LEVANTAMENTO_MODULOS[t.levantamentoModulo]?.label||t.levantamentoModulo):'Manual'}">
             ${vinc?'🔗 ':''}${t.quantidade?_fQtd(t.quantidade)+' '+(t.unidade||''):'—'}</div>`;
         } else if(cid==='frente'){
-          cells+=`<div style="${base}justify-content:center;cursor:pointer;" ${clickEdit}>${t.frenteServico?`<span style="background:${Utils.corFrente(t.frenteServico)};color:#fff;font-size:.62rem;font-weight:700;padding:2px 7px;border-radius:8px;white-space:nowrap;">${t.frenteServico}</span>`:'<span style="color:#666;font-size:.7rem;">—</span>'}</div>`;
+          cells+=`<div style="${base}justify-content:center;cursor:pointer;" onclick="Planejamento._abrirFrentePicker(${i})">${t.frenteServico?`<span style="background:${Utils.corFrente(t.frenteServico)};color:#fff;font-size:.62rem;font-weight:700;padding:2px 7px;border-radius:8px;white-space:nowrap;">${t.frenteServico}</span>`:'<span style="color:#666;font-size:.7rem;">—</span>'}</div>`;
         } else if(cid==='equipe'){
           cells+=`<div style="${base}color:#555;font-size:.7rem;justify-content:center;cursor:pointer;" ${clickEdit}>${t.equipeAlocada?t.equipeAlocada+' 👷':'—'}</div>`;
         } else if(cid==='custoMaterial'){
@@ -2381,6 +2381,57 @@ const Planejamento = (() => {
     }
     return [...vistos].sort((a,b)=>a.localeCompare(b,'pt-BR'));
   }
+  // ===================== SELETOR DE FRENTE (coluna colorida) =====================
+  // Antes a célula Frente só abria um campo de texto solto (sem lista, sem
+  // cor clicável) — agora é um seletor de verdade: mostra TODAS as frentes
+  // já em uso na obra (não só as 8 fixas de Utils.FRENTES_SERVICO — pega
+  // qualquer valor digitado antes, tipo "Limpeza"/"Serralheria"), cada uma
+  // como um selo colorido clicável, e deixa criar uma frente nova digitando.
+  function _listarFrentesDistintas(){
+    const vistos=new Set(Utils.FRENTES_SERVICO); // sempre mostra as 8 fixas, mesmo sem uso ainda
+    for(const t of tarefas){
+      const f=(t.frenteServico||'').trim();
+      if(f)vistos.add(f);
+    }
+    return [...vistos].sort((a,b)=>a.localeCompare(b,'pt-BR'));
+  }
+  function _abrirFrentePicker(idx){
+    const t=filtradas[idx];if(!t)return;
+    let pop=document.getElementById('frente-pop');if(pop)pop.remove();
+    pop=document.createElement('div');pop.id='frente-pop';
+    pop.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#1a1a1a;border:1px solid #333;border-radius:10px;padding:14px;z-index:2000;min-width:280px;max-width:95vw;max-height:75vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.55);';
+    const lista=_listarFrentesDistintas();
+    pop.innerHTML=`
+      <div style="font-weight:700;color:var(--cor-primaria);margin-bottom:2px;font-size:.85rem;">🎨 Frente de: ${_esc(t.nome)}</div>
+      <div style="font-size:.68rem;color:#888;margin-bottom:10px;">Clique numa frente pra aplicar, ou digite embaixo pra criar uma nova.</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;">
+        <span style="cursor:pointer;background:#333;color:#aaa;font-size:.68rem;font-weight:700;padding:4px 9px;border-radius:8px;" onclick="Planejamento._frenteAplicar(${idx},this.dataset.f)" data-f="">— remover</span>
+        ${lista.map(f=>`<span style="cursor:pointer;background:${Utils.corFrente(f)};color:#fff;font-size:.68rem;font-weight:700;padding:4px 9px;border-radius:8px;${t.frenteServico===f?'outline:2px solid #fff;':''}" onclick="Planejamento._frenteAplicar(${idx},this.dataset.f)" data-f="${_esc(f)}">${_esc(f)}</span>`).join('')}
+      </div>
+      <div style="display:flex;gap:6px;">
+        <input id="frente-nova-input" type="text" placeholder="Criar frente nova (ex: Marcenaria)..." style="flex:1;background:#111;border:1px solid #333;border-radius:6px;color:#fff;padding:6px 8px;font-size:.78rem;" onkeydown="if(event.key==='Enter')Planejamento._frenteCriarNova(${idx})">
+        <button class="btn btn-primario btn-sm" onclick="Planejamento._frenteCriarNova(${idx})">Criar</button>
+      </div>`;
+    document.body.appendChild(pop);
+    setTimeout(()=>document.addEventListener('click',function h(e){if(!pop.contains(e.target)){pop.remove();document.removeEventListener('click',h);}},false),50);
+  }
+  async function _frenteAplicar(idx,valor){
+    const t=filtradas[idx];if(!t)return;
+    const antes=t.frenteServico||'';
+    t.frenteServico=valor||'';
+    document.getElementById('frente-pop')?.remove();
+    _paintRows();
+    if(antes===t.frenteServico)return;
+    try{await Database.atualizar(obraId,COL,t.id,{frenteServico:t.frenteServico});Audit.campo(obraId,'Planejamento',t.id,t.nome,'frenteServico',antes,t.frenteServico).catch(()=>{});}
+    catch(e){console.error(e);Utils.toast('Erro ao salvar.','erro');}
+  }
+  function _frenteCriarNova(idx){
+    const input=document.getElementById('frente-nova-input');
+    const valor=(input?.value||'').trim().toUpperCase();
+    if(!valor){Utils.toast('Digite um nome pra frente nova.','alerta');return;}
+    _frenteAplicar(idx,valor);
+  }
+
   function _abrirFiltroResponsavel(){
     let pop=document.getElementById('resp-filtro-pop');
     if(pop){pop.remove();return;}
@@ -6885,7 +6936,7 @@ const Planejamento = (() => {
     _arvAbrirMover,_arvFecharMover,_arvFiltrarMover,_arvConfirmarMover,
     _colResizeStart,moveColLeft,moveColRight,_hideCol,_divStart,_sync,_editCell,_esqDragStart,
     _rowDragStart,toggleSel,_limparSelecao,_moverSel,_bulkNivel,_bulkDuplicar,_bulkExcluir,
-    toggleStatusFiltro,_aplicarStatusFiltro,_abrirFiltroResponsavel,_aplicarFiltroResponsavel,_limparFiltroResponsavel,
+    toggleStatusFiltro,_aplicarStatusFiltro,_abrirFrentePicker,_frenteAplicar,_frenteCriarNova,_abrirFiltroResponsavel,_aplicarFiltroResponsavel,_limparFiltroResponsavel,
     _abrirVisaoOrg,_menuVisaoOrg,_visaoOrgFiltrarLista,_visaoOrgToggleBloco,_visaoOrgAplicar,_visaoOrgLimpar,toggleSetasPred,_setaClicada,undo,
     toggleCategoriaView,_catToggle,_subcatToggle,_catExpandirTudo,
     onBusca,limparBusca,_buscaKey,

@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.30.36',
+  versaoAtual: 'V3.19.30.37',
 
   versoes: [
     {
@@ -10461,6 +10461,17 @@ const NotasVersao = {
       "itens": [
         "Quando um grupo (em qualquer modo de visão, inclusive Categoria/Grupo) tem só UMA tarefa dentro e nada mais, mostrar a linha do grupo E a linha de edição da tarefa embaixo virava repetição — o nome da tarefa já é basicamente o que os agrupamentos acima disseram, só com mais palavras.",
         "Agora esse caso funde numa linha só: usa o nome do GRUPO como título e já mostra direto os campos de edição (Início/Término/%) ali — preenche a mesma tarefa de sempre por trás, só não repete o nome dela por cima do que já foi dito."
+      ]
+    },
+    {
+      "versao": "V3.19.30.37",
+      "data": "2026-08-24",
+      "tipo": "funcionalidade",
+      "titulo": "Planejamento: coluna Frente ganhou seletor de verdade (lista colorida clicável + criar frente nova) — antes só abria um campo de texto solto",
+      "itens": [
+        "Clicar na célula Frente abre um seletor: mostra TODAS as frentes já em uso na obra (não só as 8 padrão do sistema — pega qualquer valor digitado antes, ex: Limpeza, Serralheria) como selos coloridos clicáveis, igual já aparecia na coluna.",
+        "Campo pra digitar e CRIAR uma frente nova na hora (Enter ou botão Criar) — antes não tinha como adicionar uma categoria fora das 8 fixas por esse caminho.",
+        "\"— remover\" limpa a frente da tarefa. A frente atual da tarefa vem destacada (contorno branco) na lista."
       ]
     }
   ],
