@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.30.42',
+  versaoAtual: 'V3.19.30.43',
 
   versoes: [
     {
@@ -10523,6 +10523,18 @@ const NotasVersao = {
         "Causa: o gerador buscava o pavimento pelo NOME em TODOS os pavimentos de TODAS as torres misturados — se duas torres têm pavimento com o mesmo nome (comum: cada prédio tem seu \"Térreo\"), ele sempre achava o da primeira torre da lista, não importa de qual prédio a tarefa realmente fosse.",
         "Corrigido: agora ele olha os PAIS da tarefa no Planejamento (a hierarquia real — Torre X > ... > tarefa) pra descobrir de qual torre ela é, e busca o pavimento só dentro dela. Não depende de nenhuma lista fixa nem precisa que a tarefa mencione o nome da torre — funciona com qualquer nome de torre/pavimento/subgrupo que você cadastrar, se adaptando à estrutura de cada obra.",
         "Obra com uma torre só continua funcionando exatamente como antes (não muda nada nesse caso, que é o mais comum)."
+      ]
+    },
+    {
+      "versao": "V3.19.30.43",
+      "data": "2026-08-24",
+      "tipo": "correcao",
+      "titulo": "Gerador de Grupos: pavimento/subgrupo com nome COMPOSTO (ex: \"Mini Grua e Cremalheira\") nunca casava com nenhuma tarefa",
+      "itens": [
+        "Caso real: Milton cadastrou o pavimento \"Mini Grua e Cremalheira\" pra agrupar tarefas de equipamento (Montagem Mini Grua, Montagem/Desmontagem Cremalheira Externa/Interna) — e nenhuma delas casava, todas caíam em \"Sem Vínculo\".",
+        "Causa: o match exigia a FRASE INTEIRA do pavimento aparecer dentro do nome da tarefa — mas nenhuma tarefa fala \"Mini Grua e Cremalheira\" junto, cada uma menciona só uma parte (\"Mini Grua\" OU \"Cremalheira Externa\").",
+        "Corrigido: nome composto com \" e \"/\",\"/\"/\" agora é dividido em partes (\"Mini Grua\", \"Cremalheira\") — cada parte sozinha já casa. Testado com as 6 tarefas reais do caso: todas casaram certo.",
+        "Vale tanto pra pavimento quanto pra apartamento/subgrupo — qualquer nome composto que você criar, em qualquer obra, sem precisar de nenhuma lista fixa."
       ]
     }
   ],

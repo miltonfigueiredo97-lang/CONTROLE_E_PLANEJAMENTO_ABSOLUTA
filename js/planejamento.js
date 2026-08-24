@@ -4252,8 +4252,10 @@ const Planejamento = (() => {
       for(const apto of aptos){
         const nApto=_normTexto(apto.nome);
         if(nApto.length<3)continue;
-        for(const cand of _candidatosSingular(nApto)){
-          if(nomeNorm.includes(cand)&&nApto.length>melhorLen){melhorApto=apto;melhorLen=nApto.length;break;}
+        for(const seg of _segmentosNome(nApto)){
+          for(const cand of _candidatosSingular(seg)){
+            if(nomeNorm.includes(cand)&&seg.length>melhorLen){melhorApto=apto;melhorLen=seg.length;break;}
+          }
         }
       }
       if(melhorApto){
@@ -4329,6 +4331,17 @@ const Planejamento = (() => {
     if(s.length>5&&/oes$/.test(s))out.push(s.slice(0,-3)+'ao');
     return[...new Set(out)];
   }
+  // Divide um nome COMPOSTO (ex: "Mini Grua e Cremalheira", "Fachada Frontal
+  // e Lateral", "Hall, Escada e Elevador") nas partes que o formam. Uma
+  // tarefa raramente menciona a frase INTEIRA — "Montagem Mini Grua" só fala
+  // de uma parte do nome cadastrado ("Mini Grua e Cremalheira"). Sem quebrar
+  // em pedaços, o match exigia a frase toda aparecer e nunca batia nesse
+  // tipo de nome (bug real relatado: pavimento/subgrupo "Mini Grua e
+  // Cremalheira" nunca casava com nenhuma tarefa).
+  function _segmentosNome(nNorm){
+    const partes=nNorm.split(/\s+e\s+|\s*[,/]\s*/).map(s=>s.trim()).filter(s=>s.length>=3);
+    return partes.length>1?[nNorm,...partes]:[nNorm];
+  }
   // Descobre os ancestrais (pais, avós...) de uma tarefa pela posição no
   // array ordenado — do mais próximo até a raiz. Usado pra achar em qual
   // TORRE a tarefa está (ex: tarefa dentro de "Torre A > ... > Térreo"),
@@ -4384,8 +4397,10 @@ const Planejamento = (() => {
     for(const pav of pavimentos){
       const nPav=_normTexto(pav.nome);
       if(nPav.length<3)continue;
-      for(const cand of _candidatosSingular(nPav)){
-        if(nome.includes(cand)&&nPav.length>melhorLen){melhor=pav;melhorLen=nPav.length;break;}
+      for(const seg of _segmentosNome(nPav)){
+        for(const cand of _candidatosSingular(seg)){
+          if(nome.includes(cand)&&seg.length>melhorLen){melhor=pav;melhorLen=seg.length;break;}
+        }
       }
     }
     if(!melhor)return null;
