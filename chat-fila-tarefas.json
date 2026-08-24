@@ -62,5 +62,24 @@
     "projeto": "Sistema Absoluta",
     "categoria": "Planejamento",
     "checklist": []
+  },
+  {
+    "id": "chat_medicoes_por_grupo_e_andar_v1",
+    "texto": "Medições: novas visões por Grupo/Categoria e por Andar",
+    "descricao": "Módulo de Medições precisa ganhar novas formas de visualizar/agrupar a medição, além do que já existe hoje.",
+    "projeto": "Sistema Absoluta",
+    "categoria": "",
+    "checklist": [
+      {
+        "id": "chk_med_grupo_categoria",
+        "texto": "Medição por grupo/categoria",
+        "concluido": false
+      },
+      {
+        "id": "chk_med_andar",
+        "texto": "Medição por andar",
+        "concluido": false
+      }
+    ]
   }
 ]
