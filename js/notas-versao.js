@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.30.31',
+  versaoAtual: 'V3.19.30.32',
 
   versoes: [
     {
@@ -10407,6 +10407,17 @@ const NotasVersao = {
       "itens": [
         "Bug de lógica pego pelo Milton: o seletor (busca/navegação pra escolher tarefa) tinha um checkbox de marcar como concluída — mas marcar concluído ali, antes de a tarefa nem ter sido agendada num horário, não fazia sentido nenhum.",
         "Removido do seletor. O checkbox de concluir continua existindo normalmente nas tarefas que JÁ estão alocadas num horário (onde faz sentido)."
+      ]
+    },
+    {
+      "versao": "V3.19.30.32",
+      "data": "2026-08-22",
+      "tipo": "funcionalidade",
+      "titulo": "Agenda: arrastar tarefa entre horários (clicar e segurar)",
+      "itens": [
+        "Cada tarefa já alocada num horário ganhou uma alcinha (⠿) — clicar e segurar nela (ou tocar e segurar, no tablet) e arrastar solta a tarefa em outro horário, movendo ela de vez.",
+        "Feito com Pointer Events (não o drag-and-drop nativo do HTML5, que funciona mal em touch) — o mesmo código atende mouse, toque e caneta. Enquanto arrasta, mostra um \"balão\" seguindo o dedo/cursor e destaca o horário que vai receber a tarefa.",
+        "Trava de segurança: soltar em cima de um horário que já tem essa mesma tarefa (ou item) não duplica, só avisa."
       ]
     }
   ],

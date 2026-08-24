@@ -564,8 +564,20 @@ const Todo = (() => {
       .agenda-add-icon.tem-clipboard { border-style:solid; border-color:var(--cor-primaria); background:var(--cor-primaria-light); color:var(--cor-dark-900); }
       .agenda-tarefa {
         display:flex; align-items:center; gap:9px; background:#fff; border:1.5px solid var(--cor-borda-light); border-radius:8px;
-        padding:6px 10px; border-left:3px solid var(--cor-primaria);
+        padding:6px 10px; border-left:3px solid var(--cor-primaria); transition:opacity .15s;
       }
+      .agenda-tarefa.arrastando { opacity:.35; }
+      .agenda-drag-handle {
+        display:flex; align-items:center; justify-content:center; color:var(--cor-texto-muted); flex-shrink:0;
+        cursor:grab; touch-action:none; padding:2px; -webkit-user-select:none; user-select:none;
+      }
+      .agenda-drag-handle:hover { color:var(--cor-texto-secundario); }
+      .agenda-drag-ghost {
+        position:fixed; pointer-events:none; z-index:3000; background:#fff; border:1.5px solid var(--cor-primaria);
+        border-radius:8px; padding:7px 14px; font-size:13px; font-weight:700; color:var(--cor-texto); box-shadow:0 6px 18px rgba(0,0,0,.18);
+        opacity:.95; white-space:nowrap;
+      }
+      .agenda-linha.arrastar-sobre { background:var(--cor-primaria-light); border-radius:8px; }
       .agenda-tarefa.concluida { opacity:.5; }
       .agenda-tarefa.concluida .agenda-tarefa-texto { text-decoration:line-through; }
       .agenda-tarefa-texto { flex:1; min-width:0; font-size:13.5px; font-weight:600; color:var(--cor-texto); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; cursor:pointer; }
@@ -1428,7 +1440,10 @@ const Todo = (() => {
                     const label = item ? item.texto : t.texto;
                     const concluidoAloc = item ? !!item.concluido : !!t.concluida;
                     return `
-                      <div class="agenda-tarefa ${concluidoAloc ? 'concluida' : ''}">
+                      <div class="agenda-tarefa ${concluidoAloc ? 'concluida' : ''}" data-agenda-tarefa-linha="${a.id}">
+                        <span class="agenda-drag-handle" data-agenda-arrastar="${a.id}" title="Arrastar pra outro horário">
+                          <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><circle cx="8" cy="6" r="1.6"/><circle cx="16" cy="6" r="1.6"/><circle cx="8" cy="12" r="1.6"/><circle cx="16" cy="12" r="1.6"/><circle cx="8" cy="18" r="1.6"/><circle cx="16" cy="18" r="1.6"/></svg>
+                        </span>
                         <div class="todo-check" style="width:16px;height:16px;flex-shrink:0;" data-agenda-check="${t.id}" data-agenda-check-item="${a.itemId || ''}">
                           <svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="white" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
                         </div>
@@ -1562,6 +1577,7 @@ const Todo = (() => {
     el.querySelectorAll('[data-agenda-remover]').forEach(btn => {
       btn.onclick = async () => { await _removerDoSlot(btn.dataset.agendaRemover); };
     });
+    _wireDragAndDrop(el);
     el.querySelectorAll('[data-agenda-copiar-tarefa]').forEach(btn => {
       const copiar = () => {
         agendaClipboard = {
@@ -1669,6 +1685,74 @@ const Todo = (() => {
     await Database.deletarRaiz(COL_AGENDA, alocacaoId);
     agendaAlocacoes = agendaAlocacoes.filter(a => a.id !== alocacaoId);
     _renderizarAgenda();
+  }
+
+  // Move uma alocação já existente pra outro horário do mesmo dia
+  // (usado pelo arrastar-e-soltar).
+  async function _moverAlocacaoParaHorario(alocacaoId, novoHorario) {
+    const aloc = agendaAlocacoes.find(a => a.id === alocacaoId);
+    if (!aloc || !novoHorario || aloc.horario === novoHorario) return;
+    const jaExiste = agendaAlocacoes.some(a => a.id !== alocacaoId && a.data === aloc.data && a.horario === novoHorario
+      && a.tarefaId === aloc.tarefaId && (a.itemId || '') === (aloc.itemId || ''));
+    if (jaExiste) { Utils.toast('Essa tarefa já está nesse horário.', 'alerta'); return; }
+    await Database.atualizarRaiz(COL_AGENDA, alocacaoId, { horario: novoHorario });
+    aloc.horario = novoHorario;
+    _renderizarAgenda();
+    Utils.toast('Tarefa movida de horário.', 'sucesso');
+  }
+
+  // Arrastar e soltar (Pointer Events — funciona com mouse, touch e
+  // caneta, ao contrário do drag-and-drop nativo HTML5 que é ruim em
+  // touch). Arrasta pela alcinha (⠿), solta em cima de qualquer
+  // horário pra mover a tarefa pra lá.
+  function _wireDragAndDrop(el) {
+    el.querySelectorAll('[data-agenda-arrastar]').forEach(handle => {
+      handle.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        const alocacaoId = handle.dataset.agendaArrastar;
+        const linhaOrigem = handle.closest('.agenda-tarefa');
+        if (!linhaOrigem) return;
+        handle.setPointerCapture(e.pointerId);
+
+        const ghost = document.createElement('div');
+        ghost.className = 'agenda-drag-ghost';
+        const textoEl = linhaOrigem.querySelector('.agenda-tarefa-texto');
+        ghost.textContent = textoEl ? textoEl.textContent : 'Tarefa';
+        document.body.appendChild(ghost);
+        const posicionarGhost = (x, y) => { ghost.style.left = `${x + 14}px`; ghost.style.top = `${y + 14}px`; };
+        posicionarGhost(e.clientX, e.clientY);
+
+        linhaOrigem.classList.add('arrastando');
+        let alvoAtual = null;
+
+        const onMove = (ev) => {
+          posicionarGhost(ev.clientX, ev.clientY);
+          const elemAbaixo = document.elementFromPoint(ev.clientX, ev.clientY);
+          const novaLinha = elemAbaixo ? elemAbaixo.closest('[data-agenda-slot-hora]') : null;
+          if (novaLinha !== alvoAtual) {
+            if (alvoAtual) alvoAtual.classList.remove('arrastar-sobre');
+            alvoAtual = novaLinha;
+            if (alvoAtual) alvoAtual.classList.add('arrastar-sobre');
+          }
+        };
+
+        const onUp = async () => {
+          handle.removeEventListener('pointermove', onMove);
+          handle.removeEventListener('pointerup', onUp);
+          handle.removeEventListener('pointercancel', onUp);
+          ghost.remove();
+          linhaOrigem.classList.remove('arrastando');
+          if (alvoAtual) {
+            alvoAtual.classList.remove('arrastar-sobre');
+            await _moverAlocacaoParaHorario(alocacaoId, alvoAtual.dataset.agendaSlotHora);
+          }
+        };
+
+        handle.addEventListener('pointermove', onMove);
+        handle.addEventListener('pointerup', onUp);
+        handle.addEventListener('pointercancel', onUp);
+      });
+    });
   }
 
   // ============================================
