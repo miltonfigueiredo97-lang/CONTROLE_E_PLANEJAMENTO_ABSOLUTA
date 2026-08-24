@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.30.37',
+  versaoAtual: 'V3.19.30.38',
 
   versoes: [
     {
@@ -10472,6 +10472,16 @@ const NotasVersao = {
         "Clicar na célula Frente abre um seletor: mostra TODAS as frentes já em uso na obra (não só as 8 padrão do sistema — pega qualquer valor digitado antes, ex: Limpeza, Serralheria) como selos coloridos clicáveis, igual já aparecia na coluna.",
         "Campo pra digitar e CRIAR uma frente nova na hora (Enter ou botão Criar) — antes não tinha como adicionar uma categoria fora das 8 fixas por esse caminho.",
         "\"— remover\" limpa a frente da tarefa. A frente atual da tarefa vem destacada (contorno branco) na lista."
+      ]
+    },
+    {
+      "versao": "V3.19.30.38",
+      "data": "2026-08-24",
+      "tipo": "correcao",
+      "titulo": "Toque-e-segure agora também na coluna Sucessora (só tinha na Predecessora) + corrigido o menu nativo de seleção de texto do Android aparecendo por cima",
+      "itens": [
+        "Sucessora ganhou o mesmo toque-e-segure da Predecessora: segurar o dedo ~meio segundo mostra o balão com número + nome de quem depende desta tarefa, sem abrir nada, sem menu de sistema.",
+        "Corrigido: segurar o dedo nessas duas colunas (Predecessora e Sucessora) no Android disparava a seleção de texto NATIVA do navegador (aquela caixinha de \"copiar/selecionar\" por cima) além do balão do sistema — travado com user-select:none nas duas células, então agora só aparece o balão do Planejamento, igual no iOS/desktop."
       ]
     }
   ],

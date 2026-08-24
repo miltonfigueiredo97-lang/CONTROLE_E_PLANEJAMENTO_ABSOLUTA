@@ -1738,9 +1738,9 @@ const Planejamento = (() => {
         } else if(cid==='percConc'){
           cells+=`<div style="${base}font-size:.7rem;justify-content:center;color:${perc>=100?'#16a34a':perc>0?'#2563eb':'#555'};cursor:pointer;" ${clickEdit}>${perc}%</div>`;
         } else if(cid==='predecessora'){
-          cells+=`<div style="${base}color:#555;font-size:.7rem;justify-content:center;cursor:pointer;" onclick="Planejamento._predCellClick(event,${i})" ontouchstart="Planejamento._predTouchStart(event,${i})" ontouchmove="Planejamento._predTouchCancel()" ontouchend="Planejamento._predTouchEnd(event)" title="${_esc(_tooltipPred(t))}">${t._predDisplay||'—'}</div>`;
+          cells+=`<div style="${base}color:#555;font-size:.7rem;justify-content:center;cursor:pointer;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;" onclick="Planejamento._predCellClick(event,${i})" ontouchstart="Planejamento._predTouchStart(event,${i})" ontouchmove="Planejamento._predTouchCancel()" ontouchend="Planejamento._predTouchEnd(event)" title="${_esc(_tooltipPred(t))}">${t._predDisplay||'—'}</div>`;
         } else if(cid==='sucessora'){
-          cells+=`<div style="${base}color:#666;font-size:.7rem;justify-content:center;" title="${_esc(_tooltipSuc(t._sucessoras))||'Calculado automaticamente — quem tem esta tarefa como predecessora'}">${(t._sucessoras&&t._sucessoras.length)?t._sucessoras.join(', '):'—'}</div>`;
+          cells+=`<div style="${base}color:#666;font-size:.7rem;justify-content:center;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;" ontouchstart="Planejamento._sucTouchStart(event,${i})" ontouchmove="Planejamento._predTouchCancel()" ontouchend="Planejamento._predTouchEnd(event)" title="${_esc(_tooltipSuc(t._sucessoras))||'Calculado automaticamente — quem tem esta tarefa como predecessora'}">${(t._sucessoras&&t._sucessoras.length)?t._sucessoras.join(', '):'—'}</div>`;
         } else if(cid==='responsavel'){
           cells+=`<div style="${base}color:#555;font-size:.7rem;cursor:pointer;" ${clickEdit}>${t.responsavel||'—'}</div>`;
         } else if(cid==='local'){
@@ -1868,6 +1868,21 @@ const Planejamento = (() => {
     _predTouchTimer=setTimeout(()=>{
       _predTouchLong=true;
       _mostrarTooltipTouch(_tooltipPred(t)||'Sem predecessora',x,y);
+    },450);
+  }
+  // Mesma lógica do toque-e-segure da Predecessora, só que pro tooltip da
+  // Sucessora (calculada — quem tem esta tarefa como predecessora). Reusa
+  // o mesmo timer/estado e os handlers _predTouchCancel/_predTouchEnd (são
+  // genéricos, não dependem de ser predecessora ou sucessora).
+  function _sucTouchStart(e,idx){
+    _predTouchLong=false;
+    clearTimeout(_predTouchTimer);
+    const t=filtradas[idx];if(!t)return;
+    const touch=e.touches?.[0];if(!touch)return;
+    const x=touch.clientX,y=touch.clientY;
+    _predTouchTimer=setTimeout(()=>{
+      _predTouchLong=true;
+      _mostrarTooltipTouch(_tooltipSuc(t._sucessoras)||'Nenhuma sucessora (nenhuma tarefa depende desta)',x,y);
     },450);
   }
   function _predTouchCancel(){clearTimeout(_predTouchTimer);} // moveu o dedo = rolando, não é toque-e-segure
@@ -6940,7 +6955,7 @@ const Planejamento = (() => {
     _abrirVisaoOrg,_menuVisaoOrg,_visaoOrgFiltrarLista,_visaoOrgToggleBloco,_visaoOrgAplicar,_visaoOrgLimpar,toggleSetasPred,_setaClicada,undo,
     toggleCategoriaView,_catToggle,_subcatToggle,_catExpandirTudo,
     onBusca,limparBusca,_buscaKey,
-    importarExcel,importarBaseCompleta,importarCorrecoes,_executarCorrecoes,_mostrarRevisaoCorrecoes,exportar,exportarFrentes,exportarExcelBonito,exportarMSProject,abrirImpressao,baixarPDF,exportarPNG,corrigirOrdensDuplicadas,_corrigirNiveisSoltos,_corrigirNivelPeloCodigo,_migrarPredecessorasParaId,_recalcularDatasPais,_recalcularPercTodosPais,_orfasMarcarTodas,_orfasExcluirMarcadas,_gerarPNG,_predPopup,_predSalvar,_predCellClick,_predTouchStart,_predTouchCancel,_predTouchEnd,_predAddLinha,_predLinhaAtualizar,autoClassificarFrentes,autoClassificarEquipes,
+    importarExcel,importarBaseCompleta,importarCorrecoes,_executarCorrecoes,_mostrarRevisaoCorrecoes,exportar,exportarFrentes,exportarExcelBonito,exportarMSProject,abrirImpressao,baixarPDF,exportarPNG,corrigirOrdensDuplicadas,_corrigirNiveisSoltos,_corrigirNivelPeloCodigo,_migrarPredecessorasParaId,_recalcularDatasPais,_recalcularPercTodosPais,_orfasMarcarTodas,_orfasExcluirMarcadas,_gerarPNG,_predPopup,_predSalvar,_predCellClick,_predTouchStart,_sucTouchStart,_predTouchCancel,_predTouchEnd,_predAddLinha,_predLinhaAtualizar,autoClassificarFrentes,autoClassificarEquipes,
     abrirVinculosView,fecharVinculosView,abrirVincularTarefa,abrirVincularAqui,onVincTipoChange,
     onVincNavModulo,onVincNavModuloMetrica,onVincNavMetrica,onVincNavEntrar,onVincNavBreadcrumb,onVincNavVoltar,
     onBuscaEscolhaAlvoVinc,onEscolherAlvoVinc,onTrocarAlvoVinc,
