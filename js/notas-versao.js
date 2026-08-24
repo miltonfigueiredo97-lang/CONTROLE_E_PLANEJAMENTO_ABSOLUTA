@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.30.43',
+  versaoAtual: 'V3.19.30.44',
 
   versoes: [
     {
@@ -10535,6 +10535,16 @@ const NotasVersao = {
         "Causa: o match exigia a FRASE INTEIRA do pavimento aparecer dentro do nome da tarefa — mas nenhuma tarefa fala \"Mini Grua e Cremalheira\" junto, cada uma menciona só uma parte (\"Mini Grua\" OU \"Cremalheira Externa\").",
         "Corrigido: nome composto com \" e \"/\",\"/\"/\" agora é dividido em partes (\"Mini Grua\", \"Cremalheira\") — cada parte sozinha já casa. Testado com as 6 tarefas reais do caso: todas casaram certo.",
         "Vale tanto pra pavimento quanto pra apartamento/subgrupo — qualquer nome composto que você criar, em qualquer obra, sem precisar de nenhuma lista fixa."
+      ]
+    },
+    {
+      "versao": "V3.19.30.44",
+      "data": "2026-08-24",
+      "tipo": "correcao",
+      "titulo": "Gerador de Grupos: \"Cobertura\" sempre virava Reservatório mesmo em obra que cadastrou um pavimento \"Cobertura\" de verdade",
+      "itens": [
+        "Existe uma regra fixa antiga (\"Cobertura\" = sinônimo de Reservatório) — feita numa obra que não tinha um pavimento \"Cobertura\" próprio, só \"Reservatório\". Ela estava rodando pra TODAS as obras, sem checar se a obra atual tinha um \"Cobertura\" cadastrado de verdade.",
+        "Corrigido: agora o nome LITERAL da tarefa é testado primeiro contra os pavimentos cadastrados — se você tem um pavimento \"Cobertura\", ele ganha. A regra antiga (Cobertura→Reservatório) só entra como último recurso, pra obra que realmente não tem \"Cobertura\" cadastrado."
       ]
     }
   ],

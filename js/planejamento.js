@@ -4359,7 +4359,7 @@ const Planejamento = (() => {
     return out;
   }
   function _detectarGrupoPorNome(nomeTarefa,estrutura,ancestraisNomes){
-    const nome=_expandirAbreviacoes(_normTexto(nomeTarefa));
+    const nomeLiteral=_normTexto(nomeTarefa);
     // Se algum ancestral da tarefa (pai, avô...) bate com o nome de UMA
     // torre cadastrada, restringe a busca de pavimento só aos pavimentos
     // DAQUELA torre. Sem isso, obra com mais de uma torre e cada uma com o
@@ -4378,33 +4378,44 @@ const Planejamento = (() => {
     if(!pavimentos.length){
       torres.forEach(torre=>(torre.pavimentos||[]).forEach(pav=>pavimentos.push(pav)));
     }
-    // 1º) match ESTRUTURAL por número+tipo — cobre qualquer jeito de
-    // escrever o mesmo andar/subsolo, sem precisar cadastrar variação nenhuma.
-    const canonTarefa=_parsePavCanonico(nome);
-    if(canonTarefa){
+    // Tenta casar duas vezes: 1ª com o nome LITERAL da tarefa (sem apelido
+    // nenhum) — se você cadastrou um pavimento "Cobertura" de verdade, ele
+    // ganha aqui, igual qualquer outro nome. Só se NADA literal bater é que
+    // cai pras regras de apelido antigas (_expandirAbreviacoes: "T Int"/
+    // "T Ext"=Térreo, "Muro Divisa"=Térreo, "Cobertura"=Reservatório — regras
+    // de negócio de obras que NÃO têm um pavimento "Cobertura" cadastrado
+    // próprio, aí sim cai como sinônimo de Reservatório).
+    const nomeComApelido=_expandirAbreviacoes(nomeLiteral);
+    const tentativas=nomeComApelido===nomeLiteral?[nomeLiteral]:[nomeLiteral,nomeComApelido];
+    for(const nome of tentativas){
+      // 1º) match ESTRUTURAL por número+tipo — cobre qualquer jeito de
+      // escrever o mesmo andar/subsolo, sem precisar cadastrar variação nenhuma.
+      const canonTarefa=_parsePavCanonico(nome);
+      if(canonTarefa){
+        for(const pav of pavimentos){
+          const canonPav=_parsePavCanonico(_normTexto(pav.nome));
+          if(canonPav&&canonPav.tipo===canonTarefa.tipo&&canonPav.num===canonTarefa.num){
+            return _finalizarMatchGrupo(pav,nomeTarefa);
+          }
+        }
+      }
+      // 2º) sem número (Térreo, Ático, Reservatório, Elevadores, Fachada etc.)
+      // — o nome do pavimento (ou uma variação de singular/plural dele)
+      // precisa aparecer dentro do nome da tarefa. Pega o match mais longo
+      // (mais específico).
+      let melhor=null,melhorLen=0;
       for(const pav of pavimentos){
-        const canonPav=_parsePavCanonico(_normTexto(pav.nome));
-        if(canonPav&&canonPav.tipo===canonTarefa.tipo&&canonPav.num===canonTarefa.num){
-          return _finalizarMatchGrupo(pav,nomeTarefa);
+        const nPav=_normTexto(pav.nome);
+        if(nPav.length<3)continue;
+        for(const seg of _segmentosNome(nPav)){
+          for(const cand of _candidatosSingular(seg)){
+            if(nome.includes(cand)&&seg.length>melhorLen){melhor=pav;melhorLen=seg.length;break;}
+          }
         }
       }
+      if(melhor)return _finalizarMatchGrupo(melhor,nomeTarefa);
     }
-    // 2º) sem número (Térreo, Ático, Reservatório, Elevadores, Fachada etc.)
-    // — o nome do pavimento (ou uma variação de singular/plural dele)
-    // precisa aparecer dentro do nome da tarefa. Pega o match mais longo
-    // (mais específico).
-    let melhor=null,melhorLen=0;
-    for(const pav of pavimentos){
-      const nPav=_normTexto(pav.nome);
-      if(nPav.length<3)continue;
-      for(const seg of _segmentosNome(nPav)){
-        for(const cand of _candidatosSingular(seg)){
-          if(nome.includes(cand)&&seg.length>melhorLen){melhor=pav;melhorLen=seg.length;break;}
-        }
-      }
-    }
-    if(!melhor)return null;
-    return _finalizarMatchGrupo(melhor,nomeTarefa);
+    return null;
   }
 
 
