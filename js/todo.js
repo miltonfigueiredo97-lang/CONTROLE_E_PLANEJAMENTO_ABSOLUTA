@@ -559,6 +559,7 @@ const Todo = (() => {
         margin-top:1px;
       }
       .agenda-add-icon:hover { border-color:var(--cor-primaria); border-style:solid; color:var(--cor-texto); }
+      .agenda-add-icon.tem-clipboard { border-style:solid; border-color:var(--cor-primaria); background:var(--cor-primaria-light); color:var(--cor-dark-900); }
       .agenda-tarefa {
         display:flex; align-items:center; gap:9px; background:#fff; border:1.5px solid var(--cor-borda-light); border-radius:8px;
         padding:6px 10px; border-left:3px solid var(--cor-primaria);
@@ -583,7 +584,12 @@ const Todo = (() => {
       .agenda-picker-atrasadas-btn:hover { background:#fee2e2; }
       .agenda-picker-atrasadas-titulo { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.3px; color:#991b1b; margin-bottom:8px; }
 
-      .agenda-picker { background:var(--cor-fundo); border:1.5px solid var(--cor-borda-light); border-radius:10px; padding:10px; box-sizing:border-box; }
+      .agenda-picker { background:var(--cor-fundo); border:1.5px solid var(--cor-borda-light); border-radius:10px; padding:10px; padding-top:36px; box-sizing:border-box; position:relative; }
+      .agenda-picker-fechar-x {
+        position:absolute; top:8px; right:8px; width:26px; height:26px; border-radius:50%; border:1.5px solid #fca5a5;
+        background:#fef2f2; color:#dc2626; font-size:13px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; z-index:2;
+      }
+      .agenda-picker-fechar-x:hover { background:#fee2e2; border-color:#dc2626; }
       .agenda-picker-busca {
         width:100%; border:1.5px solid var(--cor-borda-light); border-radius:8px; padding:8px 12px; font-size:13px;
         font-family:var(--font-principal); outline:none; margin-bottom:8px; box-sizing:border-box; color:var(--cor-texto); background:#fff;
@@ -603,6 +609,10 @@ const Todo = (() => {
       .agenda-picker-item-proj { font-size:10px; font-weight:700; color:var(--cor-texto-secundario); background:var(--cor-fundo); border:1px solid var(--cor-borda-light); border-radius:4px; padding:2px 7px; flex-shrink:0; white-space:nowrap; }
       .agenda-picker-item-cat { font-size:10px; font-weight:700; color:#fff; border-radius:4px; padding:2px 7px; flex-shrink:0; white-space:nowrap; }
       .agenda-picker-item-texto { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+      .agenda-picker-info-btn {
+        border:none; background:none; cursor:pointer; color:var(--cor-texto-muted); font-size:15px; padding:2px 4px; flex-shrink:0; line-height:1;
+      }
+      .agenda-picker-info-btn:hover { color:var(--cor-primaria-dark); }
       .agenda-picker-item-sub { margin-left:20px; background:var(--cor-fundo); border-style:dashed; }
       .agenda-picker-item-sub .agenda-picker-item-texto { font-size:12.5px; color:var(--cor-texto-secundario); }
       .agenda-picker-nivel-item {
@@ -1287,11 +1297,13 @@ const Todo = (() => {
         ${p.projeto ? `<span class="agenda-picker-item-proj">${esc(p.projeto)}</span>` : ''}
         ${cat ? `<span class="agenda-picker-item-cat" style="background:${esc(cat.cor)}">${esc(cat.nome)}</span>` : ''}
         <span class="agenda-picker-item-texto">${esc(p.texto)}</span>
+        <button type="button" class="agenda-picker-info-btn" data-agenda-ver-descricao="${p.id}" title="Ver descrição">ⓘ</button>
       </div>`;
       const linhasChecklistHtml = itensChecklistPendentes.map(item => `
       <div class="agenda-picker-item agenda-picker-item-sub" data-agenda-escolher="${p.id}::${item.id}" data-agenda-detalhe-picker="${p.id}">
         <div class="todo-check" style="width:15px;height:15px;flex-shrink:0;" data-agenda-picker-concluir-item="${p.id}::${item.id}" title="Marcar como concluído">${check}</div>
         <span class="agenda-picker-item-texto">↳ ${esc(item.texto)}</span>
+        <button type="button" class="agenda-picker-info-btn" data-agenda-ver-descricao="${p.id}" title="Ver descrição da tarefa">ⓘ</button>
       </div>`).join('');
       return linhaTarefaHtml + linhasChecklistHtml;
     }).join('');
@@ -1341,6 +1353,12 @@ const Todo = (() => {
         const [tarefaId, itemId] = chk.dataset.agendaPickerConcluirItem.split('::');
         await alternarChecklistItem(tarefaId, itemId);
         _renderizarAgenda();
+      };
+    });
+    container.querySelectorAll('[data-agenda-ver-descricao]').forEach(btn => {
+      btn.onclick = (e) => {
+        e.stopPropagation();
+        abrirDetalheTarefa(btn.dataset.agendaVerDescricao);
       };
     });
   }
@@ -1431,6 +1449,7 @@ const Todo = (() => {
                 </div>` : ''}
                 ${pickerAberto ? `
                   <div class="agenda-picker">
+                    <button type="button" class="agenda-picker-fechar-x" data-agenda-fechar-picker title="Fechar seletor">✕</button>
                     ${agendaCriandoNova ? `
                       <div class="agenda-picker-nova">
                         <input type="text" id="agenda-nova-titulo" class="agenda-picker-nova-input" placeholder="Título da nova tarefa" value="${esc(agendaFiltroPicker)}">
@@ -1457,12 +1476,11 @@ const Todo = (() => {
                       </button>
                       <div id="agenda-picker-dinamico">${_htmlPickerConteudo(pendentes)}</div>
                       <button type="button" class="agenda-picker-criar-link" id="agenda-abrir-criar-nova">+ Não existe ainda? Criar tarefa nova</button>
-                      <button type="button" class="agenda-picker-cancelar" data-agenda-fechar-picker>Fechar</button>
                     `}
                   </div>
                 ` : ''}
               </div>
-              ${!pickerAberto ? `<button type="button" class="agenda-add-icon" data-agenda-abrir="${s.inicio}" title="Adicionar tarefa neste horário">+</button>` : ''}
+              ${!pickerAberto ? `<button type="button" class="agenda-add-icon ${agendaClipboard ? 'tem-clipboard' : ''}" data-agenda-abrir="${s.inicio}" title="${agendaClipboard ? 'Clique pra escolher — ou botão direito pra colar: ' + esc(agendaClipboard.label) : 'Adicionar tarefa neste horário'}">+</button>` : ''}
             </div>`;
         }).join('')}
       </div>`;
@@ -1489,6 +1507,16 @@ const Todo = (() => {
         agendaMostrarJaEscolhidas = false;
         agendaMostrandoAtrasadas = false;
         _renderizarAgenda();
+      };
+      // Clique direito no "+": cola direto o que foi copiado, sem abrir o seletor inteiro.
+      btn.oncontextmenu = async (e) => {
+        e.preventDefault();
+        if (!agendaClipboard) { Utils.toast('Nada copiado ainda — clique no ⧉ de uma tarefa primeiro.', 'alerta'); return; }
+        const slotAlvo = btn.dataset.agendaAbrir;
+        const jaExisteAqui = agendaAlocacoes.some(a => a.data === dataStr && a.horario === slotAlvo
+          && a.tarefaId === agendaClipboard.tarefaId && (a.itemId || '') === (agendaClipboard.itemId || ''));
+        if (jaExisteAqui) { Utils.toast('Essa tarefa já está nesse horário.', 'alerta'); return; }
+        await _atribuirTarefaSlot(agendaClipboard.tarefaId, dataStr, slotAlvo, agendaClipboard.itemId || null);
       };
     });
     const btnFecharPicker = el.querySelector('[data-agenda-fechar-picker]');

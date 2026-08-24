@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.30.27',
+  versaoAtual: 'V3.19.30.28',
 
   versoes: [
     {
@@ -10365,6 +10365,17 @@ const NotasVersao = {
         "Os novos indicadores (% executado, dias trabalhados, m³/dia, previsão de fim) tinham entrado na aba Marcadores — mas Marcadores é só desenho/vínculo, quem registra a execução de verdade é a aba Acompanhamento. Movidos pra lá, dentro do painel \\\"Estacas/Fundações da obra — visão geral\\\", que já existia.",
         "Marcadores voltou aos 3 KPIs simples de sempre (marcadas, vinculadas, concretadas).",
         "Corrigido texto pequeno e com pouco contraste no relatório de concretagem (tela e PDF) — o \\\"/ de X\\\" embaixo dos números do resumo estava com fonte minúscula e cor clara demais pra ler bem em tela clara; aumentado e escurecido."
+      ]
+    },
+    {
+      "versao": "V3.19.30.28",
+      "data": "2026-08-22",
+      "tipo": "correcao",
+      "titulo": "Agenda: fechar mais fácil (X vermelho no topo), descrição com um toque (ⓘ), colar com botão direito no \"+\"",
+      "itens": [
+        "O \"×\" de remover tarefa do horário estava sendo confundido com \"fechar o seletor\" — e fechar de verdade exigia rolar até o fim e clicar em \"Fechar\". Agora tem um X vermelho fixo no canto do seletor, visível assim que ele abre, só pra fechar.",
+        "Cada tarefa do seletor (e cada item de checklist) ganhou um botão ⓘ — toque nele mostra a descrição na hora, sem precisar de clique direito (que não existe em tablet/touch).",
+        "Colar ficou direto: com uma tarefa copiada (⧉), o \"+\" do horário de destino fica destacado — clique direito nele cola ali na hora, sem precisar abrir o seletor inteiro pra achar o botão \"Colar aqui\"."
       ]
     }
   ],
