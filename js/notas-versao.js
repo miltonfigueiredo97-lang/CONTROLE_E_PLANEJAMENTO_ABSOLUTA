@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.30.39',
+  versaoAtual: 'V3.19.30.40',
 
   versoes: [
     {
@@ -10492,6 +10492,16 @@ const NotasVersao = {
       "itens": [
         "O scroll vertical já era preservado ao recolher um grupo; o horizontal não — cada recolhida/expandida te devolvia pro começo da tabela (colunas Início/Nível), obrigando rolar de novo pra onde estava.",
         "Corrigido: agora o scroll horizontal também é guardado antes de recolher e restaurado depois, cabeçalho da tabela incluso — fica exatamente onde você estava."
+      ]
+    },
+    {
+      "versao": "V3.19.30.40",
+      "data": "2026-08-24",
+      "tipo": "correcao",
+      "titulo": "Medições: tarefa sem Subgrupo/Categoria não cai mais num grupo genérico \"Sem X\"",
+      "itens": [
+        "Nos modos de visão por Categoria/Grupo, tarefa sem valor preenchido numa dimensão (ex: sem Subgrupo) caía todo mundo junto num grupo \"Sem Subgrupo\" — um monte de tarefa sem relação nenhuma entre si, agrupada só por não terem preenchido o mesmo campo em branco.",
+        "Corrigido: agora essa tarefa para naquele nível e aparece direto com o PRÓPRIO nome, sem o grupo genérico no meio. Some \"Sem Subgrupo\"/\"Sem Categoria\" — quem não tem o campo aparece igual a antes de existir esse agrupamento."
       ]
     }
   ],
