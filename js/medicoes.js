@@ -341,6 +341,10 @@ const Medicoes = (() => {
   // direto com o próprio nome (ficaria estranho um monte de tarefa
   // diferente junto só por não terem preenchido o mesmo campo).
   function _renderAgrupado(dims,leaves){
+    // Sempre que tem filtro ativo (Frente, busca ou Ocultar 100%), abre
+    // automaticamente o caminho até cada resultado — senão a pessoa filtra
+    // e ainda tem que clicar grupo por grupo pra achar o que já filtrou.
+    const filtroAtivo=!!busca.trim()||!!filtroFrente||ocultarConcluidos;
     const raiz={filhos:new Map(),leaves:null};
     for(const t of leaves){
       let node=raiz,caminho='';
@@ -348,7 +352,9 @@ const Medicoes = (() => {
         const valor=t[dim.k];
         if(!valor)break; // sem valor nessa dimensão — vira folha direta deste nível, sem "Sem X"
         caminho=caminho?caminho+'|||'+valor:valor;
-        if(!node.filhos.has(valor))node.filhos.set(valor,{filhos:new Map(),leaves:null,id:'grp:'+caminho,nome:valor});
+        const id='grp:'+caminho;
+        if(!node.filhos.has(valor))node.filhos.set(valor,{filhos:new Map(),leaves:null,id,nome:valor});
+        if(filtroAtivo)colapsados.delete(id);
         node=node.filhos.get(valor);
       }
       if(!node.leaves)node.leaves=[];
@@ -420,7 +426,7 @@ const Medicoes = (() => {
           const okC=!ocultarConcluidos||_progAtual(t)<100||pend[t.id];
           if(okQ&&okF&&okC){
             leavesVisiveis.add(t.id);
-            for(const gid of pilha){if(gid){gruposComAlvo.add(gid);if(q)colapsados.delete(gid);}}
+            for(const gid of pilha){if(gid){gruposComAlvo.add(gid);colapsados.delete(gid);}}
           }
         }
       }
