@@ -336,28 +336,27 @@ const Medicoes = (() => {
     </div>`;
   }
   // Monta a árvore virtual (Categoria/Grupo etc.) a partir das folhas já
-  // filtradas — nível 1 e 2 usam os campos indicados em `dims`; folhas sem
-  // valor caem num grupo "Sem X" (não somem, só ficam agrupadas à parte).
+  // filtradas. Tarefa SEM valor numa dimensão (ex: sem Subgrupo) não cai
+  // num grupo genérico "Sem Subgrupo" — ela para naquele nível e aparece
+  // direto com o próprio nome (ficaria estranho um monte de tarefa
+  // diferente junto só por não terem preenchido o mesmo campo).
   function _renderAgrupado(dims,leaves){
     const raiz={filhos:new Map(),leaves:null};
     for(const t of leaves){
       let node=raiz,caminho='';
       for(const dim of dims){
-        const chave=t[dim.k]||dim.lbl;
-        caminho=caminho?caminho+'|||'+chave:chave;
-        if(!node.filhos.has(chave))node.filhos.set(chave,{filhos:new Map(),leaves:null,id:'grp:'+caminho,nome:chave});
-        node=node.filhos.get(chave);
+        const valor=t[dim.k];
+        if(!valor)break; // sem valor nessa dimensão — vira folha direta deste nível, sem "Sem X"
+        caminho=caminho?caminho+'|||'+valor:valor;
+        if(!node.filhos.has(valor))node.filhos.set(valor,{filhos:new Map(),leaves:null,id:'grp:'+caminho,nome:valor});
+        node=node.filhos.get(valor);
       }
       if(!node.leaves)node.leaves=[];
       node.leaves.push(t);
     }
     function agregar(node){
-      if(node.leaves){
-        let sw=0,sr=0,se=0;const hoje=_hoje();
-        for(const t of node.leaves){const w=_peso(t),r=_progAtual(t),e=_espAt(t,hoje);sw+=w;sr+=r*w;se+=e*w;}
-        node.sw=sw;node.sr=sr;node.se=se;return{sw,sr,se};
-      }
-      let sw=0,sr=0,se=0;
+      let sw=0,sr=0,se=0;const hoje=_hoje();
+      if(node.leaves){for(const t of node.leaves){const w=_peso(t),r=_progAtual(t),e=_espAt(t,hoje);sw+=w;sr+=r*w;se+=e*w;}}
       for(const filho of node.filhos.values()){const r=agregar(filho);sw+=r.sw;sr+=r.sr;se+=r.se;}
       node.sw=sw;node.sr=sr;node.se=se;return{sw,sr,se};
     }
@@ -366,13 +365,13 @@ const Medicoes = (() => {
     const primeiroMatchId=q&&leaves.length?leaves[0].id:null;
     let rows='';
     function desenhar(node,niv){
-      if(node.leaves){for(const t of node.leaves)rows+=_htmlLinhaFolha(t,q&&t.id===primeiroMatchId,niv);return;}
+      if(node.leaves){for(const t of node.leaves)rows+=_htmlLinhaFolha(t,q&&t.id===primeiroMatchId,niv);}
       for(const filho of node.filhos.values()){
-        // Grupo com um único filho-folha (sem subgrupos dentro): a linha do
-        // grupo e a linha de edição seriam a mesma coisa repetida — funde
-        // as duas, usando o nome do grupo como título (o nome completo da
-        // tarefa costuma só repetir o que os agrupamentos acima já disseram).
-        if(filho.leaves&&filho.leaves.length===1){
+        // Grupo com um único filho no total (uma folha, sem subgrupos): a
+        // linha do grupo e a linha de edição seriam a mesma coisa repetida
+        // — funde as duas, usando o nome do grupo como título.
+        const totalFilhos=(filho.leaves?filho.leaves.length:0)+filho.filhos.size;
+        if(totalFilhos===1&&filho.leaves&&filho.leaves.length===1){
           const t=filho.leaves[0];
           rows+=_htmlLinhaFolha(t,q&&t.id===primeiroMatchId,niv,filho.nome);
           continue;
