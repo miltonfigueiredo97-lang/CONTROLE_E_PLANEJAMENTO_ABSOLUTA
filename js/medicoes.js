@@ -292,7 +292,7 @@ const Medicoes = (() => {
       <span class="sp"></span>
     </div>`;
   }
-  function _htmlLinhaFolha(t,destacar,niv){
+  function _htmlLinhaFolha(t,destacar,niv,tituloOverride){
     niv=niv||0;
     const p=pend[t.id];
     const prog=_progAtual(t);
@@ -304,7 +304,7 @@ const Medicoes = (() => {
     return`<div class="med-node leaf ${p?'sel':''} ${destacar?'busca-match':''}" id="med-row-${t.id}" style="--niv:${niv};flex-wrap:wrap;align-items:flex-start;">
       <div class="med-header-row">
         <div style="flex:1;min-width:0;padding-top:3px;">
-          <div class="nm">${_esc(t.nome)}${t.frenteServico?` <span class="med-frente-badge" style="background:${Utils.corFrente(t.frenteServico)};">${t.frenteServico}</span>`:''}</div>
+          <div class="nm">${_esc(tituloOverride||t.nome)}${t.frenteServico?` <span class="med-frente-badge" style="background:${Utils.corFrente(t.frenteServico)};">${t.frenteServico}</span>`:''}</div>
         </div>
         <div class="med-acoes-topo">
           <label class="med-foto-btn" title="Adicionar foto">📷<input type="file" accept="image/*" multiple style="display:none;" onchange="Medicoes.fotoSelecionada('${t.id}',this)"></label>
@@ -368,6 +368,15 @@ const Medicoes = (() => {
     function desenhar(node,niv){
       if(node.leaves){for(const t of node.leaves)rows+=_htmlLinhaFolha(t,q&&t.id===primeiroMatchId,niv);return;}
       for(const filho of node.filhos.values()){
+        // Grupo com um único filho-folha (sem subgrupos dentro): a linha do
+        // grupo e a linha de edição seriam a mesma coisa repetida — funde
+        // as duas, usando o nome do grupo como título (o nome completo da
+        // tarefa costuma só repetir o que os agrupamentos acima já disseram).
+        if(filho.leaves&&filho.leaves.length===1){
+          const t=filho.leaves[0];
+          rows+=_htmlLinhaFolha(t,q&&t.id===primeiroMatchId,niv,filho.nome);
+          continue;
+        }
         const esp=filho.sw?filho.se/filho.sw:0,real=filho.sw?filho.sr/filho.sw:0;
         rows+=_htmlLinhaGrupo(filho.id,niv,filho.nome,esp,real);
         if(!colapsados.has(filho.id))desenhar(filho,niv+1);
@@ -425,6 +434,17 @@ const Medicoes = (() => {
         if(isLeaf&&temFiltro&&!leavesVisiveis.has(t.id))continue;
         if(!isLeaf){
           if(temFiltro&&!gruposComAlvo.has(t.id))continue; // grupo sem nenhum alvo (texto e/ou Frente filtrada)
+          // Grupo cuja subárvore inteira é só 1 tarefa (folha): a linha do
+          // grupo e a linha de edição seriam a mesma coisa repetida — funde
+          // as duas, mostrando direto a linha de edição com o nome do GRUPO.
+          const nxt=sorted[i+1],nxt2=sorted[i+2];
+          const subUnico=nxt&&leafSet.has(nxt.id)&&(nxt.nivel||0)===niv+1&&(!nxt2||(nxt2.nivel||0)<=niv);
+          if(subUnico&&(!temFiltro||leavesVisiveis.has(nxt.id))){
+            if(q&&!primeiroMatchId)primeiroMatchId=nxt.id;
+            rows+=_htmlLinhaFolha(nxt,q&&nxt.id===primeiroMatchId,niv,t.nome);
+            skipLevel=niv;
+            continue;
+          }
           const col=colapsados.has(t.id);
           if(col)skipLevel=niv;
           const o=porGrupo.get(t.id);
