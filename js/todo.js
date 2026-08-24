@@ -1338,6 +1338,7 @@ const Todo = (() => {
       // Clique direito: mostra a descrição da tarefa sem escolher/alocar nada.
       item.oncontextmenu = (e) => {
         e.preventDefault();
+        e.stopPropagation(); // não deixa "vazar" pro clique-direito-de-colar da linha do horário por baixo
         const tarefaId = item.dataset.agendaDetalhePicker;
         if (tarefaId) abrirDetalheTarefa(tarefaId);
       };
@@ -1433,7 +1434,7 @@ const Todo = (() => {
           const pickerAberto = agendaSlotAberto === s.inicio;
           const atrasadasSlot = pickerAberto ? _alocacoesAtrasadas(dataStr, s.inicio) : [];
           return `
-            <div class="agenda-linha">
+            <div class="agenda-linha" data-agenda-slot-hora="${s.inicio}">
               <div class="agenda-hora ${!pickerAberto ? 'clicavel' : ''}" ${!pickerAberto ? `data-agenda-abrir="${s.inicio}"` : ''}>${s.inicio} a ${s.fim}</div>
               <div class="agenda-corpo">
                 ${alocsSlot.length ? `<div class="agenda-tarefas-lista">
@@ -1519,11 +1520,16 @@ const Todo = (() => {
         agendaMostrandoAtrasadas = false;
         _renderizarAgenda();
       };
-      // Clique direito no "+": cola direto o que foi copiado, sem abrir o seletor inteiro.
-      btn.oncontextmenu = async (e) => {
+    });
+    // Clique com o botão direito em QUALQUER lugar da linha do horário
+    // (no horário, na área vazia, ou em cima de uma tarefa já alocada)
+    // cola ali o que estiver copiado — um único lugar pra essa lógica,
+    // pra não ter parte da linha respondendo e outra não.
+    el.querySelectorAll('[data-agenda-slot-hora]').forEach(linha => {
+      linha.oncontextmenu = async (e) => {
         e.preventDefault();
         if (!agendaClipboard) { Utils.toast('Nada copiado ainda — clique no 📋 de uma tarefa primeiro.', 'alerta'); return; }
-        const slotAlvo = btn.dataset.agendaAbrir;
+        const slotAlvo = linha.dataset.agendaSlotHora;
         const jaExisteAqui = agendaAlocacoes.some(a => a.data === dataStr && a.horario === slotAlvo
           && a.tarefaId === agendaClipboard.tarefaId && (a.itemId || '') === (agendaClipboard.itemId || ''));
         if (jaExisteAqui) { Utils.toast('Essa tarefa já está nesse horário.', 'alerta'); return; }
@@ -1581,13 +1587,10 @@ const Todo = (() => {
           itemId: btn.dataset.agendaCopiarItem || '',
           label: btn.dataset.agendaCopiarLabel,
         };
-        Utils.toast('Copiado — o "+" de outro horário fica destacado. Clique nele e depois em "Colar aqui" (ou clique direito nele pra colar direto).', 'sucesso');
+        Utils.toast('Copiado — clique com o botão direito em cima do horário de destino pra colar ali.', 'sucesso');
         _renderizarAgenda();
       };
       btn.onclick = copiar;
-      // Clique direito na linha inteira da tarefa também copia — mais fácil de acertar.
-      const linha = btn.closest('.agenda-tarefa');
-      if (linha) linha.oncontextmenu = (e) => { e.preventDefault(); copiar(); };
     });
     const btnColarAqui = document.getElementById('agenda-colar-aqui');
     if (btnColarAqui) btnColarAqui.onclick = async () => {

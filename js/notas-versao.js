@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.30.29',
+  versaoAtual: 'V3.19.30.30',
 
   versoes: [
     {
@@ -10387,6 +10387,16 @@ const NotasVersao = {
         "Bug real: toda vez que algo mudava na Agenda (fechar seletor, escolher tarefa, marcar concluído), a lista inteira voltava pro topo, perdendo o lugar onde a pessoa estava rolando. Corrigido: a posição de rolagem agora é preservada entre atualizações (só volta ao topo de propósito, ao trocar de dia).",
         "Clicar em cima do horário (\"14:00 a 14:30\") agora abre o seletor de tarefa, igual clicar no \"+\" — não precisa mais acertar o botãozinho pequeno na ponta.",
         "O ícone de copiar (⧉) não tinha suporte em todo navegador/fonte e aparecia como uma caixinha vazia, sem funcionar de fato — trocado por 📋, que renderiza em qualquer lugar. Também virou possível copiar com clique direito na linha inteira da tarefa (não só no ícone)."
+      ]
+    },
+    {
+      "versao": "V3.19.30.30",
+      "data": "2026-08-22",
+      "tipo": "correcao",
+      "titulo": "Agenda: clique direito em cima da tarefa/horário cola de verdade, em vez de abrir o menu do navegador",
+      "itens": [
+        "Milton reportou que ainda estava mostrando o menu padrão do navegador (Opera) ao clicar com o botão direito na tarefa ou no horário — o clique direito só tinha sido ligado no botão \"+\" e no rótulo do horário, mas não em cima de uma tarefa já alocada, que ficou sem handler nenhum.",
+        "Unificado num lugar só: clique direito em QUALQUER ponto da linha do horário (no rótulo do horário, na área vazia, ou em cima de uma tarefa já lá) cola a tarefa copiada ali — sem precisar acertar um botão pequeno específico."
       ]
     }
   ],
