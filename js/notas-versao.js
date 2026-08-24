@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.30.35',
+  versaoAtual: 'V3.19.30.36',
 
   versoes: [
     {
@@ -10451,6 +10451,16 @@ const NotasVersao = {
         "Mesmo mecanismo do gerador de Frentes/Grupos pra revisar antes: mostra um resumo (quantas tarefas em cada equipe sugerida) e pede confirmação antes de aplicar qualquer coisa.",
         "Só preenche quem está com Responsável em branco — nunca sobrescreve o que já foi definido manualmente. Uma obra como a RD06 Essence, que já tem o filtro de equipe rodando bem na mão, fica 100% intocada.",
         "Grupo herda a equipe automaticamente quando TODOS os filhos dele (folhas descendentes, calculado na hora) concordam na mesma equipe — mesma lógica do gerador de Frentes."
+      ]
+    },
+    {
+      "versao": "V3.19.30.36",
+      "data": "2026-08-22",
+      "tipo": "melhoria",
+      "titulo": "Medições: grupo com um só filho funde com a linha de edição (menos repetição visual)",
+      "itens": [
+        "Quando um grupo (em qualquer modo de visão, inclusive Categoria/Grupo) tem só UMA tarefa dentro e nada mais, mostrar a linha do grupo E a linha de edição da tarefa embaixo virava repetição — o nome da tarefa já é basicamente o que os agrupamentos acima disseram, só com mais palavras.",
+        "Agora esse caso funde numa linha só: usa o nome do GRUPO como título e já mostra direto os campos de edição (Início/Término/%) ali — preenche a mesma tarefa de sempre por trás, só não repete o nome dela por cima do que já foi dito."
       ]
     }
   ],
