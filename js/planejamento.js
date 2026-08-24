@@ -2972,6 +2972,7 @@ const Planejamento = (() => {
     const itens=[
       {rotulo:'Auto-vincular por Nome',grupo:'Ferramentas da Obra',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento._abrirAutoVincular()" title="Detecta o pavimento/apto pelo NOME da tarefa e vincula tudo de uma vez, com prévia pra revisar antes de aplicar">🔗 Auto-vincular por Nome</button>'},
       {rotulo:'Classificar Frentes automaticamente',grupo:'Ferramentas da Obra',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.autoClassificarFrentes()" title="Sugere a Frente de Serviço (Hidráulica, Elétrica...) pelo nome da tarefa. Só preenche quem está em branco — nunca sobrescreve o que já foi definido manualmente.">👷 Classificar Frentes automaticamente</button>'},
+      {rotulo:'Classificar Equipes automaticamente',grupo:'Ferramentas da Obra',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.autoClassificarEquipes()" title="Sugere o Responsável/Equipe (Pedreiros, Elétrica, Hidráulica, Gesso...) pelo nome da tarefa — dicionário bem mais abrangente que o de Frente. Só preenche quem está em branco — nunca sobrescreve o que já foi definido manualmente (ex: RD06 Essence continua intocada).">👷‍♂️ Classificar Equipes automaticamente</button>'},
       {rotulo:'Corrigir Níveis Soltos',grupo:'Correções & Recálculos',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento._corrigirNiveisSoltos()" title="Corrige tarefas com nível soltos (invisíveis no Editor de Estrutura)">🌳 Corrigir Níveis Soltos</button>'},
       {rotulo:'Corrigir Ordens',grupo:'Correções & Recálculos',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.corrigirOrdensDuplicadas()" title="Corrige tarefas com número de ordem duplicado">🔧 Corrigir Ordens</button>'},
       {rotulo:'Corrigir Predecessoras (por ID)',grupo:'Correções & Recálculos',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento._migrarPredecessorasParaId()" title="Converte predecessoras antigas (por número de linha) pro formato por ID — imune a reordenação. Roda sozinho ao carregar, use aqui só se quiser confirmar manualmente.">🔗 Corrigir Predecessoras (por ID)</button>'},
@@ -5172,6 +5173,65 @@ const Planejamento = (() => {
     finally{Utils.esconderLoading();}
   }
 
+  // ===================== AUTO-CLASSIFICAR EQUIPES =====================
+  // Mesmo mecanismo do "Auto-Classificar Frentes": varre as folhas, sugere
+  // a equipe pelo NOME da tarefa (Utils.classificarEquipe — dicionário bem
+  // mais abrangente que o de Frente, cobre praticamente toda especialidade
+  // de obra), e os grupos herdam a equipe quando TODOS os filhos concordam
+  // no mesmo valor. Só preenche quem está em branco (Responsável já
+  // preenchido manualmente, como na RD06 Essence, nunca é sobrescrito).
+  async function autoClassificarEquipes(){
+    if(!Permissions.pode('planejamento','editar')){Utils.toast('Sem permissão para editar.','erro');return;}
+    const sorted=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
+    const alvoLeaf=[];
+    const freqPorGrupo=new Map(); // id do grupo -> {EQUIPE:contagem} das folhas descendentes (qualquer nível)
+    const pilha=[];                // freq object de cada grupo aberto, indexado por nível
+    for(let i=0;i<sorted.length;i++){
+      const t=sorted[i],niv=t.nivel||0;
+      pilha.length=niv;
+      const nxt=sorted[i+1];
+      const isLeaf=!nxt||(nxt.nivel||0)<=niv;
+      if(!isLeaf){
+        const freq={};
+        freqPorGrupo.set(t.id,freq);
+        pilha[niv]=freq;
+        continue;
+      }
+      let efetiva=(t.responsavel||'').trim();
+      if(!efetiva){
+        const sug=Utils.classificarEquipe(t.nome);
+        if(sug){efetiva=sug;alvoLeaf.push({t,sugestao:sug});}
+      }
+      if(efetiva){for(const freq of pilha){if(freq)freq[efetiva]=(freq[efetiva]||0)+1;}}
+    }
+    const alvoGrupo=[];
+    for(const t of sorted){
+      if((t.responsavel||'').trim()||!freqPorGrupo.has(t.id))continue;
+      const chaves=Object.keys(freqPorGrupo.get(t.id));
+      if(chaves.length===1)alvoGrupo.push({t,sugestao:chaves[0]});
+    }
+    const alvo=[...alvoLeaf,...alvoGrupo];
+    if(!alvo.length){Utils.toast('Nenhuma tarefa nova pra classificar (todas já têm Responsável ou não deu pra identificar pelo nome).','alerta');return;}
+    const porEquipe={};
+    for(const {sugestao} of alvo)porEquipe[sugestao]=(porEquipe[sugestao]||0)+1;
+    const resumo=Object.entries(porEquipe).sort((a,b)=>b[1]-a[1]).map(([f,n])=>`${f}: ${n}`).join('\n');
+    if(!confirm(`Sugestão automática de EQUIPE pra ${alvo.length} tarefa(s) sem Responsável definido (${alvoLeaf.length} folha(s) pelo nome + ${alvoGrupo.length} grupo(s) que herdam dos filhos):\n\n${resumo}\n\nAplicar? (só preenche quem está em branco — Responsável já preenchido nunca é sobrescrito, ex: RD06 Essence continua intocada)`))return;
+    Utils.mostrarLoading('Classificando equipes...');
+    try{
+      _undoPush();
+      const LOTE=30;
+      for(let i=0;i<alvo.length;i+=LOTE){
+        await Promise.all(alvo.slice(i,i+LOTE).map(({t,sugestao})=>{
+          t.responsavel=sugestao;
+          return Database.atualizar(obraId,COL,t.id,{responsavel:sugestao}).catch(e=>console.error('Erro classificar equipe:',t.id,e));
+        }));
+      }
+      _buildFiltradas();_render();
+      Utils.toast(`✅ ${alvo.length} tarefa(s) classificada(s) (${alvoGrupo.length} grupo(s) herdaram dos filhos). Revise a coluna "Responsável" (ou o filtro "Ver por Responsável") e ajuste manualmente o que precisar.`,'sucesso');
+    }catch(e){console.error(e);Utils.toast('Erro ao classificar.','erro');}
+    finally{Utils.esconderLoading();}
+  }
+
   // ===================== EXPORTAR FRENTES (planilha lean pra revisão manual) =====================
   // Só 4 colunas — Código, Atividade, Pai e Frente — pensada pra mandar
   // pra fora do sistema, revisar/corrigir a Frente numa planilha simples
@@ -6829,7 +6889,7 @@ const Planejamento = (() => {
     _abrirVisaoOrg,_menuVisaoOrg,_visaoOrgFiltrarLista,_visaoOrgToggleBloco,_visaoOrgAplicar,_visaoOrgLimpar,toggleSetasPred,_setaClicada,undo,
     toggleCategoriaView,_catToggle,_subcatToggle,_catExpandirTudo,
     onBusca,limparBusca,_buscaKey,
-    importarExcel,importarBaseCompleta,importarCorrecoes,_executarCorrecoes,_mostrarRevisaoCorrecoes,exportar,exportarFrentes,exportarExcelBonito,exportarMSProject,abrirImpressao,baixarPDF,exportarPNG,corrigirOrdensDuplicadas,_corrigirNiveisSoltos,_corrigirNivelPeloCodigo,_migrarPredecessorasParaId,_recalcularDatasPais,_recalcularPercTodosPais,_orfasMarcarTodas,_orfasExcluirMarcadas,_gerarPNG,_predPopup,_predSalvar,_predCellClick,_predTouchStart,_predTouchCancel,_predTouchEnd,_predAddLinha,_predLinhaAtualizar,autoClassificarFrentes,
+    importarExcel,importarBaseCompleta,importarCorrecoes,_executarCorrecoes,_mostrarRevisaoCorrecoes,exportar,exportarFrentes,exportarExcelBonito,exportarMSProject,abrirImpressao,baixarPDF,exportarPNG,corrigirOrdensDuplicadas,_corrigirNiveisSoltos,_corrigirNivelPeloCodigo,_migrarPredecessorasParaId,_recalcularDatasPais,_recalcularPercTodosPais,_orfasMarcarTodas,_orfasExcluirMarcadas,_gerarPNG,_predPopup,_predSalvar,_predCellClick,_predTouchStart,_predTouchCancel,_predTouchEnd,_predAddLinha,_predLinhaAtualizar,autoClassificarFrentes,autoClassificarEquipes,
     abrirVinculosView,fecharVinculosView,abrirVincularTarefa,abrirVincularAqui,onVincTipoChange,
     onVincNavModulo,onVincNavModuloMetrica,onVincNavMetrica,onVincNavEntrar,onVincNavBreadcrumb,onVincNavVoltar,
     onBuscaEscolhaAlvoVinc,onEscolherAlvoVinc,onTrocarAlvoVinc,

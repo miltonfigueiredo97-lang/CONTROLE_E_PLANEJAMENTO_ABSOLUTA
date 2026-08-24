@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.30.34',
+  versaoAtual: 'V3.19.30.35',
 
   versoes: [
     {
@@ -10439,6 +10439,18 @@ const NotasVersao = {
         "Novo seletor \"👁\" na barra de cima da Medição — reorganiza as MESMAS tarefas (já filtradas por Frente/busca/Ocultar 100%) de formas diferentes, sem alterar nada no Planejamento: Estrutura do Planejamento (como já era), Categoria/Subcategoria, Grupo/Subgrupo, Grupo/Subgrupo→Categoria e Categoria/Subcategoria→Grupo.",
         "Usa os campos Categoria, Subcategoria, Grupo e Subgrupo que já existem no Planejamento (preenchidos por lá — Importar Correções, Agrupador de Categoria, etc.). Tarefa sem valor em algum desses campos cai num grupo \"Sem Categoria\"/\"Sem Grupo\" — não some, só fica separada.",
         "Todos os modos respeitam o filtro de Frente igual — o pedido era exatamente esse, poder olhar a mesma coisa de ângulos diferentes sem perder o filtro de equipe."
+      ]
+    },
+    {
+      "versao": "V3.19.30.35",
+      "data": "2026-08-22",
+      "tipo": "funcionalidade",
+      "titulo": "Novo: Classificar Equipes automaticamente — igual o gerador de Frentes, mas pro Responsável/Equipe, com dicionário bem mais completo",
+      "itens": [
+        "⚙ Ferramentas → \"👷‍♂️ Classificar Equipes automaticamente\": sugere o Responsável pelo NOME da tarefa (Estrutura, Pedreiros, Elétrica, Hidráulica, Gesso/Drywall, Pintura, Azulejistas, Impermeabilização, Ar Condicionado, Fundação/Estacas, Solo Grampeado, Terraplanagem, Marcenaria, Esquadrias, Vidraçaria, Louças e Metais, Paisagismo, Engenharia, Entrega, e mais) — Utils.classificarEquipe, um dicionário de palavras-chave bem mais abrangente que o de Frente de Serviço.",
+        "Mesmo mecanismo do gerador de Frentes/Grupos pra revisar antes: mostra um resumo (quantas tarefas em cada equipe sugerida) e pede confirmação antes de aplicar qualquer coisa.",
+        "Só preenche quem está com Responsável em branco — nunca sobrescreve o que já foi definido manualmente. Uma obra como a RD06 Essence, que já tem o filtro de equipe rodando bem na mão, fica 100% intocada.",
+        "Grupo herda a equipe automaticamente quando TODOS os filhos dele (folhas descendentes, calculado na hora) concordam na mesma equipe — mesma lógica do gerador de Frentes."
       ]
     }
   ],

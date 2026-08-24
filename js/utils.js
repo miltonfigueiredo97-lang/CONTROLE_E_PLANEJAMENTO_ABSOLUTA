@@ -37,7 +37,58 @@ const Utils = (() => {
     return '';
   }
 
-  // ---- Toast ----
+  // Classificador de EQUIPE pelo nome da tarefa — mais abrangente que
+  // classificarFrente (cobre praticamente toda especialidade de obra
+  // vertical/horizontal comum). Testado em ordem: a primeira regra que
+  // bater vence, então padrões mais específicos vêm ANTES dos genéricos
+  // (ex: "alvenaria estrutural" antes de "alvenaria" simples).
+  function classificarEquipe(nome){
+    const n=(nome||'').toLowerCase();
+    const testes=[
+      // Terraplenagem / fundação / geotecnia (antes de "concreto" genérico)
+      [/terraplan|escavaç|escavac|movimento de terra|aterro|corte e aterro/,'TERRAPLANAGEM'],
+      [/solo grampeado|grampo|tirante|contenç|contenc|cortina atirantada/,'SOLO GRAMPEADO'],
+      [/estaca|cravaç|cravac|arrasamento|hélice|helice contínua|helice continua|tubulão|tubulao|broca/,'FUNDAÇÃO / ESTACAS'],
+      [/topografia|locação|locacao|\bgabarito\b|nível de referência|nivel de referencia/,'TOPOGRAFIA'],
+      // Estrutura / concreto
+      [/alvenaria estrutural|bloco estrutural/,'ALVENARIA ESTRUTURAL'],
+      [/impermeabiliz|manta asfáltica|manta asfaltica/,'IMPERMEABILIZAÇÃO'],
+      [/concreto|concretagem|\bforma(s)?\b|desforma|armaç|armac|armadura|\blaje\b|\bpilar(es)?\b|\bviga(s)?\b|\bsapata(s)?\b|baldrame|escoramento/,'ESTRUTURA'],
+      [/solda|serralheria|estrutura metálica|estrutura metalica|caixilho metálico|caixilho metalico/,'SERRALHERIA'],
+      // Alvenaria / acabamento grosso
+      [/alvenaria de veda|vedaç|vedac|contramarco|reboco|chapisco|emboço|emboco|regulariza|assentamento de bloco|contrapiso/,'PEDREIROS'],
+      // Instalações
+      [/hidráulic|hidraulic|\bágua\b|\bagua\b|esgoto|\bgás\b|\bgas\b(?!eiro)|hidrante|sprinkler|prumada|reservatório|reservatorio|caixa d.água|caixa dagua/,'HIDRÁULICA'],
+      [/elétric|eletric|quadro elétrico|quadro eletrico|enfiação|enfiacao|cabeamento|tomada|iluminaç|iluminac|subestação|subestacao|gerador de energia|para-raio/,'ELÉTRICA'],
+      [/ar[- ]condicionado|climatiz|dutos de ar|\bvrf\b|\bsplit\b|fancoil|fan-coil/,'AR CONDICIONADO'],
+      [/incêndio|incendio|alarme de fumaça|alarme de fumaca|detector de fumaça|detector de fumaca|hidrante|mangotinho/,'PREVENÇÃO A INCÊNDIO'],
+      [/elevador|monta[- ]?carga|plataforma elevatória|plataforma elevatoria/,'ELEVADOR'],
+      [/automação|automacao|cftv|interfone|cerca elétrica|cerca eletrica|controle de acesso/,'AUTOMAÇÃO / CFTV'],
+      // Acabamento fino
+      [/\bgesso\b|drywall|forro de gesso|sanca/,'GESSO / DRYWALL'],
+      [/forro de pvc|forro modular|forro mineral/,'FORRO'],
+      [/pintura|\bpintar\b|textura|\bverniz\b|\bprimer\b|massa corrida|selador/,'PINTURA'],
+      [/porcelanato|piso cerâmico|piso ceramico|azulejo|revestimento cerâmico|revestimento ceramico|rejunte(?!.*imperm)/,'AZULEJISTAS'],
+      [/granito|mármore|marmore|marmoraria|bancada de pedra|soleira/,'MARMORARIA'],
+      [/piso de madeira|deck|assoalho|piso laminado/,'CARPINTARIA — PISOS'],
+      [/marcenaria|móveis planejados|moveis planejados|armário embutido|armario embutido/,'MARCENARIA'],
+      [/esquadria|porta de madeira|porta de alumínio|porta de aluminio|janela de alumínio|janela de aluminio|batente/,'ESQUADRIAS'],
+      [/vidro|vidraçaria|vidracaria|guarda[- ]?corpo de vidro|box de vidro/,'VIDRAÇARIA'],
+      [/louça|louca|metais sanitários|metais sanitarios|bacia sanitária|bacia sanitaria|acessório de banheiro|acessorio de banheiro/,'LOUÇAS E METAIS'],
+      [/paisagismo|jardim|grama|irrigação|irrigacao|plantio/,'PAISAGISMO'],
+      [/piscina/,'PISCINA'],
+      [/limpeza (final|pós[- ]?obra|pos[- ]?obra)|faxina/,'LIMPEZA'],
+      [/andaime|balancim|acesso e proteção|acesso e protecao/,'ANDAIME / ACESSO'],
+      [/grua|guincho de carga/,'GRUA / GUINCHO'],
+      // Serviços não-braçais (não são "equipe de campo", mas aparecem no cronograma)
+      [/revisão|revisao|checklist|check-list|vistoria|compatibiliz|projeto executivo|aprovação|aprovacao|memorial|as[- ]?built/,'ENGENHARIA'],
+      [/entrega|habite-se|habite se|vistoria final|entrega de chaves/,'ENTREGA'],
+    ];
+    for(const [re,label] of testes){if(re.test(n))return label;}
+    return '';
+  }
+
+
   function toast(msg, tipo='info', dur=3500) {
     let box = document.querySelector('.toast-container');
     if (!box) { box=document.createElement('div'); box.className='toast-container'; document.body.appendChild(box); }
@@ -436,7 +487,7 @@ const Utils = (() => {
     mostrarLoading, esconderLoading, $, $$, limparForm, getFormData, setFormData, debounce,
     initPagina, opcoesTarefaHierarquia, calcularFachadaM2,
     percFamilia, recalcularPercAncestrais, distribuirPercDescendentes, calcularKitAr, formatarDiametroAr,
-    FRENTES_SERVICO, corFrente, classificarFrente,
+    FRENTES_SERVICO, corFrente, classificarFrente, classificarEquipe,
   };
 })();
 
