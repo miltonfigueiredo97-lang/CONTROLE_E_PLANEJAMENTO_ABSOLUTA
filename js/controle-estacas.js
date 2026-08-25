@@ -573,7 +573,10 @@ const ControleEstacas = (() => {
       <div class="cc-panel">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
           <div class="cc-panelTitle" style="margin:0;">📅 Concretagens planejadas</div>
-          <button class="btn btn-secundario btn-sm" onclick="CE.toggleNovaConcPlan()">${novaConcPlanAberta ? '✕ Cancelar' : '+ Nova concretagem'}</button>
+          <div style="display:flex;gap:8px;">
+            <button class="btn btn-secundario btn-sm" title="Corrige lançamentos que ficaram presos numa concretagem diferente da atual (ex: depois de reatribuir uma peça)" onclick="CE.corrigirLancamentosDesalinhados()">🔧 Corrigir desalinhados</button>
+            <button class="btn btn-secundario btn-sm" onclick="CE.toggleNovaConcPlan()">${novaConcPlanAberta ? '✕ Cancelar' : '+ Nova concretagem'}</button>
+          </div>
         </div>
         <div id="ce-plan-cards-body"></div>
       </div>` }
@@ -818,6 +821,37 @@ const ControleEstacas = (() => {
     const data = document.getElementById('ce-atribuir-data')?.value || new Date().toISOString().slice(0, 10);
     atribuirConcretagemNumero(numero, data);
   }
+  // Corrige em massa lançamentos "presos" numa concretagem diferente da que
+  // o planejamento (pecaConc) diz hoje — cobre peças que já ficaram
+  // desalinhadas ANTES do fix de reatribuição (V3.19.30.49), sem precisar
+  // reatribuir peça por peça na mão.
+  async function corrigirLancamentosDesalinhados() {
+    if (!Permissions.pode('controleEstacas', 'editar:concretagem')) { Utils.toast('Sem permissão.', 'erro'); return; }
+    const desalinhados = [];
+    pecaConc.forEach(pc => {
+      lancamentos.filter(l => l.pecaId === pc.pecaId && l.concretagemId !== pc.concretagemId).forEach(l => {
+        desalinhados.push({ lancamento: l, concretagemCerta: pc.concretagemId, pecaId: pc.pecaId });
+      });
+    });
+    if (!desalinhados.length) { Utils.toast('✓ Nenhum lançamento desalinhado — tudo certo.', 'sucesso'); return; }
+    const nomesPecas = [...new Set(desalinhados.map(d => pecas.find(p => p.id === d.pecaId)?.nome).filter(Boolean))];
+    const ok = await Utils.confirmar(`Encontrado(s) ${desalinhados.length} lançamento(s) apontando pra uma concretagem diferente do planejamento atual (peça${nomesPecas.length > 1 ? 's' : ''}: ${nomesPecas.slice(0, 6).join(', ')}${nomesPecas.length > 6 ? '...' : ''}). Corrigir agora, movendo cada lançamento pra concretagem do planejamento atual dele?`);
+    if (!ok) return;
+    Utils.mostrarLoading();
+    try {
+      const ops = desalinhados.map(d => ({ type: 'update', ref: Database.ref(obraId, COL_LANS).doc(d.lancamento.id), data: { concretagemId: d.concretagemCerta } }));
+      await Database.batchWrite(ops);
+      await carregar();
+      await EstacasCalculos.sincronizarVinculosPlanejamento(obraId).catch(e => console.error('Sync Planejamento:', e));
+      _renderCardsConcretagem();
+      Utils.toast(`✓ ${desalinhados.length} lançamento(s) corrigido(s)!`, 'sucesso');
+    } catch (e) {
+      Utils.toast('Erro ao corrigir: ' + e.message, 'erro');
+    } finally {
+      Utils.esconderLoading();
+    }
+  }
+
   async function atribuirConcretagemNumero(numero, dataNova) {
     if (!Permissions.pode('controleEstacas', 'editar:concretagem') && !Permissions.pode('controleEstacas', 'criar:concretagem')) { Utils.toast('Sem permissão.', 'erro'); return; }
     const m = marcadores.find(x => x.id === atribuirMarcadorId);
@@ -2873,7 +2907,7 @@ const ControleEstacas = (() => {
     abrirVincular, salvarVinculo, excluirMarcador,
     onFocoBuscaPeca, fecharListaPecaBusca, onBuscaPeca, selecionarPecaBusca,
     abrirPranchas, novaPrancha, renomearPrancha, excluirPrancha, abrirUploadImagem, onImagemArquivo,
-    atribuirConcretagemNumero, atribuirConcretagemNumeroInput, removerDaConcretagem, onTrocarAcompConcretagem,
+    atribuirConcretagemNumero, atribuirConcretagemNumeroInput, removerDaConcretagem, onTrocarAcompConcretagem, corrigirLancamentosDesalinhados,
     toggleNovaConcPlan, criarConcretagemPlan, focarConcretagemPlan, toggleEditarConc, salvarEdicaoConc,
     abrirNovaBT, fecharPainelBT, criarBTEstacas, abrirEditarMetaBT, salvarMetaBT, excluirBTEstacas,
     abrirModalBTs, abrirEstacaModal, btAddLinhaPeca, btRemLinhaPeca, btUpdLinhaPeca, salvarEstacaAcomp, toggleMostrarBTsCompletas,

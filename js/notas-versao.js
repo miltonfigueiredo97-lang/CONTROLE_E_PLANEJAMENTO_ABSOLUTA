@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.30.49',
+  versaoAtual: 'V3.19.30.50',
 
   versoes: [
     {
@@ -10598,6 +10598,17 @@ const NotasVersao = {
         "Causa: reatribuir uma peça pra outra concretagem (pelo popup \\\"Atribuir à Concretagem\\\" ou pelo clique rápido com concretagem em foco) só trocava o PLANEJAMENTO — os lançamentos (execução) já feitos pra aquela peça ficavam esquecidos, ainda apontando pra concretagem de origem.",
         "Corrigido nos 2 fluxos: reatribuir agora move os lançamentos existentes junto, pra concretagem nova — planejamento e execução ficam sempre alinhados.",
         "\\\"Remover desta concretagem\\\" agora avisa se a peça já tem lançamento registrado antes de remover — o lançamento continua salvo, mas fica sem concretagem vinculada."
+      ]
+    },
+    {
+      "versao": "V3.19.30.50",
+      "data": "2026-08-24",
+      "tipo": "melhoria",
+      "titulo": "Controle de Estacas: botão \"🔧 Corrigir desalinhados\" — conserta em massa dados que já ficaram errados antes do fix",
+      "itens": [
+        "O fix anterior (V3.19.30.49) só vale pra reatribuições NOVAS, dali pra frente — peças que já tinham ficado com o lançamento preso na concretagem antiga continuam erradas até alguém corrigir.",
+        "Novo botão \\\"🔧 Corrigir desalinhados\\\" no painel de Concretagens planejadas: varre TODAS as peças, compara o planejamento atual de cada uma com os lançamentos dela, e corrige em lote quem estiver apontando pra concretagem diferente — sem precisar reatribuir peça por peça na mão.",
+        "Mostra quais peças serão corrigidas antes de confirmar, e avisa se não encontrar nenhuma desalinhada."
       ]
     }
   ],
