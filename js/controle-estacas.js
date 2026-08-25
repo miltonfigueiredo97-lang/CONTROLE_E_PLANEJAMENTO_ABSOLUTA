@@ -831,47 +831,88 @@ const ControleEstacas = (() => {
   // o planejamento (pecaConc) diz hoje — cobre peças que já ficaram
   // desalinhadas ANTES do fix de reatribuição (V3.19.30.49), sem precisar
   // reatribuir peça por peça na mão.
+  let _planoCorrecao = null; // guarda o diagnóstico calculado, pra "aplicar" usar exatamente o que foi mostrado
+
+  function _rotuloConc(concId) {
+    const c = concretagens.find(x => x.id === concId);
+    if (!c) return 'sem concretagem';
+    return `Nº ${c.numero}${c.data ? ' — ' + _dataBR(c.data) : ' — sem data'}`;
+  }
+
   async function corrigirLancamentosDesalinhados() {
     if (!Permissions.pode('controleEstacas', 'editar:concretagem')) { Utils.toast('Sem permissão.', 'erro'); return; }
+    // 1) Peça com MAIS DE UM planejamento (pecaConc) ao mesmo tempo — provável
+    // causa real de aparecer em 2 dias no relatório (clique duplo/corrida
+    // numa reatribuição antiga). A concretagem "certa" escolhida é a de MAIOR
+    // número (a atribuição mais recente) — mostrado explicitamente abaixo,
+    // pra conferir antes de aplicar, não é uma caixa preta.
+    const porPeca = new Map();
+    pecaConc.forEach(pc => { if (!porPeca.has(pc.pecaId)) porPeca.set(pc.pecaId, []); porPeca.get(pc.pecaId).push(pc); });
+    const duplicados = []; // {pecaId, pecaNome, manter:{id,concretagemId}, remover:[{id,concretagemId}]}
+    const concertoFinal = new Map(); // pecaId -> concretagemId definitiva
+    porPeca.forEach((linhas, pecaId) => {
+      if (linhas.length <= 1) { concertoFinal.set(pecaId, linhas[0]?.concretagemId); return; }
+      const comConc = linhas.map(l => ({ pc: l, num: concretagens.find(c => c.id === l.concretagemId)?.numero || 0 }));
+      comConc.sort((a, b) => b.num - a.num);
+      const manter = comConc[0].pc;
+      duplicados.push({ pecaId, pecaNome: pecas.find(p => p.id === pecaId)?.nome || pecaId, manter, remover: comConc.slice(1).map(x => x.pc) });
+      concertoFinal.set(pecaId, manter.concretagemId);
+    });
+
+    // 2) Lançamentos apontando pra concretagem diferente do planejamento
+    // definitivo (já considerando a limpeza de duplicados acima).
+    const desalinhados = []; // {lancamento, pecaNome, de, para}
+    lancamentos.forEach(l => {
+      const certa = concertoFinal.get(l.pecaId);
+      if (certa && l.concretagemId !== certa) desalinhados.push({ lancamento: l, pecaNome: pecas.find(p => p.id === l.pecaId)?.nome || l.pecaId, de: l.concretagemId, para: certa });
+    });
+
+    if (!duplicados.length && !desalinhados.length) { Utils.toast('✓ Nada desalinhado — tudo certo.', 'sucesso'); return; }
+
+    _planoCorrecao = { duplicados, desalinhados };
+    const el = document.getElementById('ce-corrigir-body');
+    if (el) {
+      el.innerHTML = `
+        <div class="text-sm text-muted" style="margin-bottom:12px;">Confira o "de → para" de cada item antes de aplicar. Nada é alterado até você clicar em "Aplicar correção".</div>
+        ${duplicados.length ? `
+          <div style="font-weight:700;margin-bottom:6px;">📋 Planejamento duplicado (${duplicados.length} peça${duplicados.length !== 1 ? 's' : ''})</div>
+          <div style="margin-bottom:16px;">
+            ${duplicados.map(d => `
+              <div style="border:1px solid var(--cv-border,#e2e8f0);border-radius:8px;padding:8px 12px;margin-bottom:6px;">
+                <div style="font-weight:700;">${esc(d.pecaNome)}</div>
+                <div class="text-sm" style="color:#15803d;">✓ Mantém: ${_rotuloConc(d.manter.concretagemId)}</div>
+                ${d.remover.map(r => `<div class="text-sm" style="color:var(--cv-red,#ef4444);">✕ Remove duplicata: ${_rotuloConc(r.concretagemId)}</div>`).join('')}
+              </div>`).join('')}
+          </div>` : ''}
+        ${desalinhados.length ? `
+          <div style="font-weight:700;margin-bottom:6px;">🚚 Lançamentos fora do lugar (${desalinhados.length})</div>
+          <div>
+            ${desalinhados.map(d => `
+              <div style="border:1px solid var(--cv-border,#e2e8f0);border-radius:8px;padding:8px 12px;margin-bottom:6px;">
+                <div style="font-weight:700;">${esc(d.pecaNome)}</div>
+                <div class="text-sm">De: <span style="color:var(--cv-red,#ef4444);">${_rotuloConc(d.de)}</span> → Para: <span style="color:#15803d;font-weight:700;">${_rotuloConc(d.para)}</span></div>
+              </div>`).join('')}
+          </div>` : ''}
+      `;
+    }
+    Utils.abrirModal('modal-ce-corrigir');
+  }
+
+  async function aplicarCorrecaoDesalinhados() {
+    if (!_planoCorrecao) return;
+    const { duplicados, desalinhados } = _planoCorrecao;
     Utils.mostrarLoading();
     try {
-      // 1) Peça com MAIS DE UM planejamento (pecaConc) ao mesmo tempo —
-      // provável causa real de aparecer em 2 dias no relatório (bug de
-      // clique duplo/corrida numa reatribuição antiga). Mantém a concretagem
-      // de MAIOR número (a atribuição mais recente) e apaga as outras.
-      const porPeca = new Map();
-      pecaConc.forEach(pc => { if (!porPeca.has(pc.pecaId)) porPeca.set(pc.pecaId, []); porPeca.get(pc.pecaId).push(pc); });
-      const opsDuplicadas = [];
-      const concertoFinal = new Map(); // pecaId -> concretagemId definitiva
-      porPeca.forEach((linhas, pecaId) => {
-        if (linhas.length <= 1) { concertoFinal.set(pecaId, linhas[0]?.concretagemId); return; }
-        const comConc = linhas.map(l => ({ pc: l, num: concretagens.find(c => c.id === l.concretagemId)?.numero || 0 }));
-        comConc.sort((a, b) => b.num - a.num);
-        const manter = comConc[0].pc;
-        comConc.slice(1).forEach(({ pc }) => opsDuplicadas.push({ type: 'delete', ref: Database.ref(obraId, COL_PC).doc(pc.id) }));
-        concertoFinal.set(pecaId, manter.concretagemId);
-      });
-
-      // 2) Lançamentos apontando pra concretagem diferente do planejamento
-      // definitivo (já considerando a limpeza acima).
-      const opsLancamentos = [];
-      lancamentos.forEach(l => {
-        const certa = concertoFinal.get(l.pecaId);
-        if (certa && l.concretagemId !== certa) opsLancamentos.push({ type: 'update', ref: Database.ref(obraId, COL_LANS).doc(l.id), data: { concretagemId: certa } });
-      });
-
-      const totalOps = opsDuplicadas.length + opsLancamentos.length;
-      if (!totalOps) { Utils.toast('✓ Nada desalinhado — tudo certo.', 'sucesso'); return; }
-      const pecasAfetadas = [...new Set([...porPeca.entries()].filter(([, l]) => l.length > 1).map(([id]) => pecas.find(p => p.id === id)?.nome).filter(Boolean))];
-      const msg = `Encontrado: ${opsDuplicadas.length ? `${[...porPeca.values()].filter(l => l.length > 1).length} peça(s) com planejamento duplicado (${pecasAfetadas.slice(0, 5).join(', ')}${pecasAfetadas.length > 5 ? '...' : ''}), ` : ''}${opsLancamentos.length} lançamento(s) fora do lugar. Corrigir tudo agora?`;
-      const ok = await Utils.confirmar(msg);
-      if (!ok) return;
+      const opsDuplicadas = duplicados.flatMap(d => d.remover.map(r => ({ type: 'delete', ref: Database.ref(obraId, COL_PC).doc(r.id) })));
+      const opsLancamentos = desalinhados.map(d => ({ type: 'update', ref: Database.ref(obraId, COL_LANS).doc(d.lancamento.id), data: { concretagemId: d.para } }));
       // batchWrite tem limite por lote — quebra em pedaços de 400 se precisar.
       const todasOps = [...opsDuplicadas, ...opsLancamentos];
       for (let i = 0; i < todasOps.length; i += 400) await Database.batchWrite(todasOps.slice(i, i + 400));
       await carregar();
       await EstacasCalculos.sincronizarVinculosPlanejamento(obraId).catch(e => console.error('Sync Planejamento:', e));
       _renderCardsConcretagem();
+      Utils.fecharModal('modal-ce-corrigir');
+      _planoCorrecao = null;
       Utils.toast(`✓ Corrigido! ${opsDuplicadas.length ? opsDuplicadas.length + ' planejamento(s) duplicado(s) removido(s), ' : ''}${opsLancamentos.length} lançamento(s) realinhado(s).`, 'sucesso');
     } catch (e) {
       Utils.toast('Erro ao corrigir: ' + e.message, 'erro');
@@ -2940,7 +2981,7 @@ const ControleEstacas = (() => {
     abrirVincular, salvarVinculo, excluirMarcador,
     onFocoBuscaPeca, fecharListaPecaBusca, onBuscaPeca, selecionarPecaBusca,
     abrirPranchas, novaPrancha, renomearPrancha, excluirPrancha, abrirUploadImagem, onImagemArquivo,
-    atribuirConcretagemNumero, atribuirConcretagemNumeroInput, removerDaConcretagem, onTrocarAcompConcretagem, corrigirLancamentosDesalinhados,
+    atribuirConcretagemNumero, atribuirConcretagemNumeroInput, removerDaConcretagem, onTrocarAcompConcretagem, corrigirLancamentosDesalinhados, aplicarCorrecaoDesalinhados,
     toggleNovaConcPlan, criarConcretagemPlan, focarConcretagemPlan, toggleEditarConc, salvarEdicaoConc,
     abrirNovaBT, fecharPainelBT, criarBTEstacas, abrirEditarMetaBT, salvarMetaBT, excluirBTEstacas,
     abrirModalBTs, abrirEstacaModal, btAddLinhaPeca, btRemLinhaPeca, btUpdLinhaPeca, salvarEstacaAcomp, toggleMostrarBTsCompletas,

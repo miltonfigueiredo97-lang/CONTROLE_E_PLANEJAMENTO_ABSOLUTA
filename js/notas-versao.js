@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.30.51',
+  versaoAtual: 'V3.19.30.52',
 
   versoes: [
     {
@@ -10620,6 +10620,16 @@ const NotasVersao = {
         "Causa real de aparecer em 2 dias no relatório: a peça tinha DOIS registros de planejamento ao mesmo tempo (provavelmente clique duplo numa reatribuição antiga criou 2 em vez de trocar 1) — um preso na concretagem antiga, outro na nova. O \\\"Corrigir desalinhados\\\" anterior só olhava lançamento vs. planejamento, não pegava planejamento duplicado.",
         "\\\"🔧 Corrigir desalinhados\\\" agora faz 2 passadas: primeiro detecta peça com mais de 1 planejamento e mantém só o de concretagem mais recente (número mais alto), apagando o(s) duplicado(s); depois corrige os lançamentos pra bater com o planejamento que sobrou.",
         "Prevenção: reatribuir concretagem (pelo popup ou pelo clique rápido) agora trava contra clique duplo/corrida — não deixa criar planejamento duplicado de novo."
+      ]
+    },
+    {
+      "versao": "V3.19.30.52",
+      "data": "2026-08-24",
+      "tipo": "melhoria",
+      "titulo": "Controle de Estacas: \"Corrigir desalinhados\" agora mostra o \"de → para\" antes de aplicar",
+      "itens": [
+        "Antes: o botão só avisava quantos itens tinha errado e pedia confirmação sem mostrar detalhe — não dava pra saber qual concretagem seria escolhida como \\\"certa\\\" pra cada peça.",
+        "Agora abre um popup listando peça por peça: pra planejamento duplicado, mostra qual concretagem fica (número + data) e qual é removida; pra lançamento fora do lugar, mostra \\\"De: Nº X → Para: Nº Y\\\" claramente. Nada é alterado até clicar em \\\"Aplicar correção\\\"."
       ]
     }
   ],
