@@ -705,8 +705,12 @@ const ControleEstacas = (() => {
   // vinculada no desenho atribui/desatribui direto, sem abrir popup — feito
   // com atualização local (sem recarregar tudo) pra não perder scroll/zoom
   // no meio de uma sequência de cliques.
+  const _pecasEmProcessamento = new Set(); // trava por peça — evita clique duplo/corrida na MESMA peça
+
   async function _atribuirRapidoFoco(m) {
     if (!Permissions.pode('controleEstacas', 'editar:concretagem') && !Permissions.pode('controleEstacas', 'criar:concretagem')) { Utils.toast('Sem permissão.', 'erro'); return; }
+    if (_pecasEmProcessamento.has(m.pecaId)) return; // já processando essa mesma peça — ignora repetição
+    _pecasEmProcessamento.add(m.pecaId);
     const concId = planFocoConcretagemId;
     const existente = pecaConc.find(pc => pc.pecaId === m.pecaId);
     try {
@@ -733,6 +737,8 @@ const ControleEstacas = (() => {
       _renderCardsConcretagem(); // números dos cards (qtd/volume/diâmetro) atualizados
     } catch (e) {
       Utils.toast('Erro: ' + e.message, 'erro');
+    } finally {
+      _pecasEmProcessamento.delete(m.pecaId);
     }
   }
 
@@ -827,24 +833,46 @@ const ControleEstacas = (() => {
   // reatribuir peça por peça na mão.
   async function corrigirLancamentosDesalinhados() {
     if (!Permissions.pode('controleEstacas', 'editar:concretagem')) { Utils.toast('Sem permissão.', 'erro'); return; }
-    const desalinhados = [];
-    pecaConc.forEach(pc => {
-      lancamentos.filter(l => l.pecaId === pc.pecaId && l.concretagemId !== pc.concretagemId).forEach(l => {
-        desalinhados.push({ lancamento: l, concretagemCerta: pc.concretagemId, pecaId: pc.pecaId });
-      });
-    });
-    if (!desalinhados.length) { Utils.toast('✓ Nenhum lançamento desalinhado — tudo certo.', 'sucesso'); return; }
-    const nomesPecas = [...new Set(desalinhados.map(d => pecas.find(p => p.id === d.pecaId)?.nome).filter(Boolean))];
-    const ok = await Utils.confirmar(`Encontrado(s) ${desalinhados.length} lançamento(s) apontando pra uma concretagem diferente do planejamento atual (peça${nomesPecas.length > 1 ? 's' : ''}: ${nomesPecas.slice(0, 6).join(', ')}${nomesPecas.length > 6 ? '...' : ''}). Corrigir agora, movendo cada lançamento pra concretagem do planejamento atual dele?`);
-    if (!ok) return;
     Utils.mostrarLoading();
     try {
-      const ops = desalinhados.map(d => ({ type: 'update', ref: Database.ref(obraId, COL_LANS).doc(d.lancamento.id), data: { concretagemId: d.concretagemCerta } }));
-      await Database.batchWrite(ops);
+      // 1) Peça com MAIS DE UM planejamento (pecaConc) ao mesmo tempo —
+      // provável causa real de aparecer em 2 dias no relatório (bug de
+      // clique duplo/corrida numa reatribuição antiga). Mantém a concretagem
+      // de MAIOR número (a atribuição mais recente) e apaga as outras.
+      const porPeca = new Map();
+      pecaConc.forEach(pc => { if (!porPeca.has(pc.pecaId)) porPeca.set(pc.pecaId, []); porPeca.get(pc.pecaId).push(pc); });
+      const opsDuplicadas = [];
+      const concertoFinal = new Map(); // pecaId -> concretagemId definitiva
+      porPeca.forEach((linhas, pecaId) => {
+        if (linhas.length <= 1) { concertoFinal.set(pecaId, linhas[0]?.concretagemId); return; }
+        const comConc = linhas.map(l => ({ pc: l, num: concretagens.find(c => c.id === l.concretagemId)?.numero || 0 }));
+        comConc.sort((a, b) => b.num - a.num);
+        const manter = comConc[0].pc;
+        comConc.slice(1).forEach(({ pc }) => opsDuplicadas.push({ type: 'delete', ref: Database.ref(obraId, COL_PC).doc(pc.id) }));
+        concertoFinal.set(pecaId, manter.concretagemId);
+      });
+
+      // 2) Lançamentos apontando pra concretagem diferente do planejamento
+      // definitivo (já considerando a limpeza acima).
+      const opsLancamentos = [];
+      lancamentos.forEach(l => {
+        const certa = concertoFinal.get(l.pecaId);
+        if (certa && l.concretagemId !== certa) opsLancamentos.push({ type: 'update', ref: Database.ref(obraId, COL_LANS).doc(l.id), data: { concretagemId: certa } });
+      });
+
+      const totalOps = opsDuplicadas.length + opsLancamentos.length;
+      if (!totalOps) { Utils.toast('✓ Nada desalinhado — tudo certo.', 'sucesso'); return; }
+      const pecasAfetadas = [...new Set([...porPeca.entries()].filter(([, l]) => l.length > 1).map(([id]) => pecas.find(p => p.id === id)?.nome).filter(Boolean))];
+      const msg = `Encontrado: ${opsDuplicadas.length ? `${[...porPeca.values()].filter(l => l.length > 1).length} peça(s) com planejamento duplicado (${pecasAfetadas.slice(0, 5).join(', ')}${pecasAfetadas.length > 5 ? '...' : ''}), ` : ''}${opsLancamentos.length} lançamento(s) fora do lugar. Corrigir tudo agora?`;
+      const ok = await Utils.confirmar(msg);
+      if (!ok) return;
+      // batchWrite tem limite por lote — quebra em pedaços de 400 se precisar.
+      const todasOps = [...opsDuplicadas, ...opsLancamentos];
+      for (let i = 0; i < todasOps.length; i += 400) await Database.batchWrite(todasOps.slice(i, i + 400));
       await carregar();
       await EstacasCalculos.sincronizarVinculosPlanejamento(obraId).catch(e => console.error('Sync Planejamento:', e));
       _renderCardsConcretagem();
-      Utils.toast(`✓ ${desalinhados.length} lançamento(s) corrigido(s)!`, 'sucesso');
+      Utils.toast(`✓ Corrigido! ${opsDuplicadas.length ? opsDuplicadas.length + ' planejamento(s) duplicado(s) removido(s), ' : ''}${opsLancamentos.length} lançamento(s) realinhado(s).`, 'sucesso');
     } catch (e) {
       Utils.toast('Erro ao corrigir: ' + e.message, 'erro');
     } finally {
@@ -852,10 +880,14 @@ const ControleEstacas = (() => {
     }
   }
 
+  let _atribuindoConcretagem = false; // trava clique duplo/corrida — era a provável causa real de planejamento duplicado
+
   async function atribuirConcretagemNumero(numero, dataNova) {
     if (!Permissions.pode('controleEstacas', 'editar:concretagem') && !Permissions.pode('controleEstacas', 'criar:concretagem')) { Utils.toast('Sem permissão.', 'erro'); return; }
+    if (_atribuindoConcretagem) return; // já está processando um clique — ignora repetição
     const m = marcadores.find(x => x.id === atribuirMarcadorId);
     if (!m) return;
+    _atribuindoConcretagem = true;
     Utils.mostrarLoading();
     try {
       const concExistente = concretagens.find(c => c.numero === numero);
@@ -882,6 +914,7 @@ const ControleEstacas = (() => {
     } catch (e) {
       Utils.toast('Erro: ' + e.message, 'erro');
     } finally {
+      _atribuindoConcretagem = false;
       Utils.esconderLoading();
     }
   }

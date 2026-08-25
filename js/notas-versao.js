@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.30.50',
+  versaoAtual: 'V3.19.30.51',
 
   versoes: [
     {
@@ -10609,6 +10609,17 @@ const NotasVersao = {
         "O fix anterior (V3.19.30.49) só vale pra reatribuições NOVAS, dali pra frente — peças que já tinham ficado com o lançamento preso na concretagem antiga continuam erradas até alguém corrigir.",
         "Novo botão \\\"🔧 Corrigir desalinhados\\\" no painel de Concretagens planejadas: varre TODAS as peças, compara o planejamento atual de cada uma com os lançamentos dela, e corrige em lote quem estiver apontando pra concretagem diferente — sem precisar reatribuir peça por peça na mão.",
         "Mostra quais peças serão corrigidas antes de confirmar, e avisa se não encontrar nenhuma desalinhada."
+      ]
+    },
+    {
+      "versao": "V3.19.30.51",
+      "data": "2026-08-24",
+      "tipo": "correcao",
+      "titulo": "Controle de Estacas: achada a causa real — planejamento DUPLICADO pra mesma peça (aparecia em 2 dias)",
+      "itens": [
+        "Causa real de aparecer em 2 dias no relatório: a peça tinha DOIS registros de planejamento ao mesmo tempo (provavelmente clique duplo numa reatribuição antiga criou 2 em vez de trocar 1) — um preso na concretagem antiga, outro na nova. O \\\"Corrigir desalinhados\\\" anterior só olhava lançamento vs. planejamento, não pegava planejamento duplicado.",
+        "\\\"🔧 Corrigir desalinhados\\\" agora faz 2 passadas: primeiro detecta peça com mais de 1 planejamento e mantém só o de concretagem mais recente (número mais alto), apagando o(s) duplicado(s); depois corrige os lançamentos pra bater com o planejamento que sobrou.",
+        "Prevenção: reatribuir concretagem (pelo popup ou pelo clique rápido) agora trava contra clique duplo/corrida — não deixa criar planejamento duplicado de novo."
       ]
     }
   ],
