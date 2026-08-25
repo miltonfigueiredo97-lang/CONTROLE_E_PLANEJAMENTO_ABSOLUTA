@@ -716,6 +716,15 @@ const ControleEstacas = (() => {
         const dados = { pecaId: m.pecaId, concretagemId: concId, pctConcretagem: 100, obraId };
         await Database.criar(obraId, COL_PC, dados, novoId);
         pecaConc.push({ id: novoId, ...dados });
+        // Lançamentos já feitos pra essa peça, presos numa concretagem
+        // DIFERENTE — reatribui junto, senão o relatório mostra a peça no
+        // dia/concretagem errado (mesmo bug do popup de atribuir).
+        const lansDaPeca = lancamentos.filter(l => l.pecaId === m.pecaId && l.concretagemId !== concId);
+        if (lansDaPeca.length) {
+          const ops = lansDaPeca.map(l => ({ type: 'update', ref: Database.ref(obraId, COL_LANS).doc(l.id), data: { concretagemId: concId } }));
+          await Database.batchWrite(ops);
+          lansDaPeca.forEach(l => { l.concretagemId = concId; });
+        }
       }
       await renderMapaPlanejamento(); // só o mapa — preserva scroll/zoom pro próximo clique
       _renderCardsConcretagem(); // números dos cards (qtd/volume/diâmetro) atualizados
@@ -822,11 +831,20 @@ const ControleEstacas = (() => {
       const existente = pecaConc.find(pc => pc.pecaId === m.pecaId);
       if (existente) await Database.deletar(obraId, COL_PC, existente.id);
       await Database.criar(obraId, COL_PC, { pecaId: m.pecaId, concretagemId: concId, pctConcretagem: 100, obraId }, EC.genId('pc'));
+      // Se essa peça já tinha lançamento(s) registrado(s), eles ficavam
+      // presos na concretagem ANTIGA — divergindo do planejamento atual (é
+      // esse o bug real: o relatório mostrava a peça no dia/concretagem
+      // errado). Reatribui os lançamentos também, pra ficar tudo junto.
+      const lansDaPeca = lancamentos.filter(l => l.pecaId === m.pecaId && l.concretagemId !== concId);
+      if (lansDaPeca.length) {
+        const ops = lansDaPeca.map(l => ({ type: 'update', ref: Database.ref(obraId, COL_LANS).doc(l.id), data: { concretagemId: concId } }));
+        await Database.batchWrite(ops);
+      }
       await carregar();
       Utils.fecharModal('modal-ce-atribuir-conc');
       _renderAbaPlanejamento();
       if (criouNova) Utils.toast(`✓ Concretagem Nº ${numero} criada com data ${_dataBR(data)}!`, 'sucesso');
-      else Utils.toast(`✓ Atribuída à Concretagem Nº ${numero}!`, 'sucesso');
+      else Utils.toast(`✓ Atribuída à Concretagem Nº ${numero}!${lansDaPeca.length ? ` (${lansDaPeca.length} lançamento(s) movido(s) junto)` : ''}`, 'sucesso');
     } catch (e) {
       Utils.toast('Erro: ' + e.message, 'erro');
     } finally {
@@ -838,6 +856,11 @@ const ControleEstacas = (() => {
     if (!m) return;
     const existente = pecaConc.find(pc => pc.pecaId === m.pecaId);
     if (!existente) return;
+    const temLancamento = lancamentos.some(l => l.pecaId === m.pecaId);
+    if (temLancamento) {
+      const ok = await Utils.confirmar('Essa peça já tem lançamento (BT) registrado nessa concretagem. Remover só tira o planejamento — o lançamento continua salvo, mas fica sem concretagem vinculada. Quer continuar?');
+      if (!ok) return;
+    }
     Utils.mostrarLoading();
     try {
       await Database.deletar(obraId, COL_PC, existente.id);
