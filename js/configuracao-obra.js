@@ -193,8 +193,12 @@ const ConfiguracaoObra = (() => {
 
     const diasBtns = [0, 1, 2, 3, 4, 5, 6].map(d => {
       const on = c.jornada.includes(d);
-      return `<button class="btn btn-sm ${on ? 'btn-primario' : 'btn-secundario'}" style="min-width:52px;font-size:.72rem;"
-        onclick="ConfiguracaoObra.calToggleDia(${d})" title="${on ? 'Dia trabalhado — clique pra desligar' : 'Dia não trabalhado — clique pra ligar'}">${Calendario.nomeDiaSemana(d)}</button>`;
+      const meio = on && c.jornadaMeio.includes(d);
+      const dica = !on ? 'Não trabalha — clique para dia inteiro'
+        : meio ? 'Meio período (rende meia jornada) — clique para desligar'
+          : 'Dia inteiro — clique para meio período';
+      return `<button class="btn btn-sm ${on ? 'btn-primario' : 'btn-secundario'}" style="min-width:58px;font-size:.72rem;${meio ? 'opacity:.75;' : ''}"
+        onclick="ConfiguracaoObra.calToggleDia(${d})" title="${dica}">${Calendario.nomeDiaSemana(d)}${meio ? ' ½' : ''}</button>`;
     }).join('');
 
     const feriados = c.feriadosAuto ? Calendario.feriadosDoAno(calAnoVisivel) : [];
@@ -259,8 +263,9 @@ const ConfiguracaoObra = (() => {
         `<button class="btn ${c.ativo ? 'btn-perigo' : 'btn-primario'} btn-sm" ${podeEditar ? '' : 'disabled'} onclick="ConfiguracaoObra.calToggleAtivo()">${c.ativo ? 'Desligar calendário' : 'Ligar calendário'}</button>`
       )}
 
-      ${bloco('Jornada semanal', 'Quais dias da semana a obra trabalha. Sábado de meio período não é suportado — ligue o sábado inteiro ou deixe desligado.',
-        `<div style="display:flex;gap:6px;flex-wrap:wrap;">${diasBtns}</div>`)}
+      ${bloco('Jornada semanal', 'Cada clique cicla três estados: não trabalha → dia inteiro → meio período (½). Um dia de meio período é dia de obra, mas rende meia jornada na contagem de duração.',
+        `<div style="display:flex;gap:6px;flex-wrap:wrap;">${diasBtns}</div>
+         <div class="text-sm text-muted" style="font-size:.74rem;margin-top:8px;">Jornada atual: <b style="color:var(--cor-texto);">${Calendario.resumoJornada(c)}</b></div>`)}
 
       ${bloco('Feriados', 'Os nacionais são calculados automaticamente (inclusive os móveis, derivados da Páscoa). Estadual e municipal você cadastra aqui.',
         `<div style="margin-bottom:12px;">
@@ -312,8 +317,11 @@ const ConfiguracaoObra = (() => {
 
   // Grade dos 12 meses do ano visível, pintando o que não é dia de obra. É a
   // conferência visual: se um mês inteiro ficou cinza, o erro está na jornada.
+  // Cada dia é clicável e cria/remove exceção — é o caminho mais curto pra
+  // "esse domingo a obra trabalha" sem passar por formulário.
   function _previaAno() {
     const c = _cal();
+    const podeEditar = Permissions.pode('configuracaoObra', 'editar:calendario');
     if (!c.ativo) return '<div class="text-sm text-muted">Ligue o calendário para ver a prévia.</div>';
     const MESES = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
     // Grade de calendário de verdade: 7 colunas fixas, Dom a Sáb, e o dia 1 cai
@@ -333,18 +341,39 @@ const ConfiguracaoObra = (() => {
       for (let d = 1; d <= ultimo; d++) {
         const data = `${calAnoVisivel}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
         const motivo = Calendario.motivoNaoUtil(data, c);
-        if (!motivo) uteis++;
-        dias += `<div title="${_fd(data)} (${Calendario.nomeDiaSemana(Calendario.diaSemanaDe(data), true)})${motivo ? ' — ' + _esc(motivo) : ' — dia útil'}"
-          style="height:20px;line-height:20px;text-align:center;font-size:.6rem;font-weight:600;border-radius:3px;
-          background:${motivo ? 'var(--cor-neutro-bg)' : 'var(--cor-primaria)'};color:${motivo ? 'var(--cor-texto-muted)' : 'var(--cor-dark-900)'};">${d}</div>`;
+        const cap = Calendario.capacidade(data, c);
+        const temExcecao = c.excecoes.some(e => e.data === data);
+        uteis += cap;
+        const dica = `${_fd(data)} (${Calendario.nomeDiaSemana(Calendario.diaSemanaDe(data), true)})`
+          + (motivo ? ' — ' + motivo : cap === 0.5 ? ' — meio período' : ' — dia útil')
+          + (podeEditar ? (temExcecao ? '\nExceção manual. Clique para voltar ao padrão.' : `\nClique para ${motivo ? 'trabalhar' : 'parar'} neste dia.`) : '');
+        // Meio período recebe um degradê: metade amarela, metade cinza — dá pra
+        // ver de longe qual coluna rende meia jornada.
+        const fundo = motivo ? 'var(--cor-neutro-bg)'
+          : cap === 0.5 ? 'linear-gradient(180deg,var(--cor-primaria) 50%,var(--cor-neutro-bg) 50%)'
+            : 'var(--cor-primaria)';
+        dias += `<div title="${_esc(dica)}" ${podeEditar ? `onclick="ConfiguracaoObra.calCliqueDia('${data}')"` : ''}
+          style="height:20px;line-height:20px;text-align:center;font-size:.6rem;font-weight:600;border-radius:3px;${podeEditar ? 'cursor:pointer;' : ''}
+          background:${fundo};color:${motivo ? 'var(--cor-texto-muted)' : 'var(--cor-dark-900)'};
+          ${temExcecao ? 'box-shadow:0 0 0 2px var(--cor-info);' : ''}">${d}</div>`;
       }
       html += `<div style="border:1.5px solid var(--cor-borda-light);border-radius:8px;padding:10px;background:var(--cor-fundo-card);">
         <div style="font-size:.76rem;font-weight:700;margin-bottom:6px;color:var(--cor-texto);">${MESES[m - 1]}
-          <span class="text-muted" style="font-weight:400;">· ${uteis} úteis</span></div>
+          <span class="text-muted" style="font-weight:400;">· ${String(uteis).replace('.', ',')} úteis</span></div>
         <div style="${GRADE}margin-bottom:3px;">${cabecalho}</div>
         <div style="${GRADE}">${dias}</div></div>`;
     }
-    return html + '</div>';
+    html += '</div>';
+
+    const leg = (estilo, rotulo) => `<span style="display:inline-flex;align-items:center;gap:5px;font-size:.7rem;color:var(--cor-texto-secundario);">
+      <span style="width:14px;height:14px;border-radius:3px;${estilo}"></span>${rotulo}</span>`;
+    return `<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:10px;">
+        ${leg('background:var(--cor-primaria);', 'dia de obra')}
+        ${leg('background:linear-gradient(180deg,var(--cor-primaria) 50%,var(--cor-neutro-bg) 50%);', 'meio período')}
+        ${leg('background:var(--cor-neutro-bg);', 'parado')}
+        ${leg('background:var(--cor-primaria);box-shadow:0 0 0 2px var(--cor-info);', 'exceção manual')}
+        ${podeEditar ? '<span class="text-muted" style="font-size:.7rem;">Clique num dia para inverter · clique de novo para voltar ao padrão</span>' : ''}
+      </div>${html}`;
   }
 
   // Toda mutação passa por aqui: grava, recarrega e redesenha. Se a definição
@@ -370,12 +399,33 @@ const ConfiguracaoObra = (() => {
     if (!c.ativo && !c.jornada.length) { Utils.toast('Escolha ao menos um dia de trabalho na jornada antes de ligar.', 'alerta'); return; }
     _calSalvar(x => { x.ativo = !x.ativo; });
   }
+
+  // Clique no dia da semana cicla três estados: não trabalha → dia inteiro →
+  // meio período → não trabalha. Meio período existe porque muita obra trabalha
+  // sábado até o meio-dia, e contar esse sábado como dia cheio infla o cronograma.
   function calToggleDia(d) {
     _calSalvar(x => {
-      const i = x.jornada.indexOf(d);
-      if (i >= 0) { if (x.jornada.length === 1) { Utils.toast('A obra precisa de pelo menos um dia de trabalho.', 'alerta'); return false; } x.jornada.splice(i, 1); }
-      else x.jornada.push(d);
+      const trabalha = x.jornada.includes(d);
+      const meio = x.jornadaMeio.includes(d);
+      if (!trabalha) { x.jornada.push(d); return; }                       // não trabalha → inteiro
+      if (!meio) { x.jornadaMeio.push(d); return; }                       // inteiro → meio período
+      if (x.jornada.length === 1) { Utils.toast('A obra precisa de pelo menos um dia de trabalho.', 'alerta'); return false; }
+      x.jornada = x.jornada.filter(v => v !== d);                         // meio → não trabalha
+      x.jornadaMeio = x.jornadaMeio.filter(v => v !== d);
     });
+  }
+
+  // Clique num dia da prévia: cria a exceção que inverte aquele dia, ou remove a
+  // exceção que já existe (voltando ao padrão da jornada). É o caminho curto pra
+  // "esse domingo a gente trabalha" sem preencher formulário.
+  function calCliqueDia(data) {
+    const y = window.scrollY;
+    _calSalvar(x => {
+      const i = x.excecoes.findIndex(e => e.data === data);
+      if (i >= 0) { x.excecoes.splice(i, 1); return; }
+      const util = Calendario.ehDiaUtil(data, x);
+      x.excecoes.push({ data, trabalha: !util, motivo: '' });
+    }).then(() => window.scrollTo(0, y)); // a prévia fica no fim da página: sem isso o clique joga o scroll pro topo
   }
   function calToggle(campo) { _calSalvar(x => { x[campo] = !x[campo]; }); }
   function calToggleFacultativo(chave) { _calSalvar(x => { x.facultativos[chave] = !x.facultativos[chave]; }); }
@@ -415,7 +465,7 @@ const ConfiguracaoObra = (() => {
   function calRemoverExcecao(data) { _calSalvar(x => { x.excecoes = x.excecoes.filter(e => e.data !== data); }); }
 
   return { init, carregar, renderizar, abrirForm, editarItem, salvarItem, excluirItem,
-    calToggleAtivo, calToggleDia, calToggle, calToggleFacultativo, calMudarAno,
+    calToggleAtivo, calToggleDia, calCliqueDia, calToggle, calToggleFacultativo, calMudarAno,
     calAddFeriado, calRemoverFeriado, calAddParalisacao, calRemoverParalisacao,
     calAddExcecao, calRemoverExcecao };
 })();

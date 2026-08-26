@@ -162,6 +162,10 @@ const Calendario = (() => {
     return {
       ativo: !!c.ativo,
       jornada: (Array.isArray(c.jornada) && c.jornada.length) ? c.jornada.map(Number).filter(n => n >= 0 && n <= 6) : [1, 2, 3, 4, 5],
+      // Dias da semana trabalhados em MEIO PERÍODO (subconjunto de jornada).
+      // Existe porque muita obra trabalha sábado até o meio-dia, e contar esse
+      // sábado como dia cheio infla o cronograma inteiro.
+      jornadaMeio: Array.isArray(c.jornadaMeio) ? c.jornadaMeio.map(Number).filter(n => n >= 0 && n <= 6) : [],
       trabalhaFeriado: !!c.trabalhaFeriado,
       feriadosAuto: c.feriadosAuto !== false,
       facultativos: { carnaval: fac.carnaval !== false, corpusChristi: fac.corpusChristi !== false },
@@ -246,6 +250,30 @@ const Calendario = (() => {
     return motivoNaoUtil(data, c) === '';
   }
 
+  // Quanto de jornada este dia rende: 0 (parado), 0.5 (meio período) ou 1.
+  //
+  // É a base de toda contagem de duração. Um sábado de meio período é dia útil
+  // (a obra abre) mas rende metade — então uma tarefa de 6 dias que atravessa um
+  // sábado desses termina um dia depois do que terminaria numa semana de 6 dias
+  // cheios. É a mesma ideia do MS Project, que mede duração em jornada e não em
+  // caixinhas do calendário.
+  //
+  // LIMITAÇÃO CONHECIDA: exceção com trabalha:true rende dia CHEIO, mesmo que
+  // caia num dia da semana marcado como meio período. Exceção é esforço extra
+  // (mutirão, concretagem) — meio período excepcional não é suportado.
+  function capacidade(data, cal) {
+    const c = _c(cal);
+    if (!c.ativo) return 1;
+    const d = _dt(data);
+    if (!d) return 1;
+    const dia = iso(d);
+
+    const exc = c.excecoes.find(e => e.data === dia);
+    if (exc) return exc.trabalha ? 1 : 0;
+    if (!ehDiaUtil(dia, c)) return 0;
+    return c.jornadaMeio.includes(d.getDay()) ? 0.5 : 1;
+  }
+
   // ---- Navegação no calendário ----
 
   // Primeiro dia útil em ou depois de `data`. É o que faz "término da
@@ -290,19 +318,26 @@ const Calendario = (() => {
     if (!c.ativo) return addDiasCorridos(dia, n); // dias corridos = comportamento antigo
 
     dia = n < 0 ? diaUtilAnterior(dia, c) : proximoDiaUtil(dia, c);
+    if (n === 0) return dia;
+
+    // Acumula CAPACIDADE, não caixinhas de calendário: o dia de partida já
+    // conta, e caminha até o acumulado alcançar n+1 jornadas (n passos + o
+    // próprio dia inicial). Sem meio período a capacidade é sempre 1 e isso se
+    // reduz a "conte n dias úteis", igual antes.
     const passo = n < 0 ? -1 : 1;
-    let restam = Math.abs(n), guard = 0;
-    while (restam > 0 && guard++ < MAX_ITER) {
+    const alvo = Math.abs(n) + 1;
+    let acum = capacidade(dia, c) || 1, guard = 0;
+    while (acum < alvo && guard++ < MAX_ITER) {
       dia = addDiasCorridos(dia, passo);
-      if (ehDiaUtil(dia, c)) restam--;
+      acum += capacidade(dia, c);
     }
     if (guard >= MAX_ITER) console.warn('[Calendario] somarDiasUteis estourou o limite — jornada vazia?', data, n);
     return dia;
   }
 
-  // Conta dias úteis de ini até fim, INCLUSIVO nas duas pontas. É o inverso de
-  // somarDiasUteis: contarDiasUteis(ini, somarDiasUteis(ini, d-1)) === d.
-  function contarDiasUteis(ini, fim, cal) {
+  // Jornadas acumuladas de ini até fim, INCLUSIVO nas duas pontas. Pode dar
+  // fração quando há meio período (ex: seg a sáb com sábado meio = 5,5).
+  function jornadasEntre(ini, fim, cal) {
     const c = _c(cal);
     let a = iso(ini);
     const b = iso(fim);
@@ -310,10 +345,20 @@ const Calendario = (() => {
     if (!c.ativo) return Math.round((_dt(b) - _dt(a)) / 864e5) + 1;
     let n = 0, guard = 0;
     while (a <= b && guard++ < MAX_ITER) {
-      if (ehDiaUtil(a, c)) n++;
+      n += capacidade(a, c);
       a = addDiasCorridos(a, 1);
     }
     return n;
+  }
+
+  // Duração em dias INTEIROS entre duas datas — é o que vai pro campo Duração da
+  // tarefa, que é inteiro. Trunca a fração pra manter a ida-e-volta com
+  // somarDiasUteis: contarDiasUteis(ini, somarDiasUteis(ini, d-1)) === d.
+  // O piso de 1 evita que um único sábado de meio período vire duração zero.
+  function contarDiasUteis(ini, fim, cal) {
+    const jornadas = jornadasEntre(ini, fim, cal);
+    if (!jornadas) return 0;
+    return Math.max(1, Math.floor(jornadas));
   }
 
   // ---- Apoio pra tela ----
@@ -324,10 +369,18 @@ const Calendario = (() => {
     const c = _c(cal);
     const dias = [...c.jornada].sort((a, b) => a - b);
     if (!dias.length) return 'nenhum dia trabalhado';
-    let seq = true;
-    for (let i = 1; i < dias.length; i++) if (dias[i] !== dias[i - 1] + 1) { seq = false; break; }
-    if (seq && dias.length > 2) return `${DIAS_CURTO[dias[0]]} a ${DIAS_CURTO[dias[dias.length - 1]]}`;
-    return dias.map(d => DIAS_CURTO[d]).join(', ');
+    const meios = dias.filter(d => c.jornadaMeio.includes(d));
+    const cheios = dias.filter(d => !c.jornadaMeio.includes(d));
+    const faixa = (arr) => {
+      if (!arr.length) return '';
+      let seq = true;
+      for (let i = 1; i < arr.length; i++) if (arr[i] !== arr[i - 1] + 1) { seq = false; break; }
+      if (seq && arr.length > 2) return `${DIAS_CURTO[arr[0]]} a ${DIAS_CURTO[arr[arr.length - 1]]}`;
+      return arr.map(d => DIAS_CURTO[d]).join(', ');
+    };
+    const partes = [faixa(cheios)];
+    if (meios.length) partes.push(`${faixa(meios)} ½`);
+    return partes.filter(Boolean).join(' + ');
   }
 
   // Todos os dias não úteis de um mês, com o motivo. Alimenta a prévia visual
@@ -366,7 +419,8 @@ const Calendario = (() => {
   function assinatura(cal) {
     const c = _c(cal);
     return JSON.stringify([
-      c.ativo, [...c.jornada].sort((a, b) => a - b), c.trabalhaFeriado, c.feriadosAuto,
+      c.ativo, [...c.jornada].sort((a, b) => a - b), [...c.jornadaMeio].sort((a, b) => a - b),
+      c.trabalhaFeriado, c.feriadosAuto,
       c.facultativos.carnaval, c.facultativos.corpusChristi,
       c.feriadosManuais.map(f => f.data).sort(),
       c.paralisacoes.map(p => `${p.ini}~${p.fim}`).sort(),
@@ -402,6 +456,8 @@ const Calendario = (() => {
     feriadosDoAno,
     pascoa,
     ehDiaUtil,
+    capacidade,
+    jornadasEntre,
     motivoNaoUtil,
     proximoDiaUtil,
     diaUtilAnterior,
