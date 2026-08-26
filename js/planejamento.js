@@ -7172,11 +7172,20 @@ const Planejamento = (() => {
     const sorted=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
     const snap=new Map();
     for(const t of sorted){
+      const perc=parseFloat(String(t.percentualConcluido==null?0:t.percentualConcluido).replace(',','.'))||0;
+      // DATA DE CORTE — o que já foi executado NÃO se recalcula.
+      // Tarefa 100% (ou com término real) tem data de FATO: mexer nela é
+      // reescrever a história da obra, e ainda empurra todas as sucessoras a
+      // partir de uma data que nunca existiu. Tarefa já iniciada tem o início
+      // como fato; só o término se recalcula.
+      const executado=perc>=100||!!t.terminoReal;
+      const iniciado=!executado&&(perc>0||!!t.inicioReal);
       snap.set(t.id,{
         id:t.id, nome:t.nome||'', codigo:t.codigo||'', nivel:t.nivel||0,
         predecessora:t.predecessora||'', duracao:parseInt(t.duracao)||0,
         inicioPlanejado:t.inicioPlanejado||'', terminoPlanejado:t.terminoPlanejado||'',
         _iniAntes:t.inicioPlanejado||'', _fimAntes:t.terminoPlanejado||'',
+        _executado:executado, _iniciado:iniciado, _perc:perc,
       });
     }
     const rascunho=sorted.map(t=>snap.get(t.id));
@@ -7190,22 +7199,25 @@ const Planejamento = (() => {
 
     // 1) Âncora: folha sem predecessora mantém o início que já tem, só empurrado
     //    pro próximo dia útil, e fecha o término pela duração.
+    //    Executada fica intocada; iniciada só recalcula o término.
     for(const s of folhas){
+      if(s._executado)continue;
       if(!s.inicioPlanejado)continue;
-      if(!s.predecessora){
-        if(_calObra.ativo)s.inicioPlanejado=Calendario.proximoDiaUtil(s.inicioPlanejado,_calObra);
+      if(!s.predecessora||s._iniciado){
+        if(_calObra.ativo&&!s._iniciado)s.inicioPlanejado=Calendario.proximoDiaUtil(s.inicioPlanejado,_calObra);
         if(s.duracao>0)s.terminoPlanejado=_fimPorDuracao(s.inicioPlanejado,s.duracao);
       }
     }
 
     // 2) Converge a rede: repassa aplicando os vínculos até ninguém mais mudar.
     //    Cadeia circular nunca converge — o teto de passes corta e a gente relata.
+    //    Executada e iniciada ficam fora: elas são âncora, não resultado.
     const MAX_PASSES=Math.min(300,Math.max(20,folhas.length));
     let passes=0, mudou=true;
     while(mudou&&passes<MAX_PASSES){
       mudou=false;passes++;
       for(const s of folhas){
-        if(!s.predecessora)continue;
+        if(!s.predecessora||s._executado||s._iniciado)continue;
         const upd={};
         _calcPredecessora(s,s.predecessora,upd,look);
         if(upd.inicioPlanejado&&upd.inicioPlanejado!==s.inicioPlanejado){s.inicioPlanejado=upd.inicioPlanejado;mudou=true;}
@@ -7236,6 +7248,8 @@ const Planejamento = (() => {
     return {
       linhas, convergiu, passes,
       total:rascunho.length,
+      preservadas:rascunho.filter(s=>s._executado).length,
+      iniciadas:rascunho.filter(s=>s._iniciado).length,
       fimAntes:rascunho.reduce((m,s)=>(s._fimAntes&&s._fimAntes>m)?s._fimAntes:m,''),
       fimDepois:maxDe('terminoPlanejado'),
       rascunho,
@@ -7269,6 +7283,7 @@ const Planejamento = (() => {
     const sinal=s.fimDepois>s.fimAntes?'+':(s.fimDepois<s.fimAntes?'−':'');
 
     const avisos=[];
+    if(s.preservadas)avisos.push(`${s.preservadas} tarefa(s) 100% concluída(s) ficaram INTOCADAS — data executada é fato, não previsão. ${s.iniciadas?`Outras ${s.iniciadas} já iniciada(s) mantiveram o início real e só tiveram o término recalculado.`:''}`);
     if(!s.convergiu)avisos.push(`⚠ A rede não estabilizou em ${s.passes} passes — quase sempre é dependência circular (tarefa A depende de B que depende de A). Vale conferir as predecessoras antes de aplicar.`);
     if(s.linhas.length>MAX_LINHAS_PREVIA)avisos.push(`Mostrando as primeiras ${MAX_LINHAS_PREVIA} de ${s.linhas.length} tarefas alteradas — as outras ${s.linhas.length-MAX_LINHAS_PREVIA} também serão aplicadas.`);
 
@@ -7294,6 +7309,7 @@ const Planejamento = (() => {
     el.innerHTML=`
       <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
         ${kpi('Tarefas alteradas',`<span style="font-size:1.6rem;">${s.linhas.length}</span>`,`de ${s.total} no total`)}
+        ${kpi('Executadas preservadas',`<span style="font-size:1.6rem;">${s.preservadas||0}</span>`,`${s.iniciadas||0} iniciada(s) mantêm o início`)}
         ${kpi('Término da obra',
           `<span class="text-muted" style="text-decoration:line-through;font-size:.95rem;">${_fd(s.fimAntes)||'—'}</span>
            <span style="color:var(--cor-sucesso);font-size:.95rem;">→ ${_fd(s.fimDepois)||'—'}</span>`,
@@ -7581,9 +7597,13 @@ const Planejamento = (() => {
   let _invPend=null;
 
   function _clonarParaSimular(){
+    // Leva o avanço e as datas reais: sem isso o CPM não sabe o que já foi
+    // executado e recalcularia data de tarefa pronta.
     return tarefas.map(t=>({id:t.id,ordem:t.ordem,nivel:t.nivel,nome:t.nome,codigo:t.codigo,
       duracao:t.duracao,predecessora:t.predecessora||'',
-      inicioPlanejado:t.inicioPlanejado||'',terminoPlanejado:t.terminoPlanejado||''}));
+      inicioPlanejado:t.inicioPlanejado||'',terminoPlanejado:t.terminoPlanejado||'',
+      percentualConcluido:t.percentualConcluido||0,
+      inicioReal:t.inicioReal||'',terminoReal:t.terminoReal||''}));
   }
 
   // Aplica a inversão numa lista de tarefas (rascunho ou real, mesma função).
@@ -7741,6 +7761,9 @@ const Planejamento = (() => {
       const dOps=[];
       for(const no of s.depois.nos.values()){
         if(no.emCiclo)continue;
+        // Executada não se regrava: a data dela é fato, e o CPM devolve a data
+        // real justamente pra não ser movida.
+        if(no.executado)continue;
         const t=_porId.get(no.id);
         if(!t)continue;
         if((t.inicioPlanejado||'')===no.es&&(t.terminoPlanejado||'')===no.ef)continue;

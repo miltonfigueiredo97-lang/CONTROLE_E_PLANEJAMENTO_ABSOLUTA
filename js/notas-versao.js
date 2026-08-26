@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.22.0',
+  versaoAtual: 'V3.22.1',
 
   versoes: [
     {
@@ -10732,6 +10732,23 @@ const NotasVersao = {
         "CHECAGEM REMOVIDA: \\\"ordem global entre serviços\\\" comparava o primeiro início de um serviço com o último término de outro na obra inteira. Num prédio isso está sempre \\\"invertido\\\" e não é erro — a elétrica do 1º pavimento começa antes da alvenaria do 16º terminar, porque é obra em linha de balanço. Gerava apontamento sem sentido só pela existência de 16 pavimentos.",
         "RECORTE DO BLOCO REPETITIVO: o sistema identifica que 16 pavimentos do RD06 são idênticos e extrai o pavimento-tipo — 60 serviços em ordem cronológica real, pela data média. É o recorte que torna a análise em linguagem natural viável: 16 kB em vez da planilha de 2.439 linhas, 56× menor, e vai junto no \\\"Copiar dossiê\\\". A sequência é ordenada por data e não por ordenação topológica de propósito: entre dois serviços sem vínculo a topológica devolve ordem arbitrária, e é justamente essa ausência de vínculo que interessa auditar.",
         "O que continua igual: calendário, CPM, folga e caminho crítico. Aquilo é matemática, está provado por teste, e não dependia de opinião nenhuma sobre sequência de obra."
+      ]
+    },
+    {
+      "versao": "V3.22.1",
+      "data": "2026-08-26",
+      "tipo": "correcao",
+      "titulo": "Recálculo de datas mexia em tarefa já 100% concluída",
+      "itens": [
+        "BUG GRAVE: \\\"Aplicar Calendário às Datas\\\" e o CPM recalculavam a data de tarefas já executadas. No RD06 o popup propunha alterar 2.438 tarefas — incluindo 317 que estão 100% concluídas e foram executadas naquelas datas. Recalcular isso é reescrever a história da obra, e pior: empurra todas as sucessoras a partir de uma data que nunca existiu.",
+        "Implementada a DATA DE CORTE, que é como planejamento de obra funciona: o que já aconteceu é FATO, só o futuro se replaneja.",
+        "Tarefa 100% concluída (ou com Término Real lançado) fica INTOCADA: início e término congelados, e a data real vence a planejada. Ela também sai do caminho crítico — não faz sentido dizer que tarefa pronta segura a data final — e a folga dela é zero por definição.",
+        "Tarefa já iniciada (avanço > 0 ou com Início Real) mantém o INÍCIO como fato; só o término é recalculado pela duração. Foi o serviço que começou naquele dia, e isso não se apaga.",
+        "Tarefa não iniciada: recalcula normal. É o único caso em que faz sentido.",
+        "Tarefa concluída que esteja em dependência circular também mantém a data: o ciclo impede calcular previsão, mas não impede saber quando o serviço foi feito — isso é registro, não cálculo.",
+        "O popup de simulação agora mostra quantas executadas foram preservadas e quantas iniciadas mantiveram o início, e avisa isso em destaque antes de você aplicar.",
+        "Efeito colateral revelado e correto: apareceram 202 tarefas com folga negativa no RD06. Não é bug novo — é a verdade que estava escondida. Com as datas executadas congeladas, fica visível onde o cronograma não fecha mais: serviço que começou antes da antecessora terminar, ou tarefa concluída com atraso que nunca foi replanejada adiante. Enquanto isso não for resolvido, a data final que o sistema mostra é otimista. Sai agregado num apontamento só, com a causa e a ação.",
+        "Verificação: 14 testes da data de corte, incluindo regressão que confirma comportamento idêntico quando não há avanço lançado; e no cronograma real do RD06, ZERO das 317 tarefas executadas é movida pelo motor."
       ]
     }
   ],

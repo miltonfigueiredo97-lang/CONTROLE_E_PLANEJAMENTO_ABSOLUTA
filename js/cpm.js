@@ -98,11 +98,23 @@ const CPM = (() => {
     const nos = new Map();
     for (const t of sorted) {
       if (t._cpmPai) continue;
+      const perc = parseFloat(String(t.percentualConcluido == null ? 0 : t.percentualConcluido).replace(',', '.')) || 0;
+      // DATA DE CORTE: o que já aconteceu é FATO, não previsão.
+      //   executado -> 100% ou com término real: início E término congelados
+      //   iniciado   -> começou mas não terminou: início congelado, término recalcula
+      //   livre      -> não começou: recalcula os dois
+      // Sem isso o replanejamento reescreve a história da obra: no RD06 a
+      // primeira versão mudava a data de tarefas 100% concluídas, e ainda
+      // empurrava todas as sucessoras a partir de uma data que nunca existiu.
+      const executado = perc >= 100 || !!t.terminoReal;
+      const iniciado = !executado && (perc > 0 || !!t.inicioReal);
       nos.set(t.id, {
         id: t.id, nome: t.nome || '', codigo: t.codigo || '', nivel: t.nivel || 0,
         ordem: t.ordem || 0,
         duracao: Math.max(0, parseInt(t.duracao) || 0),
         inicioAtual: t.inicioPlanejado || '', terminoAtual: t.terminoPlanejado || '',
+        inicioReal: t.inicioReal || '', terminoReal: t.terminoReal || '', perc,
+        executado, iniciado,
         entradas: [], saidas: [],
         es: '', ef: '', ls: '', lf: '',
         folgaTotal: 0, folgaLivre: 0, critico: false, emCiclo: false,
@@ -164,6 +176,17 @@ const CPM = (() => {
     const { ordem, ciclos } = _topologica(nos);
     for (const id of ciclos) nos.get(id).emCiclo = true;
 
+    // Tarefa EXECUTADA em ciclo: o ciclo impede calcular previsão, mas não
+    // impede saber quando ela foi feita — isso é registro, não cálculo. Preenche
+    // a data real/salva antes de qualquer coisa, pra ela nunca aparecer sem data
+    // nem como candidata a ser movida por um replanejamento.
+    for (const no of nos.values()) {
+      if (!no.executado) continue;
+      no.es = no.inicioReal || no.inicioAtual || '';
+      no.ef = no.terminoReal || no.terminoAtual || '';
+      no.ls = no.es; no.lf = no.ef;
+    }
+
     // Data-base do projeto: a menor data de início que existe hoje. Serve de
     // âncora pra tarefa sem predecessora e sem data própria.
     let base = '';
@@ -174,7 +197,23 @@ const CPM = (() => {
     // ---- FORWARD PASS: mais cedo que pode começar e terminar ----
     for (const id of ordem) {
       const no = nos.get(id);
+
+      // EXECUTADO: aconteceu, ponto. Data real vence data planejada, e nenhum
+      // vínculo pode mover o que já foi feito. As sucessoras partem daqui.
+      if (no.executado) {
+        no.es = no.inicioReal || no.inicioAtual || base;
+        no.ef = no.terminoReal || no.terminoAtual || Calendario.fimPorDuracao(no.es, no.duracao, c);
+        continue;
+      }
+
       const cands = [];
+
+      // INICIADO: o início é fato. Só o término se recalcula pela duração.
+      if (no.iniciado) {
+        no.es = no.inicioReal || no.inicioAtual || base;
+        no.ef = Calendario.fimPorDuracao(no.es, no.duracao, c);
+        continue;
+      }
 
       if (!no.entradas.length) {
         cands.push(no.inicioAtual ? Calendario.proximoDiaUtil(no.inicioAtual, c) : base);
@@ -198,6 +237,12 @@ const CPM = (() => {
 
     for (let i = ordem.length - 1; i >= 0; i--) {
       const no = nos.get(ordem[i]);
+
+      // O que já aconteceu não tem "mais tarde que poderia": aconteceu quando
+      // aconteceu. Late = early, folga zero, e fora do caminho crítico (não faz
+      // sentido dizer que tarefa pronta segura a data final).
+      if (no.executado) { no.lf = no.ef; no.ls = no.es; continue; }
+
       const cands = [];
       for (const a of no.saidas) {
         const suc = nos.get(a.para);
@@ -215,6 +260,7 @@ const CPM = (() => {
     // ---- FOLGAS E CAMINHO CRÍTICO ----
     for (const no of nos.values()) {
       if (no.emCiclo) continue;
+      if (no.executado) { no.folgaTotal = 0; no.folgaLivre = 0; no.critico = false; continue; }
       no.folgaTotal = _folgaEntre(no.ef, no.lf, c);
       no.critico = no.folgaTotal <= TOL;
 
@@ -269,6 +315,8 @@ const CPM = (() => {
       iniProjeto: lista.reduce((m, x) => (x.es && (!m || x.es < m)) ? x.es : m, ''),
       fimProjeto: lfProjeto,
       totalNos: nos.size,
+      executadas: lista.filter(x => x.executado).length,
+      iniciadas: lista.filter(x => x.iniciado).length,
       // Quantas tarefas o cronograma salvo hoje coloca em data diferente da que
       // o CPM calcula. Zero = cronograma coerente com a própria rede.
       divergentes: lista.filter(x => (x.inicioAtual && x.inicioAtual !== x.es) || (x.terminoAtual && x.terminoAtual !== x.ef)).length,
