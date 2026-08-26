@@ -316,21 +316,33 @@ const ConfiguracaoObra = (() => {
     const c = _cal();
     if (!c.ativo) return '<div class="text-sm text-muted">Ligue o calendário para ver a prévia.</div>';
     const MESES = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
-    let html = '<div style="display:flex;gap:10px;flex-wrap:wrap;">';
+    // Grade de calendário de verdade: 7 colunas fixas, Dom a Sáb, e o dia 1 cai
+    // na coluna do dia da semana correto. Antes os dias vinham enfileirados e não
+    // dava pra saber em que dia da semana cada número caía.
+    const GRADE = 'display:grid;grid-template-columns:repeat(7,20px);gap:2px;';
+    const cabecalho = [0, 1, 2, 3, 4, 5, 6].map(d =>
+      `<div style="text-align:center;font-size:.56rem;font-weight:700;text-transform:uppercase;color:${c.jornada.includes(d) ? 'var(--cor-texto-secundario)' : 'var(--cor-texto-muted)'};">${Calendario.nomeDiaSemana(d)}</div>`
+    ).join('');
+
+    let html = '<div style="display:flex;gap:12px;flex-wrap:wrap;">';
     for (let m = 1; m <= 12; m++) {
       const ultimo = new Date(calAnoVisivel, m, 0).getDate();
-      let dias = '', uteis = 0;
+      const offset = new Date(calAnoVisivel, m - 1, 1).getDay(); // 0=dom: quantas células vazias antes do dia 1
+      let dias = offset ? `<div style="grid-column:span ${offset};"></div>` : '';
+      let uteis = 0;
       for (let d = 1; d <= ultimo; d++) {
         const data = `${calAnoVisivel}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
         const motivo = Calendario.motivoNaoUtil(data, c);
         if (!motivo) uteis++;
-        dias += `<span title="${_fd(data)}${motivo ? ' — ' + _esc(motivo) : ' — dia útil'}" style="display:inline-block;width:16px;height:16px;line-height:16px;text-align:center;font-size:.58rem;font-weight:600;border-radius:3px;margin:1px;
-          background:${motivo ? 'var(--cor-neutro-bg)' : 'var(--cor-primaria)'};color:${motivo ? 'var(--cor-texto-muted)' : 'var(--cor-dark-900)'};">${d}</span>`;
+        dias += `<div title="${_fd(data)} (${Calendario.nomeDiaSemana(Calendario.diaSemanaDe(data), true)})${motivo ? ' — ' + _esc(motivo) : ' — dia útil'}"
+          style="height:20px;line-height:20px;text-align:center;font-size:.6rem;font-weight:600;border-radius:3px;
+          background:${motivo ? 'var(--cor-neutro-bg)' : 'var(--cor-primaria)'};color:${motivo ? 'var(--cor-texto-muted)' : 'var(--cor-dark-900)'};">${d}</div>`;
       }
-      html += `<div style="border:1.5px solid var(--cor-borda-light);border-radius:8px;padding:8px;width:166px;background:var(--cor-fundo-card);">
-        <div style="font-size:.74rem;font-weight:700;margin-bottom:4px;color:var(--cor-texto);">${MESES[m - 1]}
+      html += `<div style="border:1.5px solid var(--cor-borda-light);border-radius:8px;padding:10px;background:var(--cor-fundo-card);">
+        <div style="font-size:.76rem;font-weight:700;margin-bottom:6px;color:var(--cor-texto);">${MESES[m - 1]}
           <span class="text-muted" style="font-weight:400;">· ${uteis} úteis</span></div>
-        <div>${dias}</div></div>`;
+        <div style="${GRADE}margin-bottom:3px;">${cabecalho}</div>
+        <div style="${GRADE}">${dias}</div></div>`;
     }
     return html + '</div>';
   }

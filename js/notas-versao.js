@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.20.1',
+  versaoAtual: 'V3.20.1.1',
 
   versoes: [
     {
@@ -10662,6 +10662,18 @@ const NotasVersao = {
         "Reescrita usando os componentes e as variáveis do próprio sistema: blocos viraram card/card-header/card-body, tabelas viraram tabela + tabela-compacta dentro de tabela-container, caixas de seleção viraram form-check, e tipo de feriado e efeito da exceção viraram badge colorido.",
         "Mesma correção no popup de \\\"Aplicar Calendário às Datas\\\" (os três indicadores do topo, a tabela de de → para e os avisos) e no aviso do topo do Planejamento, que estava em verde escuro e agora usa o amarelo de alerta do sistema.",
         "Prévia dos 12 meses: dia útil no amarelo Absoluta, dia parado no cinza neutro do tema, ambos com contraste de texto correto."
+      ]
+    },
+    {
+      "versao": "V3.20.1.1",
+      "data": "2026-08-26",
+      "tipo": "melhoria",
+      "titulo": "Calendário de Obra: prévia dos meses virou calendário de verdade, com Dom a Sáb no cabeçalho",
+      "itens": [
+        "Antes os dias vinham enfileirados um atrás do outro, sem coluna: dava pra ver quais dias estavam parados, mas não em que dia da semana cada número caía — justamente o que interessa pra conferir a jornada.",
+        "Agora cada mês é uma grade de 7 colunas com as siglas DOM SEG TER QUA QUI SEX SÁB no cabeçalho, e o dia 1 cai na coluna certa (com as células vazias antes dele).",
+        "As siglas dos dias fora da jornada aparecem em tom mais fraco, então bate o olho e já vê a coluna que a obra não trabalha.",
+        "O passar do mouse em cada dia agora diz também o dia da semana por extenso, além da data e do motivo de estar parado."
       ]
     }
   ],
