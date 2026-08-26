@@ -51,7 +51,17 @@ const PadraoAprendido = (() => {
 
   const MIN_PADRAO = 3;      // repetições para o sentido majoritário virar "padrão da obra"
   const CONF_MIN = 0.70;     // fração mínima do sentido majoritário
-  const MIN_COBERTURA = 4;   // locais para exigir cobertura de um vínculo
+  const MIN_COBERTURA = 4;   // locais com o vínculo para começar a considerar padrão
+  // FRAÇÃO mínima de locais que precisam ter o vínculo pra ele ser "o padrão".
+  //
+  // Bug corrigido: a versão anterior só exigia MIN_COBERTURA=4 locais. No RD06
+  // isso apontou "Distribuição Elétrica -> Distribuição de Gás faltando em 12
+  // locais" porque o vínculo existia em 4. Mas 4 de 16 não é padrão — é o
+  // contrário: em 12 locais NÃO existe, então o padrão da obra é NÃO ter esse
+  // vínculo, e os 4 são que estão errados. O gás não depende da elétrica; depende
+  // da alvenaria de vedação e do gás do pavimento anterior.
+  // Apontar o inverso é pior que ficar calado: manda criar 12 vínculos errados.
+  const FRACAO_COBERTURA = 0.6;
 
   function _norm(s) {
     return String(s || '')
@@ -208,11 +218,17 @@ const PadraoAprendido = (() => {
           alvos: alvos.map(x => ({ id: x.id, nome: x.nome, codigo: x.codigo })) });
       }
       if (!buracos.length) continue;
+      // O vínculo tem que ser MAIORIA nos locais onde os dois serviços coexistem.
+      // Presente em 4 e ausente em 12 significa que o padrão da obra é não ter —
+      // e mandar criar os 12 seria propagar o erro. Ver FRACAO_COBERTURA no topo.
+      const locaisTotal = gruposComVinculo.size + buracos.length;
+      const cobertura = gruposComVinculo.size / locaisTotal;
+      if (cobertura < FRACAO_COBERTURA) continue;
       faltando.push({
         tipo: 'faltando',
         servicoAntes: e.a, servicoDepois: e.b,
         rotuloAntes: rot.get(e.a) || e.a, rotuloDepois: rot.get(e.b) || e.b,
-        n: e.n, locaisComVinculo: gruposComVinculo.size, buracos,
+        n: e.n, locaisComVinculo: gruposComVinculo.size, locaisTotal, cobertura, buracos,
       });
     }
 
@@ -233,11 +249,38 @@ const PadraoAprendido = (() => {
         tarefasPorGrupo: Math.round(a.tarefas / a.grupos.length), tarefasTotal: a.tarefas }))
       .sort((x, y) => y.repeticoes - x.repeticoes || y.tarefasTotal - x.tarefasTotal);
 
+    // ---- Vínculo SOBRANDO: existe na minoria dos locais ----
+    // O espelho do "faltando", e o achado que estava saindo invertido. Se dois
+    // serviços coexistem em 16 locais e estão ligados em só 4, o padrão da obra é
+    // NÃO ligar — então são esses 4 vínculos que estão fora do padrão, não os 12
+    // que faltam. No RD06 é o caso de "Distribuição Elétrica -> Distribuição de
+    // Gás": gás não depende de elétrica, e os 4 vínculos existentes é que sobram.
+    const sobrando = [];
+    for (const [key, e] of pares) {
+      const inv = pares.get(e.b + '>' + e.a);
+      if (inv && inv.n >= e.n) continue;
+      const gruposComVinculo = new Set(e.vinculos.map(v => v.grupo).filter(Boolean));
+      let coexistem = 0;
+      for (const [g, m] of porGrupoServico) if (m.has(e.a) && m.has(e.b)) coexistem++;
+      if (coexistem < MIN_COBERTURA + 2) continue;              // poucos locais: não dá base estatística
+      const cobertura = gruposComVinculo.size / coexistem;
+      if (cobertura >= FRACAO_COBERTURA) continue;              // é padrão, não sobra
+      if (gruposComVinculo.size > coexistem * 0.4) continue;    // zona cinzenta: não opina
+      sobrando.push({
+        tipo: 'sobrando',
+        servicoAntes: e.a, servicoDepois: e.b,
+        rotuloAntes: rot.get(e.a) || e.a, rotuloDepois: rot.get(e.b) || e.b,
+        n: e.n, locaisComVinculo: gruposComVinculo.size, locaisTotal: coexistem, cobertura,
+        vinculos: e.vinculos.slice(),
+      });
+    }
+
     desvios.sort((x, y) => (y.n + y.m) - (x.n + x.m));
     faltando.sort((x, y) => y.buracos.length - x.buracos.length || y.n - x.n);
+    sobrando.sort((x, y) => x.cobertura - y.cobertura || y.n - x.n);
 
     return {
-      pares, servicoDe: svc, rotulos: rot, desvios, faltando, blocos,
+      pares, servicoDe: svc, rotulos: rot, desvios, faltando, sobrando, blocos,
       resumo: {
         folhas: folhas.length,
         semClassificacao: sorted.filter(t => !t._pai && !chaveServico(t)).length,
@@ -248,6 +291,8 @@ const PadraoAprendido = (() => {
         vinculosSuspeitos: desvios.reduce((s, d) => s + d.m, 0),
         faltando: faltando.length,
         buracos: faltando.reduce((s, f) => s + f.buracos.length, 0),
+        sobrando: sobrando.length,
+        vinculosSobrando: sobrando.reduce((s, f) => s + f.n, 0),
         blocoMaior: blocos.length ? blocos[0].repeticoes : 0,
       },
     };

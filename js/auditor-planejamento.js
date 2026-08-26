@@ -111,10 +111,17 @@ const Auditor = (() => {
     // ---------- 1. QUALIDADE DA REDE ----------
 
     for (const c of rede.ciclos) {
+      // Mostra o LAÇO, não só o fato de existir: sem saber por onde ele volta não
+      // dá pra escolher qual vínculo remover.
+      const cam = (c.laco && c.laco.length > 1)
+        ? c.laco.map(x => (x.codigo ? x.codigo + ' ' : '') + (x.nome || '').trim()).join('\n   ↓ depende de\n')
+        : '';
       add({ chave: `ciclo:${c.id}`, ctx: '', tipo: 'ciclo', severidade: 'alta',
         tarefaId: c.id, tarefaNome: c.nome, tarefaCodigo: c.codigo,
         titulo: 'Dependência circular',
-        detalhe: 'Esta tarefa está num laço de predecessoras: A espera B, que espera A. Nenhuma das duas pode começar.',
+        detalhe: cam
+          ? `O laço fecha assim (a última volta pra primeira):\n\n   ${cam}\n\nPra desfazer, remova UM dos vínculos deste caminho — o que menos fizer sentido na obra.`
+          : 'Esta tarefa está num laço de predecessoras. Nenhuma das tarefas do laço pode começar.',
         motivo: 'Rede de precedência não admite ciclo — não existe ordem possível, então o cálculo de data e de folga fica sem solução e a tarefa sai do caminho crítico sem motivo.',
         sugestao: 'Abra a coluna Predecessora das tarefas do laço e remova o vínculo que fecha o círculo.',
         acoes: ['ir', 'ignorar'] });
@@ -194,10 +201,17 @@ const Auditor = (() => {
       if (!no) continue;
 
       if (no.folgaTotal < -1e-9) {
+        // Endereço do aperto: quem cobra, quando, e por qual vínculo. "Folga
+        // negativa de 146 dias" sem isso é número sem causa, e não dá pra julgar.
+        const ap = no.apertaPor;
+        const causa = ap
+          ? `Quem aperta: "${ap.nome}" precisa começar em ${ap.ls} (vínculo ${ap.tipo}${ap.lag ? (ap.lag > 0 ? '+' + ap.lag : ap.lag) : ''}), então esta teria que terminar até ${no.lf}. Mas ela só consegue terminar em ${no.ef}.`
+          : `Esta tarefa termina em ${no.ef} e a rede exigiria até ${no.lf}.`;
         add({ chave: `folga_neg:${t.id}`, ctx: _assinatura([no.es, no.ef, dur]), tipo: 'folga_negativa', severidade: 'alta',
           tarefaId: t.id, tarefaNome: t.nome, tarefaCodigo: t.codigo,
+          tarefaId2: ap ? ap.id : '', tarefaNome2: ap ? ap.nome : '',
           titulo: `Folga negativa de ${Math.abs(no.folgaTotal)} dias`,
-          detalhe: `A rede exige que esta tarefa termine ${Math.abs(no.folgaTotal)} dias antes do que ela consegue.`,
+          detalhe: causa,
           motivo: 'Folga negativa quer dizer que o cronograma já é impossível como está: ou uma data foi travada à mão, ou a duração não cabe entre os vínculos. Ignorar isso é assumir um atraso que ninguém declarou.',
           sugestao: 'Reveja a duração, o vínculo, ou aceite a nova data final da obra.',
           acoes: ['ir', 'ignorar'] });
@@ -309,6 +323,29 @@ const Auditor = (() => {
             padraoN: d.n, padraoM: d.m, confianca: d.confianca } });
       }
 
+      // Vínculo que existe na MINORIA dos locais: o padrão da obra é não ter, e
+      // esses poucos é que estão fora. Este achado corrige o diagnóstico invertido
+      // da versão anterior, que mandava CRIAR o vínculo nos 12 locais que não
+      // tinham em vez de questionar os 4 que tinham.
+      for (const f of (aprendido.sobrando || [])) {
+        const V = f.vinculos;
+        add({ chave: `vinculo_sobrando:${f.servicoAntes}>${f.servicoDepois}`,
+          ctx: _assinatura([f.n, V.map(v => `${v.de}>${v.para}`).sort().join(',')]),
+          tipo: 'vinculo_sobrando', severidade: 'media',
+          tarefaId: V[0].para, tarefaNome: V[0].nomePara, tarefaCodigo: V[0].codPara,
+          tarefaId2: V[0].de, tarefaNome2: V[0].nomeDe,
+          titulo: `${f.n} vínculo(s) fora do padrão: ${f.rotuloAntes} → ${f.rotuloDepois}`,
+          detalhe: `Os dois serviços coexistem em ${f.locaisTotal} local(is), e estão ligados em apenas ${f.locaisComVinculo} (${Math.round(f.cobertura * 100)}%).`
+            + `\nO padrão desta obra é NÃO ligar esses dois — então provavelmente são estes ${f.n} vínculos que estão sobrando, e não os outros que faltam.\n\n`
+            + V.slice(0, 8).map(v => `• ${(v.nomeDe || '').trim()}  →  ${(v.nomePara || '').trim()}${v.grupo ? `   [${v.grupo}]` : ''}`).join('\n')
+            + (V.length > 8 ? `\n… e outros ${V.length - 8}` : ''),
+          motivo: 'Vínculo que só existe em alguns locais costuma ser sobra de montagem: alguém amarrou dois serviços que na obra não dependem um do outro. Isso prende a tarefa sem necessidade, come folga, e pode jogar coisa pro caminho crítico que não deveria estar lá.',
+          sugestao: `Se estes dois serviços realmente não dependem um do outro, remover os ${f.n} vínculo(s). Se dependem, criar nos outros ${f.locaisTotal - f.locaisComVinculo} local(is).`,
+          acoes: ['remover', 'inverter', 'ir', 'manter'],
+          dados: { vinculos: V, labelAntes: f.rotuloAntes, labelDepois: f.rotuloDepois,
+            cobertura: f.cobertura, locaisTotal: f.locaisTotal, locaisComVinculo: f.locaisComVinculo } });
+      }
+
       // Vínculo que o padrão manda existir e não existe naquele local. É o erro
       // mais perigoso da lista: vínculo ausente não aparece em lugar nenhum, o
       // Gantt fica bonito e a tarefa flutua solta.
@@ -326,9 +363,11 @@ const Auditor = (() => {
             + `\n\nExemplo: "${(f.buracos[0].origens[0] || {}).nome || ''}" deveria preceder "${(f.buracos[0].alvos[0] || {}).nome || ''}".`,
           motivo: 'Vínculo ausente é o erro mais silencioso que existe num cronograma: nada reclama. A tarefa parece amarrada porque a data está no lugar certo, mas quando a antecessora atrasa ela não anda junto — e o cronograma passa a mentir sem ninguém notar. Como o mesmo par está ligado nos outros locais, aqui é falha de montagem, não decisão.',
           sugestao: `Criar o vínculo ${f.rotuloAntes} → ${f.rotuloDepois} nos ${f.buracos.length} local(is) que estão sem.`,
-          acoes: ['ir', 'manter', 'ignorar'],
+          acoes: ['criar', 'ir', 'manter', 'ignorar'],
           dados: { servicoAntes: f.servicoAntes, servicoDepois: f.servicoDepois,
-            buracos: f.buracos, locais, padraoN: f.n } });
+            buracos: f.buracos, locais, padraoN: f.n,
+            labelAntes: f.rotuloAntes, labelDepois: f.rotuloDepois,
+            cobertura: f.cobertura, locaisTotal: f.locaisTotal } });
       }
     }
 
@@ -560,8 +599,14 @@ const Auditor = (() => {
       const decididos = grupo.filter(a => a.decidido).length;
       const abertosG = grupo.filter(a => !a.decidido);
       if (!abertosG.length) continue; // tudo já decidido: não reabre agregado
-      const amostra = abertosG.slice(0, 10).map(a =>
-        `• ${a.tarefaCodigo ? a.tarefaCodigo + ' ' : ''}${a.tarefaNome}${a.detalhe ? ' — ' + a.detalhe.split('\n')[0] : ''}`).join('\n');
+      // O PRIMEIRO caso vai com o detalhe INTEIRO — em achado repetitivo (ciclo,
+      // folga negativa) o diagnóstico completo de um caso explica todos, e cortar
+      // na primeira linha era justamente o que impedia entender o problema.
+      const p = abertosG[0];
+      const primeiro = `▸ ${p.tarefaCodigo ? p.tarefaCodigo + ' ' : ''}${p.tarefaNome}\n${p.detalhe || ''}`;
+      const resto = abertosG.slice(1, 10).map(a =>
+        `• ${a.tarefaCodigo ? a.tarefaCodigo + ' ' : ''}${a.tarefaNome}${a.detalhe ? ' — ' + a.detalhe.split('\n').filter(Boolean)[0] : ''}`).join('\n');
+      const amostra = primeiro + (resto ? `\n\nOutros:\n${resto}` : '');
       finais.push(_achado({
         chave: `agregado:${tipo}`,
         ctx: _assinatura([abertosG.length]),

@@ -7449,8 +7449,13 @@ const Planejamento = (() => {
     const cartao=(a)=>{
       const acoes=[];
       const nVinc=(a.dados&&a.dados.vinculos)?a.dados.vinculos.length:(a.dados&&a.dados.de?1:0);
+      const nBur=(a.dados&&a.dados.buracos)?a.dados.buracos.length:0;
+      if(podeEditar&&a.acoes.includes('criar')&&nBur)
+        acoes.push(`<button class="btn btn-primario btn-sm" style="font-size:.72rem;" onclick="Planejamento.auditorCriarVinculos('${_esc(a.chave)}')">Criar nos ${nBur} local(is)</button>`);
+      if(podeEditar&&a.acoes.includes('remover')&&nVinc)
+        acoes.push(`<button class="btn btn-primario btn-sm" style="font-size:.72rem;" onclick="Planejamento.auditorRemoverVinculos('${_esc(a.chave)}')">Remover os ${nVinc} vínculo(s)</button>`);
       if(podeEditar&&a.acoes.includes('inverter')&&nVinc)
-        acoes.push(`<button class="btn btn-primario btn-sm" style="font-size:.72rem;" onclick="Planejamento.auditorInverter('${_esc(a.chave)}')">${nVinc>1?`Inverter os ${nVinc} vínculos`:'Inverter o vínculo'}</button>`);
+        acoes.push(`<button class="btn ${a.acoes.includes('remover')?'btn-secundario':'btn-primario'} btn-sm" style="font-size:.72rem;" onclick="Planejamento.auditorInverter('${_esc(a.chave)}')">${nVinc>1?`Inverter os ${nVinc}`:'Inverter o vínculo'}</button>`);
       if(a.tarefaId)
         acoes.push(`<button class="btn btn-secundario btn-sm" style="font-size:.72rem;" onclick="Planejamento.auditorIr('${_esc(a.tarefaId)}')">Ver a tarefa</button>`);
       if(podeEditar)
@@ -7632,10 +7637,73 @@ const Planejamento = (() => {
     return out;
   }
 
-  function _simularInversao(vinculos){
+  // CRIAR vínculos onde o padrão manda ter e não tem.
+  //
+  // O pareamento é POR LOCAL, respondendo à dúvida certa: "ele entende que é o
+  // 1º com o 1º, o 2º com o 2º?" Sim — cada buraco vem com as origens e os alvos
+  // daquele grupo (pavimento), e dentro do grupo prefere o mesmo AMBIENTE
+  // (subgrupo: Final 01 com Final 01, Hall com Hall). Nunca cruza pavimento.
+  //
+  // Onde o ambiente não casa, liga em todas as origens do local. Isso é
+  // conservador de propósito: prende a tarefa depois de tudo que o padrão diz
+  // que vem antes, em vez de escolher um palpite entre várias.
+  function _calcularCriacao(lista,buracos,tipo,lag){
+    const porIdL=new Map(lista.map(t=>[t.id,t]));
+    const preds=new Map();
+    const partesDe=(id)=>{
+      if(!preds.has(id))preds.set(id,_predParse((porIdL.get(id)||{}).predecessora));
+      return preds.get(id);
+    };
+    const sub=(id)=>String((porIdL.get(id)||{}).subgrupo||'').trim().toLowerCase();
+    let criados=0;
+    for(const b of buracos){
+      for(const alvo of b.alvos){
+        if(!porIdL.has(alvo.id))continue;
+        const mesmoAmb=b.origens.filter(o=>porIdL.has(o.id)&&sub(o.id)&&sub(o.id)===sub(alvo.id));
+        const origens=mesmoAmb.length?mesmoAmb:b.origens.filter(o=>porIdL.has(o.id));
+        const arr=partesDe(alvo.id);
+        for(const o of origens){
+          if(o.id===alvo.id)continue;
+          if(arr.some(p=>p.id===o.id))continue;
+          arr.push({id:o.id,tipo:tipo||'TI',lag:String(lag||'')});
+          criados++;
+        }
+        preds.set(alvo.id,arr);
+      }
+    }
+    const out=new Map();
+    for(const [id,partes] of preds){
+      const nova=_predFormat(partes);
+      if(nova!==((porIdL.get(id)||{}).predecessora||''))out.set(id,nova);
+    }
+    out._criados=criados;
+    return out;
+  }
+
+  // REMOVER vínculos que sobram (existem na minoria dos locais).
+  function _calcularRemocao(lista,vinculos){
+    const porIdL=new Map(lista.map(t=>[t.id,t]));
+    const preds=new Map();
+    for(const v of vinculos){
+      if(!porIdL.has(v.para))continue;
+      const atual=preds.has(v.para)?preds.get(v.para):_predParse((porIdL.get(v.para)||{}).predecessora);
+      preds.set(v.para,atual.filter(p=>p.id!==v.de));
+    }
+    const out=new Map();
+    for(const [id,partes] of preds){
+      const nova=_predFormat(partes);
+      if(nova!==((porIdL.get(id)||{}).predecessora||''))out.set(id,nova);
+    }
+    return out;
+  }
+
+  // Simulador genérico: recebe a função que calcula as mudanças de predecessora
+  // e devolve o impacto. Inverter, criar e remover usam o MESMO caminho — um
+  // codigo só pra simular e um só pra aplicar.
+  function _simularMudanca(calcular){
     const antes=CPM.calcular(tarefas,_calObra);
     const rascunho=_clonarParaSimular();
-    const mudancas=_calcularInversao(rascunho,vinculos);
+    const mudancas=calcular(rascunho);
     const porIdR=new Map(rascunho.map(t=>[t.id,t]));
     for(const [id,pred] of mudancas){const t=porIdR.get(id);if(t)t.predecessora=pred;}
     const depois=CPM.calcular(rascunho,_calObra);
@@ -7656,30 +7724,49 @@ const Planejamento = (() => {
       ciclosNovos:depois.ciclos.filter(c=>!antes.ciclos.some(x=>x.id===c.id))};
   }
 
-  function auditorInverter(chave){
+  function _simularInversao(vinculos){return _simularMudanca(r=>_calcularInversao(r,vinculos));}
+
+  // Uma função pra três ações: inverter, criar e remover vínculo em massa.
+  // Todas simulam antes, mostram o impacto na data final e no caminho crítico, e
+  // só aplicam depois de confirmar.
+  function auditorAcaoVinculo(chave,acao){
     if(!Permissions.pode('planejamento','editar')){Utils.toast('Sem permissão.','erro');return;}
     const a=(_audit&&_audit.achados||[]).find(x=>x.chave===chave);
     if(!a||!a.dados)return;
     const vinculos=(a.dados.vinculos&&a.dados.vinculos.length)?a.dados.vinculos
       :(a.dados.de&&a.dados.para?[{de:a.dados.de,para:a.dados.para,tipo:a.dados.tipo,lag:a.dados.lag,
         nomeDe:a.tarefaNome2,nomePara:a.tarefaNome}]:[]);
-    if(!vinculos.length)return;
+    const buracos=a.dados.buracos||[];
+    if(acao==='criar'?!buracos.length:!vinculos.length)return;
 
-    Utils.mostrarLoading('Simulando a inversão...');
+    Utils.mostrarLoading('Simulando...');
     setTimeout(()=>{
       try{
-        const s=_simularInversao(vinculos);
-        _invPend={achado:a,vinculos,sim:s};
-        _renderConfirmarInversao();
+        let s,qtd;
+        if(acao==='criar'){
+          s=_simularMudanca(r=>_calcularCriacao(r,buracos,'TI',''));
+          qtd=s.mudancas._criados||s.mudancas.size;
+        }else if(acao==='remover'){
+          s=_simularMudanca(r=>_calcularRemocao(r,vinculos));
+          qtd=vinculos.length;
+        }else{
+          s=_simularInversao(vinculos); qtd=vinculos.length;
+        }
+        _invPend={achado:a,vinculos,buracos,sim:s,acao,qtd};
+        _renderConfirmarAcao();
         Utils.abrirModal('modal-planej-decisao');
-      }catch(e){console.error(e);Utils.toast('Erro ao simular a inversão.','erro');}
+      }catch(e){console.error(e);Utils.toast('Erro ao simular.','erro');}
       finally{Utils.esconderLoading();}
     },10);
   }
+  function auditorInverter(chave){auditorAcaoVinculo(chave,'inverter');}
+  function auditorCriarVinculos(chave){auditorAcaoVinculo(chave,'criar');}
+  function auditorRemoverVinculos(chave){auditorAcaoVinculo(chave,'remover');}
 
-  function _renderConfirmarInversao(){
+  function _renderConfirmarAcao(){
     if(!_invPend)return;
-    const {achado:a,vinculos,sim:s}=_invPend;
+    const {achado:a,vinculos,sim:s,acao,qtd}=_invPend;
+    const VERBO={inverter:'Inverter',criar:'Criar',remover:'Remover'}[acao||'inverter'];
     const dl=a.dados.labelDepois||'', da=a.dados.labelAntes||'';
     const dias=(s.fimAntes&&s.fimDepois)?_duracaoEntre(
       s.fimAntes<s.fimDepois?s.fimAntes:s.fimDepois,
@@ -7687,7 +7774,7 @@ const Planejamento = (() => {
     const sinal=s.fimDepois>s.fimAntes?'atrasa':(s.fimDepois<s.fimAntes?'adianta':'não muda');
 
     document.getElementById('planej-decisao-titulo').textContent=
-      vinculos.length>1?`Inverter ${vinculos.length} vínculos`:'Inverter o vínculo';
+      `${VERBO} ${qtd} vínculo${qtd===1?'':'s'}`;
 
     const kpi=(rot,val,rod,cor)=>`<div style="flex:1;min-width:135px;background:var(--cor-fundo);border:1.5px solid var(--cor-borda-light);border-radius:8px;padding:10px;">
       <div class="text-muted" style="font-size:.65rem;text-transform:uppercase;letter-spacing:.5px;">${rot}</div>
@@ -7698,14 +7785,18 @@ const Planejamento = (() => {
 
     document.getElementById('planej-decisao-body').innerHTML=`
       <div style="font-size:.82rem;color:var(--cor-texto);margin-bottom:3px;">
-        ${da&&dl?`<b>${_esc(da)}</b> passa a vir antes de <b>${_esc(dl)}</b>`:'<b>Inversão de vínculo</b>'}</div>
+        ${acao==='criar'?`<b>${_esc(da)}</b> passa a preceder <b>${_esc(dl)}</b> nos locais que estão sem`
+         :acao==='remover'?`Remover a dependência entre <b>${_esc(da)}</b> e <b>${_esc(dl)}</b>`
+         :(da&&dl?`<b>${_esc(da)}</b> passa a vir antes de <b>${_esc(dl)}</b>`:'<b>Inversão de vínculo</b>')}</div>
       <div class="text-sm text-muted" style="margin-bottom:12px;">
-        ${vinculos.length>1
-          ? `${vinculos.length} vínculos serão invertidos de uma vez, cada um no seu local — a EAP inteira, não só um pavimento.`
-          : 'Um vínculo será invertido.'}</div>
+        ${acao==='criar'
+          ? `Pareado POR LOCAL: cada tarefa é ligada à do mesmo pavimento, e dentro dele ao mesmo ambiente (Final 01 com Final 01, Hall com Hall). Nunca cruza pavimento.`
+          : qtd>1
+            ? `${qtd} vínculos de uma vez, cada um no seu local — a EAP inteira, não só um pavimento.`
+            : 'Um vínculo.'}</div>
 
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
-        ${kpi('Vínculos',`<span style="font-size:1.4rem;">${vinculos.length}</span>`,`${s.mudancas.size} tarefa(s) reamarrada(s)`)}
+        ${kpi('Vínculos',`<span style="font-size:1.4rem;">${qtd}</span>`,`${s.mudancas.size} tarefa(s) reamarrada(s)`)}
         ${kpi('Datas que mudam',`<span style="font-size:1.4rem;">${s.movidas}</span>`,'tarefas deslocadas na rede')}
         ${kpi('Término da obra',
           `<span class="text-muted" style="text-decoration:line-through;font-size:.9rem;">${_fd(s.fimAntes)}</span>
@@ -7723,29 +7814,41 @@ const Planejamento = (() => {
         <summary style="cursor:pointer;font-size:.76rem;color:var(--cor-texto);">${s.entram.length} tarefa(s) entram no caminho crítico</summary>
         <div class="text-muted" style="font-size:.72rem;margin-top:5px;">${s.entram.slice(0,12).map(id=>_esc(nomeDe(id))).join('<br>')}${s.entram.length>12?`<br>… e outras ${s.entram.length-12}`:''}</div></details>`:''}
 
-      <details style="margin-bottom:10px;">
-        <summary style="cursor:pointer;font-size:.76rem;color:var(--cor-texto);">Ver os ${vinculos.length} vínculo(s)</summary>
-        <div class="text-muted" style="font-size:.71rem;margin-top:5px;max-height:180px;overflow:auto;">
-          ${vinculos.slice(0,60).map(v=>`${_esc(v.nomeDe||nomeDe(v.de))} <span style="color:var(--cor-perigo);">→</span> ${_esc(v.nomePara||nomeDe(v.para))} <span style="color:var(--cor-texto-muted);">vira</span> ${_esc(v.nomePara||nomeDe(v.para))} <span style="color:var(--cor-sucesso);">→</span> ${_esc(v.nomeDe||nomeDe(v.de))}`).join('<br>')}
-          ${vinculos.length>60?`<br>… e outros ${vinculos.length-60}`:''}</div></details>
+      <details style="margin-bottom:10px;" ${acao==='criar'?'open':''}>
+        <summary style="cursor:pointer;font-size:.76rem;color:var(--cor-texto);">Ver o que muda em cada tarefa</summary>
+        <div class="text-muted" style="font-size:.71rem;margin-top:5px;max-height:200px;overflow:auto;">
+          ${acao==='criar'
+            ? [...s.mudancas.keys()].slice(0,60).map(id=>{
+                const antesP=_predDisplayDe(_porId.get(id)), agoraP=_predCanonParaTexto(s.mudancas.get(id));
+                return `${_esc(nomeDe(id))}<br><span style="margin-left:14px;">predecessora: <span class="text-muted">${_esc(antesP||'—')}</span> <span style="color:var(--cor-sucesso);">→ ${_esc(agoraP||'—')}</span></span>`;
+              }).join('<br>')
+            : acao==='remover'
+              ? vinculos.slice(0,60).map(v=>`${_esc(v.nomeDe||nomeDe(v.de))} <span style="color:var(--cor-perigo);text-decoration:line-through;">→</span> ${_esc(v.nomePara||nomeDe(v.para))}`).join('<br>')
+              : vinculos.slice(0,60).map(v=>`${_esc(v.nomeDe||nomeDe(v.de))} <span style="color:var(--cor-perigo);">→</span> ${_esc(v.nomePara||nomeDe(v.para))} <span style="color:var(--cor-texto-muted);">vira</span> ${_esc(v.nomePara||nomeDe(v.para))} <span style="color:var(--cor-sucesso);">→</span> ${_esc(v.nomeDe||nomeDe(v.de))}`).join('<br>')}
+          ${qtd>60?`<br>… e outros ${qtd-60}`:''}</div></details>
 
-      <div class="text-sm text-muted" style="margin-bottom:10px;">Tipo de vínculo e defasagem são preservados. Dá pra desfazer com Ctrl+Z enquanto a página não recarregar.</div>
+      <div class="text-sm text-muted" style="margin-bottom:10px;">${acao==='criar'?'Vínculo criado como Término-Início sem defasagem.':'Tipo de vínculo e defasagem são preservados.'} Dá pra desfazer com Ctrl+Z enquanto a página não recarregar.</div>
       <div style="display:flex;gap:8px;justify-content:flex-end;">
         <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-planej-decisao')">Cancelar</button>
-        <button class="btn btn-primario" onclick="Planejamento.auditorConfirmarInversao()">Aplicar a inversão</button>
+        <button class="btn btn-primario" onclick="Planejamento.auditorConfirmarInversao()">${VERBO} ${qtd}</button>
       </div>`;
   }
 
+  // Predecessora de uma tarefa em texto por número de linha, pra leitura humana.
+  function _predDisplayDe(t){return t?(t._predDisplay||_predCanonParaTexto(t.predecessora)||''):'';}
+
   async function auditorConfirmarInversao(){
     if(!_invPend)return;
-    const {achado:a,vinculos,sim:s,manual}=_invPend;
+    const {achado:a,vinculos,buracos,sim:s,manual,acao,qtd}=_invPend;
     _invPend=null;
     Utils.fecharModal('modal-planej-decisao');
-    Utils.mostrarLoading('Invertendo...');
+    Utils.mostrarLoading('Aplicando...');
     try{
       _undoPush();
       // Mesma função da simulação, agora sobre as tarefas de verdade.
-      const mudancas=_calcularInversao(tarefas,vinculos);
+      const mudancas=acao==='criar'?_calcularCriacao(tarefas,buracos||[],'TI','')
+        :acao==='remover'?_calcularRemocao(tarefas,vinculos)
+        :_calcularInversao(tarefas,vinculos);
       const ops=[];
       for(const [id,pred] of mudancas){
         const t=_porId.get(id);
@@ -7927,9 +8030,10 @@ const Planejamento = (() => {
     setTimeout(()=>{
       try{
         const s=_simularInversao(V);
-        _invPend={achado:{chave:'',dados:{labelAntes:nomeB,labelDepois:nomeA,vinculos:V}},vinculos:V,sim:s,manual:true};
+        _invPend={achado:{chave:'',dados:{labelAntes:nomeB,labelDepois:nomeA,vinculos:V}},
+          vinculos:V,sim:s,manual:true,acao:'inverter',qtd:V.length};
         Utils.fecharModal('modal-planej-inverter');
-        _renderConfirmarInversao();
+        _renderConfirmarAcao();
         Utils.abrirModal('modal-planej-decisao');
       }catch(e){console.error(e);Utils.toast('Erro ao simular.','erro');}
       finally{Utils.esconderLoading();}
@@ -7952,7 +8056,7 @@ const Planejamento = (() => {
   }
 
   return{init,carregar,abrirAplicarCalendario,aplicarCalendario,calendarioAtual,ciclosDetectados,
-    abrirVerificarPlanejamento,auditorFiltrar,auditorIr,auditorDecidir,auditorConfirmarDecisao,auditorReabrir,auditorInverter,auditorConfirmarInversao,auditorCopiarDossie,toggleCritico,
+    abrirVerificarPlanejamento,auditorFiltrar,auditorIr,auditorDecidir,auditorConfirmarDecisao,auditorReabrir,auditorInverter,auditorCriarVinculos,auditorRemoverVinculos,auditorAcaoVinculo,auditorConfirmarInversao,auditorCopiarDossie,toggleCritico,
     abrirInverterGrupos,invGruposSel,invGruposSimular,setZoom,setVersaoData,copiarDatasDeAtual,inserirTarefa,editarTarefa,salvarTarefa,excluirTarefa,
     selectIdx,toggleRecolher,recuarNivel,avancarNivel,
     toggleGantt,toggleLiberarEdicaoReal,hideCol,showColsMenu,_showCol,_showAll,_toggleMenuFerramentas,

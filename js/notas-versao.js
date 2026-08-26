@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.22.1',
+  versaoAtual: 'V3.22.2',
 
   versoes: [
     {
@@ -10749,6 +10749,22 @@ const NotasVersao = {
         "O popup de simulação agora mostra quantas executadas foram preservadas e quantas iniciadas mantiveram o início, e avisa isso em destaque antes de você aplicar.",
         "Efeito colateral revelado e correto: apareceram 202 tarefas com folga negativa no RD06. Não é bug novo — é a verdade que estava escondida. Com as datas executadas congeladas, fica visível onde o cronograma não fecha mais: serviço que começou antes da antecessora terminar, ou tarefa concluída com atraso que nunca foi replanejada adiante. Enquanto isso não for resolvido, a data final que o sistema mostra é otimista. Sai agregado num apontamento só, com a causa e a ação.",
         "Verificação: 14 testes da data de corte, incluindo regressão que confirma comportamento idêntico quando não há avanço lançado; e no cronograma real do RD06, ZERO das 317 tarefas executadas é movida pelo motor."
+      ]
+    },
+    {
+      "versao": "V3.22.2",
+      "data": "2026-08-26",
+      "tipo": "correcao",
+      "titulo": "Verificador dava diagnóstico invertido em vínculo, e não mostrava a causa dos apontamentos",
+      "itens": [
+        "DIAGNÓSTICO INVERTIDO (o pior tipo de erro, porque manda fazer a coisa errada): o apontamento \\\"vínculo faltando\\\" só exigia que o vínculo existisse em 4 locais pra considerar aquilo padrão da obra. No RD06 isso mandava criar \\\"Distribuição Elétrica → Distribuição de Gás\\\" em 12 pavimentos porque existia em 4. Mas 4 de 16 não é padrão: é o contrário — em 12 locais NÃO existe, então o padrão da obra é não ter esse vínculo, e os 4 é que estão errados. Gás não depende de elétrica; depende da alvenaria de vedação e do gás do pavimento anterior.",
+        "Agora o vínculo só é considerado padrão se estiver presente na MAIORIA dos locais onde os dois serviços coexistem (60%). No RD06 os apontamentos de vínculo faltando caíram de 25 padrões / 109 locais para 20 / 52 — os que sobraram têm cobertura de 63% a 79%, aí sim é falha de montagem.",
+        "ACHADO NOVO, o espelho do anterior: VÍNCULO SOBRANDO. Se dois serviços coexistem em 20 locais e estão ligados em 1, esse vínculo é que está fora do padrão. Encontrou 26 casos no RD06, com 92 vínculos — coisas como \\\"Concretagem de Laje → Instalação de Luminárias\\\" ligado em 1 de 20 locais. Vínculo assim prende tarefa sem necessidade, come folga e pode jogar coisa pro caminho crítico que não deveria estar lá.",
+        "AÇÕES QUE FALTAVAM: os apontamentos de vínculo agora têm botão pra CRIAR nos locais que estão sem, REMOVER os que sobram, e INVERTER — todos em massa, com simulação do impacto na data final e no caminho crítico antes de aplicar. Antes o sistema achava o problema e mandava resolver na mão, tarefa por tarefa.",
+        "A criação é pareada POR LOCAL: cada tarefa é ligada à do mesmo pavimento e, dentro dele, ao mesmo ambiente (Final 01 com Final 01, Hall com Hall). Nunca cruza pavimento. Onde o ambiente não casa, liga em todas as origens daquele local — conservador de propósito, em vez de escolher um palpite.",
+        "CAUSA DA FOLGA NEGATIVA: antes dizia só \\\"a rede exige que esta tarefa termine 146 dias antes do que ela consegue\\\" — número sem endereço, impossível de julgar. Agora diz quem aperta: \\\"Concretagem Laje Piso: Cobertura precisa começar em 09/07 (vínculo TI), então esta teria que terminar até 08/07, mas só consegue em 25/08\\\".",
+        "O LAÇO DA DEPENDÊNCIA CIRCULAR: antes dizia \\\"A espera B, que espera A\\\" sem dizer quem é A e quem é B. Agora mostra o caminho fechado inteiro — no RD06, Fechamento Shaft do 7º depende do 8º, que depende do 9º Final 01, que depende do 9º Final 02, que depende do 10º Final 02, e volta. Com o caminho na mão dá pra escolher qual vínculo remover.",
+        "AGREGADO MOSTRA O PRIMEIRO CASO COMPLETO: em achado repetitivo o diagnóstico inteiro de um caso explica todos, e cortar na primeira linha era exatamente o que impedia entender o problema."
       ]
     }
   ],

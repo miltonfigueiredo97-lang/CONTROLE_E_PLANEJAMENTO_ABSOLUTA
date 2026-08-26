@@ -168,6 +168,30 @@ const CPM = (() => {
     return { ordem, ciclos };
   }
 
+  // O LAÇO em si: qual é o A, qual é o B, e por onde volta.
+  // Dizer "esta tarefa está num ciclo" sem mostrar o caminho não permite
+  // consertar nada — é preciso saber qual vínculo fechar. DFS a partir do nó
+  // até reencontrá-lo, devolvendo a sequência de tarefas do laço.
+  function _acharLaco(nos, idInicial) {
+    const pilha = [], noPilha = new Set(), visitado = new Set();
+    let achado = null;
+    function dfs(id) {
+      if (achado) return;
+      if (noPilha.has(id)) {
+        const i = pilha.indexOf(id);
+        achado = pilha.slice(i).concat([id]);
+        return;
+      }
+      if (visitado.has(id)) return;
+      visitado.add(id); noPilha.add(id); pilha.push(id);
+      const no = nos.get(id);
+      if (no) for (const a of no.saidas) { dfs(a.para); if (achado) return; }
+      pilha.pop(); noPilha.delete(id);
+    }
+    dfs(idInicial);
+    return achado;
+  }
+
   // ---- Cálculo ----
 
   function calcular(tarefas, cal) {
@@ -255,6 +279,17 @@ const CPM = (() => {
       const validos = cands.filter(Boolean);
       no.lf = validos.length ? validos.sort()[0] : lfProjeto;   // o mais restritivo é o MENOR
       no.ls = Calendario.iniPorDuracao(no.lf, no.duracao, c);
+      // Quem aperta esta tarefa: a sucessora que produziu o LF mais restritivo.
+      // Sem isso, "folga negativa de 146 dias" é um número sem endereço — e não
+      // dá pra avaliar se está certo ou errado.
+      if (validos.length) {
+        const i = cands.findIndex(x => x === no.lf);
+        const aresta = no.saidas.filter(a => { const s = nos.get(a.para); return s && !s.emCiclo && s.ls; })[i];
+        if (aresta) {
+          const suc = nos.get(aresta.para);
+          no.apertaPor = { id: suc.id, nome: suc.nome, codigo: suc.codigo, tipo: aresta.tipo, lag: aresta.lag, ls: suc.ls };
+        }
+      }
     }
 
     // ---- FOLGAS E CAMINHO CRÍTICO ----
@@ -310,7 +345,14 @@ const CPM = (() => {
 
     return {
       nos, pais, criticos,
-      ciclos: ciclos.map(id => { const t = nos.get(id); return { id, nome: t.nome, codigo: t.codigo }; }),
+      ciclos: ciclos.map(id => {
+        const t = nos.get(id);
+        const laco = _acharLaco(nos, id);
+        return { id, nome: t.nome, codigo: t.codigo,
+          // O caminho fechado, pra tela poder mostrar "A → B → C → A" em vez de
+          // só dizer que existe um laço.
+          laco: laco ? laco.map(x => { const n = nos.get(x); return { id: x, nome: n ? n.nome : x, codigo: n ? n.codigo : '' }; }) : null };
+      }),
       orfas,
       iniProjeto: lista.reduce((m, x) => (x.es && (!m || x.es < m)) ? x.es : m, ''),
       fimProjeto: lfProjeto,
