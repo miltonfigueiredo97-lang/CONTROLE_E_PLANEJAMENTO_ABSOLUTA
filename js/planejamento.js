@@ -115,7 +115,7 @@ const Planejamento = (() => {
 
   // Colunas: ordem editável, largura editável
   let colOrdem=['sel','num','status','nivel','codigo','nome','inicio','termino','inicioReal','terminoReal','duracao','percEsp','percConc','predecessora','sucessora','responsavel','local','vinculoEstrutura','grupo','subgrupo','frente','categoria','subcategoria','quantidade','equipe','custoMaterial','custoMaoObra','acoes'];
-  let colLarguras={sel:28,num:36,status:34,nivel:42,codigo:70,nome:250,inicio:88,termino:88,duracao:60,percEsp:72,percConc:78,predecessora:80,responsavel:100,local:80,grupo:80,frente:100,quantidade:110,equipe:60,custoMaterial:100,custoMaoObra:100,acoes:64};
+  let colLarguras={sel:28,num:36,status:34,nivel:42,codigo:70,nome:250,inicio:88,termino:88,duracao:60,percEsp:72,percConc:78,predecessora:80,folga:56,responsavel:100,local:80,grupo:80,frente:100,quantidade:110,equipe:60,custoMaterial:100,custoMaoObra:100,acoes:64};
   let colsHidden=new Set();
 
   // Frente de Serviço: disciplina/equipe responsável pela tarefa (Hidráulica,
@@ -123,7 +123,7 @@ const Planejamento = (() => {
   // pessoas alocadas, usada no módulo Produção). Lista fixa em Utils.
   const FRENTES=Utils.FRENTES_SERVICO;
 
-  const COL_LABELS={sel:'',num:'#',status:'',nivel:'Nível',codigo:'Código',nome:'Tarefa',inicio:'Início',termino:'Término',inicioReal:'Início Real',terminoReal:'Término Real',duracao:'Duração',percEsp:'% Esperado',percConc:'% Concluído',predecessora:'Predecessora',sucessora:'Sucessora',responsavel:'Responsável',local:'Local',vinculoEstrutura:'Local (Pav/Sub)',grupo:'Grupo',subgrupo:'Subgrupo',frente:'Frente',categoria:'Categoria',subcategoria:'Subcategoria',quantidade:'Quantidade',equipe:'Nº Equipe',custoMaterial:'Custo Material',custoMaoObra:'Custo M.Obra',acoes:''};
+  const COL_LABELS={sel:'',num:'#',status:'',nivel:'Nível',codigo:'Código',nome:'Tarefa',inicio:'Início',termino:'Término',inicioReal:'Início Real',terminoReal:'Término Real',duracao:'Duração',percEsp:'% Esperado',percConc:'% Concluído',predecessora:'Predecessora',sucessora:'Sucessora',folga:'Folga',responsavel:'Responsável',local:'Local',vinculoEstrutura:'Local (Pav/Sub)',grupo:'Grupo',subgrupo:'Subgrupo',frente:'Frente',categoria:'Categoria',subcategoria:'Subcategoria',quantidade:'Quantidade',equipe:'Nº Equipe',custoMaterial:'Custo Material',custoMaoObra:'Custo M.Obra',acoes:''};
   const COL_FIXED=new Set(['sel','num','status','nome','acoes']);
   const COL_EDITABLE=new Set(['codigo','nome','inicio','termino','duracao','percConc','predecessora','responsavel','local','grupo','nivel','equipe','inicioReal','terminoReal']); // percEsp saiu: agora é calculado ao vivo pela data (não editável); frente saiu: agora tem seletor próprio (_abrirFrentePicker)
 
@@ -471,34 +471,69 @@ const Planejamento = (() => {
   // obra muda de data até alguém ligar o calendário na tela de Configuração.
   let _calObra=(typeof Calendario!=='undefined')?Calendario.normalizar(null):{ativo:false};
 
-  // AS TRÊS ÚNICAS FUNÇÕES QUE CONVERTEM ENTRE DURAÇÃO E DATA.
-  // Nunca faça setDate(getDate()+duracao) solto em outro lugar do arquivo —
-  // foi assim que o motor passou a contar sábado e domingo como dia de obra.
-  //
-  // Convenção com calendário LIGADO: duração conta o dia de início (5 dias
-  // começando segunda termina na sexta), igual obra e igual MS Project.
-  // Convenção com calendário DESLIGADO: término = início + duração em dias
-  // corridos (a convenção antiga, mantida pra não mexer em obra nenhuma).
-  function _fimPorDuracao(ini,dur){
-    if(!ini)return'';
-    const d=parseInt(dur)||0;
-    if(!_calObra.ativo)return Calendario.addDiasCorridos(ini,d);
-    if(d<=0)return Calendario.proximoDiaUtil(ini,_calObra);
-    return Calendario.somarDiasUteis(ini,d-1,_calObra);
-  }
-  function _iniPorDuracao(fim,dur){
-    if(!fim)return'';
-    const d=parseInt(dur)||0;
-    if(!_calObra.ativo)return Calendario.addDiasCorridos(fim,-d);
-    if(d<=0)return Calendario.diaUtilAnterior(fim,_calObra);
-    return Calendario.somarDiasUteis(fim,-(d-1),_calObra);
-  }
+  // Conversão duração <-> data. A regra mora em js/calendario.js (Calendario.
+  // fimPorDuracao / iniPorDuracao) pra Planejamento, CPM, Medições e Curva S
+  // usarem a MESMA — estes três são só atalhos que já passam o calendário da obra.
+  // Nunca faça setDate(getDate()+duracao) solto: foi assim que o motor passou a
+  // contar sábado e domingo como dia de obra.
+  function _fimPorDuracao(ini,dur){return Calendario.fimPorDuracao(ini,dur,_calObra);}
+  function _iniPorDuracao(fim,dur){return Calendario.iniPorDuracao(fim,dur,_calObra);}
   function _duracaoEntre(ini,fim){
     if(!ini||!fim)return 0;
     if(!_calObra.ativo)return Math.max(0,Math.ceil((new Date(fim)-new Date(ini))/864e5));
     return Calendario.contarDiasUteis(ini,fim,_calObra);
   }
   function calendarioAtual(){return _calObra;}
+
+  // ===================== CAMINHO CRÍTICO (modo de visualização) =====================
+  // Desligado por padrão: rodar o CPM a cada pintura de linha seria desperdício.
+  // Ligado, calcula uma vez e guarda o resultado — a coluna Folga e o anel
+  // vermelho na barra leem daqui.
+  let _modoCritico=false;
+  let _criticos=new Set();
+  let _folgas=new Map();
+
+  function _folgaTexto(f){
+    if(f===null||f===undefined)return'—';
+    const v=Math.round(f*10)/10;
+    if(Math.abs(v)<0.05)return'0';
+    return (v>0?'':'−')+String(Math.abs(v)).replace('.',',');
+  }
+
+  function _recalcularCritico(){
+    _criticos=new Set();_folgas=new Map();
+    if(!_modoCritico)return null;
+    if(typeof CPM==='undefined'){Utils.toast('Módulo de CPM não carregou. Recarregue a página.','erro');_modoCritico=false;return null;}
+    const r=CPM.calcular(tarefas,_calObra);
+    for(const no of r.nos.values()){
+      if(no.emCiclo)continue;
+      _folgas.set(no.id,no.folgaTotal);
+      if(no.critico)_criticos.add(no.id);
+    }
+    for(const [id,p] of r.pais){ // pai herda a criticidade de quem está dentro
+      if(p.critico)_criticos.add(id);
+      if(p.folgaTotal!==null)_folgas.set(id,p.folgaTotal);
+    }
+    return r;
+  }
+
+  function toggleCritico(){
+    _modoCritico=!_modoCritico;
+    const r=_recalcularCritico();
+    if(_modoCritico&&r){
+      if(!colOrdem.includes('folga')){
+        const i=colOrdem.indexOf('sucessora');
+        colOrdem.splice(i>=0?i+1:colOrdem.length,0,'folga');
+      }
+      colsHidden.delete('folga');
+      const aviso=_calObra.ativo?'':' Atenção: o calendário está desligado, então a folga está em dias corridos.';
+      Utils.toast(`${r.criticos.length} tarefa(s) no caminho crítico. Término da obra: ${_fd(r.fimProjeto)}.${aviso}`,_calObra.ativo?'sucesso':'alerta',6000);
+      if(r.ciclos.length)Utils.toast(`${r.ciclos.length} tarefa(s) em dependência circular ficaram fora do cálculo.`,'erro',6000);
+    }else{
+      colsHidden.add('folga');
+    }
+    _render();requestAnimationFrame(()=>_paintRows());
+  }
 
   // ===================== PREDECESSORA POR ID (imune a reordenação) =====================
   // Antes a predecessora era guardada como TEXTO com número de linha (ex: "5TI+3").
@@ -657,6 +692,7 @@ const Planejamento = (() => {
         ${['dia','semana','mes','trimestre','ano'].map(z=>`<button class="btn btn-sm ${zoomGantt===z?'btn-primario':'btn-secundario'}" onclick="Planejamento.setZoom('${z}')" style="font-size:.7rem;padding:2px 8px;">${z.charAt(0).toUpperCase()+z.slice(1)}</button>`).join('')}
         <span style="color:#333;">|</span>
         <button class="btn btn-secundario btn-sm" onclick="Planejamento.toggleGantt()" id="btn-tg" style="font-size:.72rem;">${ganttVisible?'◀ Esconder Gantt':'▶ Mostrar Gantt'}</button>
+        <button class="btn btn-sm ${_modoCritico?'btn-primario':'btn-secundario'}" onclick="Planejamento.toggleCritico()" style="font-size:.72rem;" title="Calcula o CPM da obra: marca em vermelho as tarefas que seguram a data final e mostra a folga de cada uma na coluna Folga">${_modoCritico?'☑':'☐'} Caminho Crítico</button>
         <button class="btn btn-sm ${_setasPred&&ganttVisible?'btn-primario':'btn-secundario'}" onclick="Planejamento.toggleSetasPred()" style="font-size:.72rem;${ganttVisible?'':'opacity:.45;'}" title="${ganttVisible?'Desenha no Gantt a seta da predecessora até cada tarefa (estilo MS Project) — passe o mouse pra destacar, clique pra marcar e ver o nome':'Mostre o Gantt pra usar as setas'}">${_setasPred?'☑':'☐'} Setas de Predecessora</button>
         <span style="color:#333;">|</span>
         <button class="btn btn-secundario btn-sm" onclick="Planejamento._toggleMenuFerramentas()" style="font-size:.72rem;">⚙ Ferramentas</button>
@@ -1778,6 +1814,17 @@ const Planejamento = (() => {
           cells+=`<div style="${base}font-size:.7rem;justify-content:center;color:${perc>=100?'#16a34a':perc>0?'#2563eb':'#555'};cursor:pointer;" ${clickEdit}>${perc}%</div>`;
         } else if(cid==='predecessora'){
           cells+=`<div style="${base}color:#555;font-size:.7rem;justify-content:center;cursor:pointer;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;" onclick="Planejamento._predCellClick(event,${i})" ontouchstart="Planejamento._predTouchStart(event,${i})" ontouchmove="Planejamento._predTouchCancel()" ontouchend="Planejamento._predTouchEnd(event)" title="${_esc(_tooltipPred(t))}">${t._predDisplay||'—'}</div>`;
+        } else if(cid==='folga'){
+          // Folga total em dias úteis. 0 = caminho crítico (atrasar aqui atrasa a
+          // obra). Negativa = o cronograma já é impossível como está.
+          const f=_folgas.has(t.id)?_folgas.get(t.id):null;
+          const crit=_criticos.has(t.id);
+          const cor=f===null?'#555':f<-0.05?'#f87171':crit?'#fbbf24':'#888';
+          const dica=f===null?'Ligue o modo Caminho Crítico para calcular'
+            :f<-0.05?`Folga negativa: a rede exige término ${_folgaTexto(Math.abs(f))} dia(s) antes do possível — o cronograma não fecha assim`
+            :crit?'Caminho crítico: atrasar esta tarefa atrasa a obra inteira'
+            :`Pode atrasar até ${_folgaTexto(f)} dia(s) úteis sem mexer na data final`;
+          cells+=`<div style="${base}color:${cor};font-size:.7rem;justify-content:center;font-weight:${crit||(f!==null&&f<-0.05)?'800':'400'};" title="${_esc(dica)}">${_modoCritico?_folgaTexto(f):'—'}</div>`;
         } else if(cid==='sucessora'){
           cells+=`<div style="${base}color:#666;font-size:.7rem;justify-content:center;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;" ontouchstart="Planejamento._sucTouchStart(event,${i})" ontouchmove="Planejamento._predTouchCancel()" ontouchend="Planejamento._predTouchEnd(event)" title="${_esc(_tooltipSuc(t._sucessoras))||'Calculado automaticamente — quem tem esta tarefa como predecessora'}">${(t._sucessoras&&t._sucessoras.length)?t._sucessoras.join(', '):'—'}</div>`;
         } else if(cid==='responsavel'){
@@ -1834,10 +1881,15 @@ const Planejamento = (() => {
         const bw=Math.max(4,Math.round((new Date(_vFim(t))-new Date(_vIni(t)))/864e5*lpd));
         const by=y+5, bh=20;
         const cor={em_dia:'#2563eb',em_andamento:'#ca8a04',concluido:'#15803d',alerta:'#c2410c',atrasado:'#dc2626'}[st2]||'#333';
+        // Caminho crítico: anel vermelho na barra e a folga no tooltip. Só
+        // aparece quando o modo está ligado (Planejamento.toggleCritico).
+        const ehCrit=_modoCritico&&_criticos.has(t.id);
+        const folgaTip=_modoCritico&&_folgas.has(t.id)?` — folga ${_folgaTexto(_folgas.get(t.id))}`:'';
+        const anelCrit=ehCrit?'box-shadow:0 0 0 2px #dc2626;':'';
         if(isG){
-          bH+=`<div style="position:absolute;left:${bx}px;top:${by+8}px;width:${bw}px;height:5px;background:var(--cor-primaria);border-radius:1px;" title="${t.nome} — ${_fd(_vIni(t))} a ${_fd(_vFim(t))}"></div>`;
+          bH+=`<div style="position:absolute;left:${bx}px;top:${by+8}px;width:${bw}px;height:5px;background:${ehCrit?'#dc2626':'var(--cor-primaria)'};border-radius:1px;" title="${t.nome} — ${_fd(_vIni(t))} a ${_fd(_vFim(t))}${folgaTip}"></div>`;
         } else {
-          bH+=`<div style="position:absolute;left:${bx}px;top:${by}px;width:${bw}px;height:${bh}px;background:${cor};border-radius:3px;overflow:hidden;" title="${t.nome} — ${_fd(_vIni(t))} a ${_fd(_vFim(t))} — ${perc}%">
+          bH+=`<div style="position:absolute;left:${bx}px;top:${by}px;width:${bw}px;height:${bh}px;background:${cor};border-radius:3px;overflow:hidden;${anelCrit}" title="${t.nome} — ${_fd(_vIni(t))} a ${_fd(_vFim(t))} — ${perc}%${folgaTip}">
             <div style="height:100%;width:${perc}%;background:rgba(255,255,255,.25);"></div>
             ${bw>50?`<span style="position:absolute;left:4px;top:4px;font-size:.58rem;color:rgba(255,255,255,.85);white-space:nowrap;overflow:hidden;max-width:${bw-8}px;">${t.nome}</span>`:''}
           </div>`;
@@ -3159,6 +3211,7 @@ const Planejamento = (() => {
       {rotulo:'PNG',grupo:'Importar & Exportar',html:'<button class="btn btn-secundario btn-sm" data-perm="planejamento:exportar:png" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.exportarPNG()">🖼 PNG</button>'},
       {rotulo:'Recalcular % dos Pais',grupo:'Correções & Recálculos',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento._recalcularPercTodosPais()" title="Recalcula o % de toda tarefa-pai a partir dos filhos diretos (nível por nível, igual MS Project)">📊 Recalcular % dos Pais</button>'},
       {rotulo:'Recalcular Datas dos Pais',grupo:'Correções & Recálculos',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento._recalcularDatasPais()" title="Recalcula início/término das tarefas-pai a partir dos filhos">📐 Recalcular Datas dos Pais</button>'},
+      {rotulo:'Verificar Planejamento',grupo:'Correções & Recálculos',html:'<button class="btn btn-primario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.abrirVerificarPlanejamento()" title="Analisa a rede inteira: caminho crítico, folgas, vínculos que faltam ou não fazem sentido, ordem de execução dos serviços e duração x quantidade. Roda offline, sem IA, e nada é alterado sem sua aprovação">🔍 Verificar Planejamento</button>'},
       {rotulo:'Aplicar Calendário às Datas',grupo:'Correções & Recálculos',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.abrirAplicarCalendario()" title="Recalcula a rede toda contando só dias úteis (jornada, feriados, paralisações e exceções da obra). Mostra de/para antes de aplicar — nada muda sem confirmação">📅 Aplicar Calendário às Datas</button>'},
       ...(_versaoData!=='atual'?[{rotulo:'Copiar Datas de Atual',grupo:'Correções & Recálculos',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.copiarDatasDeAtual()" title="Preenche as datas de '+VERSAO_LABEL[_versaoData]+' copiando de Atual em todas as tarefas que ainda não têm valor">📋 Copiar Datas de Atual → '+VERSAO_LABEL[_versaoData]+'</button>'}]:[]),
       {rotulo:'Ver por Responsável',grupo:'Ferramentas da Obra',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;'+(_filtroResponsavel?'background:var(--cor-primaria);color:#000;':'')+'" onclick="Planejamento._abrirFiltroResponsavel()" title="Filtra a grid por responsável/especialidade">👷 '+(_filtroResponsavel?_esc(_filtroResponsavel):'Ver por Responsável')+'</button>'},
@@ -7309,7 +7362,270 @@ const Planejamento = (() => {
     </div>`;
   }
 
-  return{init,carregar,abrirAplicarCalendario,aplicarCalendario,calendarioAtual,ciclosDetectados,setZoom,setVersaoData,copiarDatasDeAtual,inserirTarefa,editarTarefa,salvarTarefa,excluirTarefa,
+  // ============================================================
+  // VERIFICAR PLANEJAMENTO — o Planejador
+  // ============================================================
+  // Uma passada por clique, não vigilância contínua. O motor (CPM), o auditor e
+  // a base de regras de precedência rodam OFFLINE e montam o diagnóstico; a tela
+  // só apresenta e aplica o que for aprovado. Nenhuma chamada de rede: se a
+  // internet cair no meio, o painel continua na tela.
+  //
+  // Cada achado tem três saídas possíveis:
+  //   Aplicar   — o sistema executa a correção (hoje: inverter vínculo)
+  //   Decidir   — "é assim de propósito", com a justificativa gravada
+  //   Ir        — abre a tarefa pra você mexer na mão
+  //
+  // "Decidir" é o que impede o painel de virar ruído: sem memória, o mesmo
+  // alerta voltaria em toda análise até você parar de olhar.
+  const COL_DECISOES='decisoesPlanejamento';
+  let _audit=null;         // último resultado da análise
+  let _decisoes=new Map(); // chave -> {id, chave, ctx, decisao, justificativa}
+  let _auditSev='todas';
+  let _decisaoPend=null;   // achado aguardando justificativa no modal
+
+  async function _carregarDecisoes(){
+    try{
+      const lista=await Database.listar(obraId,COL_DECISOES,'createdAt').catch(()=>[]);
+      _decisoes=new Map(lista.filter(d=>d&&d.chave).map(d=>[d.chave,d]));
+    }catch(e){console.error('[Auditor] decisões:',e);_decisoes=new Map();}
+  }
+
+  async function abrirVerificarPlanejamento(){
+    if(!Permissions.pode('planejamento','ver')){Utils.toast('Sem permissão.','erro');return;}
+    if(typeof Auditor==='undefined'||typeof CPM==='undefined'){Utils.toast('Módulos de análise não carregaram. Recarregue a página (Ctrl+Shift+R).','erro');return;}
+    Utils.mostrarLoading('Analisando o planejamento...');
+    try{
+      await _carregarDecisoes();
+      // setTimeout dá um quadro pro loading aparecer antes do trabalho pesado
+      await new Promise(r=>setTimeout(r,10));
+      _audit=Auditor.analisar(tarefas,{
+        cal:_calObra, hoje:Utils.hoje(), decisoes:_decisoes,
+        produtividade:{}, // gancho da Fase 2: produtividade real vinda de Medições/Diário
+      });
+      _auditSev='todas';
+      _renderAuditor();
+      Utils.abrirModal('modal-planej-auditor');
+    }catch(e){console.error(e);Utils.toast('Erro ao analisar o planejamento.','erro');}
+    finally{Utils.esconderLoading();}
+  }
+
+  const SEV_LABEL={alta:'Grave',media:'Atenção',baixa:'Revisar'};
+  const SEV_BADGE={alta:'badge-perigo',media:'badge-alerta',baixa:'badge-neutro'};
+
+  function _renderAuditor(){
+    const el=document.getElementById('planej-auditor-body');
+    if(!el||!_audit)return;
+    const R=_audit.resumo;
+    const podeEditar=Permissions.pode('planejamento','editar');
+
+    const kpi=(rot,val,rod)=>`<div style="flex:1;min-width:130px;background:var(--cor-fundo);border:1.5px solid var(--cor-borda-light);border-radius:var(--borda-radius-lg);padding:11px;">
+      <div class="text-muted" style="font-size:.66rem;text-transform:uppercase;letter-spacing:.5px;">${rot}</div>
+      <div style="font-weight:800;color:var(--cor-texto);margin:2px 0;">${val}</div>
+      <div class="text-muted" style="font-size:.68rem;">${rod}</div></div>`;
+
+    const filtro=(sev,rotulo,n)=>`<button class="btn btn-sm ${_auditSev===sev?'btn-primario':'btn-secundario'}" style="font-size:.72rem;"
+      onclick="Planejamento.auditorFiltrar('${sev}')">${rotulo} ${n}</button>`;
+
+    const lista=_audit.abertos.filter(a=>_auditSev==='todas'||a.severidade===_auditSev);
+    const decididos=_audit.achados.filter(a=>a.decidido);
+
+    const cartao=(a)=>{
+      const acoes=[];
+      if(podeEditar&&a.acoes.includes('inverter')&&a.dados&&a.dados.de)
+        acoes.push(`<button class="btn btn-primario btn-sm" style="font-size:.72rem;" onclick="Planejamento.auditorInverter('${_esc(a.chave)}')">Inverter o vínculo</button>`);
+      if(a.tarefaId)
+        acoes.push(`<button class="btn btn-secundario btn-sm" style="font-size:.72rem;" onclick="Planejamento.auditorIr('${_esc(a.tarefaId)}')">Ver a tarefa</button>`);
+      if(podeEditar)
+        acoes.push(`<button class="btn btn-secundario btn-sm" style="font-size:.72rem;" onclick="Planejamento.auditorDecidir('${_esc(a.chave)}','manter')">É assim de propósito</button>`);
+      if(podeEditar)
+        acoes.push(`<button class="btn btn-secundario btn-sm" style="font-size:.72rem;opacity:.8;" onclick="Planejamento.auditorDecidir('${_esc(a.chave)}','ignorar')">Ignorar</button>`);
+
+      return `<div style="border:1.5px solid var(--cor-borda-light);border-left:4px solid ${a.severidade==='alta'?'var(--cor-perigo)':a.severidade==='media'?'var(--cor-alerta)':'var(--cor-neutro)'};
+        border-radius:8px;padding:12px;margin-bottom:10px;background:var(--cor-fundo-card);">
+        <div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;margin-bottom:5px;">
+          <span class="badge ${SEV_BADGE[a.severidade]}">${SEV_LABEL[a.severidade]}</span>
+          <b style="font-size:.86rem;color:var(--cor-texto);">${_esc(a.titulo)}</b>
+          ${a.tarefaCodigo?`<span class="text-muted" style="font-size:.7rem;">${_esc(a.tarefaCodigo)}</span>`:''}
+        </div>
+        ${a.tarefaNome?`<div class="text-muted" style="font-size:.74rem;margin-bottom:5px;">${_esc(a.tarefaNome)}${a.tarefaNome2?` <span style="color:var(--cor-texto-muted);">· vínculo com</span> ${_esc(a.tarefaNome2)}`:''}</div>`:''}
+        ${a.detalhe?`<div style="font-size:.78rem;color:var(--cor-texto);margin-bottom:6px;">${_esc(a.detalhe)}</div>`:''}
+        ${a.motivo?`<div style="font-size:.76rem;color:var(--cor-texto-secundario);background:var(--cor-fundo);border-radius:6px;padding:8px 10px;margin-bottom:6px;">
+          <b>Por quê:</b> ${_esc(a.motivo)}${a.risco?`<br><b>Risco:</b> ${_esc(a.risco)}`:''}</div>`:''}
+        ${a.sugestao?`<div style="font-size:.76rem;color:var(--cor-sucesso);margin-bottom:8px;"><b>Proposta:</b> ${_esc(a.sugestao)}</div>`:''}
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">${acoes.join('')}</div>
+      </div>`;
+    };
+
+    const MAX=120;
+    el.innerHTML=`
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
+        ${kpi('Pendências',`<span style="font-size:1.5rem;">${_audit.abertos.length}</span>`,`${R.decididos} já decidida(s)`)}
+        ${kpi('Caminho crítico',`<span style="font-size:1.5rem;">${R.criticos}</span>`,'tarefas que seguram a data final')}
+        ${kpi('Término da obra',`<span style="font-size:.95rem;">${_fd(R.fimProjeto)}</span>`,`início em ${_fd(R.iniProjeto)}`)}
+        ${kpi('Base da análise',`<span style="font-size:.95rem;">${R.folhas} tarefas</span>`,`${R.regrasAplicadas} regras de execução`)}
+      </div>
+
+      ${!_calObra.ativo?`<div style="background:var(--cor-alerta-bg);border:1.5px solid var(--cor-alerta);border-radius:8px;padding:9px 12px;font-size:.76rem;color:#b45309;margin-bottom:10px;">
+        O calendário desta obra está desligado, então folga e caminho crítico foram calculados em <b>dias corridos</b> — fim de semana e feriado contam como dia de obra. Ligue o calendário em Configuração da Obra para os números valerem.</div>`:''}
+
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;align-items:center;">
+        ${filtro('todas','Todas',_audit.abertos.length)}
+        ${filtro('alta','Graves',R.alta)}
+        ${filtro('media','Atenção',R.media)}
+        ${filtro('baixa','Revisar',R.baixa)}
+        <span style="margin-left:auto;display:flex;gap:6px;">
+          <button class="btn btn-secundario btn-sm" style="font-size:.72rem;" onclick="Planejamento.auditorCopiarDossie()" title="Copia um resumo compacto (algumas dezenas de kB) pra colar num chat de IA quando quiser discutir em linguagem livre">📋 Copiar dossiê</button>
+          <button class="btn btn-secundario btn-sm" style="font-size:.72rem;" onclick="Planejamento.abrirVerificarPlanejamento()">↻ Reanalisar</button>
+        </span>
+      </div>
+
+      ${lista.length?lista.slice(0,MAX).map(cartao).join(''):`<div class="text-sm text-muted" style="padding:22px;text-align:center;">
+        ${_audit.abertos.length?'Nenhuma pendência nesta severidade.':'Nenhuma pendência aberta. O planejamento passou em todas as checagens.'}</div>`}
+      ${lista.length>MAX?`<div class="text-sm text-muted" style="padding:8px;">Mostrando ${MAX} de ${lista.length}. Resolva ou decida as primeiras e reanalise para ver o resto.</div>`:''}
+
+      ${decididos.length?`<details style="margin-top:14px;">
+        <summary style="cursor:pointer;font-size:.8rem;font-weight:700;color:var(--cor-texto);">${decididos.length} ponto(s) já decidido(s)</summary>
+        <div style="margin-top:8px;">${decididos.map(a=>`
+          <div style="border:1px solid var(--cor-borda-light);border-radius:6px;padding:8px 10px;margin-bottom:6px;font-size:.74rem;">
+            <b>${_esc(a.titulo)}</b> ${a.tarefaNome?`<span class="text-muted">— ${_esc(a.tarefaNome)}</span>`:''}
+            <div class="text-muted" style="margin-top:3px;">${a.decisao&&a.decisao.decisao==='manter'?'Mantido de propósito':'Ignorado'}${a.decisao&&a.decisao.justificativa?`: ${_esc(a.decisao.justificativa)}`:''}</div>
+            ${podeEditar?`<button class="btn btn-secundario btn-sm" style="font-size:.68rem;margin-top:5px;" onclick="Planejamento.auditorReabrir('${_esc(a.chave)}')">Reabrir</button>`:''}
+          </div>`).join('')}</div></details>`:''}`;
+  }
+
+  function auditorFiltrar(sev){_auditSev=sev;_renderAuditor();}
+
+  function auditorIr(tarefaId){
+    Utils.fecharModal('modal-planej-auditor');
+    const idx=filtradas.findIndex(t=>t.id===tarefaId);
+    if(idx<0){Utils.toast('A tarefa está oculta pelo filtro atual — limpe o filtro para vê-la.','alerta');return;}
+    selectIdx(idx);
+    const esq=document.getElementById('g-esq-s');
+    if(esq)esq.scrollTop=Math.max(0,idx*ROW_H-160);
+    _paintRows();
+  }
+
+  // ---- Decisão (memória) ----
+  function auditorDecidir(chave,tipo){
+    if(!Permissions.pode('planejamento','editar')){Utils.toast('Sem permissão.','erro');return;}
+    const a=(_audit&&_audit.achados||[]).find(x=>x.chave===chave);
+    if(!a)return;
+    if(tipo==='ignorar'){_gravarDecisao(a,'ignorar','');return;}
+    _decisaoPend=a;
+    document.getElementById('planej-decisao-titulo').textContent='É assim de propósito';
+    document.getElementById('planej-decisao-body').innerHTML=`
+      <div style="font-size:.82rem;color:var(--cor-texto);margin-bottom:4px;"><b>${_esc(a.titulo)}</b></div>
+      ${a.tarefaNome?`<div class="text-muted" style="font-size:.75rem;margin-bottom:10px;">${_esc(a.tarefaNome)}</div>`:''}
+      <div class="text-sm text-muted" style="margin-bottom:10px;">Escreva o motivo. Ele fica gravado na obra e este ponto para de aparecer nas próximas análises — até que algo mude nele, e aí volta a ser perguntado.</div>
+      <div class="form-grupo">
+        <label>Motivo da decisão</label>
+        <input type="text" id="planej-decisao-motivo" class="form-control" placeholder="Ex: ordem da diretoria, piso liberado em 12/09" maxlength="220">
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px;">
+        <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-planej-decisao')">Cancelar</button>
+        <button class="btn btn-primario" onclick="Planejamento.auditorConfirmarDecisao()">Gravar decisão</button>
+      </div>`;
+    Utils.abrirModal('modal-planej-decisao');
+    setTimeout(()=>{const i=document.getElementById('planej-decisao-motivo');if(i)i.focus();},60);
+  }
+
+  async function auditorConfirmarDecisao(){
+    if(!_decisaoPend)return;
+    const motivo=(document.getElementById('planej-decisao-motivo')||{}).value||'';
+    if(!motivo.trim()){Utils.toast('Escreva o motivo — é ele que vale daqui pra frente.','alerta');return;}
+    const a=_decisaoPend;_decisaoPend=null;
+    Utils.fecharModal('modal-planej-decisao');
+    await _gravarDecisao(a,'manter',motivo.trim());
+  }
+
+  async function _gravarDecisao(a,decisao,justificativa){
+    try{
+      const existente=_decisoes.get(a.chave);
+      const dados={chave:a.chave,ctx:a.ctx||'',tipo:a.tipo,decisao,justificativa,
+        tarefaId:a.tarefaId||'',titulo:a.titulo};
+      if(existente&&existente.id)await Database.atualizar(obraId,COL_DECISOES,existente.id,dados);
+      else await Database.criar(obraId,COL_DECISOES,dados);
+      await _carregarDecisoes();
+      _audit=Auditor.analisar(tarefas,{cal:_calObra,hoje:Utils.hoje(),decisoes:_decisoes});
+      _renderAuditor();
+      Utils.toast(decisao==='manter'?'Decisão gravada.':'Ponto ignorado.','sucesso');
+    }catch(e){console.error(e);Utils.toast('Erro ao gravar a decisão.','erro');}
+  }
+
+  async function auditorReabrir(chave){
+    const d=_decisoes.get(chave);
+    if(!d||!d.id)return;
+    try{
+      await Database.deletar(obraId,COL_DECISOES,d.id);
+      await _carregarDecisoes();
+      _audit=Auditor.analisar(tarefas,{cal:_calObra,hoje:Utils.hoje(),decisoes:_decisoes});
+      _renderAuditor();
+      Utils.toast('Ponto reaberto.','sucesso');
+    }catch(e){console.error(e);Utils.toast('Erro ao reabrir.','erro');}
+  }
+
+  // ---- Aplicar: inverter o vínculo ----
+  // O vínculo diz "de → para". Inverter é tirar essa predecessora de `para` e
+  // colocar `para` como predecessora de `de`, mantendo tipo e defasagem. A
+  // propagação de data em cascata roda em seguida, como em qualquer edição.
+  async function auditorInverter(chave){
+    if(!Permissions.pode('planejamento','editar')){Utils.toast('Sem permissão.','erro');return;}
+    const a=(_audit&&_audit.achados||[]).find(x=>x.chave===chave);
+    if(!a||!a.dados||!a.dados.de||!a.dados.para)return;
+    const tDe=_porId.get(a.dados.de), tPara=_porId.get(a.dados.para);
+    if(!tDe||!tPara){Utils.toast('Uma das tarefas não está mais na obra.','erro');return;}
+    if(!confirm(`Inverter o vínculo?\n\nAgora: "${tDe.nome}" antes de "${tPara.nome}"\nFicará: "${tPara.nome}" antes de "${tDe.nome}"\n\nAs datas da rede são recalculadas em seguida. Dá pra desfazer com Ctrl+Z.`))return;
+
+    Utils.mostrarLoading('Invertendo...');
+    try{
+      _undoPush();
+      const tipo=a.dados.tipo||'TI', lag=a.dados.lag||'';
+      const restante=_predParse(tPara.predecessora).filter(p=>p.id!==a.dados.de);
+      const novaDoDe=_predParse(tDe.predecessora).filter(p=>p.id!==a.dados.para);
+      novaDoDe.push({id:a.dados.para,tipo,lag:String(lag||'')});
+
+      const updPara={predecessora:_predFormat(restante)};
+      const updDe={predecessora:_predFormat(novaDoDe)};
+      _calcPredecessora(tDe,updDe.predecessora,updDe);
+
+      Object.assign(tPara,updPara);Object.assign(tDe,updDe);
+      await Database.atualizar(obraId,COL,tPara.id,updPara);
+      await Database.atualizar(obraId,COL,tDe.id,updDe);
+      _buildFiltradas();
+      await _propagarDataEmCascata(tDe.id);
+      await _propagarDataEmCascata(tPara.id);
+      const ciclos=ciclosDetectados();
+      if(ciclos.length)Utils.toast(`Atenção: a inversão criou dependência circular em ${ciclos.length} tarefa(s). Desfaça com Ctrl+Z ou ajuste o vínculo.`,'erro',7000);
+
+      if(typeof Audit!=='undefined'&&Audit.registrar){
+        Audit.registrar(obraId,'planejamento_vinculo_invertido',{modulo:'planejamento',
+          descricao:`Vínculo invertido pelo Verificador: "${tPara.nome}" passa a preceder "${tDe.nome}"`,
+          dados:{chave,de:a.dados.de,para:a.dados.para,tipo,lag}}).catch(()=>{});
+      }
+      await _gravarDecisao(a,'ignorar','Corrigido: vínculo invertido pelo Verificador');
+      _buildFiltradas();_render();
+      Utils.toast('Vínculo invertido e datas recalculadas.','sucesso');
+    }catch(e){console.error(e);Utils.toast('Erro ao inverter o vínculo.','erro');}
+    finally{Utils.esconderLoading();}
+  }
+
+  // Dossiê pra colar num chat de IA quando quiser discutir em linguagem livre.
+  // Vai só o resumo e os achados abertos — nunca a planilha inteira.
+  function auditorCopiarDossie(){
+    if(!_audit)return;
+    const d=Auditor.dossie(_audit);
+    const txt=`Sou responsável por esta obra e preciso de ajuda de planejamento. Segue o diagnóstico do meu cronograma (gerado pelo próprio sistema, offline).\n\n`+
+      JSON.stringify(d,null,1)+
+      `\n\nMe ajude a decidir o que atacar primeiro e por quê. Onde discordar do diagnóstico, diga.`;
+    if(navigator.clipboard&&navigator.clipboard.writeText){
+      navigator.clipboard.writeText(txt).then(
+        ()=>Utils.toast(`Dossiê copiado (${(txt.length/1024).toFixed(1)} kB${d.omitidos?`, ${d.omitidos} achado(s) fora do corte`:''}).`,'sucesso'),
+        ()=>Utils.toast('Não foi possível copiar.','erro'));
+    }else Utils.toast('O navegador não liberou a cópia.','erro');
+  }
+
+  return{init,carregar,abrirAplicarCalendario,aplicarCalendario,calendarioAtual,ciclosDetectados,
+    abrirVerificarPlanejamento,auditorFiltrar,auditorIr,auditorDecidir,auditorConfirmarDecisao,auditorReabrir,auditorInverter,auditorCopiarDossie,toggleCritico,setZoom,setVersaoData,copiarDatasDeAtual,inserirTarefa,editarTarefa,salvarTarefa,excluirTarefa,
     selectIdx,toggleRecolher,recuarNivel,avancarNivel,
     toggleGantt,toggleLiberarEdicaoReal,hideCol,showColsMenu,_showCol,_showAll,_toggleMenuFerramentas,
     _abrirEstruturaObra,_addTorre,_addPavimento,_addApartamento,_duplicarPavimento,_editarNomeEst,_removerNoEst,

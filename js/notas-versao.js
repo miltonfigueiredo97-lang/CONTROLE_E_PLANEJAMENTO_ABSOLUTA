@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.20.1.1',
+  versaoAtual: 'V3.21.0',
 
   versoes: [
     {
@@ -10674,6 +10674,27 @@ const NotasVersao = {
         "Agora cada mês é uma grade de 7 colunas com as siglas DOM SEG TER QUA QUI SEX SÁB no cabeçalho, e o dia 1 cai na coluna certa (com as células vazias antes dele).",
         "As siglas dos dias fora da jornada aparecem em tom mais fraco, então bate o olho e já vê a coluna que a obra não trabalha.",
         "O passar do mouse em cada dia agora diz também o dia da semana por extenso, além da data e do motivo de estar parado."
+      ]
+    },
+    {
+      "versao": "V3.21.0",
+      "data": "2026-08-26",
+      "tipo": "funcionalidade",
+      "titulo": "Novo módulo: Verificar Planejamento — caminho crítico, auditoria da rede e crítica de sequência",
+      "itens": [
+        "O QUE ISSO SUBSTITUI: a conferência manual do cronograma, linha por linha, predecessora por predecessora. Um clique analisa a rede inteira e devolve o que não faz sentido, com o motivo técnico de cada apontamento.",
+        "CAMINHO CRÍTICO (o que nunca existiu): o sistema só empurrava data pra frente. Agora tem o caminho de volta — late start, late finish, folga total e folga livre. Botão \\\"Caminho Crítico\\\" na barra do Planejamento marca em vermelho as tarefas que seguram a data final e liga a coluna Folga. Folga 0 = atrasar ali atrasa a obra. Folga negativa = o cronograma já não fecha como está.",
+        "AUDITORIA DA REDE, na linha das 14 checagens do DCMA: tarefa sem predecessora, tarefa sem sucessora, defasagem negativa, defasagem longa demais (espera que na verdade é uma tarefa faltando), duração acima de 44 dias, folga negativa, folga absurdamente alta (sinal de lógica faltando), dependência circular, predecessora apontando pra tarefa excluída, excesso de vínculos que não são Término-Início, e incoerência entre avanço e datas reais.",
+        "ORDEM DE EXECUÇÃO DOS SERVIÇOS: 18 regras de precedência tecnológica de obra, cada uma com o motivo e o risco escritos. Ele reconhece o serviço pelo nome da tarefa e avisa, por exemplo, que porcelanato antes de forro de gesso é retrabalho — porque serviço que fica acima derruba massa, poeira e água, e piso pronto embaixo vira proteção física e limpeza pesada que ninguém orçou. Também avisa quando dois grupos de serviço estão na ordem errada na obra inteira e não existe vínculo nenhum entre eles.",
+        "CRÍTICA DE DURAÇÃO: usa a quantidade vinculada ao levantamento e o número de equipe pra calcular se a duração cabe. \\\"5 dias pra 620 m² de porcelanato com 4 oficiais\\\" vira \\\"o necessário fica em torno de 14 dias\\\". A faixa TCPO/SINAPI entra como referência e a fonte é sempre declarada no apontamento; quando houver histórico de produtividade da própria equipe, ele usa o histórico e diz isso.",
+        "AÇÕES: cada apontamento traz \\\"Inverter o vínculo\\\" (o sistema aplica e recalcula a rede, com Ctrl+Z), \\\"Ver a tarefa\\\" (vai direto pra linha) e \\\"É assim de propósito\\\".",
+        "MEMÓRIA DE DECISÃO: ao responder \\\"é assim de propósito\\\" você escreve o motivo (ex: ordem da diretoria) e aquilo fica gravado na obra. O ponto para de aparecer nas análises seguintes — sem isso o painel repetiria o mesmo alerta pra sempre, viraria ruído e ninguém mais olharia. Se o que gerou o apontamento mudar (data, duração, tipo de vínculo), a decisão antiga deixa de valer e o ponto é reaberto: decidir não é apagar, é decidir aquilo.",
+        "RODA OFFLINE E SEM IA. Motor de datas, CPM, auditoria e as 18 regras são cálculo determinístico dentro do navegador: dá o mesmo resultado toda vez e continua funcionando se a internet cair. Quem quiser discutir em linguagem livre tem o botão \\\"Copiar dossiê\\\", que copia um resumo compacto (poucos kB, nunca a planilha inteira) pra colar num chat.",
+        "Nada é alterado sem aprovação. Nenhum apontamento mexe no cronograma sozinho.",
+        "Nova sub-permissão configuracaoObra:editar:calendario, e o Verificador respeita planejamento:editar pra oferecer as ações que gravam.",
+        "SÁBADO DE MEIO PERÍODO (pedido): a jornada semanal passa a ter três estados por dia — não trabalha, dia inteiro, meio período. Cada clique no dia cicla. O motor passou a medir duração em JORNADA acumulada e não em caixinhas do calendário, que é como o MS Project faz: uma tarefa de 6 dias que atravessa um sábado de meio período termina um dia depois do que terminaria numa semana de 6 dias cheios.",
+        "CLIQUE NO DIA DA PRÉVIA (pedido): clicar num dia do calendário cria a exceção que inverte aquele dia, e clicar de novo volta ao padrão. Era formulário, virou um clique. Dia com exceção ganha anel azul, meio período ganha meio amarelo meio cinza, e a prévia ganhou legenda.",
+        "Verificação: 90 testes automatizados nos módulos de cálculo, incluindo prova empírica do backward pass (uma tarefa com folga N aceita N dias a mais sem mover o término da obra, e com N+1 move) e regressão confirmando que sem meio período e com o calendário desligado o comportamento anterior é idêntico."
       ]
     }
   ],

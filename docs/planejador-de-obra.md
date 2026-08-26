@@ -31,8 +31,51 @@ julgamento e na conversa — se a API cair, o diagnóstico já está na tela.
 | Fase | Entrega | Estado |
 |---|---|---|
 | 1 | Calendário de obra + correções no motor de datas | **Concluída — V3.20.0** |
-| 2 | Planejador: auditor, base de regras de precedência, crítica de duração, entrevista, memória de decisão | A fazer |
-| 3 | CPM completo: backward pass, folga total e livre, caminho crítico | A fazer |
+| 1b | Sábado de meio período + clique no dia da prévia | **Concluída — V3.21.0** |
+| 3 | CPM completo: backward pass, folga total e livre, caminho crítico | **Concluída — V3.21.0** |
+| 2 | Planejador: auditor, regras de precedência, crítica de duração, memória de decisão | **Concluída — V3.21.0** |
+
+> A Fase 3 foi entregue antes da 2 porque o auditor precisa de folga e caminho
+> crítico pra apontar folga negativa e falta de lógica na rede.
+
+## Arquitetura final (V3.21.0)
+
+Quatro módulos de cálculo puro, sem DOM e sem Firestore — testáveis com `node -e`:
+
+| Arquivo | Responsabilidade |
+|---|---|
+| `js/calendario.js` | Dia útil, feriados, exceções, capacidade do dia (0 / 0,5 / 1) e **as duas únicas funções que convertem duração em data** |
+| `js/cpm.js` | Forward e backward pass, folga total e livre, caminho crítico, detecção de ciclo |
+| `js/regras-precedencia.js` | As 18 regras de precedência tecnológica, com motivo e risco |
+| `js/auditor-planejamento.js` | Junta tudo: qualidade da rede, precedência, duração × quantidade, memória de decisão, dossiê |
+
+A tela (`planejamento.js`, `configuracao-obra.js`) só apresenta e aplica. Isso é
+o que permite testar o cálculo fora do navegador e é o que faz o diagnóstico
+continuar na tela se a internet cair.
+
+## Onde continuar
+
+1. **Produtividade real vinda das Medições.** O auditor já aceita
+   `opcoes.produtividade` (mapa serviço → unidade/dia por oficial) e prefere esse
+   número à faixa TCPO, declarando a fonte no apontamento. O que falta é a
+   função que deriva isso de Medições + Diário de Obra. Hoje o gancho é passado
+   vazio em `abrirVerificarPlanejamento`.
+2. **Mais ações de correção automática.** Hoje só "Inverter o vínculo" é
+   aplicável pelo sistema. Candidatas naturais: ajustar duração pro valor
+   calculado, criar o vínculo que falta entre dois grupos de serviço, e remover
+   predecessora órfã.
+3. **Cobertura das regras.** O casamento é por palavra no nome da tarefa. Nome
+   fora do padrão não é reconhecido e o sistema fica calado de propósito —
+   alerta errado destrói a confiança mais rápido que alerta faltando. Ampliar
+   cobertura = cadastrar apelido em `SERVICOS`.
+4. **Meio período em exceção.** Exceção com `trabalha:true` rende dia cheio,
+   mesmo caindo num dia marcado como meio período. Limitação documentada no
+   módulo.
+5. **Folga fracionária.** Com meia jornada na semana, a folga sai em 0,5 e o
+   caminho crítico fica mais curto do que a intuição sugere. Está provado
+   empiricamente que a folga é real (ver comentário 5 em `cpm.js`), mas se algum
+   dia precisar desaparecer, o caminho é trabalhar num eixo contínuo de jornadas
+   acumuladas — não arredondar o resultado.
 
 ---
 

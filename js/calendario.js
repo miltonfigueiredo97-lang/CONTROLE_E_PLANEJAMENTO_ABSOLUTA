@@ -361,6 +361,33 @@ const Calendario = (() => {
     return Math.max(1, Math.floor(jornadas));
   }
 
+  // ---- Duração <-> data ----
+  // AS DUAS ÚNICAS FUNÇÕES QUE CONVERTEM DURAÇÃO EM DATA em todo o sistema.
+  // Planejamento e CPM chamam estas — nunca faça setDate(getDate()+duracao)
+  // solto num módulo. Foi assim que o motor passou a contar sábado como dia de
+  // obra e a obra encurtou quase 30%.
+  //
+  // Calendário LIGADO:   duração conta o dia de início (5 dias começando segunda
+  //                      termina na sexta), igual obra e igual MS Project.
+  // Calendário DESLIGADO: término = início + duração em dias corridos — a
+  //                      convenção antiga, mantida pra não mexer em obra nenhuma.
+  function fimPorDuracao(ini, dur, cal) {
+    if (!ini) return '';
+    const c = _c(cal);
+    const d = parseInt(dur) || 0;
+    if (!c.ativo) return addDiasCorridos(ini, d);
+    if (d <= 0) return proximoDiaUtil(ini, c);
+    return somarDiasUteis(ini, d - 1, c);
+  }
+  function iniPorDuracao(fim, dur, cal) {
+    if (!fim) return '';
+    const c = _c(cal);
+    const d = parseInt(dur) || 0;
+    if (!c.ativo) return addDiasCorridos(fim, -d);
+    if (d <= 0) return diaUtilAnterior(fim, c);
+    return somarDiasUteis(fim, -(d - 1), c);
+  }
+
   // ---- Apoio pra tela ----
 
   // "Seg a Sex", "Seg a Sáb", "Seg, Qua, Sex" — pra mostrar a jornada sem o
@@ -463,6 +490,8 @@ const Calendario = (() => {
     diaUtilAnterior,
     somarDiasUteis,
     contarDiasUteis,
+    fimPorDuracao,
+    iniPorDuracao,
     iso,
     addDiasCorridos,
     nomeDiaSemana,
