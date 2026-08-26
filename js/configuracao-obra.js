@@ -202,53 +202,59 @@ const ConfiguracaoObra = (() => {
     const linhasFer = [
       ...feriados.map(f => {
         const desligado = f.tipo === 'facultativo' && !c.facultativos[f.chave];
-        return `<tr style="${desligado ? 'opacity:.4;' : ''}">
-          <td style="font-size:.72rem;white-space:nowrap;">${_fd(f.data)}</td>
-          <td style="font-size:.72rem;">${_esc(f.nome)}</td>
-          <td style="font-size:.66rem;color:#888;">${f.tipo === 'facultativo' ? 'facultativo' + (desligado ? ' (obra trabalha)' : '') : 'nacional'}</td>
-          <td style="font-size:.66rem;color:#666;">automático</td>
+        return `<tr style="${desligado ? 'opacity:.45;' : ''}">
+          <td style="white-space:nowrap;">${_fd(f.data)}</td>
+          <td>${_esc(f.nome)}</td>
+          <td>${f.tipo === 'facultativo'
+            ? `<span class="badge badge-neutro">facultativo${desligado ? ' · obra trabalha' : ''}</span>`
+            : '<span class="badge badge-info">nacional</span>'}</td>
+          <td class="text-muted" style="font-size:.72rem;">automático</td>
         </tr>`;
       }),
-      ...manuaisAno.map((f, i) => `<tr>
-        <td style="font-size:.72rem;white-space:nowrap;">${_fd(f.data)}</td>
-        <td style="font-size:.72rem;">${_esc(f.nome || 'Feriado')}</td>
-        <td style="font-size:.66rem;color:#888;">${_esc(f.tipo || 'municipal')}</td>
-        <td>${podeEditar ? `<button class="btn btn-perigo btn-sm btn-icon" onclick="ConfiguracaoObra.calRemoverFeriado('${_esc(f.data)}')" title="Remover">✕</button>` : ''}</td>
+      ...manuaisAno.map(f => `<tr>
+        <td style="white-space:nowrap;">${_fd(f.data)}</td>
+        <td>${_esc(f.nome || 'Feriado')}</td>
+        <td><span class="badge badge-amarelo">${_esc(f.tipo || 'municipal')}</span></td>
+        <td class="col-acoes">${podeEditar ? `<button class="btn btn-perigo btn-sm" onclick="ConfiguracaoObra.calRemoverFeriado('${_esc(f.data)}')" title="Remover">✕</button>` : ''}</td>
       </tr>`)
     ].join('');
 
     const linhasPar = c.paralisacoes.map((p, i) => `<tr>
-      <td style="font-size:.72rem;white-space:nowrap;">${_fd(p.ini)} → ${_fd(p.fim)}</td>
-      <td style="font-size:.72rem;">${_esc(p.motivo || '—')}</td>
-      <td>${podeEditar ? `<button class="btn btn-perigo btn-sm btn-icon" onclick="ConfiguracaoObra.calRemoverParalisacao(${i})" title="Remover">✕</button>` : ''}</td>
+      <td style="white-space:nowrap;">${_fd(p.ini)} → ${_fd(p.fim)}</td>
+      <td>${_esc(p.motivo || '—')}</td>
+      <td class="col-acoes">${podeEditar ? `<button class="btn btn-perigo btn-sm" onclick="ConfiguracaoObra.calRemoverParalisacao(${i})" title="Remover">✕</button>` : ''}</td>
     </tr>`).join('');
 
     const linhasExc = [...c.excecoes].sort((a, b) => a.data < b.data ? -1 : 1).map(e => `<tr>
-      <td style="font-size:.72rem;white-space:nowrap;">${_fd(e.data)}</td>
-      <td style="font-size:.72rem;color:${e.trabalha ? '#4ade80' : '#f87171'};">${e.trabalha ? 'trabalha mesmo assim' : 'não trabalha'}</td>
-      <td style="font-size:.72rem;">${_esc(e.motivo || '—')}</td>
-      <td>${podeEditar ? `<button class="btn btn-perigo btn-sm btn-icon" onclick="ConfiguracaoObra.calRemoverExcecao('${_esc(e.data)}')" title="Remover">✕</button>` : ''}</td>
+      <td style="white-space:nowrap;">${_fd(e.data)}</td>
+      <td><span class="badge ${e.trabalha ? 'badge-sucesso' : 'badge-perigo'}">${e.trabalha ? 'trabalha mesmo assim' : 'não trabalha'}</span></td>
+      <td>${_esc(e.motivo || '—')}</td>
+      <td class="col-acoes">${podeEditar ? `<button class="btn btn-perigo btn-sm" onclick="ConfiguracaoObra.calRemoverExcecao('${_esc(e.data)}')" title="Remover">✕</button>` : ''}</td>
     </tr>`).join('');
 
-    const chk = (marcado, acao, rotulo, dica) => `<label style="display:inline-flex;align-items:center;gap:6px;font-size:.75rem;cursor:pointer;margin-right:16px;" title="${_esc(dica)}">
+    const chk = (marcado, acao, rotulo, dica) => `<label class="form-check" style="display:inline-flex;font-size:.78rem;cursor:pointer;margin-right:18px;color:var(--cor-texto);" title="${_esc(dica)}">
       <input type="checkbox" ${marcado ? 'checked' : ''} onchange="ConfiguracaoObra.${acao}"> ${_esc(rotulo)}</label>`;
 
-    const bloco = (titulo, subtitulo, corpo) => `<div style="background:#181818;border:1px solid var(--cor-borda-light);border-radius:10px;padding:12px;margin-bottom:12px;">
-      <div style="font-size:.85rem;font-weight:700;margin-bottom:2px;">${titulo}</div>
-      <div style="font-size:.7rem;color:#888;margin-bottom:10px;">${subtitulo}</div>
-      ${corpo}</div>`;
+    const bloco = (titulo, subtitulo, corpo) => `<div class="card" style="margin-bottom:14px;">
+      <div class="card-header" style="display:block;padding:12px 16px;">
+        <div style="font-size:.9rem;font-weight:700;color:var(--cor-texto);">${titulo}</div>
+        <div class="text-sm text-muted" style="font-size:.75rem;margin-top:2px;">${subtitulo}</div>
+      </div>
+      <div class="card-body" style="padding:14px 16px;">${corpo}</div>
+    </div>`;
 
     const tabela = (cabecalhos, linhas, vazio) => linhas
-      ? `<div style="max-height:260px;overflow:auto;border:1px solid var(--cor-borda-light);border-radius:8px;"><table class="tabela tabela-compacta" style="width:100%;">
-          <thead style="position:sticky;top:0;background:#1f1f1f;"><tr>${cabecalhos.map(h => `<th style="font-size:.66rem;color:#888;text-align:left;">${h}</th>`).join('')}</tr></thead>
-          <tbody>${linhas}</tbody></table></div>`
+      ? `<div class="tabela-container" style="max-height:280px;overflow:auto;">
+          <table class="tabela tabela-compacta">
+            <thead><tr>${cabecalhos.map(h => `<th>${h}</th>`).join('')}</tr></thead>
+            <tbody>${linhas}</tbody></table></div>`
       : `<div class="text-sm text-muted" style="padding:10px;">${vazio}</div>`;
 
     return `
       ${bloco(
-        `${c.ativo ? '🟢' : '⚪'} Calendário ${c.ativo ? 'ligado' : 'desligado'}`,
+        `<span class="badge ${c.ativo ? 'badge-sucesso' : 'badge-neutro'}">${c.ativo ? '● ligado' : '○ desligado'}</span> Calendário desta obra`,
         c.ativo
-          ? `Datas e durações contam <b>dias úteis</b>: ${Calendario.resumoJornada(c)}. ${c.aplicado ? 'As datas do cronograma já foram recalculadas com esta régua.' : '<b style="color:#fbbf24;">As datas salvas ainda estão em dias corridos</b> — abra o Planejamento e use "Aplicar Calendário às Datas".'}`
+          ? `Datas e durações contam <b>dias úteis</b>: ${Calendario.resumoJornada(c)}. ${c.aplicado ? 'As datas do cronograma já foram recalculadas com esta régua.' : '<b style="color:var(--cor-alerta);">As datas salvas ainda estão em dias corridos</b> — abra o Planejamento e use "Aplicar Calendário às Datas".'}`
           : 'Enquanto está desligado, o sistema conta <b>dias corridos</b> — exatamente como sempre contou. Nenhuma data muda ao ligar: o recálculo é um passo separado, com simulação antes.',
         `<button class="btn ${c.ativo ? 'btn-perigo' : 'btn-primario'} btn-sm" ${podeEditar ? '' : 'disabled'} onclick="ConfiguracaoObra.calToggleAtivo()">${c.ativo ? 'Desligar calendário' : 'Ligar calendário'}</button>`
       )}
@@ -257,18 +263,18 @@ const ConfiguracaoObra = (() => {
         `<div style="display:flex;gap:6px;flex-wrap:wrap;">${diasBtns}</div>`)}
 
       ${bloco('Feriados', 'Os nacionais são calculados automaticamente (inclusive os móveis, derivados da Páscoa). Estadual e municipal você cadastra aqui.',
-        `<div style="margin-bottom:10px;">
+        `<div style="margin-bottom:12px;">
           ${chk(c.trabalhaFeriado, 'calToggle(\'trabalhaFeriado\')', 'A obra trabalha em feriado', 'Ligado, feriado passa a ser dia útil — exceto onde houver exceção pontual')}
           ${chk(c.feriadosAuto, 'calToggle(\'feriadosAuto\')', 'Gerar feriados nacionais', 'Desligado, só valem os feriados que você cadastrar na mão')}
         </div>
-        <div style="margin-bottom:10px;">
-          <div style="font-size:.7rem;color:#888;margin-bottom:4px;">Ponto facultativo — marcado significa que a obra PARA:</div>
+        <div style="margin-bottom:12px;">
+          <div class="text-sm text-muted" style="font-size:.75rem;margin-bottom:5px;">Ponto facultativo — marcado significa que a obra PARA:</div>
           ${chk(c.facultativos.carnaval, 'calToggleFacultativo(\'carnaval\')', 'Carnaval (seg e ter)', 'Carnaval não é feriado nacional por lei, é ponto facultativo')}
           ${chk(c.facultativos.corpusChristi, 'calToggleFacultativo(\'corpusChristi\')', 'Corpus Christi', 'Corpus Christi não é feriado nacional por lei, é ponto facultativo')}
         </div>
-        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px;">
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px;">
           <button class="btn btn-secundario btn-sm" onclick="ConfiguracaoObra.calMudarAno(-1)">←</button>
-          <b style="font-size:.8rem;">${calAnoVisivel}</b>
+          <b style="font-size:.85rem;color:var(--cor-texto);">${calAnoVisivel}</b>
           <button class="btn btn-secundario btn-sm" onclick="ConfiguracaoObra.calMudarAno(1)">→</button>
           ${podeEditar ? `<span style="margin-left:auto;display:flex;gap:6px;align-items:center;">
             <input type="date" id="cal-fer-data" class="form-control" style="width:150px;font-size:.72rem;">
@@ -281,7 +287,7 @@ const ConfiguracaoObra = (() => {
       ${bloco('Paralisações', 'Faixa de dias parados: recesso, período de chuva, interdição. Uma exceção pontual ainda vence a paralisação — dá pra trabalhar um dia no meio dela.',
         `${podeEditar ? `<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:8px;">
           <input type="date" id="cal-par-ini" class="form-control" style="width:150px;font-size:.72rem;">
-          <span style="color:#666;">→</span>
+          <span class="text-muted">→</span>
           <input type="date" id="cal-par-fim" class="form-control" style="width:150px;font-size:.72rem;">
           <input type="text" id="cal-par-motivo" class="form-control" placeholder="Motivo" style="width:200px;font-size:.72rem;">
           <button class="btn btn-primario btn-sm" onclick="ConfiguracaoObra.calAddParalisacao()">+ Paralisação</button>
@@ -318,11 +324,12 @@ const ConfiguracaoObra = (() => {
         const data = `${calAnoVisivel}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
         const motivo = Calendario.motivoNaoUtil(data, c);
         if (!motivo) uteis++;
-        dias += `<span title="${_fd(data)}${motivo ? ' — ' + _esc(motivo) : ' — dia útil'}" style="display:inline-block;width:15px;height:15px;line-height:15px;text-align:center;font-size:.55rem;border-radius:3px;margin:1px;
-          background:${motivo ? '#2a2a2a' : 'var(--cor-primaria)'};color:${motivo ? '#666' : '#0a0a0a'};">${d}</span>`;
+        dias += `<span title="${_fd(data)}${motivo ? ' — ' + _esc(motivo) : ' — dia útil'}" style="display:inline-block;width:16px;height:16px;line-height:16px;text-align:center;font-size:.58rem;font-weight:600;border-radius:3px;margin:1px;
+          background:${motivo ? 'var(--cor-neutro-bg)' : 'var(--cor-primaria)'};color:${motivo ? 'var(--cor-texto-muted)' : 'var(--cor-dark-900)'};">${d}</span>`;
       }
-      html += `<div style="border:1px solid var(--cor-borda-light);border-radius:8px;padding:6px;width:158px;">
-        <div style="font-size:.7rem;font-weight:700;margin-bottom:3px;">${MESES[m - 1]} <span style="color:#888;font-weight:400;">· ${uteis} úteis</span></div>
+      html += `<div style="border:1.5px solid var(--cor-borda-light);border-radius:8px;padding:8px;width:166px;background:var(--cor-fundo-card);">
+        <div style="font-size:.74rem;font-weight:700;margin-bottom:4px;color:var(--cor-texto);">${MESES[m - 1]}
+          <span class="text-muted" style="font-weight:400;">· ${uteis} úteis</span></div>
         <div>${dias}</div></div>`;
     }
     return html + '</div>';

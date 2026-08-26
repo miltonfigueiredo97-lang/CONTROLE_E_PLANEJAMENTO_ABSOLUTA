@@ -7221,50 +7221,43 @@ const Planejamento = (() => {
     const rows=s.linhas.slice(0,MAX_LINHAS_PREVIA).map(l=>{
       const mudouIni=l.inicioPlanejado!==l._iniAntes, mudouFim=l.terminoPlanejado!==l._fimAntes;
       const cel=(antes,depois,mudou)=>mudou
-        ? `<span style="color:#888;text-decoration:line-through;">${_fd(antes)||'—'}</span> <span style="color:#4ade80;">${_fd(depois)||'—'}</span>`
-        : `<span style="color:#666;">${_fd(depois)||'—'}</span>`;
+        ? `<span class="text-muted" style="text-decoration:line-through;">${_fd(antes)||'—'}</span> <b style="color:var(--cor-sucesso);">${_fd(depois)||'—'}</b>`
+        : `<span class="text-muted">${_fd(depois)||'—'}</span>`;
       return `<tr>
-        <td style="font-size:.7rem;color:#888;">${_esc(l.codigo)||'—'}</td>
-        <td style="font-size:.72rem;padding-left:${(l.nivel||0)*10}px;">${_esc(l.nome)}</td>
-        <td style="font-size:.7rem;white-space:nowrap;">${cel(l._iniAntes,l.inicioPlanejado,mudouIni)}</td>
-        <td style="font-size:.7rem;white-space:nowrap;">${cel(l._fimAntes,l.terminoPlanejado,mudouFim)}</td>
+        <td class="text-muted" style="font-size:.72rem;">${_esc(l.codigo)||'—'}</td>
+        <td style="padding-left:${10+(l.nivel||0)*12}px;">${_esc(l.nome)}</td>
+        <td style="white-space:nowrap;">${cel(l._iniAntes,l.inicioPlanejado,mudouIni)}</td>
+        <td style="white-space:nowrap;">${cel(l._fimAntes,l.terminoPlanejado,mudouFim)}</td>
       </tr>`;
     }).join('');
 
+    const kpi=(rotulo,valor,rodape)=>`<div style="flex:1;min-width:150px;background:var(--cor-fundo);border:1.5px solid var(--cor-borda-light);border-radius:var(--borda-radius-lg);padding:12px;">
+      <div class="text-muted" style="font-size:.68rem;text-transform:uppercase;letter-spacing:.5px;">${rotulo}</div>
+      <div style="font-weight:800;color:var(--cor-texto);margin:2px 0;">${valor}</div>
+      <div class="text-muted" style="font-size:.7rem;">${rodape}</div>
+    </div>`;
+
     el.innerHTML=`
-      <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:12px;">
-        <div style="flex:1;min-width:130px;background:#181818;border:1px solid var(--cor-borda-light);border-radius:8px;padding:10px;">
-          <div style="font-size:.68rem;color:#888;text-transform:uppercase;">Tarefas alteradas</div>
-          <div style="font-size:1.5rem;font-weight:800;">${s.linhas.length}</div>
-          <div style="font-size:.66rem;color:#666;">de ${s.total} no total</div>
-        </div>
-        <div style="flex:1;min-width:130px;background:#181818;border:1px solid var(--cor-borda-light);border-radius:8px;padding:10px;">
-          <div style="font-size:.68rem;color:#888;text-transform:uppercase;">Término da obra</div>
-          <div style="font-size:.95rem;font-weight:700;"><span style="color:#888;text-decoration:line-through;">${_fd(s.fimAntes)||'—'}</span> → <span style="color:#4ade80;">${_fd(s.fimDepois)||'—'}</span></div>
-          <div style="font-size:.66rem;color:#666;">${sinal?`${sinal}${diasObra} dia(s)`:'sem mudança'}</div>
-        </div>
-        <div style="flex:1;min-width:130px;background:#181818;border:1px solid var(--cor-borda-light);border-radius:8px;padding:10px;">
-          <div style="font-size:.68rem;color:#888;text-transform:uppercase;">Jornada</div>
-          <div style="font-size:.95rem;font-weight:700;">${Calendario.resumoJornada(_calObra)}</div>
-          <div style="font-size:.66rem;color:#666;">${_calObra.trabalhaFeriado?'trabalha em feriado':'para em feriado'}</div>
-        </div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
+        ${kpi('Tarefas alteradas',`<span style="font-size:1.6rem;">${s.linhas.length}</span>`,`de ${s.total} no total`)}
+        ${kpi('Término da obra',
+          `<span class="text-muted" style="text-decoration:line-through;font-size:.95rem;">${_fd(s.fimAntes)||'—'}</span>
+           <span style="color:var(--cor-sucesso);font-size:.95rem;">→ ${_fd(s.fimDepois)||'—'}</span>`,
+          sinal?`${sinal}${diasObra} dia(s)`:'sem mudança')}
+        ${kpi('Jornada',`<span style="font-size:.95rem;">${Calendario.resumoJornada(_calObra)}</span>`,
+          _calObra.trabalhaFeriado?'trabalha em feriado':'para em feriado')}
       </div>
-      ${avisos.map(a=>`<div style="background:#2a1f0a;border:1px solid #7c5c14;border-radius:8px;padding:8px 10px;font-size:.72rem;color:#fbbf24;margin-bottom:8px;">${_esc(a)}</div>`).join('')}
+      ${avisos.map(a=>`<div style="background:var(--cor-alerta-bg);border:1.5px solid var(--cor-alerta);border-radius:8px;padding:9px 12px;font-size:.76rem;color:#b45309;margin-bottom:10px;">${_esc(a)}</div>`).join('')}
       ${s.linhas.length?`
-      <div style="max-height:340px;overflow:auto;border:1px solid var(--cor-borda-light);border-radius:8px;">
-        <table style="width:100%;border-collapse:collapse;">
-          <thead style="position:sticky;top:0;background:#1f1f1f;"><tr>
-            <th style="text-align:left;font-size:.66rem;padding:6px;color:#888;">Código</th>
-            <th style="text-align:left;font-size:.66rem;padding:6px;color:#888;">Tarefa</th>
-            <th style="text-align:left;font-size:.66rem;padding:6px;color:#888;">Início</th>
-            <th style="text-align:left;font-size:.66rem;padding:6px;color:#888;">Término</th>
-          </tr></thead>
+      <div class="tabela-container" style="max-height:340px;overflow:auto;">
+        <table class="tabela tabela-compacta">
+          <thead><tr><th>Código</th><th>Tarefa</th><th>Início</th><th>Término</th></tr></thead>
           <tbody>${rows}</tbody>
         </table>
       </div>`:`<div class="text-sm text-muted" style="padding:14px;text-align:center;">Nenhuma data muda — o cronograma já está coerente com este calendário.</div>`}
-      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;">
-        <button class="btn btn-secundario btn-sm" onclick="Utils.fecharModal('modal-planej-calendario')">Cancelar</button>
-        <button class="btn btn-primario btn-sm" ${s.linhas.length?'':'disabled'} onclick="Planejamento.aplicarCalendario()">Aplicar ${s.linhas.length} alteração(ões)</button>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px;">
+        <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-planej-calendario')">Cancelar</button>
+        <button class="btn btn-primario" ${s.linhas.length?'':'disabled'} onclick="Planejamento.aplicarCalendario()">Aplicar ${s.linhas.length} alteração(ões)</button>
       </div>`;
   }
 
@@ -7310,9 +7303,9 @@ const Planejamento = (() => {
   // cronograma já mudou — quando na verdade não mudou nada.
   function _bannerCalendario(){
     if(!_calObra.ativo||_calObra.aplicado)return'';
-    return `<div style="background:#0f2a1f;border:1px solid #15803d;border-radius:8px;padding:8px 12px;margin-bottom:8px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-      <span style="font-size:.75rem;color:#86efac;">📅 Calendário ligado (<b>${Calendario.resumoJornada(_calObra)}</b>), mas as datas salvas ainda estão em dias corridos.</span>
-      <button class="btn btn-primario btn-sm" style="font-size:.72rem;" onclick="Planejamento.abrirAplicarCalendario()">Simular e aplicar</button>
+    return `<div style="background:var(--cor-alerta-bg);border:1.5px solid var(--cor-alerta);border-radius:8px;padding:8px 12px;margin-bottom:8px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <span style="font-size:.78rem;color:#b45309;">📅 Calendário ligado (<b>${Calendario.resumoJornada(_calObra)}</b>), mas as datas salvas ainda estão em dias corridos.</span>
+      <button class="btn btn-primario btn-sm" style="font-size:.74rem;" onclick="Planejamento.abrirAplicarCalendario()">Simular e aplicar</button>
     </div>`;
   }
 

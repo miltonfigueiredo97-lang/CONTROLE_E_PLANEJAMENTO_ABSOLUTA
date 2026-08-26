@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.20.0',
+  versaoAtual: 'V3.20.1',
 
   versoes: [
     {
@@ -10650,6 +10650,18 @@ const NotasVersao = {
         "Esse botão SIMULA antes de aplicar: mostra quantas tarefas mudam de data, o de → para de cada uma, e quantos dias o término da obra estica ou encurta. Só aplica depois de confirmar, grava em lote e dá pra desfazer com Ctrl+Z. Enquanto o calendário estiver ligado mas as datas ainda na régua antiga, um aviso verde aparece no topo do Planejamento.",
         "Mudar qualquer coisa no calendário depois (jornada, feriado, exceção) marca as datas como desatualizadas de novo e o aviso volta — não fica cronograma incoerente em silêncio.",
         "A conta de dia útil mora num módulo só (js/calendario.js) pra Medições, Semanal, Histograma e Curva S usarem a MESMA régua. Dois caminhos de cálculo que divergem já quebrou este sistema antes."
+      ]
+    },
+    {
+      "versao": "V3.20.1",
+      "data": "2026-08-26",
+      "tipo": "correcao",
+      "titulo": "Calendário de Obra: aba ficava com texto preto no fundo preto",
+      "itens": [
+        "A tela nova do Calendário foi escrita com cores fixas de tema escuro (fundo #181818, textos em cinza) enquanto o sistema usa tema CLARO. Resultado: os títulos dos blocos, os nomes dos feriados e os rótulos das caixas de seleção herdavam a cor de texto padrão (quase preta) sobre fundo preto — invisíveis.",
+        "Reescrita usando os componentes e as variáveis do próprio sistema: blocos viraram card/card-header/card-body, tabelas viraram tabela + tabela-compacta dentro de tabela-container, caixas de seleção viraram form-check, e tipo de feriado e efeito da exceção viraram badge colorido.",
+        "Mesma correção no popup de \\\"Aplicar Calendário às Datas\\\" (os três indicadores do topo, a tabela de de → para e os avisos) e no aviso do topo do Planejamento, que estava em verde escuro e agora usa o amarelo de alerta do sistema.",
+        "Prévia dos 12 meses: dia útil no amarelo Absoluta, dia parado no cinza neutro do tema, ambos com contraste de texto correto."
       ]
     }
   ],
