@@ -266,11 +266,24 @@ const Auditor = (() => {
     }
 
     // ---------- 2. PRECEDÊNCIA TECNOLÓGICA ----------
+    //
+    // AGREGADO POR PAR DE SERVIÇOS, não por par de tarefas. Motivo: a EAP é
+    // hierárquica — Gesso > Final 01 > 1º ao 20º pavimento, Gesso > Final 02 >
+    // idem, e Contrapiso na mesma estrutura. A ordem errada entre gesso e
+    // contrapiso não aparece num vínculo: aparece em dezenas deles, um por
+    // pavimento e por final.
+    //
+    // Um achado por vínculo geraria 40 alertas dizendo a mesma coisa, e inverter
+    // um só não muda o cronograma da obra — os outros 39 continuariam mandando.
+    // Então o achado é UM, do par de serviços, carregando a lista completa de
+    // vínculos pra inversão em massa. O pareamento por local sai de graça: cada
+    // vínculo já liga o par certo (Final 01/3º andar com Final 01/3º andar), e
+    // inverter cada um no lugar preserva isso.
+    const paresPrec = new Map();
     for (const t of folhas) {
       const servT = RegrasPrecedencia.classificar(t.nome);
       if (!servT.length) continue;
-      const noT = rede.nos.get(t.id);
-      if (!noT) continue;
+      if (!rede.nos.get(t.id)) continue;
 
       for (const p of _predParse(t.predecessora)) {
         const alvo = porId.get(p.id);
@@ -285,18 +298,49 @@ const Auditor = (() => {
           // regra.antes === sa. `invertido` true significa que a regra manda o
           // contrário do que o cronograma faz.
           if (!r || !r.invertido) continue;
-          add({ chave: `precedencia:${p.id}>${t.id}:${r.regra.antes}>${r.regra.depois}`,
-            ctx: _assinatura([p.tipo, p.lag]), tipo: 'precedencia_invertida', severidade: r.regra.severidade,
-            tarefaId: t.id, tarefaNome: t.nome, tarefaCodigo: t.codigo,
-            tarefaId2: p.id, tarefaNome2: alvo.nome,
-            titulo: `${RegrasPrecedencia.label(r.regra.depois)} antes de ${RegrasPrecedencia.label(r.regra.antes)}`,
-            detalhe: `O cronograma põe "${alvo.nome}" antes de "${t.nome}". Na execução a ordem costuma ser a inversa.`,
-            motivo: r.regra.motivo, risco: r.regra.risco,
-            sugestao: `Inverter o vínculo: "${t.nome}" passa a ser predecessora de "${alvo.nome}".`,
-            acoes: ['inverter', 'manter', 'ir'],
-            dados: { de: p.id, para: t.id, tipo: p.tipo, lag: p.lag, regraAntes: r.regra.antes, regraDepois: r.regra.depois } });
+          const k = `${r.regra.antes}>${r.regra.depois}`;
+          if (!paresPrec.has(k)) paresPrec.set(k, { regra: r.regra, vinculos: [] });
+          paresPrec.get(k).vinculos.push({
+            de: p.id, para: t.id, tipo: p.tipo, lag: p.lag,
+            nomeDe: alvo.nome || '', nomePara: t.nome || '',
+            codDe: alvo.codigo || '', codPara: t.codigo || '',
+          });
         }
       }
+    }
+
+    for (const [k, grupo] of paresPrec) {
+      const r = grupo.regra;
+      const V = grupo.vinculos;
+      // Quantos desses vínculos tocam o caminho crítico. É o que diz se a
+      // inversão muda a data da obra ou só reorganiza folga.
+      const noCritico = V.filter(v => {
+        const a = rede.nos.get(v.de), b = rede.nos.get(v.para);
+        return (a && a.critico) || (b && b.critico);
+      }).length;
+
+      const amostra = V.slice(0, 6).map(v => `• ${v.codDe ? v.codDe + ' ' : ''}${v.nomeDe}  →  ${v.codPara ? v.codPara + ' ' : ''}${v.nomePara}`).join('\n');
+      add({ chave: `precedencia:${k}`,
+        ctx: _assinatura([V.length, V.map(v => `${v.de}>${v.para}:${v.tipo}${v.lag}`).sort().join(',')]),
+        tipo: 'precedencia_invertida', severidade: r.severidade,
+        tarefaId: V[0].para, tarefaNome: V[0].nomePara, tarefaCodigo: V[0].codPara,
+        tarefaId2: V[0].de, tarefaNome2: V[0].nomeDe,
+        titulo: V.length === 1
+          ? `${RegrasPrecedencia.label(r.depois)} antes de ${RegrasPrecedencia.label(r.antes)}`
+          : `${V.length} vínculos põem ${RegrasPrecedencia.label(r.depois)} antes de ${RegrasPrecedencia.label(r.antes)}`,
+        detalhe: (V.length === 1
+          ? `O cronograma põe "${V[0].nomeDe}" antes de "${V[0].nomePara}". Na execução a ordem costuma ser a inversa.`
+          : `${V.length} vínculos em toda a EAP põem ${RegrasPrecedencia.label(r.depois)} antes de ${RegrasPrecedencia.label(r.antes)} — um por local (pavimento, final, torre). Inverter só um não muda o cronograma da obra: todos precisam virar juntos.`)
+          + (noCritico ? `\n${noCritico} deles envolvem tarefa no caminho crítico, então a inversão mexe na data final.` : `\nNenhum deles está no caminho crítico: a inversão reorganiza folga, sem mudar a data final.`)
+          + (V.length > 1 ? `\n\nPrimeiros:\n${amostra}${V.length > 6 ? `\n… e outros ${V.length - 6}` : ''}` : ''),
+        motivo: r.motivo, risco: r.risco,
+        sugestao: V.length === 1
+          ? `Inverter o vínculo: "${V[0].nomePara}" passa a ser predecessora de "${V[0].nomeDe}".`
+          : `Inverter os ${V.length} vínculos de uma vez, cada um no seu local. O sistema simula o efeito na data final e no caminho crítico antes de aplicar.`,
+        acoes: ['inverter', 'manter', 'ir'],
+        dados: { de: V[0].de, para: V[0].para, vinculos: V, noCritico,
+          regraAntes: r.antes, regraDepois: r.depois,
+          labelAntes: RegrasPrecedencia.label(r.antes), labelDepois: RegrasPrecedencia.label(r.depois) } });
     }
 
     // Serviços que existem na obra mas não estão amarrados entre si, mesmo

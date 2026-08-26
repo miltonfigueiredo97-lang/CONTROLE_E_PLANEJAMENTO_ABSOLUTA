@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.21.0',
+  versaoAtual: 'V3.21.1',
 
   versoes: [
     {
@@ -10695,6 +10695,23 @@ const NotasVersao = {
         "SÁBADO DE MEIO PERÍODO (pedido): a jornada semanal passa a ter três estados por dia — não trabalha, dia inteiro, meio período. Cada clique no dia cicla. O motor passou a medir duração em JORNADA acumulada e não em caixinhas do calendário, que é como o MS Project faz: uma tarefa de 6 dias que atravessa um sábado de meio período termina um dia depois do que terminaria numa semana de 6 dias cheios.",
         "CLIQUE NO DIA DA PRÉVIA (pedido): clicar num dia do calendário cria a exceção que inverte aquele dia, e clicar de novo volta ao padrão. Era formulário, virou um clique. Dia com exceção ganha anel azul, meio período ganha meio amarelo meio cinza, e a prévia ganhou legenda.",
         "Verificação: 90 testes automatizados nos módulos de cálculo, incluindo prova empírica do backward pass (uma tarefa com folga N aceita N dias a mais sem mover o término da obra, e com N+1 move) e regressão confirmando que sem meio período e com o calendário desligado o comportamento anterior é idêntico."
+      ]
+    },
+    {
+      "versao": "V3.21.1",
+      "data": "2026-08-26",
+      "tipo": "correcao",
+      "titulo": "Verificar Planejamento: inversão de vínculo agora entende a EAP inteira, não um vínculo só",
+      "itens": [
+        "PROBLEMA: a EAP é hierárquica — Gesso tem Final 01 e Final 02, e dentro de cada final os pavimentos; Contrapiso e Porcelanato na mesma estrutura. A ordem errada entre dois serviços não aparece num vínculo: aparece em dezenas, um por local. O Verificador gerava um alerta por vínculo (repetindo a mesma coisa 8, 20, 40 vezes) e o botão invertia UM. Invertendo um só, o cronograma da obra não mudava nada — os outros continuavam mandando.",
+        "Agora o apontamento é UM por par de serviços, carregando todos os vínculos daquele par em toda a EAP. O título diz quantos são, e o texto avisa que inverter só um não resolve.",
+        "A inversão é em massa, cada vínculo no seu lugar. O pareamento por final e pavimento sai de graça: cada vínculo já liga o par certo (Final 01/3º andar com Final 01/3º andar), e inverter cada um onde está preserva isso. O sistema não tenta adivinhar pareamento — usa o que já existe.",
+        "LÊ O CAMINHO CRÍTICO: o apontamento informa quantos daqueles vínculos envolvem tarefa crítica, ou seja se a inversão mexe na data final ou só reorganiza folga.",
+        "SIMULA ANTES DE APLICAR: quantos vínculos, quantas tarefas mudam de data, término da obra de → para com quantos dias atrasa ou adianta, e quantas tarefas entram e saem do caminho crítico (com a lista). Se a inversão criar dependência circular, avisa antes — sinal de que já existe outro vínculo puxando no sentido contrário.",
+        "As datas são gravadas em lote a partir do CPM já simulado, em vez de propagação tarefa por tarefa, que numa EAP grande seriam centenas de escritas em sequência.",
+        "NOVA FERRAMENTA — \\\"Inverter Vínculos entre Grupos\\\" no menu de Ferramentas: escolha dois grupos da EAP e o sistema acha todos os vínculos entre eles, mostra a lista, simula e inverte de uma vez. Serve pro caso em que a decisão de ordem é sua e não existe regra: gesso depois do contrapiso, por exemplo, é prática legítima (o gesseiro usa o contrapiso como piso de trabalho e referência de nível), então o sistema não afirma ordem ali — mas te dá a ferramenta pra trocar quando você decidir.",
+        "Quando não existe vínculo nenhum entre os dois grupos, a ferramenta diz isso em vez de fingir que fez algo: sem vínculo não há o que inverter, e o que falta é criar os vínculos.",
+        "Verificação: 12 testes sobre uma EAP hierárquica de 2 finais × 4 pavimentos, incluindo a prova de que invertendo um vínculo só o problema continua e sobram os outros 7, e que nenhum vínculo cruza final ou pavimento na inversão em massa."
       ]
     }
   ],

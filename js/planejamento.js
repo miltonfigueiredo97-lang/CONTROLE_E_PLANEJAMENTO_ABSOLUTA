@@ -3212,6 +3212,7 @@ const Planejamento = (() => {
       {rotulo:'Recalcular % dos Pais',grupo:'Correções & Recálculos',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento._recalcularPercTodosPais()" title="Recalcula o % de toda tarefa-pai a partir dos filhos diretos (nível por nível, igual MS Project)">📊 Recalcular % dos Pais</button>'},
       {rotulo:'Recalcular Datas dos Pais',grupo:'Correções & Recálculos',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento._recalcularDatasPais()" title="Recalcula início/término das tarefas-pai a partir dos filhos">📐 Recalcular Datas dos Pais</button>'},
       {rotulo:'Verificar Planejamento',grupo:'Correções & Recálculos',html:'<button class="btn btn-primario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.abrirVerificarPlanejamento()" title="Analisa a rede inteira: caminho crítico, folgas, vínculos que faltam ou não fazem sentido, ordem de execução dos serviços e duração x quantidade. Roda offline, sem IA, e nada é alterado sem sua aprovação">🔍 Verificar Planejamento</button>'},
+      {rotulo:'Inverter Vínculos entre Grupos',grupo:'Correções & Recálculos',html:'<button class="btn btn-secundario btn-sm" data-perm="planejamento:editar" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.abrirInverterGrupos()" title="Troca a ordem de dois serviços na obra inteira de uma vez: acha todos os vínculos entre os dois grupos da EAP, cada um no seu pavimento e final, simula o efeito na data final e no caminho crítico, e inverte tudo junto">🔀 Inverter Vínculos entre Grupos</button>'},
       {rotulo:'Aplicar Calendário às Datas',grupo:'Correções & Recálculos',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.abrirAplicarCalendario()" title="Recalcula a rede toda contando só dias úteis (jornada, feriados, paralisações e exceções da obra). Mostra de/para antes de aplicar — nada muda sem confirmação">📅 Aplicar Calendário às Datas</button>'},
       ...(_versaoData!=='atual'?[{rotulo:'Copiar Datas de Atual',grupo:'Correções & Recálculos',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.copiarDatasDeAtual()" title="Preenche as datas de '+VERSAO_LABEL[_versaoData]+' copiando de Atual em todas as tarefas que ainda não têm valor">📋 Copiar Datas de Atual → '+VERSAO_LABEL[_versaoData]+'</button>'}]:[]),
       {rotulo:'Ver por Responsável',grupo:'Ferramentas da Obra',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;'+(_filtroResponsavel?'background:var(--cor-primaria);color:#000;':'')+'" onclick="Planejamento._abrirFiltroResponsavel()" title="Filtra a grid por responsável/especialidade">👷 '+(_filtroResponsavel?_esc(_filtroResponsavel):'Ver por Responsável')+'</button>'},
@@ -7431,8 +7432,9 @@ const Planejamento = (() => {
 
     const cartao=(a)=>{
       const acoes=[];
-      if(podeEditar&&a.acoes.includes('inverter')&&a.dados&&a.dados.de)
-        acoes.push(`<button class="btn btn-primario btn-sm" style="font-size:.72rem;" onclick="Planejamento.auditorInverter('${_esc(a.chave)}')">Inverter o vínculo</button>`);
+      const nVinc=(a.dados&&a.dados.vinculos)?a.dados.vinculos.length:(a.dados&&a.dados.de?1:0);
+      if(podeEditar&&a.acoes.includes('inverter')&&nVinc)
+        acoes.push(`<button class="btn btn-primario btn-sm" style="font-size:.72rem;" onclick="Planejamento.auditorInverter('${_esc(a.chave)}')">${nVinc>1?`Inverter os ${nVinc} vínculos`:'Inverter o vínculo'}</button>`);
       if(a.tarefaId)
         acoes.push(`<button class="btn btn-secundario btn-sm" style="font-size:.72rem;" onclick="Planejamento.auditorIr('${_esc(a.tarefaId)}')">Ver a tarefa</button>`);
       if(podeEditar)
@@ -7448,7 +7450,7 @@ const Planejamento = (() => {
           ${a.tarefaCodigo?`<span class="text-muted" style="font-size:.7rem;">${_esc(a.tarefaCodigo)}</span>`:''}
         </div>
         ${a.tarefaNome?`<div class="text-muted" style="font-size:.74rem;margin-bottom:5px;">${_esc(a.tarefaNome)}${a.tarefaNome2?` <span style="color:var(--cor-texto-muted);">· vínculo com</span> ${_esc(a.tarefaNome2)}`:''}</div>`:''}
-        ${a.detalhe?`<div style="font-size:.78rem;color:var(--cor-texto);margin-bottom:6px;">${_esc(a.detalhe)}</div>`:''}
+        ${a.detalhe?`<div style="font-size:.78rem;color:var(--cor-texto);margin-bottom:6px;white-space:pre-line;">${_esc(a.detalhe)}</div>`:''}
         ${a.motivo?`<div style="font-size:.76rem;color:var(--cor-texto-secundario);background:var(--cor-fundo);border-radius:6px;padding:8px 10px;margin-bottom:6px;">
           <b>Por quê:</b> ${_esc(a.motivo)}${a.risco?`<br><b>Risco:</b> ${_esc(a.risco)}`:''}</div>`:''}
         ${a.sugestao?`<div style="font-size:.76rem;color:var(--cor-sucesso);margin-bottom:8px;"><b>Proposta:</b> ${_esc(a.sugestao)}</div>`:''}
@@ -7564,49 +7566,351 @@ const Planejamento = (() => {
     }catch(e){console.error(e);Utils.toast('Erro ao reabrir.','erro');}
   }
 
-  // ---- Aplicar: inverter o vínculo ----
-  // O vínculo diz "de → para". Inverter é tirar essa predecessora de `para` e
-  // colocar `para` como predecessora de `de`, mantendo tipo e defasagem. A
-  // propagação de data em cascata roda em seguida, como em qualquer edição.
-  async function auditorInverter(chave){
+  // ---- Aplicar: inverter os vínculos de um par de serviços ----
+  //
+  // Um achado de precedência carrega TODOS os vínculos daquele par de serviços
+  // na EAP inteira (Gesso × Contrapiso = um vínculo por pavimento e por final).
+  // Inverter um só não muda o cronograma da obra — os outros continuam mandando.
+  // Então a inversão é em massa, cada vínculo no seu lugar. O pareamento por
+  // local sai de graça: cada vínculo já liga o par certo.
+  //
+  // Antes de gravar qualquer coisa, o efeito é SIMULADO num rascunho e comparado
+  // com a rede atual: quantas tarefas mudam de data, como fica o término da
+  // obra, e o que entra e sai do caminho crítico. Sem isso não há como saber se
+  // a inversão resolve ou só empurra o aperto pra outro lugar.
+  let _invPend=null;
+
+  function _clonarParaSimular(){
+    return tarefas.map(t=>({id:t.id,ordem:t.ordem,nivel:t.nivel,nome:t.nome,codigo:t.codigo,
+      duracao:t.duracao,predecessora:t.predecessora||'',
+      inicioPlanejado:t.inicioPlanejado||'',terminoPlanejado:t.terminoPlanejado||''}));
+  }
+
+  // Aplica a inversão numa lista de tarefas (rascunho ou real, mesma função).
+  // Devolve o mapa id -> nova string de predecessora, só de quem mudou.
+  function _calcularInversao(lista,vinculos){
+    const porIdL=new Map(lista.map(t=>[t.id,t]));
+    const preds=new Map(); // id -> array de partes
+    const partesDe=(id)=>{
+      if(!preds.has(id))preds.set(id,_predParse((porIdL.get(id)||{}).predecessora));
+      return preds.get(id);
+    };
+    for(const v of vinculos){
+      if(!porIdL.has(v.de)||!porIdL.has(v.para))continue;
+      // tira o vínculo de `para`
+      preds.set(v.para,partesDe(v.para).filter(p=>p.id!==v.de));
+      // e coloca o inverso em `de`, sem duplicar
+      const alvo=partesDe(v.de).filter(p=>p.id!==v.para);
+      alvo.push({id:v.para,tipo:v.tipo||'TI',lag:String(v.lag||'')});
+      preds.set(v.de,alvo);
+    }
+    const out=new Map();
+    for(const [id,partes] of preds){
+      const nova=_predFormat(partes);
+      if(nova!==((porIdL.get(id)||{}).predecessora||''))out.set(id,nova);
+    }
+    return out;
+  }
+
+  function _simularInversao(vinculos){
+    const antes=CPM.calcular(tarefas,_calObra);
+    const rascunho=_clonarParaSimular();
+    const mudancas=_calcularInversao(rascunho,vinculos);
+    const porIdR=new Map(rascunho.map(t=>[t.id,t]));
+    for(const [id,pred] of mudancas){const t=porIdR.get(id);if(t)t.predecessora=pred;}
+    const depois=CPM.calcular(rascunho,_calObra);
+
+    const critAntes=new Set([...antes.nos.values()].filter(x=>x.critico).map(x=>x.id));
+    const critDepois=new Set([...depois.nos.values()].filter(x=>x.critico).map(x=>x.id));
+    const entram=[...critDepois].filter(id=>!critAntes.has(id));
+    const saem=[...critAntes].filter(id=>!critDepois.has(id));
+
+    let movidas=0;
+    for(const no of depois.nos.values()){
+      const a=antes.nos.get(no.id);
+      if(a&&(a.es!==no.es||a.ef!==no.ef))movidas++;
+    }
+    return {antes,depois,mudancas,movidas,entram,saem,
+      fimAntes:antes.fimProjeto,fimDepois:depois.fimProjeto,
+      critAntes:critAntes.size,critDepois:critDepois.size,
+      ciclosNovos:depois.ciclos.filter(c=>!antes.ciclos.some(x=>x.id===c.id))};
+  }
+
+  function auditorInverter(chave){
     if(!Permissions.pode('planejamento','editar')){Utils.toast('Sem permissão.','erro');return;}
     const a=(_audit&&_audit.achados||[]).find(x=>x.chave===chave);
-    if(!a||!a.dados||!a.dados.de||!a.dados.para)return;
-    const tDe=_porId.get(a.dados.de), tPara=_porId.get(a.dados.para);
-    if(!tDe||!tPara){Utils.toast('Uma das tarefas não está mais na obra.','erro');return;}
-    if(!confirm(`Inverter o vínculo?\n\nAgora: "${tDe.nome}" antes de "${tPara.nome}"\nFicará: "${tPara.nome}" antes de "${tDe.nome}"\n\nAs datas da rede são recalculadas em seguida. Dá pra desfazer com Ctrl+Z.`))return;
+    if(!a||!a.dados)return;
+    const vinculos=(a.dados.vinculos&&a.dados.vinculos.length)?a.dados.vinculos
+      :(a.dados.de&&a.dados.para?[{de:a.dados.de,para:a.dados.para,tipo:a.dados.tipo,lag:a.dados.lag,
+        nomeDe:a.tarefaNome2,nomePara:a.tarefaNome}]:[]);
+    if(!vinculos.length)return;
 
+    Utils.mostrarLoading('Simulando a inversão...');
+    setTimeout(()=>{
+      try{
+        const s=_simularInversao(vinculos);
+        _invPend={achado:a,vinculos,sim:s};
+        _renderConfirmarInversao();
+        Utils.abrirModal('modal-planej-decisao');
+      }catch(e){console.error(e);Utils.toast('Erro ao simular a inversão.','erro');}
+      finally{Utils.esconderLoading();}
+    },10);
+  }
+
+  function _renderConfirmarInversao(){
+    if(!_invPend)return;
+    const {achado:a,vinculos,sim:s}=_invPend;
+    const dl=a.dados.labelDepois||'', da=a.dados.labelAntes||'';
+    const dias=(s.fimAntes&&s.fimDepois)?_duracaoEntre(
+      s.fimAntes<s.fimDepois?s.fimAntes:s.fimDepois,
+      s.fimAntes<s.fimDepois?s.fimDepois:s.fimAntes)-1:0;
+    const sinal=s.fimDepois>s.fimAntes?'atrasa':(s.fimDepois<s.fimAntes?'adianta':'não muda');
+
+    document.getElementById('planej-decisao-titulo').textContent=
+      vinculos.length>1?`Inverter ${vinculos.length} vínculos`:'Inverter o vínculo';
+
+    const kpi=(rot,val,rod,cor)=>`<div style="flex:1;min-width:135px;background:var(--cor-fundo);border:1.5px solid var(--cor-borda-light);border-radius:8px;padding:10px;">
+      <div class="text-muted" style="font-size:.65rem;text-transform:uppercase;letter-spacing:.5px;">${rot}</div>
+      <div style="font-weight:800;color:${cor||'var(--cor-texto)'};margin:2px 0;">${val}</div>
+      <div class="text-muted" style="font-size:.68rem;">${rod}</div></div>`;
+
+    const nomeDe=(id)=>{const t=_porId.get(id);return t?(t.codigo?t.codigo+' ':'')+(t.nome||id):id;};
+
+    document.getElementById('planej-decisao-body').innerHTML=`
+      <div style="font-size:.82rem;color:var(--cor-texto);margin-bottom:3px;">
+        ${da&&dl?`<b>${_esc(da)}</b> passa a vir antes de <b>${_esc(dl)}</b>`:'<b>Inversão de vínculo</b>'}</div>
+      <div class="text-sm text-muted" style="margin-bottom:12px;">
+        ${vinculos.length>1
+          ? `${vinculos.length} vínculos serão invertidos de uma vez, cada um no seu local — a EAP inteira, não só um pavimento.`
+          : 'Um vínculo será invertido.'}</div>
+
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
+        ${kpi('Vínculos',`<span style="font-size:1.4rem;">${vinculos.length}</span>`,`${s.mudancas.size} tarefa(s) reamarrada(s)`)}
+        ${kpi('Datas que mudam',`<span style="font-size:1.4rem;">${s.movidas}</span>`,'tarefas deslocadas na rede')}
+        ${kpi('Término da obra',
+          `<span class="text-muted" style="text-decoration:line-through;font-size:.9rem;">${_fd(s.fimAntes)}</span>
+           <span style="font-size:.9rem;color:${s.fimDepois>s.fimAntes?'var(--cor-perigo)':s.fimDepois<s.fimAntes?'var(--cor-sucesso)':'var(--cor-texto)'};">→ ${_fd(s.fimDepois)}</span>`,
+          sinal==='não muda'?'sem mudança na data final':`${sinal} ${dias} dia(s)`)}
+        ${kpi('Caminho crítico',`<span style="font-size:.95rem;">${s.critAntes} → ${s.critDepois}</span>`,
+          `${s.entram.length} entra(m), ${s.saem.length} sai(em)`)}
+      </div>
+
+      ${s.ciclosNovos.length?`<div style="background:var(--cor-perigo-bg);border:1.5px solid var(--cor-perigo);border-radius:8px;padding:9px 12px;font-size:.76rem;color:#dc2626;margin-bottom:10px;">
+        <b>A inversão cria dependência circular</b> em ${s.ciclosNovos.length} tarefa(s): ${_esc(s.ciclosNovos.slice(0,3).map(c=>c.nome).join(', '))}${s.ciclosNovos.length>3?'…':''}.
+        Isso quer dizer que já existe outro vínculo puxando no sentido contrário — vale olhar antes de aplicar.</div>`:''}
+
+      ${s.entram.length?`<details style="margin-bottom:8px;">
+        <summary style="cursor:pointer;font-size:.76rem;color:var(--cor-texto);">${s.entram.length} tarefa(s) entram no caminho crítico</summary>
+        <div class="text-muted" style="font-size:.72rem;margin-top:5px;">${s.entram.slice(0,12).map(id=>_esc(nomeDe(id))).join('<br>')}${s.entram.length>12?`<br>… e outras ${s.entram.length-12}`:''}</div></details>`:''}
+
+      <details style="margin-bottom:10px;">
+        <summary style="cursor:pointer;font-size:.76rem;color:var(--cor-texto);">Ver os ${vinculos.length} vínculo(s)</summary>
+        <div class="text-muted" style="font-size:.71rem;margin-top:5px;max-height:180px;overflow:auto;">
+          ${vinculos.slice(0,60).map(v=>`${_esc(v.nomeDe||nomeDe(v.de))} <span style="color:var(--cor-perigo);">→</span> ${_esc(v.nomePara||nomeDe(v.para))} <span style="color:var(--cor-texto-muted);">vira</span> ${_esc(v.nomePara||nomeDe(v.para))} <span style="color:var(--cor-sucesso);">→</span> ${_esc(v.nomeDe||nomeDe(v.de))}`).join('<br>')}
+          ${vinculos.length>60?`<br>… e outros ${vinculos.length-60}`:''}</div></details>
+
+      <div class="text-sm text-muted" style="margin-bottom:10px;">Tipo de vínculo e defasagem são preservados. Dá pra desfazer com Ctrl+Z enquanto a página não recarregar.</div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;">
+        <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-planej-decisao')">Cancelar</button>
+        <button class="btn btn-primario" onclick="Planejamento.auditorConfirmarInversao()">Aplicar a inversão</button>
+      </div>`;
+  }
+
+  async function auditorConfirmarInversao(){
+    if(!_invPend)return;
+    const {achado:a,vinculos,sim:s,manual}=_invPend;
+    _invPend=null;
+    Utils.fecharModal('modal-planej-decisao');
     Utils.mostrarLoading('Invertendo...');
     try{
       _undoPush();
-      const tipo=a.dados.tipo||'TI', lag=a.dados.lag||'';
-      const restante=_predParse(tPara.predecessora).filter(p=>p.id!==a.dados.de);
-      const novaDoDe=_predParse(tDe.predecessora).filter(p=>p.id!==a.dados.para);
-      novaDoDe.push({id:a.dados.para,tipo,lag:String(lag||'')});
+      // Mesma função da simulação, agora sobre as tarefas de verdade.
+      const mudancas=_calcularInversao(tarefas,vinculos);
+      const ops=[];
+      for(const [id,pred] of mudancas){
+        const t=_porId.get(id);
+        if(!t)continue;
+        t.predecessora=pred;
+        ops.push({type:'update',ref:Database.ref(obraId,COL).doc(id),data:{predecessora:pred}});
+      }
+      for(let i=0;i<ops.length;i+=400)await Database.batchWrite(ops.slice(i,i+400));
 
-      const updPara={predecessora:_predFormat(restante)};
-      const updDe={predecessora:_predFormat(novaDoDe)};
-      _calcPredecessora(tDe,updDe.predecessora,updDe);
+      // Recalcula as datas da rede a partir do resultado do CPM já simulado —
+      // uma escrita em lote em vez de propagação em cascata tarefa por tarefa,
+      // que numa EAP grande seriam centenas de escritas sequenciais.
+      const dOps=[];
+      for(const no of s.depois.nos.values()){
+        if(no.emCiclo)continue;
+        const t=_porId.get(no.id);
+        if(!t)continue;
+        if((t.inicioPlanejado||'')===no.es&&(t.terminoPlanejado||'')===no.ef)continue;
+        t.inicioPlanejado=no.es;t.terminoPlanejado=no.ef;
+        dOps.push({type:'update',ref:Database.ref(obraId,COL).doc(no.id),data:{inicioPlanejado:no.es,terminoPlanejado:no.ef}});
+      }
+      for(let i=0;i<dOps.length;i+=400)await Database.batchWrite(dOps.slice(i,i+400));
 
-      Object.assign(tPara,updPara);Object.assign(tDe,updDe);
-      await Database.atualizar(obraId,COL,tPara.id,updPara);
-      await Database.atualizar(obraId,COL,tDe.id,updDe);
       _buildFiltradas();
-      await _propagarDataEmCascata(tDe.id);
-      await _propagarDataEmCascata(tPara.id);
-      const ciclos=ciclosDetectados();
-      if(ciclos.length)Utils.toast(`Atenção: a inversão criou dependência circular em ${ciclos.length} tarefa(s). Desfaça com Ctrl+Z ou ajuste o vínculo.`,'erro',7000);
+      await _recalcularDatasPais(true);
+      if(_modoCritico)_recalcularCritico();
 
       if(typeof Audit!=='undefined'&&Audit.registrar){
-        Audit.registrar(obraId,'planejamento_vinculo_invertido',{modulo:'planejamento',
-          descricao:`Vínculo invertido pelo Verificador: "${tPara.nome}" passa a preceder "${tDe.nome}"`,
-          dados:{chave,de:a.dados.de,para:a.dados.para,tipo,lag}}).catch(()=>{});
+        Audit.registrar(obraId,'planejamento_vinculos_invertidos',{modulo:'planejamento',
+          descricao:`Verificador inverteu ${vinculos.length} vínculo(s): ${a.dados.labelAntes||''} passa a preceder ${a.dados.labelDepois||''}`,
+          dados:{chave:a.chave,vinculos:vinculos.length,tarefasReamarradas:mudancas.size,
+            datasAtualizadas:dOps.length,fimAntes:s.fimAntes,fimDepois:s.fimDepois}}).catch(()=>{});
       }
-      await _gravarDecisao(a,'ignorar','Corrigido: vínculo invertido pelo Verificador');
-      _buildFiltradas();_render();
-      Utils.toast('Vínculo invertido e datas recalculadas.','sucesso');
-    }catch(e){console.error(e);Utils.toast('Erro ao inverter o vínculo.','erro');}
+      // Inversão vinda de um achado grava a decisão (o ponto está resolvido).
+      // Vinda da ferramenta manual não tem achado pra decidir — só reanalisa se
+      // o painel estiver aberto.
+      if(!manual&&a.chave)await _gravarDecisao(a,'ignorar',`Corrigido: ${vinculos.length} vínculo(s) invertido(s) pelo Verificador`);
+      else if(_audit)_audit=Auditor.analisar(tarefas,{cal:_calObra,hoje:Utils.hoje(),decisoes:_decisoes});
+      _render();
+      if(s.ciclosNovos.length)Utils.toast(`Invertido, mas ${s.ciclosNovos.length} tarefa(s) ficaram em dependência circular. Confira ou desfaça com Ctrl+Z.`,'erro',8000);
+      else Utils.toast(`${vinculos.length} vínculo(s) invertido(s), ${dOps.length} data(s) recalculada(s).`,'sucesso',6000);
+    }catch(e){console.error(e);Utils.toast('Erro ao inverter os vínculos.','erro');}
     finally{Utils.esconderLoading();}
+  }
+
+  // ============================================================
+  // INVERTER VÍNCULOS ENTRE GRUPOS (ferramenta manual)
+  // ============================================================
+  // O Verificador só aponta o que está na base de regras. Mas a decisão de
+  // ordem é do engenheiro, e existe caso legítimo que nenhuma regra cobre —
+  // gesso depois do contrapiso, por exemplo, é prática comum (o gesseiro usa o
+  // contrapiso como piso de trabalho e referência de nível), e inverter isso é
+  // escolha de obra, não correção de erro.
+  //
+  // Numa EAP hierárquica (Gesso > Final 01 > 1º ao 20º pavimento, e o mesmo em
+  // Contrapiso) essa troca são dezenas de vínculos, um por local. Fazer na mão é
+  // onde o erro nasce: esquece um pavimento e o cronograma fica incoerente sem
+  // ninguém ver. Aqui você escolhe os dois grupos, o sistema acha todos os
+  // vínculos entre os descendentes deles, simula o efeito e inverte de uma vez.
+  //
+  // O pareamento por local sai de graça: cada vínculo já liga o par certo
+  // (Final 01/3º andar com Final 01/3º andar), e inverter cada um no lugar
+  // preserva isso. O sistema não tenta adivinhar pareamento — ele usa o que já
+  // existe. Onde não houver vínculo, nada é criado (e o Verificador acusa a
+  // falta pelo achado de ordem global).
+  let _invGrpA='', _invGrpB='';
+
+  // Descendentes folha de uma tarefa. Se for folha, é ela mesma.
+  function _descendentesFolha(id){
+    const sorted=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
+    const i=sorted.findIndex(t=>t.id===id);
+    if(i<0)return[];
+    const nivel=sorted[i].nivel||0;
+    const temFilho=!!(sorted[i+1]&&(sorted[i+1].nivel||0)>nivel);
+    if(!temFilho)return[sorted[i]];
+    const out=[];
+    for(let j=i+1;j<sorted.length;j++){
+      if((sorted[j].nivel||0)<=nivel)break;
+      const ehPai=!!(sorted[j+1]&&(sorted[j+1].nivel||0)>(sorted[j].nivel||0));
+      if(!ehPai)out.push(sorted[j]);
+    }
+    return out;
+  }
+
+  // Vínculos existentes entre os dois conjuntos, nos dois sentidos.
+  function _vinculosEntreGrupos(idA,idB){
+    const A=_descendentesFolha(idA), B=_descendentesFolha(idB);
+    const setA=new Set(A.map(t=>t.id)), setB=new Set(B.map(t=>t.id));
+    const out=[];
+    const varrer=(lista,setOposto)=>{
+      for(const t of lista)for(const p of _predParse(t.predecessora)){
+        if(!setOposto.has(p.id))continue;
+        const pred=_porId.get(p.id);
+        out.push({de:p.id,para:t.id,tipo:p.tipo,lag:p.lag,
+          nomeDe:pred?pred.nome:p.id,nomePara:t.nome||'',
+          codDe:pred?(pred.codigo||''):'',codPara:t.codigo||''});
+      }
+    };
+    varrer(B,setA); // A antes de B
+    varrer(A,setB); // B antes de A
+    return out;
+  }
+
+  function abrirInverterGrupos(){
+    if(!Permissions.pode('planejamento','editar')){Utils.toast('Sem permissão.','erro');return;}
+    if(typeof CPM==='undefined'){Utils.toast('Módulo de CPM não carregou. Recarregue a página.','erro');return;}
+    _invGrpA='';_invGrpB='';
+    _renderInverterGrupos();
+    Utils.abrirModal('modal-planej-inverter');
+  }
+
+  function invGruposSel(qual,id){
+    if(qual==='A')_invGrpA=id;else _invGrpB=id;
+    _renderInverterGrupos();
+  }
+
+  function _renderInverterGrupos(){
+    const el=document.getElementById('planej-inverter-body');
+    if(!el)return;
+    const ops=Utils.opcoesTarefaHierarquia(tarefas);
+    const sel=(qual,valor)=>`<select class="form-control" style="font-size:.76rem;" onchange="Planejamento.invGruposSel('${qual}',this.value)">
+      <option value="">— escolha —</option>
+      ${ops.map(o=>`<option value="${o.id}" ${o.id===valor?'selected':''}>${_esc(o.label)}</option>`).join('')}</select>`;
+
+    let corpo='';
+    if(_invGrpA&&_invGrpB){
+      if(_invGrpA===_invGrpB){
+        corpo='<div class="text-sm text-muted" style="padding:12px;">Escolha dois grupos diferentes.</div>';
+      }else{
+        const A=_descendentesFolha(_invGrpA), B=_descendentesFolha(_invGrpB);
+        const V=_vinculosEntreGrupos(_invGrpA,_invGrpB);
+        const nomeA=(_porId.get(_invGrpA)||{}).nome||'', nomeB=(_porId.get(_invGrpB)||{}).nome||'';
+        if(!V.length){
+          corpo=`<div style="background:var(--cor-alerta-bg);border:1.5px solid var(--cor-alerta);border-radius:8px;padding:10px 12px;font-size:.77rem;color:#b45309;">
+            Não existe nenhum vínculo entre "${_esc(nomeA)}" (${A.length} tarefa(s)) e "${_esc(nomeB)}" (${B.length} tarefa(s)).
+            Sem vínculo não há o que inverter — os dois grupos estão soltos um do outro, e a ordem entre eles hoje é só coincidência de data.
+            Nesse caso o que falta é <b>criar</b> os vínculos, tarefa por tarefa ou pelo Auto-Vincular.</div>`;
+        }else{
+          corpo=`<div style="font-size:.8rem;color:var(--cor-texto);margin-bottom:8px;">
+              <b>${V.length}</b> vínculo(s) entre <b>${_esc(nomeA)}</b> (${A.length} tarefa(s)) e <b>${_esc(nomeB)}</b> (${B.length} tarefa(s)).
+            </div>
+            <div class="text-sm text-muted" style="margin-bottom:10px;">Cada um será invertido no próprio local — o pareamento por final e pavimento é o que já está no vínculo, então nada cruza.</div>
+            <div class="tabela-container" style="max-height:230px;overflow:auto;margin-bottom:12px;">
+              <table class="tabela tabela-compacta"><thead><tr><th>Hoje vem antes</th><th>Hoje vem depois</th><th>Vínculo</th></tr></thead>
+              <tbody>${V.slice(0,200).map(v=>`<tr>
+                <td>${_esc((v.codDe?v.codDe+' ':'')+v.nomeDe)}</td>
+                <td>${_esc((v.codPara?v.codPara+' ':'')+v.nomePara)}</td>
+                <td class="text-muted" style="white-space:nowrap;">${_esc(v.tipo||'TI')}${v.lag?(v.lag>0?'+'+v.lag:v.lag):''}</td></tr>`).join('')}</tbody></table></div>
+            ${V.length>200?`<div class="text-sm text-muted" style="margin-bottom:8px;">Mostrando 200 de ${V.length} — todos serão invertidos.</div>`:''}
+            <div style="display:flex;gap:8px;justify-content:flex-end;">
+              <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-planej-inverter')">Cancelar</button>
+              <button class="btn btn-primario" onclick="Planejamento.invGruposSimular()">Simular a inversão</button>
+            </div>`;
+        }
+      }
+    }else{
+      corpo='<div class="text-sm text-muted" style="padding:12px;">Escolha os dois grupos para ver os vínculos entre eles.</div>';
+    }
+
+    el.innerHTML=`
+      <div class="text-sm text-muted" style="margin-bottom:12px;">Inverte de uma vez todos os vínculos entre dois grupos da EAP, cada um no seu local. Serve pra trocar a ordem de dois serviços na obra inteira sem passar pavimento por pavimento na mão.</div>
+      <div class="form-row" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
+        <div class="form-grupo" style="flex:1;min-width:240px;"><label>Grupo A</label>${sel('A',_invGrpA)}</div>
+        <div class="form-grupo" style="flex:1;min-width:240px;"><label>Grupo B</label>${sel('B',_invGrpB)}</div>
+      </div>
+      ${corpo}`;
+  }
+
+  // Reaproveita a mesma simulação e a mesma aplicação do Verificador — um
+  // caminho de código só pra inverter vínculo, venha do achado ou da ferramenta.
+  function invGruposSimular(){
+    const V=_vinculosEntreGrupos(_invGrpA,_invGrpB);
+    if(!V.length)return;
+    const nomeA=(_porId.get(_invGrpA)||{}).nome||'', nomeB=(_porId.get(_invGrpB)||{}).nome||'';
+    Utils.mostrarLoading('Simulando...');
+    setTimeout(()=>{
+      try{
+        const s=_simularInversao(V);
+        _invPend={achado:{chave:'',dados:{labelAntes:nomeB,labelDepois:nomeA,vinculos:V}},vinculos:V,sim:s,manual:true};
+        Utils.fecharModal('modal-planej-inverter');
+        _renderConfirmarInversao();
+        Utils.abrirModal('modal-planej-decisao');
+      }catch(e){console.error(e);Utils.toast('Erro ao simular.','erro');}
+      finally{Utils.esconderLoading();}
+    },10);
   }
 
   // Dossiê pra colar num chat de IA quando quiser discutir em linguagem livre.
@@ -7625,7 +7929,8 @@ const Planejamento = (() => {
   }
 
   return{init,carregar,abrirAplicarCalendario,aplicarCalendario,calendarioAtual,ciclosDetectados,
-    abrirVerificarPlanejamento,auditorFiltrar,auditorIr,auditorDecidir,auditorConfirmarDecisao,auditorReabrir,auditorInverter,auditorCopiarDossie,toggleCritico,setZoom,setVersaoData,copiarDatasDeAtual,inserirTarefa,editarTarefa,salvarTarefa,excluirTarefa,
+    abrirVerificarPlanejamento,auditorFiltrar,auditorIr,auditorDecidir,auditorConfirmarDecisao,auditorReabrir,auditorInverter,auditorConfirmarInversao,auditorCopiarDossie,toggleCritico,
+    abrirInverterGrupos,invGruposSel,invGruposSimular,setZoom,setVersaoData,copiarDatasDeAtual,inserirTarefa,editarTarefa,salvarTarefa,excluirTarefa,
     selectIdx,toggleRecolher,recuarNivel,avancarNivel,
     toggleGantt,toggleLiberarEdicaoReal,hideCol,showColsMenu,_showCol,_showAll,_toggleMenuFerramentas,
     _abrirEstruturaObra,_addTorre,_addPavimento,_addApartamento,_duplicarPavimento,_editarNomeEst,_removerNoEst,

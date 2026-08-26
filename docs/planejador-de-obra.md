@@ -53,6 +53,38 @@ A tela (`planejamento.js`, `configuracao-obra.js`) só apresenta e aplica. Isso 
 o que permite testar o cálculo fora do navegador e é o que faz o diagnóstico
 continuar na tela se a internet cair.
 
+## Inversão de vínculo numa EAP hierárquica (V3.21.1)
+
+A EAP é hierárquica: Gesso > Final 01 > 1º ao 20º pavimento, Gesso > Final 02 >
+idem, e Contrapiso/Porcelanato na mesma estrutura. **A ordem errada entre dois
+serviços não aparece num vínculo — aparece em dezenas, um por local.**
+
+Consequência de projeto: o achado de precedência é **por par de serviços**, não
+por par de tarefas, e carrega a lista completa de vínculos. Um achado por vínculo
+geraria 40 alertas dizendo a mesma coisa, e inverter um só não muda o cronograma
+da obra.
+
+**O pareamento por local sai de graça.** Cada vínculo já liga o par certo (Final
+01/3º andar com Final 01/3º andar). Inverter cada um onde está preserva isso — o
+sistema nunca tenta adivinhar pareamento a partir do nome. Onde não existe
+vínculo, nada é criado; a falta é acusada pelo achado `ordem_global_invertida`.
+
+**Toda inversão simula antes.** `_simularInversao` clona as tarefas, aplica a
+inversão no rascunho, roda o CPM e compara com a rede atual: tarefas deslocadas,
+término de → para, e quem entra e sai do caminho crítico. Ciclo criado pela
+inversão é detectado e avisado antes de gravar — sinal de que já existe outro
+vínculo puxando no sentido contrário.
+
+`_calcularInversao` é usada tanto na simulação quanto na aplicação real: um
+caminho de código só.
+
+**Ferramenta manual** (`abrirInverterGrupos`): escolhe dois grupos da EAP, lista
+os vínculos entre os descendentes, simula e inverte. Existe porque a decisão de
+ordem é do engenheiro e há caso legítimo que nenhuma regra cobre — gesso depois
+do contrapiso, por exemplo, é prática comum (o gesseiro usa o contrapiso como
+piso de trabalho e referência de nível). **Onde não há consenso técnico, a base
+de regras fica calada de propósito** e a ferramenta manual atende.
+
 ## Onde continuar
 
 1. **Produtividade real vinda das Medições.** O auditor já aceita
