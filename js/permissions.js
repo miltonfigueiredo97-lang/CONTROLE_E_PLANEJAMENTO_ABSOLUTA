@@ -176,6 +176,7 @@ const Permissions = (() => {
         { key: 'pacotes',  label: 'Pacotes' },
         { key: 'locais',   label: 'Locais' },
         { key: 'equipes',  label: 'Equipes' },
+        { key: 'calendario',label: 'Calendário de obra (jornada, feriados, exceções)' },
         { key: 'dadosObra',label: 'Dados gerais / cálculo da obra' },
       ],
     },

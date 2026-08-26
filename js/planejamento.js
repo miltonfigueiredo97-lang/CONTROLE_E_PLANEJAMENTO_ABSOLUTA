@@ -337,12 +337,14 @@ const Planejamento = (() => {
       if(typeof EstacasCalculos!=='undefined'){
         await EstacasCalculos.sincronizarVinculosPlanejamento(obraId).catch(e=>console.error('Sync vínculos Estacas:',e));
       }
-      const [tf,materiaisBib,materiaisVinc,maoDeObraVinc]=await Promise.all([
+      const [tf,materiaisBib,materiaisVinc,maoDeObraVinc,calObra]=await Promise.all([
         Database.listar(obraId,COL,'ordem').catch(()=>[]),
         Database.listar(obraId,'materiais','nome').catch(()=>[]),
         Database.listar(obraId,'materiais_vinculos','createdAt').catch(()=>[]),
         Database.listar(obraId,'maoDeObra_vinculos','createdAt').catch(()=>[]),
+        Calendario.carregar(obraId).catch(()=>Calendario.normalizar(null)),
       ]);
+      _calObra=calObra; // precisa vir ANTES de qualquer conta de data
       tarefas=tf;
       _calcularCustos(materiaisBib,materiaisVinc,maoDeObraVinc);
       _buildFiltradas();
@@ -461,6 +463,42 @@ const Planejamento = (() => {
   let _numLinhaMap=new Map(); // numLinha -> tarefa, montado em _buildFiltradas(), usado pra tooltip
   let _idParaNumLinha=new Map(); // id -> numLinha, pra exibir predecessora canônica como número
   let _porId=new Map(); // id -> tarefa, lookup rápido
+
+  // ===================== CALENDÁRIO DE OBRA =====================
+  // Carregado uma vez em carregar(). Quando DESLIGADO (ativo:false), as três
+  // funções abaixo se comportam EXATAMENTE como o sistema se comportava antes
+  // do calendário existir — dias corridos e duração exclusiva. É a trava: nenhuma
+  // obra muda de data até alguém ligar o calendário na tela de Configuração.
+  let _calObra=(typeof Calendario!=='undefined')?Calendario.normalizar(null):{ativo:false};
+
+  // AS TRÊS ÚNICAS FUNÇÕES QUE CONVERTEM ENTRE DURAÇÃO E DATA.
+  // Nunca faça setDate(getDate()+duracao) solto em outro lugar do arquivo —
+  // foi assim que o motor passou a contar sábado e domingo como dia de obra.
+  //
+  // Convenção com calendário LIGADO: duração conta o dia de início (5 dias
+  // começando segunda termina na sexta), igual obra e igual MS Project.
+  // Convenção com calendário DESLIGADO: término = início + duração em dias
+  // corridos (a convenção antiga, mantida pra não mexer em obra nenhuma).
+  function _fimPorDuracao(ini,dur){
+    if(!ini)return'';
+    const d=parseInt(dur)||0;
+    if(!_calObra.ativo)return Calendario.addDiasCorridos(ini,d);
+    if(d<=0)return Calendario.proximoDiaUtil(ini,_calObra);
+    return Calendario.somarDiasUteis(ini,d-1,_calObra);
+  }
+  function _iniPorDuracao(fim,dur){
+    if(!fim)return'';
+    const d=parseInt(dur)||0;
+    if(!_calObra.ativo)return Calendario.addDiasCorridos(fim,-d);
+    if(d<=0)return Calendario.diaUtilAnterior(fim,_calObra);
+    return Calendario.somarDiasUteis(fim,-(d-1),_calObra);
+  }
+  function _duracaoEntre(ini,fim){
+    if(!ini||!fim)return 0;
+    if(!_calObra.ativo)return Math.max(0,Math.ceil((new Date(fim)-new Date(ini))/864e5));
+    return Calendario.contarDiasUteis(ini,fim,_calObra);
+  }
+  function calendarioAtual(){return _calObra;}
 
   // ===================== PREDECESSORA POR ID (imune a reordenação) =====================
   // Antes a predecessora era guardada como TEXTO com número de linha (ex: "5TI+3").
@@ -604,6 +642,7 @@ const Planejamento = (() => {
 
     c.style.cssText='display:flex;flex-direction:column;min-height:0;height:100%;';
     c.innerHTML=`
+      ${_bannerCalendario()}
       <div style="display:flex;gap:8px;align-items:baseline;margin-bottom:8px;">
         <h2 style="margin:0;font-size:1.1rem;color:var(--cor-primaria);">📊 Planejamento</h2>
         <span style="font-size:.75rem;color:#555;">${filtradas.length} tarefas</span>
@@ -1990,13 +2029,12 @@ const Planejamento = (() => {
         // Project: mudar o início não deveria mudar quanto tempo a tarefa
         // dura, só joga ela pra frente/trás no tempo).
         if(t.duracao>0){
-          const fim=new Date(v);fim.setDate(fim.getDate()+Number(t.duracao));
-          updates.terminoPlanejado=fim.toISOString().split('T')[0];
+          updates.terminoPlanejado=_fimPorDuracao(v,t.duracao);
         } else if(t.terminoPlanejado&&t.terminoPlanejado>=v){
           // Sem duração salva ainda (ex: tarefa nova) — só nesse caso cai pro
           // fallback de calcular a duração a partir do término existente,
           // pra não deixar tudo em branco na primeira vez.
-          updates.duracao=Math.max(0,Math.ceil((new Date(t.terminoPlanejado)-new Date(v))/864e5));
+          updates.duracao=_duracaoEntre(v,t.terminoPlanejado);
         } else if(t.terminoPlanejado&&t.terminoPlanejado<v){
           // Término existente ficou ANTES do novo início (impossível: a tarefa
           // "voltaria no tempo") — arrasta o término junto pro mesmo dia.
@@ -2013,11 +2051,10 @@ const Planejamento = (() => {
           return;
         }
         // Término editado → MANTÉM o início e recalcula a Duração.
-        updates.duracao=Math.max(0,Math.ceil((new Date(v)-new Date(t.inicioPlanejado))/864e5));
+        updates.duracao=_duracaoEntre(t.inicioPlanejado,v);
       } else if(field==='duracao'&&v>0&&t.inicioPlanejado){
         // Duração editada → MANTÉM o início e recalcula o Término.
-        const fim=new Date(t.inicioPlanejado);fim.setDate(fim.getDate()+v);
-        updates.terminoPlanejado=fim.toISOString().split('T')[0];
+        updates.terminoPlanejado=_fimPorDuracao(t.inicioPlanejado,v);
       } else if(field==='predecessora'&&updates.predecessora){
         // Predecessora: calcula datas a partir do vínculo canônico (por ID)
         _calcPredecessora(t, updates.predecessora, updates);
@@ -2135,18 +2172,47 @@ const Planejamento = (() => {
   // que é a regra padrão de CPM/MS Project para múltiplas dependências.
   // predCanon: formato CANÔNICO por ID (não mais texto por número de linha) —
   // ver _predParse/_predTextoParaCanon.
-  function _calcPredecessora(t, predCanon, updates){
+  // Cada tipo de vínculo restringe UMA ponta da barra, não as duas:
+  //   TI/II -> piso para o INÍCIO      TT/IT -> piso para o TÉRMINO
+  //
+  // O jeito antigo pegava o maior início entre TI/II, o maior término entre
+  // TT/IT, e gravava OS DOIS. Numa tarefa com TI e TT ao mesmo tempo a barra
+  // saía com duração diferente da declarada — silenciosamente, sem avisar
+  // ninguém. Agora as duas restrições são traduzidas pra um piso de INÍCIO
+  // comum (o término vira início recuando a duração) e a duração é sempre
+  // preservada: vence a restrição mais tardia, que é a regra de CPM.
+  function _calcPredecessora(t, predCanon, updates, lookup){
     const partes=_predParse(predCanon);
     if(!partes.length)return;
-    let melhorIni=null, melhorFim=null;
+    const dur=parseInt(t.duracao)||0;
+    let pisoIni=null, pisoFim=null;
     for(const parte of partes){
-      const r=_calcUmaPredecessora(t,parte);
+      const r=_calcUmaPredecessora(t,parte,lookup);
       if(!r)continue;
-      if(r.inicioPlanejado&&(!melhorIni||r.inicioPlanejado>melhorIni))melhorIni=r.inicioPlanejado;
-      if(r.terminoPlanejado&&(!melhorFim||r.terminoPlanejado>melhorFim))melhorFim=r.terminoPlanejado;
+      if(r.inicioPlanejado&&(!pisoIni||r.inicioPlanejado>pisoIni))pisoIni=r.inicioPlanejado;
+      if(r.terminoPlanejado&&(!pisoFim||r.terminoPlanejado>pisoFim))pisoFim=r.terminoPlanejado;
     }
-    if(melhorIni)updates.inicioPlanejado=melhorIni;
-    if(melhorFim)updates.terminoPlanejado=melhorFim;
+    if(!pisoIni&&!pisoFim)return;
+
+    // Sem duração conhecida (tarefa nova, ou pai sem duração) não há como
+    // preservar tamanho de barra — mantém o comportamento antigo de gravar
+    // cada ponta com o que se sabe, e não inventa a outra.
+    if(dur<=0){
+      if(pisoIni)updates.inicioPlanejado=pisoIni;
+      if(pisoFim)updates.terminoPlanejado=pisoFim;
+      return;
+    }
+
+    // Traduz o piso de término em piso de início (recuando a duração) e fica
+    // com o mais tardio dos dois. Depois recalcula o término pela duração —
+    // então a barra NUNCA muda de tamanho por causa de vínculo.
+    const candidatos=[];
+    if(pisoIni)candidatos.push(pisoIni);
+    if(pisoFim)candidatos.push(_iniPorDuracao(pisoFim,dur));
+    const ini=candidatos.sort()[candidatos.length-1];
+    if(!ini)return;
+    updates.inicioPlanejado=ini;
+    updates.terminoPlanejado=_fimPorDuracao(ini,dur);
   }
 
   // parte: {id,tipo,lag} — resolve DIRETO por ID, nunca por posição/número de linha.
@@ -2156,9 +2222,23 @@ const Planejamento = (() => {
   // própria data também — e se a data delas mudar, propaga pras sucessoras
   // DELAS, e assim por diante. É isso que faz a predecessora funcionar de
   // verdade (matematicamente), não só ficar um número salvo sem efeito.
-  async function _propagarDataEmCascata(tarefaId, visitados){
+  // Ciclos achados na última propagação. Dependência circular era cortada em
+  // silêncio pelo `visitados` — a cadeia não travava, mas ninguém nunca soube
+  // que existia, e ciclo em rede de precedência é erro grave (nenhuma das duas
+  // tarefas pode começar antes da outra). Agora fica registrado, o usuário é
+  // avisado, e o auditor de planejamento vai ler esta lista.
+  let _ciclosDetectados=[];
+  function ciclosDetectados(){return _ciclosDetectados.slice();}
+
+  async function _propagarDataEmCascata(tarefaId, visitados, raiz){
     visitados=visitados||new Set();
-    if(visitados.has(tarefaId))return; // corta dependência circular
+    if(!raiz)_ciclosDetectados=[];
+    if(visitados.has(tarefaId)){ // corta dependência circular — e agora RELATA
+      const t=_porId.get(tarefaId);
+      const nome=t?(t.nome||t.codigo||tarefaId):tarefaId;
+      if(!_ciclosDetectados.includes(nome))_ciclosDetectados.push(nome);
+      return;
+    }
     visitados.add(tarefaId);
     const t=_porId.get(tarefaId);
     if(!t||!t._sucessoras||!t._sucessoras.length)return;
@@ -2172,41 +2252,55 @@ const Planejamento = (() => {
       if(mudouIni||mudouFim){
         Object.assign(suc,upd);
         await Database.atualizar(obraId,COL,suc.id,upd).catch(console.error);
-        await _propagarDataEmCascata(suc.id,visitados); // propaga mais adiante na cadeia
+        await _propagarDataEmCascata(suc.id,visitados,true); // propaga mais adiante na cadeia (raiz=true: não zera a lista de ciclos)
       }
     }
   }
 
-  function _calcUmaPredecessora(t, parte){
-    const pred=_porId.get(parte.id)||tarefas.find(x=>x.id===parte.id);
+  // A defasagem (lag) é contada em dias ÚTEIS quando o calendário está ligado —
+  // igual MS Project, onde "+3d" significa três dias de trabalho, não três dias
+  // de folhinha. Com o calendário desligado cai em dias corridos, que é o que o
+  // sistema fazia antes.
+  //
+  // O que estava errado aqui: setDate(getDate()+defasagem+1) soma dias
+  // CORRIDOS. Uma tarefa que terminava na sexta jogava a sucessora pro sábado,
+  // e uma duração de 20 dias úteis (4 semanas de obra) era agendada como 20
+  // dias de folhinha — quase 28% mais curta. Numa cadeia de 10 tarefas
+  // encadeadas o erro acumulado passava de dois meses.
+  // `lookup` existe pra simulação: a tela de "aplicar calendário" precisa
+  // recalcular a rede inteira num rascunho, sem tocar em tarefas nem no banco.
+  // Passando um lookup que aponta pro rascunho, o MESMO motor roda nos dois
+  // casos — de novo, um caminho de cálculo só.
+  function _calcUmaPredecessora(t, parte, lookup){
+    const pred=lookup?lookup(parte.id):(_porId.get(parte.id)||tarefas.find(x=>x.id===parte.id));
     if(!pred)return null;
     const tipo=(parte.tipo||'TI').toUpperCase();
     const defasagem=parseInt(parte.lag)||0;
-    
+
     let dataRef;
     if(tipo==='TI') dataRef=pred.terminoPlanejado; // Após término da pred
     else if(tipo==='II') dataRef=pred.inicioPlanejado; // Junto com início da pred
     else if(tipo==='TT') dataRef=pred.terminoPlanejado; // Término junto com término da pred
     else if(tipo==='IT') dataRef=pred.inicioPlanejado; // Término junto com início da pred
-    
+
     if(!dataRef)return null;
-    
-    const dt=new Date(dataRef);
-    dt.setDate(dt.getDate()+defasagem+(tipo==='TI'?1:0)); // TI: começa no dia seguinte
-    
+
+    // TI é a única que pula pro dia seguinte: a sucessora começa DEPOIS que a
+    // predecessora termina. As outras três ancoram no mesmo dia da referência.
+    const passo=defasagem+(tipo==='TI'?1:0);
+    const alvo=_calObra.ativo
+      ? Calendario.somarDiasUteis(dataRef,passo,_calObra)
+      : Calendario.addDiasCorridos(dataRef,passo);
+    if(!alvo)return null;
+
+    const dur=parseInt(t.duracao)||0;
     const r={};
     if(tipo==='TI'||tipo==='II'){
-      r.inicioPlanejado=dt.toISOString().split('T')[0];
-      if(t.duracao){
-        const fim=new Date(dt);fim.setDate(fim.getDate()+t.duracao);
-        r.terminoPlanejado=fim.toISOString().split('T')[0];
-      }
-    } else {
-      r.terminoPlanejado=dt.toISOString().split('T')[0];
-      if(t.duracao){
-        const ini=new Date(dt);ini.setDate(ini.getDate()-t.duracao);
-        r.inicioPlanejado=ini.toISOString().split('T')[0];
-      }
+      r.inicioPlanejado=alvo;
+      if(dur>0)r.terminoPlanejado=_fimPorDuracao(alvo,dur);
+    }else{
+      r.terminoPlanejado=alvo;
+      if(dur>0)r.inicioPlanejado=_iniPorDuracao(alvo,dur);
     }
     return r;
   }
@@ -3065,6 +3159,7 @@ const Planejamento = (() => {
       {rotulo:'PNG',grupo:'Importar & Exportar',html:'<button class="btn btn-secundario btn-sm" data-perm="planejamento:exportar:png" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.exportarPNG()">🖼 PNG</button>'},
       {rotulo:'Recalcular % dos Pais',grupo:'Correções & Recálculos',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento._recalcularPercTodosPais()" title="Recalcula o % de toda tarefa-pai a partir dos filhos diretos (nível por nível, igual MS Project)">📊 Recalcular % dos Pais</button>'},
       {rotulo:'Recalcular Datas dos Pais',grupo:'Correções & Recálculos',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento._recalcularDatasPais()" title="Recalcula início/término das tarefas-pai a partir dos filhos">📐 Recalcular Datas dos Pais</button>'},
+      {rotulo:'Aplicar Calendário às Datas',grupo:'Correções & Recálculos',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.abrirAplicarCalendario()" title="Recalcula a rede toda contando só dias úteis (jornada, feriados, paralisações e exceções da obra). Mostra de/para antes de aplicar — nada muda sem confirmação">📅 Aplicar Calendário às Datas</button>'},
       ...(_versaoData!=='atual'?[{rotulo:'Copiar Datas de Atual',grupo:'Correções & Recálculos',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.copiarDatasDeAtual()" title="Preenche as datas de '+VERSAO_LABEL[_versaoData]+' copiando de Atual em todas as tarefas que ainda não têm valor">📋 Copiar Datas de Atual → '+VERSAO_LABEL[_versaoData]+'</button>'}]:[]),
       {rotulo:'Ver por Responsável',grupo:'Ferramentas da Obra',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;'+(_filtroResponsavel?'background:var(--cor-primaria);color:#000;':'')+'" onclick="Planejamento._abrirFiltroResponsavel()" title="Filtra a grid por responsável/especialidade">👷 '+(_filtroResponsavel?_esc(_filtroResponsavel):'Ver por Responsável')+'</button>'},
       {rotulo:'Vínculos com Levantamento',grupo:'Ferramentas da Obra',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.abrirVinculosView()">🔗 Vínculos com Levantamento</button>'},
@@ -5176,13 +5271,14 @@ const Planejamento = (() => {
           t['_agr_'+fIni]=t[fIni]||null;t['_agr_'+fFim]=t[fFim]||null;
         }
       }
-      // Duração do pai = dias corridos entre início e término agregados
-      // (Atual) — igual MS Project. Sem isso, um grupo criado manualmente
-      // ficava com Duração vazia/0, o que também distorcia o peso dele nas
-      // médias de % (ver V2.60.8) — agora nunca fica em branco.
+      // Duração do pai = tempo entre início e término agregados dos filhos —
+      // igual MS Project. Sem isso, um grupo criado manualmente ficava com
+      // Duração vazia/0, o que também distorcia o peso dele nas médias de %
+      // (ver V2.60.8) — agora nunca fica em branco.
+      // Com o calendário ligado conta dias ÚTEIS (mesma régua da tarefa
+      // folha); desligado, dias corridos como antes.
       if(achouFilhoDireto&&t._agr_inicioPlanejado&&t._agr_terminoPlanejado){
-        const dias=Math.round((new Date(t._agr_terminoPlanejado)-new Date(t._agr_inicioPlanejado))/864e5);
-        t._agr_duracao=Math.max(1,dias);
+        t._agr_duracao=Math.max(1,_duracaoEntre(t._agr_inicioPlanejado,t._agr_terminoPlanejado));
       } else {
         t._agr_duracao=t.duracao||null;
       }
@@ -7005,7 +7101,222 @@ const Planejamento = (() => {
     finally{Utils.esconderLoading();}
   }
 
-  return{init,carregar,setZoom,setVersaoData,copiarDatasDeAtual,inserirTarefa,editarTarefa,salvarTarefa,excluirTarefa,
+  // ===================== APLICAR CALENDÁRIO ÀS DATAS =====================
+  // Ligar o calendário na tela de Configuração NÃO mexe em data nenhuma — só
+  // muda a régua. As datas que já estão salvas continuam sendo as antigas
+  // (contadas em dias corridos) até alguém rodar isto aqui de propósito.
+  //
+  // Por que existe simulação em vez de aplicar direto: recalcular a rede muda
+  // a data de praticamente toda tarefa da obra, e isso reverbera em Medições,
+  // % Esperado, Curva S e Histograma. O usuário tem que ver o tamanho do
+  // estrago antes de aceitar.
+  let _simCache=null;
+
+  // Recalcula a rede inteira num RASCUNHO (não toca em `tarefas` nem no banco).
+  // Retorna {linhas, convergiu, passes, fimAntes, fimDepois, ciclos}.
+  function _simularCalendario(){
+    const sorted=[...tarefas].sort((a,b)=>(a.ordem||0)-(b.ordem||0));
+    const snap=new Map();
+    for(const t of sorted){
+      snap.set(t.id,{
+        id:t.id, nome:t.nome||'', codigo:t.codigo||'', nivel:t.nivel||0,
+        predecessora:t.predecessora||'', duracao:parseInt(t.duracao)||0,
+        inicioPlanejado:t.inicioPlanejado||'', terminoPlanejado:t.terminoPlanejado||'',
+        _iniAntes:t.inicioPlanejado||'', _fimAntes:t.terminoPlanejado||'',
+      });
+    }
+    const rascunho=sorted.map(t=>snap.get(t.id));
+    // Pai (tarefa com filho direto) não tem data própria: ela vem do rollup dos
+    // filhos. Deixar o pai ser empurrado por vínculo brigaria com o rollup.
+    for(let i=0;i<rascunho.length;i++){
+      rascunho[i]._pai=!!(rascunho[i+1]&&(rascunho[i+1].nivel>rascunho[i].nivel));
+    }
+    const look=(id)=>snap.get(id);
+    const folhas=rascunho.filter(s=>!s._pai);
+
+    // 1) Âncora: folha sem predecessora mantém o início que já tem, só empurrado
+    //    pro próximo dia útil, e fecha o término pela duração.
+    for(const s of folhas){
+      if(!s.inicioPlanejado)continue;
+      if(!s.predecessora){
+        if(_calObra.ativo)s.inicioPlanejado=Calendario.proximoDiaUtil(s.inicioPlanejado,_calObra);
+        if(s.duracao>0)s.terminoPlanejado=_fimPorDuracao(s.inicioPlanejado,s.duracao);
+      }
+    }
+
+    // 2) Converge a rede: repassa aplicando os vínculos até ninguém mais mudar.
+    //    Cadeia circular nunca converge — o teto de passes corta e a gente relata.
+    const MAX_PASSES=Math.min(300,Math.max(20,folhas.length));
+    let passes=0, mudou=true;
+    while(mudou&&passes<MAX_PASSES){
+      mudou=false;passes++;
+      for(const s of folhas){
+        if(!s.predecessora)continue;
+        const upd={};
+        _calcPredecessora(s,s.predecessora,upd,look);
+        if(upd.inicioPlanejado&&upd.inicioPlanejado!==s.inicioPlanejado){s.inicioPlanejado=upd.inicioPlanejado;mudou=true;}
+        if(upd.terminoPlanejado&&upd.terminoPlanejado!==s.terminoPlanejado){s.terminoPlanejado=upd.terminoPlanejado;mudou=true;}
+      }
+    }
+    const convergiu=!mudou;
+
+    // 3) Rollup dos pais, de baixo pra cima: pai abraça a menor data de início e
+    //    a maior de término entre os descendentes.
+    for(let i=rascunho.length-1;i>=0;i--){
+      const p=rascunho[i];
+      if(!p._pai)continue;
+      let ini='',fim='';
+      for(let j=i+1;j<rascunho.length;j++){
+        if(rascunho[j].nivel<=p.nivel)break;
+        const f=rascunho[j];
+        if(f.inicioPlanejado&&(!ini||f.inicioPlanejado<ini))ini=f.inicioPlanejado;
+        if(f.terminoPlanejado&&(!fim||f.terminoPlanejado>fim))fim=f.terminoPlanejado;
+      }
+      if(ini)p.inicioPlanejado=ini;
+      if(fim)p.terminoPlanejado=fim;
+      if(ini&&fim)p.duracao=Math.max(1,_duracaoEntre(ini,fim));
+    }
+
+    const linhas=rascunho.filter(s=>s.inicioPlanejado!==s._iniAntes||s.terminoPlanejado!==s._fimAntes);
+    const maxDe=(campo)=>rascunho.reduce((m,s)=>(s[campo]&&s[campo]>m)?s[campo]:m,'');
+    return {
+      linhas, convergiu, passes,
+      total:rascunho.length,
+      fimAntes:rascunho.reduce((m,s)=>(s._fimAntes&&s._fimAntes>m)?s._fimAntes:m,''),
+      fimDepois:maxDe('terminoPlanejado'),
+      rascunho,
+    };
+  }
+
+  const MAX_LINHAS_PREVIA=250; // teto só de EXIBIÇÃO — o que não cabe é contado em voz alta
+
+  function abrirAplicarCalendario(){
+    if(!Permissions.pode('planejamento','editar')){Utils.toast('Sem permissão para alterar datas.','erro');return;}
+    if(!_calObra.ativo){
+      Utils.toast('O calendário desta obra está desligado. Ligue em Configuração da Obra › Calendário antes de recalcular.','alerta');
+      return;
+    }
+    Utils.mostrarLoading('Simulando...');
+    setTimeout(()=>{
+      try{
+        _simCache=_simularCalendario();
+        _renderPreviaCalendario();
+        Utils.abrirModal('modal-planej-calendario');
+      }catch(e){console.error(e);Utils.toast('Erro ao simular o calendário.','erro');}
+      finally{Utils.esconderLoading();}
+    },10);
+  }
+
+  function _renderPreviaCalendario(){
+    const el=document.getElementById('planej-calendario-body');
+    if(!el||!_simCache)return;
+    const s=_simCache;
+    const diasObra=(s.fimAntes&&s.fimDepois)?_duracaoEntre(s.fimAntes<s.fimDepois?s.fimAntes:s.fimDepois,s.fimAntes<s.fimDepois?s.fimDepois:s.fimAntes):0;
+    const sinal=s.fimDepois>s.fimAntes?'+':(s.fimDepois<s.fimAntes?'−':'');
+
+    const avisos=[];
+    if(!s.convergiu)avisos.push(`⚠ A rede não estabilizou em ${s.passes} passes — quase sempre é dependência circular (tarefa A depende de B que depende de A). Vale conferir as predecessoras antes de aplicar.`);
+    if(s.linhas.length>MAX_LINHAS_PREVIA)avisos.push(`Mostrando as primeiras ${MAX_LINHAS_PREVIA} de ${s.linhas.length} tarefas alteradas — as outras ${s.linhas.length-MAX_LINHAS_PREVIA} também serão aplicadas.`);
+
+    const rows=s.linhas.slice(0,MAX_LINHAS_PREVIA).map(l=>{
+      const mudouIni=l.inicioPlanejado!==l._iniAntes, mudouFim=l.terminoPlanejado!==l._fimAntes;
+      const cel=(antes,depois,mudou)=>mudou
+        ? `<span style="color:#888;text-decoration:line-through;">${_fd(antes)||'—'}</span> <span style="color:#4ade80;">${_fd(depois)||'—'}</span>`
+        : `<span style="color:#666;">${_fd(depois)||'—'}</span>`;
+      return `<tr>
+        <td style="font-size:.7rem;color:#888;">${_esc(l.codigo)||'—'}</td>
+        <td style="font-size:.72rem;padding-left:${(l.nivel||0)*10}px;">${_esc(l.nome)}</td>
+        <td style="font-size:.7rem;white-space:nowrap;">${cel(l._iniAntes,l.inicioPlanejado,mudouIni)}</td>
+        <td style="font-size:.7rem;white-space:nowrap;">${cel(l._fimAntes,l.terminoPlanejado,mudouFim)}</td>
+      </tr>`;
+    }).join('');
+
+    el.innerHTML=`
+      <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:12px;">
+        <div style="flex:1;min-width:130px;background:#181818;border:1px solid var(--cor-borda-light);border-radius:8px;padding:10px;">
+          <div style="font-size:.68rem;color:#888;text-transform:uppercase;">Tarefas alteradas</div>
+          <div style="font-size:1.5rem;font-weight:800;">${s.linhas.length}</div>
+          <div style="font-size:.66rem;color:#666;">de ${s.total} no total</div>
+        </div>
+        <div style="flex:1;min-width:130px;background:#181818;border:1px solid var(--cor-borda-light);border-radius:8px;padding:10px;">
+          <div style="font-size:.68rem;color:#888;text-transform:uppercase;">Término da obra</div>
+          <div style="font-size:.95rem;font-weight:700;"><span style="color:#888;text-decoration:line-through;">${_fd(s.fimAntes)||'—'}</span> → <span style="color:#4ade80;">${_fd(s.fimDepois)||'—'}</span></div>
+          <div style="font-size:.66rem;color:#666;">${sinal?`${sinal}${diasObra} dia(s)`:'sem mudança'}</div>
+        </div>
+        <div style="flex:1;min-width:130px;background:#181818;border:1px solid var(--cor-borda-light);border-radius:8px;padding:10px;">
+          <div style="font-size:.68rem;color:#888;text-transform:uppercase;">Jornada</div>
+          <div style="font-size:.95rem;font-weight:700;">${Calendario.resumoJornada(_calObra)}</div>
+          <div style="font-size:.66rem;color:#666;">${_calObra.trabalhaFeriado?'trabalha em feriado':'para em feriado'}</div>
+        </div>
+      </div>
+      ${avisos.map(a=>`<div style="background:#2a1f0a;border:1px solid #7c5c14;border-radius:8px;padding:8px 10px;font-size:.72rem;color:#fbbf24;margin-bottom:8px;">${_esc(a)}</div>`).join('')}
+      ${s.linhas.length?`
+      <div style="max-height:340px;overflow:auto;border:1px solid var(--cor-borda-light);border-radius:8px;">
+        <table style="width:100%;border-collapse:collapse;">
+          <thead style="position:sticky;top:0;background:#1f1f1f;"><tr>
+            <th style="text-align:left;font-size:.66rem;padding:6px;color:#888;">Código</th>
+            <th style="text-align:left;font-size:.66rem;padding:6px;color:#888;">Tarefa</th>
+            <th style="text-align:left;font-size:.66rem;padding:6px;color:#888;">Início</th>
+            <th style="text-align:left;font-size:.66rem;padding:6px;color:#888;">Término</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`:`<div class="text-sm text-muted" style="padding:14px;text-align:center;">Nenhuma data muda — o cronograma já está coerente com este calendário.</div>`}
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;">
+        <button class="btn btn-secundario btn-sm" onclick="Utils.fecharModal('modal-planej-calendario')">Cancelar</button>
+        <button class="btn btn-primario btn-sm" ${s.linhas.length?'':'disabled'} onclick="Planejamento.aplicarCalendario()">Aplicar ${s.linhas.length} alteração(ões)</button>
+      </div>`;
+  }
+
+  async function aplicarCalendario(){
+    if(!_simCache){Utils.toast('Simule antes de aplicar.','alerta');return;}
+    if(!Permissions.pode('planejamento','editar')){Utils.toast('Sem permissão para alterar datas.','erro');return;}
+    const linhas=_simCache.linhas;
+    if(!linhas.length){Utils.fecharModal('modal-planej-calendario');return;}
+    if(!confirm(`Aplicar novas datas em ${linhas.length} tarefa(s)?\n\nIsso muda o cronograma da obra e reflete em % Esperado, Curva S e Histograma. Dá pra desfazer com Ctrl+Z enquanto a página não for recarregada.`))return;
+
+    _undoPush();
+    Utils.mostrarLoading('Aplicando...');
+    try{
+      // Firestore aceita no máximo 500 operações por lote — 400 dá folga.
+      const ops=linhas.map(l=>({
+        type:'update',
+        ref:Database.ref(obraId,COL).doc(l.id),
+        data:{inicioPlanejado:l.inicioPlanejado,terminoPlanejado:l.terminoPlanejado,duracao:l.duracao},
+      }));
+      for(let i=0;i<ops.length;i+=400)await Database.batchWrite(ops.slice(i,i+400));
+
+      for(const l of linhas){
+        const t=_porId.get(l.id);
+        if(t){t.inicioPlanejado=l.inicioPlanejado;t.terminoPlanejado=l.terminoPlanejado;t.duracao=l.duracao;}
+      }
+      // Marca que a régua nova já foi aplicada — é isso que apaga o aviso da tela.
+      _calObra=await Calendario.salvar(obraId,{..._calObra,aplicado:true,aplicadoEm:new Date().toISOString()});
+      if(typeof Audit!=='undefined'&&Audit.registrar){
+        Audit.registrar(obraId,'calendario_aplicado',{modulo:'planejamento',
+          descricao:`Datas recalculadas pelo calendário de obra em ${linhas.length} tarefa(s)`,
+          dados:{tarefas:linhas.length,fimAntes:_simCache.fimAntes,fimDepois:_simCache.fimDepois}}).catch(()=>{});
+      }
+      _simCache=null;
+      Utils.fecharModal('modal-planej-calendario');
+      _buildFiltradas();_render();
+      Utils.toast(`Datas recalculadas em ${linhas.length} tarefa(s).`,'sucesso');
+    }catch(e){console.error(e);Utils.toast('Erro ao aplicar as datas.','erro');}
+    finally{Utils.esconderLoading();}
+  }
+
+  // Aviso no topo do Planejamento: calendário ligado mas datas ainda na régua
+  // antiga. Sem isso o usuário liga o calendário em Configuração e acha que o
+  // cronograma já mudou — quando na verdade não mudou nada.
+  function _bannerCalendario(){
+    if(!_calObra.ativo||_calObra.aplicado)return'';
+    return `<div style="background:#0f2a1f;border:1px solid #15803d;border-radius:8px;padding:8px 12px;margin-bottom:8px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <span style="font-size:.75rem;color:#86efac;">📅 Calendário ligado (<b>${Calendario.resumoJornada(_calObra)}</b>), mas as datas salvas ainda estão em dias corridos.</span>
+      <button class="btn btn-primario btn-sm" style="font-size:.72rem;" onclick="Planejamento.abrirAplicarCalendario()">Simular e aplicar</button>
+    </div>`;
+  }
+
+  return{init,carregar,abrirAplicarCalendario,aplicarCalendario,calendarioAtual,ciclosDetectados,setZoom,setVersaoData,copiarDatasDeAtual,inserirTarefa,editarTarefa,salvarTarefa,excluirTarefa,
     selectIdx,toggleRecolher,recuarNivel,avancarNivel,
     toggleGantt,toggleLiberarEdicaoReal,hideCol,showColsMenu,_showCol,_showAll,_toggleMenuFerramentas,
     _abrirEstruturaObra,_addTorre,_addPavimento,_addApartamento,_duplicarPavimento,_editarNomeEst,_removerNoEst,

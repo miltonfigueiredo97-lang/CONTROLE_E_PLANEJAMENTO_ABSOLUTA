@@ -1,0 +1,208 @@
+# Planejador de Obra — motor de datas, auditor e assistente de sequenciamento
+
+> Documento de continuidade. O trabalho acontece em sessões diferentes e em chats
+> diferentes; este arquivo é a fonte da verdade sobre o que já foi feito, o que
+> falta e por quê cada decisão foi tomada.
+>
+> **Ritual antes de qualquer coisa:** `git fetch origin && git reset --hard origin/main`.
+> O estado local costuma estar dezenas de commits atrás.
+
+## Objetivo
+
+Hoje a conferência do cronograma é manual: linha por linha, predecessora por
+predecessora. O objetivo é um sistema que leia o planejamento da obra, encontre o
+que não faz sentido, discuta as opções como um planejador profissional discutiria,
+e aplique as correções aprovadas.
+
+Divisão de responsabilidade, decidida na análise inicial:
+
+| Camada | O que faz | Precisa de IA? |
+|---|---|---|
+| Motor de datas | Propagação por predecessora, dias úteis, folga, caminho crítico | Não |
+| Auditor | Checagens numéricas de qualidade da rede (linha das 14 do DCMA) | Não |
+| Juiz de precedência | "Piso antes de forro faz sentido?" — base de regras com o motivo | Não, depois de montada |
+| Entrevistador | Conduz a conversa, aceita contra-argumento, decide, aplica | Sim |
+
+A maior parte roda offline no navegador e nunca depende de rede. A IA entra só no
+julgamento e na conversa — se a API cair, o diagnóstico já está na tela.
+
+## Fases
+
+| Fase | Entrega | Estado |
+|---|---|---|
+| 1 | Calendário de obra + correções no motor de datas | **Concluída — V3.20.0** |
+| 2 | Planejador: auditor, base de regras de precedência, crítica de duração, entrevista, memória de decisão | A fazer |
+| 3 | CPM completo: backward pass, folga total e livre, caminho crítico | A fazer |
+
+---
+
+## Fase 1 — concluída (V3.20.0)
+
+### O que existia antes
+
+O modelo de dados do Planejamento já era bom e melhor do que aparentava:
+
+- Predecessora canônica **por ID**, imune a reordenação (`_predParse`, formato `id|TIPO|lag`)
+- Quatro tipos de vínculo: **TI / II / TT / IT** (equivalentes a FS / SS / FF / SF) com defasagem
+- Sucessora calculada como inverso, sempre coerente
+- Propagação em cadeia de verdade (`_propagarDataEmCascata`), recursiva
+- EAP hierárquica, Gantt com setas, import/export XLSX, export MS Project XML
+
+### Os cinco defeitos encontrados
+
+1. **Dias corridos, não dias úteis.** `setDate(getDate() + defasagem + 1)` somava
+   dias de folhinha. Nenhum `getDay()` no cálculo — o único do arquivo servia pra
+   *pintar* o fim de semana no Gantt. Uma tarefa de 20 dias úteis era agendada
+   como 20 dias corridos, ~28% mais curta. Medido: cadeia de 10 tarefas de 20 dias
+   dava **79 dias de erro acumulado**.
+2. **Convenção de duração diferente do MS Project.** `duracao = término − início`,
+   sem o +1. Duração 5 começando 10/set dava término 15/set em vez de 14/set. Toda
+   planilha que entrava ou saía do Project desalinhava um dia por tarefa.
+3. **TI + TT na mesma tarefa quebrava a barra.** O código pegava o maior início
+   entre TI/II e o maior término entre TT/IT e gravava os dois — a barra saía com
+   duração diferente da declarada, em silêncio.
+4. **Sem backward pass.** Só propagação pra frente. Sem late start, sem folga, sem
+   caminho crítico. Não é CPM — é propagação. (Endereçado na Fase 3.)
+5. **Dependência circular engolida.** O `visitados` cortava o laço pra não travar,
+   mas nunca avisava que existia.
+
+### O que foi construído
+
+**`js/calendario.js`** — módulo novo, global `Calendario`. Mora sozinho porque
+Medições, Semanal, Histograma, Curva S e Dashboard precisam da mesma régua de dia
+útil. Nunca reimplemente essa conta em outro módulo.
+
+Decisões que valem registro:
+
+- **Datas são string `'YYYY-MM-DD'`**, e toda conversão passa por `_dt()`, que
+  ancora o horário ao **meio-dia local**. `new Date('2026-09-07')` é meia-noite UTC
+  e, no fuso do Brasil, `.getDay()` devolve o dia anterior. Meio-dia mata essa
+  classe de erro inteira. Nunca troque por `new Date(string)`.
+- **Feriados são calculados, não baixados.** O sistema é HTML estático e o cálculo
+  de data tem que ser instantâneo e determinístico — API dentro do motor de datas
+  significa cronograma que quebra quando a rede cai. Os móveis derivam da Páscoa
+  por fórmula fechada (Meeus/Jones/Butcher). Testado contra 2024–2027.
+- **Carnaval e Corpus Christi são ponto facultativo, não feriado nacional.** Entram
+  como toggle, pré-marcados como parados. Sexta-feira Santa é feriado de verdade.
+  20/11 só é nacional a partir de 2024 (Lei 14.759/2023) — o gerador respeita o ano.
+- **Nada de feriado é gravado.** Gerados sob demanda por ano. Gravado é só o que o
+  usuário decidiu: toggles, feriados manuais, paralisações, exceções.
+
+**Precedência** (do mais forte pro mais fraco). É o que resolve todo caso duvidoso:
+
+1. **Exceção pontual** — manda em tudo. Serve nos dois sentidos: domingo trabalhado
+   ou terça de folga.
+2. **Paralisação** — faixa de datas parada. Exceção pontual ainda vence.
+3. **Feriado** — salvo se `trabalhaFeriado`.
+4. **Jornada semanal** — a base.
+
+**Objeto salvo** em `obras/{obraId}.calendario`:
+
+```js
+{
+  ativo: false,
+  jornada: [1,2,3,4,5],                                 // 0=dom … 6=sáb
+  trabalhaFeriado: false,
+  feriadosAuto: true,
+  facultativos: { carnaval: true, corpusChristi: true }, // true = obra PARA
+  feriadosManuais: [{ data, nome, tipo }],
+  paralisacoes:    [{ ini, fim, motivo }],
+  excecoes:        [{ data, trabalha, motivo }],
+  aplicado: false, aplicadoEm: ''
+}
+```
+
+**`js/planejamento.js`** — três funções passaram a ser as **únicas** que convertem
+entre duração e data: `_fimPorDuracao`, `_iniPorDuracao`, `_duracaoEntre`. Nunca
+faça `setDate(getDate() + duracao)` solto em outro lugar — foi assim que o motor
+passou a contar sábado como dia de obra.
+
+`_calcPredecessora` foi reescrita: cada tipo de vínculo restringe **uma** ponta, as
+duas restrições viram um piso de início comum, e a duração é sempre preservada.
+
+**Aba Calendário** em Configuração da Obra: jornada clicável, toggles de feriado e
+facultativo, listas de feriado manual / paralisação / exceção, e prévia dos 12 meses
+pintados com o motivo no passar do mouse.
+
+### Trava de segurança — importante
+
+- O calendário **nasce desligado** em toda obra. Desligado, o sistema conta dias
+  corridos exatamente como antes: `somarDiasUteis` cai em `addDiasCorridos`, e a
+  convenção antiga de duração é mantida. Verificado por teste.
+- **Ligar o calendário não muda data nenhuma.** O recálculo é passo separado:
+  Planejamento › Ferramentas › **Aplicar Calendário às Datas**. Simula primeiro
+  (quantas tarefas mudam, de → para de cada uma, quanto o término da obra move),
+  aplica só depois de confirmar, grava em lote e desfaz com Ctrl+Z.
+- Mudar a definição do calendário depois zera `aplicado` (via `Calendario.assinatura`)
+  e o aviso volta ao topo do Planejamento. Não fica cronograma incoerente em silêncio.
+- A simulação relata quando a rede não converge — quase sempre é ciclo — e diz
+  quantas linhas ficaram fora da exibição, se o teto de 250 foi atingido.
+
+### Verificação
+
+- `node --check` em todos os arquivos alterados
+- Checagem do `return{}` do projeto (`_esc`, `_vIni`, `_vFim` são falsos positivos
+  conhecidos: são arrow functions)
+- 29 testes do `Calendario`: Páscoa 2024–2027, feriados móveis, fuso, precedência
+  completa, ida-e-volta `somarDiasUteis` × `contarDiasUteis` para 1..40 dias
+- 12 testes de integração no motor, extraindo o código real do arquivo: paridade
+  com o comportamento antigo quando desligado, TI/II/TT/IT com o calendário
+  ligado, lag em dias úteis, duração 1, e o defeito TI+TT
+
+---
+
+## Fase 2 — Planejador (a fazer)
+
+Botão **Verificar Planejamento**: uma passada por clique, não vigilância contínua.
+Motor, auditor e base de regras montam um dossiê compacto offline; só o dossiê vai
+pra IA — não a planilha inteira. Uma obra de 800 tarefas vira um resumo pequeno.
+
+**Autoridade, em dois portões separados** (definido pelo Milton):
+
+1. Mexer em vínculo e ordem — precisa de aprovação.
+2. Reagendar datas quando a cascata não resolver — precisa de **nova** aprovação.
+   O assistente volta e relata: "troquei a predecessora, a cascata não trouxe data
+   coerente, autoriza reagendar?"
+
+**Auditor** — checagens numéricas, offline, na linha das 14 do DCMA: tarefa sem
+predecessora ou sem sucessora, lag negativo, excesso de II/TT, restrição rígida,
+folga alta, folga negativa, duração fora de faixa, data real no futuro, previsto no
+passado, ciclo (já detectado pelo motor), tarefa vencida sem avanço.
+
+**Base de regras de precedência tecnológica** — versionada, cada regra com o motivo
+técnico. É o que faz o argumento ser fundamentado em vez de genérico. Núcleo inicial:
+
+| Regra | Motivo |
+|---|---|
+| Forro/gesso antes de piso final | Serviço superior derruba massa, poeira e água. Piso pronto embaixo exige proteção física — custo que ninguém orçou |
+| Instalação embutida antes de reboco/contrapiso | Rasgar parede rebocada ou contrapiso curado é demolição parcial; compromete aderência e gera fissura |
+| Impermeabilização + teste de estanqueidade antes de regularização | Vazamento achado depois do piso assentado = quebrar tudo. O teste tem duração própria no cronograma, não é zero |
+| Contrapiso curado antes de assentar porcelanato | Umidade residual e retração descolam a placa. Cura tem prazo — emendar os dois é data fictícia |
+| Fachada vedada / esquadria antes de acabamento interno sensível | Chuva destrói forro, pintura e piso de madeira |
+| Alvenaria com liberação estrutural e folga de pavimentos | Sobrecarga em laje jovem e conflito de escoramento |
+
+**Crítica de duração** — é cálculo, não opinião. O sistema já tem os levantamentos
+(piso, teto, paredes, concreto, fachada, pintura, terraplanagem, solo grampeado), o
+campo `quantidade`, o campo `equipeAlocada` e o vínculo levantamento→tarefa:
+
+```
+duração necessária (dias úteis) = (Quantidade × Hh por unidade) ÷ (Nº equipe × jornada)
+```
+
+TCPO/SINAPI entra como **semente**, em faixa. A verdade é a produtividade da própria
+equipe, derivada de Medições e Diário de Obra, que já guardam executado por data.
+O argumento então fica concreto: *"tua equipe entregou 43 m²/dia nas últimas 6
+medições; teu cronograma pede 96 m²/dia."* Onde não houver histórico, cai na faixa
+de referência e avisa que está usando referência.
+
+**Memória de decisão** — obrigatória, não opcional. Cada exceção aceita fica gravada
+na obra: regra violada, justificativa ("ordem da diretoria, piso liberado em 12/09"),
+quem decidiu, quando. Na próxima análise aquele ponto aparece como *decidido*, não
+como erro. Sem isso o assistente repete o mesmo alerta toda vez, vira ruído e o
+Milton para de usar. De brinde, gera o histórico de *por que* a obra foi planejada
+assim.
+
+## Fase 3 — CPM completo (a fazer)
+
+Backward pass, folga total e folga livre, caminho crítico marcado no Gantt. Depende
+da Fase 1 (sem calendário, folga em dias corridos não significa nada).

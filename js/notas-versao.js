@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.19.30.52',
+  versaoAtual: 'V3.20.0',
 
   versoes: [
     {
@@ -10630,6 +10630,26 @@ const NotasVersao = {
       "itens": [
         "Antes: o botão só avisava quantos itens tinha errado e pedia confirmação sem mostrar detalhe — não dava pra saber qual concretagem seria escolhida como \\\"certa\\\" pra cada peça.",
         "Agora abre um popup listando peça por peça: pra planejamento duplicado, mostra qual concretagem fica (número + data) e qual é removida; pra lançamento fora do lugar, mostra \\\"De: Nº X → Para: Nº Y\\\" claramente. Nada é alterado até clicar em \\\"Aplicar correção\\\"."
+      ]
+    },
+    {
+      "versao": "V3.20.0",
+      "data": "2026-08-26",
+      "tipo": "funcionalidade",
+      "titulo": "Novo módulo: Calendário de Obra — o motor de datas passa a contar dias úteis",
+      "itens": [
+        "PROBLEMA QUE ISSO RESOLVE: o motor de datas somava dias CORRIDOS. Uma tarefa de 20 dias úteis (4 semanas de obra) era agendada como 20 dias de folhinha — quase 28% mais curta — e uma tarefa que terminava na sexta jogava a sucessora pro sábado. Numa cadeia de 10 tarefas encadeadas o erro acumulado passava de dois meses.",
+        "Nova aba Calendário em Configuração da Obra, por obra: jornada semanal (quais dias da semana a obra trabalha, sábado incluído), \\\"a obra trabalha em feriado\\\" liga/desliga, feriados nacionais gerados automaticamente, feriados municipais/estaduais cadastrados na mão, paralisações por faixa de datas (recesso, chuva) e exceções por data.",
+        "As exceções funcionam nos DOIS sentidos: um domingo específico que a obra vai trabalhar, ou uma terça específica que ela não vai. Exceção pontual vence tudo — feriado, paralisação e jornada.",
+        "Feriados nacionais são CALCULADOS, não baixados de API: os fixos por data e os móveis derivados da Páscoa por fórmula fechada (Carnaval, Sexta-feira Santa, Corpus Christi). Sem dependência de rede dentro do cálculo de data, e sem tabela pra ficar desatualizada. Carnaval e Corpus Christi entram como ponto facultativo (não são feriado nacional por lei) e podem ser desmarcados. 20/11 só entra como feriado nacional a partir de 2024, respeitando a Lei 14.759/2023.",
+        "Prévia visual do ano inteiro na tela de configuração: os 12 meses pintados, dia útil em destaque e dia parado em cinza com o motivo no passar do mouse, mais a contagem de dias úteis por mês.",
+        "CORREÇÃO NO MOTOR: tarefa com predecessora Término-Início e Término-Término ao mesmo tempo tinha o início vindo de uma e o término da outra — a barra saía com duração DIFERENTE da declarada, sem avisar ninguém. Agora as duas restrições viram um piso de início comum e a duração é sempre preservada, como manda o CPM.",
+        "CORREÇÃO NO MOTOR: dependência circular (tarefa A depende de B que depende de A) era cortada em silêncio na propagação — a cadeia não travava, mas ninguém nunca soube que existia. Agora fica registrada e é relatada.",
+        "Convenção de duração alinhada ao MS Project quando o calendário está ligado: duração conta o dia de início (5 dias começando segunda termina na sexta). Antes dava sábado, e toda planilha que entrava ou saía do Project desalinhava um dia por tarefa.",
+        "NADA MUDA SOZINHO: o calendário nasce DESLIGADO em toda obra, e com ele desligado o sistema conta dias corridos exatamente como antes. Ligar o calendário também não mexe em data nenhuma — o recálculo é um passo separado, no botão \\\"Aplicar Calendário às Datas\\\" do menu de Ferramentas do Planejamento.",
+        "Esse botão SIMULA antes de aplicar: mostra quantas tarefas mudam de data, o de → para de cada uma, e quantos dias o término da obra estica ou encurta. Só aplica depois de confirmar, grava em lote e dá pra desfazer com Ctrl+Z. Enquanto o calendário estiver ligado mas as datas ainda na régua antiga, um aviso verde aparece no topo do Planejamento.",
+        "Mudar qualquer coisa no calendário depois (jornada, feriado, exceção) marca as datas como desatualizadas de novo e o aviso volta — não fica cronograma incoerente em silêncio.",
+        "A conta de dia útil mora num módulo só (js/calendario.js) pra Medições, Semanal, Histograma e Curva S usarem a MESMA régua. Dois caminhos de cálculo que divergem já quebrou este sistema antes."
       ]
     }
   ],
