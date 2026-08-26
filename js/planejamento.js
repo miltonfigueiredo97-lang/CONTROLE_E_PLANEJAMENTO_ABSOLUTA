@@ -3212,6 +3212,7 @@ const Planejamento = (() => {
       {rotulo:'Recalcular % dos Pais',grupo:'Correções & Recálculos',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento._recalcularPercTodosPais()" title="Recalcula o % de toda tarefa-pai a partir dos filhos diretos (nível por nível, igual MS Project)">📊 Recalcular % dos Pais</button>'},
       {rotulo:'Recalcular Datas dos Pais',grupo:'Correções & Recálculos',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento._recalcularDatasPais()" title="Recalcula início/término das tarefas-pai a partir dos filhos">📐 Recalcular Datas dos Pais</button>'},
       {rotulo:'Verificar Planejamento',grupo:'Correções & Recálculos',html:'<button class="btn btn-primario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.abrirVerificarPlanejamento()" title="Analisa a rede inteira: caminho crítico, folgas, vínculos que faltam ou não fazem sentido, ordem de execução dos serviços e duração x quantidade. Roda offline, sem IA, e nada é alterado sem sua aprovação">🔍 Verificar Planejamento</button>'},
+      {rotulo:'Editor de Predecessoras',grupo:'Correções & Recálculos',html:'<button class="btn btn-secundario btn-sm" data-perm="planejamento:editar" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.abrirEditorPred((Planejamento.tarefaSelecionadaId&&Planejamento.tarefaSelecionadaId())||\'\')" title="Corrige vínculo sem depender da grade: mostra o pai e os irmãos, a predecessora atual por nome, sugere a próxima ordenada por probabilidade, e copia para baixo ou copia a sequência andar por andar. Selecione uma tarefa antes">🔗 Editor de Predecessoras</button>'},
       {rotulo:'Inverter Vínculos entre Grupos',grupo:'Correções & Recálculos',html:'<button class="btn btn-secundario btn-sm" data-perm="planejamento:editar" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.abrirInverterGrupos()" title="Troca a ordem de dois serviços na obra inteira de uma vez: acha todos os vínculos entre os dois grupos da EAP, cada um no seu pavimento e final, simula o efeito na data final e no caminho crítico, e inverte tudo junto">🔀 Inverter Vínculos entre Grupos</button>'},
       {rotulo:'Aplicar Calendário às Datas',grupo:'Correções & Recálculos',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.abrirAplicarCalendario()" title="Recalcula a rede toda contando só dias úteis (jornada, feriados, paralisações e exceções da obra). Mostra de/para antes de aplicar — nada muda sem confirmação">📅 Aplicar Calendário às Datas</button>'},
       ...(_versaoData!=='atual'?[{rotulo:'Copiar Datas de Atual',grupo:'Correções & Recálculos',html:'<button class="btn btn-secundario btn-sm" style="display:block;width:100%;text-align:left;font-size:.75rem;" onclick="Planejamento.copiarDatasDeAtual()" title="Preenche as datas de '+VERSAO_LABEL[_versaoData]+' copiando de Atual em todas as tarefas que ainda não têm valor">📋 Copiar Datas de Atual → '+VERSAO_LABEL[_versaoData]+'</button>'}]:[]),
@@ -7395,7 +7396,9 @@ const Planejamento = (() => {
   // "Decidir" é o que impede o painel de virar ruído: sem memória, o mesmo
   // alerta voltaria em toda análise até você parar de olhar.
   const COL_DECISOES='decisoesPlanejamento';
-  let _audit=null;         // último resultado da análise
+  let _audit=null;         // último resultado da análise da REDE (auditor)
+  let _cron=null;          // último resultado da análise do CRONOGRAMA (planejamento)
+  let _auditAba='rede';    // 'rede' = vínculo e matemática | 'cronograma' = opinião de planejamento
   let _decisoes=new Map(); // chave -> {id, chave, ctx, decisao, justificativa}
   let _auditSev='todas';
   let _decisaoPend=null;   // achado aguardando justificativa no modal
@@ -7419,6 +7422,13 @@ const Planejamento = (() => {
         cal:_calObra, hoje:Utils.hoje(), decisoes:_decisoes,
         produtividade:{}, // gancho da Fase 2: produtividade real vinda de Medições/Diário
       });
+      // Análise de CRONOGRAMA: carga de equipe, ritmo de linha de balanço,
+      // conflito de ambiente, oportunidade de antecipação. Outra classe de
+      // pergunta — nenhuma delas se responde olhando predecessora.
+      _cron=(typeof AnaliseCronograma!=='undefined')
+        ? AnaliseCronograma.analisar(tarefas,{cal:_calObra,hoje:Utils.hoje(),decisoes:_decisoes,
+            rede:_audit.rede, aprendido:_audit.aprendido})
+        : null;
       _auditSev='todas';
       _renderAuditor();
       Utils.abrirModal('modal-planej-auditor');
@@ -7443,8 +7453,10 @@ const Planejamento = (() => {
     const filtro=(sev,rotulo,n)=>`<button class="btn btn-sm ${_auditSev===sev?'btn-primario':'btn-secundario'}" style="font-size:.72rem;"
       onclick="Planejamento.auditorFiltrar('${sev}')">${rotulo} ${n}</button>`;
 
-    const lista=_audit.abertos.filter(a=>_auditSev==='todas'||a.severidade===_auditSev);
-    const decididos=_audit.achados.filter(a=>a.decidido);
+    const fonte=(_auditAba==='cronograma'&&_cron)?_cron:_audit;
+    const lista=fonte.abertos.filter(a=>_auditSev==='todas'||a.severidade===_auditSev);
+    const decididos=fonte.achados.filter(a=>a.decidido);
+    const RC=fonte.resumo;
 
     const cartao=(a)=>{
       const acoes=[];
@@ -7456,8 +7468,10 @@ const Planejamento = (() => {
         acoes.push(`<button class="btn btn-primario btn-sm" style="font-size:.72rem;" onclick="Planejamento.auditorRemoverVinculos('${_esc(a.chave)}')">Remover os ${nVinc} vínculo(s)</button>`);
       if(podeEditar&&a.acoes.includes('inverter')&&nVinc)
         acoes.push(`<button class="btn ${a.acoes.includes('remover')?'btn-secundario':'btn-primario'} btn-sm" style="font-size:.72rem;" onclick="Planejamento.auditorInverter('${_esc(a.chave)}')">${nVinc>1?`Inverter os ${nVinc}`:'Inverter o vínculo'}</button>`);
+      if(podeEditar&&a.tarefaId)
+        acoes.push(`<button class="btn btn-secundario btn-sm" style="font-size:.72rem;" onclick="Planejamento.abrirEditorPred('${_esc(a.tarefaId)}')" title="Abre o editor de predecessoras nesta tarefa: mostra o pai, os irmãos, a predecessora atual por nome, e sugere a próxima">🔗 Editar vínculo</button>`);
       if(a.tarefaId)
-        acoes.push(`<button class="btn btn-secundario btn-sm" style="font-size:.72rem;" onclick="Planejamento.auditorIr('${_esc(a.tarefaId)}')">Ver a tarefa</button>`);
+        acoes.push(`<button class="btn btn-secundario btn-sm" style="font-size:.72rem;" onclick="Planejamento.auditorIr('${_esc(a.tarefaId)}')">Ver na grade</button>`);
       if(podeEditar)
         acoes.push(`<button class="btn btn-secundario btn-sm" style="font-size:.72rem;" onclick="Planejamento.auditorDecidir('${_esc(a.chave)}','manter')">É assim de propósito</button>`);
       if(podeEditar)
@@ -7480,22 +7494,51 @@ const Planejamento = (() => {
     };
 
     const MAX=120;
+    // Duas abas porque são duas perguntas diferentes: a REDE é matemática de
+    // vínculo (falta predecessora, folga, ciclo); o CRONOGRAMA é planejamento
+    // (a equipe cabe, o ritmo fecha, as frentes se atropelam). Misturar as duas
+    // numa lista só foi o que fez o painel parecer que só sabia falar de vínculo.
+    const aba=(id,rot,n,dica)=>`<button class="btn btn-sm ${_auditAba===id?'btn-primario':'btn-secundario'}"
+      style="font-size:.76rem;font-weight:700;" title="${_esc(dica)}" onclick="Planejamento.auditorAba('${id}')">${rot} ${n}</button>`;
+
     el.innerHTML=`
+      <div style="display:flex;gap:6px;margin-bottom:14px;border-bottom:1.5px solid var(--cor-borda-light);padding-bottom:10px;">
+        ${aba('rede','Rede e vínculos',_audit.abertos.length,'Matemática da rede: predecessora faltando, folga, caminho crítico, ciclo, duração x quantidade')}
+        ${aba('cronograma','Cronograma',_cron?_cron.abertos.length:0,'Opinião de planejamento: a equipe cabe nos locais, o ritmo entre pavimentos fecha, as frentes se atropelam, o que dá pra antecipar')}
+      </div>
+
+      ${_auditAba==='cronograma'&&_cron?`
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
+        ${kpi('Apontamentos',`<span style="font-size:1.5rem;">${_cron.abertos.length}</span>`,`${_cron.resumo.frentes} frentes analisadas`)}
+        ${kpi('Ritmo médio',`<span style="font-size:1.5rem;">${_cron.resumo.taktMedio.toFixed(1)}d</span>`,`entre pavimentos, em ${_cron.resumo.servicosComRitmo} serviços`)}
+        ${kpi('Frente mais carregada',`<span style="font-size:.95rem;">${_cron.cargas.length?_esc(_cron.cargas.slice().sort((a,b)=>b.pico-a.pico)[0].frente):'—'}</span>`,
+          _cron.cargas.length?`${_cron.cargas.slice().sort((a,b)=>b.pico-a.pico)[0].pico} locais no pico`:'')}
+        ${kpi('Sobreposição de frentes',`<span style="font-size:1.5rem;">${_cron.resumo.conflitos}</span>`,'no mesmo ambiente, ao mesmo tempo')}
+      </div>
+      ${_cron.cargas.length?`<details style="margin-bottom:12px;">
+        <summary style="cursor:pointer;font-size:.78rem;font-weight:700;color:var(--cor-texto);">Carga de cada frente (pico de locais simultâneos)</summary>
+        <div class="tabela-container" style="margin-top:8px;max-height:230px;overflow:auto;">
+          <table class="tabela tabela-compacta"><thead><tr><th>Frente</th><th>Pico</th><th>Quando</th><th>Tarefas</th></tr></thead>
+          <tbody>${_cron.cargas.slice().sort((a,b)=>b.pico-a.pico).map(c=>`<tr>
+            <td>${_esc(c.frente)}</td>
+            <td style="font-weight:700;color:${c.pico>12?'var(--cor-perigo)':c.pico>6?'var(--cor-alerta)':'var(--cor-texto)'};">${c.pico} locais</td>
+            <td>${_fd(c.dataPico)}</td><td class="text-muted">${c.total}</td></tr>`).join('')}</tbody></table></div></details>`:''}
+      `:`
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
         ${kpi('Pendências',`<span style="font-size:1.5rem;">${_audit.abertos.length}</span>`,`${R.decididos} já decidida(s)`)}
         ${kpi('Caminho crítico',`<span style="font-size:1.5rem;">${R.criticos}</span>`,'tarefas que seguram a data final')}
         ${kpi('Término da obra',`<span style="font-size:.95rem;">${_fd(R.fimProjeto)}</span>`,`início em ${_fd(R.iniProjeto)}`)}
         ${kpi('Base da análise',`<span style="font-size:.95rem;">${R.folhas} tarefas</span>`,`${R.regrasAplicadas} regras de execução`)}
-      </div>
+      </div>`}
 
       ${!_calObra.ativo?`<div style="background:var(--cor-alerta-bg);border:1.5px solid var(--cor-alerta);border-radius:8px;padding:9px 12px;font-size:.76rem;color:#b45309;margin-bottom:10px;">
         O calendário desta obra está desligado, então folga e caminho crítico foram calculados em <b>dias corridos</b> — fim de semana e feriado contam como dia de obra. Ligue o calendário em Configuração da Obra para os números valerem.</div>`:''}
 
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;align-items:center;">
-        ${filtro('todas','Todas',_audit.abertos.length)}
-        ${filtro('alta','Graves',R.alta)}
-        ${filtro('media','Atenção',R.media)}
-        ${filtro('baixa','Revisar',R.baixa)}
+        ${filtro('todas','Todas',fonte.abertos.length)}
+        ${filtro('alta','Graves',RC.alta)}
+        ${filtro('media','Atenção',RC.media)}
+        ${filtro('baixa','Revisar',RC.baixa)}
         <span style="margin-left:auto;display:flex;gap:6px;">
           <button class="btn btn-secundario btn-sm" style="font-size:.72rem;" onclick="Planejamento.auditorCopiarDossie()" title="Copia um resumo compacto (algumas dezenas de kB) pra colar num chat de IA quando quiser discutir em linguagem livre">📋 Copiar dossiê</button>
           <button class="btn btn-secundario btn-sm" style="font-size:.72rem;" onclick="Planejamento.abrirVerificarPlanejamento()">↻ Reanalisar</button>
@@ -7503,7 +7546,7 @@ const Planejamento = (() => {
       </div>
 
       ${lista.length?lista.slice(0,MAX).map(cartao).join(''):`<div class="text-sm text-muted" style="padding:22px;text-align:center;">
-        ${_audit.abertos.length?'Nenhuma pendência nesta severidade.':'Nenhuma pendência aberta. O planejamento passou em todas as checagens.'}</div>`}
+        ${fonte.abertos.length?'Nenhuma pendência nesta severidade.':'Nada apontado aqui. Passou em todas as checagens desta aba.'}</div>`}
       ${lista.length>MAX?`<div class="text-sm text-muted" style="padding:8px;">Mostrando ${MAX} de ${lista.length}. Resolva ou decida as primeiras e reanalise para ver o resto.</div>`:''}
 
       ${decididos.length?`<details style="margin-top:14px;">
@@ -7517,6 +7560,23 @@ const Planejamento = (() => {
   }
 
   function auditorFiltrar(sev){_auditSev=sev;_renderAuditor();}
+  function auditorAba(id){_auditAba=id;_auditSev='todas';_renderAuditor();}
+
+  // Recalcula as duas análises com as decisões atuais. Um lugar só, pra as duas
+  // abas nunca ficarem dessincronizadas depois de uma ação.
+  function _reanalisar(){
+    _audit=Auditor.analisar(tarefas,{cal:_calObra,hoje:Utils.hoje(),decisoes:_decisoes});
+    _cron=(typeof AnaliseCronograma!=='undefined')
+      ? AnaliseCronograma.analisar(tarefas,{cal:_calObra,hoje:Utils.hoje(),decisoes:_decisoes,
+          rede:_audit.rede,aprendido:_audit.aprendido})
+      : null;
+  }
+
+  // As duas listas de achados (rede e cronograma) num lugar só, pra decisão e
+  // ação funcionarem igual em qualquer aba.
+  function _todosAchados(){
+    return (_audit?_audit.achados:[]).concat(_cron?_cron.achados:[]);
+  }
 
   function auditorIr(tarefaId){
     Utils.fecharModal('modal-planej-auditor');
@@ -7531,7 +7591,7 @@ const Planejamento = (() => {
   // ---- Decisão (memória) ----
   function auditorDecidir(chave,tipo){
     if(!Permissions.pode('planejamento','editar')){Utils.toast('Sem permissão.','erro');return;}
-    const a=(_audit&&_audit.achados||[]).find(x=>x.chave===chave);
+    const a=_todosAchados().find(x=>x.chave===chave);
     if(!a)return;
     if(tipo==='ignorar'){_gravarDecisao(a,'ignorar','');return;}
     _decisaoPend=a;
@@ -7569,7 +7629,7 @@ const Planejamento = (() => {
       if(existente&&existente.id)await Database.atualizar(obraId,COL_DECISOES,existente.id,dados);
       else await Database.criar(obraId,COL_DECISOES,dados);
       await _carregarDecisoes();
-      _audit=Auditor.analisar(tarefas,{cal:_calObra,hoje:Utils.hoje(),decisoes:_decisoes});
+      _reanalisar();
       _renderAuditor();
       Utils.toast(decisao==='manter'?'Decisão gravada.':'Ponto ignorado.','sucesso');
     }catch(e){console.error(e);Utils.toast('Erro ao gravar a decisão.','erro');}
@@ -7581,7 +7641,7 @@ const Planejamento = (() => {
     try{
       await Database.deletar(obraId,COL_DECISOES,d.id);
       await _carregarDecisoes();
-      _audit=Auditor.analisar(tarefas,{cal:_calObra,hoje:Utils.hoje(),decisoes:_decisoes});
+      _reanalisar();
       _renderAuditor();
       Utils.toast('Ponto reaberto.','sucesso');
     }catch(e){console.error(e);Utils.toast('Erro ao reabrir.','erro');}
@@ -7731,7 +7791,7 @@ const Planejamento = (() => {
   // só aplicam depois de confirmar.
   function auditorAcaoVinculo(chave,acao){
     if(!Permissions.pode('planejamento','editar')){Utils.toast('Sem permissão.','erro');return;}
-    const a=(_audit&&_audit.achados||[]).find(x=>x.chave===chave);
+    const a=_todosAchados().find(x=>x.chave===chave);
     if(!a||!a.dados)return;
     const vinculos=(a.dados.vinculos&&a.dados.vinculos.length)?a.dados.vinculos
       :(a.dados.de&&a.dados.para?[{de:a.dados.de,para:a.dados.para,tipo:a.dados.tipo,lag:a.dados.lag,
@@ -7898,6 +7958,219 @@ const Planejamento = (() => {
   }
 
   // ============================================================
+  // EDITOR DE PREDECESSORAS
+  // ============================================================
+  // Corrigir vínculo sem depender da grade. Mostra o pai e os irmãos, a
+  // predecessora atual POR NOME, sugere a próxima ordenada por probabilidade
+  // real, e copia para baixo ou copia a SEQUÊNCIA (cada andar aponta pro seu
+  // equivalente). O cálculo mora em js/editor-predecessoras.js; aqui é só tela.
+  let _edAlvo=null;      // tarefa em edição
+  let _edPend=new Map(); // id -> nova predecessora canônica (ainda não gravada)
+  let _edBusca='';
+
+  function tarefaSelecionadaId(){
+    return (selectedIdx>=0&&filtradas[selectedIdx])?filtradas[selectedIdx].id:'';
+  }
+
+  function abrirEditorPred(tarefaId){
+    if(typeof EditorPredecessoras==='undefined'){Utils.toast('Módulo do editor não carregou. Recarregue a página.','erro');return;}
+    const t=_porId.get(tarefaId)||_porId.get(tarefaSelecionadaId());
+    if(!t){Utils.toast('Selecione uma tarefa na grade primeiro (clique na linha).','alerta');return;}
+    _edAlvo=t;_edPend=new Map();_edBusca='';
+    _renderEditorPred();
+    Utils.abrirModal('modal-planej-editor-pred');
+  }
+
+  function _edPredAtual(t){
+    const canon=_edPend.has(t.id)?_edPend.get(t.id):(t.predecessora||'');
+    const partes=_predParse(canon);
+    if(!partes.length)return'<span class="text-muted">— sem predecessora —</span>';
+    return partes.map(p=>{
+      const pr=_porId.get(p.id);
+      const nome=pr?((pr.codigo?pr.codigo+' ':'')+(pr.nome||'').trim()):'(excluída)';
+      const suf=(p.tipo&&p.tipo!=='TI'?' '+p.tipo:'')+(p.lag?(p.lag>0?'+'+p.lag:p.lag):'');
+      return `<span style="display:inline-block;background:var(--cor-neutro-bg);border-radius:4px;padding:1px 6px;margin:1px 2px 1px 0;font-size:.7rem;">
+        ${_esc(nome)}${_esc(suf)} <a href="#" onclick="Planejamento.edPredRemover('${t.id}','${p.id}');return false;" style="color:var(--cor-perigo);text-decoration:none;font-weight:700;">×</a></span>`;
+    }).join('');
+  }
+
+  function _renderEditorPred(){
+    const el=document.getElementById('planej-editor-pred-body');
+    if(!el||!_edAlvo)return;
+    const pai=EditorPredecessoras.paiDe(tarefas,_edAlvo.id);
+    const irmaos=EditorPredecessoras.irmaosDe(tarefas,_edAlvo.id);
+    const ap=_audit?_audit.aprendido:null;
+    let sug=EditorPredecessoras.sugerir(tarefas,_edAlvo.id,ap,60);
+    if(_edBusca){
+      const q=_edBusca.toLowerCase();
+      sug=sug.filter(s=>((s.codigo||'')+' '+(s.nome||'')+' '+(s.grupo||'')).toLowerCase().includes(q));
+    }
+
+    const linhasIrmaos=irmaos.map(t=>{
+      const sel=t.id===_edAlvo.id;
+      const alterado=_edPend.has(t.id);
+      return `<tr style="${sel?'background:var(--cor-primaria-ultra-light);':''}">
+        <td class="text-muted" style="font-size:.7rem;white-space:nowrap;">${_esc(t.codigo||'')}</td>
+        <td style="font-size:.74rem;">${_esc((t.nome||'').trim())}${alterado?' <span class="badge badge-sucesso">alterado</span>':''}</td>
+        <td class="text-muted" style="font-size:.7rem;white-space:nowrap;">${_esc(t.grupo||'')}</td>
+        <td style="font-size:.72rem;">${_edPredAtual(t)}</td>
+        <td class="col-acoes">${sel?'<span class="badge badge-amarelo">editando</span>'
+          :`<button class="btn btn-secundario btn-sm" style="font-size:.66rem;" onclick="Planejamento.edPredTrocarAlvo('${t.id}')">editar</button>`}</td>
+      </tr>`;
+    }).join('');
+
+    el.innerHTML=`
+      <div style="font-size:.78rem;color:var(--cor-texto);margin-bottom:2px;">
+        ${pai?`<span class="text-muted">Dentro de:</span> <b>${_esc((pai.codigo?pai.codigo+' ':'')+(pai.nome||'').trim())}</b>`:'<span class="text-muted">Nível raiz</span>'}
+      </div>
+      <div class="text-sm text-muted" style="margin-bottom:12px;">${irmaos.length} tarefa(s) neste nível. Editando: <b style="color:var(--cor-texto);">${_esc((_edAlvo.nome||'').trim())}</b></div>
+
+      <div class="form-row" style="display:flex;gap:12px;flex-wrap:wrap;">
+        <div style="flex:1;min-width:330px;">
+          <div style="font-size:.8rem;font-weight:700;color:var(--cor-texto);margin-bottom:6px;">Escolher predecessora</div>
+          <input type="text" class="form-control" style="font-size:.76rem;margin-bottom:8px;" placeholder="Buscar por nome, código ou pavimento..."
+            value="${_esc(_edBusca)}" oninput="Planejamento.edPredBuscar(this.value)">
+          <div class="tabela-container" style="max-height:300px;overflow:auto;">
+            <table class="tabela tabela-compacta"><thead><tr><th>Tarefa</th><th>Local</th><th>Por quê</th><th></th></tr></thead><tbody>
+            ${sug.length?sug.map(s=>`<tr ${s.fariaCiclo?'style="opacity:.55;"':''}>
+              <td style="font-size:.72rem;">${_esc((s.codigo?s.codigo+' ':'')+(s.nome||'').trim())}</td>
+              <td class="text-muted" style="font-size:.68rem;white-space:nowrap;">${_esc(s.grupo||'')}</td>
+              <td style="font-size:.66rem;color:${s.fariaCiclo?'var(--cor-perigo)':'var(--cor-texto-secundario)'};">${_esc(s.porque)}</td>
+              <td class="col-acoes"><button class="btn ${s.fariaCiclo?'btn-perigo':'btn-primario'} btn-sm" style="font-size:.66rem;"
+                onclick="Planejamento.edPredAdicionar('${s.id}')">+</button></td></tr>`).join('')
+              :'<tr><td colspan="4" class="text-sm text-muted" style="padding:12px;">Nenhuma candidata. Limpe a busca.</td></tr>'}
+            </tbody></table></div>
+          <div class="text-sm text-muted" style="font-size:.7rem;margin-top:6px;">Ordenado por probabilidade: o que o padrão da obra usa para este serviço vem primeiro, depois mesmo pavimento e mesmo ambiente. Candidata que criaria ciclo aparece em vermelho, nunca escondida.</div>
+        </div>
+
+        <div style="flex:1;min-width:330px;">
+          <div style="font-size:.8rem;font-weight:700;color:var(--cor-texto);margin-bottom:6px;">Tarefas deste nível</div>
+          <div class="tabela-container" style="max-height:300px;overflow:auto;">
+            <table class="tabela tabela-compacta"><thead><tr><th>Cód.</th><th>Tarefa</th><th>Local</th><th>Predecessora</th><th></th></tr></thead>
+            <tbody>${linhasIrmaos}</tbody></table></div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">
+            <button class="btn btn-secundario btn-sm" style="font-size:.72rem;" onclick="Planejamento.edPredCopiarBaixo()"
+              title="Põe a MESMA predecessora nas outras tarefas deste nível. Use quando o vínculo aponta pra algo que não varia por andar (um marco, uma liberação única)">⤓ Copiar para as outras</button>
+            <button class="btn btn-primario btn-sm" style="font-size:.72rem;" onclick="Planejamento.edPredCopiarSequencia()"
+              title="Cada tarefa recebe a predecessora EQUIVALENTE no seu próprio pavimento: o 2º aponta pro 2º, o 3º pro 3º. É o que se usa quando o serviço sobe andar por andar">⇉ Copiar a sequência</button>
+          </div>
+        </div>
+      </div>
+
+      ${_edPend.size?`<div style="background:var(--cor-sucesso-bg);border:1.5px solid var(--cor-sucesso);border-radius:8px;padding:9px 12px;font-size:.76rem;color:#15803d;margin-top:12px;">
+        ${_edPend.size} tarefa(s) com predecessora alterada, ainda não gravada.</div>`:''}
+
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;">
+        <button class="btn btn-secundario" onclick="Utils.fecharModal('modal-planej-editor-pred')">Cancelar</button>
+        <button class="btn btn-primario" ${_edPend.size?'':'disabled'} onclick="Planejamento.edPredAplicar()">Aplicar ${_edPend.size||''}</button>
+      </div>`;
+  }
+
+  function edPredBuscar(v){_edBusca=v||'';_renderEditorPred();}
+  function edPredTrocarAlvo(id){const t=_porId.get(id);if(t){_edAlvo=t;_edBusca='';_renderEditorPred();}}
+
+  function edPredAdicionar(predId){
+    if(!_edAlvo)return;
+    const atual=_edPend.has(_edAlvo.id)?_edPend.get(_edAlvo.id):(_edAlvo.predecessora||'');
+    const partes=_predParse(atual);
+    if(partes.some(p=>p.id===predId)){Utils.toast('Já é predecessora desta tarefa.','alerta');return;}
+    if(predId===_edAlvo.id)return;
+    partes.push({id:predId,tipo:'TI',lag:''});
+    _edPend.set(_edAlvo.id,_predFormat(partes));
+    _renderEditorPred();
+  }
+  function edPredRemover(tarefaId,predId){
+    const t=_porId.get(tarefaId);if(!t)return;
+    const atual=_edPend.has(tarefaId)?_edPend.get(tarefaId):(t.predecessora||'');
+    _edPend.set(tarefaId,_predFormat(_predParse(atual).filter(p=>p.id!==predId)));
+    _renderEditorPred();
+  }
+
+  // As duas cópias trabalham sobre um rascunho que já inclui o que está pendente,
+  // pra você poder montar o vínculo da primeira e propagar sem gravar no meio.
+  function _edRascunho(){
+    return tarefas.map(t=>({...t,predecessora:_edPend.has(t.id)?_edPend.get(t.id):(t.predecessora||'')}));
+  }
+
+  function edPredCopiarBaixo(){
+    if(!_edAlvo)return;
+    const irmaos=EditorPredecessoras.irmaosDe(tarefas,_edAlvo.id).map(x=>x.id);
+    const m=EditorPredecessoras.copiarParaBaixo(_edRascunho(),_edAlvo.id,irmaos);
+    if(!m.size){Utils.toast('Nada a copiar — as outras já estão iguais.','alerta');return;}
+    for(const [id,v] of m)_edPend.set(id,v);
+    _renderEditorPred();
+    Utils.toast(`Mesma predecessora aplicada em ${m.size} tarefa(s).`,'sucesso');
+  }
+
+  function edPredCopiarSequencia(){
+    if(!_edAlvo)return;
+    const irmaos=EditorPredecessoras.irmaosDe(tarefas,_edAlvo.id).map(x=>x.id);
+    const r=EditorPredecessoras.copiarSequencia(_edRascunho(),_edAlvo.id,irmaos);
+    for(const [id,v] of r.mudancas)_edPend.set(id,v);
+    _renderEditorPred();
+    if(!r.mudancas.size&&r.pendentes.length){
+      Utils.toast(`Nenhuma equivalência encontrada. ${r.pendentes[0].motivo}`,'alerta',6000);
+      return;
+    }
+    // Pendência não é falha silenciosa: onde não achou o equivalente, avisa em vez
+    // de colocar vínculo errado.
+    Utils.toast(`Sequência aplicada em ${r.mudancas.size} tarefa(s).`
+      +(r.pendentes.length?` ${r.pendentes.length} ficaram sem equivalente: ${r.pendentes[0].motivo}.`:''),
+      r.pendentes.length?'alerta':'sucesso',r.pendentes.length?7000:3500);
+  }
+
+  async function edPredAplicar(){
+    if(!Permissions.pode('planejamento','editar')){Utils.toast('Sem permissão.','erro');return;}
+    if(!_edPend.size)return;
+    // Simula antes: mostra se a mudança cria ciclo ou mexe na data final.
+    const s=_simularMudanca(()=>new Map(_edPend));
+    if(s.ciclosNovos.length&&!confirm(`Atenção: estas mudanças criam dependência circular em ${s.ciclosNovos.length} tarefa(s).\n\nAplicar mesmo assim?`))return;
+    const msg=`Aplicar predecessora em ${_edPend.size} tarefa(s)?\n\n`
+      +`Tarefas que mudam de data: ${s.movidas}\n`
+      +`Término da obra: ${_fd(s.fimAntes)} → ${_fd(s.fimDepois)}\n`
+      +`Caminho crítico: ${s.critAntes} → ${s.critDepois} tarefas\n\nDá pra desfazer com Ctrl+Z.`;
+    if(!confirm(msg))return;
+
+    Utils.mostrarLoading('Aplicando...');
+    try{
+      _undoPush();
+      const ops=[];
+      for(const [id,pred] of _edPend){
+        const t=_porId.get(id);
+        if(!t)continue;
+        t.predecessora=pred;
+        ops.push({type:'update',ref:Database.ref(obraId,COL).doc(id),data:{predecessora:pred}});
+      }
+      for(let i=0;i<ops.length;i+=400)await Database.batchWrite(ops.slice(i,i+400));
+      const dOps=[];
+      for(const no of s.depois.nos.values()){
+        if(no.emCiclo||no.executado)continue;
+        const t=_porId.get(no.id);
+        if(!t)continue;
+        if((t.inicioPlanejado||'')===no.es&&(t.terminoPlanejado||'')===no.ef)continue;
+        t.inicioPlanejado=no.es;t.terminoPlanejado=no.ef;
+        dOps.push({type:'update',ref:Database.ref(obraId,COL).doc(no.id),data:{inicioPlanejado:no.es,terminoPlanejado:no.ef}});
+      }
+      for(let i=0;i<dOps.length;i+=400)await Database.batchWrite(dOps.slice(i,i+400));
+      if(typeof Audit!=='undefined'&&Audit.registrar){
+        Audit.registrar(obraId,'planejamento_predecessoras_editadas',{modulo:'planejamento',
+          descricao:`Editor de predecessoras: ${_edPend.size} tarefa(s) revinculada(s)`,
+          dados:{tarefas:_edPend.size,datas:dOps.length,fimAntes:s.fimAntes,fimDepois:s.fimDepois}}).catch(()=>{});
+      }
+      const n=_edPend.size;
+      _edPend=new Map();
+      Utils.fecharModal('modal-planej-editor-pred');
+      _buildFiltradas();
+      await _recalcularDatasPais(true);
+      if(_modoCritico)_recalcularCritico();
+      if(_audit)_reanalisar();
+      _render();
+      Utils.toast(`${n} predecessora(s) gravada(s), ${dOps.length} data(s) recalculada(s).`,'sucesso',6000);
+    }catch(e){console.error(e);Utils.toast('Erro ao gravar as predecessoras.','erro');}
+    finally{Utils.esconderLoading();}
+  }
+
+  // ============================================================
   // INVERTER VÍNCULOS ENTRE GRUPOS (ferramenta manual)
   // ============================================================
   // O Verificador só aponta o que está na base de regras. Mas a decisão de
@@ -8056,8 +8329,9 @@ const Planejamento = (() => {
   }
 
   return{init,carregar,abrirAplicarCalendario,aplicarCalendario,calendarioAtual,ciclosDetectados,
-    abrirVerificarPlanejamento,auditorFiltrar,auditorIr,auditorDecidir,auditorConfirmarDecisao,auditorReabrir,auditorInverter,auditorCriarVinculos,auditorRemoverVinculos,auditorAcaoVinculo,auditorConfirmarInversao,auditorCopiarDossie,toggleCritico,
-    abrirInverterGrupos,invGruposSel,invGruposSimular,setZoom,setVersaoData,copiarDatasDeAtual,inserirTarefa,editarTarefa,salvarTarefa,excluirTarefa,
+    abrirVerificarPlanejamento,auditorFiltrar,auditorAba,auditorIr,auditorDecidir,auditorConfirmarDecisao,auditorReabrir,auditorInverter,auditorCriarVinculos,auditorRemoverVinculos,auditorAcaoVinculo,auditorConfirmarInversao,auditorCopiarDossie,toggleCritico,
+    abrirInverterGrupos,invGruposSel,invGruposSimular,
+    abrirEditorPred,tarefaSelecionadaId,edPredBuscar,edPredTrocarAlvo,edPredAdicionar,edPredRemover,edPredCopiarBaixo,edPredCopiarSequencia,edPredAplicar,setZoom,setVersaoData,copiarDatasDeAtual,inserirTarefa,editarTarefa,salvarTarefa,excluirTarefa,
     selectIdx,toggleRecolher,recuarNivel,avancarNivel,
     toggleGantt,toggleLiberarEdicaoReal,hideCol,showColsMenu,_showCol,_showAll,_toggleMenuFerramentas,
     _abrirEstruturaObra,_addTorre,_addPavimento,_addApartamento,_duplicarPavimento,_editarNomeEst,_removerNoEst,

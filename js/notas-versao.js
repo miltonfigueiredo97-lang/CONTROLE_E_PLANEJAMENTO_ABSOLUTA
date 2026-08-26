@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.22.2',
+  versaoAtual: 'V3.23.0',
 
   versoes: [
     {
@@ -10765,6 +10765,31 @@ const NotasVersao = {
         "CAUSA DA FOLGA NEGATIVA: antes dizia só \\\"a rede exige que esta tarefa termine 146 dias antes do que ela consegue\\\" — número sem endereço, impossível de julgar. Agora diz quem aperta: \\\"Concretagem Laje Piso: Cobertura precisa começar em 09/07 (vínculo TI), então esta teria que terminar até 08/07, mas só consegue em 25/08\\\".",
         "O LAÇO DA DEPENDÊNCIA CIRCULAR: antes dizia \\\"A espera B, que espera A\\\" sem dizer quem é A e quem é B. Agora mostra o caminho fechado inteiro — no RD06, Fechamento Shaft do 7º depende do 8º, que depende do 9º Final 01, que depende do 9º Final 02, que depende do 10º Final 02, e volta. Com o caminho na mão dá pra escolher qual vínculo remover.",
         "AGREGADO MOSTRA O PRIMEIRO CASO COMPLETO: em achado repetitivo o diagnóstico inteiro de um caso explica todos, e cortar na primeira linha era exatamente o que impedia entender o problema."
+      ]
+    },
+    {
+      "versao": "V3.23.0",
+      "data": "2026-08-26",
+      "tipo": "funcionalidade",
+      "titulo": "Novo: opinião técnica sobre o cronograma, e Editor de Predecessoras",
+      "itens": [
+        "PROBLEMA: até aqui o Verificador só sabia falar de VÍNCULO — predecessora faltando, folga, ciclo, caminho crítico. Isso é matemática de rede, é necessário, mas não é planejamento. Faltava o que mais importa: a ordem faz sentido, a equipe cabe nos locais, o ritmo entre pavimentos fecha, as frentes vão se atropelar, o que dá pra antecipar. E faltava poder CORRIGIR sem depender da grade.",
+        "O Verificador agora tem DUAS ABAS, porque são duas perguntas diferentes: \\\"Rede e vínculos\\\" (o que já existia) e \\\"Cronograma\\\" (a opinião de planejamento). Misturar as duas numa lista só era o que fazia o painel parecer que só sabia falar de vínculo.",
+        "CARGA DE FRENTE — o achado mais forte: equipe é recurso finito e o cronograma não sabe disso. No RD06 o sistema encontrou PEDREIROS em 26 locais simultâneos em 24/08/2026, ELÉTRICA em 17 e HIDRÁULICA em 12. É o erro mais comum de cronograma montado serviço por serviço: cada um parece razoável isolado, e o conjunto exige um efetivo que a obra não tem. Na prática a equipe atende um local por vez, os outros esperam, e o atraso aparece sem causa aparente. A tela mostra a tabela de carga de todas as frentes com o pico e a data.",
+        "RITMO DE LINHA DE BALANÇO: obra de edifício é trem de serviços subindo pavimento a pavimento, e o que importa não é a duração de cada tarefa, é o INTERVALO entre pavimentos — o takt. O sistema mede o takt de cada serviço, calcula o desvio, e aponta ritmo irregular. Ritmo aos trancos significa equipe parando e voltando: desmobiliza, perde produtividade no reaquecimento, e o encarregado não consegue programar a semana. No RD06 o takt médio é de 8,5 dias em 44 serviços medíveis.",
+        "ESPERA ENTRE PAVIMENTOS: quando o takt é muito maior que a duração, a equipe termina e só volta semanas depois. É onde o prazo se estica sem ninguém decidir esticar. O sistema calcula a ociosidade por ciclo e propõe as duas saídas honestas — puxar o passo e encurtar a obra, ou reduzir a equipe e assumir o ritmo com custo menor.",
+        "COLISÃO DE RITMO: dois serviços encadeados precisam subir no mesmo passo. Se o de trás sobe mais rápido, ele ALCANÇA o da frente e para; se sobe mais devagar, abre buraco de pavimento pronto esperando serviço. Nos dois casos o efetivo planejado deixa de valer no meio da obra. Nenhuma checagem de vínculo enxerga isso.",
+        "CONFLITO NO MESMO AMBIENTE: duas frentes diferentes no mesmo ambiente ao mesmo tempo é atrito físico — disputa de espaço, de andaime, de ponto de energia, e serviço pronto de uma sendo danificado pela outra. No RD06 encontrou GESSO × AZULEJISTAS, GESSO × SERRALHERIA e GESSO × MARMORARIA com 32 sobreposições cada.",
+        "OPORTUNIDADE DE ANTECIPAÇÃO: tarefa com folga livre alta pode antecipar sem empurrar ninguém. É a decisão de planejamento mais barata que existe — não custa nada e compra prazo, além de tirar risco de cima do caminho crítico.",
+        "NOVO: EDITOR DE PREDECESSORAS. Corrigir vínculo pela grade era digitar número de linha sem ver o nome e sem saber qual escolher — impraticável em 2.400 linhas, e um sistema que aponta 50 problemas e não deixa consertar nenhum é pior que um que não aponta nada.",
+        "O editor mostra o pai, os irmãos, e a predecessora atual POR NOME, com botão de remover em cada uma. As candidatas vêm ordenadas por probabilidade real, não alfabética: o que o padrão da obra usa para aquele serviço vem primeiro (com a contagem), depois mesmo pavimento, mesmo ambiente, termina antes, e mesmo serviço no pavimento anterior. Candidata que criaria ciclo aparece em vermelho — marcada, nunca escondida.",
+        "COPIAR PARA AS OUTRAS: põe a mesma predecessora nos irmãos. Serve quando o vínculo aponta pra algo que não varia por andar (um marco, uma liberação única).",
+        "COPIAR A SEQUÊNCIA — a operação que faltava: cada tarefa recebe a predecessora EQUIVALENTE no seu próprio pavimento. O 2º aponta pro 2º, o 3º pro 3º. Em EAP repetitiva o vínculo certo nunca é o mesmo objeto: o gás do 5º depende do gás do 4º, o do 6º do 5º. Copiar o mesmo id criaria 15 tarefas dependendo da mesma.",
+        "O casamento entre andares resolve o subgrupo que embute o pavimento: no RD06 o apartamento 1 do 5º é \\\"51\\\" e o do 4º é \\\"41\\\". Comparar o subgrupo cru nunca casava — o editor compara o ambiente RELATIVO ao andar, então \\\"51\\\" e \\\"41\\\" viram \\\"1\\\" e casam, e \\\"Hall\\\" continua \\\"Hall\\\".",
+        "Onde não existe equivalente, aquela tarefa é DEVOLVIDA como pendência com o motivo, em vez de receber vínculo errado em silêncio. Testado no RD06: dos 16 andares do gás, 11 já estavam corretos, 3 mudaram e 1 ficou pendente (o 1º pavimento não tem anterior) — e depois de aplicar, todos os 15 apontam para o andar imediatamente anterior.",
+        "Antes de gravar, o editor SIMULA: quantas tarefas mudam de data, o término da obra de → para, o caminho crítico antes e depois, e avisa se a mudança cria dependência circular. Grava em lote, recalcula as datas e desfaz com Ctrl+Z.",
+        "Acesso: botão \\\"Editar vínculo\\\" em cada apontamento do Verificador, e Ferramentas › Editor de Predecessoras com uma tarefa selecionada na grade.",
+        "Análise completa das 2.439 linhas do RD06 nas duas abas em menos de 1 segundo, offline."
       ]
     }
   ],
