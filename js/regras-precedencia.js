@@ -39,7 +39,14 @@ const RegrasPrecedencia = (() => {
   const SERVICOS = {
     estrutura:        { label: 'estrutura / laje',           termos: ['estrutura', 'laje', 'pilar', 'viga', 'concretagem', 'forma', 'armacao'] },
     desforma:         { label: 'desforma / escoramento',     termos: ['desforma', 'escoramento', 'reescoramento'] },
-    alvenaria:        { label: 'alvenaria',                  termos: ['alvenaria', 'bloco', 'vedacao'] },
+    // Alvenaria de VEDAÇÃO e alvenaria ESTRUTURAL são serviços diferentes e a
+    // ordem em relação à laje é INVERTIDA entre eles:
+    //   vedação   -> sobe DEPOIS da laje pronta (é só fechamento)
+    //   estrutural-> sobe ANTES da laje daquele pavimento (a parede recebe a laje)
+    // A regra antiga tratava as duas como "alvenaria" e contrariava o cronograma
+    // do RD06 em 43 vínculos de alvenaria estrutural — que estavam corretos.
+    alvenaria:        { label: 'alvenaria de vedação',       termos: ['alvenaria', 'bloco', 'vedacao'], exclui: ['estrutural'] },
+    alvenariaEstrut:  { label: 'alvenaria estrutural',       termos: ['alvenaria estrutural'] },
     eletrica:         { label: 'instalação elétrica',        termos: ['eletrica', 'eletrico', 'eletrodutos', 'fiacao', 'cabeamento'] },
     hidraulica:       { label: 'instalação hidráulica',      termos: ['hidraulica', 'hidraulico', 'tubulacao', 'esgoto', 'agua fria', 'agua quente', 'prumada'] },
     impermeabilizacao:{ label: 'impermeabilização',          termos: ['impermeabilizacao', 'impermeabilizante', 'manta asfaltica'] },
@@ -62,8 +69,17 @@ const RegrasPrecedencia = (() => {
   // Ordem: `antes` tem que começar (e em geral terminar) antes de `depois`.
   const REGRAS = [
     { antes: 'estrutura', depois: 'alvenaria', severidade: 'alta',
-      motivo: 'Alvenaria só sobe em laje liberada estruturalmente, e em edifício se mantém uma folga de pavimentos entre a estrutura e a vedação.',
+      motivo: 'Alvenaria de vedação só sobe em laje liberada estruturalmente, e em edifício se mantém uma folga de pavimentos entre a estrutura e a vedação.',
       risco: 'Sobrecarga em laje jovem e conflito com o escoramento que ainda está montado.' },
+
+    // NÃO EXISTE REGRA entre alvenaria estrutural e laje, de propósito.
+    // Em prédio de alvenaria estrutural a ordem ALTERNA por pavimento:
+    //   laje do 5º -> alvenaria estrutural do 6º -> laje do 6º -> alvenaria do 7º…
+    // Os dois sentidos são corretos, e qual vale depende do pavimento — coisa que
+    // a regra não vê. Tentei afirmar "alvenaria estrutural antes da laje" e no
+    // RD06 isso gerou 17 alertas falsos na hora. Onde a ordem depende de contexto
+    // que a regra não enxerga, a regra não opina: quem resolve esse par é o
+    // padrão aprendido, que conta os dois sentidos e só acusa desequilíbrio.
 
     { antes: 'alvenaria', depois: 'eletrica', severidade: 'alta',
       motivo: 'Elétrica embutida é rasgada na alvenaria já executada — a parede precisa existir primeiro.',
@@ -81,12 +97,20 @@ const RegrasPrecedencia = (() => {
       motivo: 'Toda instalação embutida entra antes do reboco fechar a parede.',
       risco: 'Rasgar parede rebocada é demolição parcial e fonte de fissura.' },
 
-    { antes: 'impermeabilizacao', depois: 'contrapiso', severidade: 'alta',
-      motivo: 'A impermeabilização fica sob a regularização em área fria (banheiro, cozinha, área de serviço, sacada).',
-      risco: 'Impermeabilizar depois do contrapiso não protege o que está embaixo; e um vazamento descoberto mais tarde obriga a quebrar o piso pronto.' },
+    // CORRIGIDA. A versão anterior dizia "impermeabilização antes do contrapiso"
+    // e contrariava o cronograma real do RD06 42 vezes — e o cronograma estava
+    // certo. Existem duas escolas, e a mais comum é: o contrapiso (ou a
+    // regularização) executa o CAIMENTO, a impermeabilização vem sobre ele, o
+    // teste de lâmina d'água valida, e só então o revestimento. Afirmar a ordem
+    // entre impermeabilização e contrapiso produziria dezenas de alertas falsos,
+    // então a regra passou a afirmar só o que é inequívoco: a impermeabilização
+    // e o teste vêm antes do REVESTIMENTO que os cobre.
+    { antes: 'impermeabilizacao', depois: 'piso', severidade: 'alta',
+      motivo: 'A impermeabilização fica sob o revestimento em área fria (banheiro, cozinha, área de serviço, sacada).',
+      risco: 'Um vazamento descoberto depois do piso assentado obriga a quebrar o piso pronto.' },
 
-    { antes: 'estanqueidade', depois: 'contrapiso', severidade: 'alta',
-      motivo: 'O teste de lâmina d\'água valida a impermeabilização antes de ser coberta. E o teste tem duração própria no cronograma — dias parados, não zero.',
+    { antes: 'estanqueidade', depois: 'piso', severidade: 'alta',
+      motivo: 'O teste de lâmina d\'água valida a impermeabilização antes de ser coberta pelo revestimento. E o teste tem duração própria no cronograma — dias parados, não zero.',
       risco: 'Cobrir sem testar significa descobrir o vazamento com o piso assentado.' },
 
     { antes: 'contrapiso', depois: 'piso', severidade: 'alta',

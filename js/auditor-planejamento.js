@@ -265,7 +265,74 @@ const Auditor = (() => {
         acoes: ['ignorar'] });
     }
 
-    // ---------- 2. PRECEDÊNCIA TECNOLÓGICA ----------
+    // ---------- 2a. PADRÃO DA PRÓPRIA OBRA (tem prioridade) ----------
+    //
+    // Antes de comparar com qualquer regra de fora, compara o cronograma COM ELE
+    // MESMO. Num edifício o mesmo conjunto de serviços se repete por pavimento,
+    // então o padrão emerge por contagem — e o desvio dele é erro apontado com
+    // número, sem chute: "42 vezes assim, 2 vezes ao contrário, aqui estão as 2".
+    //
+    // Isso tem prioridade sobre as regras genéricas por um motivo prático: no
+    // RD06 a regra "impermeabilização antes do contrapiso" contrariava o
+    // cronograma 42 vezes, e o cronograma estava certo. Conhecimento da própria
+    // empresa vence conhecimento de fora.
+    const parAprendido = new Set();
+    let aprendido = null;
+    if (typeof PadraoAprendido !== 'undefined') {
+      aprendido = PadraoAprendido.aprender(sorted);
+
+      for (const d of aprendido.desvios) {
+        // Marca o par como "já coberto pelo padrão observado" pra a regra
+        // genérica não falar sobre ele de novo, possivelmente ao contrário.
+        parAprendido.add([d.servicoAntes, d.servicoDepois].sort().join('~'));
+        const V = d.vinculos;
+        const noCritico = V.filter(v => {
+          const a = rede.nos.get(v.de), b = rede.nos.get(v.para);
+          return (a && a.critico) || (b && b.critico);
+        }).length;
+        const amostra = V.slice(0, 6).map(v => `• ${(v.nomeDe || '').trim()}  →  ${(v.nomePara || '').trim()}${v.grupo ? `   [${v.grupo}]` : ''}`).join('\n');
+        add({ chave: `padrao:${d.servicoAntes}>${d.servicoDepois}`,
+          ctx: _assinatura([d.n, d.m, V.map(v => `${v.de}>${v.para}`).sort().join(',')]),
+          tipo: 'desvio_padrao_obra', severidade: d.m <= 2 ? 'alta' : 'media',
+          tarefaId: V[0].para, tarefaNome: V[0].nomePara, tarefaCodigo: V[0].codPara,
+          tarefaId2: V[0].de, tarefaNome2: V[0].nomeDe,
+          titulo: `${d.m} vínculo(s) contra o padrão da própria obra: ${d.rotuloDepois} antes de ${d.rotuloAntes}`,
+          detalhe: `Nesta obra, ${d.rotuloAntes} vem antes de ${d.rotuloDepois} em ${d.n} lugares (${Math.round(d.confianca * 100)}% dos casos). Em ${d.m} lugar(es) está invertido.`
+            + (noCritico ? `\n${noCritico} desses vínculos toca o caminho crítico.` : `\nNenhum toca o caminho crítico.`)
+            + `\n\n${amostra}${V.length > 6 ? `\n… e outros ${V.length - 6}` : ''}`,
+          motivo: `Este apontamento não vem de regra externa: vem do seu próprio cronograma. O padrão foi contado nas ${d.n + d.m} ocorrências do par, e ${d.n} delas seguem um sentido. Onde a obra faz diferente do que ela mesma faz em toda parte, ou é erro de montagem ou é exceção que merece estar registrada.`,
+          risco: 'Sequência diferente no mesmo serviço entre pavimentos costuma ser vínculo montado à mão fora do padrão, e vira retrabalho ou espera de equipe naquele local.',
+          sugestao: `Inverter os ${d.m} vínculo(s) para o padrão da obra, ou registrar por que ali é diferente.`,
+          acoes: ['inverter', 'manter', 'ir'],
+          dados: { de: V[0].de, para: V[0].para, vinculos: V, noCritico,
+            labelAntes: d.rotuloDepois, labelDepois: d.rotuloAntes,
+            padraoN: d.n, padraoM: d.m, confianca: d.confianca } });
+      }
+
+      // Vínculo que o padrão manda existir e não existe naquele local. É o erro
+      // mais perigoso da lista: vínculo ausente não aparece em lugar nenhum, o
+      // Gantt fica bonito e a tarefa flutua solta.
+      for (const f of aprendido.faltando) {
+        const locais = f.buracos.map(b => b.grupo);
+        add({ chave: `falta_vinculo:${f.servicoAntes}>${f.servicoDepois}`,
+          ctx: _assinatura([f.n, locais.sort().join(',')]),
+          tipo: 'vinculo_faltando_padrao', severidade: f.buracos.length <= 2 ? 'media' : 'alta',
+          tarefaId: (f.buracos[0].alvos[0] || {}).id || '',
+          tarefaNome: (f.buracos[0].alvos[0] || {}).nome || '',
+          tarefaCodigo: (f.buracos[0].alvos[0] || {}).codigo || '',
+          titulo: `Vínculo faltando em ${f.buracos.length} local(is): ${f.rotuloAntes} → ${f.rotuloDepois}`,
+          detalhe: `Esta obra liga ${f.rotuloAntes} a ${f.rotuloDepois} em ${f.locaisComVinculo} local(is), mas em ${f.buracos.length} os dois serviços existem e não estão ligados:\n`
+            + locais.slice(0, 12).join(', ') + (locais.length > 12 ? `, … e outros ${locais.length - 12}` : '')
+            + `\n\nExemplo: "${(f.buracos[0].origens[0] || {}).nome || ''}" deveria preceder "${(f.buracos[0].alvos[0] || {}).nome || ''}".`,
+          motivo: 'Vínculo ausente é o erro mais silencioso que existe num cronograma: nada reclama. A tarefa parece amarrada porque a data está no lugar certo, mas quando a antecessora atrasa ela não anda junto — e o cronograma passa a mentir sem ninguém notar. Como o mesmo par está ligado nos outros locais, aqui é falha de montagem, não decisão.',
+          sugestao: `Criar o vínculo ${f.rotuloAntes} → ${f.rotuloDepois} nos ${f.buracos.length} local(is) que estão sem.`,
+          acoes: ['ir', 'manter', 'ignorar'],
+          dados: { servicoAntes: f.servicoAntes, servicoDepois: f.servicoDepois,
+            buracos: f.buracos, locais, padraoN: f.n } });
+      }
+    }
+
+    // ---------- 2b. PRECEDÊNCIA TECNOLÓGICA (referência genérica) ----------
     //
     // AGREGADO POR PAR DE SERVIÇOS, não por par de tarefas. Motivo: a EAP é
     // hierárquica — Gesso > Final 01 > 1º ao 20º pavimento, Gesso > Final 02 >
@@ -312,6 +379,20 @@ const Auditor = (() => {
     for (const [k, grupo] of paresPrec) {
       const r = grupo.regra;
       const V = grupo.vinculos;
+      // Se o padrão da própria obra já falou sobre este par, a regra genérica
+      // cala a boca. Foi exatamente aqui que a regra errada de impermeabilização
+      // teria gerado 42 alertas falsos no RD06.
+      const svcA = aprendido ? PadraoAprendido.chaveServico(porId.get(V[0].de) || {}) : '';
+      const svcB = aprendido ? PadraoAprendido.chaveServico(porId.get(V[0].para) || {}) : '';
+      if (svcA && svcB && parAprendido.has([svcA, svcB].sort().join('~'))) continue;
+      // E se o cronograma faz isso de forma CONSISTENTE em muitos lugares, é
+      // padrão da empresa, não erro: a regra genérica não tem autoridade pra
+      // contrariar dezenas de repetições deliberadas.
+      if (aprendido && V.length >= 5) {
+        const parObs = aprendido.pares.get(svcA + '>' + svcB);
+        const inv = aprendido.pares.get(svcB + '>' + svcA);
+        if (parObs && parObs.n >= 5 && (!inv || inv.n === 0)) continue;
+      }
       // Quantos desses vínculos tocam o caminho crítico. É o que diz se a
       // inversão muda a data da obra ou só reorganiza folga.
       const noCritico = V.filter(v => {
@@ -322,7 +403,10 @@ const Auditor = (() => {
       const amostra = V.slice(0, 6).map(v => `• ${v.codDe ? v.codDe + ' ' : ''}${v.nomeDe}  →  ${v.codPara ? v.codPara + ' ' : ''}${v.nomePara}`).join('\n');
       add({ chave: `precedencia:${k}`,
         ctx: _assinatura([V.length, V.map(v => `${v.de}>${v.para}:${v.tipo}${v.lag}`).sort().join(',')]),
-        tipo: 'precedencia_invertida', severidade: r.severidade,
+        // Rebaixada em relação à versão anterior: regra genérica agora é
+        // REFERÊNCIA, nunca 'alta'. Ela não conhece a obra; o padrão observado
+        // conhece. Só sobe de tom quando o padrão não tem o que dizer.
+        tipo: 'precedencia_invertida', severidade: r.severidade === 'alta' ? 'media' : 'baixa',
         tarefaId: V[0].para, tarefaNome: V[0].nomePara, tarefaCodigo: V[0].codPara,
         tarefaId2: V[0].de, tarefaNome2: V[0].nomeDe,
         titulo: V.length === 1
@@ -333,7 +417,8 @@ const Auditor = (() => {
           : `${V.length} vínculos em toda a EAP põem ${RegrasPrecedencia.label(r.depois)} antes de ${RegrasPrecedencia.label(r.antes)} — um por local (pavimento, final, torre). Inverter só um não muda o cronograma da obra: todos precisam virar juntos.`)
           + (noCritico ? `\n${noCritico} deles envolvem tarefa no caminho crítico, então a inversão mexe na data final.` : `\nNenhum deles está no caminho crítico: a inversão reorganiza folga, sem mudar a data final.`)
           + (V.length > 1 ? `\n\nPrimeiros:\n${amostra}${V.length > 6 ? `\n… e outros ${V.length - 6}` : ''}` : ''),
-        motivo: r.motivo, risco: r.risco,
+        motivo: r.motivo + '\n(Referência genérica de execução, não o padrão desta obra — se aqui é diferente de propósito, registre e ele para de perguntar.)',
+        risco: r.risco,
         sugestao: V.length === 1
           ? `Inverter o vínculo: "${V[0].nomePara}" passa a ser predecessora de "${V[0].nomeDe}".`
           : `Inverter os ${V.length} vínculos de uma vez, cada um no seu local. O sistema simula o efeito na data final e no caminho crítico antes de aplicar.`,
@@ -343,37 +428,18 @@ const Auditor = (() => {
           labelAntes: RegrasPrecedencia.label(r.antes), labelDepois: RegrasPrecedencia.label(r.depois) } });
     }
 
-    // Serviços que existem na obra mas não estão amarrados entre si, mesmo
-    // havendo regra pra eles. Não é erro de vínculo — é vínculo FALTANDO, que é
-    // mais perigoso porque nada no sistema reclama.
-    const porServico = new Map();
-    for (const t of folhas) {
-      for (const s of RegrasPrecedencia.classificar(t.nome)) {
-        if (!porServico.has(s)) porServico.set(s, []);
-        porServico.get(s).push(t);
-      }
-    }
-    for (const r of RegrasPrecedencia.todasAsRegras()) {
-      if (r.severidade !== 'alta') continue;
-      const A = porServico.get(r.antes), B = porServico.get(r.depois);
-      if (!A || !B) continue;
-      // Só reclama quando o serviço "depois" começa antes do "antes" terminar em
-      // TODA a obra — aí é ordem trocada de fato, não só falta de vínculo local.
-      let iniB = '', fimA = '';
-      for (const t of B) { const n = rede.nos.get(t.id); if (n && n.es && (!iniB || n.es < iniB)) iniB = n.es; }
-      for (const t of A) { const n = rede.nos.get(t.id); if (n && n.ef && (!fimA || n.ef > fimA)) fimA = n.ef; }
-      if (!iniB || !fimA || iniB >= fimA) continue;
-      const jaTemVinculo = B.some(t => _predParse(t.predecessora).some(p => A.some(a => a.id === p.id)));
-      if (jaTemVinculo) continue;
-      add({ chave: `ordem_global:${r.antes}>${r.depois}`, ctx: _assinatura([iniB, fimA]),
-        tipo: 'ordem_global_invertida', severidade: 'media',
-        titulo: `${RegrasPrecedencia.label(r.depois)} começa antes de ${RegrasPrecedencia.label(r.antes)} terminar`,
-        detalhe: `${RegrasPrecedencia.label(r.depois)} inicia em ${iniB}, e ${RegrasPrecedencia.label(r.antes)} só termina em ${fimA}. Não existe vínculo entre os dois grupos.`,
-        motivo: r.motivo, risco: r.risco,
-        sugestao: `Amarre as tarefas de ${RegrasPrecedencia.label(r.depois)} nas de ${RegrasPrecedencia.label(r.antes)} do mesmo local.`,
-        acoes: ['manter', 'ignorar'],
-        dados: { servicoAntes: r.antes, servicoDepois: r.depois, qtdAntes: A.length, qtdDepois: B.length } });
-    }
+    // REMOVIDA a checagem de "ordem global entre serviços".
+    //
+    // Ela comparava o PRIMEIRO início do serviço B com o ÚLTIMO término do
+    // serviço A na obra inteira, e acusava inversão. Num prédio isso está sempre
+    // "invertido" e não é erro: a elétrica do 1º pavimento começa muito antes da
+    // alvenaria do 16º terminar — é obra em linha de balanço, andar por andar.
+    // No RD06 gerou apontamentos sem sentido ("louças e metais começa antes de
+    // instalação hidráulica terminar") pela simples existência de 16 pavimentos.
+    //
+    // O que ela tentava achar — vínculo faltando entre dois serviços — é feito
+    // muito melhor pelo `vinculo_faltando_padrao`, que compara LOCAL POR LOCAL
+    // usando o padrão da própria obra, em vez de somar a obra inteira num número.
 
     // ---------- 3. DURAÇÃO x QUANTIDADE ----------
     for (const t of folhas) {
@@ -433,6 +499,82 @@ const Auditor = (() => {
       a.decisao = d;
     }
 
+    // ---------- AGREGAÇÃO ----------
+    // Rodar isto cru no RD06 (2.439 linhas) devolveu 4.401 pendências, sendo
+    // 2.180 de "data divergente" e 1.501 de "folga alta". Painel com 4.401 itens
+    // é o mesmo que painel nenhum: ninguém lê, e o que importa afunda no meio.
+    //
+    // E o número é enganoso: 2.180 datas divergentes NÃO são 2.180 problemas —
+    // são UM problema (o cronograma nunca foi recalculado pela própria rede) com
+    // 2.180 sintomas. Agregar não é esconder: é dizer a verdade sobre a causa,
+    // com a contagem e os exemplos na mão, e uma ação que resolve o conjunto.
+    const AGREGAR = {
+      data_divergente: { titulo: (n) => `${n} tarefas com data que não bate com a rede`,
+        motivo: 'Isto é um problema só: o cronograma não está recalculado pelos próprios vínculos. Enquanto a data gravada não é a que a rede produz, o Gantt mostra uma coisa e a lógica diz outra — e não se sabe qual das duas usar pra cobrar a equipe. Recalcular resolve o conjunto.',
+        sugestao: 'Ferramentas › Aplicar Calendário às Datas recalcula a obra inteira e mostra o de/para antes de aplicar.' },
+      folga_alta: { titulo: (n) => `${n} tarefas com folga alta`,
+        motivo: 'Folga alta em massa não é conforto: é falta de amarração. Tarefa que pode atrasar meses sem afetar o fim da obra quase sempre não está ligada em quem de fato depende dela — e por isso nunca entra no caminho crítico, escondendo risco real.',
+        sugestao: 'Ver os vínculos faltando apontados nesta mesma análise: costumam ser a mesma causa.' },
+      sem_sucessora: { titulo: (n) => `${n} tarefas sem sucessora`,
+        motivo: 'Sem sucessora a tarefa não empurra nada: atrasar ela não aparece em lugar nenhum, e ela nunca entra no caminho crítico mesmo que na obra real trave a frente seguinte.',
+        sugestao: 'Ligar no serviço que vem depois, ou num marco de encerramento da etapa.' },
+      sem_predecessora: { titulo: (n) => `${n} tarefas sem predecessora`,
+        motivo: 'Data fixa no meio do cronograma: quando a obra atrasa antes dela, ela não anda junto e o cronograma passa a mentir sem ninguém notar.',
+        sugestao: 'Amarrar no serviço que precisa terminar antes.' },
+      vencida_sem_conclusao: { titulo: (n) => `${n} tarefas com prazo vencido e não concluídas`,
+        motivo: 'Tarefa vencida e aberta empurra tudo que depende dela, mas enquanto a data não é revista o cronograma continua mostrando a obra no prazo.',
+        sugestao: 'Atualizar o avanço, ou reprogramar e deixar a rede propagar.' },
+      lag_alto: { titulo: (n) => `${n} vínculos com defasagem longa`,
+        motivo: 'Espera longa embutida em defasagem quase sempre é uma tarefa que existe na obra e não está no cronograma — cura, teste, entrega de material, aprovação. Como defasagem não aparece no Gantt nem no histograma, esse tempo fica invisível.',
+        sugestao: 'Onde for cura, teste ou prazo de entrega, criar a tarefa com esse nome e essa duração.' },
+      duracao_longa: { titulo: (n) => `${n} tarefas com duração muito longa`,
+        motivo: 'Tarefa longa não é medível: o avanço vira chute e o atraso só aparece tarde.',
+        sugestao: 'Quebrar por local (pavimento, torre) ou por etapa.' },
+      ciclo: { titulo: (n) => `${n} tarefas em dependência circular`,
+        motivo: 'Rede de precedência não admite ciclo: não existe ordem possível, então estas tarefas ficam sem data e sem folga calculáveis e saem do caminho crítico sem motivo. É o erro mais grave da lista.',
+        sugestao: 'Abrir a coluna Predecessora das tarefas listadas e remover o vínculo que fecha o laço.' },
+      perc_sem_inicio_real: { titulo: (n) => `${n} tarefas com avanço lançado e sem início real`,
+        motivo: 'Sem início real não há como medir produtividade nem projetar término — o avanço fica sem âncora no tempo e o histórico da equipe não se forma.',
+        sugestao: 'Lançar a data em que o serviço começou de verdade.' },
+      data_real_futura: { titulo: (n) => `${n} tarefas com data real no futuro`,
+        motivo: 'Data real é registro do que aconteceu. No futuro é erro de digitação, e contamina medição, curva S e qualquer projeção.',
+        sugestao: 'Corrigir as datas.' },
+    };
+    const LIMITE_AGREGA = 8;
+
+    const porTipoBruto = new Map();
+    for (const a of achados) {
+      if (!AGREGAR[a.tipo]) continue;
+      if (!porTipoBruto.has(a.tipo)) porTipoBruto.set(a.tipo, []);
+      porTipoBruto.get(a.tipo).push(a);
+    }
+    let finais = achados.filter(a => !AGREGAR[a.tipo] || (porTipoBruto.get(a.tipo) || []).length <= LIMITE_AGREGA);
+    for (const [tipo, grupo] of porTipoBruto) {
+      if (grupo.length <= LIMITE_AGREGA) continue;
+      const cfg = AGREGAR[tipo];
+      const sev = grupo.some(a => a.severidade === 'alta') ? 'alta'
+        : grupo.filter(a => a.severidade === 'media').length ? 'media' : 'baixa';
+      const decididos = grupo.filter(a => a.decidido).length;
+      const abertosG = grupo.filter(a => !a.decidido);
+      if (!abertosG.length) continue; // tudo já decidido: não reabre agregado
+      const amostra = abertosG.slice(0, 10).map(a =>
+        `• ${a.tarefaCodigo ? a.tarefaCodigo + ' ' : ''}${a.tarefaNome}${a.detalhe ? ' — ' + a.detalhe.split('\n')[0] : ''}`).join('\n');
+      finais.push(_achado({
+        chave: `agregado:${tipo}`,
+        ctx: _assinatura([abertosG.length]),
+        tipo, severidade: sev,
+        titulo: cfg.titulo(abertosG.length),
+        detalhe: `${abertosG.length} ocorrência(s)${decididos ? `, além de ${decididos} já decidida(s)` : ''}.\n\n${amostra}`
+          + (abertosG.length > 10 ? `\n… e outras ${abertosG.length - 10}` : ''),
+        motivo: cfg.motivo, sugestao: cfg.sugestao,
+        acoes: ['ignorar'],
+        dados: { agregado: true, quantidade: abertosG.length,
+          itens: abertosG.map(a => ({ id: a.tarefaId, nome: a.tarefaNome, codigo: a.tarefaCodigo, detalhe: a.detalhe })) },
+      }));
+    }
+    achados.length = 0;
+    for (const a of finais) achados.push(a);
+
     const ORDEM_SEV = { alta: 0, media: 1, baixa: 2 };
     achados.sort((x, y) => (ORDEM_SEV[x.severidade] - ORDEM_SEV[y.severidade]) || x.tipo.localeCompare(y.tipo));
 
@@ -441,7 +583,7 @@ const Auditor = (() => {
     for (const a of abertos) porTipo[a.tipo] = (porTipo[a.tipo] || 0) + 1;
 
     return {
-      achados, abertos, rede,
+      achados, abertos, rede, aprendido,
       resumo: {
         tarefas: sorted.length, folhas: folhas.length,
         total: achados.length, decididos: achados.length - abertos.length,
@@ -461,10 +603,29 @@ const Auditor = (() => {
   // livre. Só o resumo e os achados abertos — nunca a planilha inteira. Uma obra
   // de 800 tarefas vira alguns kB. Se a API cair, nada disso é necessário: o
   // painel e as decisões continuam funcionando offline.
-  function dossie(resultado, limite) {
+  function dossie(resultado, limite, tarefas) {
     const lim = limite || 60;
+    // O bloco repetitivo é o que torna a conversa em linguagem natural viável.
+    // O RD06 tem 2.439 linhas, mas 16 pavimentos são idênticos: o pavimento-tipo
+    // são ~60 serviços em ordem cronológica, que cabem numa leitura linha por
+    // linha. Vai junto no dossiê pra quem for julgar a sequência ter o recorte
+    // certo em vez da planilha inteira.
+    let blocoTipo = null;
+    const ap = resultado.aprendido;
+    if (ap && ap.blocos && ap.blocos.length && typeof PadraoAprendido !== 'undefined') {
+      const b = ap.blocos[0];
+      if (b.repeticoes >= 3 && tarefas) {
+        try { blocoTipo = PadraoAprendido.dossieDoBloco(ap, b, tarefas); } catch (e) { blocoTipo = null; }
+      }
+    }
     return {
       resumo: resultado.resumo,
+      blocoRepetitivo: blocoTipo,
+      padraoDaObra: ap ? {
+        servicos: ap.resumo.servicos, paresDistintos: ap.resumo.paresDistintos,
+        vinculos: ap.resumo.vinculos,
+        observacao: 'Estes pares foram CONTADOS no próprio cronograma, não vieram de regra externa.',
+      } : null,
       achados: resultado.abertos.slice(0, lim).map(a => ({
         chave: a.chave, tipo: a.tipo, severidade: a.severidade,
         tarefa: a.tarefaCodigo ? `${a.tarefaCodigo} ${a.tarefaNome}` : a.tarefaNome,

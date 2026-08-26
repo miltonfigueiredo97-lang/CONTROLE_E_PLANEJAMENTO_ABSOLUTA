@@ -7917,7 +7917,7 @@ const Planejamento = (() => {
   // Vai só o resumo e os achados abertos — nunca a planilha inteira.
   function auditorCopiarDossie(){
     if(!_audit)return;
-    const d=Auditor.dossie(_audit);
+    const d=Auditor.dossie(_audit,60,tarefas);
     const txt=`Sou responsável por esta obra e preciso de ajuda de planejamento. Segue o diagnóstico do meu cronograma (gerado pelo próprio sistema, offline).\n\n`+
       JSON.stringify(d,null,1)+
       `\n\nMe ajude a decidir o que atacar primeiro e por quê. Onde discordar do diagnóstico, diga.`;

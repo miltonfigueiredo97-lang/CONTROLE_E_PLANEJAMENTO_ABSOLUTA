@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.21.1',
+  versaoAtual: 'V3.22.0',
 
   versoes: [
     {
@@ -10712,6 +10712,26 @@ const NotasVersao = {
         "NOVA FERRAMENTA — \\\"Inverter Vínculos entre Grupos\\\" no menu de Ferramentas: escolha dois grupos da EAP e o sistema acha todos os vínculos entre eles, mostra a lista, simula e inverte de uma vez. Serve pro caso em que a decisão de ordem é sua e não existe regra: gesso depois do contrapiso, por exemplo, é prática legítima (o gesseiro usa o contrapiso como piso de trabalho e referência de nível), então o sistema não afirma ordem ali — mas te dá a ferramenta pra trocar quando você decidir.",
         "Quando não existe vínculo nenhum entre os dois grupos, a ferramenta diz isso em vez de fingir que fez algo: sem vínculo não há o que inverter, e o que falta é criar os vínculos.",
         "Verificação: 12 testes sobre uma EAP hierárquica de 2 finais × 4 pavimentos, incluindo a prova de que invertendo um vínculo só o problema continua e sobram os outros 7, e que nenhum vínculo cruza final ou pavimento na inversão em massa."
+      ]
+    },
+    {
+      "versao": "V3.22.0",
+      "data": "2026-08-26",
+      "tipo": "funcionalidade",
+      "titulo": "Verificador passa a aprender o padrão da própria obra, em vez de aplicar regra genérica",
+      "itens": [
+        "O QUE ESTAVA ERRADO: o Verificador comparava o cronograma com 18 regras de precedência genéricas escritas sem nunca ter olhado um cronograma desta empresa. Rodando no RD06 ESSENCE RESIDENCE (2.439 linhas) o problema apareceu na hora: a regra \\\"impermeabilização antes do contrapiso\\\" contrariava o cronograma real 42 vezes — e o cronograma estava certo. O contrapiso dá o caimento, a impermeabilização vem sobre ele, o teste de lâmina d'água valida, e só então o revestimento. A regra teria gerado 42 alertas falsos.",
+        "NOVO MOTOR: o sistema lê o cronograma e conta, par por par, quantas vezes cada serviço precede cada outro. Num prédio o mesmo conjunto se repete por pavimento, então o padrão emerge por contagem, e o apontamento passa a ser o DESVIO do padrão da própria obra, com número: \\\"42 vezes assim, 2 vezes ao contrário, aqui estão as 2\\\". Zero chute. No RD06 isso rendeu 253 pares de precedência aprendidos — 14× mais conhecimento de execução que as 18 regras, e conhecimento da própria empresa.",
+        "USA A SUA CLASSIFICAÇÃO: em vez de adivinhar o serviço pelo nome da tarefa, o motor usa a Subcategoria que você já preenche (\\\"Forro de Gesso (teto)\\\", \\\"Emboço (reboco interno de regularização)\\\", \\\"Teste de Impermeabilização\\\"). Sua taxonomia é mais precisa que qualquer dicionário que eu montasse.",
+        "ACHADO NOVO E O MAIS PERIGOSO — VÍNCULO FALTANDO: se o padrão liga dois serviços em 12 pavimentos e num não liga, aquele local tem lógica furada. Vínculo ausente é o erro mais silencioso que existe: nada reclama, a data parece certa, mas quando a antecessora atrasa a tarefa não anda junto. No RD06 encontrou 25 padrões com furo em 109 locais — com concentração clara do 12º ao 16º pavimento, assinatura de pavimento duplicado sem levar os vínculos.",
+        "DESAMBIGUAÇÃO DE ETAPA: a subcategoria \\\"Demão de Pintura\\\" cobre 1ª e 2ª demão, e o par com \\\"Instalação de Luminárias\\\" aparecia 20× em cada sentido. Não era contradição: a sequência real é 1ª demão → luminárias → 2ª demão. O motor agora separa as etapas pelo ordinal do nome, e os 20 falsos positivos desapareceram.",
+        "SUPRESSÃO POR AMBIENTE: \\\"1ª Demão Pintura Final 01 → Massa Corrida Hall\\\" aparecia 16× contra o padrão e está correto — a equipe pinta os apartamentos e depois o hall. Vínculo entre ambientes diferentes é sequência de frente de serviço, não ordem tecnológica invertida, e não é mais apontado.",
+        "AGREGAÇÃO: a primeira rodada no RD06 devolveu 4.401 pendências, sendo 2.180 de \\\"data divergente\\\". Painel com 4.401 itens é o mesmo que painel nenhum. E o número mentia: 2.180 datas divergentes não são 2.180 problemas, são UM (o cronograma nunca foi recalculado pela própria rede) com 2.180 sintomas. Agora sai agregado, com a contagem, exemplos e a ação que resolve o conjunto. Resultado: 44 pendências, 19 graves.",
+        "REGRAS GENÉRICAS REBAIXADAS: deixam de ser autoridade e viram referência, sempre atrás do padrão observado. Quando o padrão da obra já falou sobre um par, a regra genérica se cala. E quando o cronograma faz algo de forma consistente em 5+ lugares, a regra não tem autoridade para contrariar repetição deliberada.",
+        "DUAS REGRAS MINHAS FORAM CORRIGIDAS PELOS SEUS DADOS. (1) \\\"impermeabilização antes de contrapiso\\\" passou a afirmar só o que é inequívoco: impermeabilização e teste antes do REVESTIMENTO que os cobre. (2) alvenaria de vedação e alvenaria estrutural viraram serviços distintos, porque a ordem em relação à laje é invertida entre elas — e entre alvenaria estrutural e laje o sistema agora NÃO afirma ordem nenhuma, porque ela alterna por pavimento (laje do 5º → alvenaria do 6º → laje do 6º). Tentar afirmar gerou 17 alertas falsos no RD06 e a regra foi removida.",
+        "CHECAGEM REMOVIDA: \\\"ordem global entre serviços\\\" comparava o primeiro início de um serviço com o último término de outro na obra inteira. Num prédio isso está sempre \\\"invertido\\\" e não é erro — a elétrica do 1º pavimento começa antes da alvenaria do 16º terminar, porque é obra em linha de balanço. Gerava apontamento sem sentido só pela existência de 16 pavimentos.",
+        "RECORTE DO BLOCO REPETITIVO: o sistema identifica que 16 pavimentos do RD06 são idênticos e extrai o pavimento-tipo — 60 serviços em ordem cronológica real, pela data média. É o recorte que torna a análise em linguagem natural viável: 16 kB em vez da planilha de 2.439 linhas, 56× menor, e vai junto no \\\"Copiar dossiê\\\". A sequência é ordenada por data e não por ordenação topológica de propósito: entre dois serviços sem vínculo a topológica devolve ordem arbitrária, e é justamente essa ausência de vínculo que interessa auditar.",
+        "O que continua igual: calendário, CPM, folga e caminho crítico. Aquilo é matemática, está provado por teste, e não dependia de opinião nenhuma sobre sequência de obra."
       ]
     }
   ],
