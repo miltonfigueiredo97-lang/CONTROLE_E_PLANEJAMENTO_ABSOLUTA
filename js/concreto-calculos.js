@@ -646,6 +646,39 @@ const ConcretoCalculos = (() => {
     return melhor ? melhor.m : null;
   }
 
+  // ── % de sobreposição de área — usado tanto pra montar uma Concretagem
+  // desenhando livre (área desenhada × cada peça já marcada na planta)
+  // quanto pra "Controlar pelo Projeto" no lançamento de BT (mesma conta,
+  // só que o resultado vira o % da BT em vez do % da Concretagem).
+  // Amostra pontos dentro do bounding box do polígono ALVO (a peça) e
+  // conta quantos caem também dentro da UNIÃO dos traços desenhados —
+  // funciona pra formas livres/irregulares sem precisar de clipping de
+  // polígono exato.
+  function pctSobreposicao(pontosAlvo, tracos, resolucao) {
+    const res = resolucao || 48;
+    if (!pontosAlvo || pontosAlvo.length < 3 || !tracos || !tracos.length) return 0;
+    let minX = 1, minY = 1, maxX = 0, maxY = 0;
+    pontosAlvo.forEach(p => {
+      if (p.x < minX) minX = p.x; if (p.x > maxX) maxX = p.x;
+      if (p.y < minY) minY = p.y; if (p.y > maxY) maxY = p.y;
+    });
+    if (maxX <= minX || maxY <= minY) return 0;
+    const tracosValidos = tracos.filter(t => t && t.length >= 3);
+    if (!tracosValidos.length) return 0;
+    let dentroAlvo = 0, dentroAmbos = 0;
+    for (let iy = 0; iy < res; iy++) {
+      const y = minY + (iy + 0.5) / res * (maxY - minY);
+      for (let ix = 0; ix < res; ix++) {
+        const x = minX + (ix + 0.5) / res * (maxX - minX);
+        const p = { x, y };
+        if (!_pontoEmPoligono(p, pontosAlvo)) continue;
+        dentroAlvo++;
+        if (tracosValidos.some(t => _pontoEmPoligono(p, t))) dentroAmbos++;
+      }
+    }
+    return dentroAlvo ? (dentroAmbos / dentroAlvo * 100) : 0;
+  }
+
   return {
     fmt2, fmt1, fmt4,
     TIPOS, TIPO_ORDEM, CORES, TIPOS_FUNDACAO,
@@ -657,7 +690,7 @@ const ConcretoCalculos = (() => {
     calcVolViga, calcVolFundacao,
     calcAreaIsopor, calcMetragemTrelica, calcTotalTrelica, calcVolLaje,
     posRelativa, canvasParaDataURLLimitado, detectarAreas, segmentarAreas,
-    marcadorMaisProximo,
+    marcadorMaisProximo, pctSobreposicao,
   };
 })();
 

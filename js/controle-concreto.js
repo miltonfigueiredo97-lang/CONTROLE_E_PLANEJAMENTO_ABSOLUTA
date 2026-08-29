@@ -43,6 +43,12 @@ const ControleConcreto = (() => {
   let vincularListaAberta = false;
   let _imagemPranchaCacheId = null;
   let _imagemPranchaCache = null;
+  // Montar Concretagem desenhando livre (V2.0 parte 2)
+  let desenhoLivreTracos = [];
+  let desenhoLivreEmAndamento = null;
+  let concLivre = null; // { numero, data, resultados: null|[{pecaId,peca,pct}] }
+  // "Controlar pelo Projeto" no lançamento de BT (V2.0 parte 2)
+  let btProjeto = null; // { pranchaId, pecaIds, tracos:[], emAndamento:null, resultados:null }
 
   // Abas e filtros
   let aba = 'operacional'; // operacional | relatorios
@@ -842,6 +848,9 @@ const ControleConcreto = (() => {
           <label style="display:flex;align-items:center;gap:5px;font-size:0.75rem;color:var(--cor-texto-muted);cursor:pointer;white-space:nowrap;">
             <input type="checkbox" ${bt.esconder100 ? 'checked' : ''} onchange="CCON.btEsconder100(this.checked)"> Esconder 100%
           </label>
+        </div>
+        <div style="margin-bottom:10px;">
+          <button class="btn btn-secundario btn-sm" data-perm="controleConcreto:criar:bt" onclick="CCON.abrirBtProjeto()">🗺️ Controlar pelo Projeto</button>
         </div>
         <div id="cc-bt-linhas">
           ${bt.linhas.map((l, i) => {
@@ -1801,14 +1810,20 @@ const ControleConcreto = (() => {
         ${poligonoPontosPlanta.map(p => `<circle cx="${(p.x * 100).toFixed(3)}" cy="${(p.y * 100).toFixed(3)}" r="0.6" fill="#2563eb"/>`).join('')}
       </svg>`;
     }
+    let tracosLivres = '';
+    if (modoPlanta === 'concretagem-livre' && desenhoLivreTracos.length) {
+      tracosLivres = `<svg viewBox="0 0 100 100" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:3;">
+        ${desenhoLivreTracos.map(t => `<polygon points="${t.map(p => `${(p.x * 100).toFixed(3)},${(p.y * 100).toFixed(3)}`).join(' ')}" fill="#a855f755" stroke="#a855f7" stroke-width="0.5" vector-effect="non-scaling-stroke"/>`).join('')}
+      </svg>`;
+    }
     const bg = imagemBase64
       ? `<img src="${imagemBase64}" style="width:100%;height:100%;display:block;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;pointer-events:none;" draggable="false">`
       : `<div style="width:100%;height:100%;background:repeating-linear-gradient(45deg,#f1f5f9,#f1f5f9 10px,#e2e8f0 10px,#e2e8f0 20px);"></div>`;
     const semSelecao = 'user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;';
-    const cursorModo = modoPlanta === 'poligono' ? 'cursor:crosshair;' : 'cursor:pointer;';
+    const cursorModo = (modoPlanta === 'poligono' || modoPlanta === 'concretagem-livre') ? 'cursor:crosshair;' : 'cursor:pointer;';
     return `<div class="cc-plan-scroll" style="overflow:auto;max-height:600px;border:1px solid #e2e8f0;border-radius:8px;background:#fff;overscroll-behavior:contain;${semSelecao}">
       <div id="cc-plan-stage" style="position:relative;width:${w}px;height:${h}px;touch-action:none;${cursorModo}${semSelecao}" onclick="CCON.onCliquePlanta(event)">
-        ${bg}${poligonos}${desenhoAtual}
+        ${bg}${poligonos}${desenhoAtual}${tracosLivres}
       </div>
     </div>`;
   }
@@ -1841,6 +1856,7 @@ const ControleConcreto = (() => {
         ${imagem ? `
           <button class="btn btn-dark btn-sm" data-perm="controleConcreto:criar:marcador" onclick="CCON.detectarAreasPlanta()">🔍 Detectar Áreas Automaticamente</button>
           <button class="btn ${modoPlanta === 'poligono' ? 'btn-primario' : 'btn-secundario'} btn-sm" data-perm="controleConcreto:criar:marcador" onclick="CCON.toggleDesenhoManualPlanta()">✏️ Desenhar Área Manual</button>
+          <button class="btn ${modoPlanta === 'concretagem-livre' ? 'btn-primario' : 'btn-secundario'} btn-sm" data-perm="controleConcreto:criar:concretagem" onclick="CCON.toggleConcretagemLivre()">◈ Montar Concretagem</button>
         ` : ''}
         <span class="text-sm text-muted">${marcs.length} área(s) marcada(s) · ${vinculadas} vinculada(s)</span>
       </div>
@@ -1850,6 +1866,7 @@ const ControleConcreto = (() => {
           <button class="btn btn-primario btn-sm" onclick="CCON.concluirDesenhoPlanta()" ${poligonoPontosPlanta.length < 3 ? 'disabled' : ''}>✓ Concluir Área</button>
           <button class="btn btn-secundario btn-sm" onclick="CCON.cancelarDesenhoPlanta()">✕ Cancelar</button>
         </div>` : ''}
+      ${modoPlanta === 'concretagem-livre' ? _painelConcretagemLivreHTML() : ''}
       ${editandoFormaPlantaId ? `
         <div style="display:flex;gap:8px;margin-bottom:10px;">
           <button class="btn btn-primario btn-sm" onclick="CCON.concluirAjusteFormaPlanta()">✓ Salvar ajuste</button>
@@ -1860,6 +1877,7 @@ const ControleConcreto = (() => {
     `;
     Permissions.aplicarNaTela(el);
     if (editandoFormaPlantaId) _desenharHandlesEdicaoPlanta();
+    if (modoPlanta === 'concretagem-livre') _ligarEventosDesenhoLivre();
   }
 
   function onTrocarPranchaPlanta(id) {
@@ -2326,6 +2344,284 @@ const ControleConcreto = (() => {
     }
   }
 
+  // ── Montar Concretagem desenhando livre (V2.0 parte 2) ──
+  // Desenha uma ou mais áreas soltas sobre a planta; o sistema soma a
+  // sobreposição de cada área desenhada com cada peça já vinculada nesta
+  // prancha e monta a Concretagem sozinho, com o % de cada peça.
+  function _proximoNumeroConcSugerido() {
+    const nums = concretagens.map(c => parseInt(c.numero) || 0);
+    return nums.length ? Math.max(...nums) + 1 : 1;
+  }
+  function toggleConcretagemLivre() {
+    if (modoPlanta === 'concretagem-livre') { cancelarConcretagemLivre(); return; }
+    if (!Permissions.pode('controleConcreto', 'criar:concretagem')) { Utils.toast('Sem permissão para criar.', 'erro'); return; }
+    const marcs = marcadoresDaPranchaAtiva().filter(m => m.pecaId);
+    if (!marcs.length) { Utils.toast('Vincule ao menos uma área a uma peça antes de montar a concretagem por aqui.', 'erro'); return; }
+    modoPlanta = 'concretagem-livre';
+    editandoFormaPlantaId = null;
+    desenhoLivreTracos = []; desenhoLivreEmAndamento = null;
+    concLivre = { numero: String(_proximoNumeroConcSugerido()), data: new Date().toISOString().slice(0, 10), resultados: null };
+    renderPlanta();
+  }
+  function cancelarConcretagemLivre() {
+    modoPlanta = null; desenhoLivreTracos = []; desenhoLivreEmAndamento = null; concLivre = null;
+    renderPlanta();
+  }
+  function desfazerTracoLivre() { desenhoLivreTracos.pop(); concLivre.resultados = null; renderPlanta(); }
+  function concLivreUpd(campo, valor) { if (concLivre) concLivre[campo] = valor; }
+
+  function _painelConcretagemLivreHTML() {
+    if (!concLivre) return '';
+    return `
+      <div style="border:1px solid var(--cv-border,#e2e8f0);border-radius:8px;padding:12px;margin-bottom:10px;background:#faf5ff;">
+        <p class="text-sm text-muted" style="margin:0 0 8px;">Desenhe livremente por cima das áreas que fazem parte desta Concretagem (pode ser mais de uma área solta). Depois clique em Calcular.</p>
+        <div class="form-row" style="margin-bottom:8px;">
+          <div class="form-grupo" style="margin-bottom:0;"><label>Número</label><input type="text" inputmode="numeric" class="form-control" value="${esc(concLivre.numero)}" oninput="CCON.concLivreUpd('numero', this.value)"></div>
+          <div class="form-grupo" style="margin-bottom:0;"><label>Data</label><input type="date" class="form-control" value="${esc(concLivre.data)}" oninput="CCON.concLivreUpd('data', this.value)"></div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn btn-secundario btn-sm" onclick="CCON.desfazerTracoLivre()" ${!desenhoLivreTracos.length ? 'disabled' : ''}>↩ Desfazer traço</button>
+          <button class="btn btn-primario btn-sm" onclick="CCON.processarConcretagemLivre()" ${!desenhoLivreTracos.length ? 'disabled' : ''}>✓ Calcular Sobreposição</button>
+          <button class="btn btn-secundario btn-sm" onclick="CCON.cancelarConcretagemLivre()">✕ Cancelar</button>
+        </div>
+        ${concLivre.resultados ? `
+          <div style="margin-top:12px;border-top:1px solid var(--cv-border,#e2e8f0);padding-top:10px;">
+            <div style="font-weight:700;font-size:0.85rem;margin-bottom:6px;">${concLivre.resultados.length} peça(s) encontrada(s):</div>
+            ${concLivre.resultados.map(r => `<div class="text-sm" style="display:flex;justify-content:space-between;padding:3px 0;"><span>${esc(r.peca.nome)} <span class="text-muted">(${esc(r.peca.tipo)})</span></span><b>${r.pct}%</b></div>`).join('')}
+            <button class="btn btn-primario btn-sm" style="margin-top:10px;" onclick="CCON.salvarConcretagemLivre()">✓ Confirmar e Salvar Concretagem</button>
+          </div>` : ''}
+      </div>`;
+  }
+
+  function _ligarEventosDesenhoLivre() {
+    const stage = document.getElementById('cc-plan-stage');
+    if (!stage || modoPlanta !== 'concretagem-livre') return;
+    let desenhando = false;
+    const addPonto = ev => { desenhoLivreEmAndamento.push(CC.posRelativa(ev, stage)); _redesenharTracoAoVivo(); };
+    const onDown = e => { e.preventDefault(); desenhando = true; desenhoLivreEmAndamento = []; addPonto(e.touches ? e.touches[0] : e); };
+    const onMove = e => { if (!desenhando) return; addPonto(e.touches ? e.touches[0] : e); };
+    const onUp = () => {
+      if (!desenhando) return;
+      desenhando = false;
+      if (desenhoLivreEmAndamento && desenhoLivreEmAndamento.length >= 3) { desenhoLivreTracos.push(desenhoLivreEmAndamento); concLivre.resultados = null; }
+      desenhoLivreEmAndamento = null;
+      renderPlanta();
+    };
+    stage.addEventListener('mousedown', onDown);
+    stage.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+    stage.addEventListener('touchstart', onDown, { passive: false });
+    stage.addEventListener('touchmove', onMove, { passive: false });
+    document.addEventListener('touchend', onUp);
+  }
+  function _redesenharTracoAoVivo() {
+    const stage = document.getElementById('cc-plan-stage');
+    if (!stage || !desenhoLivreEmAndamento) return;
+    let poly = document.getElementById('cc-plan-live-poly');
+    if (!poly) {
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.setAttribute('viewBox', '0 0 100 100'); svg.setAttribute('preserveAspectRatio', 'none');
+      svg.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:5;';
+      poly = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+      poly.id = 'cc-plan-live-poly';
+      poly.setAttribute('fill', 'none'); poly.setAttribute('stroke', '#a855f7'); poly.setAttribute('stroke-width', '0.5'); poly.setAttribute('vector-effect', 'non-scaling-stroke');
+      svg.appendChild(poly);
+      stage.appendChild(svg);
+    }
+    poly.setAttribute('points', desenhoLivreEmAndamento.map(p => `${p.x * 100},${p.y * 100}`).join(' '));
+  }
+
+  function processarConcretagemLivre() {
+    if (!desenhoLivreTracos.length) { Utils.toast('Desenhe ao menos uma área.', 'erro'); return; }
+    const marcs = marcadoresDaPranchaAtiva().filter(m => m.pecaId);
+    const resultados = [];
+    marcs.forEach(m => {
+      const pct = CC.pctSobreposicao(m.pontos, desenhoLivreTracos);
+      if (pct >= 2) {
+        const p = pecas.find(x => x.id === m.pecaId);
+        if (p) resultados.push({ pecaId: p.id, peca: p, pct: Math.min(100, Math.round(pct)) });
+      }
+    });
+    if (!resultados.length) { Utils.toast('Nenhuma peça vinculada foi coberta pelo desenho.', 'erro'); return; }
+    concLivre.resultados = resultados;
+    renderPlanta();
+  }
+
+  async function salvarConcretagemLivre() {
+    if (!Permissions.pode('controleConcreto', 'criar:concretagem')) { Utils.toast('Sem permissão para criar.', 'erro'); return; }
+    if (!concLivre || !concLivre.resultados || !concLivre.resultados.length) return;
+    const numero = parseInt(concLivre.numero) || 0;
+    if (!numero) { Utils.toast('Informe o número da concretagem.', 'erro'); return; }
+    Utils.mostrarLoading();
+    try {
+      const concExistente = concretagens.find(c => c.numero === numero);
+      const concId = concExistente ? concExistente.id
+        : await Database.criar(obraId, COL_CONCS, { numero, data: concLivre.data || new Date().toISOString().slice(0, 10), descricao: '', obraId }, CC.genId('conc'));
+      const ops = [];
+      concLivre.resultados.forEach(r => {
+        const existentePC = pecaConc.find(pc => pc.pecaId === r.pecaId && pc.concretagemId === concId);
+        if (existentePC) ops.push({ type: 'update', ref: Database.ref(obraId, COL_PC).doc(existentePC.id), data: { pctConcretagem: r.pct } });
+        else ops.push({ type: 'set', ref: Database.ref(obraId, COL_PC).doc(CC.genId('pc')), data: { pecaId: r.pecaId, concretagemId: concId, pctConcretagem: r.pct, obraId } });
+      });
+      for (let i = 0; i < ops.length; i += 400) await Database.batchWrite(ops.slice(i, i + 400));
+      const qtd = concLivre.resultados.length;
+      modoPlanta = null; desenhoLivreTracos = []; desenhoLivreEmAndamento = null; concLivre = null;
+      await carregar();
+      Utils.toast(`✓ Concretagem Nº${numero} montada com ${qtd} peça(s)!`, 'sucesso');
+    } catch (e) {
+      Utils.toast('Erro ao salvar: ' + e.message, 'erro');
+    } finally {
+      Utils.esconderLoading();
+    }
+  }
+
+  // ── "Controlar pelo Projeto" no lançamento de BT (V2.0 parte 2) ──
+  // Mesma conta de sobreposição, só que o resultado preenche o % da BT
+  // (dentro da concretagem já selecionada) em vez de montar a concretagem.
+  function _marcadoresBtProjeto() {
+    if (!btProjeto) return [];
+    return marcadoresProjeto.filter(m => m.pranchaId === btProjeto.pranchaId && m.pecaId && btProjeto.pecaIds.includes(m.pecaId));
+  }
+
+  function abrirBtProjeto() {
+    if (!bt || !bt.concId) { Utils.toast('Selecione a concretagem primeiro.', 'erro'); return; }
+    const pecaIds = pecaConc.filter(pc => pc.concretagemId === bt.concId).map(pc => pc.pecaId);
+    const marcs = marcadoresProjeto.filter(m => m.pecaId && pecaIds.includes(m.pecaId));
+    if (!marcs.length) { Utils.toast('Nenhuma peça desta concretagem foi marcada na Planta do Projeto ainda.', 'erro'); return; }
+    const pranchaIds = [...new Set(marcs.map(m => m.pranchaId))];
+    btProjeto = { pranchaId: pranchaIds[0], pecaIds, tracos: [], emAndamento: null, resultados: null };
+    Utils.abrirModal('modal-cc-bt-projeto');
+    _renderBtProjetoBody();
+  }
+  function onTrocarPranchaBtProjeto(id) {
+    btProjeto.pranchaId = id; btProjeto.tracos = []; btProjeto.emAndamento = null; btProjeto.resultados = null;
+    _renderBtProjetoBody();
+  }
+  function desfazerTracoBtProjeto() { btProjeto.tracos.pop(); btProjeto.resultados = null; _renderBtProjetoBody(); }
+  function cancelarBtProjeto() { Utils.fecharModal('modal-cc-bt-projeto'); btProjeto = null; }
+
+  function _btProjetoStageHTML(prancha, imagemBase64, marcadores) {
+    const W = CC.num(prancha.imgWidthPx) || 800, H = CC.num(prancha.imgHeightPx) || 500;
+    const poligonos = (marcadores || []).map(m => {
+      const pts = m.pontos.map(p => `${(p.x * 100).toFixed(3)},${(p.y * 100).toFixed(3)}`).join(' ');
+      return `<polygon points="${pts}" fill="#22c55e33" stroke="#22c55e" stroke-width="0.4" vector-effect="non-scaling-stroke"/>`;
+    }).join('');
+    const tracos = (btProjeto.tracos || []).map(t => {
+      const pts = t.map(p => `${(p.x * 100).toFixed(3)},${(p.y * 100).toFixed(3)}`).join(' ');
+      return `<polygon points="${pts}" fill="#a855f755" stroke="#a855f7" stroke-width="0.5" vector-effect="non-scaling-stroke"/>`;
+    }).join('');
+    const semSelecao = 'user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;';
+    const bg = `<img src="${imagemBase64}" style="width:100%;height:100%;display:block;user-select:none;pointer-events:none;" draggable="false">`;
+    return `<div style="overflow:auto;max-height:420px;border:1px solid #e2e8f0;border-radius:8px;background:#fff;overscroll-behavior:contain;${semSelecao}">
+      <div id="cc-btproj-stage" style="position:relative;width:${W}px;height:${H}px;touch-action:none;cursor:crosshair;${semSelecao}">
+        ${bg}
+        <svg viewBox="0 0 100 100" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;">${poligonos}${tracos}</svg>
+      </div>
+    </div>`;
+  }
+
+  async function _renderBtProjetoBody() {
+    const el = document.getElementById('cc-bt-projeto-body');
+    if (!el || !btProjeto) return;
+    const pranchasComPeca = [...new Set(marcadoresProjeto.filter(m => m.pecaId && btProjeto.pecaIds.includes(m.pecaId)).map(m => m.pranchaId))]
+      .map(id => pranchas.find(p => p.id === id)).filter(Boolean);
+    const pr = pranchas.find(p => p.id === btProjeto.pranchaId);
+    const marcs = _marcadoresBtProjeto();
+    const imagem = pr ? await _obterImagemPrancha(pr.id) : null;
+    if (!btProjeto) return; // pode ter sido cancelado enquanto a imagem carregava
+    el.innerHTML = `
+      ${pranchasComPeca.length > 1 ? `
+        <div class="form-grupo">
+          <label>Prancha</label>
+          <select class="form-control" onchange="CCON.onTrocarPranchaBtProjeto(this.value)">
+            ${pranchasComPeca.map(p => `<option value="${p.id}" ${p.id === btProjeto.pranchaId ? 'selected' : ''}>${esc(p.nome)}</option>`).join('')}
+          </select>
+        </div>` : ''}
+      <p class="text-sm text-muted">Desenhe livremente por cima das peças que esta BT cobriu (pode ser mais de uma área).</p>
+      <div style="display:flex;gap:8px;margin-bottom:8px;">
+        <button class="btn btn-secundario btn-sm" onclick="CCON.desfazerTracoBtProjeto()" ${!btProjeto.tracos.length ? 'disabled' : ''}>↩ Desfazer traço</button>
+        <button class="btn btn-primario btn-sm" onclick="CCON.calcularBtProjeto()" ${!btProjeto.tracos.length ? 'disabled' : ''}>✓ Calcular</button>
+      </div>
+      ${imagem ? _btProjetoStageHTML(pr, imagem, marcs) : '<div class="cc-empty">Esta prancha não tem imagem importada.</div>'}
+      ${btProjeto.resultados ? `
+        <div style="margin-top:14px;border-top:1px solid var(--cv-border,#e2e8f0);padding-top:12px;">
+          <div style="font-weight:700;margin-bottom:8px;">${btProjeto.resultados.length} peça(s) encontrada(s):</div>
+          ${btProjeto.resultados.map(r => `<div class="text-sm" style="display:flex;justify-content:space-between;padding:4px 0;"><span>${esc(r.peca.nome)} <span class="text-muted">(${esc(r.peca.tipo)})</span></span><b>${r.pct}%</b></div>`).join('')}
+          <button class="btn btn-primario btn-sm" style="margin-top:10px;" onclick="CCON.usarResultadoBtProjeto()">✓ Usar estes valores na BT</button>
+        </div>` : ''}
+    `;
+    _ligarEventosDesenhoBtProjeto();
+  }
+
+  function _ligarEventosDesenhoBtProjeto() {
+    const stage = document.getElementById('cc-btproj-stage');
+    if (!stage || !btProjeto) return;
+    let desenhando = false;
+    const addPonto = ev => { btProjeto.emAndamento.push(CC.posRelativa(ev, stage)); _redesenharTracoAoVivoBtProjeto(); };
+    const onDown = e => { e.preventDefault(); desenhando = true; btProjeto.emAndamento = []; addPonto(e.touches ? e.touches[0] : e); };
+    const onMove = e => { if (!desenhando) return; addPonto(e.touches ? e.touches[0] : e); };
+    const onUp = () => {
+      if (!desenhando) return;
+      desenhando = false;
+      if (btProjeto.emAndamento && btProjeto.emAndamento.length >= 3) { btProjeto.tracos.push(btProjeto.emAndamento); btProjeto.resultados = null; }
+      btProjeto.emAndamento = null;
+      _renderBtProjetoBody();
+    };
+    stage.addEventListener('mousedown', onDown);
+    stage.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+    stage.addEventListener('touchstart', onDown, { passive: false });
+    stage.addEventListener('touchmove', onMove, { passive: false });
+    document.addEventListener('touchend', onUp);
+  }
+  function _redesenharTracoAoVivoBtProjeto() {
+    const stage = document.getElementById('cc-btproj-stage');
+    if (!stage || !btProjeto || !btProjeto.emAndamento) return;
+    let poly = document.getElementById('cc-btproj-live-poly');
+    if (!poly) {
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.setAttribute('viewBox', '0 0 100 100'); svg.setAttribute('preserveAspectRatio', 'none');
+      svg.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:5;';
+      poly = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+      poly.id = 'cc-btproj-live-poly';
+      poly.setAttribute('fill', 'none'); poly.setAttribute('stroke', '#a855f7'); poly.setAttribute('stroke-width', '0.5'); poly.setAttribute('vector-effect', 'non-scaling-stroke');
+      svg.appendChild(poly);
+      stage.appendChild(svg);
+    }
+    poly.setAttribute('points', btProjeto.emAndamento.map(p => `${p.x * 100},${p.y * 100}`).join(' '));
+  }
+
+  function calcularBtProjeto() {
+    if (!btProjeto || !btProjeto.tracos.length) { Utils.toast('Desenhe ao menos uma área.', 'erro'); return; }
+    const marcs = _marcadoresBtProjeto();
+    const resultados = [];
+    marcs.forEach(m => {
+      const pct = CC.pctSobreposicao(m.pontos, btProjeto.tracos);
+      if (pct >= 2) {
+        const p = pecas.find(x => x.id === m.pecaId);
+        if (p) resultados.push({ pecaId: p.id, peca: p, pct: Math.min(100, Math.round(pct)) });
+      }
+    });
+    if (!resultados.length) { Utils.toast('Nenhuma peça foi coberta pelo desenho.', 'erro'); return; }
+    btProjeto.resultados = resultados;
+    _renderBtProjetoBody();
+  }
+
+  function usarResultadoBtProjeto() {
+    if (!btProjeto || !btProjeto.resultados) return;
+    btProjeto.resultados.forEach(r => {
+      const idx = bt.linhas.findIndex(l => l.pecaId === r.pecaId);
+      if (idx >= 0) bt.linhas[idx].pct = String(r.pct);
+      else bt.linhas.push({ pecaId: r.pecaId, pct: String(r.pct) });
+    });
+    bt.linhas = bt.linhas.filter(l => l.pecaId);
+    if (!bt.linhas.length) bt.linhas = [{ pecaId: '', pct: '' }];
+    Utils.fecharModal('modal-cc-bt-projeto');
+    btProjeto = null;
+    renderLancarBT();
+    Utils.toast('✓ Valores preenchidos — confira e lance a BT.', 'sucesso');
+  }
+
   return {
     init, recarregar, renderizar,
     setAba, fbToggle, fbFechar, fbSelAndar, fbSelConc,
@@ -2350,6 +2646,10 @@ const ControleConcreto = (() => {
     salvarVinculoPlanta, excluirMarcadorPlanta,
     abrirPranchasPlanta, novaPranchaPlanta, renomearPranchaPlanta, excluirPranchaPlanta,
     abrirUploadImagemPlanta, onImagemArquivoPlanta,
+    toggleConcretagemLivre, cancelarConcretagemLivre, desfazerTracoLivre, concLivreUpd,
+    processarConcretagemLivre, salvarConcretagemLivre,
+    abrirBtProjeto, onTrocarPranchaBtProjeto, desfazerTracoBtProjeto, cancelarBtProjeto,
+    calcularBtProjeto, usarResultadoBtProjeto,
   };
 })();
 

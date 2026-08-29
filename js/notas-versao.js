@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.26.0.1',
+  versaoAtual: 'V3.26.0.2',
 
   versoes: [
     {
@@ -10855,6 +10855,19 @@ const NotasVersao = {
         "Áreas que a detecção não pegou bem: \"Desenhar Área Manual\" (clique a clique, igual Controle de Estacas) ou \"Ajustar forma\" pra arrastar os vértices de uma área já detectada.",
         "Gestão de pranchas: 1 prancha por laje/pavimento, com botão de atualizar o projeto se a planta mudar.",
         "Base pro que vem a seguir: montar Concretagem inteira desenhando livremente sobre a planta (com múltiplas áreas soltas), e \"Controlar pelo Projeto\" no lançamento de BT — ainda não iniciado."
+      ]
+    },
+    {
+      "versao": "V3.26.0.2",
+      "data": "2026-08-29",
+      "tipo": "melhoria",
+      "titulo": "Controle de Concreto V2.0 (parte 2): montar Concretagem e BT desenhando na planta",
+      "itens": [
+        "Novo botão \"◈ Montar Concretagem\" na aba Planta: desenha-se livremente uma ou mais áreas soltas por cima da planta (não precisa ser uma região só) e o sistema monta a Concretagem sozinho — cruza o desenho com cada peça já vinculada e calcula o % de cada uma por sobreposição de área, sem precisar digitar peça por peça.",
+        "Novo botão \"🗺️ Controlar pelo Projeto\" dentro do Lançar BT (aparece assim que a concretagem é escolhida): mesmo princípio, no nível da BT — desenha a área que aquela BT cobriu e o sistema preenche sozinho a peça e o % de cada uma no formulário de lançamento, que continua editável antes de salvar.",
+        "Cálculo por amostragem geométrica (não é clipping exato de polígono) — funciona igual pra área desenhada certinha ou por cima de forma irregular à mão. Sobreposição abaixo de 2% é ignorada (ruído de traço).",
+        "Fluxo manual de sempre (montar concretagem peça por peça no wizard, digitar % na BT) continua funcionando exatamente igual — isto é um caminho A MAIS, não substitui nada.",
+        "V2.0 completo: os dois pedidos originais (reconhecimento automático de área na planta + montagem de concretagem/BT desenhando) estão nesta versão e na V3.26.0.1."
       ]
     }
   ],
