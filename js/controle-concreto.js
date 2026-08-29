@@ -43,6 +43,8 @@ const ControleConcreto = (() => {
   let vincularListaAberta = false;
   let _imagemPranchaCacheId = null;
   let _imagemPranchaCache = null;
+  let plantaTelaCheiaAtiva = false;
+  let plantaTelaCheiaGuardado = null;
   // Montar Concretagem desenhando livre (V2.0 parte 2)
   let desenhoLivreTracos = [];
   let desenhoLivreEmAndamento = null;
@@ -158,6 +160,12 @@ const ControleConcreto = (() => {
   function renderizar() {
     const c = document.getElementById('cc-content');
     if (!c) return;
+
+    // Tela cheia da Planta: o wrapper (#cc-planta-wrap) foi realocado pra
+    // fora de #cc-content, pra dentro de um overlay — recriar o shell aqui
+    // destruiria essa realocação (e duplicaria o id). Só atualiza o
+    // conteúdo, que renderPlanta() já sabe achar onde quer que ele esteja.
+    if (aba === 'planta' && plantaTelaCheiaAtiva) { renderPlanta(); return; }
 
     if (!pecas.length && !concretagens.length) {
       c.innerHTML = `
@@ -1816,6 +1824,45 @@ const ControleConcreto = (() => {
     return { vinculado: true, label: `${p.tipo} — ${p.nome}` };
   }
 
+  // ── Filtro por tipo (Pilar/Viga/Laje/Outros/Não vinculadas) ──
+  let filtroTipoPlanta = new Set(['Pilar', 'Viga', 'Laje', 'Outros', 'naoVinculada']);
+  function _tipoFiltroMarcador(m) {
+    const p = m.pecaId ? pecas.find(x => x.id === m.pecaId) : null;
+    if (!p) return null; // não vinculada
+    if (p.tipo === 'Pilar' || p.tipo === 'Viga' || p.tipo === 'Laje') return p.tipo;
+    return 'Outros';
+  }
+  function _marcadorVisivelPlanta(m) {
+    const t = _tipoFiltroMarcador(m);
+    return filtroTipoPlanta.has(t === null ? 'naoVinculada' : t);
+  }
+  function _marcadoresVisiveisPlanta() {
+    return marcadoresDaPranchaAtiva().filter(_marcadorVisivelPlanta);
+  }
+  function toggleFiltroTipoPlanta(chave) {
+    if (filtroTipoPlanta.has(chave)) filtroTipoPlanta.delete(chave); else filtroTipoPlanta.add(chave);
+    renderPlanta();
+  }
+
+  // ── Zoom (botões — o scroll/arraste do container cuida do pan) ──
+  function zoomInPlanta() { zoomPlanta = Math.min(4, Math.round(((zoomPlanta || 1) + 0.25) * 100) / 100); renderPlanta(); }
+  function zoomOutPlanta() { zoomPlanta = Math.max(0.25, Math.round(((zoomPlanta || 1) - 0.25) * 100) / 100); renderPlanta(); }
+  function zoomResetPlanta() { zoomPlanta = 1; renderPlanta(); }
+
+  // ── Preserva a posição de rolagem entre re-renders — sem isso, TODO
+  // clique/salvamento reconstrói o innerHTML e o scroll volta pro topo
+  // (era o "sobe lá pra cima" reclamado — a rolagem some porque o
+  // container antigo é substituído por um novo elemento zerado). ──
+  function _lerScrollPlanta() {
+    const sc = document.querySelector('.cc-plan-scroll');
+    return sc ? { top: sc.scrollTop, left: sc.scrollLeft } : null;
+  }
+  function _aplicarScrollPlanta(s) {
+    if (!s) return;
+    const sc = document.querySelector('.cc-plan-scroll');
+    if (sc) { sc.scrollTop = s.top; sc.scrollLeft = s.left; }
+  }
+
   function _plantaStageHTML(prancha, imagemBase64, marcadores) {
     const W = CC.num(prancha.imgWidthPx) || 800, H = CC.num(prancha.imgHeightPx) || 500;
     const zoom = zoomPlanta || 1;
@@ -1847,17 +1894,77 @@ const ControleConcreto = (() => {
       : `<div style="width:100%;height:100%;background:repeating-linear-gradient(45deg,#f1f5f9,#f1f5f9 10px,#e2e8f0 10px,#e2e8f0 20px);"></div>`;
     const semSelecao = 'user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;';
     const cursorModo = (modoPlanta === 'poligono' || modoPlanta === 'concretagem-livre') ? 'cursor:crosshair;' : 'cursor:pointer;';
-    return `<div class="cc-plan-scroll" style="overflow:auto;max-height:600px;border:1px solid #e2e8f0;border-radius:8px;background:#fff;overscroll-behavior:contain;${semSelecao}">
+    const alturaMax = plantaTelaCheiaAtiva ? 'calc(100vh - 190px)' : '600px';
+    return `<div class="cc-plan-scroll" style="overflow:auto;max-height:${alturaMax};border:1px solid #e2e8f0;border-radius:8px;background:#fff;overscroll-behavior:contain;${semSelecao}">
       <div id="cc-plan-stage" style="position:relative;width:${w}px;height:${h}px;touch-action:none;${cursorModo}${semSelecao}" onclick="CCON.onCliquePlanta(event)">
         ${bg}${poligonos}${desenhoAtual}${tracosLivres}
       </div>
     </div>`;
   }
 
+  // ── Tela cheia — mesma técnica do Controle de Estacas: realoca o
+  // wrapper #cc-planta-wrap (elemento de verdade, com os mesmos
+  // listeners) pra um overlay cobrindo a tela inteira, sem recriar nada.
+  // ══════════════════════════════════════════
+  function alternarTelaCheiaPlanta() {
+    if (plantaTelaCheiaAtiva) _sairTelaCheiaPlanta(); else _entrarTelaCheiaPlanta();
+  }
+  function _entrarTelaCheiaPlanta() {
+    const wrap = document.getElementById('cc-planta-wrap');
+    if (!wrap) return;
+    plantaTelaCheiaGuardado = { parent: wrap.parentNode, next: wrap.nextSibling };
+    const overlay = document.createElement('div');
+    overlay.id = 'cc-planta-tela-cheia-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:500;background:var(--cor-fundo,#f1f5f9);overflow:auto;padding:10px 16px 16px;';
+    overlay.innerHTML = '<button class="btn btn-secundario btn-sm" style="position:absolute;top:10px;right:16px;z-index:1;" onclick="CCON.alternarTelaCheiaPlanta()">✕ Fechar tela cheia (Esc)</button>';
+    document.body.appendChild(overlay);
+    overlay.appendChild(wrap);
+    document.body.style.overflow = 'hidden';
+    document.addEventListener('keydown', _teclaEscTelaCheiaPlanta);
+    plantaTelaCheiaAtiva = true;
+    renderPlanta();
+  }
+  function _sairTelaCheiaPlanta() {
+    const wrap = document.getElementById('cc-planta-wrap');
+    const overlay = document.getElementById('cc-planta-tela-cheia-overlay');
+    if (wrap && plantaTelaCheiaGuardado) {
+      if (plantaTelaCheiaGuardado.next) plantaTelaCheiaGuardado.parent.insertBefore(wrap, plantaTelaCheiaGuardado.next);
+      else plantaTelaCheiaGuardado.parent.appendChild(wrap);
+    }
+    if (overlay) overlay.remove();
+    document.body.style.overflow = '';
+    document.removeEventListener('keydown', _teclaEscTelaCheiaPlanta);
+    plantaTelaCheiaAtiva = false;
+    plantaTelaCheiaGuardado = null;
+    renderPlanta();
+  }
+  function _teclaEscTelaCheiaPlanta(e) { if (e.key === 'Escape') _sairTelaCheiaPlanta(); }
+
+  // ── Limpar áreas (pra descartar uma detecção ruim e tentar de novo) ──
+  async function limparAreasPlanta() {
+    if (!Permissions.pode('controleConcreto', 'excluir:marcador')) { Utils.toast('Sem permissão para excluir.', 'erro'); return; }
+    const marcs = marcadoresDaPranchaAtiva();
+    if (!marcs.length) { Utils.toast('Não há áreas marcadas nesta prancha.', 'erro'); return; }
+    const vinculadas = marcs.filter(m => m.pecaId).length;
+    const ok = await Utils.confirmar(`Apagar TODAS as ${marcs.length} área(s) marcada(s) nesta prancha${vinculadas ? ` (${vinculadas} já vinculada${vinculadas > 1 ? 's' : ''} a peça)` : ''}? Não pode ser desfeito.`);
+    if (!ok) return;
+    Utils.mostrarLoading();
+    try {
+      const ops = marcs.map(m => ({ type: 'delete', ref: Database.ref(obraId, COL_MARCADORES).doc(m.id) }));
+      for (let i = 0; i < ops.length; i += 400) await Database.batchWrite(ops.slice(i, i + 400));
+      await carregar();
+      Utils.toast('Áreas apagadas — pode detectar ou desenhar de novo.', 'sucesso');
+    } catch (e) {
+      Utils.toast('Erro ao apagar: ' + e.message, 'erro');
+    } finally {
+      Utils.esconderLoading();
+    }
+  }
+
   async function renderPlanta() {
-    const el = document.getElementById('cc-body');
-    if (!el) return;
     if (!pranchas.length) {
+      const el = document.getElementById('cc-body');
+      if (!el) return;
       el.innerHTML = `
         <div class="cc-empty" style="text-align:center;padding:40px 0;">
           <div style="font-size:2rem;margin-bottom:8px;">🗺️</div>
@@ -1867,14 +1974,29 @@ const ControleConcreto = (() => {
       Permissions.aplicarNaTela(el);
       return;
     }
+    // Wrapper persistente — se a tela cheia estiver ativa ele já foi
+    // realocado pra dentro do overlay; achamos ele onde estiver em vez de
+    // recriar (recriar destruiria a realocação e duplicaria o id).
+    let wrap = document.getElementById('cc-planta-wrap');
+    if (!wrap) {
+      const el = document.getElementById('cc-body');
+      if (!el) return;
+      el.innerHTML = '<div id="cc-planta-wrap"></div>';
+      wrap = document.getElementById('cc-planta-wrap');
+    }
+
     if (!pranchaAtivaId) pranchaAtivaId = pranchas[0].id;
     const pr = pranchas.find(p => p.id === pranchaAtivaId);
     const imagem = pr ? await _obterImagemPrancha(pr.id) : null;
     const marcs = marcadoresDaPranchaAtiva();
+    const marcsVisiveis = _marcadoresVisiveisPlanta();
     const vinculadas = marcs.filter(m => m.pecaId).length;
+    const scrollAnterior = _lerScrollPlanta();
 
-    el.innerHTML = `
-      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px;">
+    const filtros = [['Pilar', 'Pilar'], ['Viga', 'Viga'], ['Laje', 'Laje'], ['Outros', 'Outros tipos'], ['naoVinculada', 'Não vinculadas']];
+
+    wrap.innerHTML = `
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px;">
         <select class="form-control" style="max-width:260px;" onchange="CCON.onTrocarPranchaPlanta(this.value)">
           ${pranchas.map(p => `<option value="${p.id}" ${p.id === pranchaAtivaId ? 'selected' : ''}>${esc(p.nome)}${p.andar ? ` (${esc(p.andar)})` : ''}</option>`).join('')}
         </select>
@@ -1883,9 +2005,27 @@ const ControleConcreto = (() => {
           <button class="btn btn-dark btn-sm" data-perm="controleConcreto:criar:marcador" onclick="CCON.detectarAreasPlanta()">🔍 Detectar Áreas Automaticamente</button>
           <button class="btn ${modoPlanta === 'poligono' ? 'btn-primario' : 'btn-secundario'} btn-sm" data-perm="controleConcreto:criar:marcador" onclick="CCON.toggleDesenhoManualPlanta()">✏️ Desenhar Área Manual</button>
           <button class="btn ${modoPlanta === 'concretagem-livre' ? 'btn-primario' : 'btn-secundario'} btn-sm" data-perm="controleConcreto:criar:concretagem" onclick="CCON.toggleConcretagemLivre()">◈ Montar Concretagem</button>
+          <button class="btn btn-secundario btn-sm" style="color:var(--cv-red,#ef4444);" data-perm="controleConcreto:excluir:marcador" onclick="CCON.limparAreasPlanta()">🗑 Limpar Áreas</button>
+          <button class="btn btn-secundario btn-sm" onclick="CCON.alternarTelaCheiaPlanta()">${plantaTelaCheiaAtiva ? '✕ Sair da Tela Cheia' : '⛶ Tela Cheia'}</button>
         ` : ''}
         <span class="text-sm text-muted">${marcs.length} área(s) marcada(s) · ${vinculadas} vinculada(s)</span>
       </div>
+      ${imagem ? `
+      <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-bottom:10px;">
+        <div style="display:flex;align-items:center;gap:4px;">
+          <button class="btn btn-secundario btn-sm" onclick="CCON.zoomOutPlanta()">➖</button>
+          <span class="text-sm text-muted" style="min-width:44px;text-align:center;">${Math.round((zoomPlanta || 1) * 100)}%</span>
+          <button class="btn btn-secundario btn-sm" onclick="CCON.zoomInPlanta()">➕</button>
+          <button class="btn btn-secundario btn-sm" onclick="CCON.zoomResetPlanta()">100%</button>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+          <span class="text-sm text-muted">Mostrar:</span>
+          ${filtros.map(([k, label]) => `
+            <label style="display:flex;align-items:center;gap:4px;font-size:0.78rem;cursor:pointer;">
+              <input type="checkbox" ${filtroTipoPlanta.has(k) ? 'checked' : ''} onchange="CCON.toggleFiltroTipoPlanta('${k}')"> ${esc(label)}
+            </label>`).join('')}
+        </div>
+      </div>` : ''}
       ${modoPlanta === 'poligono' ? `
         <div style="display:flex;gap:8px;margin-bottom:10px;">
           <button class="btn btn-secundario btn-sm" onclick="CCON.desfazerPontoPlanta()">↩ Desfazer ponto</button>
@@ -1899,9 +2039,10 @@ const ControleConcreto = (() => {
           <button class="btn btn-secundario btn-sm" onclick="CCON.cancelarAjusteFormaPlanta()">✕ Cancelar</button>
         </div>` : ''}
       ${!imagem ? `<div class="cc-empty">Esta prancha ainda não tem PDF/imagem. <button class="btn btn-secundario btn-sm" onclick="CCON.abrirUploadImagemPlanta('${pr.id}')">⊞ Importar PDF/Imagem</button></div>`
-        : _plantaStageHTML(pr, imagem, marcs)}
+        : _plantaStageHTML(pr, imagem, marcsVisiveis)}
     `;
-    Permissions.aplicarNaTela(el);
+    Permissions.aplicarNaTela(wrap);
+    _aplicarScrollPlanta(scrollAnterior);
     if (editandoFormaPlantaId) _desenharHandlesEdicaoPlanta();
     if (modoPlanta === 'concretagem-livre') _ligarEventosDesenhoLivre();
   }
@@ -1922,7 +2063,7 @@ const ControleConcreto = (() => {
     }
     if (editandoFormaPlantaId) return; // não troca de área enquanto ajusta vértices
     const rect = stage.getBoundingClientRect();
-    const m = CC.marcadorMaisProximo(marcadoresDaPranchaAtiva(), p, rect);
+    const m = CC.marcadorMaisProximo(_marcadoresVisiveisPlanta(), p, rect);
     if (m) abrirVincularPlanta(m.id);
   }
 
@@ -2688,6 +2829,8 @@ const ControleConcreto = (() => {
     processarConcretagemLivre, salvarConcretagemLivre,
     abrirBtProjeto, onTrocarPranchaBtProjeto, desfazerTracoBtProjeto, cancelarBtProjeto,
     calcularBtProjeto, usarResultadoBtProjeto, abrirControlarProjeto,
+    zoomInPlanta, zoomOutPlanta, zoomResetPlanta,
+    alternarTelaCheiaPlanta, toggleFiltroTipoPlanta, limparAreasPlanta,
   };
 })();
 

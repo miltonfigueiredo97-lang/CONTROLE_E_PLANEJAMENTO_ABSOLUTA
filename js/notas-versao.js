@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.26.0.3',
+  versaoAtual: 'V3.26.0.4',
 
   versoes: [
     {
@@ -10879,6 +10879,20 @@ const NotasVersao = {
         "Toda Concretagem agora tem uma Prancha associada (campo novo no Passo 1 do wizard \"◈ Concretagens\"). Montada pela Planta (desenho livre): a prancha usada no desenho é gravada automaticamente. Montada manualmente: escolhe-se na tela de Dados.",
         "\"Controlar pelo Projeto\" ganhou atalho direto: novo botão roxo ao lado de \"⊕ LANÇAR BT\" — escolhe Concretagem e BT normalmente e cai direto na tela de desenho (antes só aparecia depois de entrar no formulário manual).",
         "Como a Concretagem já sabe qual é sua Prancha, o \"Controlar pelo Projeto\" abre direto nela — não depende mais de já existir peça marcada pra descobrir qual planta mostrar."
+      ]
+    },
+    {
+      "versao": "V3.26.0.4",
+      "data": "2026-08-29",
+      "tipo": "correcao",
+      "titulo": "Planta: corrigido scroll voltando pro topo a cada clique, +zoom, tela cheia, filtro por tipo e limpar áreas",
+      "itens": [
+        "PROBLEMA GRAVE corrigido: qualquer clique, ajuste de forma ou salvamento na Planta reconstruía a tela inteira e jogava a rolagem de volta pro topo — impossível trabalhar em pranchas grandes. Agora a posição de rolagem é preservada em toda atualização.",
+        "Zoom por botões (➖ / ➕ / 100%) — antes só existia a variável interna, sem controle nenhum na tela.",
+        "Botão \"⛶ Tela Cheia\" — a planta ocupa a janela inteira (Esc ou botão fecha), mesma técnica já usada no Controle de Estacas.",
+        "Filtro \"Mostrar: Pilar / Viga / Laje / Outros tipos / Não vinculadas\" — esconde o que não interessa no momento, tanto visualmente quanto pra clique (evita selecionar sem querer uma peça escondida atrás de outra).",
+        "Botão \"🗑 Limpar Áreas\" — apaga todas as áreas marcadas na prancha ativa de uma vez (avisa quantas já estavam vinculadas antes de confirmar), pra descartar uma detecção ruim e tentar de novo.",
+        "Pendente: alguns falsos positivos na Detecção Automática (cotas/textos do desenho sendo marcados como se fossem peça) ainda podem aparecer — o filtro por tipo e o Limpar Áreas ajudam a arrumar isso manualmente por enquanto; o algoritmo de detecção em si ainda não foi ajustado pra esse caso específico."
       ]
     }
   ],
