@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.26.0.4',
+  versaoAtual: 'V3.26.1',
 
   versoes: [
     {
@@ -10893,6 +10893,18 @@ const NotasVersao = {
         "Filtro \"Mostrar: Pilar / Viga / Laje / Outros tipos / Não vinculadas\" — esconde o que não interessa no momento, tanto visualmente quanto pra clique (evita selecionar sem querer uma peça escondida atrás de outra).",
         "Botão \"🗑 Limpar Áreas\" — apaga todas as áreas marcadas na prancha ativa de uma vez (avisa quantas já estavam vinculadas antes de confirmar), pra descartar uma detecção ruim e tentar de novo.",
         "Pendente: alguns falsos positivos na Detecção Automática (cotas/textos do desenho sendo marcados como se fossem peça) ainda podem aparecer — o filtro por tipo e o Limpar Áreas ajudam a arrumar isso manualmente por enquanto; o algoritmo de detecção em si ainda não foi ajustado pra esse caso específico."
+      ]
+    },
+    {
+      "versao": "V3.26.1",
+      "data": "2026-08-29",
+      "tipo": "correcao",
+      "titulo": "Detecção automática não fragmenta mais vigas em pedaços soltos por causa das cotas",
+      "itens": [
+        "CAUSA ENCONTRADA a partir dos prints mandados: a etapa de separação (erosão) usada pra distinguir peças coladas da mesma cor de nível estava cortando peças FINAS (vigas) bem no meio, exatamente onde uma cota, número ou linha de chamada cruza por cima do preenchimento colorido — cada cruzamento virava um corte, picotando uma viga inteira em vários retalhos pequenos.",
+        "CORREÇÃO: antes de separar, o sistema agora preenche só os buraquinhos PEQUENOS e ISOLADOS da máscara (que não tocam a malha real de linhas do desenho nem a borda da folha) — isso fecha o rastro das cotas sem tocar em nenhuma separação de verdade entre peças diferentes.",
+        "RESULTADO na planta de teste real: viga que antes saía em 4-5 pedaços soltos agora sai inteira, num retângulo só. Total de áreas detectadas caiu de 98 para 56 nessa planta — a diferença é ruído eliminado (fragmentos e falsos positivos de cota/texto), não peça de verdade perdida.",
+        "Ainda pode sobrar algum falso positivo isolado (texto/cota grande demais pro filtro) — Filtro por tipo + Ajustar Forma + Limpar Áreas continuam sendo o caminho pra corrigir manualmente o que passar."
       ]
     }
   ],

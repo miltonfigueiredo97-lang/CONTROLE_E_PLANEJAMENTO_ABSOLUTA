@@ -379,10 +379,14 @@ const ConcretoCalculos = (() => {
   // ── Detecção automática de áreas (pilar/viga/laje) por segmentação de
   // cor — NÃO reconhece qual peça é (isso é manual, no vínculo), só isola
   // cada região colorida da planta como um polígono já pronto pra clicar.
-  // Pipeline: máscara cromática (saturação+brilho) → erosão (separa peças
-  // vizinhas da mesma cor de nível que se tocam) → rotula componentes
-  // conexos → cresce de volta até a máscara original (BFS multi-fonte) →
-  // contorno por varredura de linha → simplificação (Douglas-Peucker).
+  // Pipeline: máscara cromática (saturação+brilho) → preenche buracos
+  // PEQUENOS E ISOLADOS na máscara (cotas/números/linhas de chamada
+  // desenhados por cima do preenchimento abrem buraquinhos que, sem isso,
+  // picotavam peças finas como vigas em vários pedaços soltos — corrigido
+  // na V3.26.0.5) → erosão (separa peças vizinhas da MESMA cor de nível
+  // que se tocam sem cota nenhuma no meio) → rotula componentes conexos →
+  // cresce de volta até a máscara já limpa (BFS multi-fonte) → contorno
+  // por varredura de linha → simplificação (Douglas-Peucker).
   // Testado contra plantas reais (CAD exportado em PDF vetorial) — ver
   // notas de versão. Puramente geométrico: não lê nome de peça (P25,
   // V308...) porque o rótulo no PDF é desenho vetorial, não texto.
@@ -390,6 +394,7 @@ const ConcretoCalculos = (() => {
     opts = opts || {};
     const satMin = opts.satMin ?? 30;
     const mxMin = opts.mxMin ?? 170;
+    const maxAreaBuraco = opts.maxAreaBuraco ?? Math.max(40, Math.round(W * H * 0.0001));
     const iterErosao = opts.iterErosao ?? 2;
     const minPixels = opts.minPixels ?? Math.max(30, Math.round(W * H * 0.00015));
     const epsilonRDP = opts.epsilonRDP ?? Math.max(1.5, Math.round(Math.max(W, H) * 0.0025));
@@ -403,7 +408,15 @@ const ConcretoCalculos = (() => {
       if ((mx - mn) > satMin && mx > mxMin) chromatic[i] = 1;
     }
 
-    let mask = chromatic;
+    // Preenche só buracos PEQUENOS e ISOLADOS (não conectados ao fundo/
+    // linhas do desenho) — uma cota ou número desenhado em cima de um
+    // preenchimento colorido forma uma ilha branca cercada de cor por
+    // todo lado, bem diferente de uma linha divisória de verdade (que faz
+    // parte da malha grande de linhas pretas, conectada até a borda da
+    // folha). Isso deixa intacta qualquer separação real entre peças.
+    const chromaticLimpo = _preencherBuracosPequenos(chromatic, W, H, maxAreaBuraco);
+
+    let mask = chromaticLimpo;
     for (let it = 0; it < iterErosao; it++) {
       const novo = new Uint8Array(n);
       for (let y = 0; y < H; y++) {
@@ -470,7 +483,7 @@ const ConcretoCalculos = (() => {
           const nx = cx + dx, ny = cy + dy;
           if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
           const ni = ny * W + nx;
-          if (chromatic[ni] && !label[ni]) {
+          if (chromaticLimpo[ni] && !label[ni]) {
             label[ni] = lab;
             qX[qt] = nx; qY[qt] = ny; qt++;
           }
@@ -511,6 +524,60 @@ const ConcretoCalculos = (() => {
       });
     }
     return resultados;
+  }
+
+  // Rotula componentes conexos do NEGATIVO da máscara (tudo que não é
+  // cor: fundo branco + linhas pretas + cotas/textos) e preenche de volta
+  // só os componentes PEQUENOS que não tocam a borda da imagem nem fazem
+  // parte da maior malha (a rede de linhas de verdade sempre vence por
+  // ser, de longe, o maior componente conectado do desenho inteiro).
+  function _preencherBuracosPequenos(chromatic, W, H, maxAreaBuraco) {
+    const n = W * H;
+    const inv = new Uint8Array(n);
+    for (let i = 0; i < n; i++) inv[i] = chromatic[i] ? 0 : 1;
+    const label = new Int32Array(n);
+    let numLabels = 0;
+    const filaX = new Int32Array(n), filaY = new Int32Array(n);
+    const tocaBordaArr = [0], tamanhoArr = [0];
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        const i0 = y * W + x;
+        if (!inv[i0] || label[i0]) continue;
+        numLabels++;
+        let sp = 0, tam = 0, tocaBorda = false;
+        filaX[sp] = x; filaY[sp] = y; sp++;
+        label[i0] = numLabels;
+        while (sp > 0) {
+          sp--;
+          const cx = filaX[sp], cy = filaY[sp];
+          tam++;
+          if (cx === 0 || cy === 0 || cx === W - 1 || cy === H - 1) tocaBorda = true;
+          for (let dy = -1; dy <= 1; dy++) {
+            for (let dx = -1; dx <= 1; dx++) {
+              if (!dx && !dy) continue;
+              const nx = cx + dx, ny = cy + dy;
+              if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
+              const ni = ny * W + nx;
+              if (inv[ni] && !label[ni]) { label[ni] = numLabels; filaX[sp] = nx; filaY[sp] = ny; sp++; }
+            }
+          }
+        }
+        tamanhoArr[numLabels] = tam;
+        tocaBordaArr[numLabels] = tocaBorda ? 1 : 0;
+      }
+    }
+    let maiorLabel = 0, maiorTam = 0;
+    for (let l = 1; l <= numLabels; l++) if (tamanhoArr[l] > maiorTam) { maiorTam = tamanhoArr[l]; maiorLabel = l; }
+
+    const out = new Uint8Array(n);
+    out.set(chromatic);
+    for (let i = 0; i < n; i++) {
+      if (!inv[i]) continue;
+      const l = label[i];
+      if (l === maiorLabel || tocaBordaArr[l]) continue; // rede de linhas de verdade — não mexe
+      if (tamanhoArr[l] <= maxAreaBuraco) out[i] = 1; // buraco pequeno isolado — preenche
+    }
+    return out;
   }
 
   function _contornoPorVarredura(label, W, bb, labelId) {
