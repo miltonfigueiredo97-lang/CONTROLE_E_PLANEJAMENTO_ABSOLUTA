@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.26.1',
+  versaoAtual: 'V3.26.2',
 
   versoes: [
     {
@@ -10905,6 +10905,21 @@ const NotasVersao = {
         "CORREÇÃO: antes de separar, o sistema agora preenche só os buraquinhos PEQUENOS e ISOLADOS da máscara (que não tocam a malha real de linhas do desenho nem a borda da folha) — isso fecha o rastro das cotas sem tocar em nenhuma separação de verdade entre peças diferentes.",
         "RESULTADO na planta de teste real: viga que antes saía em 4-5 pedaços soltos agora sai inteira, num retângulo só. Total de áreas detectadas caiu de 98 para 56 nessa planta — a diferença é ruído eliminado (fragmentos e falsos positivos de cota/texto), não peça de verdade perdida.",
         "Ainda pode sobrar algum falso positivo isolado (texto/cota grande demais pro filtro) — Filtro por tipo + Ajustar Forma + Limpar Áreas continuam sendo o caminho pra corrigir manualmente o que passar."
+      ]
+    },
+    {
+      "versao": "V3.26.2",
+      "data": "2026-08-29",
+      "tipo": "correcao",
+      "titulo": "Planta: zoom de verdade (roda do mouse), pan por arrasto, bolinha de ajuste não fica mais gigante, cor por tipo e qualidade da imagem",
+      "itens": [
+        "Zoom pela roda do mouse, ANCORADO no ponto embaixo do cursor (dá zoom em cima do que você está mirando, não no canto da tela) — e agora bloqueia o zoom da página do navegador, que era o que estava acontecendo antes.",
+        "Pan por arrasto: clique esquerdo e arraste move a planta (cursor de mãozinha). Só não funciona nos modos de desenho, pra não brigar com marcar ponto.",
+        "CORRIGIDO: a bolinha de ajustar vértice era um tamanho FIXO em pixel de tela — dando zoom-out ela virava uma bola gigante cobrindo o desenho (era a \"bolinha não diminui de tamanho\" reportada). Agora o tamanho acompanha o zoom.",
+        "Cor por tipo de peça: Pilar, Viga e Laje aparecem cada um numa cor — antes tudo vinculado ficava verde igual, sem diferenciar o quê é o quê.",
+        "Seletor de peça no vínculo: lista inteira sempre visível (não precisa mais focar/digitar pra aparecer) — clica direto, mais simples.",
+        "QUALIDADE DA IMAGEM: a planta parava de existir de tanta perda — vinha de um limite de ~950KB do Firestore (2200px + JPEG bem comprimido). Agora a imagem vai pro Firebase Storage (sem esse teto): resolução alvo subiu pra 4500px e o formato virou PNG sem perda. Isso também deve ajudar a Detecção Automática a pegar mais peças (imagem suja atrapalhava a leitura de cor).",
+        "AÇÃO NECESSÁRIA DO MILTON: como a imagem agora vem de outro domínio (Storage), o navegador pode bloquear a Detecção Automática por CORS mesmo a imagem aparecendo normal na tela. Se aparecer esse erro, é preciso rodar uma configuração de CORS no bucket do Storage uma única vez (fora daqui, via Google Cloud CLI) — avisar se precisar do passo a passo."
       ]
     }
   ],

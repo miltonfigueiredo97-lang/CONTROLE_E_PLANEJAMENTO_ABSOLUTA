@@ -45,6 +45,10 @@ const ControleConcreto = (() => {
   let _imagemPranchaCache = null;
   let plantaTelaCheiaAtiva = false;
   let plantaTelaCheiaGuardado = null;
+  let _scrollOverridePlanta = null; // {top,left} — usado pelo zoom ancorado, sobrepõe a preservação padrão de scroll
+  let _ultimoFoiArrastoPlanta = false; // suprime o "clique" que vem logo depois de um arrasto de pan
+  let _panEstadoPlanta = null;
+  let _panListenersGlobaisLigados = false;
   // Montar Concretagem desenhando livre (V2.0 parte 2)
   let desenhoLivreTracos = [];
   let desenhoLivreEmAndamento = null;
@@ -1810,6 +1814,10 @@ const ControleConcreto = (() => {
 
   async function _obterImagemPrancha(pranchaId) {
     if (_imagemPranchaCacheId === pranchaId && _imagemPranchaCache) return _imagemPranchaCache;
+    const pr = pranchas.find(p => p.id === pranchaId);
+    if (pr && pr.imgUrl) { _imagemPranchaCacheId = pranchaId; _imagemPranchaCache = pr.imgUrl; return pr.imgUrl; }
+    // Compatibilidade com pranchas antigas (imagem embutida em dataURL no
+    // Firestore, de antes da V3.26.2 — a partir daqui vai tudo pro Storage).
     try {
       const doc = await db.collection('obras').doc(obraId).collection('config').doc('concretoImagem_' + pranchaId).get();
       const img = doc.exists ? doc.data().img : null;
@@ -1818,10 +1826,11 @@ const ControleConcreto = (() => {
     } catch (e) { return null; }
   }
 
+  const CORES_TIPO_PLANTA = { Pilar: '#ef4444', Viga: '#3b82f6', Laje: '#f59e0b' };
   function _statusMarcadorPlanta(m) {
     const p = m.pecaId ? pecas.find(x => x.id === m.pecaId) : null;
-    if (!p) return { vinculado: false, label: 'Sem peça vinculada' };
-    return { vinculado: true, label: `${p.tipo} — ${p.nome}` };
+    if (!p) return { vinculado: false, label: 'Sem peça vinculada', cor: '#94a3b8' };
+    return { vinculado: true, label: `${p.tipo} — ${p.nome}`, cor: CORES_TIPO_PLANTA[p.tipo] || '#a855f7' };
   }
 
   // ── Filtro por tipo (Pilar/Viga/Laje/Outros/Não vinculadas) ──
@@ -1863,13 +1872,74 @@ const ControleConcreto = (() => {
     if (sc) { sc.scrollTop = s.top; sc.scrollLeft = s.left; }
   }
 
+  // ── Zoom com a roda do mouse, ANCORADO no ponto embaixo do cursor (não
+  // no canto do container) — e bloqueia o zoom da PÁGINA do navegador. ──
+  function _ligarZoomWheelPlanta() {
+    const sc = document.querySelector('.cc-plan-scroll');
+    if (!sc) return;
+    sc.addEventListener('wheel', e => {
+      if (modoPlanta === 'poligono' || modoPlanta === 'concretagem-livre' || editandoFormaPlantaId) return;
+      e.preventDefault();
+      const zAnt = zoomPlanta || 1;
+      const delta = e.deltaY < 0 ? 0.15 : -0.15;
+      const zNovo = Math.min(4, Math.max(0.25, Math.round((zAnt + delta) * 100) / 100));
+      if (zNovo === zAnt) return;
+      const rect = sc.getBoundingClientRect();
+      const anchorX = e.clientX - rect.left, anchorY = e.clientY - rect.top;
+      const k = zNovo / zAnt;
+      _scrollOverridePlanta = {
+        left: Math.max(0, (sc.scrollLeft + anchorX) * k - anchorX),
+        top: Math.max(0, (sc.scrollTop + anchorY) * k - anchorY),
+      };
+      zoomPlanta = zNovo;
+      renderPlanta();
+    }, { passive: false });
+  }
+
+  // ── Pan por arraste do botão esquerdo (clicar e arrastar move a
+  // planta) — só quando não está desenhando/ajustando, senão atrapalha o
+  // clique de marcar ponto/selecionar área. Os listeners de move/up ficam
+  // no window (ligados uma única vez) pra não perder o arrasto se o
+  // cursor sair da área visível no meio do gesto. ──
+  function _onPanMouseDownPlanta(e) {
+    if (modoPlanta === 'poligono' || modoPlanta === 'concretagem-livre' || editandoFormaPlantaId) return;
+    if (e.button !== 0) return;
+    const sc = document.querySelector('.cc-plan-scroll');
+    if (!sc) return;
+    _panEstadoPlanta = { sc, ultimoX: e.clientX, ultimoY: e.clientY, moveu: false };
+    sc.style.cursor = 'grabbing';
+  }
+  function _onPanMouseMovePlanta(e) {
+    if (!_panEstadoPlanta) return;
+    const dx = e.clientX - _panEstadoPlanta.ultimoX, dy = e.clientY - _panEstadoPlanta.ultimoY;
+    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) _panEstadoPlanta.moveu = true;
+    if (_panEstadoPlanta.moveu) { _panEstadoPlanta.sc.scrollLeft -= dx; _panEstadoPlanta.sc.scrollTop -= dy; }
+    _panEstadoPlanta.ultimoX = e.clientX; _panEstadoPlanta.ultimoY = e.clientY;
+  }
+  function _onPanMouseUpPlanta() {
+    if (!_panEstadoPlanta) return;
+    _ultimoFoiArrastoPlanta = _panEstadoPlanta.moveu;
+    _panEstadoPlanta.sc.style.cursor = '';
+    _panEstadoPlanta = null;
+  }
+  function _ligarPanArrastoPlanta() {
+    const sc = document.querySelector('.cc-plan-scroll');
+    if (!sc) return;
+    sc.addEventListener('mousedown', _onPanMouseDownPlanta);
+    if (!_panListenersGlobaisLigados) {
+      _panListenersGlobaisLigados = true;
+      window.addEventListener('mousemove', _onPanMouseMovePlanta);
+      window.addEventListener('mouseup', _onPanMouseUpPlanta);
+    }
+  }
+
   function _plantaStageHTML(prancha, imagemBase64, marcadores) {
     const W = CC.num(prancha.imgWidthPx) || 800, H = CC.num(prancha.imgHeightPx) || 500;
     const zoom = zoomPlanta || 1;
     const w = W * zoom, h = H * zoom;
     const poligonos = (marcadores || []).filter(m => m.pontos && m.pontos.length >= 3).map(m => {
       const st = _statusMarcadorPlanta(m);
-      const cor = st.vinculado ? '#22c55e' : '#f59e0b';
+      const cor = st.cor;
       const pts = m.pontos.map(p => `${(p.x * 100).toFixed(3)},${(p.y * 100).toFixed(3)}`).join(' ');
       return `<svg viewBox="0 0 100 100" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:2;">
         <polygon class="cc-plan-poligono" data-id="${m.id}" points="${pts}" fill="${cor}55" stroke="${cor}" stroke-width="0.4" vector-effect="non-scaling-stroke" style="cursor:pointer;pointer-events:auto;"><title>${esc(st.label)}</title></polygon>
@@ -1893,7 +1963,7 @@ const ControleConcreto = (() => {
       ? `<img src="${imagemBase64}" style="width:100%;height:100%;display:block;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;pointer-events:none;" draggable="false">`
       : `<div style="width:100%;height:100%;background:repeating-linear-gradient(45deg,#f1f5f9,#f1f5f9 10px,#e2e8f0 10px,#e2e8f0 20px);"></div>`;
     const semSelecao = 'user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;';
-    const cursorModo = (modoPlanta === 'poligono' || modoPlanta === 'concretagem-livre') ? 'cursor:crosshair;' : 'cursor:pointer;';
+    const cursorModo = (modoPlanta === 'poligono' || modoPlanta === 'concretagem-livre') ? 'cursor:crosshair;' : 'cursor:grab;';
     const alturaMax = plantaTelaCheiaAtiva ? 'calc(100vh - 190px)' : '600px';
     return `<div class="cc-plan-scroll" style="overflow:auto;max-height:${alturaMax};border:1px solid #e2e8f0;border-radius:8px;background:#fff;overscroll-behavior:contain;${semSelecao}">
       <div id="cc-plan-stage" style="position:relative;width:${w}px;height:${h}px;touch-action:none;${cursorModo}${semSelecao}" onclick="CCON.onCliquePlanta(event)">
@@ -1991,7 +2061,8 @@ const ControleConcreto = (() => {
     const marcs = marcadoresDaPranchaAtiva();
     const marcsVisiveis = _marcadoresVisiveisPlanta();
     const vinculadas = marcs.filter(m => m.pecaId).length;
-    const scrollAnterior = _lerScrollPlanta();
+    const scrollAnterior = _scrollOverridePlanta || _lerScrollPlanta();
+    _scrollOverridePlanta = null;
 
     const filtros = [['Pilar', 'Pilar'], ['Viga', 'Viga'], ['Laje', 'Laje'], ['Outros', 'Outros tipos'], ['naoVinculada', 'Não vinculadas']];
 
@@ -2043,6 +2114,8 @@ const ControleConcreto = (() => {
     `;
     Permissions.aplicarNaTela(wrap);
     _aplicarScrollPlanta(scrollAnterior);
+    _ligarZoomWheelPlanta();
+    _ligarPanArrastoPlanta();
     if (editandoFormaPlantaId) _desenharHandlesEdicaoPlanta();
     if (modoPlanta === 'concretagem-livre') _ligarEventosDesenhoLivre();
   }
@@ -2053,6 +2126,7 @@ const ControleConcreto = (() => {
   }
 
   function onCliquePlanta(ev) {
+    if (_ultimoFoiArrastoPlanta) { _ultimoFoiArrastoPlanta = false; return; } // era pan, não clique de verdade
     const stage = document.getElementById('cc-plan-stage');
     if (!stage) return;
     const p = CC.posRelativa(ev, stage);
@@ -2119,11 +2193,23 @@ const ControleConcreto = (() => {
     if (!imagem) { Utils.toast('Importe o PDF/imagem da prancha primeiro.', 'erro'); return; }
     Utils.mostrarLoading();
     try {
-      const img = await new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = imagem; });
+      // crossOrigin obrigatório: a imagem agora vem do Storage (outro
+      // domínio) — sem isso o canvas fica "contaminado" e getImageData()
+      // abaixo (dentro de CC.detectarAreas) explode com SecurityError,
+      // mesmo a imagem aparecendo normalmente na tela via <img>.
+      const img = await new Promise((res, rej) => { const im = new Image(); im.crossOrigin = 'anonymous'; im.onload = () => res(im); im.onerror = rej; im.src = imagem; });
       const canvas = document.createElement('canvas');
       canvas.width = img.naturalWidth; canvas.height = img.naturalHeight;
       canvas.getContext('2d').drawImage(img, 0, 0);
-      const areas = CC.detectarAreas(canvas);
+      let areas;
+      try {
+        areas = CC.detectarAreas(canvas);
+      } catch (e) {
+        if (String(e.message || e).toLowerCase().includes('tainted') || e.name === 'SecurityError') {
+          throw new Error('O Storage do Firebase precisa liberar CORS pra essa imagem poder ser analisada (mesmo já aparecendo na tela). Peça pro Milton rodar a configuração de CORS do bucket uma única vez.');
+        }
+        throw e;
+      }
       if (!areas.length) { Utils.toast('Nenhuma área detectada — tente desenhar manualmente.', 'erro'); return; }
       const existentes = marcadoresDaPranchaAtiva();
       const novas = areas.filter(a => !_areaJaMarcada(a, existentes));
@@ -2169,9 +2255,13 @@ const ControleConcreto = (() => {
     let cont = document.getElementById('cc-plan-edicao-overlay');
     if (!cont) { cont = document.createElement('div'); cont.id = 'cc-plan-edicao-overlay'; cont.style.cssText = 'position:absolute;inset:0;z-index:10;'; stage.appendChild(cont); }
     cont.innerHTML = '';
+    // Tamanho do vértice ACOMPANHA o zoom — fixo em px de tela ele virava
+    // uma bola gigante cobrindo o desenho inteiro quando dava zoom-out
+    // (reclamação real: "as bolinha não diminui de tamanho").
+    const tam = Math.max(6, Math.round(10 * (zoomPlanta || 1)));
     (m.pontos || []).forEach((p, i) => {
       const dot = document.createElement('div');
-      dot.style.cssText = `position:absolute;left:${(p.x * 100).toFixed(3)}%;top:${(p.y * 100).toFixed(3)}%;width:14px;height:14px;margin:-7px;border-radius:50%;background:#2563eb;border:2px solid #fff;box-shadow:0 0 0 1px #2563eb;cursor:move;z-index:11;pointer-events:auto;`;
+      dot.style.cssText = `position:absolute;left:${(p.x * 100).toFixed(3)}%;top:${(p.y * 100).toFixed(3)}%;width:${tam}px;height:${tam}px;margin:-${tam / 2}px;border-radius:50%;background:#2563eb;border:2px solid #fff;box-shadow:0 0 0 1px #2563eb;cursor:move;z-index:11;pointer-events:auto;`;
       dot.title = 'Arraste pra ajustar este vértice';
       _arrastarHandlePlanta(dot, mv => { m.pontos[i] = CC.posRelativa(mv, stage); _desenharHandlesEdicaoPlanta(); });
       cont.appendChild(dot);
@@ -2210,7 +2300,7 @@ const ControleConcreto = (() => {
     const pecaAtual = m.pecaId ? pecas.find(p => p.id === m.pecaId) : null;
     vincularTipo = pecaAtual ? pecaAtual.tipo : '';
     vincularAndarFiltro = '__prancha__';
-    vincularBusca = ''; vincularListaAberta = false;
+    vincularBusca = ''; vincularListaAberta = true; // lista de peças sempre visível — não é mais um dropdown escondido
     _renderVincularPlantaBody();
     Utils.abrirModal('modal-cc-vincular-planta');
   }
@@ -2231,12 +2321,12 @@ const ControleConcreto = (() => {
     vincularTipo = v;
     const hid = document.getElementById('cc-vincular-peca'); if (hid) hid.value = '';
     const inputBusca = document.getElementById('cc-vincular-peca-busca'); if (inputBusca) inputBusca.value = '';
-    vincularBusca = ''; vincularListaAberta = false;
+    vincularBusca = ''; vincularListaAberta = true;
     _renderListaPecaBuscaPlanta();
   }
   function onAndarFiltroVincularPlanta(v) { vincularAndarFiltro = v; _renderListaPecaBuscaPlanta(); }
   function onFocoBuscaPecaPlanta() { vincularListaAberta = true; _renderListaPecaBuscaPlanta(); }
-  function fecharListaPecaBuscaPlanta() { vincularListaAberta = false; _renderListaPecaBuscaPlanta(); }
+  function fecharListaPecaBuscaPlanta() { /* lista fica sempre visível — nada a fazer */ }
   function onBuscaPecaPlanta(v) {
     vincularBusca = v; vincularListaAberta = true;
     const hid = document.getElementById('cc-vincular-peca'); if (hid) hid.value = '';
@@ -2251,14 +2341,13 @@ const ControleConcreto = (() => {
   function _renderListaPecaBuscaPlanta() {
     const el = document.getElementById('cc-vincular-peca-lista');
     if (!el) return;
-    if (!vincularListaAberta) { el.style.display = 'none'; return; }
     const lista = _pecasFiltradasBuscaPlanta();
-    el.style.display = 'block';
     el.innerHTML = `
       <div style="padding:8px 12px;cursor:pointer;color:var(--cv-text3,#94a3b8);font-size:.85rem;" onmousedown="CCON.selecionarPecaBuscaPlanta('')">— Nenhuma —</div>
       ${lista.length ? lista.map(p => {
         const outro = _marcadorDaPecaPlanta(p.id, marcadorVincularId);
-        return `<div style="padding:8px 12px;cursor:pointer;border-top:1px solid var(--cv-border,#f1f5f9);" onmousedown="CCON.selecionarPecaBuscaPlanta('${p.id}')">
+        const ativo = p.id === (document.getElementById('cc-vincular-peca') ? document.getElementById('cc-vincular-peca').value : '');
+        return `<div style="padding:9px 12px;cursor:pointer;border-top:1px solid var(--cv-border,#f1f5f9);${ativo ? 'background:var(--cor-primaria-light,#fef9e7);' : ''}" onmousedown="CCON.selecionarPecaBuscaPlanta('${p.id}')">
           <div style="font-weight:600;font-size:.85rem;">${esc(p.nome)}${outro ? ' <span style="color:var(--cv-red,#ef4444);font-weight:400;font-size:.75rem;">— já vinculada a outra área</span>' : ''}</div>
           <div class="text-sm text-muted">${esc(p.tipo)} · ${esc(p.andar)}</div>
         </div>`;
@@ -2269,7 +2358,7 @@ const ControleConcreto = (() => {
     const hid = document.getElementById('cc-vincular-peca'); if (hid) hid.value = pecaId;
     const p = pecaId ? pecas.find(x => x.id === pecaId) : null;
     const inputBusca = document.getElementById('cc-vincular-peca-busca'); if (inputBusca) inputBusca.value = p ? p.nome : '';
-    vincularBusca = ''; vincularListaAberta = false;
+    vincularBusca = '';
     _renderListaPecaBuscaPlanta();
   }
 
@@ -2281,6 +2370,7 @@ const ControleConcreto = (() => {
     const pecaAtual = m.pecaId ? pecas.find(p => p.id === m.pecaId) : null;
     const pr = pranchas.find(p => p.id === pranchaAtivaId);
     el.innerHTML = `
+      ${pecaAtual ? `<div class="cc-empty" style="margin-bottom:10px;">Vinculada a: <b>${esc(pecaAtual.tipo)} — ${esc(pecaAtual.nome)}</b></div>` : ''}
       <div class="form-grupo">
         <label>Tipo</label>
         <select class="form-control" id="cc-vincular-tipo" onchange="CCON.onTipoVincularPlanta(this.value)">
@@ -2297,13 +2387,10 @@ const ControleConcreto = (() => {
       </div>
       <div class="form-grupo">
         <label>Peça do Levantamento de Concreto</label>
-        <div style="position:relative;">
-          <input type="text" class="form-control" id="cc-vincular-peca-busca" placeholder="Digite pra buscar por nome..."
-            value="${esc(pecaAtual ? pecaAtual.nome : '')}" oninput="CCON.onBuscaPecaPlanta(this.value)" onfocus="CCON.onFocoBuscaPecaPlanta()"
-            onblur="setTimeout(()=>CCON.fecharListaPecaBuscaPlanta(),150)" autocomplete="off">
-          <input type="hidden" id="cc-vincular-peca" value="${m.pecaId || ''}">
-          <div id="cc-vincular-peca-lista" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:30;background:#fff;border:1px solid var(--cv-border,#e2e8f0);border-radius:8px;max-height:220px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,.15);margin-top:4px;"></div>
-        </div>
+        <input type="text" class="form-control" id="cc-vincular-peca-busca" placeholder="🔍 Filtrar por nome... (ou clique direto na lista abaixo)"
+          value="" oninput="CCON.onBuscaPecaPlanta(this.value)" autocomplete="off" style="margin-bottom:6px;">
+        <input type="hidden" id="cc-vincular-peca" value="${m.pecaId || ''}">
+        <div id="cc-vincular-peca-lista" style="background:#fff;border:1px solid var(--cv-border,#e2e8f0);border-radius:8px;max-height:320px;overflow-y:auto;"></div>
         ${!_pecasElegiveisPlanta().length ? `<p class="text-sm text-muted" style="margin-top:6px;">Nenhuma peça encontrada com esse filtro — confira o tipo/andar, ou cadastre no <a href="levantamento-concreto.html" style="color:var(--cor-primaria-dark);font-weight:600;">Levantamento de Concreto</a>.</p>` : ''}
       </div>
       <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;">
@@ -2312,6 +2399,7 @@ const ControleConcreto = (() => {
       </div>
     `;
     Permissions.aplicarNaTela(document.getElementById('modal-cc-vincular-planta'));
+    _renderListaPecaBuscaPlanta();
   }
 
   async function salvarVinculoPlanta(continuar) {
@@ -2430,6 +2518,7 @@ const ControleConcreto = (() => {
       for (let i = 0; i < ops.length; i += 400) await Database.batchWrite(ops.slice(i, i + 400));
       await Database.deletar(obraId, COL_PRANCHAS, id);
       await db.collection('obras').doc(obraId).collection('config').doc('concretoImagem_' + id).delete().catch(() => {});
+      await deletarImagem(`obras/${obraId}/concreto-plantas/${id}.png`).catch(() => {});
       if (pranchaAtivaId === id) pranchaAtivaId = null;
       await carregar();
       _renderPranchasBody();
@@ -2462,7 +2551,11 @@ const ControleConcreto = (() => {
       const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
       const page = await pdf.getPage(1);
       const viewportBase = page.getViewport({ scale: 1 });
-      const alvo = 2200;
+      // Antes ficava em 2200px + JPEG comprimido (limite de ~950KB do
+      // Firestore) — planta técnica cheia de texto/cota miúdo ficava
+      // ilegível. Agora vai pro Storage (sem esse teto), então sobe a
+      // resolução de verdade e salva sem perda (PNG).
+      const alvo = 4500;
       const escala = Math.min(4, alvo / Math.max(viewportBase.width, viewportBase.height));
       const viewport = page.getViewport({ scale: escala });
       canvas = document.createElement('canvas');
@@ -2470,16 +2563,15 @@ const ControleConcreto = (() => {
       await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
     } else {
       const img = await new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = URL.createObjectURL(file); });
-      const alvo = 2200;
-      const fator = Math.min(1, alvo / Math.max(img.naturalWidth, img.naturalHeight));
       canvas = document.createElement('canvas');
-      canvas.width = Math.round(img.naturalWidth * fator); canvas.height = Math.round(img.naturalHeight * fator);
-      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      canvas.width = img.naturalWidth; canvas.height = img.naturalHeight;
+      canvas.getContext('2d').drawImage(img, 0, 0);
     }
-    const { url, width, height, ok } = CC.canvasParaDataURLLimitado(canvas);
-    if (!ok) throw new Error('Arquivo grande demais mesmo após compressão. Tente uma exportação menor.');
-    await db.collection('obras').doc(obraId).collection('config').doc('concretoImagem_' + pranchaId).set({ img: url });
-    await Database.atualizar(obraId, COL_PRANCHAS, pranchaId, { imgWidthPx: width, imgHeightPx: height });
+    if (statusEl) statusEl.textContent = 'Enviando (planta em alta qualidade pode demorar um pouco)...';
+    const dataUrl = canvas.toDataURL('image/png');
+    const path = `obras/${obraId}/concreto-plantas/${pranchaId}.png`;
+    const url = await uploadImagem(path, dataUrl);
+    await Database.atualizar(obraId, COL_PRANCHAS, pranchaId, { imgUrl: url, imgWidthPx: canvas.width, imgHeightPx: canvas.height });
     _imagemPranchaCacheId = null;
     if (statusEl) statusEl.textContent = '✓ Imagem carregada!';
   }
