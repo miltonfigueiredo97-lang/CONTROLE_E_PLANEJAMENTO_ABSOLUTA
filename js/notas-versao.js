@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.24.0',
+  versaoAtual: 'V3.25.0',
 
   versoes: [
     {
@@ -10811,6 +10811,24 @@ const NotasVersao = {
         "Botão \\\"Copiar parecer\\\" leva tudo em texto corrido, na ordem em que um planejador falaria.",
         "DESEMPENHO — 27× mais rápido: o motor de datas ganhou cache de capacidade por dia e índice de dias úteis com soma acumulada, então somar dias úteis e contar jornadas viraram busca binária em vez de caminhada dia a dia. O CPM do RD06 caiu de 2.300ms para 86ms, e o parecer inteiro (19 simulações de rede completa) de 23 segundos para 2,4. Verificado contra o caminho antigo em 3 calendários × 400 datas: resultado idêntico, incluindo meio período e exceções.",
         "Funciona em qualquer obra sem configuração: o parecer descobre sozinho os serviços, as frentes e os locais a partir dos campos que a obra já preenche. Sem classificação, ele avisa que a leitura é mais grossa em vez de fingir precisão."
+      ]
+    },
+    {
+      "versao": "V3.25.0",
+      "data": "2026-08-26",
+      "tipo": "funcionalidade",
+      "titulo": "Nova aba VIABILIDADE: dá pra fazer isso nesta ordem? — conferência linha por linha",
+      "itens": [
+        "A PERGUNTA QUE FALTAVA, e que nenhuma análise anterior fazia. O auditor pergunta se a REDE está bem montada. O padrão aprendido pergunta se aquilo é DIFERENTE do que a obra faz em outros lugares. A análise de cronograma pergunta se a EQUIPE cabe. Nenhuma perguntava a mais básica: como se faz o gesso do 1º andar sem a laje do 1º andar existir?",
+        "Isso não é estatística nem boa prática — é impossibilidade física. Um serviço precisa que exista o suporte onde ele vai ser feito, e se o cronograma diz que sim, aquela data é ficção e tudo que depende dela herda a ficção.",
+        "AS CAMADAS FÍSICAS, que é a ordem em que um prédio sobe e não é opinável: 1 SUPORTE (estrutura, laje, alvenaria estrutural, e a infraestrutura enterrada — drenagem, regularização de solo, escavação) · 2 VEDAÇÃO · 3 EMBUTIDO (elétrica, hidráulica, gás, contramarco) · 4 FECHAMENTO (reboco, contrapiso, gesso, forro) · 5 ACABAMENTO · 6 ENTREGA. Uma tarefa da camada N no local L exige que as camadas anteriores DAQUELE MESMO LOCAL existam.",
+        "DUAS CHECAGENS EM CADA UMA DAS TAREFAS, uma por uma. (A) DATA IMPOSSÍVEL: a tarefa começa antes de a camada anterior do mesmo local terminar. Não olha vínculo, olha data — é a checagem mais forte, porque independe de o cronograma estar amarrado. (B) SEM AMARRA NO SUPORTE: a tarefa não tem caminho de dependência, nem indireto, até a estrutura do próprio local.",
+        "RESULTADO NO RD06: 2.133 tarefas conferidas uma a uma. ZERO impossibilidades de data — nas datas, a ordem física do cronograma está coerente, não há serviço marcado onde ainda não há estrutura. Mas 905 tarefas sem amarra no suporte do próprio local.",
+        "O CASO EXATO QUE MOTIVOU ISTO: o Gesso Liso do 10º pavimento depende SÓ do gesso do 9º, que depende do 8º, que depende do 7º — uma corrente vertical de gesso em que nenhum elo está preso à estrutura do próprio pavimento. Hoje a data está certa (gesso em 26/08, laje pronta em 15/04), mas por coincidência: nada obriga. Quando a laje atrasar, o gesso não anda junto, e o cronograma passa a marcar serviço num pavimento que ainda não foi concretado, sem que nada reclame.",
+        "AÇÃO EM MASSA: botão \\\"Amarrar na estrutura\\\" cria o vínculo faltante em todas as tarefas do grupo, pareado por local — cada tarefa ligada à estrutura do SEU pavimento, nunca de outro. Com a mesma simulação de impacto na data final e no caminho crítico antes de aplicar.",
+        "Os achados vêm AGRUPADOS POR PADRÃO: 404 acabamentos sem amarra são um problema com 404 ocorrências e uma ação que resolve o conjunto, não 404 problemas.",
+        "ONDE O SISTEMA FICA CALADO, DE PROPÓSITO: serviço cujo nome não é reconhecido pelo vocabulário de construção fica de fora (65 no RD06), e atividades de canteiro, projeto e mobilização são ignoradas por não dependerem do local estar construído. Dizer que algo é impossível sem ter certeza é pior que não dizer nada.",
+        "Dois erros meus corrigidos durante a construção, ambos revelados pelo cronograma real: drenagem e regularização de solo estavam classificadas como instalação embutida, e o sistema dizia que a drenagem do subsolo era impossível por começar antes da estrutura do subsolo — quando é exatamente assim que se constrói. E a comparação usava o ÚLTIMO término da estrutura do local: num local grande como o Térreo, uma única estrutura tardia jogava o limite pra frente e transformava serviço legítimo em impossível. Passou a usar o PRIMEIRO — a pergunta certa é \\\"já existe alguma parte pronta aqui?\\\", não \\\"está tudo pronto?\\\"."
       ]
     }
   ],

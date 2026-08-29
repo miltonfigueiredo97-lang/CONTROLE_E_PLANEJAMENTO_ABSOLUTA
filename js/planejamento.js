@@ -7399,7 +7399,8 @@ const Planejamento = (() => {
   let _audit=null;         // último resultado da análise da REDE (auditor)
   let _cron=null;          // último resultado da análise do CRONOGRAMA (planejamento)
   let _parecer=null;       // parecer de planejamento (onde está o prazo, o que muda a data)
-  let _auditAba='parecer'; // 'parecer' | 'rede' | 'cronograma'
+  let _viab=null;          // viabilidade física (dá pra fazer isso nesta ordem?)
+  let _auditAba='parecer'; // 'parecer' | 'viabilidade' | 'rede' | 'cronograma'
   let _decisoes=new Map(); // chave -> {id, chave, ctx, decisao, justificativa}
   let _auditSev='todas';
   let _decisaoPend=null;   // achado aguardando justificativa no modal
@@ -7435,6 +7436,11 @@ const Planejamento = (() => {
       // a base de evidência dele.
       _parecer=(typeof ParecerCronograma!=='undefined')
         ? ParecerCronograma.gerar(tarefas,{cal:_calObra,hoje:Utils.hoje(),rede:_audit.rede,cron:_cron})
+        : null;
+      // VIABILIDADE FÍSICA: "dá pra fazer isso, nesta ordem?" — a pergunta mais
+      // básica, e a que nenhuma das outras análises fazia.
+      _viab=(typeof ViabilidadeFisica!=='undefined')
+        ? ViabilidadeFisica.analisar(tarefas,{cal:_calObra,decisoes:_decisoes})
         : null;
       _auditAba=_parecer?'parecer':'rede';
       _auditSev='todas';
@@ -7515,6 +7521,7 @@ const Planejamento = (() => {
       el.innerHTML=`
         <div style="display:flex;gap:6px;margin-bottom:14px;border-bottom:1.5px solid var(--cor-borda-light);padding-bottom:10px;">
           ${aba('parecer','📋 Parecer','','Onde está o prazo, o que muda a data, onde a obra vai travar, o foco das próximas semanas')}
+          ${aba('viabilidade','🧱 Viabilidade',_viab?_viab.abertos.length:0,'Dá pra fazer isso nesta ordem? Cada tarefa conferida contra a realidade física: existe estrutura no local antes dela começar, e ela está presa nessa estrutura')}
           ${aba('rede','Rede e vínculos',_audit.abertos.length,'Matemática da rede: predecessora faltando, folga, caminho crítico, ciclo')}
           ${aba('cronograma','Cronograma',_cron?_cron.abertos.length:0,'Carga de equipe, ritmo entre pavimentos, conflito de frentes')}
           <span style="margin-left:auto;display:flex;gap:6px;">
@@ -7526,9 +7533,25 @@ const Planejamento = (() => {
       return;
     }
 
+    if(_auditAba==='viabilidade'&&_viab){
+      el.innerHTML=`
+        <div style="display:flex;gap:6px;margin-bottom:14px;border-bottom:1.5px solid var(--cor-borda-light);padding-bottom:10px;">
+          ${aba('parecer','📋 Parecer','','Onde está o prazo, o que muda a data, onde a obra vai travar')}
+          ${aba('viabilidade','🧱 Viabilidade',_viab.abertos.length,'Dá pra fazer isso nesta ordem?')}
+          ${aba('rede','Rede e vínculos',_audit.abertos.length,'Matemática da rede')}
+          ${aba('cronograma','Cronograma',_cron?_cron.abertos.length:0,'Carga de equipe, ritmo, conflito de frentes')}
+          <span style="margin-left:auto;">
+            <button class="btn btn-secundario btn-sm" style="font-size:.72rem;" onclick="Planejamento.abrirVerificarPlanejamento()">↻ Reanalisar</button>
+          </span>
+        </div>
+        ${_renderViabilidade()}`;
+      return;
+    }
+
     el.innerHTML=`
       <div style="display:flex;gap:6px;margin-bottom:14px;border-bottom:1.5px solid var(--cor-borda-light);padding-bottom:10px;">
         ${aba('parecer','📋 Parecer','','Onde está o prazo, o que muda a data, onde a obra vai travar, o foco das próximas semanas')}
+        ${aba('viabilidade','🧱 Viabilidade',_viab?_viab.abertos.length:0,'Dá pra fazer isso nesta ordem? Cada tarefa conferida contra a realidade física do local')}
         ${aba('rede','Rede e vínculos',_audit.abertos.length,'Matemática da rede: predecessora faltando, folga, caminho crítico, ciclo, duração x quantidade')}
         ${aba('cronograma','Cronograma',_cron?_cron.abertos.length:0,'Opinião de planejamento: a equipe cabe nos locais, o ritmo entre pavimentos fecha, as frentes se atropelam, o que dá pra antecipar')}
       </div>
@@ -7666,6 +7689,91 @@ const Planejamento = (() => {
         ${(!p.antecipaveis.length&&!p.ociosas.length)?'<div class="text-sm text-muted">Nada de folga relevante sobrando — o cronograma está apertado em todas as frentes.</div>':''}`)}`;
   }
 
+  // A aba que responde "dá pra fazer isso?". Agrupada por padrão, porque 400
+  // acabamentos sem amarra são UM problema com 400 ocorrências — e com uma ação
+  // que resolve o conjunto.
+  function _renderViabilidade(){
+    const v=_viab;
+    if(!v)return'';
+    const R=v.resumo;
+    const podeEditar=Permissions.pode('planejamento','editar');
+    const kpi=(rot,val,rod,cor)=>`<div style="flex:1;min-width:145px;background:var(--cor-fundo);border:1.5px solid var(--cor-borda-light);border-radius:var(--borda-radius-lg);padding:11px;">
+      <div class="text-muted" style="font-size:.66rem;text-transform:uppercase;letter-spacing:.5px;">${rot}</div>
+      <div style="font-weight:800;color:${cor||'var(--cor-texto)'};margin:2px 0;">${val}</div>
+      <div class="text-muted" style="font-size:.68rem;">${rod}</div></div>`;
+
+    const NOMES={impossivel_sem_suporte:'Começa antes de existir estrutura no local',
+      antece_camada:'Começa antes de terminar a camada anterior',
+      antecede_camada:'Começa antes de terminar a camada anterior',
+      sem_amarra_suporte:'Não está preso à estrutura do próprio local'};
+
+    const cartao=(g,i)=>{
+      const ex=g.itens[0];
+      const locais=[...new Set(g.itens.map(x=>x.dados.local).filter(Boolean))];
+      const acoes=[];
+      if(podeEditar&&g.tipo==='sem_amarra_suporte'&&g.buracos&&g.buracos.length)
+        acoes.push(`<button class="btn btn-primario btn-sm" style="font-size:.72rem;" onclick="Planejamento.viabAmarrar(${i})">Amarrar na estrutura (${g.itens.length})</button>`);
+      if(ex.tarefaId)acoes.push(`<button class="btn btn-secundario btn-sm" style="font-size:.72rem;" onclick="Planejamento.abrirEditorPred('${_esc(ex.tarefaId)}')">🔗 Editar vínculo</button>`);
+      acoes.push(`<button class="btn btn-secundario btn-sm" style="font-size:.72rem;" onclick="Planejamento.auditorDecidir('${_esc(ex.chave)}','manter')">É assim de propósito</button>`);
+
+      return `<div style="border:1.5px solid var(--cor-borda-light);border-left:4px solid ${g.severidade==='alta'?'var(--cor-perigo)':'var(--cor-alerta)'};
+        border-radius:8px;padding:12px;margin-bottom:10px;background:var(--cor-fundo-card);">
+        <div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;margin-bottom:5px;">
+          <span class="badge ${g.severidade==='alta'?'badge-perigo':'badge-alerta'}">${g.severidade==='alta'?'Impossível':'Atenção'}</span>
+          <b style="font-size:.86rem;color:var(--cor-texto);">${g.itens.length}× ${_esc(NOMES[g.tipo]||g.tipo)}</b>
+          <span class="text-muted" style="font-size:.72rem;">${_esc(g.camada)}${g.camadaBase?' · base: '+_esc(g.camadaBase):''}</span>
+        </div>
+        <div class="text-muted" style="font-size:.74rem;margin-bottom:6px;">Em ${locais.length} local(is): ${_esc(locais.slice(0,8).join(', '))}${locais.length>8?` e mais ${locais.length-8}`:''}</div>
+        <div style="font-size:.78rem;color:var(--cor-texto);white-space:pre-line;margin-bottom:6px;"><b>Exemplo:</b>\n${_esc(ex.detalhe)}</div>
+        <div style="font-size:.76rem;color:var(--cor-texto-secundario);background:var(--cor-fundo);border-radius:6px;padding:8px 10px;margin-bottom:6px;"><b>Por quê:</b> ${_esc(ex.motivo)}</div>
+        <div style="font-size:.76rem;color:var(--cor-sucesso);margin-bottom:8px;"><b>Proposta:</b> ${_esc(ex.sugestao)}</div>
+        <details style="margin-bottom:8px;"><summary style="cursor:pointer;font-size:.74rem;color:var(--cor-texto);">Ver as ${g.itens.length} tarefas</summary>
+          <div class="text-muted" style="font-size:.71rem;margin-top:5px;max-height:190px;overflow:auto;">
+            ${g.itens.slice(0,80).map(x=>`${_esc((x.tarefaCodigo?x.tarefaCodigo+' ':'')+(x.tarefaNome||'').trim())} <span style="color:var(--cor-texto-muted);">[${_esc(x.dados.local||'')}]</span>`).join('<br>')}
+            ${g.itens.length>80?`<br>… e outras ${g.itens.length-80}`:''}</div></details>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">${acoes.join('')}</div>
+      </div>`;
+    };
+
+    return `
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
+        ${kpi('Conferidas',`<span style="font-size:1.5rem;">${R.avaliadas}</span>`,`de ${R.total} tarefas, uma a uma`)}
+        ${kpi('Sem problema',`<span style="font-size:1.5rem;">${R.ok}</span>`,'ordem física coerente')}
+        ${kpi('Impossíveis',`<span style="font-size:1.5rem;">${R.alta}</span>`,'começam antes do local existir',R.alta?'var(--cor-perigo)':'var(--cor-sucesso)')}
+        ${kpi('Sem amarra',`<span style="font-size:1.5rem;">${R.media}</span>`,'data certa hoje, mas por acaso')}
+      </div>
+
+      <div class="text-sm text-muted" style="margin-bottom:12px;">
+        Cada tarefa foi conferida contra a realidade física do local dela: existe estrutura ali antes dela começar, e ela está presa nessa estrutura?
+        ${R.naoReconhecidas?`<br>${R.naoReconhecidas} tarefa(s) têm serviço fora do vocabulário de construção e ficaram de fora — o sistema prefere calar a chutar que algo é impossível.`:''}
+      </div>
+
+      ${R.alta===0?`<div style="background:var(--cor-sucesso-bg);border:1.5px solid var(--cor-sucesso);border-radius:8px;padding:10px 12px;font-size:.78rem;color:#15803d;margin-bottom:12px;">
+        <b>Nenhuma tarefa começa antes do local existir.</b> Nas datas, a ordem física do cronograma está coerente: não há serviço marcado onde ainda não há estrutura.</div>`:''}
+
+      ${v.grupos.length?v.grupos.map(cartao).join(''):'<div class="text-sm text-muted" style="padding:22px;text-align:center;">Nenhum problema de viabilidade física.</div>'}`;
+  }
+
+  // Amarra em massa as tarefas de um grupo na estrutura do próprio local. Usa a
+  // mesma criação pareada por local do Verificador — um caminho de código só.
+  function viabAmarrar(idx){
+    if(!Permissions.pode('planejamento','editar')){Utils.toast('Sem permissão.','erro');return;}
+    const g=_viab&&_viab.grupos&&_viab.grupos[idx];
+    if(!g||!g.buracos||!g.buracos.length)return;
+    Utils.mostrarLoading('Simulando...');
+    setTimeout(()=>{
+      try{
+        const s=_simularMudanca(r=>_calcularCriacao(r,g.buracos,'TI',''));
+        _invPend={achado:{chave:g.itens[0].chave,dados:{labelAntes:'estrutura do local',
+          labelDepois:g.camada,buracos:g.buracos}},vinculos:[],buracos:g.buracos,
+          sim:s,acao:'criar',qtd:s.mudancas._criados||s.mudancas.size,manual:true};
+        _renderConfirmarAcao();
+        Utils.abrirModal('modal-planej-decisao');
+      }catch(e){console.error(e);Utils.toast('Erro ao simular.','erro');}
+      finally{Utils.esconderLoading();}
+    },10);
+  }
+
   function copiarParecer(){
     if(!_parecer||typeof ParecerCronograma==='undefined')return;
     const nome=(typeof Router!=='undefined'&&Router.getObraNome)?(Router.getObraNome()||''):'';
@@ -7691,12 +7799,17 @@ const Planejamento = (() => {
     _parecer=(typeof ParecerCronograma!=='undefined')
       ? ParecerCronograma.gerar(tarefas,{cal:_calObra,hoje:Utils.hoje(),rede:_audit.rede,cron:_cron})
       : null;
+    _viab=(typeof ViabilidadeFisica!=='undefined')
+      ? ViabilidadeFisica.analisar(tarefas,{cal:_calObra,decisoes:_decisoes})
+      : null;
   }
 
   // As duas listas de achados (rede e cronograma) num lugar só, pra decisão e
   // ação funcionarem igual em qualquer aba.
   function _todosAchados(){
-    return (_audit?_audit.achados:[]).concat(_cron?_cron.achados:[]);
+    return (_audit?_audit.achados:[])
+      .concat(_cron?_cron.achados:[])
+      .concat(_viab?_viab.achados:[]);
   }
 
   function auditorIr(tarefaId){
@@ -8450,7 +8563,7 @@ const Planejamento = (() => {
   }
 
   return{init,carregar,abrirAplicarCalendario,aplicarCalendario,calendarioAtual,ciclosDetectados,
-    abrirVerificarPlanejamento,auditorFiltrar,auditorAba,copiarParecer,auditorIr,auditorDecidir,auditorConfirmarDecisao,auditorReabrir,auditorInverter,auditorCriarVinculos,auditorRemoverVinculos,auditorAcaoVinculo,auditorConfirmarInversao,auditorCopiarDossie,toggleCritico,
+    abrirVerificarPlanejamento,auditorFiltrar,auditorAba,copiarParecer,viabAmarrar,auditorIr,auditorDecidir,auditorConfirmarDecisao,auditorReabrir,auditorInverter,auditorCriarVinculos,auditorRemoverVinculos,auditorAcaoVinculo,auditorConfirmarInversao,auditorCopiarDossie,toggleCritico,
     abrirInverterGrupos,invGruposSel,invGruposSimular,
     abrirEditorPred,tarefaSelecionadaId,edPredBuscar,edPredTrocarAlvo,edPredAdicionar,edPredRemover,edPredCopiarBaixo,edPredCopiarSequencia,edPredAplicar,setZoom,setVersaoData,copiarDatasDeAtual,inserirTarefa,editarTarefa,salvarTarefa,excluirTarefa,
     selectIdx,toggleRecolher,recuarNivel,avancarNivel,
