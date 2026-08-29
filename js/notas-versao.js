@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.25.0',
+  versaoAtual: 'V3.26.0',
 
   versoes: [
     {
@@ -10828,7 +10828,19 @@ const NotasVersao = {
         "AÇÃO EM MASSA: botão \\\"Amarrar na estrutura\\\" cria o vínculo faltante em todas as tarefas do grupo, pareado por local — cada tarefa ligada à estrutura do SEU pavimento, nunca de outro. Com a mesma simulação de impacto na data final e no caminho crítico antes de aplicar.",
         "Os achados vêm AGRUPADOS POR PADRÃO: 404 acabamentos sem amarra são um problema com 404 ocorrências e uma ação que resolve o conjunto, não 404 problemas.",
         "ONDE O SISTEMA FICA CALADO, DE PROPÓSITO: serviço cujo nome não é reconhecido pelo vocabulário de construção fica de fora (65 no RD06), e atividades de canteiro, projeto e mobilização são ignoradas por não dependerem do local estar construído. Dizer que algo é impossível sem ter certeza é pior que não dizer nada.",
-        "Dois erros meus corrigidos durante a construção, ambos revelados pelo cronograma real: drenagem e regularização de solo estavam classificadas como instalação embutida, e o sistema dizia que a drenagem do subsolo era impossível por começar antes da estrutura do subsolo — quando é exatamente assim que se constrói. E a comparação usava o ÚLTIMO término da estrutura do local: num local grande como o Térreo, uma única estrutura tardia jogava o limite pra frente e transformava serviço legítimo em impossível. Passou a usar o PRIMEIRO — a pergunta certa é \\\"já existe alguma parte pronta aqui?\\\", não \\\"está tudo pronto?\\\"."
+        "Dois erros meus corrigidos durante a construção, ambos revelados pelo cronograma real: drenagem e regularização de solo estavam classificadas como instalação embutida, e o sistema dizia que a drenagem do subsolo era impossível por começar antes da estrutura do subsolo — quando é exatamente assim que se constrói. E a comparação usava o ÚLTIMO término da estrutura do local: num local grande como o Térreo, uma única estrutura tardia jogava o limite pra frente e transformava serviço legítimo em impossível. Passou a usar o PRIMEIRO — a pergunta certa é \"já existe alguma parte pronta aqui?\", não \"está tudo pronto?\"."
+      ]
+    },
+    {
+      "versao": "V3.26.0",
+      "data": "2026-08-29",
+      "tipo": "funcionalidade",
+      "titulo": "Novo: Concretagens agora se montam no Controle de Concreto, não no Levantamento",
+      "itens": [
+        "PROBLEMA: montar/editar/excluir uma Concretagem (vínculo de peças + configuração de BTs) morava no Levantamento de Concreto. Errado — Levantamento é a base de peças do projeto; quem controla e executa a concretagem é o Controle de Concreto.",
+        "Botão \\\"◈ Concretagens\\\" e todo o wizard (Dados → Peças → BTs → Resumo) saíram do Levantamento e foram para o Controle de Concreto, ao lado das abas Operacional/Relatórios.",
+        "Permissões: as ações \\\"Criar/Editar/Excluir concretagem\\\" agora pertencem ao módulo Controle — Concreto (antes estavam, por engano, dentro de Levantamento — Concreto).",
+        "Levantamento de Concreto ficou só com o que é dele: base de peças, calculadora de volumes, importação em lote e configuração de andares."
       ]
     }
   ],

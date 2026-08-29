@@ -39,6 +39,9 @@ const ControleConcreto = (() => {
   // Estado do modal Lançar BT
   let bt = null;
 
+  // Estado do wizard de concretagem (movido do Levantamento de Concreto)
+  let cw = null;
+
   // ══════════════════════════════════════════
   // INIT / CARREGAMENTO
   // ══════════════════════════════════════════
@@ -144,9 +147,12 @@ const ControleConcreto = (() => {
           <h2>📊 Controle de Concreto</h2>
           <span class="subtitulo">Lançamento de BTs, previsto × realizado e índices de perda</span>
         </div>
-        <div class="aba-toggle">
-          <button class="aba-btn ${aba === 'operacional' ? 'ativo' : ''}" onclick="CCON.setAba('operacional')">Operacional</button>
-          <button class="aba-btn ${aba === 'relatorios' ? 'ativo' : ''}" onclick="CCON.setAba('relatorios')">Relatórios</button>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+          <button class="btn btn-dark btn-sm" onclick="CCON.abrirConcretagens()">◈ Concretagens</button>
+          <div class="aba-toggle">
+            <button class="aba-btn ${aba === 'operacional' ? 'ativo' : ''}" onclick="CCON.setAba('operacional')">Operacional</button>
+            <button class="aba-btn ${aba === 'relatorios' ? 'ativo' : ''}" onclick="CCON.setAba('relatorios')">Relatórios</button>
+          </div>
         </div>
       </div>
       <div id="cc-body"></div>
@@ -304,14 +310,14 @@ const ControleConcreto = (() => {
           <div class="cc-launchBarLeft">
             <div class="cc-launchBarBadge">⚡ Pronto para Lançamento</div>
             <div class="cc-launchBarTitle">Lançamento de Concretagem</div>
-            <div class="cc-launchBarSub">Configure as concretagens no Levantamento e lance as BTs por aqui com agilidade.</div>
+            <div class="cc-launchBarSub">Monte as concretagens aqui mesmo e lance as BTs com agilidade.</div>
           </div>
           <div class="cc-launchBarRight">
             <div class="cc-launchBarActions">
               <a class="cc-launchBarSmallBtn" href="levantamento-concreto.html">
                 <span class="cc-launchBarSmallBtnIcon">🪨</span>
                 Levantamento
-                <span class="cc-launchBarSmallBtnSub">Peças e concretagens</span>
+                <span class="cc-launchBarSmallBtnSub">Base de peças</span>
               </a>
             </div>
             <button class="cc-btnLaunch" onclick="CCON.abrirLancarBT()">⊕ LANÇAR BT →</button>
@@ -1290,6 +1296,437 @@ const ControleConcreto = (() => {
       ${tabelaAndar}`;
   }
 
+  // ══════════════════════════════════════════
+  // MONTAGEM DE CONCRETAGENS (vínculos de peças + BTs)
+  // Movido do Levantamento de Concreto — aqui é onde a
+  // concretagem é de fato controlada/lançada.
+  // ══════════════════════════════════════════
+  function abrirConcretagens() {
+    cw = { modo: 'menu', concSel: '' };
+    renderConcretagem();
+    Utils.abrirModal('modal-cc-conc');
+  }
+
+  function iniciarNovaConc() {
+    cw = {
+      modo: 'nova', step: 1,
+      concId: CC.genId('c'),
+      numero: String(concretagens.length + 1),
+      data: Utils.hoje(),
+      desc: '',
+      vinculos: [],
+      bts: [],
+      filtroAndar: 'todos', filtroTipo: 'todos', busca: '', esconder100: false,
+    };
+    renderConcretagem();
+  }
+
+  function editarConcretagem(id) {
+    // Chamado da tabela/menu: abre o modal já em edição
+    const c = concretagens.find(x => x.id === id);
+    if (!c) return;
+    cw = {
+      modo: 'editar', step: 1,
+      concId: c.id,
+      numero: String(c.numero),
+      data: c.data || '',
+      desc: c.descricao || '',
+      vinculos: pecaConc.filter(pc => pc.concretagemId === c.id).map(pc => ({ id: pc.id, pecaId: pc.pecaId, pctConcretagem: pc.pctConcretagem })),
+      bts: btsConfig.filter(b => b.concretagemId === c.id).map(b => ({ ...b })),
+      filtroAndar: 'todos', filtroTipo: 'todos', busca: '', esconder100: false,
+    };
+    renderConcretagem();
+    Utils.abrirModal('modal-cc-conc');
+  }
+
+  function cwIniciarEditar() {
+    if (!cw.concSel) { Utils.toast('Selecione uma concretagem para editar.', 'alerta'); return; }
+    editarConcretagem(cw.concSel);
+  }
+
+  function cwSetConcSel(v) { cw.concSel = v; }
+
+  async function excluirConcretagem(id) {
+    if(!Permissions.pode('controleConcreto','excluir:concretagem')){Utils.toast('Sem permissão para excluir.','erro');return;}
+    const c = concretagens.find(x => x.id === id);
+    if (!c) return;
+    const ok = await Utils.confirmar(`Excluir Concretagem Nº${c.numero}? Isso removerá peças vinculadas, BTs configuradas e lançamentos desta concretagem.`);
+    if (!ok) return;
+    Utils.mostrarLoading();
+    try {
+      const ops = [{ type: 'delete', ref: Database.ref(obraId, COL_CONCS).doc(id) }];
+      pecaConc.filter(pc => pc.concretagemId === id).forEach(pc =>
+        ops.push({ type: 'delete', ref: Database.ref(obraId, COL_PC).doc(pc.id) }));
+      btsConfig.filter(b => b.concretagemId === id).forEach(b =>
+        ops.push({ type: 'delete', ref: Database.ref(obraId, COL_BTS).doc(b.id) }));
+      lancamentos.filter(l => l.concretagemId === id).forEach(l =>
+        ops.push({ type: 'delete', ref: Database.ref(obraId, COL_LANS).doc(l.id) }));
+      for (let i = 0; i < ops.length; i += 400) {
+        await Database.batchWrite(ops.slice(i, i + 400));
+      }
+      Utils.toast(`Concretagem Nº${c.numero} excluída.`, 'sucesso');
+      Utils.fecharModal('modal-cc-conc');
+      await carregar();
+    } catch (e) {
+      Utils.toast('Erro ao excluir: ' + e.message, 'erro');
+    } finally {
+      Utils.esconderLoading();
+    }
+  }
+
+  async function cwExcluirSelecionada() {
+    if(!Permissions.pode('controleConcreto','excluir:concretagem')){Utils.toast('Sem permissão para excluir.','erro');return;}
+    if (!cw.concSel) { Utils.toast('Selecione uma concretagem para excluir.', 'alerta'); return; }
+    await excluirConcretagem(cw.concSel);
+  }
+
+  function cwPctJaAlocado(pecaId) {
+    return pecaConc
+      .filter(pc => pc.pecaId === pecaId && pc.concretagemId !== cw.concId)
+      .reduce((s, pc) => s + (parseFloat(pc.pctConcretagem) || 0), 0);
+  }
+
+  function renderConcretagem() {
+    const el = document.getElementById('cc-conc-body');
+    if (!el || !cw) return;
+
+    if (cw.modo === 'menu') {
+      el.innerHTML = `
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;" class="cc-menu-grid">
+          <div class="cc-menuCard" style="text-align:center;" onclick="CCON.iniciarNovaConc()">
+            <div class="cc-menuCardIcon">＋</div>
+            <div class="cc-menuCardTitle">Nova Concretagem</div>
+            <div class="cc-menuCardSub">Criar do zero com peças e BTs</div>
+          </div>
+          <div class="cc-menuCard" style="text-align:center;cursor:default;">
+            <div class="cc-menuCardIcon">✎</div>
+            <div class="cc-menuCardTitle">Editar / Excluir</div>
+            <select class="form-control mt-1" onchange="CCON.cwSetConcSel(this.value)">
+              <option value="">— selecione —</option>
+              ${[...concretagens].sort((a, b) => a.numero - b.numero).map(c =>
+                `<option value="${c.id}">Nº${c.numero} — ${esc(c.data || '')}${c.descricao ? ` | ${esc(c.descricao)}` : ''}</option>`).join('')}
+            </select>
+            <div style="display:flex;gap:8px;margin-top:10px;">
+              <button class="btn btn-primario btn-sm" style="flex:1;" onclick="CCON.cwIniciarEditar()">Editar →</button>
+              <button class="btn btn-secundario btn-sm" style="color:var(--cv-red);" onclick="CCON.cwExcluirSelecionada()">🗑</button>
+            </div>
+          </div>
+        </div>`;
+      return;
+    }
+
+    // Wizard
+    const stepsHtml = `
+      <div class="cc-steps">
+        ${['Dados', 'Peças', 'BTs', 'Resumo'].map((label, i) => {
+          const n = i + 1;
+          const ativo = cw.step === n, feito = cw.step > n;
+          return `<div class="cc-step ${ativo ? 'cc-stepActive' : ''} ${feito ? 'cc-stepDone' : ''}">
+            <span class="cc-stepNum">${feito ? '✓' : n}</span>
+            <span class="cc-stepLabel">${label}</span>
+          </div>`;
+        }).join('')}
+      </div>`;
+
+    if (cw.step === 1) {
+      el.innerHTML = `${stepsHtml}
+        <div class="form-row">
+          <div class="form-grupo"><label>Número</label><input type="number" min="1" class="form-control" value="${esc(cw.numero)}" oninput="CCON.cwUpd('numero', this.value)"></div>
+          <div class="form-grupo"><label>Data</label><input type="date" class="form-control" value="${esc(cw.data)}" oninput="CCON.cwUpd('data', this.value)"></div>
+        </div>
+        <div class="form-grupo"><label>Descrição</label><input type="text" class="form-control" placeholder="ex: Pilares Térreo eixos A-D" value="${esc(cw.desc)}" oninput="CCON.cwUpd('desc', this.value)"></div>
+        <div style="display:flex;justify-content:space-between;margin-top:14px;">
+          <button class="btn btn-secundario" onclick="CCON.cwVoltarMenu()">← Voltar</button>
+          <button class="btn btn-primario" onclick="CCON.cwStep1Next()">Próximo →</button>
+        </div>`;
+      return;
+    }
+
+    if (cw.step === 2) {
+      const volTotal = cwVolTotalVinculos();
+      const andares = ['todos', ...todosAndares()];
+      const tipos = ['todos', ...[...new Set(pecas.map(p => p.tipo))].sort()];
+      el.innerHTML = `${stepsHtml}
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px;">
+          <span style="font-family:var(--font-mono);font-size:0.85rem;font-weight:700;color:var(--cor-primaria-dark,#b8960a);">${cw.vinculos.length} peças · ${CC.fmt4(volTotal)} m³</span>
+          ${cw.filtroAndar !== 'todos' ? `<button class="btn btn-secundario btn-sm" onclick="CCON.cwToggleAndar()">${cwAndarTodoMarcado() ? 'Desmarcar tudo do andar' : 'Marcar tudo do andar'}</button>` : ''}
+        </div>
+        <div class="form-row" style="margin-bottom:8px;">
+          <select class="form-control" onchange="CCON.cwUpdFiltro('filtroAndar', this.value)">
+            ${andares.map(a => `<option value="${esc(a)}" ${cw.filtroAndar === a ? 'selected' : ''}>${a === 'todos' ? 'Todos os andares' : esc(a)}</option>`).join('')}
+          </select>
+          <select class="form-control" onchange="CCON.cwUpdFiltro('filtroTipo', this.value)">
+            ${tipos.map(t => `<option value="${esc(t)}" ${cw.filtroTipo === t ? 'selected' : ''}>${t === 'todos' ? 'Todos os tipos' : esc(t)}</option>`).join('')}
+          </select>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
+          <input type="text" class="form-control" style="flex:1;" placeholder="🔍 Buscar por nome..." value="${esc(cw.busca)}" oninput="CCON.cwBusca(this.value)">
+          <label style="display:flex;align-items:center;gap:5px;font-size:0.78rem;color:var(--cor-texto-muted);cursor:pointer;white-space:nowrap;">
+            <input type="checkbox" ${cw.esconder100 ? 'checked' : ''} onchange="CCON.cwUpdFiltro('esconder100', this.checked)"> Esconder 100%
+          </label>
+        </div>
+        <div id="cc-cw-lista" style="max-height:300px;overflow-y:auto;border:1px solid var(--cor-borda-light);border-radius:8px;"></div>
+        <div style="display:flex;justify-content:space-between;margin-top:14px;">
+          <button class="btn btn-secundario" onclick="CCON.cwSetStep(1)">← Voltar</button>
+          <button class="btn btn-primario" onclick="CCON.cwStep2Next()">Próximo →</button>
+        </div>`;
+      renderCwLista();
+      return;
+    }
+
+    if (cw.step === 3) {
+      const volTotal = cwVolTotalVinculos();
+      const volBTs = cw.bts.reduce((s, b) => s + (parseFloat(b.volumePrevisto) || 0), 0);
+      const btsOk = Math.abs(volBTs - volTotal) < 0.1;
+      el.innerHTML = `${stepsHtml}
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px;">
+          <div style="font-family:var(--font-mono);font-size:0.85rem;">
+            Volume concretagem: <b style="color:var(--cor-primaria-dark,#b8960a);">${CC.fmt4(volTotal)} m³</b>
+            ${cw.bts.length ? ` · BTs: <b id="cc-cw-volbts" style="color:${btsOk ? '#16a34a' : '#ef4444'};">${CC.fmt4(volBTs)} m³</b>` : ''}
+          </div>
+          <button class="btn btn-secundario btn-sm" onclick="CCON.cwAddBT()">+ Adicionar BT</button>
+        </div>
+        <div id="cc-cw-bts">
+          ${!cw.bts.length ? `<div class="cc-empty">Clique em "+ Adicionar BT" para configurar as betonadas.</div>` :
+          cw.bts.map((b, i) => `
+            <div style="display:grid;grid-template-columns:70px 110px 1fr 1fr auto;gap:8px;margin-bottom:8px;align-items:end;" class="cc-bt-row">
+              <div class="form-grupo" style="margin-bottom:0;"><label style="font-size:0.68rem;">BT Nº</label><input type="number" min="1" class="form-control" value="${esc(b.numero)}" oninput="CCON.cwUpdBT(${i}, 'numero', this.value)"></div>
+              <div class="form-grupo" style="margin-bottom:0;"><label style="font-size:0.68rem;">Volume (m³)</label><input type="number" step="0.5" min="0" class="form-control" value="${esc(b.volumePrevisto)}" oninput="CCON.cwUpdBT(${i}, 'volumePrevisto', this.value)"></div>
+              <div class="form-grupo" style="margin-bottom:0;"><label style="font-size:0.68rem;">Nota Fiscal</label><input type="text" class="form-control" placeholder="opcional" value="${esc(b.notaFiscal || '')}" oninput="CCON.cwUpdBT(${i}, 'notaFiscal', this.value)"></div>
+              <div class="form-grupo" style="margin-bottom:0;"><label style="font-size:0.68rem;">Código BT</label><input type="text" class="form-control" placeholder="opcional" value="${esc(b.codigoBT || '')}" oninput="CCON.cwUpdBT(${i}, 'codigoBT', this.value)"></div>
+              <button class="btn btn-secundario btn-sm" style="color:#ef4444;" onclick="CCON.cwRemBT(${i})">✕</button>
+            </div>`).join('')}
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-top:14px;">
+          <button class="btn btn-secundario" onclick="CCON.cwSetStep(2)">← Voltar</button>
+          <button class="btn btn-primario" onclick="CCON.cwSetStep(4)">Revisar →</button>
+        </div>`;
+      return;
+    }
+
+    // Step 4: resumo
+    const volTotal = cwVolTotalVinculos();
+    el.innerHTML = `${stepsHtml}
+      <div class="cc-kpiGrid" style="grid-template-columns:1fr 1fr;margin-bottom:14px;">
+        <div class="cc-kpi"><div class="cc-kpiIcon">◈</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Concretagem</div><div class="cc-kpiValue" style="font-size:18px;">Nº ${esc(cw.numero)}</div><div class="cc-kpiSub">${esc(cw.data)}${cw.desc ? ` · ${esc(cw.desc)}` : ''}</div></div></div>
+        <div class="cc-kpi"><div class="cc-kpiIcon">📦</div><div class="cc-kpiBody"><div class="cc-kpiLabel">Volume Total</div><div class="cc-kpiValue">${CC.fmt4(volTotal)}<span class="cc-kpiUnit">m³</span></div><div class="cc-kpiSub">${cw.vinculos.length} peças · ${cw.bts.length} BTs</div></div></div>
+      </div>
+      <div style="margin-bottom:12px;">
+        ${cw.vinculos.slice(0, 6).map(v => {
+          const p = pecas.find(x => x.id === v.pecaId);
+          if (!p) return '';
+          return `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--cor-borda-light);font-family:var(--font-mono);font-size:0.8rem;">
+            <span>${esc(p.nome)} (${esc(p.andar)})</span>
+            <span style="color:var(--cor-primaria-dark,#b8960a);">${v.pctConcretagem}% → ${CC.fmt4(((parseFloat(v.pctConcretagem) || 0) / 100) * p.volume)} m³</span>
+          </div>`;
+        }).join('')}
+        ${cw.vinculos.length > 6 ? `<div style="font-family:var(--font-mono);font-size:0.75rem;color:var(--cor-texto-muted);margin-top:4px;">... e mais ${cw.vinculos.length - 6} peças</div>` : ''}
+      </div>
+      ${cw.bts.length ? `<div style="margin-bottom:12px;">
+        ${cw.bts.map(b => `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--cor-borda-light);font-family:var(--font-mono);font-size:0.8rem;">
+          <span style="color:var(--cor-primaria-dark,#b8960a);">BT-${esc(b.numero)}</span>
+          <span>${CC.fmt4(parseFloat(b.volumePrevisto) || 0)} m³${b.notaFiscal ? ` · NF:${esc(b.notaFiscal)}` : ''}</span>
+        </div>`).join('')}
+      </div>` : ''}
+      <div style="display:flex;justify-content:space-between;margin-top:14px;">
+        <button class="btn btn-secundario" onclick="CCON.cwSetStep(3)">← Voltar</button>
+        <button class="btn btn-primario" data-perm="controleConcreto:criar:concretagem" onclick="CCON.cwSalvar()">✓ Salvar Concretagem</button>
+      </div>`;
+  }
+
+  function cwVolTotalVinculos() {
+    return cw.vinculos.reduce((s, v) => {
+      const p = pecas.find(x => x.id === v.pecaId);
+      return s + (p ? ((parseFloat(v.pctConcretagem) || 0) / 100) * p.volume : 0);
+    }, 0);
+  }
+
+  function cwAndarTodoMarcado() {
+    const ids = pecas.filter(p => p.andar === cw.filtroAndar).map(p => p.id);
+    return ids.length > 0 && ids.every(id => cw.vinculos.find(v => v.pecaId === id));
+  }
+
+  function renderCwLista() {
+    const el = document.getElementById('cc-cw-lista');
+    if (!el || !cw) return;
+    const busca = (cw.busca || '').toLowerCase();
+    const visiveis = pecas.filter(p => {
+      if (cw.filtroAndar !== 'todos' && p.andar !== cw.filtroAndar) return false;
+      if (cw.filtroTipo !== 'todos' && p.tipo !== cw.filtroTipo) return false;
+      if (busca && !p.nome.toLowerCase().includes(busca)) return false;
+      if (cw.esconder100 && CC.pctConcretado(p, lancamentos) >= 100) return false;
+      return true;
+    });
+    if (!visiveis.length) {
+      el.innerHTML = `<div class="cc-empty">Nenhuma peça encontrada.</div>`;
+      return;
+    }
+    el.innerHTML = visiveis.map(p => {
+      const vinc = cw.vinculos.find(v => v.pecaId === p.id);
+      const sel = !!vinc;
+      const jaAlocado = cwPctJaAlocado(p.id);
+      const disponivel = Math.max(0, 100 - jaAlocado);
+      const bloqueada = !sel && disponivel <= 0;
+      const concsComPeca = pecaConc.filter(pc => pc.pecaId === p.id && pc.concretagemId !== cw.concId);
+      const nomesConc = concsComPeca.map(pc => {
+        const c = concretagens.find(x => x.id === pc.concretagemId);
+        return `Nº${c?.numero || '?'} (${CC.fmt1(parseFloat(pc.pctConcretagem) || 0)}%)`;
+      }).join(', ');
+      return `
+        <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--cor-borda-light);background:${sel ? 'var(--cor-primaria-light,#fef9e7)' : '#fff'};${bloqueada ? 'opacity:0.55;' : ''}">
+          <div onclick="${bloqueada ? '' : `CCON.cwTogglePeca('${p.id}')`}" style="width:20px;height:20px;border:2px solid ${sel ? 'var(--cor-primaria)' : 'var(--cor-borda-light)'};border-radius:5px;background:${sel ? 'var(--cor-primaria)' : 'transparent'};display:flex;align-items:center;justify-content:center;cursor:${bloqueada ? 'not-allowed' : 'pointer'};flex-shrink:0;font-size:0.75rem;color:#000;font-weight:700;">${sel ? '✓' : ''}</div>
+          <div style="flex:1;cursor:${bloqueada ? 'not-allowed' : 'pointer'};" onclick="${bloqueada ? '' : `CCON.cwTogglePeca('${p.id}')`}">
+            <div style="font-weight:600;font-size:0.88rem;">${esc(p.nome)}</div>
+            <div style="font-family:var(--font-mono);font-size:0.72rem;color:var(--cor-texto-muted);">${esc(p.tipo)} · ${esc(p.andar)} · ${CC.fmt4(p.volume)} m³</div>
+            ${jaAlocado > 0 ? `<div style="font-size:0.7rem;color:${disponivel <= 0 ? '#ef4444' : 'var(--cor-primaria-dark,#b8960a)'};margin-top:2px;">
+              ${disponivel <= 0 ? '⛔ 100% já alocado' : `${CC.fmt1(jaAlocado)}% em ${esc(nomesConc)} · disponível: ${CC.fmt1(disponivel)}%`}
+            </div>` : ''}
+          </div>
+          ${sel ? `<div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+            <label style="font-family:var(--font-mono);font-size:0.7rem;color:var(--cor-texto-muted);">%</label>
+            <input type="text" inputmode="numeric" value="${esc(vinc.pctConcretagem)}" style="width:58px;padding:5px 7px;border:1px solid var(--cor-primaria);border-radius:6px;font-family:var(--font-mono);font-size:0.82rem;color:var(--cor-primaria-dark,#b8960a);outline:none;"
+              oninput="CCON.cwSetPct('${p.id}', this.value)" onblur="CCON.cwBlurPct('${p.id}', this)">
+            <span id="cc-cw-vol-${p.id}" style="font-family:var(--font-mono);font-size:0.75rem;color:var(--cor-texto-muted);">${CC.fmt4(((parseFloat(vinc.pctConcretagem) || 0) / 100) * p.volume)} m³</span>
+          </div>` : ''}
+        </div>`;
+    }).join('');
+  }
+
+  function cwUpd(campo, valor) { cw[campo] = valor; }
+  function cwUpdFiltro(campo, valor) { cw[campo] = valor; renderConcretagem(); }
+  function cwBusca(v) { cw.busca = v; renderCwLista(); }
+  function cwSetStep(n) { cw.step = n; renderConcretagem(); }
+  function cwVoltarMenu() { cw = { modo: 'menu', concSel: '' }; renderConcretagem(); }
+
+  function cwStep1Next() {
+    if (!cw.numero || !cw.data) { Utils.toast('Preencha número e data.', 'alerta'); return; }
+    cwSetStep(2);
+  }
+  function cwStep2Next() {
+    if (!cw.vinculos.length) { Utils.toast('Vincule ao menos 1 peça.', 'alerta'); return; }
+    cwSetStep(3);
+  }
+
+  function cwTogglePeca(pecaId) {
+    const idx = cw.vinculos.findIndex(v => v.pecaId === pecaId);
+    if (idx >= 0) cw.vinculos.splice(idx, 1);
+    else {
+      const disponivel = Math.max(0, 100 - cwPctJaAlocado(pecaId));
+      cw.vinculos.push({ pecaId, pctConcretagem: disponivel > 0 ? Math.min(100, disponivel) : 100 });
+    }
+    renderConcretagem();
+  }
+
+  function cwToggleAndar() {
+    const ids = pecas.filter(p => p.andar === cw.filtroAndar).map(p => p.id);
+    const todos = ids.every(id => cw.vinculos.find(v => v.pecaId === id));
+    if (todos) {
+      cw.vinculos = cw.vinculos.filter(v => !ids.includes(v.pecaId));
+    } else {
+      ids.filter(id => !cw.vinculos.find(v => v.pecaId === id)).forEach(id => {
+        const disponivel = Math.max(0, 100 - cwPctJaAlocado(id));
+        if (disponivel > 0) cw.vinculos.push({ pecaId: id, pctConcretagem: Math.min(100, disponivel) });
+      });
+    }
+    renderConcretagem();
+  }
+
+  function cwSetPct(pecaId, val) {
+    const v = val.replace(/[^0-9]/g, '');
+    const vinc = cw.vinculos.find(x => x.pecaId === pecaId);
+    if (!vinc) return;
+    const n = parseFloat(v);
+    vinc.pctConcretagem = v === '' ? '' : Math.min(isNaN(n) ? '' : n, 100);
+    // Atualização parcial: só o m³ da linha (preserva foco)
+    const p = pecas.find(x => x.id === pecaId);
+    const volEl = document.getElementById('cc-cw-vol-' + pecaId);
+    if (p && volEl) volEl.textContent = CC.fmt4(((parseFloat(vinc.pctConcretagem) || 0) / 100) * p.volume) + ' m³';
+  }
+
+  function cwBlurPct(pecaId, input) {
+    const vinc = cw.vinculos.find(x => x.pecaId === pecaId);
+    if (!vinc) return;
+    const ja = cwPctJaAlocado(pecaId);
+    const maxVal = Math.max(1, 100 - ja);
+    const raw = parseFloat(input.value);
+    const v = isNaN(raw) || raw < 1 ? 1 : Math.min(raw, maxVal);
+    vinc.pctConcretagem = v;
+    renderConcretagem();
+  }
+
+  function cwAddBT() {
+    cw.bts.push({ id: '', numero: cw.bts.length + 1, volumePrevisto: 8, notaFiscal: '', codigoBT: '' });
+    renderConcretagem();
+  }
+  function cwRemBT(i) { cw.bts.splice(i, 1); renderConcretagem(); }
+  function cwUpdBT(i, f, v) {
+    cw.bts[i][f] = v;
+    // Atualiza só o total das BTs (preserva foco nos inputs)
+    const totEl = document.getElementById('cc-cw-volbts');
+    if (totEl) {
+      const volTotal = cwVolTotalVinculos();
+      const volBTs = cw.bts.reduce((s, b) => s + (parseFloat(b.volumePrevisto) || 0), 0);
+      totEl.textContent = CC.fmt4(volBTs) + ' m³';
+      totEl.style.color = Math.abs(volBTs - volTotal) < 0.1 ? '#16a34a' : '#ef4444';
+    }
+  }
+
+  async function cwSalvar() {
+    if(!Permissions.pode('controleConcreto','criar:concretagem')&&!Permissions.pode('controleConcreto','editar:concretagem')){Utils.toast('Sem permissão.','erro');return;}
+    if (!cw.numero || !cw.data) { Utils.toast('Preencha número e data.', 'alerta'); return; }
+    if (!cw.vinculos.length) { Utils.toast('Vincule ao menos 1 peça.', 'alerta'); return; }
+    Utils.mostrarLoading();
+    try {
+      const ops = [];
+      // Documento da concretagem
+      ops.push({
+        type: 'set',
+        ref: Database.ref(obraId, COL_CONCS).doc(cw.concId),
+        data: { numero: parseInt(cw.numero) || 0, data: cw.data, descricao: cw.desc || '', obraId },
+      });
+      // Em edição: remove todos os vínculos e BTs antigos e regrava
+      if (cw.modo === 'editar') {
+        pecaConc.filter(pc => pc.concretagemId === cw.concId).forEach(pc =>
+          ops.push({ type: 'delete', ref: Database.ref(obraId, COL_PC).doc(pc.id) }));
+        btsConfig.filter(b => b.concretagemId === cw.concId).forEach(b =>
+          ops.push({ type: 'delete', ref: Database.ref(obraId, COL_BTS).doc(b.id) }));
+      }
+      cw.vinculos.forEach(v => {
+        ops.push({
+          type: 'set',
+          ref: Database.ref(obraId, COL_PC).doc(CC.genId('pc')),
+          data: { pecaId: v.pecaId, concretagemId: cw.concId, pctConcretagem: parseFloat(v.pctConcretagem) || 100, obraId },
+        });
+      });
+      cw.bts.forEach(b => {
+        // Preserva o id da BT em edição para não perder lançamentos vinculados
+        const btId = b.id || CC.genId('bt');
+        ops.push({
+          type: 'set',
+          ref: Database.ref(obraId, COL_BTS).doc(btId),
+          data: {
+            concretagemId: cw.concId,
+            numero: parseInt(b.numero) || 0,
+            volumePrevisto: parseFloat(b.volumePrevisto) || 0,
+            notaFiscal: b.notaFiscal || '',
+            codigoBT: b.codigoBT || '',
+            obraId,
+          },
+        });
+      });
+      for (let i = 0; i < ops.length; i += 400) {
+        await Database.batchWrite(ops.slice(i, i + 400));
+      }
+      Utils.toast(`✓ Concretagem Nº${cw.numero} salva!`, 'sucesso');
+      Utils.fecharModal('modal-cc-conc');
+      await carregar();
+    } catch (e) {
+      Utils.toast('Erro ao salvar: ' + e.message, 'erro');
+    } finally {
+      Utils.esconderLoading();
+    }
+  }
+
   return {
     init, recarregar, renderizar,
     setAba, fbToggle, fbFechar, fbSelAndar, fbSelConc,
@@ -1299,6 +1736,11 @@ const ControleConcreto = (() => {
     btUpd, btBusca, btEsconder100, btAddLinha, btRemLinha, btUpdLinha, btSalvar,
     rfbToggle, rfbFechar, rfbSelConc, rfbSelAndar, setAndarFiltroTipo, toggleAndarAberto,
     abrirUploadPdfConc, onPdfConcArquivo,
+    abrirConcretagens, iniciarNovaConc, editarConcretagem, excluirConcretagem,
+    cwSetConcSel, cwIniciarEditar, cwExcluirSelecionada,
+    cwUpd, cwUpdFiltro, cwBusca, cwSetStep, cwVoltarMenu, cwStep1Next, cwStep2Next,
+    cwTogglePeca, cwToggleAndar, cwSetPct, cwBlurPct,
+    cwAddBT, cwRemBT, cwUpdBT, cwSalvar,
   };
 })();
 

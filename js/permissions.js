@@ -281,19 +281,16 @@ const Permissions = (() => {
       criar: [
         { key: 'peca',        label: 'Criar peça' },
         { key: 'importar',    label: 'Importar peças em lote' },
-        { key: 'concretagem', label: 'Criar concretagem' },
         { key: 'levantamento',label: 'Adicionar item no levantamento' },
       ],
       editar: [
         { key: 'peca',        label: 'Editar peça' },
-        { key: 'concretagem', label: 'Editar concretagem (BTs, andares)' },
         { key: 'levantamento',label: 'Editar itens do levantamento' },
         { key: 'ordenar',     label: 'Ordenar/reorganizar peças' },
         { key: 'config',      label: 'Configuração de peças' },
       ],
       excluir: [
         { key: 'peca',        label: 'Excluir peça' },
-        { key: 'concretagem', label: 'Excluir concretagem' },
         { key: 'levantamento',label: 'Remover item do levantamento' },
         { key: 'limparBase',  label: 'Limpar base de peças (tudo)' },
       ],
@@ -386,11 +383,14 @@ const Permissions = (() => {
     // ---------------- CONTROLES ----------------
 
     controleConcreto: {
-      criar:   [ { key: 'bt',   label: 'Lançar BT (boletim de transporte)' },
-                 { key: 'pdf',  label: 'Anexar PDF da concretagem' } ],
-      editar:  [ { key: 'bt',   label: 'Editar BT lançado' } ],
-      excluir: [ { key: 'bt',   label: 'Excluir BT' } ],
-      exportar:[ { key: 'csv',  label: 'Exportar CSV' } ],
+      criar:   [ { key: 'bt',          label: 'Lançar BT (boletim de transporte)' },
+                 { key: 'pdf',         label: 'Anexar PDF da concretagem' },
+                 { key: 'concretagem', label: 'Criar concretagem' } ],
+      editar:  [ { key: 'bt',          label: 'Editar BT lançado' },
+                 { key: 'concretagem', label: 'Editar concretagem (BTs, andares)' } ],
+      excluir: [ { key: 'bt',          label: 'Excluir BT' },
+                 { key: 'concretagem', label: 'Excluir concretagem' } ],
+      exportar:[ { key: 'csv',         label: 'Exportar CSV' } ],
     },
 
     controleSolo: {

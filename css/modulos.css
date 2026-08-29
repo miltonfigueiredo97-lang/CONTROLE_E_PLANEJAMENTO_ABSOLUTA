@@ -491,8 +491,8 @@
 
 @media (max-width: 640px) {
   .lc-calc-grid { grid-template-columns: 1fr !important; }
-  .lc-menu-grid { grid-template-columns: 1fr !important; }
-  .lc-bt-row { grid-template-columns: 1fr 1fr !important; }
+  .cc-menu-grid { grid-template-columns: 1fr !important; }
+  .cc-bt-row { grid-template-columns: 1fr 1fr !important; }
 }
 
 /* Barra de progresso genérica usada nos gráficos de concreto */
