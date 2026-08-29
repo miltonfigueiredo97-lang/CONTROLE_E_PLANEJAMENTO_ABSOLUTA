@@ -355,6 +355,7 @@ const ControleConcreto = (() => {
               </a>
             </div>
             <button class="cc-btnLaunch" onclick="CCON.abrirLancarBT()">⊕ LANÇAR BT →</button>
+            <button class="cc-btnLaunch" style="background:#7c3aed;margin-left:8px;" data-perm="controleConcreto:criar:bt" onclick="CCON.abrirControlarProjeto()">🗺️ CONTROLAR PELO PROJETO →</button>
           </div>
         </div>
       </div>
@@ -696,7 +697,22 @@ const ControleConcreto = (() => {
     const jaLancada = lancamentos.some(l => l.btConfigId === id);
     bt.modo = jaLancada ? 'menu' : 'nova';
     if (bt.modo === 'nova') bt.linhas = [{ pecaId: '', pct: '' }];
+    if (bt.viaProjeto) {
+      bt.viaProjeto = false;
+      if (jaLancada) btIniciarEdicao(); else renderLancarBT();
+      abrirBtProjeto();
+      return;
+    }
     renderLancarBT();
+  }
+
+  // Atalho "🗺️ Controlar pelo Projeto" (botão ao lado de "Lançar BT"): abre
+  // o mesmo fluxo de sempre (escolher Concretagem → BT), e assim que a BT é
+  // escolhida já pula direto pra tela de desenho, sem precisar clicar de
+  // novo lá dentro.
+  function abrirControlarProjeto() {
+    abrirLancarBT();
+    bt.viaProjeto = true;
   }
 
   function btIniciarEdicao() {
@@ -1351,6 +1367,7 @@ const ControleConcreto = (() => {
       numero: String(concretagens.length + 1),
       data: Utils.hoje(),
       desc: '',
+      pranchaId: pranchaAtivaId || '',
       vinculos: [],
       bts: [],
       filtroAndar: 'todos', filtroTipo: 'todos', busca: '', esconder100: false,
@@ -1368,6 +1385,7 @@ const ControleConcreto = (() => {
       numero: String(c.numero),
       data: c.data || '',
       desc: c.descricao || '',
+      pranchaId: c.pranchaId || '',
       vinculos: pecaConc.filter(pc => pc.concretagemId === c.id).map(pc => ({ id: pc.id, pecaId: pc.pecaId, pctConcretagem: pc.pctConcretagem })),
       bts: btsConfig.filter(b => b.concretagemId === c.id).map(b => ({ ...b })),
       filtroAndar: 'todos', filtroTipo: 'todos', busca: '', esconder100: false,
@@ -1472,6 +1490,14 @@ const ControleConcreto = (() => {
           <div class="form-grupo"><label>Data</label><input type="date" class="form-control" value="${esc(cw.data)}" oninput="CCON.cwUpd('data', this.value)"></div>
         </div>
         <div class="form-grupo"><label>Descrição</label><input type="text" class="form-control" placeholder="ex: Pilares Térreo eixos A-D" value="${esc(cw.desc)}" oninput="CCON.cwUpd('desc', this.value)"></div>
+        <div class="form-grupo">
+          <label>Prancha (Planta do Projeto)</label>
+          <select class="form-control" onchange="CCON.cwUpd('pranchaId', this.value)">
+            <option value="">— nenhuma —</option>
+            ${pranchas.map(p => `<option value="${p.id}" ${cw.pranchaId === p.id ? 'selected' : ''}>${esc(p.nome)}${p.andar ? ` (${esc(p.andar)})` : ''}</option>`).join('')}
+          </select>
+          ${!pranchas.length ? `<p class="text-sm text-muted" style="margin-top:6px;">Nenhuma prancha importada ainda — pode deixar em branco e vincular depois, na aba Planta.</p>` : ''}
+        </div>
         <div style="display:flex;justify-content:space-between;margin-top:14px;">
           <button class="btn btn-secundario" onclick="CCON.cwVoltarMenu()">← Voltar</button>
           <button class="btn btn-primario" onclick="CCON.cwStep1Next()">Próximo →</button>
@@ -1719,7 +1745,7 @@ const ControleConcreto = (() => {
       ops.push({
         type: 'set',
         ref: Database.ref(obraId, COL_CONCS).doc(cw.concId),
-        data: { numero: parseInt(cw.numero) || 0, data: cw.data, descricao: cw.desc || '', obraId },
+        data: { numero: parseInt(cw.numero) || 0, data: cw.data, descricao: cw.desc || '', pranchaId: cw.pranchaId || '', obraId },
       });
       // Em edição: remove todos os vínculos e BTs antigos e regrava
       if (cw.modo === 'editar') {
@@ -2455,9 +2481,16 @@ const ControleConcreto = (() => {
     Utils.mostrarLoading();
     try {
       const concExistente = concretagens.find(c => c.numero === numero);
-      const concId = concExistente ? concExistente.id
-        : await Database.criar(obraId, COL_CONCS, { numero, data: concLivre.data || new Date().toISOString().slice(0, 10), descricao: '', obraId }, CC.genId('conc'));
       const ops = [];
+      let concId;
+      if (concExistente) {
+        concId = concExistente.id;
+        if (concExistente.pranchaId !== pranchaAtivaId) {
+          ops.push({ type: 'update', ref: Database.ref(obraId, COL_CONCS).doc(concId), data: { pranchaId: pranchaAtivaId } });
+        }
+      } else {
+        concId = await Database.criar(obraId, COL_CONCS, { numero, data: concLivre.data || new Date().toISOString().slice(0, 10), descricao: '', pranchaId: pranchaAtivaId, obraId }, CC.genId('conc'));
+      }
       concLivre.resultados.forEach(r => {
         const existentePC = pecaConc.find(pc => pc.pecaId === r.pecaId && pc.concretagemId === concId);
         if (existentePC) ops.push({ type: 'update', ref: Database.ref(obraId, COL_PC).doc(existentePC.id), data: { pctConcretagem: r.pct } });
@@ -2485,11 +2518,17 @@ const ControleConcreto = (() => {
 
   function abrirBtProjeto() {
     if (!bt || !bt.concId) { Utils.toast('Selecione a concretagem primeiro.', 'erro'); return; }
+    const concSel = concretagens.find(c => c.id === bt.concId);
     const pecaIds = pecaConc.filter(pc => pc.concretagemId === bt.concId).map(pc => pc.pecaId);
-    const marcs = marcadoresProjeto.filter(m => m.pecaId && pecaIds.includes(m.pecaId));
-    if (!marcs.length) { Utils.toast('Nenhuma peça desta concretagem foi marcada na Planta do Projeto ainda.', 'erro'); return; }
-    const pranchaIds = [...new Set(marcs.map(m => m.pranchaId))];
-    btProjeto = { pranchaId: pranchaIds[0], pecaIds, tracos: [], emAndamento: null, resultados: null };
+    let pranchaIds;
+    if (concSel && concSel.pranchaId && pranchas.find(p => p.id === concSel.pranchaId)) {
+      pranchaIds = [concSel.pranchaId];
+    } else {
+      const marcs = marcadoresProjeto.filter(m => m.pecaId && pecaIds.includes(m.pecaId));
+      pranchaIds = [...new Set(marcs.map(m => m.pranchaId))];
+    }
+    if (!pranchaIds.length) { Utils.toast('Nenhuma prancha vinculada a esta concretagem — edite a concretagem e escolha a prancha, ou marque as peças na aba Planta.', 'erro'); return; }
+    btProjeto = { pranchaId: pranchaIds[0], pranchaIds, pecaIds, tracos: [], emAndamento: null, resultados: null };
     Utils.abrirModal('modal-cc-bt-projeto');
     _renderBtProjetoBody();
   }
@@ -2523,8 +2562,7 @@ const ControleConcreto = (() => {
   async function _renderBtProjetoBody() {
     const el = document.getElementById('cc-bt-projeto-body');
     if (!el || !btProjeto) return;
-    const pranchasComPeca = [...new Set(marcadoresProjeto.filter(m => m.pecaId && btProjeto.pecaIds.includes(m.pecaId)).map(m => m.pranchaId))]
-      .map(id => pranchas.find(p => p.id === id)).filter(Boolean);
+    const pranchasComPeca = (btProjeto.pranchaIds || [btProjeto.pranchaId]).map(id => pranchas.find(p => p.id === id)).filter(Boolean);
     const pr = pranchas.find(p => p.id === btProjeto.pranchaId);
     const marcs = _marcadoresBtProjeto();
     const imagem = pr ? await _obterImagemPrancha(pr.id) : null;
@@ -2649,7 +2687,7 @@ const ControleConcreto = (() => {
     toggleConcretagemLivre, cancelarConcretagemLivre, desfazerTracoLivre, concLivreUpd,
     processarConcretagemLivre, salvarConcretagemLivre,
     abrirBtProjeto, onTrocarPranchaBtProjeto, desfazerTracoBtProjeto, cancelarBtProjeto,
-    calcularBtProjeto, usarResultadoBtProjeto,
+    calcularBtProjeto, usarResultadoBtProjeto, abrirControlarProjeto,
   };
 })();
 

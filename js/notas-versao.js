@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.26.0.2',
+  versaoAtual: 'V3.26.0.3',
 
   versoes: [
     {
@@ -10868,6 +10868,17 @@ const NotasVersao = {
         "Cálculo por amostragem geométrica (não é clipping exato de polígono) — funciona igual pra área desenhada certinha ou por cima de forma irregular à mão. Sobreposição abaixo de 2% é ignorada (ruído de traço).",
         "Fluxo manual de sempre (montar concretagem peça por peça no wizard, digitar % na BT) continua funcionando exatamente igual — isto é um caminho A MAIS, não substitui nada.",
         "V2.0 completo: os dois pedidos originais (reconhecimento automático de área na planta + montagem de concretagem/BT desenhando) estão nesta versão e na V3.26.0.1."
+      ]
+    },
+    {
+      "versao": "V3.26.0.3",
+      "data": "2026-08-29",
+      "tipo": "melhoria",
+      "titulo": "Concretagem agora se vincula a uma Prancha + atalho \"Controlar pelo Projeto\" ao lado de Lançar BT",
+      "itens": [
+        "Toda Concretagem agora tem uma Prancha associada (campo novo no Passo 1 do wizard \"◈ Concretagens\"). Montada pela Planta (desenho livre): a prancha usada no desenho é gravada automaticamente. Montada manualmente: escolhe-se na tela de Dados.",
+        "\"Controlar pelo Projeto\" ganhou atalho direto: novo botão roxo ao lado de \"⊕ LANÇAR BT\" — escolhe Concretagem e BT normalmente e cai direto na tela de desenho (antes só aparecia depois de entrar no formulário manual).",
+        "Como a Concretagem já sabe qual é sua Prancha, o \"Controlar pelo Projeto\" abre direto nela — não depende mais de já existir peça marcada pra descobrir qual planta mostrar."
       ]
     }
   ],
