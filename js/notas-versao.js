@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.26.2',
+  versaoAtual: 'V3.26.3',
 
   versoes: [
     {
@@ -10920,6 +10920,19 @@ const NotasVersao = {
         "Seletor de peça no vínculo: lista inteira sempre visível (não precisa mais focar/digitar pra aparecer) — clica direto, mais simples.",
         "QUALIDADE DA IMAGEM: a planta parava de existir de tanta perda — vinha de um limite de ~950KB do Firestore (2200px + JPEG bem comprimido). Agora a imagem vai pro Firebase Storage (sem esse teto): resolução alvo subiu pra 4500px e o formato virou PNG sem perda. Isso também deve ajudar a Detecção Automática a pegar mais peças (imagem suja atrapalhava a leitura de cor).",
         "AÇÃO NECESSÁRIA DO MILTON: como a imagem agora vem de outro domínio (Storage), o navegador pode bloquear a Detecção Automática por CORS mesmo a imagem aparecendo normal na tela. Se aparecer esse erro, é preciso rodar uma configuração de CORS no bucket do Storage uma única vez (fora daqui, via Google Cloud CLI) — avisar se precisar do passo a passo."
+      ]
+    },
+    {
+      "versao": "V3.26.3",
+      "data": "2026-08-29",
+      "tipo": "correcao",
+      "titulo": "Planta: zoom não trava mais desenhando, zoom vai até 1000%, ponto de desenho não fica gigante",
+      "itens": [
+        "PROBLEMA: zoom pela roda do mouse e pan por arrasto ficavam DESLIGADOS de propósito nos modos de desenho/ajuste — exatamente quando mais se precisa de precisão. Removida essa trava: um arrasto de verdade continua fazendo pan (e não conta como clique), um clique parado continua marcando ponto — sem conflito, então zoom/pan agora funcionam em qualquer modo.",
+        "Zoom máximo subiu de 400% pra 1000% — 400% ainda ficava apertado pra clicar em viga fina.",
+        "CORRIGIDO: o ponto azul do \"Desenhar Área Manual\" tinha o tamanho em % da IMAGEM (não da tela) — com a planta em alta resolução da V3.26.2 isso virou uma bola enorme. Agora, igual a bolinha de ajustar forma, o tamanho é em pixel de tela e acompanha o zoom de verdade.",
+        "Prancha com imagem quebrada (404 ou CORS) agora mostra um aviso no lugar da planta em branco, em vez de simplesmente não aparecer nada.",
+        "CONFIRMADO pelo console do Milton: a Detecção Automática está batendo em CORS de verdade (\"blocked by CORS policy\", sem Access-Control-Allow-Origin) — não é mais suposição. Passo a passo pra resolver, direto no Google Cloud (não dá pra fazer isso pelo chat):\n1. Instalar o Google Cloud SDK (gcloud/gsutil), se ainda não tiver.\n2. Criar um arquivo cors.json com: [{\"origin\": [\"https://controle-e-planejamento-absoluta.vercel.app\"], \"method\": [\"GET\"], \"maxAgeSeconds\": 3600, \"responseHeader\": [\"Content-Type\"]}]\n3. Rodar: gsutil cors set cors.json gs://controle-absoluta.firebasestorage.app\n4. Conferir com: gsutil cors get gs://controle-absoluta.firebasestorage.app\nSem isso, a Detecção Automática continua dando erro (a planta aparece na tela normalmente, só a leitura de pixel pra detectar é que trava)."
       ]
     }
   ],

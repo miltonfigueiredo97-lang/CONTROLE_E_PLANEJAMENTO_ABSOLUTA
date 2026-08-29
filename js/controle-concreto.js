@@ -1854,7 +1854,7 @@ const ControleConcreto = (() => {
   }
 
   // ── Zoom (botões — o scroll/arraste do container cuida do pan) ──
-  function zoomInPlanta() { zoomPlanta = Math.min(4, Math.round(((zoomPlanta || 1) + 0.25) * 100) / 100); renderPlanta(); }
+  function zoomInPlanta() { zoomPlanta = Math.min(10, Math.round(((zoomPlanta || 1) + 0.25) * 100) / 100); renderPlanta(); }
   function zoomOutPlanta() { zoomPlanta = Math.max(0.25, Math.round(((zoomPlanta || 1) - 0.25) * 100) / 100); renderPlanta(); }
   function zoomResetPlanta() { zoomPlanta = 1; renderPlanta(); }
 
@@ -1873,16 +1873,17 @@ const ControleConcreto = (() => {
   }
 
   // ── Zoom com a roda do mouse, ANCORADO no ponto embaixo do cursor (não
-  // no canto do container) — e bloqueia o zoom da PÁGINA do navegador. ──
+  // no canto do container) — e bloqueia o zoom da PÁGINA do navegador.
+  // Funciona em qualquer modo (inclusive desenhando/ajustando) — dar zoom
+  // pra mirar com precisão é exatamente quando mais se precisa dele. ──
   function _ligarZoomWheelPlanta() {
     const sc = document.querySelector('.cc-plan-scroll');
     if (!sc) return;
     sc.addEventListener('wheel', e => {
-      if (modoPlanta === 'poligono' || modoPlanta === 'concretagem-livre' || editandoFormaPlantaId) return;
       e.preventDefault();
       const zAnt = zoomPlanta || 1;
-      const delta = e.deltaY < 0 ? 0.15 : -0.15;
-      const zNovo = Math.min(4, Math.max(0.25, Math.round((zAnt + delta) * 100) / 100));
+      const delta = e.deltaY < 0 ? 0.2 : -0.2;
+      const zNovo = Math.min(10, Math.max(0.25, Math.round((zAnt + delta) * 100) / 100));
       if (zNovo === zAnt) return;
       const rect = sc.getBoundingClientRect();
       const anchorX = e.clientX - rect.left, anchorY = e.clientY - rect.top;
@@ -1897,12 +1898,13 @@ const ControleConcreto = (() => {
   }
 
   // ── Pan por arraste do botão esquerdo (clicar e arrastar move a
-  // planta) — só quando não está desenhando/ajustando, senão atrapalha o
-  // clique de marcar ponto/selecionar área. Os listeners de move/up ficam
-  // no window (ligados uma única vez) pra não perder o arrasto se o
-  // cursor sair da área visível no meio do gesto. ──
+  // planta) — funciona em qualquer modo. Um ARRASTO de verdade (>3px)
+  // faz pan e suprime o "clique" que viria no soltar (_ultimoFoiArrastoPlanta);
+  // um clique parado (sem mover) continua marcando ponto normalmente —
+  // por isso dá pra deixar ligado mesmo desenhando, sem conflito. Os
+  // listeners de move/up ficam no window (ligados uma única vez) pra não
+  // perder o arrasto se o cursor sair da área visível no meio do gesto. ──
   function _onPanMouseDownPlanta(e) {
-    if (modoPlanta === 'poligono' || modoPlanta === 'concretagem-livre' || editandoFormaPlantaId) return;
     if (e.button !== 0) return;
     const sc = document.querySelector('.cc-plan-scroll');
     if (!sc) return;
@@ -1948,10 +1950,17 @@ const ControleConcreto = (() => {
     let desenhoAtual = '';
     if (modoPlanta === 'poligono' && poligonoPontosPlanta.length) {
       const pts = poligonoPontosPlanta.map(p => `${(p.x * 100).toFixed(3)},${(p.y * 100).toFixed(3)}`).join(' ');
-      desenhoAtual = `<svg viewBox="0 0 100 100" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:3;">
-        ${poligonoPontosPlanta.length >= 2 ? `<polyline points="${pts}" fill="none" stroke="#2563eb" stroke-width="0.4" vector-effect="non-scaling-stroke"/>` : ''}
-        ${poligonoPontosPlanta.map(p => `<circle cx="${(p.x * 100).toFixed(3)}" cy="${(p.y * 100).toFixed(3)}" r="0.6" fill="#2563eb"/>`).join('')}
-      </svg>`;
+      // Os PONTOS são <div> com tamanho em px de tela (acompanha o zoom) —
+      // um <circle r="%"> ficava atrelado à resolução da imagem: com a
+      // planta em alta qualidade (V3.26.2) os pontos viraram bolões.
+      // A LINHA continua em SVG (non-scaling-stroke já resolve ela sozinha).
+      const tamPonto = Math.max(6, Math.round(10 * (zoomPlanta || 1)));
+      desenhoAtual = `
+        ${poligonoPontosPlanta.length >= 2 ? `<svg viewBox="0 0 100 100" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:3;">
+          <polyline points="${pts}" fill="none" stroke="#2563eb" stroke-width="0.4" vector-effect="non-scaling-stroke"/>
+        </svg>` : ''}
+        ${poligonoPontosPlanta.map(p => `<div style="position:absolute;left:${(p.x * 100).toFixed(3)}%;top:${(p.y * 100).toFixed(3)}%;width:${tamPonto}px;height:${tamPonto}px;margin:-${tamPonto / 2}px;border-radius:50%;background:#2563eb;border:2px solid #fff;box-shadow:0 0 0 1px #2563eb;z-index:4;pointer-events:none;"></div>`).join('')}
+      `;
     }
     let tracosLivres = '';
     if (modoPlanta === 'concretagem-livre' && desenhoLivreTracos.length) {
@@ -1960,7 +1969,7 @@ const ControleConcreto = (() => {
       </svg>`;
     }
     const bg = imagemBase64
-      ? `<img src="${imagemBase64}" style="width:100%;height:100%;display:block;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;pointer-events:none;" draggable="false">`
+      ? `<img src="${imagemBase64}" style="width:100%;height:100%;display:block;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;pointer-events:none;" draggable="false" onerror="this.style.display='none';this.insertAdjacentHTML('afterend','<div style=&quot;position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#fef2f2;color:#991b1b;font-size:.85rem;text-align:center;padding:20px;&quot;>⚠️ Não consegui carregar a imagem desta prancha (link quebrado ou bloqueio de CORS no Storage). Reimporte o PDF/imagem.</div>')">`
       : `<div style="width:100%;height:100%;background:repeating-linear-gradient(45deg,#f1f5f9,#f1f5f9 10px,#e2e8f0 10px,#e2e8f0 20px);"></div>`;
     const semSelecao = 'user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;';
     const cursorModo = (modoPlanta === 'poligono' || modoPlanta === 'concretagem-livre') ? 'cursor:crosshair;' : 'cursor:grab;';
