@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.26.0',
+  versaoAtual: 'V3.26.0.1',
 
   versoes: [
     {
@@ -10841,6 +10841,20 @@ const NotasVersao = {
         "Botão \\\"◈ Concretagens\\\" e todo o wizard (Dados → Peças → BTs → Resumo) saíram do Levantamento e foram para o Controle de Concreto, ao lado das abas Operacional/Relatórios.",
         "Permissões: as ações \\\"Criar/Editar/Excluir concretagem\\\" agora pertencem ao módulo Controle — Concreto (antes estavam, por engano, dentro de Levantamento — Concreto).",
         "Levantamento de Concreto ficou só com o que é dele: base de peças, calculadora de volumes, importação em lote e configuração de andares."
+      ]
+    },
+    {
+      "versao": "V3.26.0.1",
+      "data": "2026-08-29",
+      "tipo": "melhoria",
+      "titulo": "Controle de Concreto V2.0 (parte 1): Planta do Projeto com detecção automática de áreas",
+      "itens": [
+        "Novo: aba \"Planta\" no Controle de Concreto — importa o PDF/imagem do projeto (mesmo pipeline do Controle de Estacas) e detecta sozinho, por geometria, cada área colorida da planta (pilar/viga/laje) como um polígono já pronto pra clicar.",
+        "A detecção NÃO reconhece qual peça é (o rótulo no PDF, tipo \"P25\" ou \"V308\", é desenho vetorial, não texto — não dá pra ler direto). Ela só isola ONDE cada peça está: segmentação por cor com erosão e crescimento de região, pra separar peças vizinhas que compartilham a mesma cor de nível.",
+        "Clicando numa área detectada: seletor de Tipo (Pilar/Viga/Laje/...) e busca por nome, filtrando as peças já cadastradas no Levantamento — por padrão só do andar da prancha ativa, com opção de ver todos os andares.",
+        "Áreas que a detecção não pegou bem: \"Desenhar Área Manual\" (clique a clique, igual Controle de Estacas) ou \"Ajustar forma\" pra arrastar os vértices de uma área já detectada.",
+        "Gestão de pranchas: 1 prancha por laje/pavimento, com botão de atualizar o projeto se a planta mudar.",
+        "Base pro que vem a seguir: montar Concretagem inteira desenhando livremente sobre a planta (com múltiplas áreas soltas), e \"Controlar pelo Projeto\" no lançamento de BT — ainda não iniciado."
       ]
     }
   ],

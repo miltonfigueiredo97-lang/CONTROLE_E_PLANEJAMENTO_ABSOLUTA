@@ -13,6 +13,8 @@ const ControleConcreto = (() => {
   const COL_PC = 'concretoPecaConc';
   const COL_BTS = 'concretoBTs';
   const COL_LANS = 'concretoLancamentos';
+  const COL_PRANCHAS = 'concretoPranchas';
+  const COL_MARCADORES = 'concretoMarcadoresProjeto';
 
   let obraId = null;
   let pecas = [];
@@ -21,6 +23,26 @@ const ControleConcreto = (() => {
   let btsConfig = [];
   let lancamentos = [];
   let config = { ordemAndares: [], andaresCustm: [] };
+
+  // Planta do Projeto (V2.0) — pranchas (PDF/imagem) com áreas (polígonos)
+  // vinculadas a peças do Levantamento. Mesmo princípio do Controle de
+  // Estacas, sem reconhecimento automático de QUAL peça é — só onde ela
+  // está (detecção de área é geometria pura, sem OCR).
+  let pdfjsCarregado = false;
+  let pranchas = [];
+  let marcadoresProjeto = [];
+  let pranchaAtivaId = null;
+  let zoomPlanta = 1;
+  let modoPlanta = null; // 'poligono' (desenho manual) | null
+  let poligonoPontosPlanta = [];
+  let editandoFormaPlantaId = null;
+  let marcadorVincularId = null;
+  let vincularTipo = '';
+  let vincularAndarFiltro = '__prancha__'; // '__prancha__' = só andar da prancha ativa · 'todos'
+  let vincularBusca = '';
+  let vincularListaAberta = false;
+  let _imagemPranchaCacheId = null;
+  let _imagemPranchaCache = null;
 
   // Abas e filtros
   let aba = 'operacional'; // operacional | relatorios
@@ -66,14 +88,18 @@ const ControleConcreto = (() => {
   async function carregar() {
     Utils.mostrarLoading();
     try {
-      const [ps, cs, pcs, bts, lans] = await Promise.all([
+      const [ps, cs, pcs, bts, lans, prs, mks] = await Promise.all([
         Database.listar(obraId, COL_PECAS, null),
         Database.listar(obraId, COL_CONCS, null),
         Database.listar(obraId, COL_PC, null),
         Database.listar(obraId, COL_BTS, null),
         Database.listar(obraId, COL_LANS, null),
+        Database.listar(obraId, COL_PRANCHAS, null),
+        Database.listar(obraId, COL_MARCADORES, null),
       ]);
       pecas = ps; concretagens = cs; pecaConc = pcs; btsConfig = bts; lancamentos = lans;
+      pranchas = prs; marcadoresProjeto = mks;
+      if (!pranchaAtivaId || !pranchas.find(p => p.id === pranchaAtivaId)) pranchaAtivaId = pranchas[0]?.id || null;
       try {
         const doc = await db.collection('obras').doc(obraId).collection('config').doc('concreto').get();
         config = doc.exists ? doc.data() : { ordemAndares: [], andaresCustm: [] };
@@ -152,6 +178,7 @@ const ControleConcreto = (() => {
           <div class="aba-toggle">
             <button class="aba-btn ${aba === 'operacional' ? 'ativo' : ''}" onclick="CCON.setAba('operacional')">Operacional</button>
             <button class="aba-btn ${aba === 'relatorios' ? 'ativo' : ''}" onclick="CCON.setAba('relatorios')">Relatórios</button>
+            <button class="aba-btn ${aba === 'planta' ? 'ativo' : ''}" onclick="CCON.setAba('planta')">🗺️ Planta</button>
           </div>
         </div>
       </div>
@@ -159,7 +186,8 @@ const ControleConcreto = (() => {
       </div>
     `;
     if (aba === 'operacional') renderOperacional();
-    else renderRelatorios();
+    else if (aba === 'relatorios') renderRelatorios();
+    else renderPlanta();
   }
 
   function setAba(a) { aba = a; renderizar(); }
@@ -1727,6 +1755,577 @@ const ControleConcreto = (() => {
     }
   }
 
+  // ══════════════════════════════════════════
+  // ABA PLANTA (V2.0) — pranchas com áreas (polígonos) vinculadas a peças.
+  // Detecção automática de área é geometria pura (segmentação de cor),
+  // NÃO tenta reconhecer qual peça é — isso é sempre escolhido no vínculo
+  // (tipo + busca por nome), com filtro por andar.
+  // ══════════════════════════════════════════
+  function marcadoresDaPranchaAtiva() {
+    return marcadoresProjeto.filter(m => m.pranchaId === pranchaAtivaId);
+  }
+
+  async function _obterImagemPrancha(pranchaId) {
+    if (_imagemPranchaCacheId === pranchaId && _imagemPranchaCache) return _imagemPranchaCache;
+    try {
+      const doc = await db.collection('obras').doc(obraId).collection('config').doc('concretoImagem_' + pranchaId).get();
+      const img = doc.exists ? doc.data().img : null;
+      _imagemPranchaCacheId = pranchaId; _imagemPranchaCache = img;
+      return img;
+    } catch (e) { return null; }
+  }
+
+  function _statusMarcadorPlanta(m) {
+    const p = m.pecaId ? pecas.find(x => x.id === m.pecaId) : null;
+    if (!p) return { vinculado: false, label: 'Sem peça vinculada' };
+    return { vinculado: true, label: `${p.tipo} — ${p.nome}` };
+  }
+
+  function _plantaStageHTML(prancha, imagemBase64, marcadores) {
+    const W = CC.num(prancha.imgWidthPx) || 800, H = CC.num(prancha.imgHeightPx) || 500;
+    const zoom = zoomPlanta || 1;
+    const w = W * zoom, h = H * zoom;
+    const poligonos = (marcadores || []).filter(m => m.pontos && m.pontos.length >= 3).map(m => {
+      const st = _statusMarcadorPlanta(m);
+      const cor = st.vinculado ? '#22c55e' : '#f59e0b';
+      const pts = m.pontos.map(p => `${(p.x * 100).toFixed(3)},${(p.y * 100).toFixed(3)}`).join(' ');
+      return `<svg viewBox="0 0 100 100" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:2;">
+        <polygon class="cc-plan-poligono" data-id="${m.id}" points="${pts}" fill="${cor}55" stroke="${cor}" stroke-width="0.4" vector-effect="non-scaling-stroke" style="cursor:pointer;pointer-events:auto;"><title>${esc(st.label)}</title></polygon>
+      </svg>`;
+    }).join('');
+    let desenhoAtual = '';
+    if (modoPlanta === 'poligono' && poligonoPontosPlanta.length) {
+      const pts = poligonoPontosPlanta.map(p => `${(p.x * 100).toFixed(3)},${(p.y * 100).toFixed(3)}`).join(' ');
+      desenhoAtual = `<svg viewBox="0 0 100 100" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:3;">
+        ${poligonoPontosPlanta.length >= 2 ? `<polyline points="${pts}" fill="none" stroke="#2563eb" stroke-width="0.4" vector-effect="non-scaling-stroke"/>` : ''}
+        ${poligonoPontosPlanta.map(p => `<circle cx="${(p.x * 100).toFixed(3)}" cy="${(p.y * 100).toFixed(3)}" r="0.6" fill="#2563eb"/>`).join('')}
+      </svg>`;
+    }
+    const bg = imagemBase64
+      ? `<img src="${imagemBase64}" style="width:100%;height:100%;display:block;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;pointer-events:none;" draggable="false">`
+      : `<div style="width:100%;height:100%;background:repeating-linear-gradient(45deg,#f1f5f9,#f1f5f9 10px,#e2e8f0 10px,#e2e8f0 20px);"></div>`;
+    const semSelecao = 'user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;';
+    const cursorModo = modoPlanta === 'poligono' ? 'cursor:crosshair;' : 'cursor:pointer;';
+    return `<div class="cc-plan-scroll" style="overflow:auto;max-height:600px;border:1px solid #e2e8f0;border-radius:8px;background:#fff;overscroll-behavior:contain;${semSelecao}">
+      <div id="cc-plan-stage" style="position:relative;width:${w}px;height:${h}px;touch-action:none;${cursorModo}${semSelecao}" onclick="CCON.onCliquePlanta(event)">
+        ${bg}${poligonos}${desenhoAtual}
+      </div>
+    </div>`;
+  }
+
+  async function renderPlanta() {
+    const el = document.getElementById('cc-body');
+    if (!el) return;
+    if (!pranchas.length) {
+      el.innerHTML = `
+        <div class="cc-empty" style="text-align:center;padding:40px 0;">
+          <div style="font-size:2rem;margin-bottom:8px;">🗺️</div>
+          Nenhuma prancha (PDF/planta do projeto) importada ainda.<br>
+          <button class="btn btn-primario btn-sm" style="margin-top:10px;" data-perm="controleConcreto:criar:prancha" onclick="CCON.abrirPranchasPlanta()">⊞ Importar Prancha</button>
+        </div>`;
+      Permissions.aplicarNaTela(el);
+      return;
+    }
+    if (!pranchaAtivaId) pranchaAtivaId = pranchas[0].id;
+    const pr = pranchas.find(p => p.id === pranchaAtivaId);
+    const imagem = pr ? await _obterImagemPrancha(pr.id) : null;
+    const marcs = marcadoresDaPranchaAtiva();
+    const vinculadas = marcs.filter(m => m.pecaId).length;
+
+    el.innerHTML = `
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px;">
+        <select class="form-control" style="max-width:260px;" onchange="CCON.onTrocarPranchaPlanta(this.value)">
+          ${pranchas.map(p => `<option value="${p.id}" ${p.id === pranchaAtivaId ? 'selected' : ''}>${esc(p.nome)}${p.andar ? ` (${esc(p.andar)})` : ''}</option>`).join('')}
+        </select>
+        <button class="btn btn-secundario btn-sm" onclick="CCON.abrirPranchasPlanta()">📄 Pranchas</button>
+        ${imagem ? `
+          <button class="btn btn-dark btn-sm" data-perm="controleConcreto:criar:marcador" onclick="CCON.detectarAreasPlanta()">🔍 Detectar Áreas Automaticamente</button>
+          <button class="btn ${modoPlanta === 'poligono' ? 'btn-primario' : 'btn-secundario'} btn-sm" data-perm="controleConcreto:criar:marcador" onclick="CCON.toggleDesenhoManualPlanta()">✏️ Desenhar Área Manual</button>
+        ` : ''}
+        <span class="text-sm text-muted">${marcs.length} área(s) marcada(s) · ${vinculadas} vinculada(s)</span>
+      </div>
+      ${modoPlanta === 'poligono' ? `
+        <div style="display:flex;gap:8px;margin-bottom:10px;">
+          <button class="btn btn-secundario btn-sm" onclick="CCON.desfazerPontoPlanta()">↩ Desfazer ponto</button>
+          <button class="btn btn-primario btn-sm" onclick="CCON.concluirDesenhoPlanta()" ${poligonoPontosPlanta.length < 3 ? 'disabled' : ''}>✓ Concluir Área</button>
+          <button class="btn btn-secundario btn-sm" onclick="CCON.cancelarDesenhoPlanta()">✕ Cancelar</button>
+        </div>` : ''}
+      ${editandoFormaPlantaId ? `
+        <div style="display:flex;gap:8px;margin-bottom:10px;">
+          <button class="btn btn-primario btn-sm" onclick="CCON.concluirAjusteFormaPlanta()">✓ Salvar ajuste</button>
+          <button class="btn btn-secundario btn-sm" onclick="CCON.cancelarAjusteFormaPlanta()">✕ Cancelar</button>
+        </div>` : ''}
+      ${!imagem ? `<div class="cc-empty">Esta prancha ainda não tem PDF/imagem. <button class="btn btn-secundario btn-sm" onclick="CCON.abrirUploadImagemPlanta('${pr.id}')">⊞ Importar PDF/Imagem</button></div>`
+        : _plantaStageHTML(pr, imagem, marcs)}
+    `;
+    Permissions.aplicarNaTela(el);
+    if (editandoFormaPlantaId) _desenharHandlesEdicaoPlanta();
+  }
+
+  function onTrocarPranchaPlanta(id) {
+    pranchaAtivaId = id; modoPlanta = null; poligonoPontosPlanta = []; editandoFormaPlantaId = null;
+    renderPlanta();
+  }
+
+  function onCliquePlanta(ev) {
+    const stage = document.getElementById('cc-plan-stage');
+    if (!stage) return;
+    const p = CC.posRelativa(ev, stage);
+    if (modoPlanta === 'poligono') {
+      poligonoPontosPlanta.push(p);
+      renderPlanta();
+      return;
+    }
+    if (editandoFormaPlantaId) return; // não troca de área enquanto ajusta vértices
+    const rect = stage.getBoundingClientRect();
+    const m = CC.marcadorMaisProximo(marcadoresDaPranchaAtiva(), p, rect);
+    if (m) abrirVincularPlanta(m.id);
+  }
+
+  // ── Desenho manual (fallback pra quando a detecção automática não pega) ──
+  function toggleDesenhoManualPlanta() {
+    if (modoPlanta === 'poligono') { cancelarDesenhoPlanta(); return; }
+    if (!Permissions.pode('controleConcreto', 'criar:marcador')) { Utils.toast('Sem permissão para criar.', 'erro'); return; }
+    modoPlanta = 'poligono'; poligonoPontosPlanta = []; editandoFormaPlantaId = null;
+    renderPlanta();
+  }
+  function desfazerPontoPlanta() { poligonoPontosPlanta.pop(); renderPlanta(); }
+  function cancelarDesenhoPlanta() { modoPlanta = null; poligonoPontosPlanta = []; renderPlanta(); }
+  async function concluirDesenhoPlanta() {
+    if (poligonoPontosPlanta.length < 3) return;
+    if (!Permissions.pode('controleConcreto', 'criar:marcador')) { Utils.toast('Sem permissão para criar.', 'erro'); return; }
+    Utils.mostrarLoading();
+    try {
+      const pontos = [...poligonoPontosPlanta];
+      const id = await Database.criar(obraId, COL_MARCADORES, { pranchaId: pranchaAtivaId, pontos, pecaId: '', obraId }, CC.genId('cm'));
+      modoPlanta = null; poligonoPontosPlanta = [];
+      await carregar();
+      abrirVincularPlanta(id);
+    } catch (e) {
+      Utils.toast('Erro ao criar área: ' + e.message, 'erro');
+    } finally {
+      Utils.esconderLoading();
+    }
+  }
+
+  // ── Detecção automática (geometria pura — ver ConcretoCalculos.detectarAreas) ──
+  function _centroidePoligono(pontos) {
+    let x = 0, y = 0; pontos.forEach(p => { x += p.x; y += p.y; });
+    return { x: x / pontos.length, y: y / pontos.length };
+  }
+  function _pontoDentroPoligono(p, pontos) {
+    let dentro = false;
+    for (let i = 0, j = pontos.length - 1; i < pontos.length; j = i++) {
+      const xi = pontos[i].x, yi = pontos[i].y, xj = pontos[j].x, yj = pontos[j].y;
+      if (((yi > p.y) !== (yj > p.y)) && (p.x < (xj - xi) * (p.y - yi) / (yj - yi) + xi)) dentro = !dentro;
+    }
+    return dentro;
+  }
+  function _areaJaMarcada(area, existentes) {
+    const c = _centroidePoligono(area.pontos);
+    return existentes.some(m => m.pontos && m.pontos.length >= 3 && _pontoDentroPoligono(c, m.pontos));
+  }
+
+  async function detectarAreasPlanta() {
+    if (!Permissions.pode('controleConcreto', 'criar:marcador')) { Utils.toast('Sem permissão para criar.', 'erro'); return; }
+    const pr = pranchas.find(p => p.id === pranchaAtivaId);
+    if (!pr) return;
+    const imagem = await _obterImagemPrancha(pr.id);
+    if (!imagem) { Utils.toast('Importe o PDF/imagem da prancha primeiro.', 'erro'); return; }
+    Utils.mostrarLoading();
+    try {
+      const img = await new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = imagem; });
+      const canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth; canvas.height = img.naturalHeight;
+      canvas.getContext('2d').drawImage(img, 0, 0);
+      const areas = CC.detectarAreas(canvas);
+      if (!areas.length) { Utils.toast('Nenhuma área detectada — tente desenhar manualmente.', 'erro'); return; }
+      const existentes = marcadoresDaPranchaAtiva();
+      const novas = areas.filter(a => !_areaJaMarcada(a, existentes));
+      if (!novas.length) { Utils.toast('Nada novo — todas as áreas já foram marcadas.', 'sucesso'); return; }
+      const ops = novas.map(a => ({
+        type: 'set',
+        ref: Database.ref(obraId, COL_MARCADORES).doc(CC.genId('cm')),
+        data: { pranchaId: pranchaAtivaId, pontos: a.pontos, pecaId: '', obraId },
+      }));
+      for (let i = 0; i < ops.length; i += 400) await Database.batchWrite(ops.slice(i, i + 400));
+      await carregar();
+      Utils.toast(`✓ ${novas.length} área(s) detectada(s)! Clique em cada uma pra vincular à peça.`, 'sucesso');
+    } catch (e) {
+      Utils.toast('Erro ao detectar: ' + e.message, 'erro');
+    } finally {
+      Utils.esconderLoading();
+    }
+  }
+
+  // ── Ajuste de forma (arrastar vértices) ──
+  function iniciarAjusteFormaPlanta(id) {
+    if (!Permissions.pode('controleConcreto', 'editar:marcador')) { Utils.toast('Sem permissão para editar.', 'erro'); return; }
+    editandoFormaPlantaId = id;
+    Utils.fecharTodosModais();
+    renderPlanta();
+  }
+  function cancelarAjusteFormaPlanta() { editandoFormaPlantaId = null; renderPlanta(); }
+
+  function _arrastarHandlePlanta(el, onMove) {
+    const mover = e => { const ev = e.touches ? e.touches[0] : e; onMove(ev); };
+    const soltar = () => {
+      document.removeEventListener('mousemove', mover); document.removeEventListener('mouseup', soltar);
+      document.removeEventListener('touchmove', mover); document.removeEventListener('touchend', soltar);
+    };
+    el.addEventListener('mousedown', e => { e.preventDefault(); e.stopPropagation(); document.addEventListener('mousemove', mover); document.addEventListener('mouseup', soltar); });
+    el.addEventListener('touchstart', e => { e.preventDefault(); e.stopPropagation(); document.addEventListener('touchmove', mover, { passive: false }); document.addEventListener('touchend', soltar); }, { passive: false });
+  }
+
+  function _desenharHandlesEdicaoPlanta() {
+    const m = marcadoresProjeto.find(x => x.id === editandoFormaPlantaId);
+    const stage = document.getElementById('cc-plan-stage');
+    if (!m || !stage) return;
+    let cont = document.getElementById('cc-plan-edicao-overlay');
+    if (!cont) { cont = document.createElement('div'); cont.id = 'cc-plan-edicao-overlay'; cont.style.cssText = 'position:absolute;inset:0;z-index:10;'; stage.appendChild(cont); }
+    cont.innerHTML = '';
+    (m.pontos || []).forEach((p, i) => {
+      const dot = document.createElement('div');
+      dot.style.cssText = `position:absolute;left:${(p.x * 100).toFixed(3)}%;top:${(p.y * 100).toFixed(3)}%;width:14px;height:14px;margin:-7px;border-radius:50%;background:#2563eb;border:2px solid #fff;box-shadow:0 0 0 1px #2563eb;cursor:move;z-index:11;pointer-events:auto;`;
+      dot.title = 'Arraste pra ajustar este vértice';
+      _arrastarHandlePlanta(dot, mv => { m.pontos[i] = CC.posRelativa(mv, stage); _desenharHandlesEdicaoPlanta(); });
+      cont.appendChild(dot);
+    });
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('viewBox', '0 0 100 100'); svg.setAttribute('preserveAspectRatio', 'none');
+    svg.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:9;';
+    const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+    poly.setAttribute('points', (m.pontos || []).map(p => `${p.x * 100},${p.y * 100}`).join(' '));
+    poly.setAttribute('fill', 'rgba(59,130,246,0.15)'); poly.setAttribute('stroke', '#2563eb'); poly.setAttribute('stroke-width', '0.3'); poly.setAttribute('vector-effect', 'non-scaling-stroke');
+    svg.appendChild(poly);
+    cont.insertBefore(svg, cont.firstChild);
+  }
+
+  async function concluirAjusteFormaPlanta() {
+    const m = marcadoresProjeto.find(x => x.id === editandoFormaPlantaId);
+    if (!m) { editandoFormaPlantaId = null; renderPlanta(); return; }
+    Utils.mostrarLoading();
+    try {
+      await Database.atualizar(obraId, COL_MARCADORES, m.id, { pontos: m.pontos });
+      editandoFormaPlantaId = null;
+      Utils.toast('✓ Forma ajustada!', 'sucesso');
+      await carregar();
+    } catch (e) {
+      Utils.toast('Erro ao salvar ajuste: ' + e.message, 'erro');
+    } finally {
+      Utils.esconderLoading();
+    }
+  }
+
+  // ── Vínculo com peça do Levantamento (tipo + busca + filtro de andar) ──
+  function abrirVincularPlanta(marcadorId) {
+    const m = marcadoresProjeto.find(x => x.id === marcadorId);
+    if (!m) return;
+    marcadorVincularId = marcadorId;
+    const pecaAtual = m.pecaId ? pecas.find(p => p.id === m.pecaId) : null;
+    vincularTipo = pecaAtual ? pecaAtual.tipo : '';
+    vincularAndarFiltro = '__prancha__';
+    vincularBusca = ''; vincularListaAberta = false;
+    _renderVincularPlantaBody();
+    Utils.abrirModal('modal-cc-vincular-planta');
+  }
+
+  function _pecasElegiveisPlanta() {
+    const pr = pranchas.find(p => p.id === pranchaAtivaId);
+    return pecas.filter(p => {
+      if (vincularTipo && p.tipo !== vincularTipo) return false;
+      if (vincularAndarFiltro === '__prancha__' && pr && pr.andar) return p.andar === pr.andar;
+      return true;
+    });
+  }
+  function _marcadorDaPecaPlanta(pecaId, excetoId) {
+    return marcadoresProjeto.find(m => m.pecaId === pecaId && m.id !== excetoId);
+  }
+
+  function onTipoVincularPlanta(v) {
+    vincularTipo = v;
+    const hid = document.getElementById('cc-vincular-peca'); if (hid) hid.value = '';
+    const inputBusca = document.getElementById('cc-vincular-peca-busca'); if (inputBusca) inputBusca.value = '';
+    vincularBusca = ''; vincularListaAberta = false;
+    _renderListaPecaBuscaPlanta();
+  }
+  function onAndarFiltroVincularPlanta(v) { vincularAndarFiltro = v; _renderListaPecaBuscaPlanta(); }
+  function onFocoBuscaPecaPlanta() { vincularListaAberta = true; _renderListaPecaBuscaPlanta(); }
+  function fecharListaPecaBuscaPlanta() { vincularListaAberta = false; _renderListaPecaBuscaPlanta(); }
+  function onBuscaPecaPlanta(v) {
+    vincularBusca = v; vincularListaAberta = true;
+    const hid = document.getElementById('cc-vincular-peca'); if (hid) hid.value = '';
+    _renderListaPecaBuscaPlanta();
+  }
+  function _pecasFiltradasBuscaPlanta() {
+    const elegiveis = _pecasElegiveisPlanta();
+    const termo = (vincularBusca || '').trim().toLowerCase();
+    if (!termo) return elegiveis;
+    return elegiveis.filter(p => `${p.nome} ${p.andar}`.toLowerCase().includes(termo));
+  }
+  function _renderListaPecaBuscaPlanta() {
+    const el = document.getElementById('cc-vincular-peca-lista');
+    if (!el) return;
+    if (!vincularListaAberta) { el.style.display = 'none'; return; }
+    const lista = _pecasFiltradasBuscaPlanta();
+    el.style.display = 'block';
+    el.innerHTML = `
+      <div style="padding:8px 12px;cursor:pointer;color:var(--cv-text3,#94a3b8);font-size:.85rem;" onmousedown="CCON.selecionarPecaBuscaPlanta('')">— Nenhuma —</div>
+      ${lista.length ? lista.map(p => {
+        const outro = _marcadorDaPecaPlanta(p.id, marcadorVincularId);
+        return `<div style="padding:8px 12px;cursor:pointer;border-top:1px solid var(--cv-border,#f1f5f9);" onmousedown="CCON.selecionarPecaBuscaPlanta('${p.id}')">
+          <div style="font-weight:600;font-size:.85rem;">${esc(p.nome)}${outro ? ' <span style="color:var(--cv-red,#ef4444);font-weight:400;font-size:.75rem;">— já vinculada a outra área</span>' : ''}</div>
+          <div class="text-sm text-muted">${esc(p.tipo)} · ${esc(p.andar)}</div>
+        </div>`;
+      }).join('') : '<div style="padding:10px 12px;color:var(--cv-text3,#94a3b8);font-size:.82rem;">Nenhuma peça encontrada.</div>'}
+    `;
+  }
+  function selecionarPecaBuscaPlanta(pecaId) {
+    const hid = document.getElementById('cc-vincular-peca'); if (hid) hid.value = pecaId;
+    const p = pecaId ? pecas.find(x => x.id === pecaId) : null;
+    const inputBusca = document.getElementById('cc-vincular-peca-busca'); if (inputBusca) inputBusca.value = p ? p.nome : '';
+    vincularBusca = ''; vincularListaAberta = false;
+    _renderListaPecaBuscaPlanta();
+  }
+
+  function _renderVincularPlantaBody() {
+    const el = document.getElementById('cc-vincular-planta-body');
+    if (!el) return;
+    const m = marcadoresProjeto.find(x => x.id === marcadorVincularId);
+    if (!m) { el.innerHTML = ''; return; }
+    const pecaAtual = m.pecaId ? pecas.find(p => p.id === m.pecaId) : null;
+    const pr = pranchas.find(p => p.id === pranchaAtivaId);
+    el.innerHTML = `
+      <div class="form-grupo">
+        <label>Tipo</label>
+        <select class="form-control" id="cc-vincular-tipo" onchange="CCON.onTipoVincularPlanta(this.value)">
+          <option value="">Todos os tipos</option>
+          ${CC.TIPOS.map(t => `<option value="${esc(t)}" ${vincularTipo === t ? 'selected' : ''}>${esc(t)}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-grupo">
+        <label>Andar</label>
+        <select class="form-control" id="cc-vincular-andar" onchange="CCON.onAndarFiltroVincularPlanta(this.value)">
+          <option value="__prancha__" ${vincularAndarFiltro === '__prancha__' ? 'selected' : ''}>Só ${esc(pr && pr.andar ? pr.andar : 'o andar desta prancha')}</option>
+          <option value="todos" ${vincularAndarFiltro === 'todos' ? 'selected' : ''}>Todos os andares</option>
+        </select>
+      </div>
+      <div class="form-grupo">
+        <label>Peça do Levantamento de Concreto</label>
+        <div style="position:relative;">
+          <input type="text" class="form-control" id="cc-vincular-peca-busca" placeholder="Digite pra buscar por nome..."
+            value="${esc(pecaAtual ? pecaAtual.nome : '')}" oninput="CCON.onBuscaPecaPlanta(this.value)" onfocus="CCON.onFocoBuscaPecaPlanta()"
+            onblur="setTimeout(()=>CCON.fecharListaPecaBuscaPlanta(),150)" autocomplete="off">
+          <input type="hidden" id="cc-vincular-peca" value="${m.pecaId || ''}">
+          <div id="cc-vincular-peca-lista" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:30;background:#fff;border:1px solid var(--cv-border,#e2e8f0);border-radius:8px;max-height:220px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,.15);margin-top:4px;"></div>
+        </div>
+        ${!_pecasElegiveisPlanta().length ? `<p class="text-sm text-muted" style="margin-top:6px;">Nenhuma peça encontrada com esse filtro — confira o tipo/andar, ou cadastre no <a href="levantamento-concreto.html" style="color:var(--cor-primaria-dark);font-weight:600;">Levantamento de Concreto</a>.</p>` : ''}
+      </div>
+      <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;">
+        <button class="btn btn-secundario btn-sm" data-perm="controleConcreto:editar:marcador" onclick="CCON.iniciarAjusteFormaPlanta('${m.id}')">✎ Ajustar forma</button>
+        <button class="btn btn-secundario btn-sm" style="color:var(--cv-red,#ef4444);" data-perm="controleConcreto:excluir:marcador" onclick="CCON.excluirMarcadorPlanta('${m.id}')">🗑 Excluir área</button>
+      </div>
+    `;
+    Permissions.aplicarNaTela(document.getElementById('modal-cc-vincular-planta'));
+  }
+
+  async function salvarVinculoPlanta(continuar) {
+    if (!Permissions.pode('controleConcreto', 'editar:vinculo') && !Permissions.pode('controleConcreto', 'criar:marcador')) { Utils.toast('Sem permissão.', 'erro'); return; }
+    const m = marcadoresProjeto.find(x => x.id === marcadorVincularId);
+    if (!m) return;
+    const pecaId = document.getElementById('cc-vincular-peca').value || '';
+    if (pecaId) {
+      const outro = _marcadorDaPecaPlanta(pecaId, m.id);
+      if (outro) {
+        const ok = await Utils.confirmar('Esta peça já está vinculada a outra área. Vincular aqui também?');
+        if (!ok) return;
+      }
+    }
+    Utils.mostrarLoading();
+    try {
+      await Database.atualizar(obraId, COL_MARCADORES, m.id, { pecaId });
+      Utils.fecharModal('modal-cc-vincular-planta');
+      await carregar();
+      Utils.toast(continuar ? '✓ Salvo!' : '✓ Vínculo salvo!', 'sucesso');
+    } catch (e) {
+      Utils.toast('Erro ao salvar vínculo: ' + e.message, 'erro');
+    } finally {
+      Utils.esconderLoading();
+    }
+  }
+
+  async function excluirMarcadorPlanta(id) {
+    if (!Permissions.pode('controleConcreto', 'excluir:marcador')) { Utils.toast('Sem permissão para excluir.', 'erro'); return; }
+    const ok = await Utils.confirmar('Excluir esta área? O vínculo com a peça também é removido (a peça em si não é afetada).');
+    if (!ok) return;
+    Utils.mostrarLoading();
+    try {
+      await Database.deletar(obraId, COL_MARCADORES, id);
+      Utils.fecharModal('modal-cc-vincular-planta');
+      await carregar();
+      Utils.toast('Área excluída.', 'sucesso');
+    } catch (e) {
+      Utils.toast('Erro ao excluir: ' + e.message, 'erro');
+    } finally {
+      Utils.esconderLoading();
+    }
+  }
+
+  // ── Gestão de Pranchas ──
+  function abrirPranchasPlanta() {
+    _renderPranchasBody();
+    Utils.abrirModal('modal-cc-pranchas');
+  }
+  function _renderPranchasBody() {
+    const selAndar = document.getElementById('cc-nova-prancha-andar');
+    if (selAndar) {
+      const atual = selAndar.value;
+      const andares = todosAndares();
+      selAndar.innerHTML = `<option value="">Sem andar definido</option>${andares.map(a => `<option value="${esc(a)}">${esc(a)}</option>`).join('')}`;
+      if (andares.includes(atual)) selAndar.value = atual;
+    }
+    const el = document.getElementById('cc-pranchas-lista');
+    if (!el) return;
+    el.innerHTML = pranchas.length ? pranchas.map(p => `
+      <div style="display:flex;align-items:center;gap:10px;border:1px solid var(--cv-border,#e2e8f0);border-radius:8px;padding:10px 12px;margin-bottom:8px;flex-wrap:wrap;">
+        <div style="flex:1;min-width:140px;">
+          <div style="font-weight:700;">${esc(p.nome)}</div>
+          <div class="text-sm text-muted">${esc(p.andar || '—')}${p.imgWidthPx ? ' · imagem importada' : ' · sem imagem ainda'}</div>
+        </div>
+        <button class="btn btn-secundario btn-sm" data-perm="controleConcreto:editar:prancha" onclick="CCON.abrirUploadImagemPlanta('${p.id}')">⊞ ${p.imgWidthPx ? 'Atualizar Projeto' : 'Importar PDF/Imagem'}</button>
+        <button class="btn btn-secundario btn-sm" data-perm="controleConcreto:editar:prancha" onclick="CCON.renomearPranchaPlanta('${p.id}')">✎</button>
+        <button class="btn btn-secundario btn-sm" style="color:var(--cv-red,#ef4444);" data-perm="controleConcreto:excluir:prancha" onclick="CCON.excluirPranchaPlanta('${p.id}')">🗑</button>
+      </div>
+    `).join('') : `<div class="cc-empty">Nenhuma prancha ainda.</div>`;
+    Permissions.aplicarNaTela(document.getElementById('modal-cc-pranchas'));
+  }
+  async function novaPranchaPlanta() {
+    if (!Permissions.pode('controleConcreto', 'criar:prancha')) { Utils.toast('Sem permissão para criar.', 'erro'); return; }
+    const nome = (document.getElementById('cc-nova-prancha-nome').value || '').trim();
+    const andar = document.getElementById('cc-nova-prancha-andar').value || '';
+    if (!nome) { Utils.toast('Dê um nome pra prancha (ex: Térreo).', 'erro'); return; }
+    Utils.mostrarLoading();
+    try {
+      const id = await Database.criar(obraId, COL_PRANCHAS, { nome, andar, obraId }, CC.genId('pr'));
+      document.getElementById('cc-nova-prancha-nome').value = '';
+      pranchaAtivaId = id;
+      await carregar();
+      _renderPranchasBody();
+      Utils.toast('✓ Prancha criada! Agora importe o PDF/imagem.', 'sucesso');
+    } catch (e) {
+      Utils.toast('Erro ao criar prancha: ' + e.message, 'erro');
+    } finally {
+      Utils.esconderLoading();
+    }
+  }
+  async function renomearPranchaPlanta(id) {
+    if (!Permissions.pode('controleConcreto', 'editar:prancha')) { Utils.toast('Sem permissão para editar.', 'erro'); return; }
+    const pr = pranchas.find(p => p.id === id); if (!pr) return;
+    const novoNome = prompt('Novo nome da prancha:', pr.nome || '');
+    if (!novoNome || !novoNome.trim()) return;
+    Utils.mostrarLoading();
+    try {
+      await Database.atualizar(obraId, COL_PRANCHAS, id, { nome: novoNome.trim() });
+      await carregar();
+      _renderPranchasBody();
+    } catch (e) {
+      Utils.toast('Erro ao renomear: ' + e.message, 'erro');
+    } finally {
+      Utils.esconderLoading();
+    }
+  }
+  async function excluirPranchaPlanta(id) {
+    if (!Permissions.pode('controleConcreto', 'excluir:prancha')) { Utils.toast('Sem permissão para excluir.', 'erro'); return; }
+    const ok = await Utils.confirmar('Excluir esta prancha? Todas as áreas marcadas nela também serão removidas (os vínculos com peças do Levantamento não são afetados).');
+    if (!ok) return;
+    Utils.mostrarLoading();
+    try {
+      const marcs = marcadoresProjeto.filter(m => m.pranchaId === id);
+      const ops = marcs.map(m => ({ type: 'delete', ref: Database.ref(obraId, COL_MARCADORES).doc(m.id) }));
+      for (let i = 0; i < ops.length; i += 400) await Database.batchWrite(ops.slice(i, i + 400));
+      await Database.deletar(obraId, COL_PRANCHAS, id);
+      await db.collection('obras').doc(obraId).collection('config').doc('concretoImagem_' + id).delete().catch(() => {});
+      if (pranchaAtivaId === id) pranchaAtivaId = null;
+      await carregar();
+      _renderPranchasBody();
+      Utils.toast('Prancha excluída.', 'sucesso');
+    } catch (e) {
+      Utils.toast('Erro ao excluir: ' + e.message, 'erro');
+    } finally {
+      Utils.esconderLoading();
+    }
+  }
+
+  // ── Import de PDF/imagem (mesmo pipeline do Controle de Estacas) ──
+  async function _carregarPdfjs() {
+    if (pdfjsCarregado || typeof pdfjsLib !== 'undefined') { pdfjsCarregado = true; return; }
+    await new Promise((res, rej) => {
+      const s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+      s.onload = res; s.onerror = rej;
+      document.head.appendChild(s);
+    });
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    pdfjsCarregado = true;
+  }
+  async function _processarArquivoPranchaPlanta(file, pranchaId, statusEl) {
+    if (statusEl) statusEl.textContent = 'Processando...';
+    let canvas;
+    if (file.type === 'application/pdf' || /\.pdf$/i.test(file.name)) {
+      await _carregarPdfjs();
+      const buf = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+      const page = await pdf.getPage(1);
+      const viewportBase = page.getViewport({ scale: 1 });
+      const alvo = 2200;
+      const escala = Math.min(4, alvo / Math.max(viewportBase.width, viewportBase.height));
+      const viewport = page.getViewport({ scale: escala });
+      canvas = document.createElement('canvas');
+      canvas.width = viewport.width; canvas.height = viewport.height;
+      await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+    } else {
+      const img = await new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = URL.createObjectURL(file); });
+      const alvo = 2200;
+      const fator = Math.min(1, alvo / Math.max(img.naturalWidth, img.naturalHeight));
+      canvas = document.createElement('canvas');
+      canvas.width = Math.round(img.naturalWidth * fator); canvas.height = Math.round(img.naturalHeight * fator);
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+    }
+    const { url, width, height, ok } = CC.canvasParaDataURLLimitado(canvas);
+    if (!ok) throw new Error('Arquivo grande demais mesmo após compressão. Tente uma exportação menor.');
+    await db.collection('obras').doc(obraId).collection('config').doc('concretoImagem_' + pranchaId).set({ img: url });
+    await Database.atualizar(obraId, COL_PRANCHAS, pranchaId, { imgWidthPx: width, imgHeightPx: height });
+    _imagemPranchaCacheId = null;
+    if (statusEl) statusEl.textContent = '✓ Imagem carregada!';
+  }
+  function abrirUploadImagemPlanta(pranchaId) {
+    document.getElementById('cc-img-pranchaid').value = pranchaId;
+    document.getElementById('cc-img-status').textContent = '';
+    Utils.abrirModal('modal-cc-imagem-planta');
+  }
+  async function onImagemArquivoPlanta(input) {
+    const file = input.files && input.files[0];
+    if (!file) return;
+    const pranchaId = document.getElementById('cc-img-pranchaid').value;
+    const statusEl = document.getElementById('cc-img-status');
+    Utils.mostrarLoading();
+    try {
+      await _processarArquivoPranchaPlanta(file, pranchaId, statusEl);
+      Utils.toast('✓ Prancha atualizada!', 'sucesso');
+      Utils.fecharModal('modal-cc-imagem-planta');
+      pranchaAtivaId = pranchaId;
+      await carregar();
+      _renderPranchasBody();
+    } catch (e) {
+      console.error(e);
+      statusEl.textContent = 'Erro: ' + e.message;
+      Utils.toast('Erro ao processar arquivo: ' + e.message, 'erro');
+    } finally {
+      Utils.esconderLoading();
+      input.value = '';
+    }
+  }
+
   return {
     init, recarregar, renderizar,
     setAba, fbToggle, fbFechar, fbSelAndar, fbSelConc,
@@ -1741,6 +2340,16 @@ const ControleConcreto = (() => {
     cwUpd, cwUpdFiltro, cwBusca, cwSetStep, cwVoltarMenu, cwStep1Next, cwStep2Next,
     cwTogglePeca, cwToggleAndar, cwSetPct, cwBlurPct,
     cwAddBT, cwRemBT, cwUpdBT, cwSalvar,
+    // Planta do Projeto (V2.0)
+    renderPlanta, onTrocarPranchaPlanta, onCliquePlanta,
+    toggleDesenhoManualPlanta, desfazerPontoPlanta, cancelarDesenhoPlanta, concluirDesenhoPlanta,
+    detectarAreasPlanta,
+    iniciarAjusteFormaPlanta, cancelarAjusteFormaPlanta, concluirAjusteFormaPlanta,
+    abrirVincularPlanta, onTipoVincularPlanta, onAndarFiltroVincularPlanta,
+    onFocoBuscaPecaPlanta, fecharListaPecaBuscaPlanta, onBuscaPecaPlanta, selecionarPecaBuscaPlanta,
+    salvarVinculoPlanta, excluirMarcadorPlanta,
+    abrirPranchasPlanta, novaPranchaPlanta, renomearPranchaPlanta, excluirPranchaPlanta,
+    abrirUploadImagemPlanta, onImagemArquivoPlanta,
   };
 })();
 
