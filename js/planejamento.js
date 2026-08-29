@@ -7398,7 +7398,8 @@ const Planejamento = (() => {
   const COL_DECISOES='decisoesPlanejamento';
   let _audit=null;         // último resultado da análise da REDE (auditor)
   let _cron=null;          // último resultado da análise do CRONOGRAMA (planejamento)
-  let _auditAba='rede';    // 'rede' = vínculo e matemática | 'cronograma' = opinião de planejamento
+  let _parecer=null;       // parecer de planejamento (onde está o prazo, o que muda a data)
+  let _auditAba='parecer'; // 'parecer' | 'rede' | 'cronograma'
   let _decisoes=new Map(); // chave -> {id, chave, ctx, decisao, justificativa}
   let _auditSev='todas';
   let _decisaoPend=null;   // achado aguardando justificativa no modal
@@ -7429,6 +7430,13 @@ const Planejamento = (() => {
         ? AnaliseCronograma.analisar(tarefas,{cal:_calObra,hoje:Utils.hoje(),decisoes:_decisoes,
             rede:_audit.rede, aprendido:_audit.aprendido})
         : null;
+      // O PARECER: onde está o prazo, o que muda a data, onde vai travar, o foco
+      // das próximas semanas. É a aba que abre por padrão — as outras duas são
+      // a base de evidência dele.
+      _parecer=(typeof ParecerCronograma!=='undefined')
+        ? ParecerCronograma.gerar(tarefas,{cal:_calObra,hoje:Utils.hoje(),rede:_audit.rede,cron:_cron})
+        : null;
+      _auditAba=_parecer?'parecer':'rede';
       _auditSev='todas';
       _renderAuditor();
       Utils.abrirModal('modal-planej-auditor');
@@ -7501,8 +7509,26 @@ const Planejamento = (() => {
     const aba=(id,rot,n,dica)=>`<button class="btn btn-sm ${_auditAba===id?'btn-primario':'btn-secundario'}"
       style="font-size:.76rem;font-weight:700;" title="${_esc(dica)}" onclick="Planejamento.auditorAba('${id}')">${rot} ${n}</button>`;
 
+    // A aba PARECER não lista defeito: responde onde está o prazo, o que muda a
+    // data e o que fazer. As outras duas são a evidência por trás dela.
+    if(_auditAba==='parecer'&&_parecer){
+      el.innerHTML=`
+        <div style="display:flex;gap:6px;margin-bottom:14px;border-bottom:1.5px solid var(--cor-borda-light);padding-bottom:10px;">
+          ${aba('parecer','📋 Parecer','','Onde está o prazo, o que muda a data, onde a obra vai travar, o foco das próximas semanas')}
+          ${aba('rede','Rede e vínculos',_audit.abertos.length,'Matemática da rede: predecessora faltando, folga, caminho crítico, ciclo')}
+          ${aba('cronograma','Cronograma',_cron?_cron.abertos.length:0,'Carga de equipe, ritmo entre pavimentos, conflito de frentes')}
+          <span style="margin-left:auto;display:flex;gap:6px;">
+            <button class="btn btn-secundario btn-sm" style="font-size:.72rem;" onclick="Planejamento.copiarParecer()">📋 Copiar parecer</button>
+            <button class="btn btn-secundario btn-sm" style="font-size:.72rem;" onclick="Planejamento.abrirVerificarPlanejamento()">↻ Reanalisar</button>
+          </span>
+        </div>
+        ${_renderParecer()}`;
+      return;
+    }
+
     el.innerHTML=`
       <div style="display:flex;gap:6px;margin-bottom:14px;border-bottom:1.5px solid var(--cor-borda-light);padding-bottom:10px;">
+        ${aba('parecer','📋 Parecer','','Onde está o prazo, o que muda a data, onde a obra vai travar, o foco das próximas semanas')}
         ${aba('rede','Rede e vínculos',_audit.abertos.length,'Matemática da rede: predecessora faltando, folga, caminho crítico, ciclo, duração x quantidade')}
         ${aba('cronograma','Cronograma',_cron?_cron.abertos.length:0,'Opinião de planejamento: a equipe cabe nos locais, o ritmo entre pavimentos fecha, as frentes se atropelam, o que dá pra antecipar')}
       </div>
@@ -7559,6 +7585,98 @@ const Planejamento = (() => {
           </div>`).join('')}</div></details>`:''}`;
   }
 
+  // O parecer em tela. Mesma ordem do texto: prazo, alavancas, risco, foco,
+  // sobra. Cada bloco responde uma pergunta, não lista defeito.
+  function _renderParecer(){
+    const p=_parecer;
+    if(!p)return'';
+    const P=p.prazo;
+    const bloco=(n,titulo,corpo,sub)=>`<div style="margin-bottom:18px;">
+      <div style="font-size:.9rem;font-weight:800;color:var(--cor-texto);">${n}. ${titulo}</div>
+      ${sub?`<div class="text-sm text-muted" style="margin-bottom:8px;">${sub}</div>`:'<div style="height:6px;"></div>'}
+      ${corpo}</div>`;
+    const kpi=(rot,val,rod)=>`<div style="flex:1;min-width:140px;background:var(--cor-fundo);border:1.5px solid var(--cor-borda-light);border-radius:var(--borda-radius-lg);padding:11px;">
+      <div class="text-muted" style="font-size:.66rem;text-transform:uppercase;letter-spacing:.5px;">${rot}</div>
+      <div style="font-weight:800;color:var(--cor-texto);margin:2px 0;">${val}</div>
+      <div class="text-muted" style="font-size:.68rem;">${rod}</div></div>`;
+    const barra=(pct,cor)=>`<div style="height:6px;background:var(--cor-neutro-bg);border-radius:3px;overflow:hidden;">
+      <div style="height:100%;width:${Math.min(100,pct)}%;background:${cor};"></div></div>`;
+
+    return `
+      ${p.ressalvas.length?`<div style="background:var(--cor-alerta-bg);border:1.5px solid var(--cor-alerta);border-radius:8px;padding:10px 12px;font-size:.75rem;color:#b45309;margin-bottom:14px;">
+        <b>Ressalvas sobre este parecer:</b><ul style="margin:5px 0 0 16px;padding:0;">${p.ressalvas.map(r=>`<li>${_esc(r)}</li>`).join('')}</ul></div>`:''}
+
+      ${bloco(1,'Onde está o prazo',`
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
+          ${kpi('Término',`<span style="font-size:1.1rem;">${_fd(P.fim)}</span>`,`início em ${_fd(P.inicio)}`)}
+          ${kpi('Duração',`<span style="font-size:1.5rem;">${P.duracao}</span>`,'dias úteis')}
+          ${kpi('Caminho crítico',`<span style="font-size:1.5rem;">${P.tarefasCriticas}</span>`,'tarefas que seguram a data')}
+        </div>
+        ${P.dominam.length?`<div class="text-sm" style="margin-bottom:6px;color:var(--cor-texto);">O prazo é definido principalmente por:</div>
+        ${P.dominam.slice(0,7).map(d=>`<div style="margin-bottom:7px;">
+          <div style="display:flex;justify-content:space-between;font-size:.76rem;">
+            <span style="color:var(--cor-texto);">${_esc(d.servico)}${d.frentes.length?` <span class="text-muted">· ${_esc(d.frentes.join('/'))}</span>`:''}</span>
+            <span class="text-muted">${d.dias}d · ${d.peso}%</span></div>
+          ${barra(d.peso*4,'var(--cor-primaria)')}</div>`).join('')}
+        <div class="text-sm text-muted" style="margin-top:8px;">Tudo que não está nesta lista pode atrasar sem mexer na data final.</div>`:''}`)}
+
+      ${bloco(2,'O que muda a data',
+        (p.alavancasFrente.length?`<div class="tabela-container" style="margin-bottom:10px;">
+          <table class="tabela tabela-compacta"><thead><tr><th>Equipe</th><th>Se acelerar ${p.alavancasFrente[0].reducao}%</th><th>Novo término</th><th>Dias no crítico</th></tr></thead>
+          <tbody>${p.alavancasFrente.slice(0,8).map(a=>`<tr>
+            <td><b>${_esc(a.nome)}</b></td>
+            <td style="color:var(--cor-sucesso);font-weight:700;">ganha ${a.ganho} dia(s)</td>
+            <td>${_fd(a.fimNovo)}</td><td class="text-muted">${a.diasCriticos}d</td></tr>`).join('')}</tbody></table></div>`
+        :'<div class="text-sm text-muted">Nenhuma equipe, acelerada isoladamente, antecipa o término.</div>')
+        +(p.teto?`<div style="background:${p.teto.ganho>0?'var(--cor-sucesso-bg)':'var(--cor-alerta-bg)'};border:1.5px solid ${p.teto.ganho>0?'var(--cor-sucesso)':'var(--cor-alerta)'};border-radius:8px;padding:10px 12px;font-size:.78rem;color:${p.teto.ganho>0?'#15803d':'#b45309'};">
+          ${p.teto.ganho>0
+            ? `<b>Teto do efetivo: ${p.teto.ganho} dias.</b> Acelerando TODAS as equipes críticas em ${p.teto.reducao}% ao mesmo tempo, o término vai para ${_fd(p.teto.fim)}. É o máximo que contratar gente compra — o que passar disso só vem de mudar a lógica da rede.`
+            : `<b>Contratar gente não resolve esta obra.</b> Mesmo acelerando todas as equipes críticas em ${p.teto.reducao}%, a data não anda. O que prende é a LÓGICA DA REDE: a sequência obriga esperar. O caminho é paralelizar frentes, quebrar tarefa longa e rever vínculo que não precisa existir.`}
+          </div>`:''),
+        'Simulação medida: acelerei cada equipe e recalculei a obra inteira.')}
+
+      ${bloco(3,'Onde a obra vai travar',
+        p.riscos.length?`<ul style="margin:0 0 0 16px;padding:0;font-size:.78rem;color:var(--cor-texto);">
+          ${p.riscos.slice(0,8).map(r=>`<li style="margin-bottom:5px;">${_esc(r.texto)}</li>`).join('')}</ul>`
+        :'<div class="text-sm text-muted">Nenhum gargalo evidente de efetivo ou tarefa longa no caminho crítico.</div>')}
+
+      ${bloco(4,'Foco das próximas semanas',
+        p.foco.length?`<div class="tabela-container" style="max-height:280px;overflow:auto;">
+          <table class="tabela tabela-compacta"><thead><tr><th>Tarefa</th><th>Frente</th><th>Período</th><th>Situação</th><th></th></tr></thead>
+          <tbody>${p.foco.slice(0,25).map(f=>`<tr>
+            <td style="font-size:.73rem;">${_esc((f.codigo?f.codigo+' ':'')+(f.nome||'').trim())}</td>
+            <td class="text-muted" style="font-size:.7rem;">${_esc(f.frente)}</td>
+            <td style="font-size:.7rem;white-space:nowrap;">${_fd(f.inicio)} a ${_fd(f.termino)}</td>
+            <td style="font-size:.7rem;color:${f.acao.startsWith('em curso')?'var(--cor-perigo)':'var(--cor-texto-secundario)'};">${_esc(f.acao)}${f.perc?` · ${f.perc}%`:''}</td>
+            <td class="col-acoes"><button class="btn btn-secundario btn-sm" style="font-size:.64rem;" onclick="Planejamento.auditorIr('${_esc(f.id)}')">ver</button></td>
+          </tr>`).join('')}</tbody></table></div>
+          ${p.foco.length>25?`<div class="text-sm text-muted" style="margin-top:6px;">… e outras ${p.foco.length-25}</div>`:''}`
+        :'<div class="text-sm text-muted">Nenhuma tarefa crítica na janela das próximas 4 semanas.</div>',
+        'Tarefas do caminho crítico nas próximas 4 semanas. Se alguma escorregar, a obra escorrega junto.')}
+
+      ${bloco(5,'Prazo sobrando',`
+        ${p.antecipaveis.length?`<div class="text-sm" style="color:var(--cor-texto);margin-bottom:6px;">
+          <b>${p.antecipaveis.length}</b> tarefas podem antecipar sem empurrar ninguém. As maiores:</div>
+          <ul style="margin:0 0 10px 16px;padding:0;font-size:.75rem;color:var(--cor-texto-secundario);">
+          ${p.antecipaveis.slice(0,6).map(a=>`<li>${_esc((a.nome||'').trim())} — até ${a.folga} dias</li>`).join('')}</ul>`:''}
+        ${p.ociosas.length?`<div class="text-sm" style="color:var(--cor-texto);margin-bottom:6px;">Serviços com espera entre pavimentos:</div>
+          <ul style="margin:0 0 8px 16px;padding:0;font-size:.75rem;color:var(--cor-texto-secundario);">
+          ${p.ociosas.slice(0,6).map(o=>`<li>${_esc(o.servico)}${o.ambiente?' — '+_esc(o.ambiente):''}: dura ${o.duracao.toFixed(0)}d e só volta em ${o.takt.toFixed(0)}d — ${Math.round(o.ocio)}d parados por ciclo, em ${o.pavimentos} pavimentos</li>`).join('')}</ul>
+          <div class="text-sm text-muted">Cada um é uma escolha: puxar o passo e encurtar a obra, ou reduzir a equipe e assumir o ritmo com custo menor. Ficar como está é pagar pelas duas coisas.</div>`:''}
+        ${(!p.antecipaveis.length&&!p.ociosas.length)?'<div class="text-sm text-muted">Nada de folga relevante sobrando — o cronograma está apertado em todas as frentes.</div>':''}`)}`;
+  }
+
+  function copiarParecer(){
+    if(!_parecer||typeof ParecerCronograma==='undefined')return;
+    const nome=(typeof Router!=='undefined'&&Router.getObraNome)?(Router.getObraNome()||''):'';
+    const txt=ParecerCronograma.texto(_parecer,nome);
+    if(navigator.clipboard&&navigator.clipboard.writeText){
+      navigator.clipboard.writeText(txt).then(
+        ()=>Utils.toast(`Parecer copiado (${(txt.length/1024).toFixed(1)} kB).`,'sucesso'),
+        ()=>Utils.toast('Não foi possível copiar.','erro'));
+    }else Utils.toast('O navegador não liberou a cópia.','erro');
+  }
+
   function auditorFiltrar(sev){_auditSev=sev;_renderAuditor();}
   function auditorAba(id){_auditAba=id;_auditSev='todas';_renderAuditor();}
 
@@ -7569,6 +7687,9 @@ const Planejamento = (() => {
     _cron=(typeof AnaliseCronograma!=='undefined')
       ? AnaliseCronograma.analisar(tarefas,{cal:_calObra,hoje:Utils.hoje(),decisoes:_decisoes,
           rede:_audit.rede,aprendido:_audit.aprendido})
+      : null;
+    _parecer=(typeof ParecerCronograma!=='undefined')
+      ? ParecerCronograma.gerar(tarefas,{cal:_calObra,hoje:Utils.hoje(),rede:_audit.rede,cron:_cron})
       : null;
   }
 
@@ -8329,7 +8450,7 @@ const Planejamento = (() => {
   }
 
   return{init,carregar,abrirAplicarCalendario,aplicarCalendario,calendarioAtual,ciclosDetectados,
-    abrirVerificarPlanejamento,auditorFiltrar,auditorAba,auditorIr,auditorDecidir,auditorConfirmarDecisao,auditorReabrir,auditorInverter,auditorCriarVinculos,auditorRemoverVinculos,auditorAcaoVinculo,auditorConfirmarInversao,auditorCopiarDossie,toggleCritico,
+    abrirVerificarPlanejamento,auditorFiltrar,auditorAba,copiarParecer,auditorIr,auditorDecidir,auditorConfirmarDecisao,auditorReabrir,auditorInverter,auditorCriarVinculos,auditorRemoverVinculos,auditorAcaoVinculo,auditorConfirmarInversao,auditorCopiarDossie,toggleCritico,
     abrirInverterGrupos,invGruposSel,invGruposSimular,
     abrirEditorPred,tarefaSelecionadaId,edPredBuscar,edPredTrocarAlvo,edPredAdicionar,edPredRemover,edPredCopiarBaixo,edPredCopiarSequencia,edPredAplicar,setZoom,setVersaoData,copiarDatasDeAtual,inserirTarefa,editarTarefa,salvarTarefa,excluirTarefa,
     selectIdx,toggleRecolher,recuarNivel,avancarNivel,

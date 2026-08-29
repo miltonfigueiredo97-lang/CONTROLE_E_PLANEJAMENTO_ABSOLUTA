@@ -243,11 +243,13 @@ const Calendario = (() => {
     return '';
   }
 
+  // Passa pelo cache de capacidade: é a mesma pergunta ("este dia rende algo?")
+  // e assim uma varredura de exceções/feriados por dia serve as duas funções.
   function ehDiaUtil(data, cal) {
     const c = _c(cal);
     if (!c.ativo) return true; // calendário desligado: todo dia conta
     if (!_dt(data)) return true;
-    return motivoNaoUtil(data, c) === '';
+    return capacidade(data, c) > 0;
   }
 
   // Quanto de jornada este dia rende: 0 (parado), 0.5 (meio período) ou 1.
@@ -261,6 +263,33 @@ const Calendario = (() => {
   // LIMITAÇÃO CONHECIDA: exceção com trabalha:true rende dia CHEIO, mesmo que
   // caia num dia da semana marcado como meio período. Exceção é esforço extra
   // (mutirão, concretagem) — meio período excepcional não é suportado.
+  // CACHE DE CAPACIDADE POR DIA.
+  //
+  // Sem isto, cada consulta refaz a varredura de exceções, paralisações e
+  // feriados. O CPM chama isto milhões de vezes numa obra grande: no RD06
+  // (2.439 tarefas) uma simulação levava 2,3 segundos, e o parecer, que roda 10
+  // simulações, levava 23 segundos — inutilizável.
+  //
+  // A capacidade de um dia só depende da DEFINIÇÃO do calendário, então a chave
+  // do cache é a assinatura dele. Trocar a jornada invalida sozinho.
+  const _cacheCap = new Map();   // assinatura -> Map(data -> 0 | 0.5 | 1)
+  // A assinatura fica memorizada no próprio objeto normalizado: calculá-la a
+  // cada consulta seria um JSON.stringify por dia, pior que o problema original.
+  function _sigDe(c) {
+    if (!c._sig) { try { Object.defineProperty(c, '_sig', { value: assinatura(c), enumerable: false, writable: true }); } catch (e) { c._sig = assinatura(c); } }
+    return c._sig;
+  }
+  function _mapaCap(c) {
+    const k = _sigDe(c);
+    let m = _cacheCap.get(k);
+    if (!m) {
+      m = new Map();
+      if (_cacheCap.size > 8) _cacheCap.clear();  // evita crescer sem limite
+      _cacheCap.set(k, m);
+    }
+    return m;
+  }
+
   function capacidade(data, cal) {
     const c = _c(cal);
     if (!c.ativo) return 1;
@@ -268,10 +297,79 @@ const Calendario = (() => {
     if (!d) return 1;
     const dia = iso(d);
 
+    const m = _mapaCap(c);
+    const hit = m.get(dia);
+    if (hit !== undefined) return hit;
+
+    let v;
     const exc = c.excecoes.find(e => e.data === dia);
-    if (exc) return exc.trabalha ? 1 : 0;
-    if (!ehDiaUtil(dia, c)) return 0;
-    return c.jornadaMeio.includes(d.getDay()) ? 0.5 : 1;
+    if (exc) v = exc.trabalha ? 1 : 0;
+    else if (motivoNaoUtil(dia, c) !== '') v = 0;   // chama a lógica crua, não ehDiaUtil (evita recursão)
+    else v = c.jornadaMeio.includes(d.getDay()) ? 0.5 : 1;
+
+    m.set(dia, v);
+    return v;
+  }
+
+  // ============================================================
+  // ÍNDICE DE DIAS ÚTEIS (o que torna o cálculo instantâneo)
+  // ============================================================
+  // Caminhar dia a dia é correto e foi como tudo começou, mas numa obra de 2.400
+  // tarefas o CPM percorre milhões de dias. Mesmo com o cache de capacidade, uma
+  // simulação levava 1 segundo — e o parecer roda dez.
+  //
+  // Aqui as datas úteis do período são indexadas UMA vez por calendário, com a
+  // soma acumulada de jornadas. Com isso:
+  //   somarDiasUteis  vira busca binária no acumulado  (era caminhada linear)
+  //   jornadasEntre   vira uma subtração               (era caminhada linear)
+  //
+  // O índice cobre 2015–2045. Data fora disso cai no caminho antigo, que continua
+  // ali e continua correto — o índice é otimização, não regra nova.
+  const IDX_INI = 2015, IDX_FIM = 2045;
+  const _cacheIdx = new Map();   // assinatura -> {datas, acum, pos}
+
+  function _idx(c) {
+    const k = _sigDe(c);
+    let ix = _cacheIdx.get(k);
+    if (ix) return ix;
+    const datas = [], acum = [], pos = new Map();
+    let soma = 0;
+    let d = new Date(IDX_INI, 0, 1, 12);
+    const fim = new Date(IDX_FIM, 11, 31, 12);
+    while (d <= fim) {
+      const dia = iso(d);
+      const cap = capacidade(dia, c);
+      if (cap > 0) { pos.set(dia, datas.length); datas.push(dia); soma += cap; acum.push(soma); }
+      d.setDate(d.getDate() + 1);
+    }
+    ix = { datas, acum, pos };
+    if (_cacheIdx.size > 4) _cacheIdx.clear();
+    _cacheIdx.set(k, ix);
+    return ix;
+  }
+
+  // Primeiro índice de dia útil >= data (ou -1 se passar do fim).
+  function _posDepois(ix, dia) {
+    const p = ix.pos.get(dia);
+    if (p !== undefined) return p;
+    let lo = 0, hi = ix.datas.length - 1, r = -1;
+    while (lo <= hi) { const m = (lo + hi) >> 1; if (ix.datas[m] >= dia) { r = m; hi = m - 1; } else lo = m + 1; }
+    return r;
+  }
+  // Último índice de dia útil <= data (ou -1 se antes do início).
+  function _posAntes(ix, dia) {
+    const p = ix.pos.get(dia);
+    if (p !== undefined) return p;
+    let lo = 0, hi = ix.datas.length - 1, r = -1;
+    while (lo <= hi) { const m = (lo + hi) >> 1; if (ix.datas[m] <= dia) { r = m; lo = m + 1; } else hi = m - 1; }
+    return r;
+  }
+  const _dentro = (dia) => { const a = parseInt(String(dia).slice(0, 4)); return a >= IDX_INI && a <= IDX_FIM; };
+  // Menor j >= de tal que acum[j] >= alvo.
+  function _buscaAcum(ix, de, alvo) {
+    let lo = de, hi = ix.acum.length - 1, r = -1;
+    while (lo <= hi) { const m = (lo + hi) >> 1; if (ix.acum[m] >= alvo) { r = m; hi = m - 1; } else lo = m + 1; }
+    return r;
   }
 
   // ---- Navegação no calendário ----
@@ -283,6 +381,7 @@ const Calendario = (() => {
     let dia = iso(data);
     if (!dia) return '';
     if (!c.ativo) return dia;
+    if (_dentro(dia)) { const ix = _idx(c); const p = _posDepois(ix, dia); if (p >= 0) return ix.datas[p]; }
     for (let i = 0; i < MAX_ITER; i++) {
       if (ehDiaUtil(dia, c)) return dia;
       dia = addDiasCorridos(dia, 1);
@@ -296,6 +395,7 @@ const Calendario = (() => {
     let dia = iso(data);
     if (!dia) return '';
     if (!c.ativo) return dia;
+    if (_dentro(dia)) { const ix = _idx(c); const p = _posAntes(ix, dia); if (p >= 0) return ix.datas[p]; }
     for (let i = 0; i < MAX_ITER; i++) {
       if (ehDiaUtil(dia, c)) return dia;
       dia = addDiasCorridos(dia, -1);
@@ -321,11 +421,36 @@ const Calendario = (() => {
     if (n === 0) return dia;
 
     // Acumula CAPACIDADE, não caixinhas de calendário: o dia de partida já
-    // conta, e caminha até o acumulado alcançar n+1 jornadas (n passos + o
+    // conta, e avança até o acumulado alcançar n+1 jornadas (n passos + o
     // próprio dia inicial). Sem meio período a capacidade é sempre 1 e isso se
     // reduz a "conte n dias úteis", igual antes.
-    const passo = n < 0 ? -1 : 1;
     const alvo = Math.abs(n) + 1;
+
+    // Caminho rápido pelo índice: busca binária no acumulado em vez de caminhar.
+    if (_dentro(dia)) {
+      const ix = _idx(c);
+      const p = n < 0 ? _posAntes(ix, dia) : _posDepois(ix, dia);
+      if (p >= 0) {
+        const base = ix.acum[p];
+        if (n > 0) {
+          const j = _buscaAcum(ix, p, base - capacidade(dia, c) + alvo);
+          if (j >= 0) return ix.datas[j];
+        } else {
+          // Andando pra trás: o menor j cujo trecho j..p já soma `alvo`.
+          const limite = base - alvo;
+          let lo = 0, hi = p, r = -1;
+          while (lo <= hi) {
+            const m = (lo + hi) >> 1;
+            const antes = m > 0 ? ix.acum[m - 1] : 0;
+            if (antes <= limite) { r = m; lo = m + 1; } else hi = m - 1;
+          }
+          if (r >= 0) return ix.datas[r];
+        }
+      }
+    }
+
+    // Caminho antigo: data fora do período indexado. Continua correto.
+    const passo = n < 0 ? -1 : 1;
     let acum = capacidade(dia, c) || 1, guard = 0;
     while (acum < alvo && guard++ < MAX_ITER) {
       dia = addDiasCorridos(dia, passo);
@@ -343,6 +468,15 @@ const Calendario = (() => {
     const b = iso(fim);
     if (!a || !b || a > b) return 0;
     if (!c.ativo) return Math.round((_dt(b) - _dt(a)) / 864e5) + 1;
+
+    // Caminho rápido: diferença de acumulados no índice.
+    if (_dentro(a) && _dentro(b)) {
+      const ix = _idx(c);
+      const ia = _posDepois(ix, a), ib = _posAntes(ix, b);
+      if (ia >= 0 && ib >= 0 && ia <= ib) return ix.acum[ib] - (ia > 0 ? ix.acum[ia - 1] : 0);
+      if (ia < 0 || ib < 0 || ia > ib) return 0;
+    }
+
     let n = 0, guard = 0;
     while (a <= b && guard++ < MAX_ITER) {
       n += capacidade(a, c);

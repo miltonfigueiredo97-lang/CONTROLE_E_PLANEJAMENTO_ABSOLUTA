@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.23.0',
+  versaoAtual: 'V3.24.0',
 
   versoes: [
     {
@@ -10790,6 +10790,27 @@ const NotasVersao = {
         "Antes de gravar, o editor SIMULA: quantas tarefas mudam de data, o término da obra de → para, o caminho crítico antes e depois, e avisa se a mudança cria dependência circular. Grava em lote, recalcula as datas e desfaz com Ctrl+Z.",
         "Acesso: botão \\\"Editar vínculo\\\" em cada apontamento do Verificador, e Ferramentas › Editor de Predecessoras com uma tarefa selecionada na grade.",
         "Análise completa das 2.439 linhas do RD06 nas duas abas em menos de 1 segundo, offline."
+      ]
+    },
+    {
+      "versao": "V3.24.0",
+      "data": "2026-08-26",
+      "tipo": "funcionalidade",
+      "titulo": "Novo: PARECER do cronograma — o planejador que pensa, não o conferente que aponta",
+      "itens": [
+        "PROBLEMA: mesmo depois da aba Cronograma, tudo que o sistema entregava era CONFERÊNCIA — acha defeito e aponta. Planejador não entrega lista de defeito. Ele responde: onde está o prazo, o que muda a data, onde a obra vai travar, o que fazer nas próximas semanas, e onde tem prazo sobrando.",
+        "Nova aba PARECER, que abre por padrão. As outras duas (Rede e Cronograma) passam a ser a evidência por trás dela.",
+        "1. ONDE ESTÁ O PRAZO: o caminho crítico agrupado por SERVIÇO, com quantos dias e que percentual cada um pesa. Saber que 432 tarefas são críticas não ajuda; saber quais serviços definem a data, sim. E a frase que fecha: tudo que não está nessa lista pode atrasar sem mexer na entrega.",
+        "2. O QUE MUDA A DATA — medido, não opinado: o sistema SIMULA acelerar cada equipe em 25% e recalcula a obra inteira para medir o ganho real em dias. Por EQUIPE e não por serviço, porque equipe é a unidade de decisão de verdade (contratar mais pedreiro acelera tudo que pedreiro faz).",
+        "O TETO DO EFETIVO — o número mais importante do parecer: quanto a obra antecipa se TODAS as equipes críticas acelerarem juntas. No RD06 são 47 dias. Isso responde a pergunta que ninguém consegue responder no olho: contratar gente resolve? Se o teto for baixo ou zero, o sistema diz na cara que o problema não é produção, é a lógica da rede — e que o caminho é paralelizar, não contratar.",
+        "E avisa quando os ganhos não se somam: no RD06 acelerar uma frente por vez rende 21 dias somados, mas todas juntas rendem 47. Isso é sinal de caminho crítico distribuído — assim que uma frente acelera, a próxima assume o gargalo, e reforço isolado quase não muda a entrega.",
+        "3. ONDE A OBRA VAI TRAVAR: cruza o que já está atrasado no crítico, as frentes sem efetivo para o que o cronograma pede, e as tarefas críticas longas demais para serem controladas. No RD06: 28 tarefas críticas já vencidas, e PEDREIROS precisando estar em 26 locais ao mesmo tempo — sendo frente crítica.",
+        "4. FOCO DAS PRÓXIMAS SEMANAS: as tarefas do caminho crítico na janela de 4 semanas, com o que está em curso e não pode escorregar. É a lista que se leva para a reunião de segunda. 54 tarefas no RD06.",
+        "5. PRAZO SOBRANDO: o que pode antecipar sem empurrar ninguém, e os serviços com equipe parada entre pavimentos — cada um apresentado como a escolha que é: puxar o passo e encurtar a obra, ou reduzir a equipe e assumir o ritmo com custo menor.",
+        "RESSALVAS: o parecer diz o quanto confiar nele. Avisa se o calendário está desligado, se há tarefas sem classificação, se há ciclo fora do cálculo, e se as datas salvas divergem da rede.",
+        "Botão \\\"Copiar parecer\\\" leva tudo em texto corrido, na ordem em que um planejador falaria.",
+        "DESEMPENHO — 27× mais rápido: o motor de datas ganhou cache de capacidade por dia e índice de dias úteis com soma acumulada, então somar dias úteis e contar jornadas viraram busca binária em vez de caminhada dia a dia. O CPM do RD06 caiu de 2.300ms para 86ms, e o parecer inteiro (19 simulações de rede completa) de 23 segundos para 2,4. Verificado contra o caminho antigo em 3 calendários × 400 datas: resultado idêntico, incluindo meio período e exceções.",
+        "Funciona em qualquer obra sem configuração: o parecer descobre sozinho os serviços, as frentes e os locais a partir dos campos que a obra já preenche. Sem classificação, ele avisa que a leitura é mais grossa em vez de fingir precisão."
       ]
     }
   ],
