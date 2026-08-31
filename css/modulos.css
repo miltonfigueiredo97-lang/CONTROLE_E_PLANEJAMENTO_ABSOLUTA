@@ -725,6 +725,18 @@
 .cc-divider { height: 1px; background: var(--cv-border); margin: 15px 0; }
 .cc-empty { color: var(--cv-text3); font-size: 12.5px; text-align: center; padding: 26px 0; line-height: 2; }
 
+/* Barra de ação do Controle de Estacas (Adicionar Estaca/Fundação e Ajustar
+   forma) — fica ANTES do mapa (não depois, que ficava fora da área visível
+   em mapas altos) e "gruda" no topo do card de mapa ao rolar, pra nunca
+   sumir de vista enquanto o desenho está em andamento. */
+.ce-barra-acao {
+  position: sticky; top: 0; z-index: 5;
+  display: flex; align-items: center; flex-wrap: wrap; gap: 8px;
+  background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px;
+  padding: 8px 12px; margin-bottom: 8px;
+  font-size: 0.82rem; color: #1e3a8a;
+}
+
 @media (max-width: 1100px) { .cc-kpiGrid { grid-template-columns: repeat(3, 1fr); } }
 @media (max-width: 768px) {
   .cc-kpiGrid { grid-template-columns: 1fr 1fr; }

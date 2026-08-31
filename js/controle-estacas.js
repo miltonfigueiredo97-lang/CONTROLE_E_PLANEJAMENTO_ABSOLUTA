@@ -2165,6 +2165,15 @@ const ControleEstacas = (() => {
   // ══════════════════════════════════════════
   async function _obterImagemPrancha(pranchaId) {
     if (imagemCachePranchaId === pranchaId) return imagemCacheBase64;
+    const pr = pranchas.find(p => p.id === pranchaId);
+    if (pr && pr.imgUrl) { imagemCachePranchaId = pranchaId; imagemCacheBase64 = pr.imgUrl; return pr.imgUrl; }
+    // Compatibilidade com pranchas antigas (imagem embutida em dataURL no
+    // Firestore — pra caber no limite de ~950KB do documento, o JPEG saía
+    // bem comprimido e a planta técnica perdia nitidez ao dar zoom, mesmo
+    // as estacas/marcadores desenhados por cima continuando nítidos, por
+    // serem vetor e não pixel. A partir daqui a imagem vai pro Storage, sem
+    // esse teto de tamanho e sem recompressão com perda — ver
+    // _processarArquivoPrancha).
     try {
       const doc = await db.collection('obras').doc(obraId).collection('config').doc('estacasImagem_' + pranchaId).get();
       const imagem = doc.exists ? (doc.data().img || null) : null;
@@ -2186,7 +2195,11 @@ const ControleEstacas = (() => {
     if (!imagem) { Utils.toast('Esta prancha ainda não tem PDF/imagem.', 'erro'); return; }
     Utils.mostrarLoading();
     try {
-      const img = await new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = imagem; });
+      // crossOrigin obrigatório: a imagem agora pode vir do Storage (outro
+      // domínio) — sem isso o canvas fica "contaminado" e toDataURL()
+      // abaixo explode com SecurityError, mesmo a imagem aparecendo
+      // normalmente na tela via <img> (mesma causa/fix do Controle de Concreto).
+      const img = await new Promise((res, rej) => { const im = new Image(); im.crossOrigin = 'anonymous'; im.onload = () => res(im); im.onerror = rej; im.src = imagem; });
       const Wold = pr.imgWidthPx || img.naturalWidth, Hold = pr.imgHeightPx || img.naturalHeight;
       const canvas = document.createElement('canvas');
       canvas.width = Hold; canvas.height = Wold; // 90° troca largura/altura
@@ -2194,8 +2207,12 @@ const ControleEstacas = (() => {
       ctx.translate(canvas.width, 0);
       ctx.rotate(Math.PI / 2);
       ctx.drawImage(img, 0, 0, Wold, Hold);
-      const { url, width, height, ok } = EC.canvasParaDataURLLimitado(canvas);
-      if (!ok) { Utils.toast('Erro ao girar (arquivo grande demais após rotação).', 'erro'); return; }
+      // PNG sem perda pro Storage (mesmo pipeline do upload — ver
+      // _processarArquivoPrancha) — girar não pode ser a hora de degradar
+      // uma planta que já tinha sido salva em alta qualidade.
+      const dataUrl = canvas.toDataURL('image/png');
+      const path = `obras/${obraId}/estacas-plantas/${pr.id}.png`;
+      const url = await uploadImagem(path, dataUrl);
 
       // Recalcula a posição de todos os marcadores desta prancha pro novo sentido
       const marcadoresDaPrancha = marcadores.filter(m => m.pranchaId === pr.id);
@@ -2211,8 +2228,7 @@ const ControleEstacas = (() => {
       });
       for (let i = 0; i < ops.length; i += 400) await Database.batchWrite(ops.slice(i, i + 400));
 
-      await db.collection('obras').doc(obraId).collection('config').doc('estacasImagem_' + pr.id).set({ img: url });
-      await Database.atualizar(obraId, COL_PRANCHAS, pr.id, { imgWidthPx: width, imgHeightPx: height });
+      await Database.atualizar(obraId, COL_PRANCHAS, pr.id, { imgUrl: url, imgWidthPx: canvas.width, imgHeightPx: canvas.height });
       imagemCachePranchaId = null;
       await carregar();
       Utils.toast('✓ Projeto girado!', 'sucesso');
@@ -2246,11 +2262,21 @@ const ControleEstacas = (() => {
     const lista = marcadoresDaPranchaView(pr.id);
     const reporScroll = _preservarScroll('#ce-mapa-host');
     const html = EC.stageHTML(pr, imagem, lista, statusMarcador, { interativo: true, zoom: zoomE, stageId: 'ce-stage', maxHeight: _alturaMapa() });
+    // Barra de ação (Concluir/Desfazer/Cancelar) vai ANTES do mapa, não depois.
+    // Antes ficava depois de `html` — com o mapa esticando até 600/720px de
+    // altura, a barra caía fora da área visível em telas menores e dava a
+    // impressão de que não existia botão nenhum pra terminar o desenho da
+    // fundação (só dava pra ver rolando a página pra baixo do mapa inteiro).
+    const barraAcao = modo === 'circulo'
+      ? `<div class="ce-barra-acao">Clique no centro da estaca e arraste até o tamanho desejado. <button class="btn btn-secundario btn-sm" onclick="CE.cancelarModo()">Cancelar</button></div>`
+      : modo === 'poligono'
+      ? `<div class="ce-barra-acao">Clique nos vértices da fundação (${poligonoPontos.length} ponto${poligonoPontos.length !== 1 ? 's' : ''}). <button class="btn btn-secundario btn-sm" ${poligonoPontos.length ? '' : 'disabled'} onclick="CE.desfazerPontoPoligono()">↩ Desfazer ponto</button> <button class="btn btn-primario btn-sm" ${poligonoPontos.length >= 3 ? '' : 'disabled'} onclick="CE.concluirPoligono()">✓ Concluir</button> <button class="btn btn-secundario btn-sm" onclick="CE.cancelarModo()">Cancelar</button></div>`
+      : editandoFormaId
+      ? `<div class="ce-barra-acao">Ajustando forma — arraste os pontos. <button class="btn btn-primario btn-sm" onclick="CE.concluirAjusteForma()">✓ Concluir ajuste</button> <button class="btn btn-secundario btn-sm" onclick="CE.cancelarAjusteForma()">Cancelar</button></div>`
+      : '';
     host.innerHTML = `
+      ${barraAcao}
       ${html}
-      ${modo === 'circulo' ? `<div class="cc-empty" style="margin-top:8px;">Clique no centro da estaca e arraste até o tamanho desejado. <button class="btn btn-secundario btn-sm" onclick="CE.cancelarModo()">Cancelar</button></div>` : ''}
-      ${modo === 'poligono' ? `<div class="cc-empty" style="margin-top:8px;">Clique nos vértices da fundação (${poligonoPontos.length} ponto${poligonoPontos.length !== 1 ? 's' : ''}). <button class="btn btn-secundario btn-sm" ${poligonoPontos.length ? '' : 'disabled'} onclick="CE.desfazerPontoPoligono()">↩ Desfazer ponto</button> <button class="btn btn-primario btn-sm" ${poligonoPontos.length >= 3 ? '' : 'disabled'} onclick="CE.concluirPoligono()">✓ Concluir</button> <button class="btn btn-secundario btn-sm" onclick="CE.cancelarModo()">Cancelar</button></div>` : ''}
-      ${editandoFormaId ? `<div class="cc-empty" style="margin-top:8px;">Ajustando forma — arraste os pontos. <button class="btn btn-primario btn-sm" onclick="CE.concluirAjusteForma()">✓ Concluir ajuste</button> <button class="btn btn-secundario btn-sm" onclick="CE.cancelarAjusteForma()">Cancelar</button></div>` : ''}
     `;
     reporScroll();
     if (modo === 'poligono') _desenharPoligonoEmCriacao();
@@ -2884,6 +2910,7 @@ const ControleEstacas = (() => {
       marcadores.filter(m => m.pranchaId === id).forEach(m => ops.push({ type: 'delete', ref: Database.ref(obraId, COL_MARCADORES).doc(m.id) }));
       await Database.batchWrite(ops);
       await db.collection('obras').doc(obraId).collection('config').doc('estacasImagem_' + id).delete().catch(() => {});
+      await deletarImagem(`obras/${obraId}/estacas-plantas/${id}.png`).catch(() => {});
       if (pranchaAtivaId === id) pranchaAtivaId = null;
       Object.keys(pranchaAtivaPorView).forEach(k => { if (pranchaAtivaPorView[k] === id) pranchaAtivaPorView[k] = null; });
       await carregar();
@@ -2913,9 +2940,16 @@ const ControleEstacas = (() => {
     pdfjsCarregado = true;
   }
 
-  // Processa o PDF/imagem (rasteriza 1ª página se PDF, comprime) e grava no
-  // Firestore — usado tanto ao criar a prancha (arquivo já junto) quanto ao
-  // trocar depois (modal dedicado). statusEl é opcional (só o modal dedicado tem).
+  // Processa o PDF/imagem (rasteriza 1ª página se PDF) e sobe pro Storage —
+  // usado tanto ao criar a prancha (arquivo já junto) quanto ao trocar
+  // depois (modal dedicado). statusEl é opcional (só o modal dedicado tem).
+  // Antes ficava em 2200px + JPEG comprimido pra caber no limite de ~950KB
+  // do documento Firestore — planta técnica cheia de texto/cota miúdo
+  // ficava ilegível ao dar zoom (as estacas/marcadores desenhados por cima,
+  // sendo vetor/CSS e não pixel, não perdiam nitidez — só a imagem de fundo).
+  // Agora vai pro Storage (sem esse teto), então sobe a resolução de
+  // verdade e salva sem perda (PNG) — mesmo pipeline do Controle de
+  // Concreto (V3.26.2).
   async function _processarArquivoPrancha(file, pranchaId, statusEl) {
     if (statusEl) statusEl.textContent = 'Processando...';
     let canvas;
@@ -2925,7 +2959,7 @@ const ControleEstacas = (() => {
       const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
       const page = await pdf.getPage(1);
       const viewportBase = page.getViewport({ scale: 1 });
-      const alvo = 2200;
+      const alvo = 4500;
       const escala = Math.min(4, alvo / Math.max(viewportBase.width, viewportBase.height));
       const viewport = page.getViewport({ scale: escala });
       canvas = document.createElement('canvas');
@@ -2937,17 +2971,15 @@ const ControleEstacas = (() => {
         im.onload = () => res(im); im.onerror = rej;
         im.src = URL.createObjectURL(file);
       });
-      const alvo = 2200;
-      const fator = Math.min(1, alvo / Math.max(img.naturalWidth, img.naturalHeight));
       canvas = document.createElement('canvas');
-      canvas.width = Math.round(img.naturalWidth * fator);
-      canvas.height = Math.round(img.naturalHeight * fator);
-      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      canvas.width = img.naturalWidth; canvas.height = img.naturalHeight;
+      canvas.getContext('2d').drawImage(img, 0, 0);
     }
-    const { url, width, height, ok } = EC.canvasParaDataURLLimitado(canvas);
-    if (!ok) throw new Error('Arquivo grande demais mesmo após compressão. Tente uma exportação menor.');
-    await db.collection('obras').doc(obraId).collection('config').doc('estacasImagem_' + pranchaId).set({ img: url });
-    await Database.atualizar(obraId, COL_PRANCHAS, pranchaId, { imgWidthPx: width, imgHeightPx: height });
+    if (statusEl) statusEl.textContent = 'Enviando (planta em alta qualidade pode demorar um pouco)...';
+    const dataUrl = canvas.toDataURL('image/png');
+    const path = `obras/${obraId}/estacas-plantas/${pranchaId}.png`;
+    const url = await uploadImagem(path, dataUrl);
+    await Database.atualizar(obraId, COL_PRANCHAS, pranchaId, { imgUrl: url, imgWidthPx: canvas.width, imgHeightPx: canvas.height });
     imagemCachePranchaId = null;
     if (statusEl) statusEl.textContent = '✓ Imagem carregada!';
   }

@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.26.8',
+  versaoAtual: 'V3.26.9',
 
   versoes: [
     {
@@ -10989,6 +10989,17 @@ const NotasVersao = {
       "itens": [
         "Na aba Acompanhamento do Controle de Estacas, clicar em \"▲ Minimizar\" escondia tudo — inclusive o seletor de concretagem e o botão de BTs — deixando sem como trocar de concretagem com o painel minimizado.",
         "Agora o seletor de concretagem e o botão de BTs continuam visíveis minimizado; só o título, o toggle Estacas/Fundações, a legenda e os controles de zoom somem."
+      ]
+    },
+    {
+      "versao": "V3.26.9",
+      "data": "2026-08-31",
+      "tipo": "correcao",
+      "titulo": "Controle de Estacas — botão \"Concluir\" da Fundação fora de vista + planta perdendo nitidez no zoom",
+      "itens": [
+        "PROBLEMA 1: ao clicar nos vértices pra desenhar uma Fundação, os botões \"✓ Concluir\"/\"↩ Desfazer ponto\"/\"Cancelar\" apareciam só DEPOIS do mapa (que pode chegar a 600-720px de altura) — em telas menores ficava fora da área visível, parecendo que não existia botão nenhum pra terminar o desenho. Corrigido: a barra de ação agora aparece ANTES do mapa (logo abaixo da linha \"Adicionar Fundação/Girar 90°\"), sempre visível, com fundo destacado. Mesma correção pro modo Adicionar Estaca e pro ajuste de forma.",
+        "PROBLEMA 2 (causa raiz igual à do Controle de Concreto em V3.26.2): a planta/PDF importada ia pra um campo do Firestore, limitado a ~950KB — pra caber, o sistema comprimia a imagem em JPEG com qualidade cada vez mais baixa (chegando a recortar a resolução pela metade em plantas grandes). Texto e cota miúdos da planta técnica ficavam borrados ao dar zoom, enquanto as estacas/fundações desenhadas por cima continuavam nítidas por serem vetor (CSS/SVG), não pixel — daí a diferença notada.",
+        "Corrigido: a planta agora vai pro Firebase Storage (sem limite de tamanho de documento) em PNG sem perda, com resolução alvo de 4500px (antes 2200px) — mesmo pipeline já usado no Controle de Concreto. Vale pra importar, trocar depois e Girar 90°. Plantas já importadas antes desta versão continuam funcionando normalmente (compatibilidade mantida) — pra ganhar a qualidade nova, é só reimportar o arquivo ou girar a prancha uma vez."
       ]
     }
   ],
