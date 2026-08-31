@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.26.4',
+  versaoAtual: 'V3.26.5',
 
   versoes: [
     {
@@ -10945,6 +10945,17 @@ const NotasVersao = {
         "NOVO no Ajustar Forma: clique rápido num ponto (sem arrastar) exclui aquele vértice — não precisa mais recriar a área inteira só porque um ponto ficou torto. Precisa sobrar pelo menos 3 pontos.",
         "Detecção Automática: testei com a planta que veio de exemplo (área P42-P46) e achei uma cor de preenchimento mais apagada que ficava bem na borda do critério e às vezes não entrava. Afrouxei um pouco o corte de saturação/brilho — testado que isso NÃO piora a planta que já funcionava bem (mesma qualidade de antes) e ajuda um pouco nessa nova.",
         "IMPORTANTE sobre a Detecção Automática — expectativa realista: ela não é um modelo treinável, é geometria pura baseada em cor. Em áreas tracejadas/técnicas onde várias peças (ex: P42, P43, PG3) estão dentro de UM preenchimento contínuo sem separação de cor real entre elas, ela vai continuar juntando tudo numa área só — isso não tem como \"treinar melhor\", é um limite de o desenho não ter uma linha separando de verdade uma peça da outra na cor. Pra esses casos: Desenhar Área Manual + os pontos de exclusão novos deixam a correção rápida."
+      ]
+    },
+    {
+      "versao": "V3.26.5",
+      "data": "2026-08-31",
+      "tipo": "correcao",
+      "titulo": "Cada tipo de peça com sua própria cor na Planta (Pilar/Viga/Laje/Fundação/Escada/Rampa/Cortina/Caixa D'água/Outro)",
+      "itens": [
+        "PROBLEMA relatado: só Pilar, Viga e Laje tinham cor própria — todo o resto (Fundação, Escada, Rampa, Cortina, Caixa D'água) caía junto num \"Outro\" roxo genérico, fazendo peças bem diferentes parecerem a mesma coisa na planta.",
+        "CORRIGIDO: os 9 tipos agora têm cor própria e bem distinta. O filtro \"Mostrar\" ganhou um checkbox por tipo (em vez do balaio \"Outros tipos\"), cada um com uma bolinha da cor real ao lado do nome.",
+        "Aviso de \"peça já vinculada a outra área\" reescrito — isso É esperado quando uma peça aparece dividida em pedaços no desenho (ex: uma viga que passa por trás de outra e continua do outro lado): vincular a mesma peça a duas áreas separadas continua funcionando, só que agora sem soar como erro."
       ]
     }
   ],

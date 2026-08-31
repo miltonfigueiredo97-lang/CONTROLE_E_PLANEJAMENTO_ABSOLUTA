@@ -1826,20 +1826,24 @@ const ControleConcreto = (() => {
     } catch (e) { return null; }
   }
 
-  const CORES_TIPO_PLANTA = { Pilar: '#ef4444', Viga: '#3b82f6', Laje: '#f59e0b' };
+  const CORES_TIPO_PLANTA = {
+    Pilar: '#ef4444', Viga: '#3b82f6', Laje: '#f59e0b',
+    'Fundação': '#10b981', Cortina: '#6366f1', Escada: '#ec4899',
+    Rampa: '#14b8a6', "Caixa D'água": '#8b5cf6', Outro: '#78716c',
+  };
   function _statusMarcadorPlanta(m) {
     const p = m.pecaId ? pecas.find(x => x.id === m.pecaId) : null;
     if (!p) return { vinculado: false, label: 'Sem peça vinculada', cor: '#94a3b8' };
     return { vinculado: true, label: `${p.tipo} — ${p.nome}`, cor: CORES_TIPO_PLANTA[p.tipo] || '#a855f7' };
   }
 
-  // ── Filtro por tipo (Pilar/Viga/Laje/Outros/Não vinculadas) ──
-  let filtroTipoPlanta = new Set(['Pilar', 'Viga', 'Laje', 'Outros', 'naoVinculada']);
+  // ── Filtro por tipo — um checkbox por tipo de peça (mais "Não
+  // vinculadas"), cada um com a cor real que aparece na planta. ──
+  let filtroTipoPlanta = new Set([...CC.TIPOS, 'naoVinculada']);
   function _tipoFiltroMarcador(m) {
     const p = m.pecaId ? pecas.find(x => x.id === m.pecaId) : null;
     if (!p) return null; // não vinculada
-    if (p.tipo === 'Pilar' || p.tipo === 'Viga' || p.tipo === 'Laje') return p.tipo;
-    return 'Outros';
+    return CC.TIPOS.includes(p.tipo) ? p.tipo : 'Outro';
   }
   function _marcadorVisivelPlanta(m) {
     const t = _tipoFiltroMarcador(m);
@@ -2078,7 +2082,7 @@ const ControleConcreto = (() => {
     const scrollAnterior = _scrollOverridePlanta || _lerScrollPlanta();
     _scrollOverridePlanta = null;
 
-    const filtros = [['Pilar', 'Pilar'], ['Viga', 'Viga'], ['Laje', 'Laje'], ['Outros', 'Outros tipos'], ['naoVinculada', 'Não vinculadas']];
+    const filtros = [...CC.TIPOS.map(t => [t, t]), ['naoVinculada', 'Não vinculadas']];
 
     wrap.innerHTML = `
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px;">
@@ -2105,10 +2109,14 @@ const ControleConcreto = (() => {
         </div>
         <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
           <span class="text-sm text-muted">Mostrar:</span>
-          ${filtros.map(([k, label]) => `
+          ${filtros.map(([k, label]) => {
+            const cor = CORES_TIPO_PLANTA[k] || '#94a3b8';
+            return `
             <label style="display:flex;align-items:center;gap:4px;font-size:0.78rem;cursor:pointer;">
-              <input type="checkbox" ${filtroTipoPlanta.has(k) ? 'checked' : ''} onchange="CCON.toggleFiltroTipoPlanta('${k}')"> ${esc(label)}
-            </label>`).join('')}
+              <input type="checkbox" ${filtroTipoPlanta.has(k) ? 'checked' : ''} onchange="CCON.toggleFiltroTipoPlanta('${k}')">
+              <span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${cor};"></span> ${esc(label)}
+            </label>`;
+          }).join('')}
         </div>
       </div>` : ''}
       ${modoPlanta === 'poligono' ? `
@@ -2385,7 +2393,7 @@ const ControleConcreto = (() => {
         const outro = _marcadorDaPecaPlanta(p.id, marcadorVincularId);
         const ativo = p.id === (document.getElementById('cc-vincular-peca') ? document.getElementById('cc-vincular-peca').value : '');
         return `<div style="padding:9px 12px;cursor:pointer;border-top:1px solid var(--cv-border,#f1f5f9);${ativo ? 'background:var(--cor-primaria-light,#fef9e7);' : ''}" onmousedown="CCON.selecionarPecaBuscaPlanta('${p.id}')">
-          <div style="font-weight:600;font-size:.85rem;">${esc(p.nome)}${outro ? ' <span style="color:var(--cv-red,#ef4444);font-weight:400;font-size:.75rem;">— já vinculada a outra área</span>' : ''}</div>
+          <div style="font-weight:600;font-size:.85rem;">${esc(p.nome)}${outro ? ' <span style="color:var(--cv-text3,#94a3b8);font-weight:400;font-size:.75rem;">— já tem outra área (ok se for a mesma peça dividida)</span>' : ''}</div>
           <div class="text-sm text-muted">${esc(p.tipo)} · ${esc(p.andar)}</div>
         </div>`;
       }).join('') : '<div style="padding:10px 12px;color:var(--cv-text3,#94a3b8);font-size:.82rem;">Nenhuma peça encontrada.</div>'}
@@ -2447,7 +2455,7 @@ const ControleConcreto = (() => {
     if (pecaId) {
       const outro = _marcadorDaPecaPlanta(pecaId, m.id);
       if (outro) {
-        const ok = await Utils.confirmar('Esta peça já está vinculada a outra área. Vincular aqui também?');
+        const ok = await Utils.confirmar('Esta peça já tem outra área vinculada nesta prancha — normal quando a peça aparece dividida em pedaços no desenho (ex: uma viga que passa por trás de outra). Vincular esta área também à mesma peça?');
         if (!ok) return;
       }
     }
