@@ -36,6 +36,7 @@ const ControleConcreto = (() => {
   let modoPlanta = null; // 'poligono' (desenho manual) | null
   let poligonoPontosPlanta = [];
   let editandoFormaPlantaId = null;
+  let proximaAreaParaPeca = null; // {pecaId, tipo, nome} — se setado, a próxima área desenhada é vinculada direto a essa peça, sem passar pelo seletor
   let marcadorVincularId = null;
   let vincularTipo = '';
   let vincularAndarFiltro = '__prancha__'; // '__prancha__' = só andar da prancha ativa · 'todos'
@@ -2132,10 +2133,11 @@ const ControleConcreto = (() => {
         </div>
       </div>` : ''}
       ${modoPlanta === 'poligono' ? `
-        <div style="display:flex;gap:8px;margin-bottom:10px;">
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap;">
           <button class="btn btn-secundario btn-sm" onclick="CCON.desfazerPontoPlanta()">↩ Desfazer ponto</button>
           <button class="btn btn-primario btn-sm" onclick="CCON.concluirDesenhoPlanta()" ${poligonoPontosPlanta.length < 3 ? 'disabled' : ''}>✓ Concluir Área</button>
           <button class="btn btn-secundario btn-sm" onclick="CCON.cancelarDesenhoPlanta()">✕ Cancelar</button>
+          ${proximaAreaParaPeca ? `<span class="text-sm" style="font-weight:600;color:#1d4ed8;">→ esta área vai direto pra ${esc(proximaAreaParaPeca.tipo)} — ${esc(proximaAreaParaPeca.nome)}</span>` : ''}
         </div>` : ''}
       ${modoPlanta === 'concretagem-livre' ? _painelConcretagemLivreHTML() : ''}
       ${editandoFormaPlantaId ? `
@@ -2180,21 +2182,36 @@ const ControleConcreto = (() => {
   function toggleDesenhoManualPlanta() {
     if (modoPlanta === 'poligono') { cancelarDesenhoPlanta(); return; }
     if (!Permissions.pode('controleConcreto', 'criar:marcador')) { Utils.toast('Sem permissão para criar.', 'erro'); return; }
-    modoPlanta = 'poligono'; poligonoPontosPlanta = []; editandoFormaPlantaId = null;
+    modoPlanta = 'poligono'; poligonoPontosPlanta = []; editandoFormaPlantaId = null; proximaAreaParaPeca = null;
     renderPlanta();
   }
   function desfazerPontoPlanta() { poligonoPontosPlanta.pop(); renderPlanta(); }
-  function cancelarDesenhoPlanta() { modoPlanta = null; poligonoPontosPlanta = []; renderPlanta(); }
+  function cancelarDesenhoPlanta() { modoPlanta = null; poligonoPontosPlanta = []; proximaAreaParaPeca = null; renderPlanta(); }
+
+  // Chamado pelo botão "+ Adicionar outra área pra esta peça" dentro do
+  // modal de vínculo — pula direto pro desenho, sem passar pelo seletor
+  // de novo, pra marcar uma SEGUNDA (ou terceira...) área que é a MESMA
+  // peça (ex: viga que passa por trás de outra e continua do outro lado).
+  function iniciarNovaAreaParaPeca(pecaId, tipo, nome) {
+    if (!Permissions.pode('controleConcreto', 'criar:marcador')) { Utils.toast('Sem permissão para criar.', 'erro'); return; }
+    Utils.fecharModal('modal-cc-vincular-planta');
+    proximaAreaParaPeca = { pecaId, tipo, nome };
+    modoPlanta = 'poligono'; poligonoPontosPlanta = []; editandoFormaPlantaId = null;
+    renderPlanta();
+  }
+
   async function concluirDesenhoPlanta() {
     if (poligonoPontosPlanta.length < 3) return;
     if (!Permissions.pode('controleConcreto', 'criar:marcador')) { Utils.toast('Sem permissão para criar.', 'erro'); return; }
     Utils.mostrarLoading();
     try {
       const pontos = [...poligonoPontosPlanta];
-      const id = await Database.criar(obraId, COL_MARCADORES, { pranchaId: pranchaAtivaId, pontos, pecaId: '', obraId }, CC.genId('cm'));
-      modoPlanta = null; poligonoPontosPlanta = [];
+      const viaPeca = proximaAreaParaPeca;
+      const id = await Database.criar(obraId, COL_MARCADORES, { pranchaId: pranchaAtivaId, pontos, pecaId: viaPeca ? viaPeca.pecaId : '', obraId }, CC.genId('cm'));
+      modoPlanta = null; poligonoPontosPlanta = []; proximaAreaParaPeca = null;
       await carregar();
-      abrirVincularPlanta(id);
+      if (viaPeca) Utils.toast(`✓ Nova área adicionada a ${viaPeca.tipo} — ${viaPeca.nome}!`, 'sucesso');
+      else abrirVincularPlanta(id);
     } catch (e) {
       Utils.toast('Erro ao criar área: ' + e.message, 'erro');
     } finally {
@@ -2459,9 +2476,11 @@ const ControleConcreto = (() => {
         ${!_pecasElegiveisPlanta().length ? `<p class="text-sm text-muted" style="margin-top:6px;">Nenhuma peça encontrada com esse filtro — confira o tipo/andar, ou cadastre no <a href="levantamento-concreto.html" style="color:var(--cor-primaria-dark);font-weight:600;">Levantamento de Concreto</a>.</p>` : ''}
       </div>
       <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;">
+        ${pecaAtual ? `<button class="btn btn-secundario btn-sm" data-perm="controleConcreto:criar:marcador" onclick="CCON.iniciarNovaAreaParaPeca('${pecaAtual.id}', '${esc(pecaAtual.tipo)}', '${esc(pecaAtual.nome)}')">➕ Adicionar outra área pra esta peça</button>` : ''}
         <button class="btn btn-secundario btn-sm" data-perm="controleConcreto:editar:marcador" onclick="CCON.iniciarAjusteFormaPlanta('${m.id}')">✎ Ajustar forma</button>
         <button class="btn btn-secundario btn-sm" style="color:var(--cv-red,#ef4444);" data-perm="controleConcreto:excluir:marcador" onclick="CCON.excluirMarcadorPlanta('${m.id}')">🗑 Excluir área</button>
       </div>
+      ${pecaAtual ? `<p class="text-sm text-muted" style="margin-top:8px;">Use "Adicionar outra área" quando esta peça aparece dividida em pedaços no desenho (ex: uma viga que passa por trás de outra e continua do outro lado) — as duas áreas ficam vinculadas à mesma peça.</p>` : ''}
     `;
     Permissions.aplicarNaTela(document.getElementById('modal-cc-vincular-planta'));
     _renderListaPecaBuscaPlanta();
@@ -2975,6 +2994,7 @@ const ControleConcreto = (() => {
     // Planta do Projeto (V2.0)
     renderPlanta, onTrocarPranchaPlanta, onCliquePlanta,
     toggleDesenhoManualPlanta, desfazerPontoPlanta, cancelarDesenhoPlanta, concluirDesenhoPlanta,
+    iniciarNovaAreaParaPeca,
     detectarAreasPlanta,
     iniciarAjusteFormaPlanta, cancelarAjusteFormaPlanta, concluirAjusteFormaPlanta,
     abrirVincularPlanta, onTipoVincularPlanta, onAndarFiltroVincularPlanta,
