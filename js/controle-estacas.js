@@ -1064,6 +1064,7 @@ const ControleEstacas = (() => {
         </div>
         ${painelMinimizado ? '' : `
         <div class="cc-panelTitle">✅ Acompanhamento — clique numa estaca/fundação no mapa pra lançar</div>
+        `}
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px;">
           <select class="form-control" id="ce-acomp-conc" style="max-width:280px;" onchange="CE.onTrocarAcompConcretagem()">
             <option value="">— Selecione uma concretagem —</option>
@@ -1072,7 +1073,7 @@ const ControleEstacas = (() => {
           ${!concsComPlano.length ? '<span class="text-sm text-muted">Nenhuma concretagem com peças planejadas ainda — vá em Planejamento primeiro.</span>' : ''}
           ${acompConcretagemId ? `<button class="btn btn-secundario btn-sm" onclick="CE.abrirModalBTs()">🚚 ${qtdBTs} BT${qtdBTs !== 1 ? 's' : ''} nesta concretagem</button>` : ''}
         </div>
-        ${acompConcretagemId ? `
+        ${!painelMinimizado && acompConcretagemId ? `
           <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:4px;">
             <div class="aba-toggle">
               <button class="aba-btn ${view === 'estacas' ? 'ativo' : ''}" onclick="CE.onTrocarView('estacas')">⚫ Estacas</button>
@@ -1089,7 +1090,7 @@ const ControleEstacas = (() => {
             <button class="btn btn-secundario btn-sm" onclick="CE.zoomAjustar(0.25)">+</button>
             </span>
           </div>
-        ` : ''}` }
+        ` : ''}
         ${!painelMinimizado && !acompConcretagemId ? '<div class="cc-empty">Selecione uma concretagem planejada.</div>' : ''}
         <div id="ce-acomp-mapa-host"></div>
         ${!painelMinimizado && acompConcretagemId ? `

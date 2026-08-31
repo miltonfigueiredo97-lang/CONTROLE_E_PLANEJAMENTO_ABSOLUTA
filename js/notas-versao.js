@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.26.7',
+  versaoAtual: 'V3.26.8',
 
   versoes: [
     {
@@ -10979,6 +10979,16 @@ const NotasVersao = {
         "Enquanto desenha por esse caminho, aparece um aviso na tela mostrando pra qual peça a área vai (ex: \"→ esta área vai direto pra Viga — V308\"), pra não ter dúvida de que não é uma peça nova.",
         "Resolve o caso descrito: uma viga que passa por trás de outra e continua do outro lado — antes dava pra fazer isso confirmando o aviso de \"peça já vinculada\", mas exigia buscar e selecionar a peça de novo do zero a cada pedaço.",
         "INVESTIGANDO (Detecção Automática \"não acerta nenhuma\"): testei o algoritmo renderizando a planta com o pdf.js de verdade (a mesma engine do navegador, não o Poppler que eu vinha usando pra testar) na resolução exata de produção — na planta ABS037 ele continua detectando as áreas normalmente (64 áreas), então não é uma falha geral do motor de renderização. Preciso de um print de qual prancha/área específica está saindo errada pra continuar a investigação."
+      ]
+    },
+    {
+      "versao": "V3.26.8",
+      "data": "2026-08-31",
+      "tipo": "correcao",
+      "titulo": "Controle de Estacas — minimizar o painel do Acompanhamento escondia o seletor de concretagem",
+      "itens": [
+        "Na aba Acompanhamento do Controle de Estacas, clicar em \"▲ Minimizar\" escondia tudo — inclusive o seletor de concretagem e o botão de BTs — deixando sem como trocar de concretagem com o painel minimizado.",
+        "Agora o seletor de concretagem e o botão de BTs continuam visíveis minimizado; só o título, o toggle Estacas/Fundações, a legenda e os controles de zoom somem."
       ]
     }
   ],
