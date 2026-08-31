@@ -1954,7 +1954,12 @@ const ControleConcreto = (() => {
       // um <circle r="%"> ficava atrelado à resolução da imagem: com a
       // planta em alta qualidade (V3.26.2) os pontos viraram bolões.
       // A LINHA continua em SVG (non-scaling-stroke já resolve ela sozinha).
-      const tamPonto = Math.max(6, Math.round(10 * (zoomPlanta || 1)));
+      // Tamanho CONSTANTE em px de tela — não depende do zoom. Escalar
+      // com o zoom foi um erro (V3.26.2/3): a bola crescia junto, ficando
+      // gigante justo no zoom alto, que é quando se precisa de precisão.
+      // Fixo, ela fica proporcionalmente menor (mais precisa) quanto mais
+      // se dá zoom, que é o comportamento certo.
+      const tamPonto = 9;
       desenhoAtual = `
         ${poligonoPontosPlanta.length >= 2 ? `<svg viewBox="0 0 100 100" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:3;">
           <polyline points="${pts}" fill="none" stroke="#2563eb" stroke-width="0.4" vector-effect="non-scaling-stroke"/>
@@ -2114,9 +2119,10 @@ const ControleConcreto = (() => {
         </div>` : ''}
       ${modoPlanta === 'concretagem-livre' ? _painelConcretagemLivreHTML() : ''}
       ${editandoFormaPlantaId ? `
-        <div style="display:flex;gap:8px;margin-bottom:10px;">
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap;">
           <button class="btn btn-primario btn-sm" onclick="CCON.concluirAjusteFormaPlanta()">✓ Salvar ajuste</button>
           <button class="btn btn-secundario btn-sm" onclick="CCON.cancelarAjusteFormaPlanta()">✕ Cancelar</button>
+          <span class="text-sm text-muted">Arraste um ponto pra mover · clique rápido (sem arrastar) nele pra excluir</span>
         </div>` : ''}
       ${!imagem ? `<div class="cc-empty">Esta prancha ainda não tem PDF/imagem. <button class="btn btn-secundario btn-sm" onclick="CCON.abrirUploadImagemPlanta('${pr.id}')">⊞ Importar PDF/Imagem</button></div>`
         : _plantaStageHTML(pr, imagem, marcsVisiveis)}
@@ -2247,14 +2253,28 @@ const ControleConcreto = (() => {
   }
   function cancelarAjusteFormaPlanta() { editandoFormaPlantaId = null; renderPlanta(); }
 
-  function _arrastarHandlePlanta(el, onMove) {
-    const mover = e => { const ev = e.touches ? e.touches[0] : e; onMove(ev); };
+  // onMove: chamado a cada movimento de verdade (arrastar o vértice).
+  // onCliqueSemMover: chamado se soltar sem ter arrastado de fato (>3px)
+  // — usado pra EXCLUIR o vértice com um clique simples, sem precisar de
+  // um botão à parte pra cada ponto.
+  function _arrastarHandlePlanta(el, onMove, onCliqueSemMover) {
+    let x0 = 0, y0 = 0, moveu = false;
+    const mover = e => {
+      const ev = e.touches ? e.touches[0] : e;
+      if (Math.hypot(ev.clientX - x0, ev.clientY - y0) > 3) moveu = true;
+      onMove(ev);
+    };
     const soltar = () => {
       document.removeEventListener('mousemove', mover); document.removeEventListener('mouseup', soltar);
       document.removeEventListener('touchmove', mover); document.removeEventListener('touchend', soltar);
+      if (!moveu && onCliqueSemMover) onCliqueSemMover();
     };
-    el.addEventListener('mousedown', e => { e.preventDefault(); e.stopPropagation(); document.addEventListener('mousemove', mover); document.addEventListener('mouseup', soltar); });
-    el.addEventListener('touchstart', e => { e.preventDefault(); e.stopPropagation(); document.addEventListener('touchmove', mover, { passive: false }); document.addEventListener('touchend', soltar); }, { passive: false });
+    const iniciar = e0 => {
+      const p0 = e0.touches ? e0.touches[0] : e0;
+      x0 = p0.clientX; y0 = p0.clientY; moveu = false;
+    };
+    el.addEventListener('mousedown', e => { e.preventDefault(); e.stopPropagation(); iniciar(e); document.addEventListener('mousemove', mover); document.addEventListener('mouseup', soltar); });
+    el.addEventListener('touchstart', e => { e.preventDefault(); e.stopPropagation(); iniciar(e); document.addEventListener('touchmove', mover, { passive: false }); document.addEventListener('touchend', soltar); }, { passive: false });
   }
 
   function _desenharHandlesEdicaoPlanta() {
@@ -2264,15 +2284,23 @@ const ControleConcreto = (() => {
     let cont = document.getElementById('cc-plan-edicao-overlay');
     if (!cont) { cont = document.createElement('div'); cont.id = 'cc-plan-edicao-overlay'; cont.style.cssText = 'position:absolute;inset:0;z-index:10;'; stage.appendChild(cont); }
     cont.innerHTML = '';
-    // Tamanho do vértice ACOMPANHA o zoom — fixo em px de tela ele virava
-    // uma bola gigante cobrindo o desenho inteiro quando dava zoom-out
-    // (reclamação real: "as bolinha não diminui de tamanho").
-    const tam = Math.max(6, Math.round(10 * (zoomPlanta || 1)));
+    // Tamanho CONSTANTE em px de tela (ver nota em tamPonto, mesma lógica:
+    // não depende do zoom — assim fica proporcionalmente mais preciso
+    // quanto mais zoom, em vez de virar bola gigante no zoom alto).
+    const tam = 9;
     (m.pontos || []).forEach((p, i) => {
       const dot = document.createElement('div');
       dot.style.cssText = `position:absolute;left:${(p.x * 100).toFixed(3)}%;top:${(p.y * 100).toFixed(3)}%;width:${tam}px;height:${tam}px;margin:-${tam / 2}px;border-radius:50%;background:#2563eb;border:2px solid #fff;box-shadow:0 0 0 1px #2563eb;cursor:move;z-index:11;pointer-events:auto;`;
-      dot.title = 'Arraste pra ajustar este vértice';
-      _arrastarHandlePlanta(dot, mv => { m.pontos[i] = CC.posRelativa(mv, stage); _desenharHandlesEdicaoPlanta(); });
+      dot.title = 'Arraste pra ajustar — clique rápido (sem arrastar) pra excluir este vértice';
+      _arrastarHandlePlanta(
+        dot,
+        mv => { m.pontos[i] = CC.posRelativa(mv, stage); _desenharHandlesEdicaoPlanta(); },
+        () => {
+          if ((m.pontos || []).length <= 3) { Utils.toast('A área precisa de pelo menos 3 pontos.', 'erro'); return; }
+          m.pontos.splice(i, 1);
+          _desenharHandlesEdicaoPlanta();
+        }
+      );
       cont.appendChild(dot);
     });
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');

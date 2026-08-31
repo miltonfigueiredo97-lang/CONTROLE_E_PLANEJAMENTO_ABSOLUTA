@@ -392,8 +392,8 @@ const ConcretoCalculos = (() => {
   // V308...) porque o rótulo no PDF é desenho vetorial, não texto.
   function segmentarAreas(imgData, W, H, opts) {
     opts = opts || {};
-    const satMin = opts.satMin ?? 30;
-    const mxMin = opts.mxMin ?? 170;
+    const satMin = opts.satMin ?? 25;
+    const mxMin = opts.mxMin ?? 150;
     const maxAreaBuraco = opts.maxAreaBuraco ?? Math.max(40, Math.round(W * H * 0.0001));
     const iterErosao = opts.iterErosao ?? 2;
     const minPixels = opts.minPixels ?? Math.max(30, Math.round(W * H * 0.00015));

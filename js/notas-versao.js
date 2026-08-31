@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.26.3',
+  versaoAtual: 'V3.26.4',
 
   versoes: [
     {
@@ -10933,6 +10933,18 @@ const NotasVersao = {
         "CORRIGIDO: o ponto azul do \"Desenhar Área Manual\" tinha o tamanho em % da IMAGEM (não da tela) — com a planta em alta resolução da V3.26.2 isso virou uma bola enorme. Agora, igual a bolinha de ajustar forma, o tamanho é em pixel de tela e acompanha o zoom de verdade.",
         "Prancha com imagem quebrada (404 ou CORS) agora mostra um aviso no lugar da planta em branco, em vez de simplesmente não aparecer nada.",
         "CONFIRMADO pelo console do Milton: a Detecção Automática está batendo em CORS de verdade (\"blocked by CORS policy\", sem Access-Control-Allow-Origin) — não é mais suposição. Passo a passo pra resolver, direto no Google Cloud (não dá pra fazer isso pelo chat):\n1. Instalar o Google Cloud SDK (gcloud/gsutil), se ainda não tiver.\n2. Criar um arquivo cors.json com: [{\"origin\": [\"https://controle-e-planejamento-absoluta.vercel.app\"], \"method\": [\"GET\"], \"maxAgeSeconds\": 3600, \"responseHeader\": [\"Content-Type\"]}]\n3. Rodar: gsutil cors set cors.json gs://controle-absoluta.firebasestorage.app\n4. Conferir com: gsutil cors get gs://controle-absoluta.firebasestorage.app\nSem isso, a Detecção Automática continua dando erro (a planta aparece na tela normalmente, só a leitura de pixel pra detectar é que trava)."
+      ]
+    },
+    {
+      "versao": "V3.26.4",
+      "data": "2026-08-29",
+      "tipo": "correcao",
+      "titulo": "Bolinha de ajuste corrigida de vez (era eu que tinha invertido a lógica), exclusão de ponto, ajuste fino na detecção",
+      "itens": [
+        "ERRO MEU CORRIGIDO: nas duas versões anteriores a bolinha de ajustar vértice e o ponto do desenho manual cresciam JUNTO com o zoom — no zoom máximo (1000%) ficavam gigantes, exatamente o oposto do que fazia sentido (é no zoom alto que se precisa de precisão fina). Agora o tamanho é FIXO em pixel de tela, sempre pequeno — dando zoom, ela fica proporcionalmente cada vez menor (mais precisa) em vez de crescer.",
+        "NOVO no Ajustar Forma: clique rápido num ponto (sem arrastar) exclui aquele vértice — não precisa mais recriar a área inteira só porque um ponto ficou torto. Precisa sobrar pelo menos 3 pontos.",
+        "Detecção Automática: testei com a planta que veio de exemplo (área P42-P46) e achei uma cor de preenchimento mais apagada que ficava bem na borda do critério e às vezes não entrava. Afrouxei um pouco o corte de saturação/brilho — testado que isso NÃO piora a planta que já funcionava bem (mesma qualidade de antes) e ajuda um pouco nessa nova.",
+        "IMPORTANTE sobre a Detecção Automática — expectativa realista: ela não é um modelo treinável, é geometria pura baseada em cor. Em áreas tracejadas/técnicas onde várias peças (ex: P42, P43, PG3) estão dentro de UM preenchimento contínuo sem separação de cor real entre elas, ela vai continuar juntando tudo numa área só — isso não tem como \"treinar melhor\", é um limite de o desenho não ter uma linha separando de verdade uma peça da outra na cor. Pra esses casos: Desenhar Área Manual + os pontos de exclusão novos deixam a correção rápida."
       ]
     }
   ],
