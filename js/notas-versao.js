@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.26.5',
+  versaoAtual: 'V3.26.6',
 
   versoes: [
     {
@@ -10956,6 +10956,17 @@ const NotasVersao = {
         "PROBLEMA relatado: só Pilar, Viga e Laje tinham cor própria — todo o resto (Fundação, Escada, Rampa, Cortina, Caixa D'água) caía junto num \"Outro\" roxo genérico, fazendo peças bem diferentes parecerem a mesma coisa na planta.",
         "CORRIGIDO: os 9 tipos agora têm cor própria e bem distinta. O filtro \"Mostrar\" ganhou um checkbox por tipo (em vez do balaio \"Outros tipos\"), cada um com uma bolinha da cor real ao lado do nome.",
         "Aviso de \"peça já vinculada a outra área\" reescrito — isso É esperado quando uma peça aparece dividida em pedaços no desenho (ex: uma viga que passa por trás de outra e continua do outro lado): vincular a mesma peça a duas áreas separadas continua funcionando, só que agora sem soar como erro."
+      ]
+    },
+    {
+      "versao": "V3.26.6",
+      "data": "2026-08-31",
+      "tipo": "correcao",
+      "titulo": "Laje aparecendo roxa e peça já vinculada sumindo da busca — os dois eram comparação de texto exata demais",
+      "itens": [
+        "CAUSA 1 (cor errada): a cor por tipo comparava o texto do tipo da peça igualzinho a \"Pilar\"/\"Viga\"/\"Laje\"/etc — uma peça salva como \"LAJE\" (maiúscula) ou com espaço a mais, comum em peça importada em lote, não batia com nada e caía sempre no cinza \"Outro\". Corrigido: a comparação agora ignora maiúscula/minúscula e espaço nas pontas, tanto pra cor quanto pro filtro \"Mostrar\".",
+        "CAUSA 2 (peça some da busca): o filtro de andar comparava o texto cru (\"p.andar === prancha.andar\") — se a peça estivesse salva como \"TERREO\" e a prancha como \"Térreo\", a comparação falhava mesmo sendo visualmente o mesmo andar. Agora usa a mesma normalização de andar (CC.normalizarAndar) usada no resto do sistema.",
+        "Além disso: a peça JÁ vinculada àquela área agora sempre aparece na lista de busca, não importa o filtro de Tipo/Andar selecionado no momento — antes, se você trocasse o filtro, a peça que já estava vinculada podia sumir da lista mesmo continuando vinculada de verdade."
       ]
     }
   ],

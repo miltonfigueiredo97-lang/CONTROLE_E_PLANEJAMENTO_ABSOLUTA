@@ -1831,10 +1831,22 @@ const ControleConcreto = (() => {
     'Fundação': '#10b981', Cortina: '#6366f1', Escada: '#ec4899',
     Rampa: '#14b8a6', "Caixa D'água": '#8b5cf6', Outro: '#78716c',
   };
+  // Compara tipo tolerando maiúscula/minúscula e espaço (peça importada em
+  // lote às vezes vem com grafia diferente da exata de CC.TIPOS) e devolve
+  // a grafia CANÔNICA — usado tanto pra cor quanto pro filtro, pra uma
+  // peça "LAJE" não cair no balaio "Outro" nos dois lugares por motivos
+  // diferentes.
+  function _tipoNormalizadoPlanta(tipo) {
+    const alvo = String(tipo || '').trim().toLowerCase();
+    return CC.TIPOS.find(t => t.toLowerCase() === alvo) || null;
+  }
+  function _corPorTipo(tipo) {
+    return CORES_TIPO_PLANTA[_tipoNormalizadoPlanta(tipo)] || CORES_TIPO_PLANTA.Outro;
+  }
   function _statusMarcadorPlanta(m) {
     const p = m.pecaId ? pecas.find(x => x.id === m.pecaId) : null;
     if (!p) return { vinculado: false, label: 'Sem peça vinculada', cor: '#94a3b8' };
-    return { vinculado: true, label: `${p.tipo} — ${p.nome}`, cor: CORES_TIPO_PLANTA[p.tipo] || '#a855f7' };
+    return { vinculado: true, label: `${p.tipo} — ${p.nome}`, cor: _corPorTipo(p.tipo) };
   }
 
   // ── Filtro por tipo — um checkbox por tipo de peça (mais "Não
@@ -1843,7 +1855,7 @@ const ControleConcreto = (() => {
   function _tipoFiltroMarcador(m) {
     const p = m.pecaId ? pecas.find(x => x.id === m.pecaId) : null;
     if (!p) return null; // não vinculada
-    return CC.TIPOS.includes(p.tipo) ? p.tipo : 'Outro';
+    return _tipoNormalizadoPlanta(p.tipo) || 'Outro';
   }
   function _marcadorVisivelPlanta(m) {
     const t = _tipoFiltroMarcador(m);
@@ -2352,9 +2364,17 @@ const ControleConcreto = (() => {
 
   function _pecasElegiveisPlanta() {
     const pr = pranchas.find(p => p.id === pranchaAtivaId);
+    const mAtual = marcadoresProjeto.find(x => x.id === marcadorVincularId);
+    const pecaAtualId = mAtual ? mAtual.pecaId : null;
     return pecas.filter(p => {
-      if (vincularTipo && p.tipo !== vincularTipo) return false;
-      if (vincularAndarFiltro === '__prancha__' && pr && pr.andar) return p.andar === pr.andar;
+      if (p.id === pecaAtualId) return true; // a peça já vinculada sempre aparece, mesmo fora do filtro
+      if (vincularTipo && _tipoNormalizadoPlanta(p.tipo) !== vincularTipo) return false;
+      // Comparação de andar TOLERANTE (CC.normalizarAndar) — comparar a
+      // string crua fazia peça com "TERREO"/"terreo"/etc. sumir da busca
+      // mesmo sendo visualmente o mesmo andar da prancha ("Térreo").
+      if (vincularAndarFiltro === '__prancha__' && pr && pr.andar) {
+        return CC.normalizarAndar(p.andar) === CC.normalizarAndar(pr.andar);
+      }
       return true;
     });
   }
