@@ -362,7 +362,7 @@ const ControleEstacas = (() => {
           </div>
           <span class="text-sm text-muted">🟢 concretado · 🟠 parcial · ⚪ pendente · ▢ sem vínculo</span>
         </div>
-        ${_legendaGrupos()}
+        ${_legendaGrupos()}`}
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0;align-items:center;">
           <select class="form-control" id="ce-prancha-ativa" style="max-width:240px;" onchange="CE.onTrocarPranchaAtiva()">
             ${pranchasOrdenadas().map(p => `<option value="${p.id}" ${p.id === pranchaAtivaId ? 'selected' : ''}>${esc(p.nome || 'Prancha')}</option>`).join('')}
@@ -375,7 +375,7 @@ const ControleEstacas = (() => {
             <span class="text-sm text-muted" id="ce-zoom-label" style="width:48px;text-align:center;">${Math.round(zoomE * 100)}%</span>
             <button class="btn btn-secundario btn-sm" onclick="CE.zoomAjustar(0.25)">+</button>
           </span>
-        </div>`}
+        </div>
         <div id="ce-mapa-host"></div>
       </div>
 
