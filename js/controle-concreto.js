@@ -2735,21 +2735,25 @@ const ControleConcreto = (() => {
     } catch (e) {
       erro = e;
     }
-    // Esconde o loading ANTES de qualquer toast — o overlay de loading
-    // tem z-index maior que o toast (9999 vs 2000): se o toast disparasse
-    // antes, ele nascia, contava os ~3.5s e sumia inteiro ESCONDIDO atrás
-    // da tela de "Carregando...", sem o usuário nunca ver nada.
-    Utils.esconderLoading();
     input.value = '';
     if (erro) {
+      // Aqui sim já pode esconder e mostrar o toast — não tem mais nenhum
+      // carregar() vindo depois pra reabrir o loading em cima dele.
+      Utils.esconderLoading();
       console.error(erro);
       statusEl.textContent = 'Erro: ' + erro.message;
       Utils.toast('Erro ao processar arquivo: ' + erro.message, 'erro');
       return;
     }
-    // A mensagem detalhada (statusEl) fica dentro do modal, que fecha
-    // logo abaixo — sem isso no toast, ela some antes de dar tempo de
-    // ler. O toast persiste na tela mesmo depois do modal fechar.
+    Utils.fecharModal('modal-cc-imagem-planta');
+    pranchaAtivaId = pranchaId;
+    // carregar() mostra/esconde o PRÓPRIO loading — chamar antes do toast
+    // (não depois) pra não reabrir o overlay por cima dele um instante
+    // depois de disparado (era esse o "flash de 1s" — o toast nascia,
+    // carregar() cobria ele de novo quase na hora, e só revelava ele já
+    // perto do fim do tempo de vida, ou nem chegava a revelar).
+    await carregar();
+    _renderPranchasBody();
     let msg = '✓ Prancha atualizada!';
     if (malhaFaces !== null) {
       msg += malhaFaces.length
@@ -2757,10 +2761,6 @@ const ControleConcreto = (() => {
         : ' Nenhum espaço fechado encontrado na malha desse PDF — o botão "Detectar Malha" não vai aparecer (use "Detectar Áreas (cor)" ou desenho manual).';
     }
     Utils.toast(msg, 'sucesso');
-    Utils.fecharModal('modal-cc-imagem-planta');
-    pranchaAtivaId = pranchaId;
-    await carregar();
-    _renderPranchasBody();
   }
 
   // ── Montar Concretagem desenhando livre (V2.0 parte 2) ──

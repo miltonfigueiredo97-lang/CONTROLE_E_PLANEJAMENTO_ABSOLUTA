@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.26.14',
+  versaoAtual: 'V3.26.15',
 
   versoes: [
     {
@@ -11056,6 +11056,16 @@ const NotasVersao = {
         "CAUSA REAL da V3.26.13 ainda não ter resolvido: a tela de \"Carregando...\" (o overlay branco com o spinner) tem prioridade visual maior que o toast (z-index 9999 contra 2000) — e só era escondida DEPOIS de tudo, inclusive recarregar os dados da tela. Se esse recarregamento demorasse mais que os ~3,5s que o toast fica na tela, ele nascia, contava o tempo e sumia inteiro por trás do \"Carregando...\", sem nunca aparecer visível de verdade.",
         "CORRIGIDO: a tela de \"Carregando...\" agora fecha ANTES de qualquer toast disparar — a informação da malha (quantos espaços encontrados, ou nenhum) fica garantida de aparecer visível por cima de tudo.",
         "Removido também um segundo aviso que tinha o mesmo problema (o de erro na leitura da malha, que disparava ainda dentro do processamento) — a informação dele já está coberta pela mensagem final, que agora aparece de verdade."
+      ]
+    },
+    {
+      "versao": "V3.26.15",
+      "data": "2026-09-02",
+      "tipo": "correcao",
+      "titulo": "Terceiro round: a correção da V3.26.14 ainda deixava o toast ser coberto de novo — dessa vez pelo próprio carregar()",
+      "itens": [
+        "CAUSA: a V3.26.14 escondia o \"Carregando...\" e disparava o toast ANTES de chamar carregar() (a função que recarrega os dados da tela) — só que carregar() mostra o PRÓPRIO \"Carregando...\" de novo assim que é chamada. Resultado: o toast nascia, e um instante depois (o tempo de carregar() rodar) ficava coberto de novo, dando a impressão de \"tela verde rápida de ~1 segundo\" em vez dos ~3,5s normais.",
+        "CORRIGIDO: inverteu a ordem — agora espera carregar() terminar (e esconder o loading DELA) antes de disparar o toast. Não sobra mais nenhuma etapa depois capaz de cobrir o aviso."
       ]
     }
   ],
