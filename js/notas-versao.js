@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.26.12',
+  versaoAtual: 'V3.26.13',
 
   versoes: [
     {
@@ -11034,6 +11034,17 @@ const NotasVersao = {
         "LEMBRETE: o botão \"🕸️ Detectar Malha\" só aparece em prancha REIMPORTADA depois da V3.26.11 — o cálculo roda uma vez, no momento da importação. Prancha antiga não ganha a malha sozinha, precisa reimportar o PDF (Pranchas → Atualizar Projeto).",
         "Antes, se a leitura da malha desse zero espaços ou desse erro, a mensagem final só dizia \"✓ Imagem carregada!\" sem explicar — parecia que tinha funcionado igual, mas o botão \"Detectar Malha\" simplesmente não aparecia depois, sem pista do motivo.",
         "Agora a mensagem final avisa explicitamente qual dos três casos aconteceu: encontrou espaços (mostra quantos), não encontrou nenhum, ou deu erro ao ler a malha (mostra o motivo num aviso separado) — em qualquer um dos dois últimos casos, deixa claro que o resto do processamento (a imagem em si) funcionou normal mesmo assim."
+      ]
+    },
+    {
+      "versao": "V3.26.13",
+      "data": "2026-08-31",
+      "tipo": "correcao",
+      "titulo": "Achado o bug de verdade: o modal fechava antes de dar tempo de ler a mensagem da Malha",
+      "itens": [
+        "CAUSA REAL da V3.26.12 não ter resolvido nada: a mensagem detalhada (\"N espaço(s) de malha encontrados\" / \"nenhum espaço encontrado\") era escrita dentro do modal de upload — só que logo em seguida o próprio código fechava esse modal automaticamente (pra voltar pra tela da Planta). A mensagem aparecia por uma fração de segundo e sumia junto com o modal, impossível de ler.",
+        "CORRIGIDO: a informação da malha agora vai pro toast (aviso amarelo/verde no canto da tela), que continua visível MESMO depois do modal fechar — \"✓ Prancha atualizada! N espaço(s) de malha encontrados — botão Detectar Malha disponível.\" (ou o aviso de zero encontrado, conforme o caso).",
+        "Se você reimportou entre a V3.26.11 e agora e não viu nada de diferente, era esse o motivo — não precisa ter sido erro de leitura da malha, ela pode ter funcionado normal e você só não teve a chance de ver a mensagem."
       ]
     }
   ],

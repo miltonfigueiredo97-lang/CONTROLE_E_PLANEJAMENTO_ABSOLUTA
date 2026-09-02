@@ -2713,6 +2713,7 @@ const ControleConcreto = (() => {
       else if (malhaFaces.length) statusEl.textContent = `✓ Imagem carregada! (${malhaFaces.length} espaço(s) de malha encontrados — botão "Detectar Malha" já disponível)`;
       else statusEl.textContent = '✓ Imagem carregada! (nenhum espaço fechado encontrado na malha dessa planta — o botão "Detectar Malha" não vai aparecer; use "Detectar Áreas (cor)" ou desenho manual)';
     }
+    return malhaFaces;
   }
   function abrirUploadImagemPlanta(pranchaId) {
     document.getElementById('cc-img-pranchaid').value = pranchaId;
@@ -2726,8 +2727,17 @@ const ControleConcreto = (() => {
     const statusEl = document.getElementById('cc-img-status');
     Utils.mostrarLoading();
     try {
-      await _processarArquivoPranchaPlanta(file, pranchaId, statusEl);
-      Utils.toast('✓ Prancha atualizada!', 'sucesso');
+      const malhaFaces = await _processarArquivoPranchaPlanta(file, pranchaId, statusEl);
+      // A mensagem detalhada (statusEl) fica dentro do modal, que fecha
+      // logo abaixo — sem isso no toast, ela some antes de dar tempo de
+      // ler. O toast persiste na tela mesmo depois do modal fechar.
+      let msg = '✓ Prancha atualizada!';
+      if (malhaFaces !== null) {
+        msg += malhaFaces.length
+          ? ` ${malhaFaces.length} espaço(s) de malha encontrados — botão "🕸️ Detectar Malha" disponível.`
+          : ' Nenhum espaço fechado encontrado na malha desse PDF — o botão "Detectar Malha" não vai aparecer (use "Detectar Áreas (cor)" ou desenho manual).';
+      }
+      Utils.toast(msg, 'sucesso');
       Utils.fecharModal('modal-cc-imagem-planta');
       pranchaAtivaId = pranchaId;
       await carregar();
