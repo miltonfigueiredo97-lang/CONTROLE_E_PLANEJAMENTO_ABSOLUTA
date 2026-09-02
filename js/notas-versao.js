@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.26.15',
+  versaoAtual: 'V3.26.16',
 
   versoes: [
     {
@@ -11066,6 +11066,18 @@ const NotasVersao = {
       "itens": [
         "CAUSA: a V3.26.14 escondia o \"Carregando...\" e disparava o toast ANTES de chamar carregar() (a função que recarrega os dados da tela) — só que carregar() mostra o PRÓPRIO \"Carregando...\" de novo assim que é chamada. Resultado: o toast nascia, e um instante depois (o tempo de carregar() rodar) ficava coberto de novo, dando a impressão de \"tela verde rápida de ~1 segundo\" em vez dos ~3,5s normais.",
         "CORRIGIDO: inverteu a ordem — agora espera carregar() terminar (e esconder o loading DELA) antes de disparar o toast. Não sobra mais nenhuma etapa depois capaz de cobrir o aviso."
+      ]
+    },
+    {
+      "versao": "V3.26.16",
+      "data": "2026-09-02",
+      "tipo": "correcao",
+      "titulo": "ACHADO: a Detecção por Malha voltava zero por um bug real na versão do Turf.js usada (não era código nosso)",
+      "itens": [
+        "Depois que o toast passou a aparecer de verdade (V3.26.15), a mensagem real apareceu: \"Nenhum espaço fechado encontrado\" — na mesma planta que eu já tinha testado e validado com 389 espaços. Isso só podia significar uma coisa: diferença entre o ambiente de teste e o navegador de verdade.",
+        "CAUSA ENCONTRADA: eu tinha testado com a versão mais recente do Turf.js (7.4.0, instalada por padrão), mas o código de produção carregava a versão 6.5.0 pelo CDN. Instalei a 6.5.0 EXATA localmente pra reproduzir e confirmei: o polygonize dessa versão tem um bug de verdade (RangeError: Invalid array length, dentro do próprio código da biblioteca) que quebra silenciosamente com entradas grandes/complexas como a malha de uma planta real — não é falha nossa, é bug da lib nessa versão específica.",
+        "CORRIGIDO: trocada a versão do Turf.js carregada de 6.5.0 pra 7.4.0 (onde esse bug já não existe). Testado de ponta a ponta com a versão EXATA que vai pro CDN, contra o arquivo de produção real: 389 áreas encontradas, igual antes.",
+        "Reimporte o PDF mais uma vez — dessa vez o número de espaços deve aparecer de verdade."
       ]
     }
   ],

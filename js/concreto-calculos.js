@@ -764,7 +764,15 @@ const ConcretoCalculos = (() => {
     if (typeof turf !== 'undefined') return;
     await new Promise((res, rej) => {
       const s = document.createElement('script');
-      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/Turf.js/6.5.0/turf.min.js';
+      // ATENÇÃO: pin explícito de versão — NÃO trocar por "latest" nem por
+      // 6.5.0. O @turf/polygonize empacotado na 6.5.0 tem um bug real
+      // (RangeError: Invalid array length, dentro do Graph.js da própria
+      // lib) que estoura em entradas grandes/complexas e faz a extração
+      // de malha voltar sempre vazia, silenciosamente (capturado pelo
+      // try/catch abaixo). Confirmado reproduzindo com a 6.5.0 exata
+      // instalada localmente; a 7.4.0 não tem esse bug — testado ponta a
+      // ponta contra a planta real (389 áreas encontradas).
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/Turf.js/7.4.0/turf.min.js';
       s.onload = res; s.onerror = rej;
       document.head.appendChild(s);
     });
