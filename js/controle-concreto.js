@@ -2690,8 +2690,11 @@ const ControleConcreto = (() => {
       try {
         malhaFaces = await CC.extrairFacesMalha(page, pdfjsLib.OPS);
       } catch (e) {
+        // Não dispara toast aqui — a tela de "Carregando..." ainda está
+        // em cima (mesmo bug de z-index corrigido em onImagemArquivoPlanta),
+        // o aviso nunca apareceria visível. O resultado (malhaFaces=[])
+        // já vira a mensagem final no toast de lá, depois do loading sumir.
         console.error('Falha ao extrair malha vetorial (não impede o resto):', e);
-        Utils.toast('Aviso: não consegui ler a malha vetorial dessa planta (' + (e.message || e) + ') — o resto do processamento continua normal, mas o botão "Detectar Malha" não vai aparecer.', 'erro');
         malhaFaces = [];
       }
     } else {
@@ -2726,30 +2729,38 @@ const ControleConcreto = (() => {
     const pranchaId = document.getElementById('cc-img-pranchaid').value;
     const statusEl = document.getElementById('cc-img-status');
     Utils.mostrarLoading();
+    let malhaFaces = null, erro = null;
     try {
-      const malhaFaces = await _processarArquivoPranchaPlanta(file, pranchaId, statusEl);
-      // A mensagem detalhada (statusEl) fica dentro do modal, que fecha
-      // logo abaixo — sem isso no toast, ela some antes de dar tempo de
-      // ler. O toast persiste na tela mesmo depois do modal fechar.
-      let msg = '✓ Prancha atualizada!';
-      if (malhaFaces !== null) {
-        msg += malhaFaces.length
-          ? ` ${malhaFaces.length} espaço(s) de malha encontrados — botão "🕸️ Detectar Malha" disponível.`
-          : ' Nenhum espaço fechado encontrado na malha desse PDF — o botão "Detectar Malha" não vai aparecer (use "Detectar Áreas (cor)" ou desenho manual).';
-      }
-      Utils.toast(msg, 'sucesso');
-      Utils.fecharModal('modal-cc-imagem-planta');
-      pranchaAtivaId = pranchaId;
-      await carregar();
-      _renderPranchasBody();
+      malhaFaces = await _processarArquivoPranchaPlanta(file, pranchaId, statusEl);
     } catch (e) {
-      console.error(e);
-      statusEl.textContent = 'Erro: ' + e.message;
-      Utils.toast('Erro ao processar arquivo: ' + e.message, 'erro');
-    } finally {
-      Utils.esconderLoading();
-      input.value = '';
+      erro = e;
     }
+    // Esconde o loading ANTES de qualquer toast — o overlay de loading
+    // tem z-index maior que o toast (9999 vs 2000): se o toast disparasse
+    // antes, ele nascia, contava os ~3.5s e sumia inteiro ESCONDIDO atrás
+    // da tela de "Carregando...", sem o usuário nunca ver nada.
+    Utils.esconderLoading();
+    input.value = '';
+    if (erro) {
+      console.error(erro);
+      statusEl.textContent = 'Erro: ' + erro.message;
+      Utils.toast('Erro ao processar arquivo: ' + erro.message, 'erro');
+      return;
+    }
+    // A mensagem detalhada (statusEl) fica dentro do modal, que fecha
+    // logo abaixo — sem isso no toast, ela some antes de dar tempo de
+    // ler. O toast persiste na tela mesmo depois do modal fechar.
+    let msg = '✓ Prancha atualizada!';
+    if (malhaFaces !== null) {
+      msg += malhaFaces.length
+        ? ` ${malhaFaces.length} espaço(s) de malha encontrados — botão "🕸️ Detectar Malha" disponível.`
+        : ' Nenhum espaço fechado encontrado na malha desse PDF — o botão "Detectar Malha" não vai aparecer (use "Detectar Áreas (cor)" ou desenho manual).';
+    }
+    Utils.toast(msg, 'sucesso');
+    Utils.fecharModal('modal-cc-imagem-planta');
+    pranchaAtivaId = pranchaId;
+    await carregar();
+    _renderPranchasBody();
   }
 
   // ── Montar Concretagem desenhando livre (V2.0 parte 2) ──

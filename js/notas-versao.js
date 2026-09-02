@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.26.13',
+  versaoAtual: 'V3.26.14',
 
   versoes: [
     {
@@ -11045,6 +11045,17 @@ const NotasVersao = {
         "CAUSA REAL da V3.26.12 não ter resolvido nada: a mensagem detalhada (\"N espaço(s) de malha encontrados\" / \"nenhum espaço encontrado\") era escrita dentro do modal de upload — só que logo em seguida o próprio código fechava esse modal automaticamente (pra voltar pra tela da Planta). A mensagem aparecia por uma fração de segundo e sumia junto com o modal, impossível de ler.",
         "CORRIGIDO: a informação da malha agora vai pro toast (aviso amarelo/verde no canto da tela), que continua visível MESMO depois do modal fechar — \"✓ Prancha atualizada! N espaço(s) de malha encontrados — botão Detectar Malha disponível.\" (ou o aviso de zero encontrado, conforme o caso).",
         "Se você reimportou entre a V3.26.11 e agora e não viu nada de diferente, era esse o motivo — não precisa ter sido erro de leitura da malha, ela pode ter funcionado normal e você só não teve a chance de ver a mensagem."
+      ]
+    },
+    {
+      "versao": "V3.26.14",
+      "data": "2026-08-31",
+      "tipo": "correcao",
+      "titulo": "Segundo bug de verdade: o toast nascia e morria ESCONDIDO atrás da tela de \"Carregando...\"",
+      "itens": [
+        "CAUSA REAL da V3.26.13 ainda não ter resolvido: a tela de \"Carregando...\" (o overlay branco com o spinner) tem prioridade visual maior que o toast (z-index 9999 contra 2000) — e só era escondida DEPOIS de tudo, inclusive recarregar os dados da tela. Se esse recarregamento demorasse mais que os ~3,5s que o toast fica na tela, ele nascia, contava o tempo e sumia inteiro por trás do \"Carregando...\", sem nunca aparecer visível de verdade.",
+        "CORRIGIDO: a tela de \"Carregando...\" agora fecha ANTES de qualquer toast disparar — a informação da malha (quantos espaços encontrados, ou nenhum) fica garantida de aparecer visível por cima de tudo.",
+        "Removido também um segundo aviso que tinha o mesmo problema (o de erro na leitura da malha, que disparava ainda dentro do processamento) — a informação dele já está coberta pela mensagem final, que agora aparece de verdade."
       ]
     }
   ],
