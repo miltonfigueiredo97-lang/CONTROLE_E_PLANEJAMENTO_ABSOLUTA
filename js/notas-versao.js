@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.26.11',
+  versaoAtual: 'V3.26.12',
 
   versoes: [
     {
@@ -11023,6 +11023,17 @@ const NotasVersao = {
         "Novo botão \"🕸️ Detectar Malha (N espaços)\" ao lado de \"🔍 Detectar Áreas (cor)\", na aba Planta do Controle de Concreto — só aparece quando a prancha tem essa malha calculada (só funciona pra prancha importada como PDF; imagem comum não tem dado vetorial pra ler).",
         "Esse cálculo roda uma vez, no momento de importar o PDF (é a única hora em que o arquivo original está disponível — depois só fica a imagem). Reimportar uma prancha antiga recalcula.",
         "Os dois detectores (cor e malha) são complementares e podem ser usados na mesma prancha — cada um pega o que o outro não pega."
+      ]
+    },
+    {
+      "versao": "V3.26.12",
+      "data": "2026-08-31",
+      "tipo": "melhoria",
+      "titulo": "Mensagem clara sobre o resultado da Detecção por Malha ao importar o PDF",
+      "itens": [
+        "LEMBRETE: o botão \"🕸️ Detectar Malha\" só aparece em prancha REIMPORTADA depois da V3.26.11 — o cálculo roda uma vez, no momento da importação. Prancha antiga não ganha a malha sozinha, precisa reimportar o PDF (Pranchas → Atualizar Projeto).",
+        "Antes, se a leitura da malha desse zero espaços ou desse erro, a mensagem final só dizia \"✓ Imagem carregada!\" sem explicar — parecia que tinha funcionado igual, mas o botão \"Detectar Malha\" simplesmente não aparecia depois, sem pista do motivo.",
+        "Agora a mensagem final avisa explicitamente qual dos três casos aconteceu: encontrou espaços (mostra quantos), não encontrou nenhum, ou deu erro ao ler a malha (mostra o motivo num aviso separado) — em qualquer um dos dois últimos casos, deixa claro que o resto do processamento (a imagem em si) funcionou normal mesmo assim."
       ]
     }
   ],

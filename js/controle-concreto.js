@@ -2691,6 +2691,7 @@ const ControleConcreto = (() => {
         malhaFaces = await CC.extrairFacesMalha(page, pdfjsLib.OPS);
       } catch (e) {
         console.error('Falha ao extrair malha vetorial (não impede o resto):', e);
+        Utils.toast('Aviso: não consegui ler a malha vetorial dessa planta (' + (e.message || e) + ') — o resto do processamento continua normal, mas o botão "Detectar Malha" não vai aparecer.', 'erro');
         malhaFaces = [];
       }
     } else {
@@ -2707,7 +2708,11 @@ const ControleConcreto = (() => {
     if (malhaFaces !== null) dadosAtualizar.malhaFaces = malhaFaces;
     await Database.atualizar(obraId, COL_PRANCHAS, pranchaId, dadosAtualizar);
     _imagemPranchaCacheId = null;
-    if (statusEl) statusEl.textContent = malhaFaces && malhaFaces.length ? `✓ Imagem carregada! (${malhaFaces.length} espaço(s) de malha encontrados)` : '✓ Imagem carregada!';
+    if (statusEl) {
+      if (malhaFaces === null) statusEl.textContent = '✓ Imagem carregada!';
+      else if (malhaFaces.length) statusEl.textContent = `✓ Imagem carregada! (${malhaFaces.length} espaço(s) de malha encontrados — botão "Detectar Malha" já disponível)`;
+      else statusEl.textContent = '✓ Imagem carregada! (nenhum espaço fechado encontrado na malha dessa planta — o botão "Detectar Malha" não vai aparecer; use "Detectar Áreas (cor)" ou desenho manual)';
+    }
   }
   function abrirUploadImagemPlanta(pranchaId) {
     document.getElementById('cc-img-pranchaid').value = pranchaId;
