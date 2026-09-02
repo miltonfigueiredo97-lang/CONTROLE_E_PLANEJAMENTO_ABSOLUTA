@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.26.10',
+  versaoAtual: 'V3.26.11',
 
   versoes: [
     {
@@ -11010,6 +11010,19 @@ const NotasVersao = {
       "itens": [
         "Mesmo problema já corrigido no Acompanhamento (V3.26.8), agora na aba Marcadores: clicar em \"▲ Minimizar\" escondia a linha inteira de ferramentas — seletor de prancha, \"Adicionar Estaca\"/\"Adicionar Fundação\", \"Girar 90°\" e zoom — junto com o toggle Estacas/Fundações e a legenda.",
         "Agora, minimizado, essa linha de ferramentas continua visível; só somem o toggle Estacas/Fundações e a legenda de cores."
+      ]
+    },
+    {
+      "versao": "V3.26.11",
+      "data": "2026-08-31",
+      "tipo": "melhoria",
+      "titulo": "NOVO: Detecção por Malha Vetorial no Controle de Concreto — encontra lajes SEM cor de preenchimento (a maioria)",
+      "itens": [
+        "CAUSA da laje \"roxa\" que precisou ser traçada manualmente: ela não tinha NENHUMA cor de preenchimento no PDF — é delimitada só pela malha de vigas/pilares ao redor. Confirmado com o Milton: a MAIORIA das lajes são assim. Isso não tem solução por detecção de cor, por mais que se ajuste o algoritmo — o sinal simplesmente não existe na cor do desenho.",
+        "SOLUÇÃO NOVA: em vez de olhar pixel/cor, o sistema agora lê os dados VETORIAIS de verdade do PDF (as linhas que o CAD desenhou — via leitura direta do conteúdo do arquivo, não da imagem renderizada), filtra as linhas estruturais (descarta hachura/texto/cota por comprimento e ângulo), reconstrói a malha como um grafo e encontra os espaços FECHADOS por essa malha — cada espaço fechado é uma laje candidata. Validado numa planta real: os espaços batem exatamente com os cômodos/vãos do projeto, incluindo áreas com escada em diagonal.",
+        "Novo botão \"🕸️ Detectar Malha (N espaços)\" ao lado de \"🔍 Detectar Áreas (cor)\", na aba Planta do Controle de Concreto — só aparece quando a prancha tem essa malha calculada (só funciona pra prancha importada como PDF; imagem comum não tem dado vetorial pra ler).",
+        "Esse cálculo roda uma vez, no momento de importar o PDF (é a única hora em que o arquivo original está disponível — depois só fica a imagem). Reimportar uma prancha antiga recalcula.",
+        "Os dois detectores (cor e malha) são complementares e podem ser usados na mesma prancha — cada um pega o que o outro não pega."
       ]
     }
   ],

@@ -746,6 +746,218 @@ const ConcretoCalculos = (() => {
     return dentroAlvo ? (dentroAmbos / dentroAlvo * 100) : 0;
   }
 
+  // ══════════════════════════════════════════
+  // DETECÇÃO POR MALHA VETORIAL — pra lajes SEM cor de preenchimento,
+  // delimitadas só pelas linhas de viga/pilar (a maioria, segundo o
+  // levantamento com o Milton). Bem diferente da detecção por cor: aqui
+  // lê os dados VETORIAIS de verdade do PDF (as linhas que o CAD desenhou,
+  // via page.getOperatorList() do pdf.js) — não os pixels renderizados —
+  // e reconstrói os espaços fechados por essa malha (cada espaço fechado
+  // = uma laje candidata). Validado numa planta real: os espaços batem
+  // exatamente com os cômodos/vãos reais do projeto.
+  // ══════════════════════════════════════════
+
+  // Turf.js só pra usar o polygonize (rastreamento de faces de grafo
+  // planar) — evita reimplementar esse algoritmo (tem bastante caso de
+  // borda: nó com 3+ arestas, aresta pendurada, etc.) do zero.
+  async function _carregarTurf() {
+    if (typeof turf !== 'undefined') return;
+    await new Promise((res, rej) => {
+      const s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/Turf.js/6.5.0/turf.min.js';
+      s.onload = res; s.onerror = rej;
+      document.head.appendChild(s);
+    });
+  }
+
+  // Extrai segmentos de linha do operator list do pdf.js — só os que são
+  // de verdade TRAÇADOS (stroke), ignorando preenchimentos, hachura de
+  // padrão e texto (que não geram stroke de linha).
+  function _extrairSegmentosPDF(opList, OPS) {
+    const segmentos = [];
+    let larguraAtual = 1;
+    let pathPendente = null;
+
+    function processaPath(coordOps, coords) {
+      let cx = 0, cy = 0, startX = 0, startY = 0, ci = 0;
+      for (const op of coordOps) {
+        if (op === OPS.moveTo) {
+          cx = coords[ci]; cy = coords[ci + 1]; startX = cx; startY = cy; ci += 2;
+        } else if (op === OPS.lineTo) {
+          const nx = coords[ci], ny = coords[ci + 1];
+          segmentos.push({ x1: cx, y1: cy, x2: nx, y2: ny, largura: larguraAtual });
+          cx = nx; cy = ny; ci += 2;
+        } else if (op === OPS.curveTo) {
+          // aproxima a curva por reta início->fim — suficiente pra malha
+          // estrutural, que não costuma usar curva pra viga/pilar
+          const ex = coords[ci + 4], ey = coords[ci + 5];
+          segmentos.push({ x1: cx, y1: cy, x2: ex, y2: ey, largura: larguraAtual });
+          cx = ex; cy = ey; ci += 6;
+        } else if (op === OPS.closePath) {
+          segmentos.push({ x1: cx, y1: cy, x2: startX, y2: startY, largura: larguraAtual });
+          cx = startX; cy = startY;
+        } else if (op === OPS.rectangle) {
+          const rx = coords[ci], ry = coords[ci + 1], rw = coords[ci + 2], rh = coords[ci + 3];
+          segmentos.push({ x1: rx, y1: ry, x2: rx + rw, y2: ry, largura: larguraAtual });
+          segmentos.push({ x1: rx + rw, y1: ry, x2: rx + rw, y2: ry + rh, largura: larguraAtual });
+          segmentos.push({ x1: rx + rw, y1: ry + rh, x2: rx, y2: ry + rh, largura: larguraAtual });
+          segmentos.push({ x1: rx, y1: ry + rh, x2: rx, y2: ry, largura: larguraAtual });
+          ci += 4;
+        }
+      }
+    }
+
+    for (let i = 0; i < opList.fnArray.length; i++) {
+      const fn = opList.fnArray[i];
+      const args = opList.argsArray[i];
+      if (fn === OPS.setLineWidth) { larguraAtual = args[0]; continue; }
+      if (fn === OPS.constructPath) { pathPendente = args; continue; }
+      if (fn === OPS.stroke || fn === OPS.closeStroke) {
+        if (pathPendente) processaPath(pathPendente[0], pathPendente[1]);
+        pathPendente = null;
+        continue;
+      }
+      if (fn !== OPS.setLineWidth && fn !== OPS.constructPath) pathPendente = null;
+    }
+    return segmentos;
+  }
+
+  // Mantém só segmentos LONGOS (corta hachura/texto/ícone, que geram
+  // milhares de traços minúsculos) e nos ÂNGULOS DOMINANTES da malha —
+  // uma malha estrutural de verdade tem poucas direções (0°/90°, às vezes
+  // uma diagonal de escada); linhas soltas em ângulos aleatórios (comum
+  // em cota mal extraída ou padrão de hachura) ficam de fora.
+  function _filtrarSegmentosEstruturais(segmentos, comprimentoMin) {
+    const longos = segmentos.filter(s => Math.hypot(s.x2 - s.x1, s.y2 - s.y1) > comprimentoMin);
+    if (!longos.length) return [];
+    const hist = new Array(180).fill(0);
+    longos.forEach(s => {
+      const ang = (((Math.atan2(s.y2 - s.y1, s.x2 - s.x1) * 180 / Math.PI) % 180) + 180) % 180;
+      hist[Math.round(ang) % 180] += Math.hypot(s.x2 - s.x1, s.y2 - s.y1);
+    });
+    // pega os picos do histograma (direções que concentram mais comprimento)
+    const ordenado = hist.map((v, i) => [i, v]).sort((a, b) => b[1] - a[1]);
+    const dominantes = [];
+    for (const [ang, peso] of ordenado) {
+      if (peso < ordenado[0][1] * 0.05) break; // despreza direções com <5% do peso do pico principal
+      if (dominantes.some(d => Math.min(Math.abs(d - ang), 180 - Math.abs(d - ang)) < 3)) continue; // já tem uma perto
+      dominantes.push(ang);
+      if (dominantes.length >= 6) break;
+    }
+    function pertoDominante(s) {
+      const ang = (((Math.atan2(s.y2 - s.y1, s.x2 - s.x1) * 180 / Math.PI) % 180) + 180) % 180;
+      return dominantes.some(d => Math.min(Math.abs(d - ang), 180 - Math.abs(d - ang)) < 2);
+    }
+    return longos.filter(pertoDominante);
+  }
+
+  // "Noda" a malha: quebra cada segmento nos pontos onde ele cruza outro,
+  // pra virar um grafo planar de verdade (o polygonize exige isso — sem
+  // nodar, um "X" de duas linhas cruzando no meio não vira 4 arestas).
+  function _nodarSegmentos(segmentos) {
+    const GRID = 0.05;
+    const snap = v => Math.round(v / GRID) * GRID;
+    const segs = segmentos.map(s => ({ x1: snap(s.x1), y1: snap(s.y1), x2: snap(s.x2), y2: snap(s.y2) }))
+      .filter(s => Math.hypot(s.x2 - s.x1, s.y2 - s.y1) > 0.5);
+
+    function intersecao(a, b) {
+      const x1 = a.x1, y1 = a.y1, x2 = a.x2, y2 = a.y2, x3 = b.x1, y3 = b.y1, x4 = b.x2, y4 = b.y2;
+      const d = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
+      if (Math.abs(d) < 1e-9) return null;
+      const t = ((x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)) / d;
+      const u = ((x1 - x3) * (y1 - y2) - (y1 - y3) * (x1 - x2)) / d;
+      const eps = 1e-6;
+      if (t < -eps || t > 1 + eps || u < -eps || u > 1 + eps) return null;
+      return { x: x1 + t * (x2 - x1), y: y1 + t * (y2 - y1) };
+    }
+
+    const CELL = 20;
+    const bbox = s => [Math.min(s.x1, s.x2), Math.min(s.y1, s.y2), Math.max(s.x1, s.x2), Math.max(s.y1, s.y2)];
+    const grade = new Map();
+    const celulasDe = bb => {
+      const cs = [];
+      for (let gx = Math.floor(bb[0] / CELL); gx <= Math.floor(bb[2] / CELL); gx++)
+        for (let gy = Math.floor(bb[1] / CELL); gy <= Math.floor(bb[3] / CELL); gy++) cs.push(gx + '_' + gy);
+      return cs;
+    };
+    segs.forEach((s, i) => { celulasDe(bbox(s)).forEach(c => { if (!grade.has(c)) grade.set(c, []); grade.get(c).push(i); }); });
+
+    const cortesPorSeg = segs.map(() => new Set());
+    const jaComparado = new Set();
+    for (const [, lista] of grade) {
+      for (let a = 0; a < lista.length; a++) for (let b = a + 1; b < lista.length; b++) {
+        const i = lista[a], j = lista[b];
+        const key = i < j ? i + '_' + j : j + '_' + i;
+        if (jaComparado.has(key)) continue;
+        jaComparado.add(key);
+        const pt = intersecao(segs[i], segs[j]);
+        if (pt) {
+          const k = JSON.stringify([snap(pt.x), snap(pt.y)]);
+          cortesPorSeg[i].add(k); cortesPorSeg[j].add(k);
+        }
+      }
+    }
+
+    const nodados = [];
+    segs.forEach((s, i) => {
+      const pontos = [[s.x1, s.y1], [s.x2, s.y2]];
+      cortesPorSeg[i].forEach(k => pontos.push(JSON.parse(k)));
+      const dx = s.x2 - s.x1, dy = s.y2 - s.y1, len2 = dx * dx + dy * dy;
+      const comT = pontos.map(p => ({ p, t: len2 ? ((p[0] - s.x1) * dx + (p[1] - s.y1) * dy) / len2 : 0 }));
+      comT.sort((a, b) => a.t - b.t);
+      for (let k = 0; k < comT.length - 1; k++) {
+        const p1 = comT[k].p, p2 = comT[k + 1].p;
+        if (Math.hypot(p2[0] - p1[0], p2[1] - p1[1]) > 0.3) nodados.push({ x1: p1[0], y1: p1[1], x2: p2[0], y2: p2[1] });
+      }
+    });
+    return nodados;
+  }
+
+  function _areaPoligonoAbs(coords) {
+    let a = 0;
+    for (let i = 0; i < coords.length - 1; i++) a += coords[i][0] * coords[i + 1][1] - coords[i + 1][0] * coords[i][1];
+    return Math.abs(a) / 2;
+  }
+
+  // Função principal — recebe uma `page` do pdf.js (já carregada) e
+  // devolve as faces (espaços fechados) candidatas a laje, em coordenadas
+  // FRACIONÁRIAS (0..1), no mesmo sistema usado pelos marcadores normais.
+  async function extrairFacesMalha(page, OPS) {
+    const opList = await page.getOperatorList();
+    const viewport = page.getViewport({ scale: 1 });
+    const pageW = viewport.width, pageH = viewport.height;
+
+    const segmentos = _extrairSegmentosPDF(opList, OPS);
+    const comprimentoMin = Math.max(15, Math.min(pageW, pageH) * 0.006);
+    const limpos = _filtrarSegmentosEstruturais(segmentos, comprimentoMin);
+    if (!limpos.length) return [];
+    const nodados = _nodarSegmentos(limpos);
+    if (!nodados.length) return [];
+
+    await _carregarTurf();
+    const linhas = turf.featureCollection(nodados.map(s => turf.lineString([[s.x1, s.y1], [s.x2, s.y2]])));
+    let poligonizado;
+    try { poligonizado = turf.polygonize(linhas); } catch (e) { return []; }
+
+    const areaPagina = pageW * pageH;
+    const areaMin = areaPagina * 0.00015; // exclui hachura/ícone/célula de tabela minúscula
+    const areaMax = areaPagina * 0.30;    // exclui a moldura da folha inteira
+
+    const faces = [];
+    poligonizado.features.forEach(f => {
+      const coords = f.geometry.coordinates[0];
+      const area = _areaPoligonoAbs(coords);
+      if (area < areaMin || area > areaMax) return;
+      // remove o último ponto (repete o primeiro, fecha o anel) antes de
+      // simplificar/guardar, e inverte Y (PDF cresce pra cima; imagem
+      // renderizada cresce pra baixo — mesma convenção já usada nos
+      // marcadores normais)
+      const pontos = coords.slice(0, -1).map(([x, y]) => ({ x: x / pageW, y: 1 - y / pageH }));
+      faces.push({ pontos, areaPt2: area });
+    });
+    return faces;
+  }
+
   return {
     fmt2, fmt1, fmt4,
     TIPOS, TIPO_ORDEM, CORES, TIPOS_FUNDACAO,
@@ -757,7 +969,7 @@ const ConcretoCalculos = (() => {
     calcVolViga, calcVolFundacao,
     calcAreaIsopor, calcMetragemTrelica, calcTotalTrelica, calcVolLaje,
     posRelativa, canvasParaDataURLLimitado, detectarAreas, segmentarAreas,
-    marcadorMaisProximo, pctSobreposicao,
+    marcadorMaisProximo, pctSobreposicao, extrairFacesMalha,
   };
 })();
 

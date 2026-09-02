@@ -2104,7 +2104,8 @@ const ControleConcreto = (() => {
         </select>
         <button class="btn btn-secundario btn-sm" onclick="CCON.abrirPranchasPlanta()">📄 Pranchas</button>
         ${imagem ? `
-          <button class="btn btn-dark btn-sm" data-perm="controleConcreto:criar:marcador" onclick="CCON.detectarAreasPlanta()">🔍 Detectar Áreas Automaticamente</button>
+          <button class="btn btn-dark btn-sm" data-perm="controleConcreto:criar:marcador" onclick="CCON.detectarAreasPlanta()">🔍 Detectar Áreas (cor)</button>
+          ${pr.malhaFaces && pr.malhaFaces.length ? `<button class="btn btn-dark btn-sm" style="background:#0f766e;" data-perm="controleConcreto:criar:marcador" onclick="CCON.detectarMalhaPlanta()">🕸️ Detectar Malha (${pr.malhaFaces.length} espaços)</button>` : ''}
           <button class="btn ${modoPlanta === 'poligono' ? 'btn-primario' : 'btn-secundario'} btn-sm" data-perm="controleConcreto:criar:marcador" onclick="CCON.toggleDesenhoManualPlanta()">✏️ Desenhar Área Manual</button>
           <button class="btn ${modoPlanta === 'concretagem-livre' ? 'btn-primario' : 'btn-secundario'} btn-sm" data-perm="controleConcreto:criar:concretagem" onclick="CCON.toggleConcretagemLivre()">◈ Montar Concretagem</button>
           <button class="btn btn-secundario btn-sm" style="color:var(--cv-red,#ef4444);" data-perm="controleConcreto:excluir:marcador" onclick="CCON.limparAreasPlanta()">🗑 Limpar Áreas</button>
@@ -2276,6 +2277,37 @@ const ControleConcreto = (() => {
       Utils.toast(`✓ ${novas.length} área(s) detectada(s)! Clique em cada uma pra vincular à peça.`, 'sucesso');
     } catch (e) {
       Utils.toast('Erro ao detectar: ' + e.message, 'erro');
+    } finally {
+      Utils.esconderLoading();
+    }
+  }
+
+  // ── Detecção por malha vetorial (lajes sem cor — ver
+  // ConcretoCalculos.extrairFacesMalha). Usa o que já foi calculado na
+  // importação do PDF (prancha.malhaFaces) — não precisa reprocessar. ──
+  async function detectarMalhaPlanta() {
+    if (!Permissions.pode('controleConcreto', 'criar:marcador')) { Utils.toast('Sem permissão para criar.', 'erro'); return; }
+    const pr = pranchas.find(p => p.id === pranchaAtivaId);
+    if (!pr) return;
+    if (!pr.malhaFaces || !pr.malhaFaces.length) {
+      Utils.toast('Essa prancha não tem malha vetorial calculada (só funciona pra prancha importada como PDF — imagem comum não tem essa informação). Reimporte o PDF pra gerar.', 'erro');
+      return;
+    }
+    Utils.mostrarLoading();
+    try {
+      const existentes = marcadoresDaPranchaAtiva();
+      const novas = pr.malhaFaces.filter(a => !_areaJaMarcada(a, existentes));
+      if (!novas.length) { Utils.toast('Nada novo — todos os espaços da malha já foram marcados.', 'sucesso'); return; }
+      const ops = novas.map(a => ({
+        type: 'set',
+        ref: Database.ref(obraId, COL_MARCADORES).doc(CC.genId('cm')),
+        data: { pranchaId: pranchaAtivaId, pontos: a.pontos, pecaId: '', obraId },
+      }));
+      for (let i = 0; i < ops.length; i += 400) await Database.batchWrite(ops.slice(i, i + 400));
+      await carregar();
+      Utils.toast(`✓ ${novas.length} espaço(s) da malha marcado(s)! Clique em cada um pra vincular à peça (provavelmente Laje).`, 'sucesso');
+    } catch (e) {
+      Utils.toast('Erro ao detectar pela malha: ' + e.message, 'erro');
     } finally {
       Utils.esconderLoading();
     }
@@ -2629,6 +2661,7 @@ const ControleConcreto = (() => {
   async function _processarArquivoPranchaPlanta(file, pranchaId, statusEl) {
     if (statusEl) statusEl.textContent = 'Processando...';
     let canvas;
+    let malhaFaces = null;
     if (file.type === 'application/pdf' || /\.pdf$/i.test(file.name)) {
       await _carregarPdfjs();
       const buf = await file.arrayBuffer();
@@ -2645,6 +2678,21 @@ const ControleConcreto = (() => {
       canvas = document.createElement('canvas');
       canvas.width = viewport.width; canvas.height = viewport.height;
       await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+
+      // Detecção por MALHA VETORIAL — pra lajes sem cor de preenchimento,
+      // delimitadas só pelas linhas de viga/pilar do PDF (a maioria dos
+      // casos, segundo o levantamento). Lê os dados vetoriais de verdade
+      // do PDF (não o pixel renderizado) e acha os espaços fechados pela
+      // malha. Roda uma vez aqui na importação (é o único momento em que
+      // temos o PDF de verdade — depois só fica a imagem rasterizada) e
+      // fica salvo pronto pra usar quando quiser, sem reprocessar.
+      if (statusEl) statusEl.textContent = 'Lendo a malha estrutural do PDF...';
+      try {
+        malhaFaces = await CC.extrairFacesMalha(page, pdfjsLib.OPS);
+      } catch (e) {
+        console.error('Falha ao extrair malha vetorial (não impede o resto):', e);
+        malhaFaces = [];
+      }
     } else {
       const img = await new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = URL.createObjectURL(file); });
       canvas = document.createElement('canvas');
@@ -2655,9 +2703,11 @@ const ControleConcreto = (() => {
     const dataUrl = canvas.toDataURL('image/png');
     const path = `obras/${obraId}/concreto-plantas/${pranchaId}.png`;
     const url = await uploadImagem(path, dataUrl);
-    await Database.atualizar(obraId, COL_PRANCHAS, pranchaId, { imgUrl: url, imgWidthPx: canvas.width, imgHeightPx: canvas.height });
+    const dadosAtualizar = { imgUrl: url, imgWidthPx: canvas.width, imgHeightPx: canvas.height };
+    if (malhaFaces !== null) dadosAtualizar.malhaFaces = malhaFaces;
+    await Database.atualizar(obraId, COL_PRANCHAS, pranchaId, dadosAtualizar);
     _imagemPranchaCacheId = null;
-    if (statusEl) statusEl.textContent = '✓ Imagem carregada!';
+    if (statusEl) statusEl.textContent = malhaFaces && malhaFaces.length ? `✓ Imagem carregada! (${malhaFaces.length} espaço(s) de malha encontrados)` : '✓ Imagem carregada!';
   }
   function abrirUploadImagemPlanta(pranchaId) {
     document.getElementById('cc-img-pranchaid').value = pranchaId;
@@ -2995,7 +3045,7 @@ const ControleConcreto = (() => {
     renderPlanta, onTrocarPranchaPlanta, onCliquePlanta,
     toggleDesenhoManualPlanta, desfazerPontoPlanta, cancelarDesenhoPlanta, concluirDesenhoPlanta,
     iniciarNovaAreaParaPeca,
-    detectarAreasPlanta,
+    detectarAreasPlanta, detectarMalhaPlanta,
     iniciarAjusteFormaPlanta, cancelarAjusteFormaPlanta, concluirAjusteFormaPlanta,
     abrirVincularPlanta, onTipoVincularPlanta, onAndarFiltroVincularPlanta,
     onFocoBuscaPecaPlanta, fecharListaPecaBuscaPlanta, onBuscaPecaPlanta, selecionarPecaBuscaPlanta,
