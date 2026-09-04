@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.26.16',
+  versaoAtual: 'V3.26.17',
 
   versoes: [
     {
@@ -11078,6 +11078,18 @@ const NotasVersao = {
         "CAUSA ENCONTRADA: eu tinha testado com a versão mais recente do Turf.js (7.4.0, instalada por padrão), mas o código de produção carregava a versão 6.5.0 pelo CDN. Instalei a 6.5.0 EXATA localmente pra reproduzir e confirmei: o polygonize dessa versão tem um bug de verdade (RangeError: Invalid array length, dentro do próprio código da biblioteca) que quebra silenciosamente com entradas grandes/complexas como a malha de uma planta real — não é falha nossa, é bug da lib nessa versão específica.",
         "CORRIGIDO: trocada a versão do Turf.js carregada de 6.5.0 pra 7.4.0 (onde esse bug já não existe). Testado de ponta a ponta com a versão EXATA que vai pro CDN, contra o arquivo de produção real: 389 áreas encontradas, igual antes.",
         "Reimporte o PDF mais uma vez — dessa vez o número de espaços deve aparecer de verdade."
+      ]
+    },
+    {
+      "versao": "V3.26.17",
+      "data": "2026-09-04",
+      "tipo": "melhoria",
+      "titulo": "Controle de Estacas — \"Adicionar outra área pra esta peça\" (mesma peça dividida em pedaços no desenho)",
+      "itens": [
+        "Caso relatado: uma viga que atravessa por dentro de um bloco (ex: V132 ligando BL3 a BL6) aparece dividida em pedaços na planta — o pedaço que passa por trás/dentro do bloco precisa contar como a MESMA peça pro Levantamento, senão o % de execução fica errado quando concretar tudo junto.",
+        "Abrindo o vínculo de qualquer estaca/fundação já vinculada a uma peça, aparece \"➕ Adicionar outra área pra esta peça\": pula direto pro desenho (círculo ou polígono, igual ao marcador de onde veio) e a nova área já sai vinculada àquela mesma peça — sem passar pelo seletor de peça de novo.",
+        "Enquanto desenha por esse caminho, a barra de ação em cima do mapa mostra pra qual peça a área vai (ex: \"→ esta área vai direto pra V132\"), pra não ter dúvida de que não é uma peça nova.",
+        "Mesmo pipeline já usado no Controle de Concreto (V3.26.7) — os pedaços continuam sendo marcadores separados no desenho (cada um clicável), mas todos apontam pra uma peça só, com o mesmo % de execução e a mesma cor de status."
       ]
     }
   ],

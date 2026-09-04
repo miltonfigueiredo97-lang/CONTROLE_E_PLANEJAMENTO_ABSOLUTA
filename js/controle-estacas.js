@@ -49,6 +49,12 @@ const ControleEstacas = (() => {
   let view = 'estacas'; // 'estacas' | 'fundacoes'
   let modo = null;      // null | 'circulo' | 'poligono' (modo de adicionar)
   let poligonoPontos = [];
+  // Se setado, o próximo marcador desenhado é vinculado direto a essa peça,
+  // sem passar pelo popup de vínculo — pra quando a MESMA peça (ex: uma viga
+  // que passa por trás de um bloco) aparece dividida em pedaços no desenho e
+  // cada pedaço precisa virar um marcador próprio, todos apontando pra peça
+  // única (o % de execução/cor é o mesmo em todos, porque vem da peça).
+  let proximaAreaParaPeca = null; // {pecaId, nome}
   let _arrastouMarcadorAgora = false; // true logo depois de arrastar uma estaca — suprime o 'click' que abriria o vínculo
   let _arrastandoMarcador = false;    // arrasto de estaca EM CURSO — impede o pan de 1 dedo de arrastar o mapa junto
   let editandoFormaId = null; // marcador em ajuste de forma (mover/redimensionar)
@@ -2267,10 +2273,15 @@ const ControleEstacas = (() => {
     // altura, a barra caía fora da área visível em telas menores e dava a
     // impressão de que não existia botão nenhum pra terminar o desenho da
     // fundação (só dava pra ver rolando a página pra baixo do mapa inteiro).
+    // Quando a área em desenho vai direto pra uma peça já existente
+    // (proximaAreaParaPeca — botão "Adicionar outra área pra esta peça" no
+    // popup de vínculo), mostra pra quem é, senão dá a impressão de que o
+    // clique não fez nada com o vínculo.
+    const avisoPeca = proximaAreaParaPeca ? ` <span style="font-weight:600;color:#1d4ed8;">→ esta área vai direto pra ${esc(proximaAreaParaPeca.nome)}</span>` : '';
     const barraAcao = modo === 'circulo'
-      ? `<div class="ce-barra-acao">Clique no centro da estaca e arraste até o tamanho desejado. <button class="btn btn-secundario btn-sm" onclick="CE.cancelarModo()">Cancelar</button></div>`
+      ? `<div class="ce-barra-acao">Clique no centro da estaca e arraste até o tamanho desejado.${avisoPeca} <button class="btn btn-secundario btn-sm" onclick="CE.cancelarModo()">Cancelar</button></div>`
       : modo === 'poligono'
-      ? `<div class="ce-barra-acao">Clique nos vértices da fundação (${poligonoPontos.length} ponto${poligonoPontos.length !== 1 ? 's' : ''}). <button class="btn btn-secundario btn-sm" ${poligonoPontos.length ? '' : 'disabled'} onclick="CE.desfazerPontoPoligono()">↩ Desfazer ponto</button> <button class="btn btn-primario btn-sm" ${poligonoPontos.length >= 3 ? '' : 'disabled'} onclick="CE.concluirPoligono()">✓ Concluir</button> <button class="btn btn-secundario btn-sm" onclick="CE.cancelarModo()">Cancelar</button></div>`
+      ? `<div class="ce-barra-acao">Clique nos vértices da fundação (${poligonoPontos.length} ponto${poligonoPontos.length !== 1 ? 's' : ''}).${avisoPeca} <button class="btn btn-secundario btn-sm" ${poligonoPontos.length ? '' : 'disabled'} onclick="CE.desfazerPontoPoligono()">↩ Desfazer ponto</button> <button class="btn btn-primario btn-sm" ${poligonoPontos.length >= 3 ? '' : 'disabled'} onclick="CE.concluirPoligono()">✓ Concluir</button> <button class="btn btn-secundario btn-sm" onclick="CE.cancelarModo()">Cancelar</button></div>`
       : editandoFormaId
       ? `<div class="ce-barra-acao">Ajustando forma — arraste os pontos. <button class="btn btn-primario btn-sm" onclick="CE.concluirAjusteForma()">✓ Concluir ajuste</button> <button class="btn btn-secundario btn-sm" onclick="CE.cancelarAjusteForma()">Cancelar</button></div>`
       : '';
@@ -2472,17 +2483,30 @@ const ControleEstacas = (() => {
 
   async function iniciarAdicionarCirculo() {
     if (!Permissions.pode('controleEstacas', 'criar:marcador')) { Utils.toast('Sem permissão para criar.', 'erro'); return; }
-    modo = 'circulo'; editandoFormaId = null;
+    modo = 'circulo'; editandoFormaId = null; proximaAreaParaPeca = null;
     await renderMapa();
     _atualizarBotoesModo();
   }
   async function iniciarAdicionarPoligono() {
     if (!Permissions.pode('controleEstacas', 'criar:marcador')) { Utils.toast('Sem permissão para criar.', 'erro'); return; }
-    modo = 'poligono'; poligonoPontos = []; editandoFormaId = null;
+    modo = 'poligono'; poligonoPontos = []; editandoFormaId = null; proximaAreaParaPeca = null;
     await renderMapa();
     _atualizarBotoesModo();
   }
-  function cancelarModo() { modo = null; poligonoPontos = []; renderMapa(); _atualizarBotoesModo(); }
+  // Chamado pelo botão "➕ Adicionar outra área pra esta peça" dentro do
+  // popup de vínculo — pula direto pro desenho (círculo ou polígono, igual
+  // ao marcador de onde veio), sem passar pelo seletor de peça de novo, pra
+  // marcar um SEGUNDO (ou terceiro...) pedaço que é a MESMA peça.
+  async function iniciarNovaAreaParaPeca(pecaId, nome, tipo) {
+    if (!Permissions.pode('controleEstacas', 'criar:marcador')) { Utils.toast('Sem permissão para criar.', 'erro'); return; }
+    Utils.fecharModal('modal-ce-vincular');
+    proximaAreaParaPeca = { pecaId, nome };
+    editandoFormaId = null;
+    if (tipo === 'circulo') { modo = 'circulo'; } else { modo = 'poligono'; poligonoPontos = []; }
+    await renderMapa();
+    _atualizarBotoesModo();
+  }
+  function cancelarModo() { modo = null; poligonoPontos = []; proximaAreaParaPeca = null; renderMapa(); _atualizarBotoesModo(); }
   function _atualizarBotoesModo() {
     const bc = document.getElementById('ce-btn-circulo'), bp = document.getElementById('ce-btn-poligono');
     if (bc) bc.className = `btn ${modo === 'circulo' ? 'btn-primario' : 'btn-secundario'} btn-sm`;
@@ -2497,10 +2521,12 @@ const ControleEstacas = (() => {
     if (!Permissions.pode('controleEstacas', 'criar:marcador')) { Utils.toast('Sem permissão para criar.', 'erro'); return; }
     Utils.mostrarLoading();
     try {
-      const id = await Database.criar(obraId, COL_MARCADORES, { pranchaId: pranchaAtivaId, tipo: 'circulo', cx, cy, raio, pecaId: '' }, EC.genId('em'));
-      modo = null;
+      const viaPeca = proximaAreaParaPeca;
+      const id = await Database.criar(obraId, COL_MARCADORES, { pranchaId: pranchaAtivaId, tipo: 'circulo', cx, cy, raio, pecaId: viaPeca ? viaPeca.pecaId : '' }, EC.genId('em'));
+      modo = null; proximaAreaParaPeca = null;
       await carregar();
-      abrirVincular(id);
+      if (viaPeca) Utils.toast(`✓ Nova área adicionada a ${viaPeca.nome}!`, 'sucesso');
+      else abrirVincular(id);
     } catch (e) {
       Utils.toast('Erro ao criar marcador: ' + e.message, 'erro');
     } finally {
@@ -2514,10 +2540,12 @@ const ControleEstacas = (() => {
     Utils.mostrarLoading();
     try {
       const pontos = [...poligonoPontos];
-      const id = await Database.criar(obraId, COL_MARCADORES, { pranchaId: pranchaAtivaId, tipo: 'poligono', pontos, pecaId: '' }, EC.genId('em'));
-      modo = null; poligonoPontos = [];
+      const viaPeca = proximaAreaParaPeca;
+      const id = await Database.criar(obraId, COL_MARCADORES, { pranchaId: pranchaAtivaId, tipo: 'poligono', pontos, pecaId: viaPeca ? viaPeca.pecaId : '' }, EC.genId('em'));
+      modo = null; poligonoPontos = []; proximaAreaParaPeca = null;
       await carregar();
-      abrirVincular(id);
+      if (viaPeca) Utils.toast(`✓ Nova área adicionada a ${viaPeca.nome}!`, 'sucesso');
+      else abrirVincular(id);
     } catch (e) {
       Utils.toast('Erro ao criar marcador: ' + e.message, 'erro');
     } finally {
@@ -2671,9 +2699,11 @@ const ControleEstacas = (() => {
       </div>
       <div class="cc-empty" style="margin-top:4px;">Status atual: <b>${esc(st.label)}</b></div>
       <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;">
+        ${pecaAtual ? `<button class="btn btn-secundario btn-sm" data-perm="controleEstacas:criar:marcador" onclick="CE.iniciarNovaAreaParaPeca('${pecaAtual.id}', '${esc(pecaAtual.nome)}', '${m.tipo}')">➕ Adicionar outra área pra esta peça</button>` : ''}
         <button class="btn btn-secundario btn-sm" data-perm="controleEstacas:editar:marcador" onclick="CE.iniciarAjusteForma('${m.id}')">✎ Ajustar forma</button>
         <button class="btn btn-secundario btn-sm" style="color:var(--cv-red,#ef4444);" data-perm="controleEstacas:excluir:marcador" onclick="CE.excluirMarcador('${m.id}')">🗑 Excluir marcador</button>
       </div>
+      ${pecaAtual ? `<p class="text-sm text-muted" style="margin-top:8px;">Use "Adicionar outra área" quando esta peça aparece dividida em pedaços no desenho (ex: uma viga que passa por dentro/atrás de um bloco e continua do outro lado) — os pedaços ficam todos vinculados à mesma peça, com o mesmo % de execução.</p>` : ''}
     `;
     Permissions.aplicarNaTela(document.getElementById('modal-ce-vincular'));
   }
@@ -3009,7 +3039,7 @@ const ControleEstacas = (() => {
   return {
     init, recarregar, renderizar, setAbaPrincipal, alternarTelaCheia, toggleMinimizarPainel, toggleMostrarTodosNumeros,
     onTrocarView, onTrocarPranchaAtiva, zoomAjustar, girarPrancha,
-    iniciarAdicionarCirculo, iniciarAdicionarPoligono, cancelarModo, desfazerPontoPoligono, concluirPoligono,
+    iniciarAdicionarCirculo, iniciarAdicionarPoligono, cancelarModo, desfazerPontoPoligono, concluirPoligono, iniciarNovaAreaParaPeca,
     iniciarAjusteForma, concluirAjusteForma, cancelarAjusteForma,
     abrirVincular, salvarVinculo, excluirMarcador,
     onFocoBuscaPeca, fecharListaPecaBusca, onBuscaPeca, selecionarPecaBusca,
