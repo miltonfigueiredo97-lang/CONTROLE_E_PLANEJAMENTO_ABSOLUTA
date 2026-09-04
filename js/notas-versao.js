@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.26.18',
+  versaoAtual: 'V3.26.19',
 
   versoes: [
     {
@@ -11105,6 +11105,17 @@ const NotasVersao = {
         "\"Ajustar forma\" passou a mostrar e permitir arrastar os vértices de TODOS os pedaços da área, não só do primeiro.",
         "Em todo o resto do módulo — clique/toque pra selecionar, destaque amarelo no Acompanhamento, número da concretagem, giro de prancha em 90° — os pedaços extras agora são tratados exatamente como o pedaço principal.",
         "O botão \"➕ Adicionar outra área pra esta peça\" (V3.26.17) continua existindo, pra quando a intenção É mesmo ter marcadores separados e independentes (cada um podendo ser movido/apagado sozinho) apontando pra mesma peça — os dois recursos são complementares."
+      ]
+    },
+    {
+      "versao": "V3.26.19",
+      "data": "2026-09-04",
+      "tipo": "melhoria",
+      "titulo": "Controle de Estacas — dava pra dividir uma área em pedaços só na hora de CRIAR; agora dá em áreas que já existem também",
+      "itens": [
+        "O \"➕ Novo pedaço (área separada)\" da V3.26.18 só aparecia enquanto a fundação estava sendo desenhada pela primeira vez. Numa área que já existe (abrindo \"✏️ Ajustar forma\"), não tinha como acrescentar outro pedaço — só dava pra mexer nos vértices que já estavam lá.",
+        "Agora \"Ajustar forma\" de uma fundação (polígono) ganhou o botão \"➕ Novo pedaço\": entra num modo de clicar os vértices de um pedaço novo em qualquer lugar da prancha (com \"↩ Desfazer ponto\" e \"Cancelar pedaço\"); ao confirmar (\"✓ Adicionar esse pedaço\"), ele se junta à área — e os vértices dele já ficam arrastáveis junto com o resto.",
+        "Só é gravado no banco quando clicar \"✓ Concluir ajuste\" (igual já acontecia pra qualquer outro ajuste de forma) — dá pra adicionar vários pedaços, ajustar todos, e salvar tudo de uma vez."
       ]
     }
   ],

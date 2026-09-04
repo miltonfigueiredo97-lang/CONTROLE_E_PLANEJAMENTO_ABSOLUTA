@@ -53,6 +53,12 @@ const ControleEstacas = (() => {
   // da prancha (ex: viga que atravessa por trás de um bloco) — cada item é
   // um Point[] já fechado (>=3 pontos). Ao salvar viram m.partesExtras.
   let poligonoPartesExtras = [];
+  // true durante "Ajustar forma" quando a pessoa clicou "➕ Novo pedaço" pra
+  // acrescentar um pedaço numa área JÁ EXISTENTE (não só na hora de criar).
+  // Enquanto ativo, cliques no mapa cravam vértices em poligonoPontos (mesma
+  // variável do desenho normal — aqui não coexistem) até "✓ Adicionar esse
+  // pedaço" gravar em m.partesExtras (só em memória; "Concluir ajuste" salva).
+  let ajusteNovoPedaco = false;
   // Se setado, o próximo marcador desenhado é vinculado direto a essa peça,
   // sem passar pelo popup de vínculo — pra quando a MESMA peça (ex: uma viga
   // que passa por trás de um bloco) aparece dividida em pedaços no desenho e
@@ -2279,6 +2285,7 @@ const ControleEstacas = (() => {
       host.innerHTML = `<div class="cc-empty">Esta prancha ainda não tem PDF/imagem. <button class="btn btn-secundario btn-sm" onclick="CE.abrirPranchas()">📄 Gerenciar Pranchas</button></div>`;
       return;
     }
+    const mEditando = editandoFormaId ? marcadores.find(x => x.id === editandoFormaId) : null;
     const lista = marcadoresDaPranchaView(pr.id);
     const reporScroll = _preservarScroll('#ce-mapa-host');
     const html = EC.stageHTML(pr, imagem, lista, statusMarcador, { interativo: true, zoom: zoomE, stageId: 'ce-stage', maxHeight: _alturaMapa() });
@@ -2301,15 +2308,17 @@ const ControleEstacas = (() => {
       ? `<div class="ce-barra-acao">Clique no centro da estaca e arraste até o tamanho desejado.${avisoPeca} <button class="btn btn-secundario btn-sm" onclick="CE.cancelarModo()">Cancelar</button></div>`
       : modo === 'poligono'
       ? `<div class="ce-barra-acao">Clique nos vértices da fundação (${poligonoPontos.length} ponto${poligonoPontos.length !== 1 ? 's' : ''}${infoPartes}).${avisoPeca} <button class="btn btn-secundario btn-sm" ${poligonoPontos.length || poligonoPartesExtras.length ? '' : 'disabled'} onclick="CE.desfazerPontoPoligono()">↩ Desfazer ponto</button> <button class="btn btn-secundario btn-sm" ${poligonoPontos.length >= 3 ? '' : 'disabled'} onclick="CE.novoPedacoPoligono()" title="Pra quando a fundação atravessa atrás de outra estrutura e o desenho fica em pedaços separados — todos viram a mesma área">➕ Novo pedaço (área separada)</button> <button class="btn btn-primario btn-sm" ${podeConcluirPoligono ? '' : 'disabled'} onclick="CE.concluirPoligono()">✓ Concluir</button> <button class="btn btn-secundario btn-sm" onclick="CE.cancelarModo()">Cancelar</button></div>`
+      : editandoFormaId && ajusteNovoPedaco
+      ? `<div class="ce-barra-acao">Clique nos vértices do novo pedaço (${poligonoPontos.length} ponto${poligonoPontos.length !== 1 ? 's' : ''}). <button class="btn btn-secundario btn-sm" ${poligonoPontos.length ? '' : 'disabled'} onclick="CE.desfazerPontoPoligono()">↩ Desfazer ponto</button> <button class="btn btn-primario btn-sm" ${poligonoPontos.length >= 3 ? '' : 'disabled'} onclick="CE.concluirNovoPedacoAjuste()">✓ Adicionar esse pedaço</button> <button class="btn btn-secundario btn-sm" onclick="CE.cancelarNovoPedacoAjuste()">Cancelar pedaço</button></div>`
       : editandoFormaId
-      ? `<div class="ce-barra-acao">Ajustando forma — arraste os pontos. <button class="btn btn-primario btn-sm" onclick="CE.concluirAjusteForma()">✓ Concluir ajuste</button> <button class="btn btn-secundario btn-sm" onclick="CE.cancelarAjusteForma()">Cancelar</button></div>`
+      ? `<div class="ce-barra-acao">Ajustando forma — arraste os pontos.${mEditando && mEditando.tipo === 'poligono' ? ` <button class="btn btn-secundario btn-sm" onclick="CE.iniciarNovoPedacoAjuste()" title="Pra quando a fundação atravessa atrás de outra estrutura e o desenho fica em pedaços separados — todos viram a mesma área">➕ Novo pedaço</button>` : ''} <button class="btn btn-primario btn-sm" onclick="CE.concluirAjusteForma()">✓ Concluir ajuste</button> <button class="btn btn-secundario btn-sm" onclick="CE.cancelarAjusteForma()">Cancelar</button></div>`
       : '';
     host.innerHTML = `
       ${barraAcao}
       ${html}
     `;
     reporScroll();
-    if (modo === 'poligono') _desenharPoligonoEmCriacao();
+    if (modo === 'poligono' || (editandoFormaId && ajusteNovoPedaco)) _desenharPoligonoEmCriacao();
     if (editandoFormaId) _desenharHandlesEdicao();
     _ligarEventosMapa();
   }
@@ -2327,7 +2336,20 @@ const ControleEstacas = (() => {
     if (!stage) return;
     _ligarPanZoom('ce-stage');
 
-    if (editandoFormaId) return; // handles de edição já têm seus próprios listeners
+    if (editandoFormaId) {
+      // "➕ Novo pedaço" dentro do ajuste — clique crava vértice, igual ao
+      // desenho normal (reaproveita poligonoPontos/_desenharPoligonoEmCriacao).
+      if (ajusteNovoPedaco) {
+        stage.style.cursor = 'crosshair';
+        stage.addEventListener('click', ev => {
+          if (ev.ctrlKey) return;
+          if (_cliqueDeGesto()) return;
+          poligonoPontos.push(EC.posRelativa(ev, stage));
+          _atualizarToolbarPoligono();
+        });
+      }
+      return; // handles de edição já têm seus próprios listeners
+    }
 
     if (modo === 'circulo') {
       stage.style.cursor = 'crosshair';
@@ -2619,10 +2641,38 @@ const ControleEstacas = (() => {
     if (!Permissions.pode('controleEstacas', 'editar:marcador')) { Utils.toast('Sem permissão para editar.', 'erro'); return; }
     editandoFormaId = id;
     modo = null;
+    ajusteNovoPedaco = false; poligonoPontos = [];
     Utils.fecharTodosModais();
     renderMapa();
   }
-  function cancelarAjusteForma() { editandoFormaId = null; renderMapa(); }
+  function cancelarAjusteForma() { editandoFormaId = null; ajusteNovoPedaco = false; poligonoPontos = []; renderMapa(); }
+
+  // "➕ Novo pedaço" dentro do Ajustar forma — pra acrescentar um pedaço
+  // numa área que JÁ EXISTE (não só na hora de criar). Entra num sub-modo:
+  // clique no mapa crava vértice, igual ao desenho normal.
+  function iniciarNovoPedacoAjuste() {
+    ajusteNovoPedaco = true;
+    poligonoPontos = [];
+    renderMapa();
+  }
+  function cancelarNovoPedacoAjuste() {
+    ajusteNovoPedaco = false;
+    poligonoPontos = [];
+    renderMapa();
+  }
+  // Grava o pedaço em desenho no marcador (SÓ EM MEMÓRIA — "✓ Concluir
+  // ajuste" que persiste tudo no Firestore, igual já faz com os vértices
+  // arrastados).
+  function concluirNovoPedacoAjuste() {
+    if (poligonoPontos.length < 3) return;
+    const m = marcadores.find(x => x.id === editandoFormaId);
+    if (!m) return;
+    if (!Array.isArray(m.partesExtras)) m.partesExtras = [];
+    m.partesExtras.push({ pontos: [...poligonoPontos] });
+    poligonoPontos = [];
+    ajusteNovoPedaco = false;
+    renderMapa();
+  }
 
   function _desenharHandlesEdicao() {
     const m = marcadores.find(x => x.id === editandoFormaId);
@@ -3111,6 +3161,7 @@ const ControleEstacas = (() => {
     onTrocarView, onTrocarPranchaAtiva, zoomAjustar, girarPrancha,
     iniciarAdicionarCirculo, iniciarAdicionarPoligono, cancelarModo, desfazerPontoPoligono, novoPedacoPoligono, concluirPoligono, iniciarNovaAreaParaPeca,
     iniciarAjusteForma, concluirAjusteForma, cancelarAjusteForma,
+    iniciarNovoPedacoAjuste, cancelarNovoPedacoAjuste, concluirNovoPedacoAjuste,
     abrirVincular, salvarVinculo, excluirMarcador,
     onFocoBuscaPeca, fecharListaPecaBusca, onBuscaPeca, selecionarPecaBusca,
     abrirPranchas, novaPrancha, renomearPrancha, excluirPrancha, abrirUploadImagem, onImagemArquivo,
