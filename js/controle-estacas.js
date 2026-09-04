@@ -49,6 +49,10 @@ const ControleEstacas = (() => {
   let view = 'estacas'; // 'estacas' | 'fundacoes'
   let modo = null;      // null | 'circulo' | 'poligono' (modo de adicionar)
   let poligonoPontos = [];
+  // Pedaços extras da MESMA área em criação, desenhados em lugares separados
+  // da prancha (ex: viga que atravessa por trás de um bloco) — cada item é
+  // um Point[] já fechado (>=3 pontos). Ao salvar viram m.partesExtras.
+  let poligonoPartesExtras = [];
   // Se setado, o próximo marcador desenhado é vinculado direto a essa peça,
   // sem passar pelo popup de vínculo — pra quando a MESMA peça (ex: uma viga
   // que passa por trás de um bloco) aparece dividida em pedaços no desenho e
@@ -777,12 +781,15 @@ const ControleEstacas = (() => {
       const c = _concretagemDaPeca(m.pecaId);
       if (!c) return;
       if (!forcarTodas && concretagemAtualId && c.id !== concretagemAtualId) return;
-      const centro = m.tipo === 'circulo' ? { x: m.cx, y: m.cy } : _centroide(m.pontos);
-      if (!centro) return;
-      const bolha = document.createElement('div');
-      bolha.style.cssText = `position:absolute;left:${(centro.x * 100).toFixed(3)}%;top:${(centro.y * 100).toFixed(3)}%;transform:translate(-50%,-50%);background:#1e293b;color:#fff;font-size:10px;font-weight:700;padding:1px 5px;border-radius:100px;white-space:nowrap;box-shadow:0 1px 3px rgba(0,0,0,.4);`;
-      bolha.textContent = c.numero;
-      cont.appendChild(bolha);
+      // Uma bolha por pedaço da área (m.pontos + m.partesExtras) — cada
+      // pedaço aparece marcado no plano, mesmo sendo a mesma peça/concretagem.
+      const centros = m.tipo === 'circulo' ? [{ x: m.cx, y: m.cy }] : EC.partesPoligono(m).map(_centroide).filter(Boolean);
+      centros.forEach(centro => {
+        const bolha = document.createElement('div');
+        bolha.style.cssText = `position:absolute;left:${(centro.x * 100).toFixed(3)}%;top:${(centro.y * 100).toFixed(3)}%;transform:translate(-50%,-50%);background:#1e293b;color:#fff;font-size:10px;font-weight:700;padding:1px 5px;border-radius:100px;white-space:nowrap;box-shadow:0 1px 3px rgba(0,0,0,.4);`;
+        bolha.textContent = c.numero;
+        cont.appendChild(bolha);
+      });
     });
     stage.appendChild(cont);
   }
@@ -1928,11 +1935,14 @@ const ControleEstacas = (() => {
         svg.setAttribute('viewBox', '0 0 100 100');
         svg.setAttribute('preserveAspectRatio', 'none');
         svg.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;';
-        const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
-        poly.setAttribute('points', m.pontos.map(p => `${p.x * 100},${p.y * 100}`).join(' '));
-        poly.setAttribute('fill', 'none'); poly.setAttribute('stroke', '#eab308');
-        poly.setAttribute('stroke-width', '0.8'); poly.setAttribute('vector-effect', 'non-scaling-stroke');
-        svg.appendChild(poly);
+        // Destaca TODOS os pedaços da área (m.pontos + m.partesExtras).
+        EC.partesPoligono(m).forEach(pontos => {
+          const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+          poly.setAttribute('points', pontos.map(p => `${p.x * 100},${p.y * 100}`).join(' '));
+          poly.setAttribute('fill', 'none'); poly.setAttribute('stroke', '#eab308');
+          poly.setAttribute('stroke-width', '0.8'); poly.setAttribute('vector-effect', 'non-scaling-stroke');
+          svg.appendChild(poly);
+        });
         cont.appendChild(svg);
       }
     });
@@ -2229,7 +2239,11 @@ const ControleEstacas = (() => {
           const novoRaio = m.raio * (Wold / Hold);
           ops.push({ type: 'update', ref: Database.ref(obraId, COL_MARCADORES).doc(m.id), data: { cx: novo.x, cy: novo.y, raio: novoRaio } });
         } else if (m.pontos && m.pontos.length) {
-          ops.push({ type: 'update', ref: Database.ref(obraId, COL_MARCADORES).doc(m.id), data: { pontos: m.pontos.map(EC.rotacionarPontoCW) } });
+          const data = { pontos: m.pontos.map(EC.rotacionarPontoCW) };
+          if (Array.isArray(m.partesExtras) && m.partesExtras.length) {
+            data.partesExtras = m.partesExtras.map(pe => ({ pontos: (pe.pontos || []).map(EC.rotacionarPontoCW) }));
+          }
+          ops.push({ type: 'update', ref: Database.ref(obraId, COL_MARCADORES).doc(m.id), data });
         }
       });
       for (let i = 0; i < ops.length; i += 400) await Database.batchWrite(ops.slice(i, i + 400));
@@ -2278,10 +2292,15 @@ const ControleEstacas = (() => {
     // popup de vínculo), mostra pra quem é, senão dá a impressão de que o
     // clique não fez nada com o vínculo.
     const avisoPeca = proximaAreaParaPeca ? ` <span style="font-weight:600;color:#1d4ed8;">→ esta área vai direto pra ${esc(proximaAreaParaPeca.nome)}</span>` : '';
+    // Info de pedaços extras já fechados nesta área (ex: viga que passa por
+    // trás de um bloco — pedaços em lugares separados da prancha, mas viram
+    // UM marcador só, com um vínculo só).
+    const infoPartes = poligonoPartesExtras.length ? ` — ${poligonoPartesExtras.length} pedaço${poligonoPartesExtras.length !== 1 ? 's' : ''} já pronto${poligonoPartesExtras.length !== 1 ? 's' : ''}` : '';
+    const podeConcluirPoligono = poligonoPontos.length >= 3 || (!poligonoPontos.length && poligonoPartesExtras.length > 0);
     const barraAcao = modo === 'circulo'
       ? `<div class="ce-barra-acao">Clique no centro da estaca e arraste até o tamanho desejado.${avisoPeca} <button class="btn btn-secundario btn-sm" onclick="CE.cancelarModo()">Cancelar</button></div>`
       : modo === 'poligono'
-      ? `<div class="ce-barra-acao">Clique nos vértices da fundação (${poligonoPontos.length} ponto${poligonoPontos.length !== 1 ? 's' : ''}).${avisoPeca} <button class="btn btn-secundario btn-sm" ${poligonoPontos.length ? '' : 'disabled'} onclick="CE.desfazerPontoPoligono()">↩ Desfazer ponto</button> <button class="btn btn-primario btn-sm" ${poligonoPontos.length >= 3 ? '' : 'disabled'} onclick="CE.concluirPoligono()">✓ Concluir</button> <button class="btn btn-secundario btn-sm" onclick="CE.cancelarModo()">Cancelar</button></div>`
+      ? `<div class="ce-barra-acao">Clique nos vértices da fundação (${poligonoPontos.length} ponto${poligonoPontos.length !== 1 ? 's' : ''}${infoPartes}).${avisoPeca} <button class="btn btn-secundario btn-sm" ${poligonoPontos.length || poligonoPartesExtras.length ? '' : 'disabled'} onclick="CE.desfazerPontoPoligono()">↩ Desfazer ponto</button> <button class="btn btn-secundario btn-sm" ${poligonoPontos.length >= 3 ? '' : 'disabled'} onclick="CE.novoPedacoPoligono()" title="Pra quando a fundação atravessa atrás de outra estrutura e o desenho fica em pedaços separados — todos viram a mesma área">➕ Novo pedaço (área separada)</button> <button class="btn btn-primario btn-sm" ${podeConcluirPoligono ? '' : 'disabled'} onclick="CE.concluirPoligono()">✓ Concluir</button> <button class="btn btn-secundario btn-sm" onclick="CE.cancelarModo()">Cancelar</button></div>`
       : editandoFormaId
       ? `<div class="ce-barra-acao">Ajustando forma — arraste os pontos. <button class="btn btn-primario btn-sm" onclick="CE.concluirAjusteForma()">✓ Concluir ajuste</button> <button class="btn btn-secundario btn-sm" onclick="CE.cancelarAjusteForma()">Cancelar</button></div>`
       : '';
@@ -2457,6 +2476,22 @@ const ControleEstacas = (() => {
     if (!cont) return;
     cont.innerHTML = '';
     const stage = document.getElementById('ce-stage');
+    // Pedaços já fechados (via "➕ Novo pedaço") — desenho estático, sem
+    // pontinhos de arrastar, só pra mostrar que já fazem parte da área.
+    if (poligonoPartesExtras.length) {
+      const svgExtras = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svgExtras.setAttribute('viewBox', '0 0 100 100');
+      svgExtras.setAttribute('preserveAspectRatio', 'none');
+      svgExtras.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:8;';
+      poligonoPartesExtras.forEach(pontos => {
+        const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+        poly.setAttribute('points', pontos.map(p => `${p.x * 100},${p.y * 100}`).join(' '));
+        poly.setAttribute('fill', 'rgba(22,163,74,0.18)');
+        poly.setAttribute('stroke', '#16a34a'); poly.setAttribute('stroke-width', '0.3'); poly.setAttribute('vector-effect', 'non-scaling-stroke');
+        svgExtras.appendChild(poly);
+      });
+      cont.appendChild(svgExtras);
+    }
     if (poligonoPontos.length >= 2) {
       const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
       svg.setAttribute('viewBox', '0 0 100 100');
@@ -2489,7 +2524,7 @@ const ControleEstacas = (() => {
   }
   async function iniciarAdicionarPoligono() {
     if (!Permissions.pode('controleEstacas', 'criar:marcador')) { Utils.toast('Sem permissão para criar.', 'erro'); return; }
-    modo = 'poligono'; poligonoPontos = []; editandoFormaId = null; proximaAreaParaPeca = null;
+    modo = 'poligono'; poligonoPontos = []; poligonoPartesExtras = []; editandoFormaId = null; proximaAreaParaPeca = null;
     await renderMapa();
     _atualizarBotoesModo();
   }
@@ -2502,18 +2537,31 @@ const ControleEstacas = (() => {
     Utils.fecharModal('modal-ce-vincular');
     proximaAreaParaPeca = { pecaId, nome };
     editandoFormaId = null;
-    if (tipo === 'circulo') { modo = 'circulo'; } else { modo = 'poligono'; poligonoPontos = []; }
+    if (tipo === 'circulo') { modo = 'circulo'; } else { modo = 'poligono'; poligonoPontos = []; poligonoPartesExtras = []; }
     await renderMapa();
     _atualizarBotoesModo();
   }
-  function cancelarModo() { modo = null; poligonoPontos = []; proximaAreaParaPeca = null; renderMapa(); _atualizarBotoesModo(); }
+  function cancelarModo() { modo = null; poligonoPontos = []; poligonoPartesExtras = []; proximaAreaParaPeca = null; renderMapa(); _atualizarBotoesModo(); }
   function _atualizarBotoesModo() {
     const bc = document.getElementById('ce-btn-circulo'), bp = document.getElementById('ce-btn-poligono');
     if (bc) bc.className = `btn ${modo === 'circulo' ? 'btn-primario' : 'btn-secundario'} btn-sm`;
     if (bp) bp.className = `btn ${modo === 'poligono' ? 'btn-primario' : 'btn-secundario'} btn-sm`;
   }
+  // Desfaz um ponto do pedaço atual; se o pedaço atual já está vazio, desfaz
+  // volta o ÚLTIMO pedaço extra (o do botão "➕ Novo pedaço") pra edição.
   function desfazerPontoPoligono() {
-    poligonoPontos.pop();
+    if (poligonoPontos.length) poligonoPontos.pop();
+    else if (poligonoPartesExtras.length) poligonoPontos = poligonoPartesExtras.pop();
+    renderMapa();
+  }
+  // "➕ Novo pedaço (área separada)" — fecha o pedaço em desenho (precisa ter
+  // >=3 pontos) e guarda em poligonoPartesExtras, liberando pra começar a
+  // clicar os vértices de um pedaço novo, em outro lugar da prancha, que ao
+  // salvar vira a MESMA área/marcador (mesmo pecaId, mesmo % de execução).
+  function novoPedacoPoligono() {
+    if (poligonoPontos.length < 3) return;
+    poligonoPartesExtras.push(poligonoPontos);
+    poligonoPontos = [];
     renderMapa();
   }
 
@@ -2535,14 +2583,25 @@ const ControleEstacas = (() => {
   }
 
   async function concluirPoligono() {
-    if (poligonoPontos.length < 3) return;
+    // O pedaço em desenho vira m.pontos; qualquer pedaço fechado antes (via
+    // "➕ Novo pedaço") vira m.partesExtras — tudo o MESMO marcador/vínculo.
+    let pontosFinal = poligonoPontos;
+    let extras = poligonoPartesExtras;
+    if (pontosFinal.length < 3) {
+      if (!extras.length) return;
+      extras = extras.slice();
+      pontosFinal = extras.pop();
+    }
     if (!Permissions.pode('controleEstacas', 'criar:marcador')) { Utils.toast('Sem permissão para criar.', 'erro'); return; }
     Utils.mostrarLoading();
     try {
-      const pontos = [...poligonoPontos];
+      const pontos = [...pontosFinal];
+      const partesExtras = extras.map(pts => ({ pontos: [...pts] }));
       const viaPeca = proximaAreaParaPeca;
-      const id = await Database.criar(obraId, COL_MARCADORES, { pranchaId: pranchaAtivaId, tipo: 'poligono', pontos, pecaId: viaPeca ? viaPeca.pecaId : '' }, EC.genId('em'));
-      modo = null; poligonoPontos = []; proximaAreaParaPeca = null;
+      const dados = { pranchaId: pranchaAtivaId, tipo: 'poligono', pontos, pecaId: viaPeca ? viaPeca.pecaId : '' };
+      if (partesExtras.length) dados.partesExtras = partesExtras;
+      const id = await Database.criar(obraId, COL_MARCADORES, dados, EC.genId('em'));
+      modo = null; poligonoPontos = []; poligonoPartesExtras = []; proximaAreaParaPeca = null;
       await carregar();
       if (viaPeca) Utils.toast(`✓ Nova área adicionada a ${viaPeca.nome}!`, 'sucesso');
       else abrirVincular(id);
@@ -2601,23 +2660,34 @@ const ControleEstacas = (() => {
       return;
     }
 
-    // Polígono: vértice a vértice
-    (m.pontos || []).forEach((p, i) => {
-      const dot = document.createElement('div');
-      dot.style.cssText = `position:absolute;left:${(p.x * 100).toFixed(3)}%;top:${(p.y * 100).toFixed(3)}%;width:14px;height:14px;margin:-7px;border-radius:50%;background:#2563eb;border:2px solid #fff;box-shadow:0 0 0 1px #2563eb;cursor:move;z-index:11;pointer-events:auto;`;
-      dot.title = 'Arraste pra ajustar este vértice';
-      _arrastarHandle(dot, mv => { m.pontos[i] = EC.posRelativa(mv, stage); _desenharHandlesEdicaoLeve(m); });
-      cont.appendChild(dot);
+    // Polígono: vértice a vértice — pode ter vários pedaços (área com
+    // partesExtras); cada pedaço fica editável igual, cada um com seus
+    // próprios vértices arrastáveis.
+    const partes = [m.pontos || [], ...((m.partesExtras || []).map(pe => pe.pontos || []))];
+    partes.forEach((pontos, pi) => {
+      pontos.forEach((p, i) => {
+        const dot = document.createElement('div');
+        dot.style.cssText = `position:absolute;left:${(p.x * 100).toFixed(3)}%;top:${(p.y * 100).toFixed(3)}%;width:14px;height:14px;margin:-7px;border-radius:50%;background:#2563eb;border:2px solid #fff;box-shadow:0 0 0 1px #2563eb;cursor:move;z-index:11;pointer-events:auto;`;
+        dot.title = 'Arraste pra ajustar este vértice';
+        _arrastarHandle(dot, mv => {
+          const np = EC.posRelativa(mv, stage);
+          if (pi === 0) m.pontos[i] = np; else m.partesExtras[pi - 1].pontos[i] = np;
+          _desenharHandlesEdicaoLeve(m);
+        });
+        cont.appendChild(dot);
+      });
     });
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     svg.setAttribute('viewBox', '0 0 100 100');
     svg.setAttribute('preserveAspectRatio', 'none');
     svg.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:9;';
-    const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
-    poly.setAttribute('points', (m.pontos || []).map(p => `${p.x * 100},${p.y * 100}`).join(' '));
-    poly.setAttribute('fill', 'rgba(59,130,246,0.15)');
-    poly.setAttribute('stroke', '#2563eb'); poly.setAttribute('stroke-width', '0.3'); poly.setAttribute('vector-effect', 'non-scaling-stroke');
-    svg.appendChild(poly);
+    partes.forEach(pontos => {
+      const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+      poly.setAttribute('points', pontos.map(p => `${p.x * 100},${p.y * 100}`).join(' '));
+      poly.setAttribute('fill', 'rgba(59,130,246,0.15)');
+      poly.setAttribute('stroke', '#2563eb'); poly.setAttribute('stroke-width', '0.3'); poly.setAttribute('vector-effect', 'non-scaling-stroke');
+      svg.appendChild(poly);
+    });
     cont.insertBefore(svg, cont.firstChild);
   }
 
@@ -2632,7 +2702,7 @@ const ControleEstacas = (() => {
     if (!m) { editandoFormaId = null; renderMapa(); return; }
     Utils.mostrarLoading();
     try {
-      const data = m.tipo === 'circulo' ? { cx: m.cx, cy: m.cy, raio: m.raio } : { pontos: m.pontos };
+      const data = m.tipo === 'circulo' ? { cx: m.cx, cy: m.cy, raio: m.raio } : { pontos: m.pontos, partesExtras: (m.partesExtras || []).map(pe => ({ pontos: pe.pontos })) };
       await Database.atualizar(obraId, COL_MARCADORES, m.id, data);
       editandoFormaId = null;
       Utils.toast('✓ Forma ajustada!', 'sucesso');
@@ -3039,7 +3109,7 @@ const ControleEstacas = (() => {
   return {
     init, recarregar, renderizar, setAbaPrincipal, alternarTelaCheia, toggleMinimizarPainel, toggleMostrarTodosNumeros,
     onTrocarView, onTrocarPranchaAtiva, zoomAjustar, girarPrancha,
-    iniciarAdicionarCirculo, iniciarAdicionarPoligono, cancelarModo, desfazerPontoPoligono, concluirPoligono, iniciarNovaAreaParaPeca,
+    iniciarAdicionarCirculo, iniciarAdicionarPoligono, cancelarModo, desfazerPontoPoligono, novoPedacoPoligono, concluirPoligono, iniciarNovaAreaParaPeca,
     iniciarAjusteForma, concluirAjusteForma, cancelarAjusteForma,
     abrirVincular, salvarVinculo, excluirMarcador,
     onFocoBuscaPeca, fecharListaPecaBusca, onBuscaPeca, selecionarPecaBusca,

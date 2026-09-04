@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.26.17',
+  versaoAtual: 'V3.26.18',
 
   versoes: [
     {
@@ -11090,6 +11090,21 @@ const NotasVersao = {
         "Abrindo o vínculo de qualquer estaca/fundação já vinculada a uma peça, aparece \"➕ Adicionar outra área pra esta peça\": pula direto pro desenho (círculo ou polígono, igual ao marcador de onde veio) e a nova área já sai vinculada àquela mesma peça — sem passar pelo seletor de peça de novo.",
         "Enquanto desenha por esse caminho, a barra de ação em cima do mapa mostra pra qual peça a área vai (ex: \"→ esta área vai direto pra V132\"), pra não ter dúvida de que não é uma peça nova.",
         "Mesmo pipeline já usado no Controle de Concreto (V3.26.7) — os pedaços continuam sendo marcadores separados no desenho (cada um clicável), mas todos apontam pra uma peça só, com o mesmo % de execução e a mesma cor de status."
+      ]
+    },
+    {
+      "versao": "V3.26.18",
+      "data": "2026-09-04",
+      "tipo": "melhoria",
+      "titulo": "Controle de Estacas — uma área só desenhada em pedaços separados (ex: viga atravessando por trás de um bloco), sem precisar vincular cada pedaço",
+      "itens": [
+        "Esclarecimento do caso da viga que passa por trás/dentro de um bloco: não é 'duas áreas vinculadas à mesma peça' — é UMA área só, que por causa do desenho técnico fica separada em pedaços na planta. Antes só dava pra fazer isso criando um marcador pra cada pedaço e vinculando cada um à peça (V3.26.17); agora dá pra fazer tudo dentro do mesmo desenho.",
+        "Ao desenhar uma fundação (polígono), a barra de ação ganhou o botão \"➕ Novo pedaço (área separada)\": fecha o pedaço atual (precisa ter pelo menos 3 pontos) e libera pra clicar os vértices de outro pedaço, em qualquer lugar da prancha — o pedaço fechado fica marcado em verde no mapa enquanto o próximo é desenhado.",
+        "Ao clicar \"✓ Concluir\", todos os pedaços viram UM marcador só (um documento, um vínculo) — se ainda não tinha peça vinculada, abre o popup de vínculo normalmente, uma vez só pra todos os pedaços.",
+        "\"↩ Desfazer ponto\" também desfaz um \"Novo pedaço\" fechado por engano, voltando ele pra edição.",
+        "\"Ajustar forma\" passou a mostrar e permitir arrastar os vértices de TODOS os pedaços da área, não só do primeiro.",
+        "Em todo o resto do módulo — clique/toque pra selecionar, destaque amarelo no Acompanhamento, número da concretagem, giro de prancha em 90° — os pedaços extras agora são tratados exatamente como o pedaço principal.",
+        "O botão \"➕ Adicionar outra área pra esta peça\" (V3.26.17) continua existindo, pra quando a intenção É mesmo ter marcadores separados e independentes (cada um podendo ser movido/apagado sozinho) apontando pra mesma peça — os dois recursos são complementares."
       ]
     }
   ],

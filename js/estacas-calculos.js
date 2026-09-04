@@ -65,6 +65,27 @@ const EstacasCalculos = (() => {
   }
 
   // ══════════════════════════════════════════
+  // MULTI-PARTES DE POLÍGONO (uma "área" só, desenhada em pedaços separados
+  // na prancha — ex: viga que atravessa por trás de um bloco). O marcador
+  // guarda o primeiro pedaço em m.pontos (compatível com o formato antigo) e
+  // os pedaços extras em m.partesExtras, um array de { pontos: [...] } —
+  // Firestore não aceita array-dentro-de-array direto, por isso o wrap em
+  // objeto. Esta função devolve TODOS os pedaços já achatados num único
+  // Point[][], pra todo código de leitura (render, hit-test, rotação,
+  // centróide) tratar igual, sem se importar com o formato de guardar.
+  // ══════════════════════════════════════════
+  function partesPoligono(m) {
+    const partes = [];
+    if (m && m.pontos && m.pontos.length >= 3) partes.push(m.pontos);
+    if (m && Array.isArray(m.partesExtras)) {
+      m.partesExtras.forEach(pe => {
+        if (pe && Array.isArray(pe.pontos) && pe.pontos.length >= 3) partes.push(pe.pontos);
+      });
+    }
+    return partes;
+  }
+
+  // ══════════════════════════════════════════
   // RENDER DO PALCO (imagem + marcadores) — HTML absoluto + SVG p/ polígonos.
   // Reaproveitado no Controle (interativo) e no Dashboard (miniatura, só leitura).
   // marcadores: array já filtrado pro tipo da view atual (circulo|poligono)
@@ -98,9 +119,15 @@ const EstacasCalculos = (() => {
       const cor = corStatus(st.pct);
       const tracejado = (st.pct === null || st.pct === undefined) ? 'stroke-dasharray:1.5,1;' : '';
       const titulo = opts.mini ? '' : `<title>${esc(st.label || '')}</title>`;
-      const pts = m.pontos.map(p => `${(p.x * 100).toFixed(3)},${(p.y * 100).toFixed(3)}`).join(' ');
+      // Uma "área" pode ter vários pedaços desenhados em lugares separados da
+      // prancha (m.partesExtras) — todos com o mesmo status/cor, um <polygon>
+      // por pedaço dentro do mesmo <svg>.
+      const polys = partesPoligono(m).map(pontos => {
+        const pts = pontos.map(p => `${(p.x * 100).toFixed(3)},${(p.y * 100).toFixed(3)}`).join(' ');
+        return `<polygon class="est-poligono-hit" data-id="${m.id}" points="${pts}" fill="${cor}66" stroke="${cor}" stroke-width="0.4" vector-effect="non-scaling-stroke" ${tracejado} style="${cursor}pointer-events:auto;"${cursor ? '' : ''}>${titulo}</polygon>`;
+      }).join('');
       return `<svg viewBox="0 0 100 100" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:2;">
-        <polygon class="est-poligono-hit" data-id="${m.id}" points="${pts}" fill="${cor}66" stroke="${cor}" stroke-width="0.4" vector-effect="non-scaling-stroke" ${tracejado} style="${cursor}pointer-events:auto;"${cursor ? '' : ''}>${titulo}</polygon>
+        ${polys}
       </svg>`;
     }).join('');
 
@@ -242,13 +269,16 @@ const EstacasCalculos = (() => {
         const d = Math.hypot(dx, dy);
         if (d <= Math.max(num(m.raio) * W, tol)) dist = d;
       } else if (m.pontos && m.pontos.length >= 3) {
-        if (_pontoEmPoligono(pontoFrac, m.pontos)) dist = 0;
-        else {
+        // Testa TODOS os pedaços da área (m.pontos + m.partesExtras) — o
+        // toque pode cair em qualquer um deles, o marcador é o mesmo.
+        partesPoligono(m).forEach(pontos => {
+          if (dist === 0) return;
+          if (_pontoEmPoligono(pontoFrac, pontos)) { dist = 0; return; }
           let d = Infinity;
-          for (let i = 0, j = m.pontos.length - 1; i < m.pontos.length; j = i++)
-            d = Math.min(d, _distPxSegmento(pontoFrac, m.pontos[j], m.pontos[i], W, H));
-          if (d <= tol) dist = d;
-        }
+          for (let i = 0, j = pontos.length - 1; i < pontos.length; j = i++)
+            d = Math.min(d, _distPxSegmento(pontoFrac, pontos[j], pontos[i], W, H));
+          if (d <= tol) dist = Math.min(dist, d);
+        });
       }
       if (dist === Infinity) return;
       if (!melhor || prio < melhor.prio || (prio === melhor.prio && dist < melhor.dist))
@@ -347,6 +377,7 @@ const EstacasCalculos = (() => {
     chaveGrupoEstaca, mapaCoresGrupoEstaca,
     rotacionarPontoCW,
     zoomAncorado, marcadorMaisProximo, TOL_TOQUE_PX,
+    partesPoligono,
   };
 })();
 
