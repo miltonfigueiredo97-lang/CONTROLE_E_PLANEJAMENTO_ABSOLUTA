@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.26.19',
+  versaoAtual: 'V3.26.20',
 
   versoes: [
     {
@@ -11116,6 +11116,18 @@ const NotasVersao = {
         "O \"➕ Novo pedaço (área separada)\" da V3.26.18 só aparecia enquanto a fundação estava sendo desenhada pela primeira vez. Numa área que já existe (abrindo \"✏️ Ajustar forma\"), não tinha como acrescentar outro pedaço — só dava pra mexer nos vértices que já estavam lá.",
         "Agora \"Ajustar forma\" de uma fundação (polígono) ganhou o botão \"➕ Novo pedaço\": entra num modo de clicar os vértices de um pedaço novo em qualquer lugar da prancha (com \"↩ Desfazer ponto\" e \"Cancelar pedaço\"); ao confirmar (\"✓ Adicionar esse pedaço\"), ele se junta à área — e os vértices dele já ficam arrastáveis junto com o resto.",
         "Só é gravado no banco quando clicar \"✓ Concluir ajuste\" (igual já acontecia pra qualquer outro ajuste de forma) — dá pra adicionar vários pedaços, ajustar todos, e salvar tudo de uma vez."
+      ]
+    },
+    {
+      "versao": "V3.26.20",
+      "data": "2026-09-04",
+      "tipo": "correcao",
+      "titulo": "Controle de Estacas — mapa voltava pro canto superior esquerdo (zerando zoom/posição) toda vez que salvava alguma coisa na aba Marcadores",
+      "itens": [
+        "CAUSA: fora da tela cheia, a função que redesenha a tela inteira (renderizar(), chamada depois de QUALQUER salvamento — vincular peça, ajustar forma, criar/excluir marcador, girar prancha etc.) recriava o container do zero (c.innerHTML) ANTES de dar qualquer chance da lógica que preserva o scroll capturar a posição atual — ela sempre achava um mapa vazio (recém-criado) pra 'lembrar', ou seja, nunca lembrava de nada.",
+        "Reproduzido: dar zoom, se posicionar numa parte específica da planta e salvar qualquer coisa (ex: concluir um ajuste de forma) jogava a visão de volta pro canto superior esquerdo, obrigando a procurar e dar zoom de novo toda vez.",
+        "CORRIGIDO: a captura da posição de rolagem agora acontece ANTES da tela ser recriada (não depois), e a posição é reposta assim que a aba termina de desenhar de novo — o zoom (%) já era mantido, só a posição de rolagem (pan) que se perdia.",
+        "Afeta as 3 abas (Marcadores, Planejamento, Acompanhamento), já que as três passam pelo mesmo renderizar()."
       ]
     }
   ],

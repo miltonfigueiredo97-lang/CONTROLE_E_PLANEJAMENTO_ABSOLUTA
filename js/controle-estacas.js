@@ -229,6 +229,16 @@ const ControleEstacas = (() => {
       return;
     }
 
+    // c.innerHTML abaixo recria #ce-content inteiro (fora da tela cheia) —
+    // isso destrói #ce-mapa-host/#ce-plan-mapa-host/#ce-acomp-mapa-host ANTES
+    // de _renderAbaAtual() ter qualquer chance de capturar o scroll: todo
+    // salvamento que passa por carregar()->renderizar() (vincular, ajustar
+    // forma, criar/excluir marcador, girar prancha...) jogava o mapa de volta
+    // pro canto superior esquerdo, mesmo a pessoa estando com zoom/posição
+    // específicos. Captura AQUI, antes do wipe, e repõe só depois que a aba
+    // (async — renderMapa recarrega a imagem) terminar de desenhar de novo.
+    const reporScroll = _preservarScroll(_hostDaAba());
+
     c.innerHTML = `
       <div class="cc-view">
       <div class="page-header">
@@ -248,7 +258,7 @@ const ControleEstacas = (() => {
       </div>
     `;
     Permissions.aplicarNaTela();
-    _renderAbaAtual();
+    Promise.resolve(_renderAbaAtual()).then(reporScroll);
   }
 
   // HTML dos 3 botões Marcadores/Planejamento/Acompanhamento — função à
@@ -265,9 +275,9 @@ const ControleEstacas = (() => {
   }
 
   function _renderAbaAtual() {
-    if (abaPrincipal === 'planejamento') _renderAbaPlanejamento();
-    else if (abaPrincipal === 'acompanhamento') _renderAbaAcompanhamento();
-    else _renderAbaMarcadores();
+    if (abaPrincipal === 'planejamento') return _renderAbaPlanejamento();
+    else if (abaPrincipal === 'acompanhamento') return _renderAbaAcompanhamento();
+    else return _renderAbaMarcadores();
   }
 
   // Minimiza/mostra o cabeçalho de controles (toggle estaca/fundação,
