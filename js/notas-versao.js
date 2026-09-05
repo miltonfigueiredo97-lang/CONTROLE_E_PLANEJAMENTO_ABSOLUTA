@@ -1,6 +1,6 @@
 // Notas de Versão — atualizado a cada commit
 const NotasVersao = {
-  versaoAtual: 'V3.26.20',
+  versaoAtual: 'V3.26.21',
 
   versoes: [
     {
@@ -11128,6 +11128,17 @@ const NotasVersao = {
         "Reproduzido: dar zoom, se posicionar numa parte específica da planta e salvar qualquer coisa (ex: concluir um ajuste de forma) jogava a visão de volta pro canto superior esquerdo, obrigando a procurar e dar zoom de novo toda vez.",
         "CORRIGIDO: a captura da posição de rolagem agora acontece ANTES da tela ser recriada (não depois), e a posição é reposta assim que a aba termina de desenhar de novo — o zoom (%) já era mantido, só a posição de rolagem (pan) que se perdia.",
         "Afeta as 3 abas (Marcadores, Planejamento, Acompanhamento), já que as três passam pelo mesmo renderizar()."
+      ]
+    },
+    {
+      "versao": "V3.26.21",
+      "data": "2026-09-05",
+      "tipo": "correcao",
+      "titulo": "Controle de Estacas — corrige \"Ajustar forma\" travando ao arrastar um ponto (estaca ou fundação)",
+      "itens": [
+        "CAUSA CONFIRMADA (reproduzida isolada, fora do sistema, com automação de navegador): a cada pixel arrastado, o código redesenhava TODAS as bolinhas de ajuste do zero — inclusive a bolinha que a pessoa estava com o dedo/mouse em cima. Recriar o elemento que está sendo arrastado faz o navegador soltar a 'captura' do arrasto na hora — o gesto andava um pouquinho e travava, exatamente como relatado ('eu tento mover o ponto mas ele fica travado'). No teste isolado, de 10 movimentos só 1 era processado.",
+        "CORRIGIDO: as bolinhas (e o contorno pontilhado do círculo / preenchimento do polígono) agora são criadas uma única vez; cada arrasto só atualiza a POSIÇÃO delas, nunca recria os elementos. Reproduzido o mesmo teste isolado após a correção: os 10 movimentos foram processados normalmente.",
+        "Vale tanto pra estaca (círculo: mover o centro, redimensionar pela borda) quanto pra fundação (arrastar qualquer vértice do polígono, incluindo pedaços extras da V3.26.18/19)."
       ]
     }
   ],

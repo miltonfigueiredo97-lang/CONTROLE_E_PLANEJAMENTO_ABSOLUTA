@@ -2684,6 +2684,18 @@ const ControleEstacas = (() => {
     renderMapa();
   }
 
+  // IMPORTANTE: nenhum handle (dot/bolinha) pode ser RECRIADO durante o
+  // arrasto — só ter sua posição (style) atualizada. Recriar o elemento que
+  // está com o pointer capture ativo destrói esse elemento; o navegador
+  // libera a captura junto (fica "presa" ao elemento antigo, que já não
+  // existe mais), e o arrasto trava depois do primeiro micro-movimento —
+  // era exatamente o "eu tento mover o ponto mas ele fica travado" relatado.
+  // Confirmado com teste isolado (Playwright): recriando a cada movimento,
+  // só 1 de 10 eventos de arrasto era processado; atualizando in-place, os
+  // 10 são processados normalmente. Por isso _desenharHandlesEdicao() monta
+  // os elementos UMA VEZ só, e cada _arrastarHandle atualiza sozinho a
+  // posição do próprio handle e do preview (SVG do polígono / círculo
+  // pontilhado), nunca chamando esta função de novo no meio do gesto.
   function _desenharHandlesEdicao() {
     const m = marcadores.find(x => x.id === editandoFormaId);
     const stage = document.getElementById('ce-stage');
@@ -2692,69 +2704,80 @@ const ControleEstacas = (() => {
     cont.innerHTML = '';
 
     if (m.tipo === 'circulo') {
-      // Handle central (mover) + handle de borda (redimensionar)
+      // Handle central (mover) + handle de borda (redimensionar) + círculo
+      // pontilhado "ao vivo" — os 3 são criados uma vez e só têm a posição/
+      // tamanho atualizados a cada movimento (nunca recriados).
       const centro = document.createElement('div');
-      centro.style.cssText = `position:absolute;left:${(m.cx * 100).toFixed(3)}%;top:${(m.cy * 100).toFixed(3)}%;width:14px;height:14px;margin:-7px;border-radius:50%;background:#2563eb;border:2px solid #fff;box-shadow:0 0 0 1px #2563eb;cursor:move;z-index:11;pointer-events:auto;`;
+      centro.style.cssText = `position:absolute;width:14px;height:14px;margin:-7px;border-radius:50%;background:#2563eb;border:2px solid #fff;box-shadow:0 0 0 1px #2563eb;cursor:move;z-index:11;pointer-events:auto;`;
       centro.title = 'Arraste pra mover';
-      _arrastarHandle(centro, mv => { const p = EC.posRelativa(mv, stage); m.cx = p.x; m.cy = p.y; _desenharHandlesEdicaoLeve(m); });
-      cont.appendChild(centro);
+
+      const borda = document.createElement('div');
+      borda.style.cssText = `position:absolute;width:14px;height:14px;margin:-7px;border-radius:50%;background:#f59e0b;border:2px solid #fff;box-shadow:0 0 0 1px #f59e0b;cursor:ew-resize;z-index:11;pointer-events:auto;`;
+      borda.title = 'Arraste pra redimensionar';
+
+      const preview = document.createElement('div');
+      preview.id = 'ce-edicao-preview-circulo';
+      preview.style.cssText = 'position:absolute;transform:translate(-50%,-50%);border-radius:50%;border:2px dashed #1e293b;pointer-events:none;z-index:10;';
 
       const w = stage.getBoundingClientRect().width || 1;
-      const bordaX = m.cx + m.raio;
-      const borda = document.createElement('div');
-      borda.style.cssText = `position:absolute;left:${(bordaX * 100).toFixed(3)}%;top:${(m.cy * 100).toFixed(3)}%;width:14px;height:14px;margin:-7px;border-radius:50%;background:#f59e0b;border:2px solid #fff;box-shadow:0 0 0 1px #f59e0b;cursor:ew-resize;z-index:11;pointer-events:auto;`;
-      borda.title = 'Arraste pra redimensionar';
+      const atualizarCirculo = () => {
+        centro.style.left = (m.cx * 100).toFixed(3) + '%';
+        centro.style.top = (m.cy * 100).toFixed(3) + '%';
+        borda.style.left = ((m.cx + m.raio) * 100).toFixed(3) + '%';
+        borda.style.top = (m.cy * 100).toFixed(3) + '%';
+        const diam = m.raio * 2 * w;
+        preview.style.left = (m.cx * 100).toFixed(3) + '%';
+        preview.style.top = (m.cy * 100).toFixed(3) + '%';
+        preview.style.width = diam.toFixed(1) + 'px';
+        preview.style.height = diam.toFixed(1) + 'px';
+      };
+      _arrastarHandle(centro, mv => { const p = EC.posRelativa(mv, stage); m.cx = p.x; m.cy = p.y; atualizarCirculo(); });
       _arrastarHandle(borda, mv => {
         const p = EC.posRelativa(mv, stage);
         m.raio = Math.max(0.004, EC.raioFracao({ x: m.cx, y: m.cy }, p, stage));
-        _desenharHandlesEdicaoLeve(m);
+        atualizarCirculo();
       });
+      atualizarCirculo();
+      cont.appendChild(preview);
+      cont.appendChild(centro);
       cont.appendChild(borda);
-
-      // Círculo "ao vivo" — redesenha junto com os handles pra ver o tamanho mudando
-      const preview = document.createElement('div');
-      preview.id = 'ce-edicao-preview-circulo';
-      const diam = m.raio * 2 * w;
-      preview.style.cssText = `position:absolute;left:${(m.cx * 100).toFixed(3)}%;top:${(m.cy * 100).toFixed(3)}%;width:${diam.toFixed(1)}px;height:${diam.toFixed(1)}px;transform:translate(-50%,-50%);border-radius:50%;border:2px dashed #1e293b;pointer-events:none;z-index:10;`;
-      cont.insertBefore(preview, centro);
       return;
     }
 
     // Polígono: vértice a vértice — pode ter vários pedaços (área com
     // partesExtras); cada pedaço fica editável igual, cada um com seus
-    // próprios vértices arrastáveis.
+    // próprios vértices arrastáveis. O contorno (SVG) é criado uma vez e só
+    // tem os `points` atualizados a cada movimento.
     const partes = [m.pontos || [], ...((m.partesExtras || []).map(pe => pe.pontos || []))];
-    partes.forEach((pontos, pi) => {
-      pontos.forEach((p, i) => {
-        const dot = document.createElement('div');
-        dot.style.cssText = `position:absolute;left:${(p.x * 100).toFixed(3)}%;top:${(p.y * 100).toFixed(3)}%;width:14px;height:14px;margin:-7px;border-radius:50%;background:#2563eb;border:2px solid #fff;box-shadow:0 0 0 1px #2563eb;cursor:move;z-index:11;pointer-events:auto;`;
-        dot.title = 'Arraste pra ajustar este vértice';
-        _arrastarHandle(dot, mv => {
-          const np = EC.posRelativa(mv, stage);
-          if (pi === 0) m.pontos[i] = np; else m.partesExtras[pi - 1].pontos[i] = np;
-          _desenharHandlesEdicaoLeve(m);
-        });
-        cont.appendChild(dot);
-      });
-    });
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     svg.setAttribute('viewBox', '0 0 100 100');
     svg.setAttribute('preserveAspectRatio', 'none');
     svg.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:9;';
-    partes.forEach(pontos => {
+    const polys = partes.map(() => {
       const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
-      poly.setAttribute('points', pontos.map(p => `${p.x * 100},${p.y * 100}`).join(' '));
       poly.setAttribute('fill', 'rgba(59,130,246,0.15)');
       poly.setAttribute('stroke', '#2563eb'); poly.setAttribute('stroke-width', '0.3'); poly.setAttribute('vector-effect', 'non-scaling-stroke');
       svg.appendChild(poly);
+      return poly;
     });
+    const atualizarContorno = () => partes.forEach((pontos, pi) => polys[pi].setAttribute('points', pontos.map(p => `${p.x * 100},${p.y * 100}`).join(' ')));
+    partes.forEach((pontos, pi) => {
+      pontos.forEach((p, i) => {
+        const dot = document.createElement('div');
+        dot.style.cssText = `position:absolute;left:${(p.x * 100).toFixed(3)}%;top:${(p.y * 100).toFixed(3)}%;width:14px;height:14px;margin:-7px;border-radius:50%;background:#2563eb;border:2px solid #fff;box-shadow:0 0 0 1px #2563eb,0 1px 4px rgba(0,0,0,.4);cursor:move;z-index:11;pointer-events:auto;`;
+        dot.title = 'Arraste pra ajustar este vértice';
+        _arrastarHandle(dot, mv => {
+          const np = EC.posRelativa(mv, stage);
+          if (pi === 0) m.pontos[i] = np; else m.partesExtras[pi - 1].pontos[i] = np;
+          dot.style.left = (np.x * 100).toFixed(3) + '%';
+          dot.style.top = (np.y * 100).toFixed(3) + '%';
+          atualizarContorno();
+        });
+        cont.appendChild(dot);
+      });
+    });
+    atualizarContorno();
     cont.insertBefore(svg, cont.firstChild);
-  }
-
-  // Redesenho leve durante o arrasto — evita re-renderizar o mapa inteiro
-  // (e recarregar a imagem) a cada pixel movido.
-  function _desenharHandlesEdicaoLeve(m) {
-    _desenharHandlesEdicao();
   }
 
   async function concluirAjusteForma() {
